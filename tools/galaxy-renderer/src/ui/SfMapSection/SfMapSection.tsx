@@ -384,6 +384,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               path="fieldTuning.sfMapFluid.armGather"
               info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild."
             />
+            <ParamSlider
+              label="Pressure"
+              value={fluid.pressureStrength}
+              min={0}
+              max={0.2}
+              step={0.005}
+              format={(v) => v.toFixed(3)}
+              onChange={(v) => patchFluid({ pressureStrength: v })}
+              path="fieldTuning.sfMapFluid.pressureStrength"
+              info="Explicit diffusion coefficient for gas/dust density (texel²/step) — the repulsion arm gather's attraction otherwise has nothing to balance, which without it collapses gas onto a 1-2 texel line at each arm crest. Stable only up to 0.25; this range stays well under that bound."
+            />
           </div>
         </CollapsibleSection>
       )}

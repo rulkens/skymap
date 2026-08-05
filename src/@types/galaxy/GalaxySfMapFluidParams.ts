@@ -38,4 +38,6 @@ export type GalaxySfMapFluidParams = {
   readonly emaRate: number;
   /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field the automaton samples (`galaxySfMapArmForcing.ts`), read here as a texture instead of biasing event placement. Damped by `sfMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
   readonly armGather: number;
+  /** Explicit diffusion coefficient for gas/dust density, in texel²/step (`sfMapFluidStep.wesl`'s `diffusionLaplacian`) — the repulsion `armGather`'s attraction has nothing to balance without it; sets arm band width and kills grid-scale (1-texel-line, checkerboard) collapse. Explicit 2D diffusion is stable only for coefficient ≤ 0.25. A `v += -pressureStrength * grad(gas)` velocity term was tried first and rejected: central-difference pressure on a collocated grid is blind to checkerboard modes and vanishes at a 1-texel spike's own peak — don't reintroduce it. */
+  readonly pressureStrength: number;
 };

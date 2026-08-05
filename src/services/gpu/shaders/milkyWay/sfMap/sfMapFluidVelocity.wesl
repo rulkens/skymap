@@ -23,6 +23,11 @@ struct SfMapFluidConstants {
   curlScale: f32,
   impulseDuration: f32,
   armGather: f32,
+  // Unused here — this pass composes velocity only. Consumed by
+  // sfMapFluidStep.wesl (Pass B) as a density-diffusion coefficient. Kept in
+  // both struct copies for byte-identical layout (packSfMapFluidConstants.ts
+  // is the offset authority).
+  pressureStrength: f32,
 }
 
 // Same layout as sfMapFluidStep.wesl's own copy (packSfMapFluidStepIndex.ts

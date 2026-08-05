@@ -55,4 +55,9 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // corotation), so gathering reads as a visible pull toward the arm without
   // dominating the shear/curl structure already carrying the look.
   armGather: 60,
+  // Well under the D <= 0.25 explicit-stability bound (see the param's own
+  // doc): each step multiplies a 1-texel spike's own excess by (1 - 4D) =
+  // 0.6, more than halving it within ~2 steps, strong enough to widen a
+  // collapsed ridge without visibly smearing the rest of the grid.
+  pressureStrength: 0.1,
 };

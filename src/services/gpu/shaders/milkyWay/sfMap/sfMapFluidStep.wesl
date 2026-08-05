@@ -21,6 +21,10 @@ struct SfMapFluidConstants {
   curlScale: f32,
   impulseDuration: f32,
   armGather: f32,
+  // Explicit diffusion coefficient (texel^2/step) for gas/dust, this pass's
+  // own consumer — see diffusionLaplacian below. Explicit 2D diffusion is
+  // stable only for coefficient <= 0.25; the slider range enforces it.
+  pressureStrength: f32,
 }
 
 // Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts
@@ -88,6 +92,34 @@ fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric:
   let dVelAzDAz = (vPlusAz - vMinusAz) * 0.5;
   let dVelRingDRing = (vPlusRing - vMinusRing) * 0.5;
   return dVelAzDAz + dVelRingDRing * azToRingMetric;
+}
+
+// 5-point Laplacian of gas (prevTex.x) and dust (prevTex.z), in TEXEL units
+// on both axes — deliberately NOT physical (theta, ln r) space: the
+// pathology this term exists to kill (1-texel density-spike collapse,
+// grid-scale checkerboard modes, both artifacts of the OLD velocity-gradient
+// pressure term this replaced) is itself a grid-scale artifact, so texel
+// space is the space that treats it. Same edge semantics as divVelocity: az
+// wraps, ring clamps (a clamped ring neighbour equals self, i.e. zero-flux
+// boundary).
+fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasDust: vec2<f32>) -> vec2<f32> {
+  let azCountI = i32(azCount);
+  let ringCountI = i32(ringCount);
+  let azPlus = wrapAz(az + 1, azCountI);
+  let azMinus = wrapAz(az - 1, azCountI);
+  let ringPlus = clamp(ring + 1, 0, ringCountI - 1);
+  let ringMinus = clamp(ring - 1, 0, ringCountI - 1);
+
+  let nAzPlus = textureLoad(prevTex, vec2<i32>(azPlus, ring), 0);
+  let nAzMinus = textureLoad(prevTex, vec2<i32>(azMinus, ring), 0);
+  let nRingPlus = textureLoad(prevTex, vec2<i32>(az, ringPlus), 0);
+  let nRingMinus = textureLoad(prevTex, vec2<i32>(az, ringMinus), 0);
+
+  let neighbourSum = vec2<f32>(
+    nAzPlus.x + nAzMinus.x + nRingPlus.x + nRingMinus.x,
+    nAzPlus.z + nAzMinus.z + nRingPlus.z + nRingMinus.z
+  );
+  return neighbourSum - 4.0 * selfGasDust;
 }
 
 // Bilinear sample of prevTex — wraps in az, clamps in ring, same edge
@@ -173,17 +205,24 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let advectedGas = advected.x * continuityMult;
   let advectedDust = advected.z * continuityMult;
 
+  // Operator-split diffusion, applied to the PREVIOUS state (not the
+  // advected one) and added on top of it — see diffusionLaplacian above.
+  // Clamped >= 0 so a strong coefficient can't push a thin texel negative.
+  let lap = diffusionLaplacian(i32(az), i32(ring), azCount, ringCount, vec2<f32>(selfState.x, selfState.z));
+  let diffusedGas = max(0.0, advectedGas + u.pressureStrength * lap.x);
+  let diffusedDust = max(0.0, advectedDust + u.pressureStrength * lap.y);
+
   let selfAge = selfState.y;
   let selfOldActivity = selfState.w;
 
-  let gas = min(GAS_CEILING, advectedGas + u.gasRegen);
+  let gas = min(GAS_CEILING, diffusedGas + u.gasRegen);
   var age = selfAge + 1.0;
   // "Core" threshold: an event only just born here dominates the intensity
   // sum, so this fires exactly at its birth texel/step, not its whole tail.
   if (eventStamp > 0.5) {
     age = 0.0;
   }
-  let dust = min(advectedDust, DUST_OVERSHOOT_CEILING);
+  let dust = min(diffusedDust, DUST_OVERSHOOT_CEILING);
   let oldActivity = mix(selfOldActivity, eventStamp, u.emaRate);
 
   textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gas, age, dust, oldActivity));
