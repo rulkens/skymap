@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodeSfMapTexels } from '../../../../../tools/galaxy-renderer/src/engine/sfMap/decodeSfMapTexels';
 import { floatToF16 } from '../../../../../src/utils/math/floatToF16';
+import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
 
 describe('decodeSfMapTexels', () => {
   it('reads all four lanes of each texel at the padded row stride, skipping padding', () => {
@@ -56,5 +57,34 @@ describe('decodeSfMapTexels', () => {
     expect(rounded).toEqual([
       0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.5, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 2.5, 1.6,
     ]);
+  });
+
+  it('decodes zero, a subnormal, ±Inf and NaN exactly like the scalar f16ToFloat reference', () => {
+    // 1x1 grid, unpadded — isolates the LUT decode from the row-stride
+    // logic already covered above. One texel can't carry 6 special values,
+    // so this walks a handful of single-texel grids instead.
+    const az = 1;
+    const rings = 1;
+    const paddedBytesPerRow = az * 4 * 2;
+    const specials: [number, number, number, number][] = [
+      [0, -0, 3e-5, -3e-5], // zero (both signs) + subnormal (both signs)
+      [Infinity, -Infinity, NaN, 1],
+    ];
+    for (const [gas, recentSf, activity, dust] of specials) {
+      const padded = new Uint16Array(4);
+      padded[0] = floatToF16(gas);
+      padded[1] = floatToF16(recentSf);
+      padded[2] = floatToF16(activity);
+      padded[3] = floatToF16(dust);
+      const out = decodeSfMapTexels(padded, paddedBytesPerRow, az, rings);
+      const reference = [gas, recentSf, activity, dust].map((v) => f16ToFloat(floatToF16(v)));
+      for (let i = 0; i < 4; i++) {
+        if (Number.isNaN(reference[i])) {
+          expect(Number.isNaN(out[i]!)).toBe(true);
+        } else {
+          expect(out[i]).toBe(reference[i]);
+        }
+      }
+    }
   });
 });

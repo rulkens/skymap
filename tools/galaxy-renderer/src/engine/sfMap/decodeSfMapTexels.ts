@@ -7,9 +7,10 @@
  * Same f16-per-lane decode as `decodeOrientationTexels`, generalized to all
  * four channels: that helper drops `.zw` since orientation only ever wants
  * `.xy`, but this map's `dust` channel now lives in the slot `.zw` would
- * have dropped.
+ * have dropped. Runs on every fluid slider tick over 3.1M halves, so the
+ * per-lane decode is a LUT read (`f16ToFloatLut`), not bit-twiddling.
  */
-import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
+import { f16ToFloatLut } from '../../../../../src/utils/math/f16ToFloatLut';
 
 export function decodeSfMapTexels(
   padded: Uint16Array,
@@ -23,10 +24,10 @@ export function decodeSfMapTexels(
     for (let a = 0; a < az; a++) {
       const src = row * rowStrideU16 + a * 4; // 4 u16 lanes/texel
       const dst = (row * az + a) * 4;
-      data[dst] = f16ToFloat(padded[src]!);
-      data[dst + 1] = f16ToFloat(padded[src + 1]!);
-      data[dst + 2] = f16ToFloat(padded[src + 2]!);
-      data[dst + 3] = f16ToFloat(padded[src + 3]!);
+      data[dst] = f16ToFloatLut(padded[src]!);
+      data[dst + 1] = f16ToFloatLut(padded[src + 1]!);
+      data[dst + 2] = f16ToFloatLut(padded[src + 2]!);
+      data[dst + 3] = f16ToFloatLut(padded[src + 3]!);
     }
   }
   return data;
