@@ -22,6 +22,12 @@ export const DEFAULT_UI_STATE: UiState = {
     armField: false,
     armCloud: false,
     hii: false,
+    // Nested under HII REGIONS (CollapsibleSection's `nested` prop) — own
+    // open state so folding the parent doesn't fight these for the same key
+    // (the `armField`/`armCloud` sibling precedent, prefixed instead since
+    // these two are nested rather than siblings).
+    hiiDig: false,
+    hiiAssociations: false,
     // Collapsed for the same reason `hii` is: two calibrated knobs, not the
     // active work.
     starFormation: false,

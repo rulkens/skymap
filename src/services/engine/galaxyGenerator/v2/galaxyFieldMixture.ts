@@ -335,6 +335,13 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // and knots driven by the same automaton run. 0 recovers the arm-ridge
     // catalog byte-identically.
     sfMapSeeding: 1,
+    // >0 out of the box, same "visible by default, calibration is a FEEL
+    // call" reasoning `associations.brightness` below already uses — a shell
+    // tier whose every texture knob does nothing until raised reads as
+    // broken, not neutral.
+    texture: 0.5,
+    textureScale: 1,
+    textureContrast: 1,
     dig: {
       // Mid-range of the observed 30-50% split (docs/research/m74-jwst/
       // 08-realism-notes.md S:B3).
@@ -344,6 +351,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       armBias: 0.6,
       elongation: 3,
       coherence: 0.7,
+      texture: 0.6,
     },
     associations: {
       // >0 so the tier is visible out of the box; a FEEL calibration, not a
@@ -354,6 +362,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       armBias: 0.5,
       elongation: 2.5,
       coherence: 0.6,
+      texture: 0.5,
     },
   },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,

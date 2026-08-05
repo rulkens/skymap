@@ -39,6 +39,7 @@
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { FieldDust } from '../../../@types/engine/FieldDust';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
+import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView + dustDetail. */
 export const FIELD_HEADER_FLOATS = 56;
@@ -66,6 +67,14 @@ const INERT_DUST: FieldDust = {
 };
 
 /**
+ * "This pass draws no HII texture" — scale 0 is what lets splat.wesl's fs
+ * skip the noise sample on a uniform branch (see `FieldHeaderInput`'s
+ * `hiiTexture` doc); contrast 1 is inert but never read while scale gates
+ * the branch closed.
+ */
+const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
+
+/**
  * packFieldHeaderUniforms — one 224-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
  * (createGalaxyEngine's `fieldData`/`hiiData`), so a lane left unwritten
@@ -83,6 +92,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
     sfMapChannels,
   } = input;
   const dust = input.dust ?? INERT_DUST;
+  const hiiTexture = input.hiiTexture ?? NO_HII_TEXTURE;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
   const { view } = cam;
 
@@ -169,10 +179,15 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[50] = 0;
   out[51] = 0;
 
-  // dustDetail 52..55 = (strength, unused, unused, unused).
+  // dustDetail 52..55 = (strength, hiiTextureScale, hiiTextureContrast,
+  // unused). .y/.z are unrelated to S4's own strength lane — they ride this
+  // vec4's two free lanes for the HII tier's tier-global texture modulation
+  // (io.wesl's dustDetail doc); NO_HII_TEXTURE's scale 0 is what lets
+  // splat.wesl's fs skip the noise sample on a uniform branch for every pass
+  // but the HII one.
   out[52] = dust.detail;
-  out[53] = 0;
-  out[54] = 0;
+  out[53] = hiiTexture.scale;
+  out[54] = hiiTexture.contrast;
   out[55] = 0;
 
   return out;
@@ -209,7 +224,9 @@ export function packFieldComponents(
     out[base + 8] = c.color[0];
     out[base + 9] = c.color[1];
     out[base + 10] = c.color[2];
-    out[base + 11] = 0;
+    // textureWeight (io.wesl's comps doc) — 0 (untouched) for every producer
+    // except hiiRegions.ts's pushes.
+    out[base + 11] = c.textureWeight ?? 0;
     out[base + 12] = c.center[0];
     out[base + 13] = c.center[1];
     out[base + 14] = c.center[2];

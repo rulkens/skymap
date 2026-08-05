@@ -50,4 +50,25 @@ export type GalaxyHiiTuning = {
    * nothing standing in for the naked cluster left behind.
    */
   readonly associations: GalaxyHiiAssociationsTuning;
+  /**
+   * 0..1+ how strongly the shell + embedded-cluster sprites are modulated by
+   * the tier-global noise texture (`splat.wesl`'s `hiiNoiseTerm`, the same
+   * baked volume the dust cloud erodes with) — breaks up their circular
+   * Gaussian footprint. 0 (untouched) is NOT the default here; see
+   * `DEFAULT_GALAXY_FIELD_TUNING`.
+   */
+  readonly texture: number;
+  /**
+   * Tier-global: multiplies the noise sample's frequency relative to the
+   * dust noise volume's own tile size (`io.wesl`'s `dustNoise.x`) — 1 samples
+   * at the SAME scale dust erosion does. Shared by every HII group; only
+   * each group's own `texture` weight varies.
+   */
+  readonly textureScale: number;
+  /**
+   * Tier-global: shapes the noise modulation about its own midpoint, mirroring
+   * `dustMap.wesl`'s `dustNoiseMultiplier` contrast exponent. Shared by every
+   * HII group.
+   */
+  readonly textureContrast: number;
 };

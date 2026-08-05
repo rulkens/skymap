@@ -29,4 +29,10 @@ export type GalaxyHiiAssociationsTuning = {
   readonly elongation: number;
   /** 0..1 how strictly a complex's scatter axis follows its local flow direction — same convention `GalaxyHiiDigTuning.coherence` uses. */
   readonly coherence: number;
+  /**
+   * 0..1+ how strongly this tier's blobs are modulated by the HII tier's
+   * shared noise texture — same convention `GalaxyHiiDigTuning.texture` uses,
+   * its own per-group weight.
+   */
+  readonly texture: number;
 };

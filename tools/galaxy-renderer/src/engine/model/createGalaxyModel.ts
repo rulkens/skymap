@@ -15,6 +15,7 @@ import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
 import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
 import type { FieldSliceCounts } from '../../../@types/engine/FieldSliceCounts';
+import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
@@ -131,6 +132,8 @@ export type GalaxyModel = {
   readonly fieldCounts: FieldSliceCounts;
   /** Cached by the dust rebuild — the header reads these every frame, they change only when dust does. */
   readonly dustHeaderLanes: DustHeaderLanes;
+  /** The HII tier's own tier-global texture knobs — cheap to derive, so read straight off `fieldTuning.hii` rather than cached like `dustHeaderLanes`. */
+  readonly hiiTexture: HiiTextureLanes;
   readonly fieldComps: GrowOnlyRecordBuffer;
   readonly hiiComps: GrowOnlyRecordBuffer;
   readonly bubbleComps: GrowOnlyRecordBuffer;
@@ -757,6 +760,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     },
     get dustHeaderLanes(): DustHeaderLanes {
       return dustHeaderLanes;
+    },
+    get hiiTexture(): HiiTextureLanes {
+      // `?? 0`/`?? 1`: same stale-stored-tuning guard `hiiRegions.ts` applies
+      // at its own per-group `texture` reads — a preset saved before this
+      // knob existed carries an `hii` object with no `textureScale`/
+      // `textureContrast` keys.
+      return {
+        scale: fieldTuning.hii.textureScale ?? 0,
+        contrast: fieldTuning.hii.textureContrast ?? 1,
+      };
     },
     fieldComps,
     hiiComps,

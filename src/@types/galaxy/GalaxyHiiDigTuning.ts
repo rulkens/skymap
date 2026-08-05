@@ -38,4 +38,10 @@ export type GalaxyHiiDigTuning = {
    * complex.
    */
   readonly coherence: number;
+  /**
+   * 0..1+ how strongly this veil's blobs are modulated by the HII tier's
+   * shared noise texture (`GalaxyHiiTuning.texture`'s own doc) — its own
+   * per-group weight, independent of the shell tier's.
+   */
+  readonly texture: number;
 };

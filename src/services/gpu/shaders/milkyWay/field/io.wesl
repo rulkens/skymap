@@ -27,7 +27,7 @@
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
 //   offset 192 : bubbleView: vec4 (intensity, unused, unused, unused)
-//   offset 208 : dustDetail: vec4 (strength, unused, unused, unused)
+//   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, unused)
 //   total: 224 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
@@ -131,10 +131,23 @@
 // at that splat's closest-approach point — applied once, at ACCUMULATION, so
 // it parallaxes with the splats instead of stamping one flat pattern across
 // the whole depth column. Both consumers (splat.wesl, dustPresent.wesl) see
-// it through the column with no second read; 0 disables it. .yzw reserved
-// like counts2.x. The accumulation multiply scales its deviation by a
-// mean-1 sample of the baked noise volume so the 2D map's contrast doesn't
-// extrude into vertical curtains (dustMap.wesl).
+// it through the column with no second read; 0 disables it. The
+// accumulation multiply scales its deviation by a mean-1 sample of the baked
+// noise volume so the 2D map's contrast doesn't extrude into vertical
+// curtains (dustMap.wesl).
+//
+// .yz are unrelated to S4 — they ride this vec4's two free lanes only
+// because they were free, not because they are "dust detail": hiiTextureScale/
+// hiiTextureContrast are the HII tier's own tier-global noise-modulation knobs
+// (GalaxyHiiTuning.textureScale/textureContrast), read by splat.wesl's
+// hiiNoiseTerm for EVERY HII draw's fragments regardless of which group
+// (shell/DIG/associations) a component belongs to — only each component's own
+// comps[4i+2].w (textureWeight) varies per group. hiiTextureScale 0 is what
+// lets the shader skip the noise sample entirely via a uniform branch — the
+// primary field pass packs 0 here always, since its own components never
+// carry a nonzero textureWeight, so the far larger disc/arms fragment count
+// never pays for a sample it would just multiply by zero. .w reserved like
+// counts2.x.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -157,13 +170,16 @@
 // exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre:
 //   [4i]   = (m00, m11, m22, amplitude)
 //   [4i+1] = (m01, m02, m12, boundRadius)
-//   [4i+2] = (colorR, colorG, colorB, unused)
+//   [4i+2] = (colorR, colorG, colorB, textureWeight)
 //   [4i+3] = (cx, cy, cz, unused)
 // Six independent M entries, not three sigmas and a tilt: a component's own
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
 // boundRadius (world-space max sigma, warp-inflated — see
-// GalaxyFieldComponent) sizes splat.wesl's per-instance quad.
+// GalaxyFieldComponent) sizes splat.wesl's per-instance quad. textureWeight
+// (GalaxyFieldComponent's own field) is 0 (untouched) for every producer
+// except hiiRegions.ts's pushes — splat.wesl's fs mixes it against
+// hiiNoiseTerm (see dustDetail's own doc above).
 //
 // Dust components (past dustOffset) reuse this exact 4-vec4 record with two
 // re-readings, not two new lanes: [4i].w (amplitude for emission) is the
@@ -177,8 +193,9 @@
 // primary. The law splat.wesl uses instead arrives per-frame, in this
 // header's own dustExtinction lane below. [4i+1].w (boundRadius) and
 // [4i+3].xyz (center) mean the same thing they do for an emission
-// component. Dust components are consumed by dustMap.wesl's own splat pass
-// now, not looped over inside splat.wesl's fs — see binding 2.
+// component; [4i+2].w (textureWeight) is left 0, since dust never sets it.
+// Dust components are consumed by dustMap.wesl's own splat pass now, not
+// looped over inside splat.wesl's fs — see binding 2.
 //
 // DUST MAP (binding 2) — the screen-space depth-sliced optical-depth
 // accumulation dustMap.wesl splats the PRIMARY galaxy's dust into,
@@ -238,13 +255,15 @@ struct FieldUniforms {
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
 @group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
-// Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) — ONLY
-// dustMap.wesl imports these two. Every pipeline here uses 'layout: auto'
-// (createGalaxyEngine.ts), which derives a bind-group layout from the
-// bindings the SHADER actually references, so splat.wesl (importing
-// 'u'/'comps'/'dustMapTex') never gains entries 4/5 — each pipeline's bind
-// group stays exactly the bindings its own shader references, unaffected by
-// this file growing.
+// Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) —
+// dustMap.wesl's own erosion term AND splat.wesl's hiiNoiseTerm both import
+// these two (the latter is what lets HII sprites share dust's ISM texture
+// rather than baking a second volume). Every pipeline here uses
+// 'layout: auto' (createGalaxyEngine.ts), which derives a bind-group layout
+// from the bindings the SHADER actually references, so a pipeline whose
+// module does not import a binding never gains its entry — each pipeline's
+// bind group stays exactly the bindings its own shader references,
+// unaffected by this file growing.
 @group(0) @binding(4) var dustNoiseTex: texture_3d<f32>;
 @group(0) @binding(5) var dustNoiseSmp: sampler;
 // Binding 6: dustMapTex's own sampler — ONLY splat.wesl imports it (see the

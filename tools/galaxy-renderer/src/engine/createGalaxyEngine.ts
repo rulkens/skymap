@@ -620,9 +620,10 @@ export async function createGalaxyEngine(
   //    a group built from one pipeline's layout fails another's draw-time
   //    compatibility check even for byte-identical WGSL. Hence four groups for
   //    three pipelines, with different binding sets: dustNoiseTex/Smp (4/5)
-  //    and the dustDetail lane (3/7/8/9) only where dustMap.wesl imports
-  //    them, dustMapSmp (6) only where splat.wesl samples `dustMapTex`
-  //    through a filtered UV.
+  //    everywhere splat.wesl OR dustMap.wesl imports them (both do now — the
+  //    former for hiiNoiseTerm, the HII texture-breakup term), the dustDetail
+  //    lane (3/7/8/9) only where dustMap.wesl imports it, dustMapSmp (6) only
+  //    where splat.wesl samples `dustMapTex` through a filtered UV.
   //  - A group holds the EXACT GPUBuffer/GPUTexture objects it names. So each
   //    is a `let` + a builder, and the resource owns the rebuild: the model's
   //    two `onRegrow` hooks above for the comps buffers, and
@@ -658,6 +659,14 @@ export async function createGalaxyEngine(
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 1, resource: { buffer: model.fieldComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
+        // Bindings 4/5: dustNoiseTex/dustNoiseSampler — splat.wesl's fs now
+        // imports these for hiiNoiseTerm (the HII texture-breakup term), the
+        // SAME resources dustMapBG binds for the dust cloud's own erosion.
+        // The field draw's own components never carry a nonzero
+        // textureWeight, so this pass reads them but never samples them
+        // (dustDetail.y is packed 0 here — see packFieldHeaderUniforms).
+        { binding: 4, resource: dustNoiseTex.createView() },
+        { binding: 5, resource: dustNoiseSampler },
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
         // dustMapTex's own declaration comment for why the divisors split).
@@ -691,6 +700,10 @@ export async function createGalaxyEngine(
   // branch never triggers — HII does not (yet) darken under the lane it may
   // sit inside. No 3/7/8/9 here either, for the same reason `splatBG` has
   // none: `splatPipe`'s shader (splat.wesl) no longer references dustDetail.
+  // Bindings 4/5 (dustNoiseTex/dustNoiseSampler) ARE bound and DO get
+  // sampled here — this header's own `dustDetail.y`/`.z` carry the real
+  // tier-global texture scale/contrast (`model.hiiTexture`), unlike
+  // `splatBG`'s.
   let hiiBG: GPUBindGroup;
   function buildHiiBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -700,6 +713,8 @@ export async function createGalaxyEngine(
         { binding: 0, resource: { buffer: hiiUbo } },
         { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
+        { binding: 4, resource: dustNoiseTex.createView() },
+        { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },
       ],
     });
@@ -1011,6 +1026,10 @@ export async function createGalaxyEngine(
         emissionCount: model.hiiComps.count,
         primaryCount: 0,
         targetSizePx: targets.reducedSize(render.hiiDivisor),
+        // The tier-global texture scale/contrast — see `hiiTexture`'s own
+        // doc for why only THIS header (never the field one above) carries
+        // real values.
+        hiiTexture: model.hiiTexture,
         debugViews,
         galaxyWeight,
         sfMapChannels,

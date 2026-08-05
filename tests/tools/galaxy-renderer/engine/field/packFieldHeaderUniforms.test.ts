@@ -72,6 +72,7 @@ const input: FieldHeaderInput = {
     activityWeight: 23002,
     dustWeight: 23003,
   },
+  hiiTexture: { scale: 25000, contrast: 25001 },
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -121,6 +122,11 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // with the next vec4.
     expect(observed(23003)).toBe(at('sfMapChannels') + 12);
     expect(observed(24000)).toBe(at('dustDetail'));
+    // dustDetail.y/.z are the HII tier's own tier-global texture scale/
+    // contrast, unrelated to S4's own strength lane at .x — they ride this
+    // vec4's two free lanes (io.wesl's dustDetail doc).
+    expect(observed(25000)).toBe(at('dustDetail') + 4);
+    expect(observed(25001)).toBe(at('dustDetail') + 8);
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {
@@ -131,7 +137,10 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // `dst` is a scratch reused across frames and headers, so a skipped write
     // would ship the previous pass's dust to a pass that has none.
     const dst = new Float32Array(FIELD_HEADER_FLOATS).fill(-999);
-    const { dust: _omitted, ...noDust } = input;
+    // `hiiTexture` omitted too — the field pass packs both `dust` and
+    // `hiiTexture` inert, and this is the one call that pins BOTH defaults
+    // land without clobbering each other in the shared `dustDetail` vec4.
+    const { dust: _omittedDust, hiiTexture: _omittedHiiTexture, ...noDust } = input;
     packFieldHeaderUniforms(noDust, dst);
     const four = (byteOffset: number) => [...dst.slice(byteOffset / 4, byteOffset / 4 + 4)];
 
@@ -142,6 +151,10 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // first and raises `pow` to the second.
     expect(four(at('dustNoise'))).toEqual([1, 0, 0, 1]);
     expect(four(at('dustSlices'))).toEqual([0, 0, 0, 0]);
-    expect(four(at('dustDetail'))).toEqual([0, 0, 0, 0]);
+    // .x (S4 strength) is 0 like every other inert dust lane; .y (hiiTexture
+    // scale) is 0 too, but .z (hiiTexture contrast) is 1, not 0 — same
+    // "the neutral value, not zero" reasoning `dustNoise`'s tileUnits/
+    // contrastExp lanes use just above.
+    expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
   });
 });

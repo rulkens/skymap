@@ -33,6 +33,8 @@ import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::io::dustMapTex;
 import package::milkyWay::field::io::dustMapSmp;
+import package::milkyWay::field::io::dustNoiseTex;
+import package::milkyWay::field::io::dustNoiseSmp;
 
 // sliceTransmitRatio — (1 - exp(-x)) / x per channel, the exact closed form
 // for emission spread UNIFORMLY through a homogeneous slab of per-channel
@@ -49,6 +51,24 @@ fn sliceTransmitRatio(x: vec3<f32>) -> vec3<f32> {
   let safe = max(x, thin);
   let ratio = (vec3<f32>(1.0) - exp(-safe)) / safe;
   return select(ratio, vec3<f32>(1.0), x < thin);
+}
+
+// hiiNoiseTerm — breaks up an HII sprite's circular Gaussian footprint by
+// reusing the SAME baked ridged-noise volume the dust cloud erodes with
+// (dustNoiseTex/dustNoiseSmp), so shells/DIG/associations pick up the ISM
+// texture their nearby dust already has rather than a second, uncorrelated
+// pattern. 'scale' multiplies the sampling frequency relative to the dust
+// volume's own tile size (u.dustNoise.x); 'contrast' is the same signed-power
+// shaping dustMap.wesl's dustNoiseMultiplier applies about the noise's own
+// ~0.5 midpoint. Returns a mean-~1 multiplier; the caller mixes it against
+// the component's own textureWeight, so weight 0 is exactly "untouched"
+// regardless of scale/contrast.
+fn hiiNoiseTerm(p: vec3<f32>, scale: f32, contrast: f32) -> f32 {
+  let tileUnits = u.dustNoise.x / max(scale, 1e-4);
+  let n = textureSampleLevel(dustNoiseTex, dustNoiseSmp, p / tileUnits, 0.0).x;
+  let s = 2.0 * n - 1.0;
+  let shaped = sign(s) * pow(abs(s), contrast);
+  return max(0.0, 1.0 + shaped);
 }
 
 struct SplatOut {
@@ -200,6 +220,26 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   if (!dustApplies) {
     emission = g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
   }
+
+  // HII texture breakup: g2.w is comp.textureWeight (io.wesl's comps doc), 0
+  // everywhere except hiiRegions.ts's pushes. dustDetail.y (the tier-global
+  // scale) is packed 0 for every draw but the HII pass, so this branch is
+  // UNIFORM across the whole draw call — the far more numerous primary
+  // disc/arm fragments (dustDetail.y == 0 there) skip the sample outright
+  // rather than compute a modulation that mix() would discard anyway.
+  var texMod = 1.0;
+  if (u.dustDetail.y > 0.0 && g2.w > 0.0) {
+    let tc = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);
+    if (tc.x >= 1e-12) {
+      // o + d*tPeak is this component's own closest-approach point, the
+      // same choice dustMap.wesl's fs makes for its erosion/S4 samples —
+      // sampling at a shared plane instead would make the texture read as a
+      // flat decal rather than something living IN the sprite as it parallaxes.
+      let tPeak = max(-tc.y / tc.x, 0.0);
+      texMod = mix(1.0, hiiNoiseTerm(o + d * tPeak, u.dustDetail.y, u.dustDetail.z), g2.w);
+    }
+  }
+  emission = emission * texMod;
 
   // Alpha 0: the aggregate's alpha channel feeds nothing — the additive
   // upsample folds it into HDR and the compositor forces 1.0 — and a quad

@@ -458,6 +458,10 @@ function buildDigVeil(
   const rng = mulberry32(seed ^ DIG_SALT);
   const digAmplitudeBase = digTotalFlux / totalChildren;
   const digColor = geometry.hiiPalette.halo;
+  // Stale-stored-tuning guard, same discipline `dig.armBias` et al. already
+  // get from this function's own `!dig` early-return — a preset saved before
+  // this knob existed carries a `dig` object with no `texture` key.
+  const digTextureWeight = dig.texture ?? 0;
 
   const out: GalaxyFieldComponent[] = [];
   for (let c = 0; c < complexes; c++) {
@@ -496,6 +500,7 @@ function buildDigVeil(
         color: digColor,
         center: [x, height, z],
         boundRadius: sigma,
+        textureWeight: digTextureWeight,
       });
     }
   }
@@ -588,6 +593,8 @@ function buildBlueAssociations(
 
   const rng = mulberry32(seed ^ ASSN_SALT);
   const amplitudeBase = assnTotalFlux / totalChildren;
+  // Stale-stored-tuning guard, same discipline `buildDigVeil` uses for `dig.texture`.
+  const assnTextureWeight = assn.texture ?? 0;
 
   const out: GalaxyFieldComponent[] = [];
   for (let c = 0; c < complexes; c++) {
@@ -624,6 +631,7 @@ function buildBlueAssociations(
         color: associationChildColor(rng),
         center: [x, height, z],
         boundRadius: sigma,
+        textureWeight: assnTextureWeight,
       });
     }
   }
@@ -668,6 +676,9 @@ export function buildHiiRegions(
   const rng = mulberry32(seed ^ 0x48494920); // "HII "
   const clusterShare =
     Math.min(1, Math.max(0, tuning.hii.clusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
+  // Stale-stored-tuning guard, same discipline `sfMapSeeding` uses just
+  // above: a preset saved before this knob existed carries no `texture` key.
+  const shellTextureWeight = tuning.hii.texture ?? 0;
   const out: GalaxyFieldComponent[] = [];
 
   // Accumulated in the SAME currency the shell/cluster amplitudes below are
@@ -701,6 +712,7 @@ export function buildHiiRegions(
             region.center[2] + dir[2] * r,
           ],
           boundRadius: sigma,
+          textureWeight: shellTextureWeight,
         });
       }
     }
@@ -721,6 +733,7 @@ export function buildHiiRegions(
             region.center[2] + dir[2] * r,
           ],
           boundRadius: sigma,
+          textureWeight: shellTextureWeight,
         });
       }
     }
