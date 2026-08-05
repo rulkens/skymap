@@ -1006,6 +1006,10 @@ export async function createGalaxyEngine(
         debugViews,
         galaxyWeight,
         sfMapChannels,
+        // sfMapPresent.wesl binds ONLY this header (createSfMapAutomaton.ts's
+        // presentBindGroup) — the HII header below omits this and packs the
+        // seeding lanes inert.
+        sfMapSeeding: model.sfMapSeedingView,
       },
       fieldData,
     );

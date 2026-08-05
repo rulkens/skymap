@@ -130,6 +130,11 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   sfMapRecentWeight: 1,
   sfMapActivityWeight: 1,
   sfMapDustWeight: 1,
+  // 0, unlike the four raw-channel weights above: this is a composite
+  // overlay (the exact placement density), not a raw channel, so "identity
+  // until touched" here means dark rather than 1 — see `RenderSettings.
+  // sfMapSeedingViewWeight`.
+  sfMapSeedingViewWeight: 0,
   // 0 at boot, same rationale as the other two debug-view crossfades — and
   // the pass gate: the placement rebuild only runs while this is above 0
   // (see createGalaxyModel.ts's rebuildBubblePlacements).

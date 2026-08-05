@@ -74,6 +74,7 @@ const input: FieldHeaderInput = {
     dustWeight: 23003,
   },
   hiiTexture: { scale: 25000, contrast: 25001 },
+  sfMapSeeding: { weight: 27000, meanLegacy: 27001, meanOvershoot: 27002 },
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -117,6 +118,12 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // bubble view needs a vec4 of its own.
     expect(observed(22000)).toBe(at('debugView') + 12);
     expect(observed(21003)).toBe(at('bubbleView'));
+    // bubbleView.yzw are the seeding view's own weight/meanLegacy/
+    // meanOvershoot (io.wesl's bubbleView doc) — free lanes claimed
+    // alongside the bubble intensity at .x, not a fourth debug view.
+    expect(observed(27000)).toBe(at('bubbleView') + 4);
+    expect(observed(27001)).toBe(at('bubbleView') + 8);
+    expect(observed(27002)).toBe(at('bubbleView') + 12);
     expect(observed(23000)).toBe(at('sfMapChannels'));
     // sfMapChannels.w was the header's one slack scalar — dustWeight now
     // fills it, so this pins it stays put rather than silently colliding
@@ -141,10 +148,16 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // `dst` is a scratch reused across frames and headers, so a skipped write
     // would ship the previous pass's dust to a pass that has none.
     const dst = new Float32Array(FIELD_HEADER_FLOATS).fill(-999);
-    // `hiiTexture` omitted too — the field pass packs both `dust` and
-    // `hiiTexture` inert, and this is the one call that pins BOTH defaults
-    // land without clobbering each other in the shared `dustDetail` vec4.
-    const { dust: _omittedDust, hiiTexture: _omittedHiiTexture, ...noDust } = input;
+    // `hiiTexture`/`sfMapSeeding` omitted too — the HII pass packs `dust` and
+    // `sfMapSeeding` inert (sfMapPresent.wesl binds only the field header),
+    // and this is the one call that pins every default lands without
+    // clobbering another in a shared vec4.
+    const {
+      dust: _omittedDust,
+      hiiTexture: _omittedHiiTexture,
+      sfMapSeeding: _omittedSfMapSeeding,
+      ...noDust
+    } = input;
     packFieldHeaderUniforms(noDust, dst);
     const four = (byteOffset: number) => [...dst.slice(byteOffset / 4, byteOffset / 4 + 4)];
 
@@ -160,5 +173,8 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // "the neutral value, not zero" reasoning `dustNoise`'s tileUnits/
     // contrastExp lanes use just above.
     expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
+    // .x (bubble intensity, from `debugViews`, still supplied) stays;
+    // .yzw (the seeding lanes) are inert.
+    expect(four(at('bubbleView'))).toEqual([21003, 0, 0, 0]);
   });
 });

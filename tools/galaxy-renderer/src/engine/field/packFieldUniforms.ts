@@ -40,6 +40,7 @@ import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/Gala
 import type { FieldDust } from '../../../@types/engine/FieldDust';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
+import type { SfMapSeedingLanes } from '../../../@types/engine/SfMapSeedingLanes';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView + dustDetail. */
 export const FIELD_HEADER_FLOATS = 56;
@@ -76,6 +77,9 @@ const INERT_DUST: FieldDust = {
  */
 const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 
+/** "This pass has no seeding overlay" — the HII header packs this; only the field header (sfMapPresent.wesl's own bind group) ever passes real lanes. */
+const INERT_SF_MAP_SEEDING: SfMapSeedingLanes = { weight: 0, meanLegacy: 0, meanOvershoot: 0 };
+
 /**
  * packFieldHeaderUniforms — one 224-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
@@ -95,6 +99,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   } = input;
   const dust = input.dust ?? INERT_DUST;
   const hiiTexture = input.hiiTexture ?? NO_HII_TEXTURE;
+  const sfMapSeeding = input.sfMapSeeding ?? INERT_SF_MAP_SEEDING;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
   const { view } = cam;
 
@@ -175,11 +180,14 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[46] = sfMapChannels.activityWeight;
   out[47] = sfMapChannels.dustWeight;
 
-  // bubbleView 48..51 = (intensity, unused, unused, unused).
+  // bubbleView 48..51 = (intensity, sfMapSeedingWeight, sfMapSeedingMeanLegacy,
+  // sfMapSeedingMeanOvershoot). .yzw ride bubbleView's free lanes for the same
+  // reason dustDetail's .yz do (io.wesl's doc) — sfMapPresent.wesl's "seeding"
+  // debug view, dust-seeding spike.
   out[48] = debugViews.bubble;
-  out[49] = 0;
-  out[50] = 0;
-  out[51] = 0;
+  out[49] = sfMapSeeding.weight;
+  out[50] = sfMapSeeding.meanLegacy;
+  out[51] = sfMapSeeding.meanOvershoot;
 
   // dustDetail 52..55 = (strength, hiiTextureScale, hiiTextureContrast,
   // sweptMix). .y/.z are unrelated to S4's own strength lane — they ride this

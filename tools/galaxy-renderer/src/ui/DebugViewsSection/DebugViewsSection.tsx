@@ -97,6 +97,17 @@ function DebugViewsSection(): ReactNode {
           info="Isolates the conserved dust channel (the packed texel's own .w lane, since 9aa9fe5d): swept dust, unclamped past ambient — rims legitimately overshoot to the 8.0 ceiling. Teal-green. Lower the weight to bring rim overshoot back into a readable range."
         />
         <ParamSlider
+          label="SF map · seeding"
+          value={render.sfMapSeedingViewWeight}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ sfMapSeedingViewWeight: v }))}
+          path="render.sfMapSeedingViewWeight"
+          info="NOT a channel isolation like the four above — this is the exact composite density dust placement consumes: mix(legacy/meanLegacy, overshoot/meanOvershoot, sweptMix). Shows what the raw channels can't: an ambient pedestal glows teal in the dust channel above without contributing any placement mass. Warm-white. Shows the density BEFORE texel-area weighting — the CDF multiplies by area, so outer texels weigh more in placement than they glow here."
+        />
+        <ParamSlider
           label={DEBUG_VIEWS.orientation.label}
           value={render.orientationViewIntensity}
           min={0}

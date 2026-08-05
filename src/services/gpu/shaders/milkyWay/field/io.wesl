@@ -26,7 +26,7 @@
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
-//   offset 192 : bubbleView: vec4 (intensity, unused, unused, unused)
+//   offset 192 : bubbleView: vec4 (intensity, sfMapSeedingWeight, sfMapSeedingMeanLegacy, sfMapSeedingMeanOvershoot)
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, sweptMix)
 //   total: 224 bytes.
 //
@@ -123,7 +123,14 @@
 // so the two can be compared directly. Not folded into debugView: that vec4
 // is full (dust/sfMap/orientation/galaxyWeight), and reusing
 // sfMapChannels.w would name a bubble weight after an unrelated automaton
-// channel. Only .x is live; .yzw are reserved the same way counts2.x is.
+// channel. Only .x is bubblePresent.wesl's own; .yzw are sfMapPresent.wesl's
+// "seeding" debug view (dust-seeding spike) — the exact composite density
+// dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
+// .y is the view's own weight (CPU-forced to 0, view dark, when there is no
+// map or both means below are 0 — createGalaxyModel.ts's sfMapSeedingView),
+// .z/.w are meanSfMapChannel's legacy/overshoot means, computed off the SAME
+// functions (sfMapDustDensity, sweptDustOvershoot) the placement CDF uses, so
+// this view cannot drift from what placement actually consumes.
 //
 // dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
 // (dustDetail.wesl) multiplies each dust splat's own slices by the SF map's

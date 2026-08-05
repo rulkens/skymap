@@ -18,6 +18,12 @@ import package::milkyWay::field::io::u;
 
 const PI: f32 = 3.14159265358979;
 
+// Mirrors sweptDustOvershoot.ts's export — parity-tested in
+// constants.parity.test.ts alongside its other three WESL mirrors. Needed
+// here to reconstruct 'overshoot' below from the raw dust channel this
+// shader already reads.
+const SF_MAP_AMBIENT_DUST: f32 = 1.0;
+
 // rMin/rMax: the log-radial bounds THIS galaxy's grid was built over
 // (galaxySfMapArmForcing.ts's sfMapGridRadius) — written once per
 // rebuildSfMap, not every frame like io.wesl's 'u' above.
@@ -104,7 +110,31 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.sfMapChannels.z;
   let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.sfMapChannels.y;
   let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.sfMapChannels.w;
-  let color = (gasColor + oldColor + recentColor + dustColor) * edgeFade;
+
+  // The fifth, composite term: NOT another raw-channel isolation like the
+  // four above — this is the exact density dustParticleCloud.ts's S1 CDF
+  // sampler places from, 'mix(legacy/meanLegacy, overshoot/meanOvershoot,
+  // sweptMix)', so seeding can be judged directly instead of inferred from
+  // channels an ambient pedestal can glow in without contributing placement
+  // mass. bubbleView.z/.w are the CPU's meanSfMapChannel means (0 when no map
+  // has landed yet); the same epsilon-guard semantics as the CPU
+  // (sweptDustOvershoot.ts / dustParticleCloud.ts) apply per-term here, NOT
+  // just at the CPU's own weight-forcing guard — 'mix' would otherwise carry
+  // a NaN from a zero-mean division through even at a zero blend fraction.
+  // Shown BEFORE texel-area weighting: the CDF multiplies by area, so outer
+  // texels weigh more in placement than they glow here.
+  let legacyDensity = gas * old; // sfMapDustDensity(gas, oldActivity) mirrored inline
+  let overshoot = max(0.0, dust - SF_MAP_AMBIENT_DUST);
+  let meanLegacy = u.bubbleView.z;
+  let meanOvershoot = u.bubbleView.w;
+  let legacyTerm = select(0.0, legacyDensity / meanLegacy, meanLegacy > 0.0);
+  let overshootTerm = select(0.0, overshoot / meanOvershoot, meanOvershoot > 0.0);
+  let seedingDensity = mix(legacyTerm, overshootTerm, u.dustDetail.w);
+  // Warm-white, deliberately brighter/cooler than recentColor's near-white so
+  // the composite reads as its own layer rather than blending into recentSf.
+  let seedingColor = vec3<f32>(1.4, 1.3, 1.15) * seedingDensity * u.bubbleView.y;
+
+  let color = (gasColor + oldColor + recentColor + dustColor + seedingColor) * edgeFade;
 
   // debugView.y is this view's own crossfade weight (io.wesl's debugView
   // doc), same role as dustPresent.wesl's debugView.x multiply.
