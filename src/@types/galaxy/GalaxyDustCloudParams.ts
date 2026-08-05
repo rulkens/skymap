@@ -27,4 +27,11 @@ export type GalaxyDustCloudParams = {
   readonly textureScale: number;
   /** Shapes the erosion noise about its own midpoint — 1 = identity, higher = harder filament edges (dustMap.wesl's `dustNoiseMultiplier`). */
   readonly textureContrast: number;
+  /**
+   * S4 strength — how strongly the SF map's detail ratio (map density over
+   * its 8-texel blur) modulates each cloud's column at accumulation
+   * (dustMap.wesl via the header's dustDetail lane). 0 disables the whole
+   * path (the shader skips it), 1 = full ratio, up to 2 extrapolates.
+   */
+  readonly mapDetail: number;
 };

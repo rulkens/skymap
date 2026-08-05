@@ -26,4 +26,6 @@ export type FieldDust = {
    * it (io.wesl's counts2.y doc).
    */
   readonly mapHeightPx: number;
+  /** The cloud's `mapDetail`, packed to the header's dustDetail lane. */
+  readonly detail: number;
 };

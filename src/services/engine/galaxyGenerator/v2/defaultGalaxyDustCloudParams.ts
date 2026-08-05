@@ -20,4 +20,7 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   texture: 0.45,
   textureScale: 1,
   textureContrast: 1,
+  // Off while the automaton is being improved — the term amplifies whatever
+  // the map shows.
+  mapDetail: 0,
 };

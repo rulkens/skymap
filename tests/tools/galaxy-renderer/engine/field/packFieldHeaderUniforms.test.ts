@@ -62,11 +62,11 @@ const input: FieldHeaderInput = {
     noise: { tileUnits: 18000, amplitude: 18001, cloudOffset: 18002, contrastExp: 18003 },
     slices: { t1: 19000, t2: 19001, t3: 19002 },
     mapHeightPx: 16000,
+    detail: 24000,
   },
   debugViews: { dust: 21000, sfMap: 21001, orientation: 21002, bubble: 21003 },
   galaxyWeight: 22000,
   sfMapChannels: { gasWeight: 23000, recentSfWeight: 23001, activityWeight: 23002 },
-  dustDetail: 24000,
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -133,5 +133,6 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // first and raises `pow` to the second.
     expect(four(at('dustNoise'))).toEqual([1, 0, 0, 1]);
     expect(four(at('dustSlices'))).toEqual([0, 0, 0, 0]);
+    expect(four(at('dustDetail'))).toEqual([0, 0, 0, 0]);
   });
 });

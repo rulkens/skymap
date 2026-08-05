@@ -85,14 +85,6 @@ export type RenderSettings = {
    */
   readonly dustViewIntensity: number;
   /**
-   * S4 strength for the SF-map high-pass (0 = splat column alone, 1 = full
-   * detail ratio, >1 extrapolates). Applied per dust splat at accumulation
-   * (dustMap.wesl), at that splat's own closest-approach point, so both the
-   * JWST view's presented column and the normal view's dust attenuation
-   * inherit it through the map — no per-consumer read.
-   */
-  readonly dustDetailStrength: number;
-  /**
    * SF-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
    * log-polar output alone, same seam as `dustViewIntensity`. The automaton
    * seeds the dust placement and the orientation field, so this is the view

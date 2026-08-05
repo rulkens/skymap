@@ -976,9 +976,10 @@ export async function createGalaxyEngine(
         targetSizePx: targets.reducedSize(render.fieldDivisor),
         dust: {
           count: model.fieldCounts.dust,
-          // Both cached by rebuildDustMixture, not recomputed per frame.
+          // All three cached by rebuildDustMixture, not recomputed per frame.
           extinctionRgb: model.dustHeaderLanes.extinctionRgb,
           noise: model.dustHeaderLanes.noise,
+          detail: model.dustHeaderLanes.detail,
           // VIEW-dependent, unlike every other lane in this bag.
           slices: dustSlices,
           mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
@@ -989,7 +990,6 @@ export async function createGalaxyEngine(
         debugViews,
         galaxyWeight,
         sfMapChannels,
-        dustDetail: render.dustDetailStrength,
       },
       fieldData,
     );
@@ -1014,7 +1014,6 @@ export async function createGalaxyEngine(
         debugViews,
         galaxyWeight,
         sfMapChannels,
-        dustDetail: 0,
       },
       hiiData,
     );

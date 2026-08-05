@@ -20,4 +20,9 @@ export type DustHeaderLanes = {
    * IS camera-dependent, so this is the galaxy half of that pair.
    */
   readonly reachR: number;
+  /**
+   * The cloud's S4 map-detail strength (`dust.cloud.mapDetail`), packed to
+   * the header's dustDetail lane. 0 while dust is off, same gate as `noise`.
+   */
+  readonly detail: number;
 };

@@ -61,6 +61,8 @@ const INERT_DUST: FieldDust = {
   noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
   slices: { t1: 0, t2: 0, t3: 0 },
   mapHeightPx: 0,
+  // A pass with no dust has nothing for the map to modulate.
+  detail: 0,
 };
 
 /**
@@ -79,7 +81,6 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
     debugViews,
     galaxyWeight,
     sfMapChannels,
-    dustDetail,
   } = input;
   const dust = input.dust ?? INERT_DUST;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -169,7 +170,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[51] = 0;
 
   // dustDetail 52..55 = (strength, unused, unused, unused).
-  out[52] = dustDetail;
+  out[52] = dust.detail;
   out[53] = 0;
   out[54] = 0;
   out[55] = 0;

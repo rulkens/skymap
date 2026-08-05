@@ -133,6 +133,17 @@ function DustCloudSection(): ReactNode {
           path="galaxy.dust.cloud.textureContrast"
           info="Shapes the noise about its midpoint, so higher values harden filament edges while leaving the mean — and the tier's share of the optical depth — unchanged."
         />
+        <ParamSlider
+          label="Map detail"
+          value={cloud.mapDetail}
+          min={0}
+          max={2}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ mapDetail: v })}
+          path="galaxy.dust.cloud.mapDetail"
+          info="S4: modulates each cloud's column by the SF map's detail ratio at accumulation, per splat (parallax-correct, column-preserving vertical noise breakup). 0 disables the path entirely; 1 = full ratio."
+        />
       </div>
     </CollapsibleSection>
   );
