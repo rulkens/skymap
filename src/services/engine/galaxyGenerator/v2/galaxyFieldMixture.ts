@@ -335,6 +335,9 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // and knots driven by the same automaton run. 0 recovers the arm-ridge
     // catalog byte-identically.
     sfMapSeeding: 1,
+    // Mid-range of the observed 30-50% split (docs/research/m74-jwst/
+    // 08-realism-notes.md S:B3).
+    diffuse: 0.35,
   },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
 };

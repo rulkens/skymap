@@ -100,6 +100,17 @@ function HiiSection(): ReactNode {
           path="fieldTuning.hii.sfMapSeeding"
           info="Fraction of HII events placed from the SF-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
         />
+        <ParamSlider
+          label="Diffuse glow"
+          value={hii.diffuse}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchHii({ diffuse: v })}
+          path="fieldTuning.hii.diffuse"
+          info="Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an SF map; 0 skips the veil."
+        />
       </div>
     </CollapsibleSection>
   );

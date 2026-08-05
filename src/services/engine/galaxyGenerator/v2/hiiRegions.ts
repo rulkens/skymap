@@ -23,6 +23,7 @@ import { armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
+import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleSfMapEventPosition';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
@@ -65,6 +66,23 @@ const CLUSTER_SPREAD_RATIO = 0.12;
 
 /** Cluster's ceiling share of a region's own flux at `clusterStrength` 1 — a bright core, not a rival to the shell. */
 const CLUSTER_FLUX_SHARE_MAX = 0.2;
+
+/**
+ * Diffuse ionized gas (DIG) veil — see `GalaxyHiiTuning.diffuse`'s doc for
+ * the observational anchor. A fixed-count group pushed AFTER the catalog
+ * regions, not a per-region add-on: DIG isn't tied to any one HII event, it
+ * is a separate haze the arms and knots sit inside.
+ */
+export const DIG_SPRITE_COUNT = 150;
+/** Per-blob sigma range, parsecs — wide enough that 150 blobs read as a continuous wash rather than a second population of dots (no blur pass; this range IS the smoothing). */
+const DIG_SIGMA_MIN_PC = 100;
+const DIG_SIGMA_MAX_PC = 300;
+/** Extraplanar DIG stands well above the disc a razor-thin HII shell sits in (Haffner+2009 review). */
+const DIG_SCALE_HEIGHT_PC = 300;
+/** Ceiling on `diffuse / (1 - diffuse)` so a `diffuse` near 1 saturates the veil instead of diverging it. */
+const DIG_FLUX_RATIO_MAX = 4;
+/** Dedicated rng stream salt for the DIG veil draws — distinct from "SFMP"/"HII "/"DUST"/"ARMC". */
+const DIG_SALT = 0x44494720; // "DIG "
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
@@ -252,10 +270,17 @@ export function buildHiiRegions(
     Math.min(1, Math.max(0, tuning.hii.clusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
   const out: GalaxyFieldComponent[] = [];
 
+  // Accumulated in the SAME currency the shell amplitude below is drawn
+  // from (flux, pre-division-by-sprite-count) — the DIG veil's total flux
+  // is anchored to this sum, not to `totalFlux`, because the cluster share
+  // is stellar continuum (`HII_CLUSTER_COLOR`), not Hα.
+  let shellFluxSum = 0;
+
   for (const region of regions) {
     const regionFlux = (totalFlux * region.luminosity) / luminositySum;
     const clusterFlux = region.clusterCount > 0 ? regionFlux * clusterShare : 0;
     const shellFlux = regionFlux - clusterFlux;
+    shellFluxSum += shellFlux;
 
     if (region.shellCount > 0 && shellFlux > 0) {
       const sigma = region.radius * SHELL_SPRITE_SIGMA_RATIO;
@@ -295,6 +320,44 @@ export function buildHiiRegions(
           ],
           boundRadius: sigma,
         });
+      }
+    }
+  }
+
+  // DIG veil — a fixed-count group placed independently of the catalog
+  // regions above, so `diffuse` never perturbs which regions were admitted
+  // or where they sit. The SF map is the substrate this tier reads from
+  // (`oldActivity`, the automaton's long-run occupancy channel); without one
+  // handed in, the veil would decorrelate from every other map-seeded
+  // feature, so it pushes nothing rather than fall back to some other
+  // placement law. `diffuse ?? 0` mirrors `applySfMapSeeding`'s guard for
+  // stale stored tuning that predates this field.
+  const diffuse = Math.min(0.999, Math.max(0, tuning.hii.diffuse ?? 0));
+  if (diffuse > 0 && sfMap) {
+    const cdf = buildSfMapDustCdf(sfMap, (_gas, _recentSf, oldActivity) => oldActivity);
+    if (cdf.total > 0) {
+      const digRatio = Math.min(DIG_FLUX_RATIO_MAX, diffuse / (1 - diffuse));
+      const digTotalFlux = digRatio * shellFluxSum;
+      if (digTotalFlux > 0) {
+        const digRng = mulberry32(seed ^ DIG_SALT);
+        const digAmplitudeBase = digTotalFlux / DIG_SPRITE_COUNT;
+        const digColor = geometry.hiiPalette.halo;
+        for (let i = 0; i < DIG_SPRITE_COUNT; i++) {
+          const center = sampleSfMapEventPosition(cdf, geometry, digRng);
+          const sigma = pcToUnits(
+            DIG_SIGMA_MIN_PC + (DIG_SIGMA_MAX_PC - DIG_SIGMA_MIN_PC) * digRng(),
+          );
+          // On top of the warp lift `sampleSfMapEventPosition` already applied —
+          // extraplanar DIG stands thicker off the disc than a single HII shell.
+          const height = center[1] + gaussian(digRng) * pcToUnits(DIG_SCALE_HEIGHT_PC);
+          out.push({
+            amplitude: digAmplitudeBase / (TAU_ROOT3 * sigma * sigma * sigma),
+            ...inverseCovarianceFromFrame(ISO_FRAME, { along: sigma, across: sigma, pole: sigma }),
+            color: digColor,
+            center: [center[0], height, center[2]],
+            boundRadius: sigma,
+          });
+        }
       }
     }
   }
