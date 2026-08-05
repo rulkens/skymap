@@ -1,7 +1,7 @@
 /**
  * sfMapActivityHistogramHarness — measures the claim behind S4's density
- * product (dust = gas x oldActivity x texelArea): does the automaton's
- * oldActivity EMA clamp at 1.0 on arm crests while interarm stays low, and
+ * product (dust = gas x activity x texelArea): does the automaton's
+ * activity EMA clamp at 1.0 on arm crests while interarm stays low, and
  * does that concentrate the CDF's mass in the arms? Runs the REAL
  * `createSfMapAutomatonRunner` (no CPU re-port of the shader) over the
  * shipped `DEFAULT_GALAXY_FIELD_TUNING` and the Milky Way's own geometry —
@@ -10,7 +10,7 @@
  * rather than `sfMapPercolationHarness.ts`'s synthetic uniform-forcing grid,
  * since the question here is what the REAL ridge does, not the bare
  * automaton. Automaton-specific by design (the fluid generator has no
- * `oldActivity` EMA claim to measure this way), so it drives
+ * `activity` EMA claim to measure this way), so it drives
  * `createSfMapAutomatonRunner` directly rather than the generator dispatcher.
  *
  * Page entry, like `sfMapPercolationEntry.ts`: hangs itself on `globalThis`
@@ -63,20 +63,20 @@ function percentileOf(sortedAsc: Float64Array, p: number): number {
   return sortedAsc[idx]!;
 }
 
-/** oldActivity's [0,1] clamp survives the rgba16float switch (sfMapPack.wesl keeps it, unlike dust) — an f16 1.0 and 0.0 are both exact, so frac255/frac0 below still land on the real saturation, not a decode artifact. */
+/** activity's [0,1] clamp survives the rgba16float switch (sfMapPack.wesl keeps it, unlike dust) — an f16 1.0 and 0.0 are both exact, so frac255/frac0 below still land on the real saturation, not a decode artifact. */
 function computeStat(
   label: string,
-  oldActivity: readonly number[],
+  activity: readonly number[],
   gas: readonly number[],
   mass: number,
   totalMass: number,
 ): PopulationStat {
-  const n = oldActivity.length;
-  const sorted = Float64Array.from(oldActivity).sort();
+  const n = activity.length;
+  const sorted = Float64Array.from(activity).sort();
   const gasSorted = Float64Array.from(gas).sort();
   let frac255 = 0;
   let frac0 = 0;
-  for (const v of oldActivity) {
+  for (const v of activity) {
     if (v === 1) frac255++;
     if (v === 0) frac0++;
   }
@@ -277,16 +277,16 @@ export async function runSfMapActivityHistogram(
     texelAreaByRing[ring] = 0.5 * dTheta * (rOuter * rOuter - rInner * rInner);
   }
 
-  const oldActivityAll: number[] = new Array(CELL_COUNT);
+  const activityAll: number[] = new Array(CELL_COUNT);
   const gasAll: number[] = new Array(CELL_COUNT);
   const dustAll: number[] = new Array(CELL_COUNT);
   const byPop: Record<
     Population,
-    { oldActivity: number[]; gas: number[]; dust: number[]; mass: number }
+    { activity: number[]; gas: number[]; dust: number[]; mass: number }
   > = {
-    crest: { oldActivity: [], gas: [], dust: [], mass: 0 },
-    interarm: { oldActivity: [], gas: [], dust: [], mass: 0 },
-    other: { oldActivity: [], gas: [], dust: [], mass: 0 },
+    crest: { activity: [], gas: [], dust: [], mass: 0 },
+    interarm: { activity: [], gas: [], dust: [], mass: 0 },
+    other: { activity: [], gas: [], dust: [], mass: 0 },
   };
   let totalMass = 0;
 
@@ -296,15 +296,15 @@ export async function runSfMapActivityHistogram(
     for (let az = 0; az < SF_MAP_AZ; az++) {
       const i = rowBase + az;
       const gas = packed[i * 4]!;
-      const oldActivity = packed[i * 4 + 2]!;
+      const activity = packed[i * 4 + 2]!;
       const dust = packed[i * 4 + 3]!;
-      oldActivityAll[i] = oldActivity;
+      activityAll[i] = activity;
       gasAll[i] = gas;
       dustAll[i] = dust;
-      const mass = sfMapDustDensity(gas, oldActivity) * area;
+      const mass = sfMapDustDensity(gas, activity) * area;
       totalMass += mass;
       const pop = classify(forcing[i]!);
-      byPop[pop].oldActivity.push(oldActivity);
+      byPop[pop].activity.push(activity);
       byPop[pop].gas.push(gas);
       byPop[pop].dust.push(dust);
       byPop[pop].mass += mass;
@@ -312,16 +312,16 @@ export async function runSfMapActivityHistogram(
   }
 
   const stats = [
-    computeStat('all', oldActivityAll, gasAll, totalMass, totalMass),
-    computeStat('crest', byPop.crest.oldActivity, byPop.crest.gas, byPop.crest.mass, totalMass),
+    computeStat('all', activityAll, gasAll, totalMass, totalMass),
+    computeStat('crest', byPop.crest.activity, byPop.crest.gas, byPop.crest.mass, totalMass),
     computeStat(
       'interarm',
-      byPop.interarm.oldActivity,
+      byPop.interarm.activity,
       byPop.interarm.gas,
       byPop.interarm.mass,
       totalMass,
     ),
-    computeStat('other', byPop.other.oldActivity, byPop.other.gas, byPop.other.mass, totalMass),
+    computeStat('other', byPop.other.activity, byPop.other.gas, byPop.other.mass, totalMass),
   ];
 
   const dustStats = [
@@ -332,7 +332,7 @@ export async function runSfMapActivityHistogram(
   ];
 
   const lines: string[] = [];
-  lines.push('SF-map oldActivity / dust-mass histogram');
+  lines.push('SF-map activity / dust-mass histogram');
   lines.push(
     `  adapter: ${`${info.vendor ?? '?'}/${info.architecture ?? '?'} ${info.device ?? ''} ${info.description ?? ''}`.trim()}`,
   );

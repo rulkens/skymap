@@ -34,11 +34,11 @@ describe('decodeSfMapTexels', () => {
     ];
     for (let row = 0; row < rings; row++) {
       for (let a = 0; a < az; a++) {
-        const [gas, recentSf, oldActivity, dust] = texels[row]![a]!;
+        const [gas, recentSf, activity, dust] = texels[row]![a]!;
         const base = row * rowStrideU16 + a * 4;
         padded[base] = floatToF16(gas);
         padded[base + 1] = floatToF16(recentSf);
-        padded[base + 2] = floatToF16(oldActivity);
+        padded[base + 2] = floatToF16(activity);
         padded[base + 3] = floatToF16(dust);
       }
       // Row-padding texel: a stride bug that used the tight (unpadded)

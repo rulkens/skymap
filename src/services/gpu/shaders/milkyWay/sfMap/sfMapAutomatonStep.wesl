@@ -2,21 +2,21 @@
 // cellular automaton (Gerola & Seiden 1978, ApJ 223, 129) on a fixed
 // log-polar grid. Renamed from sfMapStep.wesl now that a second, independent
 // generator exists (sfMapFluidStep.wesl) — see that file's header for the
-// alternative. State (gas, age, dust, an old-activity EMA) ping-pongs
-// between two storage textures; the automaton runner dispatches one 'cs' per
-// step, in ONE compute pass, never per frame. MATERIAL (Lagrangian) frame: a
-// cell's state lives at its own texel forever, never resampled (see
-// selfState below) — only the neighbour lookup and arm-forcing sample drift
-// with shear. sfMapPack.wesl un-shears back to world coordinates once, at
-// the end. Grid is UNIFORM log-polar (1536 az x 512 ring), not Gerola &
-// Seiden's own equal-area cells.
+// alternative. State (x=gas, y=eventAge, z=activity, w=dust — see
+// GalaxySfMap.ts's contract table) ping-pongs between two storage textures;
+// the automaton runner dispatches one 'cs' per step, in ONE compute pass,
+// never per frame. MATERIAL (Lagrangian) frame: a cell's state lives at its
+// own texel forever, never resampled (see selfState below) — only the
+// neighbour lookup and arm-forcing sample drift with shear. sfMapPack.wesl
+// un-shears back to world coordinates once, at the end. Grid is UNIFORM
+// log-polar (1536 az x 512 ring), not Gerola & Seiden's own equal-area cells.
 //
-// The z slot used to hold a refractory countdown; it is DERIVABLE as
-// max(0, refractorySteps - age) (age already resets to 0 on ignition and
-// counts up every step since), so z is free for the conserved dust channel
-// the snowplough rule (docs/research/m74-jwst/06-ca-dust-channel-sketch.md)
-// transports. Dust is NEVER clamped — colliding shells summing past ambient
-// IS the rim/filament feature, not overflow to correct.
+// The refractory countdown is DERIVABLE as max(0, refractorySteps -
+// eventAge) (eventAge resets to 0 on ignition, counts up every step since),
+// so it is never stored as its own slot — freeing state for the dust
+// snowplough rule (docs/research/m74-jwst/06-ca-dust-channel-sketch.md)
+// transports. Dust (w) is NEVER clamped — colliding shells summing past
+// ambient IS the rim/filament feature, not overflow to correct.
 
 import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;
 
@@ -32,7 +32,7 @@ struct SfMapConstants {
   refractorySteps: f32,
   seed: f32,
   armFluxRef: f32,
-  // 'oldActivity' trace decay/gain — see GalaxySfMapAutomatonParams.ts for
+  // 'activity' trace decay/gain — see GalaxySfMapAutomatonParams.ts for
   // the steady-state derivation; formerly baked-in consts, now sliders.
   activityDecay: f32,
   activityGain: f32,
@@ -108,8 +108,8 @@ fn armForcingAt(ring: u32, azF: f32, azCount: u32) -> f32 {
 }
 
 // Exact texel read of a NEIGHBOUR, rounded to the nearest whole texel — no
-// bilinear blend of the (unbounded) age channel, which is what let a lone
-// ignited cell go invisible to its neighbours before (research doc).
+// bilinear blend of the (unbounded) eventAge channel, which is what let a
+// lone ignited cell go invisible to its neighbours before (research doc).
 fn neighbourAt(nRing: u32, azF: f32, azCount: u32) -> vec4<f32> {
   let a = u32(round(wrapAz(azF, azCount))) % azCount;
   return textureLoad(prevTex, vec2<i32>(i32(a), i32(nRing)), 0);
@@ -133,11 +133,11 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Step 0 has no meaningful previous state — prevTex is whatever the OTHER
   // ping-pong texture last held (possibly a prior generation's stale
   // content) — so it is seeded here instead of standing up a separate init
-  // pass. Full gas, age far past any decay window, ambient dust (1.0 — same
-  // simplification as the flat gas seed; a radial disc profile is future
-  // work, see 06-ca-dust-channel-sketch.md landmine 4).
+  // pass. Full gas, eventAge far past any decay window, ambient dust (1.0 —
+  // same simplification as the flat gas seed; a radial disc profile is
+  // future work, see 06-ca-dust-channel-sketch.md landmine 4).
   if (genStep == 0u) {
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, SF_MAP_AMBIENT_DUST, 0.0));
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, 0.0, SF_MAP_AMBIENT_DUST));
     return;
   }
 
@@ -145,12 +145,12 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // never resample — see this file's header). No shear, no blend.
   let selfState = textureLoad(prevTex, vec2<i32>(i32(az), i32(ring)), 0);
   let gas = selfState.x;
-  let age = selfState.y;
-  let dust = selfState.z;
-  let oldActivity = selfState.w;
+  let eventAge = selfState.y;
+  let activity = selfState.z;
+  let dust = selfState.w;
   // Derived, not stored — see this file's header. A cell that just ignited
-  // (age 0) is refractory for exactly refractorySteps generations.
-  let refractory = max(0.0, u.refractorySteps - age);
+  // (eventAge 0) is refractory for exactly refractorySteps generations.
+  let refractory = max(0.0, u.refractorySteps - eventAge);
 
   // Moore (8-cell) neighbourhood, but adjacency is now a WORLD-frame
   // relation: solving nextTex[x] = prevTex[x - shear] (the OLD Eulerian
@@ -165,10 +165,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // set evolve over time — the paper's actual mechanism (research doc §19).
   var ignitedNeighbours = 0.0;
   // Gather form (docs/research/m74-jwst/06-ca-dust-channel-sketch.md): a
-  // neighbour with prevTex age == 0 ignited LAST step and sweeps THIS step
-  // (see 'ownDust' below) — same loop, same fetch ignitedNeighbours already
-  // needs. neighbour.z is still its PRE-sweep dust, so the swept share is
-  // computed here: (1 - dustFloorFraction) of it, split 8 ways.
+  // neighbour with prevTex eventAge == 0 ignited LAST step and sweeps THIS
+  // step (see 'ownDust' below) — same loop, same fetch ignitedNeighbours
+  // already needs. neighbour.w is still its PRE-sweep dust, so the swept
+  // share is computed here: (1 - dustFloorFraction) of it, split 8 ways.
   var receivedDust = 0.0;
   let shearAtRing = shearTexels(ring, ringCount, azCount);
   for (var dr = -1; dr <= 1; dr++) {
@@ -189,7 +189,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
       let neighbour = neighbourAt(nRing, f32(i32(az) + da) + relShear, azCount);
       if (neighbour.y == 0.0) {
         ignitedNeighbours += 1.0;
-        receivedDust += neighbour.z * (1.0 - u.dustFloorFraction) / 8.0;
+        receivedDust += neighbour.w * (1.0 - u.dustFloorFraction) / 8.0;
       }
     }
   }
@@ -217,15 +217,15 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   // Snowplough, one step deferred (06-ca-dust-channel-sketch.md): ignition
   // leaves dust UNCHANGED (ignite branch below — the front hasn't swept
-  // yet); the sweep lands on THIS cell's own NEXT update, gated on age ==
-  // 0.0 — the same "ignited last step" test the neighbour loop reads via
+  // yet); the sweep lands on THIS cell's own NEXT update, gated on eventAge
+  // == 0.0 — the same "ignited last step" test the neighbour loop reads via
   // neighbour.y == 0.0, off the SAME prevTex snapshot. Debit (ownDust) and
   // credit (receivedDust, above) are one transfer seen from both ends, so
   // sweeping is conservative by construction, not by the ceiling below.
-  // (Refractory means age == 0.0 can't re-ignite this step, so the select
-  // only ever fires in the non-ignite branch — written unconditionally so
-  // the arithmetic doesn't depend on that staying true.)
-  let ownDust = select(dust, dust * u.dustFloorFraction, age == 0.0);
+  // (Refractory means eventAge == 0.0 can't re-ignite this step, so the
+  // select only ever fires in the non-ignite branch — written
+  // unconditionally so the arithmetic doesn't depend on that staying true.)
+  let ownDust = select(dust, dust * u.dustFloorFraction, eventAge == 0.0);
   // Two honest leaks remain: a grid-edge ring skips out-of-range dr without
   // rebalancing the /8 divisor (that share is lost off-disc), and
   // DUST_OVERSHOOT_CEILING still clips collided totals above it.
@@ -236,15 +236,15 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     next = vec4<f32>(
       0.0,
       0.0,
+      activity * u.activityDecay + u.activityGain,
       nextDust,
-      oldActivity * u.activityDecay + u.activityGain,
     );
   } else {
     next = vec4<f32>(
       min(1.0, gas + u.gasRegen),
-      age + 1.0,
+      eventAge + 1.0,
+      activity * u.activityDecay,
       nextDust,
-      oldActivity * u.activityDecay,
     );
   }
   textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), next);

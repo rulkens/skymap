@@ -371,7 +371,7 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               format={(v) => v.toFixed(2)}
               onChange={(v) => patchFluid({ emaRate: v })}
               path="fieldTuning.sfMapFluid.emaRate"
-              info="Blend rate of the per-texel oldActivity trace toward this step's event intensity (w' = mix(w, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
+              info="Blend rate of the per-texel activity trace toward this step's event intensity (z' = mix(z, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
             />
             <ParamSlider
               label="Arm gather"

@@ -39,7 +39,7 @@ import type { GalaxySfMapDustCdf } from '../../@types/galaxy/GalaxySfMapDustCdf'
 export type SfMapDensityTexel = {
   gas: number;
   recentSf: number;
-  oldActivity: number;
+  activity: number;
   dust: number;
 };
 
@@ -56,7 +56,7 @@ export function buildSfMapDustCdf(
   // only reads these fields synchronously inside its `density` callback and
   // never stores the record itself, so mutating it in place is safe; see the
   // type's own doc for the contract this relies on.
-  const texel: SfMapDensityTexel = { gas: 0, recentSf: 0, oldActivity: 0, dust: 0 };
+  const texel: SfMapDensityTexel = { gas: 0, recentSf: 0, activity: 0, dust: 0 };
 
   let total = 0;
   for (let ring = 0; ring < rings; ring++) {
@@ -68,7 +68,7 @@ export function buildSfMapDustCdf(
       const angle = (azIdx + 0.5) * dTheta;
       texel.gas = data[i]!;
       texel.recentSf = data[i + 1]!;
-      texel.oldActivity = data[i + 2]!;
+      texel.activity = data[i + 2]!;
       texel.dust = data[i + 3]!;
       const d = density(texel, radius, angle);
       total += d * texelArea;

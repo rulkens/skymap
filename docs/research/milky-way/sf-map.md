@@ -213,7 +213,7 @@ the real edge sits at 0.231.
 DYNAMICS.** The automaton's own activity at 0.164 is 2.4e-3 of cells per step,
 a twentieth of the 4.6e-2 it reaches at 0.30 — nothing is saturated. INFERRED,
 from the display saturation recorded further down this section: what the tuner
-saw was `oldActivity` pinning to flat white at a healthy duty cycle under the
+saw was `activity` pinning to flat white at a healthy duty cycle under the
 then-current GAIN of 0.35. That is the one mechanism already on record which
 produces "saturated" at a `spread` the dynamics are nowhere near.
 
@@ -284,7 +284,7 @@ saturated whatever `spread` did. It is a bias, not a driver; past ~0.06 it
 drives.
 
 **A display saturation hides behind the dynamical one, and it is not
-cosmetic.** `oldActivity` is an EMA, `w * DECAY + GAIN` on ignition, and
+cosmetic.** `activity` is an EMA, `w * DECAY + GAIN` on ignition, and
 `sfMapPack` clamps it to [0,1]. Steady state for a cell igniting every T steps
 is `GAIN/(1 - DECAY^T)`. At DECAY 0.985 and GAIN 0.35 that pins at 1.0 for any
 T below ~28, while refractory 7 plus gas recovery gives T ~ 17 — so the channel
@@ -360,7 +360,7 @@ it as bytes. Both are now `rgba16float` too, decoded via the existing
 orientation chain — no new bit-twiddling code, see `decodeSfMapTexels.ts`).
 Every `/255`, `*255` and implicit [0,1] byte-quantization assumption in
 `sampleGalaxySfMap.ts`, `buildSfMapDustCdf.ts` and the histogram harness is
-gone. `oldActivity`'s `[0,1]` clamp in `sfMapPack.wesl` is KEPT — it bounds a
+gone. `activity`'s `[0,1]` clamp in `sfMapPack.wesl` is KEPT — it bounds a
 real EMA, not a format artifact — but nothing new is clamped.
 
 **DECISION: the freed refractory slot carries a conserved, transported dust
@@ -387,5 +387,5 @@ makes; a radial disc profile is future work (06's landmine 4).
 `dustFloorFraction` ships at 0.2, eyeballed (06 gives no number) — the one
 live-tunable slider this change adds, in SF MAP's own UI section. Downstream
 dust SEEDING (`sfMapDustDensity`, `dustDetail.wesl`) still reads `gas x
-oldActivity`, not the new dust channel — re-keying that read is 06's own
+activity`, not the new dust channel — re-keying that read is 06's own
 "downstream" consequence, deliberately deferred past this change.

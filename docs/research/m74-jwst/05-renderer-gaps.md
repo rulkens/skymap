@@ -12,7 +12,7 @@ event-catalog bubble carving this doc treats as the live mechanism is now a
 **debug overlay only** (`rebuildBubblePlacements` gates on
 `bubbleViewIntensity`; `dustParticleCloud.ts`'s header: "No cavity carving
 here any more"). The live dust is `buildDustParticleCloud` seeded from the SF
-map (`gas × oldActivity`), with NO cavity mechanism at all yet — which makes
+map (`gas × activity`), with NO cavity mechanism at all yet — which makes
 the Tier-1 rim/wall/floor gaps _stronger_, not weaker: cavities and rims are
 both waiting on the map (see [06-ca-dust-channel-sketch.md](06-ca-dust-channel-sketch.md)
 and [07-sprite-seeding.md](07-sprite-seeding.md)). The HII knot tier still reads the

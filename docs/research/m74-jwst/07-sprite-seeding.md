@@ -13,7 +13,7 @@ Constraint from the user: whatever changes, per-frame cost must not grow.
    (double-angle × coherence, f32).
 2. ≤40k particles in complexes of `1 + 15·clumpiness` children. The COMPLEX
    centre is the only thing that reads the map density: 24 uniform proposals
-   over the annulus, rejection-sampled against `gas × oldActivity`
+   over the annulus, rejection-sampled against `gas × activity`
    (normalised by grid max), best-of-24 fallback.
 3. The complex frame is rotated toward the orientation field once, at the
    complex centre, coherence-weighted. Children scatter around it as a fixed
@@ -47,7 +47,7 @@ cannot express "thin where coherent".
 centre inherit one texel's orientation; filament curvature inside a complex is
 lost, so even well-placed children cross their own wall.
 
-**M5 — 8-bit saturation flattens placement inside walls.** `oldActivity`'s
+**M5 — 8-bit saturation flattens placement inside walls.** `activity`'s
 EMA pins at 1.0 over active regions (the display-saturation trap sf-map.md
 already records); density becomes a plateau there, so placement within a
 saturated wall complex is uniform — no ridge-line preference.
@@ -127,7 +127,7 @@ fidelity work could silently cost per-frame time; gate it with `npm run perf`
 before/after per the perf skill.
 
 **S6 — if wall placement still looks plateau-flat after S1–S3:** the fix is
-at the PACK, not the sampler — log-encode or rescale `oldActivity` so walls
+at the PACK, not the sampler — log-encode or rescale `activity` so walls
 keep gradient (same landmine as the dust-channel sketch's clamp note), or
 widen the readback to 16-bit. 8-bit is fine once the channel isn't pinned.
 
@@ -141,7 +141,7 @@ render round splats.
 
 Structural weaknesses (all input-side, not tensor-side):
 
-1. It differentiates `oldActivity`, whose EMA pins at 1.0 over active
+1. It differentiates `activity`, whose EMA pins at 1.0 over active
    regions — and flat-white ≡ black to a structure tensor (zero gradient,
    coherence 0) exactly on the structures that need orientation. A starved
    input, not an estimator defect (sf-map.md's display-saturation trap).
@@ -220,7 +220,7 @@ the tool's debug-view crossfade against the map overlay; S4 is a shader
 change with a natural first home in the JWST view; S5/S6 are gated
 follow-ups. When the CA grows the conserved dust channel
 ([06-ca-dust-channel-sketch.md](06-ca-dust-channel-sketch.md)), only the density
-callback changes (`dust` channel instead of `gas × oldActivity`) — the CDF
+callback changes (`dust` channel instead of `gas × activity`) — the CDF
 sampler, streamline children and per-child modulation all carry over
 unchanged. That decoupling is the argument for doing the seeding work first:
 it improves fidelity now and becomes the delivery mechanism for the rims and

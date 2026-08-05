@@ -3,7 +3,7 @@
  * (io.wesl's `sfMapChannels`), orthogonal to `debugViews.sfMap` (the whole
  * view's crossfade weight) — sfMapPresent.wesl's palette sums all four
  * channels, so with no per-channel control there was no way to tell gas from
- * oldActivity from recentSf from dust. Each field names what the automaton channel MEANS,
+ * activity from recentSf from dust. Each field names what the automaton channel MEANS,
  * not just that it's a weight — see `RenderSettings`'s own docblocks for the
  * same four explained from the slider side.
  */

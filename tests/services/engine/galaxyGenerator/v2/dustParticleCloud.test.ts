@@ -21,14 +21,14 @@ const MAP_AZ = 32;
 const MAP_RINGS = 16;
 const MAP_R_MIN = 0.5;
 
-/** A busy, non-degenerate legacy density (gas x oldActivity varies per texel) so the CDF is never flat; `dustValue` is constant everywhere. */
+/** A busy, non-degenerate legacy density (gas x activity varies per texel) so the CDF is never flat; `dustValue` is constant everywhere. */
 function makeMap(dustValue: number): GalaxySfMap {
   const data = new Float32Array(MAP_RINGS * MAP_AZ * 4);
   for (let i = 0; i < data.length; i += 4) {
     const idx = i / 4;
     data[i] = 0.3 + (0.5 * ((idx * 7) % 11)) / 11; // gas
     data[i + 1] = 0.2; // recentSf, unread by sfMapDustDensity
-    data[i + 2] = 0.4 + (0.4 * ((idx * 13) % 9)) / 9; // oldActivity
+    data[i + 2] = 0.4 + (0.4 * ((idx * 13) % 9)) / 9; // activity
     data[i + 3] = dustValue;
   }
   return { az: MAP_AZ, rings: MAP_RINGS, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
@@ -68,7 +68,7 @@ describe('buildDustParticleCloud', () => {
     for (let i = 0; i < data.length; i += 4) {
       data[i] = 0.15; // gas
       data[i + 1] = 0.2; // recentSf
-      data[i + 2] = 0.15; // oldActivity -> legacy baseline 0.0225
+      data[i + 2] = 0.15; // activity -> legacy baseline 0.0225
       data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
     }
     const ringA = 4;
@@ -79,15 +79,15 @@ describe('buildDustParticleCloud', () => {
     const setTexel = (
       ring: number,
       azIdx: number,
-      patch: Partial<Record<'gas' | 'oldActivity' | 'dust', number>>,
+      patch: Partial<Record<'gas' | 'activity' | 'dust', number>>,
     ): void => {
       const base = (ring * az + azIdx) * 4;
       if (patch.gas !== undefined) data[base] = patch.gas;
-      if (patch.oldActivity !== undefined) data[base + 2] = patch.oldActivity;
+      if (patch.activity !== undefined) data[base + 2] = patch.activity;
       if (patch.dust !== undefined) data[base + 3] = patch.dust;
     };
     setTexel(ringA, azA, { dust: 1.5 }); // hot in the SWEPT channel's OVERSHOOT only (0.5 above ambient)
-    setTexel(ringB, azB, { gas: 20, oldActivity: 20 }); // hot in the LEGACY product only (400)
+    setTexel(ringB, azB, { gas: 20, activity: 20 }); // hot in the LEGACY product only (400)
     const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
 
     const centerOf = (ring: number, azIdx: number): { x: number; z: number } => {
@@ -118,7 +118,7 @@ describe('buildDustParticleCloud', () => {
   });
 
   it('zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {
-    // makeMap's legacy channel (gas x oldActivity) is busy/non-degenerate,
+    // makeMap's legacy channel (gas x activity) is busy/non-degenerate,
     // but its dust channel is a flat SF_MAP_AMBIENT_DUST (1.0) — no texel
     // has swept past ambient, so meanOvershoot is exactly 0 and density is 0
     // for every texel: `buildSfMapDustCdf`'s total comes out 0, and

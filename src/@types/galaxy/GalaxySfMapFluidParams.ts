@@ -34,7 +34,7 @@ export type GalaxySfMapFluidParams = {
   readonly corotationRadius: number;
   /** Gas relaxation rate toward 1.0 per step, applied AFTER advection — this generator's own copy, same role as `GalaxySfMapAutomatonParams.gasRegen`. */
   readonly gasRegen: number;
-  /** Blend rate of the per-texel `oldActivity` trace toward this step's event intensity (`w' = mix(w, eventStamp, emaRate)`) — an EMA, not the automaton's decay+gain pair. */
+  /** Blend rate of the per-texel `activity` trace toward this step's event intensity (`w' = mix(w, eventStamp, emaRate)`) — an EMA, not the automaton's decay+gain pair. */
   readonly emaRate: number;
   /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field the automaton samples (`galaxySfMapArmForcing.ts`), read here as a texture instead of biasing event placement. Damped by `sfMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
   readonly armGather: number;

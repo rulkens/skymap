@@ -22,7 +22,7 @@ export function meanSfMapChannel(
     sum += extract({
       gas: data[base]!,
       recentSf: data[base + 1]!,
-      oldActivity: data[base + 2]!,
+      activity: data[base + 2]!,
       dust: data[base + 3]!,
     });
   }

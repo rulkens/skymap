@@ -97,14 +97,14 @@ export type GalaxySfMapAutomatonParams = {
    */
   readonly armFluxRef: number;
   /**
-   * Per-step multiplier on the accumulated `oldActivity` trace. At 1.0 the
+   * Per-step multiplier on the accumulated `activity` trace. At 1.0 the
    * channel integrates the FULL run ("everywhere a front passed"); below
    * that it is an EMA whose half-life is `ln(0.5)/ln(decay)` steps, so 0.985
    * forgets within ~46.
    */
   readonly activityDecay: number;
   /**
-   * Added to `oldActivity` on each ignition. The channel clamps to [0,1],
+   * Added to `activity` on each ignition. The channel clamps to [0,1],
    * and its steady state for a cell firing every T steps is
    * `gain / (1 - decay^T)` — gain and decay are NOT independent: raising
    * decay toward 1 demands a much smaller gain or the channel saturates to

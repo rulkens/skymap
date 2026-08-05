@@ -129,7 +129,7 @@ describe('buildHiiRegions', () => {
 
   it('armBias 1 pulls DIG complexes onto the arm envelope, closer than armBias 0 on the identical map', () => {
     // armBias no longer forks a second, analytic arm-lane placement — it
-    // reweights the SAME `oldActivity` CDF every complex draws from toward
+    // reweights the SAME `activity` CDF every complex draws from toward
     // `buildArmProximityEnvelope`'s arm-proximity kernel (`hiiRegions.ts`'s
     // `armBiasedDensity`). `makeBusyMap` is uniform, so any difference in
     // cross-arm distance between armBias 0/1 comes from that reweighting
@@ -228,9 +228,9 @@ describe('buildHiiRegions', () => {
   });
 
   it('associations concentrate on a swept old-activity texel and skip a fresh-ignition one', () => {
-    // Both texels carry equal oldActivity; only the hot one's recentSf
+    // Both texels carry equal activity; only the hot one's recentSf
     // differs — isolates the suppression term from a bare "follows
-    // oldActivity" placement.
+    // activity" placement.
     const az = 32;
     const rings = 16;
     const hotRing = 2;
@@ -240,9 +240,9 @@ describe('buildHiiRegions', () => {
     const data = new Float32Array(rings * az * 4);
     const hotI = (hotRing * az + hotAz) * 4;
     data[hotI + 1] = 1; // recentSf: fresh ignition
-    data[hotI + 2] = 1; // oldActivity: same magnitude as the swept texel
+    data[hotI + 2] = 1; // activity: same magnitude as the swept texel
     const oldI = (oldRing * az + oldAz) * 4;
-    data[oldI + 2] = 1; // oldActivity only: swept clear, not currently igniting
+    data[oldI + 2] = 1; // activity only: swept clear, not currently igniting
     const map: GalaxySfMap = { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
 
     const tuningOn = {

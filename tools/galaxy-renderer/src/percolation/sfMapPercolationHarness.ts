@@ -84,11 +84,12 @@ fn cs(
  * other texel as it stands, which is what makes a single-cell initial
  * condition reachable without forking `sfMapAutomatonStep.wesl`.
  *
- * z used to be an explicit refractory countdown this pass had to set
- * alongside age; `sfMapAutomatonStep.wesl` now DERIVES refractory from age alone
- * (06-ca-dust-channel-sketch.md), so age=0 here is already sufficient — z is
- * the dust channel today, and dust never feeds ignition probability, so its
- * seed value is inert for this harness's percolation measurement.
+ * The state texel used to carry an explicit refractory countdown this pass
+ * had to set alongside age; `sfMapAutomatonStep.wesl` now DERIVES refractory
+ * from eventAge alone (06-ca-dust-channel-sketch.md), so eventAge=0 here is
+ * already sufficient — neither activity nor dust (see GalaxySfMap.ts's
+ * contract table) feeds ignition probability, so their seed values are inert
+ * for this harness's percolation measurement.
  */
 const SEED_CELL_WGSL = /* wgsl */ `
 struct SeedCell { az: f32, ring: f32, pad0: f32, pad1: f32 }

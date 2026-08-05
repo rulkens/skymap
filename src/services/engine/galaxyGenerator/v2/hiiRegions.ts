@@ -257,7 +257,7 @@ let seedingCdfCache: CachedCdf | null = null;
  * moving the `sfMapSeeding` slider only ever changes which regions swap
  * centres, never the rng draws (and hence positions) of the ones that don't.
  *
- * Weighted by `recentSf` alone, not `sfMapDustDensity`'s `gas x oldActivity`:
+ * Weighted by `recentSf` alone, not `sfMapDustDensity`'s `gas x activity`:
  * ignition zeroes gas and age in the same cell, so this is anti-correlated
  * with the dust CDF by construction — knots avoid the dust the automaton
  * just cleared, the same decorrelation M74 shows (Chevance+2020).
@@ -304,7 +304,7 @@ type DigSeedFrame = {
 
 /**
  * A DIG or association complex CDF-sampled from its tier's own map density
- * (`buildDigVeil`'s `oldActivity` CDF, `buildBlueAssociations`'s
+ * (`buildDigVeil`'s `activity` CDF, `buildBlueAssociations`'s
  * `associationDensity` one) — the ONE substrate every complex draws from.
  * `armBias` no longer forks this into a second, arm-lane placement path (see
  * `buildArmProximityEnvelope`): it reweights the CDF itself before this ever
@@ -432,7 +432,7 @@ function scatterAxesForCoherence(
 /**
  * buildDigVeil — the DIG tier's own complex/children placement (see
  * `GalaxyHiiDigTuning`): `dig.complexes` seeds CDF-sampled from the map's
- * `oldActivity` channel (`armBias` reweights that SAME CDF toward the arm
+ * `activity` channel (`armBias` reweights that SAME CDF toward the arm
  * envelope rather than forking a second placement path — see
  * `buildArmProximityEnvelope`), each scattering `dig.childrenPerComplex`
  * blobs area-preservingly along/across its local flow direction
@@ -440,7 +440,7 @@ function scatterAxesForCoherence(
  * aspect convention (`along = spread*sqrt(e)`, `across = spread/sqrt(e)`).
  *
  * Gated (and its rng stream only consulted) when `dig.fraction > 0`, a map
- * is handed in, and that map's `oldActivity` CDF has nonzero mass — same
+ * is handed in, and that map's `activity` CDF has nonzero mass — same
  * discipline `buildHiiRegions`' old inline block used. Total flux is
  * anchored to `shellFluxSum` (the shell tier's own flux, not `totalFlux`),
  * because the cluster share folded into `totalFlux` is stellar continuum,
@@ -474,7 +474,7 @@ function buildDigVeil(
   digCdfCache = cachedCdf(digCdfCache, [sfMap, geometry, tuning.arms.widthScale, armBias], () => {
     const envelope = buildArmProximityEnvelope(geometry, tuning);
     return buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
-      armBiasedDensity(texel.oldActivity, armBias, envelope, radius, angle),
+      armBiasedDensity(texel.activity, armBias, envelope, radius, angle),
     );
   });
   const cdf = digCdfCache.cdf;
@@ -575,8 +575,8 @@ export const ASSOCIATIONS_MAX_COUNT = 1800;
 
 /** A fresh ignition site (`recentSf` high) must NOT seed an association — only cells the front has already swept clear of qualify. Suppression saturates by `recentSf = 1/K`, well inside the automaton's own active range. */
 const ASSN_RECENT_SF_SUPPRESSION_K = 4;
-function associationDensity(_gas: number, recentSf: number, oldActivity: number): number {
-  return oldActivity * (1 - Math.min(1, ASSN_RECENT_SF_SUPPRESSION_K * recentSf));
+function associationDensity(_gas: number, recentSf: number, activity: number): number {
+  return activity * (1 - Math.min(1, ASSN_RECENT_SF_SUPPRESSION_K * recentSf));
 }
 
 /** Subtle cool/hot spread around the cluster's own stellar-continuum colour — `hiiCorePerturbed`'s nudge-and-clamp mechanism (`generate.wesl`), blue-anchored instead of `gen.hiiCore`. */
@@ -611,7 +611,7 @@ function buildBlueAssociations(
     const envelope = buildArmProximityEnvelope(geometry, tuning);
     return buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
       armBiasedDensity(
-        associationDensity(texel.gas, texel.recentSf, texel.oldActivity),
+        associationDensity(texel.gas, texel.recentSf, texel.activity),
         armBias,
         envelope,
         radius,

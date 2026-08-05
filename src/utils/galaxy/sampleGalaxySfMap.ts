@@ -14,7 +14,7 @@ import type { GalaxySfMap } from '../../@types/galaxy/GalaxySfMap';
 export type GalaxySfMapSample = {
   readonly gas: number;
   readonly recentSf: number;
-  readonly oldActivity: number;
+  readonly activity: number;
 };
 
 function ringForRadius(radius: number, rings: number, rMin: number, rMax: number): number {
@@ -42,6 +42,6 @@ export function sampleGalaxySfMap(
   return {
     gas: data[i]!,
     recentSf: data[i + 1]!,
-    oldActivity: data[i + 2]!,
+    activity: data[i + 2]!,
   };
 }

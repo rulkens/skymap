@@ -13,7 +13,7 @@ const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createSfMapOutput.ts
 // own blur divisor.
 const SF_MAP_AMBIENT_DUST: f32 = 1.0;
 
-@group(0) @binding(0) var srcTex: texture_2d<f32>; // packed sfMap: x=gas, y=recentSf, z=oldActivity, w=dust
+@group(0) @binding(0) var srcTex: texture_2d<f32>; // packed sfMap: x=gas, y=recentSf, z=activity, w=dust
 @group(0) @binding(1) var dstTex: texture_storage_2d<rgba16float, write>;
 
 @compute @workgroup_size(8, 8)

@@ -1,6 +1,6 @@
 // milkyWay/sfMap/sfMapOrientationField.wesl — stage 1 of the GPU
 // structure-tensor orientation pass chain: separable Gaussian blur
-// (sigmaDeriv) of sfMapPack.wesl's dust (A) channel — not oldActivity,
+// (sigmaDeriv) of sfMapPack.wesl's dust (A) channel — not activity,
 // which is an Eulerian EMA of isotropic event stamps and yields ring-
 // shaped tensors, not lane-shaped ones. Replaces the deleted
 // buildSfMapOrientation.ts's blurLogPolar. Two dispatches (csBlurAzimuth

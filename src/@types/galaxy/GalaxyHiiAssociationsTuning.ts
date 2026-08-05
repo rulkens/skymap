@@ -21,7 +21,7 @@ export type GalaxyHiiAssociationsTuning = {
   /**
    * 0..1: concentrates map-seeded complexes toward the analytic arm
    * envelope — same reweighting `GalaxyHiiDigTuning.armBias` applies, over
-   * this tier's own `associationDensity` CDF instead of DIG's `oldActivity`
+   * this tier's own `associationDensity` CDF instead of DIG's `activity`
    * one.
    */
   readonly armBias: number;

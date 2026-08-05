@@ -1,6 +1,6 @@
 /**
  * decodeSfMapTexels — unpad + decode a mapped rgba16float readback buffer
- * from sfMapPack.wesl's packed output (gas, recentSf, oldActivity, dust)
+ * from sfMapPack.wesl's packed output (gas, recentSf, activity, dust)
  * into one tightly-packed `Float32Array`, 4 lanes per texel, row-major
  * (`ring*az + azIdx`) — the layout `GalaxySfMap.data` carries.
  *

@@ -31,7 +31,7 @@ export type SfMapOutput = {
   readonly readbackBytesPerRow: number;
   readonly presentPipeline: GPURenderPipeline;
   readonly presentBindGroup: GPUBindGroup;
-  /** 8x-downsampled gas x oldActivity density, S4's low-pass divisor — see sfMapDustBlur.wesl. */
+  /** 8x-downsampled gas x activity density, S4's low-pass divisor — see sfMapDustBlur.wesl. */
   readonly dustBlurTexture: GPUTexture;
   /** rMin/rMax — dustPresent.wesl's S4 read needs the same log-polar mapping the present pass uses. */
   readonly gridBuffer: GPUBuffer;

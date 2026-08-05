@@ -76,12 +76,11 @@ export function createSfMapAutomatonRunner(
     format: 'r32float',
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
-  // Ping-pong state: (gasFraction, ageSinceIgnition, dust, oldActivityEma) —
-  // refractory is DERIVED from age in sfMapAutomatonStep.wesl, not stored;
-  // that frees the z slot for the conserved dust channel the snowplough
-  // rule transports (docs/research/m74-jwst/06-ca-dust-channel-sketch.md).
-  // Both need BOTH usages — each alternates between being the step's read
-  // source and its write target from one step to the next.
+  // Ping-pong state (x=gas, y=eventAge, z=activity, w=dust — see
+  // GalaxySfMap.ts's contract table): refractory is DERIVED from eventAge
+  // in sfMapAutomatonStep.wesl, never stored. Both need BOTH usages — each
+  // alternates between being the step's read source and its write target
+  // from one step to the next.
   const makeStateTex = (label: string): GPUTexture =>
     device.createTexture({
       label,

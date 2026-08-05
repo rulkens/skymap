@@ -5,10 +5,11 @@
 // material-frame trick and no final un-shear pass — sfMapFluidPack.wesl's
 // own repack is a straight copy.
 //
-// State layout is IDENTICAL to the automaton's own ping-pong texel (gas,
-// age, dust, oldActivity), but gas/dust are ADVECTED (semi-Lagrangian
-// back-trace into prevTex) while age/oldActivity are EULERIAN (read from
-// this texel's own previous value, never resampled).
+// State layout (x=gas, y=eventAge, z=activity, w=dust — see GalaxySfMap.ts's
+// contract table) is IDENTICAL to the automaton's own ping-pong texel.
+// gas/dust are ADVECTED (semi-Lagrangian back-trace into prevTex) while
+// eventAge/activity are EULERIAN (read from this texel's own previous
+// value, never resampled).
 
 struct SfMapFluidConstants {
   rMin: f32,
@@ -97,7 +98,7 @@ fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric:
   return dVelAzDAz + dVelRingDRing * azToRingMetric;
 }
 
-// 5-point Laplacian of gas (prevTex.x) and dust (prevTex.z), in TEXEL units
+// 5-point Laplacian of gas (prevTex.x) and dust (prevTex.w), in TEXEL units
 // on both axes — deliberately NOT physical (theta, ln r) space: the
 // pathology this term exists to kill (1-texel density-spike collapse,
 // grid-scale checkerboard modes, both artifacts of the OLD velocity-gradient
@@ -120,7 +121,7 @@ fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasD
 
   let neighbourSum = vec2<f32>(
     nAzPlus.x + nAzMinus.x + nRingPlus.x + nRingMinus.x,
-    nAzPlus.z + nAzMinus.z + nRingPlus.z + nRingMinus.z
+    nAzPlus.w + nAzMinus.w + nRingPlus.w + nRingMinus.w
   );
   return neighbourSum - 4.0 * selfGasDust;
 }
@@ -166,7 +167,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // on what an unrun map looks like. Pass A is not dispatched for step 0
   // (velocity is unused), so velocityTex is dead here.
   if (genStep == 0u) {
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, SF_MAP_AMBIENT_DUST, 0.0));
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, 0.0, SF_MAP_AMBIENT_DUST));
     return;
   }
 
@@ -191,8 +192,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let azCountF = f32(azCount);
 
   // Semi-Lagrangian back-trace, dt = 1 step: gas/dust sample where THIS
-  // texel's material came FROM, not where it self-reads (contrast age/
-  // oldActivity below).
+  // texel's material came FROM, not where it self-reads (contrast eventAge/
+  // activity below).
   var prevAzF = (f32(az) - velAz) % azCountF;
   if (prevAzF < 0.0) {
     prevAzF += azCountF;
@@ -206,27 +207,27 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // (divV > 0) is what actually produces density structure, not advection.
   let continuityMult = clamp(1.0 - DT_TEXELS_PER_STEP * divV, CONTINUITY_MULT_MIN, CONTINUITY_MULT_MAX);
   let advectedGas = advected.x * continuityMult;
-  let advectedDust = advected.z * continuityMult;
+  let advectedDust = advected.w * continuityMult;
 
   // Operator-split diffusion, applied to the PREVIOUS state (not the
   // advected one) and added on top of it — see diffusionLaplacian above.
   // Clamped >= 0 so a strong coefficient can't push a thin texel negative.
-  let lap = diffusionLaplacian(i32(az), i32(ring), azCount, ringCount, vec2<f32>(selfState.x, selfState.z));
+  let lap = diffusionLaplacian(i32(az), i32(ring), azCount, ringCount, vec2<f32>(selfState.x, selfState.w));
   let diffusedGas = max(0.0, advectedGas + u.diffusion * lap.x);
   let diffusedDust = max(0.0, advectedDust + u.diffusion * lap.y);
 
-  let selfAge = selfState.y;
-  let selfOldActivity = selfState.w;
+  let selfEventAge = selfState.y;
+  let selfActivity = selfState.z;
 
   let gas = min(GAS_CEILING, diffusedGas + u.gasRegen);
-  var age = selfAge + 1.0;
+  var eventAge = selfEventAge + 1.0;
   // "Core" threshold: an event only just born here dominates the intensity
   // sum, so this fires exactly at its birth texel/step, not its whole tail.
   if (eventStamp > 0.5) {
-    age = 0.0;
+    eventAge = 0.0;
   }
   let dust = min(diffusedDust, DUST_OVERSHOOT_CEILING);
-  let oldActivity = mix(selfOldActivity, eventStamp, u.emaRate);
+  let activity = mix(selfActivity, eventStamp, u.emaRate);
 
-  textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gas, age, dust, oldActivity));
+  textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gas, eventAge, activity, dust));
 }

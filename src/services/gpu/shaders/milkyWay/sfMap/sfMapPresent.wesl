@@ -86,9 +86,9 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let gas = texel.x;
   let recent = texel.y;
   let old = texel.z;
-  // The conserved dust channel (sfMapPack.wesl's state.z, since 9aa9fe5d) —
-  // written RAW there, so swept-shell rims legitimately read above 1, up to
-  // the snowplough's 8.0 ceiling.
+  // The conserved dust channel (sfMapPack.wesl's state.w, see
+  // GalaxySfMap.ts's contract table) — written RAW there, so swept-shell
+  // rims legitimately read above 1, up to the snowplough's 8.0 ceiling.
   let dust = texel.w;
   // Presentation palette, NOT physics — chosen so the four channels stay
   // separable by eye: dim cool navy for unspent gas, bright magenta-violet

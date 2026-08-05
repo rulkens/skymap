@@ -19,7 +19,7 @@ export type GalaxyHiiDigTuning = {
   /**
    * 0..1: concentrates map-seeded complexes toward the analytic arm
    * envelope (`hiiRegions.ts`'s `buildArmProximityEnvelope`) — a
-   * reweighting of the SAME `oldActivity` CDF every complex draws from, not
+   * reweighting of the SAME `activity` CDF every complex draws from, not
    * a second placement path. 0 = pure map density.
    */
   readonly armBias: number;

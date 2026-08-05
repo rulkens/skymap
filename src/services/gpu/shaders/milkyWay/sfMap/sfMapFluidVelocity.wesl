@@ -174,8 +174,8 @@ fn forcingGradient(az: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMet
 
 struct VelocitySample {
   vel: vec2<f32>,
-  // Dimensionless [0,1] "how present is an event here" — Pass B's age-reset
-  // and oldActivity EMA both key off this, not off speed.
+  // Dimensionless [0,1] "how present is an event here" — Pass B's eventAge-
+  // reset and activity EMA both key off this, not off speed.
   eventStamp: f32,
 }
 
@@ -194,7 +194,7 @@ fn composedVelocity(
 ) -> VelocitySample {
   let azCountI = i32(azCount);
   let ringCountI = i32(ringCount);
-  let localDust = textureLoad(prevTex, vec2<i32>(az, ring), 0).z;
+  let localDust = textureLoad(prevTex, vec2<i32>(az, ring), 0).w;
 
   let shearVelAz = sfMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
   let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, u.curlScale, f32(genStep));

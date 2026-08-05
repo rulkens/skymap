@@ -13,9 +13,9 @@ import { sfMapDustRingEdges } from '../../../src/utils/galaxy/sfMapDustRingEdges
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
 import type { GalaxySfMap } from '../../../src/@types/galaxy/GalaxySfMap';
 
-/** Every fixture here only fills gas/oldActivity, so this is dust's own density exactly. */
+/** Every fixture here only fills gas/activity, so this is dust's own density exactly. */
 const buildCdf = (map: GalaxySfMap) =>
-  buildSfMapDustCdf(map, (texel) => sfMapDustDensity(texel.gas, texel.oldActivity));
+  buildSfMapDustCdf(map, (texel) => sfMapDustDensity(texel.gas, texel.activity));
 
 const AZ = 4;
 const RINGS = 4;
@@ -28,7 +28,7 @@ function makeMap(fill: (data: Float32Array) => void): GalaxySfMap {
   return { az: AZ, rings: RINGS, rMin: R_MIN, rMax: R_MAX, data };
 }
 
-/** `sfMapDustDensity` reads gas (R) x oldActivity (B); set both to the same level. */
+/** `sfMapDustDensity` reads gas (R) x activity (B); set both to the same level. */
 function setDensity(data: Float32Array, ring: number, azIdx: number, density: number): void {
   const i = (ring * AZ + azIdx) * 4;
   data[i] = density;

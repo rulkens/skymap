@@ -206,7 +206,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchDig({ armBias: v })}
             path="fieldTuning.hii.dig.armBias"
-            info="Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the SF map's oldActivity channel."
+            info="Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the SF map's activity channel."
           />
           <ParamSlider
             label="Elongation"

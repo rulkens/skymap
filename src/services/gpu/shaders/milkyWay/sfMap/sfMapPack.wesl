@@ -1,23 +1,24 @@
 // milkyWay/sfMap/sfMapPack.wesl — packs the SSPSF automaton's final
-// ping-pong state into one presentable RGBA texture: gas column, recent SF
-// (age's own decay), older SF (the activity EMA sfMapAutomatonStep.wesl
-// already carries in state.w), and the conserved dust channel (state.z) —
-// see that file's header. One dispatch, run once per automaton rebuild
-// after the last step — never per frame. finalTex is still in
-// sfMapAutomatonStep.wesl's MATERIAL (Lagrangian) frame; every consumer of
-// THIS pass's output expects WORLD coordinates, so this is the one place
-// that un-shears — a single resample instead of sfMapAutomatonStep.wesl's
-// old per-generation one (see that file's header for why the difference
-// matters). Dust is a smooth accumulated field, so the bilinear resample
-// below is fine for it too (unlike the discrete ignition state
-// sfMapAutomatonStep.wesl itself must never blur). Automaton-only: the
-// fluid generator has no material frame to un-shear, so its own repack
-// (sfMapFluidPack.wesl) is a straight copy instead.
+// ping-pong state into one presentable RGBA texture (see GalaxySfMap.ts's
+// contract table for the full state/packed mapping): gas column, recent SF
+// (eventAge's own decay), activity (the EMA sfMapAutomatonStep.wesl already
+// carries in state.z), and the conserved dust channel (state.w). One
+// dispatch, run once per automaton rebuild after the last step — never per
+// frame. finalTex is still in sfMapAutomatonStep.wesl's MATERIAL
+// (Lagrangian) frame; every consumer of THIS pass's output expects WORLD
+// coordinates, so this is the one place that un-shears — a single resample
+// instead of sfMapAutomatonStep.wesl's old per-generation one (see that
+// file's header for why the difference matters). Dust is a smooth
+// accumulated field, so the bilinear resample below is fine for it too
+// (unlike the discrete ignition state sfMapAutomatonStep.wesl itself must
+// never blur). Automaton-only: the fluid generator has no material frame to
+// un-shear, so its own repack (sfMapFluidPack.wesl) is a straight copy
+// instead.
 //
-// The output is rgba16float, not rgba8unorm: oldActivity keeps its
-// intentional [0,1] clamp below (a real bound on the EMA, independent of
-// storage format), but dust is written RAW — colliding swept shells summing
-// past ambient is the rim/filament feature, and clamping it away here would
+// The output is rgba16float, not rgba8unorm: activity keeps its intentional
+// [0,1] clamp below (a real bound on the EMA, independent of storage
+// format), but dust is written RAW — colliding swept shells summing past
+// ambient is the rim/filament feature, and clamping it away here would
 // erase exactly what the snowplough rule exists to produce.
 
 import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;
@@ -71,9 +72,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let materialAz = f32(gid.x) - shear * u.totalShiftSteps;
   let state = sampleMaterial(ring, materialAz, dims.x);
   let gas = state.x;
-  let age = state.y;
-  let dust = state.z;
-  let oldActivity = clamp(state.w, 0.0, 1.0);
-  let recentSf = exp(-age / RECENT_SF_TAU);
-  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, recentSf, oldActivity, dust));
+  let eventAge = state.y;
+  let activity = clamp(state.z, 0.0, 1.0);
+  let dust = state.w;
+  let recentSf = exp(-eventAge / RECENT_SF_TAU);
+  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, recentSf, activity, dust));
 }

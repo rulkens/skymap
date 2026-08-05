@@ -122,7 +122,7 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /**
  * S3 cavity floor: a map-seeded particle whose own `sfMapDustDensity` (gas x
- * oldActivity, already in [0,1]) sits below this is dropped AFTER placement
+ * activity, already in [0,1]) sits below this is dropped AFTER placement
  * — a post-filter, not a rejection, so it never touches the rng stream S1's
  * CDF sampler consumed.
  */
@@ -220,7 +220,7 @@ export function buildDustParticleCloud(
           const sample = sampleGalaxySfMap(map, radius, angle);
           return {
             aspect: 1 + (cloud.elongation - 1) * coherence,
-            alive: sfMapDustDensity(sample.gas, sample.oldActivity) >= DUST_SURVIVAL_DENSITY_FLOOR,
+            alive: sfMapDustDensity(sample.gas, sample.activity) >= DUST_SURVIVAL_DENSITY_FLOOR,
           };
         };
       }

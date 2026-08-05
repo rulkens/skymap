@@ -1,5 +1,5 @@
 /**
- * sweepSfMapActivityHistogram — does oldActivity clamp on arm crests while
+ * sweepSfMapActivityHistogram — does activity clamp on arm crests while
  * the dust CDF's mass concentrates there? Measures it, rather than inferring
  * it from the update rule.
  *

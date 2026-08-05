@@ -83,7 +83,7 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapActivityWeight: v }))}
           path="render.sfMapActivityWeight"
-          info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other three to isolate it, though it rarely needs isolating."
+          info="Isolates the activity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other three to isolate it, though it rarely needs isolating."
         />
         <ParamSlider
           label="SF map · dust"
