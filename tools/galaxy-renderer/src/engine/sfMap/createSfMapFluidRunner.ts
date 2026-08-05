@@ -6,6 +6,13 @@
  * `createSfMapGenerator.ts`'s dispatcher decides which one runs. See
  * `sfMapFluidStep.wesl`'s header for the integration scheme.
  *
+ * Each step is TWO dispatches sharing one compute pass: `sfMapFluidVelocity`
+ * (Pass A) composes this step's velocity field once per texel into
+ * `velocityTex`, then `sfMapFluidStep` (Pass B) reads it back to advect and
+ * difference — WebGPU synchronizes a storage-texture write against a later
+ * read within the same compute pass, so no pass split is needed. Step 0
+ * only ever dispatches Pass B (it seeds and returns; velocity is unused).
+ *
  * `rebuild` takes the geometry/tuning/seed/grid it runs against as ARGUMENTS,
  * same contract as the automaton runner's own `rebuild` — no shared
  * step-dispatch code between the two, just the shape of the contract.
@@ -30,6 +37,7 @@ import {
 import { packSfMapFluidEvents, SF_MAP_FLUID_EVENT_STRIDE } from './packSfMapFluidEvents';
 import type { SfMapOutput } from './createSfMapOutput';
 
+import sfMapFluidVelocityWgsl from '../shaders/milkyWay/sfMap/sfMapFluidVelocity.wesl?static';
 import sfMapFluidStepWgsl from '../shaders/milkyWay/sfMap/sfMapFluidStep.wesl?static';
 import sfMapFluidPackWgsl from '../shaders/milkyWay/sfMap/sfMapFluidPack.wesl?static';
 
@@ -53,6 +61,12 @@ export function createSfMapFluidRunner(
 ): SfMapFluidRunner {
   const { makeShader, output } = deps;
 
+  const velocityMod = makeShader(sfMapFluidVelocityWgsl, 'galaxy:sfMapFluidVelocity');
+  const velocityPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapFluidVelocityPipe',
+    layout: 'auto',
+    compute: { module: velocityMod, entryPoint: 'cs' },
+  });
   const stepMod = makeShader(sfMapFluidStepWgsl, 'galaxy:sfMapFluidStep');
   const stepPipe = device.createComputePipeline({
     label: 'galaxy:sfMapFluidStepPipe',
@@ -74,13 +88,22 @@ export function createSfMapFluidRunner(
     });
   const stateA = makeStateTex('galaxy:sfMapFluidStateA');
   const stateB = makeStateTex('galaxy:sfMapFluidStateB');
+  // One texture is enough: Pass A (sfMapFluidVelocity) writes it, Pass B
+  // (sfMapFluidStep) reads it back, both within the SAME step's compute
+  // pass — no ping-pong needed since nothing reads a PRIOR step's velocity.
+  const velocityTex = device.createTexture({
+    label: 'galaxy:sfMapFluidVelocityTex',
+    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    format: 'rgba16float',
+    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+  });
   // This generator's OWN copy of the automaton's armForcingTex — same upload
   // pattern as createSfMapAutomatonRunner.ts, deliberately not shared: the
   // two runners are un-complected siblings, and a shared texture would tie
   // their dispose()/rebuild() lifecycles together for no benefit (neither
   // runs while the other doesn't need this data). The gather velocity term
-  // in sfMapFluidStep.wesl samples it directly, unlike the events builder
-  // below which reads the same CPU field (never the texture).
+  // in sfMapFluidVelocity.wesl samples it directly, unlike the events
+  // builder below which reads the same CPU field (never the texture).
   const armForcingTex = device.createTexture({
     label: 'galaxy:sfMapFluidArmForcingTex',
     size: [SF_MAP_AZ, SF_MAP_RINGS],
@@ -150,14 +173,20 @@ export function createSfMapFluidRunner(
         packSfMapFluidStepIndex(events, steps, fluid.impulseDuration, stride),
       );
 
-      // Every step's bind group shares the SAME eventsBuf sub-range — only
+      // Every step's bind groups share the SAME eventsBuf sub-range — only
       // constUbo/prev/next/stepIndex vary per step, same shape as the
-      // automaton runner's own per-step bind groups.
-      const stepBindGroups: GPUBindGroup[] = [];
+      // automaton runner's own per-step bind groups. Step 0 gets no Pass A
+      // bind group: its shader seeds and returns without touching velocity.
+      const stepBindGroupsB: GPUBindGroup[] = [];
+      const stepBindGroupsA: (GPUBindGroup | null)[] = [];
       for (let s = 0; s < steps; s++) {
         const prev = s % 2 === 0 ? stateA : stateB;
         const next = s % 2 === 0 ? stateB : stateA;
-        stepBindGroups.push(
+        // size: 12 — step, activeStart, activeEnd (SfMapFluidStepIndex,
+        // sfMapFluidVelocity.wesl/sfMapFluidStep.wesl), up from the single
+        // `step` float the shared sfMapStepIndexData.ts shape carries.
+        const stepIndexEntry = { binding: 3, resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 } };
+        stepBindGroupsB.push(
           device.createBindGroup({
             label: `galaxy:sfMapFluidStepBG${s}`,
             layout: stepPipe.getBindGroupLayout(0),
@@ -165,28 +194,46 @@ export function createSfMapFluidRunner(
               { binding: 0, resource: { buffer: constUbo } },
               { binding: 1, resource: prev.createView() },
               { binding: 2, resource: next.createView() },
-              // size: 12 — step, activeStart, activeEnd (SfMapFluidStepIndex,
-              // sfMapFluidStep.wesl), up from the single `step` float the
-              // shared sfMapStepIndexData.ts shape carries.
-              { binding: 3, resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 } },
-              {
-                binding: 4,
-                resource: {
-                  buffer: eventsBuf,
-                  size: Math.max(packedEvents.byteLength, 4),
-                },
-              },
-              { binding: 5, resource: armForcingTex.createView() },
+              stepIndexEntry,
+              { binding: 4, resource: velocityTex.createView() },
             ],
           }),
+        );
+        stepBindGroupsA.push(
+          s === 0
+            ? null
+            : device.createBindGroup({
+                label: `galaxy:sfMapFluidVelocityBG${s}`,
+                layout: velocityPipe.getBindGroupLayout(0),
+                entries: [
+                  { binding: 0, resource: { buffer: constUbo } },
+                  { binding: 1, resource: prev.createView() },
+                  { binding: 2, resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 } },
+                  {
+                    binding: 3,
+                    resource: {
+                      buffer: eventsBuf,
+                      size: Math.max(packedEvents.byteLength, 4),
+                    },
+                  },
+                  { binding: 4, resource: armForcingTex.createView() },
+                  { binding: 5, resource: velocityTex.createView() },
+                ],
+              }),
         );
       }
 
       const enc = device.createCommandEncoder({ label: 'galaxy:sfMapFluidRebuild' });
       const stepPass = enc.beginComputePass({ label: 'galaxy:sfMapFluidStepPass' });
-      stepPass.setPipeline(stepPipe);
       for (let s = 0; s < steps; s++) {
-        stepPass.setBindGroup(0, stepBindGroups[s]!);
+        const bgA = stepBindGroupsA[s];
+        if (bgA) {
+          stepPass.setPipeline(velocityPipe);
+          stepPass.setBindGroup(0, bgA);
+          stepPass.dispatchWorkgroups(dispatchX, dispatchY);
+        }
+        stepPass.setPipeline(stepPipe);
+        stepPass.setBindGroup(0, stepBindGroupsB[s]!);
         stepPass.dispatchWorkgroups(dispatchX, dispatchY);
       }
       stepPass.end();
@@ -218,6 +265,7 @@ export function createSfMapFluidRunner(
       armForcingTex.destroy();
       stateA.destroy();
       stateB.destroy();
+      velocityTex.destroy();
       constUbo.destroy();
       eventsBuf.destroy();
     },

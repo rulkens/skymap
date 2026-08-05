@@ -1,7 +1,7 @@
 // milkyWay/sfMap/sfMapShear.wesl — log-polar ring radius <-> per-ring shear
 // (in texels), shared by sfMapAutomatonStep.wesl (the automaton) and
 // sfMapPack.wesl (the final un-shear) so the two passes cannot disagree on
-// what a ring's shear means. sfMapFluidStep.wesl reuses the SAME
+// what a ring's shear means. sfMapFluidVelocity.wesl reuses the SAME
 // sfMapShearTexels for its own shear velocity term — same physical formula,
 // no reason for a second copy. Restated from galaxySfMapArmForcing.ts's
 // sfMapRingRadius on the TS side (WGSL cannot import TS); ringCount/azCount/
