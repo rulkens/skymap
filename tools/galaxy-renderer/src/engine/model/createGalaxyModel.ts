@@ -700,11 +700,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // CURRENT full tuning regardless, so switching `generator` itself (which
     // moves `sfMap`) always picks up whatever the inactive block drifted to
     // meanwhile.
+    const generatorMoved = sfMapKey !== fieldTuning.sfMap;
     const activeGeneratorParamsMoved =
       fieldTuning.sfMap.generator === 'fluid'
         ? sfMapFluidKey !== fieldTuning.sfMapFluid
         : sfMapAutomatonKey !== fieldTuning.sfMapAutomaton;
-    if (sfMapKey !== fieldTuning.sfMap || activeGeneratorParamsMoved) {
+    if (generatorMoved || activeGeneratorParamsMoved) {
       sfMapKey = fieldTuning.sfMap;
       sfMapAutomatonKey = fieldTuning.sfMapAutomaton;
       sfMapFluidKey = fieldTuning.sfMapFluid;
@@ -713,6 +714,21 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // No `else if (dustMoved)` branch any more: the S4 blur (sfMapDustBlur.wesl)
     // is a pure function of `texture` since `sweptMix` was deleted, so a
     // dust-only drag has nothing left for it to re-dispatch over.
+
+    // `generator` gates `buildDustParticleCloud`'s own placement mode (map-seeded
+    // vs `smoothDisc`) directly — before the three-state dropdown, that switch
+    // lived AS `dust.sfMapSeeding`, inside the `dust` section, so `dustMoved`
+    // caught it for free. Now that it lives in `sfMap`, a generator flip needs
+    // its own synchronous dust rebuild or the previous generator's map-seeded
+    // placement (and its `OrientationDeltaStats` coupling readout) keeps
+    // drawing/reporting as live until an unrelated dust/geometry change happens
+    // to rebuild it. Uses whatever `readbacks.sfMapData`/`orientationData` are
+    // cached right now — the same determinism tradeoff `scheduleSfMapReadback`
+    // documents, corrected again once this rebuild's own readback lands.
+    if (generatorMoved && !dustMoved) {
+      rebuildDustMixture();
+      repackFieldComponents();
+    }
   }
 
   /** Torn down from two places — `setExtras` replacing the list, and `destroy`. */
