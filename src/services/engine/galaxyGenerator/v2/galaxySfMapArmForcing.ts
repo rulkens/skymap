@@ -6,10 +6,14 @@
  * never re-derived in WGSL, per research doc §19's "shared ridge truth by
  * import, not by re-deriving the curve" rule. Uploaded once per generation
  * (`rebuildSfMap` in createGalaxyEngine.ts) as a small R32F texture the
- * automaton samples with a plain 1:1 `textureLoad`, since it is baked at
- * this file's own grid extent. The fluid generator reuses this SAME CPU
- * field (never the texture) to bias its own event placement — see
- * `galaxySfMapFluidEvents.ts`.
+ * automaton samples with a plain 1:1 `textureLoad`. The fluid generator
+ * reuses this SAME CPU field (never the texture) — see
+ * `galaxySfMapFluidEvents.ts`. Single-slot memo, same discipline as
+ * `hiiRegions.ts`'s CDF memos: keyed on geometry identity plus
+ * `tuning.arms.widthScale` (the only tuning value the ridge functions above
+ * actually read), so a same-generation rebuild — this file's two call sites,
+ * plus any fluid/automaton/dust slider drag that leaves arm geometry alone —
+ * hits cache instead of repaying the O(rings x arms x az) bake.
  */
 import { armRidgeCurvePoint, armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import { sfMapRingRadius } from '../../../../utils/galaxy/sfMapRingRadius';
@@ -95,10 +99,13 @@ export function sfMapGridRadiusOrDefault(
  * support.
  */
 function wrapAngle(a: number): number {
-  return Math.atan2(Math.sin(a), Math.cos(a));
+  return a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 }
 
-export function buildGalaxySfMapArmForcing(
+/** Gaussian support beyond this many sigma is exp(-12.5) ~ 4e-6 — invisible to every consumer (automaton forcing, fluid CDF, percolation thresholds). */
+const CROSS_SIGMA_SUPPORT = 5;
+
+function computeGalaxySfMapArmForcing(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
 ): Float32Array {
@@ -111,6 +118,10 @@ export function buildGalaxySfMapArmForcing(
     if (r <= geometry.armStartRadius) continue;
     const logR = Math.log(r / geometry.armStartRadius);
     const sigmaAcross = Math.max(armCrossSigma(r, geometry, tuning), 1e-4);
+    // Az-index half-width of the support band, shared by every arm at this
+    // ring (both r and sigmaAcross are ring-level, not arm-level).
+    const halfWidthAz = ((CROSS_SIGMA_SUPPORT * sigmaAcross) / r / (2 * Math.PI)) * SF_MAP_AZ;
+    const rowBase = ring * SF_MAP_AZ;
 
     for (const arm of geometry.arms) {
       const envelope = armFadeEnvelope(r, geometry, arm);
@@ -118,8 +129,17 @@ export function buildGalaxySfMapArmForcing(
       const point = armRidgeCurvePoint(logR, geometry, arm);
       const ridgeAngle = Math.atan2(point[2], point[0]);
 
-      const rowBase = ring * SF_MAP_AZ;
-      for (let az = 0; az < SF_MAP_AZ; az++) {
+      // Band narrower than the full circle: iterate only it, wrapping each
+      // raw index back into [0, SF_MAP_AZ) — a plain window when it clears
+      // the seam, transparently the full sweep when the band is wide (the
+      // `azHi` clamp), never a duplicate index either way since the raw
+      // range never exceeds SF_MAP_AZ distinct values.
+      const azCenter = (ridgeAngle / (2 * Math.PI)) * SF_MAP_AZ;
+      const azLo = Math.floor(azCenter - halfWidthAz);
+      const azHi = Math.min(azLo + SF_MAP_AZ - 1, Math.ceil(azCenter + halfWidthAz));
+
+      for (let rawAz = azLo; rawAz <= azHi; rawAz++) {
+        const az = ((rawAz % SF_MAP_AZ) + SF_MAP_AZ) % SF_MAP_AZ;
         const theta = (2 * Math.PI * az) / SF_MAP_AZ;
         const crossDist = r * wrapAngle(theta - ridgeAngle);
         const gauss = Math.exp(-0.5 * (crossDist / sigmaAcross) ** 2);
@@ -129,4 +149,29 @@ export function buildGalaxySfMapArmForcing(
     }
   }
   return out;
+}
+
+type CachedForcing = { readonly key: readonly unknown[]; readonly field: Float32Array };
+
+function sameForcingKey(a: readonly unknown[], b: readonly unknown[]): boolean {
+  return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+}
+
+/**
+ * Single-slot memo — same pattern as `hiiRegions.ts`'s `cachedCdf`. Sound
+ * under any interleaving: a key miss just rebuilds, so this can only cost
+ * performance, never correctness. Callers must treat the returned array as
+ * read-only (both current call sites do: GPU upload, CDF read).
+ */
+let forcingCache: CachedForcing | null = null;
+
+export function buildGalaxySfMapArmForcing(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+): Float32Array {
+  const key: readonly unknown[] = [geometry, tuning.arms.widthScale];
+  if (forcingCache && sameForcingKey(forcingCache.key, key)) return forcingCache.field;
+  const field = computeGalaxySfMapArmForcing(geometry, tuning);
+  forcingCache = { key, field };
+  return field;
 }
