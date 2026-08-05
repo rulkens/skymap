@@ -22,7 +22,7 @@ import { SF_MAP_FLUID_MAX_EVENTS } from '../../../../../src/services/engine/gala
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
-import { sfMapStepIndexData } from './sfMapStepIndexData';
+import { packSfMapFluidStepIndex } from './packSfMapFluidStepIndex';
 import {
   packSfMapFluidConstants,
   SF_MAP_FLUID_CONSTANTS_BUFFER_SIZE,
@@ -144,7 +144,11 @@ export function createSfMapFluidRunner(
         size: steps * stride,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      device.queue.writeBuffer(stepIndexBuf, 0, sfMapStepIndexData(steps, stride));
+      device.queue.writeBuffer(
+        stepIndexBuf,
+        0,
+        packSfMapFluidStepIndex(events, steps, fluid.impulseDuration, stride),
+      );
 
       // Every step's bind group shares the SAME eventsBuf sub-range — only
       // constUbo/prev/next/stepIndex vary per step, same shape as the
@@ -161,7 +165,10 @@ export function createSfMapFluidRunner(
               { binding: 0, resource: { buffer: constUbo } },
               { binding: 1, resource: prev.createView() },
               { binding: 2, resource: next.createView() },
-              { binding: 3, resource: { buffer: stepIndexBuf, offset: s * stride, size: 4 } },
+              // size: 12 — step, activeStart, activeEnd (SfMapFluidStepIndex,
+              // sfMapFluidStep.wesl), up from the single `step` float the
+              // shared sfMapStepIndexData.ts shape carries.
+              { binding: 3, resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 } },
               {
                 binding: 4,
                 resource: {
