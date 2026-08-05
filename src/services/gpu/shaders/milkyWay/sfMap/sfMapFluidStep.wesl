@@ -24,7 +24,7 @@ struct SfMapFluidConstants {
   // Explicit diffusion coefficient (texel^2/step) for gas/dust, this pass's
   // own consumer — see diffusionLaplacian below. Explicit 2D diffusion is
   // stable only for coefficient <= 0.25; the slider range enforces it.
-  pressureStrength: f32,
+  diffusion: f32,
 }
 
 // Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts
@@ -209,8 +209,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // advected one) and added on top of it — see diffusionLaplacian above.
   // Clamped >= 0 so a strong coefficient can't push a thin texel negative.
   let lap = diffusionLaplacian(i32(az), i32(ring), azCount, ringCount, vec2<f32>(selfState.x, selfState.z));
-  let diffusedGas = max(0.0, advectedGas + u.pressureStrength * lap.x);
-  let diffusedDust = max(0.0, advectedDust + u.pressureStrength * lap.y);
+  let diffusedGas = max(0.0, advectedGas + u.diffusion * lap.x);
+  let diffusedDust = max(0.0, advectedDust + u.diffusion * lap.y);
 
   let selfAge = selfState.y;
   let selfOldActivity = selfState.w;

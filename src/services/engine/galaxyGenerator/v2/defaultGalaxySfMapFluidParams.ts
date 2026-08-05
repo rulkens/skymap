@@ -59,5 +59,5 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // doc): each step multiplies a 1-texel spike's own excess by (1 - 4D) =
   // 0.6, more than halving it within ~2 steps, strong enough to widen a
   // collapsed ridge without visibly smearing the rest of the grid.
-  pressureStrength: 0.1,
+  diffusion: 0.1,
 };

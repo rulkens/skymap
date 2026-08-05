@@ -38,7 +38,7 @@ export function packSfMapFluidConstants({
   out[7] = fluid.curlScale;
   out[8] = fluid.impulseDuration;
   out[9] = fluid.armGather;
-  out[10] = fluid.pressureStrength;
+  out[10] = fluid.diffusion;
 
   // Slack past the struct, written rather than left to the allocator — same
   // convention as packSfMapAutomatonConstants.ts.

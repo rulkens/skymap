@@ -38,7 +38,7 @@ const SENTINEL = {
   curlScale: 4108,
   impulseDuration: 4109,
   armGather: 4110,
-  pressureStrength: 4111,
+  diffusion: 4111,
 } as const;
 
 const input: SfMapFluidConstantsInput = {
@@ -56,7 +56,7 @@ const input: SfMapFluidConstantsInput = {
     gasRegen: SENTINEL.gasRegen,
     emaRate: SENTINEL.emaRate,
     armGather: SENTINEL.armGather,
-    pressureStrength: SENTINEL.pressureStrength,
+    diffusion: SENTINEL.diffusion,
   },
 };
 
