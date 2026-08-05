@@ -33,6 +33,11 @@ a hurry: read 05, it links back into everything before it.
    bar dust lanes, across-arm age sequence, scattering floor, DIG, chromatic
    arm contrast, instrument signature, and a statistics-based tuning
    harness — with implementation hints and a priority table.
+9. [09-fluid-pivot-literature.md](09-fluid-pivot-literature.md) — after the
+   CA's structural verdict: the advected-density direction, a verified
+   prior-art negative, face-on visual ground truth (Zhao/SILCC/TIGRESS),
+   and the Latte/FIRE pipeline findings (offline; the field is the gap,
+   not the renderer).
 
 Every claim is labelled LITERATURE-verified / SECONDARY / RECALLED per the
 branch's research-doc convention; docs 02–04 were produced by research
