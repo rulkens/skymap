@@ -11,6 +11,7 @@
  * step-dispatch code between the two, just the shape of the contract.
  */
 import {
+  buildGalaxySfMapArmForcing,
   SF_MAP_AZ,
   SF_MAP_RINGS,
   SF_MAP_WORKGROUP_SIZE,
@@ -73,6 +74,19 @@ export function createSfMapFluidRunner(
     });
   const stateA = makeStateTex('galaxy:sfMapFluidStateA');
   const stateB = makeStateTex('galaxy:sfMapFluidStateB');
+  // This generator's OWN copy of the automaton's armForcingTex — same upload
+  // pattern as createSfMapAutomatonRunner.ts, deliberately not shared: the
+  // two runners are un-complected siblings, and a shared texture would tie
+  // their dispose()/rebuild() lifecycles together for no benefit (neither
+  // runs while the other doesn't need this data). The gather velocity term
+  // in sfMapFluidStep.wesl samples it directly, unlike the events builder
+  // below which reads the same CPU field (never the texture).
+  const armForcingTex = device.createTexture({
+    label: 'galaxy:sfMapFluidArmForcingTex',
+    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    format: 'r32float',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
   const constUbo = device.createBuffer({
     label: 'galaxy:sfMapFluidConstUbo',
     size: SF_MAP_FLUID_CONSTANTS_BUFFER_SIZE,
@@ -98,6 +112,20 @@ export function createSfMapFluidRunner(
       const fluid = tuning.sfMapFluid;
 
       device.queue.writeBuffer(constUbo, 0, packSfMapFluidConstants({ grid, fluid }));
+
+      // Same CPU field `buildGalaxySfMapFluidEvents` below reads for its own
+      // event-placement bias — its call re-reads `buildGalaxySfMapArmForcing`
+      // with the SAME (geometry, tuning) key, so this only ever costs a
+      // second call, never a third; the memo in galaxySfMapArmForcing.ts
+      // (when it lands) makes even that call free, but nothing here depends
+      // on it landing.
+      const forcing = buildGalaxySfMapArmForcing(geometry, tuning);
+      device.queue.writeTexture(
+        { texture: armForcingTex },
+        forcing,
+        { bytesPerRow: SF_MAP_AZ * 4 },
+        [SF_MAP_AZ, SF_MAP_RINGS],
+      );
 
       const events = buildGalaxySfMapFluidEvents(geometry, tuning, seed);
       const packedEvents = packSfMapFluidEvents(events);
@@ -141,6 +169,7 @@ export function createSfMapFluidRunner(
                   size: Math.max(packedEvents.byteLength, 4),
                 },
               },
+              { binding: 5, resource: armForcingTex.createView() },
             ],
           }),
         );
@@ -179,6 +208,7 @@ export function createSfMapFluidRunner(
 
     dispose(): void {
       stepIndexBuf?.destroy();
+      armForcingTex.destroy();
       stateA.destroy();
       stateB.destroy();
       constUbo.destroy();

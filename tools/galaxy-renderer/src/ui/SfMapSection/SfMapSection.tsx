@@ -417,6 +417,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
             path="fieldTuning.sfMapFluid.emaRate"
             info="Blend rate of the per-texel oldActivity trace toward this step's event intensity (w' = mix(w, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
           />
+          <ParamSlider
+            label="Arm gather"
+            value={fluid.armGather}
+            min={0}
+            max={180}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => patchFluid({ armGather: v })}
+            path="fieldTuning.sfMapFluid.armGather"
+            info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild."
+          />
         </div>
       </CollapsibleSection>
     </CollapsibleSection>

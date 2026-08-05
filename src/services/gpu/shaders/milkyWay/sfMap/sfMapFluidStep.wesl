@@ -1,8 +1,9 @@
 // milkyWay/sfMap/sfMapFluidStep.wesl — the FLUID alternative to
 // sfMapAutomatonStep.wesl's cellular automaton: density advected through a
 // composed, analytically-evaluated velocity field (shear + curl noise +
-// event impulses), semi-Lagrangian, directly in WORLD/grid coordinates every
-// step. Unlike the automaton there is no material-frame trick and no final
+// event impulses + arm-gather, up the SAME arm-forcing field the automaton
+// samples), semi-Lagrangian, directly in WORLD/grid coordinates every step.
+// Unlike the automaton there is no material-frame trick and no final
 // un-shear pass — sfMapFluidPack.wesl's own repack is a straight copy.
 //
 // State layout is IDENTICAL to the automaton's own ping-pong texel (gas,
@@ -34,6 +35,7 @@ struct SfMapFluidConstants {
   curlStrength: f32,
   curlScale: f32,
   impulseDuration: f32,
+  armGather: f32,
 }
 
 struct SfMapFluidStepIndex {
@@ -56,12 +58,21 @@ const EVENT_STRIDE: u32 = 8u;
 // continuous stirring, not a reroll.
 const CURL_PHASE_SPEED: f32 = 0.03;
 const CURL_FD_EPS: f32 = 0.5;
+// Gate on DUST, not gas: gas is hard-clamped to 1.0 below regardless of the
+// gather term's strength, so an "N x ambient" brake keyed on gas would never
+// bind. Dust has no such ceiling short of DUST_OVERSHOOT_CEILING (8x) and is
+// advected by the SAME velocity field, so it is the channel gather-driven
+// convergence can actually run away in — this brake engages well before that
+// hard ceiling. 3x = SF_MAP_AMBIENT_DUST's own headroom, a third of the way
+// to DUST_OVERSHOOT_CEILING.
+const ARM_GATHER_SAT: f32 = 3.0;
 
 @group(0) @binding(0) var<uniform> u: SfMapFluidConstants;
 @group(0) @binding(1) var prevTex: texture_2d<f32>;
 @group(0) @binding(2) var nextTex: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(3) var<uniform> stepIdx: SfMapFluidStepIndex;
 @group(0) @binding(4) var<storage, read> events: array<f32>;
+@group(0) @binding(5) var armForcingTex: texture_2d<f32>;
 
 // Value noise via bilinear-interpolated hashes (standard construction) —
 // lib/util.wesl's own valueNoise2 bakes in a radial falloff tuned for a
@@ -103,6 +114,40 @@ fn curlVelocity(gridPos: vec2<f32>, curlScale: f32, genStep: f32) -> vec2<f32> {
   let dPsiDy = (n1 - n2) / (2.0 * CURL_FD_EPS);
   let dPsiDx = (n3 - n4) / (2.0 * CURL_FD_EPS);
   return vec2<f32>(dPsiDy, -dPsiDx);
+}
+
+// armForcingTex read at an integer texel — az wraps (the grid is periodic),
+// ring clamps at the disc's inner/outer edge, same edge semantics as
+// sampleBilinear below. Unlike sfMapAutomatonStep.wesl's own armForcingAt,
+// this never needs a sub-texel az sample: the gradient below always asks for
+// this texel's own integer neighbours.
+fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
+  var a = az % azCount;
+  if (a < 0) {
+    a += azCount;
+  }
+  let r = clamp(ring, 0, ringCount - 1);
+  return textureLoad(armForcingTex, vec2<i32>(a, r), 0).x;
+}
+
+// Steepest-ascent direction of the arm-forcing field, central-differenced
+// over each axis's own integer neighbours. The ring partial is rescaled by
+// azToRingMetric before being handed back — the SAME az-equivalent metric
+// curlVelocity's gridPos uses — so the combined (az, ring) vector points
+// toward a ridge along the true shortest path in (theta, ln r) space,
+// rather than being skewed by whichever axis a texel covers less physical
+// distance on. Caller applies the result to (velAz, velRing) directly, same
+// convention as curlVelocity's own output (no further per-axis conversion:
+// azToRingMetric is grid-wide constant, so any residual scale folds into
+// the caller's own strength knob).
+fn forcingGradient(az: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
+  let fAzPlus = armForcingAt(az + 1, ring, azCount, ringCount);
+  let fAzMinus = armForcingAt(az - 1, ring, azCount, ringCount);
+  let fRingPlus = armForcingAt(az, ring + 1, azCount, ringCount);
+  let fRingMinus = armForcingAt(az, ring - 1, azCount, ringCount);
+  let dFdAz = (fAzPlus - fAzMinus) * 0.5;
+  let dFdRing = (fRingPlus - fRingMinus) * 0.5;
+  return vec2<f32>(dFdAz, dFdRing * azToRingMetric);
 }
 
 // Bilinear sample of prevTex — wraps in az, clamps in ring, same edge
@@ -158,11 +203,20 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let dThetaPerAz = 2.0 * PI / f32(azCount);
   let azToRingMetric = dThetaPerAz / dLnRPerRing;
 
+  // Read early — this step's velocity needs it (the gather saturation gate
+  // below), and age/oldActivity below reuse the same load rather than
+  // issuing a second one.
+  let selfState = textureLoad(prevTex, vec2<i32>(i32(az), i32(ring)), 0);
+
   let shearVelAz = sfMapShearTexels(ring, ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
   let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), u.curlScale, f32(genStep));
+  let grad = forcingGradient(i32(az), i32(ring), i32(azCount), i32(ringCount), azToRingMetric);
+  // Counterweight so 120 steps of convergent gathering can't run the local
+  // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.
+  let gatherSat = max(0.0, 1.0 - selfState.z / ARM_GATHER_SAT);
 
-  var velAz = shearVelAz + u.curlStrength * curl.x;
-  var velRing = u.curlStrength * curl.y;
+  var velAz = shearVelAz + u.curlStrength * curl.x + u.armGather * gatherSat * grad.x;
+  var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * grad.y;
   // Dimensionless [0,1] intensity, NOT scaled by an event's own velocity
   // strength — this drives the age-reset threshold and the oldActivity EMA
   // target below, both of which want "how present is an event here", not a
@@ -215,7 +269,6 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let prevRingF = clamp(f32(ring) - velRing, 0.0, f32(ringCount - 1u));
   let advected = sampleBilinear(prevAzF, prevRingF, azCount, ringCount);
 
-  let selfState = textureLoad(prevTex, vec2<i32>(i32(az), i32(ring)), 0);
   let selfAge = selfState.y;
   let selfOldActivity = selfState.w;
 

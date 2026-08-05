@@ -47,4 +47,12 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // Half-life ln(0.5)/ln(1-0.1) ~= 7 steps — comparable to `impulseDuration`,
   // so the activity trace tracks roughly one event's own active window.
   emaRate: 0.1,
+  // The forcing field's gradient runs ~0.05/texel at a ridge's steepest
+  // flank for a typical arm width (armCrossSigma at mid-disc radius spans
+  // roughly 10 az-texels) — 60x that puts the gather term at ~3 texels/step
+  // there, the SAME order as `shearStrength`'s own texel/step velocity at
+  // outer radii (a few) and a fraction of its inner-disc peak (10-20+ near
+  // corotation), so gathering reads as a visible pull toward the arm without
+  // dominating the shear/curl structure already carrying the look.
+  armGather: 60,
 };

@@ -37,6 +37,7 @@ const SENTINEL = {
   curlStrength: 4107,
   curlScale: 4108,
   impulseDuration: 4109,
+  armGather: 4110,
 } as const;
 
 const input: SfMapFluidConstantsInput = {
@@ -53,6 +54,7 @@ const input: SfMapFluidConstantsInput = {
     corotationRadius: SENTINEL.corotationRadius,
     gasRegen: SENTINEL.gasRegen,
     emaRate: SENTINEL.emaRate,
+    armGather: SENTINEL.armGather,
   },
 };
 
