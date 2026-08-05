@@ -197,7 +197,6 @@ export function buildArmParticleCloud(
   const count = deriveArmCloudCount(geometry, tuning);
   if (count <= 0) return [];
 
-  const color = armColor(geometry.youngFraction);
   const hLight = discLightScaleLength(geometry);
   // A representative radius for the complex-level clustering scale below —
   // per-PARTICLE size still reads the true local armCrossSigma at that
@@ -285,6 +284,11 @@ export function buildArmParticleCloud(
     };
     const flux = fluxPerWeight * weights[i]!;
     const amplitude = flux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
+    // Per-particle, same radial cross-fade the ridge chain now carries — this
+    // tier renders alongside those blobs and would otherwise sit at a single
+    // flat hue while its neighbours graded from bulge-warm to disc-blue.
+    const particleRadius = Math.hypot(p.center[0], p.center[2]);
+    const color = armColor(geometry.youngFraction, particleRadius / geometry.outerRadius);
     return {
       amplitude,
       ...inverseCovarianceFromFrame(p.frame, sigmas),

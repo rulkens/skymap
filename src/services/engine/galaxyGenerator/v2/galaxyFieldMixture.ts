@@ -33,6 +33,7 @@ import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLen
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../../../utils/galaxy/galaxyFieldInverseCovariance';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
+import { lerpVec3 } from '../../../../utils/math/lerpVec3';
 import { spheroidEmissionSigma } from '../../../../utils/galaxy/spheroidEmissionSigma';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
@@ -110,10 +111,22 @@ function shapeOf(
 const TAU_ROOT = Math.sqrt(2 * Math.PI);
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
-const DISC_COLOR = [0.86, 0.9, 1.0] as const;
+/**
+ * Inside-out formation: the bulge and bar hold the old, metal-rich stars
+ * (decidedly yellow-orange); the disc runs from that same warm tone at its
+ * inner edge out to a young, blue population at its outer edge. HALO_COLOR
+ * stays flat — an old spheroidal population at every radius, no gradient to
+ * carry. Eyeball values, luminance-matched to the flat colours they replace
+ * (old DISC_COLOR's luma was ~0.9) so this reads as a hue shift, not a
+ * change in exposure — DISC_COLOR_OUTER trades some of that back for its hue
+ * (blue is inherently the lowest-luma primary), the same trade
+ * `armRidgeGeometry.ts`'s ARM_COLOR_YOUNG already makes.
+ */
+const DISC_COLOR_INNER = [1.0, 0.87, 0.66] as const;
+const DISC_COLOR_OUTER = [0.68, 0.8, 1.0] as const;
 const HALO_COLOR = [1.0, 0.92, 0.78] as const;
-const BAR_COLOR = [1.0, 0.84, 0.62] as const;
-const BULGE_COLOR = [1.0, 0.8, 0.55] as const;
+const BAR_COLOR = [1.0, 0.8, 0.56] as const;
+const BULGE_COLOR = [1.0, 0.76, 0.47] as const;
 
 /** `buildDisk`'s vertical flare: diskHeight * (0.6 + bulgeRadius/(R + bulgeRadius)). */
 const DISC_FLARE_FLOOR = 0.6;
@@ -186,10 +199,14 @@ function pushDisc(
     // and it is the surface density the flare must leave untouched.
     const amplitude =
       (geometry.luminosity * DISC_SURFACE_WEIGHTS[i]! * central) / (sigmaPole * TAU_ROOT);
+    // This ring has no single "position" (it's centred on the origin, not
+    // out at its own radius), so its OWN sigmaR — how far out its mass sits
+    // — stands in for the radius the inner/outer gradient blends against.
+    const radialT = Math.min(1, Math.max(0, sigmaR / geometry.outerRadius));
     out.push({
       amplitude,
       ...shapeOf(geometry, sigmaR, sigmaPole, sigmaR, 0),
-      color: DISC_COLOR,
+      color: lerpVec3(DISC_COLOR_INNER, DISC_COLOR_OUTER, radialT),
       center: ORIGIN,
     });
     // This component's own 3D integral — summed rather than hand-derived
@@ -396,6 +413,13 @@ function pushWarpedOuterDisc(
 
   for (let r = 0; r < WARP_RING_COUNT; r++) {
     const radius = radii[r]!;
+    // Rings sit near/at RING_OUTER_RADIUS_FRAC * outerRadius, so this lands
+    // at or close to DISC_COLOR_OUTER regardless of which ring.
+    const ringColor = lerpVec3(
+      DISC_COLOR_INNER,
+      DISC_COLOR_OUTER,
+      Math.min(1, Math.max(0, radius / outerRadius)),
+    );
     const blobFlux = (totalFlux * weights[r]!) / blobsPerRing;
     const sigmas = {
       along: ((2 * Math.PI * radius) / blobsPerRing) * RING_AZIMUTHAL_OVERLAP,
@@ -412,7 +436,7 @@ function pushWarpedOuterDisc(
       out.push({
         amplitude,
         ...inverseCovarianceFromFrame(warpSurfaceFrame(radius, phi, geometry), sigmas),
-        color: DISC_COLOR,
+        color: ringColor,
         center: [radius * Math.cos(phi), warpHeight(radius, phi, geometry), radius * Math.sin(phi)],
         boundRadius,
       });
@@ -570,9 +594,8 @@ function pushArmRidges(
   cloudShare: number,
 ): number {
   if (!tuning.arms.enabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
-  const { armStartRadius, diskHeight } = geometry;
+  const { armStartRadius, diskHeight, outerRadius } = geometry;
   const sharpness = Math.max(1, tuning.arms.blobSharpness);
-  const color = armColor(geometry.youngFraction);
   const hLight = discLightScaleLength(geometry);
   const K = tuning.arms.contrast;
   // The RENDERED share of each blob's flux — `armExcessFlux` below stays the
@@ -662,6 +685,7 @@ function pushArmRidges(
       const amplitude =
         (blobFlux * renderedShare) / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
       const boundRadius = Math.max(sigmas.along, sigmas.across, sigmas.pole);
+      const color = armColor(geometry.youngFraction, radius / outerRadius);
 
       out.push({
         amplitude,
