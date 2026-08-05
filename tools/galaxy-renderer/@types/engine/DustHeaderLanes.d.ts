@@ -25,4 +25,14 @@ export type DustHeaderLanes = {
    * the header's dustDetail lane. 0 while dust is off, same gate as `noise`.
    */
   readonly detail: number;
+  /**
+   * `GalaxyFieldTuning.dust.sweptMix` (NOT `GalaxyDustParams` — this is the
+   * one lane here that comes off the tuning section, not the galaxy's own
+   * dust params), packed to the header's dustDetail.w lane. Not gated by
+   * `dustEnabled` like the other three: `sfMapDustBlur.wesl`'s own low-pass
+   * reads a matching value through its own uniform regardless of whether
+   * this pass draws any dust, and disagreeing would just make the S4 ratio
+   * wrong on the next enable rather than draw anything extra now.
+   */
+  readonly sweptMix: number;
 };

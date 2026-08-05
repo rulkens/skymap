@@ -27,7 +27,7 @@
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
 //   offset 192 : bubbleView: vec4 (intensity, unused, unused, unused)
-//   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, unused)
+//   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, sweptMix)
 //   total: 224 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
@@ -146,8 +146,11 @@
 // lets the shader skip the noise sample entirely via a uniform branch — the
 // primary field pass packs 0 here always, since its own components never
 // carry a nonzero textureWeight, so the far larger disc/arms fragment count
-// never pays for a sample it would just multiply by zero. .w reserved like
-// counts2.x.
+// never pays for a sample it would just multiply by zero. .w (sweptMix) is
+// dustDetail.wesl's own free lane, the last one in this vec4 — 0 (default)
+// reads the legacy gas x oldActivity product, 1 the conserved swept-dust
+// channel (GalaxyDustTuning.sweptMix); sfMapDustBlur.wesl blends its own
+// low-pass by the same value, through its own tiny uniform, not this header.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

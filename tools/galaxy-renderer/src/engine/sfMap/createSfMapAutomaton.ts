@@ -59,6 +59,16 @@ export type SfMapAutomaton = {
     readonly tuning: GalaxyFieldTuning;
     readonly seed: number;
   }): GalaxySfMapGridRadius;
+  /**
+   * Re-dispatch ONLY the S4 low-pass (sfMapDustBlur.wesl) against whatever
+   * `texture` currently holds, at a new `sweptMix` — the cheap refresh a
+   * `fieldTuning.dust`-only change needs (a plain field-tuning drag never
+   * re-triggers `rebuild`, which is the N-step automaton, so left alone the
+   * blur target would go stale the moment `sweptMix` moved without also
+   * moving `sfMap`). Safe to call before the first `rebuild`: `texture`
+   * starts zero-initialised, so this just re-blurs zeros.
+   */
+  refreshDustBlur(sweptMix: number): void;
   dispose(): void;
 };
 
@@ -197,6 +207,18 @@ export function createSfMapAutomaton(
   // offset alignment. Reallocated per rebuild to match the live `steps` count.
   let stepIndexBuf: GPUBuffer | null = null;
 
+  // sfMapDustBlur.wesl's own blend weight — a separate tiny uniform rather
+  // than riding io.wesl's per-frame header, because the blur pass's bind
+  // group has no binding to that header at all (see the header's own
+  // `sweptMix` doc for the split). 16 bytes: WebGPU has no problem with a
+  // 4-byte uniform, but every other small uniform in this module pads to a
+  // vec4, and matching that saves a reader from wondering if 4 was deliberate.
+  const dustBlurParamsUbo = device.createBuffer({
+    label: 'galaxy:sfMapDustBlurParamsUbo',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
   // Built once — `texture`/`gridUbo` are the same GPU objects for this
   // module's whole lifetime, only their CONTENT changes per rebuild, and a
   // bind group only needs rebuilding when the OBJECT it references does.
@@ -210,6 +232,28 @@ export function createSfMapAutomaton(
       { binding: 3, resource: { buffer: gridUbo } },
     ],
   });
+  // Same reasoning as `presentBindGroup` — `texture`/`sfMapDustBlurTex`/
+  // `dustBlurParamsUbo` never change identity, only content, so one bind
+  // group serves both `rebuild`'s own dispatch and `refreshDustBlur`'s.
+  const dustBlurBindGroup = device.createBindGroup({
+    label: 'galaxy:sfMapDustBlurBG',
+    layout: dustBlurPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: texture.createView() },
+      { binding: 1, resource: sfMapDustBlurTex.createView() },
+      { binding: 2, resource: { buffer: dustBlurParamsUbo } },
+    ],
+  });
+
+  /** Shared by `rebuild`'s own dispatch and the standalone `refreshDustBlur`. */
+  function encodeDustBlurPass(enc: GPUCommandEncoder, sweptMix: number): void {
+    device.queue.writeBuffer(dustBlurParamsUbo, 0, new Float32Array([sweptMix, 0, 0, 0]));
+    const pass = enc.beginComputePass({ label: 'galaxy:sfMapDustBlurPass' });
+    pass.setPipeline(dustBlurPipe);
+    pass.setBindGroup(0, dustBlurBindGroup);
+    pass.dispatchWorkgroups(SF_MAP_AZ / DUST_BLUR_FACTOR / 8, SF_MAP_RINGS / DUST_BLUR_FACTOR / 8);
+    pass.end();
+  }
 
   const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
   const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
@@ -341,26 +385,19 @@ export function createSfMapAutomaton(
       packPass.end();
 
       // S4's low-pass, in the same encoder right after the pack pass writes
-      // `texture` — the blur reads exactly what pack just produced.
-      const dustBlurBG = device.createBindGroup({
-        label: 'galaxy:sfMapDustBlurBG',
-        layout: dustBlurPipe.getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: texture.createView() },
-          { binding: 1, resource: sfMapDustBlurTex.createView() },
-        ],
-      });
-      const dustBlurPass = enc.beginComputePass({ label: 'galaxy:sfMapDustBlurPass' });
-      dustBlurPass.setPipeline(dustBlurPipe);
-      dustBlurPass.setBindGroup(0, dustBlurBG);
-      dustBlurPass.dispatchWorkgroups(
-        SF_MAP_AZ / DUST_BLUR_FACTOR / 8,
-        SF_MAP_RINGS / DUST_BLUR_FACTOR / 8,
-      );
-      dustBlurPass.end();
+      // `texture` — the blur reads exactly what pack just produced. Lives on
+      // `tuning.dust`, not `sfMap` (`sweptMix` gates a CONSUMER of this
+      // automaton's output, not a parameter of the automaton itself).
+      encodeDustBlurPass(enc, tuning.dust.sweptMix ?? 0);
 
       device.queue.submit([enc.finish()]);
       return grid;
+    },
+
+    refreshDustBlur(sweptMix: number): void {
+      const enc = device.createCommandEncoder({ label: 'galaxy:sfMapDustBlurRefresh' });
+      encodeDustBlurPass(enc, sweptMix);
+      device.queue.submit([enc.finish()]);
     },
 
     dispose(): void {
@@ -374,6 +411,7 @@ export function createSfMapAutomaton(
       constUbo.destroy();
       gridUbo.destroy();
       packConstUbo.destroy();
+      dustBlurParamsUbo.destroy();
     },
   };
 }

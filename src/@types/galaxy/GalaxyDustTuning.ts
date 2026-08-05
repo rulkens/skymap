@@ -23,4 +23,18 @@ export type GalaxyDustTuning = {
    * without one, so this only takes effect where a map is actually produced.
    */
   readonly sfMapSeeding: boolean;
+  /**
+   * Blend between the two dust-placement channels the automaton now carries:
+   * 0 reads the legacy `gas x oldActivity` product (today's image), 1 reads
+   * the conserved swept-dust channel (`docs/research/m74-jwst/
+   * 06-ca-dust-channel-sketch.md`) every consumer decodes from `texel.dust`.
+   * The legacy product time-integrates the swept AREA (activity accumulates
+   * over the whole run), while the swept channel is a short-memory front
+   * tracer (reset by each front's own floor/collision rule) — 0 is the
+   * broad-smear image already shipped, 1 is thin rims and dark cavities.
+   * Defaults 0: every consumer (CPU seeding, the S4 blur, the detail ratio)
+   * must read this identically or the three would disagree about what a
+   * "wall" looks like.
+   */
+  readonly sweptMix: number;
 };

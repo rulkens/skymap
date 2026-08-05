@@ -63,6 +63,7 @@ const input: FieldHeaderInput = {
     slices: { t1: 19000, t2: 19001, t3: 19002 },
     mapHeightPx: 16000,
     detail: 24000,
+    sweptMix: 26000,
   },
   debugViews: { dust: 21000, sfMap: 21001, orientation: 21002, bubble: 21003 },
   galaxyWeight: 22000,
@@ -127,6 +128,9 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // vec4's two free lanes (io.wesl's dustDetail doc).
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);
+    // .w is dustDetail.wesl's own legacy/swept blend weight (sweptMix) — the
+    // last free lane in this vec4.
+    expect(observed(26000)).toBe(at('dustDetail') + 12);
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {

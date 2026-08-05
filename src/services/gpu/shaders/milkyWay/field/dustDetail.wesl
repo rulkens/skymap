@@ -55,11 +55,12 @@ fn dustDetailMultiplier(p: vec3<f32>, breakup: f32) -> f32 {
   let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
   let uv = vec2<f32>(azT, ringT);
-  // sfMapDustDensity's gas x oldActivity (src/utils/galaxy/sfMapDustDensity.ts)
-  // — the density the splats were SEEDED from, so the ratio below is
-  // structure the splats should carry but blurred away.
+  // The density the splats were SEEDED from, so the ratio below is structure
+  // the splats should carry but blurred away — u.dustDetail.w blends the same
+  // legacy/swept pair the CPU seeding and sfMapDustBlur.wesl blend, and needs
+  // no mean-normalization here since a RATIO of two mixes is scale-invariant.
   let mapTexel = textureSampleLevel(sfMapTex, sfMapSmp, uv, 0.0);
-  let density = mapTexel.x * mapTexel.z;
+  let density = mix(mapTexel.x * mapTexel.z, mapTexel.w, u.dustDetail.w);
   let densityBlur = textureSampleLevel(sfMapBlurTex, sfMapSmp, uv, 0.0).x;
   let detail = (density + DETAIL_EPS) / (densityBlur + DETAIL_EPS);
   return clamp(1.0 + u.dustDetail.x * (detail - 1.0) * breakup, 0.0, DETAIL_MAX);

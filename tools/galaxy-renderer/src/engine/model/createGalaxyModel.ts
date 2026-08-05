@@ -249,7 +249,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // Cached, not recomputed per frame: the field header reads all three every
   // frame, but they only change when `rebuildDustMixture` runs. Seeded at the
   // no-galaxy answer, which is what the first frames draw.
-  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
+  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false, 0);
   // How the last `repackFieldComponents` concatenation sliced `fieldComps`.
   let fieldCounts: FieldSliceCounts = { emission: 0, primary: 0, dust: 0 };
   // What the orientation chain was last dispatched at — see `noteRenderChanged`.
@@ -283,7 +283,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // Same "map landed after the synchronous build that asked for it"
       // determinism problem `rebuildDustMixture` above solves, for the HII
       // tier's own map-seeded positions AND its DIG veil (also map-seeded).
-      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0 || (fieldTuning.hii.associations?.brightness ?? 0) > 0)) {
+      if (
+        fieldGeometry &&
+        (fieldTuning.hii.sfMapSeeding > 0 ||
+          (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
+          (fieldTuning.hii.associations?.brightness ?? 0) > 0)
+      ) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
         repackHiiComponents();
       }
@@ -309,7 +314,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       } else {
         reportOrientationDiagnostics();
       }
-      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0 || (fieldTuning.hii.associations?.brightness ?? 0) > 0)) {
+      if (
+        fieldGeometry &&
+        (fieldTuning.hii.sfMapSeeding > 0 ||
+          (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
+          (fieldTuning.hii.associations?.brightness ?? 0) > 0)
+      ) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
         repackHiiComponents();
       }
@@ -375,7 +385,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    */
   function rebuildDustMixture(): void {
     const dust = currentDust();
-    dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dust.enabled);
+    dustHeaderLanes = deriveDustHeaderLanes(
+      fieldGeometry,
+      dust,
+      fieldTuning.dust.enabled,
+      fieldTuning.dust.sweptMix ?? 0, // stale stored tuning predates this knob
+    );
     const orientationDeltaStats: OrientationDeltaStats = {
       count: 0,
       sumAbsDeltaDeg: 0,
@@ -643,7 +658,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // pay this cost per frame — deliberately left stale until `sfMap` moves.
     if (sfMapKey !== fieldTuning.sfMap) {
       sfMapKey = fieldTuning.sfMap;
-      rebuildSfMap();
+      rebuildSfMap(); // also refreshes the S4 blur, off the tuning it reads there
+    } else if (dustMoved) {
+      // `rebuildSfMap` above already re-derives the blur from `tuning.dust`
+      // when it runs; this is the ELSE — a `dust`-only drag (sweptMix, most
+      // often) never touches `sfMap`, so nothing else would re-dispatch S4
+      // and it would keep blending the last-built `sweptMix` forever. One
+      // compute pass over a 24x8 target, not the N-step automaton, so this
+      // costs nothing next to the CPU rebuild `dustMoved` already triggered
+      // (192x64 texels, dispatched as 24x8 workgroups).
+      automaton.refreshDustBlur(fieldTuning.dust.sweptMix ?? 0);
     }
   }
 

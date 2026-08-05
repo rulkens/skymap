@@ -39,8 +39,10 @@ import {
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
 import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
+import type { SfMapDensityTexel } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { dustExtinctionRgb } from '../../../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
+import { meanSfMapChannel } from '../../../../utils/galaxy/meanSfMapChannel';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleGalaxySfMap } from '../../../../utils/galaxy/sampleGalaxySfMap';
 import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
@@ -188,9 +190,26 @@ export function buildDustParticleCloud(
     | null = null;
   if (tuning.dust.sfMapSeeding && sfMap) {
     const map = sfMap; // narrowed alias so the closures below don't re-null-check
-    // (gas, oldActivity) — recentSf and the texel's own position unused, see
-    // sfMapDustDensity's own header (the position re-key is a separate task).
-    const cdf = buildSfMapDustCdf(map, (texel) => sfMapDustDensity(texel.gas, texel.oldActivity));
+    // Stale stored tuning predates this knob.
+    const sweptMix = tuning.dust.sweptMix ?? 0;
+    const legacyOf = (texel: SfMapDensityTexel): number =>
+      sfMapDustDensity(texel.gas, texel.oldActivity);
+    // 0 (the default) stays the exact pre-existing expression — no mean pass,
+    // no division — so placement is byte-identical to before `sweptMix`
+    // existed. Above 0, the CDF only cares about relative SHAPE, but the two
+    // channels have unrelated magnitudes (see `meanSfMapChannel`'s header),
+    // so each is normalised by its own map-wide mean before blending.
+    let density: (texel: SfMapDensityTexel) => number = legacyOf;
+    if (sweptMix > 0) {
+      const meanLegacy = meanSfMapChannel(map, legacyOf);
+      const meanSwept = meanSfMapChannel(map, (texel) => texel.dust);
+      density = (texel) => {
+        const legacy = meanLegacy > 0 ? legacyOf(texel) / meanLegacy : 0;
+        const swept = meanSwept > 0 ? texel.dust / meanSwept : 0;
+        return (1 - sweptMix) * legacy + sweptMix * swept;
+      };
+    }
+    const cdf = buildSfMapDustCdf(map, density);
     if (cdf.total > 0) {
       placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
       sampleMapTraits = (radius, angle) => {

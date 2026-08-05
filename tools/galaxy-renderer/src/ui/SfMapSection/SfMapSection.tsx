@@ -13,6 +13,7 @@
  * the arm tangent), and only these three numbers tell them apart.
  */
 import type { ReactNode } from 'react';
+import type { GalaxyDustTuning } from '../../../../../src/@types/galaxy/GalaxyDustTuning';
 import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
@@ -36,6 +37,9 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
   const patchSfMap = (patch: Partial<GalaxySfMapParams>): void => {
     dispatch(fieldTuningPatched({ sfMap: { ...sfMap, ...patch } }));
   };
+  const patchDust = (patch: Partial<GalaxyDustTuning>): void => {
+    dispatch(fieldTuningPatched({ dust: { ...dust, ...patch } }));
+  };
 
   return (
     <CollapsibleSection
@@ -44,9 +48,12 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
       onToggle={() => dispatch(sectionToggled('sfMap'))}
       headerToggle={sfMap.enabled}
       onHeaderToggleChange={(value) => patchSfMap({ enabled: value })}
-      // `dust.sfMapSeeding` rides along because this section's checkbox writes
-      // it, even though it lives on the dust tier — see that control's comment.
-      copyPayload={{ fieldTuning: { sfMap, dust: { sfMapSeeding: dust.sfMapSeeding } } }}
+      // `dust.sfMapSeeding`/`dust.sweptMix` ride along because this section's
+      // own controls write them, even though both live on the dust tier —
+      // see those controls' comments.
+      copyPayload={{
+        fieldTuning: { sfMap, dust: { sfMapSeeding: dust.sfMapSeeding, sweptMix: dust.sweptMix } },
+      }}
     >
       <div className={styles.root}>
         <ParamSlider
@@ -200,6 +207,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
             }
           />
         </label>
+        <ParamSlider
+          label="Swept mix"
+          value={dust.sweptMix}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchDust({ sweptMix: v })}
+          path="fieldTuning.dust.sweptMix"
+          info="0 = today's placement density (gas x accumulated activity, time-integrates the swept AREA). 1 = the conserved swept-dust channel alone — a short-memory front tracer, so walls read as thin bright rims around dark cavities instead of a broad smear. Lives on the dust tier (like 'Seed dust from gas' above) but shown here beside the map both consumers read."
+        />
 
         <div className={styles.readout}>
           <div className={styles.readoutHeader}>orientation coupling · live</div>

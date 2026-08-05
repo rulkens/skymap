@@ -64,6 +64,8 @@ const INERT_DUST: FieldDust = {
   mapHeightPx: 0,
   // A pass with no dust has nothing for the map to modulate.
   detail: 0,
+  // 0 = legacy product, same default as a live pass — see `DustHeaderLanes.sweptMix`.
+  sweptMix: 0,
 };
 
 /**
@@ -180,15 +182,15 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[51] = 0;
 
   // dustDetail 52..55 = (strength, hiiTextureScale, hiiTextureContrast,
-  // unused). .y/.z are unrelated to S4's own strength lane — they ride this
+  // sweptMix). .y/.z are unrelated to S4's own strength lane — they ride this
   // vec4's two free lanes for the HII tier's tier-global texture modulation
   // (io.wesl's dustDetail doc); NO_HII_TEXTURE's scale 0 is what lets
   // splat.wesl's fs skip the noise sample on a uniform branch for every pass
-  // but the HII one.
+  // but the HII one. .w is dustDetail.wesl's own legacy/swept blend weight.
   out[52] = dust.detail;
   out[53] = hiiTexture.scale;
   out[54] = hiiTexture.contrast;
-  out[55] = 0;
+  out[55] = dust.sweptMix;
 
   return out;
 }

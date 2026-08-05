@@ -33,6 +33,7 @@ export function deriveDustHeaderLanes(
   geometry: GalaxyDescription | null,
   dust: GalaxyDustParams,
   dustEnabled: boolean,
+  sweptMix: number,
 ): DustHeaderLanes {
   // R comes from the disc shape the particle cloud's mass budget is anchored
   // to, not from the built mixture: the cloud's own components carry no
@@ -72,5 +73,7 @@ export function deriveDustHeaderLanes(
     // through `currentDust()` unmerged with the default — see
     // `createGalaxyModel.ts`'s `currentDust`.
     detail: live ? (dust.cloud.mapDetail ?? 0) : 0,
+    // Ungated by `live` — see `DustHeaderLanes.sweptMix`'s own doc.
+    sweptMix,
   };
 }

@@ -995,6 +995,7 @@ export async function createGalaxyEngine(
           extinctionRgb: model.dustHeaderLanes.extinctionRgb,
           noise: model.dustHeaderLanes.noise,
           detail: model.dustHeaderLanes.detail,
+          sweptMix: model.dustHeaderLanes.sweptMix,
           // VIEW-dependent, unlike every other lane in this bag.
           slices: dustSlices,
           mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
