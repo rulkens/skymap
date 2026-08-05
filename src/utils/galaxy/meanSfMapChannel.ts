@@ -1,8 +1,9 @@
 /**
  * meanSfMapChannel — the plain (unweighted) mean of one extracted quantity
  * over every texel of an `GalaxySfMap`. Used to bring the legacy `gas x
- * oldActivity` product and the swept dust channel (`texel.dust`) onto a
- * common scale before `sweptMix` blends them: the two have unrelated
+ * oldActivity` product and the swept dust channel (its overshoot above
+ * ambient — see `sweptDustOvershoot`) onto a common scale before `sweptMix`
+ * blends them: the two have unrelated
  * magnitudes (one is a bounded [0,1] product, the other an unclamped
  * conserved quantity that overshoots past 8), so blending raw values would
  * let whichever term happens to be bigger dominate at any mix short of the

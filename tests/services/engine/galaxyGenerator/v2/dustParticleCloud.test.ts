@@ -76,6 +76,9 @@ describe('buildDustParticleCloud', () => {
     // Two well-separated texels, one hot per channel, everything else at a
     // shared baseline that clears the S3 survival floor (DUST_SURVIVAL_
     // DENSITY_FLOOR = 0.01) so the filter can't confound the placement test.
+    // The dust baseline sits at SF_MAP_AMBIENT_DUST (1.0, zero overshoot)
+    // like a quiet automaton grid — the swept channel is keyed off OVERSHOOT
+    // above ambient (`sweptDustOvershoot`), not the absolute value.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -83,7 +86,7 @@ describe('buildDustParticleCloud', () => {
       data[i] = 0.15; // gas
       data[i + 1] = 0.2; // recentSf
       data[i + 2] = 0.15; // oldActivity -> legacy baseline 0.0225
-      data[i + 3] = 0.05; // dust baseline
+      data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
     }
     const ringA = 4;
     const azA = 4;
@@ -100,7 +103,7 @@ describe('buildDustParticleCloud', () => {
       if (patch.oldActivity !== undefined) data[base + 2] = patch.oldActivity;
       if (patch.dust !== undefined) data[base + 3] = patch.dust;
     };
-    setTexel(ringA, azA, { dust: 50000 }); // hot in the SWEPT channel only
+    setTexel(ringA, azA, { dust: 1.5 }); // hot in the SWEPT channel's OVERSHOOT only (0.5 above ambient)
     setTexel(ringB, azB, { gas: 20, oldActivity: 20 }); // hot in the LEGACY product only (400)
     const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
 
@@ -133,5 +136,34 @@ describe('buildDustParticleCloud', () => {
 
     // Overwhelmingly placed near A (the swept channel's hot texel), not B.
     expect(meanDistTo(swept, a)).toBeLessThan(meanDistTo(swept, b) * 0.1);
+  });
+
+  it('sweptMix 1 with zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {
+    // makeMap's legacy channel (gas x oldActivity) is busy/non-degenerate,
+    // but its dust channel is a flat SF_MAP_AMBIENT_DUST (1.0) — no texel
+    // has swept past ambient, so meanOvershoot is exactly 0. At sweptMix 1
+    // legacy's own share of the blend is also 0 (1 - sweptMix), so density
+    // is 0 for every texel: `buildSfMapDustCdf`'s total comes out 0, and
+    // `buildDustParticleCloud` leaves `placement` at its `smoothDisc`
+    // default — the same code path an absent map takes (see the guard's own
+    // comment on the `sweptMix > 0` branch in dustParticleCloud.ts).
+    const ambientMap = makeMap(1.0);
+    const dust = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 400, clumpiness: 0.5 },
+    };
+    const tuning = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      dust: { ...DEFAULT_GALAXY_FIELD_TUNING.dust, sweptMix: 1 },
+    };
+    const seeded = buildDustParticleCloud(geometry, dust, tuning, 1, ambientMap, null);
+    const unseeded = buildDustParticleCloud(geometry, dust, tuning, 1, null, null);
+    expect(seeded.length).toBeGreaterThan(0);
+    for (const p of seeded) {
+      expect(Number.isFinite(p.amplitude)).toBe(true);
+    }
+    // The CDF-total-0 fallback takes literally the same smoothDisc code path
+    // as no map at all, off the same rng stream, so the two are byte-identical.
+    expect(seeded).toEqual(unseeded);
   });
 });

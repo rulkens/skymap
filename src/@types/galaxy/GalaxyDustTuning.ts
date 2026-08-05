@@ -31,10 +31,14 @@ export type GalaxyDustTuning = {
    * The legacy product time-integrates the swept AREA (activity accumulates
    * over the whole run), while the swept channel is a short-memory front
    * tracer (reset by each front's own floor/collision rule) — 0 is the
-   * broad-smear image already shipped, 1 is thin rims and dark cavities.
-   * Defaults 0: every consumer (CPU seeding, the S4 blur, the detail ratio)
-   * must read this identically or the three would disagree about what a
-   * "wall" looks like.
+   * broad-smear image already shipped, 1 = clouds on the swept filament
+   * walls (overshoot-keyed): CPU seeding (`buildDustParticleCloud`) places
+   * off `texel.dust`'s excess above the automaton's ambient pedestal, not
+   * the absolute value — raw dust is almost all pedestal (ambient ~1,
+   * cavities ~0.36), so only the overshoot carries placement signal; see
+   * `sweptDustOvershoot`. Defaults 0: every consumer (CPU seeding, the S4
+   * blur, the detail ratio) must read this identically or the three would
+   * disagree about what a "wall" looks like.
    */
   readonly sweptMix: number;
 };

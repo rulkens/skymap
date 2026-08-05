@@ -48,6 +48,7 @@ import { sampleGalaxySfMap } from '../../../../utils/galaxy/sampleGalaxySfMap';
 import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
 import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrientation';
 import { sfMapDustDensity } from '../../../../utils/galaxy/sfMapDustDensity';
+import { sweptDustOvershoot } from '../../../../utils/galaxy/sweptDustOvershoot';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
@@ -127,6 +128,15 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
  */
 const DUST_SURVIVAL_DENSITY_FLOOR = 0.01;
 
+/**
+ * Below this mean overshoot, the swept channel is transport-off/early-run
+ * noise (every texel near ambient, see `sweptDustOvershoot`'s header) — too
+ * close to zero to divide by without blowing the swept term up toward
+ * Infinity/NaN. The blend below treats it as exactly zero instead, which
+ * degrades smoothly rather than crashing: see the guard's own comment.
+ */
+const SWEPT_OVERSHOOT_MEAN_EPS = 1e-6;
+
 type CloudParticle = {
   readonly center: Vec3;
   readonly frame: CloudFrame;
@@ -202,10 +212,24 @@ export function buildDustParticleCloud(
     let density: (texel: SfMapDensityTexel) => number = legacyOf;
     if (sweptMix > 0) {
       const meanLegacy = meanSfMapChannel(map, legacyOf);
-      const meanSwept = meanSfMapChannel(map, (texel) => texel.dust);
+      // Overshoot, not raw dust — see `sweptDustOvershoot`'s header for why
+      // the swept term has to be keyed off the pedestal, not the absolute
+      // value, to mean anything as a placement density.
+      const meanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
+      // Guard: an all-ambient/all-cavity map (no shell has swept past
+      // ambient anywhere — true whenever transport is off, or the automaton
+      // hasn't run long enough yet, see `SWEPT_OVERSHOOT_MEAN_EPS`) makes
+      // the swept term contribute nothing rather than divide by ~0. At
+      // sweptMix < 1 the legacy term still carries its own (1 - sweptMix)
+      // share, so placement degrades smoothly toward the legacy-only image
+      // as the guard engages. At sweptMix == 1 legacy's share is also 0, so
+      // `density` comes out 0 for every texel, `cdf.total` below is 0, and
+      // `placement` is left at its `smoothDisc` default — the SAME fallback
+      // an absent map takes, not a crash or an empty result.
+      const sweptGuardOk = meanOvershoot >= SWEPT_OVERSHOOT_MEAN_EPS;
       density = (texel) => {
         const legacy = meanLegacy > 0 ? legacyOf(texel) / meanLegacy : 0;
-        const swept = meanSwept > 0 ? texel.dust / meanSwept : 0;
+        const swept = sweptGuardOk ? sweptDustOvershoot(texel) / meanOvershoot : 0;
         return (1 - sweptMix) * legacy + sweptMix * swept;
       };
     }
