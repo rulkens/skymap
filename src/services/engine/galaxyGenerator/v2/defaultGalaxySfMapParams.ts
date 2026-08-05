@@ -3,8 +3,9 @@ import type { GalaxySfMapParams } from '../../../../@types/galaxy/GalaxySfMapPar
 
 export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   enabled: true,
-  // The automaton is the calibrated, shipped look; fluid is the comparison
-  // spike (`GalaxySfMapFluidParams`) — defaults to the tuned pipeline so no
-  // existing build changes until someone flips the toggle.
-  generator: 'automaton',
+  // Fluid is the default since the 2026-08-05 pivot: the automaton cannot
+  // produce coherent walls/filaments (spike verdict, research doc 09), so the
+  // advected-density pipeline is the one being calibrated. The automaton
+  // stays selectable for comparison.
+  generator: 'fluid',
 };
