@@ -1,11 +1,12 @@
 // milkyWay/sfMap/sfMapOrientationField.wesl — stage 1 of the GPU
 // structure-tensor orientation pass chain: separable Gaussian blur
-// (sigmaDeriv) of sfMapPack.wesl's oldActivity (B) channel, replacing the
-// deleted buildSfMapOrientation.ts's blurLogPolar. Two dispatches
-// (csBlurAzimuth then csBlurRing), ping-ponging through one scratch
-// texture — a single invocation cannot blur along both axes at once
-// without reading a texel another invocation in the same pass is still
-// writing.
+// (sigmaDeriv) of sfMapPack.wesl's dust (A) channel — not oldActivity,
+// which is an Eulerian EMA of isotropic event stamps and yields ring-
+// shaped tensors, not lane-shaped ones. Replaces the deleted
+// buildSfMapOrientation.ts's blurLogPolar. Two dispatches (csBlurAzimuth
+// then csBlurRing), ping-ponging through one scratch texture — a single
+// invocation cannot blur along both axes at once without reading a texel
+// another invocation in the same pass is still writing.
 
 import package::milkyWay::sfMap::sfMapOrientationLib::SfMapOrientationSigma;
 import package::milkyWay::sfMap::sfMapOrientationLib::wrapIndex;
@@ -18,7 +19,10 @@ import package::milkyWay::sfMap::sfMapOrientationLib::kernelRadius;
 @group(0) @binding(2) var<uniform> sigma: SfMapOrientationSigma;
 
 // Reads sfMapPack.wesl's packed rgba16float output directly, extracting the
-// oldActivity (.z) channel — no separate CPU-side extraction step needed.
+// dust (.w) channel — no separate CPU-side extraction step needed. The
+// SF_MAP_AMBIENT_DUST pedestal baked into that channel needs no subtraction
+// here: the structure tensor consumes gradients only, and a constant offset
+// has zero gradient.
 @compute @workgroup_size(16, 16)
 fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {
   let dims = textureDimensions(dst);
@@ -31,7 +35,7 @@ fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {
   for (var k = -radius; k <= radius; k++) {
     let a = wrapIndex(i32(gid.x) + k, dims.x);
     let w = gaussianTap(k, sigma.sigmaDeriv);
-    sum += textureLoad(srcTex, vec2<i32>(i32(a), i32(gid.y)), 0).z * w;
+    sum += textureLoad(srcTex, vec2<i32>(i32(a), i32(gid.y)), 0).w * w;
     wsum += w;
   }
   textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(sum / wsum, 0.0, 0.0, 0.0));
