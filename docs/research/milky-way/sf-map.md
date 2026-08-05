@@ -342,7 +342,9 @@ spirals have a pattern speed that DECREASES with radius, so the arms roughly
 corotate everywhere and there is no single corotation ring to suppress. That
 would dissolve the artifact rather than damp it.
 
-**MEASURED.** `armForcing` wants to be LOW (0.15, against a seeded 0.5). Above
-that the arms stop biasing the automaton and start driving it, which washes out
-the emergent inter-arm structure and redraws the ridge as a fuzzy band — the
-arms are supposed to be a thumb on the scale, not the signal.
+**MEASURED.** `armForcing` wants to be LOW (0.015 shipped; past ~0.06 it
+drives — see §"re-seat every rate below saturation" above, which superseded
+this note's original 0.15 within the hour it was written). Above that the arms
+stop biasing the automaton and start driving it, which washes out the emergent
+inter-arm structure and redraws the ridge as a fuzzy band — the arms are
+supposed to be a thumb on the scale, not the signal.

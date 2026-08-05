@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SF-map oldActivity histogram harness</title>
+  </head>
+  <body>
+    <!--
+      A compute-only page, patterned on sfMapPercolation.html: no canvas, no
+      engine, no React — just this tool's own Vite server (and its own WESL
+      link) so sweepSfMapActivityHistogram.ts can reach the real automaton.
+    -->
+    <pre id="status">idle</pre>
+    <script type="module" src="./src/engine/sfMap/sfMapActivityHistogramHarness.ts"></script>
+  </body>
+</html>

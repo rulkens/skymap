@@ -58,6 +58,7 @@
     "galaxy-renderer:build": "vite build --config tools/galaxy-renderer/vite.config.ts",
     "galaxy-renderer:probe": "tsx tools/galaxy-renderer/probeGpuErrors.ts",
     "galaxy-renderer:percolation": "tsx tools/galaxy-renderer/sweepSfMapPercolation.ts",
+    "galaxy-renderer:sfmap-histogram": "tsx tools/galaxy-renderer/sweepSfMapActivityHistogram.ts",
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
     "desi-cone-census": "tsx tools/catalog/desiConeCensus.ts",
