@@ -53,6 +53,7 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import {
+  ASSOCIATIONS_MAX_COUNT,
   buildHiiRegions,
   DIG_MAX_COUNT,
   HII_MAX_COUNT,
@@ -191,7 +192,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // buffer as a bounded group pushed after `HII_MAX_COUNT`'s
     // admission, not a reservation carved out of it — so the common case
     // (dig.fraction on, its default) never regrows on first activation.
-    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT,
+    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + ASSOCIATIONS_MAX_COUNT,
     onRegrow: deps.onHiiCompsRegrow,
   });
   // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a plain
@@ -279,7 +280,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // Same "map landed after the synchronous build that asked for it"
       // determinism problem `rebuildDustMixture` above solves, for the HII
       // tier's own map-seeded positions AND its DIG veil (also map-seeded).
-      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0)) {
+      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0 || (fieldTuning.hii.associations?.brightness ?? 0) > 0)) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
         repackHiiComponents();
       }
@@ -305,7 +306,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       } else {
         reportOrientationDiagnostics();
       }
-      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0)) {
+      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0 || (fieldTuning.hii.associations?.brightness ?? 0) > 0)) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
         repackHiiComponents();
       }

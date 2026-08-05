@@ -7,6 +7,7 @@
  * a settings drawer folded into FLUX FIELD.
  */
 import type { ReactNode } from 'react';
+import type { GalaxyHiiAssociationsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiAssociationsTuning';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
 import type { GalaxyHiiTuning } from '../../../../../src/@types/galaxy/GalaxyHiiTuning';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
@@ -27,6 +28,10 @@ function HiiSection(): ReactNode {
 
   const patchDig = (patch: Partial<GalaxyHiiDigTuning>): void => {
     patchHii({ dig: { ...hii.dig, ...patch } });
+  };
+
+  const patchAssociations = (patch: Partial<GalaxyHiiAssociationsTuning>): void => {
+    patchHii({ associations: { ...hii.associations, ...patch } });
   };
 
   return (
@@ -169,6 +174,72 @@ function HiiSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDig({ coherence: v })}
           path="fieldTuning.hii.dig.coherence"
+          info="How strictly a complex's scatter axis follows its local flow direction — 1 follows it exactly, 0 rotates it to a fresh random direction per complex."
+        />
+        <ParamSlider
+          label="Assoc · brightness"
+          value={hii.associations.brightness}
+          min={0}
+          max={2}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchAssociations({ brightness: v })}
+          path="fieldTuning.hii.associations.brightness"
+          info="Blue OB-association tier's flux multiplier, in the embedded cluster's own stellar-continuum currency — the exposed population left once a region's gas is expelled and its shell fades. 0 skips the tier."
+        />
+        <ParamSlider
+          label="Assoc · complexes"
+          value={hii.associations.complexes}
+          min={0}
+          max={180}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          onChange={(v) => patchAssociations({ complexes: v })}
+          path="fieldTuning.hii.associations.complexes"
+          info="Number of association complex seeds. Total blob count is complexes x children."
+        />
+        <ParamSlider
+          label="Assoc · children"
+          value={hii.associations.childrenPerComplex}
+          min={1}
+          max={10}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          onChange={(v) => patchAssociations({ childrenPerComplex: v })}
+          path="fieldTuning.hii.associations.childrenPerComplex"
+          info="Blobs scattered around each association complex seed."
+        />
+        <ParamSlider
+          label="Assoc · arm bias"
+          value={hii.associations.armBias}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchAssociations({ armBias: v })}
+          path="fieldTuning.hii.associations.armBias"
+          info="Fraction of complexes seeded on an arm's lane, offset downstream of the ridge, rather than CDF-sampled from the SF map's swept-past density."
+        />
+        <ParamSlider
+          label="Assoc · elongation"
+          value={hii.associations.elongation}
+          min={1}
+          max={8}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => patchAssociations({ elongation: v })}
+          path="fieldTuning.hii.associations.elongation"
+          info="Aspect ratio of a complex's child scatter along vs. across its local flow direction, area-preserving so the complex stretches without also inflating."
+        />
+        <ParamSlider
+          label="Assoc · coherence"
+          value={hii.associations.coherence}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchAssociations({ coherence: v })}
+          path="fieldTuning.hii.associations.coherence"
           info="How strictly a complex's scatter axis follows its local flow direction — 1 follows it exactly, 0 rotates it to a fresh random direction per complex."
         />
       </div>

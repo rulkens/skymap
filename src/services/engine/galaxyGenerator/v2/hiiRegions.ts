@@ -21,6 +21,7 @@ import {
 } from './hiiRegionGeometry';
 import {
   ARM_SPAN_START_FRAC,
+  armCrossSigma,
   armFadeEnvelope,
   armRidgeAngle,
   armRidgeCurvePoint,
@@ -480,6 +481,156 @@ function buildDigVeil(
   return out;
 }
 
+/**
+ * Blue OB-association tier (see `GalaxyHiiAssociationsTuning`): the exposed
+ * phase-3 population left once an HII region's gas is expelled (~5 Myr) and
+ * its shell fades — a naked cluster, visible ~50-100 Myr, several times more
+ * numerous than the still-glowing knots that spawned it. Mirrors
+ * `buildDigVeil`'s complex/children machinery (both `placeDigMapComplex` and
+ * `scatterAxesForCoherence` are reused as-is); the phase-3 discriminant is
+ * entirely in `associationDensity` and the arm-lane lag below.
+ */
+/** Compact strings, not DIG's diffuse wash — smaller per-blob sigma and complex footprint (ratio to sigma kept close to DIG's own 250/200). */
+const ASSN_SIGMA_MIN_PC = 30;
+const ASSN_SIGMA_MAX_PC = 100;
+const ASSN_COMPLEX_SPREAD_PC = 80;
+/** Associations haven't diffused off the disc the way DIG has (300 pc) — still close to their birth height. */
+const ASSN_SCALE_HEIGHT_PC = 150;
+/** Dedicated rng stream salt — distinct from "SFMP"/"HII "/"DUST"/"ARMC"/"DIG ". */
+const ASSN_SALT = 0x4153534e; // "ASSN"
+/** `complexes x childrenPerComplex` ceiling, sized to `HiiSection.tsx`'s own slider maxima (180 x 10), not derived from them — see `DIG_MAX_COUNT`'s own doc for why. */
+export const ASSOCIATIONS_MAX_COUNT = 1800;
+
+/** A fresh ignition site (`recentSf` high) must NOT seed an association — only cells the front has already swept clear of qualify. Suppression saturates by `recentSf = 1/K`, well inside the automaton's own active range. */
+const ASSN_RECENT_SF_SUPPRESSION_K = 4;
+function associationDensity(_gas: number, recentSf: number, oldActivity: number): number {
+  return oldActivity * (1 - Math.min(1, ASSN_RECENT_SF_SUPPRESSION_K * recentSf));
+}
+
+/** A complex's downstream drift since ignition, standing in for an un-integrated velocity-shear model — a fixed offset along the ridge tangent, scaled to the arm's own cross width rather than a bare parsec constant. */
+const ASSN_ARM_LAG_SIGMAS = 1.2;
+function placeAssnArmComplex(
+  rng: () => number,
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  armWeights: readonly number[],
+  armWeightSum: number,
+): DigSeedFrame | null {
+  const seed = placeDigArmComplex(rng, geometry, armWeights, armWeightSum);
+  if (!seed) return null;
+  const radius = Math.hypot(seed.point[0], seed.point[2]);
+  const lag = armCrossSigma(radius, geometry, tuning) * ASSN_ARM_LAG_SIGMAS;
+  return {
+    ...seed,
+    point: [
+      seed.point[0] + seed.along[0] * lag,
+      seed.point[1] + seed.along[1] * lag,
+      seed.point[2] + seed.along[2] * lag,
+    ],
+  };
+}
+
+/** Subtle cool/hot spread around the cluster's own stellar-continuum colour — `hiiCorePerturbed`'s nudge-and-clamp mechanism (`generate.wesl`), blue-anchored instead of `gen.hiiCore`. */
+const ASSN_COLOR_JITTER_MAX = 0.15;
+function associationChildColor(rng: () => number): Vec3 {
+  const jitter = rng() * ASSN_COLOR_JITTER_MAX;
+  return [
+    HII_CLUSTER_COLOR[0] * (1 - jitter),
+    Math.min(1, HII_CLUSTER_COLOR[1] + jitter * 0.3),
+    HII_CLUSTER_COLOR[2],
+  ];
+}
+
+function buildBlueAssociations(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  sfMap: GalaxySfMap | null,
+  clusterFluxSum: number,
+  seed: number,
+): readonly GalaxyFieldComponent[] {
+  // Stale-stored-tuning guard, same discipline `buildDigVeil` uses for `dig`.
+  const assn = tuning.hii.associations;
+  if (!assn || !sfMap) return [];
+  const brightness = Math.max(0, assn.brightness);
+  if (brightness <= 0) return [];
+
+  const cdf = buildSfMapDustCdf(sfMap, associationDensity);
+  if (!(cdf.total > 0)) return [];
+
+  // Stellar continuum like the embedded cluster core, not Hα like the
+  // shell/DIG — anchored to that SAME currency (`clusterFluxSum`, not
+  // `totalFlux`), the same reasoning `buildDigVeil` uses for `shellFluxSum`.
+  const assnTotalFlux = brightness * clusterFluxSum;
+  if (!(assnTotalFlux > 0)) return [];
+
+  const childrenPerComplex = Math.max(0, Math.round(assn.childrenPerComplex));
+  if (childrenPerComplex <= 0 || assn.complexes <= 0) return [];
+  const complexes = Math.min(
+    Math.max(0, Math.round(assn.complexes)),
+    Math.floor(ASSOCIATIONS_MAX_COUNT / childrenPerComplex),
+  );
+  if (complexes <= 0) return [];
+  const totalChildren = complexes * childrenPerComplex;
+
+  const armBias = Math.min(1, Math.max(0, assn.armBias));
+  const elongation = assn.elongation;
+  if (!(elongation > 0)) return [];
+  const coherence = Math.min(1, Math.max(0, assn.coherence));
+  const canUseArms = geometry.numArms > 0;
+  const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
+  const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
+  const complexSpread = pcToUnits(ASSN_COMPLEX_SPREAD_PC);
+
+  const rng = mulberry32(seed ^ ASSN_SALT);
+  const amplitudeBase = assnTotalFlux / totalChildren;
+
+  const out: GalaxyFieldComponent[] = [];
+  for (let c = 0; c < complexes; c++) {
+    const armRoll = rng();
+    const seedFrame =
+      (canUseArms && armRoll < armBias
+        ? placeAssnArmComplex(rng, geometry, tuning, armWeights, armWeightSum)
+        : null) ?? placeDigMapComplex(rng, geometry, cdf);
+    const axes = scatterAxesForCoherence(seedFrame, coherence, rng);
+
+    for (let ch = 0; ch < childrenPerComplex; ch++) {
+      const offAlong = gaussian(rng) * complexSpread * Math.sqrt(elongation);
+      const offAcross = (gaussian(rng) * complexSpread) / Math.sqrt(elongation);
+      const offPole = gaussian(rng) * complexSpread * DIG_CHILD_POLE_RATIO;
+      const x =
+        seedFrame.point[0] +
+        axes.along[0] * offAlong +
+        axes.across[0] * offAcross +
+        seedFrame.pole[0] * offPole;
+      const z =
+        seedFrame.point[2] +
+        axes.along[2] * offAlong +
+        axes.across[2] * offAcross +
+        seedFrame.pole[2] * offPole;
+      const yFlat =
+        seedFrame.point[1] +
+        axes.along[1] * offAlong +
+        axes.across[1] * offAcross +
+        seedFrame.pole[1] * offPole;
+      const y = seedFrame.warped
+        ? yFlat
+        : yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
+      const height = y + gaussian(rng) * pcToUnits(ASSN_SCALE_HEIGHT_PC);
+      const sigma = pcToUnits(
+        ASSN_SIGMA_MIN_PC + (ASSN_SIGMA_MAX_PC - ASSN_SIGMA_MIN_PC) * rng(),
+      );
+      out.push({
+        amplitude: amplitudeBase / (TAU_ROOT3 * sigma * sigma * sigma),
+        ...inverseCovarianceFromFrame(ISO_FRAME, { along: sigma, across: sigma, pole: sigma }),
+        color: associationChildColor(rng),
+        center: [x, height, z],
+        boundRadius: sigma,
+      });
+    }
+  }
+  return out;
+}
+
 export function buildHiiRegions(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
@@ -520,17 +671,19 @@ export function buildHiiRegions(
     Math.min(1, Math.max(0, tuning.hii.clusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
   const out: GalaxyFieldComponent[] = [];
 
-  // Accumulated in the SAME currency the shell amplitude below is drawn
-  // from (flux, pre-division-by-sprite-count) — the DIG veil's total flux
-  // is anchored to this sum, not to `totalFlux`, because the cluster share
-  // is stellar continuum (`HII_CLUSTER_COLOR`), not Hα.
+  // Accumulated in the SAME currency the shell/cluster amplitudes below are
+  // drawn from (flux, pre-division-by-sprite-count) — the DIG veil's total
+  // flux is anchored to `shellFluxSum` (Hα) and the blue-association tier's
+  // to `clusterFluxSum` (stellar continuum), not to `totalFlux`.
   let shellFluxSum = 0;
+  let clusterFluxSum = 0;
 
   for (const region of regions) {
     const regionFlux = (totalFlux * region.luminosity) / luminositySum;
     const clusterFlux = region.clusterCount > 0 ? regionFlux * clusterShare : 0;
     const shellFlux = regionFlux - clusterFlux;
     shellFluxSum += shellFlux;
+    clusterFluxSum += clusterFlux;
 
     if (region.shellCount > 0 && shellFlux > 0) {
       const sigma = region.radius * SHELL_SPRITE_SIGMA_RATIO;
@@ -579,6 +732,14 @@ export function buildHiiRegions(
   // which regions were admitted or where they sit. See `buildDigVeil`'s own
   // header for the gating and flux-anchoring discipline.
   for (const component of buildDigVeil(geometry, tuning, sfMap, shellFluxSum, seed)) {
+    out.push(component);
+  }
+
+  // Blue OB-association tier — placed independently of both the catalog
+  // regions and the DIG veil (its own complex/children structure, own rng
+  // stream). See `buildBlueAssociations`'s own header for the gating and
+  // flux-anchoring discipline.
+  for (const component of buildBlueAssociations(geometry, tuning, sfMap, clusterFluxSum, seed)) {
     out.push(component);
   }
 

@@ -1,3 +1,4 @@
+import type { GalaxyHiiAssociationsTuning } from './GalaxyHiiAssociationsTuning';
 import type { GalaxyHiiDigTuning } from './GalaxyHiiDigTuning';
 
 /**
@@ -43,4 +44,10 @@ export type GalaxyHiiTuning = {
    * the whole point.
    */
   readonly dig: GalaxyHiiDigTuning;
+  /**
+   * The exposed blue OB-association tier's own tuning — see
+   * `GalaxyHiiAssociationsTuning`. Without it the shells fade at ~5 Myr with
+   * nothing standing in for the naked cluster left behind.
+   */
+  readonly associations: GalaxyHiiAssociationsTuning;
 };

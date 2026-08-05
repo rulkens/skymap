@@ -18,11 +18,11 @@ const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 function makeBusyMap(): GalaxySfMap {
   const az = 32;
   const rings = 16;
-  const data = new Uint8Array(rings * az * 4);
+  const data = new Float32Array(rings * az * 4);
   for (let i = 0; i < data.length; i += 4) {
-    data[i] = 200;
-    data[i + 1] = 180;
-    data[i + 2] = 150;
+    data[i] = 0.78;
+    data[i + 1] = 0.7;
+    data[i + 2] = 0.6;
   }
   return { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
 }
@@ -182,6 +182,107 @@ describe('buildHiiRegions', () => {
       // and the complex's own cross-lane offset, so this only pins "landed
       // near an arm", not an exact match.
       expect(minDelta).toBeLessThan(0.6);
+    }
+  });
+
+  it('associations.brightness 0 is byte-identical whether or not a map is handed in', () => {
+    const tuningOff = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      hii: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+        sfMapSeeding: 0,
+        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
+        associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, brightness: 0 },
+      },
+    };
+    const withoutMap = buildHiiRegions(
+      geometry,
+      tuningOff,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      null,
+    );
+    const withMap = buildHiiRegions(
+      geometry,
+      tuningOff,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      makeBusyMap(),
+    );
+    expect(withMap.length).toBeGreaterThan(0);
+    expect(withMap).toEqual(withoutMap);
+  });
+
+  it('associations concentrate on a swept old-activity texel and skip a fresh-ignition one', () => {
+    // Both texels carry equal oldActivity; only the hot one's recentSf
+    // differs — isolates the suppression term from a bare "follows
+    // oldActivity" placement.
+    const az = 32;
+    const rings = 16;
+    const hotRing = 2;
+    const hotAz = 4;
+    const oldRing = 12;
+    const oldAz = 20;
+    const data = new Float32Array(rings * az * 4);
+    const hotI = (hotRing * az + hotAz) * 4;
+    data[hotI + 1] = 1; // recentSf: fresh ignition
+    data[hotI + 2] = 1; // oldActivity: same magnitude as the swept texel
+    const oldI = (oldRing * az + oldAz) * 4;
+    data[oldI + 2] = 1; // oldActivity only: swept clear, not currently igniting
+    const map: GalaxySfMap = { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
+
+    const tuningOn = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      hii: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+        sfMapSeeding: 0,
+        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
+        associations: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations,
+          brightness: 1,
+          armBias: 0, // every complex takes the map-CDF path, deterministically
+          complexes: 20,
+          childrenPerComplex: 6,
+        },
+      },
+    };
+    const tuningOff = {
+      ...tuningOn,
+      hii: { ...tuningOn.hii, associations: { ...tuningOn.hii.associations, brightness: 0 } },
+    };
+    const withoutAssn = buildHiiRegions(
+      geometry,
+      tuningOff,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      map,
+    );
+    const withAssn = buildHiiRegions(
+      geometry,
+      tuningOn,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      map,
+    );
+    const expectedCount =
+      tuningOn.hii.associations.complexes * tuningOn.hii.associations.childrenPerComplex;
+    expect(withAssn.length).toBe(withoutAssn.length + expectedCount);
+
+    const assn = withAssn.slice(withoutAssn.length);
+    const dTheta = (2 * Math.PI) / az;
+    const oldAngleCenter = (oldAz + 0.5) * dTheta;
+    const hotAngleCenter = (hotAz + 0.5) * dTheta;
+    const wrap = (a: number) => Math.abs(a - 2 * Math.PI * Math.round(a / (2 * Math.PI)));
+    for (const component of assn) {
+      const [x, , z] = component.center;
+      const angle = Math.atan2(z, x);
+      const deltaOld = wrap(angle - oldAngleCenter);
+      const deltaHot = wrap(angle - hotAngleCenter);
+      // Generous band, same idea as the arm-bias test above — pins "landed
+      // near the swept texel", not an exact bin match once child scatter and
+      // radial jitter are folded in.
+      expect(deltaOld).toBeLessThan(0.5);
+      expect(deltaOld).toBeLessThan(deltaHot);
     }
   });
 });

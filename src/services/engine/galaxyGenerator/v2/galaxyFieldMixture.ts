@@ -345,6 +345,16 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       elongation: 3,
       coherence: 0.7,
     },
+    associations: {
+      // >0 so the tier is visible out of the box; a FEEL calibration, not a
+      // measurement (see hiiRegions.ts's brightness anchor).
+      brightness: 0.6,
+      complexes: 90,
+      childrenPerComplex: 5,
+      armBias: 0.5,
+      elongation: 2.5,
+      coherence: 0.6,
+    },
   },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
 };
