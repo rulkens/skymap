@@ -38,7 +38,12 @@ struct SfMapGrid {
 // closest-approach point (o + d*tPeak in dustMap.wesl's fs), not a
 // re-derived ray/plane hit, so detail rides each component's own depth
 // instead of one shared disc-plane intersection.
-fn dustDetailMultiplier(p: vec3<f32>) -> f32 {
+// breakup: a mean-1 vertical decorrelation weight supplied by the caller —
+// the map is 2D, so an unweighted multiplier extrudes its texel contrast
+// into vertical curtains through a 3D cloud; scaling the DEVIATION by a
+// mean-1 field preserves the column ratio in expectation while breaking the
+// vertical coherence. Callers with no noise in reach pass 1.0.
+fn dustDetailMultiplier(p: vec3<f32>, breakup: f32) -> f32 {
   if (u.dustDetail.x <= 0.0) {
     return 1.0;
   }
@@ -57,5 +62,5 @@ fn dustDetailMultiplier(p: vec3<f32>) -> f32 {
   let density = mapTexel.x * mapTexel.z;
   let densityBlur = textureSampleLevel(sfMapBlurTex, sfMapSmp, uv, 0.0).x;
   let detail = (density + DETAIL_EPS) / (densityBlur + DETAIL_EPS);
-  return clamp(1.0 + u.dustDetail.x * (detail - 1.0), 0.0, DETAIL_MAX);
+  return clamp(1.0 + u.dustDetail.x * (detail - 1.0) * breakup, 0.0, DETAIL_MAX);
 }

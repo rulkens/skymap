@@ -50,7 +50,7 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ dustDetailStrength: v }))}
           path="render.dustDetailStrength"
-          info="S4 high-pass: multiplies each dust splat by the SF map's detail ratio (map density / 8-texel blur) at that splat's own closest-approach point, applied once at accumulation so it parallaxes with the splats. Both the normal view's attenuation and the JWST column inherit it through the map. 0 = splats alone; 1 = full ratio."
+          info="S4 high-pass: multiplies each dust splat by the SF map's detail ratio (map density / 8-texel blur) at that splat's own closest-approach point, applied once at accumulation so it parallaxes with the splats. The ratio's deviation is scaled by a mean-1 vertical noise weight so a cloud's column keeps its detail in expectation without the map's 2D contrast extruding into vertical curtains. Both the normal view's attenuation and the JWST column inherit it through the map. 0 = splats alone; 1 = full ratio."
         />
         <ParamSlider
           label={DEBUG_VIEWS.sfMap.label}

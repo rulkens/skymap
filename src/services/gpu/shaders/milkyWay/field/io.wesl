@@ -130,7 +130,9 @@
 // it parallaxes with the splats instead of stamping one flat pattern across
 // the whole depth column. Both consumers (splat.wesl, dustPresent.wesl) see
 // it through the column with no second read; 0 disables it. .yzw reserved
-// like counts2.x.
+// like counts2.x. The accumulation multiply scales its deviation by a
+// mean-1 sample of the baked noise volume so the 2D map's contrast doesn't
+// extrude into vertical curtains (dustMap.wesl).
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

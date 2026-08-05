@@ -207,7 +207,32 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // splats rather than stamping a flat disc-plane decal. Its own gate
   // (dustDetail.x <= 0) is independent of noiseAmp: erosion off must not
   // disable map detail. The ratio is a density term, so it applies to all
-  // four slices alike.
-  slices = slices * dustDetailMultiplier(o + d * tPeak);
+  // four slices alike. The map is 2D, so its ratio alone is constant along a
+  // vertical ray through the cloud; dustDetailMultiplier's 'breakup' scales
+  // just the deviation from 1 by a mean-1 sample of the same noise volume
+  // erosion uses, above, so the vertical coherence breaks up while the
+  // column ratio holds in expectation.
+  if (u.dustDetail.x > 0.0) {
+    let p = o + d * tPeak;
+    // Half-tile offset decorrelates this breakup field from the erosion
+    // field sampled at the unoffset coordinate above; reusing the same
+    // field would correlate two multiplicative terms and bias the
+    // product's mean.
+    let bands = textureSampleLevel(
+      dustNoiseTex, dustNoiseSmp, p / u.dustNoise.x + vec3<f32>(0.5), 0.0,
+    );
+    let w = 2.0 * bands.y; // 2x band, mean ~0.5 -> w mean ~1.
+    let pxWorld = 2.0 * tPeak * u.params.x / u.counts2.y;
+    var breakup = 1.0;
+    if (pxWorld > 0.0) {
+      // Band-limited like dustNoiseMultiplier's own w1 term above, but
+      // ramped toward NEUTRAL 1.0, not 0: sub-pixel breakup would crawl
+      // under camera motion exactly like unweighted erosion bands, and at
+      // that distance the banding it exists to hide is itself sub-pixel.
+      let resolved = clamp((u.dustNoise.x / 2.0) / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+      breakup = mix(1.0, w, resolved);
+    }
+    slices = slices * dustDetailMultiplier(p, breakup);
+  }
   return slices;
 }
