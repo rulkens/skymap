@@ -15,6 +15,7 @@ import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/
 import {
   buildGalaxySfMapArmForcing,
   SF_MAP_AZ,
+  SF_MAP_RINGS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import {
   buildGalaxySfMapFluidEvents,
@@ -49,7 +50,11 @@ describe('buildGalaxySfMapFluidEvents', () => {
     let eventTotal = 0;
     for (const e of events) {
       const az = Math.min(SF_MAP_AZ - 1, Math.round(e.az)) % SF_MAP_AZ;
-      const ring = Math.round(e.ring);
+      // Same top-edge overflow as az above: `e.ring`'s own sub-texel jitter
+      // (`ring + rng()`, see buildGalaxySfMapFluidEvents) can round up to
+      // SF_MAP_RINGS at the outermost ring — clamp rather than index past
+      // the array into NaN.
+      const ring = Math.min(SF_MAP_RINGS - 1, Math.round(e.ring));
       eventTotal += forcing[ring * SF_MAP_AZ + az]!;
     }
     const eventMean = eventTotal / events.length;
