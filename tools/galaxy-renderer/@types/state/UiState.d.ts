@@ -20,6 +20,8 @@ export type UiState = {
       | 'hiiAssociations'
       | 'starFormation'
       | 'sfMap'
+      | 'sfMapAutomaton'
+      | 'sfMapFluid'
       | 'debugViews'
       | 'pop'
       | 'dust'

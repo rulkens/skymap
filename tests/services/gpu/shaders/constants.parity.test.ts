@@ -83,8 +83,10 @@ describe('flow/constants.wesl ↔ flowFieldConstants.ts parity', () => {
  */
 describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
   const files = [
-    'src/services/gpu/shaders/milkyWay/sfMap/sfMapStep.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapAutomatonStep.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapPack.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapFluidStep.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapFluidPack.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationField.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationTensor.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationTensorBlur.wesl',
@@ -113,15 +115,18 @@ describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
 });
 
 /**
- * SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into four WESL
+ * SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into five WESL
  * files that are not dedicated constant-mirror files, so — same idiom as
  * bloomSeedingConstants.parity.test.ts's readWeslConst — this reads one
- * named const per file rather than sweeping each for orphans. sfMapStep.wesl
- * seeds every texel to this pedestal at step 0; sfMapDustBlur.wesl and
- * dustDetail.wesl must subtract the SAME pedestal before blending sweptMix,
- * or S4's detail ratio (dustDetail.wesl) drifts against its own blur divisor;
+ * named const per file rather than sweeping each for orphans.
+ * sfMapAutomatonStep.wesl/sfMapFluidStep.wesl seed every texel to this
+ * pedestal at step 0; sfMapDustBlur.wesl and dustDetail.wesl must subtract
+ * the SAME pedestal before blending sweptMix, or S4's detail ratio
+ * (dustDetail.wesl) drifts against its own blur divisor;
  * sfMapPresent.wesl subtracts it too, to reconstruct the seeding view's
- * overshoot term from the raw dust channel it already reads.
+ * overshoot term from the raw dust channel it already reads. sfMapFluidStep.wesl
+ * seeds the same pedestal at its own step 0 — the two generators must agree
+ * on what an unrun map looks like.
  */
 function readWeslConst(relPath: string, name: string): number | undefined {
   const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
@@ -135,7 +140,8 @@ function readWeslConst(relPath: string, name: string): number | undefined {
 
 describe('SF_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirrors)', () => {
   const files = [
-    'src/services/gpu/shaders/milkyWay/sfMap/sfMapStep.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapAutomatonStep.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapFluidStep.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapDustBlur.wesl',
     'src/services/gpu/shaders/milkyWay/field/dustDetail.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapPresent.wesl',

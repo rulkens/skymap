@@ -1,12 +1,15 @@
-// milkyWay/sfMap/sfMapStep.wesl — one generation of the SSPSF cellular
-// automaton (Gerola & Seiden 1978, ApJ 223, 129) on a fixed log-polar grid.
-// State (gas, age, dust, an old-activity EMA) ping-pongs between two storage
-// textures; rebuildSfMap dispatches one 'cs' per step, in ONE compute pass,
-// never per frame. MATERIAL (Lagrangian) frame: a cell's state lives at its
-// own texel forever, never resampled (see selfState below) — only the
-// neighbour lookup and arm-forcing sample drift with shear. sfMapPack.wesl
-// un-shears back to world coordinates once, at the end. Grid is UNIFORM
-// log-polar (1536 az x 512 ring), not Gerola & Seiden's own equal-area cells.
+// milkyWay/sfMap/sfMapAutomatonStep.wesl — one generation of the SSPSF
+// cellular automaton (Gerola & Seiden 1978, ApJ 223, 129) on a fixed
+// log-polar grid. Renamed from sfMapStep.wesl now that a second, independent
+// generator exists (sfMapFluidStep.wesl) — see that file's header for the
+// alternative. State (gas, age, dust, an old-activity EMA) ping-pongs
+// between two storage textures; the automaton runner dispatches one 'cs' per
+// step, in ONE compute pass, never per frame. MATERIAL (Lagrangian) frame: a
+// cell's state lives at its own texel forever, never resampled (see
+// selfState below) — only the neighbour lookup and arm-forcing sample drift
+// with shear. sfMapPack.wesl un-shears back to world coordinates once, at
+// the end. Grid is UNIFORM log-polar (1536 az x 512 ring), not Gerola &
+// Seiden's own equal-area cells.
 //
 // The z slot used to hold a refractory countdown; it is DERIVABLE as
 // max(0, refractorySteps - age) (age already resets to 0 on ignition and
@@ -29,8 +32,8 @@ struct SfMapConstants {
   refractorySteps: f32,
   seed: f32,
   armFluxRef: f32,
-  // 'oldActivity' trace decay/gain — see GalaxySfMapParams.ts for the
-  // steady-state derivation; formerly baked-in consts, now sliders.
+  // 'oldActivity' trace decay/gain — see GalaxySfMapAutomatonParams.ts for
+  // the steady-state derivation; formerly baked-in consts, now sliders.
   activityDecay: f32,
   activityGain: f32,
   // Fraction of a cell's own dust that survives being swept to its Moore

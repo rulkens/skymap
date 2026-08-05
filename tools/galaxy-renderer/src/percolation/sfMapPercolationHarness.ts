@@ -1,6 +1,6 @@
 /**
  * sfMapPercolationHarness — measures the SSPSF automaton's percolation
- * threshold by running `sfMapStep.wesl` ITSELF, on a real GPU, with no CPU
+ * threshold by running `sfMapAutomatonStep.wesl` ITSELF, on a real GPU, with no CPU
  * re-implementation of the update rule. A second copy of the automaton would
  * drift within a week (research doc's own standing rule), and a threshold read
  * off the update rule instead of measured is not a measurement at all.
@@ -14,20 +14,20 @@
  * The page half of `sweepSfMapPercolation.ts`; it owns its own GPUDevice and
  * touches no engine state.
  */
-import { DEFAULT_GALAXY_SF_MAP_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxySfMapParams';
+import { DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxySfMapAutomatonParams';
 import {
   SF_MAP_AZ,
   SF_MAP_RINGS,
   SF_MAP_WORKGROUP_SIZE,
 } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
-import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
+import type { GalaxySfMapAutomatonParams } from '../../../../src/@types/galaxy/GalaxySfMapAutomatonParams';
 import {
-  packSfMapConstants,
-  SF_MAP_CONSTANTS_BUFFER_SIZE,
-} from '../engine/sfMap/packSfMapConstants';
+  packSfMapAutomatonConstants,
+  SF_MAP_AUTOMATON_CONSTANTS_BUFFER_SIZE,
+} from '../engine/sfMap/packSfMapAutomatonConstants';
 import { sfMapStepIndexData } from '../engine/sfMap/sfMapStepIndexData';
 
-import sfMapStepWgsl from '../engine/shaders/milkyWay/sfMap/sfMapStep.wesl?static';
+import sfMapStepWgsl from '../engine/shaders/milkyWay/sfMap/sfMapAutomatonStep.wesl?static';
 
 const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
 
@@ -82,10 +82,10 @@ fn cs(
  * Overwrite ONE texel with a just-ignited cell, between the automaton's own
  * step-0 seeding pass and step 1. A write-only storage texture leaves every
  * other texel as it stands, which is what makes a single-cell initial
- * condition reachable without forking `sfMapStep.wesl`.
+ * condition reachable without forking `sfMapAutomatonStep.wesl`.
  *
  * z used to be an explicit refractory countdown this pass had to set
- * alongside age; `sfMapStep.wesl` now DERIVES refractory from age alone
+ * alongside age; `sfMapAutomatonStep.wesl` now DERIVES refractory from age alone
  * (06-ca-dust-channel-sketch.md), so age=0 here is already sufficient — z is
  * the dust channel today, and dust never feeds ignition probability, so its
  * seed value is inert for this harness's percolation measurement.
@@ -108,8 +108,8 @@ fn cs() {
 
 export type SfMapPercolationCase = {
   readonly label: string;
-  /** Merged over `DEFAULT_GALAXY_SF_MAP_PARAMS`; `steps` is taken from the request instead. */
-  readonly params: Partial<GalaxySfMapParams>;
+  /** Merged over `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS`; `steps` is taken from the request instead. */
+  readonly params: Partial<GalaxySfMapAutomatonParams>;
 };
 
 export type SfMapPercolationRequest = {
@@ -137,7 +137,7 @@ export type SfMapPercolationRequest = {
 
 export type SfMapPercolationResult = {
   readonly label: string;
-  readonly params: GalaxySfMapParams;
+  readonly params: GalaxySfMapAutomatonParams;
   readonly runs: number;
   /** Runs whose active-cell count is still non-zero on the final step. */
   readonly survived: number;
@@ -173,7 +173,7 @@ export type SfMapPercolationReport = {
 
 /**
  * Flood fill over the "ever ignited" mask, Moore-8 adjacency with azimuth
- * wraparound (radius does not wrap) — the same neighbourhood `sfMapStep.wesl`
+ * wraparound (radius does not wrap) — the same neighbourhood `sfMapAutomatonStep.wesl`
  * itself uses. Runs on the MATERIAL-frame grid with no shear un-rotation:
  * shear only rotates which world azimuth a material cell corresponds to, it
  * never changes which cells are lit, so material-frame adjacency answers the
@@ -299,7 +299,7 @@ export async function runSfMapPercolation(
 
   const constUbo = device.createBuffer({
     label: 'sfMapPercolation:constUbo',
-    size: SF_MAP_CONSTANTS_BUFFER_SIZE,
+    size: SF_MAP_AUTOMATON_CONSTANTS_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   const stride = device.limits.minUniformBufferOffsetAlignment;
@@ -343,8 +343,8 @@ export async function runSfMapPercolation(
   });
 
   // Even step index writes stateB, odd writes stateA — the same parity
-  // createSfMapAutomaton's dispatch loop runs, and what the census pass has to
-  // agree with to read the state a step just wrote.
+  // createSfMapAutomatonRunner's dispatch loop runs, and what the census pass
+  // has to agree with to read the state a step just wrote.
   const nextTexAt = (step: number): GPUTexture => (step % 2 === 0 ? stateB : stateA);
   const prevTexAt = (step: number): GPUTexture => (step % 2 === 0 ? stateA : stateB);
 
@@ -395,8 +395,8 @@ export async function runSfMapPercolation(
 
   const results: SfMapPercolationResult[] = [];
   for (const testCase of request.cases) {
-    const params: GalaxySfMapParams = {
-      ...DEFAULT_GALAXY_SF_MAP_PARAMS,
+    const params: GalaxySfMapAutomatonParams = {
+      ...DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS,
       ...testCase.params,
       steps: request.steps,
     };
@@ -416,7 +416,7 @@ export async function runSfMapPercolation(
       device.queue.writeBuffer(
         constUbo,
         0,
-        packSfMapConstants({ grid, sfMap: params, seed: run + 1 }),
+        packSfMapAutomatonConstants({ grid, sfMap: params, seed: run + 1 }),
       );
 
       const isLastRun = run === request.runs - 1;

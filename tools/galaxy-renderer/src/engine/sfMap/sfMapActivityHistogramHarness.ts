@@ -3,12 +3,15 @@
  * product (dust = gas x oldActivity x texelArea): does the automaton's
  * oldActivity EMA clamp at 1.0 on arm crests while interarm stays low, and
  * does that concentrate the CDF's mass in the arms? Runs the REAL
- * `createSfMapAutomaton` (no CPU re-port of the shader) over the shipped
- * `DEFAULT_GALAXY_FIELD_TUNING` and the Milky Way's own geometry — the same
- * construction path `createGalaxyModel.ts`'s `setParams` uses
- * (`describeGalaxy(MILKY_WAY_GALAXY_PARAMS)` -> `automaton.rebuild`) — rather
- * than `sfMapPercolationHarness.ts`'s synthetic uniform-forcing grid, since
- * the question here is what the REAL ridge does, not the bare automaton.
+ * `createSfMapAutomatonRunner` (no CPU re-port of the shader) over the
+ * shipped `DEFAULT_GALAXY_FIELD_TUNING` and the Milky Way's own geometry —
+ * the same construction path `createGalaxyModel.ts`'s `setParams` uses
+ * (`describeGalaxy(MILKY_WAY_GALAXY_PARAMS)` -> `sfMapGenerator.rebuild`) —
+ * rather than `sfMapPercolationHarness.ts`'s synthetic uniform-forcing grid,
+ * since the question here is what the REAL ridge does, not the bare
+ * automaton. Automaton-specific by design (the fluid generator has no
+ * `oldActivity` EMA claim to measure this way), so it drives
+ * `createSfMapAutomatonRunner` directly rather than the generator dispatcher.
  *
  * Page entry, like `sfMapPercolationEntry.ts`: hangs itself on `globalThis`
  * for `sweepSfMapActivityHistogram.ts`'s Playwright driver to call, since a
@@ -19,15 +22,17 @@ import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyW
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import {
   buildGalaxySfMapArmForcing,
+  sfMapGridRadiusOrDefault,
   SF_MAP_AZ,
   SF_MAP_RINGS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { sfMapDustDensity } from '../../../../../src/utils/galaxy/sfMapDustDensity';
 import { sfMapDustRingEdges } from '../../../../../src/utils/galaxy/sfMapDustRingEdges';
 import { createShaderModuleWithDevLog } from '../../../../../src/services/gpu/shaderCompileLogger';
-import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
+import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxySfMapAutomatonParams';
 import { FIELD_HEADER_BUFFER_SIZE } from '../field/packFieldUniforms';
-import { createSfMapAutomaton } from './createSfMapAutomaton';
+import { createSfMapOutput } from './createSfMapOutput';
+import { createSfMapAutomatonRunner } from './createSfMapAutomatonRunner';
 import { decodeSfMapTexels } from './decodeSfMapTexels';
 
 const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
@@ -174,7 +179,7 @@ function assertNoDeviceError(device: GPUDevice, what: string): Promise<void> {
 }
 
 export async function runSfMapActivityHistogram(
-  overrides?: Partial<GalaxySfMapParams>,
+  overrides?: Partial<GalaxySfMapAutomatonParams>,
 ): Promise<string> {
   const adapter = await navigator.gpu?.requestAdapter();
   if (!adapter) throw new Error('no WebGPU adapter');
@@ -195,8 +200,10 @@ export async function runSfMapActivityHistogram(
   });
 
   device.pushErrorScope('validation');
-  const automaton = createSfMapAutomaton(device, {
-    makeShader: (code, label) => createShaderModuleWithDevLog(device, code, label),
+  const makeShader = (code: string, label: string): GPUShaderModule =>
+    createShaderModuleWithDevLog(device, code, label);
+  const output = createSfMapOutput(device, {
+    makeShader,
     // Matches createGalaxyEngine.ts's own `HDR` — not exported from that
     // file (this harness must not import it, see this file's header), so
     // restated here; `presentPipeline`'s target format, which this harness
@@ -204,6 +211,7 @@ export async function runSfMapActivityHistogram(
     hdrFormat: 'rgba16float',
     fieldUbo,
   });
+  const automaton = createSfMapAutomatonRunner(device, { makeShader, output });
   await assertNoDeviceError(device, 'automaton pipeline creation');
 
   // The exact construction path `createGalaxyModel.ts`'s `setParams` runs at
@@ -219,33 +227,35 @@ export async function runSfMapActivityHistogram(
       ? DEFAULT_GALAXY_FIELD_TUNING
       : {
           ...DEFAULT_GALAXY_FIELD_TUNING,
-          sfMap: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMap, ...overrides },
+          sfMapAutomaton: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMapAutomaton, ...overrides },
         };
+  const grid = sfMapGridRadiusOrDefault(geometry);
+  output.writeGrid(grid);
 
   device.pushErrorScope('validation');
-  const grid = automaton.rebuild({ geometry, tuning, seed: SEED });
+  automaton.rebuild({ geometry, tuning, seed: SEED, grid });
   await device.queue.onSubmittedWorkDone();
   await assertNoDeviceError(device, 'automaton rebuild');
 
   // Same readback path as createSfMapReadbacks.ts's `sfMapStream`: copy into
-  // the automaton's own padded staging buffer, map, then `decodeSfMapTexels`
+  // the output's own padded staging buffer, map, then `decodeSfMapTexels`
   // strips WebGPU's 256-byte row stride AND decodes the f16 lanes back to
   // the tight, linear az*4-floats-per-row layout.
   const enc = device.createCommandEncoder({ label: 'sfMapActivityHistogram:copy' });
   enc.copyTextureToBuffer(
-    { texture: automaton.texture },
-    { buffer: automaton.readbackBuffer, bytesPerRow: automaton.readbackBytesPerRow },
+    { texture: output.texture },
+    { buffer: output.readbackBuffer, bytesPerRow: output.readbackBytesPerRow },
     [SF_MAP_AZ, SF_MAP_RINGS],
   );
   device.queue.submit([enc.finish()]);
-  await automaton.readbackBuffer.mapAsync(GPUMapMode.READ);
+  await output.readbackBuffer.mapAsync(GPUMapMode.READ);
   const packed = decodeSfMapTexels(
-    new Uint16Array(automaton.readbackBuffer.getMappedRange()).slice(),
-    automaton.readbackBytesPerRow,
+    new Uint16Array(output.readbackBuffer.getMappedRange()).slice(),
+    output.readbackBytesPerRow,
     SF_MAP_AZ,
     SF_MAP_RINGS,
   );
-  automaton.readbackBuffer.unmap();
+  output.readbackBuffer.unmap();
 
   // CPU-side arm-forcing field, no GPU readback needed — same pure function
   // `automaton.rebuild` already called to fill its own texture, so this is a
@@ -327,11 +337,11 @@ export async function runSfMapActivityHistogram(
     `  adapter: ${`${info.vendor ?? '?'}/${info.architecture ?? '?'} ${info.device ?? ''} ${info.description ?? ''}`.trim()}`,
   );
   lines.push(
-    `  grid: ${SF_MAP_AZ}x${SF_MAP_RINGS}, rMin=${grid.rMin.toFixed(3)} rMax=${grid.rMax.toFixed(3)}, steps=${tuning.sfMap.steps}, armForcing=${tuning.sfMap.armForcing}, seed=${SEED}`,
+    `  grid: ${SF_MAP_AZ}x${SF_MAP_RINGS}, rMin=${grid.rMin.toFixed(3)} rMax=${grid.rMax.toFixed(3)}, steps=${tuning.sfMapAutomaton.steps}, armForcing=${tuning.sfMapAutomaton.armForcing}, seed=${SEED}`,
   );
   // Full effective sfMap param set, not just the two named above — makes a
   // sweep log self-describing without cross-referencing the CLI invocation.
-  lines.push(`  params: ${JSON.stringify(tuning.sfMap)}`);
+  lines.push(`  params: ${JSON.stringify(tuning.sfMapAutomaton)}`);
   lines.push(
     `  population thresholds on the CPU armForcing field: crest >= p90 = ${crestThreshold.toFixed(4)}, interarm <= p50 = ${interarmThreshold.toFixed(4)}`,
   );
@@ -381,7 +391,7 @@ export async function runSfMapActivityHistogram(
   // every run's params + stats without parsing the tables above.
   const result = {
     tool: 'sfMapActivityHistogram',
-    params: tuning.sfMap,
+    params: tuning.sfMapAutomaton,
     activity: Object.fromEntries(stats.map((s) => [s.label, s])),
     dust: Object.fromEntries(dustStats.map((s) => [s.label, s])),
   };
@@ -392,7 +402,7 @@ export async function runSfMapActivityHistogram(
 }
 
 declare global {
-  var __sfMapActivityHistogram: (overrides?: Partial<GalaxySfMapParams>) => Promise<string>;
+  var __sfMapActivityHistogram: (overrides?: Partial<GalaxySfMapAutomatonParams>) => Promise<string>;
 }
 
 globalThis.__sfMapActivityHistogram = runSfMapActivityHistogram;

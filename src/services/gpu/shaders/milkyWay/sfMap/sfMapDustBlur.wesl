@@ -12,7 +12,7 @@
 // only ever reads this as a RATIO against the full-res density, and a ratio
 // is scale-invariant.
 
-const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createSfMapAutomaton.ts (TS is authoritative)
+const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createSfMapOutput.ts (TS is authoritative)
 // Mirrors SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested in
 // constants.parity.test.ts. CONTRACT: dustDetail.wesl's numerator must blend
 // the identical overshoot term, or the detail ratio drifts with sweptMix.

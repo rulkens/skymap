@@ -1,19 +1,20 @@
 /**
- * Parity guard: `milkyWay/sfMap/sfMapStep.wesl`'s `SfMapConstants` is the
- * offset authority, and `packSfMapConstants` writes raw indices into a
- * Float32Array — a wrong index throws nothing, it just ships garbage, and on
- * WebKit a mislaid uniform drops the frame with no error at all. Neither home
- * is restated here: the WESL offsets are computed from the scraped struct, and
- * the TS offsets are OBSERVED by finding unique sentinels in the packed
- * buffer, so reordering either side fails the comparison.
+ * Parity guard: `milkyWay/sfMap/sfMapAutomatonStep.wesl`'s `SfMapConstants`
+ * is the offset authority, and `packSfMapAutomatonConstants` writes raw
+ * indices into a Float32Array — a wrong index throws nothing, it just ships
+ * garbage, and on WebKit a mislaid uniform drops the frame with no error at
+ * all. Neither home is restated here: the WESL offsets are computed from the
+ * scraped struct, and the TS offsets are OBSERVED by finding unique
+ * sentinels in the packed buffer, so reordering either side fails the
+ * comparison.
  */
 import { describe, expect, it } from 'vitest';
 
 import {
-  packSfMapConstants,
-  SF_MAP_CONSTANTS_FLOATS,
-} from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapConstants';
-import type { SfMapConstantsInput } from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapConstants';
+  packSfMapAutomatonConstants,
+  SF_MAP_AUTOMATON_CONSTANTS_FLOATS,
+} from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapAutomatonConstants';
+import type { SfMapAutomatonConstantsInput } from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapAutomatonConstants';
 import { layoutWgslStruct } from '../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../tools/utils/wgsl/readShaderSource';
@@ -21,7 +22,7 @@ import { wgslPrimitiveLayout } from '../../../../../tools/utils/wgsl/wgslPrimiti
 
 const struct = layoutWgslStruct(
   parseWgslStructFields(
-    readShaderSource('src/services/gpu/shaders/milkyWay/sfMap/sfMapStep.wesl'),
+    readShaderSource('src/services/gpu/shaders/milkyWay/sfMap/sfMapAutomatonStep.wesl'),
     'SfMapConstants',
   ),
   (type) => {
@@ -52,10 +53,9 @@ const SENTINEL = {
   dustFloorFraction: 3114,
 } as const;
 
-const input: SfMapConstantsInput = {
+const input: SfMapAutomatonConstantsInput = {
   grid: { rMin: SENTINEL.rMin, rMax: SENTINEL.rMax },
   sfMap: {
-    enabled: true,
     steps: 3201,
     baseIgnition: SENTINEL.baseIgnition,
     spread: SENTINEL.spread,
@@ -72,7 +72,7 @@ const input: SfMapConstantsInput = {
   seed: SENTINEL.seed,
 };
 
-const packed = packSfMapConstants(input);
+const packed = packSfMapAutomatonConstants(input);
 
 /** Byte offset a sentinel landed at (asserting it landed exactly once). */
 function observed(value: number): number {
@@ -82,7 +82,7 @@ function observed(value: number): number {
   return i * 4;
 }
 
-describe('packSfMapConstants ↔ milkyWay/sfMap/sfMapStep.wesl SfMapConstants', () => {
+describe('packSfMapAutomatonConstants ↔ milkyWay/sfMap/sfMapAutomatonStep.wesl SfMapConstants', () => {
   it('packs a buffer the shader can bind', () => {
     // The floor is the struct's own size, which is what Dawn reports as this
     // binding's minBindingSize (52 for 13 f32, measured with probeGpuErrors —
@@ -90,7 +90,7 @@ describe('packSfMapConstants ↔ milkyWay/sfMap/sfMapStep.wesl SfMapConstants', 
     // might suggest; 56 for the 14th `dustFloorFraction` field added since,
     // same reasoning, not re-measured). Undershooting it fails every
     // createBindGroup, so the whole automaton silently stops running.
-    expect(SF_MAP_CONSTANTS_FLOATS * 4).toBeGreaterThanOrEqual(struct.layout.size);
+    expect(SF_MAP_AUTOMATON_CONSTANTS_FLOATS * 4).toBeGreaterThanOrEqual(struct.layout.size);
   });
 
   it('puts every member the shader declares where it declares it', () => {

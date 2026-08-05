@@ -31,10 +31,16 @@ export const DEFAULT_UI_STATE: UiState = {
     // Collapsed for the same reason `hii` is: two calibrated knobs, not the
     // active work.
     starFormation: false,
-    // The only section expanded by default: the SSPSF automaton is the
-    // current work, and everything else on the panel is either tuned or
-    // downstream of it.
+    // The only section expanded by default: the SF map is the current work,
+    // and everything else on the panel is either tuned or downstream of it.
     sfMap: true,
+    // Nested under SF MAP (CollapsibleSection's `nested` prop), own open
+    // state so folding the parent doesn't fight these for the same key —
+    // the `hiiDig`/`hiiAssociations` precedent. Automaton expanded (the
+    // shipped, calibrated generator and the default `sfMap.generator`);
+    // fluid collapsed (the new comparison spike, not the active default).
+    sfMapAutomaton: true,
+    sfMapFluid: false,
     // Collapsed: the crossfade sliders default to 0 (pure galaxy), so this
     // section is an occasional A/B tool, not something tuned every session.
     debugViews: false,

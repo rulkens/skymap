@@ -10,7 +10,15 @@
  */
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 
-const SECTION_KEYS = ['disc', 'arms', 'dust', 'hii', 'sfMap'] as const;
+const SECTION_KEYS = [
+  'disc',
+  'arms',
+  'dust',
+  'hii',
+  'sfMap',
+  'sfMapAutomaton',
+  'sfMapFluid',
+] as const;
 
 /** v2 flat key -> where it lands, `arms.cloud` spelled as the two hops it is. */
 const V2_FLAT_PATHS: Readonly<Record<string, readonly [string, ...string[]]>> = {

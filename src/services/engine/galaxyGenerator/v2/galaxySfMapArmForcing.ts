@@ -1,13 +1,15 @@
 /**
  * galaxySfMapArmForcing — bakes the SSPSF automaton's arm-forcing field on
- * the CPU, onto the SAME 1536x512 log-polar grid `sfMapStep.wesl` steps, from
- * the EXISTING ridge functions the sprite/analytic arms are placed against
- * (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`) — never
- * re-derived in WGSL, per research doc §19's "shared ridge truth by import,
- * not by re-deriving the curve" rule. Uploaded once per generation
+ * the CPU, onto the SAME 1536x512 log-polar grid `sfMapAutomatonStep.wesl`
+ * steps, from the EXISTING ridge functions the sprite/analytic arms are
+ * placed against (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`) —
+ * never re-derived in WGSL, per research doc §19's "shared ridge truth by
+ * import, not by re-deriving the curve" rule. Uploaded once per generation
  * (`rebuildSfMap` in createGalaxyEngine.ts) as a small R32F texture the
  * automaton samples with a plain 1:1 `textureLoad`, since it is baked at
- * this file's own grid extent.
+ * this file's own grid extent. The fluid generator reuses this SAME CPU
+ * field (never the texture) to bias its own event placement — see
+ * `galaxySfMapFluidEvents.ts`.
  */
 import { armRidgeCurvePoint, armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import { sfMapRingRadius } from '../../../../utils/galaxy/sfMapRingRadius';

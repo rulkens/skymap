@@ -61,7 +61,7 @@ import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './field/encodeSplatPass';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
-import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
+import { createSfMapGenerator } from './sfMap/createSfMapGenerator';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
@@ -183,7 +183,7 @@ export async function createGalaxyEngine(
   // `dispose` walks this in reverse. It replaces a hand-maintained destroy list
   // that had drifted by ten resources; an HMR remount hands the next engine the
   // same canvas, so each miss leaked a full set per remount. Resources that own
-  // their own teardown (`targets`, `model`, `sfMapAutomaton`,
+  // their own teardown (`targets`, `model`, `sfMapGenerator`,
   // `sfMapOrientation`, `bloomPyramid`, `compositor`, `aggregateUpsample`) keep
   // delegating and are deliberately absent here — which is also why nothing
   // registered here is ever reassigned.
@@ -483,7 +483,7 @@ export async function createGalaxyEngine(
   // Both own every resource they touch, including their readback staging
   // buffers; the engine keeps only the handles and the perf GATES (which read
   // the render bag / field tuning, which those modules deliberately don't).
-  const sfMapAutomaton = createSfMapAutomaton(device, {
+  const sfMapGenerator = createSfMapGenerator(device, {
     makeShader,
     hdrFormat: HDR,
     fieldUbo,
@@ -492,7 +492,7 @@ export async function createGalaxyEngine(
     makeShader,
     hdrFormat: HDR,
     fieldUbo,
-    sourceTexture: sfMapAutomaton.texture,
+    sourceTexture: sfMapGenerator.texture,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
@@ -585,7 +585,7 @@ export async function createGalaxyEngine(
   // regrow hooks are the `layout: 'auto'` contract — see the bind groups below.
   const model = createGalaxyModel({
     device,
-    automaton: sfMapAutomaton,
+    sfMapGenerator,
     orientation: sfMapOrientation,
     render,
     onFieldCompsRegrow: () => {
@@ -643,10 +643,10 @@ export async function createGalaxyEngine(
         { binding: 5, resource: dustNoiseSampler },
         // S4's SF-map detail term (dustDetail.wesl) rides the accumulation
         // pass now, applied per dust splat — see dustMap.wesl's fs.
-        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
-        { binding: 7, resource: sfMapAutomaton.mapSampler },
-        { binding: 8, resource: sfMapAutomaton.texture.createView() },
-        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
+        { binding: 3, resource: { buffer: sfMapGenerator.gridBuffer } },
+        { binding: 7, resource: sfMapGenerator.mapSampler },
+        { binding: 8, resource: sfMapGenerator.texture.createView() },
+        { binding: 9, resource: sfMapGenerator.dustBlurTexture.createView() },
       ],
     });
   }
@@ -1006,9 +1006,9 @@ export async function createGalaxyEngine(
         debugViews,
         galaxyWeight,
         sfMapChannels,
-        // sfMapPresent.wesl binds ONLY this header (createSfMapAutomaton.ts's
-        // presentBindGroup) — the HII header below omits this and packs the
-        // seeding lanes inert.
+        // sfMapPresent.wesl binds ONLY this header (createSfMapOutput.ts's
+        // presentBindGroup, shared by both generators) — the HII header
+        // below omits this and packs the seeding lanes inert.
         sfMapSeeding: model.sfMapSeedingView,
       },
       fieldData,
@@ -1202,8 +1202,8 @@ export async function createGalaxyEngine(
         if (debugViews.sfMap > 0) {
           encodePresentOverlay(
             pass,
-            sfMapAutomaton.presentPipeline,
-            sfMapAutomaton.presentBindGroup,
+            sfMapGenerator.presentPipeline,
+            sfMapGenerator.presentBindGroup,
           );
         }
         if (debugViews.orientation > 0) {
@@ -1316,7 +1316,7 @@ export async function createGalaxyEngine(
     // yet but sfMapPresent.wesl's own overlay; exposed here for the sibling
     // UI and future consumers, per `docs/research/milky-way/sf-map.md`'s
     // staging note (overlay first, consumed by nothing).
-    getSfMapTexture: (): GPUTexture => sfMapAutomaton.texture,
+    getSfMapTexture: (): GPUTexture => sfMapGenerator.texture,
     // The CPU-side readback of the same output (`scheduleSfMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`
     // via `dust.sfMapSeeding` today; exposed here for future consumers too.
@@ -1329,7 +1329,7 @@ export async function createGalaxyEngine(
       bloomPyramid.destroy();
       compositor.destroy();
       aggregateUpsample.destroy();
-      sfMapAutomaton.dispose();
+      sfMapGenerator.dispose();
       sfMapOrientation.dispose();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and

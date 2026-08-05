@@ -1,11 +1,13 @@
 /**
- * createSfMapOrientation — the GPU structure-tensor chain over the automaton's
- * packed map: field blur (separable) -> tensor -> tensor blur (separable) ->
- * coherence, plus the overlay that presents it.
+ * createSfMapOrientation — the GPU structure-tensor chain over the active
+ * SF-map generator's packed map (automaton or fluid, whichever
+ * `sfMap.generator` names — this module only ever sees `sourceTexture`, never
+ * which generator wrote it): field blur (separable) -> tensor -> tensor blur
+ * (separable) -> coherence, plus the overlay that presents it.
  *
  * Entirely GPU-side: no readback to run FROM, no JS blur, no upload back. The
  * source is a texture WebGPU zero-initialises, so `dispatch` is safe to call
- * before the automaton has ever run.
+ * before either generator has ever run.
  *
  * The perf GATE (is any consumer live?) stays with the caller — it reads the
  * render bag and the field tuning, neither of which this module should know
@@ -48,7 +50,7 @@ export function createSfMapOrientation(
     readonly hdrFormat: GPUTextureFormat;
     /** io.wesl's per-frame camera uniform — the present bind group's binding 0. */
     readonly fieldUbo: GPUBuffer;
-    /** The automaton's packed output; this chain's input. */
+    /** The active generator's packed output; this chain's input. */
     readonly sourceTexture: GPUTexture;
   },
 ): SfMapOrientation {

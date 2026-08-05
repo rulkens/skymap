@@ -22,10 +22,13 @@ sprites/   encodeStarPass, encodeTransmittanceDust, packCloudUniforms,
 field/     encodeSplatPass, encodeDustMapPass, encodeDustPresentPass,
            packFieldUniforms, packBubbleInstances, deriveDustHeaderLanes,
            dustSliceEdges
-sfMap/     createSfMapAutomaton, createSfMapOrientation, createSfMapReadbacks,
+sfMap/     createSfMapGenerator (dispatcher) + createSfMapOutput (shared
+           artifact) + createSfMapAutomatonRunner/createSfMapFluidRunner
+           (the two generators), createSfMapOrientation, createSfMapReadbacks,
            createOrientationDiagnostics, decodeOrientationTexels,
-           orientationCoherenceStats, sfMapStepIndexData, packSfMapConstants,
-           packSfMapUnshear
+           orientationCoherenceStats, sfMapStepIndexData,
+           packSfMapAutomatonConstants, packSfMapFluidConstants,
+           packSfMapFluidEvents, packSfMapUnshear
 
 model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
 frame/     deriveFrameView + the pure per-frame arithmetic under it

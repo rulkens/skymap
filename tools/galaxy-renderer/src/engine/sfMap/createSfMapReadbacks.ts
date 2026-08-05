@@ -1,14 +1,15 @@
 /**
- * createSfMapReadbacks — the two CPU copies of the SSPSF chain (the packed
- * automaton output and the orientation field), each with the stream that
- * fills it, over ONE `createReadbackQueue`.
+ * createSfMapReadbacks — the two CPU copies of the SF-map chain (the packed
+ * generator output — automaton OR fluid, whichever `sfMap.generator` names —
+ * and the orientation field), each with the stream that fills it, over ONE
+ * `createReadbackQueue`.
  *
  * One queue is load-bearing, not tidiness: two independent promise chains
  * reintroduce the 'buffer used in submit while mapped' race that queue exists
  * to prevent. Tokens stay per-stream so an orientation-only trigger (a sigma
  * move) cannot supersede a pending sfMap copy.
  *
- * Never a per-frame readback and never a CPU mirror of the automaton — these
+ * Never a per-frame readback and never a CPU mirror of the generator — these
  * land once per rebuild, and `dropIfGridMoved` is the only other writer.
  */
 
@@ -23,7 +24,7 @@ import {
 import { createReadbackQueue } from '../gpu/createReadbackQueue';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
 import { decodeSfMapTexels } from './decodeSfMapTexels';
-import type { SfMapAutomaton } from './createSfMapAutomaton';
+import type { SfMapGenerator } from './createSfMapGenerator';
 import type { SfMapOrientation } from './createSfMapOrientation';
 
 export type SfMapReadbacks = {
@@ -55,22 +56,22 @@ export type SfMapReadbacks = {
 
 export function createSfMapReadbacks(deps: {
   readonly device: GPUDevice;
-  readonly automaton: SfMapAutomaton;
+  readonly sfMapGenerator: SfMapGenerator;
   readonly orientation: SfMapOrientation;
 }): SfMapReadbacks {
   const queue = createReadbackQueue(deps.device);
 
   const sfMapStream = queue.stream({
     label: 'galaxy:sfMapReadback',
-    texture: deps.automaton.texture,
-    buffer: deps.automaton.readbackBuffer,
-    bytesPerRow: deps.automaton.readbackBytesPerRow,
+    texture: deps.sfMapGenerator.texture,
+    buffer: deps.sfMapGenerator.readbackBuffer,
+    bytesPerRow: deps.sfMapGenerator.readbackBytesPerRow,
     width: SF_MAP_AZ,
     height: SF_MAP_RINGS,
     decode: (mapped) =>
       decodeSfMapTexels(
         new Uint16Array(mapped),
-        deps.automaton.readbackBytesPerRow,
+        deps.sfMapGenerator.readbackBytesPerRow,
         SF_MAP_AZ,
         SF_MAP_RINGS,
       ),

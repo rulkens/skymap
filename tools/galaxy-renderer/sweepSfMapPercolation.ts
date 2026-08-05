@@ -7,13 +7,13 @@
  * With no override flag this runs the full built-in 11-sweep x 15-spread
  * matrix below, unchanged. Passing any of `--spread`/`--gasRegen`/
  * `--refractorySteps`/`--dustFloorFraction` instead runs ONE 'seeded' case at
- * that single parameter point (omitted knobs keep `DEFAULT_GALAXY_SF_MAP_PARAMS`)
+ * that single parameter point (omitted knobs keep `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS`)
  * — the ad-hoc-point mode a shell sweep loop drives:
  *
  *   npx tsx tools/galaxy-renderer/sweepSfMapPercolation.ts \
  *     --spread 0.23 --gasRegen 0.06 --refractorySteps 7 --dustFloorFraction 0.2 --steps 200 --runs 48
  *
- * Drives the REAL `sfMapStep.wesl` compute pass in headless Chromium (the
+ * Drives the REAL `sfMapAutomatonStep.wesl` compute pass in headless Chromium (the
  * page half is `src/percolation/sfMapPercolationHarness.ts`) rather than a CPU
  * port of the update rule — a percolation threshold is emergent and cannot be
  * read off a shader.
@@ -40,10 +40,12 @@ import type {
   SfMapPercolationRequest,
   SfMapPercolationResult,
 } from './src/percolation/sfMapPercolationHarness';
-import type { GalaxySfMapParams } from '../../src/@types/galaxy/GalaxySfMapParams';
+import type { GalaxySfMapAutomatonParams } from '../../src/@types/galaxy/GalaxySfMapAutomatonParams';
 
-/** `GalaxySfMapParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
-type MutableSfMapOverrides = { -readonly [K in keyof GalaxySfMapParams]?: GalaxySfMapParams[K] };
+/** `GalaxySfMapAutomatonParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
+type MutableSfMapOverrides = {
+  -readonly [K in keyof GalaxySfMapAutomatonParams]?: GalaxySfMapAutomatonParams[K];
+};
 
 /**
  * A Milky-Way-shaped grid span (`sfMapGridRadius`: rMin = 0.6 * armStartRadius,
@@ -205,7 +207,7 @@ function formatSweep(sweep: Sweep, results: readonly SfMapPercolationResult[]): 
 
 /**
  * One 'seeded' case at exactly the CLI-given point (omitted knobs keep
- * `DEFAULT_GALAXY_SF_MAP_PARAMS` — `runSfMapPercolation` does that merge
+ * `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS` — `runSfMapPercolation` does that merge
  * itself, see its own `params` line). This is the ad-hoc-point path a shell
  * sweep loop drives, as opposed to `main`'s own fixed 11-sweep matrix.
  */

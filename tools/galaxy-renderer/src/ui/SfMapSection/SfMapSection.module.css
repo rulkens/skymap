@@ -9,6 +9,14 @@
   composes: checkbox from '../shared.module.css';
 }
 
+/* Generator picker — same control surface as TonemapSelect's own .root, sized to sit inline in a .toggleRow rather than filling the panel width. */
+.select {
+  composes: control from '../shared.module.css';
+  padding: 4px 6px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-lg);
+}
+
 /* Same scannable two-column shape as FadeSection's readout — see that
    module's own comment for why: a fixed label column keeps the numbers on
    a straight right edge. */

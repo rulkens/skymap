@@ -6,7 +6,7 @@
  *   npx tsx tools/galaxy-renderer/sweepSfMapActivityHistogram.ts [--headed]
  *     [--spread N] [--gasRegen N] [--refractorySteps N] [--dustFloorFraction N] [--steps N]
  *
- * The five override flags replace one field of `DEFAULT_GALAXY_SF_MAP_PARAMS`
+ * The five override flags replace one field of `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS`
  * each; omitted ones keep the shipped default, so a flagless run is
  * byte-identical to before these flags existed.
  *
@@ -21,10 +21,12 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 
-import type { GalaxySfMapParams } from '../../src/@types/galaxy/GalaxySfMapParams';
+import type { GalaxySfMapAutomatonParams } from '../../src/@types/galaxy/GalaxySfMapAutomatonParams';
 
-/** `GalaxySfMapParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
-type MutableSfMapOverrides = { -readonly [K in keyof GalaxySfMapParams]?: GalaxySfMapParams[K] };
+/** `GalaxySfMapAutomatonParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
+type MutableSfMapOverrides = {
+  -readonly [K in keyof GalaxySfMapAutomatonParams]?: GalaxySfMapAutomatonParams[K];
+};
 
 type Options = { headed: boolean; overrides: MutableSfMapOverrides };
 
@@ -111,7 +113,7 @@ async function main(): Promise<void> {
       (o) =>
         (
           globalThis as unknown as {
-            __sfMapActivityHistogram: (o?: Partial<GalaxySfMapParams>) => Promise<string>;
+            __sfMapActivityHistogram: (o?: Partial<GalaxySfMapAutomatonParams>) => Promise<string>;
           }
         ).__sfMapActivityHistogram(o),
       overrides,

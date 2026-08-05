@@ -27,6 +27,8 @@ import {
   armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
+import { DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS } from './defaultGalaxySfMapAutomatonParams';
+import { DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS } from './defaultGalaxySfMapFluidParams';
 import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxySfMapParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
@@ -368,6 +370,8 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     },
   },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
+  sfMapAutomaton: DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS,
+  sfMapFluid: DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */

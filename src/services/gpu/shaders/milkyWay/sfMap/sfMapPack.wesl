@@ -1,15 +1,18 @@
 // milkyWay/sfMap/sfMapPack.wesl — packs the SSPSF automaton's final
 // ping-pong state into one presentable RGBA texture: gas column, recent SF
-// (age's own decay), older SF (the activity EMA sfMapStep.wesl already
-// carries in state.w), and the conserved dust channel (state.z) — see that
-// file's header. One dispatch, run once per rebuildSfMap after the last
-// step — never per frame. finalTex is still in sfMapStep.wesl's MATERIAL
-// (Lagrangian) frame; every consumer of THIS pass's output expects WORLD
-// coordinates, so this is the one place that un-shears — a single resample
-// instead of sfMapStep.wesl's old per-generation one (see that file's
-// header for why the difference matters). Dust is a smooth accumulated
-// field, so the bilinear resample below is fine for it too (unlike the
-// discrete ignition state sfMapStep.wesl itself must never blur).
+// (age's own decay), older SF (the activity EMA sfMapAutomatonStep.wesl
+// already carries in state.w), and the conserved dust channel (state.z) —
+// see that file's header. One dispatch, run once per automaton rebuild
+// after the last step — never per frame. finalTex is still in
+// sfMapAutomatonStep.wesl's MATERIAL (Lagrangian) frame; every consumer of
+// THIS pass's output expects WORLD coordinates, so this is the one place
+// that un-shears — a single resample instead of sfMapAutomatonStep.wesl's
+// old per-generation one (see that file's header for why the difference
+// matters). Dust is a smooth accumulated field, so the bilinear resample
+// below is fine for it too (unlike the discrete ignition state
+// sfMapAutomatonStep.wesl itself must never blur). Automaton-only: the
+// fluid generator has no material frame to un-shear, so its own repack
+// (sfMapFluidPack.wesl) is a straight copy instead.
 //
 // The output is rgba16float, not rgba8unorm: oldActivity keeps its
 // intentional [0,1] clamp below (a real bound on the EMA, independent of
@@ -34,10 +37,11 @@ struct SfMapUnshear {
 @group(0) @binding(2) var<uniform> u: SfMapUnshear;
 
 // Bilinear-in-azimuth read of the material state — the ONE resample this
-// design allows (this file's header); unlike sfMapStep.wesl's per-generation
-// self read, this runs once, so a single blur here cannot compound like N did.
-// azCount comes from textureDimensions(dst) in cs() below, same as
-// sfMapStep.wesl (no baked-in grid size — sfMapShear.wesl's own precedent).
+// design allows (this file's header); unlike sfMapAutomatonStep.wesl's
+// per-generation self read, this runs once, so a single blur here cannot
+// compound like N did. azCount comes from textureDimensions(dst) in cs()
+// below, same as sfMapAutomatonStep.wesl (no baked-in grid size —
+// sfMapShear.wesl's own precedent).
 fn sampleMaterial(ring: u32, azF: f32, azCount: u32) -> vec4<f32> {
   let wrapped = (azF % f32(azCount) + f32(azCount)) % f32(azCount);
   let a0 = u32(floor(wrapped)) % azCount;
@@ -55,7 +59,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
   let ring = gid.y;
-  // sfMapStep.wesl's armForcingAt derives the FORWARD transform: world =
+  // sfMapAutomatonStep.wesl's armForcingAt derives the FORWARD transform: world =
   // material + shear * genStep (a material cell drifts to higher world
   // azimuth as steps accumulate). This output texel IS a world azimuth
   // (gid.x); inverting that transform to find which material azimuth to

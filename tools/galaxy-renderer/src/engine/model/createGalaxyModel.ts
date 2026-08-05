@@ -29,6 +29,8 @@ import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/Gala
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxySfMap';
+import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxySfMapAutomatonParams';
+import type { GalaxySfMapFluidParams } from '../../../../../src/@types/galaxy/GalaxySfMapFluidParams';
 import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
 
@@ -73,7 +75,7 @@ import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import type { GrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { createOrientationDiagnostics } from '../sfMap/createOrientationDiagnostics';
-import type { SfMapAutomaton } from '../sfMap/createSfMapAutomaton';
+import type { SfMapGenerator } from '../sfMap/createSfMapGenerator';
 import type { SfMapOrientation } from '../sfMap/createSfMapOrientation';
 import { createSfMapReadbacks } from '../sfMap/createSfMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
@@ -103,7 +105,7 @@ type Extra = {
 
 export type GalaxyModelDeps = {
   readonly device: GPUDevice;
-  readonly automaton: SfMapAutomaton;
+  readonly sfMapGenerator: SfMapGenerator;
   readonly orientation: SfMapOrientation;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
@@ -162,7 +164,7 @@ export type GalaxyModel = {
 };
 
 export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
-  const { device, automaton, orientation, render } = deps;
+  const { device, sfMapGenerator, orientation, render } = deps;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
   // settings key — what the rebuild gates' `wanted` predicates read.
@@ -241,8 +243,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // to rebuild.
   let fieldGeometry: GalaxyDescription | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
-  // What the automaton was last rebuilt against — see `setFieldTuning`.
+  // What the SF map was last rebuilt against — see `setFieldTuning`. Three
+  // keys, not one: `sfMap` is the shared switch, but only the ACTIVE
+  // generator's own param block needs to move the identity check — an
+  // inactive generator's slider drag would otherwise pay a rebuild for a
+  // change nothing on screen reflects.
   let sfMapKey: GalaxySfMapParams = fieldTuning.sfMap;
+  let sfMapAutomatonKey: GalaxySfMapAutomatonParams = fieldTuning.sfMapAutomaton;
+  let sfMapFluidKey: GalaxySfMapFluidParams = fieldTuning.sfMapFluid;
   // The CENTRAL galaxy's HII tier, cached like `fieldMixture` but never
   // concatenated into it (see `hiiComps`).
   let hiiMixture: readonly GalaxyFieldComponent[] = [];
@@ -277,7 +285,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
   // The SSPSF chain's two CPU-side copies and the single queue that fills
   // them — see `createSfMapReadbacks`.
-  const readbacks = createSfMapReadbacks({ device, automaton, orientation });
+  const readbacks = createSfMapReadbacks({ device, sfMapGenerator, orientation });
   const orientationDiagnostics = createOrientationDiagnostics();
 
   /**
@@ -486,15 +494,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
-   * rebuildSfMap — reruns the SSPSF automaton from scratch off the CACHED
-   * geometry. NEVER per frame, per the params contract.
-   * `createSfMapAutomaton` owns the dispatch; what stays here is the pair of
-   * things that follow it either way — and the readback runs on BOTH of the
-   * automaton's exits, the disabled one too, so `sfMapData` reflects the
-   * cleared texture it just wrote rather than an earlier galaxy's map.
+   * rebuildSfMap — reruns whichever SF-map generator `fieldTuning.sfMap.generator`
+   * names, from scratch, off the CACHED geometry. NEVER per frame, per the
+   * params contract. `createSfMapGenerator` owns the dispatch (and the
+   * automaton/fluid branch, its ONLY branch point); what stays here is the
+   * pair of things that follow it either way — and the readback runs on BOTH
+   * of its exits, the disabled one too, so `sfMapData` reflects the cleared
+   * texture it just wrote rather than an earlier galaxy's map.
    */
   function rebuildSfMap(): void {
-    const grid = automaton.rebuild({
+    const grid = sfMapGenerator.rebuild({
       geometry: fieldGeometry,
       tuning: fieldTuning,
       seed: currentSeed(),
@@ -571,7 +580,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
    * not a re-derivation. `sfMap` is null for every extra (same asymmetry as
    * `rebuildDustMixture`'s central-only readback below) — extras have no
-   * automaton of their own.
+   * SF-map generator of their own, automaton or fluid.
    */
   function hiiMixtureOf(
     geometry: GalaxyDescription,
@@ -625,8 +634,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     bubblePlacements.invalidate();
     repackFieldComponents();
     repackHiiComponents();
-    // Always — a new galaxy means new geometry/arms, so the automaton and
-    // the ridge it forces against are both stale otherwise.
+    // Always — a new galaxy means new geometry/arms, so the active SF-map
+    // generator and the ridge it forces/biases against are both stale otherwise.
     rebuildSfMap();
 
     device.queue.submit([enc.finish()]);
@@ -644,11 +653,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // wholesale (`GalaxyFieldTuning`'s contract) and the merge below is shallow,
   // so an untouched section arrives as the same object. What each one feeds:
   //
-  //   disc  -> field mixture
-  //   arms  -> field mixture, HII tier, bubble overlay
-  //   hii   -> HII tier, bubble overlay
-  //   dust  -> dust mixture + the header's dust lanes
-  //   sfMap -> the automaton
+  //   disc          -> field mixture
+  //   arms          -> field mixture, HII tier, bubble overlay
+  //   hii           -> HII tier, bubble overlay
+  //   dust          -> dust mixture + the header's dust lanes
+  //   sfMap         -> the shared enabled/generator switch
+  //   sfMapAutomaton -> the automaton, only while it is the active generator
+  //   sfMapFluid     -> the fluid generator, only while it is the active one
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     const prev = fieldTuning;
     fieldTuning = { ...fieldTuning, ...patch };
@@ -691,22 +702,33 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // mixtures pack into, so either moving needs the one repack.
     if (fieldMoved || dustMoved) repackFieldComponents();
     if (hiiMoved) repackHiiComponents();
-    // The automaton rebuild is N compute dispatches, far more expensive than
+    // A generator rebuild is N compute dispatches, far more expensive than
     // the CPU mixture rebuilds above. `arms.widthScale` feeds the ridge its
     // forcing field bakes, but re-triggering on it would make an arm-width drag
     // pay this cost per frame — deliberately left stale until `sfMap` moves.
-    if (sfMapKey !== fieldTuning.sfMap) {
+    // Only the ACTIVE generator's own block gates the rebuild (see the key
+    // declarations' own comment) — `sfMapGenerator.rebuild` always reads the
+    // CURRENT full tuning regardless, so switching `generator` itself (which
+    // moves `sfMap`) always picks up whatever the inactive block drifted to
+    // meanwhile.
+    const activeGeneratorParamsMoved =
+      fieldTuning.sfMap.generator === 'fluid'
+        ? sfMapFluidKey !== fieldTuning.sfMapFluid
+        : sfMapAutomatonKey !== fieldTuning.sfMapAutomaton;
+    if (sfMapKey !== fieldTuning.sfMap || activeGeneratorParamsMoved) {
       sfMapKey = fieldTuning.sfMap;
+      sfMapAutomatonKey = fieldTuning.sfMapAutomaton;
+      sfMapFluidKey = fieldTuning.sfMapFluid;
       rebuildSfMap(); // also refreshes the S4 blur, off the tuning it reads there
     } else if (dustMoved) {
       // `rebuildSfMap` above already re-derives the blur from `tuning.dust`
       // when it runs; this is the ELSE — a `dust`-only drag (sweptMix, most
       // often) never touches `sfMap`, so nothing else would re-dispatch S4
       // and it would keep blending the last-built `sweptMix` forever. One
-      // compute pass over a 24x8 target, not the N-step automaton, so this
-      // costs nothing next to the CPU rebuild `dustMoved` already triggered
-      // (192x64 texels, dispatched as 24x8 workgroups).
-      automaton.refreshDustBlur(fieldTuning.dust.sweptMix ?? 0);
+      // compute pass over a 24x8 target, not the N-step generator run, so
+      // this costs nothing next to the CPU rebuild `dustMoved` already
+      // triggered (192x64 texels, dispatched as 24x8 workgroups).
+      sfMapGenerator.refreshDustBlur(fieldTuning.dust.sweptMix ?? 0);
     }
   }
 

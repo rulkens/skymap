@@ -8,7 +8,7 @@
  * binding size demands — the tail is slack, not required padding.
  */
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
-import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
+import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxySfMapAutomatonParams';
 
 /** Float count of `sfMapPack.wesl`'s `SfMapUnshear` — 5 members, rounded up to whole 16-byte rows. */
 export const SF_MAP_UNSHEAR_FLOATS = 8;
@@ -19,11 +19,11 @@ export const SF_MAP_UNSHEAR_BUFFER_SIZE = SF_MAP_UNSHEAR_FLOATS * 4;
 export type SfMapUnshearInput = {
   /** Same bounds the step pass ran against — the inverse transform is read on the same grid. */
   readonly grid: GalaxySfMapGridRadius;
-  readonly sfMap: Pick<GalaxySfMapParams, 'corotationRadius' | 'shearRate'>;
+  readonly sfMap: Pick<GalaxySfMapAutomatonParams, 'corotationRadius' | 'shearRate'>;
   /**
    * Shear-applying generations the final state accumulated, NOT the raw step
-   * count: step 0 only seeds (`sfMapStep.wesl`), so the caller passes
-   * `steps - 1`.
+   * count: step 0 only seeds (`sfMapAutomatonStep.wesl`), so the caller
+   * passes `steps - 1`.
    */
   readonly totalShiftSteps: number;
 };
