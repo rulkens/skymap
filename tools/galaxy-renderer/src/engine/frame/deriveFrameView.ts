@@ -109,6 +109,7 @@ export function deriveFrameView(input: {
       gasWeight: render.sfMapGasWeight,
       recentSfWeight: render.sfMapRecentWeight,
       activityWeight: render.sfMapActivityWeight,
+      dustWeight: render.sfMapDustWeight,
     },
     // D is the eye's distance to the primary galaxy's centre (the tool's
     // origin, NOT the orbit target — the two differ once the camera pans).

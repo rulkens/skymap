@@ -157,11 +157,11 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[42] = debugViews.orientation;
   out[43] = galaxyWeight;
 
-  // sfMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, unused).
+  // sfMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, dustWeight).
   out[44] = sfMapChannels.gasWeight;
   out[45] = sfMapChannels.recentSfWeight;
   out[46] = sfMapChannels.activityWeight;
-  out[47] = 0;
+  out[47] = sfMapChannels.dustWeight;
 
   // bubbleView 48..51 = (intensity, unused, unused, unused).
   out[48] = debugViews.bubble;

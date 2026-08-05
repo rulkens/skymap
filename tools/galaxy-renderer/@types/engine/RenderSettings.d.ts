@@ -125,7 +125,7 @@ export type RenderSettings = {
    * unspent ISM fuel, 1 nearly everywhere on a quiet disc, driven to 0 by an
    * ignition and refilled over `1/gasRegen` steps. The palette's dimmest
    * channel (maxes at colour 0.25 vs `recentSf`'s 1.0), so zeroing the other
-   * two is the only way to see it against them. Only reachable while
+   * three is the only way to see it against them. Only reachable while
    * `sfMapViewIntensity` is above 0.
    */
   readonly sfMapGasWeight: number;
@@ -142,6 +142,16 @@ export type RenderSettings = {
    * actually reads. Only reachable while `sfMapViewIntensity` is above 0.
    */
   readonly sfMapActivityWeight: number;
+  /**
+   * SF-map channel weight, isolating the automaton's conserved dust channel
+   * (io.wesl's `sfMapChannels.w`, sourced from the packed texel's `.w` since
+   * 9aa9fe5d): swept dust, unclamped past ambient — rims legitimately
+   * overshoot to the 8.0 ceiling. Scaled in linearly like the other three, so
+   * lowering the weight is how the slider pulls rim overshoot back into a
+   * readable range instead of it blowing out the debug view. Only reachable
+   * while `sfMapViewIntensity` is above 0.
+   */
+  readonly sfMapDustWeight: number;
   /**
    * Bubble-view crossfade weight: 0 = pure galaxy, 1 = the SF-event
    * catalog's own bubble/cavity placements alone (dustBubblePlacements.ts),

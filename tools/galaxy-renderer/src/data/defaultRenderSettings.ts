@@ -123,12 +123,13 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // without smearing distinct spurs together.
   orientationSigmaDerivTexels: 1.5,
   orientationSigmaIntegTexels: 4,
-  // All three at 1: the composite is unchanged from before these knobs
+  // All four at 1: the composite is unchanged from before these knobs
   // existed until the user moves one — same "identity until touched"
   // discipline as saturation/vignette above.
   sfMapGasWeight: 1,
   sfMapRecentWeight: 1,
   sfMapActivityWeight: 1,
+  sfMapDustWeight: 1,
   // 0 at boot, same rationale as the other two debug-view crossfades — and
   // the pass gate: the placement rebuild only runs while this is above 0
   // (see createGalaxyModel.ts's rebuildBubblePlacements).

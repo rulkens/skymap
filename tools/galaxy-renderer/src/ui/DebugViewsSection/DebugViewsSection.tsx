@@ -61,7 +61,7 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapGasWeight: v }))}
           path="render.sfMapGasWeight"
-          info="Isolates the gas channel: unspent ISM fuel, driven to 0 by an ignition and refilled over 1/gasRegen steps. The palette's dimmest colour by a wide margin — zero the other two to see it at all."
+          info="Isolates the gas channel: unspent ISM fuel, driven to 0 by an ignition and refilled over 1/gasRegen steps. The palette's dimmest colour by a wide margin — zero the other three to see it at all."
         />
         <ParamSlider
           label="SF map · recent SF"
@@ -83,7 +83,18 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapActivityWeight: v }))}
           path="render.sfMapActivityWeight"
-          info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other two to isolate it, though it rarely needs isolating."
+          info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other three to isolate it, though it rarely needs isolating."
+        />
+        <ParamSlider
+          label="SF map · dust"
+          value={render.sfMapDustWeight}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ sfMapDustWeight: v }))}
+          path="render.sfMapDustWeight"
+          info="Isolates the conserved dust channel (the packed texel's own .w lane, since 9aa9fe5d): swept dust, unclamped past ambient — rims legitimately overshoot to the 8.0 ceiling. Teal-green. Lower the weight to bring rim overshoot back into a readable range."
         />
         <ParamSlider
           label={DEBUG_VIEWS.orientation.label}

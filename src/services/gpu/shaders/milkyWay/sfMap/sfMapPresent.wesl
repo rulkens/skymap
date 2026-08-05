@@ -80,23 +80,31 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let gas = texel.x;
   let recent = texel.y;
   let old = texel.z;
-  // Presentation palette, NOT physics — chosen so the three channels stay
+  // The conserved dust channel (sfMapPack.wesl's state.z, since 9aa9fe5d) —
+  // written RAW there, so swept-shell rims legitimately read above 1, up to
+  // the snowplough's 8.0 ceiling.
+  let dust = texel.w;
+  // Presentation palette, NOT physics — chosen so the four channels stay
   // separable by eye: dim cool navy for unspent gas, bright magenta-violet
   // for the decaying activity wake, warm near-white for a cell that ignited
-  // recently. Activity used to be amber, but that sat right next to
-  // recentSf's warm near-white (the two blended into one warm smear) and
-  // duplicated dustPresent.wesl's own red-orange-white band; magenta-violet
-  // is the one hue nothing else in the debug-view set (dust, bubble's amber/
-  // cyan, the other two sfMap channels) claims. The three peak colours are
-  // still deliberately NOT equal-brightness — gas maxes at 0.25, recentSf at
-  // 1.0, activity's red/blue channels at 1.3 (above the Reinhard whitepoint's
-  // linear range, spending some of the HDR target's real headroom) — so
-  // u.sfMapChannels is the only way to see the gas channel at all against
-  // the other two, and zeroing two weights isolates the third.
+  // recently, teal-green for dust. Activity used to be amber, but that sat
+  // right next to recentSf's warm near-white (the two blended into one warm
+  // smear) and duplicated dustPresent.wesl's own red-orange-white band;
+  // magenta-violet and teal-green are the two hues nothing else in the
+  // debug-view set (dustPresent's red-orange-white, bubble's amber/cyan)
+  // claims. The four peak colours are still deliberately NOT equal-
+  // brightness — gas maxes at 0.25, recentSf at 1.0, activity's red/blue
+  // channels at 1.3 (above the Reinhard whitepoint's linear range, spending
+  // some of the HDR target's real headroom) — so u.sfMapChannels is the only
+  // way to see the gas channel at all against the other three, and zeroing
+  // three weights isolates the fourth. Dust is scaled by its weight the same
+  // raw way, un-clamped, before the sum — the weight is how the slider pulls
+  // rim overshoot back into a readable range, not a clip.
   let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.sfMapChannels.x;
   let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.sfMapChannels.z;
   let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.sfMapChannels.y;
-  let color = (gasColor + oldColor + recentColor) * edgeFade;
+  let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.sfMapChannels.w;
+  let color = (gasColor + oldColor + recentColor + dustColor) * edgeFade;
 
   // debugView.y is this view's own crossfade weight (io.wesl's debugView
   // doc), same role as dustPresent.wesl's debugView.x multiply.

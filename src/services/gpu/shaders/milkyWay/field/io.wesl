@@ -25,7 +25,7 @@
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
-//   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, unused)
+//   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
 //   offset 192 : bubbleView: vec4 (intensity, unused, unused, unused)
 //   offset 208 : dustDetail: vec4 (strength, unused, unused, unused)
 //   total: 224 bytes.
@@ -110,10 +110,12 @@
 //
 // sfMapChannels (offset 176) is sfMapPresent.wesl's own per-channel
 // isolation control, orthogonal to debugView.y (the whole view's crossfade
-// weight): the palette there sums gas+old+recent, and with all three always
-// visible there was no way to tell which one you were looking at. Each
+// weight): the palette there sums gas+old+recent+dust, and with all four
+// always visible there was no way to tell which one you were looking at. .w
+// (dustWeight) scales the packed texel's own .w lane — the conserved dust
+// channel, unclamped since 9aa9fe5d (rims legitimately overshoot to 8). Each
 // weight independently scales its channel before the palette multiply, so
-// zeroing two isolates the third.
+// zeroing three isolates the fourth.
 //
 // bubbleView (offset 192) is bubblePresent.wesl's own crossfade weight —
 // the SF-event catalog's (dustBubblePlacements.ts) bubble/cavity overlay, a
