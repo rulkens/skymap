@@ -85,9 +85,11 @@ export type RenderSettings = {
    */
   readonly dustViewIntensity: number;
   /**
-   * S4 strength for the shared SF-map high-pass (0 = splat column alone,
-   * 1 = full detail ratio, >1 extrapolates), multiplying BOTH the JWST
-   * view's presented column and the normal view's dust attenuation.
+   * S4 strength for the SF-map high-pass (0 = splat column alone, 1 = full
+   * detail ratio, >1 extrapolates). Applied per dust splat at accumulation
+   * (dustMap.wesl), at that splat's own closest-approach point, so both the
+   * JWST view's presented column and the normal view's dust attenuation
+   * inherit it through the map — no per-consumer read.
    */
   readonly dustDetailStrength: number;
   /**

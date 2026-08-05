@@ -123,12 +123,14 @@
 // sfMapChannels.w would name a bubble weight after an unrelated automaton
 // channel. Only .x is live; .yzw are reserved the same way counts2.x is.
 //
-// dustDetail (offset 208) is S4's high-pass strength, shared by BOTH dust
-// consumers via dustDetail.wesl: dustPresent.wesl multiplies its presented
-// column and splat.wesl multiplies its own attenuation column by the SF
-// map's detail ratio (map density over an 8-texel-blurred copy,
-// sfMapDustBlur.wesl) at the fragment's disc intersection; 0 disables both.
-// .yzw reserved like counts2.x.
+// dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
+// (dustDetail.wesl) multiplies each dust splat's own slices by the SF map's
+// detail ratio (map density over an 8-texel-blurred copy, sfMapDustBlur.wesl)
+// at that splat's closest-approach point — applied once, at ACCUMULATION, so
+// it parallaxes with the splats instead of stamping one flat pattern across
+// the whole depth column. Both consumers (splat.wesl, dustPresent.wesl) see
+// it through the column with no second read; 0 disables it. .yzw reserved
+// like counts2.x.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -206,8 +208,8 @@
 // pass that WRITES it never reads it.
 //
 // Bindings 3/7/8/9 belong to dustDetail.wesl (grid uniform, sfMapSmp,
-// sfMapTex, sfMapBlurTex) — declared THERE, not here, because only the two
-// dust-detail consumers (dustPresent.wesl, splat.wesl) reference them, and
+// sfMapTex, sfMapBlurTex) — declared THERE, not here, because only
+// dustMap.wesl's pipeline references them now (the accumulation pass), and
 // io.wesl must not force them into every pipeline's auto layout. The
 // remaining bindings keep their numbers so every pipeline and bind group
 // here stays as written.

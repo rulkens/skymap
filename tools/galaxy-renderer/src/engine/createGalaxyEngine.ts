@@ -620,8 +620,9 @@ export async function createGalaxyEngine(
   //    a group built from one pipeline's layout fails another's draw-time
   //    compatibility check even for byte-identical WGSL. Hence four groups for
   //    three pipelines, with different binding sets: dustNoiseTex/Smp (4/5)
-  //    only where dustMap.wesl imports them, dustMapSmp (6) only where
-  //    splat.wesl samples `dustMapTex` through a filtered UV.
+  //    and the dustDetail lane (3/7/8/9) only where dustMap.wesl imports
+  //    them, dustMapSmp (6) only where splat.wesl samples `dustMapTex`
+  //    through a filtered UV.
   //  - A group holds the EXACT GPUBuffer/GPUTexture objects it names. So each
   //    is a `let` + a builder, and the resource owns the rebuild: the model's
   //    two `onRegrow` hooks above for the comps buffers, and
@@ -639,6 +640,12 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: model.fieldComps.buffer } },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
+        // S4's SF-map detail term (dustDetail.wesl) rides the accumulation
+        // pass now, applied per dust splat — see dustMap.wesl's fs.
+        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
+        { binding: 7, resource: sfMapAutomaton.mapSampler },
+        { binding: 8, resource: sfMapAutomaton.texture.createView() },
+        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }
@@ -654,14 +661,11 @@ export async function createGalaxyEngine(
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
         // dustMapTex's own declaration comment for why the divisors split).
+        // No 3/7/8/9 here: S4's SF-map detail term (dustDetail.wesl) now
+        // rides dustMap.wesl's accumulation pass, not this consumer — the
+        // shader no longer references those bindings, and with
+        // layout:'auto' a superfluous entry is a bind-group creation ERROR.
         { binding: 6, resource: dustMapSampler },
-        // S4's per-fragment SF-map read (dustDetail.wesl) — splat.wesl now
-        // multiplies its own dust attenuation by the same term
-        // dustPresent.wesl applies to the JWST column.
-        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
-        { binding: 7, resource: sfMapAutomaton.mapSampler },
-        { binding: 8, resource: sfMapAutomaton.texture.createView() },
-        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }
@@ -673,13 +677,9 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 2, resource: targets.dustMapTex.createView() },
-        // S4's per-fragment map read (dustDetail.wesl) — binding numbers
-        // match splat.wesl's own dustDetail entries above, since both link
-        // the same module and its auto layout must resolve identically.
-        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
-        { binding: 7, resource: sfMapAutomaton.mapSampler },
-        { binding: 8, resource: sfMapAutomaton.texture.createView() },
-        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
+        // No 3/7/8/9: S4's detail term now applies at accumulation
+        // (dustMap.wesl); this pass just presents the already-modulated
+        // column.
       ],
     });
   }
@@ -689,9 +689,8 @@ export async function createGalaxyEngine(
   // both unconditionally, but `packFieldHeaderUniforms`'s `primaryCount` is
   // always packed 0 for this header (see `drawFrame`), so the dust-attenuation
   // branch never triggers — HII does not (yet) darken under the lane it may
-  // sit inside. The dustDetail entries below satisfy the same shared
-  // `splatPipe` layout as `splatBG`; the term stays inert here since the
-  // branch that would apply it never runs.
+  // sit inside. No 3/7/8/9 here either, for the same reason `splatBG` has
+  // none: `splatPipe`'s shader (splat.wesl) no longer references dustDetail.
   let hiiBG: GPUBindGroup;
   function buildHiiBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -702,10 +701,6 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 6, resource: dustMapSampler },
-        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
-        { binding: 7, resource: sfMapAutomaton.mapSampler },
-        { binding: 8, resource: sfMapAutomaton.texture.createView() },
-        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }

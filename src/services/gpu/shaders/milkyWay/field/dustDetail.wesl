@@ -1,11 +1,11 @@
 // milkyWay/field/dustDetail.wesl — S4's high-pass term (docs/research/
 // m74-jwst/07-sprite-seeding.md): the SF map's own density over an
-// 8-texel-blurred copy, sampled at a ray's disc-plane hit. One term shared
-// by BOTH the JWST presentation (dustPresent.wesl) and the normal view's
-// dust attenuation (splat.wesl), so the two consumers can never disagree
-// about what the map adds beyond the splats' own low/mid frequencies.
-// Thin-disc approximation: the column is 3D but this samples the map at
-// essentially one (r, theta) — the ray's y=0 intersection.
+// 8-texel-blurred copy. Applied at ACCUMULATION (dustMap.wesl's fs), per
+// splat fragment, at that splat's own closest-approach point — so the
+// pattern parallaxes with the splats instead of stamping one flat decal
+// across the whole depth column (the earlier per-consumer, ray-hit version
+// did exactly that, and read as 2D). Both consumers inherit the modulated
+// column for free.
 
 import package::milkyWay::field::io::u;
 
@@ -26,38 +26,27 @@ struct SfMapGrid {
   rMax: f32,
 }
 
-// Binding numbers: 0/1/2/6 are io.wesl's own lanes, referenced by
-// splat.wesl (u/comps/dustMapTex/dustMapSmp); 4/5 are the dust-noise volume
-// (dustNoiseTex/Smp), referenced only by dustMap.wesl. 3/7/8/9 are free in
-// EVERY shader that links this module — both splat.wesl and
-// dustPresent.wesl — which is the only constraint that mattered picking
-// them.
+// Binding numbers: dustMap.wesl's own closure is io's 0/1 (u/comps), its
+// dust-noise volume 4/5, and these four — collision-free there, which is the
+// only constraint that mattered picking them.
 @group(0) @binding(3) var<uniform> grid: SfMapGrid;
 @group(0) @binding(7) var sfMapSmp: sampler;
 @group(0) @binding(8) var sfMapTex: texture_2d<f32>;
 @group(0) @binding(9) var sfMapBlurTex: texture_2d<f32>;
 
-// o/d: the ray's world-space origin/direction, already reconstructed by the
-// caller (both consumers need their own ray for other work too), so this
-// stays a pure function over geometry rather than re-deriving a ray from a
-// screen uv itself.
-fn dustDetailMultiplier(o: vec3<f32>, d: vec3<f32>) -> f32 {
+// p: the world-space point to sample at — the caller's splat's own
+// closest-approach point (o + d*tPeak in dustMap.wesl's fs), not a
+// re-derived ray/plane hit, so detail rides each component's own depth
+// instead of one shared disc-plane intersection.
+fn dustDetailMultiplier(p: vec3<f32>) -> f32 {
   if (u.dustDetail.x <= 0.0) {
     return 1.0;
   }
-  if (abs(d.y) < 1e-6) {
-    return 1.0;
-  }
-  let t = -o.y / d.y;
-  if (t <= 0.0) {
-    return 1.0;
-  }
-  let hit = o + d * t;
-  let r = length(hit.xz);
+  let r = length(p.xz);
   if (r < grid.rMin || r > grid.rMax) {
     return 1.0;
   }
-  let theta = atan2(hit.z, hit.x);
+  let theta = atan2(p.z, p.x);
   let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
   let uv = vec2<f32>(azT, ringT);

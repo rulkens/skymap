@@ -27,6 +27,7 @@ import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
+import package::milkyWay::field::dustDetail::dustDetailMultiplier;
 
 struct DustMapOut {
   @builtin(position) pos: vec4<f32>,
@@ -201,5 +202,12 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   if (noiseAmp > 0.0 && input.inst >= u32(u.dustNoise.z)) {
     slices = slices * dustNoiseMultiplier(o + d * tPeak, tPeak);
   }
+  // S4: same sample point as the erosion noise above, for the same reason —
+  // per-fragment, per-component, so the map's top octave parallaxes with the
+  // splats rather than stamping a flat disc-plane decal. Its own gate
+  // (dustDetail.x <= 0) is independent of noiseAmp: erosion off must not
+  // disable map detail. The ratio is a density term, so it applies to all
+  // four slices alike.
+  slices = slices * dustDetailMultiplier(o + d * tPeak);
   return slices;
 }

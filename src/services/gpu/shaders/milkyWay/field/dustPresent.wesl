@@ -4,17 +4,15 @@
 // (createGalaxyEngine.ts). Writes into dustViewTex, divisor-matched to
 // dustMapTex, not fieldTex (io.wesl's DUST MAP doc).
 //
-// S4 (docs/research/m74-jwst/07-sprite-seeding.md): the presented column is
-// further modulated by dustDetailMultiplier, a per-fragment high-pass read
-// of the SF map at the ray's disc intersection. The term itself now lives in
-// dustDetail.wesl, shared with splat.wesl's dust attenuation — see that
-// module's header for why the two views must agree.
+// S4 (docs/research/m74-jwst/07-sprite-seeding.md): the presented column
+// already carries the SF map's high-pass detail — dustMap.wesl bakes it in
+// at accumulation (dustDetail.wesl), per splat, so this pass needs no
+// second read.
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::dustMapTex;
-import package::milkyWay::field::dustDetail::dustDetailMultiplier;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
@@ -39,32 +37,11 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let texel = textureLoad(dustMapTex, coord, 0);
   let tau = texel.x + texel.y + texel.z + texel.w;
 
-  // dustDetailMultiplier needs its own ray, reconstructed here from the
-  // fullscreen-triangle uv — mirrors splat.wesl's own NDC-based
-  // reconstruction, just fed from a different varying since this pass has
-  // no per-instance NDC to interpolate.
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let ndcX = input.uv.x * 2.0 - 1.0;
-  let ndcY = 1.0 - input.uv.y * 2.0;
-  let d = normalize(
-    u.camRight.xyz * ((ndcX + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (ndcY * tanHalfFov)
-      + u.camFwd.xyz,
-  );
-  let o = u.eye.xyz;
-  // S4: modulate the splat-accumulated column by the SF map's own high-pass
-  // ratio at this fragment's disc intersection, BEFORE the palette — the
-  // splats keep the low/mid frequencies, the map contributes only what the
-  // blur removed.
-  let tau2 = tau * dustDetailMultiplier(o, d);
-
   // Presentation palette, NOT physics: intensity saturates smoothly with
   // column depth, then ramps black -> deep red -> orange -> white. Tuned by
   // eye for a JWST/MIRI dust-map look; none of these four colours or the
   // 1.5 rate is a measured quantity.
-  let i = 1.0 - exp(-tau2 * 1.5);
+  let i = 1.0 - exp(-tau * 1.5);
   let black = vec3<f32>(0.0, 0.0, 0.0);
   let deepRed = vec3<f32>(0.55, 0.08, 0.02);
   let orange = vec3<f32>(1.0, 0.45, 0.1);
