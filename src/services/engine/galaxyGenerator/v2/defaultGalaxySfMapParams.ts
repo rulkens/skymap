@@ -45,4 +45,8 @@ export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   // exactly, so promoting them to params is behaviour-neutral by itself.
   activityDecay: 0.985,
   activityGain: 0.15,
+  // No measurement yet (docs/research/m74-jwst/06-ca-dust-channel-sketch.md
+  // gives no number) — eyeballed so a front sweeps the MAJORITY of its own
+  // dust outward while still leaving a visible, non-black floor behind it.
+  dustFloorFraction: 0.2,
 };

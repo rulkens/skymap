@@ -22,18 +22,17 @@ const RINGS = 4;
 const R_MIN = 1;
 const R_MAX = 8;
 
-function makeMap(fill: (data: Uint8Array) => void): GalaxySfMap {
-  const data = new Uint8Array(RINGS * AZ * 4);
+function makeMap(fill: (data: Float32Array) => void): GalaxySfMap {
+  const data = new Float32Array(RINGS * AZ * 4);
   fill(data);
   return { az: AZ, rings: RINGS, rMin: R_MIN, rMax: R_MAX, data };
 }
 
 /** `sfMapDustDensity` reads gas (R) x oldActivity (B); set both to the same level. */
-function setDensity(data: Uint8Array, ring: number, azIdx: number, density: number): void {
+function setDensity(data: Float32Array, ring: number, azIdx: number, density: number): void {
   const i = (ring * AZ + azIdx) * 4;
-  const level = Math.round(density * 255);
-  data[i] = level;
-  data[i + 2] = level;
+  data[i] = density;
+  data[i + 2] = density;
 }
 
 describe('sampleSfMapDustCdf', () => {

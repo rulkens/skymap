@@ -4,9 +4,10 @@
  * a lane written to the wrong index throws nothing, it just ships garbage,
  * and on WebKit a mislaid uniform drops the frame with no error at all.
  *
- * 16 lanes for 13 members: the struct is 52 bytes, which is exactly the
- * minimum binding size Dawn demands (measured, not the 16-byte round-up you
- * might expect) — the tail is slack, not padding the layout requires.
+ * 16 lanes for 14 members (12-13 were slack when the struct had 13; one is
+ * spent on `dustFloorFraction` now, see 06-ca-dust-channel-sketch.md) — the
+ * struct's real minimum binding size is smaller than the 16-lane round-up,
+ * so the remaining tail is slack, not padding the layout requires.
  */
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
@@ -41,10 +42,10 @@ export function packSfMapConstants({ grid, sfMap, seed }: SfMapConstantsInput): 
   out[10] = sfMap.armFluxRef;
   out[11] = sfMap.activityDecay;
   out[12] = sfMap.activityGain;
+  out[13] = sfMap.dustFloorFraction;
 
   // Slack past the struct, written rather than left to the allocator: this is
   // the shape the buffer holds, not an artifact of how the array was made.
-  out[13] = 0;
   out[14] = 0;
   out[15] = 0;
 

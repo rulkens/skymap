@@ -24,10 +24,10 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { sfMapDustDensity } from '../../../../../src/utils/galaxy/sfMapDustDensity';
 import { sfMapDustRingEdges } from '../../../../../src/utils/galaxy/sfMapDustRingEdges';
-import { unpadRows } from '../../../../../src/utils/gpu/unpadRows';
 import { createShaderModuleWithDevLog } from '../../../../../src/services/gpu/shaderCompileLogger';
 import { FIELD_HEADER_BUFFER_SIZE } from '../field/packFieldUniforms';
 import { createSfMapAutomaton } from './createSfMapAutomaton';
+import { decodeSfMapTexels } from './decodeSfMapTexels';
 
 const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
 /** Fixed per the brief: geometry RNG and the automaton's own step hash both key off this. */
@@ -57,7 +57,7 @@ function percentileOf(sortedAsc: Float64Array, p: number): number {
   return sortedAsc[idx]!;
 }
 
-/** oldActivity/gas are read as `/255` floats, so 255/255 and 0/255 land on exact 1 and 0 — no epsilon needed. */
+/** oldActivity's [0,1] clamp survives the rgba16float switch (sfMapPack.wesl keeps it, unlike dust) — an f16 1.0 and 0.0 are both exact, so frac255/frac0 below still land on the real saturation, not a decode artifact. */
 function computeStat(
   label: string,
   oldActivity: readonly number[],
@@ -161,8 +161,9 @@ export async function runSfMapActivityHistogram(): Promise<string> {
   await assertNoDeviceError(device, 'automaton rebuild');
 
   // Same readback path as createSfMapReadbacks.ts's `sfMapStream`: copy into
-  // the automaton's own padded staging buffer, map, then `unpadRows` strips
-  // WebGPU's 256-byte row stride back to the tight az*4 layout.
+  // the automaton's own padded staging buffer, map, then `decodeSfMapTexels`
+  // strips WebGPU's 256-byte row stride AND decodes the f16 lanes back to
+  // the tight, linear az*4-floats-per-row layout.
   const enc = device.createCommandEncoder({ label: 'sfMapActivityHistogram:copy' });
   enc.copyTextureToBuffer(
     { texture: automaton.texture },
@@ -171,10 +172,10 @@ export async function runSfMapActivityHistogram(): Promise<string> {
   );
   device.queue.submit([enc.finish()]);
   await automaton.readbackBuffer.mapAsync(GPUMapMode.READ);
-  const packed = unpadRows(
-    new Uint8Array(automaton.readbackBuffer.getMappedRange()).slice(),
+  const packed = decodeSfMapTexels(
+    new Uint16Array(automaton.readbackBuffer.getMappedRange()).slice(),
     automaton.readbackBytesPerRow,
-    SF_MAP_AZ * 4,
+    SF_MAP_AZ,
     SF_MAP_RINGS,
   );
   automaton.readbackBuffer.unmap();
@@ -213,8 +214,8 @@ export async function runSfMapActivityHistogram(): Promise<string> {
     const area = texelAreaByRing[ring]!;
     for (let az = 0; az < SF_MAP_AZ; az++) {
       const i = rowBase + az;
-      const gas = packed[i * 4]! / 255;
-      const oldActivity = packed[i * 4 + 2]! / 255;
+      const gas = packed[i * 4]!;
+      const oldActivity = packed[i * 4 + 2]!;
       oldActivityAll[i] = oldActivity;
       gasAll[i] = gas;
       const mass = sfMapDustDensity(gas, oldActivity) * area;

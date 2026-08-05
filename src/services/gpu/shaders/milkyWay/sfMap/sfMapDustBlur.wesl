@@ -7,7 +7,7 @@
 
 const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createSfMapAutomaton.ts (TS is authoritative)
 
-@group(0) @binding(0) var srcTex: texture_2d<f32>; // packed sfMap: x=gas, y=recentSf, z=oldActivity
+@group(0) @binding(0) var srcTex: texture_2d<f32>; // packed sfMap: x=gas, y=recentSf, z=oldActivity, w=dust (unread here)
 @group(0) @binding(1) var dstTex: texture_storage_2d<rgba16float, write>;
 
 @compute @workgroup_size(8, 8)

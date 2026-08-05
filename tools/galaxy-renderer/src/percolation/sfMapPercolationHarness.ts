@@ -74,9 +74,15 @@ fn cs(
  * step-0 seeding pass and step 1. A write-only storage texture leaves every
  * other texel as it stands, which is what makes a single-cell initial
  * condition reachable without forking `sfMapStep.wesl`.
+ *
+ * z used to be an explicit refractory countdown this pass had to set
+ * alongside age; `sfMapStep.wesl` now DERIVES refractory from age alone
+ * (06-ca-dust-channel-sketch.md), so age=0 here is already sufficient — z is
+ * the dust channel today, and dust never feeds ignition probability, so its
+ * seed value is inert for this harness's percolation measurement.
  */
 const SEED_CELL_WGSL = /* wgsl */ `
-struct SeedCell { az: f32, ring: f32, refractory: f32, pad: f32 }
+struct SeedCell { az: f32, ring: f32, pad0: f32, pad1: f32 }
 
 @group(0) @binding(0) var stateOut: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(1) var<uniform> seed: SeedCell;
@@ -86,7 +92,7 @@ fn cs() {
   textureStore(
     stateOut,
     vec2<i32>(i32(seed.az), i32(seed.ring)),
-    vec4<f32>(0.0, 0.0, seed.refractory, 0.0),
+    vec4<f32>(0.0, 0.0, 0.0, 0.0),
   );
 }
 `;
@@ -311,7 +317,7 @@ export async function runSfMapPercolation(
     device.queue.writeBuffer(
       seedUbo,
       0,
-      new Float32Array([Math.floor(SF_MAP_AZ / 2), request.seedRing, params.refractorySteps, 0]),
+      new Float32Array([Math.floor(SF_MAP_AZ / 2), request.seedRing, 0, 0]),
     );
 
     const activeSum = new Float64Array(request.steps);

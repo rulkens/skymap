@@ -49,6 +49,7 @@ const SENTINEL = {
   armFluxRef: 3111,
   activityDecay: 3112,
   activityGain: 3113,
+  dustFloorFraction: 3114,
 } as const;
 
 const input: SfMapConstantsInput = {
@@ -66,6 +67,7 @@ const input: SfMapConstantsInput = {
     armFluxRef: SENTINEL.armFluxRef,
     activityDecay: SENTINEL.activityDecay,
     activityGain: SENTINEL.activityGain,
+    dustFloorFraction: SENTINEL.dustFloorFraction,
   },
   seed: SENTINEL.seed,
 };
@@ -83,9 +85,10 @@ function observed(value: number): number {
 describe('packSfMapConstants ↔ milkyWay/sfMap/sfMapStep.wesl SfMapConstants', () => {
   it('packs a buffer the shader can bind', () => {
     // The floor is the struct's own size, which is what Dawn reports as this
-    // binding's minBindingSize (52 for the 13 f32 today — measured with
-    // probeGpuErrors, NOT rounded up to 16 as the uniform address space's
-    // alignment rule might suggest). Undershooting it fails every
+    // binding's minBindingSize (52 for 13 f32, measured with probeGpuErrors —
+    // NOT rounded up to 16 as the uniform address space's alignment rule
+    // might suggest; 56 for the 14th `dustFloorFraction` field added since,
+    // same reasoning, not re-measured). Undershooting it fails every
     // createBindGroup, so the whole automaton silently stops running.
     expect(SF_MAP_CONSTANTS_FLOATS * 4).toBeGreaterThanOrEqual(struct.layout.size);
   });

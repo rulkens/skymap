@@ -1,12 +1,21 @@
 // milkyWay/sfMap/sfMapPack.wesl — packs the SSPSF automaton's final
 // ping-pong state into one presentable RGBA texture: gas column, recent SF
 // (age's own decay), older SF (the activity EMA sfMapStep.wesl already
-// carries in state.w). One dispatch, run once per rebuildSfMap after the
-// last step — never per frame. finalTex is still in sfMapStep.wesl's
-// MATERIAL (Lagrangian) frame; every consumer of THIS pass's output expects
-// WORLD coordinates, so this is the one place that un-shears — a single
-// resample instead of sfMapStep.wesl's old per-generation one (see that
-// file's header for why the difference matters).
+// carries in state.w), and the conserved dust channel (state.z) — see that
+// file's header. One dispatch, run once per rebuildSfMap after the last
+// step — never per frame. finalTex is still in sfMapStep.wesl's MATERIAL
+// (Lagrangian) frame; every consumer of THIS pass's output expects WORLD
+// coordinates, so this is the one place that un-shears — a single resample
+// instead of sfMapStep.wesl's old per-generation one (see that file's
+// header for why the difference matters). Dust is a smooth accumulated
+// field, so the bilinear resample below is fine for it too (unlike the
+// discrete ignition state sfMapStep.wesl itself must never blur).
+//
+// The output is rgba16float, not rgba8unorm: oldActivity keeps its
+// intentional [0,1] clamp below (a real bound on the EMA, independent of
+// storage format), but dust is written RAW — colliding swept shells summing
+// past ambient is the rim/filament feature, and clamping it away here would
+// erase exactly what the snowplough rule exists to produce.
 
 import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;
 
@@ -21,7 +30,7 @@ struct SfMapUnshear {
 }
 
 @group(0) @binding(0) var finalTex: texture_2d<f32>;
-@group(0) @binding(1) var dst: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(2) var<uniform> u: SfMapUnshear;
 
 // Bilinear-in-azimuth read of the material state — the ONE resample this
@@ -59,7 +68,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let state = sampleMaterial(ring, materialAz, dims.x);
   let gas = state.x;
   let age = state.y;
+  let dust = state.z;
   let oldActivity = clamp(state.w, 0.0, 1.0);
   let recentSf = exp(-age / RECENT_SF_TAU);
-  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, recentSf, oldActivity, 0.0));
+  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, recentSf, oldActivity, dust));
 }

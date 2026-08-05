@@ -37,7 +37,7 @@ export function buildSfMapDustCdf(
     const texelArea = 0.5 * dTheta * (rOuter * rOuter - rInner * rInner);
     for (let azIdx = 0; azIdx < az; azIdx++) {
       const i = (ring * az + azIdx) * 4;
-      const d = density(data[i]! / 255, data[i + 1]! / 255, data[i + 2]! / 255);
+      const d = density(data[i]!, data[i + 1]!, data[i + 2]!);
       total += d * texelArea;
       prefix[ring * az + azIdx] = total;
     }

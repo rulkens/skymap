@@ -149,6 +149,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           info="Shear magnitude (texels/step) at which arm forcing saturates to full strength. Forcing weights by |shear|/armFluxRef, which sends corotation (shear = 0) to a DEFICIT instead of the residence-time ring the raw forcing term produces there — lower this to widen the deficit band, raise it to narrow it."
         />
         <ParamSlider
+          label="Dust floor fraction"
+          value={sfMap.dustFloorFraction}
+          min={0}
+          max={1}
+          step={0.01}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchSfMap({ dustFloorFraction: v })}
+          path="fieldTuning.sfMap.dustFloorFraction"
+          info="On ignition a cell keeps this fraction of its own dust; the rest sweeps onto its 8 neighbours (the snowplough rule). Lower carves darker cavities behind an advancing front. Colliding fronts pile dust past ambient into the rim by design — that overshoot is never clamped."
+        />
+        <ParamSlider
           label="Corotation radius"
           value={sfMap.corotationRadius}
           min={1}

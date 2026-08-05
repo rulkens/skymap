@@ -348,3 +348,40 @@ this note's original 0.15 within the hour it was written). Above that the arms
 stop biasing the automaton and start driving it, which washes out the emergent
 inter-arm structure and redraws the ridge as a fuzzy band — the arms are
 supposed to be a thumb on the scale, not the signal.
+
+## The state texture went float, and the freed refractory slot carries a conserved dust channel (2026-08-05)
+
+**IMPLEMENTED, this session.** The ping-pong state texture (`stateA`/`stateB`
+in `createSfMapAutomaton.ts`) was already `rgba16float`; the one surviving
+`rgba8unorm` surface was `sfMapPack.wesl`'s packed presentable output — the
+CPU readback (`GalaxySfMap`) and the activity histogram harness both decoded
+it as bytes. Both are now `rgba16float` too, decoded via the existing
+`f16ToFloat` (the same route `decodeOrientationTexels` already used for the
+orientation chain — no new bit-twiddling code, see `decodeSfMapTexels.ts`).
+Every `/255`, `*255` and implicit [0,1] byte-quantization assumption in
+`sampleGalaxySfMap.ts`, `buildSfMapDustCdf.ts` and the histogram harness is
+gone. `oldActivity`'s `[0,1]` clamp in `sfMapPack.wesl` is KEPT — it bounds a
+real EMA, not a format artifact — but nothing new is clamped.
+
+**DECISION: the freed refractory slot carries a conserved, transported dust
+channel** (docs/research/m74-jwst/06-ca-dust-channel-sketch.md is the
+mechanism's authority). `refractory` is derivable as
+`max(0, refractorySteps - age)` (age already resets to 0 on ignition), so the
+z lane state used to spend on a stored countdown is free. On ignition a cell
+keeps `dustFloorFraction` of its own dust; every cell — igniting or not —
+also gathers 1/8 of the dust each Moore-8 neighbour carried IF that neighbour
+ignited last step, reusing the same neighbour fetch `ignitedNeighbours`
+already needed (zero extra texture reads). This is NOT mass-conservative by
+construction: a front pushes its full dust outward while also keeping a
+floor at itself, and two fronts colliding SUM their shares — which is what
+piles dust past ambient (1.0) into the rim/filament instead of merely
+relocating it. `DUST_OVERSHOOT_CEILING` (8x ambient) is a lenient runaway
+guard, not a rim-flattening clamp — never tighten it to flatten a bright rim.
+Step-0 dust seeds flat at 1.0, the same simplification the gas seed already
+makes; a radial disc profile is future work (06's landmine 4).
+
+`dustFloorFraction` ships at 0.2, eyeballed (06 gives no number) — the one
+live-tunable slider this change adds, in SF MAP's own UI section. Downstream
+dust SEEDING (`sfMapDustDensity`, `dustDetail.wesl`) still reads `gas x
+oldActivity`, not the new dust channel — re-keying that read is 06's own
+"downstream" consequence, deliberately deferred past this change.

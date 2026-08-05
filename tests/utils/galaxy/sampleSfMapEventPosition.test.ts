@@ -58,8 +58,8 @@ const GEOMETRY: GalaxyDescription = {
 
 /** A single hot texel in the `recentSf` (G) channel — the density this sampler weights by. */
 function makeSingleHotMap(ring: number, azIdx: number): GalaxySfMap {
-  const data = new Uint8Array(RINGS * AZ * 4);
-  data[(ring * AZ + azIdx) * 4 + 1] = 255;
+  const data = new Float32Array(RINGS * AZ * 4);
+  data[(ring * AZ + azIdx) * 4 + 1] = 1;
   return { az: AZ, rings: RINGS, rMin: R_MIN, rMax: R_MAX, data };
 }
 

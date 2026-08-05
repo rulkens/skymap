@@ -19,10 +19,10 @@ import {
   SF_MAP_AZ,
   SF_MAP_RINGS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
-import { unpadRows } from '../../../../../src/utils/gpu/unpadRows';
 
 import { createReadbackQueue } from '../gpu/createReadbackQueue';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
+import { decodeSfMapTexels } from './decodeSfMapTexels';
 import type { SfMapAutomaton } from './createSfMapAutomaton';
 import type { SfMapOrientation } from './createSfMapOrientation';
 
@@ -68,10 +68,10 @@ export function createSfMapReadbacks(deps: {
     width: SF_MAP_AZ,
     height: SF_MAP_RINGS,
     decode: (mapped) =>
-      unpadRows(
-        new Uint8Array(mapped),
+      decodeSfMapTexels(
+        new Uint16Array(mapped),
         deps.automaton.readbackBytesPerRow,
-        SF_MAP_AZ * 4,
+        SF_MAP_AZ,
         SF_MAP_RINGS,
       ),
   });

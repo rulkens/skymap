@@ -108,4 +108,13 @@ export type GalaxySfMapParams = {
    * structure" exactly like blackness does.
    */
   readonly activityGain: number;
+  /**
+   * Fraction of an igniting cell's own dust that survives the SF event in
+   * place; the rest is swept onto its 8 Moore neighbours (the snowplough
+   * rule, docs/research/m74-jwst/06-ca-dust-channel-sketch.md). Lower values
+   * carve deeper, darker cavities behind an advancing front — this is the
+   * PAH-destruction knob, not a mass-conservation one: colliding fronts are
+   * meant to pile dust past ambient into the rim, not merely relocate it.
+   */
+  readonly dustFloorFraction: number;
 };

@@ -126,9 +126,12 @@ export function createSfMapAutomaton(
     format: 'r32float',
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
-  // Ping-pong state: (gasFraction, ageSinceIgnition, refractoryTimer,
-  // oldActivityEma). Both need BOTH usages — each alternates between being the
-  // step's read source and its write target from one step to the next.
+  // Ping-pong state: (gasFraction, ageSinceIgnition, dust, oldActivityEma) —
+  // refractory is DERIVED from age in sfMapStep.wesl, not stored; that frees
+  // the z slot for the conserved dust channel the snowplough rule transports
+  // (docs/research/m74-jwst/06-ca-dust-channel-sketch.md). Both need BOTH
+  // usages — each alternates between being the step's read source and its
+  // write target from one step to the next.
   const makeStateTex = (label: string): GPUTexture =>
     device.createTexture({
       label,
@@ -138,10 +141,14 @@ export function createSfMapAutomaton(
     });
   const stateA = makeStateTex('galaxy:sfMapStateA');
   const stateB = makeStateTex('galaxy:sfMapStateB');
+  // rgba16float, not rgba8unorm: sfMapPack.wesl's dust channel (w) must
+  // carry raw, unclamped values above 1.0 — the swept-shell rim overshoot —
+  // which an 8-bit unorm store would quantize/clamp away. Same
+  // filterable-storage-format precedent as sfMapDustBlurTex below.
   const texture = device.createTexture({
     label: 'galaxy:sfMapTex',
     size: [SF_MAP_AZ, SF_MAP_RINGS],
-    format: 'rgba8unorm',
+    format: 'rgba16float',
     usage:
       GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
   });
@@ -156,7 +163,9 @@ export function createSfMapAutomaton(
   });
   // `copyTextureToBuffer` forces `bytesPerRow` to a 256-byte multiple; the
   // readback's decode strips the padding so it never reaches `GalaxySfMap.data`.
-  const readbackBytesPerRow = alignedBytesPerRow(SF_MAP_AZ * 4);
+  // 8 bytes/texel (rgba16float = 4 lanes x 2 bytes), not 4: `decodeSfMapTexels`
+  // is the f16 counterpart of the old direct-byte read.
+  const readbackBytesPerRow = alignedBytesPerRow(SF_MAP_AZ * 8);
   const readbackBuffer = device.createBuffer({
     label: 'galaxy:sfMapReadbackBuf',
     size: readbackBytesPerRow * SF_MAP_RINGS,
@@ -230,10 +239,13 @@ export function createSfMapAutomaton(
           { bytesPerRow: SF_MAP_AZ * 4 },
           [SF_MAP_AZ, SF_MAP_RINGS],
         );
+        // All-zero bytes decode to 0.0 in both rgba16float and the old
+        // rgba8unorm, so the zero-fill trick needs only a wider row (8
+        // bytes/texel, not 4) to stay correct under the new format.
         device.queue.writeTexture(
           { texture },
-          new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4),
-          { bytesPerRow: SF_MAP_AZ * 4 },
+          new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 8),
+          { bytesPerRow: SF_MAP_AZ * 8 },
           [SF_MAP_AZ, SF_MAP_RINGS],
         );
         // A stale blur under a cleared map would read as detail everywhere

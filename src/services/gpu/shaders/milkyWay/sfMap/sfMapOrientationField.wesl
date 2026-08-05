@@ -17,7 +17,7 @@ import package::milkyWay::sfMap::sfMapOrientationLib::kernelRadius;
 @group(0) @binding(1) var dst: texture_storage_2d<r32float, write>;
 @group(0) @binding(2) var<uniform> sigma: SfMapOrientationSigma;
 
-// Reads sfMapPack.wesl's rgba8unorm output directly, extracting the
+// Reads sfMapPack.wesl's packed rgba16float output directly, extracting the
 // oldActivity (.z) channel — no separate CPU-side extraction step needed.
 @compute @workgroup_size(16, 16)
 fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {

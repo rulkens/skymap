@@ -40,8 +40,8 @@ export function sampleGalaxySfMap(
   const azIdx = Math.min(az - 1, Math.floor((wrapped / (2 * Math.PI)) * az));
   const i = (ring * az + azIdx) * 4;
   return {
-    gas: data[i]! / 255,
-    recentSf: data[i + 1]! / 255,
-    oldActivity: data[i + 2]! / 255,
+    gas: data[i]!,
+    recentSf: data[i + 1]!,
+    oldActivity: data[i + 2]!,
   };
 }
