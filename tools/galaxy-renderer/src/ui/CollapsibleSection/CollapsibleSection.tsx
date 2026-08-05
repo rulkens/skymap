@@ -12,6 +12,7 @@
  * every pointer event to keep the affordances apart.
  */
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import CopyButton from '../../../../../src/components/common/CopyButton/CopyButton';
 import styles from './CollapsibleSection.module.css';
 
@@ -36,6 +37,25 @@ export type CollapsibleSectionProps = {
    * half a node drops the other half.
    */
   readonly copyPayload?: Record<string, unknown>;
+  /**
+   * Renders this section as a SUB-section of whatever CollapsibleSection it
+   * sits inside — nesting itself is plain composition (put one in another's
+   * `children`), so this prop only carries what composition can't: the
+   * diminished header/indented-body look that tells the two levels apart,
+   * and a `data-nested` marker on the fold button. probeGpuErrors.ts's
+   * root-level sweep excludes that marker, so a nested section whose parent
+   * already defaults open doesn't get queued twice — once as if it were
+   * top-level, once (correctly) from its parent's own body scan.
+   *
+   * Open state stays the caller's problem either way (this component owns
+   * none): give a nested section its OWN `openSections` key, never the
+   * parent's — e.g. `hiiRegions`/`hiiDig`/`hiiAssociations` under a
+   * conceptual `hii` parent, the same prefixed-sibling naming `armField`/
+   * `armCloud` already use under `arms`. Reusing a key would make the two
+   * fold buttons drive the same boolean, which is easy to miss visually and
+   * easy to catch by grep — `openSections` keys all live in one file.
+   */
+  readonly nested?: boolean;
   readonly children: ReactNode;
 };
 
@@ -46,12 +66,13 @@ function CollapsibleSection({
   headerToggle,
   onHeaderToggleChange,
   copyPayload,
+  nested,
   children,
 }: CollapsibleSectionProps): ReactNode {
   const hasHeaderToggle = headerToggle !== undefined && onHeaderToggleChange !== undefined;
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
+      <div className={cx(styles.header, nested && styles.nestedHeader)}>
         {hasHeaderToggle && (
           <input
             type="checkbox"
@@ -61,7 +82,13 @@ function CollapsibleSection({
             aria-label={`Toggle ${title}`}
           />
         )}
-        <button type="button" className={styles.foldButton} onClick={onToggle} aria-expanded={open}>
+        <button
+          type="button"
+          className={styles.foldButton}
+          onClick={onToggle}
+          aria-expanded={open}
+          data-nested={nested || undefined}
+        >
           <span className={styles.headerTitle}>{title}</span>
           <span className={styles.chevron} aria-hidden>
             {open ? '▾' : '▸'}
@@ -76,7 +103,7 @@ function CollapsibleSection({
           />
         )}
       </div>
-      {open && <div className={styles.body}>{children}</div>}
+      {open && <div className={cx(styles.body, nested && styles.nestedBody)}>{children}</div>}
     </div>
   );
 }

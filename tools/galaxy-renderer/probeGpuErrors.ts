@@ -34,9 +34,19 @@ const BOOT_TIMEOUT_MS = 60_000;
  * is a section this probe has never run. Its header button is the only
  * disclosure control in the panel, and `aria-expanded` is what marks it —
  * enumerating that instead of a list of titles is what keeps a section added
- * next month from being silently uncovered.
+ * next month from being silently uncovered. A nested sub-section (composed
+ * inside another CollapsibleSection's body, via the `nested` prop) uses this
+ * SAME selector — discovery below is recursive and scoped per-section, not
+ * a single flat page-wide list.
  */
 const SECTION_HEADER = 'button[aria-expanded]';
+/**
+ * The root sweep's seed list only: `data-nested` (set by the `nested` prop)
+ * excludes a nested header here, so a sub-section whose parent already
+ * defaults open doesn't get queued twice — once as if it were top-level,
+ * once (correctly) a moment later from its parent's own body scan.
+ */
+const TOP_LEVEL_SECTION_HEADER = 'button[aria-expanded]:not([data-nested])';
 
 /** One `uncapturederror` / device-loss entry, tagged with the step that provoked it. */
 type GpuErrorEntry = { kind: string; message: string; step: string };
@@ -235,18 +245,24 @@ async function pressSlider(page: Page, label: string, keys: readonly string[]): 
 }
 
 /**
- * Every section header, in DOM order, with the fold state it is in right now.
- * The chevron glyph is part of the button's text and is stripped here — the
- * one place titles are parsed, so a re-read compares like with like.
+ * Every section header inside `scope`, each with a locator bound narrowly to
+ * IT (never a page-wide position). Position-based addressing (`nth(index)`
+ * into a single flat, page-wide list) is what this replaced — it broke the
+ * moment a parent section's expansion inserted new headers into the middle
+ * of the DOM, shifting every later sibling's index out from under it. The
+ * chevron glyph is part of the button's text and is stripped here — the one
+ * place titles are parsed, so a re-read compares like with like.
  */
-async function readSections(page: Page): Promise<{ title: string; open: boolean }[]> {
-  return page.evaluate(
-    (selector) =>
-      [...document.querySelectorAll(selector)].map((header) => ({
-        title: (header.textContent ?? '').replace(/[▾▸]/g, '').replace(/\s+/g, ' ').trim(),
-        open: header.getAttribute('aria-expanded') === 'true',
-      })),
-    SECTION_HEADER,
+async function readSectionHeaders(
+  scope: Page | Locator,
+  selector: string,
+): Promise<{ header: Locator; title: string }[]> {
+  const headers = await scope.locator(selector).all();
+  return Promise.all(
+    headers.map(async (header) => ({
+      header,
+      title: ((await header.textContent()) ?? '').replace(/[▾▸]/g, '').replace(/\s+/g, ' ').trim(),
+    })),
   );
 }
 
@@ -265,42 +281,75 @@ async function nudgeSlider(page: Page, slider: Locator): Promise<void> {
 }
 
 /**
- * Expand every collapsible section and drive whatever sliders appear, one
- * step per section so a fault keeps the section's name. `rows` is filled as
- * the sweep goes, and is what the coverage report is printed from.
+ * Exercise one section: expand it, nudge its own sliders, then hand back a
+ * step per section nested inside — `main`'s queue runs those right after
+ * this one (`queue.unshift`), so a nested section is fully expanded and
+ * driven before the sweep moves on to the next top-level sibling. A nested
+ * section's own step takes the exact same path, so depth beyond one level
+ * needs no new plumbing (nothing in the panel goes past one today).
+ *
+ * `rows` is filled as the sweep goes and is what the coverage report at the
+ * end is printed from.
+ */
+function exerciseSection(header: Locator, title: string, rows: SectionRow[]): ExerciseStep {
+  return {
+    name: `section:${title}`,
+    run: async (page) => {
+      const row: SectionRow = { title, sliders: null };
+      rows.push(row);
+
+      // Re-read and compare: a section appearing, vanishing or renaming
+      // mid-sweep would otherwise silently point this step at the wrong
+      // header and still report full coverage.
+      const current = ((await header.textContent()) ?? '')
+        .replace(/[▾▸]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (current !== title) {
+        throw new Error(
+          `section header now reads '${current}', not '${title}' — the panel changed shape mid-sweep`,
+        );
+      }
+
+      if ((await header.getAttribute('aria-expanded')) !== 'true') {
+        await header.click();
+        await settleFrames(page, SETTLE_FRAMES);
+      }
+
+      // `.header`'s next sibling is `.body` (see CollapsibleSection.tsx) —
+      // walked structurally rather than through a hashed CSS-module class
+      // name, and only present once the click above has mounted it. (The
+      // previous `header.locator('xpath=..')` stopped ONE level short, at
+      // `.header` itself, which holds no sliders at all — this section's
+      // own slider count was silently zero on every run.)
+      const body = header.locator('xpath=../following-sibling::*[1]');
+
+      const sliders = body.getByRole('slider');
+      const count = await sliders.count();
+      row.sliders = count;
+      for (let i = 0; i < count; i++) await nudgeSlider(page, sliders.nth(i));
+
+      // A nested section that already defaults open is inside `body` and so
+      // already counted/nudged above; its own step below repeats that
+      // (idempotent — one step up, one back), not extra state.
+      const nested = await readSectionHeaders(body, SECTION_HEADER);
+      return nested.map((section) => exerciseSection(section.header, section.title, rows));
+    },
+  };
+}
+
+/**
+ * Expand every collapsible section — and everything nested inside it — and
+ * drive whatever sliders appear. Seeded from a page-wide, TOP-LEVEL-only
+ * scan (`TOP_LEVEL_SECTION_HEADER`): a nested section is never discovered
+ * from here, only from its own parent's body once that parent is open.
  */
 function sweepSections(rows: SectionRow[]): ExerciseStep {
   return {
     name: 'sections:discover',
     run: async (page) => {
-      const found = await readSections(page);
-      return found.map((section, index) => {
-        const row: SectionRow = { title: section.title, sliders: null };
-        rows.push(row);
-        return {
-          name: `section:${section.title}`,
-          run: async (page: Page) => {
-            const header = page.locator(SECTION_HEADER).nth(index);
-            // Positional, so re-read and compare: a section appearing or
-            // vanishing mid-sweep would otherwise silently shift the whole
-            // sweep onto the wrong headers and still report full coverage.
-            const current = (await readSections(page))[index];
-            if (current === undefined || current.title !== section.title) {
-              throw new Error(
-                `section ${index} is now '${current?.title ?? 'gone'}', not '${section.title}' — the panel changed shape mid-sweep`,
-              );
-            }
-            if (!current.open) {
-              await header.click();
-              await settleFrames(page, SETTLE_FRAMES);
-            }
-            const sliders = header.locator('xpath=..').getByRole('slider');
-            const count = await sliders.count();
-            row.sliders = count;
-            for (let i = 0; i < count; i++) await nudgeSlider(page, sliders.nth(i));
-          },
-        };
-      });
+      const found = await readSectionHeaders(page, TOP_LEVEL_SECTION_HEADER);
+      return found.map((section) => exerciseSection(section.header, section.title, rows));
     },
   };
 }

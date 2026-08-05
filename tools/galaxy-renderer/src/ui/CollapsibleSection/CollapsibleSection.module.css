@@ -64,3 +64,22 @@
 
 .body {
 }
+
+/* Nested sub-section variant, opt-in via the `nested` prop — every existing
+ * (top-level) section keeps its exact look, since these rules only take
+ * effect when the modifier class rides alongside `.header`/`.body`.
+ * Declared AFTER them on purpose: same specificity, same module file, so
+ * source order is what lets these properties win the ones both share. */
+.nestedHeader {
+  margin: 2px 0 8px;
+  padding: 10px 0 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-fg-faint);
+  font-weight: 500;
+}
+
+.nestedBody {
+  padding-left: 14px;
+  border-left: 1px solid var(--border-divider);
+}
