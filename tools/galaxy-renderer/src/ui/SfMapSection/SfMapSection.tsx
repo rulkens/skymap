@@ -385,6 +385,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild."
             />
             <ParamSlider
+              label="Arm drag"
+              value={fluid.armDrag}
+              min={0}
+              max={4}
+              step={0.05}
+              format={(v) => v.toFixed(2)}
+              onChange={(v) => patchFluid({ armDrag: v })}
+              path="fieldTuning.sfMapFluid.armDrag"
+              info="Drags the shear (only) by local arm forcing, so drift stalls inside the arm — density piles up on the upstream edge via the existing convergence term, a soft release downstream, sides flipping at corotation. Forcing peaks at 1 at a ridge crest, so armDrag >= 1 gives full stall there."
+            />
+            <ParamSlider
               label="Diffusion"
               value={fluid.diffusion}
               min={0}

@@ -28,6 +28,10 @@ struct SfMapFluidConstants {
   // both struct copies for byte-identical layout (packSfMapFluidConstants.ts
   // is the offset authority).
   diffusion: f32,
+  // Shear drag by the arm-forcing field at this texel — see composedVelocity
+  // below. Forcing peaks at 1 (galaxySfMapArmForcing.ts's clamp), so full
+  // stall at a ridge crest needs armDrag >= 1.
+  armDrag: f32,
 }
 
 // Same layout as sfMapFluidStep.wesl's own copy (packSfMapFluidStepIndex.ts
@@ -174,7 +178,13 @@ fn composedVelocity(
   // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.
   let gatherSat = max(0.0, 1.0 - localDust / ARM_GATHER_SAT);
 
-  var velAz = shearVelAz + u.curlStrength * curl.x + u.armGather * gatherSat * grad.x;
+  // Drift-stall shock caricature: drag the shear (only) by this texel's own
+  // forcing, so drift stalls inside the arm and Pass B's divV convergence
+  // term piles density at the upstream edge — see the param's own doc.
+  let forcingSelf = armForcingAt(az, ring, azCountI, ringCountI);
+  let stalledShear = shearVelAz * max(0.0, 1.0 - u.armDrag * forcingSelf);
+
+  var velAz = stalledShear + u.curlStrength * curl.x + u.armGather * gatherSat * grad.x;
   var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * grad.y;
   var eventStamp = 0.0;
 

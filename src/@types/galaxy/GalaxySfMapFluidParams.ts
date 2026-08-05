@@ -38,6 +38,20 @@ export type GalaxySfMapFluidParams = {
   readonly emaRate: number;
   /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field the automaton samples (`galaxySfMapArmForcing.ts`), read here as a texture instead of biasing event placement. Damped by `sfMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
   readonly armGather: number;
+  /**
+   * Drag on the shear velocity by the arm-forcing field at THIS texel (not
+   * the gradient `armGather` reads) — `sfMapFluidVelocity.wesl`'s
+   * `composedVelocity` applies `shearVel * max(0, 1 - armDrag * forcingSelf)`.
+   * Caricatures a real spiral shock: gas drifting through the pattern at
+   * shear speed decelerates inside the arm, and Pass B's existing
+   * convergence-piles-density term (`divV < 0`) turns that stall into a lane
+   * on the upstream edge, softening downstream, flipping sides at
+   * corotation with the shear sign — emergent, not authored. Units: inverse
+   * forcing (forcing is dimensionless [0,1], peak 1 at a ridge crest — see
+   * `galaxySfMapArmForcing.ts`'s clamp); full stall at the crest needs
+   * `armDrag >= 1`.
+   */
+  readonly armDrag: number;
   /** Explicit diffusion coefficient for gas/dust density, in texel²/step (`sfMapFluidStep.wesl`'s `diffusionLaplacian`) — the repulsion `armGather`'s attraction has nothing to balance without it; sets arm band width and kills grid-scale (1-texel-line, checkerboard) collapse. Explicit 2D diffusion is stable only for coefficient ≤ 0.25. A `v += -k * grad(gas)` velocity term was tried first and rejected: central-difference pressure on a collocated grid is blind to checkerboard modes and vanishes at a 1-texel spike's own peak — don't reintroduce it. */
   readonly diffusion: number;
 };

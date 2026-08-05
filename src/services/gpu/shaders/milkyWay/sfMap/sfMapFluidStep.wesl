@@ -25,6 +25,9 @@ struct SfMapFluidConstants {
   // own consumer — see diffusionLaplacian below. Explicit 2D diffusion is
   // stable only for coefficient <= 0.25; the slider range enforces it.
   diffusion: f32,
+  // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
+  // here for byte-identical layout, same discipline as diffusion above.
+  armDrag: f32,
 }
 
 // Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts

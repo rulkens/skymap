@@ -62,4 +62,7 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // collapse gas onto a grid-scale line — hasn't been needed. Dial in
   // alongside armGather if that collapse shows up.
   diffusion: 0,
+  // Off by default: this 2026-08-05 calibration predates the term, and must
+  // stay byte-identical until the user pushes the slider.
+  armDrag: 0,
 };

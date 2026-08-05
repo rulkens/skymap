@@ -39,6 +39,7 @@ const SENTINEL = {
   impulseDuration: 4109,
   armGather: 4110,
   diffusion: 4111,
+  armDrag: 4112,
 } as const;
 
 const input: SfMapFluidConstantsInput = {
@@ -57,6 +58,7 @@ const input: SfMapFluidConstantsInput = {
     emaRate: SENTINEL.emaRate,
     armGather: SENTINEL.armGather,
     diffusion: SENTINEL.diffusion,
+    armDrag: SENTINEL.armDrag,
   },
 };
 
