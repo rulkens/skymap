@@ -33,8 +33,8 @@ struct SfMapConstants {
   // steady-state derivation; formerly baked-in consts, now sliders.
   activityDecay: f32,
   activityGain: f32,
-  // Fraction of an igniting cell's OWN dust that survives the SF event in
-  // place, the rest swept to its Moore neighbours (see 'nextDust' below) —
+  // Fraction of a cell's own dust that survives being swept to its Moore
+  // neighbours, one step AFTER that cell ignites (see 'ownDust' below) —
   // the PAH-destruction knob (m74-jwst/06-ca-dust-channel-sketch.md).
   dustFloorFraction: f32,
 }
@@ -156,10 +156,11 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // The offset ACCUMULATES with genStep, which is what makes the neighbour
   // set evolve over time — the paper's actual mechanism (research doc §19).
   var ignitedNeighbours = 0.0;
-  // Gather form (docs/research/m74-jwst/06-ca-dust-channel-sketch.md): every
-  // neighbour that ignited LAST step pushes 1/8 of the dust it carried into
-  // THIS cell — same loop, same neighbour fetch already needed for
-  // ignitedNeighbours, zero extra texture reads.
+  // Gather form (docs/research/m74-jwst/06-ca-dust-channel-sketch.md): a
+  // neighbour with prevTex age == 0 ignited LAST step and sweeps THIS step
+  // (see 'ownDust' below) — same loop, same fetch ignitedNeighbours already
+  // needs. neighbour.z is still its PRE-sweep dust, so the swept share is
+  // computed here: (1 - dustFloorFraction) of it, split 8 ways.
   var receivedDust = 0.0;
   let shearAtRing = shearTexels(ring, ringCount, azCount);
   for (var dr = -1; dr <= 1; dr++) {
@@ -173,11 +174,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
       if (dr == 0 && da == 0) {
         continue;
       }
-      // Exact equality is valid again (neighbourAt's own docstring).
+      // Exact equality is valid again (neighbourAt's own docstring). Its
+      // round() isn't perfectly symmetric at half-texel shear boundaries —
+      // A can count B a neighbour without B counting A back — a small,
+      // un-fixed leak alongside the two below.
       let neighbour = neighbourAt(nRing, f32(i32(az) + da) + relShear, azCount);
       if (neighbour.y == 0.0) {
         ignitedNeighbours += 1.0;
-        receivedDust += neighbour.z / 8.0;
+        receivedDust += neighbour.z * (1.0 - u.dustFloorFraction) / 8.0;
       }
     }
   }
@@ -203,16 +207,21 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let roll = cellHash(ring, az, genStep, u32(round(u.seed)));
   let ignite = refractory <= 0.0 && roll < p;
 
-  // Snowplough (06-ca-dust-channel-sketch.md): an igniting cell keeps only
-  // dustFloorFraction of its own dust; every cell (igniting or not) also
-  // gathers whatever its neighbours pushed THIS step (receivedDust, above).
-  // The two together are not mass-conservative by construction — a front
-  // pushes its full dust outward while also keeping a floor, and two fronts
-  // colliding sum their shares — which is what piles dust into the rim
-  // instead of merely relocating it. DUST_OVERSHOOT_CEILING bounds how far
-  // that can run, nothing tighter.
-  let sweptDust = select(dust, dust * u.dustFloorFraction, ignite);
-  let nextDust = min(sweptDust + receivedDust, DUST_OVERSHOOT_CEILING);
+  // Snowplough, one step deferred (06-ca-dust-channel-sketch.md): ignition
+  // leaves dust UNCHANGED (ignite branch below — the front hasn't swept
+  // yet); the sweep lands on THIS cell's own NEXT update, gated on age ==
+  // 0.0 — the same "ignited last step" test the neighbour loop reads via
+  // neighbour.y == 0.0, off the SAME prevTex snapshot. Debit (ownDust) and
+  // credit (receivedDust, above) are one transfer seen from both ends, so
+  // sweeping is conservative by construction, not by the ceiling below.
+  // (Refractory means age == 0.0 can't re-ignite this step, so the select
+  // only ever fires in the non-ignite branch — written unconditionally so
+  // the arithmetic doesn't depend on that staying true.)
+  let ownDust = select(dust, dust * u.dustFloorFraction, age == 0.0);
+  // Two honest leaks remain: a grid-edge ring skips out-of-range dr without
+  // rebalancing the /8 divisor (that share is lost off-disc), and
+  // DUST_OVERSHOOT_CEILING still clips collided totals above it.
+  let nextDust = min(ownDust + receivedDust, DUST_OVERSHOOT_CEILING);
 
   var next: vec4<f32>;
   if (ignite) {

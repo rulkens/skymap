@@ -367,16 +367,20 @@ real EMA, not a format artifact — but nothing new is clamped.
 channel** (docs/research/m74-jwst/06-ca-dust-channel-sketch.md is the
 mechanism's authority). `refractory` is derivable as
 `max(0, refractorySteps - age)` (age already resets to 0 on ignition), so the
-z lane state used to spend on a stored countdown is free. On ignition a cell
-keeps `dustFloorFraction` of its own dust; every cell — igniting or not —
-also gathers 1/8 of the dust each Moore-8 neighbour carried IF that neighbour
-ignited last step, reusing the same neighbour fetch `ignitedNeighbours`
-already needed (zero extra texture reads). This is NOT mass-conservative by
-construction: a front pushes its full dust outward while also keeping a
-floor at itself, and two fronts colliding SUM their shares — which is what
-piles dust past ambient (1.0) into the rim/filament instead of merely
-relocating it. `DUST_OVERSHOOT_CEILING` (8x ambient) is a lenient runaway
-guard, not a rim-flattening clamp — never tighten it to flatten a bright rim.
+z lane state used to spend on a stored countdown is free. Ignition itself
+passes dust through unchanged; the sweep is deferred to a cell's OWN NEXT
+update (gated on `age == 0`, i.e. "I ignited last step"), and every cell —
+swept or not — also gathers `(1 - dustFloorFraction)/8` of the dust each
+Moore-8 neighbour carried IF that neighbour ignited last step, reusing the
+same neighbour fetch `ignitedNeighbours` already needed (zero extra texture
+reads). Debit and credit read the SAME pre-sweep value off the SAME prevTex
+snapshot, so the transfer is mass-conservative by construction (mod a
+grid-edge leak and rounding-asymmetry leak, both documented in the shader) —
+two fronts colliding still SUM their shares, which is what piles dust past
+ambient (1.0) into the rim/filament, but nothing is destroyed or duplicated
+en route. `DUST_OVERSHOOT_CEILING` (8x ambient) is a lenient runaway guard on
+that collision overshoot, not a rim-flattening clamp — never tighten it to
+flatten a bright rim.
 Step-0 dust seeds flat at 1.0, the same simplification the gas seed already
 makes; a radial disc profile is future work (06's landmine 4).
 
