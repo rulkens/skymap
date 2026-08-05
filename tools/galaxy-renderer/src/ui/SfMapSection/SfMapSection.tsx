@@ -418,6 +418,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               info="Drags the shear (only) by local arm forcing, so drift stalls inside the arm — density piles up on the upstream edge via the existing convergence term, a soft release downstream, sides flipping at corotation. Forcing peaks at 1 at a ridge crest, so armDrag >= 1 gives full stall there."
             />
             <ParamSlider
+              label="Lane bias"
+              value={fluid.laneBias}
+              min={0}
+              max={1}
+              step={0.01}
+              format={(v) => v.toFixed(2)}
+              onChange={(v) => patchFluid({ laneBias: v })}
+              path="fieldTuning.sfMapFluid.laneBias"
+              info="Directional gather: full strength where the drift carries gas toward the ridge (the upstream flank arm drag stalls), scaled down by (1 - laneBias) on the downstream flank — keeps the drag lane one-sided instead of the gather washing it back out."
+            />
+            <ParamSlider
               label="Diffusion"
               value={fluid.diffusion}
               min={0}

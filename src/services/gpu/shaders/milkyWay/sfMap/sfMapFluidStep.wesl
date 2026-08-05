@@ -37,6 +37,9 @@ struct SfMapFluidConstants {
   // gasProfile's r->infinity floor fraction [0,1] (the flat HI component);
   // 1 makes the profile identically 1.0, the pre-profile calibration.
   gasFloor: f32,
+  // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
+  // here for byte-identical layout, same discipline as armDrag above.
+  laneBias: f32,
 }
 
 // Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts

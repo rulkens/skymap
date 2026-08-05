@@ -52,6 +52,17 @@ export type GalaxySfMapFluidParams = {
    * `armDrag >= 1`.
    */
   readonly armDrag: number;
+  /**
+   * Directional gate on `armGather` above, [0,1] dimensionless —
+   * `sfMapFluidVelocity.wesl`'s `composedVelocity` applies the gather term at
+   * full strength where the (undragged) shear carries gas toward the ridge
+   * (the upstream flank `armDrag` stalls), scaled by `1 - laneBias` on the
+   * downstream flank. `armGather` alone re-symmetrizes the one-sided stall
+   * lane `armDrag` creates by pulling gas back from both sides; this makes
+   * that pull directional so the lane's asymmetry survives it. 0 (default)
+   * is today's symmetric gather, bit-identical.
+   */
+  readonly laneBias: number;
   /** Explicit diffusion coefficient for gas/dust density, in texel²/step (`sfMapFluidStep.wesl`'s `diffusionLaplacian`) — the repulsion `armGather`'s attraction has nothing to balance without it; sets arm band width and kills grid-scale (1-texel-line, checkerboard) collapse. Explicit 2D diffusion is stable only for coefficient ≤ 0.25. A `v += -k * grad(gas)` velocity term was tried first and rejected: central-difference pressure on a collocated grid is blind to checkerboard modes and vanishes at a 1-texel spike's own peak — don't reintroduce it. */
   readonly diffusion: number;
   /** Exponential decline length of `gasProfile` (`sfMapFluidStep.wesl`), grid-radius units (same as `rMin`/`rMax`/`corotationRadius`) — sets how fast the star-forming (H2-like) gas disc thins with radius. */

@@ -42,6 +42,7 @@ const SENTINEL = {
   armDrag: 4112,
   gasScaleLength: 4113,
   gasFloor: 4114,
+  laneBias: 4115,
 } as const;
 
 const input: SfMapFluidConstantsInput = {
@@ -63,6 +64,7 @@ const input: SfMapFluidConstantsInput = {
     armDrag: SENTINEL.armDrag,
     gasScaleLength: SENTINEL.gasScaleLength,
     gasFloor: SENTINEL.gasFloor,
+    laneBias: SENTINEL.laneBias,
   },
 };
 

@@ -65,6 +65,9 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // Off by default: this 2026-08-05 calibration predates the term, and must
   // stay byte-identical until the user pushes the slider.
   armDrag: 0,
+  // Off by default, same reasoning as armDrag above: this calibration
+  // predates laneBias, and 0 keeps the gather symmetric (byte-identical).
+  laneBias: 0,
   // gasFloor=1 makes gasProfile identically 1.0 everywhere, so this
   // calibration stays byte-identical to the pre-profile seed/regen until the
   // user dials gasFloor down. Value is inert at that default; picked as

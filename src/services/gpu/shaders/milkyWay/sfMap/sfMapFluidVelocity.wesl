@@ -37,6 +37,12 @@ struct SfMapFluidConstants {
   gasScaleLength: f32,
   // Pass-B-consumed only — see gasScaleLength above.
   gasFloor: f32,
+  // Directional gate on armGather below (composedVelocity) — full strength
+  // where the drift carries gas toward the ridge (upstream flank), scaled by
+  // (1 - laneBias) on the downstream flank, so the gather can't wash out the
+  // one-sided lane armDrag creates. 0 (default) is today's symmetric gather,
+  // bit-identical.
+  laneBias: f32,
 }
 
 // Same layout as sfMapFluidStep.wesl's own copy (packSfMapFluidStepIndex.ts
@@ -214,8 +220,15 @@ fn composedVelocity(
   let forcingSelf = armForcingAt(az, ring, azCountI, ringCountI);
   let stalledShear = shearVelAz * max(0.0, 1.0 - u.armDrag * forcingSelf);
 
-  var velAz = stalledShear + u.curlStrength * curl.x + u.armGather * gatherSat * grad.x;
-  var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * grad.y;
+  // Directional gate: gate on shearVelAz (the UNDRAGGED shear), not
+  // stalledShear — armDrag's max(0, ...) clamps stalledShear to exactly 0
+  // throughout the stall zone, which would make the sign test degenerate
+  // right where the gate matters most. shearVelAz * grad.x > 0 means the
+  // drift is carrying gas up-slope, toward the ridge (upstream flank).
+  let gatherWeight = select(1.0 - u.laneBias, 1.0, shearVelAz * grad.x > 0.0);
+
+  var velAz = stalledShear + u.curlStrength * curl.x + u.armGather * gatherSat * gatherWeight * grad.x;
+  var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * gatherWeight * grad.y;
   var eventStamp = 0.0;
 
   let azCountF = f32(azCount);
