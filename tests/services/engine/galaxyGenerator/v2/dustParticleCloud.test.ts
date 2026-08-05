@@ -27,7 +27,7 @@ function makeMap(dustValue: number): GalaxySfMap {
   for (let i = 0; i < data.length; i += 4) {
     const idx = i / 4;
     data[i] = 0.3 + (0.5 * ((idx * 7) % 11)) / 11; // gas
-    data[i + 1] = 0.2; // recentSf, unread by sfMapDustDensity
+    data[i + 1] = 0.2; // recentSf, unread by dust placement or its survival filter
     data[i + 2] = 0.4 + (0.4 * ((idx * 13) % 9)) / 9; // activity
     data[i + 3] = dustValue;
   }
@@ -57,11 +57,11 @@ describe('buildDustParticleCloud', () => {
 
   it('seeds mass onto the swept channel’s hot texel, off the legacy product’s', () => {
     // Two well-separated texels, one hot per channel, everything else at a
-    // shared baseline that clears the S3 survival floor (DUST_SURVIVAL_
-    // DENSITY_FLOOR = 0.01) so the filter can't confound the placement test.
-    // The dust baseline sits at SF_MAP_AMBIENT_DUST (1.0, zero overshoot)
-    // like a quiet automaton grid — the swept channel is keyed off OVERSHOOT
-    // above ambient (`sweptDustOvershoot`), not the absolute value.
+    // shared baseline. The dust baseline sits at SF_MAP_AMBIENT_DUST (1.0,
+    // zero overshoot) like a quiet automaton grid — both placement AND (S3)
+    // survival key off OVERSHOOT above ambient (`sweptDustOvershoot`), not
+    // the absolute value, so B's legacy-only heat (gas x activity) buys it
+    // neither placement mass nor a pass through the survival filter.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -115,6 +115,78 @@ describe('buildDustParticleCloud', () => {
 
     // Overwhelmingly placed near A (the swept channel's hot texel), not B.
     expect(meanDistTo(swept, a)).toBeLessThan(meanDistTo(swept, b) * 0.1);
+  });
+
+  it('keeps particles alive on the dust lane even when activity is zero everywhere', () => {
+    // The FLUID generator's `activity` is an EMA of event stamps that decays
+    // to ~0 away from a recent ignition — the bug this filter was re-keyed
+    // away from: under the old `gas x activity` criterion, activity = 0
+    // everywhere dropped every placed particle regardless of where the map's
+    // own dust actually was. Overshoot doesn't have that failure mode: the
+    // dust channel is conserved/advected, not an EMA, so a texel the
+    // automaton swept keeps its overshoot long after the front that made it.
+    const az = MAP_AZ;
+    const rings = MAP_RINGS;
+    const data = new Float32Array(rings * az * 4);
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 0.5; // gas
+      data[i + 1] = 0.2; // recentSf
+      data[i + 2] = 0; // activity: zero everywhere
+      data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
+    }
+    const ring = 8;
+    const azIdx = 16;
+    const base = (ring * az + azIdx) * 4;
+    data[base + 3] = 1.4; // one swept texel: 0.4 overshoot, well clear of the floor
+
+    const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
+    const dust = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 500, clumpiness: 0 },
+    };
+    const swept = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, map, null);
+
+    // Pre-fix this was empty: `gas x activity` is 0 at every texel when
+    // activity is 0 everywhere, regardless of where the dust channel's mass is.
+    expect(swept.length).toBeGreaterThan(0);
+  });
+
+  it('culls a child that straddles from a swept texel into a neighbouring cavity', () => {
+    // Placement itself only ever seeds a complex's CENTRE inside a texel
+    // with real overshoot (S1's CDF draws proportional to swept mass —
+    // sampleSfMapDustCdf.test.ts's "confines every draw to a single hot
+    // texel"). The survival filter's job is downstream of that: a complex's
+    // CHILDREN scatter COMPLEX_SPREAD_PC around the centre and can land in
+    // an adjacent, untouched texel the CDF would never have picked on its
+    // own — that's what this filter exists to catch, not placement itself.
+    const az = MAP_AZ;
+    const rings = MAP_RINGS;
+    const data = new Float32Array(rings * az * 4);
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 0.5; // gas
+      data[i + 1] = 0.2; // recentSf
+      data[i + 2] = 0.5; // activity
+      data[i + 3] = 1.0; // dust baseline: ambient/cavity, zero overshoot
+    }
+    // Near rMin, a texel's azimuthal width is comparable to
+    // COMPLEX_SPREAD_PC (~0.15 world units) — small enough that a
+    // meaningful fraction of children scatter clear of it.
+    const ring = 1;
+    const azIdx = 10;
+    const base = (ring * az + azIdx) * 4;
+    data[base + 3] = 4.0; // 3.0 overshoot: overwhelmingly the only placement mass on the grid
+
+    const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
+    const dust = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 4000, clumpiness: 0.6 },
+    };
+    const swept = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, map, null);
+
+    expect(swept.length).toBeGreaterThan(0);
+    // Some children scattered off the hot texel into the flat cavity/ambient
+    // background and were dropped — survivors fall short of the request.
+    expect(swept.length).toBeLessThan(dust.cloud.count);
   });
 
   it('zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {

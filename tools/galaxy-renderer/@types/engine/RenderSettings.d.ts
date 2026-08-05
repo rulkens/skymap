@@ -138,8 +138,8 @@ export type RenderSettings = {
   /**
    * SF-map channel weight, isolating `activity` (io.wesl's
    * `sfMapChannels.z`): the accumulated trace of every front that passed,
-   * decayed per step by `activityDecay` — the channel dust placement
-   * actually reads. Only reachable while `sfMapViewIntensity` is above 0.
+   * decayed per step by `activityDecay`. Only reachable while
+   * `sfMapViewIntensity` is above 0.
    */
   readonly sfMapActivityWeight: number;
   /**

@@ -3,9 +3,10 @@
  * (io.wesl's `sfMapChannels`), orthogonal to `debugViews.sfMap` (the whole
  * view's crossfade weight) — sfMapPresent.wesl's palette sums all four
  * channels, so with no per-channel control there was no way to tell gas from
- * activity from recentSf from dust. Each field names what the automaton channel MEANS,
- * not just that it's a weight — see `RenderSettings`'s own docblocks for the
- * same four explained from the slider side.
+ * activity from recentSf from dust. Each field names what the channel MEANS
+ * to the generator producing it (automaton or fluid), not just that it's a
+ * weight — see `RenderSettings`'s own docblocks for the same four explained
+ * from the slider side.
  */
 
 export type SfMapChannelWeights = {
@@ -13,7 +14,7 @@ export type SfMapChannelWeights = {
   readonly gasWeight: number;
   /** `exp(-age/12)` — a cell that fired within roughly the last dozen steps. */
   readonly recentSfWeight: number;
-  /** The accumulated trace of every front that passed, decayed per step by `activityDecay` — the channel dust placement actually reads. */
+  /** The accumulated trace of every front that passed, decayed per step by `activityDecay`. */
   readonly activityWeight: number;
   /** The conserved dust channel (packed texel's `.w`, since 9aa9fe5d) — swept-shell overshoot legitimately exceeds 1, up to the 8.0 ceiling; unclamped here so the slider can pull rim overshoot back into view. */
   readonly dustWeight: number;

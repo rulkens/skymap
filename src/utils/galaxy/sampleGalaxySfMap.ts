@@ -15,6 +15,7 @@ export type GalaxySfMapSample = {
   readonly gas: number;
   readonly recentSf: number;
   readonly activity: number;
+  readonly dust: number;
 };
 
 function ringForRadius(radius: number, rings: number, rMin: number, rMax: number): number {
@@ -43,5 +44,6 @@ export function sampleGalaxySfMap(
     gas: data[i]!,
     recentSf: data[i + 1]!,
     activity: data[i + 2]!,
+    dust: data[i + 3]!,
   };
 }

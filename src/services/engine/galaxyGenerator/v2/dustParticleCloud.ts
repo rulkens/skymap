@@ -16,10 +16,11 @@
  * (`dustBubblePlacements.ts`) used to sweep particles onto bubble/HII rims,
  * a second, independent star-formation model carving the same holes the
  * SSPSF automaton's own gas depletion already produces (`sfMap`, read via
- * `sfMapDustDensity` below). The map is now the only thing that shapes
- * dust, so until the automaton's depletion is tuned to carve on its own,
- * dust has no cavity holes and HII regions (still seeded from the event
- * catalog) can sit inside dust that no longer has a hole for them.
+ * the swept `dust` channel's overshoot below). The map is now the only
+ * thing that shapes dust, so until the automaton's depletion is tuned to
+ * carve on its own, dust has no cavity holes and HII regions (still seeded
+ * from the event catalog) can sit inside dust that no longer has a hole for
+ * them.
  *
  * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
  * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
@@ -47,8 +48,7 @@ import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleGalaxySfMap } from '../../../../utils/galaxy/sampleGalaxySfMap';
 import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
 import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrientation';
-import { sfMapDustDensity } from '../../../../utils/galaxy/sfMapDustDensity';
-import { sweptDustOvershoot } from '../../../../utils/galaxy/sweptDustOvershoot';
+import { SF_MAP_AMBIENT_DUST, sweptDustOvershoot } from '../../../../utils/galaxy/sweptDustOvershoot';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
@@ -121,12 +121,22 @@ const CLOUD_POLE_RATIO = 0.6;
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /**
- * S3 cavity floor: a map-seeded particle whose own `sfMapDustDensity` (gas x
- * activity, already in [0,1]) sits below this is dropped AFTER placement
- * — a post-filter, not a rejection, so it never touches the rng stream S1's
- * CDF sampler consumed.
+ * S3 survival floor — keyed on the SAME channel placement itself draws from
+ * (dust overshoot above the automaton's ambient pedestal,
+ * `sweptDustOvershoot`), not the legacy `gas x activity` product; a
+ * map-seeded particle whose own texel sits below this is dropped AFTER
+ * placement, a post-filter that never touches the rng stream S1's CDF
+ * sampler consumed. Its job persists from the old filter: cluster children
+ * scatter `COMPLEX_SPREAD_PC` around their complex's seed point and can
+ * straddle into a cavity/ambient texel placement itself would never pick
+ * (the CDF only draws complex CENTRES from swept mass).
+ *
+ * 1% of the ambient pedestal: cavity and untouched-ambient texels clamp to
+ * exactly zero overshoot, while a genuinely swept rim measures ~0.4
+ * overshoot (`sweptDustOvershoot`'s header) — the floor only needs to clear
+ * noise near zero, not compete with real signal.
  */
-const DUST_SURVIVAL_DENSITY_FLOOR = 0.01;
+const DUST_SURVIVAL_OVERSHOOT_FLOOR = 0.01 * SF_MAP_AMBIENT_DUST;
 
 /**
  * Below this mean overshoot, the swept channel is transport-off/early-run
@@ -143,7 +153,7 @@ type CloudParticle = {
   readonly radius: number;
   /** sigma_along / sigma_across — `cloud.elongation` off the map path; coherence-scaled toward it on the map path (S3). */
   readonly aspect: number;
-  /** Always true off the map path; on it, false below `DUST_SURVIVAL_DENSITY_FLOOR` (S3). */
+  /** Always true off the map path; on it, false below `DUST_SURVIVAL_OVERSHOOT_FLOOR` (S3). */
   readonly alive: boolean;
 };
 
@@ -220,7 +230,7 @@ export function buildDustParticleCloud(
           const sample = sampleGalaxySfMap(map, radius, angle);
           return {
             aspect: 1 + (cloud.elongation - 1) * coherence,
-            alive: sfMapDustDensity(sample.gas, sample.activity) >= DUST_SURVIVAL_DENSITY_FLOOR,
+            alive: sweptDustOvershoot(sample) >= DUST_SURVIVAL_OVERSHOOT_FLOOR,
           };
         };
       }
@@ -261,7 +271,7 @@ export function buildDustParticleCloud(
       return { radius, ...traits };
     },
   );
-  // S3 cavity filter — a post-filter (see `DUST_SURVIVAL_DENSITY_FLOOR`), a
+  // S3 cavity filter — a post-filter (see `DUST_SURVIVAL_OVERSHOOT_FLOOR`), a
   // no-op off the map path since `alive` is always true there.
   const particles = rawParticles.filter((p) => p.alive);
 
