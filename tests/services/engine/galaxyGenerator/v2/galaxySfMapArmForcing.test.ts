@@ -98,8 +98,12 @@ describe('buildGalaxySfMapArmForcing', () => {
 
     const a = buildGalaxySfMapArmForcing(geometryA, tuning);
     const b = buildGalaxySfMapArmForcing(geometryB, tuning);
-    expect(b).not.toBe(a);
-  });
+    // Not `expect(b).not.toBe(a)`: on a pass, vitest's `.not.toBe()` still runs
+    // a deep-equals over both 786432-element arrays to decide whether to print
+    // a "these are equal, use toEqual" hint — ~1.4s wall, not the ~20ms bake,
+    // is where this test's time actually went. `Object.is` sidesteps it.
+    expect(Object.is(a, b)).toBe(false);
+  }, 15000); // margin over the ~20ms bake, for whatever's left after the fix above
 
   it('the windowed inner loop matches the full unwindowed sweep to within 1e-4', () => {
     const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);

@@ -62,6 +62,8 @@ function mountPanel(type: string) {
 }
 
 describe('slider state paths', () => {
+  // Legitimately slow: mounts the whole panel and drives every slider, five
+  // times over (once per Hubble category). ~12s under load — sized ~3x that.
   it('every slider writes the field its tip names', () => {
     const checked = new Set<string>();
     const stale: string[] = [];
@@ -101,5 +103,5 @@ describe('slider state paths', () => {
     // A floor, not a count: without it a panel that renders nothing at all
     // passes every assertion above vacuously.
     expect(checked.size).toBeGreaterThan(50);
-  });
+  }, 30000);
 });
