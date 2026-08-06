@@ -38,6 +38,16 @@ export type SfMapOutput = {
   readonly mapSampler: GPUSampler;
   /** Writes `grid`'s rMin/rMax into `gridBuffer` — every dispatcher rebuild does this before running (or clearing) whichever generator is active. */
   writeGrid(grid: GalaxySfMapGridRadius): void;
+  /**
+   * Writes the "seeding" debug view's radial envelope divisor —
+   * `sfMapRingMeans(map, texel => texel.dust)`'s SF_MAP_RINGS-length array,
+   * the CPU twin of `sfMapPresent.wesl`'s own ring-indexed read. Called
+   * whenever the SF-map readback lands (`createGalaxyModel.ts`'s
+   * `recomputeSfMapSeedingMeans`), not every frame — same cadence as
+   * `writeGrid`, but from the readback landing rather than the rebuild that
+   * requested it (see `scheduleSfMapReadback`'s own determinism note).
+   */
+  writeRingMeans(means: Float32Array): void;
   /** Zero-fills `texture` and `dustBlurTexture` — the disabled/no-geometry path, shared by both generators so neither leaves the other's stale content on screen. */
   clear(): void;
   /**
@@ -133,6 +143,17 @@ export function createSfMapOutput(
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
+  // The "seeding" debug view's radial envelope divisor — one f32 per ring,
+  // fixed-size at SF_MAP_RINGS (the grid's own ring count never changes,
+  // only rMin/rMax do), read via 'arrayLength' in sfMapPresent.wesl rather
+  // than a second mirrored size constant. STORAGE not UNIFORM: a uniform's
+  // std140-style array stride would waste 3 of every 4 lanes on padding this
+  // shader never reads.
+  const ringMeansBuf = device.createBuffer({
+    label: 'galaxy:sfMapRingMeansBuf',
+    size: SF_MAP_RINGS * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
   // Built once — `texture`/`gridUbo` are the same GPU objects for this
   // module's whole lifetime, only their CONTENT changes per rebuild, and a
   // bind group only needs rebuilding when the OBJECT it references does.
@@ -146,6 +167,7 @@ export function createSfMapOutput(
       { binding: 1, resource: texture.createView() },
       { binding: 2, resource: mapSampler },
       { binding: 3, resource: { buffer: gridUbo } },
+      { binding: 4, resource: { buffer: ringMeansBuf } },
     ],
   });
   const dustBlurBindGroup = device.createBindGroup({
@@ -179,6 +201,10 @@ export function createSfMapOutput(
       device.queue.writeBuffer(gridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
     },
 
+    writeRingMeans(means): void {
+      device.queue.writeBuffer(ringMeansBuf, 0, means);
+    },
+
     clear(): void {
       // All-zero bytes decode to 0.0 in rgba16float, so the zero-fill trick
       // needs only the right row width (8 bytes/texel).
@@ -206,6 +232,7 @@ export function createSfMapOutput(
       sfMapDustBlurTex.destroy();
       readbackBuffer.destroy();
       gridUbo.destroy();
+      ringMeansBuf.destroy();
     },
   };
 }

@@ -28,6 +28,8 @@ export type SfMapGenerator = {
   readonly dustBlurTexture: GPUTexture;
   readonly gridBuffer: GPUBuffer;
   readonly mapSampler: GPUSampler;
+  /** The "seeding" debug view's radial envelope divisor — see `SfMapOutput`'s own doc. Not tied to `rebuild()`: the readback landing (`createGalaxyModel.ts`) calls this directly once the CPU-side ring means are computed. */
+  writeRingMeans(means: Float32Array): void;
   /**
    * Rerun whichever generator `tuning.sfMap.generator` names over `geometry`,
    * or clear the shared output when there is no geometry / the tuning has it
@@ -68,6 +70,7 @@ export function createSfMapGenerator(
     dustBlurTexture: output.dustBlurTexture,
     gridBuffer: output.gridBuffer,
     mapSampler: output.mapSampler,
+    writeRingMeans: output.writeRingMeans,
 
     rebuild({ geometry, tuning, seed }): GalaxySfMapGridRadius {
       const grid = sfMapGridRadiusOrDefault(geometry);

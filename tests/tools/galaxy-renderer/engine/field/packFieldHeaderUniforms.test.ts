@@ -73,7 +73,7 @@ const input: FieldHeaderInput = {
     dustWeight: 23003,
   },
   hiiTexture: { scale: 25000, contrast: 25001 },
-  sfMapSeeding: { weight: 27000, meanOvershoot: 27002 },
+  sfMapSeeding: { weight: 27000, cap: 27001, globalMean: 27002 },
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -117,11 +117,11 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // bubble view needs a vec4 of its own.
     expect(observed(22000)).toBe(at('debugView') + 12);
     expect(observed(21003)).toBe(at('bubbleView'));
-    // bubbleView.y/.w are the seeding view's own weight/meanOvershoot
+    // bubbleView.y/.z/.w are the seeding view's own weight/cap/globalMean
     // (io.wesl's bubbleView doc) — free lanes claimed alongside the bubble
-    // intensity at .x, not a fourth debug view. .z is spare (freed when the
-    // seeding view's legacy term was deleted).
+    // intensity at .x, not a fourth debug view.
     expect(observed(27000)).toBe(at('bubbleView') + 4);
+    expect(observed(27001)).toBe(at('bubbleView') + 8);
     expect(observed(27002)).toBe(at('bubbleView') + 12);
     expect(observed(23000)).toBe(at('sfMapChannels'));
     // sfMapChannels.w was the header's one slack scalar — dustWeight now
@@ -132,7 +132,8 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // dustDetail.y/.z are the HII tier's own tier-global texture scale/
     // contrast, unrelated to S4's own strength lane at .x — they ride this
     // vec4's two free lanes (io.wesl's dustDetail doc). .w is spare (freed
-    // when dustDetail.wesl's legacy/swept blend weight was deleted).
+    // when dustDetail.wesl's legacy/swept blend weight was deleted; briefly
+    // the seeding view's cap before that moved back into bubbleView.z).
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);
   });
@@ -168,10 +169,12 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // .x (S4 strength) is 0 like every other inert dust lane; .y (hiiTexture
     // scale) is 0 too, but .z (hiiTexture contrast) is 1, not 0 — same
     // "the neutral value, not zero" reasoning `dustNoise`'s tileUnits/
-    // contrastExp lanes use just above.
+    // contrastExp lanes use just above. .w is spare, always 0.
     expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
-    // .x (bubble intensity, from `debugViews`, still supplied) stays; .y/.w
-    // (the seeding lanes) are inert, .z is spare (always 0).
+    // .x (bubble intensity, from `debugViews`, still supplied) stays; .y/.z/.w
+    // (weight/cap/globalMean) are all inert at 0 — `sfMapSeeding` omitted
+    // too, so INERT_SF_MAP_SEEDING lands here (its own doc: cap 0 is
+    // "uncapped", the SAME neutral value as everything else in this vec4).
     expect(four(at('bubbleView'))).toEqual([21003, 0, 0, 0]);
   });
 });

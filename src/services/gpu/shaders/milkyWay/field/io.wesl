@@ -26,7 +26,7 @@
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
-//   offset 192 : bubbleView: vec4 (intensity, sfMapSeedingWeight, spare, sfMapSeedingMeanOvershoot)
+//   offset 192 : bubbleView: vec4 (intensity, sfMapSeedingWeight, sfMapSeedingCap, sfMapSeedingGlobalMean)
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   total: 224 bytes.
 //
@@ -123,17 +123,28 @@
 // so the two can be compared directly. Not folded into debugView: that vec4
 // is full (dust/sfMap/orientation/galaxyWeight), and reusing
 // sfMapChannels.w would name a bubble weight after an unrelated automaton
-// channel. Only .x is bubblePresent.wesl's own; .y/.w are sfMapPresent.wesl's
+// channel. Only .x is bubblePresent.wesl's own; .y/.z/.w are sfMapPresent.wesl's
 // "seeding" debug view (dust-seeding spike) — the exact composite density
 // dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
 // .y is the view's own weight (CPU-forced to 0, view dark, when there is no
-// map or the mean below is 0 — createGalaxyModel.ts's sfMapSeedingView), .w
-// is meanSfMapChannel's overshoot mean, computed off the SAME function
-// (sweptDustOvershoot) the placement CDF uses, so this view cannot drift from
-// what placement actually consumes. .z is SPARE — freed when the seeding
-// view's legacy term (and the CPU/GPU sweptMix blend it belonged to) was
-// deleted; still written every frame (packFieldHeaderUniforms's no-stale-
-// lanes contract), just always 0.
+// map or the mean below is 0 — createGalaxyModel.ts's sfMapSeedingView), .z
+// is the CDF's ONE tempering knob, dust.cloud.dustPlacementCap ?? 0 (read
+// live off the SAME source dustParticleCloud.ts's buildDustParticleCloud
+// does) — a within-RING ratio cap, 0 = uncapped, .w is
+// arrayMean(sfMapRingMeans(map, texel => texel.dust)) — the mean of the
+// map's own per-ring means, the SAME global mean the placement CDF's
+// radial-envelope term divides by. No ambient subtraction: the pedestal is
+// seeded ambient*gasProfile(r) and advected by the automaton, so it is
+// itself structure the CDF places into, not a floor to clear. The per-ring
+// means .z/.w normalise against are NOT here — 512 floats has no home in a
+// vec4 — they ride sfMapRingMeansBuf, a dedicated read-only storage buffer
+// only sfMapPresent.wesl's own bind group references (createSfMapOutput.ts's
+// ringMeansBuffer/writeRingMeans), written at the same cadence as this
+// header's own .z/.w. Together the three (.y weight, .z cap, .w globalMean)
+// plus the buffer let sfMapPresent.wesl reproduce dustParticleCloud.ts's
+// density formula byte-for-formula, so this view cannot drift from what
+// placement actually consumes — see that file's own header for the
+// contract and sfMapPresent.wesl's fs for the mirrored math.
 //
 // dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
 // (dustDetail.wesl) multiplies each dust splat's own slices by the SF map's
@@ -158,11 +169,11 @@
 // carry a nonzero textureWeight, so the far larger disc/arms fragment count
 // never pays for a sample it would just multiply by zero. .w is SPARE —
 // freed when dustDetail.wesl's legacy/swept blend weight
-// (GalaxyDustTuning.sweptMix) was deleted: every dust consumer now commits
-// fully to the swept channel, so there is nothing left to blend and
-// sfMapDustBlur.wesl's own low-pass needs no matching uniform either. Still
-// written every frame (packFieldHeaderUniforms's no-stale-lanes contract),
-// just always 0.
+// (GalaxyDustTuning.sweptMix) was deleted, briefly used for the seeding
+// view's own cap before that moved back into bubbleView.z once the view's
+// tempering EXPONENT (gamma) was deleted outright — cap is the only
+// placement knob now, and bubbleView had room again. Still written every
+// frame (packFieldHeaderUniforms's no-stale-lanes contract), just always 0.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

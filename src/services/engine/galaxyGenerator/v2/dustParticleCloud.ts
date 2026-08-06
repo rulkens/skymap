@@ -16,11 +16,10 @@
  * (`dustBubblePlacements.ts`) used to sweep particles onto bubble/HII rims,
  * a second, independent star-formation model carving the same holes the
  * SSPSF automaton's own gas depletion already produces (`sfMap`, read via
- * the swept `dust` channel's overshoot below). The map is now the only
- * thing that shapes dust, so until the automaton's depletion is tuned to
- * carve on its own, dust has no cavity holes and HII regions (still seeded
- * from the event catalog) can sit inside dust that no longer has a hole for
- * them.
+ * its own raw `dust` channel below). The map is now the only thing that
+ * shapes dust, so until the automaton's depletion is tuned to carve on its
+ * own, dust has no cavity holes and HII regions (still seeded from the
+ * event catalog) can sit inside dust that no longer has a hole for them.
  *
  * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
  * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
@@ -43,12 +42,13 @@ import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import type { SfMapDensityTexel } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { dustExtinctionRgb } from '../../../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
-import { meanSfMapChannel } from '../../../../utils/galaxy/meanSfMapChannel';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleGalaxySfMap } from '../../../../utils/galaxy/sampleGalaxySfMap';
 import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
 import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrientation';
-import { SF_MAP_AMBIENT_DUST, sweptDustOvershoot } from '../../../../utils/galaxy/sweptDustOvershoot';
+import { sfMapRingIndexForRadius } from '../../../../utils/galaxy/sfMapRingIndexForRadius';
+import { sfMapRingMeans } from '../../../../utils/galaxy/sfMapRingMeans';
+import { arrayMean } from '../../../../utils/math/arrayMean';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
@@ -122,30 +122,39 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /**
  * S3 survival floor — keyed on the SAME channel placement itself draws from
- * (dust overshoot above the automaton's ambient pedestal,
- * `sweptDustOvershoot`), not the legacy `gas x activity` product; a
+ * (the map's raw `dust` channel), not the legacy `gas x activity` product; a
  * map-seeded particle whose own texel sits below this is dropped AFTER
  * placement, a post-filter that never touches the rng stream S1's CDF
  * sampler consumed. Its job persists from the old filter: cluster children
  * scatter `COMPLEX_SPREAD_PC` around their complex's seed point and can
- * straddle into a cavity/ambient texel placement itself would never pick
- * (the CDF only draws complex CENTRES from swept mass).
+ * straddle into a true cavity placement itself would never pick (the CDF
+ * only draws complex CENTRES from dusty mass).
  *
- * 1% of the ambient pedestal: cavity and untouched-ambient texels clamp to
- * exactly zero overshoot, while a genuinely swept rim measures ~0.4
- * overshoot (`sweptDustOvershoot`'s header) — the floor only needs to clear
- * noise near zero, not compete with real signal.
+ * A FRACTION of the sampled texel's OWN RING mean, not the map's global
+ * mean: a cavity is low RELATIVE TO ITS RING, not relative to the whole
+ * disc — the outer disc's honest faintness (its ring mean is naturally far
+ * below the inner disc's) must not mass-cull outer splats the radial
+ * envelope legitimately placed. Same reasoning rules out an absolute
+ * constant: the ambient pedestal is seeded `ambient * gasProfile(r)` and
+ * advected, so it varies by radius and by how far the sim has run; ring-
+ * relative keeps the floor's MEANING fixed ("clear noise near zero, don't
+ * compete with real signal") at every radius.
+ *
+ * Exported: the "seeding" debug view in `sfMapPresent.wesl` mirrors this
+ * fraction (parity-tested in `constants.parity.test.ts`) so a texel that
+ * would never keep a particle here never glows there either.
  */
-const DUST_SURVIVAL_OVERSHOOT_FLOOR = 0.01 * SF_MAP_AMBIENT_DUST;
+export const DUST_SURVIVAL_FLOOR_FRAC = 0.01;
 
 /**
- * Below this mean overshoot, the swept channel is transport-off/early-run
- * noise (every texel near ambient, see `sweptDustOvershoot`'s header) — too
- * close to zero to divide by without blowing the density up toward
- * Infinity/NaN. Below the floor, placement stays at its `smoothDisc`
- * default instead — the same fallback an absent map takes, not a crash.
+ * Below this GLOBAL mean (the mean of every ring's own mean — see
+ * `buildDustParticleCloud`'s placement comment), the map is transport-off/
+ * early-run noise (every texel near its own seed pedestal) — too close to
+ * zero to divide by without blowing the density up toward Infinity/NaN.
+ * Below the floor, placement stays at its `smoothDisc` default instead —
+ * the same fallback an absent map takes, not a crash.
  */
-const SWEPT_OVERSHOOT_MEAN_EPS = 1e-6;
+const GLOBAL_MEAN_EPS = 1e-6;
 
 type CloudParticle = {
   readonly center: Vec3;
@@ -153,7 +162,7 @@ type CloudParticle = {
   readonly radius: number;
   /** sigma_along / sigma_across — `cloud.elongation` off the map path; coherence-scaled toward it on the map path (S3). */
   readonly aspect: number;
-  /** Always true off the map path; on it, false below `DUST_SURVIVAL_OVERSHOOT_FLOOR` (S3). */
+  /** Always true off the map path; on it, false below `DUST_SURVIVAL_FLOOR_FRAC * ringMean[ring]` (S3). */
   readonly alive: boolean;
 };
 
@@ -193,16 +202,37 @@ export function buildDustParticleCloud(
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
-  // A generator running: the map IS the placement density — the swept-dust
-  // channel's overshoot above the automaton's ambient pedestal
-  // (`sweptDustOvershoot`, mean-normalised so the CDF reads as a pure shape) —
-  // every complex is placed by `'mapDensity'` mode, its centre drawn from S1's
-  // inverse-CDF sampler (`buildSfMapDustCdf`). `generator === 'none'` (or a
-  // quiet map): `'smoothDisc'` mode, no arm-lane concept at all — the dust
-  // tier's analytic lane machinery was cut once the map became the sole
-  // placement density; `armParticleCloud.ts` still owns the one live
-  // `'analytic'` caller. This is the intended consequence of the SF map
-  // leading, not a regression.
+  // A generator running: the map IS the placement density — the map's own
+  // raw `dust` channel — every complex is placed by `'mapDensity'` mode, its
+  // centre drawn from S1's inverse-CDF sampler (`buildSfMapDustCdf`).
+  // `generator === 'none'` (or a quiet map): `'smoothDisc'` mode, no
+  // arm-lane concept at all — the dust tier's analytic lane machinery was
+  // cut once the map became the sole placement density; `armParticleCloud.ts`
+  // still owns the one live `'analytic'` caller. This is the intended
+  // consequence of the SF map leading, not a regression.
+  //
+  // RAW dust, not overshoot-above-ambient: the ambient pedestal used to be
+  // uniform (`sweptDustOvershoot`'s old subtraction), but it is now seeded
+  // `ambient * gasProfile(r)` and advected by the automaton — it IS
+  // structure, and subtracting it erased the faint wisps this placement is
+  // supposed to seed clouds into. `sweptDustOvershoot` stays in the codebase
+  // for the histogram harness; this file no longer imports it.
+  //
+  // RING-normalised, not a single map-wide mean: the map-wide mean was flat
+  // enough for a hot texel's tempering knob to also flatten the RADIAL
+  // profile itself — capping a runaway inner-disc rim thinned it out toward
+  // parity with the (measured, honestly faint) outer disc, which has vastly
+  // more texel COUNT and AREA to win that parity fight with. Density
+  // factors into an envelope term (ringMean[ring] / globalMean, untouched by
+  // the cap) times a within-ring term (dust / ringMean[ring], capped): the
+  // envelope preserves the map's measured radial dust profile EXACTLY at
+  // every cap setting, while the cap only redistributes mass AZIMUTHALLY,
+  // within a ring, away from a texel that would otherwise starve its
+  // neighbours. `globalMean = arrayMean(ringMeans)` is a documented choice,
+  // not the only valid one (the flat per-texel mean would equal it here,
+  // since every ring shares the same `az` count) — the seeding debug view in
+  // `sfMapPresent.wesl` uses the SAME definition, uploaded as the SAME
+  // number, so the two cannot drift apart.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
   // S3's per-particle aspect/survival, non-null only on the map-seeded path —
   // `null` keeps `drawPayload` below byte-identical to the pre-S3 smoothDisc
@@ -212,24 +242,39 @@ export function buildDustParticleCloud(
     | null = null;
   if (tuning.sfMap.generator !== 'none' && sfMap) {
     const map = sfMap; // narrowed alias so the closures below don't re-null-check
-    const meanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
-    // Guard: an all-ambient/all-cavity map (no shell has swept past ambient
-    // anywhere — true whenever transport is off, or the automaton hasn't run
-    // long enough yet) leaves `placement` at its `smoothDisc` default instead
-    // of dividing by ~0 — the SAME fallback an absent map takes, not a crash.
-    if (meanOvershoot >= SWEPT_OVERSHOOT_MEAN_EPS) {
-      // Guard skips Math.pow on the (default) inert path — this callback runs
-      // per texel over the whole 1536x512 grid on every slider change.
-      // `?? 1`: `dust.cloud` rides the preset wire's raw 'p' key with no
+    const ringMeans = sfMapRingMeans(map, (texel) => texel.dust);
+    const globalMean = arrayMean(ringMeans);
+    // Guard: a map with no dust anywhere (transport off, or the automaton
+    // hasn't run long enough yet) leaves `placement` at its `smoothDisc`
+    // default instead of dividing by ~0 — the SAME fallback an absent map
+    // takes, not a crash.
+    if (globalMean >= GLOBAL_MEAN_EPS) {
+      // `?? 0`: `dust.cloud` rides the preset wire's raw 'p' key with no
       // per-field defaults-merge (see dustParticleCloud.test.ts's preset-gap
       // test), so a preset saved before this field existed loads it
-      // `undefined` — treat that exactly like gamma 1, not NaN.
-      const gamma = cloud.dustPlacementContrast ?? 1;
-      const density =
-        gamma === 1
-          ? (texel: SfMapDensityTexel): number => sweptDustOvershoot(texel) / meanOvershoot
-          : (texel: SfMapDensityTexel): number =>
-              Math.pow(sweptDustOvershoot(texel) / meanOvershoot, gamma);
+      // `undefined` — treat that exactly like "uncapped" (cap 0), not NaN.
+      // Multiples of the texel's OWN ring mean, not the global mean — see
+      // the field's own doc (GalaxyDustCloudParams) for the starvation
+      // problem this solves.
+      const cap = cloud.dustPlacementCap ?? 0;
+      // Cached across the `az` calls `buildSfMapDustCdf`'s own loop makes at
+      // a fixed `radius` before moving to the next ring — this callback runs
+      // per texel over the whole 1536x512 grid on every slider change, and
+      // `sfMapRingIndexForRadius` is a log/round pair not worth repeating
+      // `az` times for the same answer.
+      let lastRadius = NaN;
+      let lastRing = 0;
+      const density = (texel: SfMapDensityTexel, radius: number): number => {
+        if (radius !== lastRadius) {
+          lastRadius = radius;
+          lastRing = sfMapRingIndexForRadius(radius, map.rings, map.rMin, map.rMax);
+        }
+        const ringMean = ringMeans[lastRing]!;
+        if (texel.dust <= 0 || ringMean <= 0) return 0;
+        const local = texel.dust / ringMean;
+        const capped = cap > 0 ? Math.min(local, cap) : local;
+        return (ringMean / globalMean) * capped;
+      };
       const cdf = buildSfMapDustCdf(map, density);
       if (cdf.total > 0) {
         placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
@@ -238,9 +283,10 @@ export function buildDustParticleCloud(
             ? sampleSfMapOrientation(sfMapOrientation, radius, angle).coherence
             : 0;
           const sample = sampleGalaxySfMap(map, radius, angle);
+          const ring = sfMapRingIndexForRadius(radius, map.rings, map.rMin, map.rMax);
           return {
             aspect: 1 + (cloud.elongation - 1) * coherence,
-            alive: sweptDustOvershoot(sample) >= DUST_SURVIVAL_OVERSHOOT_FLOOR,
+            alive: sample.dust >= DUST_SURVIVAL_FLOOR_FRAC * ringMeans[ring]!,
           };
         };
       }
@@ -281,7 +327,7 @@ export function buildDustParticleCloud(
       return { radius, ...traits };
     },
   );
-  // S3 cavity filter — a post-filter (see `DUST_SURVIVAL_OVERSHOOT_FLOOR`), a
+  // S3 cavity filter — a post-filter (see `DUST_SURVIVAL_FLOOR_FRAC`), a
   // no-op off the map path since `alive` is always true there.
   const particles = rawParticles.filter((p) => p.alive);
 

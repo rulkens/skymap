@@ -21,7 +21,7 @@ const MAP_AZ = 32;
 const MAP_RINGS = 16;
 const MAP_R_MIN = 0.5;
 
-/** A busy, non-degenerate legacy density (gas x activity varies per texel) so the CDF is never flat; `dustValue` is constant everywhere. */
+/** A busy, non-degenerate legacy density (gas x activity varies per texel) so it's never mistaken for the dust channel; `dustValue` is constant everywhere. */
 function makeMap(dustValue: number): GalaxySfMap {
   const data = new Float32Array(MAP_RINGS * MAP_AZ * 4);
   for (let i = 0; i < data.length; i += 4) {
@@ -33,6 +33,13 @@ function makeMap(dustValue: number): GalaxySfMap {
   }
   return { az: MAP_AZ, rings: MAP_RINGS, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
 }
+
+const centerOf = (ring: number, azIdx: number, az = MAP_AZ, rings = MAP_RINGS): { x: number; z: number } => {
+  const dTheta = (2 * Math.PI) / az;
+  const r = sfMapRingRadius(ring, rings, MAP_R_MIN, geometry.outerRadius);
+  const angle = (azIdx + 0.5) * dTheta;
+  return { x: Math.cos(angle) * r, z: Math.sin(angle) * r };
+};
 
 /** Clumpiness deliberately non-zero: at 0 a lone child has no scatter to be scaled, so the coupling would hide. */
 function buildAtSizeScale(sizeScale: number) {
@@ -55,13 +62,18 @@ describe('buildDustParticleCloud', () => {
     }
   });
 
-  it('seeds mass onto the swept channel’s hot texel, off the legacy product’s', () => {
+  it('seeds mass onto the dust channel’s hot texel, off the legacy product’s', () => {
     // Two well-separated texels, one hot per channel, everything else at a
-    // shared baseline. The dust baseline sits at SF_MAP_AMBIENT_DUST (1.0,
-    // zero overshoot) like a quiet automaton grid — both placement AND (S3)
-    // survival key off OVERSHOOT above ambient (`sweptDustOvershoot`), not
-    // the absolute value, so B's legacy-only heat (gas x activity) buys it
-    // neither placement mass nor a pass through the survival filter.
+    // TRULY empty (0) baseline. Placement AND (S3) survival both key off the
+    // RAW `dust` channel, not gas x activity, so B's legacy-only heat buys it
+    // neither placement mass nor a pass through the survival filter. Baseline
+    // 0, not SF_MAP_AMBIENT_DUST's old uniform 1.0 pedestal: that pedestal is
+    // no longer subtracted off (it IS structure now — see
+    // dustParticleCloud.ts's header), so any nonzero baseline here would
+    // itself carry ring-normalised placement mass everywhere it sits — only
+    // an exactly-zero baseline (every OTHER ring included) leaves A's ring
+    // the sole nonzero one, isolating the hot texel the way this test is
+    // named for.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -69,13 +81,12 @@ describe('buildDustParticleCloud', () => {
       data[i] = 0.15; // gas
       data[i + 1] = 0.2; // recentSf
       data[i + 2] = 0.15; // activity -> legacy baseline 0.0225
-      data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
+      data[i + 3] = 0; // dust baseline: empty
     }
     const ringA = 4;
     const azA = 4;
     const ringB = 12;
-    const azB = 20; // opposite side of the disc from A
-    const dTheta = (2 * Math.PI) / az;
+    const azB = 20; // opposite side of the disc from A, and a DIFFERENT ring
     const setTexel = (
       ring: number,
       azIdx: number,
@@ -86,17 +97,12 @@ describe('buildDustParticleCloud', () => {
       if (patch.activity !== undefined) data[base + 2] = patch.activity;
       if (patch.dust !== undefined) data[base + 3] = patch.dust;
     };
-    setTexel(ringA, azA, { dust: 1.5 }); // hot in the SWEPT channel's OVERSHOOT only (0.5 above ambient)
-    setTexel(ringB, azB, { gas: 20, activity: 20 }); // hot in the LEGACY product only (400)
+    setTexel(ringA, azA, { dust: 0.5 }); // hot in the RAW dust channel only
+    setTexel(ringB, azB, { gas: 20, activity: 20 }); // hot in the LEGACY product only (400), dust stays at baseline
     const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
 
-    const centerOf = (ring: number, azIdx: number): { x: number; z: number } => {
-      const r = sfMapRingRadius(ring, rings, MAP_R_MIN, geometry.outerRadius);
-      const angle = (azIdx + 0.5) * dTheta;
-      return { x: Math.cos(angle) * r, z: Math.sin(angle) * r };
-    };
-    const a = centerOf(ringA, azA);
-    const b = centerOf(ringB, azB);
+    const a = centerOf(ringA, azA, az, rings);
+    const b = centerOf(ringB, azB, az, rings);
     const meanDistTo = (
       components: readonly Pick<GalaxyFieldComponent, 'center'>[],
       target: { x: number; z: number },
@@ -113,7 +119,9 @@ describe('buildDustParticleCloud', () => {
     const swept = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, map, null);
     expect(swept.length).toBeGreaterThan(0);
 
-    // Overwhelmingly placed near A (the swept channel's hot texel), not B.
+    // Overwhelmingly placed near A (the dust channel's hot texel), not B —
+    // B's own ring has zero mean (dust stays 0 there), so it gets exactly
+    // zero density regardless of its legacy-channel heat.
     expect(meanDistTo(swept, a)).toBeLessThan(meanDistTo(swept, b) * 0.1);
   });
 
@@ -122,9 +130,9 @@ describe('buildDustParticleCloud', () => {
     // to ~0 away from a recent ignition — the bug this filter was re-keyed
     // away from: under the old `gas x activity` criterion, activity = 0
     // everywhere dropped every placed particle regardless of where the map's
-    // own dust actually was. Overshoot doesn't have that failure mode: the
-    // dust channel is conserved/advected, not an EMA, so a texel the
-    // automaton swept keeps its overshoot long after the front that made it.
+    // own dust actually was. The RAW dust channel doesn't have that failure
+    // mode: it's conserved/advected, not an EMA, so a texel the automaton
+    // swept keeps its dust long after the front that made it.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -132,12 +140,12 @@ describe('buildDustParticleCloud', () => {
       data[i] = 0.5; // gas
       data[i + 1] = 0.2; // recentSf
       data[i + 2] = 0; // activity: zero everywhere
-      data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
+      data[i + 3] = 1.0; // dust baseline
     }
     const ring = 8;
     const azIdx = 16;
     const base = (ring * az + azIdx) * 4;
-    data[base + 3] = 1.4; // one swept texel: 0.4 overshoot, well clear of the floor
+    data[base + 3] = 1.4; // one swept texel, well clear of the survival floor
 
     const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
     const dust = {
@@ -153,12 +161,18 @@ describe('buildDustParticleCloud', () => {
 
   it('culls a child that straddles from a swept texel into a neighbouring cavity', () => {
     // Placement itself only ever seeds a complex's CENTRE inside a texel
-    // with real overshoot (S1's CDF draws proportional to swept mass —
+    // with real dust (S1's CDF draws proportional to dust mass —
     // sampleSfMapDustCdf.test.ts's "confines every draw to a single hot
     // texel"). The survival filter's job is downstream of that: a complex's
     // CHILDREN scatter COMPLEX_SPREAD_PC around the centre and can land in
     // an adjacent, untouched texel the CDF would never have picked on its
     // own — that's what this filter exists to catch, not placement itself.
+    // Baseline TRULY 0, not SF_MAP_AMBIENT_DUST's old uniform 1.0 pedestal:
+    // the pedestal is no longer subtracted off (dustParticleCloud.ts's
+    // header), so a nonzero baseline here would sit well above the survival
+    // floor (`DUST_SURVIVAL_FLOOR_FRAC * ringMean[ring]`, a fraction of the
+    // TEXEL'S OWN RING mean — and the baseline all but IS that ring's mean
+    // when it covers virtually the whole ring) and nothing would get culled.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -166,7 +180,7 @@ describe('buildDustParticleCloud', () => {
       data[i] = 0.5; // gas
       data[i + 1] = 0.2; // recentSf
       data[i + 2] = 0.5; // activity
-      data[i + 3] = 1.0; // dust baseline: ambient/cavity, zero overshoot
+      data[i + 3] = 0; // dust baseline: true cavity
     }
     // Near rMin, a texel's azimuthal width is comparable to
     // COMPLEX_SPREAD_PC (~0.15 world units) — small enough that a
@@ -174,7 +188,7 @@ describe('buildDustParticleCloud', () => {
     const ring = 1;
     const azIdx = 10;
     const base = (ring * az + azIdx) * 4;
-    data[base + 3] = 4.0; // 3.0 overshoot: overwhelmingly the only placement mass on the grid
+    data[base + 3] = 4.0; // overwhelmingly the only placement mass on the grid
 
     const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
     const dust = {
@@ -189,57 +203,61 @@ describe('buildDustParticleCloud', () => {
     expect(swept.length).toBeLessThan(dust.cloud.count);
   });
 
-  it('dustPlacementContrast=1 (the default) is exactly the untempered proportional CDF', () => {
-    // The gamma===1 branch in dustParticleCloud.ts skips Math.pow entirely and
-    // reuses the pre-gamma density expression verbatim, so an explicit gamma
-    // of 1 must be byte-identical to leaving it at its default — a wiring
-    // regression (e.g. the default drifting off 1) would show up here even
-    // though it wouldn't touch the pow branch itself.
+  it('a stray dustPlacementContrast key (deleted field) on a loaded preset does not crash placement', () => {
+    // `dust.cloud` rides a preset's raw 'p' wire key with no allowlist or
+    // per-field validation (`parseGalaxyPreset.ts` just casts the whole `p`
+    // object) — a preset saved back when `dustPlacementContrast` (gamma)
+    // still existed loads it as a STRAY extra key nothing in this file reads
+    // any more. Cast to simulate that shape past the type system's closed
+    // `GalaxyDustCloudParams`.
     const map = makeMap(1.3);
-    const explicitGammaOne = {
+    const staleCloud = {
+      ...DEFAULT_GALAXY_DUST_PARAMS.cloud,
+      count: 300,
+      dustPlacementContrast: 0.5,
+    } as typeof DEFAULT_GALAXY_DUST_PARAMS.cloud;
+    const staleParams = { ...DEFAULT_GALAXY_DUST_PARAMS, cloud: staleCloud };
+    const cleanParams = {
       ...DEFAULT_GALAXY_DUST_PARAMS,
-      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300, dustPlacementContrast: 1 },
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
+    };
+    const stale = buildDustParticleCloud(geometry, staleParams, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    const clean = buildDustParticleCloud(geometry, cleanParams, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    expect(stale.length).toBeGreaterThan(0);
+    for (const p of stale) expect(Number.isFinite(p.amplitude)).toBe(true);
+    // The stray key is inert, not just non-crashing: placement is
+    // byte-identical to a preset that never had the field at all.
+    expect(stale).toEqual(clean);
+  });
+
+  it('dustPlacementCap=0 (the default) is exactly proportional to the raw dust channel', () => {
+    // Identity check: with the radial envelope UN-capped, density reduces to
+    // (ringMean/globalMean) * (dust/ringMean) = dust/globalMean — the same
+    // answer plain global-mean-proportional sampling would give. A busy,
+    // single-ring map (makeMap's dustValue is uniform, so ringMean is the
+    // same at every ring here, collapsing the envelope term to 1) isolates
+    // the identity from any radial-profile interaction.
+    const map = makeMap(1.3);
+    const explicitZero = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300, dustPlacementCap: 0 },
     };
     const defaulted = {
       ...DEFAULT_GALAXY_DUST_PARAMS,
       cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
     };
-    const a = buildDustParticleCloud(geometry, explicitGammaOne, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    const a = buildDustParticleCloud(geometry, explicitZero, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
     const b = buildDustParticleCloud(geometry, defaulted, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    expect(a.length).toBeGreaterThan(0);
     expect(a).toEqual(b);
   });
 
-  it('a pre-existing preset missing dustPlacementContrast places identically to gamma 1, not NaN', () => {
-    // `dust.cloud` rides a preset's raw 'p' wire key with no per-field
-    // defaults-merge (unlike `GalaxyFieldTuning`'s `f` key, migrated through
-    // migrateGalaxyFieldTuningWire.ts) — a preset saved before this field
-    // existed loads `cloud.dustPlacementContrast` as `undefined`. Cast to
-    // simulate that shape past the type system's `readonly ...: number`.
-    const map = makeMap(1.3);
-    const { dustPlacementContrast: _drop, ...cloudWithoutGamma } = DEFAULT_GALAXY_DUST_PARAMS.cloud;
-    const staleParams = {
-      ...DEFAULT_GALAXY_DUST_PARAMS,
-      cloud: { ...cloudWithoutGamma, count: 300 } as typeof DEFAULT_GALAXY_DUST_PARAMS.cloud,
-    };
-    const gammaOne = {
-      ...DEFAULT_GALAXY_DUST_PARAMS,
-      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
-    };
-    const stale = buildDustParticleCloud(geometry, staleParams, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
-    const seeded = buildDustParticleCloud(geometry, gammaOne, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
-    expect(stale.length).toBeGreaterThan(0);
-    for (const p of stale) expect(Number.isFinite(p.amplitude)).toBe(true);
-    expect(stale).toEqual(seeded);
-  });
-
-  it('tempers placement contrast — low gamma spreads across texels evenly, high gamma clumps onto the hottest', () => {
-    // Two well-separated texels at very different overshoot (0.1 vs 2.0):
-    // gamma < 1 compresses that 20:1 mass ratio toward parity, gamma > 1
-    // stretches it further apart. With clumpiness 0 every particle lands
-    // exactly in one texel's own footprint (the rest of the grid carries
-    // zero density regardless of gamma, since 0^gamma is 0), so classifying
-    // each particle by whichever of the two centres it's nearer to is exact,
-    // not a nearest-neighbour approximation.
+  it('dustPlacementCap below a hot texel’s within-ring ratio strictly reduces its share', () => {
+    // The starvation problem the cap solves (see GalaxyDustCloudParams's own
+    // doc): a texel blazing far above its RING's own mean eats a runaway
+    // share of that ring's splats. One ring (`ring`) carries 31 baseline
+    // texels plus one spike (B); every other ring is empty, so this ring is
+    // the map's only placement mass and the cap's effect is isolated to it.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -247,64 +265,141 @@ describe('buildDustParticleCloud', () => {
       data[i] = 0.3; // gas
       data[i + 1] = 0.2; // recentSf
       data[i + 2] = 0.3; // activity
-      data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
+      data[i + 3] = 0; // dust baseline: empty (every ring but `ring`)
     }
-    const ringA = 4;
-    const azA = 4;
-    const ringB = 12;
-    const azB = 20; // opposite side of the disc from A
-    data[(ringA * az + azA) * 4 + 3] = 1.1; // 0.1 overshoot
-    data[(ringB * az + azB) * 4 + 3] = 3.0; // 2.0 overshoot
+    const ring = 8;
+    const azB = 16;
+    for (let azIdx = 0; azIdx < az; azIdx++) {
+      if (azIdx === azB) continue;
+      data[(ring * az + azIdx) * 4 + 3] = 1.0; // this ring's own low baseline
+    }
+    data[(ring * az + azB) * 4 + 3] = 100.0; // B: far above this ring's own mean
     const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
 
-    const dTheta = (2 * Math.PI) / az;
-    const centerOf = (ring: number, azIdx: number): { x: number; z: number } => {
-      const r = sfMapRingRadius(ring, rings, MAP_R_MIN, geometry.outerRadius);
-      const angle = (azIdx + 0.5) * dTheta;
-      return { x: Math.cos(angle) * r, z: Math.sin(angle) * r };
+    const b = centerOf(ring, azB, az, rings);
+    const meanDistTo = (components: readonly Pick<GalaxyFieldComponent, 'center'>[]): number => {
+      let sum = 0;
+      for (const c of components) sum += Math.hypot(c.center[0] - b.x, c.center[2] - b.z);
+      return sum / components.length;
     };
-    const a = centerOf(ringA, azA);
-    const b = centerOf(ringB, azB);
-    const countNearA = (components: readonly Pick<GalaxyFieldComponent, 'center'>[]): number =>
-      components.filter((c) => {
-        const distA = Math.hypot(c.center[0] - a.x, c.center[2] - a.z);
-        const distB = Math.hypot(c.center[0] - b.x, c.center[2] - b.z);
-        return distA < distB;
-      }).length;
 
-    const buildAtGamma = (dustPlacementContrast: number) => {
+    const buildAtCap = (dustPlacementCap: number) => {
       const dust = {
         ...DEFAULT_GALAXY_DUST_PARAMS,
-        cloud: {
-          ...DEFAULT_GALAXY_DUST_PARAMS.cloud,
-          count: 3000,
-          clumpiness: 0,
-          dustPlacementContrast,
-        },
+        cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 3000, clumpiness: 0, dustPlacementCap },
       };
       return buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 5, map, null);
     };
 
-    const flattened = buildAtGamma(0.25);
-    const sharpened = buildAtGamma(2);
-    expect(flattened.length).toBeGreaterThan(0);
-    expect(sharpened.length).toBeGreaterThan(0);
+    const uncapped = buildAtCap(0);
+    // Between the baseline's own within-ring ratio (1.0 / ringMean, well
+    // under 1) and B's uncapped ratio (100 / ringMean, in the tens) —
+    // computed from the map above, not hand-picked, so the cap is provably
+    // in range regardless of how `ring`'s mean is defined.
+    const ringMean = (1.0 * (az - 1) + 100.0) / az;
+    const capped = buildAtCap(50.0 / ringMean);
 
-    // gamma=0.25 compresses the 20:1 overshoot ratio toward parity (~32% to
-    // A); gamma=2 stretches it further (~0.25% to A) — an order-of-magnitude
-    // gap either way, well clear of sampling noise at count=3000.
-    expect(countNearA(flattened)).toBeGreaterThan(countNearA(sharpened) * 5);
+    expect(uncapped.length).toBeGreaterThan(0);
+    expect(capped.length).toBeGreaterThan(0);
+    // Capping B pulls mass off it and onto the ring's other (baseline)
+    // texels, so the mean distance to B's own centre goes UP.
+    expect(meanDistTo(capped)).toBeGreaterThan(meanDistTo(uncapped));
   });
 
-  it('zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {
-    // makeMap's legacy channel (gas x activity) is busy/non-degenerate,
-    // but its dust channel is a flat SF_MAP_AMBIENT_DUST (1.0) — no texel
-    // has swept past ambient, so meanOvershoot is exactly 0 and density is 0
-    // for every texel: `buildSfMapDustCdf`'s total comes out 0, and
-    // `buildDustParticleCloud` leaves `placement` at its `smoothDisc`
-    // default — the same code path an absent map takes (see the guard's own
-    // comment in dustParticleCloud.ts).
-    const ambientMap = makeMap(1.0);
+  it('the radial envelope survives a cap that only clips a DIFFERENT ring', () => {
+    // Two calm rings (A, B — uniform dust, no spike, so no local ratio ever
+    // nears any reasonable cap) at DIFFERENT dust levels, so their envelope
+    // term (ringMean/globalMean) differs; a THIRD ring (C) carries a spike
+    // the cap is sized to clip. If the envelope is truly structural (never
+    // touched by the cap), A's and B's own placement counts — and so their
+    // RATIO — should be the same whether or not C gets capped; only C's own
+    // total should fall.
+    const az = MAP_AZ;
+    const rings = MAP_RINGS;
+    const ringA = 2;
+    const ringB = 8;
+    const ringC = 14;
+    const data = new Float32Array(rings * az * 4);
+    for (let ring = 0; ring < rings; ring++) {
+      for (let azIdx = 0; azIdx < az; azIdx++) {
+        const base = (ring * az + azIdx) * 4;
+        data[base] = 0.3; // gas
+        data[base + 1] = 0.2; // recentSf
+        data[base + 2] = 0.3; // activity
+        if (ring === ringA) data[base + 3] = 2.0;
+        else if (ring === ringB) data[base + 3] = 5.0;
+        else if (ring === ringC) data[base + 3] = 1.0; // C's own low baseline
+        else data[base + 3] = 0; // every other ring: empty
+      }
+    }
+    data[(ringC * az + 16) * 4 + 3] = 100.0; // C's spike — well above its own ring mean
+    const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
+
+    const rA = sfMapRingRadius(ringA, rings, MAP_R_MIN, geometry.outerRadius);
+    const rB = sfMapRingRadius(ringB, rings, MAP_R_MIN, geometry.outerRadius);
+    const rC = sfMapRingRadius(ringC, rings, MAP_R_MIN, geometry.outerRadius);
+    const radiusOf = (c: Pick<GalaxyFieldComponent, 'center'>): number =>
+      Math.hypot(c.center[0], c.center[2]);
+    // Nearest-of-three by RADIUS alone: a ring's own structure spans every
+    // azimuth, so (unlike the two-point tests above) a single named centre
+    // can't stand in for "this ring" — only the radius band can.
+    const nearestRingRadius = (r: number): number => {
+      const candidates = [rA, rB, rC];
+      let best = candidates[0]!;
+      let bestDist = Math.abs(r - best);
+      for (const candidate of candidates) {
+        const d = Math.abs(r - candidate);
+        if (d < bestDist) {
+          best = candidate;
+          bestDist = d;
+        }
+      }
+      return best;
+    };
+    const countNearRing = (
+      components: readonly Pick<GalaxyFieldComponent, 'center'>[],
+      target: number,
+    ): number => components.filter((c) => nearestRingRadius(radiusOf(c)) === target).length;
+
+    const ringMeanC = (1.0 * (az - 1) + 100.0) / az;
+
+    const buildAtCap = (dustPlacementCap: number) => {
+      const dust = {
+        ...DEFAULT_GALAXY_DUST_PARAMS,
+        cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 20000, clumpiness: 0, dustPlacementCap },
+      };
+      return buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 11, map, null);
+    };
+
+    const uncapped = buildAtCap(0);
+    const capped = buildAtCap(10.0 / ringMeanC); // well below C's spike ratio, well above A/B's uniform ratio (1.0)
+
+    const uncappedC = countNearRing(uncapped, rC);
+    const cappedC = countNearRing(capped, rC);
+    expect(cappedC).toBeLessThan(uncappedC); // the cap did something to C
+    expect(uncappedC).toBeGreaterThan(0);
+    expect(cappedC).toBeGreaterThan(0);
+
+    const uncappedRatio = countNearRing(uncapped, rA) / countNearRing(uncapped, rB);
+    const cappedRatio = countNearRing(capped, rA) / countNearRing(capped, rB);
+    // A/B's own ratio is untouched by capping a DIFFERENT ring — generous
+    // tolerance for sampling noise at a finite particle count.
+    expect(cappedRatio).toBeGreaterThan(uncappedRatio * 0.75);
+    expect(cappedRatio).toBeLessThan(uncappedRatio * 1.25);
+  });
+
+  it('zero dust everywhere degrades to the smoothDisc fallback, not NaN', () => {
+    // makeMap's legacy channel (gas x activity) is busy/non-degenerate, but
+    // its dust channel is flat 0 — no dust anywhere on the map, so the
+    // global mean is exactly 0 and density is 0 for every texel:
+    // `buildSfMapDustCdf`'s total comes out 0, and `buildDustParticleCloud`
+    // leaves `placement` at its `smoothDisc` default — the same code path an
+    // absent map takes (see the guard's own comment in
+    // dustParticleCloud.ts). A flat SF_MAP_AMBIENT_DUST (1.0) map, the OLD
+    // trigger for this fallback, no longer qualifies: 1.0 is now real
+    // (nonzero) placement mass, not an ambient pedestal subtracted down to
+    // zero.
+    const emptyMap = makeMap(0);
     const dust = {
       ...DEFAULT_GALAXY_DUST_PARAMS,
       cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 400, clumpiness: 0.5 },
@@ -314,7 +409,7 @@ describe('buildDustParticleCloud', () => {
       dust,
       DEFAULT_GALAXY_FIELD_TUNING,
       1,
-      ambientMap,
+      emptyMap,
       null,
     );
     const unseeded = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, null, null);

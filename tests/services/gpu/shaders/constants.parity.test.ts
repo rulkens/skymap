@@ -22,6 +22,7 @@ import {
   DENS_SCALE,
   SPEED_COLOR_MAX,
 } from '../../../../src/data/flow/flowFieldConstants';
+import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { SF_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/sweptDustOvershoot';
 
@@ -115,20 +116,22 @@ describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
 });
 
 /**
- * SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into five WESL
+ * SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into four WESL
  * files that are not dedicated constant-mirror files, so — same idiom as
  * bloomSeedingConstants.parity.test.ts's readWeslConst — this reads one
  * named const per file rather than sweeping each for orphans.
  * sfMapAutomatonStep.wesl/sfMapFluidStep.wesl seed every texel to this
  * pedestal at step 0; sfMapDustBlur.wesl and dustDetail.wesl must subtract
  * the SAME pedestal, or S4's detail ratio (dustDetail.wesl) drifts against
- * its own blur divisor; sfMapPresent.wesl subtracts it too, to reconstruct
- * the seeding view's
- * overshoot term from the raw dust channel it already reads. sfMapFluidStep.wesl
- * seeds the same pedestal, scaled by its own radial gasProfile(r), at its own
- * step 0 — the two generators match on what an unrun map looks like only at
- * the default gasProfile (gasFloor=1, profile === 1 everywhere); the
- * automaton has no radial knob and stays uniform.
+ * its own blur divisor. sfMapPresent.wesl no longer subtracts it: the
+ * "seeding" debug view reads the map's raw dust channel directly now (the
+ * ambient pedestal stopped being uniform — it's seeded
+ * `ambient * gasProfile(r)` and advected, so it's structure, not a floor to
+ * clear — see dustParticleCloud.ts's DUST_SURVIVAL_FLOOR_FRAC doc).
+ * sfMapFluidStep.wesl seeds the same pedestal, scaled by its own radial
+ * gasProfile(r), at its own step 0 — the two generators match on what an
+ * unrun map looks like only at the default gasProfile (gasFloor=1, profile
+ * === 1 everywhere); the automaton has no radial knob and stays uniform.
  */
 function readWeslConst(relPath: string, name: string): number | undefined {
   const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
@@ -146,7 +149,6 @@ describe('SF_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirrors
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapFluidStep.wesl',
     'src/services/gpu/shaders/milkyWay/sfMap/sfMapDustBlur.wesl',
     'src/services/gpu/shaders/milkyWay/field/dustDetail.wesl',
-    'src/services/gpu/shaders/milkyWay/sfMap/sfMapPresent.wesl',
   ];
 
   it('each file\'s SF_MAP_AMBIENT_DUST equals the TS export', () => {
@@ -158,5 +160,24 @@ describe('SF_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirrors
         `${file}: WESL SF_MAP_AMBIENT_DUST (${weslValue}) does not match TS SF_MAP_AMBIENT_DUST (${SF_MAP_AMBIENT_DUST})`,
       ).toBe(SF_MAP_AMBIENT_DUST);
     }
+  });
+});
+
+/**
+ * DUST_SURVIVAL_FLOOR_FRAC (dustParticleCloud.ts) is mirrored into
+ * sfMapPresent.wesl's "seeding" debug view (dust-seeding spike), so a texel
+ * that would never keep a map-seeded particle past S3's alive gate never
+ * glows in the view either — same `readWeslConst` idiom as
+ * SF_MAP_AMBIENT_DUST above.
+ */
+describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ sfMapPresent.wesl)', () => {
+  it('sfMapPresent.wesl\'s DUST_SURVIVAL_FLOOR_FRAC equals the TS export', () => {
+    const file = 'src/services/gpu/shaders/milkyWay/sfMap/sfMapPresent.wesl';
+    const weslValue = readWeslConst(file, 'DUST_SURVIVAL_FLOOR_FRAC');
+    expect(weslValue, `DUST_SURVIVAL_FLOOR_FRAC is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL DUST_SURVIVAL_FLOOR_FRAC (${weslValue}) does not match TS DUST_SURVIVAL_FLOOR_FRAC (${DUST_SURVIVAL_FLOOR_FRAC})`,
+    ).toBe(DUST_SURVIVAL_FLOOR_FRAC);
   });
 });

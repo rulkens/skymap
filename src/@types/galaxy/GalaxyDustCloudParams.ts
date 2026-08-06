@@ -35,14 +35,21 @@ export type GalaxyDustCloudParams = {
    */
   readonly mapDetail: number;
   /**
-   * Exponent tempering the map-seeded placement CDF (`density = overshoot ^
-   * gamma`, dustParticleCloud.ts) — the swept-overshoot channel's mass
-   * concentrates in a few arm-lane texels, and iid CDF draws stack many
-   * complexes onto the same spot. 1 = today's proportional sampling
-   * (inert); <1 flattens toward an even spread across every nonzero-overshoot
-   * texel; >1 sharpens further. The SF-map "seeding" debug view
-   * (sfMapPresent.wesl) always shows the gamma=1 density — placement and
-   * that view intentionally diverge once gamma != 1.
+   * Caps the map-seeded placement CDF's WITHIN-RING ratio (`dust /
+   * ringMean[ring]`, dustParticleCloud.ts), in multiples of the texel's own
+   * ring mean; 0 disables it (uncapped, today's behaviour). The ONLY
+   * placement-tempering knob: a single texel that accumulates a runaway
+   * share of splats (a blazing rim pixel, say 40x its ring's own mean)
+   * starves every other texel in the same ring of placement mass — capping
+   * clips just that texel, leaving the CDF exactly proportional everywhere
+   * below the cap. Deliberately RING-relative, not map-global: the radial
+   * dust profile (ringMean[ring] / the map's own global mean) is a SEPARATE,
+   * structural envelope term this cap never touches — see
+   * `buildDustParticleCloud`'s own placement comment for why a global cap
+   * would let the outer disc's sheer texel count win a contrast fight
+   * against the inner disc. The SF-map "seeding" debug view
+   * (sfMapPresent.wesl) applies the same `min()` against the same per-ring
+   * means, so the view never drifts from what placement caps.
    */
-  readonly dustPlacementContrast: number;
+  readonly dustPlacementCap: number;
 };

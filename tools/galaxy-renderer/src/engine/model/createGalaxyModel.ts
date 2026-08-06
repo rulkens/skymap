@@ -62,10 +62,10 @@ import {
   DIG_MAX_COUNT,
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import { meanSfMapChannel } from '../../../../../src/utils/galaxy/meanSfMapChannel';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { sweptDustOvershoot } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
+import { sfMapRingMeans } from '../../../../../src/utils/galaxy/sfMapRingMeans';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
+import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
 import { DEBUG_VIEWS } from '../../data/debugViews';
 import { createKeyedRebuild } from '../createKeyedRebuild';
@@ -145,10 +145,16 @@ export type GalaxyModel = {
   /** Null until the first SSPSF readback lands. */
   readonly sfMapData: GalaxySfMap | null;
   /**
-   * The SF-map "seeding" debug view's two lanes — `weight` reads
+   * The SF-map "seeding" debug view's three scalar lanes — `weight` reads
    * `render.sfMapSeedingViewWeight` live (forced to 0 while `sfMapData` is
-   * null or the mean is 0), `meanOvershoot` is cached at the sfMap readback
+   * null or the mean is 0), `globalMean` is cached at the sfMap readback
    * landing, not recomputed per frame — same cadence as `dustHeaderLanes`.
+   * `cap` reads `currentDust().cloud.dustPlacementCap` live, same source
+   * `rebuildDustMixture` passes to `buildDustParticleCloud`, so a cap-slider
+   * drag updates the view without waiting on a rebuild. The per-RING means
+   * `globalMean` is itself the mean of are NOT part of this type — they ride
+   * `sfMapGenerator.writeRingMeans`, a separate GPU buffer write at the same
+   * readback-landing cadence (`recomputeSfMapSeedingMeans`).
    */
   readonly sfMapSeedingView: SfMapSeedingLanes;
   /**
@@ -270,12 +276,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
   // How the last `repackFieldComponents` concatenation sliced `fieldComps`.
   let fieldCounts: FieldSliceCounts = { emission: 0, primary: 0, dust: 0 };
-  // The seeding debug view's own mean, cached at the sfMap readback landing
-  // (recomputeSfMapSeedingMeans below) — never per frame, and never reset
-  // back to 0 on a grid move: the `sfMapSeedingView` getter gates on
+  // The seeding debug view's own global mean, cached at the sfMap readback
+  // landing (recomputeSfMapSeedingMeans below) — never per frame, and never
+  // reset back to 0 on a grid move: the `sfMapSeedingView` getter gates on
   // `readbacks.sfMapData` being non-null instead, so a stale value sitting
   // here between a drop and the next landing is simply never read.
-  let sfMapMeanOvershoot = 0;
+  // `sfMapGlobalMeanDust` is `arrayMean` of the per-ring means array — the
+  // array itself rides the GPU only (`sfMapGenerator.writeRingMeans`),
+  // nothing on the CPU side needs it back, since `buildDustParticleCloud`
+  // computes its own copy straight off `sfMap` each rebuild.
+  let sfMapGlobalMeanDust = 0;
   // What the orientation chain was last dispatched at — see `noteRenderChanged`.
   let orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
   let orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
@@ -286,13 +296,21 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const orientationDiagnostics = createOrientationDiagnostics();
 
   /**
-   * The seeding debug view's placement density mean, off the SAME function
-   * (`sweptDustOvershoot`) `buildDustParticleCloud` normalises its own CDF
-   * term by — load-bearing: computing this any other way would let the view
-   * drift from what placement actually consumes.
+   * The seeding debug view's placement density means — per-ring AND global,
+   * off the SAME extractor (`sfMapRingMeans(map, texel => texel.dust)`)
+   * `buildDustParticleCloud` normalises its own CDF term by — load-bearing:
+   * computing this any other way would let the view drift from what
+   * placement actually consumes. No ambient subtraction: the pedestal is
+   * seeded `ambient * gasProfile(r)` and advected by the automaton, so it is
+   * itself structure the CDF places into, not a floor to clear first. The
+   * per-ring array goes straight to the GPU (`writeRingMeans`) — the
+   * shader's own radial-envelope divisor — while only its `arrayMean` is
+   * cached here for the scalar uniform lane.
    */
   function recomputeSfMapSeedingMeans(map: GalaxySfMap): void {
-    sfMapMeanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
+    const ringMeans = sfMapRingMeans(map, (texel) => texel.dust);
+    sfMapGenerator.writeRingMeans(ringMeans);
+    sfMapGlobalMeanDust = arrayMean(ringMeans);
   }
 
   /**
@@ -866,12 +884,17 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // `sfMapData` while the mean above still holds the previous grid's
       // number, and reading it here would flash a stale view for one frame
       // instead of going dark.
-      if (!readbacks.sfMapData || sfMapMeanOvershoot <= 0) {
-        return { weight: 0, meanOvershoot: 0 };
+      if (!readbacks.sfMapData || sfMapGlobalMeanDust <= 0) {
+        return { weight: 0, cap: 0, globalMean: 0 };
       }
       return {
         weight: render.sfMapSeedingViewWeight,
-        meanOvershoot: sfMapMeanOvershoot,
+        globalMean: sfMapGlobalMeanDust,
+        // `?? 0`: same preset-gap guard `buildDustParticleCloud` applies to
+        // this exact field — a preset saved before `dustPlacementCap`
+        // existed loads it `undefined`, and 0 ("uncapped") is that field's
+        // own inert default, not a value this getter invents.
+        cap: currentDust().cloud.dustPlacementCap ?? 0,
       };
     },
 
