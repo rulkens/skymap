@@ -245,13 +245,15 @@ async function pressSlider(page: Page, label: string, keys: readonly string[]): 
 }
 
 /**
- * Every section header inside `scope`, each with a locator bound narrowly to
- * IT (never a page-wide position). Position-based addressing (`nth(index)`
- * into a single flat, page-wide list) is what this replaced — it broke the
- * moment a parent section's expansion inserted new headers into the middle
- * of the DOM, shifting every later sibling's index out from under it. The
- * chevron glyph is part of the button's text and is stripped here — the one
- * place titles are parsed, so a re-read compares like with like.
+ * Every section header inside `scope`. `scope.locator(selector)` is a
+ * DESCENDANT query, so this alone is not a "one level" list — a `group`
+ * section's body (ANALYTIC MODEL, LEGACY MODEL) hands back headers at every
+ * depth beneath it, not just its own members, because a group member is
+ * deliberately not `data-nested` (see CollapsibleSection.tsx). Pair with
+ * `filterDirectHeaders` at every call site to trim that back to one level.
+ * The chevron glyph is part of the button's raw text and is stripped here —
+ * the one place titles are parsed, so every later comparison sees the same
+ * plain string.
  */
 async function readSectionHeaders(
   scope: Page | Locator,
@@ -264,6 +266,36 @@ async function readSectionHeaders(
       title: ((await header.textContent()) ?? '').replace(/[▾▸]/g, '').replace(/\s+/g, ' ').trim(),
     })),
   );
+}
+
+/**
+ * Keep only the entries NOT contained inside another entry's own section —
+ * i.e. one level, batch-relative. A grandchild present in the same batch
+ * (an already-open nested section under an already-open group member, e.g.
+ * FLUID under SF MAP under ANALYTIC MODEL) waits for its OWN parent's turn
+ * instead: `exerciseSection` re-discovers it there once that parent has
+ * expanded, which is also where its slider-nudge belongs.
+ */
+async function filterDirectHeaders(
+  entries: readonly { header: Locator; title: string }[],
+): Promise<{ header: Locator; title: string }[]> {
+  const roots = await Promise.all(
+    entries.map((entry) => entry.header.locator('xpath=../..').elementHandle()),
+  );
+  const headers = await Promise.all(entries.map((entry) => entry.header.elementHandle()));
+  const isDirect = await Promise.all(
+    entries.map(async (_, i) => {
+      const header = headers[i];
+      if (!header) return false;
+      for (let j = 0; j < entries.length; j++) {
+        const root = roots[j];
+        if (j === i || !root) continue;
+        if (await root.evaluate((r, h) => r.contains(h), header)) return false;
+      }
+      return true;
+    }),
+  );
+  return entries.filter((_, i) => isDirect[i]);
 }
 
 /**
@@ -282,33 +314,40 @@ async function nudgeSlider(page: Page, slider: Locator): Promise<void> {
 
 /**
  * Exercise one section: expand it, nudge its own sliders, then hand back a
- * step per section nested inside — `main`'s queue runs those right after
- * this one (`queue.unshift`), so a nested section is fully expanded and
- * driven before the sweep moves on to the next top-level sibling. A nested
- * section's own step takes the exact same path, so depth beyond one level
- * needs no new plumbing (nothing in the panel goes past one today).
+ * step per DIRECT child section found inside — `main`'s queue runs those
+ * right after this one (`queue.unshift`), so a section is fully expanded and
+ * driven before the sweep moves on to its next sibling. The same recursion
+ * now covers every depth the panel has (ANALYTIC MODEL → SF MAP → DIG is
+ * three), because the header is re-resolved by TITLE below rather than a
+ * position captured up front — a `.nth(index)` locator re-queries the DOM
+ * by ordinal at click time, and an earlier sibling's expansion inserting new
+ * matching headers ahead of a later one's captured index is exactly the
+ * "section header now reads X, not Y" failure a `group` section made common
+ * (two levels of siblings can now shift each other instead of one).
  *
  * `rows` is filled as the sweep goes and is what the coverage report at the
  * end is printed from.
  */
-function exerciseSection(header: Locator, title: string, rows: SectionRow[]): ExerciseStep {
+function exerciseSection(title: string, rows: SectionRow[]): ExerciseStep {
   return {
     name: `section:${title}`,
     run: async (page) => {
       const row: SectionRow = { title, sliders: null };
       rows.push(row);
 
-      // Re-read and compare: a section appearing, vanishing or renaming
-      // mid-sweep would otherwise silently point this step at the wrong
-      // header and still report full coverage.
-      const current = ((await header.textContent()) ?? '')
-        .replace(/[▾▸]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (current !== title) {
-        throw new Error(
-          `section header now reads '${current}', not '${title}' — the panel changed shape mid-sweep`,
-        );
+      // Accessible name, not a captured locator: the chevron is aria-hidden,
+      // so `title` (already stripped of it) is the whole name, and section
+      // titles are unique panel-wide (grepped at the time this was written).
+      // Zero matches is the one shape-change still worth failing loudly on —
+      // a section that existed at discovery time and is truly gone now, not
+      // one that merely moved.
+      const header = page.getByRole('button', { name: title, exact: true });
+      const matches = await header.count();
+      if (matches === 0) {
+        throw new Error(`section '${title}' vanished mid-sweep — the panel changed shape`);
+      }
+      if (matches > 1) {
+        throw new Error(`section '${title}' is ambiguous — ${matches} headers share this title`);
       }
 
       if ((await header.getAttribute('aria-expanded')) !== 'true') {
@@ -329,11 +368,12 @@ function exerciseSection(header: Locator, title: string, rows: SectionRow[]): Ex
       row.sliders = count;
       for (let i = 0; i < count; i++) await nudgeSlider(page, sliders.nth(i));
 
-      // A nested section that already defaults open is inside `body` and so
-      // already counted/nudged above; its own step below repeats that
-      // (idempotent — one step up, one back), not extra state.
-      const nested = await readSectionHeaders(body, SECTION_HEADER);
-      return nested.map((section) => exerciseSection(section.header, section.title, rows));
+      // Only THIS section's own direct children (see filterDirectHeaders) —
+      // a grandchild already visible here (an already-open nested section
+      // under this already-open one) is filtered back out and picked up by
+      // its OWN parent's step instead, one level at a time.
+      const nested = await filterDirectHeaders(await readSectionHeaders(body, SECTION_HEADER));
+      return nested.map((section) => exerciseSection(section.title, rows));
     },
   };
 }
@@ -342,14 +382,20 @@ function exerciseSection(header: Locator, title: string, rows: SectionRow[]): Ex
  * Expand every collapsible section — and everything nested inside it — and
  * drive whatever sliders appear. Seeded from a page-wide, TOP-LEVEL-only
  * scan (`TOP_LEVEL_SECTION_HEADER`): a nested section is never discovered
- * from here, only from its own parent's body once that parent is open.
+ * from here, only from its own parent's body once that parent is open. A
+ * `group` member (ANALYTIC MODEL's FIELD, HII REGIONS, …) also matches this
+ * selector — `group` deliberately leaves it un-`data-nested` — so
+ * `filterDirectHeaders` is what actually keeps this list top-level: it
+ * excludes anything contained in another match's own section root.
  */
 function sweepSections(rows: SectionRow[]): ExerciseStep {
   return {
     name: 'sections:discover',
     run: async (page) => {
-      const found = await readSectionHeaders(page, TOP_LEVEL_SECTION_HEADER);
-      return found.map((section) => exerciseSection(section.header, section.title, rows));
+      const found = await filterDirectHeaders(
+        await readSectionHeaders(page, TOP_LEVEL_SECTION_HEADER),
+      );
+      return found.map((section) => exerciseSection(section.title, rows));
     },
   };
 }
@@ -388,9 +434,13 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       },
     },
     {
-      name: 'pill:legacy-sprite-stars',
+      // The old standalone "Legacy sprite stars" checkbox was folded into
+      // LEGACY MODEL's own header pill by the group restructure — same
+      // `render.spriteField` state, same treatment as `pill:analytic-model`
+      // above (its sibling header pill on the other group).
+      name: 'pill:legacy-model',
       run: async (page) => {
-        const pill = page.getByRole('checkbox', { name: 'Legacy sprite stars' });
+        const pill = page.getByRole('checkbox', { name: 'Toggle legacy model' });
         await pill.check();
         await settleFrames(page, SETTLE_FRAMES);
         await pill.uncheck();
