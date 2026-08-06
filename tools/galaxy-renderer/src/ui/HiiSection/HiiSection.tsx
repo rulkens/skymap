@@ -18,8 +18,11 @@ import type { ReactNode } from 'react';
 import type { GalaxyHiiAssociationsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiAssociationsTuning';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
 import type { GalaxyHiiTuning } from '../../../../../src/@types/galaxy/GalaxyHiiTuning';
+import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
+import { paramsPatched } from '../../state/slices/galaxySlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
@@ -28,6 +31,9 @@ import styles from './HiiSection.module.css';
 function HiiSection(): ReactNode {
   const dispatch = useAppDispatch();
   const hii = useAppSelector((state) => state.fieldTuning.hii);
+  const starFormation = useAppSelector(
+    (state) => state.galaxy.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+  );
   const open = useAppSelector((state) => state.ui.openSections.hii);
   const shellsOpen = useAppSelector((state) => state.ui.openSections.hiiShells);
   const digOpen = useAppSelector((state) => state.ui.openSections.hiiDig);
@@ -43,6 +49,10 @@ function HiiSection(): ReactNode {
 
   const patchAssociations = (patch: Partial<GalaxyHiiAssociationsTuning>): void => {
     patchHii({ associations: { ...hii.associations, ...patch } });
+  };
+
+  const patchStarFormation = (patch: Partial<GalaxyStarFormationParams>): void => {
+    dispatch(paramsPatched({ starFormation: { ...starFormation, ...patch } }));
   };
 
   // DIG and ASSOCIATIONS copy from their OWN nested sections below — this
@@ -169,6 +179,17 @@ function HiiSection(): ReactNode {
             onChange={(v) => patchHii({ texture: v })}
             path="fieldTuning.hii.texture"
             info="Breaks up the shell + embedded-cluster sprites' circular Gaussian footprint with the same noise volume the dust cloud erodes with. 0 leaves them untouched."
+          />
+          <ParamSlider
+            label="SF activity"
+            value={starFormation.sfActivity}
+            min={0}
+            max={2.5}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchStarFormation({ sfActivity: v })}
+            path="galaxy.starFormation.sfActivity"
+            info="Fallback event-catalog rate — sizes the HII tier only when the ISM/SF-map generator is 'automaton' or 'none'. The fluid generator ignores it: its regions come from the sim's own events."
           />
         </div>
       </CollapsibleSection>

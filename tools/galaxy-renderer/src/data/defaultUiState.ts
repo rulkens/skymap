@@ -35,9 +35,6 @@ export const DEFAULT_UI_STATE: UiState = {
     hiiShells: true,
     hiiDig: false,
     hiiAssociations: false,
-    // Collapsed for the same reason `hii` is: two calibrated knobs, not the
-    // active work.
-    starFormation: false,
     // The only section expanded by default: the SF map is the current work,
     // and everything else on the panel is either tuned or downstream of it.
     sfMap: true,

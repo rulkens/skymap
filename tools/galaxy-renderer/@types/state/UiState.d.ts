@@ -21,7 +21,6 @@ export type UiState = {
       | 'hiiShells'
       | 'hiiDig'
       | 'hiiAssociations'
-      | 'starFormation'
       | 'sfMap'
       | 'sfMapAutomaton'
       | 'sfMapFluid'

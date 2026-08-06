@@ -52,7 +52,6 @@ import HiiSection from '../HiiSection/HiiSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import SfMapSection from '../SfMapSection/SfMapSection';
 import SliderGroup from '../SliderGroup/SliderGroup';
-import StarFormationSection from '../StarFormationSection/StarFormationSection';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
 import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
@@ -63,10 +62,12 @@ import styles from './ControlsPanel.module.css';
 // `armAges` array, and the nested `dust`/`starFormation` sections is a plain
 // number — this narrows `keyof GalaxyParams` down to the subset a single-value
 // slider can actually drive. `armAges` has no UI surface (pin it in a preset
-// object instead, per barAngleDeg's pattern); each nested group gets its own
-// component (`DustSection`, `StarFormationSection`), since a nested object
-// needs its own patch-spreading handlers rather than the generic single-value
-// `onChange` below.
+// object instead, per barAngleDeg's pattern); `dust`'s two knobs get their own
+// component (`DustSection`), since a nested object needs its own
+// patch-spreading handlers rather than the generic single-value `onChange`
+// below. `starFormation`'s two knobs have no home of their own — one lives in
+// `HiiSection` (SHELLS), the other in `DebugViewsSection` (beside the BUBBLE
+// view it drives) — see their own patch-spreading handlers there.
 type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges' | 'dust' | 'starFormation'>;
 
 type SliderSpec = {
@@ -377,7 +378,6 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           <ArmFieldSection />
           <ArmCloudSection />
           <HiiSection />
-          <StarFormationSection />
           <SfMapSection diagnostics={orientationDiagnostics} />
           <DustSection />
           <DustCloudSection />
@@ -441,7 +441,9 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               open={ui.openSections.dust}
               onToggle={() => dispatch(sectionToggled('dust'))}
               headerToggle={render.legacyDustEnabled}
-              onHeaderToggleChange={(value) => dispatch(renderPatched({ legacyDustEnabled: value }))}
+              onHeaderToggleChange={(value) =>
+                dispatch(renderPatched({ legacyDustEnabled: value }))
+              }
               copyPayload={{
                 galaxy: galaxyValues(galaxy, dustSliders),
                 render: { legacyDustEnabled: render.legacyDustEnabled },
