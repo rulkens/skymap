@@ -22,8 +22,71 @@ import {
   sfMapFluidEventWindow,
   SF_MAP_FLUID_MAX_EVENTS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapFluidEvents';
+import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
+
+/**
+ * Standalone reconstruction of the PRE-Kennicutt-Schmidt event placement
+ * (arm-biased CDF pick + sub-texel jitter, no gas-weighted rejection loop) —
+ * duplicates the private ARM_BIAS_FLOOR/salt/upperBound galaxySfMapFluidEvents.ts
+ * does not export, purely so this test can pin the byte-identical-at-
+ * gasFloor=1 invariant against an independent implementation rather than
+ * against the same code path it is meant to catch a regression in.
+ */
+function legacyUnweightedEvents(
+  geometry: ReturnType<typeof describeGalaxy>,
+  tuning: typeof DEFAULT_GALAXY_FIELD_TUNING,
+  seed: number,
+): ReadonlyArray<{
+  az: number;
+  ring: number;
+  birthStep: number;
+  strength: number;
+  radiusScale: number;
+}> {
+  const ARM_BIAS_FLOOR = 0.15;
+  const SALT = 0x464c5549; // "FLUI" — mirrors galaxySfMapFluidEvents.ts's private salt
+  const fluid = tuning.sfMapFluid;
+  const requested = Math.round(fluid.eventRate * fluid.steps);
+  const count = Math.min(Math.max(requested, 0), SF_MAP_FLUID_MAX_EVENTS);
+  if (count === 0) return [];
+
+  const forcing = buildGalaxySfMapArmForcing(geometry, tuning);
+  const weights = new Float64Array(forcing.length);
+  let total = 0;
+  for (let i = 0; i < forcing.length; i++) {
+    total += ARM_BIAS_FLOOR + forcing[i]!;
+    weights[i] = total;
+  }
+  const upperBound = (u: number): number => {
+    let lo = 0;
+    let hi = weights.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (weights[mid]! > u) hi = mid;
+      else lo = mid + 1;
+    }
+    return lo;
+  };
+
+  const rng = mulberry32(seed ^ SALT);
+  const events = [];
+  for (let k = 0; k < count; k++) {
+    const index = upperBound(rng() * total);
+    const ring = Math.floor(index / SF_MAP_AZ);
+    const az = index % SF_MAP_AZ;
+    events.push({
+      az: az + rng(),
+      ring: ring + rng(),
+      birthStep: Math.floor(rng() * fluid.steps),
+      strength: fluid.impulseStrength * (0.7 + 0.6 * rng()),
+      radiusScale: fluid.radiusScale * (0.7 + 0.6 * rng()),
+    });
+  }
+  events.sort((a, b) => a.birthStep - b.birthStep);
+  return events;
+}
 
 describe('buildGalaxySfMapFluidEvents', () => {
   it('is deterministic: the same seed reproduces the same event list', () => {
@@ -31,6 +94,23 @@ describe('buildGalaxySfMapFluidEvents', () => {
     const b = buildGalaxySfMapFluidEvents(geometry, DEFAULT_GALAXY_FIELD_TUNING, 42);
     expect(a).toEqual(b);
     expect(a.length).toBeGreaterThan(0); // sanity: the MW preset's defaults really produce events
+  });
+
+  it('at gasFloor=1 (gasProfile identically 1 everywhere), the gas-weighted rejection sampler never rejects — event placement is byte-identical to the pre-profile, unweighted algorithm', () => {
+    const tuning = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      sfMapFluid: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid, gasFloor: 1 },
+    };
+    const withWeighting = buildGalaxySfMapFluidEvents(geometry, tuning, 13);
+    const withoutWeighting = legacyUnweightedEvents(geometry, tuning, 13);
+    expect(withWeighting.length).toBeGreaterThan(0); // sanity: a trivially-empty comparison would pass vacuously
+    expect(withWeighting).toEqual(withoutWeighting);
+  });
+
+  it('at the shipped default gasFloor (0.07), event placement diverges from the unweighted algorithm — the rejection sampler is actually doing something', () => {
+    const withWeighting = buildGalaxySfMapFluidEvents(geometry, DEFAULT_GALAXY_FIELD_TUNING, 13);
+    const withoutWeighting = legacyUnweightedEvents(geometry, DEFAULT_GALAXY_FIELD_TUNING, 13);
+    expect(withWeighting).not.toEqual(withoutWeighting);
   });
 
   it('a different seed produces a different event list', () => {

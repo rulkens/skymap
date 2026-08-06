@@ -21,10 +21,12 @@
  * got longer).
  */
 import { mulberry32 } from '../../../../utils/random/mulberry32';
+import { sfMapGasProfile } from '../../../../utils/galaxy/sfMapGasProfile';
+import { sfMapRingRadius } from '../../../../utils/galaxy/sfMapRingRadius';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { SfMapFluidEvent } from '../../../../@types/galaxy/SfMapFluidEvent';
-import { buildGalaxySfMapArmForcing, SF_MAP_AZ } from './galaxySfMapArmForcing';
+import { buildGalaxySfMapArmForcing, sfMapGridRadius, SF_MAP_AZ, SF_MAP_RINGS } from './galaxySfMapArmForcing';
 
 /** Safely above the "several hundred events over a run" design target — a generous ceiling, not a tuned one. Overflow is truncated, not resampled. */
 export const SF_MAP_FLUID_MAX_EVENTS = 1024;
@@ -53,6 +55,35 @@ function upperBound(prefix: Float64Array, u: number): number {
   return lo;
 }
 
+/** Kennicutt-Schmidt law: SFR surface density scales as gas surface density^1.4 — the exponent an event-radius rejection test below weights candidates by. */
+const KENNICUTT_SCHMIDT_INDEX = 1.4;
+
+/** Bounded redraw count for the gas-weighted rejection sampler below — several hundred events at a thin outer disc could otherwise spin a long time near-never-accepting; 32 tries then keep-the-last-draw trades a slightly-too-generous outer-disc placement for a hard latency ceiling. */
+const MAX_GAS_WEIGHT_TRIES = 32;
+
+/**
+ * Acceptance test for the rejection sampler below: probability
+ * `gasProfile(r)^KENNICUTT_SCHMIDT_INDEX` (`gasProfile`'s own max is ~1 at
+ * r=rMin, so the ratio to that max is the profile value itself — no
+ * rescaling needed). Short-circuits WITHOUT drawing from `rng` when the
+ * probability is exactly 1: at `gasFloor=1` (or any r where the profile
+ * saturates) every candidate is always accepted, and an unconditional extra
+ * `rng()` draw would shift every LATER event's RNG stream even though
+ * nothing about placement actually changed — this is the only way
+ * `buildGalaxySfMapFluidEvents` stays byte-identical to its pre-profile
+ * output at the default `gasFloor=1`.
+ */
+function acceptGasWeightedCandidate(
+  r: number,
+  gasFloor: number,
+  gasScaleLength: number,
+  rng: () => number,
+): boolean {
+  const prob = sfMapGasProfile(r, gasFloor, gasScaleLength) ** KENNICUTT_SCHMIDT_INDEX;
+  if (prob >= 1) return true;
+  return rng() < prob;
+}
+
 export function buildGalaxySfMapFluidEvents(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
@@ -71,18 +102,32 @@ export function buildGalaxySfMapFluidEvents(
     weights[i] = total;
   }
 
+  const { rMin, rMax } = sfMapGridRadius(geometry);
   const rng = mulberry32(seed ^ SF_MAP_FLUID_EVENT_SALT);
   const events: SfMapFluidEvent[] = new Array(count);
   for (let k = 0; k < count; k++) {
-    const index = upperBound(weights, rng() * total);
-    const ring = Math.floor(index / SF_MAP_AZ);
-    const az = index % SF_MAP_AZ;
-    events[k] = {
+    // Kennicutt-Schmidt-weighted rejection sampling: redraw the whole
+    // candidate (arm-biased index + sub-texel jitter) on reject, bounded by
+    // MAX_GAS_WEIGHT_TRIES rather than looping forever — see
+    // acceptGasWeightedCandidate for the byte-identical-at-gasFloor=1
+    // invariant this loop depends on.
+    let az = 0;
+    let ring = 0;
+    for (let attempt = 0; attempt < MAX_GAS_WEIGHT_TRIES; attempt++) {
+      const index = upperBound(weights, rng() * total);
+      const ringIndex = Math.floor(index / SF_MAP_AZ);
+      const azIndex = index % SF_MAP_AZ;
       // Sub-texel jitter so events don't all land on integer grid points —
       // the shader's kernel is continuous, so this costs nothing and avoids
       // a visible lattice in a sparse run.
-      az: az + rng(),
-      ring: ring + rng(),
+      az = azIndex + rng();
+      ring = ringIndex + rng();
+      const r = sfMapRingRadius(ring, SF_MAP_RINGS, rMin, rMax);
+      if (acceptGasWeightedCandidate(r, fluid.gasFloor, fluid.gasScaleLength, rng)) break;
+    }
+    events[k] = {
+      az,
+      ring,
       birthStep: Math.floor(rng() * fluid.steps),
       strength: fluid.impulseStrength * (0.7 + 0.6 * rng()),
       radiusScale: fluid.radiusScale * (0.7 + 0.6 * rng()),

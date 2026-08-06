@@ -182,16 +182,17 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let genStep = u32(stepIdx.step);
   let r = sfMapRingRadius(ring, ringCount, u.rMin, u.rMax);
 
-  // Dust seed still matches the automaton's own step 0 (SF_MAP_AMBIENT_DUST)
-  // — the two generators must agree on dust's unrun map. Gas now seeds at
-  // gasProfile(r) instead of a bare 1.0: identical to the automaton's
-  // uniform seed at the default gasFloor=1 (profile === 1 everywhere), and
-  // deliberately diverging once this generator's own radial profile is
-  // dialed in — the automaton has no such knob and stays uniform. Pass A is
-  // not dispatched for step 0 (velocity is unused), so velocityTex is dead
-  // here.
+  // Gas and the ambient dust pedestal both seed at gasProfile(r) (dust
+  // scaled by SF_MAP_AMBIENT_DUST — roughly constant dust-to-gas ratio):
+  // identical to the automaton's uniform seed at the default gasFloor=1
+  // (profile === 1 everywhere), and deliberately diverging once this
+  // generator's own radial profile is dialed in — the automaton has no such
+  // knob and stays uniform, so the two only match AT that default, not in
+  // general. Pass A is not dispatched for step 0 (velocity is unused), so
+  // velocityTex is dead here.
   if (genStep == 0u) {
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gasProfile(r), 1.0e4, 0.0, SF_MAP_AMBIENT_DUST));
+    let seedGas = gasProfile(r);
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 1.0e4, 0.0, SF_MAP_AMBIENT_DUST * seedGas));
     return;
   }
 

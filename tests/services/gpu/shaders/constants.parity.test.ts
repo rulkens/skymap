@@ -125,8 +125,10 @@ describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
  * its own blur divisor; sfMapPresent.wesl subtracts it too, to reconstruct
  * the seeding view's
  * overshoot term from the raw dust channel it already reads. sfMapFluidStep.wesl
- * seeds the same pedestal at its own step 0 — the two generators must agree
- * on what an unrun map looks like.
+ * seeds the same pedestal, scaled by its own radial gasProfile(r), at its own
+ * step 0 — the two generators match on what an unrun map looks like only at
+ * the default gasProfile (gasFloor=1, profile === 1 everywhere); the
+ * automaton has no radial knob and stays uniform.
  */
 function readWeslConst(relPath: string, name: string): number | undefined {
   const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
