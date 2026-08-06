@@ -23,4 +23,6 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   // Off while the automaton is being improved — the term amplifies whatever
   // the map shows.
   mapDetail: 0,
+  // 1 = exactly today's proportional CDF sampling.
+  dustPlacementContrast: 1,
 };

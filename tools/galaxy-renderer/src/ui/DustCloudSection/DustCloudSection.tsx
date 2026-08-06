@@ -144,6 +144,17 @@ function DustCloudSection(): ReactNode {
           path="galaxy.dust.cloud.mapDetail"
           info="S4: modulates each cloud's column by the SF map's detail ratio at accumulation, per splat (parallax-correct, column-preserving vertical noise breakup). 0 disables the path entirely; 1 = full ratio."
         />
+        <ParamSlider
+          label="Placement contrast"
+          value={cloud.dustPlacementContrast}
+          min={0.25}
+          max={2}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ dustPlacementContrast: v })}
+          path="galaxy.dust.cloud.dustPlacementContrast"
+          info="Exponent tempering the map-seeded placement CDF. 1 = today's proportional sampling; below 1 spreads clouds more evenly across every dusty texel; above 1 clumps them more tightly onto the hottest ones."
+        />
       </div>
     </CollapsibleSection>
   );

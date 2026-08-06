@@ -189,6 +189,113 @@ describe('buildDustParticleCloud', () => {
     expect(swept.length).toBeLessThan(dust.cloud.count);
   });
 
+  it('dustPlacementContrast=1 (the default) is exactly the untempered proportional CDF', () => {
+    // The gamma===1 branch in dustParticleCloud.ts skips Math.pow entirely and
+    // reuses the pre-gamma density expression verbatim, so an explicit gamma
+    // of 1 must be byte-identical to leaving it at its default — a wiring
+    // regression (e.g. the default drifting off 1) would show up here even
+    // though it wouldn't touch the pow branch itself.
+    const map = makeMap(1.3);
+    const explicitGammaOne = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300, dustPlacementContrast: 1 },
+    };
+    const defaulted = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
+    };
+    const a = buildDustParticleCloud(geometry, explicitGammaOne, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    const b = buildDustParticleCloud(geometry, defaulted, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    expect(a).toEqual(b);
+  });
+
+  it('a pre-existing preset missing dustPlacementContrast places identically to gamma 1, not NaN', () => {
+    // `dust.cloud` rides a preset's raw 'p' wire key with no per-field
+    // defaults-merge (unlike `GalaxyFieldTuning`'s `f` key, migrated through
+    // migrateGalaxyFieldTuningWire.ts) — a preset saved before this field
+    // existed loads `cloud.dustPlacementContrast` as `undefined`. Cast to
+    // simulate that shape past the type system's `readonly ...: number`.
+    const map = makeMap(1.3);
+    const { dustPlacementContrast: _drop, ...cloudWithoutGamma } = DEFAULT_GALAXY_DUST_PARAMS.cloud;
+    const staleParams = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...cloudWithoutGamma, count: 300 } as typeof DEFAULT_GALAXY_DUST_PARAMS.cloud,
+    };
+    const gammaOne = {
+      ...DEFAULT_GALAXY_DUST_PARAMS,
+      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
+    };
+    const stale = buildDustParticleCloud(geometry, staleParams, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    const seeded = buildDustParticleCloud(geometry, gammaOne, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    expect(stale.length).toBeGreaterThan(0);
+    for (const p of stale) expect(Number.isFinite(p.amplitude)).toBe(true);
+    expect(stale).toEqual(seeded);
+  });
+
+  it('tempers placement contrast — low gamma spreads across texels evenly, high gamma clumps onto the hottest', () => {
+    // Two well-separated texels at very different overshoot (0.1 vs 2.0):
+    // gamma < 1 compresses that 20:1 mass ratio toward parity, gamma > 1
+    // stretches it further apart. With clumpiness 0 every particle lands
+    // exactly in one texel's own footprint (the rest of the grid carries
+    // zero density regardless of gamma, since 0^gamma is 0), so classifying
+    // each particle by whichever of the two centres it's nearer to is exact,
+    // not a nearest-neighbour approximation.
+    const az = MAP_AZ;
+    const rings = MAP_RINGS;
+    const data = new Float32Array(rings * az * 4);
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 0.3; // gas
+      data[i + 1] = 0.2; // recentSf
+      data[i + 2] = 0.3; // activity
+      data[i + 3] = 1.0; // dust baseline: ambient, zero overshoot
+    }
+    const ringA = 4;
+    const azA = 4;
+    const ringB = 12;
+    const azB = 20; // opposite side of the disc from A
+    data[(ringA * az + azA) * 4 + 3] = 1.1; // 0.1 overshoot
+    data[(ringB * az + azB) * 4 + 3] = 3.0; // 2.0 overshoot
+    const map: GalaxySfMap = { az, rings, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
+
+    const dTheta = (2 * Math.PI) / az;
+    const centerOf = (ring: number, azIdx: number): { x: number; z: number } => {
+      const r = sfMapRingRadius(ring, rings, MAP_R_MIN, geometry.outerRadius);
+      const angle = (azIdx + 0.5) * dTheta;
+      return { x: Math.cos(angle) * r, z: Math.sin(angle) * r };
+    };
+    const a = centerOf(ringA, azA);
+    const b = centerOf(ringB, azB);
+    const countNearA = (components: readonly Pick<GalaxyFieldComponent, 'center'>[]): number =>
+      components.filter((c) => {
+        const distA = Math.hypot(c.center[0] - a.x, c.center[2] - a.z);
+        const distB = Math.hypot(c.center[0] - b.x, c.center[2] - b.z);
+        return distA < distB;
+      }).length;
+
+    const buildAtGamma = (dustPlacementContrast: number) => {
+      const dust = {
+        ...DEFAULT_GALAXY_DUST_PARAMS,
+        cloud: {
+          ...DEFAULT_GALAXY_DUST_PARAMS.cloud,
+          count: 3000,
+          clumpiness: 0,
+          dustPlacementContrast,
+        },
+      };
+      return buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 5, map, null);
+    };
+
+    const flattened = buildAtGamma(0.25);
+    const sharpened = buildAtGamma(2);
+    expect(flattened.length).toBeGreaterThan(0);
+    expect(sharpened.length).toBeGreaterThan(0);
+
+    // gamma=0.25 compresses the 20:1 overshoot ratio toward parity (~32% to
+    // A); gamma=2 stretches it further (~0.25% to A) — an order-of-magnitude
+    // gap either way, well clear of sampling noise at count=3000.
+    expect(countNearA(flattened)).toBeGreaterThan(countNearA(sharpened) * 5);
+  });
+
   it('zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {
     // makeMap's legacy channel (gas x activity) is busy/non-degenerate,
     // but its dust channel is a flat SF_MAP_AMBIENT_DUST (1.0) — no texel

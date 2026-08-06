@@ -218,8 +218,18 @@ export function buildDustParticleCloud(
     // long enough yet) leaves `placement` at its `smoothDisc` default instead
     // of dividing by ~0 — the SAME fallback an absent map takes, not a crash.
     if (meanOvershoot >= SWEPT_OVERSHOOT_MEAN_EPS) {
-      const density = (texel: SfMapDensityTexel): number =>
-        sweptDustOvershoot(texel) / meanOvershoot;
+      // Guard skips Math.pow on the (default) inert path — this callback runs
+      // per texel over the whole 1536x512 grid on every slider change.
+      // `?? 1`: `dust.cloud` rides the preset wire's raw 'p' key with no
+      // per-field defaults-merge (see dustParticleCloud.test.ts's preset-gap
+      // test), so a preset saved before this field existed loads it
+      // `undefined` — treat that exactly like gamma 1, not NaN.
+      const gamma = cloud.dustPlacementContrast ?? 1;
+      const density =
+        gamma === 1
+          ? (texel: SfMapDensityTexel): number => sweptDustOvershoot(texel) / meanOvershoot
+          : (texel: SfMapDensityTexel): number =>
+              Math.pow(sweptDustOvershoot(texel) / meanOvershoot, gamma);
       const cdf = buildSfMapDustCdf(map, density);
       if (cdf.total > 0) {
         placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };

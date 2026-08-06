@@ -34,4 +34,15 @@ export type GalaxyDustCloudParams = {
    * path (the shader skips it), 1 = full ratio, up to 2 extrapolates.
    */
   readonly mapDetail: number;
+  /**
+   * Exponent tempering the map-seeded placement CDF (`density = overshoot ^
+   * gamma`, dustParticleCloud.ts) — the swept-overshoot channel's mass
+   * concentrates in a few arm-lane texels, and iid CDF draws stack many
+   * complexes onto the same spot. 1 = today's proportional sampling
+   * (inert); <1 flattens toward an even spread across every nonzero-overshoot
+   * texel; >1 sharpens further. The SF-map "seeding" debug view
+   * (sfMapPresent.wesl) always shows the gamma=1 density — placement and
+   * that view intentionally diverge once gamma != 1.
+   */
+  readonly dustPlacementContrast: number;
 };
