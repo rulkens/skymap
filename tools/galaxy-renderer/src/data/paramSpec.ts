@@ -71,4 +71,11 @@ export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, Pa
   dustRing: { min: 0.4, max: 1.1, step: 0.02 },
   dustRingWidth: { min: 0.02, max: 0.4, step: 0.01 },
   dustRingStrength: { min: 0, max: 2, step: 0.05 },
+
+  // Not a spike knob at all — armStart doesn't exist there, unlike the four
+  // above which at least had a live `mk()` fallback. Same treatment as those
+  // four regardless: `SLIDER_ONLY_KEYS` skips it in `randomGalaxyParams`, so
+  // adding this range doesn't reroll the gallery's arm placement on the next
+  // randomize click.
+  armStart: { min: 0.3, max: 1.5, step: 0.05 },
 };

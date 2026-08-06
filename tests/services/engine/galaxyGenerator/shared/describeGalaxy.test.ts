@@ -86,4 +86,20 @@ describe('describeGalaxy', () => {
     const arms = describeGalaxy({ type, starCount: 100000, armCount: 4, armStrength: 1.5 }).arms;
     expect(arms.map((arm) => arm.weight)).toEqual(arms.map(() => 0));
   });
+
+  // armStart is a pure multiplier on armStartRadius applied after the
+  // existing max(...) derivation, so it must scale linearly and leave every
+  // other draw (which never reads params.armStart) untouched.
+  it('armStart scales armStartRadius, leaving the rest of the description alone', () => {
+    const params: GalaxyParams = { type: 'Sb', starCount: 100000, seed: 42 };
+    const base = describeGalaxy(params);
+    const halved = describeGalaxy({ ...params, armStart: 0.5 });
+    expect(halved.armStartRadius).toBeCloseTo(base.armStartRadius * 0.5);
+    expect({ ...halved, armStartRadius: base.armStartRadius }).toEqual(base);
+  });
+
+  it('an absent armStart is identical to armStart 1', () => {
+    const params: GalaxyParams = { type: 'SBb', starCount: 100000, seed: 7 };
+    expect(describeGalaxy(params)).toEqual(describeGalaxy({ ...params, armStart: 1 }));
+  });
 });

@@ -121,6 +121,14 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
   if (category !== 'irregular' && category !== 'elliptical') {
     specs.push({ key: 'diskThickness', label: 'Disk thickness' });
   }
+  if (category === 'spiral' || category === 'barred') {
+    specs.push({
+      key: 'armStart',
+      label: 'Arm start',
+      format: (v) => v.toFixed(2),
+      info: 'Multiplier on the derived arm start radius (bar/bulge-relative); below 1 pulls the arms inward toward the bulge.',
+    });
+  }
   if (category === 'spiral' || category === 'barred' || category === 'lenticular') {
     specs.push({ key: 'warpStrength', label: 'Disk warp' });
     specs.push({
@@ -142,6 +150,7 @@ const BULGE_DISC_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
   'bulgeSize',
   'bulgeFalloff',
   'diskThickness',
+  'armStart',
 ]);
 const WARP_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
   'warpStrength',

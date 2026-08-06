@@ -39,18 +39,21 @@ const TYPES: readonly string[] = [
   'Irr',
 ];
 
-// PARAM_SPEC carries four keys — hii, dustRing, dustRingWidth,
-// dustRingStrength — solely to give their sliders a range; the spike's own
-// randomizer looped over its 26-key `SPEC` table and never
-// touched any of the four. Skipping them here keeps the draw sequence for
-// the original 26 keys identical to before PARAM_SPEC grew these entries,
-// and leaves dustRing/dustRingWidth/dustRingStrength undefined in randomized
-// output (hii still gets its explicit category-dependent draw below).
+// PARAM_SPEC carries five keys — hii, dustRing, dustRingWidth,
+// dustRingStrength, armStart — solely to give their sliders a range; the
+// spike's own randomizer looped over its 26-key `SPEC` table and never
+// touched any of them (armStart didn't exist in the spike at all). Skipping
+// them here keeps the draw sequence for the original 26 keys identical to
+// before PARAM_SPEC grew these entries, and leaves dustRing/dustRingWidth/
+// dustRingStrength/armStart undefined in randomized output (hii still gets
+// its explicit category-dependent draw below; armStart's undefined means the
+// describeGalaxy point-of-use default of 1, unchanged from today).
 export const SLIDER_ONLY_KEYS = new Set<string>([
   'hii',
   'dustRing',
   'dustRingWidth',
   'dustRingStrength',
+  'armStart',
 ]);
 
 export function randomGalaxyParams(

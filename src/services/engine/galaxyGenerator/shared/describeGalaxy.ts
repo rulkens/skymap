@@ -233,10 +233,11 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     warpTwist: params.warpTwist ?? 0,
     warpStartRadius: outerRadius * (params.warpStart ?? 0.3),
     numArms,
-    armStartRadius: Math.max(
-      category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55,
-      bulgeRadius * 0.4,
-    ),
+    armStartRadius:
+      Math.max(
+        category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55,
+        bulgeRadius * 0.4,
+      ) * (params.armStart ?? 1),
     armInnerRampW: Math.max(bulgeRadius * 0.6, outerRadius * 0.14),
     armFullRadius,
     armWidthFactor: 0.1 * (params.armWidth ?? 1),

@@ -26,6 +26,7 @@
  * | armEdgeVar | 0 |
  * | armClump | 0.5 |
  * | armWave | 0 |
+ * | armStart | 1 (not a spike knob) |
  * | barStrength | 1 |
  * | barAngleDeg | unset = drawn from the main stream |
  * | armAges | unset = alternating derived from the asym stream (not a spike knob) |
@@ -82,6 +83,16 @@ export type GalaxyParams = {
   readonly armEdgeVar?: number;
   readonly armClump?: number;
   readonly armWave?: number;
+  /**
+   * Multiplier on `GalaxyDescription.armStartRadius`
+   * (`describeGalaxy.ts`'s `Math.max(category === 'barred' ? bar.barLength *
+   * 0.9 : bulgeRadius * 0.55, bulgeRadius * 0.4)`, itself off
+   * `bulgeRadius = outerRadius * 0.34 * bulgeSize`) — the only knob that
+   * moves where the arms begin. SHARED geometry: both v1 (sprites) and v2
+   * (analytic field) place arm material against `armStartRadius`, so this
+   * scales both at once. Absent means 1, today's derivation unchanged.
+   */
+  readonly armStart?: number;
   readonly barStrength?: number;
   /**
    * Bar position angle in DEGREES about the disc pole. Absent (the spike's
