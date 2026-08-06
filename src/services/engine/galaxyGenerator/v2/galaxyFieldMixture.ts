@@ -27,9 +27,11 @@ import {
   armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
+import { DEFAULT_GALAXY_DUST_PARAMS } from './defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS } from './defaultGalaxyIsmMapAutomatonParams';
 import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
 import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from './defaultGalaxyStarFormationParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
@@ -316,9 +318,8 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       elongation: 3,
     },
   },
-  dust: {
-    enabled: true,
-  },
+  dust: DEFAULT_GALAXY_DUST_PARAMS,
+  starFormation: DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
   hii: {
     enabled: true,
     brightness: 1,

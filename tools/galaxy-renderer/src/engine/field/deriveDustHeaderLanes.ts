@@ -68,9 +68,9 @@ export function deriveDustHeaderLanes(
           contrastExp: 1 / Math.max(dust.cloud.textureContrast, 1e-3),
         }
       : NO_NOISE,
-    // `?? 0` because a preset saved before `mapDetail` existed re-enters here
-    // through `currentDust()` unmerged with the default — see
-    // `createGalaxyModel.ts`'s `currentDust`.
+    // `?? 0` because `fieldTuning.dust`'s own defaults-fill is shallow: it
+    // fills holes in `dust` itself but takes `cloud` wholesale, so a preset
+    // saved before `mapDetail` existed still re-enters here `undefined`.
     detail: live ? (dust.cloud.mapDetail ?? 0) : 0,
   };
 }

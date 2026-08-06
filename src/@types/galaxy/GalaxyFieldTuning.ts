@@ -10,16 +10,20 @@
  */
 import type { GalaxyArmTuning } from './GalaxyArmTuning';
 import type { GalaxyDiscTuning } from './GalaxyDiscTuning';
-import type { GalaxyDustTuning } from './GalaxyDustTuning';
+import type { GalaxyDustParams } from './GalaxyDustParams';
 import type { GalaxyHiiTuning } from './GalaxyHiiTuning';
 import type { GalaxyIsmMapAutomatonParams } from './GalaxyIsmMapAutomatonParams';
 import type { GalaxyIsmMapFluidParams } from './GalaxyIsmMapFluidParams';
 import type { GalaxyIsmMapParams } from './GalaxyIsmMapParams';
+import type { GalaxyStarFormationParams } from './GalaxyStarFormationParams';
 
 export type GalaxyFieldTuning = {
   readonly disc: GalaxyDiscTuning;
   readonly arms: GalaxyArmTuning;
-  readonly dust: GalaxyDustTuning;
+  /** The dust tier's shape, cloud AND master toggle in one bag — formerly split across `p.dust` (shape) and this section's own `GalaxyDustTuning` (`enabled` alone). */
+  readonly dust: GalaxyDustParams;
+  /** The seeded SF-event model driving HII placement — formerly `p.starFormation`, scene-wide like every other section rather than per-galaxy. */
+  readonly starFormation: GalaxyStarFormationParams;
   readonly hii: GalaxyHiiTuning;
   /** Shared switch: which generator writes the ISM map, if any (`ismMap.generator`, `'none'` | `'automaton'` | `'fluid'`) — the ONLY branch point. */
   readonly ismMap: GalaxyIsmMapParams;

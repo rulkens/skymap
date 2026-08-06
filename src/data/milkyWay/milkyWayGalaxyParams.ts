@@ -10,8 +10,6 @@
  * the ones measured against the real Galaxy carry their derivation inline.
  */
 import type { GalaxyParams } from '../../@types/galaxy/GalaxyParams';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { MILKY_WAY_DISC_RADIUS_KPC } from './galacticCenter';
 
 /**
@@ -95,17 +93,13 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   radius: 1.05,
   starCount: 75000,
   seed: MILKY_WAY_GENERATION_SEED,
-  // MW DIVERGENCES ONLY — everything unstated rides in from the shared
-  // defaults by spread/reference, so retuning a default reaches this preset
-  // without a second edit. A restated copy of the cloud block drifted
-  // exactly that way once (clumpiness 0.6 outliving the zeroed default,
-  // masquerading as the default because the tool boots into this preset);
-  // add a field here only with an MW-specific derivation on it.
-  dust: {
-    ...DEFAULT_GALAXY_DUST_PARAMS,
-    // The MW's dust layer is notably thin: ~100–134 pc scale height vs the
-    // ~314 pc stellar sigma (Drimmel & Spergel 2001; Misiriotis et al. 2006).
-    heightRatio: 0.35,
-  },
-  starFormation: DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
 };
+
+// UNRESOLVED (2026-08-06 dust/starFormation reshape): this preset used to
+// carry one MW divergence past the shared defaults, `dust.heightRatio: 0.35`
+// (~100-134 pc scale height vs the ~314 pc stellar sigma; Drimmel & Spergel
+// 2001, Misiriotis et al. 2006) — dropped here rather than silently lost,
+// since `dust` moved onto `GalaxyFieldTuning`, which is scene-wide and
+// unkeyed by which preset/galaxy is loaded (no per-preset fieldTuning
+// mechanism exists in the app or the tool). Needs a follow-up, not an
+// invented mechanism.

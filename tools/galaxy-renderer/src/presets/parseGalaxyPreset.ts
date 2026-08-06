@@ -5,8 +5,10 @@
  * non-object (empty bag) — deliberate, this file has never had a validation
  * framework, so a malformed nested value still reaches the store as-is. `f`
  * is additionally routed through `migrateGalaxyFieldTuningWire` to lift a v2
- * file's flat keys into v3's nested-by-section shape. `r` splits back into
- * `render`/`lod` by key: `lodApparent` is the only `LodSettings` field.
+ * file's flat keys into v3's nested-by-section shape, AND (passing `p`
+ * alongside) an even older preset's `dust`/`starFormation` off `p` itself —
+ * see that function's header. `r` splits back into `render`/`lod` by key:
+ * `lodApparent` is the only `LodSettings` field.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
@@ -50,7 +52,7 @@ export function parseGalaxyPreset(json: string): {
     p: parsed.p as Partial<GalaxyParams>,
     r: render as Partial<RenderSettings>,
     lod: lod as Partial<LodSettings>,
-    f: isPlainObject(parsed.f) ? migrateGalaxyFieldTuningWire(parsed.f) : {},
+    f: migrateGalaxyFieldTuningWire(isPlainObject(parsed.f) ? parsed.f : {}, parsed.p),
     x: (isPlainObject(parsed.x) ? parsed.x : {}) as Partial<Pick<ExtrasState, 'enabled' | 'count'>>,
   };
 }

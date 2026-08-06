@@ -170,7 +170,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.ismMap).toEqual({ generator: 'none' });
   });
 
-  it('drops the retired `dust.sfMapSeeding`, keeping the rest of the section', () => {
+  it('drops the retired `dust.sfMapSeeding`, keeping `enabled` and filling the rest from defaults', () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',
       version: 3,
@@ -180,7 +180,61 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.dust).toEqual({ enabled: false });
+    // `dust` is now the FULL merged section (shape + `enabled`), so an old
+    // preset naming only `enabled` (the pre-reshape `GalaxyDustTuning` shape)
+    // still gates the tier, with tau/scaleLenRatio/etc. filled from defaults —
+    // see `migrateGalaxyFieldTuningWire`'s `liftLegacyParamSections` header.
+    expect(parsed?.f?.dust).toEqual({ ...DEFAULT_GALAXY_FIELD_TUNING.dust, enabled: false });
+  });
+
+  // `dust`/`starFormation` moved off `p` (`GalaxyParams`) onto `f`
+  // (`GalaxyFieldTuning`) in the 2026-08-06 reshape; every preset saved
+  // before then carries them on `p` instead, sometimes alongside an `f.dust`
+  // that named only the pre-reshape `GalaxyDustTuning` shape (`{ enabled }`).
+  it('lifts a legacy preset’s p.dust/p.starFormation onto f, filling the rest from defaults', () => {
+    const legacyDust = {
+      tau: 2.5,
+      scaleLenRatio: 1.6,
+      heightRatio: 0.5,
+      rV: 3.0,
+      cloud: DEFAULT_GALAXY_FIELD_TUNING.dust.cloud,
+    };
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: { ...DEFAULT_GALAXY_PARAMS, dust: legacyDust, starFormation: { sfActivity: 1.8 } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    // No `enabled` on the legacy `p.dust` and no `f.dust` at all, so it
+    // defaults true, same as every other never-touched section.
+    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: true });
+    expect(parsed?.f?.starFormation).toEqual({ sfActivity: 1.8 });
+  });
+
+  it("keeps a legacy preset's own f.dust.enabled over the lifted p.dust shape (the two-bags-for-one-tier split)", () => {
+    const legacyDust = {
+      tau: 2.5,
+      scaleLenRatio: 1.6,
+      heightRatio: 0.5,
+      rV: 3.0,
+      cloud: DEFAULT_GALAXY_FIELD_TUNING.dust.cloud,
+    };
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: { ...DEFAULT_GALAXY_PARAMS, dust: legacyDust },
+      f: { dust: { enabled: false } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    // The realistic old-preset shape: `f.dust` (the master toggle, old
+    // `GalaxyDustTuning`) and `p.dust` (the shape) both present at once —
+    // `enabled` comes from `f`, everything else survives from `p` rather
+    // than being discarded for a generic default.
+    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: false });
   });
 
   it("lifts a legacy `hii.sfMapSeeding` onto `ismMapSeeding` so the field's value survives the rename", () => {

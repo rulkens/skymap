@@ -35,41 +35,49 @@
 import type { AppStore } from './createStore';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
 
 const COMPARE_OPEN_INSET_PX = 390;
 const COMPARE_CLOSED_INSET_PX = 0;
 const REFERENCE_INSET_PX = 340; // the reference thumbnail strip, constant regardless of open/closed
 
-// DUST (LEGACY) / DUST CLOUD pill gates: both patch the OUTGOING copy handed
-// to the engine, never the stored `galaxy` params — toggling a pill back on
-// must restore exactly the values the sliders still show while it was off.
+// DUST (LEGACY) pill: patches the OUTGOING copy handed to the engine, never
+// the stored `galaxy` params — toggling it back on must restore exactly the
+// values the sliders still show while it was off.
 function paramsForEngine(galaxy: GalaxyParams, render: RenderSettings): GalaxyParams {
-  let out = galaxy;
-  if (!render.legacyDustEnabled) out = { ...out, spriteDust: 0, dustRingStrength: 0 };
-  if (!render.dustCloudEnabled) {
-    const dust = out.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
-    out = { ...out, dust: { ...dust, cloud: { ...dust.cloud, count: 0 } } };
-  }
-  return out;
+  if (!render.legacyDustEnabled) return { ...galaxy, spriteDust: 0, dustRingStrength: 0 };
+  return galaxy;
 }
 
 /**
- * The same pill gates, applied to every background extra. Extras carry their
+ * The legacy-dust pill, applied to every background extra. Extras carry their
  * own randomly-drawn `GalaxyParams` and never pass through `paramsForEngine`,
  * so without this they keep rendering legacy sprite dust after the pill turns
  * it off — the scatter and the hero galaxy visibly disagree about what dust
- * is. Extras have no analytic dust of their own yet (it is primary-gated in
- * splat.wesl), so with the legacy pill off they currently render dustless.
+ * is.
  */
 function extrasForEngine(
   specs: readonly ExtraGalaxySpec[],
   render: RenderSettings,
 ): ExtraGalaxySpec[] {
   return specs.map((spec) => ({ ...spec, params: paramsForEngine(spec.params, render) }));
+}
+
+/**
+ * DUST CLOUD pill: same "patch the outgoing copy, never the stored state"
+ * idiom as `paramsForEngine`, now on `fieldTuning` since the tier moved off
+ * `galaxy.dust` — one gate for the whole scene (central galaxy AND every
+ * extra alike) rather than a per-`GalaxyParams` patch repeated per extra.
+ */
+function fieldTuningForEngine(
+  tuning: GalaxyFieldTuning,
+  render: RenderSettings,
+): GalaxyFieldTuning {
+  if (render.dustCloudEnabled) return tuning;
+  return { ...tuning, dust: { ...tuning.dust, cloud: { ...tuning.dust.cloud, count: 0 } } };
 }
 
 export function connectEngineBridge(
@@ -84,7 +92,7 @@ export function connectEngineBridge(
   // Initial sync — the boot render, fired immediately like every other
   // reaction below.
   engine.setRender({ ...prev.render, ...prev.lod });
-  engine.setFieldTuning(prev.fieldTuning);
+  engine.setFieldTuning(fieldTuningForEngine(prev.fieldTuning, prev.render));
   engine.setInsets(
     prev.compare.open ? COMPARE_OPEN_INSET_PX : COMPARE_CLOSED_INSET_PX,
     REFERENCE_INSET_PX,
@@ -97,8 +105,7 @@ export function connectEngineBridge(
 
     if (
       next.galaxy !== prev.galaxy ||
-      next.render.legacyDustEnabled !== prev.render.legacyDustEnabled ||
-      next.render.dustCloudEnabled !== prev.render.dustCloudEnabled
+      next.render.legacyDustEnabled !== prev.render.legacyDustEnabled
     ) {
       void engine.setParams(paramsForEngine(next.galaxy, next.render));
     }
@@ -107,8 +114,11 @@ export function connectEngineBridge(
       engine.setRender({ ...next.render, ...next.lod });
     }
 
-    if (next.fieldTuning !== prev.fieldTuning) {
-      engine.setFieldTuning(next.fieldTuning);
+    if (
+      next.fieldTuning !== prev.fieldTuning ||
+      next.render.dustCloudEnabled !== prev.render.dustCloudEnabled
+    ) {
+      engine.setFieldTuning(fieldTuningForEngine(next.fieldTuning, next.render));
     }
 
     if (next.ui.autoRotate !== prev.ui.autoRotate) {

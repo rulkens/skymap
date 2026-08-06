@@ -249,10 +249,11 @@ export function buildDustParticleCloud(
     // default instead of dividing by ~0 — the SAME fallback an absent map
     // takes, not a crash.
     if (globalMean >= GLOBAL_MEAN_EPS) {
-      // `?? 0`: `dust.cloud` rides the preset wire's raw 'p' key with no
-      // per-field defaults-merge (see dustParticleCloud.test.ts's preset-gap
-      // test), so a preset saved before this field existed loads it
-      // `undefined` — treat that exactly like "uncapped" (cap 0), not NaN.
+      // `?? 0`: `fieldTuning.dust`'s own defaults-fill (`migrateGalaxyFieldTuningWire`)
+      // is SHALLOW — it fills holes in `dust` itself, but `cloud` is taken
+      // wholesale, so a hole inside IT (a preset saved before this field
+      // existed) still loads `undefined` (see dustParticleCloud.test.ts's
+      // preset-gap test) — treat that exactly like "uncapped" (cap 0), not NaN.
       // Multiples of the texel's OWN ring mean, not the global mean — see
       // the field's own doc (GalaxyDustCloudParams) for the starvation
       // problem this solves.

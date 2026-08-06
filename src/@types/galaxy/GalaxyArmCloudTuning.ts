@@ -5,7 +5,7 @@
  */
 export type GalaxyArmCloudTuning = {
   /**
-   * Master toggle for the tier — the same role `GalaxyDustTuning.enabled`
+   * Master toggle for the tier — the same role `GalaxyDustParams.enabled`
    * plays for the dust cloud. Off skips the sprites and their
    * component-budget reservation, and hands `share` back to the ridge chain:
    * the arms' total light is the disc's either way, so this changes the arms'

@@ -1,8 +1,8 @@
 /**
- * DustCloudSection — the volumetric particle cloud (`GalaxyParams.dust.cloud`,
- * thousands of small GMC-scale Gaussians giving the dust clumpy, parallaxing
- * depth) — the galaxy's ONLY dust tier. Same nested-patch idiom as
- * `DustSection`: `params.dust.cloud` needs
+ * DustCloudSection — the volumetric particle cloud
+ * (`GalaxyFieldTuning.dust.cloud`, thousands of small GMC-scale Gaussians
+ * giving the dust clumpy, parallaxing depth) — the galaxy's ONLY dust tier.
+ * Same nested-patch idiom as `DustSection`: `fieldTuning.dust.cloud` needs
  * its own spreading handler rather than the generic single-value slider
  * path. The header pill is `render.dustCloudEnabled` (`ControlsPanel` owns
  * the dispatch, `DustSection`'s `render.legacyDustEnabled` pattern) rather
@@ -11,9 +11,8 @@
  */
 import type { ReactNode } from 'react';
 import type { GalaxyDustCloudParams } from '../../../../../src/@types/galaxy/GalaxyDustCloudParams';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
-import { paramsPatched } from '../../state/slices/galaxySlice';
+import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
@@ -22,14 +21,13 @@ import styles from './DustCloudSection.module.css';
 
 function DustCloudSection(): ReactNode {
   const dispatch = useAppDispatch();
-  const galaxy = useAppSelector((state) => state.galaxy);
+  const dust = useAppSelector((state) => state.fieldTuning.dust);
   const render = useAppSelector((state) => state.render);
   const open = useAppSelector((state) => state.ui.openSections.dustCloud);
-  const dust = galaxy.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
   const cloud = dust.cloud;
 
   const patchCloud = (patch: Partial<GalaxyDustCloudParams>): void => {
-    dispatch(paramsPatched({ dust: { ...dust, cloud: { ...cloud, ...patch } } }));
+    dispatch(fieldTuningPatched({ dust: { ...dust, cloud: { ...cloud, ...patch } } }));
   };
 
   return (
@@ -40,7 +38,7 @@ function DustCloudSection(): ReactNode {
       headerToggle={render.dustCloudEnabled}
       onHeaderToggleChange={(value) => dispatch(renderPatched({ dustCloudEnabled: value }))}
       copyPayload={{
-        galaxy: { dust: { cloud } },
+        fieldTuning: { dust: { cloud } },
         render: { dustCloudEnabled: render.dustCloudEnabled },
       }}
     >
@@ -53,7 +51,7 @@ function DustCloudSection(): ReactNode {
           step={500}
           format={(v) => String(Math.round(v))}
           onChange={(v) => patchCloud({ count: Math.round(v) })}
-          path="galaxy.dust.cloud.count"
+          path="fieldTuning.dust.cloud.count"
           info="Particle budget for the volumetric dust cloud. 0 disables it."
         />
         <ParamSlider
@@ -64,7 +62,7 @@ function DustCloudSection(): ReactNode {
           step={5}
           format={(v) => v.toFixed(0)}
           onChange={(v) => patchCloud({ sizeFloorPc: v })}
-          path="galaxy.dust.cloud.sizeFloorPc"
+          path="fieldTuning.dust.cloud.sizeFloorPc"
           info="Low end of the GMC size sampler. Measured clouds start at 15 pc; raising it trades per-cloud darkness for coverage, since the total column is renormalised."
         />
         <ParamSlider
@@ -75,7 +73,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ sizeScale: v })}
-          path="galaxy.dust.cloud.sizeScale"
+          path="fieldTuning.dust.cloud.sizeScale"
           info="Multiplier on the GMC size range each particle is drawn from."
         />
         <ParamSlider
@@ -86,7 +84,7 @@ function DustCloudSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => patchCloud({ elongation: v })}
-          path="galaxy.dust.cloud.elongation"
+          path="fieldTuning.dust.cloud.elongation"
           info="sigma_along / sigma_across at full filament coherence — map-seeded clouds run round (coherence 0) up to this aspect (coherence 1), area-preserving."
         />
         <ParamSlider
@@ -97,7 +95,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ heightRatio: v })}
-          path="galaxy.dust.cloud.heightRatio"
+          path="fieldTuning.dust.cloud.heightRatio"
           info="Cloud layer sigma_z as a ratio of the flat dust layer's own sigma_z."
         />
         <ParamSlider
@@ -108,7 +106,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ texture: v })}
-          path="galaxy.dust.cloud.texture"
+          path="fieldTuning.dust.cloud.texture"
           info="0 = smooth analytic ellipsoids, higher = clouds eroded into wispy filaments by the baked noise volume."
         />
         <ParamSlider
@@ -119,7 +117,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ textureScale: v })}
-          path="galaxy.dust.cloud.textureScale"
+          path="fieldTuning.dust.cloud.textureScale"
           info="Multiplier on the noise volume's world-space tile size."
         />
         <ParamSlider
@@ -130,7 +128,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ textureContrast: v })}
-          path="galaxy.dust.cloud.textureContrast"
+          path="fieldTuning.dust.cloud.textureContrast"
           info="Shapes the noise about its midpoint, so higher values harden filament edges while leaving the mean — and the tier's share of the optical depth — unchanged."
         />
         <ParamSlider
@@ -141,7 +139,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ mapDetail: v })}
-          path="galaxy.dust.cloud.mapDetail"
+          path="fieldTuning.dust.cloud.mapDetail"
           info="S4: modulates each cloud's column by the ISM map's detail ratio at accumulation, per splat (parallax-correct, column-preserving vertical noise breakup). 0 disables the path entirely; 1 = full ratio."
         />
         <ParamSlider
@@ -152,7 +150,7 @@ function DustCloudSection(): ReactNode {
           step={0.25}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ dustPlacementCap: v })}
-          path="galaxy.dust.cloud.dustPlacementCap"
+          path="fieldTuning.dust.cloud.dustPlacementCap"
           info="Caps how much more likely the densest texel in a ring is vs that ring's own mean; 0 = uncapped. Never touches the radial dust profile — only redistributes mass within a ring."
         />
       </div>

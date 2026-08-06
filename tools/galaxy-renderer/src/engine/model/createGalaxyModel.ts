@@ -37,8 +37,6 @@ import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy
 import { createGenerationPipelines } from '../../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import type { OrientationDeltaStats } from '../../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import {
   buildDustBubblePlacements,
   buildHiiCavityPlacements,
@@ -85,9 +83,11 @@ import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldU
  * A single generated extra galaxy. The UBO is retained rather than destroyed
  * right after the generation submit, so its lifetime brackets the vertex
  * buffers it produced; the whole triple is torn down together on the next
- * `setExtras`. `fieldGeometry`/`transform`/`starFormation` are cached for the
- * same reason the central galaxy's are — `setFieldTuning` rebuilds this
- * extra's world-space mixtures off them, with no regenerate.
+ * `setExtras`. `fieldGeometry`/`transform` are cached for the same reason the
+ * central galaxy's are — `setFieldTuning` rebuilds this extra's world-space
+ * mixtures off them, with no regenerate. No per-extra `starFormation` any
+ * more: the tier moved onto `GalaxyFieldTuning`, so every extra now reads the
+ * SAME scene-wide `currentStarFormation()` the central galaxy does.
  */
 type Extra = {
   starBuf: GPUBuffer;
@@ -97,7 +97,6 @@ type Extra = {
   ubo: GPUBuffer;
   fieldGeometry: GalaxyDescription;
   transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
-  starFormation: GalaxyStarFormationParams;
   fieldMixture: readonly GalaxyFieldComponent[];
   /** This extra's own HII tier — see `hiiComps` for why it rides a separate buffer from `fieldMixture`. */
   hiiMixture: readonly GalaxyFieldComponent[];
@@ -263,18 +262,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // a follow-up with zero rework, since the packed layout already carries
   // per-galaxy dustOffset/dustCount.
   let dustMixture: readonly GalaxyFieldComponent[] = [];
-  // What `setParams` was last handed. Every rebuild below reads it through the
-  // accessors rather than caching a field of its own, so none can go stale
-  // against this one.
+  // What `setParams` was last handed — only `seed` still comes off it; dust
+  // and starFormation moved onto `fieldTuning` (scene-wide, not per-galaxy).
   let lastParams: GalaxyParams | null = null;
-  const currentDust = (): GalaxyDustParams => lastParams?.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
-  const currentStarFormation = (): GalaxyStarFormationParams =>
-    lastParams?.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
+  const currentDust = (): GalaxyDustParams => fieldTuning.dust;
+  const currentStarFormation = (): GalaxyStarFormationParams => fieldTuning.starFormation;
   const currentSeed = (): number => normalizeGenerationSeed(lastParams?.seed);
   // Cached, not recomputed per frame: the field header reads all three every
   // frame, but they only change when `rebuildDustMixture` runs. Seeded at the
   // no-galaxy answer, which is what the first frames draw.
-  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
+  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_FIELD_TUNING.dust, false);
   // How the last `repackFieldComponents` concatenation sliced `fieldComps`.
   let fieldCounts: FieldSliceCounts = { emission: 0, primary: 0, dust: 0 };
   // The seeding debug view's own global mean, cached at the ismMap readback
@@ -676,6 +673,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   //   disc          -> field mixture
   //   arms          -> field mixture, HII tier, bubble overlay
   //   hii           -> HII tier, bubble overlay
+  //   starFormation -> HII tier, bubble overlay (same path as hii, above)
   //   dust          -> dust mixture + the header's dust lanes
   //   ismMap         -> the shared enabled/generator switch
   //   ismMapAutomaton -> the automaton, only while it is the active generator
@@ -698,7 +696,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // would rebuild HII's ~O(rings x az x arms) CDF sweep on an arm-cloud drag
     // that cannot change its output.
     const armsWidthMoved = prev.arms.widthScale !== fieldTuning.arms.widthScale;
-    const hiiMoved = armsWidthMoved || prev.hii !== fieldTuning.hii;
+    // `starFormation` feeds `hiiMixtureOf` alone (dust reads no starFormation
+    // at all — `buildDustParticleCloud` takes no such argument), so it joins
+    // `hiiMoved` rather than getting its own flag.
+    const starFormationMoved = prev.starFormation !== fieldTuning.starFormation;
+    const hiiMoved = armsWidthMoved || starFormationMoved || prev.hii !== fieldTuning.hii;
     const dustMoved = prev.dust !== fieldTuning.dust;
 
     if (fieldMoved || hiiMoved) {
@@ -712,7 +714,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         ...e,
         fieldMixture: fieldMoved ? fieldMixtureOf(e.fieldGeometry, e.transform) : e.fieldMixture,
         hiiMixture: hiiMoved
-          ? hiiMixtureOf(e.fieldGeometry, e.starFormation, null, e.transform)
+          ? hiiMixtureOf(e.fieldGeometry, currentStarFormation(), null, e.transform)
           : e.hiiMixture,
       }));
     }
@@ -813,11 +815,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         rotY: spec.rotY,
         tiltX: spec.tiltX,
       };
-      // This extra's OWN draw (`randomGalaxyParams` rolls `sfActivity` per
-      // galaxy), never the shared default — the tier is what makes one
-      // background galaxy read as more actively star-forming than the next.
-      const starFormation = spec.params.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
-
       extras.push({
         starBuf: generated.starBuf,
         starCount: generated.starCount,
@@ -826,9 +823,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         ubo,
         fieldGeometry: generated.geometry,
         transform,
-        starFormation,
         fieldMixture: fieldMixtureOf(generated.geometry, transform),
-        hiiMixture: hiiMixtureOf(generated.geometry, starFormation, null, transform),
+        hiiMixture: hiiMixtureOf(generated.geometry, currentStarFormation(), null, transform),
       });
     }
     device.queue.submit([enc.finish()]);

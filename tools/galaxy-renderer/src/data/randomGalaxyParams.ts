@@ -11,12 +11,7 @@
  * package, model layer included: never own your own entropy source.
  */
 
-import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
-import { DEFAULT_GALAXY_DUST_CLOUD_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustCloudParams';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { PARAM_SPEC } from './paramSpec';
 import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 
@@ -88,36 +83,10 @@ export function randomGalaxyParams(
   const clumpSeed = (rng() * 1e9) | 0;
   const waveSeed = (rng() * 1e9) | 0;
 
-  // The randomizer stays inside the MEASURED ranges (GalaxyDustParams'
-  // docblock); the sliders' wider spans exist for exploration, not for this
-  // draw.
-  const dust: GalaxyDustParams = {
-    ...DEFAULT_GALAXY_DUST_PARAMS,
-    tau: 0.2 + rng() * 0.8,
-    scaleLenRatio: 1.4 + rng() * 0.35,
-    heightRatio: 0.25 + rng() * 0.5,
-    // R_V is a real galaxy-to-galaxy dust-grain property (unlike the taste
-    // scalers below, left fixed) — spans diffuse-ISM to dense-cloud MW-like
-    // sightlines (2.4-4.0), short of SMC/starburst territory.
-    rV: 2.4 + rng() * 1.6,
-    cloud: {
-      ...DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
-      // Only the knobs that read as a galaxy's own ISM character get rolled:
-      // how richly it is resolved into clouds, how large its complexes run,
-      // and how eroded their silhouettes are. The rest are taste scalers,
-      // left at their calibrated value. Clumpiness stays at the default 0 —
-      // any scatter around the seed points re-blurs the map-exact placement
-      // (see dustParticleCloud.ts's mapDensity comment).
-      count: Math.round(6000 + rng() * 12000),
-      sizeScale: 0.7 + rng() * 0.9,
-      texture: 0.4 + rng() * 0.6,
-    },
-  };
-
-  const starFormation: GalaxyStarFormationParams = {
-    ...DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-    sfActivity: 0.3 + rng() * 1.7,
-  };
-
-  return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed, dust, starFormation };
+  // No dust/starFormation draw any more: both moved onto `GalaxyFieldTuning`
+  // (2026-08-06 reshape), which is scene-wide rather than per-galaxy, so a
+  // "randomize this galaxy" click has nothing left to roll for either — every
+  // background extra now shares the one scene-wide look instead of rolling
+  // its own.
+  return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed };
 }

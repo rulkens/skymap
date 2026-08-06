@@ -49,15 +49,7 @@
  * | asymSeed | `((asymSeed\|0) \|\| 331) >>> 0` |
  * | clumpSeed | 911 |
  * | waveSeed | 777 |
- *
- * The nested groups — `dust` (the analytic dust-lane section) and
- * `starFormation` — have no row above: absent means the point-of-use default,
- * `DEFAULT_GALAXY_DUST_PARAMS` / `DEFAULT_GALAXY_STAR_FORMATION_PARAMS`, not
- * a spike knob.
  */
-
-import type { GalaxyDustParams } from './GalaxyDustParams';
-import type { GalaxyStarFormationParams } from './GalaxyStarFormationParams';
 
 export type GalaxyParams = {
   /** Hubble type: 'Sa'..'Sc', 'SBa'..'SBc', 'E0'..'E7', 'S0', 'Irr'. */
@@ -115,8 +107,8 @@ export type GalaxyParams = {
   readonly metallicity?: number;
   readonly hii?: number;
   /**
-   * Legacy sprite-generator dust density. Renamed off the bare `dust` name
-   * so the analytic dust-lane section below can own it instead.
+   * Legacy sprite-generator dust density. Renamed off the bare `dust` name,
+   * which now names `GalaxyFieldTuning.dust` (the analytic dust lane) instead.
    */
   readonly spriteDust?: number;
   readonly dustNoise?: number;
@@ -124,10 +116,6 @@ export type GalaxyParams = {
   readonly dustRing?: number;
   readonly dustRingWidth?: number;
   readonly dustRingStrength?: number;
-  /** Analytic dust lane. Absent means `DEFAULT_GALAXY_DUST_PARAMS` (point of use). */
-  readonly dust?: GalaxyDustParams;
-  /** Seeded SF-event model. Absent means `DEFAULT_GALAXY_STAR_FORMATION_PARAMS` (point of use). */
-  readonly starFormation?: GalaxyStarFormationParams;
   readonly globularCount?: number;
   readonly globularSize?: number;
   readonly globularBright?: number;

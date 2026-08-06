@@ -2,14 +2,17 @@
  * migrateGalaxyFieldTuningWire — lifts a v2 preset's FLAT `f` keys into their
  * v3 nested homes, retires the two dead boolean gates the three-state
  * generator dropdown replaced (`sfMap.enabled`, `dust.sfMapSeeding` — see
- * `GalaxyIsmMapGeneratorKind`), AND lifts the pre-ISM-rename `sfMap*` wire
- * spellings onto their `ismMap*` homes. Exists because presets already saved
- * carry the old shapes forever; `parseGalaxyPreset` routes every `f` through
- * this before handing it to the store. Total, per this parser's
- * no-validation contract (see `parseGalaxyPreset`'s header). A section is
- * emitted only when the payload actually named one of its keys, so an absent
- * section stays absent — which is what makes loading a partial preset leave
- * the rest of the tuning alone.
+ * `GalaxyIsmMapGeneratorKind`), lifts the pre-ISM-rename `sfMap*` wire
+ * spellings onto their `ismMap*` homes, AND lifts `dust`/`starFormation` off
+ * an even older preset's `p` (`GalaxyParams` dropped both fields — see
+ * `GalaxyFieldTuning`'s header). Exists because presets already saved carry
+ * the old shapes forever; `parseGalaxyPreset` routes every `f` (plus its own
+ * `p`, for the `legacyParams` lift) through this before handing it to the
+ * store. Total, per this parser's no-validation contract (see
+ * `parseGalaxyPreset`'s header). A section is emitted only when the payload
+ * actually named one of its keys (on `f` OR, for `dust`/`starFormation`, on
+ * legacy `p`), so an absent section stays absent — which is what makes
+ * loading a partial preset leave the rest of the tuning alone.
  */
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
@@ -18,6 +21,7 @@ const SECTION_KEYS = [
   'disc',
   'arms',
   'dust',
+  'starFormation',
   'hii',
   'ismMap',
   'ismMapAutomaton',
@@ -90,8 +94,34 @@ function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
   return rest;
 }
 
+/**
+ * `dust`/`starFormation` used to live on `p` (`GalaxyParams`), with `dust`
+ * additionally split against this section's own `enabled`-only bag (the old
+ * `GalaxyDustTuning`) — a REAL preset from that era names both at once. The
+ * lifted `p` shape is the base and `raw`'s own `f.dust`/`f.starFormation`
+ * (whatever it named, historically just `enabled`) wins per-key over it, so
+ * an old preset's tuned tau/scaleLenRatio/etc. survive rather than being
+ * discarded in favour of a generic default. Runs before the defaults-fill
+ * pass below, same ordering requirement as `migrateIsmMap`.
+ */
+const LIFT_FROM_PARAMS_KEYS = ['dust', 'starFormation'] as const;
+
+function liftLegacyParamSections(
+  out: Record<string, unknown>,
+  legacyParams: Record<string, unknown> | undefined,
+): void {
+  if (!legacyParams) return;
+  for (const key of LIFT_FROM_PARAMS_KEYS) {
+    const fromParams = legacyParams[key];
+    if (typeof fromParams !== 'object' || fromParams === null) continue;
+    const fromRaw = out[key] as Record<string, unknown> | undefined;
+    out[key] = { ...(fromParams as Record<string, unknown>), ...fromRaw };
+  }
+}
+
 export function migrateGalaxyFieldTuningWire(
   raw: Record<string, unknown>,
+  legacyParams?: Record<string, unknown>,
 ): Partial<GalaxyFieldTuning> {
   const out: Record<string, unknown> = {};
   for (const key of SECTION_KEYS) {
@@ -111,6 +141,8 @@ export function migrateGalaxyFieldTuningWire(
     }
     node[path[path.length - 1]!] = raw[flatKey];
   }
+
+  liftLegacyParamSections(out, legacyParams);
 
   if (out.ismMap) out.ismMap = migrateIsmMap(out.ismMap as Record<string, unknown>);
   if (out.dust) out.dust = migrateDust(out.dust as Record<string, unknown>);
