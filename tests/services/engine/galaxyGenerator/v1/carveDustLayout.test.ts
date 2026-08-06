@@ -18,12 +18,12 @@ import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams
 describe('carveDustLayout', () => {
   it('Sc default params: armDust iterations = floor(30000*spriteDust/grainScale^2) (the budget, not the candidate cap)', () => {
     const category: GalaxyCategory = 'spiral';
-    const params: GalaxyParams = { type: 'Sc', starCount: 400000 };
+    const params: GalaxyParams = { type: 'Sc', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
     const g = grainScale(budget.totalStars);
-    const dustAmount = params.spriteDust ?? 1;
+    const dustAmount = params.legacy?.spriteDust ?? 1;
     // Resample-to-budget: one output slot per budgeted particle, no min() cap
     // against armStarCount — the GPU resamples the candidate space per slot.
     const expected = Math.floor((30000 * dustAmount) / (g * g));
@@ -35,7 +35,11 @@ describe('carveDustLayout', () => {
 
   it('armDust is gated on armStarCount > 0: armStrength 0 leaves a spiral with no dust ranges', () => {
     const category: GalaxyCategory = 'spiral';
-    const params: GalaxyParams = { type: 'Sc', starCount: 400000, armStrength: 0 };
+    const params: GalaxyParams = {
+      type: 'Sc',
+      shared: {},
+      legacy: { starCount: 400000, armStrength: 0 },
+    };
     const budget = splitStarBudget(category, params);
     expect(budget.armStarCount).toBe(0);
 
@@ -44,14 +48,22 @@ describe('carveDustLayout', () => {
   });
 
   it('elliptical or spriteDust 0 gives an empty layout with capacity 0', () => {
-    const paramsZeroDust: GalaxyParams = { type: 'Sc', starCount: 400000, spriteDust: 0 };
+    const paramsZeroDust: GalaxyParams = {
+      type: 'Sc',
+      shared: {},
+      legacy: { starCount: 400000, spriteDust: 0 },
+    };
     const budgetZeroDust = splitStarBudget('spiral', paramsZeroDust);
     expect(carveDustLayout('spiral', paramsZeroDust, budgetZeroDust)).toEqual({
       ranges: [],
       capacity: 0,
     });
 
-    const paramsElliptical: GalaxyParams = { type: 'E3', starCount: 400000 };
+    const paramsElliptical: GalaxyParams = {
+      type: 'E3',
+      shared: {},
+      legacy: { starCount: 400000 },
+    };
     const budgetElliptical = splitStarBudget('elliptical', paramsElliptical);
     expect(carveDustLayout('elliptical', paramsElliptical, budgetElliptical)).toEqual({
       ranges: [],
@@ -61,7 +73,11 @@ describe('carveDustLayout', () => {
 
   it('S0 with dustRingStrength 0 has only the nuclear range', () => {
     const category: GalaxyCategory = 'lenticular';
-    const params: GalaxyParams = { type: 'S0', starCount: 400000, dustRingStrength: 0 };
+    const params: GalaxyParams = {
+      type: 'S0',
+      shared: {},
+      legacy: { starCount: 400000, dustRingStrength: 0 },
+    };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
@@ -70,7 +86,11 @@ describe('carveDustLayout', () => {
 
   it('S0 with dustRingStrength 0.5 adds the ring range with floor(34000*0.5/g^2) iterations', () => {
     const category: GalaxyCategory = 'lenticular';
-    const params: GalaxyParams = { type: 'S0', starCount: 400000, dustRingStrength: 0.5 };
+    const params: GalaxyParams = {
+      type: 'S0',
+      shared: {},
+      legacy: { starCount: 400000, dustRingStrength: 0.5 },
+    };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
@@ -86,7 +106,7 @@ describe('carveDustLayout', () => {
 
   it('SBb has armDust then barDust', () => {
     const category: GalaxyCategory = 'barred';
-    const params: GalaxyParams = { type: 'SBb', starCount: 400000 };
+    const params: GalaxyParams = { type: 'SBb', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
@@ -98,12 +118,12 @@ describe('carveDustLayout', () => {
 
   it('Irr has only irregularDust sized to floor(16000*spriteDust/g^2) (budget, not the candidate cap)', () => {
     const category: GalaxyCategory = 'irregular';
-    const params: GalaxyParams = { type: 'Irr', starCount: 400000 };
+    const params: GalaxyParams = { type: 'Irr', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
     const g = grainScale(budget.totalStars);
-    const dustAmount = params.spriteDust ?? 1;
+    const dustAmount = params.legacy?.spriteDust ?? 1;
     // Resample-to-budget: the full budget, not min(armStarCount, budget).
     const expected = Math.floor((16000 * dustAmount) / (g * g));
 

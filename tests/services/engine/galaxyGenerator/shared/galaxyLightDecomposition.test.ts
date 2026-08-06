@@ -32,29 +32,36 @@ const TYPES: readonly string[] = [
 const BAR_STRENGTHS: readonly (number | undefined)[] = [undefined, 0, 0.6, 1];
 
 function cases(): GalaxyParams[] {
-  return TYPES.flatMap((type) => BAR_STRENGTHS.map((barStrength) => ({ type, barStrength })));
+  return TYPES.flatMap((type) =>
+    BAR_STRENGTHS.map((barStrength) => ({ type, shared: { barStrength } })),
+  );
 }
 
 describe('galaxyLightDecomposition', () => {
-  it.each(cases())('$type at barStrength $barStrength divides all of the light', (params) => {
-    const light = galaxyLightDecomposition(classifyHubbleType(params.type), params);
-    expect(light.bulge + light.bar + light.disc + light.halo).toBeCloseTo(1, 12);
-    for (const lane of Object.values(light)) expect(lane).toBeGreaterThanOrEqual(0);
-  });
+  it.each(cases())(
+    '$type at barStrength $shared.barStrength divides all of the light',
+    (params) => {
+      const light = galaxyLightDecomposition(classifyHubbleType(params.type), params);
+      expect(light.bulge + light.bar + light.disc + light.halo).toBeCloseTo(1, 12);
+      for (const lane of Object.values(light)) expect(lane).toBeGreaterThanOrEqual(0);
+    },
+  );
 
   it.each(cases())(
-    '$type at barStrength $barStrength lights no bar it does not build',
+    '$type at barStrength $shared.barStrength lights no bar it does not build',
     (params) => {
       const category = classifyHubbleType(params.type);
       const light = galaxyLightDecomposition(category, params);
-      if (light.bar > 0) expect(barLengthOf(category, 10, params.barStrength)).toBeGreaterThan(0);
+      if (light.bar > 0) {
+        expect(barLengthOf(category, 10, params.shared.barStrength)).toBeGreaterThan(0);
+      }
     },
   );
 
   // An elliptical has no disk builder at all — `splitStarBudget` would carve a
   // range for it and `pushDisc` would grow an exponential disc on a spheroid.
   it.each(['E0', 'E7'])('%s puts none of its light in a disc', (type) => {
-    expect(galaxyLightDecomposition('elliptical', { type }).disc).toBe(0);
+    expect(galaxyLightDecomposition('elliptical', { type, shared: {} }).disc).toBe(0);
   });
 
   // Bar-ness is not part of the RC3 stage, so a barred galaxy and its unbarred
@@ -66,8 +73,8 @@ describe('galaxyLightDecomposition', () => {
     ['Sb', 'SBb'],
     ['Sc', 'SBc'],
   ])('%s and %s differ by the bar lane alone', (plain, barred) => {
-    const unbarred = galaxyLightDecomposition('spiral', { type: plain });
-    const withBar = galaxyLightDecomposition('barred', { type: barred });
+    const unbarred = galaxyLightDecomposition('spiral', { type: plain, shared: {} });
+    const withBar = galaxyLightDecomposition('barred', { type: barred, shared: {} });
     expect(withBar.bulge).toBe(unbarred.bulge);
     expect(withBar.halo).toBe(unbarred.halo);
     expect(withBar.bar).toBeGreaterThan(0);

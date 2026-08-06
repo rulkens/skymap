@@ -21,7 +21,6 @@ import type { ReferenceGalaxy } from '../../../../../tools/galaxy-renderer/@type
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyArmTuning } from '../../../../../src/@types/galaxy/GalaxyArmTuning';
-import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
  * A Gaussian's 3D integral from the components' packed INVERSE covariance:
@@ -42,7 +41,10 @@ function totalFlux(components: readonly GalaxyFieldComponent[]): number {
 function geometryOf(ref: ReferenceGalaxy): GalaxyDescription {
   // The gallery types its presets Partial, but `type` is GalaxyParams' one
   // required field and every entry carries it (pinned by referenceGalaxies.test).
-  return describeGalaxy({ ...ref.params, type: ref.params.type! });
+  // `shared` is `GalaxyParams`' other required field; every entry carries a
+  // (possibly empty) one too, so the fallback is a type satisfier, not a
+  // real default.
+  return describeGalaxy({ ...ref.params, type: ref.params.type!, shared: ref.params.shared ?? {} });
 }
 
 /** Wide enough for the disc fit's own residual, far short of one whole lane. */

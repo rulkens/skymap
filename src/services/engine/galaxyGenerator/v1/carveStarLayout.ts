@@ -82,7 +82,7 @@ const STAR_RANGE_SPECS: readonly StarRangeSpec[] = [
   {
     popId: POPULATION_IDS.globularStar,
     stride: 1,
-    iterations: (_category, params) => Math.floor(params.globularCount || 0) * 90,
+    iterations: (_category, params) => Math.floor(params.legacy?.globularCount || 0) * 90,
   },
 ];
 

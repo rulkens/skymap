@@ -90,15 +90,15 @@ export function packGenerationUniforms(
   f32[F.warpStartRadius] = description.warpStartRadius;
 
   // --- Dust: shape shared with the description, amounts v1's alone ---------
-  f32[F.dustAmount] = params.spriteDust ?? 1;
-  f32[F.dustNoiseAmt] = params.dustNoise ?? 0.6;
-  f32[F.noiseFreq] = (2.4 * (params.dustNoiseScale ?? 1)) / outerRadius;
+  f32[F.dustAmount] = params.legacy?.spriteDust ?? 1;
+  f32[F.dustNoiseAmt] = params.legacy?.dustNoise ?? 0.6;
+  f32[F.noiseFreq] = (2.4 * (params.legacy?.dustNoiseScale ?? 1)) / outerRadius;
   f32[F.clumpAmount] = description.clumpAmount;
-  f32[F.ringRadius] = outerRadius * (params.dustRing ?? 0.72);
-  f32[F.ringWidth] = outerRadius * (params.dustRingWidth ?? 0.12);
-  f32[F.ringStrength] = params.dustRingStrength ?? 0;
+  f32[F.ringRadius] = outerRadius * (params.legacy?.dustRing ?? 0.72);
+  f32[F.ringWidth] = outerRadius * (params.legacy?.dustRingWidth ?? 0.12);
+  f32[F.ringStrength] = params.legacy?.dustRingStrength ?? 0;
 
-  f32[F.subArmAmount] = params.subArms ?? 0;
+  f32[F.subArmAmount] = params.legacy?.subArms ?? 0;
   f32[F.waveAmount] = description.waveAmount;
   f32[F.armStartRadius] = description.armStartRadius;
   f32[F.armWidthFactor] = description.armWidthFactor;
@@ -106,10 +106,10 @@ export function packGenerationUniforms(
   f32[F.armInnerRampW] = description.armInnerRampW;
   f32[F.weightSum] = description.arms.reduce((sum, arm) => sum + arm.weight, 0);
 
-  f32[F.globularSize] = params.globularSize ?? 1;
-  f32[F.globularBright] = params.globularBright ?? 0.6;
+  f32[F.globularSize] = params.legacy?.globularSize ?? 1;
+  f32[F.globularBright] = params.legacy?.globularBright ?? 0.6;
   f32[F.youngFraction] = description.youngFraction;
-  f32[F.hiiIntensity] = params.hii ?? 1;
+  f32[F.hiiIntensity] = params.legacy?.hii ?? 1;
   f32[F.irrBarOffset] = outerRadius * 0.18;
   f32[F.extraScale] = extra?.scale ?? 1;
 
@@ -131,7 +131,7 @@ export function packGenerationUniforms(
   );
 
   u32[U.seed] = description.seed;
-  u32[U.noiseSeed] = (((params.seed ?? 0) | 0) ^ 0x9e3779b9) >>> 0;
+  u32[U.noiseSeed] = (((params.shared.seed ?? 0) | 0) ^ 0x9e3779b9) >>> 0;
   u32[U.category] = CATEGORY_CODE[category];
   u32[U.numArms] = description.numArms;
   u32[U.starCapacity] = starLayout.capacity;

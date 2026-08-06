@@ -267,7 +267,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   let lastParams: GalaxyParams | null = null;
   const currentDust = (): GalaxyDustParams => fieldTuning.dust;
   const currentStarFormation = (): GalaxyStarFormationParams => fieldTuning.starFormation;
-  const currentSeed = (): number => normalizeGenerationSeed(lastParams?.seed);
+  const currentSeed = (): number => normalizeGenerationSeed(lastParams?.shared.seed);
   // Cached, not recomputed per frame: the field header reads all three every
   // frame, but they only change when `rebuildDustMixture` runs. Seeded at the
   // no-galaxy answer, which is what the first frames draw.

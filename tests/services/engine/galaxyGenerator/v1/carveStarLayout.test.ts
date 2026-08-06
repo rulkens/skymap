@@ -23,7 +23,7 @@ function sumSlots(ranges: readonly PopulationRange[]): number {
 describe('carveStarLayout', () => {
   it('Sc: bulge, disk, arms ranges are contiguous with arms stride 5', () => {
     const category: GalaxyCategory = 'spiral';
-    const params: GalaxyParams = { type: 'Sc', starCount: 400000 };
+    const params: GalaxyParams = { type: 'Sc', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
 
@@ -47,7 +47,7 @@ describe('carveStarLayout', () => {
 
   it("SBb: the bar range is the budget's own bar count, and the disk keeps all of its", () => {
     const category: GalaxyCategory = 'barred';
-    const params: GalaxyParams = { type: 'SBb', starCount: 400000 };
+    const params: GalaxyParams = { type: 'SBb', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
 
@@ -60,7 +60,7 @@ describe('carveStarLayout', () => {
 
   it('Irr: clumps range has stride 2 and there is no disk or arms range', () => {
     const category: GalaxyCategory = 'irregular';
-    const params: GalaxyParams = { type: 'Irr', starCount: 400000 };
+    const params: GalaxyParams = { type: 'Irr', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
 
@@ -74,7 +74,7 @@ describe('carveStarLayout', () => {
 
   it('E3: bulge and halo only', () => {
     const category: GalaxyCategory = 'elliptical';
-    const params: GalaxyParams = { type: 'E3', starCount: 400000 };
+    const params: GalaxyParams = { type: 'E3', shared: {}, legacy: { starCount: 400000 } };
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
 
@@ -87,7 +87,11 @@ describe('carveStarLayout', () => {
 
   it('globularCount 12 appends a 1080-slot globularStar range', () => {
     const category: GalaxyCategory = 'spiral';
-    const params: GalaxyParams = { type: 'Sc', starCount: 400000, globularCount: 12 };
+    const params: GalaxyParams = {
+      type: 'Sc',
+      shared: {},
+      legacy: { starCount: 400000, globularCount: 12 },
+    };
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
 
@@ -102,7 +106,11 @@ describe('carveStarLayout', () => {
 
   it('capacity equals the sum of iterations*stride', () => {
     const category: GalaxyCategory = 'barred';
-    const params: GalaxyParams = { type: 'SBb', starCount: 400000, globularCount: 4 };
+    const params: GalaxyParams = {
+      type: 'SBb',
+      shared: {},
+      legacy: { starCount: 400000, globularCount: 4 },
+    };
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
 

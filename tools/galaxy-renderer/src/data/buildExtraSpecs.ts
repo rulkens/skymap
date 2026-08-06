@@ -21,9 +21,10 @@ export function buildExtraSpecs(count: number, rng: () => number): ExtraGalaxySp
   const specs: ExtraGalaxySpec[] = [];
 
   for (let i = 0; i < count; i++) {
+    const draft = randomGalaxyParams(rng, { includeSize: true });
     const params = {
-      ...randomGalaxyParams(rng, { includeSize: true }),
-      starCount: (40 + ((rng() * 160) | 0)) * 1000,
+      ...draft,
+      legacy: { ...draft.legacy, starCount: (40 + ((rng() * 160) | 0)) * 1000 },
     };
 
     const dist = 26 + rng() * 70;

@@ -4,8 +4,11 @@
  * `LodSettings` into one wire bag; `parseGalaxyPreset` splits it back apart.
  * `x` carries extras' `enabled`/`count` (`regenNonce` dropped — a re-roll
  * trigger, not a seed). v3 nests `f` (`GalaxyFieldTuning`) by UI section
- * instead of v2's flat keys — see `parseGalaxyPreset`'s header for the v1/v2
- * fallback and `migrateGalaxyFieldTuningWire`'s header for the lift.
+ * instead of v2's flat keys; v4 nests `p` (`GalaxyParams`) into its
+ * `shared`/`legacy` bags instead of v3's flat keys — see
+ * `parseGalaxyPreset`'s header for the fallback chain and
+ * `migrateGalaxyFieldTuningWire`/`migrateGalaxyParamsWire`'s headers for the
+ * lifts.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
@@ -24,7 +27,7 @@ export function serializeGalaxyPreset(
   return JSON.stringify(
     {
       type: 'galaxy-preset',
-      version: 3,
+      version: 4,
       p: galaxy,
       r: { ...render, ...lod },
       f: fieldTuning,

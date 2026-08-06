@@ -21,7 +21,10 @@ import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams
  * and only a change to the draw sequence itself moves it.
  */
 function drawDigest(params: GalaxyParams): string {
-  const d = describeGalaxy({ ...params, seed: 12345, asymSeed: 7, clumpSeed: 8, waveSeed: 9 });
+  const d = describeGalaxy({
+    ...params,
+    shared: { ...params.shared, seed: 12345, asymSeed: 7, clumpSeed: 8, waveSeed: 9 },
+  });
   const numbers = [
     d.lopsidedAmp,
     d.lopsidedAngle,
@@ -67,39 +70,53 @@ describe('describeGalaxy', () => {
     ['Sb', 'aa1c8b59215135df'], // + per-arm personality off three streams
     ['Irr', '3f2ca294135c02d9'], // + 7 clump centres, no arms
   ])('draws %s in the pinned order', (type, expected) => {
-    expect(drawDigest({ type, starCount: 100000 })).toBe(expected);
+    expect(drawDigest({ type, shared: {}, legacy: { starCount: 100000 } })).toBe(expected);
   });
 
   // A spiral at armStrength 0 still HAS arms; it just spends no sprites on
   // them. v2 reads these records and nothing else in the suite would notice
   // them going to zero.
   it.each(['Sb', 'SBb'])('%s keeps its arms when no stars are budgeted for them', (type) => {
-    const params = { type, starCount: 100000 };
-    expect(describeGalaxy({ ...params, armStrength: 0 }).arms).toEqual(
-      describeGalaxy({ ...params, armStrength: 1 }).arms,
-    );
+    const params: GalaxyParams = { type, shared: {}, legacy: { starCount: 100000 } };
+    expect(
+      describeGalaxy({ ...params, legacy: { ...params.legacy, armStrength: 0 } }).arms,
+    ).toEqual(describeGalaxy({ ...params, legacy: { ...params.legacy, armStrength: 1 } }).arms);
   });
 
   // The complement: the three armless categories. `numArms` is clamped to at
   // least 1 for every galaxy, so only the category keeps their records zeroed.
   it.each(['E1', 'S0', 'Irr'])('%s has no arms whatever its arm knobs say', (type) => {
-    const arms = describeGalaxy({ type, starCount: 100000, armCount: 4, armStrength: 1.5 }).arms;
+    const arms = describeGalaxy({
+      type,
+      shared: { armCount: 4 },
+      legacy: { starCount: 100000, armStrength: 1.5 },
+    }).arms;
     expect(arms.map((arm) => arm.weight)).toEqual(arms.map(() => 0));
   });
 
   // armStart is a pure multiplier on armStartRadius applied after the
   // existing max(...) derivation, so it must scale linearly and leave every
-  // other draw (which never reads params.armStart) untouched.
+  // other draw (which never reads params.shared.armStart) untouched.
   it('armStart scales armStartRadius, leaving the rest of the description alone', () => {
-    const params: GalaxyParams = { type: 'Sb', starCount: 100000, seed: 42 };
+    const params: GalaxyParams = {
+      type: 'Sb',
+      shared: { seed: 42 },
+      legacy: { starCount: 100000 },
+    };
     const base = describeGalaxy(params);
-    const halved = describeGalaxy({ ...params, armStart: 0.5 });
+    const halved = describeGalaxy({ ...params, shared: { ...params.shared, armStart: 0.5 } });
     expect(halved.armStartRadius).toBeCloseTo(base.armStartRadius * 0.5);
     expect({ ...halved, armStartRadius: base.armStartRadius }).toEqual(base);
   });
 
   it('an absent armStart is identical to armStart 1', () => {
-    const params: GalaxyParams = { type: 'SBb', starCount: 100000, seed: 7 };
-    expect(describeGalaxy(params)).toEqual(describeGalaxy({ ...params, armStart: 1 }));
+    const params: GalaxyParams = {
+      type: 'SBb',
+      shared: { seed: 7 },
+      legacy: { starCount: 100000 },
+    };
+    expect(describeGalaxy(params)).toEqual(
+      describeGalaxy({ ...params, shared: { ...params.shared, armStart: 1 } }),
+    );
   });
 });

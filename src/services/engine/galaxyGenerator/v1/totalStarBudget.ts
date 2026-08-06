@@ -8,5 +8,5 @@
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 
 export function totalStarBudget(params: GalaxyParams): number {
-  return Math.max(20000, Math.floor(params.starCount || 400000));
+  return Math.max(20000, Math.floor(params.legacy?.starCount || 400000));
 }

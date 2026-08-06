@@ -78,7 +78,7 @@ export function galaxyLightDecomposition(
   // Asked at unit radius, so this is the same predicate `pushBar` and
   // `carveStarLayout` gate their geometry on — including a `barred` preset
   // whose `barStrength` is 0, which builds no bar and must be lit as none.
-  const bar = barLengthOf(category, 1, params.barStrength) > 0 ? row.bar : 0;
+  const bar = barLengthOf(category, 1, params.shared.barStrength) > 0 ? row.bar : 0;
   const disc = 1 - row.bulge - bar - row.halo;
   return category === 'elliptical'
     ? { bulge: row.bulge + disc, bar, disc: 0, halo: row.halo }

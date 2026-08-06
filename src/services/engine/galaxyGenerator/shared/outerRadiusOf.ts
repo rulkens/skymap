@@ -9,5 +9,5 @@
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 
 export function outerRadiusOf(params: GalaxyParams): number {
-  return 10 * (params.radius || 1);
+  return 10 * (params.shared.radius || 1);
 }

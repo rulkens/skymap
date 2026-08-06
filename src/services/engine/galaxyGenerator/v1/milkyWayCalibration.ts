@@ -45,12 +45,12 @@ export const MILKY_WAY_RADIUS_MPC = MILKY_WAY_DISC_RADIUS_KPC / 1000;
  * tier LOD entirely) and by `MILKY_WAY_TUNING_DEFAULTS` below for the boot
  * value.
  *
- * `GalaxyParams.starCount` is optional on the type (every field but `type`
- * is), even though this particular preset always sets it — the `|| 0`
- * satisfies the type checker the same way `outerRadiusOf` falls back on
- * `params.radius || 1`; it never actually applies at runtime.
+ * `GalaxyLegacyParams.starCount` is optional on the type, even though this
+ * particular preset always sets it — the `|| 0` satisfies the type checker
+ * the same way `outerRadiusOf` falls back on `params.shared.radius || 1`; it
+ * never actually applies at runtime.
  */
-const presetStarCount = MILKY_WAY_GALAXY_PARAMS.starCount || 0;
+const presetStarCount = MILKY_WAY_GALAXY_PARAMS.legacy?.starCount || 0;
 
 export const MILKY_WAY_STARS_PER_TIER: Record<Tier, number> = {
   small: presetStarCount * 0.5,

@@ -18,6 +18,7 @@ import {
 import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { REFERENCE_GALAXIES } from '../../../../../tools/galaxy-renderer/src/data/referenceGalaxies';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /** A Gaussian's 3D integral from its packed INVERSE covariance — as in the flux ledger. */
 function componentFlux(component: GalaxyFieldComponent): number {
@@ -41,8 +42,16 @@ type Signature = {
   hiiFlux: number;
 };
 
-function signatureOf(params: Record<string, unknown>, starCount: number): Signature {
-  const description = describeGalaxy({ ...params, starCount } as never);
+// `starCount` (a `legacy` field) doesn't feed `describeGalaxy` at all — that
+// is exactly the property under test — so folding it into `legacy` here is
+// for realism, not because the description would ever differ by it.
+function signatureOf(params: Partial<GalaxyParams>, starCount: number): Signature {
+  const description = describeGalaxy({
+    ...params,
+    type: params.type!,
+    shared: params.shared ?? {},
+    legacy: { ...params.legacy, starCount },
+  });
   const mixture = buildGalaxyFieldMixture(description, DEFAULT_GALAXY_FIELD_TUNING);
   const fluxByPopulation: Record<string, number> = {};
   let amplitudeSum = 0;
@@ -77,9 +86,8 @@ const ABSOLUTE_BUDGETS = [20_000, 1_200_000];
 
 describe('analytic field flux is invariant to the sprite budget', () => {
   it.each(REFERENCE_GALAXIES)('$id emits the same light at every tier', (ref) => {
-    const params = ref.params as unknown as Record<string, unknown>;
-    const own = (params.starCount as number | undefined) ?? 400_000;
-    const base = signatureOf(params, own);
+    const own = ref.params.legacy?.starCount ?? 400_000;
+    const base = signatureOf(ref.params, own);
     // Exact equality, not a tolerance: nothing downstream of the budget feeds
     // the field at all any more, so these are the same doubles.
     expect(base.amplitudeSum).toBeGreaterThan(0);
@@ -87,7 +95,7 @@ describe('analytic field flux is invariant to the sprite budget', () => {
       ...BUDGET_MULTIPLIERS.map((multiplier) => own * multiplier),
       ...ABSOLUTE_BUDGETS,
     ]) {
-      expect(signatureOf(params, starCount)).toEqual(base);
+      expect(signatureOf(ref.params, starCount)).toEqual(base);
     }
   });
 
@@ -95,7 +103,8 @@ describe('analytic field flux is invariant to the sprite budget', () => {
   // stars, so pin that some of them really do carry flux through it.
   it('exercises the HII tier on the Milky Way', () => {
     const mw = REFERENCE_GALAXIES.find((ref) => ref.id === 'mw')!;
-    const params = mw.params as unknown as Record<string, unknown>;
-    expect(signatureOf(params, params.starCount as number).hiiFlux).toBeGreaterThan(0);
+    expect(signatureOf(mw.params, mw.params.legacy?.starCount ?? 400_000).hiiFlux).toBeGreaterThan(
+      0,
+    );
   });
 });

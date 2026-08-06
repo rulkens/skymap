@@ -28,13 +28,21 @@ function sumOfCounts(budget: StarBudget): number {
 describe('splitStarBudget', () => {
   it('counts sum to exactly totalStars for every category', () => {
     for (const category of CATEGORIES) {
-      const budget = splitStarBudget(category, { type: 'Sb', starCount: 400000 });
+      const budget = splitStarBudget(category, {
+        type: 'Sb',
+        shared: {},
+        legacy: { starCount: 400000 },
+      });
       expect(sumOfCounts(budget)).toBe(budget.totalStars);
     }
   });
 
   it('totalStars floors at 20000', () => {
-    const budget = splitStarBudget('spiral', { type: 'Sb', starCount: 100 });
+    const budget = splitStarBudget('spiral', {
+      type: 'Sb',
+      shared: {},
+      legacy: { starCount: 100 },
+    });
     expect(budget.totalStars).toBe(20000);
   });
 
@@ -45,17 +53,24 @@ describe('splitStarBudget', () => {
     ['irregular', 'Irr', ['diskCount', 'barCount']],
     ['spiral', 'Sb', ['barCount']],
   ] as const)('a %s spends no stars on populations it has none of', (category, type, empty) => {
-    const budget = splitStarBudget(category, { type, starCount: 400000 });
+    const budget = splitStarBudget(category, { type, shared: {}, legacy: { starCount: 400000 } });
     for (const key of empty) expect(budget[key]).toBe(0);
   });
 
   // The one param that still moves the sprite tier's arm/disc placement. At 0
   // the arm range disappears entirely, which `carveDustLayout` also keys off.
   it('armStrength 0 gives a spiral zero arm stars, and more gives more', () => {
-    const params = { type: 'Sb', starCount: 400000 } as const;
-    expect(splitStarBudget('spiral', { ...params, armStrength: 0 }).armStarCount).toBe(0);
-    expect(splitStarBudget('spiral', { ...params, armStrength: 1 }).armStarCount).toBeGreaterThan(
-      splitStarBudget('spiral', { ...params, armStrength: 0.2 }).armStarCount,
+    const params = { type: 'Sb', shared: {}, legacy: { starCount: 400000 } } as const;
+    expect(
+      splitStarBudget('spiral', { ...params, legacy: { ...params.legacy, armStrength: 0 } })
+        .armStarCount,
+    ).toBe(0);
+    expect(
+      splitStarBudget('spiral', { ...params, legacy: { ...params.legacy, armStrength: 1 } })
+        .armStarCount,
+    ).toBeGreaterThan(
+      splitStarBudget('spiral', { ...params, legacy: { ...params.legacy, armStrength: 0.2 } })
+        .armStarCount,
     );
   });
 
@@ -63,7 +78,11 @@ describe('splitStarBudget', () => {
   // must be lit and populated as having none — the decomposition's own gate,
   // seen from the sprite tier.
   it('a barred galaxy with barStrength 0 spends no stars on a bar', () => {
-    const budget = splitStarBudget('barred', { type: 'SBb', starCount: 400000, barStrength: 0 });
+    const budget = splitStarBudget('barred', {
+      type: 'SBb',
+      shared: { barStrength: 0 },
+      legacy: { starCount: 400000 },
+    });
     expect(budget.barCount).toBe(0);
     expect(sumOfCounts(budget)).toBe(budget.totalStars);
   });

@@ -24,7 +24,9 @@
  * plain per-click reseed doesn't).
  */
 import { type ReactNode } from 'react';
+import type { GalaxyLegacyParams } from '../../../../../src/@types/galaxy/GalaxyLegacyParams';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxySharedParams } from '../../../../../src/@types/galaxy/GalaxySharedParams';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
@@ -36,7 +38,8 @@ import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { lodPatched } from '../../state/slices/lodSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import { PARAM_SPEC } from '../../data/paramSpec';
+import { GALAXY_LEGACY_PARAM_KEYS } from '../../data/galaxyLegacyParamKeys';
+import { PARAM_SPEC, type GalaxyParamKey } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
@@ -58,17 +61,39 @@ import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
 import PresetsSection from '../PresetsSection/PresetsSection';
 import styles from './ControlsPanel.module.css';
 
-// Every GalaxyParams field except the Hubble-type string, the per-arm
-// `armAges` array, and the nested `dust`/`starFormation` sections is a plain
-// number — this narrows `keyof GalaxyParams` down to the subset a single-value
-// slider can actually drive. `armAges` has no UI surface (pin it in a preset
-// object instead, per barAngleDeg's pattern); `dust`'s two knobs get their own
-// component (`DustSection`), since a nested object needs its own
-// patch-spreading handlers rather than the generic single-value `onChange`
-// below. `starFormation`'s two knobs have no home of their own — one lives in
-// `HiiSection` (SHELLS), the other in `DebugViewsSection` (beside the BUBBLE
-// view it drives) — see their own patch-spreading handlers there.
-type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges' | 'dust' | 'starFormation'>;
+// Every flat `shared`/`legacy` field except the per-arm `armAges` array is a
+// plain number — this narrows `GalaxyParamKey` down to the subset a
+// single-value slider can actually drive. `armAges` has no UI surface (pin it
+// in a preset object instead, per barAngleDeg's pattern). A key's OWNING bag
+// (`shared` vs `legacy`) is looked up via `GALAXY_LEGACY_PARAM_KEYS` at each
+// read/write site below, mirroring `fieldTuningPatched`'s section shape: read
+// the bag, spread the one field in, dispatch the whole bag.
+type GalaxySliderKey = Exclude<GalaxyParamKey, 'armAges'>;
+
+function isLegacyKey(key: GalaxySliderKey): key is keyof GalaxyLegacyParams {
+  return (GALAXY_LEGACY_PARAM_KEYS as ReadonlySet<string>).has(key);
+}
+
+function readGalaxyField(galaxy: GalaxyParams, key: GalaxySliderKey): number | undefined {
+  return isLegacyKey(key)
+    ? galaxy.legacy?.[key]
+    : (galaxy.shared[key as keyof GalaxySharedParams] as number | undefined);
+}
+
+/**
+ * Builds the whole-bag patch a single-field edit dispatches — `paramsPatched`
+ * Object.assigns the bag wholesale (`galaxySlice`'s docblock), so every other
+ * field the bag already holds has to ride along or it's dropped.
+ */
+function patchGalaxyField(
+  galaxy: GalaxyParams,
+  key: GalaxySliderKey,
+  value: number,
+): Partial<GalaxyParams> {
+  return isLegacyKey(key)
+    ? { legacy: { ...galaxy.legacy, [key]: value } }
+    : { shared: { ...galaxy.shared, [key]: value } };
+}
 
 type SliderSpec = {
   readonly key: GalaxySliderKey;
@@ -237,8 +262,8 @@ function freshRng(): () => number {
 function galaxyValues(galaxy: GalaxyParams, specs: readonly SliderSpec[]): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   for (const spec of specs) {
-    values[spec.key] = galaxy[spec.key];
-    if (spec.seedKey) values[spec.seedKey] = galaxy[spec.seedKey];
+    values[spec.key] = readGalaxyField(galaxy, spec.key);
+    if (spec.seedKey) values[spec.seedKey] = readGalaxyField(galaxy, spec.seedKey);
   }
   return values;
 }
@@ -271,12 +296,12 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
 
   const handleReseed = (seedKey: 'asymSeed' | 'clumpSeed' | 'waveSeed'): void => {
     const rng = freshRng();
-    dispatch(paramsPatched({ [seedKey]: (rng() * 1e9) | 0 } as Partial<GalaxyParams>));
+    dispatch(paramsPatched(patchGalaxyField(galaxy, seedKey, (rng() * 1e9) | 0)));
   };
 
   const renderGalaxySlider = (spec: SliderSpec): ReactNode => {
     const { min, max, step } = specFor(spec.key);
-    const value = galaxy[spec.key] ?? 0;
+    const value = readGalaxyField(galaxy, spec.key) ?? 0;
     return (
       <ParamSlider
         key={spec.key}
@@ -287,15 +312,15 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
         step={step}
         format={spec.format}
         onChange={(v) =>
-          dispatch(
-            paramsPatched({ [spec.key]: coerceInteger(spec.key, v) } as Partial<GalaxyParams>),
-          )
+          dispatch(paramsPatched(patchGalaxyField(galaxy, spec.key, coerceInteger(spec.key, v))))
         }
         onReseed={spec.seedKey ? () => handleReseed(spec.seedKey!) : undefined}
         info={spec.info}
         // Derived from the same `spec.key` `galaxyValues` keys its copy payload
-        // by, so the tip and the copy block can only ever name the same field.
-        path={`galaxy.${spec.key}`}
+        // by, so the tip and the copy block can only ever name the same field —
+        // and bag-routed the same way `readGalaxyField`/`patchGalaxyField` are,
+        // so the path actually resolves against the real (nested) store shape.
+        path={`galaxy.${isLegacyKey(spec.key) ? 'legacy' : 'shared'}.${spec.key}`}
       />
     );
   };
@@ -307,7 +332,20 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           className={styles.randomizeButton}
           onClick={() => {
             const rng = freshRng();
-            dispatch(paramsPatched(randomGalaxyParams(rng, { includeSize: false })));
+            // A "full" random draw, but merged onto the current bags rather
+            // than dispatched as-is: `includeSize: false` means the draft
+            // simply omits `radius`/`starCount`, and `paramsPatched` replaces
+            // a bag wholesale (see `galaxySlice`'s docblock), so leaving
+            // those two fields alone means spreading the draft OVER the
+            // current bags here, not handing it to the store raw.
+            const draft = randomGalaxyParams(rng, { includeSize: false });
+            dispatch(
+              paramsPatched({
+                type: draft.type,
+                shared: { ...galaxy.shared, ...draft.shared },
+                legacy: { ...galaxy.legacy, ...draft.legacy },
+              }),
+            );
           }}
         >
           Randomize
@@ -325,7 +363,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
         >
           <TypePicker
             activeType={galaxy.type}
-            onSelect={(type) => dispatch(paramsPatched(hubbleTypePatch(type)))}
+            onSelect={(type) => dispatch(paramsPatched(hubbleTypePatch(galaxy, type)))}
           />
         </CollapsibleSection>
 
@@ -333,7 +371,9 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="SHAPE & SIZE"
           open={ui.openSections.shape}
           onToggle={() => dispatch(sectionToggled('shape'))}
-          copyPayload={{ galaxy: { ...galaxyValues(galaxy, shapeSliders), seed: galaxy.seed } }}
+          copyPayload={{
+            galaxy: { ...galaxyValues(galaxy, shapeSliders), seed: galaxy.shared.seed },
+          }}
         >
           <SliderGroup title="Size">
             {shapeSliders.filter((s) => SIZE_KEYS.has(s.key)).map(renderGalaxySlider)}
@@ -348,7 +388,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             className={styles.newSeedButton}
             onClick={() => {
               const rng = freshRng();
-              dispatch(paramsPatched({ seed: (rng() * 1e9) | 0 } as Partial<GalaxyParams>));
+              dispatch(paramsPatched(patchGalaxyField(galaxy, 'seed', (rng() * 1e9) | 0)));
             }}
           >
             ⟲ New random seed

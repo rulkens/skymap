@@ -3,7 +3,7 @@
  * populations the generation compute shaders draw, mirroring
  * `carveStarLayout`'s shape (see its docblock for why carving lives here,
  * CPU-side, ahead of any GPU dispatch). Every dust population is gated on
- * the same outer condition that governs dust at all — `(params.spriteDust ?? 1) >
+ * the same outer condition that governs dust at all — `(params.legacy?.spriteDust ?? 1) >
  * 0 && category !== 'elliptical'` — so an ineligible combination returns the
  * empty layout up front rather than evaluating a table of formulas that
  * would all come out zero anyway.
@@ -65,28 +65,30 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     stride: 1,
     iterations: (category, params, budget, g) =>
       (category === 'spiral' || category === 'barred') && budget.armStarCount > 0
-        ? Math.floor((30000 * (params.spriteDust ?? 1)) / (g * g))
+        ? Math.floor((30000 * (params.legacy?.spriteDust ?? 1)) / (g * g))
         : 0,
   },
   {
     popId: POPULATION_IDS.barDust,
     stride: 1,
     iterations: (category, params, _budget, g) =>
-      barLengthOf(category, outerRadiusOf(params), params.barStrength) > 0
-        ? Math.floor((9000 * (params.spriteDust ?? 1)) / (g * g))
+      barLengthOf(category, outerRadiusOf(params), params.shared.barStrength) > 0
+        ? Math.floor((9000 * (params.legacy?.spriteDust ?? 1)) / (g * g))
         : 0,
   },
   {
     popId: POPULATION_IDS.lenticularNucDust,
     stride: 1,
     iterations: (category, params, _budget, g) =>
-      category === 'lenticular' ? Math.floor((12000 * (params.spriteDust ?? 1)) / (g * g)) : 0,
+      category === 'lenticular'
+        ? Math.floor((12000 * (params.legacy?.spriteDust ?? 1)) / (g * g))
+        : 0,
   },
   {
     popId: POPULATION_IDS.lenticularRingDust,
     stride: 1,
     iterations: (category, params, _budget, g) => {
-      const ringAmt = params.dustRingStrength ?? 0;
+      const ringAmt = params.legacy?.dustRingStrength ?? 0;
       return category === 'lenticular' && ringAmt > 0 ? Math.floor((34000 * ringAmt) / (g * g)) : 0;
     },
   },
@@ -95,7 +97,7 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     stride: 1,
     iterations: (category, params, budget, g) =>
       category === 'irregular' && budget.armStarCount > 0
-        ? Math.floor((16000 * (params.spriteDust ?? 1)) / (g * g))
+        ? Math.floor((16000 * (params.legacy?.spriteDust ?? 1)) / (g * g))
         : 0,
   },
 ];
@@ -105,7 +107,7 @@ export function carveDustLayout(
   params: GalaxyParams,
   budget: StarBudget,
 ): GenerationLayout {
-  const dustAmount = params.spriteDust ?? 1;
+  const dustAmount = params.legacy?.spriteDust ?? 1;
   if (!(dustAmount > 0) || category === 'elliptical') {
     return { ranges: [], capacity: 0 };
   }

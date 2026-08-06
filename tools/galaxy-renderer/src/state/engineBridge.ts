@@ -48,7 +48,9 @@ const REFERENCE_INSET_PX = 340; // the reference thumbnail strip, constant regar
 // the stored `galaxy` params — toggling it back on must restore exactly the
 // values the sliders still show while it was off.
 function paramsForEngine(galaxy: GalaxyParams, render: RenderSettings): GalaxyParams {
-  if (!render.legacyDustEnabled) return { ...galaxy, spriteDust: 0, dustRingStrength: 0 };
+  if (!render.legacyDustEnabled) {
+    return { ...galaxy, legacy: { ...galaxy.legacy, spriteDust: 0, dustRingStrength: 0 } };
+  }
   return galaxy;
 }
 

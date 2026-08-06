@@ -86,7 +86,10 @@ function makeStubDevice() {
 
 /** Re-derive the carved star/dust capacities for an absolute star count, from the same fold the factory uses. */
 function expectedCapacities(starCount: number): { readonly star: number; readonly dust: number } {
-  const params = { ...MILKY_WAY_GALAXY_PARAMS, starCount };
+  const params = {
+    ...MILKY_WAY_GALAXY_PARAMS,
+    legacy: { ...MILKY_WAY_GALAXY_PARAMS.legacy, starCount },
+  };
   const category = classifyHubbleType(params.type);
   const budget = splitStarBudget(category, params);
   return {

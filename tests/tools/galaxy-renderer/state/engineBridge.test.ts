@@ -79,7 +79,10 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
  * out rather than routed back through `paramsForEngine`, which would only
  * restate the implementation.
  */
-const ENGINE_PARAMS = { ...DEFAULT_GALAXY_PARAMS, spriteDust: 0, dustRingStrength: 0 };
+const ENGINE_PARAMS = {
+  ...DEFAULT_GALAXY_PARAMS,
+  legacy: { ...DEFAULT_GALAXY_PARAMS.legacy, spriteDust: 0, dustRingStrength: 0 },
+};
 
 describe('connectEngineBridge', () => {
   let store: AppStore;
@@ -112,13 +115,19 @@ describe('connectEngineBridge', () => {
     const disconnect = connectEngineBridge(store, engine);
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
 
-    store.dispatch(paramsPatched({ armCount: 3 }));
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 3 } }));
     expect(mocks.setParams).toHaveBeenCalledTimes(2);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...ENGINE_PARAMS, armCount: 3 });
+    expect(mocks.setParams).toHaveBeenLastCalledWith({
+      ...ENGINE_PARAMS,
+      shared: { ...ENGINE_PARAMS.shared, armCount: 3 },
+    });
 
-    store.dispatch(paramsPatched({ armCount: 4 }));
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 4 } }));
     expect(mocks.setParams).toHaveBeenCalledTimes(3);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...ENGINE_PARAMS, armCount: 4 });
+    expect(mocks.setParams).toHaveBeenLastCalledWith({
+      ...ENGINE_PARAMS,
+      shared: { ...ENGINE_PARAMS.shared, armCount: 4 },
+    });
 
     disconnect();
   });
@@ -236,14 +245,18 @@ describe('connectEngineBridge', () => {
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
 
     store.dispatch(fitStarted());
-    store.dispatch(paramsPatched({ armCount: 9 }));
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 9 } }));
     expect(mocks.setParams).toHaveBeenCalledTimes(2);
-    expect(mocks.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ armCount: 9 }));
+    expect(mocks.setParams).toHaveBeenLastCalledWith(
+      expect.objectContaining({ shared: expect.objectContaining({ armCount: 9 }) }),
+    );
 
     store.dispatch(fitFinished());
-    store.dispatch(paramsPatched({ armCount: 10 }));
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 10 } }));
     expect(mocks.setParams).toHaveBeenCalledTimes(3);
-    expect(mocks.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ armCount: 10 }));
+    expect(mocks.setParams).toHaveBeenLastCalledWith(
+      expect.objectContaining({ shared: expect.objectContaining({ armCount: 10 }) }),
+    );
 
     disconnect();
   });
@@ -253,7 +266,7 @@ describe('connectEngineBridge', () => {
     const disconnect = connectEngineBridge(store, engine);
     disconnect();
 
-    store.dispatch(paramsPatched({ armCount: 2 }));
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 2 } }));
     store.dispatch(renderPatched({ exposure: 2 }));
     store.dispatch(autoRotateSet(false));
     store.dispatch(comparePanelToggled());

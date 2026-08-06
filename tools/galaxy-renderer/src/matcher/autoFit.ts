@@ -22,42 +22,61 @@
  */
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../@types/matcher/GalaxyDescriptor';
+import type { GalaxyLegacyParams } from '../../../../src/@types/galaxy/GalaxyLegacyParams';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxySharedParams } from '../../../../src/@types/galaxy/GalaxySharedParams';
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { AutoFitOptions } from '../../@types/matcher/AutoFitOptions';
 import type { FitResult } from '../../@types/matcher/FitResult';
+import type { NumericGalaxyParamKey } from '../../@types/matcher/FitParamRange';
+import { GALAXY_LEGACY_PARAM_KEYS } from '../data/galaxyLegacyParamKeys';
 import { fitPlan } from './fitPlan';
 import { computeDescriptor } from './computeDescriptor';
 import { descriptorLoss } from './descriptorLoss';
 
-/** A `GalaxyParams` copy with the `readonly` modifiers stripped, so the
- * descent loop can mutate its working set of params in place instead of
- * rebuilding the whole object on every accepted step. */
-type MutableGalaxyParams = { -readonly [K in keyof GalaxyParams]: GalaxyParams[K] };
+/**
+ * A `GalaxyParams` copy with `legacy` pinned present (the descent always
+ * carries a working star budget on it) and both bags' fields writable — the
+ * arm-count sweep below mutates `shared.armCount` in place rather than
+ * rebuilding the whole object on every accepted step.
+ */
+type MutableGalaxyParams = Omit<
+  { -readonly [K in keyof GalaxyParams]: GalaxyParams[K] },
+  'shared' | 'legacy'
+> & {
+  shared: { -readonly [K in keyof GalaxySharedParams]: GalaxySharedParams[K] };
+  legacy: GalaxyLegacyParams;
+};
+
+function isLegacyParamKey(key: NumericGalaxyParamKey): boolean {
+  return (GALAXY_LEGACY_PARAM_KEYS as ReadonlySet<string>).has(key);
+}
 
 /**
  * `fitPlan`'s param keys are `FitParamRange`'s `NumericGalaxyParamKey` — a
- * key filtered, at the type level, to fields whose value is a `number` — but
- * the field being read/written is only known at runtime (it comes off the
- * plan's table), so plain dotted access can't be statically typed here.
- * These two helpers localise the one unsafe cast the generic access needs;
- * `FitParamRange` is what makes the cast reflect an actual invariant rather
- * than a type-system workaround — widen that type (e.g. back to a bare
- * `keyof GalaxyParams`) and a key naming a nested object field (`dust`,
- * `GalaxyDustParams`) would again compile and get clobbered by a scalar.
+ * flat name filtered, at the type level, to fields whose value is a `number`
+ * across BOTH `shared` and `legacy` — but which bag actually owns a given key
+ * (and the field's value) is only known at runtime via
+ * `GALAXY_LEGACY_PARAM_KEYS`, so plain dotted access can't be statically
+ * typed here. These three helpers localise the one unsafe cast the generic
+ * bag access needs; `FitParamRange` is what makes the cast reflect an actual
+ * invariant rather than a type-system workaround — widen that type (e.g. back
+ * to a bare `keyof GalaxySharedParams | keyof GalaxyLegacyParams`) and a key
+ * naming a non-number field would again compile and get clobbered by a
+ * scalar.
  */
-function paramValue(p: GalaxyParams, key: keyof GalaxyParams & string): number {
-  return (p as unknown as Record<string, number>)[key]!;
+function paramValue(p: GalaxyParams, key: NumericGalaxyParamKey): number {
+  const bag = isLegacyParamKey(key) ? p.legacy : p.shared;
+  return (bag as unknown as Record<string, number>)[key]!;
 }
-function setParamValue(p: MutableGalaxyParams, key: keyof GalaxyParams & string, v: number): void {
-  (p as unknown as Record<string, number>)[key] = v;
+function setParamValue(p: MutableGalaxyParams, key: NumericGalaxyParamKey, v: number): void {
+  const bag = isLegacyParamKey(key) ? p.legacy : p.shared;
+  (bag as unknown as Record<string, number>)[key] = v;
 }
-function withParamValue(
-  p: GalaxyParams,
-  key: keyof GalaxyParams & string,
-  v: number,
-): GalaxyParams {
-  return { ...p, [key]: v } as GalaxyParams;
+function withParamValue(p: GalaxyParams, key: NumericGalaxyParamKey, v: number): GalaxyParams {
+  return isLegacyParamKey(key)
+    ? { ...p, legacy: { ...p.legacy, [key]: v } }
+    : { ...p, shared: { ...p.shared, [key]: v } };
 }
 
 type Candidate = { readonly loss: number; readonly d: GalaxyDescriptor | null };
@@ -73,7 +92,7 @@ export async function autoFit(
   const passes = opts.passes || 3;
   const fitStars = opts.fitStars || 220000;
   const plan = fitPlan(category, reference.q);
-  const params: MutableGalaxyParams = { ...seed, starCount: fitStars };
+  const params: MutableGalaxyParams = { ...seed, legacy: { ...seed.legacy, starCount: fitStars } };
   let iter = 0;
   const history: number[] = [];
 
@@ -97,21 +116,24 @@ export async function autoFit(
   await report('start');
 
   const finish = (): FitResult => ({
-    params: { ...params, starCount: seed.starCount || 600000 },
+    params: {
+      ...params,
+      legacy: { ...params.legacy, starCount: seed.legacy?.starCount || 600000 },
+    },
     loss: cur.loss,
     desc: cur.d,
     iters: iter,
     history,
   });
 
-  // discrete arm count first (spirals) — the loop restores params.armCount
+  // discrete arm count first (spirals) — the loop restores params.shared.armCount
   // to the current best after every trial, per the spike, so a rejected
   // count doesn't leak into the next candidate's baseline.
   if (plan.arms) {
-    let bestN = params.armCount;
+    let bestN = params.shared.armCount;
     let bestL = cur.loss;
     for (const n of plan.arms) {
-      const trial = { ...params, armCount: n };
+      const trial = { ...params, shared: { ...params.shared, armCount: n } };
       const s = await score(trial);
       iter++;
       if (s.loss < bestL) {
@@ -119,11 +141,11 @@ export async function autoFit(
         bestN = n;
         cur = s;
       }
-      params.armCount = bestN;
+      params.shared.armCount = bestN;
       await report('arms=' + n);
       if (opts.signal && opts.signal.stop) return finish();
     }
-    params.armCount = bestN;
+    params.shared.armCount = bestN;
     cur = await score(params);
   }
 

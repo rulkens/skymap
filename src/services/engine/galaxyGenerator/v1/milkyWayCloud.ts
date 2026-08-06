@@ -81,7 +81,7 @@ export function createMilkyWayCloud(device: GPUDevice, starCount: number): Milky
   function generate(count: number): MilkyWayCloudBuffers {
     const params = {
       ...MILKY_WAY_GALAXY_PARAMS,
-      starCount: count,
+      legacy: { ...MILKY_WAY_GALAXY_PARAMS.legacy, starCount: count },
     };
     const category = classifyHubbleType(params.type);
     const budget = splitStarBudget(category, params);

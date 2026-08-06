@@ -1,8 +1,8 @@
 /**
- * GalaxyParams — the full knob surface for the GPU galaxy-generation passes.
- * Every field is optional except `type`; the generation shaders apply the
- * spike's hand-dialled defaults at the point of use (not here, so this type
- * stays a pure description of the input shape, not a merged/defaulted one).
+ * GalaxyParams — the full knob surface for the GPU galaxy-generation passes,
+ * split by consumer: `shared` feeds `describeGalaxy` (both v1 and v2 read the
+ * resulting `GalaxyDescription`); `legacy` is read directly by v1's sprite
+ * generator alone and dies with `galaxyGenerator/v1/`.
  *
  * The spike's `background` flag is deliberately dropped: the spike hardcodes
  * the background field to 0 regardless of the param, so the knob was dead in
@@ -50,80 +50,13 @@
  * | clumpSeed | 911 |
  * | waveSeed | 777 |
  */
+import type { GalaxyLegacyParams } from './GalaxyLegacyParams';
+import type { GalaxySharedParams } from './GalaxySharedParams';
 
 export type GalaxyParams = {
-  /** Hubble type: 'Sa'..'Sc', 'SBa'..'SBc', 'E0'..'E7', 'S0', 'Irr'. */
+  /** Hubble type: 'Sa'..'Sc', 'SBa'..'SBc', 'E0'..'E7', 'S0', 'Irr'. Stays bare — every branch keys off it first. */
   readonly type: string;
-  readonly starCount?: number;
-  readonly radius?: number;
-  readonly bulgeSize?: number;
-  readonly bulgeFalloff?: number;
-  readonly diskThickness?: number;
-  /**
-   * Disc scale length as a FRACTION of `outerRadius`. Absent means 1/3.2, the
-   * ratio every galaxy type shares (`packGenerationUniforms`); set, it retunes
-   * one galaxy's radial light profile without moving that shared constant.
-   */
-  readonly diskScaleLenFrac?: number;
-  readonly irregularity?: number;
-  readonly armCount?: number;
-  readonly armWinding?: number;
-  readonly armWidth?: number;
-  readonly armStrength?: number;
-  readonly subArms?: number;
-  readonly armFalloff?: number;
-  readonly armEdgeVar?: number;
-  readonly armClump?: number;
-  readonly armWave?: number;
-  /**
-   * Multiplier on `GalaxyDescription.armStartRadius`
-   * (`describeGalaxy.ts`'s `Math.max(category === 'barred' ? bar.barLength *
-   * 0.9 : bulgeRadius * 0.55, bulgeRadius * 0.4)`, itself off
-   * `bulgeRadius = outerRadius * 0.34 * bulgeSize`) — the only knob that
-   * moves where the arms begin. SHARED geometry: both v1 (sprites) and v2
-   * (analytic field) place arm material against `armStartRadius`, so this
-   * scales both at once. Absent means 1, today's derivation unchanged.
-   */
-  readonly armStart?: number;
-  readonly barStrength?: number;
-  /**
-   * Bar position angle in DEGREES about the disc pole. Absent (the spike's
-   * behaviour, and every preset that says nothing) means the angle is a small
-   * random tilt off `irregularity`; set, it pins the bar and the RNG draw is
-   * consumed and discarded so no other generated star moves.
-   */
-  readonly barAngleDeg?: number;
-  /**
-   * Per-arm age in [0,1] (0 = young gas arm, 1 = old stellar arm), indexed by
-   * arm number. Absent (every preset that says nothing) means each arm's age
-   * is derived from the asymmetry stream: alternating strong/weak bands (even
-   * arms old, odd arms young) with jitter, so a random galaxy naturally shows
-   * a mix of arm ages rather than one uniform contrast. Set, an entry pins
-   * that arm's age and the RNG draw is still consumed and discarded, same
-   * discipline as `barAngleDeg`.
-   */
-  readonly armAges?: readonly number[];
-  readonly youngStars?: number;
-  readonly metallicity?: number;
-  readonly hii?: number;
-  /**
-   * Legacy sprite-generator dust density. Renamed off the bare `dust` name,
-   * which now names `GalaxyFieldTuning.dust` (the analytic dust lane) instead.
-   */
-  readonly spriteDust?: number;
-  readonly dustNoise?: number;
-  readonly dustNoiseScale?: number;
-  readonly dustRing?: number;
-  readonly dustRingWidth?: number;
-  readonly dustRingStrength?: number;
-  readonly globularCount?: number;
-  readonly globularSize?: number;
-  readonly globularBright?: number;
-  readonly warpStrength?: number;
-  readonly warpTwist?: number;
-  readonly warpStart?: number;
-  readonly seed?: number;
-  readonly asymSeed?: number;
-  readonly clumpSeed?: number;
-  readonly waveSeed?: number;
+  readonly shared: GalaxySharedParams;
+  /** v1 sprite generator only — dies with `galaxyGenerator/v1/`. */
+  readonly legacy?: GalaxyLegacyParams;
 };

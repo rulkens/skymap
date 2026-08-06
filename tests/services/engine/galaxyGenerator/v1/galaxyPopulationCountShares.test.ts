@@ -30,18 +30,26 @@ const CATEGORIES: readonly GalaxyCategory[] = [
 // Off-default bulge/arm knobs, so the spiral-like entry is exercised where its
 // terms actually differ rather than at the fallbacks.
 const PARAMS: readonly GalaxyParams[] = [
-  { type: 'Sb' },
-  { type: 'Sb', bulgeSize: 0.45, armStrength: 1.4 },
-  { type: 'Sb', bulgeSize: 1.8, armStrength: 0.2 },
+  { type: 'Sb', shared: {} },
+  { type: 'Sb', shared: { bulgeSize: 0.45 }, legacy: { armStrength: 1.4 } },
+  { type: 'Sb', shared: { bulgeSize: 1.8 }, legacy: { armStrength: 0.2 } },
 ];
 
 /** One galaxy per category, each with a bar/arm mix that makes all four shares differ. */
 const BY_CATEGORY: readonly GalaxyParams[] = [
-  { type: 'E1', starCount: 100000 },
-  { type: 'S0', starCount: 100000 },
-  { type: 'Sb', starCount: 100000, bulgeSize: 0.6, armStrength: 1.1 },
-  { type: 'SBb', starCount: 100000, bulgeSize: 0.45, armStrength: 0.8 },
-  { type: 'Irr', starCount: 100000 },
+  { type: 'E1', shared: {}, legacy: { starCount: 100000 } },
+  { type: 'S0', shared: {}, legacy: { starCount: 100000 } },
+  {
+    type: 'Sb',
+    shared: { bulgeSize: 0.6 },
+    legacy: { starCount: 100000, armStrength: 1.1 },
+  },
+  {
+    type: 'SBb',
+    shared: { bulgeSize: 0.45 },
+    legacy: { starCount: 100000, armStrength: 0.8 },
+  },
+  { type: 'Irr', shared: {}, legacy: { starCount: 100000 } },
 ];
 
 describe('galaxyPopulationCountShares', () => {

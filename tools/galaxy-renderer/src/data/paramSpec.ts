@@ -18,10 +18,17 @@
  * call-site args instead of from `SPEC`.
  */
 
-import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyLegacyParams } from '../../../../src/@types/galaxy/GalaxyLegacyParams';
+import type { GalaxySharedParams } from '../../../../src/@types/galaxy/GalaxySharedParams';
 import type { ParamSpecEntry } from '../../@types/data/ParamSpecEntry';
 
-export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, ParamSpecEntry>>> = {
+// The flat slider-facing key space GalaxyParams used to be before the
+// shared/legacy split — every PARAM_SPEC/slider/randomizer site still works
+// in these flat names, routing into whichever bag actually owns the field
+// (see `GALAXY_LEGACY_PARAM_KEYS`).
+export type GalaxyParamKey = keyof GalaxySharedParams | keyof GalaxyLegacyParams;
+
+export const PARAM_SPEC: Readonly<Partial<Record<GalaxyParamKey, ParamSpecEntry>>> = {
   radius: { min: 0.4, max: 1.8, step: 0.05 },
   // The floor is `totalStarBudget`'s own `Math.max(20000, ...)`, which this
   // tool shares with the runtime — below it the slider would show a count the

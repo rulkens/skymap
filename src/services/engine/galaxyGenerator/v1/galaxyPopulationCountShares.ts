@@ -35,7 +35,7 @@ const ARM_LIGHT_SHARE_OF_DISC = 0.5;
 function armLightShareOfDisc(category: GalaxyCategory, params: GalaxyParams): number {
   if (category === 'irregular') return 1;
   if (category !== 'spiral' && category !== 'barred') return 0;
-  return Math.min(1, Math.max(0, ARM_LIGHT_SHARE_OF_DISC * (params.armStrength ?? 1)));
+  return Math.min(1, Math.max(0, ARM_LIGHT_SHARE_OF_DISC * (params.legacy?.armStrength ?? 1)));
 }
 
 export function galaxyPopulationCountShares(

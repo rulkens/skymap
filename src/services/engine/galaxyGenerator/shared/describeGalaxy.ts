@@ -96,13 +96,13 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   const outerRadius = outerRadiusOf(params);
   // 1/3.2 is the ratio every galaxy type shares; a preset that has a measured
   // radial light profile to match overrides it via `diskScaleLenFrac`.
-  const diskScaleLen = outerRadius * (params.diskScaleLenFrac ?? 1 / 3.2);
-  const bulgeRadius = outerRadius * 0.34 * (params.bulgeSize || 1);
-  const diskHeight = 0.055 * outerRadius * (params.diskThickness || 1);
+  const diskScaleLen = outerRadius * (params.shared.diskScaleLenFrac ?? 1 / 3.2);
+  const bulgeRadius = outerRadius * 0.34 * (params.shared.bulgeSize || 1);
+  const diskHeight = 0.055 * outerRadius * (params.shared.diskThickness || 1);
 
   // --- Asymmetry stream: four draws, then per-arm personality further down --
-  const asymmetry = params.irregularity ?? 0.5;
-  const asymStream = mulberry32(((params.asymSeed ?? 0) | 0 || 331) >>> 0);
+  const asymmetry = params.shared.irregularity ?? 0.5;
+  const asymStream = mulberry32(((params.shared.asymSeed ?? 0) | 0 || 331) >>> 0);
   const flattening =
     category === 'elliptical' ? 1 - 0.09 * (parseInt(params.type.slice(1), 10) || 0) : 0.62;
   const lopsidedAmp = asymmetry * (0.06 + 0.22 * asymStream());
@@ -111,14 +111,14 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   const bulgeTiltRad = asymStream() * Math.PI * 2;
 
   // --- Main stream: bar angle unconditionally, then category-gated centres ---
-  const mainStream = mulberry32(normalizeGenerationSeed(params.seed));
+  const mainStream = mulberry32(normalizeGenerationSeed(params.shared.seed));
   const bar = computeBarGeometry(
     mainStream,
     category,
     outerRadius,
     asymmetry,
-    params.barStrength,
-    params.barAngleDeg,
+    params.shared.barStrength,
+    params.shared.barAngleDeg,
   );
 
   const irregularClumpCenters: Vec3[] = [];
@@ -141,18 +141,18 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   }
 
   // --- Arm personality: asymStream continues, clump/wave get their own ------
-  const numArms = Math.min(Math.max(1, Math.round(params.armCount || 2)), MAX_ARMS);
+  const numArms = Math.min(Math.max(1, Math.round(params.shared.armCount || 2)), MAX_ARMS);
 
-  const pitchDegrees = 8 + 26 * (params.armWinding ?? 0.5);
+  const pitchDegrees = 8 + 26 * (params.shared.armWinding ?? 0.5);
   const windTightness = 1 / Math.tan((pitchDegrees * Math.PI) / 180);
   const armExtentFrac = lerp(
     ARM_EXTENT_AT_FALLOFF_0,
     ARM_EXTENT_AT_FALLOFF_1,
-    params.armFalloff ?? 0.6,
+    params.shared.armFalloff ?? 0.6,
   );
   const armFadeRadius = outerRadius * Math.max(ARM_EXTENT_FLOOR, armExtentFrac);
   const armFullRadius = armFadeRadius * 0.42;
-  const armLengthVar = params.armEdgeVar ?? 0;
+  const armLengthVar = params.shared.armEdgeVar ?? 0;
 
   // `arms` is always `numArms` long. A category that draws none — every
   // elliptical and lenticular, and every irregular — gets zeroed records
@@ -165,8 +165,8 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   // sprites.
   const arms: GalaxyFieldArmRecord[] = Array.from({ length: numArms }, () => ZERO_ARM());
   if (category === 'spiral' || category === 'barred') {
-    const clumpStream = mulberry32(((params.clumpSeed ?? 0) | 0 || 911) >>> 0);
-    const waveStream = mulberry32(((params.waveSeed ?? 0) | 0 || 777) >>> 0);
+    const clumpStream = mulberry32(((params.shared.clumpSeed ?? 0) | 0 || 911) >>> 0);
+    const waveStream = mulberry32(((params.shared.waveSeed ?? 0) | 0 || 777) >>> 0);
     for (let a = 0; a < numArms; a++) {
       const phase = (a / numArms) * Math.PI * 2 + (asymStream() * 2 - 1) * 0.38 * asymmetry;
       const pitch = windTightness * (1 + (asymStream() * 2 - 1) * 0.3 * asymmetry);
@@ -188,7 +188,7 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
       );
       const ageJitter = asymStream();
       const ageBase = a % 2 === 0 ? ARM_AGE_EVEN_BASE : ARM_AGE_ODD_BASE;
-      const age = params.armAges?.[a] ?? ageBase + ARM_AGE_JITTER_RANGE * ageJitter;
+      const age = params.shared.armAges?.[a] ?? ageBase + ARM_AGE_JITTER_RANGE * ageJitter;
       arms[a] = {
         phase,
         pitch,
@@ -226,28 +226,28 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     lopsidedAngle,
     bulgeAxisZ,
     bulgeTiltRad,
-    bulgeConcentration: params.bulgeFalloff ?? 0.5,
+    bulgeConcentration: params.shared.bulgeFalloff ?? 0.5,
     barLength: bar.barLength,
     barTiltRad: bar.barTiltRad,
-    warpStrength: params.warpStrength ?? 0,
-    warpTwist: params.warpTwist ?? 0,
-    warpStartRadius: outerRadius * (params.warpStart ?? 0.3),
+    warpStrength: params.shared.warpStrength ?? 0,
+    warpTwist: params.shared.warpTwist ?? 0,
+    warpStartRadius: outerRadius * (params.shared.warpStart ?? 0.3),
     numArms,
     armStartRadius:
       Math.max(
         category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55,
         bulgeRadius * 0.4,
-      ) * (params.armStart ?? 1),
+      ) * (params.shared.armStart ?? 1),
     armInnerRampW: Math.max(bulgeRadius * 0.6, outerRadius * 0.14),
     armFullRadius,
-    armWidthFactor: 0.1 * (params.armWidth ?? 1),
-    waveAmount: params.armWave ?? 0,
-    clumpAmount: params.armClump ?? 0.5,
-    youngFraction: params.youngStars ?? 0.5,
-    hiiPalette: hiiPalette(params.metallicity ?? 0.5),
+    armWidthFactor: 0.1 * (params.legacy?.armWidth ?? 1),
+    waveAmount: params.shared.armWave ?? 0,
+    clumpAmount: params.shared.armClump ?? 0.5,
+    youngFraction: params.shared.youngStars ?? 0.5,
+    hiiPalette: hiiPalette(params.shared.metallicity ?? 0.5),
     arms,
     irregularClumpCenters,
     lenticularCloudCenters,
-    seed: normalizeGenerationSeed(params.seed) >>> 0,
+    seed: normalizeGenerationSeed(params.shared.seed) >>> 0,
   };
 }

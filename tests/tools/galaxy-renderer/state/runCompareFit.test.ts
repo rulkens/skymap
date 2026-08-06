@@ -61,7 +61,7 @@ const REFERENCE: ReferenceGalaxy = {
   notable: '',
   credit: '',
   img: 'https://example.test/ref.png',
-  params: { type: 'E1', bulgeSize: 1, starCount: 5000 },
+  params: { type: 'E1', shared: { bulgeSize: 1 }, legacy: { starCount: 5000 } },
   view: { az: 0.4, el: 0.5, dist: 20 },
 };
 

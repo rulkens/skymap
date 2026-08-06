@@ -3,12 +3,16 @@
  * `serializeGalaxyPreset`'s header). Total, like the spike's `onUploadFile`:
  * bad JSON or a non-object `p` yields `null`; `r`/`f`/`x` tolerate missing or
  * non-object (empty bag) — deliberate, this file has never had a validation
- * framework, so a malformed nested value still reaches the store as-is. `f`
- * is additionally routed through `migrateGalaxyFieldTuningWire` to lift a v2
- * file's flat keys into v3's nested-by-section shape, AND (passing `p`
- * alongside) an even older preset's `dust`/`starFormation` off `p` itself —
- * see that function's header. `r` splits back into `render`/`lod` by key:
- * `lodApparent` is the only `LodSettings` field.
+ * framework, so a malformed nested value still reaches the store as-is.
+ *
+ * `p` is routed through `migrateGalaxyParamsWire` to lift a v3-or-older
+ * preset's flat keys into v4's `shared`/`legacy` bags. `f` is separately
+ * routed through `migrateGalaxyFieldTuningWire` to lift a v2 file's flat keys
+ * into v3's nested-by-section shape, AND (passing the RAW, unmigrated `p`
+ * alongside — see `migrateGalaxyParamsWire`'s header for why it has to be the
+ * raw one) an even older preset's `dust`/`starFormation` off `p` itself. `r`
+ * splits back into `render`/`lod` by key: `lodApparent` is the only
+ * `LodSettings` field.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
@@ -17,6 +21,7 @@ import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ExtrasState } from '../../@types/state/ExtrasState';
 import { migrateGalaxyFieldTuningWire } from './migrateGalaxyFieldTuningWire';
+import { migrateGalaxyParamsWire } from './migrateGalaxyParamsWire';
 
 const LOD_KEYS: readonly string[] = ['lodApparent'];
 
@@ -49,7 +54,7 @@ export function parseGalaxyPreset(json: string): {
   }
 
   return {
-    p: parsed.p as Partial<GalaxyParams>,
+    p: migrateGalaxyParamsWire(parsed.p),
     r: render as Partial<RenderSettings>,
     lod: lod as Partial<LodSettings>,
     f: migrateGalaxyFieldTuningWire(isPlainObject(parsed.f) ? parsed.f : {}, parsed.p),

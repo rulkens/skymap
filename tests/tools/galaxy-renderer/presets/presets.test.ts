@@ -264,7 +264,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     const raw = JSON.parse(wire);
 
     expect(raw.type).toBe('galaxy-preset');
-    expect(raw.version).toBe(3);
+    expect(raw.version).toBe(4);
     expect(raw.p).toEqual(DEFAULT_GALAXY_PARAMS);
     expect(raw.r).toMatchObject({
       exposure: DEFAULT_RENDER_SETTINGS.exposure,
@@ -279,6 +279,73 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     // regenNonce is a re-roll trigger, not part of the "look" — see
     // serializeGalaxyPreset's header for why it's deliberately dropped.
     expect(raw.x.regenNonce).toBeUndefined();
+  });
+
+  // migrateGalaxyParamsWire — v4 GalaxyParams reshape.
+  it("migrates a v3 flat p into v4's nested shared/legacy bags, values intact", () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: {
+        type: 'SBb',
+        radius: 1.2,
+        armCount: 3,
+        seed: 42,
+        starCount: 250000,
+        spriteDust: 0.4,
+        globularCount: 12,
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.p).toEqual({
+      type: 'SBb',
+      shared: { radius: 1.2, armCount: 3, seed: 42 },
+      legacy: { starCount: 250000, spriteDust: 0.4, globularCount: 12 },
+    });
+  });
+
+  it('round-trips a v4 preset (serialize -> parse) as an identity', () => {
+    const wire = serializeGalaxyPreset(
+      DEFAULT_GALAXY_PARAMS,
+      DEFAULT_RENDER_SETTINGS,
+      DEFAULT_LOD_SETTINGS,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      DEFAULT_EXTRAS_STATE,
+    );
+
+    expect(JSON.parse(wire).version).toBe(4);
+    expect(parseGalaxyPreset(wire)?.p).toEqual(DEFAULT_GALAXY_PARAMS);
+  });
+
+  // The p-side migrator has to run without disturbing what the f-side lift
+  // reads: both are handed the SAME raw `p` independently (`parseGalaxyPreset`'s
+  // header), so `migrateGalaxyParamsWire` dropping `dust`/`starFormation` from
+  // ITS OWN output must not starve `migrateGalaxyFieldTuningWire`'s separate
+  // `p.dust`/`p.starFormation` lift (see that function's `liftLegacyParamSections`).
+  it('the p-migrator dropping dust/starFormation does not starve the f-side p.dust lift', () => {
+    const legacyDust = {
+      tau: 2.5,
+      scaleLenRatio: 1.6,
+      heightRatio: 0.5,
+      rV: 3.0,
+      cloud: DEFAULT_GALAXY_FIELD_TUNING.dust.cloud,
+    };
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: { type: 'Sc', radius: 1.1, dust: legacyDust, starFormation: { sfActivity: 1.8 } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    // p-migrator: dust/starFormation dropped as unknown flat keys, radius lifted.
+    expect(parsed?.p).toEqual({ type: 'Sc', shared: { radius: 1.1 } });
+    // f-migrator: still found dust/starFormation on the RAW p, unaffected by
+    // the p-migrator's own output.
+    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: true });
+    expect(parsed?.f?.starFormation).toEqual({ sfActivity: 1.8 });
   });
 
   it('rejects invalid JSON with null', () => {
