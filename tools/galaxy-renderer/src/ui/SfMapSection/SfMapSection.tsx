@@ -366,6 +366,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               path="fieldTuning.sfMapFluid.laneBias"
               info="Directional gather: full strength where the drift carries gas toward the ridge (the upstream flank arm drag stalls), scaled down by (1 - laneBias) on the downstream flank — keeps the drag lane one-sided instead of the gather washing it back out."
             />
+            <ParamSlider
+              label="Gather offset"
+              value={fluid.gatherOffset}
+              min={-24}
+              max={24}
+              step={0.5}
+              format={(v) => v.toFixed(1)}
+              onChange={(v) => patchFluid({ gatherOffset: v })}
+              path="fieldTuning.sfMapFluid.gatherOffset"
+              info="Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. Range covers roughly the ridge's own half-FWHM (~17-24 texels across this app's Milky Way preset's grid, per galaxySfMapArmForcing.ts's armCrossSigma)."
+            />
             <div className={styles.sliderGroupHeader}>SF events</div>
             <ParamSlider
               label="Event rate"
@@ -421,6 +432,17 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               onChange={(v) => patchFluid({ emaRate: v })}
               path="fieldTuning.sfMapFluid.emaRate"
               info="Blend rate of the per-texel activity trace toward this step's event intensity (z' = mix(z, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
+            />
+            <ParamSlider
+              label="Event arm bias"
+              value={fluid.eventArmBias}
+              min={0}
+              max={1}
+              step={0.01}
+              format={(v) => v.toFixed(2)}
+              onChange={(v) => patchFluid({ eventArmBias: v })}
+              path="fieldTuning.sfMapFluid.eventArmBias"
+              info="How hard event placement is confined to the arms: the CDF floor off the ridge is ARM_BIAS_FLOOR * (1 - eventArmBias). 0 (default) is today's fixed bias — events can land anywhere, weighted toward the arms. 1 zeroes the floor entirely, gating events strictly onto texels with nonzero arm forcing."
             />
             <div className={styles.sliderGroupHeader}>Turbulence</div>
             <ParamSlider

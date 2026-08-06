@@ -34,12 +34,16 @@ export const SF_MAP_FLUID_MAX_EVENTS = 1024;
 const SF_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
 
 /**
- * Placement weight is `ARM_BIAS_FLOOR + armForcing`, not `armForcing` alone:
- * a pure arm-forcing CDF is IDENTICALLY ZERO off the ridge (`armForcing`'s
- * own `r <= armStartRadius` skip and its Gaussian cross-track falloff), which
- * would confine every event to the arms outright — this generator wants a
- * BIAS, the same "light touch" the automaton's own `armForcing` param
- * documents, not a gate.
+ * Placement weight is `ARM_BIAS_FLOOR * (1 - eventArmBias) + armForcing`, not
+ * `armForcing` alone: a pure arm-forcing CDF is IDENTICALLY ZERO off the ridge
+ * (`armForcing`'s own `r <= armStartRadius` skip and its Gaussian cross-track
+ * falloff), which would confine every event to the arms outright — the floor
+ * exists to give the whole grid a BIAS, the same "light touch" the
+ * automaton's own `armForcing` param documents, not a gate. `eventArmBias`
+ * (`GalaxySfMapFluidParams`) is now what decides bias-vs-gate: 0 (default)
+ * keeps the fixed floor below, byte-identical to before this param existed;
+ * 1 zeroes it, turning the floor into a hard gate — every event lands
+ * strictly on the ridge.
  */
 const ARM_BIAS_FLOOR = 0.15;
 
@@ -95,10 +99,11 @@ export function buildGalaxySfMapFluidEvents(
   if (count === 0) return [];
 
   const forcing = buildGalaxySfMapArmForcing(geometry, tuning);
+  const armBiasFloor = ARM_BIAS_FLOOR * (1 - fluid.eventArmBias);
   const weights = new Float64Array(forcing.length);
   let total = 0;
   for (let i = 0; i < forcing.length; i++) {
-    total += ARM_BIAS_FLOOR + forcing[i]!;
+    total += armBiasFloor + forcing[i]!;
     weights[i] = total;
   }
 

@@ -4,8 +4,9 @@
  * OFFSET AUTHORITY — see `packSfMapAutomatonConstants.ts`'s own header for
  * why a wrong index is a silent failure, not a thrown one.
  *
- * 16 lanes for 15 members — the same round-up-to-a-whole-row convention as
- * the automaton's own constants packer.
+ * 16 lanes for 16 members — `gatherOffset` (member 16) exactly fills the
+ * buffer; the round-up-to-a-whole-row slack the automaton's own constants
+ * packer still carries is gone here.
  */
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import type { GalaxySfMapFluidParams } from '../../../../../src/@types/galaxy/GalaxySfMapFluidParams';
@@ -43,10 +44,7 @@ export function packSfMapFluidConstants({
   out[12] = fluid.gasScaleLength;
   out[13] = fluid.gasFloor;
   out[14] = fluid.laneBias;
-
-  // Slack past the struct, written rather than left to the allocator — same
-  // convention as packSfMapAutomatonConstants.ts.
-  for (let i = 15; i < SF_MAP_FLUID_CONSTANTS_FLOATS; i++) out[i] = 0;
+  out[15] = fluid.gatherOffset;
 
   return out;
 }

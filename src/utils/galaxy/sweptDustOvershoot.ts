@@ -15,7 +15,7 @@
  */
 import type { SfMapDensityTexel } from './buildSfMapDustCdf';
 
-/** Ambient/step-0 dust level BOTH SF-map generators seed every texel to (sfMapAutomatonStep.wesl, sfMapFluidStep.wesl). */
+/** Ambient dust pedestal's MAXIMUM, and the fixed overshoot reference every consumer subtracts (sfMapAutomatonStep.wesl, sfMapFluidStep.wesl). The automaton seeds every texel to exactly this; the fluid generator seeds SF_MAP_AMBIENT_DUST * gasProfile(r) (<= this, gasProfile's own max is 1), so only the automaton stays uniformly AT the pedestal. */
 export const SF_MAP_AMBIENT_DUST = 1.0;
 
 export function sweptDustOvershoot(texel: SfMapDensityTexel): number {

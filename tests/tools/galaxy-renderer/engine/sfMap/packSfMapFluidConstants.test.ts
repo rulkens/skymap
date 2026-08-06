@@ -43,6 +43,7 @@ const SENTINEL = {
   gasScaleLength: 4113,
   gasFloor: 4114,
   laneBias: 4115,
+  gatherOffset: 4116,
 } as const;
 
 const input: SfMapFluidConstantsInput = {
@@ -65,6 +66,10 @@ const input: SfMapFluidConstantsInput = {
     gasScaleLength: SENTINEL.gasScaleLength,
     gasFloor: SENTINEL.gasFloor,
     laneBias: SENTINEL.laneBias,
+    gatherOffset: SENTINEL.gatherOffset,
+    // CPU-only (galaxySfMapFluidEvents.ts) — no UBO member, not part of this
+    // parity guard's sentinel set.
+    eventArmBias: 0,
   },
 };
 

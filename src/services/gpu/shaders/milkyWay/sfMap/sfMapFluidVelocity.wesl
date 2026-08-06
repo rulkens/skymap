@@ -43,6 +43,10 @@ struct SfMapFluidConstants {
   // one-sided lane armDrag creates. 0 (default) is today's symmetric gather,
   // bit-identical.
   laneBias: f32,
+  // Signed az-texel offset of armGather's OWN forcing sample (composedVelocity
+  // below) — see the sign-convention comment there. 0 (default) samples the
+  // crest texel itself, bit-identical to today.
+  gatherOffset: f32,
 }
 
 // Same layout as sfMapFluidStep.wesl's own copy (packSfMapFluidStepIndex.ts
@@ -210,6 +214,19 @@ fn composedVelocity(
   let shearVelAz = sfMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
   let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, u.curlScale, f32(genStep));
   let grad = forcingGradient(az, ring, azCountI, ringCountI, azToRingMetric);
+
+  // armGather's OWN forcing sample, offset from the crest by gatherOffset
+  // texels: gas doesn't gather exactly on the ridge, it gathers where the
+  // drift feeds it from, one flank upstream. The sign multiplies by
+  // sign(shearVelAz), NOT a fixed sign — drift direction (and so which
+  // flank is upstream) reverses at corotation, so a fixed-sign shift would
+  // land the gather target behind the crest on one side of corotation and
+  // ahead of it on the other. sign(0) = 0, so exactly at corotation the
+  // shift collapses to 0 regardless of gatherOffset: no drift, no flank to
+  // prefer. Only this sample moves — forcingSelf below (armDrag) and grad
+  // above (the laneBias direction test) keep reading the unshifted texel.
+  let gatherAz = wrapAz(az + i32(round(sign(shearVelAz) * u.gatherOffset)), azCountI);
+  let gatherGrad = forcingGradient(gatherAz, ring, azCountI, ringCountI, azToRingMetric);
   // Counterweight so 120 steps of convergent gathering can't run the local
   // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.
   let gatherSat = max(0.0, 1.0 - localDust / ARM_GATHER_SAT);
@@ -227,8 +244,8 @@ fn composedVelocity(
   // drift is carrying gas up-slope, toward the ridge (upstream flank).
   let gatherWeight = select(1.0 - u.laneBias, 1.0, shearVelAz * grad.x > 0.0);
 
-  var velAz = stalledShear + u.curlStrength * curl.x + u.armGather * gatherSat * gatherWeight * grad.x;
-  var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * gatherWeight * grad.y;
+  var velAz = stalledShear + u.curlStrength * curl.x + u.armGather * gatherSat * gatherWeight * gatherGrad.x;
+  var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * gatherWeight * gatherGrad.y;
   var eventStamp = 0.0;
 
   let azCountF = f32(azCount);

@@ -96,10 +96,10 @@ describe('buildGalaxySfMapFluidEvents', () => {
     expect(a.length).toBeGreaterThan(0); // sanity: the MW preset's defaults really produce events
   });
 
-  it('at gasFloor=1 (gasProfile identically 1 everywhere), the gas-weighted rejection sampler never rejects — event placement is byte-identical to the pre-profile, unweighted algorithm', () => {
+  it('at gasFloor=1 (gasProfile identically 1 everywhere) and eventArmBias=0, the gas-weighted rejection sampler never rejects and the placement floor is the fixed ARM_BIAS_FLOOR — event placement is byte-identical to the pre-profile, pre-eventArmBias, unweighted algorithm. This is also the eventArmBias=0 regression pin: an inverted or dropped (1 - eventArmBias) multiplier would zero the floor at 0 instead of leaving it at ARM_BIAS_FLOOR, and diverge here.', () => {
     const tuning = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
-      sfMapFluid: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid, gasFloor: 1 },
+      sfMapFluid: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid, gasFloor: 1, eventArmBias: 0 },
     };
     const withWeighting = buildGalaxySfMapFluidEvents(geometry, tuning, 13);
     const withoutWeighting = legacyUnweightedEvents(geometry, tuning, 13);
@@ -140,6 +140,22 @@ describe('buildGalaxySfMapFluidEvents', () => {
     const eventMean = eventTotal / events.length;
 
     expect(eventMean).toBeGreaterThan(gridMean);
+  });
+
+  it('at eventArmBias 1, the placement floor is zeroed to a hard gate — every event lands on a texel with nonzero armForcing', () => {
+    const forcing = buildGalaxySfMapArmForcing(geometry, DEFAULT_GALAXY_FIELD_TUNING);
+    const tuning = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      sfMapFluid: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid, eventArmBias: 1 },
+    };
+    const events = buildGalaxySfMapFluidEvents(geometry, tuning, 7);
+    expect(events.length).toBeGreaterThan(0);
+    for (const e of events) {
+      // Same clamp-the-jitter-overflow rounding as the arm-bias test above.
+      const az = Math.min(SF_MAP_AZ - 1, Math.round(e.az)) % SF_MAP_AZ;
+      const ring = Math.min(SF_MAP_RINGS - 1, Math.round(e.ring));
+      expect(forcing[ring * SF_MAP_AZ + az]).toBeGreaterThan(0);
+    }
   });
 
   it('caps the requested event count at SF_MAP_FLUID_MAX_EVENTS', () => {

@@ -69,6 +69,10 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // stalls, scaled down by (1 - laneBias) on the downstream flank — keeps
   // the drag lane one-sided instead of gather washing it back out.
   laneBias: 0.35,
+  // 0: gather still samples the crest texel itself, same as before this
+  // param existed. Left off pending a visual pass on where the crest-relative
+  // offset actually helps.
+  gatherOffset: 0,
   // Exponential decline length of the radial gas profile `gasRegen` relaxes
   // toward, in grid-radius units (same as rMin/rMax/corotationRadius) —
   // roughly a third of this app's own Milky Way preset's rMax (~10.5-15.5,
@@ -80,4 +84,7 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // toward the outer disc instead of staying flat — `gasScaleLength` above
   // is no longer inert.
   gasFloor: 0.07,
+  // 0: today's fixed ARM_BIAS_FLOOR bias, unchanged. Left off pending a
+  // visual pass on how hard a gate event placement should be.
+  eventArmBias: 0,
 };

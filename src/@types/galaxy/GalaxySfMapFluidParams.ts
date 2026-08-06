@@ -63,10 +63,32 @@ export type GalaxySfMapFluidParams = {
    * is today's symmetric gather, bit-identical.
    */
   readonly laneBias: number;
+  /**
+   * Signed azimuthal offset, in az texels, of the `armGather` term's OWN
+   * forcing sample — `sfMapFluidVelocity.wesl`'s `composedVelocity` evaluates
+   * the gather gradient at `az + sign(shearVelAz) * gatherOffset`, not at the
+   * texel itself. Gas doesn't gather exactly on the crest; it gathers where
+   * the drift feeds it from, one shear-flank upstream of it. Multiplying by
+   * `sign(shearVelAz)` (rather than a fixed-sign shift) is load-bearing:
+   * drift direction — and therefore which flank is upstream — reverses at
+   * corotation, so a fixed-sign offset would aim the gather target BEHIND
+   * the crest on one side of corotation and AHEAD of it on the other. 0
+   * (default) samples the crest texel itself, bit-identical to today.
+   */
+  readonly gatherOffset: number;
   /** Explicit diffusion coefficient for gas/dust density, in texel²/step (`sfMapFluidStep.wesl`'s `diffusionLaplacian`) — the repulsion `armGather`'s attraction has nothing to balance without it; sets arm band width and kills grid-scale (1-texel-line, checkerboard) collapse. Explicit 2D diffusion is stable only for coefficient ≤ 0.25. A `v += -k * grad(gas)` velocity term was tried first and rejected: central-difference pressure on a collocated grid is blind to checkerboard modes and vanishes at a 1-texel spike's own peak — don't reintroduce it. */
   readonly diffusion: number;
   /** Exponential decline length of `gasProfile` (`sfMapFluidStep.wesl`), grid-radius units (same as `rMin`/`rMax`/`corotationRadius`) — sets how fast the star-forming (H2-like) gas disc thins with radius. */
   readonly gasScaleLength: number;
   /** `gasProfile`'s r→∞ floor fraction [0,1] — the flat HI component underneath the exponential decline. 1 makes the profile identically 1.0 everywhere (the pre-profile, uniform-seed calibration). */
   readonly gasFloor: number;
+  /**
+   * Placement floor for `galaxySfMapFluidEvents.ts`'s CDF, [0,1] dimensionless
+   * — the floor becomes `ARM_BIAS_FLOOR * (1 - eventArmBias)`, so 0 (default)
+   * is today's fixed `ARM_BIAS_FLOOR` bias (byte-identical) and 1 zeroes the
+   * floor entirely, turning the bias into a hard gate: every event lands
+   * where `armForcing` is nonzero, strictly on the ridge. CPU-only — no UBO
+   * member, no WESL mirror.
+   */
+  readonly eventArmBias: number;
 };

@@ -40,6 +40,9 @@ struct SfMapFluidConstants {
   // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
   // here for byte-identical layout, same discipline as armDrag above.
   laneBias: f32,
+  // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
+  // here for byte-identical layout, same discipline as laneBias above.
+  gatherOffset: f32,
 }
 
 // Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts
