@@ -64,6 +64,7 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { sfMapRingMeans } from '../../../../../src/utils/galaxy/sfMapRingMeans';
+import { SF_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
@@ -413,10 +414,22 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const orientationTexRebuild = createKeyedRebuild({
     wanted: () => viewIntensity('orientation') > 0 || fieldTuning.sfMap.generator !== 'none',
     build: () => {
+      // gasFloor=1 (fluid params carry no such sentinel) is the automaton
+      // case: sfMapOrientationField.wesl's SfMapOrientationPedestal derives
+      // its zero-gradient invariant from gasProfile(r) collapsing to a flat
+      // 1.0 there — see that file's header. gasScaleLength must still be
+      // finite even though it's then algebraically unused.
+      const fluidPedestal =
+        fieldTuning.sfMap.generator === 'fluid'
+          ? fieldTuning.sfMapFluid
+          : { gasFloor: 1, gasScaleLength: 1 };
       orientation.dispatch({
         grid: sfMapGridRadiusOrDefault(fieldGeometry),
         sigmaDerivTexels: render.orientationSigmaDerivTexels,
         sigmaIntegTexels: render.orientationSigmaIntegTexels,
+        gasFloor: fluidPedestal.gasFloor,
+        gasScaleLength: fluidPedestal.gasScaleLength,
+        ambient: SF_MAP_AMBIENT_DUST,
       });
       orientationDataRebuild.invalidate();
     },

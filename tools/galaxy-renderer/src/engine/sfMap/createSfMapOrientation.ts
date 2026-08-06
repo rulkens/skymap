@@ -39,6 +39,11 @@ export type SfMapOrientation = {
     readonly grid: GalaxySfMapGridRadius;
     readonly sigmaDerivTexels: number;
     readonly sigmaIntegTexels: number;
+    /** `sfMapOrientationField.wesl`'s pedestal-subtraction inputs — see `SfMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the automaton's own case); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
+    readonly gasFloor: number;
+    readonly gasScaleLength: number;
+    /** The ambient dust pedestal both generators seed at step 0 — `SF_MAP_AMBIENT_DUST` (`sweptDustOvershoot.ts`), passed live rather than baked in so the shader carries no restated constant. */
+    readonly ambient: number;
   }): void;
   dispose(): void;
 };
@@ -116,6 +121,18 @@ export function createSfMapOrientation(
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
+  // gasFloor/gasScaleLength/rMin/rMax/ambient — sfMapOrientationField.wesl's
+  // own pedestal-subtraction uniform (its `SfMapOrientationPedestal`), bound
+  // only into the field-blur-AZIMUTH bind group below: that is the one
+  // dispatch that reads raw dust off `sourceTexture`, so it is the one that
+  // needs to know the pedestal it must subtract before the gradient stage.
+  // 5 floats = 20 bytes, rounded up to this module's own 16-byte-block
+  // convention (see sigmaUbo/gridUbo above).
+  const pedestalUbo = device.createBuffer({
+    label: 'galaxy:sfMapOrientationPedestalUbo',
+    size: 32,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
   const presentBindGroup = device.createBindGroup({
     label: 'galaxy:orientationPresentBG',
     layout: presentPipe.getBindGroupLayout(0),
@@ -163,13 +180,18 @@ export function createSfMapOrientation(
 
   // One bind group per pipeline ('auto' layouts never cross pipelines, even
   // where the bindings are structurally identical) — built once, since every
-  // resource here is allocated for this module's whole lifetime.
+  // resource here is allocated for this module's whole lifetime. `extra` is
+  // the field-blur-azimuth pipeline's own binding 3 (pedestalUbo); every
+  // other stage's 'auto' layout is derived from an entry point that never
+  // touches binding 3, so passing it there would be a validation error, not
+  // a no-op — omit it for those callers.
   const makeStageBindGroup = (
     label: string,
     pipeline: GPUComputePipeline,
     src: GPUTexture,
     dst: GPUTexture,
     uniform: GPUBuffer,
+    extra?: GPUBuffer,
   ): GPUBindGroup =>
     device.createBindGroup({
       label,
@@ -178,6 +200,7 @@ export function createSfMapOrientation(
         { binding: 0, resource: src.createView() },
         { binding: 1, resource: dst.createView() },
         { binding: 2, resource: { buffer: uniform } },
+        ...(extra ? [{ binding: 3, resource: { buffer: extra } }] : []),
       ],
     });
 
@@ -214,6 +237,7 @@ export function createSfMapOrientation(
           deps.sourceTexture,
           fieldBlurTex,
           sigmaUbo,
+          pedestalUbo,
         ),
       },
       {
@@ -282,12 +306,24 @@ export function createSfMapOrientation(
     presentPipeline: presentPipe,
     presentBindGroup,
 
-    dispatch({ grid, sigmaDerivTexels, sigmaIntegTexels }): void {
+    dispatch({
+      grid,
+      sigmaDerivTexels,
+      sigmaIntegTexels,
+      gasFloor,
+      gasScaleLength,
+      ambient,
+    }): void {
       device.queue.writeBuffer(gridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
       device.queue.writeBuffer(
         sigmaUbo,
         0,
         new Float32Array([sigmaDerivTexels, sigmaIntegTexels, 0, 0]),
+      );
+      device.queue.writeBuffer(
+        pedestalUbo,
+        0,
+        new Float32Array([gasFloor, gasScaleLength, grid.rMin, grid.rMax, ambient, 0, 0, 0]),
       );
       const enc = device.createCommandEncoder({ label: 'galaxy:sfMapOrientation' });
       // All six dispatches share ONE compute pass: WebGPU orders
@@ -308,6 +344,7 @@ export function createSfMapOrientation(
       readbackBuffer.destroy();
       gridUbo.destroy();
       sigmaUbo.destroy();
+      pedestalUbo.destroy();
       fieldBlurTex.destroy();
       fieldSmoothTex.destroy();
       tensorRawTex.destroy();

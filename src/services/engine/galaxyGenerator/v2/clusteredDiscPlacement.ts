@@ -195,7 +195,7 @@ function recordOrientationDelta(
  * honest about how much of the grid has no measured structure to turn
  * toward, rather than only averaging over the texels that did.
  */
-function rotateFrameToOrientation(
+export function rotateFrameToOrientation(
   frame: CloudFrame,
   radius: number,
   angle: number,
