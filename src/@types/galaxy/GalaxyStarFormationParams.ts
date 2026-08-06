@@ -11,6 +11,4 @@
 export type GalaxyStarFormationParams = {
   /** Poisson rate scale for arm SF events — 0 disables the catalog, and with it HII regions and the bubble overlay. */
   readonly sfActivity: number;
-  /** ×measured-default scaler on relic-bubble radii (6-552 pc in NGC 628, Watkins et al. 2023). Does NOT size HII cavities, which take their radius from the HII tier. */
-  readonly bubbleScale: number;
 };

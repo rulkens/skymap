@@ -10,10 +10,7 @@
  * panel. Only their names come off the registry.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
-import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
@@ -24,14 +21,7 @@ import styles from './DebugViewsSection.module.css';
 function DebugViewsSection(): ReactNode {
   const dispatch = useAppDispatch();
   const render = useAppSelector((state) => state.render);
-  const starFormation = useAppSelector(
-    (state) => state.galaxy.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-  );
   const open = useAppSelector((state) => state.ui.openSections.debugViews);
-
-  const patchStarFormation = (patch: Partial<GalaxyStarFormationParams>): void => {
-    dispatch(paramsPatched({ starFormation: { ...starFormation, ...patch } }));
-  };
 
   return (
     <CollapsibleSection
@@ -160,17 +150,6 @@ function DebugViewsSection(): ReactNode {
           onChange={(v) => dispatch(renderPatched({ bubbleViewIntensity: v }))}
           path="render.bubbleViewIntensity"
           info={DEBUG_VIEWS.bubble.info}
-        />
-        <ParamSlider
-          label="Bubble size x"
-          value={starFormation.bubbleScale}
-          min={0.3}
-          max={2.5}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchStarFormation({ bubbleScale: v })}
-          path="galaxy.starFormation.bubbleScale"
-          info="Scales the relic-bubble radii in the BUBBLE debug overlay — its only consumer."
         />
       </div>
     </CollapsibleSection>

@@ -20,6 +20,9 @@ import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/Galaxy
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
+/** Debug-overlay-only knob, deleted from GalaxyStarFormationParams 2026-08-06 — the BUBBLE view was its only consumer. */
+const BUBBLE_RADIUS_SCALE = 1;
+
 /** Placement cap — bubbles are sparse, large-footprint features. */
 export const BUBBLE_BUDGET = 120;
 
@@ -77,7 +80,7 @@ export function buildDustBubblePlacements(
   tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly DustBubblePlacement[] {
-  if (dust.tau <= 0 || geometry.numArms <= 0 || starFormation.bubbleScale <= 0) return [];
+  if (dust.tau <= 0 || geometry.numArms <= 0 || BUBBLE_RADIUS_SCALE <= 0) return [];
 
   const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
   const out: DustBubblePlacement[] = [];
@@ -93,7 +96,7 @@ export function buildDustBubblePlacements(
     // many-small/few-big shape from the catalog's own UNIFORM age draws —
     // not a resampled power-law distribution.
     const radiusPc = 6 + 546 * Math.pow(age01n, 2.5);
-    const radius = pcToUnits(radiusPc) * starFormation.bubbleScale;
+    const radius = pcToUnits(radiusPc) * BUBBLE_RADIUS_SCALE;
     if (radius <= 0) continue;
 
     if (!armReaches(armRadius, geometry, arm)) continue;
