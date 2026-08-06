@@ -23,7 +23,7 @@ import {
   SPEED_COLOR_MAX,
 } from '../../../../src/data/flow/flowFieldConstants';
 import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
-import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { SF_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/sweptDustOvershoot';
 
 /**

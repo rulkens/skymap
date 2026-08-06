@@ -37,7 +37,7 @@ import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadou
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
+import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
@@ -61,8 +61,8 @@ import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './field/encodeSplatPass';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
-import { createSfMapGenerator } from './sfMap/createSfMapGenerator';
-import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
+import { createSfMapGenerator } from './ismMap/createIsmMapGenerator';
+import { createSfMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';

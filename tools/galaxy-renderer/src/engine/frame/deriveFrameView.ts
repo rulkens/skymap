@@ -17,7 +17,7 @@ import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
 import type { FieldDustSlices } from '../../../@types/engine/FieldDustSlices';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { SfMapChannelWeights } from '../../../@types/engine/SfMapChannelWeights';
+import type { SfMapChannelWeights } from '../../../@types/engine/IsmMapChannelWeights';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';

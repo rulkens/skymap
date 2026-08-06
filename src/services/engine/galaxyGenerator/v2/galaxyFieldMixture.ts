@@ -27,9 +27,9 @@ import {
   armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
-import { DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS } from './defaultGalaxySfMapAutomatonParams';
-import { DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS } from './defaultGalaxySfMapFluidParams';
-import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxySfMapParams';
+import { DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS } from './defaultGalaxyIsmMapAutomatonParams';
+import { DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
+import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';

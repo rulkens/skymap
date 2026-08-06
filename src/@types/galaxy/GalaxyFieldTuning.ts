@@ -12,9 +12,9 @@ import type { GalaxyArmTuning } from './GalaxyArmTuning';
 import type { GalaxyDiscTuning } from './GalaxyDiscTuning';
 import type { GalaxyDustTuning } from './GalaxyDustTuning';
 import type { GalaxyHiiTuning } from './GalaxyHiiTuning';
-import type { GalaxySfMapAutomatonParams } from './GalaxySfMapAutomatonParams';
-import type { GalaxySfMapFluidParams } from './GalaxySfMapFluidParams';
-import type { GalaxySfMapParams } from './GalaxySfMapParams';
+import type { GalaxySfMapAutomatonParams } from './GalaxyIsmMapAutomatonParams';
+import type { GalaxySfMapFluidParams } from './GalaxyIsmMapFluidParams';
+import type { GalaxySfMapParams } from './GalaxyIsmMapParams';
 
 export type GalaxyFieldTuning = {
   readonly disc: GalaxyDiscTuning;

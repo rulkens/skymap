@@ -40,7 +40,7 @@ import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/Gala
 import type { FieldDust } from '../../../@types/engine/FieldDust';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
-import type { SfMapSeedingLanes } from '../../../@types/engine/SfMapSeedingLanes';
+import type { SfMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView + dustDetail. */
 export const FIELD_HEADER_FLOATS = 56;

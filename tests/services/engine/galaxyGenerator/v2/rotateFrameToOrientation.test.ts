@@ -19,7 +19,7 @@ import {
   type OrientationDeltaStats,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
 import { warpSurfaceFrame } from '../../../../../src/utils/galaxy/warpSurfaceFrame';
-import type { GalaxySfMapOrientation } from '../../../../../src/@types/galaxy/GalaxySfMapOrientation';
+import type { GalaxySfMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);

@@ -20,7 +20,7 @@ import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { SfMapSeedingLanes } from '../../../@types/engine/SfMapSeedingLanes';
+import type { SfMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
@@ -28,10 +28,10 @@ import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDu
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
-import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxySfMap';
-import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxySfMapAutomatonParams';
-import type { GalaxySfMapFluidParams } from '../../../../../src/@types/galaxy/GalaxySfMapFluidParams';
-import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
+import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxySfMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
+import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
 
 import { createGenerationPipelines } from '../../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
@@ -54,8 +54,8 @@ import {
 import {
   sfMapGridRadius,
   sfMapGridRadiusOrDefault,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
   ASSOCIATIONS_MAX_COUNT,
   buildHiiRegions,
@@ -63,7 +63,7 @@ import {
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { sfMapRingMeans } from '../../../../../src/utils/galaxy/sfMapRingMeans';
+import { sfMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
 import { SF_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { arrayMean } from '../../../../../src/utils/math/arrayMean';
@@ -74,10 +74,10 @@ import { deriveDustHeaderLanes } from '../field/deriveDustHeaderLanes';
 import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import type { GrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
-import { createOrientationDiagnostics } from '../sfMap/createOrientationDiagnostics';
-import type { SfMapGenerator } from '../sfMap/createSfMapGenerator';
-import type { SfMapOrientation } from '../sfMap/createSfMapOrientation';
-import { createSfMapReadbacks } from '../sfMap/createSfMapReadbacks';
+import { createOrientationDiagnostics } from '../ismMap/createOrientationDiagnostics';
+import type { SfMapGenerator } from '../ismMap/createIsmMapGenerator';
+import type { SfMapOrientation } from '../ismMap/createIsmMapOrientation';
+import { createSfMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
 

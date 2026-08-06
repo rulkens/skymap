@@ -50,7 +50,7 @@ import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
 import HiiSection from '../HiiSection/HiiSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
-import SfMapSection from '../SfMapSection/SfMapSection';
+import SfMapSection from '../IsmMapSection/IsmMapSection';
 import SliderGroup from '../SliderGroup/SliderGroup';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';

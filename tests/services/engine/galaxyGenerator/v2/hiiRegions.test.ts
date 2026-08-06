@@ -11,7 +11,7 @@ import { armRidgeAngle } from '../../../../../src/services/engine/galaxyGenerato
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxySfMap';
+import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 

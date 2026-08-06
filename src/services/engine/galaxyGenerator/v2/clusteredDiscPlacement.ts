@@ -19,13 +19,13 @@
  */
 import { ARM_SPAN_START_FRAC } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
-import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrientation';
+import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
-import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxySfMapOrientation';
+import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxyIsmMapOrientation';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**

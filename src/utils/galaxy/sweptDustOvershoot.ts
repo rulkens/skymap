@@ -13,7 +13,7 @@
  * subtracts off — all five WESL mirrors are parity-tested against this
  * export in constants.parity.test.ts.
  */
-import type { SfMapDensityTexel } from './buildSfMapDustCdf';
+import type { SfMapDensityTexel } from './buildIsmMapDustCdf';
 
 /** Ambient dust pedestal's MAXIMUM, and the fixed overshoot reference every consumer subtracts (sfMapAutomatonStep.wesl, sfMapFluidStep.wesl). The automaton seeds every texel to exactly this; the fluid generator seeds SF_MAP_AMBIENT_DUST * gasProfile(r) (<= this, gasProfile's own max is 1), so only the automaton stays uniformly AT the pedestal. */
 export const SF_MAP_AMBIENT_DUST = 1.0;

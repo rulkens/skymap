@@ -26,16 +26,16 @@ import {
   armRidgeCurvePoint,
 } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
-import { sfMapGridRadius, SF_MAP_AZ, SF_MAP_RINGS } from './galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from './galaxySfMapArmForcing';
-import { buildGalaxySfMapFluidEvents, sfMapFluidEventWindow } from './galaxySfMapFluidEvents';
+import { sfMapGridRadius, SF_MAP_AZ, SF_MAP_RINGS } from './galaxyIsmMapArmForcing';
+import type { GalaxySfMapGridRadius } from './galaxyIsmMapArmForcing';
+import { buildGalaxySfMapFluidEvents, sfMapFluidEventWindow } from './galaxyIsmMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
-import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
+import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
-import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
-import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleSfMapEventPosition';
-import { sfMapRingRadius } from '../../../../utils/galaxy/sfMapRingRadius';
+import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
+import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleIsmMapEventPosition';
+import { sfMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
@@ -43,11 +43,11 @@ import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
-import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxySfMap';
-import type { GalaxySfMapDustCdf } from '../../../../@types/galaxy/GalaxySfMapDustCdf';
+import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxyIsmMap';
+import type { GalaxySfMapDustCdf } from '../../../../@types/galaxy/GalaxyIsmMapDustCdf';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
-import type { SfMapFluidEvent } from '../../../../@types/galaxy/SfMapFluidEvent';
+import type { SfMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**

@@ -8,13 +8,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
-import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxySfMap';
+import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { buildDustParticleCloud } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
-import { sfMapRingRadius } from '../../../../../src/utils/galaxy/sfMapRingRadius';
+import { sfMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadius';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 const MAP_AZ = 32;

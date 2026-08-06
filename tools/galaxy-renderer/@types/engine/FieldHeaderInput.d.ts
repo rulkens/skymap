@@ -9,8 +9,8 @@ import type { DebugViewWeights } from './DebugViewWeights';
 import type { FieldCamera } from './FieldCamera';
 import type { FieldDust } from './FieldDust';
 import type { HiiTextureLanes } from './HiiTextureLanes';
-import type { SfMapChannelWeights } from './SfMapChannelWeights';
-import type { SfMapSeedingLanes } from './SfMapSeedingLanes';
+import type { SfMapChannelWeights } from './IsmMapChannelWeights';
+import type { SfMapSeedingLanes } from './IsmMapSeedingLanes';
 
 export type FieldHeaderInput = {
   readonly camera: FieldCamera;

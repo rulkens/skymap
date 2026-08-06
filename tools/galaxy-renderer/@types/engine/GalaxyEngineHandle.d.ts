@@ -10,7 +10,7 @@
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
-import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
+import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';
 import type { ViewPose } from './ViewPose';

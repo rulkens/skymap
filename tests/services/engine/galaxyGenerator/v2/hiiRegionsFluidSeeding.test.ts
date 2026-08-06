@@ -14,14 +14,14 @@ import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/
 import {
   buildGalaxySfMapFluidEvents,
   sfMapFluidEventWindow,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapFluidEvents';
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import {
   sfMapGridRadius,
   SF_MAP_AZ,
   SF_MAP_RINGS,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import { sfMapRingRadius } from '../../../../../src/utils/galaxy/sfMapRingRadius';
+import { sfMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../../src/utils/galaxy/warpHeight';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
