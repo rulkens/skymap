@@ -8,7 +8,7 @@ import type { GalaxyDustCloudParams } from '../../../../@types/galaxy/GalaxyDust
 //
 // Every refiner starts at its literature value (1.0).
 export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
-  count: 5000,
+  count: 6500,
   // 0 = independent scattering: child scatter around a CDF-placed seed
   // re-blurs the map-exact placement, so the tool no longer exposes a
   // slider for it (see DustCloudSection).
