@@ -80,10 +80,10 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // fadeRadius).
   gasScaleLength: 4.75,
   // Flat HI floor the radial gas profile approaches at large r, as a
-  // fraction of the disc-centre value. Well below 1, so gas now thins
-  // toward the outer disc instead of staying flat — `gasScaleLength` above
-  // is no longer inert.
-  gasFloor: 0.07,
+  // fraction of the disc-centre value. 0 = pure exponential disc, no floor:
+  // gas (and with it events, dust, activity) dies off entirely toward the
+  // outer edge — `gasScaleLength` above alone sets the falloff.
+  gasFloor: 0,
   // 0: today's fixed ARM_BIAS_FLOOR bias, unchanged. Left off pending a
   // visual pass on how hard a gate event placement should be.
   eventArmBias: 0,
