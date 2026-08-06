@@ -21,6 +21,7 @@ import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
+import SliderGroup from '../SliderGroup/SliderGroup';
 import styles from './SfMapSection.module.css';
 
 export type SfMapSectionProps = {
@@ -252,221 +253,227 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           nested
         >
           <div className={styles.root}>
-            <div className={styles.sliderGroupHeader}>Simulation</div>
-            <ParamSlider
-              label="Steps"
-              value={fluid.steps}
-              min={1}
-              max={400}
-              step={1}
-              format={(v) => String(Math.round(v))}
-              onChange={(v) => patchFluid({ steps: Math.round(v) })}
-              path="fieldTuning.sfMapFluid.steps"
-              info="Advection iterations per rebuild — this generator's own step budget, parallel to the automaton's. Rebuild latency is linear in this."
-            />
-            <div className={styles.sliderGroupHeader}>Disc &amp; rotation</div>
-            <ParamSlider
-              label="Shear strength"
-              value={fluid.shearStrength}
-              min={0}
-              max={0.5}
-              step={0.005}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchFluid({ shearStrength: v })}
-              path="fieldTuning.sfMapFluid.shearStrength"
-              info="Differential-rotation shear amplitude, same (1/r - 1/corotationRadius) formula the automaton's shearRate uses — this generator's own copy, not wired to it."
-            />
-            <ParamSlider
-              label="Corotation radius"
-              value={fluid.corotationRadius}
-              min={1}
-              max={20}
-              step={0.1}
-              format={(v) => v.toFixed(1)}
-              onChange={(v) => patchFluid({ corotationRadius: v })}
-              path="fieldTuning.sfMapFluid.corotationRadius"
-              info="Pattern-speed radius the shear vanishes at — this generator's own copy, not the automaton's."
-            />
-            <div className={styles.sliderGroupHeader}>Gas supply</div>
-            <ParamSlider
-              label="Gas scale length"
-              value={fluid.gasScaleLength}
-              min={0.5}
-              max={20}
-              step={0.25}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ gasScaleLength: v })}
-              path="fieldTuning.sfMapFluid.gasScaleLength"
-              info="Exponential decline length of the radial gas profile gasRegen relaxes toward, in grid-radius units (same as rMin/rMax/corotationRadius). Range spans roughly 0.5 to 1.5x this app's own Milky Way preset's typical rMax (~13). Inert while gas floor is 1."
-            />
-            <ParamSlider
-              label="Gas floor"
-              value={fluid.gasFloor}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ gasFloor: v })}
-              path="fieldTuning.sfMapFluid.gasFloor"
-              info="Flat HI floor the radial gas profile approaches at large r, as a fraction of the disc-centre value. 1 (default) makes the profile identically 1.0 everywhere — byte-identical to this calibration before the profile existed. Lower to let gas thin toward the outer disc."
-            />
-            <ParamSlider
-              label="Gas regen"
-              value={fluid.gasRegen}
-              min={0}
-              max={0.2}
-              step={0.002}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchFluid({ gasRegen: v })}
-              path="fieldTuning.sfMapFluid.gasRegen"
-              info="Gas relaxation rate toward gasProfile(r) per step, applied after advection — this generator's own contrast knob. At the default gas floor (1) the profile is flat 1.0 everywhere, so this reads as before."
-            />
-            <ParamSlider
-              label="Diffusion"
-              value={fluid.diffusion}
-              min={0}
-              max={0.2}
-              step={0.005}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchFluid({ diffusion: v })}
-              path="fieldTuning.sfMapFluid.diffusion"
-              info="Explicit diffusion coefficient for gas/dust density (texel²/step) — the repulsion arm gather's attraction otherwise has nothing to balance, which without it collapses gas onto a 1-2 texel line at each arm crest. Stable only up to 0.25; this range stays well under that bound."
-            />
-            <div className={styles.sliderGroupHeader}>Arm response</div>
-            <ParamSlider
-              label="Arm gather"
-              value={fluid.armGather}
-              min={0}
-              max={15}
-              step={0.1}
-              format={(v) => v.toFixed(1)}
-              onChange={(v) => patchFluid({ armGather: v })}
-              path="fieldTuning.sfMapFluid.armGather"
-              info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild. Above ~15 gather speed exceeds a texel/step at ridge gradients and spikes."
-            />
-            <ParamSlider
-              label="Arm drag"
-              value={fluid.armDrag}
-              min={0}
-              max={4}
-              step={0.05}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ armDrag: v })}
-              path="fieldTuning.sfMapFluid.armDrag"
-              info="Drags the shear (only) by local arm forcing, so drift stalls inside the arm — density piles up on the upstream edge via the existing convergence term, a soft release downstream, sides flipping at corotation. Forcing peaks at 1 at a ridge crest, so armDrag >= 1 gives full stall there."
-            />
-            <ParamSlider
-              label="Lane bias"
-              value={fluid.laneBias}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ laneBias: v })}
-              path="fieldTuning.sfMapFluid.laneBias"
-              info="Directional gather: full strength where the drift carries gas toward the ridge (the upstream flank arm drag stalls), scaled down by (1 - laneBias) on the downstream flank — keeps the drag lane one-sided instead of the gather washing it back out."
-            />
-            <ParamSlider
-              label="Gather offset"
-              value={fluid.gatherOffset}
-              min={-24}
-              max={24}
-              step={0.5}
-              format={(v) => v.toFixed(1)}
-              onChange={(v) => patchFluid({ gatherOffset: v })}
-              path="fieldTuning.sfMapFluid.gatherOffset"
-              info="Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. Range covers roughly the ridge's own half-FWHM (~17-24 texels across this app's Milky Way preset's grid, per galaxySfMapArmForcing.ts's armCrossSigma)."
-            />
-            <div className={styles.sliderGroupHeader}>SF events</div>
-            <ParamSlider
-              label="Event rate"
-              value={fluid.eventRate}
-              min={0}
-              max={20}
-              step={0.5}
-              format={(v) => v.toFixed(1)}
-              onChange={(v) => patchFluid({ eventRate: v })}
-              path="fieldTuning.sfMapFluid.eventRate"
-              info="Events spawned per step, on average — total events over a run is ~eventRate x steps (capped at SF_MAP_FLUID_MAX_EVENTS). Each event drives an outward kernel-velocity impulse."
-            />
-            <ParamSlider
-              label="Impulse strength"
-              value={fluid.impulseStrength}
-              min={0}
-              max={5}
-              step={0.05}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ impulseStrength: v })}
-              path="fieldTuning.sfMapFluid.impulseStrength"
-              info="Outward kernel-velocity amplitude an event starts at, in texels/step; decays to 0 over impulseDuration. The knob that carves walls/cavities."
-            />
-            <ParamSlider
-              label="Impulse duration"
-              value={fluid.impulseDuration}
-              min={1}
-              max={100}
-              step={1}
-              format={(v) => String(Math.round(v))}
-              onChange={(v) => patchFluid({ impulseDuration: Math.round(v) })}
-              path="fieldTuning.sfMapFluid.impulseDuration"
-              info="Steps an event stays active after birth — sets both the wall's growth window and how many events overlap at once."
-            />
-            <ParamSlider
-              label="Radius scale"
-              value={fluid.radiusScale}
-              min={0.5}
-              max={15}
-              step={0.25}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ radiusScale: v })}
-              path="fieldTuning.sfMapFluid.radiusScale"
-              info="Base kernel radius in ring-texel-equivalent units; grows with an event's own age (age^0.6, snowplough-ish) up to this scale."
-            />
-            <ParamSlider
-              label="EMA rate"
-              value={fluid.emaRate}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ emaRate: v })}
-              path="fieldTuning.sfMapFluid.emaRate"
-              info="Blend rate of the per-texel activity trace toward this step's event intensity (z' = mix(z, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
-            />
-            <ParamSlider
-              label="Event arm bias"
-              value={fluid.eventArmBias}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ eventArmBias: v })}
-              path="fieldTuning.sfMapFluid.eventArmBias"
-              info="How hard event placement is confined to the arms: the CDF floor off the ridge is ARM_BIAS_FLOOR * (1 - eventArmBias). 0 (default) is today's fixed bias — events can land anywhere, weighted toward the arms. 1 zeroes the floor entirely, gating events strictly onto texels with nonzero arm forcing."
-            />
-            <div className={styles.sliderGroupHeader}>Turbulence</div>
-            <ParamSlider
-              label="Curl strength"
-              value={fluid.curlStrength}
-              min={0}
-              max={3}
-              step={0.05}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchFluid({ curlStrength: v })}
-              path="fieldTuning.sfMapFluid.curlStrength"
-              info="Curl-noise (divergence-free) velocity amplitude, in texels/step — the turbulent stirring term on top of shear and event impulses."
-            />
-            <ParamSlider
-              label="Curl scale"
-              value={fluid.curlScale}
-              min={0.005}
-              max={0.3}
-              step={0.005}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchFluid({ curlScale: v })}
-              path="fieldTuning.sfMapFluid.curlScale"
-              info="Curl-noise spatial frequency, in texels^-1 — higher values give smaller stirring cells."
-            />
+            <SliderGroup title="Simulation">
+              <ParamSlider
+                label="Steps"
+                value={fluid.steps}
+                min={1}
+                max={400}
+                step={1}
+                format={(v) => String(Math.round(v))}
+                onChange={(v) => patchFluid({ steps: Math.round(v) })}
+                path="fieldTuning.sfMapFluid.steps"
+                info="Advection iterations per rebuild — this generator's own step budget, parallel to the automaton's. Rebuild latency is linear in this."
+              />
+            </SliderGroup>
+            <SliderGroup title="Disc & rotation">
+              <ParamSlider
+                label="Shear strength"
+                value={fluid.shearStrength}
+                min={0}
+                max={0.5}
+                step={0.005}
+                format={(v) => v.toFixed(3)}
+                onChange={(v) => patchFluid({ shearStrength: v })}
+                path="fieldTuning.sfMapFluid.shearStrength"
+                info="Differential-rotation shear amplitude, same (1/r - 1/corotationRadius) formula the automaton's shearRate uses — this generator's own copy, not wired to it."
+              />
+              <ParamSlider
+                label="Corotation radius"
+                value={fluid.corotationRadius}
+                min={1}
+                max={20}
+                step={0.1}
+                format={(v) => v.toFixed(1)}
+                onChange={(v) => patchFluid({ corotationRadius: v })}
+                path="fieldTuning.sfMapFluid.corotationRadius"
+                info="Pattern-speed radius the shear vanishes at — this generator's own copy, not the automaton's."
+              />
+            </SliderGroup>
+            <SliderGroup title="Gas supply">
+              <ParamSlider
+                label="Gas scale length"
+                value={fluid.gasScaleLength}
+                min={0.5}
+                max={20}
+                step={0.25}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ gasScaleLength: v })}
+                path="fieldTuning.sfMapFluid.gasScaleLength"
+                info="Exponential decline length of the radial gas profile gasRegen relaxes toward, in grid-radius units (same as rMin/rMax/corotationRadius). Range spans roughly 0.5 to 1.5x this app's own Milky Way preset's typical rMax (~13). Inert while gas floor is 1."
+              />
+              <ParamSlider
+                label="Gas floor"
+                value={fluid.gasFloor}
+                min={0}
+                max={1}
+                step={0.01}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ gasFloor: v })}
+                path="fieldTuning.sfMapFluid.gasFloor"
+                info="Flat HI floor the radial gas profile approaches at large r, as a fraction of the disc-centre value. 1 (default) makes the profile identically 1.0 everywhere — byte-identical to this calibration before the profile existed. Lower to let gas thin toward the outer disc."
+              />
+              <ParamSlider
+                label="Gas regen"
+                value={fluid.gasRegen}
+                min={0}
+                max={0.2}
+                step={0.002}
+                format={(v) => v.toFixed(3)}
+                onChange={(v) => patchFluid({ gasRegen: v })}
+                path="fieldTuning.sfMapFluid.gasRegen"
+                info="Gas relaxation rate toward gasProfile(r) per step, applied after advection — this generator's own contrast knob. At the default gas floor (1) the profile is flat 1.0 everywhere, so this reads as before."
+              />
+              <ParamSlider
+                label="Diffusion"
+                value={fluid.diffusion}
+                min={0}
+                max={0.2}
+                step={0.005}
+                format={(v) => v.toFixed(3)}
+                onChange={(v) => patchFluid({ diffusion: v })}
+                path="fieldTuning.sfMapFluid.diffusion"
+                info="Explicit diffusion coefficient for gas/dust density (texel²/step) — the repulsion arm gather's attraction otherwise has nothing to balance, which without it collapses gas onto a 1-2 texel line at each arm crest. Stable only up to 0.25; this range stays well under that bound."
+              />
+            </SliderGroup>
+            <SliderGroup title="Arm response">
+              <ParamSlider
+                label="Arm gather"
+                value={fluid.armGather}
+                min={0}
+                max={15}
+                step={0.1}
+                format={(v) => v.toFixed(1)}
+                onChange={(v) => patchFluid({ armGather: v })}
+                path="fieldTuning.sfMapFluid.armGather"
+                info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild. Above ~15 gather speed exceeds a texel/step at ridge gradients and spikes."
+              />
+              <ParamSlider
+                label="Arm drag"
+                value={fluid.armDrag}
+                min={0}
+                max={4}
+                step={0.05}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ armDrag: v })}
+                path="fieldTuning.sfMapFluid.armDrag"
+                info="Drags the shear (only) by local arm forcing, so drift stalls inside the arm — density piles up on the upstream edge via the existing convergence term, a soft release downstream, sides flipping at corotation. Forcing peaks at 1 at a ridge crest, so armDrag >= 1 gives full stall there."
+              />
+              <ParamSlider
+                label="Lane bias"
+                value={fluid.laneBias}
+                min={0}
+                max={1}
+                step={0.01}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ laneBias: v })}
+                path="fieldTuning.sfMapFluid.laneBias"
+                info="Directional gather: full strength where the drift carries gas toward the ridge (the upstream flank arm drag stalls), scaled down by (1 - laneBias) on the downstream flank — keeps the drag lane one-sided instead of the gather washing it back out."
+              />
+              <ParamSlider
+                label="Gather offset"
+                value={fluid.gatherOffset}
+                min={-24}
+                max={24}
+                step={0.5}
+                format={(v) => v.toFixed(1)}
+                onChange={(v) => patchFluid({ gatherOffset: v })}
+                path="fieldTuning.sfMapFluid.gatherOffset"
+                info="Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. Range covers roughly the ridge's own half-FWHM (~17-24 texels across this app's Milky Way preset's grid, per galaxySfMapArmForcing.ts's armCrossSigma)."
+              />
+            </SliderGroup>
+            <SliderGroup title="SF events">
+              <ParamSlider
+                label="Event rate"
+                value={fluid.eventRate}
+                min={0}
+                max={20}
+                step={0.5}
+                format={(v) => v.toFixed(1)}
+                onChange={(v) => patchFluid({ eventRate: v })}
+                path="fieldTuning.sfMapFluid.eventRate"
+                info="Events spawned per step, on average — total events over a run is ~eventRate x steps (capped at SF_MAP_FLUID_MAX_EVENTS). Each event drives an outward kernel-velocity impulse."
+              />
+              <ParamSlider
+                label="Impulse strength"
+                value={fluid.impulseStrength}
+                min={0}
+                max={5}
+                step={0.05}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ impulseStrength: v })}
+                path="fieldTuning.sfMapFluid.impulseStrength"
+                info="Outward kernel-velocity amplitude an event starts at, in texels/step; decays to 0 over impulseDuration. The knob that carves walls/cavities."
+              />
+              <ParamSlider
+                label="Impulse duration"
+                value={fluid.impulseDuration}
+                min={1}
+                max={100}
+                step={1}
+                format={(v) => String(Math.round(v))}
+                onChange={(v) => patchFluid({ impulseDuration: Math.round(v) })}
+                path="fieldTuning.sfMapFluid.impulseDuration"
+                info="Steps an event stays active after birth — sets both the wall's growth window and how many events overlap at once."
+              />
+              <ParamSlider
+                label="Radius scale"
+                value={fluid.radiusScale}
+                min={0.5}
+                max={15}
+                step={0.25}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ radiusScale: v })}
+                path="fieldTuning.sfMapFluid.radiusScale"
+                info="Base kernel radius in ring-texel-equivalent units; grows with an event's own age (age^0.6, snowplough-ish) up to this scale."
+              />
+              <ParamSlider
+                label="EMA rate"
+                value={fluid.emaRate}
+                min={0}
+                max={1}
+                step={0.01}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ emaRate: v })}
+                path="fieldTuning.sfMapFluid.emaRate"
+                info="Blend rate of the per-texel activity trace toward this step's event intensity (z' = mix(z, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
+              />
+              <ParamSlider
+                label="Event arm bias"
+                value={fluid.eventArmBias}
+                min={0}
+                max={1}
+                step={0.01}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ eventArmBias: v })}
+                path="fieldTuning.sfMapFluid.eventArmBias"
+                info="How hard event placement is confined to the arms: the CDF floor off the ridge is ARM_BIAS_FLOOR * (1 - eventArmBias). 0 (default) is today's fixed bias — events can land anywhere, weighted toward the arms. 1 zeroes the floor entirely, gating events strictly onto texels with nonzero arm forcing."
+              />
+            </SliderGroup>
+            <SliderGroup title="Turbulence">
+              <ParamSlider
+                label="Curl strength"
+                value={fluid.curlStrength}
+                min={0}
+                max={3}
+                step={0.05}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ curlStrength: v })}
+                path="fieldTuning.sfMapFluid.curlStrength"
+                info="Curl-noise (divergence-free) velocity amplitude, in texels/step — the turbulent stirring term on top of shear and event impulses."
+              />
+              <ParamSlider
+                label="Curl scale"
+                value={fluid.curlScale}
+                min={0.005}
+                max={0.3}
+                step={0.005}
+                format={(v) => v.toFixed(3)}
+                onChange={(v) => patchFluid({ curlScale: v })}
+                path="fieldTuning.sfMapFluid.curlScale"
+                info="Curl-noise spatial frequency, in texels^-1 — higher values give smaller stirring cells."
+              />
+            </SliderGroup>
           </div>
         </CollapsibleSection>
       )}

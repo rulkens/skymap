@@ -10,6 +10,11 @@ export const DEFAULT_UI_STATE: UiState = {
   // EXPANDED: the current work is the analytic field and the sections being
   // built beside it, and eight open legacy sections push those below the fold.
   openSections: {
+    // The two top-level model groups default OPEN regardless of the
+    // generator-era/flux-field-era split below: folding them would hide
+    // every section's own open state behind an extra click on every boot.
+    analyticModel: true,
+    legacyModel: true,
     morphology: false,
     shape: false,
     // Its own section, and doomed: the star bag is scheduled for deletion,
@@ -25,7 +30,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // Nested under HII REGIONS (CollapsibleSection's `nested` prop) — own
     // open state so folding the parent doesn't fight these for the same key
     // (the `armField`/`armCloud` sibling precedent, prefixed instead since
-    // these two are nested rather than siblings).
+    // these three are nested rather than siblings). Shells starts open: its
+    // sliders used to render unconditionally in HII REGIONS' own body.
+    hiiShells: true,
     hiiDig: false,
     hiiAssociations: false,
     // Collapsed for the same reason `hii` is: two calibrated knobs, not the

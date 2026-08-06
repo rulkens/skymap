@@ -59,46 +59,6 @@
   composes: checkbox from '../shared.module.css';
 }
 
-/* The top-of-panel legacy-sprites switch: the app's pill toggle (same
- * cross-tree compose as CollapsibleSection's header toggle) in a plain label
- * row, sitting outside every section by design — see the JSX comment. */
-.legacyToggleRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 2px 0 10px;
-  font-size: var(--font-size-xs);
-  letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-  cursor: pointer;
-  user-select: none;
-}
-
-.pillToggle {
-  composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
-}
-
-/* One level above a CollapsibleSection header (`sectionHeader` in
-   shared.module.css): brighter text, a size step up, and a stronger top
-   border, so ANALYTIC MODEL reads as the group the sections below belong
-   to rather than a peer of FLUX FIELD/ARM OVERDENSITIES. */
-.groupHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 12px 0 14px;
-  padding: 18px 0 0;
-  border-top: 1px solid var(--border-default);
-}
-
-.groupHeaderTitle {
-  font-size: var(--font-size-lg);
-  letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-  color: var(--color-fg-base);
-  font-weight: 600;
-}
-
 .infoIcon {
   padding: 0;
   border: none;

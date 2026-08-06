@@ -9,6 +9,8 @@
 export type UiState = {
   readonly openSections: Readonly<
     Record<
+      | 'analyticModel'
+      | 'legacyModel'
       | 'morphology'
       | 'shape'
       | 'starBudget'
@@ -16,6 +18,7 @@ export type UiState = {
       | 'armField'
       | 'armCloud'
       | 'hii'
+      | 'hiiShells'
       | 'hiiDig'
       | 'hiiAssociations'
       | 'starFormation'

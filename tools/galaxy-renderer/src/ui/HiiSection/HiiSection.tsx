@@ -6,10 +6,13 @@
  * `ArmCloudSection`/`DustCloudSection` — a sub-tier with its own knobs, not
  * a settings drawer folded into FLUX FIELD.
  *
- * DIG and ASSOCIATIONS nest inside it (`CollapsibleSection`'s `nested`
- * prop) rather than living as top-level siblings the way `armField`/
- * `armCloud` do — the panel was long enough that flattening every DIG/assoc
- * slider alongside the core ones read as one endless list.
+ * SHELLS, DIG and ASSOCIATIONS nest inside it (`CollapsibleSection`'s
+ * `nested` prop) rather than living as top-level siblings the way
+ * `armField`/`armCloud` do — the panel was long enough that flattening every
+ * shell/DIG/assoc slider alongside the tier-shared ones read as one endless
+ * list. Texture scale/contrast stay in the outer body: their info text says
+ * they're shared by all three nested groups, so they read as tier-global
+ * rather than owned by any one of them.
  */
 import type { ReactNode } from 'react';
 import type { GalaxyHiiAssociationsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiAssociationsTuning';
@@ -26,6 +29,7 @@ function HiiSection(): ReactNode {
   const dispatch = useAppDispatch();
   const hii = useAppSelector((state) => state.fieldTuning.hii);
   const open = useAppSelector((state) => state.ui.openSections.hii);
+  const shellsOpen = useAppSelector((state) => state.ui.openSections.hiiShells);
   const digOpen = useAppSelector((state) => state.ui.openSections.hiiDig);
   const assocOpen = useAppSelector((state) => state.ui.openSections.hiiAssociations);
 
@@ -56,83 +60,9 @@ function HiiSection(): ReactNode {
       copyPayload={{ fieldTuning: { hii: core } }}
     >
       <div className={styles.root}>
-        <ParamSlider
-          label="Brightness"
-          value={hii.brightness}
-          min={0}
-          max={4}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ brightness: v })}
-          path="fieldTuning.hii.brightness"
-          info="Whole-tier flux multiplier. Unlike the arm cloud's share knob this ADDS light on top of the disc mixture, which never contained HII emission to begin with. 1 is the calibrated default."
-        />
-        <ParamSlider
-          label="Radius scale"
-          value={hii.radiusScale}
-          min={0.2}
-          max={3}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ radiusScale: v })}
-          path="fieldTuning.hii.radiusScale"
-          info="Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly."
-        />
-        <ParamSlider
-          label="Shell thickness"
-          value={hii.shellThickness}
-          min={0.02}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ shellThickness: v })}
-          path="fieldTuning.hii.shellThickness"
-          info="Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front."
-        />
-        <ParamSlider
-          label="Cluster strength"
-          value={hii.clusterStrength}
-          min={0}
-          max={2}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ clusterStrength: v })}
-          path="fieldTuning.hii.clusterStrength"
-          info="Brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell."
-        />
-        <ParamSlider
-          label="Cavity scale"
-          value={hii.cavityScale}
-          min={0}
-          max={2}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ cavityScale: v })}
-          path="fieldTuning.hii.cavityScale"
-          info="Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed."
-        />
-        <ParamSlider
-          label="Map seeding"
-          value={hii.sfMapSeeding}
-          min={0}
-          max={1}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ sfMapSeeding: v })}
-          path="fieldTuning.hii.sfMapSeeding"
-          info="Fraction of HII events placed from the SF-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
-        />
-        <ParamSlider
-          label="Texture"
-          value={hii.texture}
-          min={0}
-          max={1}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ texture: v })}
-          path="fieldTuning.hii.texture"
-          info="Breaks up the shell + embedded-cluster sprites' circular Gaussian footprint with the same noise volume the dust cloud erodes with. 0 leaves them untouched."
-        />
+        {/* Tier-global: shared by SHELLS, DIG and ASSOCIATIONS alike, so they
+            stay in the outer body rather than owned by any one of the three
+            nested groups below. */}
         <ParamSlider
           label="Texture scale"
           value={hii.textureScale}
@@ -156,6 +86,92 @@ function HiiSection(): ReactNode {
           info="Shared by every HII group. Shapes the noise modulation about its own midpoint, mirroring the dust cloud's own contrast knob."
         />
       </div>
+      <CollapsibleSection
+        title="SHELLS"
+        open={shellsOpen}
+        onToggle={() => dispatch(sectionToggled('hiiShells'))}
+        nested
+      >
+        <div className={styles.root}>
+          <ParamSlider
+            label="Brightness"
+            value={hii.brightness}
+            min={0}
+            max={4}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ brightness: v })}
+            path="fieldTuning.hii.brightness"
+            info="Whole-tier flux multiplier. Unlike the arm cloud's share knob this ADDS light on top of the disc mixture, which never contained HII emission to begin with. 1 is the calibrated default."
+          />
+          <ParamSlider
+            label="Radius scale"
+            value={hii.radiusScale}
+            min={0.2}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ radiusScale: v })}
+            path="fieldTuning.hii.radiusScale"
+            info="Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly."
+          />
+          <ParamSlider
+            label="Shell thickness"
+            value={hii.shellThickness}
+            min={0.02}
+            max={1}
+            step={0.02}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ shellThickness: v })}
+            path="fieldTuning.hii.shellThickness"
+            info="Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front."
+          />
+          <ParamSlider
+            label="Cluster strength"
+            value={hii.clusterStrength}
+            min={0}
+            max={2}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ clusterStrength: v })}
+            path="fieldTuning.hii.clusterStrength"
+            info="Brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell."
+          />
+          <ParamSlider
+            label="Cavity scale"
+            value={hii.cavityScale}
+            min={0}
+            max={2}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ cavityScale: v })}
+            path="fieldTuning.hii.cavityScale"
+            info="Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed."
+          />
+          <ParamSlider
+            label="Map seeding"
+            value={hii.sfMapSeeding}
+            min={0}
+            max={1}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ sfMapSeeding: v })}
+            path="fieldTuning.hii.sfMapSeeding"
+            info="Fraction of HII events placed from the SF-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
+          />
+          <ParamSlider
+            label="Texture"
+            value={hii.texture}
+            min={0}
+            max={1}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchHii({ texture: v })}
+            path="fieldTuning.hii.texture"
+            info="Breaks up the shell + embedded-cluster sprites' circular Gaussian footprint with the same noise volume the dust cloud erodes with. 0 leaves them untouched."
+          />
+        </div>
+      </CollapsibleSection>
       <CollapsibleSection
         title="DIG"
         open={digOpen}

@@ -79,7 +79,21 @@
   font-weight: 500;
 }
 
-.nestedBody {
+/* Must precede its two `composes` users below — postcss-modules-scope
+ * resolves composes top-down and errors on a not-yet-seen class. */
+.containedInset {
   padding-left: 14px;
   border-left: 1px solid var(--border-divider);
+}
+
+.nestedBody {
+  composes: containedInset;
+}
+
+/* Opt-in via the `group` prop: same inset as `nestedBody`, defined once
+ * (`containedInset`) and composed into both — a group's body reads as
+ * "these are contained in here" without touching its own header, unlike
+ * `nestedHeader`/`nestedBody`, which diminish both together. */
+.groupBody {
+  composes: containedInset;
 }

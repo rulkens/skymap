@@ -54,8 +54,18 @@ export type CollapsibleSectionProps = {
    * `armCloud` already use under `arms`. Reusing a key would make the two
    * fold buttons drive the same boolean, which is easy to miss visually and
    * easy to catch by grep — `openSections` keys all live in one file.
+   *
+   * `nested` vs `group`: `nested` marks a section that IS contained (styles
+   * its OWN header+body as the diminished sub-tier, and tags itself for the
+   * probe). `group` marks a section whose CHILDREN are themselves sections
+   * (ANALYTIC MODEL, LEGACY MODEL) — it insets the body only, leaving this
+   * section's own header at full (outermost-tier) weight, and never touches
+   * `data-nested`. A section can be neither, or `nested` (it's contained),
+   * or `group` (it contains) — never both today, but nothing stops it.
    */
   readonly nested?: boolean;
+  /** See the `nested` doc above for the two props' contrast. */
+  readonly group?: boolean;
   readonly children: ReactNode;
 };
 
@@ -67,6 +77,7 @@ function CollapsibleSection({
   onHeaderToggleChange,
   copyPayload,
   nested,
+  group,
   children,
 }: CollapsibleSectionProps): ReactNode {
   const hasHeaderToggle = headerToggle !== undefined && onHeaderToggleChange !== undefined;
@@ -103,7 +114,13 @@ function CollapsibleSection({
           />
         )}
       </div>
-      {open && <div className={cx(styles.body, nested && styles.nestedBody)}>{children}</div>}
+      {open && (
+        <div
+          className={cx(styles.body, nested && styles.nestedBody, group && styles.groupBody)}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }

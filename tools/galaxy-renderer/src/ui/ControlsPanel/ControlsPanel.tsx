@@ -51,6 +51,7 @@ import FieldSection from '../FieldSection/FieldSection';
 import HiiSection from '../HiiSection/HiiSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import SfMapSection from '../SfMapSection/SfMapSection';
+import SliderGroup from '../SliderGroup/SliderGroup';
 import StarFormationSection from '../StarFormationSection/StarFormationSection';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
@@ -131,6 +132,22 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
   specs.push({ key: 'irregularity', label: 'Randomness / asymmetry', seedKey: 'asymSeed' });
   return specs;
 }
+
+// SHAPE & SIZE's own three `SliderGroup` clusters — a `buildShapeSliders`
+// entry falls into exactly one, by key, regardless of which category left it
+// in the list. `irregularity` rides with warp: it's the other axis a
+// category's default silhouette departs from, not a size knob.
+const SIZE_KEYS: ReadonlySet<GalaxySliderKey> = new Set(['radius']);
+const BULGE_DISC_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
+  'bulgeSize',
+  'bulgeFalloff',
+  'diskThickness',
+]);
+const WARP_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
+  'warpStrength',
+  'warpTwist',
+  'irregularity',
+]);
 
 // The whole group only exists for spiral/barred galaxies.
 function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
@@ -286,54 +303,10 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           Randomize
         </Button>
 
-        {/* At the very top, outside any section: the one-click A/B against the
-            sprite path the flux field is replacing. "Legacy" in the label is
-            the point — the star bag is scheduled for deletion (see
-            `docs/research/milky-way/goal-and-history.md`), and this switch is
-            how its remaining usefulness (a reference to compare against) is
-            reached without scrolling. */}
-        <label className={styles.legacyToggleRow}>
-          <input
-            type="checkbox"
-            className={styles.pillToggle}
-            checked={render.spriteField}
-            onChange={(e) => dispatch(renderPatched({ spriteField: e.target.checked }))}
-          />
-          <span>Legacy sprite stars</span>
-        </label>
-
-        {/* The analytic field is a closed-form line integral of a Gaussian
-            mixture, evaluated into its OWN reduced-resolution target and
-            additively blended into HDR alongside the sprites' — derived from
-            the generator's own geometry in `galaxyFieldMixture.ts`. This
-            group header, not a CollapsibleSection, never folds; it just
-            labels everything below it as one family. Its pill is the whole
-            field GPU pass's master (`render.analyticField`) — the one-click
-            A/B against the legacy sprite pill above — while each section
-            underneath (FLUX FIELD, ARM OVERDENSITIES) has its OWN pill
-            choosing which mixture part builds. */}
-        <div className={styles.groupHeader}>
-          <span className={styles.groupHeaderTitle}>Analytic model</span>
-          <input
-            type="checkbox"
-            className={styles.pillToggle}
-            checked={render.analyticField}
-            onChange={(e) => dispatch(renderPatched({ analyticField: e.target.checked }))}
-            aria-label="Toggle analytic model"
-          />
-        </div>
-
-        <DebugViewsSection />
-
-        <FieldSection />
-        <ArmFieldSection />
-        <ArmCloudSection />
-        <HiiSection />
-        <StarFormationSection />
-        <SfMapSection diagnostics={orientationDiagnostics} />
-        <DustSection />
-        <DustCloudSection />
-
+        {/* The two global selectors, ahead of everything else: both feed
+            BOTH models (the Hubble type gates which sliders even show, the
+            shape/size knobs drive whichever generator is on), so neither
+            belongs inside ANALYTIC MODEL or LEGACY MODEL specifically. */}
         <CollapsibleSection
           title="MORPHOLOGY · HUBBLE SEQUENCE"
           open={ui.openSections.morphology}
@@ -352,7 +325,15 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           onToggle={() => dispatch(sectionToggled('shape'))}
           copyPayload={{ galaxy: { ...galaxyValues(galaxy, shapeSliders), seed: galaxy.seed } }}
         >
-          {shapeSliders.map(renderGalaxySlider)}
+          <SliderGroup title="Size">
+            {shapeSliders.filter((s) => SIZE_KEYS.has(s.key)).map(renderGalaxySlider)}
+          </SliderGroup>
+          <SliderGroup title="Bulge & disc">
+            {shapeSliders.filter((s) => BULGE_DISC_KEYS.has(s.key)).map(renderGalaxySlider)}
+          </SliderGroup>
+          <SliderGroup title="Warp & irregularity">
+            {shapeSliders.filter((s) => WARP_KEYS.has(s.key)).map(renderGalaxySlider)}
+          </SliderGroup>
           <Button
             className={styles.newSeedButton}
             onClick={() => {
@@ -364,61 +345,114 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           </Button>
         </CollapsibleSection>
 
+        {/* The analytic field is a closed-form line integral of a Gaussian
+            mixture, evaluated into its OWN reduced-resolution target and
+            additively blended into HDR alongside the sprites' — derived from
+            the generator's own geometry in `galaxyFieldMixture.ts`. Its
+            header pill is the whole field GPU pass's master
+            (`render.analyticField`) — the one-click A/B against the legacy
+            sprite pill in LEGACY MODEL below — while each section inside
+            (FLUX FIELD, ARM OVERDENSITIES) has its OWN pill choosing which
+            mixture part builds. No copyPayload: it's a pure grouping, every
+            value it holds already has a home in the sections nested inside. */}
         <CollapsibleSection
-          title="STAR BUDGET (TO BE DELETED)"
-          open={ui.openSections.starBudget}
-          onToggle={() => dispatch(sectionToggled('starBudget'))}
-          copyPayload={{ galaxy: galaxyValues(galaxy, STAR_BUDGET_SLIDERS) }}
+          title="ANALYTIC MODEL"
+          open={ui.openSections.analyticModel}
+          onToggle={() => dispatch(sectionToggled('analyticModel'))}
+          headerToggle={render.analyticField}
+          onHeaderToggleChange={(value) => dispatch(renderPatched({ analyticField: value }))}
+          group
         >
-          {STAR_BUDGET_SLIDERS.map(renderGalaxySlider)}
+          <DebugViewsSection />
+          <FieldSection />
+          <ArmFieldSection />
+          <ArmCloudSection />
+          <HiiSection />
+          <StarFormationSection />
+          <SfMapSection diagnostics={orientationDiagnostics} />
+          <DustSection />
+          <DustCloudSection />
         </CollapsibleSection>
 
-        {armSliders.length > 0 && (
-          <CollapsibleSection
-            title="SPIRAL ARMS"
-            open={ui.openSections.arms}
-            onToggle={() => dispatch(sectionToggled('arms'))}
-            copyPayload={{ galaxy: galaxyValues(galaxy, armSliders) }}
-          >
-            {armSliders.map(renderGalaxySlider)}
-          </CollapsibleSection>
-        )}
-
+        {/* Everything the sprite generator still drives, one fold below the
+            analytic model it's being replaced by — the star bag is scheduled
+            for deletion (see `docs/research/milky-way/goal-and-history.md`),
+            and this group is how its remaining usefulness (a reference to
+            compare against) stays reachable without scrolling past the
+            active work above it. The header pill is `render.spriteField`,
+            symmetric with ANALYTIC MODEL's — but unlike that one it gates
+            only the legacy STAR half, same as the checkbox it replaces: the
+            legacy DUST half keeps its OWN pill on DUST (LEGACY) below
+            (`createGalaxyEngine.ts`'s frame-loop comment spells out why the
+            two were never one switch — dust gates upstream, at generation,
+            not the draw list this one empties). */}
         <CollapsibleSection
-          title="POPULATIONS"
-          open={ui.openSections.pop}
-          onToggle={() => dispatch(sectionToggled('pop'))}
-          copyPayload={{ galaxy: galaxyValues(galaxy, popSliders) }}
+          title="LEGACY MODEL"
+          open={ui.openSections.legacyModel}
+          onToggle={() => dispatch(sectionToggled('legacyModel'))}
+          headerToggle={render.spriteField}
+          onHeaderToggleChange={(value) => dispatch(renderPatched({ spriteField: value }))}
+          group
         >
-          {popSliders.map(renderGalaxySlider)}
-        </CollapsibleSection>
-
-        {/* The pill gates the sprite generator's dust output (see the gate in
-            `engineBridge.ts`), not this section's sliders — they stay live so
-            legacy values can still be dialled and compared while off. */}
-        {dustSliders.length > 0 && (
           <CollapsibleSection
-            title="DUST (LEGACY)"
-            open={ui.openSections.dust}
-            onToggle={() => dispatch(sectionToggled('dust'))}
-            headerToggle={render.legacyDustEnabled}
-            onHeaderToggleChange={(value) => dispatch(renderPatched({ legacyDustEnabled: value }))}
-            copyPayload={{
-              galaxy: galaxyValues(galaxy, dustSliders),
-              render: { legacyDustEnabled: render.legacyDustEnabled },
-            }}
+            title="STAR BUDGET (TO BE DELETED)"
+            open={ui.openSections.starBudget}
+            onToggle={() => dispatch(sectionToggled('starBudget'))}
+            copyPayload={{ galaxy: galaxyValues(galaxy, STAR_BUDGET_SLIDERS) }}
           >
-            {dustSliders.map(renderGalaxySlider)}
+            {STAR_BUDGET_SLIDERS.map(renderGalaxySlider)}
           </CollapsibleSection>
-        )}
 
-        <CollapsibleSection
-          title="GLOBULAR CLUSTERS"
-          open={ui.openSections.glob}
-          onToggle={() => dispatch(sectionToggled('glob'))}
-          copyPayload={{ galaxy: galaxyValues(galaxy, GLOB_SLIDERS) }}
-        >
-          {GLOB_SLIDERS.map(renderGalaxySlider)}
+          {armSliders.length > 0 && (
+            <CollapsibleSection
+              title="SPIRAL ARMS"
+              open={ui.openSections.arms}
+              onToggle={() => dispatch(sectionToggled('arms'))}
+              copyPayload={{ galaxy: galaxyValues(galaxy, armSliders) }}
+            >
+              {armSliders.map(renderGalaxySlider)}
+            </CollapsibleSection>
+          )}
+
+          <CollapsibleSection
+            title="POPULATIONS"
+            open={ui.openSections.pop}
+            onToggle={() => dispatch(sectionToggled('pop'))}
+            copyPayload={{ galaxy: galaxyValues(galaxy, popSliders) }}
+          >
+            {popSliders.map(renderGalaxySlider)}
+          </CollapsibleSection>
+
+          {/* The pill gates the sprite generator's dust output (see the gate in
+              `engineBridge.ts`), not this section's sliders — they stay live so
+              legacy values can still be dialled and compared while off. */}
+          {dustSliders.length > 0 && (
+            <CollapsibleSection
+              title="DUST (LEGACY)"
+              open={ui.openSections.dust}
+              onToggle={() => dispatch(sectionToggled('dust'))}
+              headerToggle={render.legacyDustEnabled}
+              onHeaderToggleChange={(value) => dispatch(renderPatched({ legacyDustEnabled: value }))}
+              copyPayload={{
+                galaxy: galaxyValues(galaxy, dustSliders),
+                render: { legacyDustEnabled: render.legacyDustEnabled },
+              }}
+            >
+              {dustSliders.map(renderGalaxySlider)}
+            </CollapsibleSection>
+          )}
+
+          {/* Sprite-generated clusters, not analytic — the legacy model's own
+              globular population, so it moved in here with the rest of what
+              the sprite generator drives. */}
+          <CollapsibleSection
+            title="GLOBULAR CLUSTERS"
+            open={ui.openSections.glob}
+            onToggle={() => dispatch(sectionToggled('glob'))}
+            copyPayload={{ galaxy: galaxyValues(galaxy, GLOB_SLIDERS) }}
+          >
+            {GLOB_SLIDERS.map(renderGalaxySlider)}
+          </CollapsibleSection>
         </CollapsibleSection>
 
         <CollapsibleSection
