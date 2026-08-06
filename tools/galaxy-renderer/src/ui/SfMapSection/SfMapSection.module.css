@@ -32,6 +32,25 @@
   margin-bottom: 3px;
 }
 
+/* Divides AUTOMATON/FLUID's own slider list into tuning-order groups — same
+   small-caps treatment as .readoutHeader, plus a top rule since these sit
+   between sliders rather than above a readout block. */
+.sliderGroupHeader {
+  margin: 14px 0 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-default);
+  color: var(--color-fg-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+
+.sliderGroupHeader:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 .row {
   display: flex;
   gap: 8px;
