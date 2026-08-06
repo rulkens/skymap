@@ -26,12 +26,16 @@ import {
   armRidgeCurvePoint,
 } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
+import { sfMapGridRadius, SF_MAP_AZ, SF_MAP_RINGS } from './galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from './galaxySfMapArmForcing';
+import { buildGalaxySfMapFluidEvents, sfMapFluidEventWindow } from './galaxySfMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
 import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleSfMapEventPosition';
+import { sfMapRingRadius } from '../../../../utils/galaxy/sfMapRingRadius';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
@@ -43,6 +47,7 @@ import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapDustCdf } from '../../../../@types/galaxy/GalaxySfMapDustCdf';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
+import type { SfMapFluidEvent } from '../../../../@types/galaxy/SfMapFluidEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
@@ -169,15 +174,34 @@ function eventCenter(event: SfEvent, geometry: GalaxyDescription): Vec3 | undefi
   ];
 }
 
-function planRegions(
+/**
+ * Sorted brightest-first, each candidate admitted if it still fits under
+ * `HII_MAX_COUNT` — cheap and unbiased because the L^-2-shaped luminosity
+ * draw means the tail being dropped carries almost none of the tier's total
+ * flux. Shared by both candidate sources below so admission (and hence the
+ * cap-scaling story in the module header) doesn't fork per generator.
+ */
+function admitBrightestFirst(candidates: readonly RegionPlan[]): readonly RegionPlan[] {
+  const sorted = [...candidates].sort((a, b) => b.luminosity - a.luminosity);
+  const kept: RegionPlan[] = [];
+  let used = 0;
+  for (const region of sorted) {
+    const cost = region.shellCount + region.clusterCount;
+    if (used + cost > HII_MAX_COUNT) continue;
+    kept.push(region);
+    used += cost;
+  }
+  return kept;
+}
+
+function candidateRegionsFromCatalog(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
-): readonly RegionPlan[] {
+  clusterCount: number,
+): RegionPlan[] {
   const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
-  const clusterOn = tuning.hii.clusterStrength > 0;
-
   const all: RegionPlan[] = [];
   for (const event of events) {
     if (event.age01 > HII_AGE_GATE) continue;
@@ -186,29 +210,107 @@ function planRegions(
     if (radius <= 0) continue;
     const center = eventCenter(event, geometry);
     if (!center) continue;
+    all.push({ center, radius, luminosity, shellCount: shellSpriteCount(luminosity), clusterCount });
+  }
+  return all;
+}
+
+/**
+ * World centre of one fluid-sim event, resolved off its (az, ring) log-polar
+ * grid coordinate — the SAME radius/angle -> world formula
+ * `sampleSfMapEventPosition.ts` uses for its CDF-sampled placements
+ * (`x = r cos θ, y = warpHeight(r, θ), z = r sin θ`), just fed a texel-exact
+ * (radius, angle) instead of a CDF-jittered one: a fluid event's own `az`/
+ * `ring` already carries the sub-texel jitter `buildGalaxySfMapFluidEvents`
+ * drew, so there is no second jitter draw to make here.
+ */
+function fluidEventCenter(
+  event: SfMapFluidEvent,
+  geometry: GalaxyDescription,
+  grid: GalaxySfMapGridRadius,
+): Vec3 {
+  const angle = (event.az * 2 * Math.PI) / SF_MAP_AZ;
+  const radius = sfMapRingRadius(event.ring, SF_MAP_RINGS, grid.rMin, grid.rMax);
+  return [radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)];
+}
+
+/**
+ * Candidates for `tuning.sfMap.generator === 'fluid'`: the fluid sim's own
+ * event list, windowed to the ones STILL YOUNG at the end of the run
+ * (`sfMapFluidEventWindow` at `step = fluid.steps` — the same
+ * `birthStep in (steps - impulseDuration, steps]` age test
+ * `sfMapFluidStep.wesl` itself uses to decide an event is active), so region
+ * COUNT tracks `eventRate * impulseDuration` pre-cap instead of a parallel,
+ * map-blind catalog.
+ *
+ * SEED CONTRACT: rebuilds the event list here rather than threading the
+ * fluid runner's own array across the src/tools boundary — cheap
+ * (`buildGalaxySfMapFluidEvents` is pure and capped at `SF_MAP_FLUID_MAX_EVENTS`)
+ * and avoids plumbing a live event list through every `hiiMixtureOf` call
+ * site. This is sound ONLY because `createSfMapFluidRunner.ts`'s `rebuild`
+ * and this module's caller (`buildHiiRegions`, via `createGalaxyModel.ts`'s
+ * `hiiMixtureOf`) are handed the SAME seed bits: the runner gets
+ * `currentSeed()` (`normalizeGenerationSeed(lastParams?.seed)`, signed
+ * int32), this gets `geometry.seed` (the SAME value `>>> 0`-reinterpreted at
+ * `describeGalaxy.ts`'s pack site) — both collapse to the identical int32
+ * once XORed against `buildGalaxySfMapFluidEvents`' own salt, so the two
+ * calls reproduce the SAME event list. If either call site ever derives its
+ * seed differently, this silently detaches HII placement from the sim.
+ *
+ * `luminosity`/`radius` reuse `hiiLuminosityOf`/`hiiRadiusUnits` verbatim
+ * (unchanged units, unchanged shell/cluster machinery downstream) rather than
+ * inventing a texel-space size law: `strength` is normalized against
+ * `fluid.impulseStrength` into the same [~0.2, ~0.8] `u` range
+ * `hiiLuminosityOf` expects, and `radiusScale` becomes a per-event
+ * multiplier (ratio to `fluid.radiusScale`, ~[0.7, 1.3]) on `tuning.hii.
+ * radiusScale` rather than a second, texel-to-parsec unit conversion. No age
+ * modulation: `RegionPlan` (and `hiiLuminosityOf`/`hiiRadiusUnits`) carry no
+ * age-adjacent field to hang one off, so the mapping stays this minimal
+ * rather than inventing one.
+ */
+function candidateRegionsFromFluidEvents(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  seed: number,
+  clusterCount: number,
+): RegionPlan[] {
+  const fluid = tuning.sfMapFluid;
+  const events = buildGalaxySfMapFluidEvents(geometry, tuning, seed);
+  const { start, end } = sfMapFluidEventWindow(events, fluid.steps, fluid.impulseDuration);
+  if (start >= end) return [];
+
+  const grid = sfMapGridRadius(geometry);
+  const all: RegionPlan[] = [];
+  for (let i = start; i < end; i++) {
+    const event = events[i]!;
+    const strengthFactor = fluid.impulseStrength > 0 ? event.strength / fluid.impulseStrength : 1;
+    const luminosity = hiiLuminosityOf({ strength: strengthFactor });
+    const radiusFactor = fluid.radiusScale > 0 ? event.radiusScale / fluid.radiusScale : 1;
+    const radius = hiiRadiusUnits(luminosity, tuning.hii.radiusScale * radiusFactor);
+    if (radius <= 0) continue;
     all.push({
-      center,
+      center: fluidEventCenter(event, geometry, grid),
       radius,
       luminosity,
       shellCount: shellSpriteCount(luminosity),
-      clusterCount: clusterOn ? CLUSTER_SPRITE_COUNT : 0,
+      clusterCount,
     });
   }
+  return all;
+}
 
-  // Drop the FAINTEST regions first when over budget: sorted brightest-first,
-  // each candidate is admitted if it still fits — cheap and unbiased because
-  // the L^-2 draw means the tail being dropped carries almost none of the
-  // tier's total flux.
-  all.sort((a, b) => b.luminosity - a.luminosity);
-  const kept: RegionPlan[] = [];
-  let used = 0;
-  for (const region of all) {
-    const cost = region.shellCount + region.clusterCount;
-    if (used + cost > HII_MAX_COUNT) continue;
-    kept.push(region);
-    used += cost;
-  }
-  return kept;
+function planRegions(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  starFormation: GalaxyStarFormationParams,
+  seed: number,
+): readonly RegionPlan[] {
+  const clusterCount = tuning.hii.clusterStrength > 0 ? CLUSTER_SPRITE_COUNT : 0;
+  const candidates =
+    tuning.sfMap.generator === 'fluid'
+      ? candidateRegionsFromFluidEvents(geometry, tuning, seed, clusterCount)
+      : candidateRegionsFromCatalog(geometry, tuning, starFormation, seed, clusterCount);
+  return admitBrightestFirst(candidates);
 }
 
 /** Dedicated rng stream salt for the map-position draws — distinct from "HII " (sprite scatter) and "DUST"/"ARMC". */
@@ -261,6 +363,12 @@ let seedingCdfCache: CachedCdf | null = null;
  * ignition zeroes gas and age in the same cell, so this is anti-correlated
  * with the dust CDF by construction — knots avoid the dust the automaton
  * just cleared, the same decorrelation M74 shows (Chevance+2020).
+ *
+ * NEVER called for `tuning.sfMap.generator === 'fluid'` regions (see
+ * `buildHiiRegions`'s call site) — a fluid region's centre already IS a map
+ * position (`candidateRegionsFromFluidEvents`'s own log-polar transform), so
+ * re-jittering it onto this CDF would undo the exact placement-sim
+ * correlation the fluid path exists to create, not refine it.
  */
 function applySfMapSeeding(
   regions: readonly RegionPlan[],
@@ -696,19 +804,26 @@ export function buildHiiRegions(
   seed: number,
   sfMap: GalaxySfMap | null,
 ): readonly GalaxyFieldComponent[] {
-  if (
-    !tuning.hii.enabled ||
-    tuning.hii.brightness <= 0 ||
-    tuning.hii.radiusScale <= 0 ||
-    geometry.numArms <= 0 ||
-    starFormation.sfActivity <= 0
-  ) {
+  if (!tuning.hii.enabled || tuning.hii.brightness <= 0 || tuning.hii.radiusScale <= 0) {
+    return [];
+  }
+  // `numArms`/`sfActivity` only gate the arm-ridge catalog path — the fluid
+  // event window has neither dependency (a fluid run can legitimately place
+  // events off the arm-forcing floor bias with zero arms, and its count
+  // comes from `sfMapFluid.eventRate`, never `starFormation.sfActivity`).
+  const isFluid = tuning.sfMap.generator === 'fluid';
+  if (!isFluid && (geometry.numArms <= 0 || starFormation.sfActivity <= 0)) {
     return [];
   }
 
-  const catalogRegions = planRegions(geometry, tuning, starFormation, seed);
-  if (catalogRegions.length === 0) return [];
-  const regions = applySfMapSeeding(catalogRegions, geometry, tuning, sfMap, seed);
+  const candidateRegions = planRegions(geometry, tuning, starFormation, seed);
+  if (candidateRegions.length === 0) return [];
+  // Fluid-sourced regions skip the map-seeding post-pass entirely — see
+  // `applySfMapSeeding`'s own header for why re-jittering them would be a
+  // regression, not a refinement.
+  const regions = isFluid
+    ? candidateRegions
+    : applySfMapSeeding(candidateRegions, geometry, tuning, sfMap, seed);
 
   let luminositySum = 0;
   for (const region of regions) luminositySum += region.luminosity;
