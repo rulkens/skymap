@@ -1,7 +1,7 @@
 /**
- * createSfMapOrientation — the GPU structure-tensor chain over the active
- * SF-map generator's packed map (automaton or fluid, whichever
- * `sfMap.generator` names — this module only ever sees `sourceTexture`, never
+ * createIsmMapOrientation — the GPU structure-tensor chain over the active
+ * ISM-map generator's packed map (automaton or fluid, whichever
+ * `ismMap.generator` names — this module only ever sees `sourceTexture`, never
  * which generator wrote it): field blur (separable) -> tensor -> tensor blur
  * (separable) -> coherence, plus the overlay that presents it.
  *
@@ -15,20 +15,20 @@
  */
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
-  SF_MAP_WORKGROUP_SIZE,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
+  ISM_MAP_WORKGROUP_SIZE,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
 
-import orientationPresentWgsl from '../shaders/milkyWay/sfMap/orientationPresent.wesl?static';
-import sfMapOrientationFieldWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationField.wesl?static';
-import sfMapOrientationTensorWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationTensor.wesl?static';
-import sfMapOrientationTensorBlurWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationTensorBlur.wesl?static';
-import sfMapOrientationCoherenceWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationCoherence.wesl?static';
+import orientationPresentWgsl from '../shaders/milkyWay/ismMap/orientationPresent.wesl?static';
+import ismMapOrientationFieldWgsl from '../shaders/milkyWay/ismMap/ismMapOrientationField.wesl?static';
+import ismMapOrientationTensorWgsl from '../shaders/milkyWay/ismMap/ismMapOrientationTensor.wesl?static';
+import ismMapOrientationTensorBlurWgsl from '../shaders/milkyWay/ismMap/ismMapOrientationTensorBlur.wesl?static';
+import ismMapOrientationCoherenceWgsl from '../shaders/milkyWay/ismMap/ismMapOrientationCoherence.wesl?static';
 
-export type SfMapOrientation = {
+export type IsmMapOrientation = {
   readonly texture: GPUTexture;
   readonly readbackBuffer: GPUBuffer;
   readonly readbackBytesPerRow: number;
@@ -36,19 +36,19 @@ export type SfMapOrientation = {
   readonly presentBindGroup: GPUBindGroup;
   /** Run the six passes over the current source texture. The caller gates this; it does not gate itself. */
   dispatch(input: {
-    readonly grid: GalaxySfMapGridRadius;
+    readonly grid: GalaxyIsmMapGridRadius;
     readonly sigmaDerivTexels: number;
     readonly sigmaIntegTexels: number;
-    /** `sfMapOrientationField.wesl`'s pedestal-subtraction inputs — see `SfMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the automaton's own case); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
+    /** `ismMapOrientationField.wesl`'s pedestal-subtraction inputs — see `IsmMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the automaton's own case); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
     readonly gasFloor: number;
     readonly gasScaleLength: number;
-    /** The ambient dust pedestal both generators seed at step 0 — `SF_MAP_AMBIENT_DUST` (`sweptDustOvershoot.ts`), passed live rather than baked in so the shader carries no restated constant. */
+    /** The ambient dust pedestal both generators seed at step 0 — `ISM_MAP_AMBIENT_DUST` (`sweptDustOvershoot.ts`), passed live rather than baked in so the shader carries no restated constant. */
     readonly ambient: number;
   }): void;
   dispose(): void;
 };
 
-export function createSfMapOrientation(
+export function createIsmMapOrientation(
   device: GPUDevice,
   deps: {
     readonly makeShader: (code: string, label: string) => GPUShaderModule;
@@ -58,7 +58,7 @@ export function createSfMapOrientation(
     /** The active generator's packed output; this chain's input. */
     readonly sourceTexture: GPUTexture;
   },
-): SfMapOrientation {
+): IsmMapOrientation {
   const { makeShader } = deps;
 
   const presentMod = makeShader(orientationPresentWgsl, 'galaxy:orientationPresent');
@@ -66,7 +66,7 @@ export function createSfMapOrientation(
     label: 'galaxy:orientationPresentPipe',
     layout: 'auto',
     vertex: { module: presentMod, entryPoint: 'vs' },
-    // Additive into sceneTex, same reasoning as the sfMap present pass: this
+    // Additive into sceneTex, same reasoning as the ismMap present pass: this
     // draw must sum with whatever background extras' sprites already put there.
     fragment: {
       module: presentMod,
@@ -92,17 +92,17 @@ export function createSfMapOrientation(
   // shader reads only .xy either way.
   const texture = device.createTexture({
     label: 'galaxy:orientationTex',
-    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    size: [ISM_MAP_AZ, ISM_MAP_RINGS],
     format: 'rgba16float',
     usage:
       GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
   });
   // rgba16float = 4 lanes * 2 bytes; only .xy are read back, .zw are copied
   // along for free since a texture copy can't pick channels.
-  const readbackBytesPerRow = alignedBytesPerRow(SF_MAP_AZ * 8);
+  const readbackBytesPerRow = alignedBytesPerRow(ISM_MAP_AZ * 8);
   const readbackBuffer = device.createBuffer({
     label: 'galaxy:orientationReadbackBuf',
-    size: readbackBytesPerRow * SF_MAP_RINGS,
+    size: readbackBytesPerRow * ISM_MAP_RINGS,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
   // rMin/rMax only. Doubles as the tensor pass's grid uniform (its aspect
@@ -117,19 +117,19 @@ export function createSfMapOrientation(
   // derivative scale suppresses noise before the gradient, a larger integration
   // scale (2-3x it, conventionally) averages orientations after the tensor.
   const sigmaUbo = device.createBuffer({
-    label: 'galaxy:sfMapOrientationSigmaUbo',
+    label: 'galaxy:ismMapOrientationSigmaUbo',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // gasFloor/gasScaleLength/rMin/rMax/ambient — sfMapOrientationField.wesl's
-  // own pedestal-subtraction uniform (its `SfMapOrientationPedestal`), bound
+  // gasFloor/gasScaleLength/rMin/rMax/ambient — ismMapOrientationField.wesl's
+  // own pedestal-subtraction uniform (its `IsmMapOrientationPedestal`), bound
   // only into the field-blur-AZIMUTH bind group below: that is the one
   // dispatch that reads raw dust off `sourceTexture`, so it is the one that
   // needs to know the pedestal it must subtract before the gradient stage.
   // 5 floats = 20 bytes, rounded up to this module's own 16-byte-block
   // convention (see sigmaUbo/gridUbo above).
   const pedestalUbo = device.createBuffer({
-    label: 'galaxy:sfMapOrientationPedestalUbo',
+    label: 'galaxy:ismMapOrientationPedestalUbo',
     size: 32,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
@@ -144,14 +144,14 @@ export function createSfMapOrientation(
     ],
   });
 
-  // Every intermediate is SF_MAP_AZ x SF_MAP_RINGS, allocated once and given
+  // Every intermediate is ISM_MAP_AZ x ISM_MAP_RINGS, allocated once and given
   // BOTH TEXTURE_BINDING (the next pass reads it) and STORAGE_BINDING (this
   // pass writes it). r32float for the single-channel field stage, rgba16float
   // for the packed-tensor stage — both core-guaranteed write-access formats.
   const makeScratch = (label: string, format: GPUTextureFormat): GPUTexture =>
     device.createTexture({
       label,
-      size: [SF_MAP_AZ, SF_MAP_RINGS],
+      size: [ISM_MAP_AZ, ISM_MAP_RINGS],
       format,
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
     });
@@ -161,15 +161,15 @@ export function createSfMapOrientation(
   const tensorBlurTex = makeScratch('galaxy:orientationTensorBlurTex', 'rgba16float');
   const tensorFinalTex = makeScratch('galaxy:orientationTensorFinalTex', 'rgba16float');
 
-  const fieldMod = makeShader(sfMapOrientationFieldWgsl, 'galaxy:sfMapOrientationField');
-  const tensorMod = makeShader(sfMapOrientationTensorWgsl, 'galaxy:sfMapOrientationTensor');
+  const fieldMod = makeShader(ismMapOrientationFieldWgsl, 'galaxy:ismMapOrientationField');
+  const tensorMod = makeShader(ismMapOrientationTensorWgsl, 'galaxy:ismMapOrientationTensor');
   const tensorBlurMod = makeShader(
-    sfMapOrientationTensorBlurWgsl,
-    'galaxy:sfMapOrientationTensorBlur',
+    ismMapOrientationTensorBlurWgsl,
+    'galaxy:ismMapOrientationTensorBlur',
   );
   const coherenceMod = makeShader(
-    sfMapOrientationCoherenceWgsl,
-    'galaxy:sfMapOrientationCoherence',
+    ismMapOrientationCoherenceWgsl,
+    'galaxy:ismMapOrientationCoherence',
   );
   const makeComputePipe = (
     label: string,
@@ -207,32 +207,32 @@ export function createSfMapOrientation(
   // Ordered exactly as they dispatch; each stage reads the previous stage's write.
   const stages: readonly { pipeline: GPUComputePipeline; bindGroup: GPUBindGroup }[] = (() => {
     const fieldBlurAzimuth = makeComputePipe(
-      'galaxy:sfMapOrientationFieldBlurAzimuthPipe',
+      'galaxy:ismMapOrientationFieldBlurAzimuthPipe',
       fieldMod,
       'csBlurAzimuth',
     );
     const fieldBlurRing = makeComputePipe(
-      'galaxy:sfMapOrientationFieldBlurRingPipe',
+      'galaxy:ismMapOrientationFieldBlurRingPipe',
       fieldMod,
       'csBlurRing',
     );
-    const tensor = makeComputePipe('galaxy:sfMapOrientationTensorPipe', tensorMod, 'cs');
+    const tensor = makeComputePipe('galaxy:ismMapOrientationTensorPipe', tensorMod, 'cs');
     const tensorBlurAzimuth = makeComputePipe(
-      'galaxy:sfMapOrientationTensorBlurAzimuthPipe',
+      'galaxy:ismMapOrientationTensorBlurAzimuthPipe',
       tensorBlurMod,
       'csBlurAzimuth',
     );
     const tensorBlurRing = makeComputePipe(
-      'galaxy:sfMapOrientationTensorBlurRingPipe',
+      'galaxy:ismMapOrientationTensorBlurRingPipe',
       tensorBlurMod,
       'csBlurRing',
     );
-    const coherence = makeComputePipe('galaxy:sfMapOrientationCoherencePipe', coherenceMod, 'cs');
+    const coherence = makeComputePipe('galaxy:ismMapOrientationCoherencePipe', coherenceMod, 'cs');
     return [
       {
         pipeline: fieldBlurAzimuth,
         bindGroup: makeStageBindGroup(
-          'galaxy:sfMapOrientationFieldBlurAzimuthBG',
+          'galaxy:ismMapOrientationFieldBlurAzimuthBG',
           fieldBlurAzimuth,
           deps.sourceTexture,
           fieldBlurTex,
@@ -243,7 +243,7 @@ export function createSfMapOrientation(
       {
         pipeline: fieldBlurRing,
         bindGroup: makeStageBindGroup(
-          'galaxy:sfMapOrientationFieldBlurRingBG',
+          'galaxy:ismMapOrientationFieldBlurRingBG',
           fieldBlurRing,
           fieldBlurTex,
           fieldSmoothTex,
@@ -254,7 +254,7 @@ export function createSfMapOrientation(
         // The tensor stage takes the GRID uniform, not the sigma one.
         pipeline: tensor,
         bindGroup: makeStageBindGroup(
-          'galaxy:sfMapOrientationTensorBG',
+          'galaxy:ismMapOrientationTensorBG',
           tensor,
           fieldSmoothTex,
           tensorRawTex,
@@ -264,7 +264,7 @@ export function createSfMapOrientation(
       {
         pipeline: tensorBlurAzimuth,
         bindGroup: makeStageBindGroup(
-          'galaxy:sfMapOrientationTensorBlurAzimuthBG',
+          'galaxy:ismMapOrientationTensorBlurAzimuthBG',
           tensorBlurAzimuth,
           tensorRawTex,
           tensorBlurTex,
@@ -274,7 +274,7 @@ export function createSfMapOrientation(
       {
         pipeline: tensorBlurRing,
         bindGroup: makeStageBindGroup(
-          'galaxy:sfMapOrientationTensorBlurRingBG',
+          'galaxy:ismMapOrientationTensorBlurRingBG',
           tensorBlurRing,
           tensorBlurTex,
           tensorFinalTex,
@@ -285,7 +285,7 @@ export function createSfMapOrientation(
         // The coherence stage takes no uniform — src and dst only.
         pipeline: coherence,
         bindGroup: device.createBindGroup({
-          label: 'galaxy:sfMapOrientationCoherenceBG',
+          label: 'galaxy:ismMapOrientationCoherenceBG',
           layout: coherence.getBindGroupLayout(0),
           entries: [
             { binding: 0, resource: tensorFinalTex.createView() },
@@ -296,8 +296,8 @@ export function createSfMapOrientation(
     ];
   })();
 
-  const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
-  const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
+  const dispatchX = ISM_MAP_AZ / ISM_MAP_WORKGROUP_SIZE;
+  const dispatchY = ISM_MAP_RINGS / ISM_MAP_WORKGROUP_SIZE;
 
   return {
     texture,
@@ -325,11 +325,11 @@ export function createSfMapOrientation(
         0,
         new Float32Array([gasFloor, gasScaleLength, grid.rMin, grid.rMax, ambient, 0, 0, 0]),
       );
-      const enc = device.createCommandEncoder({ label: 'galaxy:sfMapOrientation' });
+      const enc = device.createCommandEncoder({ label: 'galaxy:ismMapOrientation' });
       // All six dispatches share ONE compute pass: WebGPU orders
       // dispatchWorkgroups calls within a single pass, so no extra pass boundary
       // is needed between stages just because the texture object changed.
-      const pass = enc.beginComputePass({ label: 'galaxy:sfMapOrientationPass' });
+      const pass = enc.beginComputePass({ label: 'galaxy:ismMapOrientationPass' });
       for (const stage of stages) {
         pass.setPipeline(stage.pipeline);
         pass.setBindGroup(0, stage.bindGroup);

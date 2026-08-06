@@ -1,9 +1,9 @@
-// milkyWay/sfMap/sfMapOrientationCoherence.wesl — stage 4 (final): the
+// milkyWay/ismMap/ismMapOrientationCoherence.wesl — stage 4 (final): the
 // blurred tensor (Jxx,Jxy,Jyy) -> coherence-scaled double-angle vector
 // (cos2theta, sin2theta), no eigen-solve needed. Along-filament sign is
 // (Jyy-Jxx, -2*Jxy), rotated pi/2 from the ACROSS-ridge gradient form
 // (Jxx-Jyy, 2*Jxy) — negating it turns a pitch-0 azimuthal ridge into
-// exactly 90deg (the deleted buildSfMapOrientation.test.ts's regression).
+// exactly 90deg (the deleted buildIsmMapOrientation.test.ts's regression).
 // Written into orientationTex's .xy; rgba16float not rg16float — see
 // createGalaxyEngine.ts's orientationTex comment on storage-format support.
 

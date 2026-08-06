@@ -50,7 +50,7 @@ import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
 import HiiSection from '../HiiSection/HiiSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
-import SfMapSection from '../IsmMapSection/IsmMapSection';
+import IsmMapSection from '../IsmMapSection/IsmMapSection';
 import SliderGroup from '../SliderGroup/SliderGroup';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
@@ -251,7 +251,7 @@ export type ControlsPanelProps = {
    * subtree reads.
    */
   readonly fade: MilkyWayFadeReadout | null;
-  /** Same treatment, event-driven rather than timed — see `SfMapSection`'s own readout. */
+  /** Same treatment, event-driven rather than timed — see `IsmMapSection`'s own readout. */
   readonly orientationDiagnostics: OrientationDiagnostics | null;
 };
 
@@ -378,7 +378,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           <ArmFieldSection />
           <ArmCloudSection />
           <HiiSection />
-          <SfMapSection diagnostics={orientationDiagnostics} />
+          <IsmMapSection diagnostics={orientationDiagnostics} />
           <DustSection />
           <DustCloudSection />
         </CollapsibleSection>

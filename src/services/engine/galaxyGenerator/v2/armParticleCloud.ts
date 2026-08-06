@@ -224,7 +224,7 @@ export function buildArmParticleCloud(
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * hLight,
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum,
-      // This tier has no SF-map placement mode of its own — it stays on the
+      // This tier has no ISM-map placement mode of its own — it stays on the
       // analytic arm-lane path unconditionally (`armBias: 1` — this tier IS
       // the arm feature, the smooth-disc fallback only fires when an arm has
       // no valid span).

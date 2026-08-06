@@ -1,5 +1,5 @@
 /**
- * `GalaxySfMapOrientation.data` packs `(cos2theta, sin2theta)` already
+ * `GalaxyIsmMapOrientation.data` packs `(cos2theta, sin2theta)` already
  * SCALED by coherence per texel — so the packed vector's own length IS the
  * coherence; no separate normalisation or division is needed.
  */

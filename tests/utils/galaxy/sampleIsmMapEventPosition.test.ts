@@ -1,18 +1,18 @@
 /**
- * sampleSfMapEventPosition's own guard: draws confine to the CDF's texel
- * footprint (`sampleSfMapDustCdf`'s own tests cover the sampler itself) AND
+ * sampleIsmMapEventPosition's own guard: draws confine to the CDF's texel
+ * footprint (`sampleIsmMapDustCdf`'s own tests cover the sampler itself) AND
  * `y` lands on the exact `warpHeight` value at the sampled (radius, angle)
  * — the one thing this function adds — never a flat or gaussian-scattered
  * stand-in (see the module header on why that would be a regression).
  */
 import { describe, expect, it } from 'vitest';
-import { buildSfMapDustCdf } from '../../../src/utils/galaxy/buildIsmMapDustCdf';
-import { sampleSfMapEventPosition } from '../../../src/utils/galaxy/sampleIsmMapEventPosition';
-import { sfMapDustRingEdges } from '../../../src/utils/galaxy/ismMapDustRingEdges';
+import { buildIsmMapDustCdf } from '../../../src/utils/galaxy/buildIsmMapDustCdf';
+import { sampleIsmMapEventPosition } from '../../../src/utils/galaxy/sampleIsmMapEventPosition';
+import { ismMapDustRingEdges } from '../../../src/utils/galaxy/ismMapDustRingEdges';
 import { warpHeight } from '../../../src/utils/galaxy/warpHeight';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
 import type { GalaxyDescription } from '../../../src/@types/galaxy/GalaxyDescription';
-import type { GalaxySfMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
 
 const AZ = 4;
 const RINGS = 4;
@@ -57,27 +57,27 @@ const GEOMETRY: GalaxyDescription = {
 };
 
 /** A single hot texel in the `recentSf` (G) channel — the density this sampler weights by. */
-function makeSingleHotMap(ring: number, azIdx: number): GalaxySfMap {
+function makeSingleHotMap(ring: number, azIdx: number): GalaxyIsmMap {
   const data = new Float32Array(RINGS * AZ * 4);
   data[(ring * AZ + azIdx) * 4 + 1] = 1;
   return { az: AZ, rings: RINGS, rMin: R_MIN, rMax: R_MAX, data };
 }
 
-describe('sampleSfMapEventPosition', () => {
+describe('sampleIsmMapEventPosition', () => {
   it('confines every draw to its hot texel and warp-lifts it exactly', () => {
     const ring = 3;
     const azIdx = 1;
     const map = makeSingleHotMap(ring, azIdx);
-    const cdf = buildSfMapDustCdf(map, (texel) => texel.recentSf);
+    const cdf = buildIsmMapDustCdf(map, (texel) => texel.recentSf);
     const rng = mulberry32(7);
 
-    const { rInner, rOuter } = sfMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);
+    const { rInner, rOuter } = ismMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);
     const dTheta = (2 * Math.PI) / AZ;
     const angleInner = azIdx * dTheta;
     const angleOuter = angleInner + dTheta;
 
     for (let i = 0; i < 50; i++) {
-      const [x, y, z] = sampleSfMapEventPosition(cdf, GEOMETRY, rng);
+      const [x, y, z] = sampleIsmMapEventPosition(cdf, GEOMETRY, rng);
       const radius = Math.hypot(x, z);
       const angle = Math.atan2(z, x);
       expect(radius).toBeGreaterThanOrEqual(rInner);

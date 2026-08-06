@@ -27,9 +27,9 @@ import {
   armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
-import { DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS } from './defaultGalaxyIsmMapAutomatonParams';
-import { DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
-import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
+import { DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS } from './defaultGalaxyIsmMapAutomatonParams';
+import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
+import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
@@ -333,7 +333,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // Map-seeded by default on this branch — the whole point is seeing dust
     // and knots driven by the same automaton run. 0 recovers the arm-ridge
     // catalog byte-identically.
-    sfMapSeeding: 1,
+    ismMapSeeding: 1,
     // >0 out of the box, same "visible by default, calibration is a FEEL
     // call" reasoning `associations.brightness` below already uses — a shell
     // tier whose every texture knob does nothing until raised reads as
@@ -364,9 +364,9 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       texture: 0.5,
     },
   },
-  sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
-  sfMapAutomaton: DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS,
-  sfMapFluid: DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS,
+  ismMap: DEFAULT_GALAXY_ISM_MAP_PARAMS,
+  ismMapAutomaton: DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS,
+  ismMapFluid: DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */

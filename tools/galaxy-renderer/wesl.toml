@@ -10,7 +10,7 @@
 #
 #   src/engine/shaders/milkyWay/sprites -> src/services/gpu/shaders/milkyWay/sprites
 #   src/engine/shaders/milkyWay/field   -> .../shaders/milkyWay/field
-#   src/engine/shaders/milkyWay/sfMap   -> .../shaders/milkyWay/sfMap
+#   src/engine/shaders/milkyWay/ismMap   -> .../shaders/milkyWay/ismMap
 #   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
 #   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom
 #   src/engine/shaders/compositor       -> src/services/gpu/shaders/compositor

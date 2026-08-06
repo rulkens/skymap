@@ -1,6 +1,6 @@
 /**
- * OrientationDiagnostics — permanent debug readout for the SF-map ->
- * dust-elongation coupling (`SfMapSection`'s "measured filament coupling"
+ * OrientationDiagnostics — permanent debug readout for the ISM-map ->
+ * dust-elongation coupling (`IsmMapSection`'s "measured filament coupling"
  * block). The three numbers discriminate where a "sliders don't move the
  * dust" report is coming from: `hasData: false` means the readback never
  * landed; near-zero coherence means the automaton has no measurable

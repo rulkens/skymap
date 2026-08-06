@@ -18,7 +18,7 @@ Worker or compute-pass port open, and it is worth preserving.
 | `buildGalaxyFieldMixture` (emission)                                     | disc, bulge, bar, arm ridges           | `milkyWay/field/splat.wesl`            |
 | `buildHiiRegions`                                                        | Strömgren shells + OB cores            | `splat.wesl`, own target               |
 | `buildDustParticleCloud`                                                 | GMC-scale dust Gaussians               | `milkyWay/field/dustMap.wesl`          |
-| `buildGalaxySfMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | SSPSF forcing grid, SF events, bubbles | `sfMapAutomatonStep.wesl`, `sfMapFluidStep.wesl`, `bubblePresent.wesl` |
+| `buildGalaxyIsmMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | SSPSF forcing grid, SF events, bubbles | `ismMapAutomatonStep.wesl`, `ismMapFluidStep.wesl`, `bubblePresent.wesl` |
 
 All four take the same `GalaxyDescription` that `shared/describeGalaxy` produced
 and `v1/packGenerationUniforms` wrote into v1's generation UBO — which is what

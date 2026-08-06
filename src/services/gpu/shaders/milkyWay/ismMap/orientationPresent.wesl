@@ -1,12 +1,12 @@
-// milkyWay/sfMap/orientationPresent.wesl — presents the GPU structure-tensor
-// pass chain's crest orientation (sfMapOrientationField.wesl ->
-// sfMapOrientationTensor.wesl -> sfMapOrientationTensorBlur.wesl ->
-// sfMapOrientationCoherence.wesl), crossfaded with the analytic field's
+// milkyWay/ismMap/orientationPresent.wesl — presents the GPU structure-tensor
+// pass chain's crest orientation (ismMapOrientationField.wesl ->
+// ismMapOrientationTensor.wesl -> ismMapOrientationTensorBlur.wesl ->
+// ismMapOrientationCoherence.wesl), crossfaded with the analytic field's
 // emission draw by weight render.orientationViewIntensity, same seam as
-// sfMapPresent.wesl.
+// ismMapPresent.wesl.
 //
 // The camera-ray -> (r, theta) log-polar resample below is
-// sfMapPresent.wesl's own disc-plane-intersection mapping, copied rather
+// ismMapPresent.wesl's own disc-plane-intersection mapping, copied rather
 // than re-derived — see that file's header for the derivation.
 //
 // Display rule: hue = orientation angle, value = coherence. The angle
@@ -22,8 +22,8 @@ import package::milkyWay::field::io::u;
 
 const PI: f32 = 3.14159265358979;
 
-// This galaxy's log-radial grid bounds — same shape as sfMapPresent.wesl's
-// SfMapGrid, written once per orientation-chain dispatch rather than every
+// This galaxy's log-radial grid bounds — same shape as ismMapPresent.wesl's
+// IsmMapGrid, written once per orientation-chain dispatch rather than every
 // frame like io.wesl's 'u' above.
 struct OrientationGrid {
   rMin: f32,
@@ -84,11 +84,11 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // Linear filtering is safe here specifically because the texture packs
   // the (cos2t, sin2t) DOUBLE-ANGLE vector, not a bare angle — only that
   // form interpolates across the pi wrap without a false zero-crossing
-  // (see sfMapOrientationCoherence.wesl's own header).
+  // (see ismMapOrientationCoherence.wesl's own header).
   let texel = textureSampleLevel(orientationTex, orientationSmp, vec2<f32>(azT, ringT), 0.0);
 
   // Fade the last few percent toward each radial edge, same as
-  // sfMapPresent.wesl — presentation, not physics.
+  // ismMapPresent.wesl — presentation, not physics.
   let edgeFade = smoothstep(0.0, 0.03, ringT) * (1.0 - smoothstep(0.94, 1.0, ringT));
 
   let cos2t = texel.x;

@@ -1,6 +1,6 @@
 /**
  * createOrientationDiagnostics — the accumulator behind the readout in
- * `SfMapSection`. Two producers write it and neither can wait for the other:
+ * `IsmMapSection`. Two producers write it and neither can wait for the other:
  * coherence lands with an orientation READBACK, the delta pair with a dust
  * REBUILD, and either may be the newer half at any report.
  *

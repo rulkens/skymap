@@ -1,41 +1,41 @@
 /**
- * sfMapActivityHistogramHarness — measures the claim behind S4's density
+ * ismMapActivityHistogramHarness — measures the claim behind S4's density
  * product (dust = gas x activity x texelArea): does the automaton's
  * activity EMA clamp at 1.0 on arm crests while interarm stays low, and
  * does that concentrate the CDF's mass in the arms? Runs the REAL
- * `createSfMapAutomatonRunner` (no CPU re-port of the shader) over the
+ * `createIsmMapAutomatonRunner` (no CPU re-port of the shader) over the
  * shipped `DEFAULT_GALAXY_FIELD_TUNING` and the Milky Way's own geometry —
  * the same construction path `createGalaxyModel.ts`'s `setParams` uses
- * (`describeGalaxy(MILKY_WAY_GALAXY_PARAMS)` -> `sfMapGenerator.rebuild`) —
- * rather than `sfMapPercolationHarness.ts`'s synthetic uniform-forcing grid,
+ * (`describeGalaxy(MILKY_WAY_GALAXY_PARAMS)` -> `ismMapGenerator.rebuild`) —
+ * rather than `ismMapPercolationHarness.ts`'s synthetic uniform-forcing grid,
  * since the question here is what the REAL ridge does, not the bare
  * automaton. Automaton-specific by design (the fluid generator has no
  * `activity` EMA claim to measure this way), so it drives
- * `createSfMapAutomatonRunner` directly rather than the generator dispatcher.
+ * `createIsmMapAutomatonRunner` directly rather than the generator dispatcher.
  *
- * Page entry, like `sfMapPercolationEntry.ts`: hangs itself on `globalThis`
- * for `sweepSfMapActivityHistogram.ts`'s Playwright driver to call, since a
+ * Page entry, like `ismMapPercolationEntry.ts`: hangs itself on `globalThis`
+ * for `sweepIsmMapActivityHistogram.ts`'s Playwright driver to call, since a
  * `?static` WESL import only resolves through this tool's own Vite server.
  */
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import {
-  buildGalaxySfMapArmForcing,
-  sfMapGridRadiusOrDefault,
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
+  buildGalaxyIsmMapArmForcing,
+  ismMapGridRadiusOrDefault,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import { sfMapDustDensity } from '../../../../../src/utils/galaxy/ismMapDustDensity';
-import { sfMapDustRingEdges } from '../../../../../src/utils/galaxy/ismMapDustRingEdges';
+import { ismMapDustDensity } from '../../../../../src/utils/galaxy/ismMapDustDensity';
+import { ismMapDustRingEdges } from '../../../../../src/utils/galaxy/ismMapDustRingEdges';
 import { createShaderModuleWithDevLog } from '../../../../../src/services/gpu/shaderCompileLogger';
-import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
 import { FIELD_HEADER_BUFFER_SIZE } from '../field/packFieldUniforms';
-import { createSfMapOutput } from './createIsmMapOutput';
-import { createSfMapAutomatonRunner } from './createIsmMapAutomatonRunner';
-import { decodeSfMapTexels } from './decodeIsmMapTexels';
+import { createIsmMapOutput } from './createIsmMapOutput';
+import { createIsmMapAutomatonRunner } from './createIsmMapAutomatonRunner';
+import { decodeIsmMapTexels } from './decodeIsmMapTexels';
 
-const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
+const CELL_COUNT = ISM_MAP_AZ * ISM_MAP_RINGS;
 /** Fixed per the brief: geometry RNG and the automaton's own step hash both key off this. */
 const SEED = 1;
 
@@ -63,7 +63,7 @@ function percentileOf(sortedAsc: Float64Array, p: number): number {
   return sortedAsc[idx]!;
 }
 
-/** activity's [0,1] clamp survives the rgba16float switch (sfMapPack.wesl keeps it, unlike dust) — an f16 1.0 and 0.0 are both exact, so frac255/frac0 below still land on the real saturation, not a decode artifact. */
+/** activity's [0,1] clamp survives the rgba16float switch (ismMapPack.wesl keeps it, unlike dust) — an f16 1.0 and 0.0 are both exact, so frac255/frac0 below still land on the real saturation, not a decode artifact. */
 function computeStat(
   label: string,
   activity: readonly number[],
@@ -178,8 +178,8 @@ function assertNoDeviceError(device: GPUDevice, what: string): Promise<void> {
   });
 }
 
-export async function runSfMapActivityHistogram(
-  overrides?: Partial<GalaxySfMapAutomatonParams>,
+export async function runIsmMapActivityHistogram(
+  overrides?: Partial<GalaxyIsmMapAutomatonParams>,
 ): Promise<string> {
   const adapter = await navigator.gpu?.requestAdapter();
   if (!adapter) throw new Error('no WebGPU adapter');
@@ -194,7 +194,7 @@ export async function runSfMapActivityHistogram(
   // with — sized right so `createBindGroup`'s validation against the 'auto'
   // layout's minBindingSize doesn't reject it; content is never read.
   const fieldUbo = device.createBuffer({
-    label: 'sfMapActivityHistogram:fieldUbo',
+    label: 'ismMapActivityHistogram:fieldUbo',
     size: FIELD_HEADER_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
@@ -202,7 +202,7 @@ export async function runSfMapActivityHistogram(
   device.pushErrorScope('validation');
   const makeShader = (code: string, label: string): GPUShaderModule =>
     createShaderModuleWithDevLog(device, code, label);
-  const output = createSfMapOutput(device, {
+  const output = createIsmMapOutput(device, {
     makeShader,
     // Matches createGalaxyEngine.ts's own `HDR` — not exported from that
     // file (this harness must not import it, see this file's header), so
@@ -211,7 +211,7 @@ export async function runSfMapActivityHistogram(
     hdrFormat: 'rgba16float',
     fieldUbo,
   });
-  const automaton = createSfMapAutomatonRunner(device, { makeShader, output });
+  const automaton = createIsmMapAutomatonRunner(device, { makeShader, output });
   await assertNoDeviceError(device, 'automaton pipeline creation');
 
   // The exact construction path `createGalaxyModel.ts`'s `setParams` runs at
@@ -227,9 +227,9 @@ export async function runSfMapActivityHistogram(
       ? DEFAULT_GALAXY_FIELD_TUNING
       : {
           ...DEFAULT_GALAXY_FIELD_TUNING,
-          sfMapAutomaton: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMapAutomaton, ...overrides },
+          ismMapAutomaton: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMapAutomaton, ...overrides },
         };
-  const grid = sfMapGridRadiusOrDefault(geometry);
+  const grid = ismMapGridRadiusOrDefault(geometry);
   output.writeGrid(grid);
 
   device.pushErrorScope('validation');
@@ -237,30 +237,30 @@ export async function runSfMapActivityHistogram(
   await device.queue.onSubmittedWorkDone();
   await assertNoDeviceError(device, 'automaton rebuild');
 
-  // Same readback path as createSfMapReadbacks.ts's `sfMapStream`: copy into
-  // the output's own padded staging buffer, map, then `decodeSfMapTexels`
+  // Same readback path as createIsmMapReadbacks.ts's `ismMapStream`: copy into
+  // the output's own padded staging buffer, map, then `decodeIsmMapTexels`
   // strips WebGPU's 256-byte row stride AND decodes the f16 lanes back to
   // the tight, linear az*4-floats-per-row layout.
-  const enc = device.createCommandEncoder({ label: 'sfMapActivityHistogram:copy' });
+  const enc = device.createCommandEncoder({ label: 'ismMapActivityHistogram:copy' });
   enc.copyTextureToBuffer(
     { texture: output.texture },
     { buffer: output.readbackBuffer, bytesPerRow: output.readbackBytesPerRow },
-    [SF_MAP_AZ, SF_MAP_RINGS],
+    [ISM_MAP_AZ, ISM_MAP_RINGS],
   );
   device.queue.submit([enc.finish()]);
   await output.readbackBuffer.mapAsync(GPUMapMode.READ);
-  const packed = decodeSfMapTexels(
+  const packed = decodeIsmMapTexels(
     new Uint16Array(output.readbackBuffer.getMappedRange()).slice(),
     output.readbackBytesPerRow,
-    SF_MAP_AZ,
-    SF_MAP_RINGS,
+    ISM_MAP_AZ,
+    ISM_MAP_RINGS,
   );
   output.readbackBuffer.unmap();
 
   // CPU-side arm-forcing field, no GPU readback needed — same pure function
   // `automaton.rebuild` already called to fill its own texture, so this is a
-  // second call, not a second implementation (buildGalaxySfMapArmForcing.ts).
-  const forcing = buildGalaxySfMapArmForcing(geometry, tuning);
+  // second call, not a second implementation (buildGalaxyIsmMapArmForcing.ts).
+  const forcing = buildGalaxyIsmMapArmForcing(geometry, tuning);
 
   const sortedForcing = Float64Array.from(forcing).sort();
   // Crest = top decile, interarm = bottom half, per the brief.
@@ -270,10 +270,10 @@ export async function runSfMapActivityHistogram(
   const classify = (v: number): Population =>
     v >= crestThreshold ? 'crest' : v <= interarmThreshold ? 'interarm' : 'other';
 
-  const dTheta = (2 * Math.PI) / SF_MAP_AZ;
-  const texelAreaByRing = new Float64Array(SF_MAP_RINGS);
-  for (let ring = 0; ring < SF_MAP_RINGS; ring++) {
-    const { rInner, rOuter } = sfMapDustRingEdges(ring, SF_MAP_RINGS, grid.rMin, grid.rMax);
+  const dTheta = (2 * Math.PI) / ISM_MAP_AZ;
+  const texelAreaByRing = new Float64Array(ISM_MAP_RINGS);
+  for (let ring = 0; ring < ISM_MAP_RINGS; ring++) {
+    const { rInner, rOuter } = ismMapDustRingEdges(ring, ISM_MAP_RINGS, grid.rMin, grid.rMax);
     texelAreaByRing[ring] = 0.5 * dTheta * (rOuter * rOuter - rInner * rInner);
   }
 
@@ -290,10 +290,10 @@ export async function runSfMapActivityHistogram(
   };
   let totalMass = 0;
 
-  for (let ring = 0; ring < SF_MAP_RINGS; ring++) {
-    const rowBase = ring * SF_MAP_AZ;
+  for (let ring = 0; ring < ISM_MAP_RINGS; ring++) {
+    const rowBase = ring * ISM_MAP_AZ;
     const area = texelAreaByRing[ring]!;
-    for (let az = 0; az < SF_MAP_AZ; az++) {
+    for (let az = 0; az < ISM_MAP_AZ; az++) {
       const i = rowBase + az;
       const gas = packed[i * 4]!;
       const activity = packed[i * 4 + 2]!;
@@ -301,7 +301,7 @@ export async function runSfMapActivityHistogram(
       activityAll[i] = activity;
       gasAll[i] = gas;
       dustAll[i] = dust;
-      const mass = sfMapDustDensity(gas, activity) * area;
+      const mass = ismMapDustDensity(gas, activity) * area;
       totalMass += mass;
       const pop = classify(forcing[i]!);
       byPop[pop].activity.push(activity);
@@ -332,16 +332,16 @@ export async function runSfMapActivityHistogram(
   ];
 
   const lines: string[] = [];
-  lines.push('SF-map activity / dust-mass histogram');
+  lines.push('ISM-map activity / dust-mass histogram');
   lines.push(
     `  adapter: ${`${info.vendor ?? '?'}/${info.architecture ?? '?'} ${info.device ?? ''} ${info.description ?? ''}`.trim()}`,
   );
   lines.push(
-    `  grid: ${SF_MAP_AZ}x${SF_MAP_RINGS}, rMin=${grid.rMin.toFixed(3)} rMax=${grid.rMax.toFixed(3)}, steps=${tuning.sfMapAutomaton.steps}, armForcing=${tuning.sfMapAutomaton.armForcing}, seed=${SEED}`,
+    `  grid: ${ISM_MAP_AZ}x${ISM_MAP_RINGS}, rMin=${grid.rMin.toFixed(3)} rMax=${grid.rMax.toFixed(3)}, steps=${tuning.ismMapAutomaton.steps}, armForcing=${tuning.ismMapAutomaton.armForcing}, seed=${SEED}`,
   );
-  // Full effective sfMap param set, not just the two named above — makes a
+  // Full effective ismMap param set, not just the two named above — makes a
   // sweep log self-describing without cross-referencing the CLI invocation.
-  lines.push(`  params: ${JSON.stringify(tuning.sfMapAutomaton)}`);
+  lines.push(`  params: ${JSON.stringify(tuning.ismMapAutomaton)}`);
   lines.push(
     `  population thresholds on the CPU armForcing field: crest >= p90 = ${crestThreshold.toFixed(4)}, interarm <= p50 = ${interarmThreshold.toFixed(4)}`,
   );
@@ -390,8 +390,8 @@ export async function runSfMapActivityHistogram(
   // Single-line tail so a shell sweep loop can `grep '^RESULT '` and collect
   // every run's params + stats without parsing the tables above.
   const result = {
-    tool: 'sfMapActivityHistogram',
-    params: tuning.sfMapAutomaton,
+    tool: 'ismMapActivityHistogram',
+    params: tuning.ismMapAutomaton,
     activity: Object.fromEntries(stats.map((s) => [s.label, s])),
     dust: Object.fromEntries(dustStats.map((s) => [s.label, s])),
   };
@@ -402,7 +402,7 @@ export async function runSfMapActivityHistogram(
 }
 
 declare global {
-  var __sfMapActivityHistogram: (overrides?: Partial<GalaxySfMapAutomatonParams>) => Promise<string>;
+  var __ismMapActivityHistogram: (overrides?: Partial<GalaxyIsmMapAutomatonParams>) => Promise<string>;
 }
 
-globalThis.__sfMapActivityHistogram = runSfMapActivityHistogram;
+globalThis.__ismMapActivityHistogram = runIsmMapActivityHistogram;

@@ -1,18 +1,18 @@
-// milkyWay/sfMap/sfMapFluidVelocity.wesl — Pass A of the fluid SF-map step:
+// milkyWay/ismMap/ismMapFluidVelocity.wesl — Pass A of the fluid ISM-map step:
 // composes the velocity field ONCE per texel (shear + curl noise + event
 // impulses + arm-gather) and writes it to velocityTex for
-// sfMapFluidStep.wesl (Pass B) to advect and difference. Used to be
+// ismMapFluidStep.wesl (Pass B) to advect and difference. Used to be
 // evaluated 5x per texel per step (self + 4 neighbours) in Pass B's old
 // divergence estimate; this turns that into 1 evaluation + 4 textureLoads.
 // Events are also tile-culled: each 16x16 workgroup builds a SHARED list of
 // only the events whose kernel can reach this tile, so the per-texel loop
 // walks a handful of events, not the whole active window. See
-// sfMapFluidStep.wesl's header for the shared integration scheme.
+// ismMapFluidStep.wesl's header for the shared integration scheme.
 
 import package::lib::util::hash21;
-import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;
+import package::milkyWay::ismMap::ismMapShear::ismMapShearTexels;
 
-struct SfMapFluidConstants {
+struct IsmMapFluidConstants {
   rMin: f32,
   rMax: f32,
   corotationRadius: f32,
@@ -24,15 +24,15 @@ struct SfMapFluidConstants {
   impulseDuration: f32,
   armGather: f32,
   // Unused here — this pass composes velocity only. Consumed by
-  // sfMapFluidStep.wesl (Pass B) as a density-diffusion coefficient. Kept in
-  // both struct copies for byte-identical layout (packSfMapFluidConstants.ts
+  // ismMapFluidStep.wesl (Pass B) as a density-diffusion coefficient. Kept in
+  // both struct copies for byte-identical layout (packIsmMapFluidConstants.ts
   // is the offset authority).
   diffusion: f32,
   // Shear drag by the arm-forcing field at this texel — see composedVelocity
-  // below. Forcing peaks at 1 (galaxySfMapArmForcing.ts's clamp), so full
+  // below. Forcing peaks at 1 (galaxyIsmMapArmForcing.ts's clamp), so full
   // stall at a ridge crest needs armDrag >= 1.
   armDrag: f32,
-  // Pass-B-consumed only (sfMapFluidStep.wesl's gasProfile) — kept here for
+  // Pass-B-consumed only (ismMapFluidStep.wesl's gasProfile) — kept here for
   // byte-identical layout, same discipline as diffusion above.
   gasScaleLength: f32,
   // Pass-B-consumed only — see gasScaleLength above.
@@ -49,10 +49,10 @@ struct SfMapFluidConstants {
   gatherOffset: f32,
 }
 
-// Same layout as sfMapFluidStep.wesl's own copy (packSfMapFluidStepIndex.ts
+// Same layout as ismMapFluidStep.wesl's own copy (packIsmMapFluidStepIndex.ts
 // is the offset authority) — this pass reads all three fields, Pass B now
 // only reads '.step'.
-struct SfMapFluidStepIndex {
+struct IsmMapFluidStepIndex {
   step: f32,
   activeStart: f32,
   activeEnd: f32,
@@ -60,7 +60,7 @@ struct SfMapFluidStepIndex {
 
 const PI: f32 = 3.14159265358979;
 // Radial growth exponent for an active event's kernel — see
-// sfMapFluidStep.wesl's own IMPULSE_GROWTH_EXPONENT for the rationale (this
+// ismMapFluidStep.wesl's own IMPULSE_GROWTH_EXPONENT for the rationale (this
 // is the same look constant, duplicated because the event kernel math now
 // lives entirely in this file).
 const IMPULSE_GROWTH_EXPONENT: f32 = 0.6;
@@ -69,7 +69,7 @@ const CURL_PHASE_SPEED: f32 = 0.03;
 const CURL_FD_EPS: f32 = 0.5;
 const ARM_GATHER_SAT: f32 = 3.0;
 // exp(-0.5 * x^2) = 1e-4  =>  x = sqrt(2 * ln(1e4)) =~ 4.29 — the same
-// falloff cutoff sfMapFluidStep.wesl's old per-texel loop used implicitly
+// falloff cutoff ismMapFluidStep.wesl's old per-texel loop used implicitly
 // ('falloff > 1e-4'), made explicit here so the tile cull can bound an
 // event's reach without evaluating the falloff at every texel first.
 const CUTOFF_SIGMA_MULT: f32 = 4.3;
@@ -79,15 +79,15 @@ const CUTOFF_SIGMA_MULT: f32 = 4.3;
 // list; a false negative would visibly clip a kernel, so this errs wide.
 const TILE_CULL_MARGIN: f32 = 2.0;
 // Comfortably above the ~75-event active window the current tuning
-// produces (SF_MAP_FLUID_MAX_EVENTS's own budget) — can only bind if
+// produces (ISM_MAP_FLUID_MAX_EVENTS's own budget) — can only bind if
 // tuning changes to pack far more simultaneous events into one tile's
 // reach. Overflow silently drops the excess event, same "truncate, don't
-// resample" contract as SF_MAP_FLUID_MAX_EVENTS.
+// resample" contract as ISM_MAP_FLUID_MAX_EVENTS.
 const TILE_EVENT_CAP: u32 = 128u;
 
-@group(0) @binding(0) var<uniform> u: SfMapFluidConstants;
+@group(0) @binding(0) var<uniform> u: IsmMapFluidConstants;
 @group(0) @binding(1) var prevTex: texture_2d<f32>;
-@group(0) @binding(2) var<uniform> stepIdx: SfMapFluidStepIndex;
+@group(0) @binding(2) var<uniform> stepIdx: IsmMapFluidStepIndex;
 @group(0) @binding(3) var<storage, read> events: array<f32>;
 @group(0) @binding(4) var armForcingTex: texture_2d<f32>;
 @group(0) @binding(5) var velocityTex: texture_storage_2d<rgba16float, write>;
@@ -103,7 +103,7 @@ fn wrapLatticeX(x: f32, period: f32) -> f32 {
   return x - period * floor(x / period);
 }
 
-// Diverged from sfMapFluidStep.wesl's history (see git log) by the addition
+// Diverged from ismMapFluidStep.wesl's history (see git log) by the addition
 // of xPeriod: wraps both lattice corners' x BEFORE hashing so x and
 // x + xPeriod hash identically. y is left unwrapped — the ring axis never
 // wraps.
@@ -175,7 +175,7 @@ fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
 }
 
 // Steepest-ascent direction of the arm-forcing field — see
-// sfMapFluidStep.wesl's original for the azToRingMetric rationale (verbatim
+// ismMapFluidStep.wesl's original for the azToRingMetric rationale (verbatim
 // here, that file no longer needs its own copy).
 fn forcingGradient(az: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
   let fAzPlus = armForcingAt(az + 1, ring, azCount, ringCount);
@@ -211,7 +211,7 @@ fn composedVelocity(
   let ringCountI = i32(ringCount);
   let localDust = textureLoad(prevTex, vec2<i32>(az, ring), 0).w;
 
-  let shearVelAz = sfMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
+  let shearVelAz = ismMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
   let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, u.curlScale, f32(genStep));
   let grad = forcingGradient(az, ring, azCountI, ringCountI, azToRingMetric);
 

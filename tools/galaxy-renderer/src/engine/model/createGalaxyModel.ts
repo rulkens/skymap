@@ -1,7 +1,7 @@
 /**
  * createGalaxyModel — what a galaxy IS, as opposed to how a frame draws it: the
  * central galaxy's generated sprite buffers and its background extras, the two
- * analytic mixtures (emission + HII), the dust cloud, the SSPSF map, and the
+ * analytic mixtures (emission + HII), the dust cloud, the SSPISM map, and the
  * GPU record buffers all of that packs into.
  *
  * `setParams` / `setFieldTuning` / `setExtras` are the only writers; everything
@@ -20,7 +20,7 @@ import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { SfMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
+import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
@@ -28,10 +28,10 @@ import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDu
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
-import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
-import type { GalaxySfMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
-import type { GalaxySfMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
-import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
+import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
+import type { GalaxyIsmMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
 
 import { createGenerationPipelines } from '../../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
@@ -52,10 +52,10 @@ import {
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import {
-  sfMapGridRadius,
-  sfMapGridRadiusOrDefault,
+  ismMapGridRadius,
+  ismMapGridRadiusOrDefault,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
   ASSOCIATIONS_MAX_COUNT,
   buildHiiRegions,
@@ -63,8 +63,8 @@ import {
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { sfMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
-import { SF_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
+import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
+import { ISM_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
@@ -75,9 +75,9 @@ import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import type { GrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { createOrientationDiagnostics } from '../ismMap/createOrientationDiagnostics';
-import type { SfMapGenerator } from '../ismMap/createIsmMapGenerator';
-import type { SfMapOrientation } from '../ismMap/createIsmMapOrientation';
-import { createSfMapReadbacks } from '../ismMap/createIsmMapReadbacks';
+import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
+import type { IsmMapOrientation } from '../ismMap/createIsmMapOrientation';
+import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
 
@@ -105,8 +105,8 @@ type Extra = {
 
 export type GalaxyModelDeps = {
   readonly device: GPUDevice;
-  readonly sfMapGenerator: SfMapGenerator;
-  readonly orientation: SfMapOrientation;
+  readonly ismMapGenerator: IsmMapGenerator;
+  readonly orientation: IsmMapOrientation;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   /**
@@ -144,20 +144,20 @@ export type GalaxyModel = {
   readonly hiiComps: GrowOnlyRecordBuffer;
   readonly bubbleComps: GrowOnlyRecordBuffer;
   /** Null until the first SSPSF readback lands. */
-  readonly sfMapData: GalaxySfMap | null;
+  readonly ismMapData: GalaxyIsmMap | null;
   /**
-   * The SF-map "seeding" debug view's three scalar lanes — `weight` reads
-   * `render.sfMapSeedingViewWeight` live (forced to 0 while `sfMapData` is
-   * null or the mean is 0), `globalMean` is cached at the sfMap readback
+   * The ISM-map "seeding" debug view's three scalar lanes — `weight` reads
+   * `render.ismMapSeedingViewWeight` live (forced to 0 while `ismMapData` is
+   * null or the mean is 0), `globalMean` is cached at the ismMap readback
    * landing, not recomputed per frame — same cadence as `dustHeaderLanes`.
    * `cap` reads `currentDust().cloud.dustPlacementCap` live, same source
    * `rebuildDustMixture` passes to `buildDustParticleCloud`, so a cap-slider
    * drag updates the view without waiting on a rebuild. The per-RING means
    * `globalMean` is itself the mean of are NOT part of this type — they ride
-   * `sfMapGenerator.writeRingMeans`, a separate GPU buffer write at the same
-   * readback-landing cadence (`recomputeSfMapSeedingMeans`).
+   * `ismMapGenerator.writeRingMeans`, a separate GPU buffer write at the same
+   * readback-landing cadence (`recomputeIsmMapSeedingMeans`).
    */
-  readonly sfMapSeedingView: SfMapSeedingLanes;
+  readonly ismMapSeedingView: IsmMapSeedingLanes;
   /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
@@ -169,7 +169,7 @@ export type GalaxyModel = {
 };
 
 export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
-  const { device, sfMapGenerator, orientation, render } = deps;
+  const { device, ismMapGenerator, orientation, render } = deps;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
   // settings key — what the rebuild gates' `wanted` predicates read.
@@ -248,14 +248,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // to rebuild.
   let fieldGeometry: GalaxyDescription | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
-  // What the SF map was last rebuilt against — see `setFieldTuning`. Three
-  // keys, not one: `sfMap` is the shared switch, but only the ACTIVE
+  // What the ISM map was last rebuilt against — see `setFieldTuning`. Three
+  // keys, not one: `ismMap` is the shared switch, but only the ACTIVE
   // generator's own param block needs to move the identity check — an
   // inactive generator's slider drag would otherwise pay a rebuild for a
   // change nothing on screen reflects.
-  let sfMapKey: GalaxySfMapParams = fieldTuning.sfMap;
-  let sfMapAutomatonKey: GalaxySfMapAutomatonParams = fieldTuning.sfMapAutomaton;
-  let sfMapFluidKey: GalaxySfMapFluidParams = fieldTuning.sfMapFluid;
+  let ismMapKey: GalaxyIsmMapParams = fieldTuning.ismMap;
+  let ismMapAutomatonKey: GalaxyIsmMapAutomatonParams = fieldTuning.ismMapAutomaton;
+  let ismMapFluidKey: GalaxyIsmMapFluidParams = fieldTuning.ismMapFluid;
   // The CENTRAL galaxy's HII tier, cached like `fieldMixture` but never
   // concatenated into it (see `hiiComps`).
   let hiiMixture: readonly GalaxyFieldComponent[] = [];
@@ -277,28 +277,28 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
   // How the last `repackFieldComponents` concatenation sliced `fieldComps`.
   let fieldCounts: FieldSliceCounts = { emission: 0, primary: 0, dust: 0 };
-  // The seeding debug view's own global mean, cached at the sfMap readback
-  // landing (recomputeSfMapSeedingMeans below) — never per frame, and never
-  // reset back to 0 on a grid move: the `sfMapSeedingView` getter gates on
-  // `readbacks.sfMapData` being non-null instead, so a stale value sitting
+  // The seeding debug view's own global mean, cached at the ismMap readback
+  // landing (recomputeIsmMapSeedingMeans below) — never per frame, and never
+  // reset back to 0 on a grid move: the `ismMapSeedingView` getter gates on
+  // `readbacks.ismMapData` being non-null instead, so a stale value sitting
   // here between a drop and the next landing is simply never read.
-  // `sfMapGlobalMeanDust` is `arrayMean` of the per-ring means array — the
-  // array itself rides the GPU only (`sfMapGenerator.writeRingMeans`),
+  // `ismMapGlobalMeanDust` is `arrayMean` of the per-ring means array — the
+  // array itself rides the GPU only (`ismMapGenerator.writeRingMeans`),
   // nothing on the CPU side needs it back, since `buildDustParticleCloud`
-  // computes its own copy straight off `sfMap` each rebuild.
-  let sfMapGlobalMeanDust = 0;
+  // computes its own copy straight off `ismMap` each rebuild.
+  let ismMapGlobalMeanDust = 0;
   // What the orientation chain was last dispatched at — see `noteRenderChanged`.
   let orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
   let orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
 
   // The SSPSF chain's two CPU-side copies and the single queue that fills
-  // them — see `createSfMapReadbacks`.
-  const readbacks = createSfMapReadbacks({ device, sfMapGenerator, orientation });
+  // them — see `createIsmMapReadbacks`.
+  const readbacks = createIsmMapReadbacks({ device, ismMapGenerator, orientation });
   const orientationDiagnostics = createOrientationDiagnostics();
 
   /**
    * The seeding debug view's placement density means — per-ring AND global,
-   * off the SAME extractor (`sfMapRingMeans(map, texel => texel.dust)`)
+   * off the SAME extractor (`ismMapRingMeans(map, texel => texel.dust)`)
    * `buildDustParticleCloud` normalises its own CDF term by — load-bearing:
    * computing this any other way would let the view drift from what
    * placement actually consumes. No ambient subtraction: the pedestal is
@@ -308,16 +308,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * shader's own radial-envelope divisor — while only its `arrayMean` is
    * cached here for the scalar uniform lane.
    */
-  function recomputeSfMapSeedingMeans(map: GalaxySfMap): void {
-    const ringMeans = sfMapRingMeans(map, (texel) => texel.dust);
-    sfMapGenerator.writeRingMeans(ringMeans);
-    sfMapGlobalMeanDust = arrayMean(ringMeans);
+  function recomputeIsmMapSeedingMeans(map: GalaxyIsmMap): void {
+    const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
+    ismMapGenerator.writeRingMeans(ringMeans);
+    ismMapGlobalMeanDust = arrayMean(ringMeans);
   }
 
   /**
-   * scheduleSfMapReadback — what happens WHEN the one-per-generation copy of
-   * `sfMapTex` lands. Called from `rebuildSfMap`'s own two exits with the grid
-   * it just wrote, so `GalaxySfMap.rMin/rMax` always matches the CONTENT being
+   * scheduleIsmMapReadback — what happens WHEN the one-per-generation copy of
+   * `ismMapTex` lands. Called from `rebuildIsmMap`'s own two exits with the grid
+   * it just wrote, so `GalaxyIsmMap.rMin/rMax` always matches the CONTENT being
    * copied.
    *
    * DETERMINISM: the copy lands asynchronously, so the dust mixture built
@@ -327,10 +327,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * the map lands. Either choice reaches the same final state for a given
    * (params, tuning, seed); this one keeps the tool always showing something.
    */
-  function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
-    readbacks.requestSfMap(grid, (map) => {
-      recomputeSfMapSeedingMeans(map);
-      if (fieldTuning.sfMap.generator !== 'none') {
+  function scheduleIsmMapReadback(grid: GalaxyIsmMapGridRadius): void {
+    readbacks.requestIsmMap(grid, (map) => {
+      recomputeIsmMapSeedingMeans(map);
+      if (fieldTuning.ismMap.generator !== 'none') {
         rebuildDustMixture();
         repackFieldComponents();
       }
@@ -339,11 +339,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // tier's own map-seeded positions AND its DIG veil (also map-seeded).
       if (
         fieldGeometry &&
-        (fieldTuning.hii.sfMapSeeding > 0 ||
+        (fieldTuning.hii.ismMapSeeding > 0 ||
           (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
           (fieldTuning.hii.associations?.brightness ?? 0) > 0)
       ) {
-        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
         repackHiiComponents();
       }
     });
@@ -355,14 +355,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * samples the texture on the GPU directly. Mirrors the HII re-run above:
    * `orientationDataRebuild` only runs while a generator is active (see its
    * own `wanted`), so this landing is the SAME opportunity
-   * `scheduleSfMapReadback`'s already took, not a second independent one.
+   * `scheduleIsmMapReadback`'s already took, not a second independent one.
    */
-  function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
+  function scheduleOrientationReadback(grid: GalaxyIsmMapGridRadius): void {
     readbacks.requestOrientation(grid, ({ data }) => {
       // Folded in once here, at the one point a fresh grid exists — not per
       // frame or per dust build.
       orientationDiagnostics.noteCoherence(data);
-      if (fieldTuning.sfMap.generator !== 'none') {
+      if (fieldTuning.ismMap.generator !== 'none') {
         rebuildDustMixture(); // also reports — see its own doc
         repackFieldComponents();
       } else {
@@ -370,11 +370,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       }
       if (
         fieldGeometry &&
-        (fieldTuning.hii.sfMapSeeding > 0 ||
+        (fieldTuning.hii.ismMapSeeding > 0 ||
           (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
           (fieldTuning.hii.associations?.brightness ?? 0) > 0)
       ) {
-        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
         repackHiiComponents();
       }
     });
@@ -399,37 +399,37 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * so seeding alone decides whether a readback is worth scheduling.
    */
   const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => fieldTuning.sfMap.generator !== 'none',
-    build: () => scheduleOrientationReadback(sfMapGridRadiusOrDefault(fieldGeometry)),
+    wanted: () => fieldTuning.ismMap.generator !== 'none',
+    build: () => scheduleOrientationReadback(ismMapGridRadiusOrDefault(fieldGeometry)),
   });
 
   /**
-   * The GPU structure-tensor chain over the CURRENT `sfMapTex`. Two independent
+   * The GPU structure-tensor chain over the CURRENT `ismMapTex`. Two independent
    * consumers — the debug overlay reads the texture on the GPU, the dust
    * placement the CPU copy above — either enough to justify the six dispatches.
-   * Needs no readback to run FROM: sfMapTex is a GPU texture WebGPU
-   * zero-initialises, so dispatching before `rebuildSfMap` has ever populated it
-   * is safe. Invalidated by `rebuildSfMap` and by a sigma move.
+   * Needs no readback to run FROM: ismMapTex is a GPU texture WebGPU
+   * zero-initialises, so dispatching before `rebuildIsmMap` has ever populated it
+   * is safe. Invalidated by `rebuildIsmMap` and by a sigma move.
    */
   const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.sfMap.generator !== 'none',
+    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.ismMap.generator !== 'none',
     build: () => {
       // gasFloor=1 (fluid params carry no such sentinel) is the automaton
-      // case: sfMapOrientationField.wesl's SfMapOrientationPedestal derives
+      // case: ismMapOrientationField.wesl's IsmMapOrientationPedestal derives
       // its zero-gradient invariant from gasProfile(r) collapsing to a flat
       // 1.0 there — see that file's header. gasScaleLength must still be
       // finite even though it's then algebraically unused.
       const fluidPedestal =
-        fieldTuning.sfMap.generator === 'fluid'
-          ? fieldTuning.sfMapFluid
+        fieldTuning.ismMap.generator === 'fluid'
+          ? fieldTuning.ismMapFluid
           : { gasFloor: 1, gasScaleLength: 1 };
       orientation.dispatch({
-        grid: sfMapGridRadiusOrDefault(fieldGeometry),
+        grid: ismMapGridRadiusOrDefault(fieldGeometry),
         sigmaDerivTexels: render.orientationSigmaDerivTexels,
         sigmaIntegTexels: render.orientationSigmaIntegTexels,
         gasFloor: fluidPedestal.gasFloor,
         gasScaleLength: fluidPedestal.gasScaleLength,
-        ambient: SF_MAP_AMBIENT_DUST,
+        ambient: ISM_MAP_AMBIENT_DUST,
       });
       orientationDataRebuild.invalidate();
     },
@@ -463,7 +463,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         dust,
         fieldTuning,
         currentSeed(),
-        readbacks.sfMapData,
+        readbacks.ismMapData,
         readbacks.orientationData,
         orientationDeltaStats,
       );
@@ -514,21 +514,21 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
-   * rebuildSfMap — reruns whichever SF-map generator `fieldTuning.sfMap.generator`
+   * rebuildIsmMap — reruns whichever ISM-map generator `fieldTuning.ismMap.generator`
    * names, from scratch, off the CACHED geometry. NEVER per frame, per the
-   * params contract. `createSfMapGenerator` owns the dispatch (and the
+   * params contract. `createIsmMapGenerator` owns the dispatch (and the
    * automaton/fluid branch, its ONLY branch point); what stays here is the
    * pair of things that follow it either way — and the readback runs on BOTH
-   * of its exits, the disabled one too, so `sfMapData` reflects the cleared
+   * of its exits, the disabled one too, so `ismMapData` reflects the cleared
    * texture it just wrote rather than an earlier galaxy's map.
    */
-  function rebuildSfMap(): void {
-    const grid = sfMapGenerator.rebuild({
+  function rebuildIsmMap(): void {
+    const grid = ismMapGenerator.rebuild({
       geometry: fieldGeometry,
       tuning: fieldTuning,
       seed: currentSeed(),
     });
-    scheduleSfMapReadback(grid);
+    scheduleIsmMapReadback(grid);
     orientationTexRebuild.invalidate();
   }
 
@@ -598,25 +598,25 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   /**
    * `geometry.seed` is what `buildHiiRegions` was called with when it still
    * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
-   * not a re-derivation. `sfMap` is null for every extra (same asymmetry as
+   * not a re-derivation. `ismMap` is null for every extra (same asymmetry as
    * `rebuildDustMixture`'s central-only readback below) — extras have no
-   * SF-map generator of their own, automaton or fluid.
+   * ISM-map generator of their own, automaton or fluid.
    */
   function hiiMixtureOf(
     geometry: GalaxyDescription,
     starFormation: GalaxyStarFormationParams,
-    sfMap: GalaxySfMap | null,
+    ismMap: GalaxyIsmMap | null,
     transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
   ): readonly GalaxyFieldComponent[] {
     return place(
-      buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed, sfMap),
+      buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed, ismMap),
       transform,
     );
   }
 
   /**
    * setParams — regenerate the central galaxy, then rebuild everything derived
-   * from its geometry (both analytic tiers, the dust cloud, the SSPSF map).
+   * from its geometry (both analytic tiers, the dust cloud, the SSPISM map).
    *
    * Exactly one `writeBuffer`, one encoder and one `submit`, for a buffer
    * nothing else touches concurrently — so queue submission order alone makes
@@ -644,19 +644,19 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     dustCount = generated.dustCount;
 
     fieldGeometry = generated.geometry;
-    // `sfMapGridRadius` depends on `fieldGeometry` alone, so most params —
+    // `ismMapGridRadius` depends on `fieldGeometry` alone, so most params —
     // dust `share`, cloud counts, colours — leave the grid untouched and the
     // cached readbacks usable; see `dropIfGridMoved`.
-    readbacks.dropIfGridMoved(sfMapGridRadius(fieldGeometry));
+    readbacks.dropIfGridMoved(ismMapGridRadius(fieldGeometry));
     fieldMixture = fieldMixtureOf(fieldGeometry);
-    hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+    hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
     repackHiiComponents();
-    // Always — a new galaxy means new geometry/arms, so the active SF-map
+    // Always — a new galaxy means new geometry/arms, so the active ISM-map
     // generator and the ridge it forces/biases against are both stale otherwise.
-    rebuildSfMap();
+    rebuildIsmMap();
 
     device.queue.submit([enc.finish()]);
     deps.onStats?.({ stars: generated.plannedStars, dust: generated.dustCount });
@@ -677,9 +677,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   //   arms          -> field mixture, HII tier, bubble overlay
   //   hii           -> HII tier, bubble overlay
   //   dust          -> dust mixture + the header's dust lanes
-  //   sfMap         -> the shared enabled/generator switch
-  //   sfMapAutomaton -> the automaton, only while it is the active generator
-  //   sfMapFluid     -> the fluid generator, only while it is the active one
+  //   ismMap         -> the shared enabled/generator switch
+  //   ismMapAutomaton -> the automaton, only while it is the active generator
+  //   ismMapFluid     -> the fluid generator, only while it is the active one
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     const prev = fieldTuning;
     fieldTuning = { ...fieldTuning, ...patch };
@@ -705,7 +705,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       if (fieldGeometry) {
         if (fieldMoved) fieldMixture = fieldMixtureOf(fieldGeometry);
         if (hiiMoved) {
-          hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+          hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
         }
       }
       extras = extras.map((e) => ({
@@ -725,36 +725,36 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // A generator rebuild is N compute dispatches, far more expensive than
     // the CPU mixture rebuilds above. `arms.widthScale` feeds the ridge its
     // forcing field bakes, but re-triggering on it would make an arm-width drag
-    // pay this cost per frame — deliberately left stale until `sfMap` moves.
+    // pay this cost per frame — deliberately left stale until `ismMap` moves.
     // Only the ACTIVE generator's own block gates the rebuild (see the key
-    // declarations' own comment) — `sfMapGenerator.rebuild` always reads the
+    // declarations' own comment) — `ismMapGenerator.rebuild` always reads the
     // CURRENT full tuning regardless, so switching `generator` itself (which
-    // moves `sfMap`) always picks up whatever the inactive block drifted to
+    // moves `ismMap`) always picks up whatever the inactive block drifted to
     // meanwhile.
-    const generatorMoved = sfMapKey !== fieldTuning.sfMap;
+    const generatorMoved = ismMapKey !== fieldTuning.ismMap;
     const activeGeneratorParamsMoved =
-      fieldTuning.sfMap.generator === 'fluid'
-        ? sfMapFluidKey !== fieldTuning.sfMapFluid
-        : sfMapAutomatonKey !== fieldTuning.sfMapAutomaton;
+      fieldTuning.ismMap.generator === 'fluid'
+        ? ismMapFluidKey !== fieldTuning.ismMapFluid
+        : ismMapAutomatonKey !== fieldTuning.ismMapAutomaton;
     if (generatorMoved || activeGeneratorParamsMoved) {
-      sfMapKey = fieldTuning.sfMap;
-      sfMapAutomatonKey = fieldTuning.sfMapAutomaton;
-      sfMapFluidKey = fieldTuning.sfMapFluid;
-      rebuildSfMap(); // also re-dispatches the S4 blur, which now reads no dust tuning of its own
+      ismMapKey = fieldTuning.ismMap;
+      ismMapAutomatonKey = fieldTuning.ismMapAutomaton;
+      ismMapFluidKey = fieldTuning.ismMapFluid;
+      rebuildIsmMap(); // also re-dispatches the S4 blur, which now reads no dust tuning of its own
     }
-    // No `else if (dustMoved)` branch any more: the S4 blur (sfMapDustBlur.wesl)
+    // No `else if (dustMoved)` branch any more: the S4 blur (ismMapDustBlur.wesl)
     // is a pure function of `texture` since `sweptMix` was deleted, so a
     // dust-only drag has nothing left for it to re-dispatch over.
 
     // `generator` gates `buildDustParticleCloud`'s own placement mode (map-seeded
     // vs `smoothDisc`) directly — before the three-state dropdown, that switch
-    // lived AS `dust.sfMapSeeding`, inside the `dust` section, so `dustMoved`
-    // caught it for free. Now that it lives in `sfMap`, a generator flip needs
+    // lived AS `dust.ismMapSeeding`, inside the `dust` section, so `dustMoved`
+    // caught it for free. Now that it lives in `ismMap`, a generator flip needs
     // its own synchronous dust rebuild or the previous generator's map-seeded
     // placement (and its `OrientationDeltaStats` coupling readout) keeps
     // drawing/reporting as live until an unrelated dust/geometry change happens
-    // to rebuild it. Uses whatever `readbacks.sfMapData`/`orientationData` are
-    // cached right now — the same determinism tradeoff `scheduleSfMapReadback`
+    // to rebuild it. Uses whatever `readbacks.ismMapData`/`orientationData` are
+    // cached right now — the same determinism tradeoff `scheduleIsmMapReadback`
     // documents, corrected again once this rebuild's own readback lands.
     if (generatorMoved && !dustMoved) {
       rebuildDustMixture();
@@ -889,20 +889,20 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     fieldComps,
     hiiComps,
     bubbleComps,
-    get sfMapData(): GalaxySfMap | null {
-      return readbacks.sfMapData;
+    get ismMapData(): GalaxyIsmMap | null {
+      return readbacks.ismMapData;
     },
-    get sfMapSeedingView(): SfMapSeedingLanes {
+    get ismMapSeedingView(): IsmMapSeedingLanes {
       // Gated on the LIVE readback, not the cached mean: a grid move can null
-      // `sfMapData` while the mean above still holds the previous grid's
+      // `ismMapData` while the mean above still holds the previous grid's
       // number, and reading it here would flash a stale view for one frame
       // instead of going dark.
-      if (!readbacks.sfMapData || sfMapGlobalMeanDust <= 0) {
+      if (!readbacks.ismMapData || ismMapGlobalMeanDust <= 0) {
         return { weight: 0, cap: 0, globalMean: 0 };
       }
       return {
-        weight: render.sfMapSeedingViewWeight,
-        globalMean: sfMapGlobalMeanDust,
+        weight: render.ismMapSeedingViewWeight,
+        globalMean: ismMapGlobalMeanDust,
         // `?? 0`: same preset-gap guard `buildDustParticleCloud` applies to
         // this exact field — a preset saved before `dustPlacementCap`
         // existed loads it `undefined`, and 0 ("uncapped") is that field's

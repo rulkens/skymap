@@ -160,14 +160,14 @@ function HiiSection(): ReactNode {
           />
           <ParamSlider
             label="Map seeding"
-            value={hii.sfMapSeeding}
+            value={hii.ismMapSeeding}
             min={0}
             max={1}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ sfMapSeeding: v })}
-            path="fieldTuning.hii.sfMapSeeding"
-            info="Fraction of HII events placed from the SF-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
+            onChange={(v) => patchHii({ ismMapSeeding: v })}
+            path="fieldTuning.hii.ismMapSeeding"
+            info="Fraction of HII events placed from the ISM-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
           />
           <ParamSlider
             label="Texture"
@@ -189,7 +189,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchStarFormation({ sfActivity: v })}
             path="galaxy.starFormation.sfActivity"
-            info="Fallback event-catalog rate — sizes the HII tier only when the ISM/SF-map generator is 'automaton' or 'none'. The fluid generator ignores it: its regions come from the sim's own events."
+            info="Fallback event-catalog rate — sizes the HII tier only when the ISM generator is 'automaton' or 'none'. The fluid generator ignores it: its regions come from the sim's own events."
           />
         </div>
       </CollapsibleSection>
@@ -210,7 +210,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchDig({ fraction: v })}
             path="fieldTuning.hii.dig.fraction"
-            info="Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an SF map; 0 skips the veil."
+            info="Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an ISM map; 0 skips the veil."
           />
           <ParamSlider
             label="Complexes"
@@ -243,7 +243,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchDig({ armBias: v })}
             path="fieldTuning.hii.dig.armBias"
-            info="Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the SF map's activity channel."
+            info="Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the ISM map's activity channel."
           />
           <ParamSlider
             label="Elongation"
@@ -330,7 +330,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ armBias: v })}
             path="fieldTuning.hii.associations.armBias"
-            info="Fraction of complexes seeded on an arm's lane, offset downstream of the ridge, rather than CDF-sampled from the SF map's swept-past density."
+            info="Fraction of complexes seeded on an arm's lane, offset downstream of the ridge, rather than CDF-sampled from the ISM map's swept-past density."
           />
           <ParamSlider
             label="Elongation"

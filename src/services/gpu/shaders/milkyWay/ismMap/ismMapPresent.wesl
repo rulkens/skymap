@@ -1,9 +1,9 @@
-// milkyWay/sfMap/sfMapPresent.wesl — presents the SSPSF automaton's packed
-// output (sfMapPack.wesl), crossfaded with the analytic field's emission
-// draw by weight render.sfMapViewIntensity, same seam as dustPresent.wesl.
+// milkyWay/ismMap/ismMapPresent.wesl — presents the SSPSF automaton's packed
+// output (ismMapPack.wesl), crossfaded with the analytic field's emission
+// draw by weight render.ismMapViewIntensity, same seam as dustPresent.wesl.
 //
 // Unlike dustPresent.wesl's 1:1 texel read (its map is already screen-space,
-// splatted there by dustMap.wesl), sfMapTex is GALAXY-FRAME log-polar: this
+// splatted there by dustMap.wesl), ismMapTex is GALAXY-FRAME log-polar: this
 // shader reconstructs the camera ray per fragment (io.wesl's own basis, the
 // same formula splat.wesl's fs uses) and intersects the disc plane (y=0 —
 // the warp is ignored, a diagnostic overlay's own simplification, not
@@ -30,20 +30,20 @@ const PI: f32 = 3.14159265358979;
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
 // rMin/rMax: the log-radial bounds THIS galaxy's grid was built over
-// (galaxySfMapArmForcing.ts's sfMapGridRadius) — written once per
-// rebuildSfMap, not every frame like io.wesl's 'u' above.
-struct SfMapGrid {
+// (galaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per
+// rebuildIsmMap, not every frame like io.wesl's 'u' above.
+struct IsmMapGrid {
   rMin: f32,
   rMax: f32,
 }
 
-@group(0) @binding(1) var sfMapTex: texture_2d<f32>;
-@group(0) @binding(2) var sfMapSmp: sampler;
-@group(0) @binding(3) var<uniform> grid: SfMapGrid;
-// One f32 per ring (createSfMapOutput.ts's ringMeansBuffer/writeRingMeans,
-// dustParticleCloud.ts's sfMapRingMeans on the CPU twin) — the radial
+@group(0) @binding(1) var ismMapTex: texture_2d<f32>;
+@group(0) @binding(2) var ismMapSmp: sampler;
+@group(0) @binding(3) var<uniform> grid: IsmMapGrid;
+// One f32 per ring (createIsmMapOutput.ts's ringMeansBuffer/writeRingMeans,
+// dustParticleCloud.ts's ismMapRingMeans on the CPU twin) — the radial
 // envelope's own divisor, ring-indexed below. 'arrayLength' reads the
-// binding's own element count rather than a second mirrored SF_MAP_RINGS
+// binding's own element count rather than a second mirrored ISM_MAP_RINGS
 // constant, so the two sides can never drift on how many rings there are.
 @group(0) @binding(4) var<storage, read> ringMeans: array<f32>;
 
@@ -88,7 +88,7 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   }
   let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
-  let texel = textureSampleLevel(sfMapTex, sfMapSmp, vec2<f32>(azT, ringT), 0.0);
+  let texel = textureSampleLevel(ismMapTex, ismMapSmp, vec2<f32>(azT, ringT), 0.0);
 
   // Fade the last few percent toward each radial edge so the map doesn't
   // end in a hard ring — presentation, not physics.
@@ -97,8 +97,8 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let gas = texel.x;
   let recent = texel.y;
   let old = texel.z;
-  // The conserved dust channel (sfMapPack.wesl's state.w, see
-  // GalaxySfMap.ts's contract table) — written RAW there, so swept-shell
+  // The conserved dust channel (ismMapPack.wesl's state.w, see
+  // GalaxyIsmMap.ts's contract table) — written RAW there, so swept-shell
   // rims legitimately read above 1, up to the snowplough's 8.0 ceiling.
   let dust = texel.w;
   // Presentation palette, NOT physics — chosen so the four channels stay
@@ -112,19 +112,19 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // claims. The four peak colours are still deliberately NOT equal-
   // brightness — gas maxes at 0.25, recentSf at 1.0, activity's red/blue
   // channels at 1.3 (above the Reinhard whitepoint's linear range, spending
-  // some of the HDR target's real headroom) — so u.sfMapChannels is the only
+  // some of the HDR target's real headroom) — so u.ismMapChannels is the only
   // way to see the gas channel at all against the other three, and zeroing
   // three weights isolates the fourth. Dust is scaled by its weight the same
   // raw way, un-clamped, before the sum — the weight is how the slider pulls
   // rim overshoot back into a readable range, not a clip.
-  let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.sfMapChannels.x;
-  let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.sfMapChannels.z;
-  let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.sfMapChannels.y;
-  let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.sfMapChannels.w;
+  let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.ismMapChannels.x;
+  let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.ismMapChannels.z;
+  let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.ismMapChannels.y;
+  let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.ismMapChannels.w;
 
   // The fifth, composite term: NOT another raw-channel isolation like the
   // four above — this MIRRORS dustParticleCloud.ts's density callback (the
-  // one passed to buildSfMapDustCdf) exactly, so seeding can be judged
+  // one passed to buildIsmMapDustCdf) exactly, so seeding can be judged
   // directly instead of inferred from channels an ambient pedestal can glow
   // in without contributing placement mass. Change both together. No
   // ambient subtraction: the pedestal is no longer uniform (it's seeded

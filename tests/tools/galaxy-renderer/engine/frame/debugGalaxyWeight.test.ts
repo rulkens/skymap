@@ -7,7 +7,7 @@ import { debugGalaxyWeight } from '../../../../../tools/galaxy-renderer/src/engi
 
 describe('debugGalaxyWeight', () => {
   it('two views live at 0.6 each yield 0.4, not the sum-implied 0', () => {
-    expect(debugGalaxyWeight({ dust: 0.6, sfMap: 0.6, orientation: 0, bubble: 0 })).toBeCloseTo(
+    expect(debugGalaxyWeight({ dust: 0.6, ismMap: 0.6, orientation: 0, bubble: 0 })).toBeCloseTo(
       0.4,
       12,
     );

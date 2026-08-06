@@ -40,9 +40,9 @@ import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/Gala
 import type { FieldDust } from '../../../@types/engine/FieldDust';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
-import type { SfMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
+import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView + dustDetail. */
+/** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail. */
 export const FIELD_HEADER_FLOATS = 56;
 
 /** Byte size of the header struct, for `createBuffer`. */
@@ -75,8 +75,8 @@ const INERT_DUST: FieldDust = {
  */
 const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 
-/** "This pass has no seeding overlay" — the HII header packs this; only the field header (sfMapPresent.wesl's own bind group) ever passes real lanes. `cap: 0` matches `dustPlacementCap`'s own "0 = uncapped" default. */
-const INERT_SF_MAP_SEEDING: SfMapSeedingLanes = { weight: 0, cap: 0, globalMean: 0 };
+/** "This pass has no seeding overlay" — the HII header packs this; only the field header (ismMapPresent.wesl's own bind group) ever passes real lanes. `cap: 0` matches `dustPlacementCap`'s own "0 = uncapped" default. */
+const INERT_ISM_MAP_SEEDING: IsmMapSeedingLanes = { weight: 0, cap: 0, globalMean: 0 };
 
 /**
  * packFieldHeaderUniforms — one 224-byte `FieldUniforms` header, every lane
@@ -93,11 +93,11 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
     targetSizePx,
     debugViews,
     galaxyWeight,
-    sfMapChannels,
+    ismMapChannels,
   } = input;
   const dust = input.dust ?? INERT_DUST;
   const hiiTexture = input.hiiTexture ?? NO_HII_TEXTURE;
-  const sfMapSeeding = input.sfMapSeeding ?? INERT_SF_MAP_SEEDING;
+  const ismMapSeeding = input.ismMapSeeding ?? INERT_ISM_MAP_SEEDING;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
   const { view } = cam;
 
@@ -162,42 +162,42 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[38] = dust.slices.t3;
   out[39] = 0;
 
-  // debugView 40..43 = (dust, sfMap, orientation, galaxyWeight). Hand-written
+  // debugView 40..43 = (dust, ismMap, orientation, galaxyWeight). Hand-written
   // lane by lane, NOT iterated over `debugViews`: a loop would hang a GPU byte
   // layout on JS object key order, so reordering two `DEBUG_VIEWS` rows would
   // silently swap orientation with bubble. The four views do NOT share one
   // vec4 — .w is the galaxy weight, so `bubble` gets a vec4 of its own below.
   out[40] = debugViews.dust;
-  out[41] = debugViews.sfMap;
+  out[41] = debugViews.ismMap;
   out[42] = debugViews.orientation;
   out[43] = galaxyWeight;
 
-  // sfMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, dustWeight).
-  out[44] = sfMapChannels.gasWeight;
-  out[45] = sfMapChannels.recentSfWeight;
-  out[46] = sfMapChannels.activityWeight;
-  out[47] = sfMapChannels.dustWeight;
+  // ismMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, dustWeight).
+  out[44] = ismMapChannels.gasWeight;
+  out[45] = ismMapChannels.recentSfWeight;
+  out[46] = ismMapChannels.activityWeight;
+  out[47] = ismMapChannels.dustWeight;
 
-  // bubbleView 48..51 = (intensity, sfMapSeedingWeight, sfMapSeedingCap,
-  // sfMapSeedingGlobalMean). .y/.z/.w ride bubbleView's free lanes for the
-  // same reason dustDetail's .yz do (io.wesl's doc) — sfMapPresent.wesl's
+  // bubbleView 48..51 = (intensity, ismMapSeedingWeight, ismMapSeedingCap,
+  // ismMapSeedingGlobalMean). .y/.z/.w ride bubbleView's free lanes for the
+  // same reason dustDetail's .yz do (io.wesl's doc) — ismMapPresent.wesl's
   // "seeding" debug view, dust-seeding spike. .z used to be
-  // sfMapSeedingMeanLegacy, freed when the seeding view's legacy term was
+  // ismMapSeedingMeanLegacy, freed when the seeding view's legacy term was
   // deleted, then briefly a tempering exponent (gamma) that the placement
   // formula no longer has (deleted for a single knob — placement CAP —
   // instead); it carries that cap now. .w is the mean of the map's own
-  // per-ring dust means (`arrayMean(sfMapRingMeans(...))`, `createGalaxyModel.ts`'s
-  // `sfMapSeedingView` getter), the divisor of the radial-envelope term
+  // per-ring dust means (`arrayMean(ismMapRingMeans(...))`, `createGalaxyModel.ts`'s
+  // `ismMapSeedingView` getter), the divisor of the radial-envelope term
   // BOTH sides of the CDF density share — see io.wesl's own doc and
   // dustParticleCloud.ts's placement comment for why per-RING, not one flat
   // map-wide mean, is what keeps the cap from also flattening the radial
   // profile. The per-ring means themselves ride a separate storage buffer
-  // (createSfMapOutput.ts's ringMeansBuffer/writeRingMeans) — 512 floats has
+  // (createIsmMapOutput.ts's ringMeansBuffer/writeRingMeans) — 512 floats has
   // no home in a vec4.
   out[48] = debugViews.bubble;
-  out[49] = sfMapSeeding.weight;
-  out[50] = sfMapSeeding.cap;
-  out[51] = sfMapSeeding.globalMean;
+  out[49] = ismMapSeeding.weight;
+  out[50] = ismMapSeeding.cap;
+  out[51] = ismMapSeeding.globalMean;
 
   // dustDetail 52..55 = (strength, hiiTextureScale, hiiTextureContrast,
   // spare). .y/.z are unrelated to S4's own strength lane — they ride this

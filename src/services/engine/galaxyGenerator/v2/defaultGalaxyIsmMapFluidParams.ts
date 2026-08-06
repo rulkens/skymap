@@ -1,20 +1,20 @@
 /**
- * User-calibrated defaults for the fluid SF-map generator (2026-08-06) —
+ * User-calibrated defaults for the fluid ISM-map generator (2026-08-06) —
  * tuned by eye against the M74 reference look, not derived from first
  * principles or measurement. Supersedes the 2026-08-05 calibration, which
  * ran with armGather/diffusion/armDrag/laneBias effectively off; this pass
  * turns those arm-response terms on.
  */
-import type { GalaxySfMapFluidParams } from '../../../../@types/galaxy/GalaxyIsmMapFluidParams';
+import type { GalaxyIsmMapFluidParams } from '../../../../@types/galaxy/GalaxyIsmMapFluidParams';
 
-export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
+export const DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS: GalaxyIsmMapFluidParams = {
   // The automaton's own budget is 100; this generator needs more because
   // each step here is a full-grid advection, not a local percolation
   // growth, so shear/curl need more generations to wind and stir visibly
   // at this calibration. Per-run cost is linear in this.
   steps: 144,
   // Events spawned per step; total events over a run is eventRate * steps
-  // (720 here), comfortably under SF_MAP_FLUID_MAX_EVENTS (1024).
+  // (720 here), comfortably under ISM_MAP_FLUID_MAX_EVENTS (1024).
   eventRate: 5,
   // Outward kernel speed at age 0, in texels/step. A few texels/step lets an
   // event's wall separate visibly from its neighbours inside `impulseDuration`.
@@ -35,7 +35,7 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // disc at this grid's 1536-texel azimuthal span.
   curlScale: 0.04,
   // Differential-rotation shear amplitude, same `(1/r - 1/corotationRadius)`
-  // formula `GalaxySfMapAutomatonParams.shearRate` uses — this generator's
+  // formula `GalaxyIsmMapAutomatonParams.shearRate` uses — this generator's
   // own copy, calibrated separately (no longer pinned to the automaton's
   // shipped 0.16).
   shearStrength: 0.07,
@@ -76,7 +76,7 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // Exponential decline length of the radial gas profile `gasRegen` relaxes
   // toward, in grid-radius units (same as rMin/rMax/corotationRadius) —
   // roughly a third of this app's own Milky Way preset's rMax (~10.5-15.5,
-  // per galaxySfMapArmForcing.ts's own comment on outerRadius vs per-arm
+  // per galaxyIsmMapArmForcing.ts's own comment on outerRadius vs per-arm
   // fadeRadius).
   gasScaleLength: 4.75,
   // Flat HI floor the radial gas profile approaches at large r, as a

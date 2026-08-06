@@ -1,6 +1,6 @@
 /**
  * rotateFrameToOrientation (`clusteredDiscPlacement.ts`) bends a lane frame
- * toward the SF-map automaton's measured filament orientation. None of its
+ * toward the ISM-map automaton's measured filament orientation. None of its
  * four defining properties — identity at a matching angle, a genuine 90deg
  * turn, the mod-pi headless wrap, and the coherence-0 no-op — had a test;
  * a sign flip or a dropped wrap term would pass every other suite untouched
@@ -19,7 +19,7 @@ import {
   type OrientationDeltaStats,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
 import { warpSurfaceFrame } from '../../../../../src/utils/galaxy/warpSurfaceFrame';
-import type { GalaxySfMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
+import type { GalaxyIsmMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
@@ -31,7 +31,7 @@ function dot(a: Vec3, b: Vec3): number {
 }
 
 /** A single-texel orientation map: every (radius, angle) samples the same texel, so the fixture needs no grid math, only the packed double-angle vector for the desired (angle, coherence). */
-function singleTexelOrientation(angle: number, coherence: number): GalaxySfMapOrientation {
+function singleTexelOrientation(angle: number, coherence: number): GalaxyIsmMapOrientation {
   return {
     az: 1,
     rings: 1,

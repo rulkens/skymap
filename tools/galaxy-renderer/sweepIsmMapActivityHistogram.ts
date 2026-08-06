@@ -1,19 +1,19 @@
 /**
- * sweepSfMapActivityHistogram — does activity clamp on arm crests while
+ * sweepIsmMapActivityHistogram — does activity clamp on arm crests while
  * the dust CDF's mass concentrates there? Measures it, rather than inferring
  * it from the update rule.
  *
- *   npx tsx tools/galaxy-renderer/sweepSfMapActivityHistogram.ts [--headed]
+ *   npx tsx tools/galaxy-renderer/sweepIsmMapActivityHistogram.ts [--headed]
  *     [--spread N] [--gasRegen N] [--refractorySteps N] [--dustFloorFraction N] [--steps N]
  *
- * The five override flags replace one field of `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS`
+ * The five override flags replace one field of `DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS`
  * each; omitted ones keep the shipped default, so a flagless run is
  * byte-identical to before these flags existed.
  *
- * Same shape as sweepSfMapPercolation.ts: self-hosted Vite dev server (this
+ * Same shape as sweepIsmMapPercolation.ts: self-hosted Vite dev server (this
  * tool's own, for the WESL `?static` link) + headless Chromium, chromium
  * channel first. The page half is
- * `src/engine/sfMap/sfMapActivityHistogramHarness.ts`, which formats and
+ * `src/engine/ismMap/ismMapActivityHistogramHarness.ts`, which formats and
  * returns the whole report as one string — this driver just prints it.
  */
 import { chromium, type Browser } from '@playwright/test';
@@ -21,16 +21,16 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 
-import type { GalaxySfMapAutomatonParams } from '../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapAutomatonParams } from '../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
 
-/** `GalaxySfMapAutomatonParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
-type MutableSfMapOverrides = {
-  -readonly [K in keyof GalaxySfMapAutomatonParams]?: GalaxySfMapAutomatonParams[K];
+/** `GalaxyIsmMapAutomatonParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
+type MutableIsmMapOverrides = {
+  -readonly [K in keyof GalaxyIsmMapAutomatonParams]?: GalaxyIsmMapAutomatonParams[K];
 };
 
-type Options = { headed: boolean; overrides: MutableSfMapOverrides };
+type Options = { headed: boolean; overrides: MutableIsmMapOverrides };
 
-/** Same flag idiom as sweepSfMapPercolation.ts's parseArgs: `--flag value` pairs, one throw for anything unrecognised. */
+/** Same flag idiom as sweepIsmMapPercolation.ts's parseArgs: `--flag value` pairs, one throw for anything unrecognised. */
 function parseArgs(argv: readonly string[]): Options {
   const options: Options = { headed: false, overrides: {} };
   for (let i = 0; i < argv.length; i++) {
@@ -100,22 +100,22 @@ async function main(): Promise<void> {
     page.on('console', (message) => {
       if (message.type() === 'error') console.error(`console: ${message.text()}`);
     });
-    await page.goto(`${hosted.url}/sfMapActivityHistogram.html`, { waitUntil: 'load' });
-    await page.waitForFunction(() => '__sfMapActivityHistogram' in globalThis);
+    await page.goto(`${hosted.url}/ismMapActivityHistogram.html`, { waitUntil: 'load' });
+    await page.waitForFunction(() => '__ismMapActivityHistogram' in globalThis);
 
     // undefined (not {}) when flagless, so a default run hits the harness's
     // own `overrides === undefined` fast path and stays object-identical to
     // pre-flag behaviour, not just numerically equal.
     const overrides = Object.keys(options.overrides).length > 0 ? options.overrides : undefined;
-    // Anonymous on purpose: sweepSfMapPercolation.ts hit the `keepNames`/
+    // Anonymous on purpose: sweepIsmMapPercolation.ts hit the `keepNames`/
     // `__name` wall with a named function here.
     const report = (await page.evaluate(
       (o) =>
         (
           globalThis as unknown as {
-            __sfMapActivityHistogram: (o?: Partial<GalaxySfMapAutomatonParams>) => Promise<string>;
+            __ismMapActivityHistogram: (o?: Partial<GalaxyIsmMapAutomatonParams>) => Promise<string>;
           }
-        ).__sfMapActivityHistogram(o),
+        ).__ismMapActivityHistogram(o),
       overrides,
     )) as string;
     console.log(`\n${report}`);

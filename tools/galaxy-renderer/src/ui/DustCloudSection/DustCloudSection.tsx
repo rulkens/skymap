@@ -142,7 +142,7 @@ function DustCloudSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ mapDetail: v })}
           path="galaxy.dust.cloud.mapDetail"
-          info="S4: modulates each cloud's column by the SF map's detail ratio at accumulation, per splat (parallax-correct, column-preserving vertical noise breakup). 0 disables the path entirely; 1 = full ratio."
+          info="S4: modulates each cloud's column by the ISM map's detail ratio at accumulation, per splat (parallax-correct, column-preserving vertical noise breakup). 0 disables the path entirely; 1 = full ratio."
         />
         <ParamSlider
           label="Placement cap"

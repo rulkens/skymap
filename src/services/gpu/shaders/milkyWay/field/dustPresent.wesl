@@ -5,7 +5,7 @@
 // dustMapTex, not fieldTex (io.wesl's DUST MAP doc).
 //
 // S4 (docs/research/m74-jwst/07-sprite-seeding.md): the presented column
-// already carries the SF map's high-pass detail — dustMap.wesl bakes it in
+// already carries the ISM map's high-pass detail — dustMap.wesl bakes it in
 // at accumulation (dustDetail.wesl), per splat, so this pass needs no
 // second read.
 

@@ -24,9 +24,9 @@
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
-//   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
-//   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
-//   offset 192 : bubbleView: vec4 (intensity, sfMapSeedingWeight, sfMapSeedingCap, sfMapSeedingGlobalMean)
+//   offset 160 : debugView: vec4 (dustViewIntensity, ismMapViewIntensity, orientationViewIntensity, galaxyWeight)
+//   offset 176 : ismMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
+//   offset 192 : bubbleView: vec4 (intensity, ismMapSeedingWeight, ismMapSeedingCap, ismMapSeedingGlobalMean)
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   total: 224 bytes.
 //
@@ -98,17 +98,17 @@
 // all four back) agree on the same edges.
 //
 // debugView (offset 160) carries the three debug-view crossfade sliders
-// (createGalaxyEngine.ts's render.dustViewIntensity/sfMapViewIntensity/
+// (createGalaxyEngine.ts's render.dustViewIntensity/ismMapViewIntensity/
 // orientationViewIntensity, each in [0,1]) plus galaxyWeight, the ONE
 // combined dimming factor for the galaxy's own emission — 1 minus the
 // largest of the three, floored at 0, so two views live at once never
 // double-dim the galaxy. splat.wesl's fs multiplies its final colour by
-// .w; dustPresent.wesl/sfMapPresent.wesl/orientationPresent.wesl each
+// .w; dustPresent.wesl/ismMapPresent.wesl/orientationPresent.wesl each
 // multiply by their own lane (.x/.y/.z) instead of gating a whole pass on
 // a boolean, which is what makes the three crossfade independently rather
 // than replace one another.
 //
-// sfMapChannels (offset 176) is sfMapPresent.wesl's own per-channel
+// ismMapChannels (offset 176) is ismMapPresent.wesl's own per-channel
 // isolation control, orthogonal to debugView.y (the whole view's crossfade
 // weight): the palette there sums gas+old+recent+dust, and with all four
 // always visible there was no way to tell which one you were looking at. .w
@@ -119,36 +119,36 @@
 //
 // bubbleView (offset 192) is bubblePresent.wesl's own crossfade weight —
 // the SF-event catalog's (dustBubblePlacements.ts) bubble/cavity overlay, a
-// SECOND, independent star-formation model drawn alongside sfMap's own view
+// SECOND, independent star-formation model drawn alongside ismMap's own view
 // so the two can be compared directly. Not folded into debugView: that vec4
-// is full (dust/sfMap/orientation/galaxyWeight), and reusing
-// sfMapChannels.w would name a bubble weight after an unrelated automaton
-// channel. Only .x is bubblePresent.wesl's own; .y/.z/.w are sfMapPresent.wesl's
+// is full (dust/ismMap/orientation/galaxyWeight), and reusing
+// ismMapChannels.w would name a bubble weight after an unrelated automaton
+// channel. Only .x is bubblePresent.wesl's own; .y/.z/.w are ismMapPresent.wesl's
 // "seeding" debug view (dust-seeding spike) — the exact composite density
 // dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
 // .y is the view's own weight (CPU-forced to 0, view dark, when there is no
-// map or the mean below is 0 — createGalaxyModel.ts's sfMapSeedingView), .z
+// map or the mean below is 0 — createGalaxyModel.ts's ismMapSeedingView), .z
 // is the CDF's ONE tempering knob, dust.cloud.dustPlacementCap ?? 0 (read
 // live off the SAME source dustParticleCloud.ts's buildDustParticleCloud
 // does) — a within-RING ratio cap, 0 = uncapped, .w is
-// arrayMean(sfMapRingMeans(map, texel => texel.dust)) — the mean of the
+// arrayMean(ismMapRingMeans(map, texel => texel.dust)) — the mean of the
 // map's own per-ring means, the SAME global mean the placement CDF's
 // radial-envelope term divides by. No ambient subtraction: the pedestal is
 // seeded ambient*gasProfile(r) and advected by the automaton, so it is
 // itself structure the CDF places into, not a floor to clear. The per-ring
 // means .z/.w normalise against are NOT here — 512 floats has no home in a
-// vec4 — they ride sfMapRingMeansBuf, a dedicated read-only storage buffer
-// only sfMapPresent.wesl's own bind group references (createSfMapOutput.ts's
+// vec4 — they ride ismMapRingMeansBuf, a dedicated read-only storage buffer
+// only ismMapPresent.wesl's own bind group references (createIsmMapOutput.ts's
 // ringMeansBuffer/writeRingMeans), written at the same cadence as this
 // header's own .z/.w. Together the three (.y weight, .z cap, .w globalMean)
-// plus the buffer let sfMapPresent.wesl reproduce dustParticleCloud.ts's
+// plus the buffer let ismMapPresent.wesl reproduce dustParticleCloud.ts's
 // density formula byte-for-formula, so this view cannot drift from what
 // placement actually consumes — see that file's own header for the
-// contract and sfMapPresent.wesl's fs for the mirrored math.
+// contract and ismMapPresent.wesl's fs for the mirrored math.
 //
 // dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
-// (dustDetail.wesl) multiplies each dust splat's own slices by the SF map's
-// detail ratio (map density over an 8-texel-blurred copy, sfMapDustBlur.wesl)
+// (dustDetail.wesl) multiplies each dust splat's own slices by the ISM map's
+// detail ratio (map density over an 8-texel-blurred copy, ismMapDustBlur.wesl)
 // at that splat's closest-approach point — applied once, at ACCUMULATION, so
 // it parallaxes with the splats instead of stamping one flat pattern across
 // the whole depth column. Both consumers (splat.wesl, dustPresent.wesl) see
@@ -254,8 +254,8 @@
 // splat pipeline (splat.wesl imports it, along with dustMapSmp); the splat
 // pass that WRITES it never reads it.
 //
-// Bindings 3/7/8/9 belong to dustDetail.wesl (grid uniform, sfMapSmp,
-// sfMapTex, sfMapBlurTex) — declared THERE, not here, because only
+// Bindings 3/7/8/9 belong to dustDetail.wesl (grid uniform, ismMapSmp,
+// ismMapTex, ismMapBlurTex) — declared THERE, not here, because only
 // dustMap.wesl's pipeline references them now (the accumulation pass), and
 // io.wesl must not force them into every pipeline's auto layout. The
 // remaining bindings keep their numbers so every pipeline and bind group
@@ -273,7 +273,7 @@ struct FieldUniforms {
   dustNoise: vec4<f32>,
   dustSlices: vec4<f32>,
   debugView: vec4<f32>,
-  sfMapChannels: vec4<f32>,
+  ismMapChannels: vec4<f32>,
   bubbleView: vec4<f32>,
   dustDetail: vec4<f32>,
 };

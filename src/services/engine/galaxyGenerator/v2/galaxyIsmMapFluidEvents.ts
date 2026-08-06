@@ -1,10 +1,10 @@
 /**
- * galaxySfMapFluidEvents — the fluid SF-map generator's own event list,
+ * galaxyIsmMapFluidEvents — the fluid ISM-map generator's own event list,
  * built once per rebuild from a seeded RNG and biased toward the SAME
  * CPU arm-forcing field the automaton samples GPU-side
- * (`buildGalaxySfMapArmForcing` — the shared arm-geometry helper this
+ * (`buildGalaxyIsmMapArmForcing` — the shared arm-geometry helper this
  * generator is allowed to reuse; the automaton's OWN step logic is not).
- * `sfMapFluidStep.wesl` reads the packed result as impulses in its velocity
+ * `ismMapFluidStep.wesl` reads the packed result as impulses in its velocity
  * field — see that file's header for how an event's kernel evolves.
  *
  * Deterministic per `seed` (mulberry32, same salted-seed idiom as
@@ -13,25 +13,25 @@
  * GPU hash reproduces the same ignitions.
  *
  * Returned events are sorted ascending by `birthStep` — a load-bearing
- * contract, not incidental ordering: `sfMapFluidEventWindow` below binary
- * searches this order to hand `createSfMapFluidRunner.ts` a per-step
+ * contract, not incidental ordering: `ismMapFluidEventWindow` below binary
+ * searches this order to hand `createIsmMapFluidRunner.ts` a per-step
  * [start, end) slice of ACTIVE events only, instead of every dispatch
  * scanning the whole list (was the quadratic-rebuild-cost bug — total cost
  * grew as steps^2 * texels since the scanned range never shrank as the run
  * got longer).
  */
 import { mulberry32 } from '../../../../utils/random/mulberry32';
-import { sfMapGasProfile } from '../../../../utils/galaxy/ismMapGasProfile';
-import { sfMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
+import { ismMapGasProfile } from '../../../../utils/galaxy/ismMapGasProfile';
+import { ismMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
-import type { SfMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEvent';
-import { buildGalaxySfMapArmForcing, sfMapGridRadius, SF_MAP_AZ, SF_MAP_RINGS } from './galaxyIsmMapArmForcing';
+import type { IsmMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEvent';
+import { buildGalaxyIsmMapArmForcing, ismMapGridRadius, ISM_MAP_AZ, ISM_MAP_RINGS } from './galaxyIsmMapArmForcing';
 
 /** Safely above the "several hundred events over a run" design target — a generous ceiling, not a tuned one. Overflow is truncated, not resampled. */
-export const SF_MAP_FLUID_MAX_EVENTS = 1024;
+export const ISM_MAP_FLUID_MAX_EVENTS = 1024;
 
-const SF_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
+const ISM_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
 
 /**
  * Placement weight is `ARM_BIAS_FLOOR * (1 - eventArmBias) + armForcing`, not
@@ -40,14 +40,14 @@ const SF_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
  * falloff), which would confine every event to the arms outright — the floor
  * exists to give the whole grid a BIAS, the same "light touch" the
  * automaton's own `armForcing` param documents, not a gate. `eventArmBias`
- * (`GalaxySfMapFluidParams`) is now what decides bias-vs-gate: 0 (default)
+ * (`GalaxyIsmMapFluidParams`) is now what decides bias-vs-gate: 0 (default)
  * keeps the fixed floor below, byte-identical to before this param existed;
  * 1 zeroes it, turning the floor into a hard gate — every event lands
  * strictly on the ridge.
  */
 const ARM_BIAS_FLOOR = 0.15;
 
-/** First index whose cumulative weight exceeds `u` — same upper-bound search idiom as `sampleSfMapDustCdf.ts`'s local `upperBound`, not exported from there (that one is keyed to a built `GalaxySfMapDustCdf`, which does not exist yet at event-generation time). */
+/** First index whose cumulative weight exceeds `u` — same upper-bound search idiom as `sampleIsmMapDustCdf.ts`'s local `upperBound`, not exported from there (that one is keyed to a built `GalaxyIsmMapDustCdf`, which does not exist yet at event-generation time). */
 function upperBound(prefix: Float64Array, u: number): number {
   let lo = 0;
   let hi = prefix.length - 1;
@@ -74,7 +74,7 @@ const MAX_GAS_WEIGHT_TRIES = 32;
  * saturates) every candidate is always accepted, and an unconditional extra
  * `rng()` draw would shift every LATER event's RNG stream even though
  * nothing about placement actually changed — this is the only way
- * `buildGalaxySfMapFluidEvents` stays byte-identical to its pre-profile
+ * `buildGalaxyIsmMapFluidEvents` stays byte-identical to its pre-profile
  * output at the default `gasFloor=1`.
  */
 function acceptGasWeightedCandidate(
@@ -83,22 +83,22 @@ function acceptGasWeightedCandidate(
   gasScaleLength: number,
   rng: () => number,
 ): boolean {
-  const prob = sfMapGasProfile(r, gasFloor, gasScaleLength) ** KENNICUTT_SCHMIDT_INDEX;
+  const prob = ismMapGasProfile(r, gasFloor, gasScaleLength) ** KENNICUTT_SCHMIDT_INDEX;
   if (prob >= 1) return true;
   return rng() < prob;
 }
 
-export function buildGalaxySfMapFluidEvents(
+export function buildGalaxyIsmMapFluidEvents(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   seed: number,
-): readonly SfMapFluidEvent[] {
-  const fluid = tuning.sfMapFluid;
+): readonly IsmMapFluidEvent[] {
+  const fluid = tuning.ismMapFluid;
   const requested = Math.round(fluid.eventRate * fluid.steps);
-  const count = Math.min(Math.max(requested, 0), SF_MAP_FLUID_MAX_EVENTS);
+  const count = Math.min(Math.max(requested, 0), ISM_MAP_FLUID_MAX_EVENTS);
   if (count === 0) return [];
 
-  const forcing = buildGalaxySfMapArmForcing(geometry, tuning);
+  const forcing = buildGalaxyIsmMapArmForcing(geometry, tuning);
   const armBiasFloor = ARM_BIAS_FLOOR * (1 - fluid.eventArmBias);
   const weights = new Float64Array(forcing.length);
   let total = 0;
@@ -107,9 +107,9 @@ export function buildGalaxySfMapFluidEvents(
     weights[i] = total;
   }
 
-  const { rMin, rMax } = sfMapGridRadius(geometry);
-  const rng = mulberry32(seed ^ SF_MAP_FLUID_EVENT_SALT);
-  const events: SfMapFluidEvent[] = new Array(count);
+  const { rMin, rMax } = ismMapGridRadius(geometry);
+  const rng = mulberry32(seed ^ ISM_MAP_FLUID_EVENT_SALT);
+  const events: IsmMapFluidEvent[] = new Array(count);
   for (let k = 0; k < count; k++) {
     // Kennicutt-Schmidt-weighted rejection sampling: redraw the whole
     // candidate (arm-biased index + sub-texel jitter) on reject, bounded by
@@ -120,14 +120,14 @@ export function buildGalaxySfMapFluidEvents(
     let ring = 0;
     for (let attempt = 0; attempt < MAX_GAS_WEIGHT_TRIES; attempt++) {
       const index = upperBound(weights, rng() * total);
-      const ringIndex = Math.floor(index / SF_MAP_AZ);
-      const azIndex = index % SF_MAP_AZ;
+      const ringIndex = Math.floor(index / ISM_MAP_AZ);
+      const azIndex = index % ISM_MAP_AZ;
       // Sub-texel jitter so events don't all land on integer grid points —
       // the shader's kernel is continuous, so this costs nothing and avoids
       // a visible lattice in a sparse run.
       az = azIndex + rng();
       ring = ringIndex + rng();
-      const r = sfMapRingRadius(ring, SF_MAP_RINGS, rMin, rMax);
+      const r = ismMapRingRadius(ring, ISM_MAP_RINGS, rMin, rMax);
       if (acceptGasWeightedCandidate(r, fluid.gasFloor, fluid.gasScaleLength, rng)) break;
     }
     events[k] = {
@@ -144,27 +144,27 @@ export function buildGalaxySfMapFluidEvents(
   return events;
 }
 
-/** Index range in `events` (see `sfMapFluidEventWindow`'s docblock). */
-export type SfMapFluidEventWindow = {
+/** Index range in `events` (see `ismMapFluidEventWindow`'s docblock). */
+export type IsmMapFluidEventWindow = {
   readonly start: number;
   readonly end: number;
 };
 
 /**
  * `[start, end)` slice of a birthStep-sorted `events` list active at
- * generation `step` — same age window `sfMapFluidStep.wesl`'s own per-event
+ * generation `step` — same age window `ismMapFluidStep.wesl`'s own per-event
  * `age < 0.0 || age >= impulseDuration` skip tests, but computed once
  * CPU-side per step via two binary searches instead of every GPU texel
  * walking every event ever generated. `events` MUST already be sorted
- * ascending by `birthStep` (`buildGalaxySfMapFluidEvents`'s own contract) —
+ * ascending by `birthStep` (`buildGalaxyIsmMapFluidEvents`'s own contract) —
  * this function does not sort, so a caller with an unsorted list gets a
  * silently wrong window, not a thrown error.
  */
-export function sfMapFluidEventWindow(
-  events: readonly SfMapFluidEvent[],
+export function ismMapFluidEventWindow(
+  events: readonly IsmMapFluidEvent[],
   step: number,
   impulseDuration: number,
-): SfMapFluidEventWindow {
+): IsmMapFluidEventWindow {
   return {
     start: firstIndexWithBirthStepAbove(events, step - impulseDuration),
     end: firstIndexWithBirthStepAbove(events, step),
@@ -172,7 +172,7 @@ export function sfMapFluidEventWindow(
 }
 
 /** First index whose `birthStep` exceeds `threshold` — same upper-bound search idiom as this file's own `upperBound`, kept separate since it walks event objects by field, not a raw cumulative-weight array. */
-function firstIndexWithBirthStepAbove(events: readonly SfMapFluidEvent[], threshold: number): number {
+function firstIndexWithBirthStepAbove(events: readonly IsmMapFluidEvent[], threshold: number): number {
   let lo = 0;
   let hi = events.length;
   while (lo < hi) {

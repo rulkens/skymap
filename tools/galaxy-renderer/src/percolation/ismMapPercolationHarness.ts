@@ -1,6 +1,6 @@
 /**
- * sfMapPercolationHarness — measures the SSPSF automaton's percolation
- * threshold by running `sfMapAutomatonStep.wesl` ITSELF, on a real GPU, with no CPU
+ * ismMapPercolationHarness — measures the SSPSF automaton's percolation
+ * threshold by running `ismMapAutomatonStep.wesl` ITSELF, on a real GPU, with no CPU
  * re-implementation of the update rule. A second copy of the automaton would
  * drift within a week (research doc's own standing rule), and a threshold read
  * off the update rule instead of measured is not a measurement at all.
@@ -11,25 +11,25 @@
  *  - 'spontaneous' the shipped `baseIgnition`, which never dies; the order
  *                  parameter is steady-state activity against its p=0 floor.
  *
- * The page half of `sweepSfMapPercolation.ts`; it owns its own GPUDevice and
+ * The page half of `sweepIsmMapPercolation.ts`; it owns its own GPUDevice and
  * touches no engine state.
  */
-import { DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyIsmMapAutomatonParams';
+import { DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyIsmMapAutomatonParams';
 import {
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
-  SF_MAP_WORKGROUP_SIZE,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
+  ISM_MAP_WORKGROUP_SIZE,
 } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxySfMapAutomatonParams } from '../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapAutomatonParams } from '../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
 import {
-  packSfMapAutomatonConstants,
-  SF_MAP_AUTOMATON_CONSTANTS_BUFFER_SIZE,
+  packIsmMapAutomatonConstants,
+  ISM_MAP_AUTOMATON_CONSTANTS_BUFFER_SIZE,
 } from '../engine/ismMap/packIsmMapAutomatonConstants';
-import { sfMapStepIndexData } from '../engine/ismMap/ismMapStepIndexData';
+import { ismMapStepIndexData } from '../engine/ismMap/ismMapStepIndexData';
 
-import sfMapStepWgsl from '../engine/shaders/milkyWay/sfMap/sfMapAutomatonStep.wesl?static';
+import ismMapStepWgsl from '../engine/shaders/milkyWay/ismMap/ismMapAutomatonStep.wesl?static';
 
-const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
+const CELL_COUNT = ISM_MAP_AZ * ISM_MAP_RINGS;
 
 /**
  * Per-step census of the state texture: how many cells carry age 0, i.e.
@@ -53,7 +53,7 @@ struct CountSlot { index: f32 }
 
 var<workgroup> wgActive: atomic<u32>;
 
-@compute @workgroup_size(${SF_MAP_WORKGROUP_SIZE}, ${SF_MAP_WORKGROUP_SIZE})
+@compute @workgroup_size(${ISM_MAP_WORKGROUP_SIZE}, ${ISM_MAP_WORKGROUP_SIZE})
 fn cs(
   @builtin(global_invocation_id) gid: vec3<u32>,
   @builtin(local_invocation_index) lid: u32,
@@ -82,12 +82,12 @@ fn cs(
  * Overwrite ONE texel with a just-ignited cell, between the automaton's own
  * step-0 seeding pass and step 1. A write-only storage texture leaves every
  * other texel as it stands, which is what makes a single-cell initial
- * condition reachable without forking `sfMapAutomatonStep.wesl`.
+ * condition reachable without forking `ismMapAutomatonStep.wesl`.
  *
  * The state texel used to carry an explicit refractory countdown this pass
- * had to set alongside age; `sfMapAutomatonStep.wesl` now DERIVES refractory
+ * had to set alongside age; `ismMapAutomatonStep.wesl` now DERIVES refractory
  * from eventAge alone (06-ca-dust-channel-sketch.md), so eventAge=0 here is
- * already sufficient — neither activity nor dust (see GalaxySfMap.ts's
+ * already sufficient — neither activity nor dust (see GalaxyIsmMap.ts's
  * contract table) feeds ignition probability, so their seed values are inert
  * for this harness's percolation measurement.
  */
@@ -107,20 +107,20 @@ fn cs() {
 }
 `;
 
-export type SfMapPercolationCase = {
+export type IsmMapPercolationCase = {
   readonly label: string;
-  /** Merged over `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS`; `steps` is taken from the request instead. */
-  readonly params: Partial<GalaxySfMapAutomatonParams>;
+  /** Merged over `DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS`; `steps` is taken from the request instead. */
+  readonly params: Partial<GalaxyIsmMapAutomatonParams>;
 };
 
-export type SfMapPercolationRequest = {
+export type IsmMapPercolationRequest = {
   readonly mode: 'seeded' | 'spontaneous';
   readonly steps: number;
   /** Independent hash seeds per case. Survival probability's whole precision comes from this. */
   readonly runs: number;
   /**
    * The radial span the log-polar grid covers. It reaches the automaton only
-   * through `sfMapShear.wesl`'s per-ring radius, so it matters exactly as much
+   * through `ismMapShear.wesl`'s per-ring radius, so it matters exactly as much
    * as `shearRate` does and not at all when that is zero.
    */
   readonly rMin: number;
@@ -133,12 +133,12 @@ export type SfMapPercolationRequest = {
    * contribute without standing up a real GalaxyDescription.
    */
   readonly armForcingLevel: number;
-  readonly cases: readonly SfMapPercolationCase[];
+  readonly cases: readonly IsmMapPercolationCase[];
 };
 
-export type SfMapPercolationResult = {
+export type IsmMapPercolationResult = {
   readonly label: string;
-  readonly params: GalaxySfMapAutomatonParams;
+  readonly params: GalaxyIsmMapAutomatonParams;
   readonly runs: number;
   /** Runs whose active-cell count is still non-zero on the final step. */
   readonly survived: number;
@@ -160,10 +160,10 @@ export type SfMapPercolationResult = {
   readonly largestClusterShare: number;
 };
 
-export type SfMapPercolationReport = {
+export type IsmMapPercolationReport = {
   readonly adapter: string;
   readonly cellCount: number;
-  readonly results: readonly SfMapPercolationResult[];
+  readonly results: readonly IsmMapPercolationResult[];
   /**
    * Anything the device complained about. A rejected encoder makes every
    * census read zero, which is indistinguishable from a subcritical
@@ -174,7 +174,7 @@ export type SfMapPercolationReport = {
 
 /**
  * Flood fill over the "ever ignited" mask, Moore-8 adjacency with azimuth
- * wraparound (radius does not wrap) — the same neighbourhood `sfMapAutomatonStep.wesl`
+ * wraparound (radius does not wrap) — the same neighbourhood `ismMapAutomatonStep.wesl`
  * itself uses. Runs on the MATERIAL-frame grid with no shear un-rotation:
  * shear only rotates which world azimuth a material cell corresponds to, it
  * never changes which cells are lit, so material-frame adjacency answers the
@@ -230,9 +230,9 @@ function assertNoDeviceError(device: GPUDevice, what: string): Promise<void> {
   });
 }
 
-export async function runSfMapPercolation(
-  request: SfMapPercolationRequest,
-): Promise<SfMapPercolationReport> {
+export async function runIsmMapPercolation(
+  request: IsmMapPercolationRequest,
+): Promise<IsmMapPercolationReport> {
   const adapter = await navigator.gpu?.requestAdapter();
   if (!adapter) throw new Error('no WebGPU adapter');
   const device = await adapter.requestDevice();
@@ -244,30 +244,30 @@ export async function runSfMapPercolation(
 
   device.pushErrorScope('validation');
   const stepPipe = device.createComputePipeline({
-    label: 'sfMapPercolation:stepPipe',
+    label: 'ismMapPercolation:stepPipe',
     layout: 'auto',
     compute: {
-      module: device.createShaderModule({ label: 'sfMapPercolation:step', code: sfMapStepWgsl }),
+      module: device.createShaderModule({ label: 'ismMapPercolation:step', code: ismMapStepWgsl }),
       entryPoint: 'cs',
     },
   });
   const countPipe = device.createComputePipeline({
-    label: 'sfMapPercolation:countPipe',
+    label: 'ismMapPercolation:countPipe',
     layout: 'auto',
     compute: {
       module: device.createShaderModule({
-        label: 'sfMapPercolation:countActive',
+        label: 'ismMapPercolation:countActive',
         code: COUNT_ACTIVE_WGSL,
       }),
       entryPoint: 'cs',
     },
   });
   const seedPipe = device.createComputePipeline({
-    label: 'sfMapPercolation:seedPipe',
+    label: 'ismMapPercolation:seedPipe',
     layout: 'auto',
     compute: {
       module: device.createShaderModule({
-        label: 'sfMapPercolation:seedCell',
+        label: 'ismMapPercolation:seedCell',
         code: SEED_CELL_WGSL,
       }),
       entryPoint: 'cs',
@@ -278,46 +278,46 @@ export async function runSfMapPercolation(
   const makeStateTex = (label: string): GPUTexture =>
     device.createTexture({
       label,
-      size: [SF_MAP_AZ, SF_MAP_RINGS],
+      size: [ISM_MAP_AZ, ISM_MAP_RINGS],
       format: 'rgba16float',
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
     });
-  const stateA = makeStateTex('sfMapPercolation:stateA');
-  const stateB = makeStateTex('sfMapPercolation:stateB');
+  const stateA = makeStateTex('ismMapPercolation:stateA');
+  const stateB = makeStateTex('ismMapPercolation:stateB');
 
   const armForcingTex = device.createTexture({
-    label: 'sfMapPercolation:armForcingTex',
-    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    label: 'ismMapPercolation:armForcingTex',
+    size: [ISM_MAP_AZ, ISM_MAP_RINGS],
     format: 'r32float',
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
   device.queue.writeTexture(
     { texture: armForcingTex },
     new Float32Array(CELL_COUNT).fill(request.armForcingLevel),
-    { bytesPerRow: SF_MAP_AZ * 4 },
-    [SF_MAP_AZ, SF_MAP_RINGS],
+    { bytesPerRow: ISM_MAP_AZ * 4 },
+    [ISM_MAP_AZ, ISM_MAP_RINGS],
   );
 
   const constUbo = device.createBuffer({
-    label: 'sfMapPercolation:constUbo',
-    size: SF_MAP_AUTOMATON_CONSTANTS_BUFFER_SIZE,
+    label: 'ismMapPercolation:constUbo',
+    size: ISM_MAP_AUTOMATON_CONSTANTS_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   const stride = device.limits.minUniformBufferOffsetAlignment;
   const stepIndexBuf = device.createBuffer({
-    label: 'sfMapPercolation:stepIndexBuf',
+    label: 'ismMapPercolation:stepIndexBuf',
     size: request.steps * stride,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  device.queue.writeBuffer(stepIndexBuf, 0, sfMapStepIndexData(request.steps, stride));
+  device.queue.writeBuffer(stepIndexBuf, 0, ismMapStepIndexData(request.steps, stride));
 
   const seedUbo = device.createBuffer({
-    label: 'sfMapPercolation:seedUbo',
+    label: 'ismMapPercolation:seedUbo',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   const countsBuf = device.createBuffer({
-    label: 'sfMapPercolation:countsBuf',
+    label: 'ismMapPercolation:countsBuf',
     size: request.steps * 4,
     // COPY_DST is for `clearBuffer`, not for any copy: without it every
     // encoder is rejected at finish() and the whole sweep reads zero — which
@@ -325,7 +325,7 @@ export async function runSfMapPercolation(
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
   });
   const countsStaging = device.createBuffer({
-    label: 'sfMapPercolation:countsStaging',
+    label: 'ismMapPercolation:countsStaging',
     size: request.steps * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
@@ -333,18 +333,18 @@ export async function runSfMapPercolation(
   // own comment. Cleared every run; only copied to staging on the last run of
   // each case (computeClusters's cost is one readback per case, not per run).
   const everIgnitedBuf = device.createBuffer({
-    label: 'sfMapPercolation:everIgnitedBuf',
+    label: 'ismMapPercolation:everIgnitedBuf',
     size: CELL_COUNT * 4,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
   });
   const everIgnitedStaging = device.createBuffer({
-    label: 'sfMapPercolation:everIgnitedStaging',
+    label: 'ismMapPercolation:everIgnitedStaging',
     size: CELL_COUNT * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
   // Even step index writes stateB, odd writes stateA — the same parity
-  // createSfMapAutomatonRunner's dispatch loop runs, and what the census pass
+  // createIsmMapAutomatonRunner's dispatch loop runs, and what the census pass
   // has to agree with to read the state a step just wrote.
   const nextTexAt = (step: number): GPUTexture => (step % 2 === 0 ? stateB : stateA);
   const prevTexAt = (step: number): GPUTexture => (step % 2 === 0 ? stateA : stateB);
@@ -356,7 +356,7 @@ export async function runSfMapPercolation(
   for (let step = 0; step < request.steps; step++) {
     stepBindGroups.push(
       device.createBindGroup({
-        label: `sfMapPercolation:stepBG${step}`,
+        label: `ismMapPercolation:stepBG${step}`,
         layout: stepPipe.getBindGroupLayout(0),
         entries: [
           { binding: 0, resource: { buffer: constUbo } },
@@ -369,7 +369,7 @@ export async function runSfMapPercolation(
     );
     countBindGroups.push(
       device.createBindGroup({
-        label: `sfMapPercolation:countBG${step}`,
+        label: `ismMapPercolation:countBG${step}`,
         layout: countPipe.getBindGroupLayout(0),
         entries: [
           { binding: 0, resource: nextTexAt(step).createView() },
@@ -382,7 +382,7 @@ export async function runSfMapPercolation(
   }
   // Step 0 writes stateB, so that is the texture the single ignition lands in.
   const seedBindGroup = device.createBindGroup({
-    label: 'sfMapPercolation:seedBG',
+    label: 'ismMapPercolation:seedBG',
     layout: seedPipe.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: nextTexAt(0).createView() },
@@ -390,21 +390,21 @@ export async function runSfMapPercolation(
     ],
   });
 
-  const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
-  const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
+  const dispatchX = ISM_MAP_AZ / ISM_MAP_WORKGROUP_SIZE;
+  const dispatchY = ISM_MAP_RINGS / ISM_MAP_WORKGROUP_SIZE;
   const grid = { rMin: request.rMin, rMax: request.rMax };
 
-  const results: SfMapPercolationResult[] = [];
+  const results: IsmMapPercolationResult[] = [];
   for (const testCase of request.cases) {
-    const params: GalaxySfMapAutomatonParams = {
-      ...DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS,
+    const params: GalaxyIsmMapAutomatonParams = {
+      ...DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS,
       ...testCase.params,
       steps: request.steps,
     };
     device.queue.writeBuffer(
       seedUbo,
       0,
-      new Float32Array([Math.floor(SF_MAP_AZ / 2), request.seedRing, 0, 0]),
+      new Float32Array([Math.floor(ISM_MAP_AZ / 2), request.seedRing, 0, 0]),
     );
 
     const activeSum = new Float64Array(request.steps);
@@ -417,28 +417,28 @@ export async function runSfMapPercolation(
       device.queue.writeBuffer(
         constUbo,
         0,
-        packSfMapAutomatonConstants({ grid, sfMap: params, seed: run + 1 }),
+        packIsmMapAutomatonConstants({ grid, ismMap: params, seed: run + 1 }),
       );
 
       const isLastRun = run === request.runs - 1;
       const enc = device.createCommandEncoder({
-        label: `sfMapPercolation:${testCase.label}:${run}`,
+        label: `ismMapPercolation:${testCase.label}:${run}`,
       });
       enc.clearBuffer(countsBuf);
       enc.clearBuffer(everIgnitedBuf);
-      const seedPass = enc.beginComputePass({ label: 'sfMapPercolation:step0' });
+      const seedPass = enc.beginComputePass({ label: 'ismMapPercolation:step0' });
       seedPass.setPipeline(stepPipe);
       seedPass.setBindGroup(0, stepBindGroups[0]!);
       seedPass.dispatchWorkgroups(dispatchX, dispatchY);
       seedPass.end();
       if (request.mode === 'seeded') {
-        const injectPass = enc.beginComputePass({ label: 'sfMapPercolation:injectSeed' });
+        const injectPass = enc.beginComputePass({ label: 'ismMapPercolation:injectSeed' });
         injectPass.setPipeline(seedPipe);
         injectPass.setBindGroup(0, seedBindGroup);
         injectPass.dispatchWorkgroups(1);
         injectPass.end();
       }
-      const runPass = enc.beginComputePass({ label: 'sfMapPercolation:steps' });
+      const runPass = enc.beginComputePass({ label: 'ismMapPercolation:steps' });
       for (let step = 1; step < request.steps; step++) {
         runPass.setPipeline(stepPipe);
         runPass.setBindGroup(0, stepBindGroups[step]!);
@@ -464,7 +464,7 @@ export async function runSfMapPercolation(
         await everIgnitedStaging.mapAsync(GPUMapMode.READ);
         const everIgnited = new Uint32Array(everIgnitedStaging.getMappedRange()).slice();
         everIgnitedStaging.unmap();
-        const clusters = computeClusters(everIgnited, SF_MAP_AZ, SF_MAP_RINGS);
+        const clusters = computeClusters(everIgnited, ISM_MAP_AZ, ISM_MAP_RINGS);
         clusterCount = clusters.clusterCount;
         largestClusterShare =
           clusters.totalMarked > 0 ? clusters.largestClusterSize / clusters.totalMarked : 0;

@@ -1,5 +1,5 @@
 /**
- * GalaxySfMapAutomatonParams — the SSPSF cellular automaton that grows the
+ * GalaxyIsmMapAutomatonParams — the SSPSF cellular automaton that grows the
  * ISM's structure (Gerola & Seiden 1978, generalizing Mueller & Arnett
  * 1976), run as a compute pass on a log-polar grid.
  *
@@ -7,13 +7,13 @@
  * as `armForcing`, and what emerges is the spurs and feathers hanging off
  * them. See the research doc §19 before changing anything here.
  *
- * Named `…Automaton…`, not bare `GalaxySfMapParams`, now that a second
- * generator exists (`GalaxySfMapFluidParams`) — the incumbent doesn't keep
+ * Named `…Automaton…`, not bare `GalaxyIsmMapParams`, now that a second
+ * generator exists (`GalaxyIsmMapFluidParams`) — the incumbent doesn't keep
  * the unmarked name once there's a sibling to be ambiguous next to.
- * `enabled`/`generator` live on the shared `GalaxySfMapParams` instead
- * (`GalaxyFieldTuning.sfMap`), not here — this type is automaton fields ONLY.
+ * `enabled`/`generator` live on the shared `GalaxyIsmMapParams` instead
+ * (`GalaxyFieldTuning.ismMap`), not here — this type is automaton fields ONLY.
  */
-export type GalaxySfMapAutomatonParams = {
+export type GalaxyIsmMapAutomatonParams = {
   /** Automaton iterations per rebuild. Structure coarsens with more steps; the shear winds it. */
   readonly steps: number;
   /** Spontaneous ignition probability per cell per step, independent of neighbours — the seed that keeps a quiet disc from dying out. */
@@ -93,7 +93,7 @@ export type GalaxySfMapAutomatonParams = {
    * Shear magnitude (texels/step) at which the forcing term saturates to
    * full strength. Forced ignitions weight by `|shear| / armFluxRef`, which
    * cancels the residence-time divergence at corotation (shear -> 0) rather
-   * than rewarding it — see `sfMapAutomatonStep.wesl`'s `armFactor` for the derivation.
+   * than rewarding it — see `ismMapAutomatonStep.wesl`'s `armFactor` for the derivation.
    */
   readonly armFluxRef: number;
   /**

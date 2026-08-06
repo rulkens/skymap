@@ -64,16 +64,16 @@ const input: FieldHeaderInput = {
     mapHeightPx: 16000,
     detail: 24000,
   },
-  debugViews: { dust: 21000, sfMap: 21001, orientation: 21002, bubble: 21003 },
+  debugViews: { dust: 21000, ismMap: 21001, orientation: 21002, bubble: 21003 },
   galaxyWeight: 22000,
-  sfMapChannels: {
+  ismMapChannels: {
     gasWeight: 23000,
     recentSfWeight: 23001,
     activityWeight: 23002,
     dustWeight: 23003,
   },
   hiiTexture: { scale: 25000, contrast: 25001 },
-  sfMapSeeding: { weight: 27000, cap: 27001, globalMean: 27002 },
+  ismMapSeeding: { weight: 27000, cap: 27001, globalMean: 27002 },
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -123,11 +123,11 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     expect(observed(27000)).toBe(at('bubbleView') + 4);
     expect(observed(27001)).toBe(at('bubbleView') + 8);
     expect(observed(27002)).toBe(at('bubbleView') + 12);
-    expect(observed(23000)).toBe(at('sfMapChannels'));
-    // sfMapChannels.w was the header's one slack scalar — dustWeight now
+    expect(observed(23000)).toBe(at('ismMapChannels'));
+    // ismMapChannels.w was the header's one slack scalar — dustWeight now
     // fills it, so this pins it stays put rather than silently colliding
     // with the next vec4.
-    expect(observed(23003)).toBe(at('sfMapChannels') + 12);
+    expect(observed(23003)).toBe(at('ismMapChannels') + 12);
     expect(observed(24000)).toBe(at('dustDetail'));
     // dustDetail.y/.z are the HII tier's own tier-global texture scale/
     // contrast, unrelated to S4's own strength lane at .x — they ride this
@@ -146,14 +146,14 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // `dst` is a scratch reused across frames and headers, so a skipped write
     // would ship the previous pass's dust to a pass that has none.
     const dst = new Float32Array(FIELD_HEADER_FLOATS).fill(-999);
-    // `hiiTexture`/`sfMapSeeding` omitted too — the HII pass packs `dust` and
-    // `sfMapSeeding` inert (sfMapPresent.wesl binds only the field header),
+    // `hiiTexture`/`ismMapSeeding` omitted too — the HII pass packs `dust` and
+    // `ismMapSeeding` inert (ismMapPresent.wesl binds only the field header),
     // and this is the one call that pins every default lands without
     // clobbering another in a shared vec4.
     const {
       dust: _omittedDust,
       hiiTexture: _omittedHiiTexture,
-      sfMapSeeding: _omittedSfMapSeeding,
+      ismMapSeeding: _omittedIsmMapSeeding,
       ...noDust
     } = input;
     packFieldHeaderUniforms(noDust, dst);
@@ -172,8 +172,8 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // contrastExp lanes use just above. .w is spare, always 0.
     expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
     // .x (bubble intensity, from `debugViews`, still supplied) stays; .y/.z/.w
-    // (weight/cap/globalMean) are all inert at 0 — `sfMapSeeding` omitted
-    // too, so INERT_SF_MAP_SEEDING lands here (its own doc: cap 0 is
+    // (weight/cap/globalMean) are all inert at 0 — `ismMapSeeding` omitted
+    // too, so INERT_ISM_MAP_SEEDING lands here (its own doc: cap 0 is
     // "uncapped", the SAME neutral value as everything else in this vec4).
     expect(four(at('bubbleView'))).toEqual([21003, 0, 0, 0]);
   });

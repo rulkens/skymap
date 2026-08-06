@@ -19,13 +19,13 @@
  */
 import { ARM_SPAN_START_FRAC } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
-import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
+import { sampleIsmMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
-import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxyIsmMapOrientation';
+import type { GalaxyIsmMapOrientation } from '../../../../@types/galaxy/GalaxyIsmMapOrientation';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
@@ -64,7 +64,7 @@ export type OrientationDeltaStats = {
  * consumers genuinely differ on. `'analytic'` is the arm-lane/smooth-disc
  * roll (`armParticleCloud.ts`, which IS the arm feature and always passes
  * `armBias: 1`); `'mapDensity'` replaces that roll entirely with the SSPSF
- * automaton's measured density (`dustParticleCloud.ts`, once its SF map is
+ * automaton's measured density (`dustParticleCloud.ts`, once its ISM map is
  * usable); `'smoothDisc'` is the bare disc profile with no lane concept at
  * all (`dustParticleCloud.ts`'s no-map fallback). A tagged union rather than
  * three optional sibling fields: the dust caller has no lane callbacks to
@@ -96,11 +96,11 @@ export type ClusteredDiscPlacementMode =
   | {
       readonly kind: 'mapDensity';
       /**
-       * Draws one (radius, angle) exactly proportional to the SF map's
+       * Draws one (radius, angle) exactly proportional to the ISM map's
        * placement density — S1's inverse-CDF sampler
-       * (`buildSfMapDustCdf`/`sampleSfMapDustCdf`), built once per cloud by
+       * (`buildIsmMapDustCdf`/`sampleIsmMapDustCdf`), built once per cloud by
        * the caller. Fixed THREE rng draws every call regardless of map
-       * contrast — see `sampleSfMapDustCdf`'s own header.
+       * contrast — see `sampleIsmMapDustCdf`'s own header.
        */
       readonly samplePoint: (rng: () => number) => {
         readonly radius: number;
@@ -131,11 +131,11 @@ export type ClusteredDiscPlacementConfig = {
    * The SSPSF automaton's measured filament orientation, coherence-weighted
    * so a texel with no measured structure reproduces today's frame exactly —
    * see `rotateFrameToOrientation`. `null` (the default, and every caller's
-   * `sfMap.generator === 'none'` path) is a pure no-op: no extra work, no
+   * `ismMap.generator === 'none'` path) is a pure no-op: no extra work, no
    * extra `rng` draw, so the gated-off placement stays byte-identical.
    */
-  readonly sfMapOrientation?: GalaxySfMapOrientation | null;
-  /** Out-param, mutated once per complex whenever `sfMapOrientation` is non-null — see `OrientationDeltaStats`'s own doc. Omitted (the default) does no extra work. */
+  readonly ismMapOrientation?: GalaxyIsmMapOrientation | null;
+  /** Out-param, mutated once per complex whenever `ismMapOrientation` is non-null — see `OrientationDeltaStats`'s own doc. Omitted (the default) does no extra work. */
   readonly orientationDeltaStats?: OrientationDeltaStats;
   /** Which of the three seeding modes this build uses — see `ClusteredDiscPlacementMode`. */
   readonly placement: ClusteredDiscPlacementMode;
@@ -174,7 +174,7 @@ function recordOrientationDelta(
 
 /**
  * rotateFrameToOrientation — bends a lane/disc frame's in-plane axes
- * (`along`/`across`) toward the SF-map automaton's measured filament
+ * (`along`/`across`) toward the ISM-map automaton's measured filament
  * orientation, coherence-weighted so a texel with no measured structure
  * (coherence 0) reproduces `frame` exactly. `pole` never moves.
  *
@@ -200,11 +200,11 @@ export function rotateFrameToOrientation(
   radius: number,
   angle: number,
   geometry: GalaxyDescription,
-  orientation: GalaxySfMapOrientation | null | undefined,
+  orientation: GalaxyIsmMapOrientation | null | undefined,
   stats: OrientationDeltaStats | undefined,
 ): CloudFrame {
   if (!orientation) return frame;
-  const sample = sampleSfMapOrientation(orientation, radius, angle);
+  const sample = sampleIsmMapOrientation(orientation, radius, angle);
   if (sample.coherence <= 0) {
     recordOrientationDelta(stats, 0);
     return frame;
@@ -254,7 +254,7 @@ export function buildClusteredDiscPlacement<TPayload>(
   // IS the complex, so it belongs at the seed point `placeComplex` drew from
   // the placement density. Scattering it anyway convolves that density with a
   // ~complexSpread kernel — at clumpiness 0, where every complex is a lone
-  // child, that blurs the SF map the `'mapDensity'` mode exists to follow.
+  // child, that blurs the ISM map the `'mapDensity'` mode exists to follow.
   // Keyed on the CONFIGURED children per complex, not the per-complex
   // `childCount` below, which the count budget can truncate to 1 on the tail
   // complex of a genuinely clustered build.
@@ -303,7 +303,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       Math.hypot(frame.point[0], frame.point[2]),
       Math.atan2(frame.point[2], frame.point[0]),
       geometry,
-      config.sfMapOrientation,
+      config.ismMapOrientation,
       config.orientationDeltaStats,
     );
     return { center, frame: orientedFrame, warped: true };
@@ -322,14 +322,14 @@ export function buildClusteredDiscPlacement<TPayload>(
       radius,
       angle,
       geometry,
-      config.sfMapOrientation,
+      config.ismMapOrientation,
       config.orientationDeltaStats,
     );
     return { center: [x, y, z], frame, warped: false };
   }
 
   /**
-   * Map-density-only placement: the SF map IS the density, no arm-lane roll
+   * Map-density-only placement: the ISM map IS the density, no arm-lane roll
    * involved. `mode.samplePoint` (S1's inverse-CDF sampler, built once per
    * cloud by the caller) draws the centre exactly proportional to the map's
    * accumulated density x area — no rejection, no fallback, so unlike the
@@ -352,7 +352,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       radius,
       angle,
       geometry,
-      config.sfMapOrientation,
+      config.ismMapOrientation,
       config.orientationDeltaStats,
     );
     return { center: [x, y, z], frame, warped: false };

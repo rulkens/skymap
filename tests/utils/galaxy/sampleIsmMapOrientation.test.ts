@@ -1,5 +1,5 @@
 /**
- * sampleSfMapOrientation is a nearest-texel (not bilinear) reader — the
+ * sampleIsmMapOrientation is a nearest-texel (not bilinear) reader — the
  * header's own reason is that interpolating angle directly would average
  * opposite orientations into a false perpendicular at the pi wrap. Two
  * properties of that quantization had no test: that a mid-bin angle really
@@ -9,8 +9,8 @@
  * rather than the last bin a naive "angle < 2*PI" mental model expects.
  */
 import { describe, expect, it } from 'vitest';
-import { sampleSfMapOrientation } from '../../../src/utils/galaxy/sampleIsmMapOrientation';
-import type { GalaxySfMapOrientation } from '../../../src/@types/galaxy/GalaxyIsmMapOrientation';
+import { sampleIsmMapOrientation } from '../../../src/utils/galaxy/sampleIsmMapOrientation';
+import type { GalaxyIsmMapOrientation } from '../../../src/@types/galaxy/GalaxyIsmMapOrientation';
 
 const AZ = 4;
 const RINGS = 1;
@@ -20,7 +20,7 @@ const R_MAX = 10;
 // back is a single equality check rather than an angle round-trip.
 const BIN_COHERENCE = [0.1, 0.2, 0.3, 0.4];
 
-function makeOrientation(): GalaxySfMapOrientation {
+function makeOrientation(): GalaxyIsmMapOrientation {
   const data = new Float32Array(RINGS * AZ * 2);
   for (let k = 0; k < AZ; k++) {
     data[k * 2] = BIN_COHERENCE[k]!;
@@ -29,11 +29,11 @@ function makeOrientation(): GalaxySfMapOrientation {
   return { az: AZ, rings: RINGS, rMin: R_MIN, rMax: R_MAX, data };
 }
 
-describe('sampleSfMapOrientation', () => {
+describe('sampleIsmMapOrientation', () => {
   it('reads one whole texel at a mid-bin angle, not a blend of neighbours', () => {
     const map = makeOrientation();
     // Bin 2 of 4 spans [pi, 1.5*pi); its midpoint is 1.25*pi.
-    const sample = sampleSfMapOrientation(map, 1, 1.25 * Math.PI);
+    const sample = sampleIsmMapOrientation(map, 1, 1.25 * Math.PI);
     expect(sample.coherence).toBeCloseTo(BIN_COHERENCE[2]!, 6);
   });
 
@@ -41,7 +41,7 @@ describe('sampleSfMapOrientation', () => {
     const map = makeOrientation();
     const angle = 2 * Math.PI - 1e-15;
     expect(angle).not.toBe(2 * Math.PI); // a distinct float, not literally the wrap point
-    const sample = sampleSfMapOrientation(map, 1, angle);
+    const sample = sampleIsmMapOrientation(map, 1, angle);
     // The naive expectation is the LAST bin (angle is a hair under 2*PI); the
     // wrap formula's re-addition of 2*PI rounds back up to exactly 2*PI in
     // double precision, so the read actually lands on bin 0.

@@ -1,12 +1,12 @@
-// milkyWay/sfMap/sfMapFluidPack.wesl — the fluid generator's own final
-// repack. sfMapFluidStep.wesl already advects directly in WORLD/grid
-// coordinates every step (see its header), so unlike sfMapPack.wesl (the
+// milkyWay/ismMap/ismMapFluidPack.wesl — the fluid generator's own final
+// repack. ismMapFluidStep.wesl already advects directly in WORLD/grid
+// coordinates every step (see its header), so unlike ismMapPack.wesl (the
 // automaton's material-frame un-shear) there is nothing to invert here —
 // this is a straight 1:1 texel copy. State order already matches the packed
-// slot order (GalaxySfMap.ts's contract table), so this pass reorders
+// slot order (GalaxyIsmMap.ts's contract table), so this pass reorders
 // nothing: only eventAge -> recentSf and the activity clamp change shape.
 
-const RECENT_SF_TAU: f32 = 12.0; // mirrors sfMapPack.wesl's own look constant — same presentation meaning, same value
+const RECENT_SF_TAU: f32 = 12.0; // mirrors ismMapPack.wesl's own look constant — same presentation meaning, same value
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>;
 @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;

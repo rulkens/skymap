@@ -52,7 +52,7 @@ function App(): ReactNode {
   // dashes — a zeroed placeholder would read as a real "alpha 0.000" instead.
   const [fade, setFade] = useState<MilkyWayFadeReadout | null>(null);
   // Same null-until-first-report treatment, for the same reason — see
-  // `SfMapSection`'s own readout.
+  // `IsmMapSection`'s own readout.
   const [orientationDiagnostics, setOrientationDiagnostics] = useState<OrientationDiagnostics | null>(
     null,
   );

@@ -1,7 +1,7 @@
 /**
  * createGalaxyEngine — GPU orchestration: the WebGPU device, every pipeline,
  * render target and bind group, and the per-frame encode. What a galaxy IS —
- * geometry, mixtures, generated buffers, the SSPSF map — lives in
+ * geometry, mixtures, generated buffers, the SSPISM map — lives in
  * `model/createGalaxyModel.ts`, and the orbit camera in
  * `createOrbitCameraInput`; both are driven from here.
  * `timing/timingSlots.ts` is the one account of the pass chain — a second copy
@@ -12,7 +12,7 @@
  * A look tuned here only transfers while the two chains ARE one chain, so
  * nothing about the image is hand-matched: the sprite draws are the runtime's
  * `milkyWay/sprites/` shaders over its `io.wesl` struct, the analytic field's are
- * its `milkyWay/{field,sfMap}/`, and the post chain is the runtime's
+ * its `milkyWay/{field,ismMap}/`, and the post chain is the runtime's
  * `createAdditiveUpsample` / `createBloomPyramid` / `createCompositor` — all
  * symlinked into this tool's WESL root (`wesl.toml`). Editing any of those
  * shaders changes both apps.
@@ -37,7 +37,7 @@ import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadou
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
@@ -61,8 +61,8 @@ import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './field/encodeSplatPass';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
-import { createSfMapGenerator } from './ismMap/createIsmMapGenerator';
-import { createSfMapOrientation } from './ismMap/createIsmMapOrientation';
+import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
+import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
@@ -183,8 +183,8 @@ export async function createGalaxyEngine(
   // `dispose` walks this in reverse. It replaces a hand-maintained destroy list
   // that had drifted by ten resources; an HMR remount hands the next engine the
   // same canvas, so each miss leaked a full set per remount. Resources that own
-  // their own teardown (`targets`, `model`, `sfMapGenerator`,
-  // `sfMapOrientation`, `bloomPyramid`, `compositor`, `aggregateUpsample`) keep
+  // their own teardown (`targets`, `model`, `ismMapGenerator`,
+  // `ismMapOrientation`, `bloomPyramid`, `compositor`, `aggregateUpsample`) keep
   // delegating and are deliberately absent here — which is also why nothing
   // registered here is ever reassigned.
   const owned: { destroy(): void }[] = [];
@@ -483,29 +483,29 @@ export async function createGalaxyEngine(
   // Both own every resource they touch, including their readback staging
   // buffers; the engine keeps only the handles and the perf GATES (which read
   // the render bag / field tuning, which those modules deliberately don't).
-  const sfMapGenerator = createSfMapGenerator(device, {
+  const ismMapGenerator = createIsmMapGenerator(device, {
     makeShader,
     hdrFormat: HDR,
     fieldUbo,
   });
-  const sfMapOrientation = createSfMapOrientation(device, {
+  const ismMapOrientation = createIsmMapOrientation(device, {
     makeShader,
     hdrFormat: HDR,
     fieldUbo,
-    sourceTexture: sfMapGenerator.texture,
+    sourceTexture: ismMapGenerator.texture,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
   // A SECOND, independent star-formation model (dustBubblePlacements.ts,
   // resolved from sfEventCatalog.ts) drawn as its own debug layer so it can
-  // be compared directly against the SSPSF automaton's sfMap view — see the
+  // be compared directly against the SSPSF automaton's ismMap view — see the
   // model's `rebuildBubblePlacements` for how `model.bubbleComps` is built and
   // packed. One instanced camera-facing quad per
   // placement, no storage buffer/comps lookup: bubblePresent.wesl reads its
   // per-instance center/radius/kind straight off the vertex buffer, and
   // `u` (fieldUbo) only for the camera basis + its own crossfade weight —
   // so this bind group needs just binding 0, built once like
-  // `sfMapPresentBG`/`orientationPresentBG` (fieldUbo's OBJECT never
+  // `ismMapPresentBG`/`orientationPresentBG` (fieldUbo's OBJECT never
   // changes, only its content, rewritten every `drawFrame`).
   const bubblePresentMod = makeShader(bubblePresentWgsl, 'galaxy:bubblePresent');
   const bubblePresentPipe = device.createRenderPipeline({
@@ -585,8 +585,8 @@ export async function createGalaxyEngine(
   // regrow hooks are the `layout: 'auto'` contract — see the bind groups below.
   const model = createGalaxyModel({
     device,
-    sfMapGenerator,
-    orientation: sfMapOrientation,
+    ismMapGenerator,
+    orientation: ismMapOrientation,
     render,
     onFieldCompsRegrow: () => {
       splatBG = buildSplatBindGroup();
@@ -641,12 +641,12 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: model.fieldComps.buffer } },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
-        // S4's SF-map detail term (dustDetail.wesl) rides the accumulation
+        // S4's ISM-map detail term (dustDetail.wesl) rides the accumulation
         // pass now, applied per dust splat — see dustMap.wesl's fs.
-        { binding: 3, resource: { buffer: sfMapGenerator.gridBuffer } },
-        { binding: 7, resource: sfMapGenerator.mapSampler },
-        { binding: 8, resource: sfMapGenerator.texture.createView() },
-        { binding: 9, resource: sfMapGenerator.dustBlurTexture.createView() },
+        { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
+        { binding: 7, resource: ismMapGenerator.mapSampler },
+        { binding: 8, resource: ismMapGenerator.texture.createView() },
+        { binding: 9, resource: ismMapGenerator.dustBlurTexture.createView() },
       ],
     });
   }
@@ -670,7 +670,7 @@ export async function createGalaxyEngine(
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
         // dustMapTex's own declaration comment for why the divisors split).
-        // No 3/7/8/9 here: S4's SF-map detail term (dustDetail.wesl) now
+        // No 3/7/8/9 here: S4's ISM-map detail term (dustDetail.wesl) now
         // rides dustMap.wesl's accumulation pass, not this consumer — the
         // shader no longer references those bindings, and with
         // layout:'auto' a superfluous entry is a bind-group creation ERROR.
@@ -936,7 +936,7 @@ export async function createGalaxyEngine(
       fade,
       galaxyWeight,
       debugViews,
-      sfMapChannels,
+      ismMapChannels,
       dustSlices,
       analyticExposure,
     } = deriveFrameView({
@@ -1006,11 +1006,11 @@ export async function createGalaxyEngine(
         // `fieldUbo` and never to the HII one below.
         debugViews,
         galaxyWeight,
-        sfMapChannels,
-        // sfMapPresent.wesl binds ONLY this header (createSfMapOutput.ts's
+        ismMapChannels,
+        // ismMapPresent.wesl binds ONLY this header (createIsmMapOutput.ts's
         // presentBindGroup, shared by both generators) — the HII header
         // below omits this and packs the seeding lanes inert.
-        sfMapSeeding: model.sfMapSeedingView,
+        ismMapSeeding: model.ismMapSeedingView,
       },
       fieldData,
     );
@@ -1033,7 +1033,7 @@ export async function createGalaxyEngine(
     // frequency (`u.dustNoise.x`, splat.wesl's OWN reader of that lane) as a
     // side effect of a fix that is only about attenuation.
     //
-    // `debugViews`/`sfMapChannels` are the same values as above. Only
+    // `debugViews`/`ismMapChannels` are the same values as above. Only
     // `galaxyWeight` is read by this pass's own draw (hiiBG binds none of the
     // present pipelines), but sharing them keeps HII's dimming in lockstep
     // with the rest of the galaxy under an active view.
@@ -1057,7 +1057,7 @@ export async function createGalaxyEngine(
         hiiTexture: model.hiiTexture,
         debugViews,
         galaxyWeight,
-        sfMapChannels,
+        ismMapChannels,
       },
       hiiData,
     );
@@ -1219,18 +1219,18 @@ export async function createGalaxyEngine(
         // divisor-matched offscreen and the upsample's 4-tap reconstruction
         // were both wrong for them. Both pipelines blend additively, so each
         // sums with whatever the composites already added.
-        if (debugViews.sfMap > 0) {
+        if (debugViews.ismMap > 0) {
           encodePresentOverlay(
             pass,
-            sfMapGenerator.presentPipeline,
-            sfMapGenerator.presentBindGroup,
+            ismMapGenerator.presentPipeline,
+            ismMapGenerator.presentBindGroup,
           );
         }
         if (debugViews.orientation > 0) {
           encodePresentOverlay(
             pass,
-            sfMapOrientation.presentPipeline,
-            sfMapOrientation.presentBindGroup,
+            ismMapOrientation.presentPipeline,
+            ismMapOrientation.presentBindGroup,
           );
         }
         // The bubble-view overlay is instanced rather than a covering triangle
@@ -1330,18 +1330,18 @@ export async function createGalaxyEngine(
     step: (now?: number): void => drawFrame(now ?? performance.now()),
     sample: probe.sample,
     getCamera: camera.getCamera,
-    // The SSPSF automaton's packed output (sfMapPack.wesl) — a persistent
+    // The SSPSF automaton's packed output (ismMapPack.wesl) — a persistent
     // GPU texture, always non-null, whose CONTENT is only meaningful once
-    // rebuildSfMap has run at least once (setParams). Consumed by nothing
-    // yet but sfMapPresent.wesl's own overlay; exposed here for the sibling
-    // UI and future consumers, per `docs/research/milky-way/sf-map.md`'s
+    // rebuildIsmMap has run at least once (setParams). Consumed by nothing
+    // yet but ismMapPresent.wesl's own overlay; exposed here for the sibling
+    // UI and future consumers, per `docs/research/milky-way/ism-map.md`'s
     // staging note (overlay first, consumed by nothing).
-    getSfMapTexture: (): GPUTexture => sfMapGenerator.texture,
-    // The CPU-side readback of the same output (`scheduleSfMapReadback`):
+    getIsmMapTexture: (): GPUTexture => ismMapGenerator.texture,
+    // The CPU-side readback of the same output (`scheduleIsmMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`
-    // whenever `sfMap.generator !== 'none'` today; exposed here for future
+    // whenever `ismMap.generator !== 'none'` today; exposed here for future
     // consumers too.
-    getSfMapData: (): GalaxySfMap | null => model.sfMapData,
+    getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1350,8 +1350,8 @@ export async function createGalaxyEngine(
       bloomPyramid.destroy();
       compositor.destroy();
       aggregateUpsample.destroy();
-      sfMapGenerator.dispose();
-      sfMapOrientation.dispose();
+      ismMapGenerator.dispose();
+      ismMapOrientation.dispose();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked

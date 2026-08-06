@@ -156,7 +156,7 @@ in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 **The whole chain is the main app's, not this tool's.** The tool is only
 useful if a look tuned here transfers, so nothing about the image is
 hand-matched: the shaders are the runtime's `shaders/milkyWay/sprites/`,
-`shaders/milkyWay/{sprites,field,sfMap}/`, `shaders/additiveUpsample/`,
+`shaders/milkyWay/{sprites,field,ismMap}/`, `shaders/additiveUpsample/`,
 `shaders/bloom/` and `shaders/compositor/` trees, symlinked into this tool's
 WESL root (see `wesl.toml`), and the post passes that drive them are the
 runtime's `createAdditiveUpsample`, `createBloomPyramid` and
@@ -204,18 +204,18 @@ this tool's pass chain is the app's pass chain exactly; moving one of those
 three knobs is a visible departure from parity, kept available because
 matching reference astrophotography sometimes wants it.
 
-## Measuring the SF map's percolation threshold
+## Measuring the ISM map's percolation threshold
 
-`npm run galaxy-renderer:percolation` drives `sfMapAutomatonStep.wesl` itself
+`npm run galaxy-renderer:percolation` drives `ismMapAutomatonStep.wesl` itself
 — same shader, same ping-pong parity, same constants packing as
-`createSfMapAutomatonRunner` — on its own compute-only page, with
+`createIsmMapAutomatonRunner` — on its own compute-only page, with
 `baseIgnition` and the arm forcing zeroed so a single seeded ignition can die
 out. It sweeps `spread` at several `gasRegen` / `refractorySteps` /
 `shearRate` settings and reports the survival probability, the steady-state
 active fraction, and the interpolated threshold. Flags: `--runs N`
 (single-seed runs per point), `--steps N`, `--json`, `--headed`. Findings
-live on `GalaxySfMapAutomatonParams`'s own fields and in
-[`docs/research/milky-way/sf-map.md`](../../docs/research/milky-way/sf-map.md).
+live on `GalaxyIsmMapAutomatonParams`'s own fields and in
+[`docs/research/milky-way/ism-map.md`](../../docs/research/milky-way/ism-map.md).
 
 ## Measuring performance
 

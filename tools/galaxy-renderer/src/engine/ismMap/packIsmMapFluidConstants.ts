@@ -1,33 +1,33 @@
 /**
- * packSfMapFluidConstants — the constants uniform every `sfMapFluidStep.wesl`
- * dispatch of one rebuild reads. THAT FILE'S `SfMapFluidConstants` IS THE
- * OFFSET AUTHORITY — see `packSfMapAutomatonConstants.ts`'s own header for
+ * packIsmMapFluidConstants — the constants uniform every `ismMapFluidStep.wesl`
+ * dispatch of one rebuild reads. THAT FILE'S `IsmMapFluidConstants` IS THE
+ * OFFSET AUTHORITY — see `packIsmMapAutomatonConstants.ts`'s own header for
  * why a wrong index is a silent failure, not a thrown one.
  *
  * 16 lanes for 16 members — `gatherOffset` (member 16) exactly fills the
  * buffer; the round-up-to-a-whole-row slack the automaton's own constants
  * packer still carries is gone here.
  */
-import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxySfMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
 
-/** Float count of `sfMapFluidStep.wesl`'s `SfMapFluidConstants` — 12 members, rounded up to a whole 16-byte row. */
-export const SF_MAP_FLUID_CONSTANTS_FLOATS = 16;
+/** Float count of `ismMapFluidStep.wesl`'s `IsmMapFluidConstants` — 12 members, rounded up to a whole 16-byte row. */
+export const ISM_MAP_FLUID_CONSTANTS_FLOATS = 16;
 
 /** Byte size of the constants struct, for `createBuffer`. */
-export const SF_MAP_FLUID_CONSTANTS_BUFFER_SIZE = SF_MAP_FLUID_CONSTANTS_FLOATS * 4;
+export const ISM_MAP_FLUID_CONSTANTS_BUFFER_SIZE = ISM_MAP_FLUID_CONSTANTS_FLOATS * 4;
 
-export type SfMapFluidConstantsInput = {
+export type IsmMapFluidConstantsInput = {
   /** The radius bounds THIS rebuild's grid spans — every ring index is read against them. */
-  readonly grid: GalaxySfMapGridRadius;
-  readonly fluid: GalaxySfMapFluidParams;
+  readonly grid: GalaxyIsmMapGridRadius;
+  readonly fluid: GalaxyIsmMapFluidParams;
 };
 
-export function packSfMapFluidConstants({
+export function packIsmMapFluidConstants({
   grid,
   fluid,
-}: SfMapFluidConstantsInput): Float32Array {
-  const out = new Float32Array(SF_MAP_FLUID_CONSTANTS_FLOATS);
+}: IsmMapFluidConstantsInput): Float32Array {
+  const out = new Float32Array(ISM_MAP_FLUID_CONSTANTS_FLOATS);
 
   out[0] = grid.rMin;
   out[1] = grid.rMax;

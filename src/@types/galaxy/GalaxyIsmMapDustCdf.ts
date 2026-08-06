@@ -1,13 +1,13 @@
 /**
- * GalaxySfMapDustCdf — `buildSfMapDustCdf`'s output: a prefix sum of the
+ * GalaxyIsmMapDustCdf — `buildIsmMapDustCdf`'s output: a prefix sum of the
  * caller's `density(texel, radius, angle) x texelArea` over every (ring, az)
- * texel of a `GalaxySfMap`, flattened `ring*az + azIdx` to match
- * `GalaxySfMap.data`'s
- * own row-major layout. `sampleSfMapDustCdf` binary-searches `prefix` to
+ * texel of a `GalaxyIsmMap`, flattened `ring*az + azIdx` to match
+ * `GalaxyIsmMap.data`'s
+ * own row-major layout. `sampleIsmMapDustCdf` binary-searches `prefix` to
  * place particles exactly proportional to the map's density — see
  * docs/research/m74-jwst/07-sprite-seeding.md S1.
  */
-export type GalaxySfMapDustCdf = {
+export type GalaxyIsmMapDustCdf = {
   readonly az: number;
   readonly rings: number;
   readonly rMin: number;

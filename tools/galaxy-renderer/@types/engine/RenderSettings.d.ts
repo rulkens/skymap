@@ -85,24 +85,24 @@ export type RenderSettings = {
    */
   readonly dustViewIntensity: number;
   /**
-   * SF-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
+   * ISM-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
    * log-polar output alone, same seam as `dustViewIntensity`. The automaton
    * seeds the dust placement and the orientation field, so this is the view
    * that says whether a fault in either starts here.
    */
-  readonly sfMapViewIntensity: number;
+  readonly ismMapViewIntensity: number;
   /**
    * Orientation-overlay crossfade weight: 0 = pure galaxy, 1 = the GPU
    * structure-tensor pass chain's coherence-scaled crest orientation alone,
-   * same seam as `sfMapViewIntensity`. Hue is the pitch angle (period π, so
+   * same seam as `ismMapViewIntensity`. Hue is the pitch angle (period π, so
    * it fills the full hue wheel — see `orientationPresent.wesl`), value is
    * coherence. One of the two things that keep the pass chain alive — see
    * `createGalaxyModel.ts`'s `orientationTexRebuild`; the other is
-   * `GalaxyDustTuning.sfMapSeeding`.
+   * `GalaxyDustTuning.ismMapSeeding`.
    */
   readonly orientationViewIntensity: number;
   /**
-   * Gaussian sigma, in sfMap grid texels, for the GPU orientation pass
+   * Gaussian sigma, in ismMap grid texels, for the GPU orientation pass
    * chain's field-smoothing stage (before the central-difference gradient).
    * Deliberately SMALLER than `orientationSigmaIntegTexels` — a structure
    * tensor wants a small derivative scale for noise suppression and a
@@ -113,7 +113,7 @@ export type RenderSettings = {
    */
   readonly orientationSigmaDerivTexels: number;
   /**
-   * Gaussian sigma, in sfMap grid texels, for the tensor-smoothing stage
+   * Gaussian sigma, in ismMap grid texels, for the tensor-smoothing stage
    * (after Jxx/Jxy/Jyy are built, before the coherence readout). See
    * `orientationSigmaDerivTexels` for why the two are separate knobs: one
    * sigma for both (this pass chain's CPU predecessor) floors coherence
@@ -121,39 +121,39 @@ export type RenderSettings = {
    */
   readonly orientationSigmaIntegTexels: number;
   /**
-   * SF-map channel weight, isolating `gas` (io.wesl's `sfMapChannels.x`):
+   * ISM-map channel weight, isolating `gas` (io.wesl's `ismMapChannels.x`):
    * unspent ISM fuel, 1 nearly everywhere on a quiet disc, driven to 0 by an
    * ignition and refilled over `1/gasRegen` steps. The palette's dimmest
    * channel (maxes at colour 0.25 vs `recentSf`'s 1.0), so zeroing the other
    * three is the only way to see it against them. Only reachable while
-   * `sfMapViewIntensity` is above 0.
+   * `ismMapViewIntensity` is above 0.
    */
-  readonly sfMapGasWeight: number;
+  readonly ismMapGasWeight: number;
   /**
-   * SF-map channel weight, isolating `recentSf` (io.wesl's
-   * `sfMapChannels.y`): `exp(-age/12)`, a cell that fired within roughly the
-   * last dozen steps. Only reachable while `sfMapViewIntensity` is above 0.
+   * ISM-map channel weight, isolating `recentSf` (io.wesl's
+   * `ismMapChannels.y`): `exp(-age/12)`, a cell that fired within roughly the
+   * last dozen steps. Only reachable while `ismMapViewIntensity` is above 0.
    */
-  readonly sfMapRecentWeight: number;
+  readonly ismMapRecentWeight: number;
   /**
-   * SF-map channel weight, isolating `activity` (io.wesl's
-   * `sfMapChannels.z`): the accumulated trace of every front that passed,
+   * ISM-map channel weight, isolating `activity` (io.wesl's
+   * `ismMapChannels.z`): the accumulated trace of every front that passed,
    * decayed per step by `activityDecay`. Only reachable while
-   * `sfMapViewIntensity` is above 0.
+   * `ismMapViewIntensity` is above 0.
    */
-  readonly sfMapActivityWeight: number;
+  readonly ismMapActivityWeight: number;
   /**
-   * SF-map channel weight, isolating the automaton's conserved dust channel
-   * (io.wesl's `sfMapChannels.w`, sourced from the packed texel's `.w` since
+   * ISM-map channel weight, isolating the automaton's conserved dust channel
+   * (io.wesl's `ismMapChannels.w`, sourced from the packed texel's `.w` since
    * 9aa9fe5d): swept dust, unclamped past ambient — rims legitimately
    * overshoot to the 8.0 ceiling. Scaled in linearly like the other three, so
    * lowering the weight is how the slider pulls rim overshoot back into a
    * readable range instead of it blowing out the debug view. Only reachable
-   * while `sfMapViewIntensity` is above 0.
+   * while `ismMapViewIntensity` is above 0.
    */
-  readonly sfMapDustWeight: number;
+  readonly ismMapDustWeight: number;
   /**
-   * SF-map SEEDING view weight — NOT a channel isolation like the four
+   * ISM-map SEEDING view weight — NOT a channel isolation like the four
    * above: it renders the exact composite density `dustParticleCloud.ts`'s
    * S1 CDF sampler consumes, `overshoot/meanOvershoot`, so placement can be
    * judged directly instead of inferred from raw channels — an ambient
@@ -162,13 +162,13 @@ export type RenderSettings = {
    * defaults to 0 (off) while the other four default to 1. The view shows
    * the density BEFORE texel-area weighting: the CDF multiplies by area, so
    * outer texels weigh more than they glow here. Only reachable while
-   * `sfMapViewIntensity` is above 0.
+   * `ismMapViewIntensity` is above 0.
    */
-  readonly sfMapSeedingViewWeight: number;
+  readonly ismMapSeedingViewWeight: number;
   /**
    * Bubble-view crossfade weight: 0 = pure galaxy, 1 = the SF-event
    * catalog's own bubble/cavity placements alone (dustBubblePlacements.ts),
-   * same seam as `sfMapViewIntensity`/`orientationViewIntensity`. That
+   * same seam as `ismMapViewIntensity`/`orientationViewIntensity`. That
    * catalog is a SECOND, independent star-formation model — resolved from
    * the same `sfEventCatalog.ts` events the SSPSF automaton never sees —
    * and this is the only way to compare the two side by side. Also this

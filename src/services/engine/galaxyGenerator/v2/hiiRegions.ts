@@ -7,7 +7,7 @@
  *
  * Flux is ADDITIVE and split across regions by their own `hiiLuminosityOf`
  * draw. PURITY INVARIANT: pure `(geometry, tuning, starFormation, seed,
- * sfMap) -> flat data`, same discipline as `sfEventCatalog.ts`. Drawn by
+ * ismMap) -> flat data`, same discipline as `sfEventCatalog.ts`. Drawn by
  * `createGalaxyEngine.ts` into its OWN target (`hiiTex`), never folded into
  * `galaxyFieldMixture.ts`'s output — see research doc §18.1: a shell sprite
  * is small and bright by construction, so sharing the smooth field's
@@ -26,16 +26,16 @@ import {
   armRidgeCurvePoint,
 } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
-import { sfMapGridRadius, SF_MAP_AZ, SF_MAP_RINGS } from './galaxyIsmMapArmForcing';
-import type { GalaxySfMapGridRadius } from './galaxyIsmMapArmForcing';
-import { buildGalaxySfMapFluidEvents, sfMapFluidEventWindow } from './galaxyIsmMapFluidEvents';
+import { ismMapGridRadius, ISM_MAP_AZ, ISM_MAP_RINGS } from './galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from './galaxyIsmMapArmForcing';
+import { buildGalaxyIsmMapFluidEvents, ismMapFluidEventWindow } from './galaxyIsmMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
-import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
+import { buildIsmMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
-import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
-import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleIsmMapEventPosition';
-import { sfMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
+import { sampleIsmMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
+import { sampleIsmMapEventPosition } from '../../../../utils/galaxy/sampleIsmMapEventPosition';
+import { ismMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
@@ -43,11 +43,11 @@ import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
-import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxyIsmMap';
-import type { GalaxySfMapDustCdf } from '../../../../@types/galaxy/GalaxyIsmMapDustCdf';
+import type { GalaxyIsmMap } from '../../../../@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMapDustCdf } from '../../../../@types/galaxy/GalaxyIsmMapDustCdf';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
-import type { SfMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEvent';
+import type { IsmMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
@@ -218,42 +218,42 @@ function candidateRegionsFromCatalog(
 /**
  * World centre of one fluid-sim event, resolved off its (az, ring) log-polar
  * grid coordinate — the SAME radius/angle -> world formula
- * `sampleSfMapEventPosition.ts` uses for its CDF-sampled placements
+ * `sampleIsmMapEventPosition.ts` uses for its CDF-sampled placements
  * (`x = r cos θ, y = warpHeight(r, θ), z = r sin θ`), just fed a texel-exact
  * (radius, angle) instead of a CDF-jittered one: a fluid event's own `az`/
- * `ring` already carries the sub-texel jitter `buildGalaxySfMapFluidEvents`
+ * `ring` already carries the sub-texel jitter `buildGalaxyIsmMapFluidEvents`
  * drew, so there is no second jitter draw to make here.
  */
 function fluidEventCenter(
-  event: SfMapFluidEvent,
+  event: IsmMapFluidEvent,
   geometry: GalaxyDescription,
-  grid: GalaxySfMapGridRadius,
+  grid: GalaxyIsmMapGridRadius,
 ): Vec3 {
-  const angle = (event.az * 2 * Math.PI) / SF_MAP_AZ;
-  const radius = sfMapRingRadius(event.ring, SF_MAP_RINGS, grid.rMin, grid.rMax);
+  const angle = (event.az * 2 * Math.PI) / ISM_MAP_AZ;
+  const radius = ismMapRingRadius(event.ring, ISM_MAP_RINGS, grid.rMin, grid.rMax);
   return [radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)];
 }
 
 /**
- * Candidates for `tuning.sfMap.generator === 'fluid'`: the fluid sim's own
+ * Candidates for `tuning.ismMap.generator === 'fluid'`: the fluid sim's own
  * event list, windowed to the ones STILL YOUNG at the end of the run
- * (`sfMapFluidEventWindow` at `step = fluid.steps` — the same
+ * (`ismMapFluidEventWindow` at `step = fluid.steps` — the same
  * `birthStep in (steps - impulseDuration, steps]` age test
- * `sfMapFluidStep.wesl` itself uses to decide an event is active), so region
+ * `ismMapFluidStep.wesl` itself uses to decide an event is active), so region
  * COUNT tracks `eventRate * impulseDuration` pre-cap instead of a parallel,
  * map-blind catalog.
  *
  * SEED CONTRACT: rebuilds the event list here rather than threading the
  * fluid runner's own array across the src/tools boundary — cheap
- * (`buildGalaxySfMapFluidEvents` is pure and capped at `SF_MAP_FLUID_MAX_EVENTS`)
+ * (`buildGalaxyIsmMapFluidEvents` is pure and capped at `ISM_MAP_FLUID_MAX_EVENTS`)
  * and avoids plumbing a live event list through every `hiiMixtureOf` call
- * site. This is sound ONLY because `createSfMapFluidRunner.ts`'s `rebuild`
+ * site. This is sound ONLY because `createIsmMapFluidRunner.ts`'s `rebuild`
  * and this module's caller (`buildHiiRegions`, via `createGalaxyModel.ts`'s
  * `hiiMixtureOf`) are handed the SAME seed bits: the runner gets
  * `currentSeed()` (`normalizeGenerationSeed(lastParams?.seed)`, signed
  * int32), this gets `geometry.seed` (the SAME value `>>> 0`-reinterpreted at
  * `describeGalaxy.ts`'s pack site) — both collapse to the identical int32
- * once XORed against `buildGalaxySfMapFluidEvents`' own salt, so the two
+ * once XORed against `buildGalaxyIsmMapFluidEvents`' own salt, so the two
  * calls reproduce the SAME event list. If either call site ever derives its
  * seed differently, this silently detaches HII placement from the sim.
  *
@@ -274,12 +274,12 @@ function candidateRegionsFromFluidEvents(
   seed: number,
   clusterCount: number,
 ): RegionPlan[] {
-  const fluid = tuning.sfMapFluid;
-  const events = buildGalaxySfMapFluidEvents(geometry, tuning, seed);
-  const { start, end } = sfMapFluidEventWindow(events, fluid.steps, fluid.impulseDuration);
+  const fluid = tuning.ismMapFluid;
+  const events = buildGalaxyIsmMapFluidEvents(geometry, tuning, seed);
+  const { start, end } = ismMapFluidEventWindow(events, fluid.steps, fluid.impulseDuration);
   if (start >= end) return [];
 
-  const grid = sfMapGridRadius(geometry);
+  const grid = ismMapGridRadius(geometry);
   const all: RegionPlan[] = [];
   for (let i = start; i < end; i++) {
     const event = events[i]!;
@@ -307,29 +307,29 @@ function planRegions(
 ): readonly RegionPlan[] {
   const clusterCount = tuning.hii.clusterStrength > 0 ? CLUSTER_SPRITE_COUNT : 0;
   const candidates =
-    tuning.sfMap.generator === 'fluid'
+    tuning.ismMap.generator === 'fluid'
       ? candidateRegionsFromFluidEvents(geometry, tuning, seed, clusterCount)
       : candidateRegionsFromCatalog(geometry, tuning, starFormation, seed, clusterCount);
   return admitBrightestFirst(candidates);
 }
 
 /** Dedicated rng stream salt for the map-position draws — distinct from "HII " (sprite scatter) and "DUST"/"ARMC". */
-const SF_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
+const ISM_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
 
 /**
- * Last-value memo for one of the three per-call `buildSfMapDustCdf` builds
+ * Last-value memo for one of the three per-call `buildIsmMapDustCdf` builds
  * below — each is an O(rings x az [x arms]) pass that a tuning drag outside
  * that tier's own discriminant (map identity, `armBias`, `arms.widthScale`)
- * leaves byte-identical, since `buildSfMapDustCdf` is a pure function of
- * exactly those inputs. `createGalaxyModel.ts` keeps `sfMap`/`geometry`
+ * leaves byte-identical, since `buildIsmMapDustCdf` is a pure function of
+ * exactly those inputs. `createGalaxyModel.ts` keeps `ismMap`/`geometry`
  * reference-stable across a `setFieldTuning` call that doesn't touch them,
  * so a single slot per tier is enough: only the CENTRAL galaxy's call ever
- * hands in a non-null `sfMap` (extras pass `null` and never reach these three
+ * hands in a non-null `ismMap` (extras pass `null` and never reach these three
  * builders), so nothing else contends for the slot within one rebuild. Sound
  * under ANY interleaving regardless — a key miss just rebuilds — so this can
  * only cost performance, never correctness.
  */
-type CachedCdf = { readonly key: readonly unknown[]; readonly cdf: GalaxySfMapDustCdf };
+type CachedCdf = { readonly key: readonly unknown[]; readonly cdf: GalaxyIsmMapDustCdf };
 
 function sameCdfKey(a: readonly unknown[], b: readonly unknown[]): boolean {
   return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
@@ -338,7 +338,7 @@ function sameCdfKey(a: readonly unknown[], b: readonly unknown[]): boolean {
 function cachedCdf(
   cache: CachedCdf | null,
   key: readonly unknown[],
-  build: () => GalaxySfMapDustCdf,
+  build: () => GalaxyIsmMapDustCdf,
 ): CachedCdf {
   return cache && sameCdfKey(cache.key, key) ? cache : { key, cdf: build() };
 }
@@ -346,52 +346,52 @@ function cachedCdf(
 let seedingCdfCache: CachedCdf | null = null;
 
 /**
- * applySfMapSeeding — a POST-PASS over `planRegions`' output rather than a
+ * applyIsmMapSeeding — a POST-PASS over `planRegions`' output rather than a
  * resolver threaded into it: admission (which events survive `HII_MAX_COUNT`)
  * depends only on luminosity, never on where an event ends up, so replacing
  * `center` afterward changes nothing about which regions exist — it keeps
- * `planRegions` pure and the `sfMapSeeding === 0` path byte-identical, with
+ * `planRegions` pure and the `ismMapSeeding === 0` path byte-identical, with
  * no seeding-aware branch inside the admission logic itself.
  *
  * FIXED 4 draws per kept region (1 blend decision + 3 from
- * `sampleSfMapEventPosition`'s CDF sample) whether or not that region takes
- * the map path — `sampleSfMapEventPosition` runs unconditionally below — so
- * moving the `sfMapSeeding` slider only ever changes which regions swap
+ * `sampleIsmMapEventPosition`'s CDF sample) whether or not that region takes
+ * the map path — `sampleIsmMapEventPosition` runs unconditionally below — so
+ * moving the `ismMapSeeding` slider only ever changes which regions swap
  * centres, never the rng draws (and hence positions) of the ones that don't.
  *
- * Weighted by `recentSf` alone, not `sfMapDustDensity`'s `gas x activity`:
+ * Weighted by `recentSf` alone, not `ismMapDustDensity`'s `gas x activity`:
  * ignition zeroes gas and age in the same cell, so this is anti-correlated
  * with the dust CDF by construction — knots avoid the dust the automaton
  * just cleared, the same decorrelation M74 shows (Chevance+2020).
  *
- * NEVER called for `tuning.sfMap.generator === 'fluid'` regions (see
+ * NEVER called for `tuning.ismMap.generator === 'fluid'` regions (see
  * `buildHiiRegions`'s call site) — a fluid region's centre already IS a map
  * position (`candidateRegionsFromFluidEvents`'s own log-polar transform), so
  * re-jittering it onto this CDF would undo the exact placement-sim
  * correlation the fluid path exists to create, not refine it.
  */
-function applySfMapSeeding(
+function applyIsmMapSeeding(
   regions: readonly RegionPlan[],
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
-  sfMap: GalaxySfMap | null,
+  ismMap: GalaxyIsmMap | null,
   seed: number,
 ): readonly RegionPlan[] {
-  const weight = tuning.hii.sfMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
-  if (weight <= 0 || !sfMap || regions.length === 0) return regions;
+  const weight = tuning.hii.ismMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
+  if (weight <= 0 || !ismMap || regions.length === 0) return regions;
 
   // `recentSf` alone, no tuning input at all — this CDF's only discriminant
-  // is the map itself, so the cache key is just `sfMap`.
-  seedingCdfCache = cachedCdf(seedingCdfCache, [sfMap], () =>
-    buildSfMapDustCdf(sfMap, (texel) => texel.recentSf),
+  // is the map itself, so the cache key is just `ismMap`.
+  seedingCdfCache = cachedCdf(seedingCdfCache, [ismMap], () =>
+    buildIsmMapDustCdf(ismMap, (texel) => texel.recentSf),
   );
   const cdf = seedingCdfCache.cdf;
   if (!(cdf.total > 0)) return regions;
 
-  const rng = mulberry32(seed ^ SF_MAP_POSITION_SALT);
+  const rng = mulberry32(seed ^ ISM_MAP_POSITION_SALT);
   return regions.map((region) => {
     const takeMap = rng() < weight;
-    const mapCenter = sampleSfMapEventPosition(cdf, geometry, rng);
+    const mapCenter = sampleIsmMapEventPosition(cdf, geometry, rng);
     return takeMap ? { ...region, center: mapCenter } : region;
   });
 }
@@ -421,9 +421,9 @@ type DigSeedFrame = {
 function placeDigMapComplex(
   rng: () => number,
   geometry: GalaxyDescription,
-  cdf: GalaxySfMapDustCdf,
+  cdf: GalaxyIsmMapDustCdf,
 ): DigSeedFrame {
-  const { radius, angle } = sampleSfMapDustCdf(cdf, rng);
+  const { radius, angle } = sampleIsmMapDustCdf(cdf, rng);
   const point: Vec3 = [radius * Math.cos(angle), 0, radius * Math.sin(angle)];
   const surf = warpSurfaceFrame(radius, angle, geometry);
   return { point, along: surf.along, across: surf.across, pole: surf.pole };
@@ -434,7 +434,7 @@ function placeDigMapComplex(
  * angle) point sits to ANY arm's ridge, age-weighted the way the arm-lane
  * picker this replaced used to weight WHICH arm to draw from
  * (`armAgeWeight`). Radius-keyed memo rather than a caller-driven per-ring
- * table: `buildSfMapDustCdf`'s own loop is ring-major (the same radius
+ * table: `buildIsmMapDustCdf`'s own loop is ring-major (the same radius
  * repeats `az` times before the next ring), so caching on "radius changed
  * since the last call" gets the one-recompute-per-ring cost without this
  * function needing to know a ring loop drives it.
@@ -559,16 +559,16 @@ let digCdfCache: CachedCdf | null = null;
 function buildDigVeil(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
-  sfMap: GalaxySfMap | null,
+  ismMap: GalaxyIsmMap | null,
   shellFluxSum: number,
   seed: number,
 ): readonly GalaxyFieldComponent[] {
   // Stale-stored-tuning guard: a preset saved before this knob existed
   // carries an `hii` section with no `dig` object at all — missing means
   // DIG OFF, the same "undefined = pre-feature stored tuning" discipline
-  // `applySfMapSeeding` uses for `sfMapSeeding` just above.
+  // `applyIsmMapSeeding` uses for `ismMapSeeding` just above.
   const dig = tuning.hii.dig;
-  if (!dig || !sfMap) return [];
+  if (!dig || !ismMap) return [];
   const fraction = Math.min(0.999, Math.max(0, dig.fraction));
   if (fraction <= 0 || !(dig.elongation > 0)) return [];
 
@@ -579,9 +579,9 @@ function buildDigVeil(
   // cache miss, so a `complexes`/`elongation`/`coherence`/`texture` drag
   // (this tier's actually-common sliders) skips both the envelope setup AND
   // the CDF's O(rings x az x arms) sweep.
-  digCdfCache = cachedCdf(digCdfCache, [sfMap, geometry, tuning.arms.widthScale, armBias], () => {
+  digCdfCache = cachedCdf(digCdfCache, [ismMap, geometry, tuning.arms.widthScale, armBias], () => {
     const envelope = buildArmProximityEnvelope(geometry, tuning);
-    return buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
+    return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
       armBiasedDensity(texel.activity, armBias, envelope, radius, angle),
     );
   });
@@ -703,21 +703,21 @@ let assnCdfCache: CachedCdf | null = null;
 function buildBlueAssociations(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
-  sfMap: GalaxySfMap | null,
+  ismMap: GalaxyIsmMap | null,
   clusterFluxSum: number,
   seed: number,
 ): readonly GalaxyFieldComponent[] {
   // Stale-stored-tuning guard, same discipline `buildDigVeil` uses for `dig`.
   const assn = tuning.hii.associations;
-  if (!assn || !sfMap) return [];
+  if (!assn || !ismMap) return [];
   const brightness = Math.max(0, assn.brightness);
   if (brightness <= 0) return [];
 
   const armBias = Math.min(1, Math.max(0, assn.armBias));
   // Same memoization `buildDigVeil` applies, own cache slot — see its comment.
-  assnCdfCache = cachedCdf(assnCdfCache, [sfMap, geometry, tuning.arms.widthScale, armBias], () => {
+  assnCdfCache = cachedCdf(assnCdfCache, [ismMap, geometry, tuning.arms.widthScale, armBias], () => {
     const envelope = buildArmProximityEnvelope(geometry, tuning);
-    return buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
+    return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
       armBiasedDensity(
         associationDensity(texel.gas, texel.recentSf, texel.activity),
         armBias,
@@ -802,7 +802,7 @@ export function buildHiiRegions(
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
-  sfMap: GalaxySfMap | null,
+  ismMap: GalaxyIsmMap | null,
 ): readonly GalaxyFieldComponent[] {
   if (!tuning.hii.enabled || tuning.hii.brightness <= 0 || tuning.hii.radiusScale <= 0) {
     return [];
@@ -810,8 +810,8 @@ export function buildHiiRegions(
   // `numArms`/`sfActivity` only gate the arm-ridge catalog path — the fluid
   // event window has neither dependency (a fluid run can legitimately place
   // events off the arm-forcing floor bias with zero arms, and its count
-  // comes from `sfMapFluid.eventRate`, never `starFormation.sfActivity`).
-  const isFluid = tuning.sfMap.generator === 'fluid';
+  // comes from `ismMapFluid.eventRate`, never `starFormation.sfActivity`).
+  const isFluid = tuning.ismMap.generator === 'fluid';
   if (!isFluid && (geometry.numArms <= 0 || starFormation.sfActivity <= 0)) {
     return [];
   }
@@ -819,11 +819,11 @@ export function buildHiiRegions(
   const candidateRegions = planRegions(geometry, tuning, starFormation, seed);
   if (candidateRegions.length === 0) return [];
   // Fluid-sourced regions skip the map-seeding post-pass entirely — see
-  // `applySfMapSeeding`'s own header for why re-jittering them would be a
+  // `applyIsmMapSeeding`'s own header for why re-jittering them would be a
   // regression, not a refinement.
   const regions = isFluid
     ? candidateRegions
-    : applySfMapSeeding(candidateRegions, geometry, tuning, sfMap, seed);
+    : applyIsmMapSeeding(candidateRegions, geometry, tuning, ismMap, seed);
 
   let luminositySum = 0;
   for (const region of regions) luminositySum += region.luminosity;
@@ -842,7 +842,7 @@ export function buildHiiRegions(
   const rng = mulberry32(seed ^ 0x48494920); // "HII "
   const clusterShare =
     Math.min(1, Math.max(0, tuning.hii.clusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
-  // Stale-stored-tuning guard, same discipline `sfMapSeeding` uses just
+  // Stale-stored-tuning guard, same discipline `ismMapSeeding` uses just
   // above: a preset saved before this knob existed carries no `texture` key.
   const shellTextureWeight = tuning.hii.texture ?? 0;
   const out: GalaxyFieldComponent[] = [];
@@ -909,7 +909,7 @@ export function buildHiiRegions(
   // complex/children structure, own rng stream), so `dig` never perturbs
   // which regions were admitted or where they sit. See `buildDigVeil`'s own
   // header for the gating and flux-anchoring discipline.
-  for (const component of buildDigVeil(geometry, tuning, sfMap, shellFluxSum, seed)) {
+  for (const component of buildDigVeil(geometry, tuning, ismMap, shellFluxSum, seed)) {
     out.push(component);
   }
 
@@ -917,7 +917,7 @@ export function buildHiiRegions(
   // regions and the DIG veil (its own complex/children structure, own rng
   // stream). See `buildBlueAssociations`'s own header for the gating and
   // flux-anchoring discipline.
-  for (const component of buildBlueAssociations(geometry, tuning, sfMap, clusterFluxSum, seed)) {
+  for (const component of buildBlueAssociations(geometry, tuning, ismMap, clusterFluxSum, seed)) {
     out.push(component);
   }
 

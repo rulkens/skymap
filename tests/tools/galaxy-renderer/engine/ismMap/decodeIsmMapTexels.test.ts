@@ -1,5 +1,5 @@
 /**
- * decodeSfMapTexels — pins the two interleaved strides against each other:
+ * decodeIsmMapTexels — pins the two interleaved strides against each other:
  * the padded row stride (bytesPerRow, WebGPU-aligned) vs the 4-lanes-per-texel
  * step within a row. A row-stride bug reads the next row's padding instead of
  * its texels, so the fixture pads each row with a distinguishable extra
@@ -7,11 +7,11 @@
  * ALL four lanes are kept (dust lives in .w).
  */
 import { describe, expect, it } from 'vitest';
-import { decodeSfMapTexels } from '../../../../../tools/galaxy-renderer/src/engine/ismMap/decodeIsmMapTexels';
+import { decodeIsmMapTexels } from '../../../../../tools/galaxy-renderer/src/engine/ismMap/decodeIsmMapTexels';
 import { floatToF16 } from '../../../../../src/utils/math/floatToF16';
 import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
 
-describe('decodeSfMapTexels', () => {
+describe('decodeIsmMapTexels', () => {
   it('reads all four lanes of each texel at the padded row stride, skipping padding', () => {
     const az = 2;
     const rings = 2;
@@ -51,7 +51,7 @@ describe('decodeSfMapTexels', () => {
       padded[padBase + 3] = floatToF16(-1);
     }
 
-    const out = decodeSfMapTexels(padded, paddedBytesPerRow, az, rings);
+    const out = decodeIsmMapTexels(padded, paddedBytesPerRow, az, rings);
     expect(out.length).toBe(az * rings * 4);
     const rounded = Array.from(out).map((v) => Math.round(v * 100) / 100);
     expect(rounded).toEqual([
@@ -76,7 +76,7 @@ describe('decodeSfMapTexels', () => {
       padded[1] = floatToF16(recentSf);
       padded[2] = floatToF16(activity);
       padded[3] = floatToF16(dust);
-      const out = decodeSfMapTexels(padded, paddedBytesPerRow, az, rings);
+      const out = decodeIsmMapTexels(padded, paddedBytesPerRow, az, rings);
       const reference = [gas, recentSf, activity, dust].map((v) => f16ToFloat(floatToF16(v)));
       for (let i = 0; i < 4; i++) {
         if (Number.isNaN(reference[i])) {

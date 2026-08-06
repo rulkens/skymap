@@ -5,4 +5,4 @@
  * error until it has a row.
  */
 
-export type DebugViewKind = 'dust' | 'sfMap' | 'orientation' | 'bubble';
+export type DebugViewKind = 'dust' | 'ismMap' | 'orientation' | 'bubble';

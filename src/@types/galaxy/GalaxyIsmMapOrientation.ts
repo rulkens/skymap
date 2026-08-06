@@ -1,13 +1,13 @@
 /**
- * GalaxySfMapOrientation — one CPU-side readback of `orientationTex`
- * (`sfMapOrientationCoherence.wesl`'s output), same log-polar grid shape as
- * `GalaxySfMap`. `data` packs the DOUBLE-ANGLE vector `(cos 2θ, sin 2θ)`
+ * GalaxyIsmMapOrientation — one CPU-side readback of `orientationTex`
+ * (`ismMapOrientationCoherence.wesl`'s output), same log-polar grid shape as
+ * `GalaxyIsmMap`. `data` packs the DOUBLE-ANGLE vector `(cos 2θ, sin 2θ)`
  * scaled by coherence per texel (length `az*rings*2`), never a bare angle —
  * orientation wraps at π (a filament has no head/tail), and only the
  * double-angle form survives interpolation/blending without a false
- * zero-crossing at that wrap. Read by `sampleSfMapOrientation`.
+ * zero-crossing at that wrap. Read by `sampleIsmMapOrientation`.
  */
-export type GalaxySfMapOrientation = {
+export type GalaxyIsmMapOrientation = {
   readonly az: number;
   readonly rings: number;
   readonly rMin: number;

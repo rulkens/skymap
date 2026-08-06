@@ -28,7 +28,7 @@ export type GalaxyDustCloudParams = {
   /** Shapes the erosion noise about its own midpoint — 1 = identity, higher = harder filament edges (dustMap.wesl's `dustNoiseMultiplier`). */
   readonly textureContrast: number;
   /**
-   * S4 strength — how strongly the SF map's detail ratio (map density over
+   * S4 strength — how strongly the ISM map's detail ratio (map density over
    * its 8-texel blur) modulates each cloud's column at accumulation
    * (dustMap.wesl via the header's dustDetail lane). 0 disables the whole
    * path (the shader skips it), 1 = full ratio, up to 2 extrapolates.
@@ -47,8 +47,8 @@ export type GalaxyDustCloudParams = {
    * structural envelope term this cap never touches — see
    * `buildDustParticleCloud`'s own placement comment for why a global cap
    * would let the outer disc's sheer texel count win a contrast fight
-   * against the inner disc. The SF-map "seeding" debug view
-   * (sfMapPresent.wesl) applies the same `min()` against the same per-ring
+   * against the inner disc. The ISM-map "seeding" debug view
+   * (ismMapPresent.wesl) applies the same `min()` against the same per-ring
    * means, so the view never drifts from what placement caps.
    */
   readonly dustPlacementCap: number;

@@ -108,8 +108,8 @@ function makeFakeEngine(blackOnCall?: number): {
     })),
     grab,
     getCamera: vi.fn<GalaxyEngineHandle['getCamera']>(() => ({ az: 0, el: 0, dist: 1 })),
-    getSfMapTexture: vi.fn<GalaxyEngineHandle['getSfMapTexture']>(),
-    getSfMapData: vi.fn<GalaxyEngineHandle['getSfMapData']>(),
+    getIsmMapTexture: vi.fn<GalaxyEngineHandle['getIsmMapTexture']>(),
+    getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, setParams, grab };

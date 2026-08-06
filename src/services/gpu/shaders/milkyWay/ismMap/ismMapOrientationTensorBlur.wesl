@@ -1,19 +1,19 @@
-// milkyWay/sfMap/sfMapOrientationTensorBlur.wesl — stage 3: separable
-// Gaussian blur (sigmaInteg — see sfMapOrientationLib.wesl's struct comment
+// milkyWay/ismMap/ismMapOrientationTensorBlur.wesl — stage 3: separable
+// Gaussian blur (sigmaInteg — see ismMapOrientationLib.wesl's struct comment
 // on why it differs from stage 1's sigmaDeriv) of the packed (Jxx,Jxy,Jyy)
 // tensor, all three channels through ONE pass per axis — the main
 // structural win over the deleted CPU builder's six single-channel passes.
-// Same wrap/clamp asymmetry as sfMapOrientationField.wesl.
+// Same wrap/clamp asymmetry as ismMapOrientationField.wesl.
 
-import package::milkyWay::sfMap::sfMapOrientationLib::SfMapOrientationSigma;
-import package::milkyWay::sfMap::sfMapOrientationLib::wrapIndex;
-import package::milkyWay::sfMap::sfMapOrientationLib::clampIndex;
-import package::milkyWay::sfMap::sfMapOrientationLib::gaussianTap;
-import package::milkyWay::sfMap::sfMapOrientationLib::kernelRadius;
+import package::milkyWay::ismMap::ismMapOrientationLib::IsmMapOrientationSigma;
+import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;
+import package::milkyWay::ismMap::ismMapOrientationLib::clampIndex;
+import package::milkyWay::ismMap::ismMapOrientationLib::gaussianTap;
+import package::milkyWay::ismMap::ismMapOrientationLib::kernelRadius;
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>;
 @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(2) var<uniform> sigma: SfMapOrientationSigma;
+@group(0) @binding(2) var<uniform> sigma: IsmMapOrientationSigma;
 
 @compute @workgroup_size(16, 16)
 fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {

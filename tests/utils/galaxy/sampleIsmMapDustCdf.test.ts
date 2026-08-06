@@ -6,36 +6,36 @@
  * the area weighting the old rejection sampler didn't need).
  */
 import { describe, expect, it } from 'vitest';
-import { buildSfMapDustCdf } from '../../../src/utils/galaxy/buildIsmMapDustCdf';
-import { sampleSfMapDustCdf } from '../../../src/utils/galaxy/sampleIsmMapDustCdf';
-import { sfMapDustDensity } from '../../../src/utils/galaxy/ismMapDustDensity';
-import { sfMapDustRingEdges } from '../../../src/utils/galaxy/ismMapDustRingEdges';
+import { buildIsmMapDustCdf } from '../../../src/utils/galaxy/buildIsmMapDustCdf';
+import { sampleIsmMapDustCdf } from '../../../src/utils/galaxy/sampleIsmMapDustCdf';
+import { ismMapDustDensity } from '../../../src/utils/galaxy/ismMapDustDensity';
+import { ismMapDustRingEdges } from '../../../src/utils/galaxy/ismMapDustRingEdges';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
-import type { GalaxySfMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
 
 /** Every fixture here only fills gas/activity, so this is dust's own density exactly. */
-const buildCdf = (map: GalaxySfMap) =>
-  buildSfMapDustCdf(map, (texel) => sfMapDustDensity(texel.gas, texel.activity));
+const buildCdf = (map: GalaxyIsmMap) =>
+  buildIsmMapDustCdf(map, (texel) => ismMapDustDensity(texel.gas, texel.activity));
 
 const AZ = 4;
 const RINGS = 4;
 const R_MIN = 1;
 const R_MAX = 8;
 
-function makeMap(fill: (data: Float32Array) => void): GalaxySfMap {
+function makeMap(fill: (data: Float32Array) => void): GalaxyIsmMap {
   const data = new Float32Array(RINGS * AZ * 4);
   fill(data);
   return { az: AZ, rings: RINGS, rMin: R_MIN, rMax: R_MAX, data };
 }
 
-/** `sfMapDustDensity` reads gas (R) x activity (B); set both to the same level. */
+/** `ismMapDustDensity` reads gas (R) x activity (B); set both to the same level. */
 function setDensity(data: Float32Array, ring: number, azIdx: number, density: number): void {
   const i = (ring * AZ + azIdx) * 4;
   data[i] = density;
   data[i + 2] = density;
 }
 
-describe('sampleSfMapDustCdf', () => {
+describe('sampleIsmMapDustCdf', () => {
   it('confines every draw to a single hot texel', () => {
     const ring = 2;
     const azIdx = 1;
@@ -43,13 +43,13 @@ describe('sampleSfMapDustCdf', () => {
     const cdf = buildCdf(map);
     const rng = mulberry32(7);
 
-    const { rInner, rOuter } = sfMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);
+    const { rInner, rOuter } = ismMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);
     const dTheta = (2 * Math.PI) / AZ;
     const angleInner = azIdx * dTheta;
     const angleOuter = angleInner + dTheta;
 
     for (let i = 0; i < 200; i++) {
-      const { radius, angle } = sampleSfMapDustCdf(cdf, rng);
+      const { radius, angle } = sampleIsmMapDustCdf(cdf, rng);
       expect(radius).toBeGreaterThanOrEqual(rInner);
       expect(radius).toBeLessThanOrEqual(rOuter);
       expect(angle).toBeGreaterThanOrEqual(angleInner);
@@ -68,8 +68,8 @@ describe('sampleSfMapDustCdf', () => {
     const cdf = buildCdf(map);
     const rng = mulberry32(11);
 
-    const edgesA = sfMapDustRingEdges(0, RINGS, R_MIN, R_MAX);
-    const edgesB = sfMapDustRingEdges(3, RINGS, R_MIN, R_MAX);
+    const edgesA = ismMapDustRingEdges(0, RINGS, R_MIN, R_MAX);
+    const edgesB = ismMapDustRingEdges(3, RINGS, R_MIN, R_MAX);
     const areaA = 0.5 * ((2 * Math.PI) / AZ) * (edgesA.rOuter ** 2 - edgesA.rInner ** 2);
     const areaB = 0.5 * ((2 * Math.PI) / AZ) * (edgesB.rOuter ** 2 - edgesB.rInner ** 2);
     const expectedFracA = areaA / (areaA + areaB);
@@ -78,7 +78,7 @@ describe('sampleSfMapDustCdf', () => {
     const N = 4000;
     let countA = 0;
     for (let i = 0; i < N; i++) {
-      const { radius } = sampleSfMapDustCdf(cdf, rng);
+      const { radius } = sampleIsmMapDustCdf(cdf, rng);
       if (radius <= edgesA.rOuter) countA++;
     }
     expect(countA / N).toBeCloseTo(expectedFracA, 1);

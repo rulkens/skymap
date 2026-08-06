@@ -1,7 +1,7 @@
 .root {
 }
 
-/* Same small-caps treatment as SF MAP's own readout header, plus a top rule
+/* Same small-caps treatment as the ISM section's own readout header, plus a top rule
    since this sits between sliders rather than above a readout block. No
    rule/margin when this group is the FIRST child of its container, so a
    section body doesn't open with a floating divider line right under the

@@ -1,15 +1,15 @@
 /**
- * GalaxySfMapParams — the shared-contract switch both SF-map generators sit
+ * GalaxyIsmMapParams — the shared-contract switch both ISM-map generators sit
  * behind: which pipeline writes the map, if any (`'none'` replaces the old
- * separate `enabled` flag — see `GalaxySfMapGeneratorKind`). Deliberately
+ * separate `enabled` flag — see `GalaxyIsmMapGeneratorKind`). Deliberately
  * carries NO generator-specific fields — those live in
- * `GalaxySfMapAutomatonParams` (`GalaxyFieldTuning.sfMapAutomaton`) and
- * `GalaxySfMapFluidParams` (`GalaxyFieldTuning.sfMapFluid`), symmetrically
+ * `GalaxyIsmMapAutomatonParams` (`GalaxyFieldTuning.ismMapAutomaton`) and
+ * `GalaxyIsmMapFluidParams` (`GalaxyFieldTuning.ismMapFluid`), symmetrically
  * named, neither one the unmarked default. `generator` is the ONLY branch
- * point (`createSfMapGenerator.ts`'s dispatcher reads it, nothing else does).
+ * point (`createIsmMapGenerator.ts`'s dispatcher reads it, nothing else does).
  */
-import type { GalaxySfMapGeneratorKind } from './GalaxyIsmMapGeneratorKind';
+import type { GalaxyIsmMapGeneratorKind } from './GalaxyIsmMapGeneratorKind';
 
-export type GalaxySfMapParams = {
-  readonly generator: GalaxySfMapGeneratorKind;
+export type GalaxyIsmMapParams = {
+  readonly generator: GalaxyIsmMapGeneratorKind;
 };

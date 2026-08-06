@@ -1,11 +1,11 @@
 /**
- * sfMapDustDensity — a texel's `gas * activity` product, where `activity` is
+ * ismMapDustDensity — a texel's `gas * activity` product, where `activity` is
  * the automaton's ACCUMULATED trace, not `recentSf`. FORMERLY dust
  * placement's own density and its S3 survival filter's criterion; both now
  * key off the swept `dust` channel's overshoot instead
  * (`sweptDustOvershoot`, see `dustParticleCloud.ts`'s header for why). This
- * stays as a mass-weighting metric for `sfMapActivityHistogramHarness.ts`'s
- * debug stats, and as a two-channel density fixture in `buildSfMapDustCdf`'s
+ * stays as a mass-weighting metric for `ismMapActivityHistogramHarness.ts`'s
+ * debug stats, and as a two-channel density fixture in `buildIsmMapDustCdf`'s
  * own tests.
  *
  * `recentSf` cannot substitute for `activity` here: igniting sets `gas = 0`
@@ -20,6 +20,6 @@
  * disc, so any weight below 1 turns it into a near-uniform acceptance
  * pedestal. The blend has one correct value, so there is no knob.
  */
-export function sfMapDustDensity(gas: number, activity: number): number {
+export function ismMapDustDensity(gas: number, activity: number): number {
   return gas * activity;
 }

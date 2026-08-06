@@ -1,13 +1,13 @@
-// milkyWay/sfMap/sfMapAutomatonStep.wesl — one generation of the SSPSF
+// milkyWay/ismMap/ismMapAutomatonStep.wesl — one generation of the SSPSF
 // cellular automaton (Gerola & Seiden 1978, ApJ 223, 129) on a fixed
-// log-polar grid. Renamed from sfMapStep.wesl now that a second, independent
-// generator exists (sfMapFluidStep.wesl) — see that file's header for the
+// log-polar grid. Renamed from ismMapStep.wesl now that a second, independent
+// generator exists (ismMapFluidStep.wesl) — see that file's header for the
 // alternative. State (x=gas, y=eventAge, z=activity, w=dust — see
-// GalaxySfMap.ts's contract table) ping-pongs between two storage textures;
+// GalaxyIsmMap.ts's contract table) ping-pongs between two storage textures;
 // the automaton runner dispatches one 'cs' per step, in ONE compute pass,
 // never per frame. MATERIAL (Lagrangian) frame: a cell's state lives at its
 // own texel forever, never resampled (see selfState below) — only the
-// neighbour lookup and arm-forcing sample drift with shear. sfMapPack.wesl
+// neighbour lookup and arm-forcing sample drift with shear. ismMapPack.wesl
 // un-shears back to world coordinates once, at the end. Grid is UNIFORM
 // log-polar (1536 az x 512 ring), not Gerola & Seiden's own equal-area cells.
 //
@@ -18,9 +18,9 @@
 // transports. Dust (w) is NEVER clamped — colliding shells summing past
 // ambient IS the rim/filament feature, not overflow to correct.
 
-import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;
+import package::milkyWay::ismMap::ismMapShear::ismMapShearTexels;
 
-struct SfMapConstants {
+struct IsmMapConstants {
   rMin: f32,
   rMax: f32,
   corotationRadius: f32,
@@ -32,7 +32,7 @@ struct SfMapConstants {
   refractorySteps: f32,
   seed: f32,
   armFluxRef: f32,
-  // 'activity' trace decay/gain — see GalaxySfMapAutomatonParams.ts for
+  // 'activity' trace decay/gain — see GalaxyIsmMapAutomatonParams.ts for
   // the steady-state derivation; formerly baked-in consts, now sliders.
   activityDecay: f32,
   activityGain: f32,
@@ -49,33 +49,33 @@ struct SfMapConstants {
 const DUST_OVERSHOOT_CEILING: f32 = 8.0;
 
 // The ambient dust pedestal every texel is seeded to at step 0 (see the
-// genStep == 0 branch below) — mirrors SF_MAP_AMBIENT_DUST in
+// genStep == 0 branch below) — mirrors ISM_MAP_AMBIENT_DUST in
 // sweptDustOvershoot.ts, parity-tested in constants.parity.test.ts.
-const SF_MAP_AMBIENT_DUST: f32 = 1.0;
+const ISM_MAP_AMBIENT_DUST: f32 = 1.0;
 
 // A single scalar, but its own struct/binding: it is the one uniform that
 // varies per dispatch, given a STATIC (non-dynamic) offset into a buffer
-// holding every step's index — rebuildSfMap writes that buffer ONCE, before
+// holding every step's index — rebuildIsmMap writes that buffer ONCE, before
 // any dispatch, and binds a fresh bind group per step rather than rewriting
 // one shared location N times (which queue-ordering would collapse to the
-// LAST step's value for every dispatch — see rebuildSfMap's own comment).
-struct SfMapStepIndex {
+// LAST step's value for every dispatch — see rebuildIsmMap's own comment).
+struct IsmMapStepIndex {
   step: f32,
 }
 
-@group(0) @binding(0) var<uniform> u: SfMapConstants;
+@group(0) @binding(0) var<uniform> u: IsmMapConstants;
 @group(0) @binding(1) var armForcingTex: texture_2d<f32>;
 @group(0) @binding(2) var prevTex: texture_2d<f32>;
 @group(0) @binding(3) var nextTex: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(4) var<uniform> stepIdx: SfMapStepIndex;
+@group(0) @binding(4) var<uniform> stepIdx: IsmMapStepIndex;
 
-// Thin wrapper over the shared module: sfMapPack.wesl's un-shear imports the
+// Thin wrapper over the shared module: ismMapPack.wesl's un-shear imports the
 // SAME function, so the two passes cannot silently disagree on what a
 // texel of shear means. ringCount/azCount come from textureDimensions(nextTex)
 // in cs() below — the grid size lives ONLY in the texture, never a WGSL
-// const (sfMapShear.wesl's own precedent: params, not baked in).
+// const (ismMapShear.wesl's own precedent: params, not baked in).
 fn shearTexels(ring: u32, ringCount: u32, azCount: u32) -> f32 {
-  return sfMapShearTexels(ring, ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearRate);
+  return ismMapShearTexels(ring, ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearRate);
 }
 
 fn wrapAz(azF: f32, azCount: u32) -> f32 {
@@ -137,7 +137,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // same simplification as the flat gas seed; a radial disc profile is
   // future work, see 06-ca-dust-channel-sketch.md landmine 4).
   if (genStep == 0u) {
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, 0.0, SF_MAP_AMBIENT_DUST));
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, 0.0, ISM_MAP_AMBIENT_DUST));
     return;
   }
 

@@ -1,6 +1,6 @@
 /**
  * DebugViewsSection — the four debug-view crossfade sliders, each interleaved
- * with the knobs that only matter while it is up (the SF map's three channel
+ * with the knobs that only matter while it is up (the ISM map's three channel
  * isolations, the orientation chain's two sigmas). Each view slider is a
  * weight in [0,1]: 0 is pure galaxy, 1 the debug layer alone, and the four
  * blend independently — `RenderSettings` carries the crossfade contract.
@@ -52,69 +52,69 @@ function DebugViewsSection(): ReactNode {
           info={DEBUG_VIEWS.dust.info}
         />
         <ParamSlider
-          label={DEBUG_VIEWS.sfMap.label}
-          value={render.sfMapViewIntensity}
+          label={DEBUG_VIEWS.ismMap.label}
+          value={render.ismMapViewIntensity}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ sfMapViewIntensity: v }))}
-          path="render.sfMapViewIntensity"
-          info={DEBUG_VIEWS.sfMap.info}
+          onChange={(v) => dispatch(renderPatched({ ismMapViewIntensity: v }))}
+          path="render.ismMapViewIntensity"
+          info={DEBUG_VIEWS.ismMap.info}
         />
         <ParamSlider
-          label="SF map · gas"
-          value={render.sfMapGasWeight}
+          label="ISM map · gas"
+          value={render.ismMapGasWeight}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ sfMapGasWeight: v }))}
-          path="render.sfMapGasWeight"
+          onChange={(v) => dispatch(renderPatched({ ismMapGasWeight: v }))}
+          path="render.ismMapGasWeight"
           info="Isolates the gas channel: unspent ISM fuel, driven to 0 by an ignition and refilled over 1/gasRegen steps. The palette's dimmest colour by a wide margin — zero the other three to see it at all."
         />
         <ParamSlider
-          label="SF map · recent SF"
-          value={render.sfMapRecentWeight}
+          label="ISM map · recent SF"
+          value={render.ismMapRecentWeight}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ sfMapRecentWeight: v }))}
-          path="render.sfMapRecentWeight"
+          onChange={(v) => dispatch(renderPatched({ ismMapRecentWeight: v }))}
+          path="render.ismMapRecentWeight"
           info="Isolates the recentSf channel: exp(-age/12), a cell that fired within roughly the last dozen steps. Warm near-white and usually what washes out the gas channel in the combined view."
         />
         <ParamSlider
-          label="SF map · activity"
-          value={render.sfMapActivityWeight}
+          label="ISM map · activity"
+          value={render.ismMapActivityWeight}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ sfMapActivityWeight: v }))}
-          path="render.sfMapActivityWeight"
+          onChange={(v) => dispatch(renderPatched({ ismMapActivityWeight: v }))}
+          path="render.ismMapActivityWeight"
           info="Isolates the activity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other three to isolate it, though it rarely needs isolating."
         />
         <ParamSlider
-          label="SF map · dust"
-          value={render.sfMapDustWeight}
+          label="ISM map · dust"
+          value={render.ismMapDustWeight}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ sfMapDustWeight: v }))}
-          path="render.sfMapDustWeight"
+          onChange={(v) => dispatch(renderPatched({ ismMapDustWeight: v }))}
+          path="render.ismMapDustWeight"
           info="Isolates the conserved dust channel (the packed texel's own .w lane, since 9aa9fe5d): swept dust, unclamped past ambient — rims legitimately overshoot to the 8.0 ceiling. Teal-green. Lower the weight to bring rim overshoot back into a readable range."
         />
         <ParamSlider
-          label="SF map · seeding"
-          value={render.sfMapSeedingViewWeight}
+          label="ISM map · seeding"
+          value={render.ismMapSeedingViewWeight}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ sfMapSeedingViewWeight: v }))}
-          path="render.sfMapSeedingViewWeight"
+          onChange={(v) => dispatch(renderPatched({ ismMapSeedingViewWeight: v }))}
+          path="render.ismMapSeedingViewWeight"
           info="NOT a channel isolation like the four above — this is the exact composite density dust placement consumes: overshoot/meanOvershoot, the swept-dust channel's excess above the automaton's ambient pedestal. Shows what the raw channels can't: an ambient pedestal glows teal in the dust channel above without contributing any placement mass. Warm-white. Shows the density BEFORE texel-area weighting — the CDF multiplies by area, so outer texels weigh more in placement than they glow here."
         />
         <ParamSlider
@@ -137,7 +137,7 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(1)}
           onChange={(v) => dispatch(renderPatched({ orientationSigmaDerivTexels: v }))}
           path="render.orientationSigmaDerivTexels"
-          info="Gaussian sigma (sfMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
+          info="Gaussian sigma (ismMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
         />
         <ParamSlider
           label="Orientation sigma (integ)"
@@ -148,7 +148,7 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(1)}
           onChange={(v) => dispatch(renderPatched({ orientationSigmaIntegTexels: v }))}
           path="render.orientationSigmaIntegTexels"
-          info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
+          info="Gaussian sigma (ismMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
         />
         <ParamSlider
           label={DEBUG_VIEWS.bubble.label}

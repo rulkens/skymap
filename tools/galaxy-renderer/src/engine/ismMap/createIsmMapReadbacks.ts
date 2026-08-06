@@ -1,36 +1,36 @@
 /**
- * createSfMapReadbacks — the two CPU copies of the SF-map chain (the packed
- * generator output — automaton OR fluid, whichever `sfMap.generator` names —
+ * createIsmMapReadbacks — the two CPU copies of the ISM-map chain (the packed
+ * generator output — automaton OR fluid, whichever `ismMap.generator` names —
  * and the orientation field), each with the stream that fills it, over ONE
  * `createReadbackQueue`.
  *
  * One queue is load-bearing, not tidiness: two independent promise chains
  * reintroduce the 'buffer used in submit while mapped' race that queue exists
  * to prevent. Tokens stay per-stream so an orientation-only trigger (a sigma
- * move) cannot supersede a pending sfMap copy.
+ * move) cannot supersede a pending ismMap copy.
  *
  * Never a per-frame readback and never a CPU mirror of the generator — these
  * land once per rebuild, and `dropIfGridMoved` is the only other writer.
  */
 
-import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
-import type { GalaxySfMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
-import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
 import { createReadbackQueue } from '../gpu/createReadbackQueue';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
-import { decodeSfMapTexels } from './decodeIsmMapTexels';
-import type { SfMapGenerator } from './createIsmMapGenerator';
-import type { SfMapOrientation } from './createIsmMapOrientation';
+import { decodeIsmMapTexels } from './decodeIsmMapTexels';
+import type { IsmMapGenerator } from './createIsmMapGenerator';
+import type { IsmMapOrientation } from './createIsmMapOrientation';
 
-export type SfMapReadbacks = {
+export type IsmMapReadbacks = {
   /** Null until the first copy lands, and again whenever `dropIfGridMoved` invalidates it. */
-  readonly sfMapData: GalaxySfMap | null;
-  readonly orientationData: GalaxySfMapOrientation | null;
+  readonly ismMapData: GalaxyIsmMap | null;
+  readonly orientationData: GalaxyIsmMapOrientation | null;
   /** The orientation stream's request count — the diagnostics readout's `generation`. */
   readonly orientationGeneration: number;
   /**
@@ -38,10 +38,10 @@ export type SfMapReadbacks = {
    * written over. `onLand` runs after the cache holds the result, and only if
    * no later request superseded this one.
    */
-  requestSfMap(grid: GalaxySfMapGridRadius, onLand: (value: GalaxySfMap) => void): void;
+  requestIsmMap(grid: GalaxyIsmMapGridRadius, onLand: (value: GalaxyIsmMap) => void): void;
   requestOrientation(
-    grid: GalaxySfMapGridRadius,
-    onLand: (value: GalaxySfMapOrientation) => void,
+    grid: GalaxyIsmMapGridRadius,
+    onLand: (value: GalaxyIsmMapOrientation) => void,
   ): void;
   /**
    * Discard whichever cache was sampled over a grid that has since moved.
@@ -51,29 +51,29 @@ export type SfMapReadbacks = {
    * slider DRAG flip the dust between its map-seeded and unseeded builds once
    * per frame.
    */
-  dropIfGridMoved(grid: GalaxySfMapGridRadius): void;
+  dropIfGridMoved(grid: GalaxyIsmMapGridRadius): void;
 };
 
-export function createSfMapReadbacks(deps: {
+export function createIsmMapReadbacks(deps: {
   readonly device: GPUDevice;
-  readonly sfMapGenerator: SfMapGenerator;
-  readonly orientation: SfMapOrientation;
-}): SfMapReadbacks {
+  readonly ismMapGenerator: IsmMapGenerator;
+  readonly orientation: IsmMapOrientation;
+}): IsmMapReadbacks {
   const queue = createReadbackQueue(deps.device);
 
-  const sfMapStream = queue.stream({
-    label: 'galaxy:sfMapReadback',
-    texture: deps.sfMapGenerator.texture,
-    buffer: deps.sfMapGenerator.readbackBuffer,
-    bytesPerRow: deps.sfMapGenerator.readbackBytesPerRow,
-    width: SF_MAP_AZ,
-    height: SF_MAP_RINGS,
+  const ismMapStream = queue.stream({
+    label: 'galaxy:ismMapReadback',
+    texture: deps.ismMapGenerator.texture,
+    buffer: deps.ismMapGenerator.readbackBuffer,
+    bytesPerRow: deps.ismMapGenerator.readbackBytesPerRow,
+    width: ISM_MAP_AZ,
+    height: ISM_MAP_RINGS,
     decode: (mapped) =>
-      decodeSfMapTexels(
+      decodeIsmMapTexels(
         new Uint16Array(mapped),
-        deps.sfMapGenerator.readbackBytesPerRow,
-        SF_MAP_AZ,
-        SF_MAP_RINGS,
+        deps.ismMapGenerator.readbackBytesPerRow,
+        ISM_MAP_AZ,
+        ISM_MAP_RINGS,
       ),
   });
 
@@ -82,48 +82,48 @@ export function createSfMapReadbacks(deps: {
     texture: deps.orientation.texture,
     buffer: deps.orientation.readbackBuffer,
     bytesPerRow: deps.orientation.readbackBytesPerRow,
-    width: SF_MAP_AZ,
-    height: SF_MAP_RINGS,
+    width: ISM_MAP_AZ,
+    height: ISM_MAP_RINGS,
     decode: (mapped) =>
       decodeOrientationTexels(
         new Uint16Array(mapped),
         deps.orientation.readbackBytesPerRow,
-        SF_MAP_AZ,
-        SF_MAP_RINGS,
+        ISM_MAP_AZ,
+        ISM_MAP_RINGS,
       ),
   });
 
-  let sfMapData: GalaxySfMap | null = null;
-  let orientationData: GalaxySfMapOrientation | null = null;
+  let ismMapData: GalaxyIsmMap | null = null;
+  let orientationData: GalaxyIsmMapOrientation | null = null;
 
   const movedFrom = (
     cached: { readonly rMin: number; readonly rMax: number } | null,
-    grid: GalaxySfMapGridRadius,
+    grid: GalaxyIsmMapGridRadius,
   ): boolean => cached !== null && (cached.rMin !== grid.rMin || cached.rMax !== grid.rMax);
 
   return {
-    get sfMapData(): GalaxySfMap | null {
-      return sfMapData;
+    get ismMapData(): GalaxyIsmMap | null {
+      return ismMapData;
     },
-    get orientationData(): GalaxySfMapOrientation | null {
+    get orientationData(): GalaxyIsmMapOrientation | null {
       return orientationData;
     },
     get orientationGeneration(): number {
       return orientationStream.generation;
     },
 
-    requestSfMap(grid, onLand): void {
-      sfMapStream.request((data) => {
-        sfMapData = { az: SF_MAP_AZ, rings: SF_MAP_RINGS, rMin: grid.rMin, rMax: grid.rMax, data };
-        onLand(sfMapData);
+    requestIsmMap(grid, onLand): void {
+      ismMapStream.request((data) => {
+        ismMapData = { az: ISM_MAP_AZ, rings: ISM_MAP_RINGS, rMin: grid.rMin, rMax: grid.rMax, data };
+        onLand(ismMapData);
       });
     },
 
     requestOrientation(grid, onLand): void {
       orientationStream.request((data) => {
         orientationData = {
-          az: SF_MAP_AZ,
-          rings: SF_MAP_RINGS,
+          az: ISM_MAP_AZ,
+          rings: ISM_MAP_RINGS,
           rMin: grid.rMin,
           rMax: grid.rMax,
           data,
@@ -133,7 +133,7 @@ export function createSfMapReadbacks(deps: {
     },
 
     dropIfGridMoved(grid): void {
-      if (movedFrom(sfMapData, grid)) sfMapData = null;
+      if (movedFrom(ismMapData, grid)) ismMapData = null;
       if (movedFrom(orientationData, grid)) orientationData = null;
     },
   };

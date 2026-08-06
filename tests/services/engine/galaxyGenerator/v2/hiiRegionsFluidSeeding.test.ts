@@ -1,5 +1,5 @@
 /**
- * `tuning.sfMap.generator === 'fluid'` — HII regions seed directly from the
+ * `tuning.ismMap.generator === 'fluid'` — HII regions seed directly from the
  * fluid sim's own young-event window instead of the parallel arm-ridge
  * catalog, so the tier's output tracks `eventRate`/`impulseDuration`/`steps`
  * rather than `starFormation.sfActivity`. `'automaton'`/`'none'` keep the
@@ -12,16 +12,16 @@ import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerat
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import {
-  buildGalaxySfMapFluidEvents,
-  sfMapFluidEventWindow,
+  buildGalaxyIsmMapFluidEvents,
+  ismMapFluidEventWindow,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import {
-  sfMapGridRadius,
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
+  ismMapGridRadius,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import { sfMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadius';
+import { ismMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../../src/utils/galaxy/warpHeight';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
@@ -36,9 +36,9 @@ function fluidTuning(overrides: {
 }): GalaxyFieldTuning {
   return {
     ...DEFAULT_GALAXY_FIELD_TUNING,
-    sfMap: { generator: 'fluid' },
-    sfMapFluid: {
-      ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid,
+    ismMap: { generator: 'fluid' },
+    ismMapFluid: {
+      ...DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid,
       eventRate: overrides.eventRate,
       steps: overrides.steps,
       impulseDuration: overrides.impulseDuration,
@@ -56,8 +56,8 @@ describe('buildHiiRegions — fluid generator seeding', () => {
   it('tracks the fluid event window: doubling eventRate roughly doubles the tier output, and an empty window yields none', () => {
     // impulseDuration > steps captures every event the run ever spawns, so
     // `count = round(eventRate * steps)` IS the window size — isolates this
-    // test from `sfMapFluidEventWindow`'s own age-boundary behaviour (that
-    // lives in galaxySfMapFluidEvents.test.ts).
+    // test from `ismMapFluidEventWindow`'s own age-boundary behaviour (that
+    // lives in galaxyIsmMapFluidEvents.test.ts).
     const base = fluidTuning({ eventRate: 0.1, steps: 80, impulseDuration: 1000 });
     const doubled = fluidTuning({ eventRate: 0.2, steps: 80, impulseDuration: 1000 });
     const empty = fluidTuning({ eventRate: 0, steps: 80, impulseDuration: 1000 });
@@ -126,24 +126,24 @@ describe('buildHiiRegions — fluid generator seeding', () => {
     // independently to confirm the arrangement before trusting it.
     const tuning = fluidTuning({ eventRate: 0.02, steps: 50, impulseDuration: 1000, clusterStrength: 0 });
 
-    const events = buildGalaxySfMapFluidEvents(geometry, tuning, geometry.seed);
-    const { start, end } = sfMapFluidEventWindow(
+    const events = buildGalaxyIsmMapFluidEvents(geometry, tuning, geometry.seed);
+    const { start, end } = ismMapFluidEventWindow(
       events,
-      tuning.sfMapFluid.steps,
-      tuning.sfMapFluid.impulseDuration,
+      tuning.ismMapFluid.steps,
+      tuning.ismMapFluid.impulseDuration,
     );
     expect(end - start).toBe(1); // arrangement check, not the behaviour under test
     const event = events[start]!;
 
     // Independent reconstruction of the placement, off SHARED geometry
-    // utilities (`sfMapGridRadius`/`sfMapRingRadius`/`warpHeight`) rather
+    // utilities (`ismMapGridRadius`/`ismMapRingRadius`/`warpHeight`) rather
     // than off `hiiRegions.ts`'s own (private) placement function — the same
     // "reuse the shared ridge/grid truth, not the function under test"
     // technique `hiiRegions.test.ts`'s own armBias test uses via
     // `armRidgeAngle`.
-    const grid = sfMapGridRadius(geometry);
-    const angle = (event.az * 2 * Math.PI) / SF_MAP_AZ;
-    const radius = sfMapRingRadius(event.ring, SF_MAP_RINGS, grid.rMin, grid.rMax);
+    const grid = ismMapGridRadius(geometry);
+    const angle = (event.az * 2 * Math.PI) / ISM_MAP_AZ;
+    const radius = ismMapRingRadius(event.ring, ISM_MAP_RINGS, grid.rMin, grid.rMax);
     const expectedCenter: [number, number, number] = [
       radius * Math.cos(angle),
       warpHeight(radius, angle, geometry),
@@ -179,14 +179,14 @@ describe('buildHiiRegions — fluid generator seeding', () => {
 });
 
 describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing arm-ridge catalog", () => {
-  it("'automaton' and 'none' are byte-identical to each other, and neither reacts to sfMapFluid tuning (proving neither reads the fluid path)", () => {
-    const automaton: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, sfMap: { generator: 'automaton' } };
-    const none: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, sfMap: { generator: 'none' } };
+  it("'automaton' and 'none' are byte-identical to each other, and neither reacts to ismMapFluid tuning (proving neither reads the fluid path)", () => {
+    const automaton: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMap: { generator: 'automaton' } };
+    const none: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMap: { generator: 'none' } };
     const automatonFluidParamsChanged: GalaxyFieldTuning = {
       ...automaton,
-      sfMapFluid: {
-        ...automaton.sfMapFluid,
-        eventRate: automaton.sfMapFluid.eventRate * 50,
+      ismMapFluid: {
+        ...automaton.ismMapFluid,
+        eventRate: automaton.ismMapFluid.eventRate * 50,
         steps: 5,
         impulseDuration: 1,
       },
@@ -214,7 +214,7 @@ describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing a
   });
 
   it('starFormation.sfActivity still gates the catalog path off at 0, same as before this change', () => {
-    const tuning: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, sfMap: { generator: 'automaton' } };
+    const tuning: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMap: { generator: 'automaton' } };
     const off = {
       ...DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
       sfActivity: 0,

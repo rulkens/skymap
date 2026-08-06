@@ -17,7 +17,7 @@ import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
 import type { FieldDustSlices } from '../../../@types/engine/FieldDustSlices';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { SfMapChannelWeights } from '../../../@types/engine/IsmMapChannelWeights';
+import type { IsmMapChannelWeights } from '../../../@types/engine/IsmMapChannelWeights';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';
@@ -46,7 +46,7 @@ export type FrameView = {
   readonly fade: MilkyWayFadeReadout;
   readonly galaxyWeight: number;
   readonly debugViews: DebugViewWeights;
-  readonly sfMapChannels: SfMapChannelWeights;
+  readonly ismMapChannels: IsmMapChannelWeights;
   readonly dustSlices: FieldDustSlices;
   /** `render.analyticExposure` against `FIELD_EXPOSURE_GAUGE`, scaled by the fade. Independent of the sprite pass's `starIntensity`/`sizeScale`. */
   readonly analyticExposure: number;
@@ -105,11 +105,11 @@ export function deriveFrameView(input: {
     fade,
     galaxyWeight,
     debugViews,
-    sfMapChannels: {
-      gasWeight: render.sfMapGasWeight,
-      recentSfWeight: render.sfMapRecentWeight,
-      activityWeight: render.sfMapActivityWeight,
-      dustWeight: render.sfMapDustWeight,
+    ismMapChannels: {
+      gasWeight: render.ismMapGasWeight,
+      recentSfWeight: render.ismMapRecentWeight,
+      activityWeight: render.ismMapActivityWeight,
+      dustWeight: render.ismMapDustWeight,
     },
     // D is the eye's distance to the primary galaxy's centre (the tool's
     // origin, NOT the orbit target — the two differ once the camera pans).

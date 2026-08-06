@@ -1,10 +1,10 @@
 /**
  * GalaxyStarFormationParams — the seeded SF-event model's own knobs
  * (`sfEventCatalog.ts`), which is a different model from the SSPSF automaton
- * on the field tuning's `sfMap` and shares nothing with it.
+ * on the field tuning's `ismMap` and shares nothing with it.
  *
  * Its own group rather than a corner of `GalaxyDustCloudParams`: nothing in
- * `dustParticleCloud.ts` reads either knob (it places from the SF map and the
+ * `dustParticleCloud.ts` reads either knob (it places from the ISM map and the
  * smooth disc), so folding them back in would put the whole cloud bag back in
  * `buildSfEventCatalog`/`buildHiiRegions`'s signatures to deliver one number.
  */

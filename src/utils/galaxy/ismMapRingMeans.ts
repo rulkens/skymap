@@ -1,5 +1,5 @@
 /**
- * sfMapRingMeans — per-ring mean of one extracted channel, over every
+ * ismMapRingMeans — per-ring mean of one extracted channel, over every
  * azimuth in that ring (a row of the map's (ring, az) grid). The radial
  * envelope `dustParticleCloud.ts`'s placement CDF preserves EXACTLY
  * regardless of the placement cap — see that file's own header — is built
@@ -8,12 +8,12 @@
  * Returns a `Float32Array` (not `number[]`) so `createGalaxyModel.ts` can
  * hand the result straight to `GPUQueue.writeBuffer` with no conversion.
  */
-import type { GalaxySfMap } from '../../@types/galaxy/GalaxyIsmMap';
-import type { SfMapDensityTexel } from './buildIsmMapDustCdf';
+import type { GalaxyIsmMap } from '../../@types/galaxy/GalaxyIsmMap';
+import type { IsmMapDensityTexel } from './buildIsmMapDustCdf';
 
-export function sfMapRingMeans(
-  map: GalaxySfMap,
-  extract: (texel: SfMapDensityTexel) => number,
+export function ismMapRingMeans(
+  map: GalaxyIsmMap,
+  extract: (texel: IsmMapDensityTexel) => number,
 ): Float32Array {
   const { az, rings, data } = map;
   const means = new Float32Array(rings);

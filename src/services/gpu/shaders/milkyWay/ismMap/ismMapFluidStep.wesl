@@ -1,19 +1,19 @@
-// milkyWay/sfMap/sfMapFluidStep.wesl — Pass B of the fluid SF-map step:
-// density advected through the velocity field sfMapFluidVelocity.wesl
+// milkyWay/ismMap/ismMapFluidStep.wesl — Pass B of the fluid ISM-map step:
+// density advected through the velocity field ismMapFluidVelocity.wesl
 // (Pass A) already composed into velocityTex this step, semi-Lagrangian,
 // directly in WORLD/grid coordinates. Unlike the automaton there is no
-// material-frame trick and no final un-shear pass — sfMapFluidPack.wesl's
+// material-frame trick and no final un-shear pass — ismMapFluidPack.wesl's
 // own repack is a straight copy.
 //
-// State layout (x=gas, y=eventAge, z=activity, w=dust — see GalaxySfMap.ts's
+// State layout (x=gas, y=eventAge, z=activity, w=dust — see GalaxyIsmMap.ts's
 // contract table) is IDENTICAL to the automaton's own ping-pong texel.
 // gas/dust are ADVECTED (semi-Lagrangian back-trace into prevTex) while
 // eventAge/activity are EULERIAN (read from this texel's own previous
 // value, never resampled).
 
-import package::milkyWay::sfMap::sfMapShear::sfMapRingRadius;
+import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
-struct SfMapFluidConstants {
+struct IsmMapFluidConstants {
   rMin: f32,
   rMax: f32,
   corotationRadius: f32,
@@ -28,7 +28,7 @@ struct SfMapFluidConstants {
   // own consumer — see diffusionLaplacian below. Explicit 2D diffusion is
   // stable only for coefficient <= 0.25; the slider range enforces it.
   diffusion: f32,
-  // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
+  // Pass-A-consumed only (ismMapFluidVelocity.wesl's composedVelocity) — kept
   // here for byte-identical layout, same discipline as diffusion above.
   armDrag: f32,
   // gasProfile's exponential decline length, grid-radius units (same as
@@ -37,25 +37,25 @@ struct SfMapFluidConstants {
   // gasProfile's r->infinity floor fraction [0,1] (the flat HI component);
   // 1 makes the profile identically 1.0, the pre-profile calibration.
   gasFloor: f32,
-  // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
+  // Pass-A-consumed only (ismMapFluidVelocity.wesl's composedVelocity) — kept
   // here for byte-identical layout, same discipline as armDrag above.
   laneBias: f32,
-  // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
+  // Pass-A-consumed only (ismMapFluidVelocity.wesl's composedVelocity) — kept
   // here for byte-identical layout, same discipline as laneBias above.
   gatherOffset: f32,
 }
 
-// Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts
+// Same layout as ismMapFluidVelocity.wesl's own copy (packIsmMapFluidStepIndex.ts
 // is the offset authority) — Pass A reads all three fields, this pass reads
 // only 'step' (activeStart/activeEnd are Pass A's event-window concern).
-struct SfMapFluidStepIndex {
+struct IsmMapFluidStepIndex {
   step: f32,
   activeStart: f32,
   activeEnd: f32,
 }
 
 const PI: f32 = 3.14159265358979;
-const SF_MAP_AMBIENT_DUST: f32 = 1.0;
+const ISM_MAP_AMBIENT_DUST: f32 = 1.0;
 const DUST_OVERSHOOT_CEILING: f32 = 8.0;
 // Gas needs headroom to show the continuity source term's contrast (see
 // that term below) — half of DUST_OVERSHOOT_CEILING, since gasRegen already
@@ -72,10 +72,10 @@ const DT_TEXELS_PER_STEP: f32 = 1.0;
 const CONTINUITY_MULT_MIN: f32 = 0.6;
 const CONTINUITY_MULT_MAX: f32 = 1.4;
 
-@group(0) @binding(0) var<uniform> u: SfMapFluidConstants;
+@group(0) @binding(0) var<uniform> u: IsmMapFluidConstants;
 @group(0) @binding(1) var prevTex: texture_2d<f32>;
 @group(0) @binding(2) var nextTex: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(3) var<uniform> stepIdx: SfMapFluidStepIndex;
+@group(0) @binding(3) var<uniform> stepIdx: IsmMapFluidStepIndex;
 @group(0) @binding(4) var velocityTex: texture_2d<f32>;
 
 // Radial gas equilibrium: an exponential H2-like disc on top of a flat
@@ -100,7 +100,7 @@ fn wrapAz(az: i32, azCount: i32) -> i32 {
 // clamped ring-edge neighbour equals the self texel, so the ring derivative
 // reads as zero rather than extrapolating off the grid). Ring partial is
 // rescaled by azToRingMetric before summing, same az-equivalent-units
-// convention sfMapFluidVelocity.wesl's forcingGradient uses.
+// convention ismMapFluidVelocity.wesl's forcingGradient uses.
 fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric: f32) -> f32 {
   let azCountI = i32(azCount);
   let ringCountI = i32(ringCount);
@@ -148,7 +148,7 @@ fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasD
 }
 
 // Bilinear sample of prevTex — wraps in az, clamps in ring, same edge
-// semantics as sfMapAutomatonStep.wesl's own neighbour reads.
+// semantics as ismMapAutomatonStep.wesl's own neighbour reads.
 fn sampleBilinear(azF: f32, ringF: f32, azCount: u32, ringCount: u32) -> vec4<f32> {
   let a0f = floor(azF);
   let fracAz = azF - a0f;
@@ -183,10 +183,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let az = gid.x;
   let ring = gid.y;
   let genStep = u32(stepIdx.step);
-  let r = sfMapRingRadius(ring, ringCount, u.rMin, u.rMax);
+  let r = ismMapRingRadius(ring, ringCount, u.rMin, u.rMax);
 
   // Gas and the ambient dust pedestal both seed at gasProfile(r) (dust
-  // scaled by SF_MAP_AMBIENT_DUST — roughly constant dust-to-gas ratio):
+  // scaled by ISM_MAP_AMBIENT_DUST — roughly constant dust-to-gas ratio):
   // identical to the automaton's uniform seed at the default gasFloor=1
   // (profile === 1 everywhere), and deliberately diverging once this
   // generator's own radial profile is dialed in — the automaton has no such
@@ -195,7 +195,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // velocityTex is dead here.
   if (genStep == 0u) {
     let seedGas = gasProfile(r);
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 1.0e4, 0.0, SF_MAP_AMBIENT_DUST * seedGas));
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 1.0e4, 0.0, ISM_MAP_AMBIENT_DUST * seedGas));
     return;
   }
 

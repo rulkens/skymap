@@ -1,6 +1,6 @@
 /**
  * SliderGroup — a small-caps divider header splitting a section body's flat
- * slider list into named clusters (`SfMapSection`'s FLUID panel is the
+ * slider list into named clusters (`IsmMapSection`'s FLUID panel is the
  * original: Simulation / Disc & rotation / Gas supply / …). Plain
  * composition, no fold — every slider stays mounted and DOM-order-visible to
  * `probeGpuErrors.ts`'s slider sweep, which counts by role, not by group.

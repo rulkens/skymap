@@ -80,7 +80,7 @@ function DustSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ scaleLenRatio: v })}
           path="galaxy.dust.scaleLenRatio"
-          info="Dust/stellar radial scale-length ratio — the dust disc is more extended than the light it reddens. Measured 1.4-1.75 (Xilouris et al. 1999). With SF-map seeding on, this sets the total column and how far the dust slices reach, not where the clouds land."
+          info="Dust/stellar radial scale-length ratio — the dust disc is more extended than the light it reddens. Measured 1.4-1.75 (Xilouris et al. 1999). With ISM-map seeding on, this sets the total column and how far the dust slices reach, not where the clouds land."
         />
         <ParamSlider
           label="Layer thickness × disc"

@@ -7,7 +7,7 @@
  * (mass ~ R^2 at ~constant cloud surface density, so every cloud peaks at
  * roughly the same tau — sharp, separated clouds, not a haze); the R^-2.2
  * GMC size function (Watkins+2023); ISM hierarchical clustering, as a
- * two-level complex/children placement — the SF map when usable, else a
+ * two-level complex/children placement — the ISM map when usable, else a
  * plain smooth disc, no arm-lane machinery of its own (that stayed with
  * `armParticleCloud.ts`; see `buildDustParticleCloud`'s own placement
  * comment).
@@ -15,16 +15,16 @@
  * No cavity carving here any more — the seeded SF-event catalog
  * (`dustBubblePlacements.ts`) used to sweep particles onto bubble/HII rims,
  * a second, independent star-formation model carving the same holes the
- * SSPSF automaton's own gas depletion already produces (`sfMap`, read via
+ * SSPSF automaton's own gas depletion already produces (`ismMap`, read via
  * its own raw `dust` channel below). The map is now the only thing that
  * shapes dust, so until the automaton's depletion is tuned to carve on its
  * own, dust has no cavity holes and HII regions (still seeded from the
  * event catalog) can sit inside dust that no longer has a hole for them.
  *
- * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
- * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
- * Worker/compute-pass candidate. `sfMap`/`sfMapOrientation` are plain
- * sampled arrays (see `GalaxySfMap`/`GalaxySfMapOrientation`), so both stay
+ * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, ismMap,
+ * ismMapOrientation) -> flat data`, no Math.random/Date/engine state — a
+ * Worker/compute-pass candidate. `ismMap`/`ismMapOrientation` are plain
+ * sampled arrays (see `GalaxyIsmMap`/`GalaxyIsmMapOrientation`), so both stay
  * data arguments like every other one, not an engine dependency.
  * `orientationDeltaStats` is an optional out-param (see its own type doc) —
  * supplying it does not change what this function computes, only what a
@@ -38,24 +38,24 @@ import {
 } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
-import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
-import type { SfMapDensityTexel } from '../../../../utils/galaxy/buildIsmMapDustCdf';
+import { buildIsmMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
+import type { IsmMapDensityTexel } from '../../../../utils/galaxy/buildIsmMapDustCdf';
 import { dustExtinctionRgb } from '../../../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
-import { sampleGalaxySfMap } from '../../../../utils/galaxy/sampleGalaxyIsmMap';
-import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
-import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
-import { sfMapRingIndexForRadius } from '../../../../utils/galaxy/ismMapRingIndexForRadius';
-import { sfMapRingMeans } from '../../../../utils/galaxy/ismMapRingMeans';
+import { sampleGalaxyIsmMap } from '../../../../utils/galaxy/sampleGalaxyIsmMap';
+import { sampleIsmMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
+import { sampleIsmMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
+import { ismMapRingIndexForRadius } from '../../../../utils/galaxy/ismMapRingIndexForRadius';
+import { ismMapRingMeans } from '../../../../utils/galaxy/ismMapRingMeans';
 import { arrayMean } from '../../../../utils/math/arrayMean';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
-import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxyIsmMap';
-import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxyIsmMapOrientation';
+import type { GalaxyIsmMap } from '../../../../@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMapOrientation } from '../../../../@types/galaxy/GalaxyIsmMapOrientation';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 const MAX_PARTICLE_COUNT = 40000;
@@ -140,7 +140,7 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
  * relative keeps the floor's MEANING fixed ("clear noise near zero, don't
  * compete with real signal") at every radius.
  *
- * Exported: the "seeding" debug view in `sfMapPresent.wesl` mirrors this
+ * Exported: the "seeding" debug view in `ismMapPresent.wesl` mirrors this
  * fraction (parity-tested in `constants.parity.test.ts`) so a texel that
  * would never keep a particle here never glows there either.
  */
@@ -171,8 +171,8 @@ export function buildDustParticleCloud(
   dust: GalaxyDustParams,
   tuning: GalaxyFieldTuning,
   seed: number,
-  sfMap: GalaxySfMap | null,
-  sfMapOrientation: GalaxySfMapOrientation | null,
+  ismMap: GalaxyIsmMap | null,
+  ismMapOrientation: GalaxyIsmMapOrientation | null,
   orientationDeltaStats?: OrientationDeltaStats,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
@@ -204,12 +204,12 @@ export function buildDustParticleCloud(
 
   // A generator running: the map IS the placement density — the map's own
   // raw `dust` channel — every complex is placed by `'mapDensity'` mode, its
-  // centre drawn from S1's inverse-CDF sampler (`buildSfMapDustCdf`).
+  // centre drawn from S1's inverse-CDF sampler (`buildIsmMapDustCdf`).
   // `generator === 'none'` (or a quiet map): `'smoothDisc'` mode, no
   // arm-lane concept at all — the dust tier's analytic lane machinery was
   // cut once the map became the sole placement density; `armParticleCloud.ts`
   // still owns the one live `'analytic'` caller. This is the intended
-  // consequence of the SF map leading, not a regression.
+  // consequence of the ISM map leading, not a regression.
   //
   // RAW dust, not overshoot-above-ambient: the ambient pedestal used to be
   // uniform (`sweptDustOvershoot`'s old subtraction), but it is now seeded
@@ -231,18 +231,18 @@ export function buildDustParticleCloud(
   // neighbours. `globalMean = arrayMean(ringMeans)` is a documented choice,
   // not the only valid one (the flat per-texel mean would equal it here,
   // since every ring shares the same `az` count) — the seeding debug view in
-  // `sfMapPresent.wesl` uses the SAME definition, uploaded as the SAME
+  // `ismMapPresent.wesl` uses the SAME definition, uploaded as the SAME
   // number, so the two cannot drift apart.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
   // S3's per-particle aspect/survival, non-null only on the map-seeded path —
   // `null` keeps `drawPayload` below byte-identical to the pre-S3 smoothDisc
-  // behaviour, same gating shape as `sfMapOrientation` just below.
+  // behaviour, same gating shape as `ismMapOrientation` just below.
   let sampleMapTraits:
     | ((radius: number, angle: number) => { aspect: number; alive: boolean })
     | null = null;
-  if (tuning.sfMap.generator !== 'none' && sfMap) {
-    const map = sfMap; // narrowed alias so the closures below don't re-null-check
-    const ringMeans = sfMapRingMeans(map, (texel) => texel.dust);
+  if (tuning.ismMap.generator !== 'none' && ismMap) {
+    const map = ismMap; // narrowed alias so the closures below don't re-null-check
+    const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
     const globalMean = arrayMean(ringMeans);
     // Guard: a map with no dust anywhere (transport off, or the automaton
     // hasn't run long enough yet) leaves `placement` at its `smoothDisc`
@@ -257,17 +257,17 @@ export function buildDustParticleCloud(
       // the field's own doc (GalaxyDustCloudParams) for the starvation
       // problem this solves.
       const cap = cloud.dustPlacementCap ?? 0;
-      // Cached across the `az` calls `buildSfMapDustCdf`'s own loop makes at
+      // Cached across the `az` calls `buildIsmMapDustCdf`'s own loop makes at
       // a fixed `radius` before moving to the next ring — this callback runs
       // per texel over the whole 1536x512 grid on every slider change, and
-      // `sfMapRingIndexForRadius` is a log/round pair not worth repeating
+      // `ismMapRingIndexForRadius` is a log/round pair not worth repeating
       // `az` times for the same answer.
       let lastRadius = NaN;
       let lastRing = 0;
-      const density = (texel: SfMapDensityTexel, radius: number): number => {
+      const density = (texel: IsmMapDensityTexel, radius: number): number => {
         if (radius !== lastRadius) {
           lastRadius = radius;
-          lastRing = sfMapRingIndexForRadius(radius, map.rings, map.rMin, map.rMax);
+          lastRing = ismMapRingIndexForRadius(radius, map.rings, map.rMin, map.rMax);
         }
         const ringMean = ringMeans[lastRing]!;
         if (texel.dust <= 0 || ringMean <= 0) return 0;
@@ -275,15 +275,15 @@ export function buildDustParticleCloud(
         const capped = cap > 0 ? Math.min(local, cap) : local;
         return (ringMean / globalMean) * capped;
       };
-      const cdf = buildSfMapDustCdf(map, density);
+      const cdf = buildIsmMapDustCdf(map, density);
       if (cdf.total > 0) {
-        placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
+        placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleIsmMapDustCdf(cdf, mapRng) };
         sampleMapTraits = (radius, angle) => {
-          const coherence = sfMapOrientation
-            ? sampleSfMapOrientation(sfMapOrientation, radius, angle).coherence
+          const coherence = ismMapOrientation
+            ? sampleIsmMapOrientation(ismMapOrientation, radius, angle).coherence
             : 0;
-          const sample = sampleGalaxySfMap(map, radius, angle);
-          const ring = sfMapRingIndexForRadius(radius, map.rings, map.rMin, map.rMax);
+          const sample = sampleGalaxyIsmMap(map, radius, angle);
+          const ring = ismMapRingIndexForRadius(radius, map.rings, map.rMin, map.rMax);
           return {
             aspect: 1 + (cloud.elongation - 1) * coherence,
             alive: sample.dust >= DUST_SURVIVAL_FLOOR_FRAC * ringMeans[ring]!,
@@ -312,7 +312,7 @@ export function buildDustParticleCloud(
       placement,
       // Gated with `placement` above: `generator === 'none'` is a no-op, so a
       // caller with the map already sampled needn't re-check it.
-      sfMapOrientation: tuning.sfMap.generator !== 'none' ? sfMapOrientation : null,
+      ismMapOrientation: tuning.ismMap.generator !== 'none' ? ismMapOrientation : null,
       orientationDeltaStats,
     },
     (childRng, center) => {

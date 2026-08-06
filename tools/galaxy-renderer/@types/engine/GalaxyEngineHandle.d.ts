@@ -10,7 +10,7 @@
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
-import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';
 import type { ViewPose } from './ViewPose';
@@ -29,14 +29,14 @@ export type GalaxyEngineHandle = {
   grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // see createOffscreenProbe
   getCamera(): ViewPose;
   // The SSPSF star-formation automaton's packed output (gas / recent SF /
-  // older SF, log-polar) — see createGalaxyModel.ts's rebuildSfMap.
+  // older SF, log-polar) — see createGalaxyModel.ts's rebuildIsmMap.
   // Consumed by nothing but its own overlay yet; exposed for the sibling UI
   // and future consumers.
-  getSfMapTexture(): GPUTexture;
+  getIsmMapTexture(): GPUTexture;
   // The same output read back to the CPU, once per generation — null until
   // the first readback lands. Feeds the map-seeded placement path in
-  // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleSfMapReadback`),
-  // live whenever `sfMap.generator !== 'none'`.
-  getSfMapData(): GalaxySfMap | null;
+  // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleIsmMapReadback`),
+  // live whenever `ismMap.generator !== 'none'`.
+  getIsmMapData(): GalaxyIsmMap | null;
   dispose(): void;
 };

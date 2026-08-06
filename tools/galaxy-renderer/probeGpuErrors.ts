@@ -272,7 +272,7 @@ async function readSectionHeaders(
  * Keep only the entries NOT contained inside another entry's own section —
  * i.e. one level, batch-relative. A grandchild present in the same batch
  * (an already-open nested section under an already-open group member, e.g.
- * FLUID under SF MAP under ANALYTIC MODEL) waits for its OWN parent's turn
+ * FLUID under ISM under ANALYTIC MODEL) waits for its OWN parent's turn
  * instead: `exerciseSection` re-discovers it there once that parent has
  * expanded, which is also where its slider-nudge belongs.
  */
@@ -317,7 +317,7 @@ async function nudgeSlider(page: Page, slider: Locator): Promise<void> {
  * step per DIRECT child section found inside — `main`'s queue runs those
  * right after this one (`queue.unshift`), so a section is fully expanded and
  * driven before the sweep moves on to its next sibling. The same recursion
- * now covers every depth the panel has (ANALYTIC MODEL → SF MAP → DIG is
+ * now covers every depth the panel has (ANALYTIC MODEL → ISM → DIG is
  * three), because the header is re-resolved by TITLE below rather than a
  * position captured up front — a `.nth(index)` locator re-queries the DOM
  * by ordinal at click time, and an earlier sibling's expansion inserting new
@@ -407,7 +407,7 @@ function sweepSections(rows: SectionRow[]): ExerciseStep {
  * on, so each is switched on AND back off here.
  */
 function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[] {
-  const debugViews = ['Dust view', 'SF map view', 'Orientation view', 'Bubble view'];
+  const debugViews = ['Dust view', 'ISM map view', 'Orientation view', 'Bubble view'];
   const steps: ExerciseStep[] = [
     {
       name: 'boot',

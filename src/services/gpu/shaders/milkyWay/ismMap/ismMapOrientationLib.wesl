@@ -1,14 +1,14 @@
-// milkyWay/sfMap/sfMapOrientationLib.wesl — shared sigma-uniform shape and
+// milkyWay/ismMap/ismMapOrientationLib.wesl — shared sigma-uniform shape and
 // index wrap/clamp helpers for the GPU structure-tensor orientation chain
-// (sfMapOrientationField/Tensor/TensorBlur/Coherence.wesl), so the four
+// (ismMapOrientationField/Tensor/TensorBlur/Coherence.wesl), so the four
 // passes cannot disagree on the uniform byte layout. Grid size is NOT baked
 // in here: every pass already calls textureDimensions on its own target and
-// passes n through to wrapIndex/clampIndex — sfMapShear.wesl's precedent.
+// passes n through to wrapIndex/clampIndex — ismMapShear.wesl's precedent.
 
 // sigmaDeriv (small, pre-gradient noise suppression) vs sigmaInteg (larger,
 // post-tensor averaging, conventionally 2-3x sigmaDeriv) — one sigma for
 // both floors coherence near 0.5 on pure noise instead of near 0.
-struct SfMapOrientationSigma {
+struct IsmMapOrientationSigma {
   sigmaDeriv: f32,
   sigmaInteg: f32,
 }

@@ -12,19 +12,19 @@ import type { GalaxyArmTuning } from './GalaxyArmTuning';
 import type { GalaxyDiscTuning } from './GalaxyDiscTuning';
 import type { GalaxyDustTuning } from './GalaxyDustTuning';
 import type { GalaxyHiiTuning } from './GalaxyHiiTuning';
-import type { GalaxySfMapAutomatonParams } from './GalaxyIsmMapAutomatonParams';
-import type { GalaxySfMapFluidParams } from './GalaxyIsmMapFluidParams';
-import type { GalaxySfMapParams } from './GalaxyIsmMapParams';
+import type { GalaxyIsmMapAutomatonParams } from './GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapFluidParams } from './GalaxyIsmMapFluidParams';
+import type { GalaxyIsmMapParams } from './GalaxyIsmMapParams';
 
 export type GalaxyFieldTuning = {
   readonly disc: GalaxyDiscTuning;
   readonly arms: GalaxyArmTuning;
   readonly dust: GalaxyDustTuning;
   readonly hii: GalaxyHiiTuning;
-  /** Shared switch: which generator writes the SF map, if any (`sfMap.generator`, `'none'` | `'automaton'` | `'fluid'`) — the ONLY branch point. */
-  readonly sfMap: GalaxySfMapParams;
-  /** The SSPSF automaton that grows the ISM structure the dust tier is seeded from — live only while `sfMap.generator === 'automaton'`. */
-  readonly sfMapAutomaton: GalaxySfMapAutomatonParams;
-  /** The fluid alternative to `sfMapAutomaton` — live only while `sfMap.generator === 'fluid'`. Symmetric with it, not a fallback. */
-  readonly sfMapFluid: GalaxySfMapFluidParams;
+  /** Shared switch: which generator writes the ISM map, if any (`ismMap.generator`, `'none'` | `'automaton'` | `'fluid'`) — the ONLY branch point. */
+  readonly ismMap: GalaxyIsmMapParams;
+  /** The SSPSF automaton that grows the ISM structure the dust tier is seeded from — live only while `ismMap.generator === 'automaton'`. */
+  readonly ismMapAutomaton: GalaxyIsmMapAutomatonParams;
+  /** The fluid alternative to `ismMapAutomaton` — live only while `ismMap.generator === 'fluid'`. Symmetric with it, not a fallback. */
+  readonly ismMapFluid: GalaxyIsmMapFluidParams;
 };

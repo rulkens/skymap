@@ -1,28 +1,28 @@
-// milkyWay/sfMap/sfMapOrientationTensor.wesl — stage 2: central-difference
+// milkyWay/ismMap/ismMapOrientationTensor.wesl — stage 2: central-difference
 // gradient of the smoothed field -> structure tensor (Jxx,Jxy,Jyy), packed
 // into one rgba16float texture's RGB so stage 3 blurs all three channels in
 // one separable pass instead of six.
 //
-// Regression signatures from the deleted buildSfMapOrientation.test.ts: a
+// Regression signatures from the deleted buildIsmMapOrientation.test.ts: a
 // 40-texel ridge recovers pitch <=0.18deg flat across radii; dropping the
 // aspect weight below biases it a flat 5.33deg; a purely azimuthal ridge
 // must recover ~0deg, never ~90deg (sign finished in
-// sfMapOrientationCoherence.wesl).
+// ismMapOrientationCoherence.wesl).
 
-import package::milkyWay::sfMap::sfMapOrientationLib::wrapIndex;
-import package::milkyWay::sfMap::sfMapOrientationLib::clampIndex;
-import package::milkyWay::sfMap::sfMapShear::sfMapRingRadius;
+import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;
+import package::milkyWay::ismMap::ismMapOrientationLib::clampIndex;
+import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
 const PI: f32 = 3.14159265358979;
 
-struct SfMapOrientationGrid {
+struct IsmMapOrientationGrid {
   rMin: f32,
   rMax: f32,
 }
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>;
 @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(2) var<uniform> grid: SfMapOrientationGrid;
+@group(0) @binding(2) var<uniform> grid: IsmMapOrientationGrid;
 
 @compute @workgroup_size(16, 16)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -34,12 +34,12 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Log-polar is conformal: an az texel spans r*2*PI/az physically, a ring
   // texel spans r*ln(rMax/rMin)/(rings-1) — the ratio is r-INDEPENDENT, so
   // ONE constant equalises the two derivative axes at every radius. Via
-  // sfMapRingRadius (ratio of consecutive rings), the same shared module
-  // sfMapAutomatonStep.wesl/sfMapPack.wesl use for shear, never a restated formula.
+  // ismMapRingRadius (ratio of consecutive rings), the same shared module
+  // ismMapAutomatonStep.wesl/ismMapPack.wesl use for shear, never a restated formula.
   let azTexelSize = 2.0 * PI / f32(dims.x);
   let ringTexelSize = log(
-    sfMapRingRadius(1u, dims.y, grid.rMin, grid.rMax)
-      / sfMapRingRadius(0u, dims.y, grid.rMin, grid.rMax),
+    ismMapRingRadius(1u, dims.y, grid.rMin, grid.rMax)
+      / ismMapRingRadius(0u, dims.y, grid.rMin, grid.rMax),
   );
   let aspect = ringTexelSize / azTexelSize;
 

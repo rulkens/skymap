@@ -1,20 +1,20 @@
 /**
- * packSfMapFluidEvents — flattens `buildGalaxySfMapFluidEvents`' output into
- * the storage buffer `sfMapFluidStep.wesl` reads. THAT FILE'S `EVENT_STRIDE`
+ * packIsmMapFluidEvents — flattens `buildGalaxyIsmMapFluidEvents`' output into
+ * the storage buffer `ismMapFluidStep.wesl` reads. THAT FILE'S `EVENT_STRIDE`
  * (8 floats: az, ring, birthStep, strength, radiusScale, + 3 slack) IS THE
  * LAYOUT AUTHORITY — a stride mismatch ships garbage silently, same as every
- * other sfMap uniform/storage packer in this directory.
+ * other ismMap uniform/storage packer in this directory.
  */
-import type { SfMapFluidEvent } from '../../../../../src/@types/galaxy/IsmMapFluidEvent';
+import type { IsmMapFluidEvent } from '../../../../../src/@types/galaxy/IsmMapFluidEvent';
 
-/** Mirrors `EVENT_STRIDE` in `sfMapFluidStep.wesl`. */
-export const SF_MAP_FLUID_EVENT_STRIDE = 8;
+/** Mirrors `EVENT_STRIDE` in `ismMapFluidStep.wesl`. */
+export const ISM_MAP_FLUID_EVENT_STRIDE = 8;
 
-export function packSfMapFluidEvents(events: readonly SfMapFluidEvent[]): Float32Array {
-  const out = new Float32Array(events.length * SF_MAP_FLUID_EVENT_STRIDE);
+export function packIsmMapFluidEvents(events: readonly IsmMapFluidEvent[]): Float32Array {
+  const out = new Float32Array(events.length * ISM_MAP_FLUID_EVENT_STRIDE);
   for (let i = 0; i < events.length; i++) {
     const e = events[i]!;
-    const base = i * SF_MAP_FLUID_EVENT_STRIDE;
+    const base = i * ISM_MAP_FLUID_EVENT_STRIDE;
     out[base] = e.az;
     out[base + 1] = e.ring;
     out[base + 2] = e.birthStep;

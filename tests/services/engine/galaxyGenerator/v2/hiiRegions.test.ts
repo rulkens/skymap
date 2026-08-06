@@ -1,6 +1,6 @@
 /**
- * `sfMapSeeding: 0` must reproduce the pre-feature arm-ridge catalog
- * exactly, whether or not a caller happens to hand in an SF map — the real
+ * `ismMapSeeding: 0` must reproduce the pre-feature arm-ridge catalog
+ * exactly, whether or not a caller happens to hand in an ISM map — the real
  * bug this pins is a gate that overwrites a region's centre once a map
  * exists without also checking the blend weight.
  */
@@ -11,12 +11,12 @@ import { armRidgeAngle } from '../../../../../src/services/engine/galaxyGenerato
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
-/** Busy on every channel — if `sfMapSeeding: 0` ever consulted this, output would move. */
-function makeBusyMap(): GalaxySfMap {
+/** Busy on every channel — if `ismMapSeeding: 0` ever consulted this, output would move. */
+function makeBusyMap(): GalaxyIsmMap {
   const az = 32;
   const rings = 16;
   const data = new Float32Array(rings * az * 4);
@@ -29,16 +29,16 @@ function makeBusyMap(): GalaxySfMap {
 }
 
 describe('buildHiiRegions', () => {
-  it('sfMapSeeding 0 is byte-identical whether or not a map is handed in', () => {
+  it('ismMapSeeding 0 is byte-identical whether or not a map is handed in', () => {
     const tuningOff = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       // dig.fraction pinned to 0 too — it is the DIG veil's own knob,
-      // orthogonal to sfMapSeeding, and (unlike region placement) it reads
+      // orthogonal to ismMapSeeding, and (unlike region placement) it reads
       // the map's mere PRESENCE rather than a blend weight, so leaving it at
       // its nonzero default would break this test's own premise.
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        sfMapSeeding: 0,
+        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
       },
     };
@@ -63,13 +63,13 @@ describe('buildHiiRegions', () => {
   it('dig.fraction 0 is byte-identical whether or not a map is handed in', () => {
     const tuningOff = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
-      // sfMapSeeding pinned to 0 too — its own default (1) would already
+      // ismMapSeeding pinned to 0 too — its own default (1) would already
       // make region CENTRES differ between the map/no-map cases, which
       // would fail this test for a reason that has nothing to do with
       // `dig.fraction`.
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        sfMapSeeding: 0,
+        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
       },
     };
@@ -204,7 +204,7 @@ describe('buildHiiRegions', () => {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        sfMapSeeding: 0,
+        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
         associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, brightness: 0 },
       },
@@ -243,13 +243,13 @@ describe('buildHiiRegions', () => {
     data[hotI + 2] = 1; // activity: same magnitude as the swept texel
     const oldI = (oldRing * az + oldAz) * 4;
     data[oldI + 2] = 1; // activity only: swept clear, not currently igniting
-    const map: GalaxySfMap = { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
+    const map: GalaxyIsmMap = { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
 
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        sfMapSeeding: 0,
+        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
         associations: {
           ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations,

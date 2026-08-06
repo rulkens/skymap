@@ -19,7 +19,7 @@
  *    source, no copy to keep in sync.
  *
  * Almost every shader it draws with belongs to the runtime: the
- * `milkyWay/{sprites,field,sfMap}/`, `additiveUpsample/`, `bloom/` and
+ * `milkyWay/{sprites,field,ismMap}/`, `additiveUpsample/`, `bloom/` and
  * `compositor/` trees plus
  * `lib/camera.wesl`, `lib/cloudSprite.wesl` and `lib/tonemap.wesl` all live in
  * `src/services/gpu/shaders/` and reach this build through symlinks — see the
@@ -65,7 +65,7 @@ export default defineConfig({
     // only through the linker's `package::lib::…`, have no entry here.
     //
     // `milkyWay` is one family entry covering all three tier dirs: the trailing
-    // capture takes the rest of the path, so `sprites/`, `field/` and `sfMap/`
+    // capture takes the rest of the path, so `sprites/`, `field/` and `ismMap/`
     // ride the same rewrite.
     preserveSymlinks: true,
     alias: ['milkyWay', 'additiveUpsample', 'bloom', 'compositor'].map((family) => ({

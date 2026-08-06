@@ -31,13 +31,13 @@ export type GalaxyHiiTuning = {
    */
   readonly cavityScale: number;
   /**
-   * Fraction of HII events placed from the SF map's `recentSf` channel
+   * Fraction of HII events placed from the ISM map's `recentSf` channel
    * instead of the arm-ridge catalog (0 = catalog exactly, 1 = fully
    * map-seeded). `recentSf`, not `gas x activity`, deliberately: ignition
    * zeroes gas and age together, so knots avoid the dust the same way M74's
    * do (Chevance decorrelation).
    */
-  readonly sfMapSeeding: number;
+  readonly ismMapSeeding: number;
   /**
    * The DIG veil's own tuning — see `GalaxyHiiDigTuning`. Without it the
    * knots read as LEDs on black; leaking around them and tracing the arms is

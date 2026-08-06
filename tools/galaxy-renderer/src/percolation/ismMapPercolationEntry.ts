@@ -1,19 +1,19 @@
 /**
- * Page entry for sfMapPercolation.html — hangs the sweep on globalThis so the
+ * Page entry for ismMapPercolation.html — hangs the sweep on globalThis so the
  * Playwright driver can call it, and reports progress into the document so a
  * `--headed` run shows something.
  */
-import { runSfMapPercolation } from './ismMapPercolationHarness';
-import type { SfMapPercolationReport, SfMapPercolationRequest } from './ismMapPercolationHarness';
+import { runIsmMapPercolation } from './ismMapPercolationHarness';
+import type { IsmMapPercolationReport, IsmMapPercolationRequest } from './ismMapPercolationHarness';
 
 declare global {
-  var __sfMapPercolation: (request: SfMapPercolationRequest) => Promise<SfMapPercolationReport>;
+  var __ismMapPercolation: (request: IsmMapPercolationRequest) => Promise<IsmMapPercolationReport>;
 }
 
-globalThis.__sfMapPercolation = async (request) => {
+globalThis.__ismMapPercolation = async (request) => {
   const status = document.getElementById('status');
   if (status) status.textContent = `running ${request.cases.length} case(s)…`;
-  const report = await runSfMapPercolation(request);
+  const report = await runIsmMapPercolation(request);
   if (status) status.textContent = `done: ${report.results.length} case(s) on ${report.adapter}`;
   return report;
 };

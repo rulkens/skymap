@@ -9,8 +9,8 @@ import type { DebugViewWeights } from './DebugViewWeights';
 import type { FieldCamera } from './FieldCamera';
 import type { FieldDust } from './FieldDust';
 import type { HiiTextureLanes } from './HiiTextureLanes';
-import type { SfMapChannelWeights } from './IsmMapChannelWeights';
-import type { SfMapSeedingLanes } from './IsmMapSeedingLanes';
+import type { IsmMapChannelWeights } from './IsmMapChannelWeights';
+import type { IsmMapSeedingLanes } from './IsmMapSeedingLanes';
 
 export type FieldHeaderInput = {
   readonly camera: FieldCamera;
@@ -46,7 +46,7 @@ export type FieldHeaderInput = {
    * left with once they have taken their share.
    */
   readonly galaxyWeight: number;
-  readonly sfMapChannels: SfMapChannelWeights;
-  /** Absent means this pass's `bubbleView` carries no seeding overlay — packed inert (all 0), same idiom as `dust`/`hiiTexture`. Only the FIELD header (not the HII one) passes real values: sfMapPresent.wesl binds the field header alone. */
-  readonly sfMapSeeding?: SfMapSeedingLanes;
+  readonly ismMapChannels: IsmMapChannelWeights;
+  /** Absent means this pass's `bubbleView` carries no seeding overlay — packed inert (all 0), same idiom as `dust`/`hiiTexture`. Only the FIELD header (not the HII one) passes real values: ismMapPresent.wesl binds the field header alone. */
+  readonly ismMapSeeding?: IsmMapSeedingLanes;
 };

@@ -2,7 +2,7 @@
 // catalog's own bubble/cavity placements (dustBubblePlacements.ts): a
 // SECOND, independent star-formation model nobody has ever seen, drawn as
 // its own layer so it can be compared directly against the SSPSF
-// automaton's sfMap view (sfMapPresent.wesl) — two models of the same
+// automaton's ismMap view (ismMapPresent.wesl) — two models of the same
 // physics, side by side. One instanced camera-facing quad per placement;
 // createGalaxyEngine.ts's 'rebuildBubblePlacements' is the only producer of
 // the instance buffer this reads (center.xyz, radius, kind).

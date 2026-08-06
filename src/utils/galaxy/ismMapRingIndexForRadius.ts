@@ -1,14 +1,14 @@
 /**
- * sfMapRingIndexForRadius — inverts `sfMapRingRadius`'s log-radial ring index
+ * ismMapRingIndexForRadius — inverts `ismMapRingRadius`'s log-radial ring index
  * -> radius mapping back to the nearest ring INDEX. Exact by construction
- * when `radius` came from `sfMapRingRadius(ring, ...)` itself (as
- * `buildSfMapDustCdf`'s own loop does) — `Math.round` only absorbs
+ * when `radius` came from `ismMapRingRadius(ring, ...)` itself (as
+ * `buildIsmMapDustCdf`'s own loop does) — `Math.round` only absorbs
  * floating-point round-trip noise, never a real ambiguity between two rings.
- * Mirrors `sfMapPresent.wesl`'s own `ringT` (this function's `t` before the
+ * Mirrors `ismMapPresent.wesl`'s own `ringT` (this function's `t` before the
  * final scale/round), so CPU placement and the GPU debug view pick the SAME
  * ring for the same radius.
  */
-export function sfMapRingIndexForRadius(
+export function ismMapRingIndexForRadius(
   radius: number,
   rings: number,
   rMin: number,

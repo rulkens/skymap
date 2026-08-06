@@ -3,7 +3,7 @@
  * `dustSigmaR`) and its closed-form face-on column (`dustFaceOnColumn`).
  * There is no longer a GPU mixture built here: the azimuthally-symmetric
  * smooth tier this file used to pack as its own Gaussian components was
- * deleted (the SF map now leads — `dustParticleCloud.ts` carries the
+ * deleted (the ISM map now leads — `dustParticleCloud.ts` carries the
  * galaxy's ENTIRE measured `tau`). What remains anchors that particle
  * cloud's mass budget to the measured disc profile, and feeds
  * `dustLaneFeatures.ts`'s arm-lane amplitude (used to gate where cloud

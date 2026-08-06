@@ -7,7 +7,7 @@ say which is which:
 | --------------- | ----------------------------------------------------------------------------- |
 | `sprites/`      | **v1** — the sprite-star tier (`galaxyGenerator/v1/`), scheduled for deletion |
 | `field/`        | **v2** — the analytic Gaussian-mixture field (`galaxyGenerator/v2/`)          |
-| `sfMap/`        | **v2** — the SSPSF star-formation map and its orientation chain               |
+| `ismMap/`        | **v2** — the SSPSF star-formation map and its orientation chain               |
 | everything else | tier-independent: both tiers use it, or neither does                          |
 
 ## The tree
@@ -22,13 +22,13 @@ sprites/   encodeStarPass, encodeTransmittanceDust, packCloudUniforms,
 field/     encodeSplatPass, encodeDustMapPass, encodeDustPresentPass,
            packFieldUniforms, packBubbleInstances, deriveDustHeaderLanes,
            dustSliceEdges
-sfMap/     createSfMapGenerator (dispatcher) + createSfMapOutput (shared
-           artifact) + createSfMapAutomatonRunner/createSfMapFluidRunner
-           (the two generators), createSfMapOrientation, createSfMapReadbacks,
+ismMap/     createIsmMapGenerator (dispatcher) + createIsmMapOutput (shared
+           artifact) + createIsmMapAutomatonRunner/createIsmMapFluidRunner
+           (the two generators), createIsmMapOrientation, createIsmMapReadbacks,
            createOrientationDiagnostics, decodeOrientationTexels,
-           orientationCoherenceStats, sfMapStepIndexData,
-           packSfMapAutomatonConstants, packSfMapFluidConstants,
-           packSfMapFluidEvents, packSfMapUnshear
+           orientationCoherenceStats, ismMapStepIndexData,
+           packIsmMapAutomatonConstants, packIsmMapFluidConstants,
+           packIsmMapFluidEvents, packIsmMapUnshear
 
 model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
 frame/     deriveFrameView + the pure per-frame arithmetic under it
@@ -40,7 +40,7 @@ camera/    orbit input
 timing/    the frame median + the per-pass GPU spans (`timingSlots.ts`)
 probe/     the headless readback paths the matcher drives
 shaders/   WESL — mostly symlinks into the runtime's trees (`wesl.toml`).
-           `milkyWay/{sprites,field,sfMap}/` there mirrors the three tier
+           `milkyWay/{sprites,field,ismMap}/` there mirrors the three tier
            folders above, so a folder means the same thing on both sides.
 ```
 

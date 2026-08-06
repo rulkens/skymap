@@ -20,20 +20,20 @@ export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {
     label: 'Dust view',
     info: "Crossfades in the primary galaxy's dust-column map (a hot JWST/MIRI-ish palette) over the normal view. 0 is pure galaxy, 1 the map alone. Only has an effect while the analytic model pill is on.",
   },
-  sfMap: {
-    intensityKey: 'sfMapViewIntensity',
-    label: 'SF map view',
+  ismMap: {
+    intensityKey: 'ismMapViewIntensity',
+    label: 'ISM map view',
     info: "Crossfades in the SSPSF automaton's log-polar output, same seam as the dust view. The automaton also seeds the dust and the orientation field, so this is where to look when either of those reads wrong.",
   },
   orientation: {
     intensityKey: 'orientationViewIntensity',
     label: 'Orientation view',
-    info: "Crossfades in the direction the SF map's activity runs at each point: hue is the direction, brightness is how strongly it runs that way. Long ribbons of one hue tracing an arm or a spur mean the direction is real; fine rainbow speckle, or black, means there is none to measure there — black is also what a saturated activity channel looks like. Dust sprites are stretched along this direction whenever a generator is running, so what looks wrong here shows up as misaligned dust.",
+    info: "Crossfades in the direction the ISM map's activity runs at each point: hue is the direction, brightness is how strongly it runs that way. Long ribbons of one hue tracing an arm or a spur mean the direction is real; fine rainbow speckle, or black, means there is none to measure there — black is also what a saturated activity channel looks like. Dust sprites are stretched along this direction whenever a generator is running, so what looks wrong here shows up as misaligned dust.",
   },
   bubble: {
     intensityKey: 'bubbleViewIntensity',
     label: 'Bubble view',
-    info: "Crossfades in the SF-event catalog's own bubble/cavity placements — a second, independent star-formation model nobody has ever seen, resolved from the same events the SSPSF automaton never reads. Amber shells are old relic bubbles, cyan shells are actively-swept HII cavities. The only way to compare this model against the SF map view above.",
+    info: "Crossfades in the SF-event catalog's own bubble/cavity placements — a second, independent star-formation model nobody has ever seen, resolved from the same events the SSPSF automaton never reads. Amber shells are old relic bubbles, cyan shells are actively-swept HII cavities. The only way to compare this model against the ISM map view above.",
   },
 };
 

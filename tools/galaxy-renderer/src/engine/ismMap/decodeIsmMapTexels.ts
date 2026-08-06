@@ -1,8 +1,8 @@
 /**
- * decodeSfMapTexels — unpad + decode a mapped rgba16float readback buffer
- * from sfMapPack.wesl's packed output (gas, recentSf, activity, dust)
+ * decodeIsmMapTexels — unpad + decode a mapped rgba16float readback buffer
+ * from ismMapPack.wesl's packed output (gas, recentSf, activity, dust)
  * into one tightly-packed `Float32Array`, 4 lanes per texel, row-major
- * (`ring*az + azIdx`) — the layout `GalaxySfMap.data` carries.
+ * (`ring*az + azIdx`) — the layout `GalaxyIsmMap.data` carries.
  *
  * Same f16-per-lane decode as `decodeOrientationTexels`, generalized to all
  * four channels: that helper drops `.zw` since orientation only ever wants
@@ -12,7 +12,7 @@
  */
 import { f16ToFloatLut } from '../../../../../src/utils/math/f16ToFloatLut';
 
-export function decodeSfMapTexels(
+export function decodeIsmMapTexels(
   padded: Uint16Array,
   paddedBytesPerRow: number,
   az: number,

@@ -1,6 +1,6 @@
 /**
  * The bake this module does is expensive (O(rings x arms x az)) and gets
- * called twice per SF-map rebuild (automaton runner + fluid events) with
+ * called twice per ISM-map rebuild (automaton runner + fluid events) with
  * geometry/tuning objects that are byte-identical on every non-arm slider
  * drag — the memo and the windowed inner loop are both there to make that
  * NOT repay the full bake. Two things can break: the memo keying on the
@@ -19,12 +19,12 @@ import {
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import {
-  buildGalaxySfMapArmForcing,
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
-  sfMapGridRadius,
+  buildGalaxyIsmMapArmForcing,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
+  ismMapGridRadius,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import { sfMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadius';
+import { ismMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadius';
 
 /**
  * The pre-windowing algorithm: full az sweep, atan2(sin, cos) wrap. Computed
@@ -32,12 +32,12 @@ import { sfMapRingRadius } from '../../../../../src/utils/galaxy/ismMapRingRadiu
  * rather than depending on a private unwindowed path in the module itself.
  */
 function referenceForcing(geometry: GalaxyDescription, tuning: GalaxyFieldTuning): Float32Array {
-  const { rMin, rMax } = sfMapGridRadius(geometry);
-  const out = new Float32Array(SF_MAP_AZ * SF_MAP_RINGS);
+  const { rMin, rMax } = ismMapGridRadius(geometry);
+  const out = new Float32Array(ISM_MAP_AZ * ISM_MAP_RINGS);
   if (geometry.numArms <= 0) return out;
 
-  for (let ring = 0; ring < SF_MAP_RINGS; ring++) {
-    const r = sfMapRingRadius(ring, SF_MAP_RINGS, rMin, rMax);
+  for (let ring = 0; ring < ISM_MAP_RINGS; ring++) {
+    const r = ismMapRingRadius(ring, ISM_MAP_RINGS, rMin, rMax);
     if (r <= geometry.armStartRadius) continue;
     const logR = Math.log(r / geometry.armStartRadius);
     const sigmaAcross = Math.max(armCrossSigma(r, geometry, tuning), 1e-4);
@@ -47,10 +47,10 @@ function referenceForcing(geometry: GalaxyDescription, tuning: GalaxyFieldTuning
       if (envelope <= 0) continue;
       const point = armRidgeCurvePoint(logR, geometry, arm);
       const ridgeAngle = Math.atan2(point[2], point[0]);
-      const rowBase = ring * SF_MAP_AZ;
+      const rowBase = ring * ISM_MAP_AZ;
 
-      for (let az = 0; az < SF_MAP_AZ; az++) {
-        const theta = (2 * Math.PI * az) / SF_MAP_AZ;
+      for (let az = 0; az < ISM_MAP_AZ; az++) {
+        const theta = (2 * Math.PI * az) / ISM_MAP_AZ;
         const raw = theta - ridgeAngle;
         const wrapped = Math.atan2(Math.sin(raw), Math.cos(raw));
         const crossDist = r * wrapped;
@@ -63,27 +63,27 @@ function referenceForcing(geometry: GalaxyDescription, tuning: GalaxyFieldTuning
   return out;
 }
 
-describe('buildGalaxySfMapArmForcing', () => {
+describe('buildGalaxyIsmMapArmForcing', () => {
   it('memoizes on tuning.arms.widthScale VALUE, not tuning object identity — an unrelated slider drag hits cache, widthScale forces a real recompute', () => {
     const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
     const tuningA = DEFAULT_GALAXY_FIELD_TUNING;
-    const first = buildGalaxySfMapArmForcing(geometry, tuningA);
+    const first = buildGalaxyIsmMapArmForcing(geometry, tuningA);
 
     // The settings tool rebuilds `tuning` as a fresh object on every drag —
     // a fluid-slider change is a new object whose arms.widthScale is
     // untouched, which is exactly the case the memo exists for.
     const tuningFluidDrag: GalaxyFieldTuning = {
       ...tuningA,
-      sfMapFluid: { ...tuningA.sfMapFluid, eventRate: tuningA.sfMapFluid.eventRate + 1 },
+      ismMapFluid: { ...tuningA.ismMapFluid, eventRate: tuningA.ismMapFluid.eventRate + 1 },
     };
-    const hit = buildGalaxySfMapArmForcing(geometry, tuningFluidDrag);
+    const hit = buildGalaxyIsmMapArmForcing(geometry, tuningFluidDrag);
     expect(hit).toBe(first);
 
     const tuningWiderArms: GalaxyFieldTuning = {
       ...tuningA,
       arms: { ...tuningA.arms, widthScale: tuningA.arms.widthScale * 2 },
     };
-    const recomputed = buildGalaxySfMapArmForcing(geometry, tuningWiderArms);
+    const recomputed = buildGalaxyIsmMapArmForcing(geometry, tuningWiderArms);
     expect(recomputed).not.toBe(first);
     // A real recompute, not just a new array with the same contents: doubling
     // widthScale widens every arm's cross-sigma, so the field's total mass grows.
@@ -96,8 +96,8 @@ describe('buildGalaxySfMapArmForcing', () => {
     const geometryB = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
     const tuning = DEFAULT_GALAXY_FIELD_TUNING;
 
-    const a = buildGalaxySfMapArmForcing(geometryA, tuning);
-    const b = buildGalaxySfMapArmForcing(geometryB, tuning);
+    const a = buildGalaxyIsmMapArmForcing(geometryA, tuning);
+    const b = buildGalaxyIsmMapArmForcing(geometryB, tuning);
     // Not `expect(b).not.toBe(a)`: on a pass, vitest's `.not.toBe()` still runs
     // a deep-equals over both 786432-element arrays to decide whether to print
     // a "these are equal, use toEqual" hint — ~1.4s wall, not the ~20ms bake,
@@ -109,7 +109,7 @@ describe('buildGalaxySfMapArmForcing', () => {
     const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
     const tuning = DEFAULT_GALAXY_FIELD_TUNING;
 
-    const windowed = buildGalaxySfMapArmForcing(geometry, tuning);
+    const windowed = buildGalaxyIsmMapArmForcing(geometry, tuning);
     const reference = referenceForcing(geometry, tuning);
     expect(windowed.length).toBe(reference.length);
 

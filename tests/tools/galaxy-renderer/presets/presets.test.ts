@@ -40,13 +40,13 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     });
   });
 
-  it('preserves fieldTuning.sfMapAutomaton — a nested sub-object, not just top-level scalars', () => {
+  it('preserves fieldTuning.ismMapAutomaton — a nested sub-object, not just top-level scalars', () => {
     const tunedAutomaton = {
-      ...DEFAULT_GALAXY_FIELD_TUNING.sfMapAutomaton,
+      ...DEFAULT_GALAXY_FIELD_TUNING.ismMapAutomaton,
       steps: 123,
       armForcing: 0.42,
     };
-    const tuning = { ...DEFAULT_GALAXY_FIELD_TUNING, sfMapAutomaton: tunedAutomaton };
+    const tuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMapAutomaton: tunedAutomaton };
     const wire = serializeGalaxyPreset(
       DEFAULT_GALAXY_PARAMS,
       DEFAULT_RENDER_SETTINGS,
@@ -56,7 +56,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     );
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMapAutomaton).toEqual(tunedAutomaton);
+    expect(parsed?.f?.ismMapAutomaton).toEqual(tunedAutomaton);
   });
 
   it('migrates a v2 flat fieldTuning payload to the v3 nested shape', () => {
@@ -68,7 +68,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
         discEnabled: false,
         armCloudShare: 0.42,
         hiiCavityScale: 0.7,
-        sfMap: DEFAULT_GALAXY_FIELD_TUNING.sfMap,
+        sfMap: DEFAULT_GALAXY_FIELD_TUNING.ismMap,
       },
     });
 
@@ -77,14 +77,16 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.disc?.enabled).toBe(false);
     expect(parsed?.f?.arms?.cloud?.share).toBe(0.42);
     expect(parsed?.f?.hii?.cavityScale).toBe(0.7);
-    expect(parsed?.f?.sfMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.sfMap);
+    expect(parsed?.f?.ismMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.ismMap);
   });
 
   // The three-state generator dropdown retired two booleans it used to take
   // separate presets through: `sfMap.enabled` and `dust.sfMapSeeding`. Old
-  // files on disk still carry both — `migrateGalaxyFieldTuningWire` folds the
-  // first into `generator` and drops the second outright (see its header).
-  it('migrates a disabled sfMap section to generator "none", dropping `enabled`', () => {
+  // files on disk still carry both — under their pre-ISM-rename spellings,
+  // which is why every legacy fixture below feeds `sfMap*` keys and expects
+  // `ismMap*` out — `migrateGalaxyFieldTuningWire` folds the first into
+  // `generator` and drops the second outright (see its header).
+  it('migrates a disabled legacy sfMap section to ismMap generator "none", dropping `enabled`', () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',
       version: 3,
@@ -94,7 +96,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMap).toEqual({ generator: 'none' });
+    expect(parsed?.f?.ismMap).toEqual({ generator: 'none' });
   });
 
   it("keeps an enabled preset's own generator, dropping the now-redundant `enabled`", () => {
@@ -107,7 +109,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMap).toEqual({ generator: 'automaton' });
+    expect(parsed?.f?.ismMap).toEqual({ generator: 'automaton' });
   });
 
   it('defaults the generator when an old section named only `enabled`', () => {
@@ -120,12 +122,12 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.sfMap);
+    expect(parsed?.f?.ismMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.ismMap);
   });
 
   // The reducer that applies an uploaded fieldTuning patch does a SHALLOW
   // Object.assign per section, so a hole here would upload as `undefined`
-  // and end up NaN in the fluid sim's UBO (packSfMapFluidConstants writes
+  // and end up NaN in the fluid sim's UBO (packIsmMapFluidConstants writes
   // every field straight into a Float32Array slot) — see
   // `migrateGalaxyFieldTuningWire`'s defaults-fill pass.
   it('fills a hole left by a field added after the preset was saved, and drops the retired key it replaced', () => {
@@ -135,7 +137,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
       p: DEFAULT_GALAXY_PARAMS,
       f: {
         sfMapFluid: {
-          ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid,
+          ...DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid,
           diffusion: undefined,
           pressureStrength: 0.4,
         },
@@ -144,18 +146,18 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMapFluid).toEqual({
-      ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid,
-      diffusion: DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid.diffusion,
+    expect(parsed?.f?.ismMapFluid).toEqual({
+      ...DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid,
+      diffusion: DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid.diffusion,
     });
-    expect(parsed?.f?.sfMapFluid).not.toHaveProperty('pressureStrength');
+    expect(parsed?.f?.ismMapFluid).not.toHaveProperty('pressureStrength');
   });
 
   // Proves the per-key migrator has to run BEFORE the generic defaults-fill:
-  // `enabled` isn't a field of `GalaxySfMapParams` any more, so a fill-first
+  // `enabled` isn't a field of `GalaxyIsmMapParams` any more, so a fill-first
   // ordering would drop it as an unknown key and lose the "force generator to
   // 'none'" signal it carries, defaulting to 'fluid' instead.
-  it("runs sfMap's own migrator before the defaults-fill, so a bare `enabled: false` still forces generator 'none'", () => {
+  it("runs ismMap's own migrator before the defaults-fill, so a bare `enabled: false` still forces generator 'none'", () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',
       version: 3,
@@ -165,7 +167,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMap).toEqual({ generator: 'none' });
+    expect(parsed?.f?.ismMap).toEqual({ generator: 'none' });
   });
 
   it('drops the retired `dust.sfMapSeeding`, keeping the rest of the section', () => {
@@ -179,6 +181,22 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     const parsed = parseGalaxyPreset(wire);
 
     expect(parsed?.f?.dust).toEqual({ enabled: false });
+  });
+
+  it("lifts a legacy `hii.sfMapSeeding` onto `ismMapSeeding` so the field's value survives the rename", () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        hii: { ...DEFAULT_GALAXY_FIELD_TUNING.hii, ismMapSeeding: undefined, sfMapSeeding: 0.85 },
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.hii?.ismMapSeeding).toBe(0.85);
+    expect(parsed?.f?.hii).not.toHaveProperty('sfMapSeeding');
   });
 
   it('matches the v2 envelope shape, with LOD knobs flattened into r', () => {

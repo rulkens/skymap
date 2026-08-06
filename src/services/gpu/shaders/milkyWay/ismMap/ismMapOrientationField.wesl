@@ -1,6 +1,6 @@
-// milkyWay/sfMap/sfMapOrientationField.wesl — stage 1 of the GPU
+// milkyWay/ismMap/ismMapOrientationField.wesl — stage 1 of the GPU
 // structure-tensor orientation pass chain: separable Gaussian blur
-// (sigmaDeriv) of sfMapPack.wesl's dust (A) channel — not activity,
+// (sigmaDeriv) of ismMapPack.wesl's dust (A) channel — not activity,
 // which is an Eulerian EMA of isotropic event stamps and yields ring-
 // shaped tensors, not lane-shaped ones. Two dispatches (csBlurAzimuth then
 // csBlurRing), ping-ponging through one scratch texture — a single
@@ -9,22 +9,22 @@
 // subtracts the known dust pedestal (below) first, so a constant offset
 // really does reach the tensor with zero gradient.
 
-import package::milkyWay::sfMap::sfMapOrientationLib::SfMapOrientationSigma;
-import package::milkyWay::sfMap::sfMapOrientationLib::wrapIndex;
-import package::milkyWay::sfMap::sfMapOrientationLib::clampIndex;
-import package::milkyWay::sfMap::sfMapOrientationLib::gaussianTap;
-import package::milkyWay::sfMap::sfMapOrientationLib::kernelRadius;
-import package::milkyWay::sfMap::sfMapShear::sfMapRingRadius;
+import package::milkyWay::ismMap::ismMapOrientationLib::IsmMapOrientationSigma;
+import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;
+import package::milkyWay::ismMap::ismMapOrientationLib::clampIndex;
+import package::milkyWay::ismMap::ismMapOrientationLib::gaussianTap;
+import package::milkyWay::ismMap::ismMapOrientationLib::kernelRadius;
+import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
 // The fluid generator seeds step-0 dust to ambient*gasProfile(r)
-// (sfMapFluidStep.wesl) — a smooth RADIAL gradient the structure tensor
+// (ismMapFluidStep.wesl) — a smooth RADIAL gradient the structure tensor
 // below would otherwise read as a confident TANGENTIAL ridge (jyy >> jxx),
 // biasing orientation circumferentially wherever real structure is faint.
 // gasFloor=1 makes gasProfile(r) === 1 everywhere, i.e. the automaton's own
-// flat SF_MAP_AMBIENT_DUST pedestal — one formula, two generators; the CPU
+// flat ISM_MAP_AMBIENT_DUST pedestal — one formula, two generators; the CPU
 // packer feeds gasFloor=1 for the automaton and the live fluid-tuning
 // values otherwise.
-struct SfMapOrientationPedestal {
+struct IsmMapOrientationPedestal {
   gasFloor: f32,
   gasScaleLength: f32,
   rMin: f32,
@@ -34,16 +34,16 @@ struct SfMapOrientationPedestal {
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>;
 @group(0) @binding(1) var dst: texture_storage_2d<r32float, write>;
-@group(0) @binding(2) var<uniform> sigma: SfMapOrientationSigma;
-@group(0) @binding(3) var<uniform> pedestal: SfMapOrientationPedestal;
+@group(0) @binding(2) var<uniform> sigma: IsmMapOrientationSigma;
+@group(0) @binding(3) var<uniform> pedestal: IsmMapOrientationPedestal;
 
 fn dustPedestal(ring: u32, ringCount: u32) -> f32 {
-  let r = sfMapRingRadius(ring, ringCount, pedestal.rMin, pedestal.rMax);
+  let r = ismMapRingRadius(ring, ringCount, pedestal.rMin, pedestal.rMax);
   let profile = pedestal.gasFloor + (1.0 - pedestal.gasFloor) * exp(-r / pedestal.gasScaleLength);
   return pedestal.ambient * profile;
 }
 
-// Reads sfMapPack.wesl's packed rgba16float output directly, extracting the
+// Reads ismMapPack.wesl's packed rgba16float output directly, extracting the
 // dust (.w) channel — no separate CPU-side extraction step needed.
 @compute @workgroup_size(16, 16)
 fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {

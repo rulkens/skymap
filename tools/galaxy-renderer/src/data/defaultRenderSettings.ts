@@ -111,7 +111,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   dustViewIntensity: 0,
   // 0 at boot, same rationale as `dustViewIntensity`: it crossfades in a
   // debug presentation of the automaton's output.
-  sfMapViewIntensity: 0,
+  ismMapViewIntensity: 0,
   // 0 at boot, same rationale — and the pass-chain gate: it only
   // (re-)dispatches while this is above 0 (see createGalaxyModel.ts).
   orientationViewIntensity: 0,
@@ -126,15 +126,15 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // All four at 1: the composite is unchanged from before these knobs
   // existed until the user moves one — same "identity until touched"
   // discipline as saturation/vignette above.
-  sfMapGasWeight: 1,
-  sfMapRecentWeight: 1,
-  sfMapActivityWeight: 1,
-  sfMapDustWeight: 1,
+  ismMapGasWeight: 1,
+  ismMapRecentWeight: 1,
+  ismMapActivityWeight: 1,
+  ismMapDustWeight: 1,
   // 0, unlike the four raw-channel weights above: this is a composite
   // overlay (the exact placement density), not a raw channel, so "identity
   // until touched" here means dark rather than 1 — see `RenderSettings.
-  // sfMapSeedingViewWeight`.
-  sfMapSeedingViewWeight: 0,
+  // ismMapSeedingViewWeight`.
+  ismMapSeedingViewWeight: 0,
   // 0 at boot, same rationale as the other two debug-view crossfades — and
   // the pass gate: the placement rebuild only runs while this is above 0
   // (see createGalaxyModel.ts's rebuildBubblePlacements).

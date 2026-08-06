@@ -1,15 +1,15 @@
 /**
- * Parity guard: `milkyWay/sfMap/sfMapFluidStep.wesl`'s `SfMapFluidConstants`
+ * Parity guard: `milkyWay/ismMap/ismMapFluidStep.wesl`'s `IsmMapFluidConstants`
  * is the offset authority — same sentinel-search idiom as
- * `packSfMapAutomatonConstants.test.ts`, see that file's header for why.
+ * `packIsmMapAutomatonConstants.test.ts`, see that file's header for why.
  */
 import { describe, expect, it } from 'vitest';
 
 import {
-  packSfMapFluidConstants,
-  SF_MAP_FLUID_CONSTANTS_FLOATS,
+  packIsmMapFluidConstants,
+  ISM_MAP_FLUID_CONSTANTS_FLOATS,
 } from '../../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidConstants';
-import type { SfMapFluidConstantsInput } from '../../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidConstants';
+import type { IsmMapFluidConstantsInput } from '../../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidConstants';
 import { layoutWgslStruct } from '../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../tools/utils/wgsl/readShaderSource';
@@ -17,12 +17,12 @@ import { wgslPrimitiveLayout } from '../../../../../tools/utils/wgsl/wgslPrimiti
 
 const struct = layoutWgslStruct(
   parseWgslStructFields(
-    readShaderSource('src/services/gpu/shaders/milkyWay/sfMap/sfMapFluidStep.wesl'),
-    'SfMapFluidConstants',
+    readShaderSource('src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl'),
+    'IsmMapFluidConstants',
   ),
   (type) => {
     const p = wgslPrimitiveLayout(type);
-    if (!p) throw new Error(`SfMapFluidConstants field type ${type} has no layout entry`);
+    if (!p) throw new Error(`IsmMapFluidConstants field type ${type} has no layout entry`);
     return p;
   },
 );
@@ -46,7 +46,7 @@ const SENTINEL = {
   gatherOffset: 4116,
 } as const;
 
-const input: SfMapFluidConstantsInput = {
+const input: IsmMapFluidConstantsInput = {
   grid: { rMin: SENTINEL.rMin, rMax: SENTINEL.rMax },
   fluid: {
     steps: 4201,
@@ -67,13 +67,13 @@ const input: SfMapFluidConstantsInput = {
     gasFloor: SENTINEL.gasFloor,
     laneBias: SENTINEL.laneBias,
     gatherOffset: SENTINEL.gatherOffset,
-    // CPU-only (galaxySfMapFluidEvents.ts) — no UBO member, not part of this
+    // CPU-only (galaxyIsmMapFluidEvents.ts) — no UBO member, not part of this
     // parity guard's sentinel set.
     eventArmBias: 0,
   },
 };
 
-const packed = packSfMapFluidConstants(input);
+const packed = packIsmMapFluidConstants(input);
 
 /** Byte offset a sentinel landed at (asserting it landed exactly once). */
 function observed(value: number): number {
@@ -83,9 +83,9 @@ function observed(value: number): number {
   return i * 4;
 }
 
-describe('packSfMapFluidConstants ↔ milkyWay/sfMap/sfMapFluidStep.wesl SfMapFluidConstants', () => {
+describe('packIsmMapFluidConstants ↔ milkyWay/ismMap/ismMapFluidStep.wesl IsmMapFluidConstants', () => {
   it('packs a buffer the shader can bind', () => {
-    expect(SF_MAP_FLUID_CONSTANTS_FLOATS * 4).toBeGreaterThanOrEqual(struct.layout.size);
+    expect(ISM_MAP_FLUID_CONSTANTS_FLOATS * 4).toBeGreaterThanOrEqual(struct.layout.size);
   });
 
   it('puts every member the shader declares where it declares it', () => {

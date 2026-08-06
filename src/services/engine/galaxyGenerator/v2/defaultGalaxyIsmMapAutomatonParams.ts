@@ -9,9 +9,9 @@
  * probability per step from forcing ALONE, saturating the arms whatever
  * `spread` did.
  */
-import type { GalaxySfMapAutomatonParams } from '../../../../@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapAutomatonParams } from '../../../../@types/galaxy/GalaxyIsmMapAutomatonParams';
 
-export const DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS: GalaxySfMapAutomatonParams = {
+export const DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS: GalaxyIsmMapAutomatonParams = {
   // A 2D front covers ~n^2 cells in n steps where the old ring-trapped 1D one
   // covered ~n, so the material-frame automaton reaches the same structure in
   // far fewer iterations — and rebuild latency is linear in this.
@@ -19,7 +19,7 @@ export const DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS: GalaxySfMapAutomatonParams 
   baseIgnition: 0.0002,
   // Found by eye, and measured since to sit ~30% BELOW the automaton's
   // percolation threshold of 0.231 — the disc is lit by `baseIgnition`
-  // amplified ~12x, not by self-sustaining propagation. `GalaxySfMapAutomatonParams`'s
+  // amplified ~12x, not by self-sustaining propagation. `GalaxyIsmMapAutomatonParams`'s
   // own field carries the sweep.
   spread: 0.164,
   refractorySteps: 7,
@@ -39,7 +39,7 @@ export const DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS: GalaxySfMapAutomatonParams 
   // corotationRadius, not the whole disc (a hard clamp at 1 texel/step
   // would span r ~ 5.6-12.6).
   armFluxRef: 0.5,
-  // Formerly OLD_ACTIVITY_DECAY/OLD_ACTIVITY_GAIN consts in sfMapAutomatonStep.wesl,
+  // Formerly OLD_ACTIVITY_DECAY/OLD_ACTIVITY_GAIN consts in ismMapAutomatonStep.wesl,
   // now live sliders — these two values reproduce that build's behaviour
   // exactly, so promoting them to params is behaviour-neutral by itself.
   activityDecay: 0.985,

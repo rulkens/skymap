@@ -1,20 +1,20 @@
 /**
- * sweepSfMapPercolation — where does the SSPSF automaton's percolation
+ * sweepIsmMapPercolation — where does the SSPSF automaton's percolation
  * threshold in `spread` actually sit, and what moves it?
  *
- *   npx tsx tools/galaxy-renderer/sweepSfMapPercolation.ts [--runs N] [--steps N] [--json]
+ *   npx tsx tools/galaxy-renderer/sweepIsmMapPercolation.ts [--runs N] [--steps N] [--json]
  *
  * With no override flag this runs the full built-in 11-sweep x 15-spread
  * matrix below, unchanged. Passing any of `--spread`/`--gasRegen`/
  * `--refractorySteps`/`--dustFloorFraction` instead runs ONE 'seeded' case at
- * that single parameter point (omitted knobs keep `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS`)
+ * that single parameter point (omitted knobs keep `DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS`)
  * — the ad-hoc-point mode a shell sweep loop drives:
  *
- *   npx tsx tools/galaxy-renderer/sweepSfMapPercolation.ts \
+ *   npx tsx tools/galaxy-renderer/sweepIsmMapPercolation.ts \
  *     --spread 0.23 --gasRegen 0.06 --refractorySteps 7 --dustFloorFraction 0.2 --steps 200 --runs 48
  *
- * Drives the REAL `sfMapAutomatonStep.wesl` compute pass in headless Chromium (the
- * page half is `src/percolation/sfMapPercolationHarness.ts`) rather than a CPU
+ * Drives the REAL `ismMapAutomatonStep.wesl` compute pass in headless Chromium (the
+ * page half is `src/percolation/ismMapPercolationHarness.ts`) rather than a CPU
  * port of the update rule — a percolation threshold is emergent and cannot be
  * read off a shader.
  *
@@ -35,20 +35,20 @@ import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 
 import type {
-  SfMapPercolationCase,
-  SfMapPercolationReport,
-  SfMapPercolationRequest,
-  SfMapPercolationResult,
+  IsmMapPercolationCase,
+  IsmMapPercolationReport,
+  IsmMapPercolationRequest,
+  IsmMapPercolationResult,
 } from './src/percolation/ismMapPercolationHarness';
-import type { GalaxySfMapAutomatonParams } from '../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
+import type { GalaxyIsmMapAutomatonParams } from '../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
 
-/** `GalaxySfMapAutomatonParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
-type MutableSfMapOverrides = {
-  -readonly [K in keyof GalaxySfMapAutomatonParams]?: GalaxySfMapAutomatonParams[K];
+/** `GalaxyIsmMapAutomatonParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
+type MutableIsmMapOverrides = {
+  -readonly [K in keyof GalaxyIsmMapAutomatonParams]?: GalaxyIsmMapAutomatonParams[K];
 };
 
 /**
- * A Milky-Way-shaped grid span (`sfMapGridRadius`: rMin = 0.6 * armStartRadius,
+ * A Milky-Way-shaped grid span (`ismMapGridRadius`: rMin = 0.6 * armStartRadius,
  * rMax = the outermost arm's fadeRadius). It reaches the automaton only through
  * the per-ring shear, so the `shear 0` control below is what isolates its
  * influence.
@@ -62,7 +62,7 @@ type Options = {
   steps: number;
   json: boolean;
   headed: boolean;
-  overrides: MutableSfMapOverrides;
+  overrides: MutableIsmMapOverrides;
 };
 
 function parseArgs(argv: readonly string[]): Options {
@@ -137,7 +137,7 @@ type Sweep = {
   readonly held: Record<string, number>;
 };
 
-function sweepCases(sweep: Sweep): SfMapPercolationCase[] {
+function sweepCases(sweep: Sweep): IsmMapPercolationCase[] {
   return SPREADS.map((spread) => ({
     label: `${sweep.name}|${spread}`,
     params: {
@@ -152,7 +152,7 @@ function sweepCases(sweep: Sweep): SfMapPercolationCase[] {
 }
 
 /** Survival probability crosses 0.5 between two sweep points; report where. */
-function interpolateThreshold(results: readonly SfMapPercolationResult[]): number | null {
+function interpolateThreshold(results: readonly IsmMapPercolationResult[]): number | null {
   for (let i = 1; i < results.length; i++) {
     const below = results[i - 1]!;
     const above = results[i]!;
@@ -166,7 +166,7 @@ function interpolateThreshold(results: readonly SfMapPercolationResult[]): numbe
   return null;
 }
 
-function formatSweep(sweep: Sweep, results: readonly SfMapPercolationResult[]): string[] {
+function formatSweep(sweep: Sweep, results: readonly IsmMapPercolationResult[]): string[] {
   const lines: string[] = [];
   const floor = results[0]?.tailActiveFraction ?? 0;
   lines.push(`\n${sweep.name}  (${sweep.mode}, held: ${JSON.stringify(sweep.held)})`);
@@ -207,12 +207,12 @@ function formatSweep(sweep: Sweep, results: readonly SfMapPercolationResult[]): 
 
 /**
  * One 'seeded' case at exactly the CLI-given point (omitted knobs keep
- * `DEFAULT_GALAXY_SF_MAP_AUTOMATON_PARAMS` — `runSfMapPercolation` does that merge
+ * `DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS` — `runIsmMapPercolation` does that merge
  * itself, see its own `params` line). This is the ad-hoc-point path a shell
  * sweep loop drives, as opposed to `main`'s own fixed 11-sweep matrix.
  */
 async function runSingleCase(options: Options): Promise<void> {
-  const request: SfMapPercolationRequest = {
+  const request: IsmMapPercolationRequest = {
     mode: 'seeded',
     steps: options.steps,
     runs: options.runs,
@@ -233,7 +233,7 @@ async function runSingleCase(options: Options): Promise<void> {
   const hosted = await startDevServer();
   const server: ViteDevServer = hosted.server;
   const browser = await launchChromium(options.headed);
-  let report: SfMapPercolationReport;
+  let report: IsmMapPercolationReport;
 
   try {
     const context = await browser.newContext({ viewport: { width: 400, height: 300 } });
@@ -243,16 +243,16 @@ async function runSingleCase(options: Options): Promise<void> {
     page.on('console', (message) => {
       if (message.type() === 'error') console.error(`console: ${message.text()}`);
     });
-    await page.goto(`${hosted.url}/sfMapPercolation.html`, { waitUntil: 'load' });
-    await page.waitForFunction(() => '__sfMapPercolation' in globalThis);
+    await page.goto(`${hosted.url}/ismMapPercolation.html`, { waitUntil: 'load' });
+    await page.waitForFunction(() => '__ismMapPercolation' in globalThis);
 
     report = (await page.evaluate(
       (arg) =>
         (
-          globalThis as unknown as { __sfMapPercolation: (r: unknown) => Promise<unknown> }
-        ).__sfMapPercolation(arg),
+          globalThis as unknown as { __ismMapPercolation: (r: unknown) => Promise<unknown> }
+        ).__ismMapPercolation(arg),
       request,
-    )) as SfMapPercolationReport;
+    )) as IsmMapPercolationReport;
     if (report.gpuErrors.length > 0) {
       throw new Error(`GPU rejected work:\n  ${report.gpuErrors.join('\n  ')}`);
     }
@@ -319,7 +319,7 @@ async function main(): Promise<void> {
   const hosted = await startDevServer();
   const server: ViteDevServer = hosted.server;
   const browser = await launchChromium(options.headed);
-  const reports: { sweep: Sweep; report: SfMapPercolationReport }[] = [];
+  const reports: { sweep: Sweep; report: IsmMapPercolationReport }[] = [];
   let adapterLine = 'NONE';
 
   try {
@@ -330,11 +330,11 @@ async function main(): Promise<void> {
     page.on('console', (message) => {
       if (message.type() === 'error') console.error(`console: ${message.text()}`);
     });
-    await page.goto(`${hosted.url}/sfMapPercolation.html`, { waitUntil: 'load' });
-    await page.waitForFunction(() => '__sfMapPercolation' in globalThis);
+    await page.goto(`${hosted.url}/ismMapPercolation.html`, { waitUntil: 'load' });
+    await page.waitForFunction(() => '__ismMapPercolation' in globalThis);
 
     for (const sweep of sweeps) {
-      const request: SfMapPercolationRequest = {
+      const request: IsmMapPercolationRequest = {
         mode: sweep.mode,
         steps: options.steps,
         // Spontaneous runs self-average over 196k cells, so repeats buy little.
@@ -352,10 +352,10 @@ async function main(): Promise<void> {
       const report = (await page.evaluate(
         (arg) =>
           (
-            globalThis as unknown as { __sfMapPercolation: (r: unknown) => Promise<unknown> }
-          ).__sfMapPercolation(arg),
+            globalThis as unknown as { __ismMapPercolation: (r: unknown) => Promise<unknown> }
+          ).__ismMapPercolation(arg),
         request,
-      )) as SfMapPercolationReport;
+      )) as IsmMapPercolationReport;
       adapterLine = report.adapter;
       if (report.gpuErrors.length > 0) {
         throw new Error(

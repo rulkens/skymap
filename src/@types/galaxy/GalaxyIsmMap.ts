@@ -1,17 +1,17 @@
 /**
- * GalaxySfMap — one CPU-side readback of the SSPSF automaton's packed output
- * (`sfMapPack.wesl`/`sfMapFluidPack.wesl`), decoded from rgba16float storage
+ * GalaxyIsmMap — one CPU-side readback of the SSPSF automaton's packed output
+ * (`ismMapPack.wesl`/`ismMapFluidPack.wesl`), decoded from rgba16float storage
  * to LINEAR floats. `data` is TIGHTLY packed (4 floats/texel, row-major, no
  * GPU `copyTextureToBuffer` row-alignment padding or f16 bit pattern) — see
- * the galaxy tool's `createSfMapReadbacks` for where both get
+ * the galaxy tool's `createIsmMapReadbacks` for where both get
  * stripped/decoded. `rMin`/`rMax` are the log-radial bounds this readback's
- * grid was built over (`sfMapGridRadius`), needed to invert
- * `sfMapRingRadius` when sampling.
+ * grid was built over (`ismMapGridRadius`), needed to invert
+ * `ismMapRingRadius` when sampling.
  *
  * CONTRACT (both generators' GPU ping-pong state texel AND this readback's
  * packed layout — the step/pack shaders point back here rather than
- * restating it: `sfMapAutomatonStep.wesl`, `sfMapFluidStep.wesl`,
- * `sfMapPack.wesl`, `sfMapFluidPack.wesl`):
+ * restating it: `ismMapAutomatonStep.wesl`, `ismMapFluidStep.wesl`,
+ * `ismMapPack.wesl`, `ismMapFluidPack.wesl`):
  *
  *   state (ping-pong, internal): x gas | y eventAge (steps since event core;
  *     a clock, Eulerian) | z activity (EMA of event stamps / ignition
@@ -21,9 +21,9 @@
  *     rule; may exceed 1.0)
  *
  * All four rgba16float slots are occupied — a fifth channel needs a second
- * output texture (`SfMapOutput`) + decode, not a slot squeeze here.
+ * output texture (`IsmMapOutput`) + decode, not a slot squeeze here.
  */
-export type GalaxySfMap = {
+export type GalaxyIsmMap = {
   readonly az: number;
   readonly rings: number;
   readonly rMin: number;
