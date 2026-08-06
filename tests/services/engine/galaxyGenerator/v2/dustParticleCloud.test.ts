@@ -34,7 +34,12 @@ function makeMap(dustValue: number): GalaxyIsmMap {
   return { az: MAP_AZ, rings: MAP_RINGS, rMin: MAP_R_MIN, rMax: geometry.outerRadius, data };
 }
 
-const centerOf = (ring: number, azIdx: number, az = MAP_AZ, rings = MAP_RINGS): { x: number; z: number } => {
+const centerOf = (
+  ring: number,
+  azIdx: number,
+  az = MAP_AZ,
+  rings = MAP_RINGS,
+): { x: number; z: number } => {
   const dTheta = (2 * Math.PI) / az;
   const r = ismMapRingRadius(ring, rings, MAP_R_MIN, geometry.outerRadius);
   const angle = (azIdx + 0.5) * dTheta;
@@ -221,8 +226,22 @@ describe('buildDustParticleCloud', () => {
       ...DEFAULT_GALAXY_DUST_PARAMS,
       cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
     };
-    const stale = buildDustParticleCloud(geometry, staleParams, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
-    const clean = buildDustParticleCloud(geometry, cleanParams, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    const stale = buildDustParticleCloud(
+      geometry,
+      staleParams,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      3,
+      map,
+      null,
+    );
+    const clean = buildDustParticleCloud(
+      geometry,
+      cleanParams,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      3,
+      map,
+      null,
+    );
     expect(stale.length).toBeGreaterThan(0);
     for (const p of stale) expect(Number.isFinite(p.amplitude)).toBe(true);
     // The stray key is inert, not just non-crashing: placement is
@@ -246,8 +265,22 @@ describe('buildDustParticleCloud', () => {
       ...DEFAULT_GALAXY_DUST_PARAMS,
       cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 300 },
     };
-    const a = buildDustParticleCloud(geometry, explicitZero, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
-    const b = buildDustParticleCloud(geometry, defaulted, DEFAULT_GALAXY_FIELD_TUNING, 3, map, null);
+    const a = buildDustParticleCloud(
+      geometry,
+      explicitZero,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      3,
+      map,
+      null,
+    );
+    const b = buildDustParticleCloud(
+      geometry,
+      defaulted,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      3,
+      map,
+      null,
+    );
     expect(a.length).toBeGreaterThan(0);
     expect(a).toEqual(b);
   });
@@ -286,7 +319,12 @@ describe('buildDustParticleCloud', () => {
     const buildAtCap = (dustPlacementCap: number) => {
       const dust = {
         ...DEFAULT_GALAXY_DUST_PARAMS,
-        cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 3000, clumpiness: 0, dustPlacementCap },
+        cloud: {
+          ...DEFAULT_GALAXY_DUST_PARAMS.cloud,
+          count: 3000,
+          clumpiness: 0,
+          dustPlacementCap,
+        },
       };
       return buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 5, map, null);
     };
@@ -328,7 +366,8 @@ describe('buildDustParticleCloud', () => {
         data[base + 2] = 0.3; // activity
         if (ring === ringA) data[base + 3] = 2.0;
         else if (ring === ringB) data[base + 3] = 5.0;
-        else if (ring === ringC) data[base + 3] = 1.0; // C's own low baseline
+        else if (ring === ringC)
+          data[base + 3] = 1.0; // C's own low baseline
         else data[base + 3] = 0; // every other ring: empty
       }
     }
@@ -366,7 +405,12 @@ describe('buildDustParticleCloud', () => {
     const buildAtCap = (dustPlacementCap: number) => {
       const dust = {
         ...DEFAULT_GALAXY_DUST_PARAMS,
-        cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 20000, clumpiness: 0, dustPlacementCap },
+        cloud: {
+          ...DEFAULT_GALAXY_DUST_PARAMS.cloud,
+          count: 20000,
+          clumpiness: 0,
+          dustPlacementCap,
+        },
       };
       return buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 11, map, null);
     };
@@ -412,7 +456,14 @@ describe('buildDustParticleCloud', () => {
       emptyMap,
       null,
     );
-    const unseeded = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, null, null);
+    const unseeded = buildDustParticleCloud(
+      geometry,
+      dust,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      1,
+      null,
+      null,
+    );
     expect(seeded.length).toBeGreaterThan(0);
     for (const p of seeded) {
       expect(Number.isFinite(p.amplitude)).toBe(true);

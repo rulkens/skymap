@@ -151,7 +151,7 @@ describe('ISM_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirror
     'src/services/gpu/shaders/milkyWay/field/dustDetail.wesl',
   ];
 
-  it('each file\'s ISM_MAP_AMBIENT_DUST equals the TS export', () => {
+  it("each file's ISM_MAP_AMBIENT_DUST equals the TS export", () => {
     for (const file of files) {
       const weslValue = readWeslConst(file, 'ISM_MAP_AMBIENT_DUST');
       expect(weslValue, `ISM_MAP_AMBIENT_DUST is missing from ${file}`).toBeDefined();
@@ -171,7 +171,7 @@ describe('ISM_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirror
  * ISM_MAP_AMBIENT_DUST above.
  */
 describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ ismMapPresent.wesl)', () => {
-  it('ismMapPresent.wesl\'s DUST_SURVIVAL_FLOOR_FRAC equals the TS export', () => {
+  it("ismMapPresent.wesl's DUST_SURVIVAL_FLOOR_FRAC equals the TS export", () => {
     const file = 'src/services/gpu/shaders/milkyWay/ismMap/ismMapPresent.wesl';
     const weslValue = readWeslConst(file, 'DUST_SURVIVAL_FLOOR_FRAC');
     expect(weslValue, `DUST_SURVIVAL_FLOOR_FRAC is missing from ${file}`).toBeDefined();

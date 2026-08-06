@@ -185,7 +185,10 @@ export function createIsmMapFluidRunner(
         // size: 12 — step, activeStart, activeEnd (IsmMapFluidStepIndex,
         // ismMapFluidVelocity.wesl/ismMapFluidStep.wesl), up from the single
         // `step` float the shared ismMapStepIndexData.ts shape carries.
-        const stepIndexEntry = { binding: 3, resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 } };
+        const stepIndexEntry = {
+          binding: 3,
+          resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 },
+        };
         stepBindGroupsB.push(
           device.createBindGroup({
             label: `galaxy:ismMapFluidStepBG${s}`,

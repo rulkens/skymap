@@ -30,7 +30,10 @@ function upperBound(prefix: Float32Array, u: number): number {
   return lo;
 }
 
-export function sampleIsmMapDustCdf(cdf: GalaxyIsmMapDustCdf, rng: () => number): IsmMapDustCdfSample {
+export function sampleIsmMapDustCdf(
+  cdf: GalaxyIsmMapDustCdf,
+  rng: () => number,
+): IsmMapDustCdfSample {
   const { az, rings, rMin, rMax, prefix, total } = cdf;
   const index = upperBound(prefix, rng() * total);
   const ring = Math.floor(index / az);

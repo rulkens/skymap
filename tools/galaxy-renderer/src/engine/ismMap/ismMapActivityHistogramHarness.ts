@@ -402,7 +402,9 @@ export async function runIsmMapActivityHistogram(
 }
 
 declare global {
-  var __ismMapActivityHistogram: (overrides?: Partial<GalaxyIsmMapAutomatonParams>) => Promise<string>;
+  var __ismMapActivityHistogram: (
+    overrides?: Partial<GalaxyIsmMapAutomatonParams>,
+  ) => Promise<string>;
 }
 
 globalThis.__ismMapActivityHistogram = runIsmMapActivityHistogram;

@@ -26,7 +26,12 @@ import { ismMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { IsmMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEvent';
-import { buildGalaxyIsmMapArmForcing, ismMapGridRadius, ISM_MAP_AZ, ISM_MAP_RINGS } from './galaxyIsmMapArmForcing';
+import {
+  buildGalaxyIsmMapArmForcing,
+  ismMapGridRadius,
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
+} from './galaxyIsmMapArmForcing';
 
 /** Safely above the "several hundred events over a run" design target — a generous ceiling, not a tuned one. Overflow is truncated, not resampled. */
 export const ISM_MAP_FLUID_MAX_EVENTS = 1024;
@@ -172,7 +177,10 @@ export function ismMapFluidEventWindow(
 }
 
 /** First index whose `birthStep` exceeds `threshold` — same upper-bound search idiom as this file's own `upperBound`, kept separate since it walks event objects by field, not a raw cumulative-weight array. */
-function firstIndexWithBirthStepAbove(events: readonly IsmMapFluidEvent[], threshold: number): number {
+function firstIndexWithBirthStepAbove(
+  events: readonly IsmMapFluidEvent[],
+  threshold: number,
+): number {
   let lo = 0;
   let hi = events.length;
   while (lo < hi) {

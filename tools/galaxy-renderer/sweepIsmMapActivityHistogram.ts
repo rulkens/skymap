@@ -113,7 +113,9 @@ async function main(): Promise<void> {
       (o) =>
         (
           globalThis as unknown as {
-            __ismMapActivityHistogram: (o?: Partial<GalaxyIsmMapAutomatonParams>) => Promise<string>;
+            __ismMapActivityHistogram: (
+              o?: Partial<GalaxyIsmMapAutomatonParams>,
+            ) => Promise<string>;
           }
         ).__ismMapActivityHistogram(o),
       overrides,

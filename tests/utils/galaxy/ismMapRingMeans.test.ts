@@ -9,7 +9,11 @@ import { describe, it, expect } from 'vitest';
 import type { GalaxyIsmMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
 import { ismMapRingMeans } from '../../../src/utils/galaxy/ismMapRingMeans';
 
-function makeMap(rings: number, az: number, dustAt: (ring: number, azIdx: number) => number): GalaxyIsmMap {
+function makeMap(
+  rings: number,
+  az: number,
+  dustAt: (ring: number, azIdx: number) => number,
+): GalaxyIsmMap {
   const data = new Float32Array(rings * az * 4);
   for (let ring = 0; ring < rings; ring++) {
     for (let azIdx = 0; azIdx < az; azIdx++) {

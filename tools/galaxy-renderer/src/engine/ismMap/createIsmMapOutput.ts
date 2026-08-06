@@ -183,7 +183,10 @@ export function createIsmMapOutput(
     const pass = enc.beginComputePass({ label: 'galaxy:ismMapDustBlurPass' });
     pass.setPipeline(dustBlurPipe);
     pass.setBindGroup(0, dustBlurBindGroup);
-    pass.dispatchWorkgroups(ISM_MAP_AZ / DUST_BLUR_FACTOR / 8, ISM_MAP_RINGS / DUST_BLUR_FACTOR / 8);
+    pass.dispatchWorkgroups(
+      ISM_MAP_AZ / DUST_BLUR_FACTOR / 8,
+      ISM_MAP_RINGS / DUST_BLUR_FACTOR / 8,
+    );
     pass.end();
   }
 

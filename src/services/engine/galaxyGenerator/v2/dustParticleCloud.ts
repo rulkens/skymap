@@ -277,7 +277,10 @@ export function buildDustParticleCloud(
       };
       const cdf = buildIsmMapDustCdf(map, density);
       if (cdf.total > 0) {
-        placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleIsmMapDustCdf(cdf, mapRng) };
+        placement = {
+          kind: 'mapDensity',
+          samplePoint: (mapRng) => sampleIsmMapDustCdf(cdf, mapRng),
+        };
         sampleMapTraits = (radius, angle) => {
           const coherence = ismMapOrientation
             ? sampleIsmMapOrientation(ismMapOrientation, radius, angle).coherence

@@ -210,7 +210,13 @@ function candidateRegionsFromCatalog(
     if (radius <= 0) continue;
     const center = eventCenter(event, geometry);
     if (!center) continue;
-    all.push({ center, radius, luminosity, shellCount: shellSpriteCount(luminosity), clusterCount });
+    all.push({
+      center,
+      radius,
+      luminosity,
+      shellCount: shellSpriteCount(luminosity),
+      clusterCount,
+    });
   }
   return all;
 }
@@ -715,18 +721,22 @@ function buildBlueAssociations(
 
   const armBias = Math.min(1, Math.max(0, assn.armBias));
   // Same memoization `buildDigVeil` applies, own cache slot — see its comment.
-  assnCdfCache = cachedCdf(assnCdfCache, [ismMap, geometry, tuning.arms.widthScale, armBias], () => {
-    const envelope = buildArmProximityEnvelope(geometry, tuning);
-    return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
-      armBiasedDensity(
-        associationDensity(texel.gas, texel.recentSf, texel.activity),
-        armBias,
-        envelope,
-        radius,
-        angle,
-      ),
-    );
-  });
+  assnCdfCache = cachedCdf(
+    assnCdfCache,
+    [ismMap, geometry, tuning.arms.widthScale, armBias],
+    () => {
+      const envelope = buildArmProximityEnvelope(geometry, tuning);
+      return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
+        armBiasedDensity(
+          associationDensity(texel.gas, texel.recentSf, texel.activity),
+          armBias,
+          envelope,
+          radius,
+          angle,
+        ),
+      );
+    },
+  );
   const cdf = assnCdfCache.cdf;
   if (!(cdf.total > 0)) return [];
 
@@ -781,9 +791,7 @@ function buildBlueAssociations(
         seedFrame.pole[1] * offPole;
       const y = yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
       const height = y + gaussian(rng) * pcToUnits(ASSN_SCALE_HEIGHT_PC);
-      const sigma = pcToUnits(
-        ASSN_SIGMA_MIN_PC + (ASSN_SIGMA_MAX_PC - ASSN_SIGMA_MIN_PC) * rng(),
-      );
+      const sigma = pcToUnits(ASSN_SIGMA_MIN_PC + (ASSN_SIGMA_MAX_PC - ASSN_SIGMA_MIN_PC) * rng());
       out.push({
         amplitude: amplitudeBase / (TAU_ROOT3 * sigma * sigma * sigma),
         ...inverseCovarianceFromFrame(ISO_FRAME, { along: sigma, across: sigma, pole: sigma }),

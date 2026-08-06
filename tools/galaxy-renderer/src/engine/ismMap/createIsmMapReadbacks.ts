@@ -114,7 +114,13 @@ export function createIsmMapReadbacks(deps: {
 
     requestIsmMap(grid, onLand): void {
       ismMapStream.request((data) => {
-        ismMapData = { az: ISM_MAP_AZ, rings: ISM_MAP_RINGS, rMin: grid.rMin, rMax: grid.rMax, data };
+        ismMapData = {
+          az: ISM_MAP_AZ,
+          rings: ISM_MAP_RINGS,
+          rMin: grid.rMin,
+          rMax: grid.rMax,
+          data,
+        };
         onLand(ismMapData);
       });
     },

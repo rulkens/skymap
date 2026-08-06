@@ -124,7 +124,12 @@ describe('buildHiiRegions — fluid generator seeding', () => {
     // exceeds steps so that one event is still "young" at the run's end —
     // arranged, not asserted: the test below re-derives the window
     // independently to confirm the arrangement before trusting it.
-    const tuning = fluidTuning({ eventRate: 0.02, steps: 50, impulseDuration: 1000, clusterStrength: 0 });
+    const tuning = fluidTuning({
+      eventRate: 0.02,
+      steps: 50,
+      impulseDuration: 1000,
+      clusterStrength: 0,
+    });
 
     const events = buildGalaxyIsmMapFluidEvents(geometry, tuning, geometry.seed);
     const { start, end } = ismMapFluidEventWindow(
@@ -180,8 +185,14 @@ describe('buildHiiRegions — fluid generator seeding', () => {
 
 describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing arm-ridge catalog", () => {
   it("'automaton' and 'none' are byte-identical to each other, and neither reacts to ismMapFluid tuning (proving neither reads the fluid path)", () => {
-    const automaton: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMap: { generator: 'automaton' } };
-    const none: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMap: { generator: 'none' } };
+    const automaton: GalaxyFieldTuning = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      ismMap: { generator: 'automaton' },
+    };
+    const none: GalaxyFieldTuning = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      ismMap: { generator: 'none' },
+    };
     const automatonFluidParamsChanged: GalaxyFieldTuning = {
       ...automaton,
       ismMapFluid: {
@@ -199,7 +210,13 @@ describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing a
       geometry.seed,
       null,
     );
-    const n = buildHiiRegions(geometry, none, DEFAULT_GALAXY_STAR_FORMATION_PARAMS, geometry.seed, null);
+    const n = buildHiiRegions(
+      geometry,
+      none,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      null,
+    );
     const aFluidChanged = buildHiiRegions(
       geometry,
       automatonFluidParamsChanged,
@@ -214,7 +231,10 @@ describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing a
   });
 
   it('starFormation.sfActivity still gates the catalog path off at 0, same as before this change', () => {
-    const tuning: GalaxyFieldTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMap: { generator: 'automaton' } };
+    const tuning: GalaxyFieldTuning = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      ismMap: { generator: 'automaton' },
+    };
     const off = {
       ...DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
       sfActivity: 0,

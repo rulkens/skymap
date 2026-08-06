@@ -184,7 +184,11 @@ function computeClusters(
   everIgnited: Uint32Array,
   azCount: number,
   ringCount: number,
-): { readonly clusterCount: number; readonly largestClusterSize: number; readonly totalMarked: number } {
+): {
+  readonly clusterCount: number;
+  readonly largestClusterSize: number;
+  readonly totalMarked: number;
+} {
   const cellCount = azCount * ringCount;
   const visited = new Uint8Array(cellCount);
   let clusterCount = 0;

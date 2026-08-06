@@ -53,9 +53,8 @@ function App(): ReactNode {
   const [fade, setFade] = useState<MilkyWayFadeReadout | null>(null);
   // Same null-until-first-report treatment, for the same reason — see
   // `IsmMapSection`'s own readout.
-  const [orientationDiagnostics, setOrientationDiagnostics] = useState<OrientationDiagnostics | null>(
-    null,
-  );
+  const [orientationDiagnostics, setOrientationDiagnostics] =
+    useState<OrientationDiagnostics | null>(null);
   const disconnectRef = useRef<(() => void) | null>(null);
 
   const handleEngine = (next: GalaxyEngineHandle | null): void => {

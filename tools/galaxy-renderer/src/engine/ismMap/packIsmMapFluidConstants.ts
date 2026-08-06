@@ -23,10 +23,7 @@ export type IsmMapFluidConstantsInput = {
   readonly fluid: GalaxyIsmMapFluidParams;
 };
 
-export function packIsmMapFluidConstants({
-  grid,
-  fluid,
-}: IsmMapFluidConstantsInput): Float32Array {
+export function packIsmMapFluidConstants({ grid, fluid }: IsmMapFluidConstantsInput): Float32Array {
   const out = new Float32Array(ISM_MAP_FLUID_CONSTANTS_FLOATS);
 
   out[0] = grid.rMin;
