@@ -9,6 +9,7 @@
 
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+import type { FieldDustCarve } from './FieldDustCarve';
 import type { FieldDustNoise } from './FieldDustNoise';
 import type { FieldDustSlices } from './FieldDustSlices';
 
@@ -18,6 +19,7 @@ export type FieldDust = {
   /** The CCM89 law's A_lambda/A_V per channel, for `currentDust.rV`. */
   readonly extinctionRgb: Vec3;
   readonly noise: FieldDustNoise;
+  readonly carve: FieldDustCarve;
   readonly slices: FieldDustSlices;
   /**
    * `dustMapTex`'s OWN pixel height — it carries a divisor independent of every

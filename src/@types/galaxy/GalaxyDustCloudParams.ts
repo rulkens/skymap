@@ -52,4 +52,31 @@ export type GalaxyDustCloudParams = {
    * means, so the view never drifts from what placement caps.
    */
   readonly dustPlacementCap: number;
+  /**
+   * S5 silhouette-carving depth: turns the particle cloud's smooth Gaussian
+   * envelope into a sharp fractal-coastline edge (dustMap.wesl's
+   * `dustCarveMask`), rather than eroding only its interior the way `texture`
+   * above does. 0 is the MANDATORY identity — the shader branches out
+   * entirely, since the mask's `smoothstep` would reshape the profile even
+   * near 0. UNLIKE `texture`'s mean-1 multiplier, carving REMOVES mass — the
+   * cloud's total measured tau drops as this rises. Deliberate: the tau
+   * slider compensates, and a mean-preserving carve would defeat the
+   * defined-edge purpose. 0..~2, no hard ceiling.
+   */
+  readonly carve: number;
+  /**
+   * Shapes the carve mask's smoothstep window: 0 is wide/soft (a gradual
+   * transition), 1 is narrow/hard (a crisply defined edge). Read only when
+   * `carve > 0`.
+   */
+  readonly carveSharpness: number;
+  /**
+   * Elongates the noise field `carve` (and, since they share the SAME
+   * band-limited sample, `texture`'s erosion too) reads along the disc's
+   * local azimuthal direction at each splat — stage 1 of wisp anisotropy,
+   * see dustMap.wesl's `stretchNoiseCoord`. 1 is isotropic (identity); >1
+   * stretches features along rotation. A future stage 2 would replace this
+   * generic tangent with the per-instance ISM orientation field.
+   */
+  readonly carveStretch: number;
 };

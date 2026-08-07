@@ -15,6 +15,7 @@ import { dustNoiseTileUnits } from '../../../../../src/services/engine/galaxyGen
 import { dustExtinctionRgb } from '../../../../../src/utils/galaxy/dustExtinctionRgb';
 
 import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
+import type { FieldDustCarve } from '../../../@types/engine/FieldDustCarve';
 import type { FieldDustNoise } from '../../../@types/engine/FieldDustNoise';
 
 /**
@@ -28,6 +29,8 @@ const DUST_REACH_FLOOR = 1e-3;
 
 /** `amplitude: 0` is what makes dustMap.wesl branch out of the erosion multiply entirely. */
 const NO_NOISE: FieldDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
+/** `carve: 0` is what makes dustMap.wesl branch out of S5 entirely (the mandatory identity). */
+const NO_CARVE: FieldDustCarve = { carve: 0, sharpness: 0.5, stretch: 1 };
 
 export function deriveDustHeaderLanes(
   geometry: GalaxyDescription | null,
@@ -72,5 +75,19 @@ export function deriveDustHeaderLanes(
     // fills holes in `dust` itself but takes `cloud` wholesale, so a preset
     // saved before `mapDetail` existed still re-enters here `undefined`.
     detail: live ? (dust.cloud.mapDetail ?? 0) : 0,
+    // Same shallow-fill gap as `detail` above — a preset saved before S5
+    // existed re-enters with `cloud.carve`/`carveSharpness`/`carveStretch`
+    // `undefined`, and `carve: undefined` is NOT `carve: 0`: it would fail
+    // dustMap.wesl's `carve > 0.0` gate as NaN-falsy today, but is one `??`
+    // away from silently flipping should that gate ever become `!== 0`.
+    // `?? 0`/`?? 1` name the identity defaults explicitly rather than lean on
+    // that.
+    carve: live
+      ? {
+          carve: dust.cloud.carve ?? 0,
+          sharpness: dust.cloud.carveSharpness ?? 0.5,
+          stretch: dust.cloud.carveStretch ?? 1,
+        }
+      : NO_CARVE,
   };
 }

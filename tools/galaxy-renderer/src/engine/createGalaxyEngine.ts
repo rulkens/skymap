@@ -996,6 +996,7 @@ export async function createGalaxyEngine(
           // All three cached by rebuildDustMixture, not recomputed per frame.
           extinctionRgb: model.dustHeaderLanes.extinctionRgb,
           noise: model.dustHeaderLanes.noise,
+          carve: model.dustHeaderLanes.carve,
           detail: model.dustHeaderLanes.detail,
           // VIEW-dependent, unlike every other lane in this bag.
           slices: dustSlices,
@@ -1047,6 +1048,9 @@ export async function createGalaxyEngine(
           count: 0,
           extinctionRgb: model.dustHeaderLanes.extinctionRgb,
           noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
+          // S5, like `noise`/`detail` just above, feeds dustMap.wesl's
+          // accumulation pass only — this draw never runs it.
+          carve: { carve: 0, sharpness: 0.5, stretch: 1 },
           detail: 0,
           slices: dustSlices,
           mapHeightPx: 0,

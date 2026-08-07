@@ -153,6 +153,39 @@ function DustCloudSection(): ReactNode {
           path="fieldTuning.dust.cloud.dustPlacementCap"
           info="Caps how much more likely the densest texel in a ring is vs that ring's own mean; 0 = uncapped. Never touches the radial dust profile — only redistributes mass within a ring."
         />
+        <ParamSlider
+          label="Carve"
+          value={cloud.carve}
+          min={0}
+          max={2}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ carve: v })}
+          path="fieldTuning.dust.cloud.carve"
+          info="Carves a sharp, fractal edge into each cloud's silhouette instead of only eroding its interior. 0 disables it; higher removes mass as the cutoff bites deeper."
+        />
+        <ParamSlider
+          label="Carve sharpness"
+          value={cloud.carveSharpness}
+          min={0}
+          max={1}
+          step={0.02}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ carveSharpness: v })}
+          path="fieldTuning.dust.cloud.carveSharpness"
+          info="Shapes the carved edge's transition: 0 is a soft, gradual fade, 1 a crisp, hard cutoff."
+        />
+        <ParamSlider
+          label="Carve stretch"
+          value={cloud.carveStretch}
+          min={1}
+          max={6}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => patchCloud({ carveStretch: v })}
+          path="fieldTuning.dust.cloud.carveStretch"
+          info="Elongates the carved/eroded features along the disc's local rotation direction, for wispy rather than round wisps. 1 = isotropic."
+        />
       </div>
     </CollapsibleSection>
   );

@@ -60,6 +60,7 @@ const input: FieldHeaderInput = {
     count: 14001,
     extinctionRgb: [17000, 17001, 17002],
     noise: { tileUnits: 18000, amplitude: 18001, cloudOffset: 18002, contrastExp: 18003 },
+    carve: { carve: 28000, sharpness: 28001, stretch: 28002 },
     slices: { t1: 19000, t2: 19001, t3: 19002 },
     mapHeightPx: 16000,
     detail: 24000,
@@ -136,6 +137,10 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // the seeding view's cap before that moved back into bubbleView.z).
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);
+    // dustCarve (S5) — carve/sharpness/stretch, .w spare.
+    expect(observed(28000)).toBe(at('dustCarve'));
+    expect(observed(28001)).toBe(at('dustCarve') + 4);
+    expect(observed(28002)).toBe(at('dustCarve') + 8);
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {
@@ -171,6 +176,10 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // "the neutral value, not zero" reasoning `dustNoise`'s tileUnits/
     // contrastExp lanes use just above. .w is spare, always 0.
     expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
+    // .x (carve) is the mandatory-identity 0; .y/.z (sharpness/stretch) are
+    // INERT_DUST's own named identity values, not 0, since dustMap.wesl skips
+    // the whole S5 branch on .x alone and never reads them here.
+    expect(four(at('dustCarve'))).toEqual([0, 0.5, 1, 0]);
     // .x (bubble intensity, from `debugViews`, still supplied) stays; .y/.z/.w
     // (weight/cap/globalMean) are all inert at 0 — `ismMapSeeding` omitted
     // too, so INERT_ISM_MAP_SEEDING lands here (its own doc: cap 0 is

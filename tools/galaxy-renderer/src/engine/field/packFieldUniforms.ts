@@ -42,8 +42,8 @@ import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail. */
-export const FIELD_HEADER_FLOATS = 56;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 15 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve. */
+export const FIELD_HEADER_FLOATS = 60;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -61,6 +61,10 @@ const INERT_DUST: FieldDust = {
   count: 0,
   extinctionRgb: [0, 0, 0],
   noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
+  // `carve: 0` is the mandatory identity (dustMap.wesl branches out); the
+  // other two lanes are unread in that case, but named at their own
+  // identity values rather than 0 so a future reader never has to ask.
+  carve: { carve: 0, sharpness: 0.5, stretch: 1 },
   slices: { t1: 0, t2: 0, t3: 0 },
   mapHeightPx: 0,
   // A pass with no dust has nothing for the map to modulate.
@@ -79,7 +83,7 @@ const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 const INERT_ISM_MAP_SEEDING: IsmMapSeedingLanes = { weight: 0, cap: 0, globalMean: 0 };
 
 /**
- * packFieldHeaderUniforms — one 224-byte `FieldUniforms` header, every lane
+ * packFieldHeaderUniforms — one 240-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
  * (createGalaxyEngine's `fieldData`/`hiiData`), so a lane left unwritten
  * silently ships the previous pass's bytes to the GPU — which is why an
@@ -213,6 +217,14 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[53] = hiiTexture.scale;
   out[54] = hiiTexture.contrast;
   out[55] = 0;
+
+  // dustCarve 56..59 = (carve, sharpness, stretch, spare). S5 (io.wesl's own
+  // doc) — carve <= 0 is dustMap.wesl's mandatory identity branch, so the
+  // other two lanes are inert-but-harmless whenever `dust` is `INERT_DUST`.
+  out[56] = dust.carve.carve;
+  out[57] = dust.carve.sharpness;
+  out[58] = dust.carve.stretch;
+  out[59] = 0;
 
   return out;
 }

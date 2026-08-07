@@ -25,4 +25,10 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   mapDetail: 0,
   // 0 = uncapped — today's behaviour.
   dustPlacementCap: 0,
+  // S5 off by default — identity (today's smooth Gaussian silhouette).
+  carve: 0,
+  // Mid window; inert until `carve` is raised off 0.
+  carveSharpness: 0.5,
+  // Isotropic — identity.
+  carveStretch: 1,
 };

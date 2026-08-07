@@ -8,12 +8,14 @@
 
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+import type { FieldDustCarve } from './FieldDustCarve';
 import type { FieldDustNoise } from './FieldDustNoise';
 
 export type DustHeaderLanes = {
   /** The CCM89 law's A_lambda/A_V per channel, for the dust params' `rV`. */
   readonly extinctionRgb: Vec3;
   readonly noise: FieldDustNoise;
+  readonly carve: FieldDustCarve;
   /**
    * The dust's own reach R in generator units (io.wesl's dustSlices doc) —
    * 3x the widest disc component's radial sigma. Feeds `dustSliceEdges`, which

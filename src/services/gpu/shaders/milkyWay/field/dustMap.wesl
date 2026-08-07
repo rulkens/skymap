@@ -70,17 +70,49 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   return out;
 }
 
-// dustNoiseMultiplier — erodes the particle cloud's own column with
-// the baked ridged-fbm volume (dustNoiseBake.wesl) — see io.wesl's
-// dustNoise doc for why every dust component takes this branch now.
-// 'p' is the ray's world-space closest-approach point to this Gaussian,
-// 'depth' its distance along the ray (both already computed by the caller
-// as o + d*tPeak / tPeak). Sampled at explicit LOD 0, no derivatives: this
-// is a splat quad, so neighbouring fragments can belong to wildly different
-// depths, and hardware-derivative LOD would pick the wrong footprint for at
-// least one of them.
-fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
-  let bands = textureSampleLevel(dustNoiseTex, dustNoiseSmp, p / u.dustNoise.x, 0.0);
+// stretchNoiseCoord — S5 wisp anisotropy, stage 1: elongates the shared
+// noise field along the disc's local AZIMUTHAL (tangential) direction at p
+// by compressing the sample coordinate's tangential component by 1/stretch
+// — the field then varies more slowly along rotation, so features read as
+// stretched along it. Assumes the disc plane is XZ (io.wesl's comps doc:
+// "Index 1 of M is the DISC POLE (+Y)"), so the tangent is just the in-plane
+// radial direction rotated 90 degrees; no per-component orientation is read.
+// A stage 2 would replace this generic proxy with the per-instance ISM
+// orientation field (a vertex fetch + varying) — not built now.
+// stretch <= 1 is the identity (today's isotropic field); the near-pole
+// early-out avoids a zero-length normalize where p.xz is ~0.
+fn stretchNoiseCoord(p: vec3<f32>, stretch: f32) -> vec3<f32> {
+  if (stretch <= 1.0) {
+    return p;
+  }
+  let r2 = vec2<f32>(p.x, p.z);
+  let rl = length(r2);
+  if (rl < 1e-6) {
+    return p;
+  }
+  let radial = r2 / rl;
+  let tangent = vec2<f32>(-radial.y, radial.x);
+  let alongRadial = dot(r2, radial);
+  let alongTangent = dot(r2, tangent) / stretch;
+  let xz = alongRadial * radial + alongTangent * tangent;
+  return vec3<f32>(xz.x, p.y, xz.y);
+}
+
+// dustNoiseWeighted — the shared, band-limited ridged-fbm sample BOTH S5's
+// carve mask and dustNoiseMultiplier's interior erosion read (previously two
+// separate concerns pointed at the same volume independently; sharing the
+// fetch means they describe one coherent noisy cloud instead of two
+// decorrelated ones — see dustCarveMask's own doc). 'p' is the ray's
+// world-space closest-approach point to this Gaussian, 'depth' its distance
+// along the ray (both already computed by the caller as o + d*tPeak /
+// tPeak). Sampled at explicit LOD 0, no derivatives: this is a splat quad,
+// so neighbouring fragments can belong to wildly different depths, and
+// hardware-derivative LOD would pick the wrong footprint for at least one of
+// them. Returns n in [0,1], mean ~0.5 by construction — see
+// dustNoiseMultiplier's own doc for why that mean matters.
+fn dustNoiseWeighted(p: vec3<f32>, depth: f32, stretch: f32) -> f32 {
+  let coord = stretchNoiseCoord(p, stretch) / u.dustNoise.x;
+  let bands = textureSampleLevel(dustNoiseTex, dustNoiseSmp, coord, 0.0);
 
   // dustMapHeightPx (counts2.y) is dustMapTex's own pixel height (io.wesl);
   // tanHalfFov (params.x) times depth is the world-space HALF-height of the
@@ -88,7 +120,9 @@ fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
   // to world units per pixel — this fragment's own footprint at 'depth'.
   let pxWorld = 2.0 * depth * u.params.x / u.counts2.y;
   if (pxWorld <= 0.0) {
-    return 1.0;
+    // Neutral: 0.5 is dustNoiseMultiplier's own no-op input (s=0 there), and
+    // it zeroes S5's carve*(n-0.5) perturbation the same way.
+    return 0.5;
   }
 
   // Four bands at 1x/2x/4x/8x the base tile frequency (dustNoiseBake.wesl),
@@ -104,25 +138,59 @@ fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
 
   let wSum = w0 + w1 + w2 + w3;
   let weighted = bands.x * w0 + bands.y * w1 + bands.z * w2 + bands.w * w3;
-  let n = weighted / max(wSum, 1e-6);
-  // n has mean ~0.5 by construction (each ridged band averages ~0.5 over a
-  // tile), so 's' below has mean ~0. Contrast is applied as a SIGNED power
-  // of 's' rather than a plain pow(n, g) on n itself, specifically to stay
-  // odd about s=0: an odd function preserves mean(s)=0 for a symmetric s,
-  // so the multiplier keeps mean 1 at ANY contrast setting — the cloud's
-  // total measured tau still holds in expectation, erosion only redistributes
-  // it. This only preserves the mean as well as n's own ~0.5
-  // assumption already does (ridged fbm is not exactly symmetric); no new
-  // debt beyond that pre-existing approximation. The max(0, ...) clamp
-  // biases that mean very slightly upward at amplitudes above 1 (it can
-  // only clip the low tail, never the high one, since n in [0,1] bounds the
-  // unclamped term to [1-amp, 1+amp]); accepted rather than corrected — the
-  // slider tops out at 1.5, so the bias is small and the alternative
-  // (renormalising after the clamp) would cost a second pass over the same
-  // four samples for no visible gain.
+  return weighted / max(wSum, 1e-6);
+}
+
+// dustNoiseMultiplier — shapes a shared dustNoiseWeighted sample 'n' (mean
+// ~0.5) into a mean-1 density multiplier that erodes the particle cloud's
+// own column (see io.wesl's dustNoise doc for why every dust component takes
+// this branch now). Contrast is applied as a SIGNED power of 's' rather than
+// a plain pow(n, g) on n itself, specifically to stay odd about s=0: an odd
+// function preserves mean(s)=0 for a symmetric s, so the multiplier keeps
+// mean 1 at ANY contrast setting — the cloud's total measured tau still
+// holds in expectation, erosion only redistributes it. This only preserves
+// the mean as well as n's own ~0.5 assumption already does (ridged fbm is
+// not exactly symmetric); no new debt beyond that pre-existing
+// approximation. The max(0, ...) clamp biases that mean very slightly
+// upward at amplitudes above 1 (it can only clip the low tail, never the
+// high one, since n in [0,1] bounds the unclamped term to [1-amp, 1+amp]);
+// accepted rather than corrected — the slider tops out at 1.5, so the bias
+// is small and the alternative (renormalising after the clamp) would cost a
+// second pass over the same four samples for no visible gain.
+fn dustNoiseMultiplier(n: f32) -> f32 {
   let s = 2.0 * n - 1.0;
   let shaped = sign(s) * pow(abs(s), u.dustNoise.w);
   return max(0.0, 1.0 + u.dustNoise.y * shaped);
+}
+
+// dustCarveMask — S5 silhouette carving: turns the Gaussian envelope's
+// smooth radial falloff into a sharp, fractal-coastline edge instead of
+// leaving the silhouette untouched while only eroding its interior (which
+// dustNoiseMultiplier above does).
+//
+// radialWeight is exp(-0.5 * dc.z), the FREE (dc.z is already computed by
+// the caller, this spends one exp) per-ray radial proxy: for
+// nu(p) = A*exp(-0.5*p^T*M*p), the density along the ray p(t) = o + t*d is
+// A*exp(-0.5*q(t)) with q(t) = a*t^2 + 2*b*t + c (gaussianIntegral.wesl's
+// header); minimising over t gives exactly dc.z = q(tPeak) = c - b^2/a. So
+// exp(-0.5*dc.z) is 1 precisely on the ray through this component's core and
+// falls toward 0 outward, available BEFORE any expHalfErfc call. This is NOT
+// exp(dc.z) alone — dc.z = q is non-negative and GROWS off-core, so that
+// reading would blow up outward rather than fall off; the 0.5 and the sign
+// both come from the density law's own exponent, not a free choice.
+//
+// 'n' is the SAME shared, band-limited sample dustNoiseMultiplier reads
+// (mean ~0.5, so carve*(n-0.5) is a zero-mean perturbation of radialWeight)
+// — sharing it keeps the carved edge correlated with the interior erosion,
+// both describing one cloud rather than two decorrelated fields.
+//
+// sharpness in [0,1] narrows the smoothstep window toward a hard, defined
+// edge at 1 and widens it toward a soft one at 0.
+fn dustCarveMask(radialWeight: f32, n: f32, carve: f32, sharpness: f32) -> f32 {
+  let s = clamp(sharpness, 0.0, 1.0);
+  let edge0 = mix(0.05, 0.45, s);
+  let edge1 = mix(0.95, 0.55, s);
+  return smoothstep(edge0, edge1, radialWeight + carve * (n - 0.5));
 }
 
 @fragment
@@ -155,6 +223,49 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   if (a < 1e-12) {
     return vec4<f32>(0.0);
   }
+
+  // -b/a is this component's own closest-approach depth along the ray;
+  // clamped to 0 because a component whose peak is behind the eye still
+  // contributes column density in front of it. Hoisted ahead of the slice
+  // math below (S5): the carve test right after needs it for the shared
+  // noise sample, and is meant to skip that math on a miss — the actual
+  // perf win, not just a colour clamp.
+  let tPeak = max(-dc.y / a, 0.0);
+  let p = o + d * tPeak;
+
+  // Erosion and S5 carving both apply to every dust component — input.inst
+  // is this draw's index within the dust slice (see 'base' above), and
+  // cloudOffset (dustNoise.z) is where the cloud components start within
+  // that same slice (io.wesl's dustNoise doc); it is always 0 now that the
+  // particle cloud is the only dust tier, so this gate never skips either
+  // path. Kept rather than deleted since the uniform layout still reserves
+  // the field.
+  let cloudActive = input.inst >= u32(u.dustNoise.z);
+  let noiseActive = u.dustNoise.y > 0.0 && cloudActive;
+  let carveActive = u.dustCarve.x > 0.0 && cloudActive;
+
+  // Shared fetch (S5): the sample happens once, when EITHER path needs it,
+  // and both read the identical 'n' — see dustNoiseWeighted's own doc.
+  var n = 0.5;
+  if (noiseActive || carveActive) {
+    n = dustNoiseWeighted(p, tPeak, u.dustCarve.z);
+  }
+
+  // carve <= 0 is the MANDATORY identity: skip the branch outright rather
+  // than compute a smoothstep that would be near-1 but not exactly 1, which
+  // would still reshape the silhouette (io.wesl's dustCarve doc).
+  var carveMask = 1.0;
+  if (carveActive) {
+    let radialWeight = exp(-0.5 * dc.z);
+    carveMask = dustCarveMask(radialWeight, n, u.dustCarve.x, u.dustCarve.y);
+    // The early-out: a carved-away fragment skips the four expHalfErfc
+    // evaluations below entirely, which is the perf win this feature buys
+    // back for itself (io.wesl's dustCarve doc).
+    if (carveMask <= 0.0) {
+      return vec4<f32>(0.0);
+    }
+  }
+
   // tail(t) is this component's own column from depth t to infinity, the
   // same closed form splat.wesl's former per-fragment loop used for the
   // whole ray (t=0). amplitude (dg0.w) is the component's central V-band
@@ -184,23 +295,19 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
     max(tail3, 0.0),
   );
 
-  // -b/a is this component's own closest-approach depth along the ray;
-  // clamped to 0 because a component whose peak is behind the eye still
-  // contributes column density in front of it. Used only to place the
-  // erosion sample below — the depth SLICING above needs no such peak.
-  let tPeak = max(-dc.y / a, 0.0);
-
-  // Erosion applies to every dust component — input.inst is this draw's
-  // index within the dust slice (see 'base' above), and cloudOffset
-  // (dustNoise.z) is where the cloud components start within that same
-  // slice (io.wesl's dustNoise doc); it is always 0 now that the particle
-  // cloud is the only dust tier, so this gate never skips. Kept rather than
-  // deleted since the uniform layout still reserves the field. It is a
-  // DENSITY modulation, not a depth-dependent one, so the same scalar
-  // multiplies all four slices.
-  let noiseAmp = u.dustNoise.y;
-  if (noiseAmp > 0.0 && input.inst >= u32(u.dustNoise.z)) {
-    slices = slices * dustNoiseMultiplier(o + d * tPeak, tPeak);
+  // S5's mask, applied after the slice math it early-out past above — a
+  // fragment that reaches here either has carving off or survived the mask
+  // test, so this is always a no-op or a genuine attenuation, never the
+  // carved-away case (that already returned).
+  if (carveActive) {
+    slices = slices * carveMask;
+  }
+  // Erosion is a DENSITY modulation, not a depth-dependent one, so the same
+  // scalar multiplies all four slices. 'n' is the fetch shared with S5 above
+  // (dustNoiseWeighted's own doc) — computed once whichever path needed it
+  // first.
+  if (noiseActive) {
+    slices = slices * dustNoiseMultiplier(n);
   }
   // S4: same sample point as the erosion noise above, for the same reason —
   // per-fragment, per-component, so the map's top octave parallaxes with the
@@ -213,7 +320,6 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // erosion uses, above, so the vertical coherence breaks up while the
   // column ratio holds in expectation.
   if (u.dustDetail.x > 0.0) {
-    let p = o + d * tPeak;
     // Half-tile offset decorrelates this breakup field from the erosion
     // field sampled at the unoffset coordinate above; reusing the same
     // field would correlate two multiplicative terms and bias the

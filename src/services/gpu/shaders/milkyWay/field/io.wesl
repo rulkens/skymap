@@ -28,7 +28,8 @@
 //   offset 176 : ismMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
 //   offset 192 : bubbleView: vec4 (intensity, ismMapSeedingWeight, ismMapSeedingCap, ismMapSeedingGlobalMean)
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
-//   total: 224 bytes.
+//   offset 224 : dustCarve: vec4 (carve, sharpness, stretch, spare)
+//   total: 240 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -175,6 +176,19 @@
 // placement knob now, and bubbleView had room again. Still written every
 // frame (packFieldHeaderUniforms's no-stale-lanes contract), just always 0.
 //
+// dustCarve (offset 224) is S5's silhouette carving — dustMap.wesl's fs turns
+// the smooth Gaussian envelope into a sharp fractal edge instead of eroding
+// only its interior (which dustNoise above already does). carve (.x) is the
+// depth knob; <= 0 is the MANDATORY identity — the shader branches out
+// entirely, because the smoothstep alone would reshape the profile even at
+// carve near 0. Unlike dustNoise's mean-1 multiplier, carving REMOVES mass
+// (see dustMap.wesl's dustCarveMask doc), so raising it darkens the cloud —
+// deliberate; the tau slider compensates. sharpness (.y, 0..1) narrows the
+// smoothstep window at 1 (a hard, defined edge) and widens it at 0 (soft).
+// stretch (.z, >=1) elongates the shared noise field along the disc's local
+// azimuthal direction (dustMap.wesl's stretchNoiseCoord) — stage 1 of wisp
+// anisotropy; 1 is isotropic (identity). .w is spare.
+//
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
 // already carried into world space — see transformGalaxyFieldComponent.ts —
@@ -276,6 +290,7 @@ struct FieldUniforms {
   ismMapChannels: vec4<f32>,
   bubbleView: vec4<f32>,
   dustDetail: vec4<f32>,
+  dustCarve: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
