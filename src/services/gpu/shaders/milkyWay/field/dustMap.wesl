@@ -163,34 +163,30 @@ fn dustNoiseMultiplier(n: f32) -> f32 {
   return max(0.0, 1.0 + u.dustNoise.y * shaped);
 }
 
-// dustCarveMask — S5 silhouette carving: turns the Gaussian envelope's
-// smooth radial falloff into a sharp, fractal-coastline edge instead of
-// leaving the silhouette untouched while only eroding its interior (which
-// dustNoiseMultiplier above does).
+// dustCarveMask — S5 silhouette carving, in BOUNDARY space rather than
+// density space: the first S5 attempt smoothstepped radialWeight +
+// carve*(n-0.5) directly, which sharpened the Gaussian's ~1-2 sigma contour
+// into a hard ellipse outline at every carve, including carve near 0. Here
+// the un-carved boundary sits at RHO0 = 3 sigma, where the Gaussian has
+// already fallen to ~0.011 of its peak — invisible — so all visible change
+// is noise BITING inward from nothing: nothing hardens at low carve, and
+// nothing bulges past RHO0 at high carve.
 //
-// radialWeight is exp(-0.5 * dc.z), the FREE (dc.z is already computed by
-// the caller, this spends one exp) per-ray radial proxy: for
-// nu(p) = A*exp(-0.5*p^T*M*p), the density along the ray p(t) = o + t*d is
-// A*exp(-0.5*q(t)) with q(t) = a*t^2 + 2*b*t + c (gaussianIntegral.wesl's
-// header); minimising over t gives exactly dc.z = q(tPeak) = c - b^2/a. So
-// exp(-0.5*dc.z) is 1 precisely on the ray through this component's core and
-// falls toward 0 outward, available BEFORE any expHalfErfc call. This is NOT
-// exp(dc.z) alone — dc.z = q is non-negative and GROWS off-core, so that
-// reading would blow up outward rather than fall off; the 0.5 and the sign
-// both come from the density law's own exponent, not a free choice.
-//
-// 'n' is the SAME shared, band-limited sample dustNoiseMultiplier reads
-// (mean ~0.5, so carve*(n-0.5) is a zero-mean perturbation of radialWeight)
-// — sharing it keeps the carved edge correlated with the interior erosion,
-// both describing one cloud rather than two decorrelated fields.
-//
-// sharpness in [0,1] narrows the smoothstep window toward a hard, defined
-// edge at 1 and widens it toward a soft one at 0.
-fn dustCarveMask(radialWeight: f32, n: f32, carve: f32, sharpness: f32) -> f32 {
-  let s = clamp(sharpness, 0.0, 1.0);
-  let edge0 = mix(0.05, 0.45, s);
-  let edge1 = mix(0.95, 0.55, s);
-  return smoothstep(edge0, edge1, radialWeight + carve * (n - 0.5));
+// rho = sqrt(dc.z) is the Mahalanobis DISTANCE in sigma at the ray's closest
+// approach (dc.z = gaussianRayCoeffs' q(tPeak), already the SQUARED
+// Mahalanobis distance per gaussianIntegral.wesl's own derivation). 'n' is
+// the SAME shared, band-limited sample dustNoiseMultiplier reads (mean
+// ~0.5); rhoB = RHO0*(1 - carve*n) pulls the boundary inward only (n in
+// [0,1], carve in [0,1] => rhoB in [0, RHO0]), so mean bite depth scales
+// with carve * mean(n). w, the smoothstep half-width in sigma, is
+// sharpness's whole effect now: 0.9 sigma reads as a soft airbrushed tear,
+// 0.06 sigma as a crisp torn edge.
+const RHO0: f32 = 3.0;
+
+fn dustCarveMask(rho: f32, n: f32, carve: f32, sharpness: f32) -> f32 {
+  let w = mix(0.9, 0.06, clamp(sharpness, 0.0, 1.0));
+  let rhoB = RHO0 * (1.0 - carve * n);
+  return 1.0 - smoothstep(rhoB - w, rhoB + w, rho);
 }
 
 @fragment
@@ -256,11 +252,13 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // would still reshape the silhouette (io.wesl's dustCarve doc).
   var carveMask = 1.0;
   if (carveActive) {
-    let radialWeight = exp(-0.5 * dc.z);
-    carveMask = dustCarveMask(radialWeight, n, u.dustCarve.x, u.dustCarve.y);
+    let rho = sqrt(dc.z);
+    carveMask = dustCarveMask(rho, n, u.dustCarve.x, u.dustCarve.y);
     // The early-out: a carved-away fragment skips the four expHalfErfc
-    // evaluations below entirely, which is the perf win this feature buys
-    // back for itself (io.wesl's dustCarve doc).
+    // evaluations below entirely, the perf win this feature buys back for
+    // itself (io.wesl's dustCarve doc) — and a STRONGER one than the old
+    // density-space form, since the boundary rhoB now shrinks toward the
+    // core as carve rises, instead of sitting at a fixed density contour.
     if (carveMask <= 0.0) {
       return vec4<f32>(0.0);
     }

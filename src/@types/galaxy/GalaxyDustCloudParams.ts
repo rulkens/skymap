@@ -61,7 +61,7 @@ export type GalaxyDustCloudParams = {
    * near 0. UNLIKE `texture`'s mean-1 multiplier, carving REMOVES mass — the
    * cloud's total measured tau drops as this rises. Deliberate: the tau
    * slider compensates, and a mean-preserving carve would defeat the
-   * defined-edge purpose. 0..~2, no hard ceiling.
+   * defined-edge purpose. 0..1: 1 lets full-noise bites reach the core.
    */
   readonly carve: number;
   /**

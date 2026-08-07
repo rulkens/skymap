@@ -157,12 +157,12 @@ function DustCloudSection(): ReactNode {
           label="Carve"
           value={cloud.carve}
           min={0}
-          max={2}
+          max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ carve: v })}
           path="fieldTuning.dust.cloud.carve"
-          info="Carves a sharp, fractal edge into each cloud's silhouette instead of only eroding its interior. 0 disables it; higher removes mass as the cutoff bites deeper."
+          info="Depth of the bite noise takes out of each cloud's silhouette, inward from an invisible outer boundary. 0 disables it; 1 lets full-noise bites reach the core. Removes mass as the bite deepens."
         />
         <ParamSlider
           label="Carve sharpness"
@@ -173,7 +173,7 @@ function DustCloudSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ carveSharpness: v })}
           path="fieldTuning.dust.cloud.carveSharpness"
-          info="Shapes the carved edge's transition: 0 is a soft, gradual fade, 1 a crisp, hard cutoff."
+          info="Width of the carved edge: 0 is a soft ~0.9 sigma fade, 1 a crisp ~0.06 sigma cutoff."
         />
         <ParamSlider
           label="Carve stretch"

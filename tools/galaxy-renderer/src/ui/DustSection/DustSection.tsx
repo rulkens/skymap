@@ -63,6 +63,17 @@ function DustSection(): ReactNode {
           info="Total-to-selective extinction A_V/E(B-V); sets how much bluer light dims relative to red. Milky Way diffuse ISM 3.1 (greyer above, more reddening below)."
         />
         <ParamSlider
+          label="Redness"
+          value={dust.redness}
+          min={0}
+          max={3}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchDust({ redness: v })}
+          path="fieldTuning.dust.redness"
+          info="Physical at 1; stretches blue-vs-red extinction contrast about green without changing overall dimming."
+        />
+        <ParamSlider
           label="Scale length × disc"
           value={dust.scaleLenRatio}
           min={0.8}

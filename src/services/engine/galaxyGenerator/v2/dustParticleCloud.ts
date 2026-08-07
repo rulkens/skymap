@@ -43,6 +43,7 @@ import type { IsmMapDensityTexel } from '../../../../utils/galaxy/buildIsmMapDus
 import { dustExtinctionRgb } from '../../../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
+import { stretchExtinctionChroma } from '../../../../utils/galaxy/stretchExtinctionChroma';
 import { sampleGalaxyIsmMap } from '../../../../utils/galaxy/sampleGalaxyIsmMap';
 import { sampleIsmMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
 import { sampleIsmMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
@@ -197,7 +198,9 @@ export function buildDustParticleCloud(
   const complexSpread = pcToUnits(COMPLEX_SPREAD_PC);
 
   const shape = dustDiscShape(geometry, dust);
-  const extinctionRgb = dustExtinctionRgb(dust.rV);
+  // `?? 1`: defensive default, same idiom as the carve fields above — an old
+  // preset re-entering before `redness` existed loads `undefined` here.
+  const extinctionRgb = stretchExtinctionChroma(dustExtinctionRgb(dust.rV), dust.redness ?? 1);
   const sigmaZCloud = shape.sigmaZ * cloud.heightRatio;
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"

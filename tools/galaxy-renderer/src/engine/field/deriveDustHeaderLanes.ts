@@ -13,6 +13,7 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyDustMixture';
 import { dustNoiseTileUnits } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { dustExtinctionRgb } from '../../../../../src/utils/galaxy/dustExtinctionRgb';
+import { stretchExtinctionChroma } from '../../../../../src/utils/galaxy/stretchExtinctionChroma';
 
 import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
 import type { FieldDustCarve } from '../../../@types/engine/FieldDustCarve';
@@ -54,7 +55,9 @@ export function deriveDustHeaderLanes(
 
   const live = geometry !== null && dustEnabled;
   return {
-    extinctionRgb: dustExtinctionRgb(dust.rV),
+    // `?? 1`: defensive default, same idiom as `carve` below — an old preset
+    // re-entering before `redness` existed loads `undefined` here.
+    extinctionRgb: stretchExtinctionChroma(dustExtinctionRgb(dust.rV), dust.redness ?? 1),
     reachR,
     noise: live
       ? {

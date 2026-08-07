@@ -21,5 +21,6 @@ export const DEFAULT_GALAXY_DUST_PARAMS: GalaxyDustParams = {
   scaleLenRatio: 1.5,
   heightRatio: 0.4,
   rV: 2.3,
+  redness: 1,
   cloud: DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
 };

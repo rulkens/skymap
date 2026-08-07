@@ -16,6 +16,12 @@
  * extinction LAW's one free parameter (see `dustExtinctionRgb`) — diffuse
  * Milky Way ISM ~3.1, dense molecular clouds up to ~5.5 (greyer), SMC/
  * starburst sightlines ~2–2.5 (more strongly reddening).
+ * `redness`: a LOOK knob, not a grain property — CCM89's R_V couples total
+ * dimming and colour through one grain property, capping the blue/red tau
+ * spread at ~1.8x even at the R_V floor. `redness` stretches the per-channel
+ * extinction about its GREEN anchor (see `stretchExtinctionChroma`), buying
+ * colour without extra dimming (green tau unchanged): 1 is exactly physical,
+ * >1 exaggerates the reddening, <1 desaturates toward grey.
  */
 import type { GalaxyDustCloudParams } from './GalaxyDustCloudParams';
 
@@ -26,6 +32,7 @@ export type GalaxyDustParams = {
   readonly scaleLenRatio: number;
   readonly heightRatio: number;
   readonly rV: number;
+  readonly redness: number;
   /** The 3D particle cloud that renders ALL of `tau` — see `GalaxyDustCloudParams`. */
   readonly cloud: GalaxyDustCloudParams;
 };
