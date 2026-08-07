@@ -147,6 +147,9 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
   if (category !== 'irregular' && category !== 'elliptical') {
     specs.push({ key: 'diskThickness', label: 'Disk thickness' });
   }
+  // The SHARED-bag arm fields: both generators read them, so they live here
+  // rather than under LEGACY MODEL's SPIRAL ARMS (which keeps only the
+  // legacy-only trio — see `buildArmSliders`).
   if (category === 'spiral' || category === 'barred') {
     specs.push({
       key: 'armStart',
@@ -154,7 +157,18 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
       format: (v) => v.toFixed(2),
       info: 'Multiplier on the derived arm start radius (bar/bulge-relative); below 1 pulls the arms inward toward the bulge.',
     });
+    specs.push({ key: 'armCount', label: 'Spiral arms', format: (v) => String(v) });
+    specs.push({ key: 'armWinding', label: 'Arm pitch (tight→loose)' });
+    specs.push({
+      key: 'armFalloff',
+      label: 'Arm edge falloff',
+      info: 'Sets HOW FAR the arms extend — the only knob that does. 0 reaches 1.7x the disc radius, 1 stops at 0.65x. It is a generation knob, so moving it regenerates.',
+    });
+    specs.push({ key: 'armEdgeVar', label: 'Arm length variation', seedKey: 'asymSeed' });
+    specs.push({ key: 'armClump', label: 'Arm clumpiness', seedKey: 'clumpSeed' });
+    specs.push({ key: 'armWave', label: 'Arm waviness', seedKey: 'waveSeed' });
   }
+  if (category === 'barred') specs.push({ key: 'barStrength', label: 'Bar length' });
   if (category === 'spiral' || category === 'barred' || category === 'lenticular') {
     specs.push({ key: 'warpStrength', label: 'Disk warp' });
     specs.push({
@@ -167,16 +181,28 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
   return specs;
 }
 
-// SHAPE & SIZE's own three `SliderGroup` clusters — a `buildShapeSliders`
+// SHAPE & SIZE's own four `SliderGroup` clusters — a `buildShapeSliders`
 // entry falls into exactly one, by key, regardless of which category left it
 // in the list. `irregularity` rides with warp: it's the other axis a
-// category's default silhouette departs from, not a size knob.
+// category's default silhouette departs from, not a size knob. `ARM_KEYS` is
+// the SHARED-bag arm subset (drives both generators); the LEGACY-bag trio
+// (`armWidth`/`armStrength`/`subArms`) stays under LEGACY MODEL's SPIRAL ARMS
+// instead — see `buildArmSliders`.
 const SIZE_KEYS: ReadonlySet<GalaxySliderKey> = new Set(['radius']);
 const BULGE_DISC_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
   'bulgeSize',
   'bulgeFalloff',
   'diskThickness',
+]);
+const ARM_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
   'armStart',
+  'armCount',
+  'armWinding',
+  'armFalloff',
+  'armEdgeVar',
+  'armClump',
+  'armWave',
+  'barStrength',
 ]);
 const WARP_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
   'warpStrength',
@@ -184,26 +210,16 @@ const WARP_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
   'irregularity',
 ]);
 
-// The whole group only exists for spiral/barred galaxies.
+// The legacy-only trio: `armWidth`/`armStrength`/`subArms` drive ONLY the
+// sprite generator, so this group — unlike the shared arm fields in
+// `buildShapeSliders`'s `ARM_KEYS` above — stays under LEGACY MODEL.
 function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   if (category !== 'spiral' && category !== 'barred') return [];
-  const specs: SliderSpec[] = [
-    { key: 'armCount', label: 'Spiral arms', format: (v) => String(v) },
-    { key: 'armWinding', label: 'Arm pitch (tight→loose)' },
+  return [
     { key: 'armWidth', label: 'Arm width' },
     { key: 'armStrength', label: 'Arm definition' },
     { key: 'subArms', label: 'Sub-arms / spurs' },
-    {
-      key: 'armFalloff',
-      label: 'Arm edge falloff',
-      info: 'Sets HOW FAR the arms extend — the only knob that does. 0 reaches 1.7x the disc radius, 1 stops at 0.65x. It is a generation knob, so moving it regenerates.',
-    },
-    { key: 'armEdgeVar', label: 'Arm length variation', seedKey: 'asymSeed' },
-    { key: 'armClump', label: 'Arm clumpiness', seedKey: 'clumpSeed' },
-    { key: 'armWave', label: 'Arm waviness', seedKey: 'waveSeed' },
   ];
-  if (category === 'barred') specs.push({ key: 'barStrength', label: 'Bar length' });
-  return specs;
 }
 
 // hii/youngStars/metallicity for star-forming categories.
@@ -381,6 +397,11 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           <SliderGroup title="Bulge & disc">
             {shapeSliders.filter((s) => BULGE_DISC_KEYS.has(s.key)).map(renderGalaxySlider)}
           </SliderGroup>
+          {(category === 'spiral' || category === 'barred') && (
+            <SliderGroup title="Arms">
+              {shapeSliders.filter((s) => ARM_KEYS.has(s.key)).map(renderGalaxySlider)}
+            </SliderGroup>
+          )}
           <SliderGroup title="Warp & irregularity">
             {shapeSliders.filter((s) => WARP_KEYS.has(s.key)).map(renderGalaxySlider)}
           </SliderGroup>
