@@ -3,6 +3,7 @@
  * (`pushArmRidges`) and the sprite tier that shares their excess.
  */
 import type { GalaxyArmCloudTuning } from './GalaxyArmCloudTuning';
+import type { GalaxyArmSpurTuning } from './GalaxyArmSpurTuning';
 
 export type GalaxyArmTuning = {
   /** Master toggle for `pushArmRidges`, mirrored to the section header checkbox. */
@@ -54,4 +55,6 @@ export type GalaxyArmTuning = {
    */
   readonly blobSharpness: number;
   readonly cloud: GalaxyArmCloudTuning;
+  /** Interarm spurs/feathers, off the same excess the ridge chain and cloud share — see `GalaxyArmSpurTuning`. */
+  readonly spurs: GalaxyArmSpurTuning;
 };

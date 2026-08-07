@@ -22,7 +22,6 @@
  * no Math.random/Date/engine state.
  */
 import {
-  ARM_SPAN_START_FRAC,
   armColor,
   armCrossSigma,
   armExcessSurfaceShape,
@@ -120,10 +119,10 @@ export function deriveArmCloudCount(
 
   let total = 0;
   for (const arm of geometry.arms) {
-    const rStart = geometry.armStartRadius * ARM_SPAN_START_FRAC;
+    const logStart = arm.spanStartLogR;
+    const rStart = geometry.armStartRadius * Math.exp(logStart);
     const rEnd = arm.fadeRadius;
     if (rEnd <= rStart) continue;
-    const logStart = Math.log(rStart / geometry.armStartRadius);
     const logEnd = Math.log(rEnd / geometry.armStartRadius);
     const duSample = (logEnd - logStart) / (ARM_COVERAGE_SAMPLES - 1);
 

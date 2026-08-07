@@ -26,6 +26,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // long enough that only what is being calibrated right now earns a slot.
     armField: false,
     armCloud: false,
+    // Collapsed, the `armCloud` precedent: a new sub-tier that renders
+    // visibly by default but isn't the section currently being tuned.
+    armSpurs: false,
     hii: false,
     // Nested under HII REGIONS (CollapsibleSection's `nested` prop) — own
     // open state so folding the parent doesn't fight these for the same key

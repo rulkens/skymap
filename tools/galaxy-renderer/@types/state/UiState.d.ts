@@ -17,6 +17,7 @@ export type UiState = {
       | 'arms'
       | 'armField'
       | 'armCloud'
+      | 'armSpurs'
       | 'hii'
       | 'hiiShells'
       | 'hiiDig'

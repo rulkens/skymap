@@ -62,6 +62,16 @@ const ARM_EXTENT_AT_FALLOFF_1 = 0.65;
 const ARM_EXTENT_FLOOR = 0.5;
 
 /**
+ * Mirrors `v2/armRidgeGeometry.ts`'s `ARM_SPAN_START_FRAC` (1.05) — an ordinary
+ * arm's `spanStartLogR` default. Duplicated rather than imported: `shared/`
+ * must gain no import edge onto either tier (`shared/README.md`'s landmine on
+ * `v1/`, mirrored here for `v2/` — the folder's whole point is that both tiers
+ * read it by DATA, never by import). `tests/…/shared/describeGalaxy.test.ts`
+ * pins the two constants equal so they cannot drift apart silently.
+ */
+const ARM_SPAN_START_FRAC = 1.05;
+
+/**
  * How many arms / clumps / clouds the model has. They live on the generation
  * UBO because that is the buffer that has to reserve room for them; they are
  * model constants all the same, and the loop bounds below must match or the
@@ -76,6 +86,7 @@ const ZERO_ARM = (): GalaxyFieldArmRecord => ({
   pitch: 0,
   weight: 0,
   fadeRadius: 0,
+  spanStartLogR: 0,
   meanderAmp: 0,
   meanderFreq: 0,
   meanderPhase: 0,
@@ -183,6 +194,11 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   if (category === 'spiral' || category === 'barred') {
     const clumpStream = mulberry32(((params.shared.clumpSeed ?? 0) | 0 || 911) >>> 0);
     const waveStream = mulberry32(((params.shared.waveSeed ?? 0) | 0 || 777) >>> 0);
+    // Same value for every ordinary arm — it names WHERE logR=0's span
+    // starts, not a per-arm draw. armStartLogCompensation (above) needs no
+    // matching term here: this is a ratio against armStartRadius, which
+    // already carries the compensation, so the ratio itself does not shift.
+    const spanStartLogR = Math.log(ARM_SPAN_START_FRAC);
     for (let a = 0; a < numArms; a++) {
       // Draw order unchanged (phase's jitter draw, then pitch's) — only the
       // combination is reordered, so phase can add pitch's own compensation.
@@ -214,6 +230,7 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
         pitch,
         weight,
         fadeRadius,
+        spanStartLogR,
         meanderAmp,
         meanderFreq,
         meanderPhase,

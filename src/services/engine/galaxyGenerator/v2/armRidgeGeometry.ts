@@ -130,11 +130,14 @@ export function armRidgeFrameAt(
 }
 
 /**
- * Where every arm tier starts placing, as a fraction of `armStartRadius` —
- * the ridge chain, the sprite cloud, the SF-event catalog and the lane
- * sampler share it so their arms begin together rather than at four
- * independently-drifting radii. Unrelated to the outer margins below, which
- * are fractions of `fadeRadius`.
+ * Where an ORDINARY arm starts placing, as a fraction of `armStartRadius` —
+ * `describeGalaxy` stores `log` of this as every non-spur arm's own
+ * `GalaxyFieldArmRecord.spanStartLogR`, which is what the ridge chain, the
+ * sprite cloud and the SF-event catalog actually read now (a spur's is its
+ * own root, further out — `armSpurGeometry.ts`). This constant remains the
+ * one still-global consumer, `clusteredDiscPlacement.ts`'s arm-lane seeding,
+ * which only ever runs over `geometry.arms` (never spurs). Unrelated to the
+ * outer margins below, which are fractions of `fadeRadius`.
  */
 export const ARM_SPAN_START_FRAC = 1.05;
 

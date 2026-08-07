@@ -45,6 +45,7 @@ import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
+import SpursSection from '../SpursSection/SpursSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import DebugViewsSection from '../DebugViewsSection/DebugViewsSection';
 import DustSection from '../DustSection/DustSection';
@@ -438,6 +439,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           <FieldSection />
           <ArmFieldSection />
           <ArmCloudSection />
+          <SpursSection />
           <HiiSection />
           <IsmMapSection diagnostics={orientationDiagnostics} />
           <DustSection />

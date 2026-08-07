@@ -13,7 +13,10 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { armRidgeCurvePoint } from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
+import {
+  ARM_SPAN_START_FRAC,
+  armRidgeCurvePoint,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
@@ -82,6 +85,16 @@ describe('describeGalaxy', () => {
     expect(
       describeGalaxy({ ...params, legacy: { ...params.legacy, armStrength: 0 } }).arms,
     ).toEqual(describeGalaxy({ ...params, legacy: { ...params.legacy, armStrength: 1 } }).arms);
+  });
+
+  // describeGalaxy.ts duplicates ARM_SPAN_START_FRAC rather than importing it
+  // (shared/ must gain no import edge onto v2/ — see that file's own comment)
+  // — this is the guard that keeps the duplicate from drifting silently.
+  it('an ordinary arm defaults spanStartLogR to log(v2 ARM_SPAN_START_FRAC)', () => {
+    const geometry = describeGalaxy({ type: 'Sb', shared: {}, legacy: { starCount: 100000 } });
+    for (const arm of geometry.arms) {
+      expect(arm.spanStartLogR).toBeCloseTo(Math.log(ARM_SPAN_START_FRAC), 15);
+    }
   });
 
   // The complement: the three armless categories. `numArms` is clamped to at

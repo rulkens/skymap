@@ -13,6 +13,16 @@ export type GalaxyFieldArmRecord = {
   readonly pitch: number;
   readonly weight: number;
   readonly fadeRadius: number;
+  /**
+   * Log-radius (armRidgeAngle's `logR`, 0 at `armStartRadius`) where THIS
+   * arm's rendered span begins — an ordinary arm's is
+   * `log(ARM_SPAN_START_FRAC)` (`armRidgeGeometry.ts`), the same value every
+   * span-start consumer used to hardcode before it became per-arm. A spur
+   * (`armSpurGeometry.ts`) sets its own: the log-radius of the root it grows
+   * from on its parent, not the galaxy-wide default. Not read by
+   * `armStarSample` — v1 has no spurs.
+   */
+  readonly spanStartLogR: number;
   readonly meanderAmp: number;
   readonly meanderFreq: number;
   readonly meanderPhase: number;
