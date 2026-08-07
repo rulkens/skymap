@@ -140,6 +140,22 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     }
   }
 
+  // `armStartRadius` is where logR=0 sits for every consumer of the arm
+  // curve (armRidgeAngle et al.), so scaling it by the user's `armStart`
+  // multiplier shifts logR at every FIXED physical radius by -log(m) — a
+  // rigid rotation of the whole log-spiral pattern, not a move of where the
+  // arm begins. `armStartLogCompensation` (0 at the default m=1, so nothing
+  // below changes) is added to each arm's phase-like terms, scaled by that
+  // term's own logR coefficient, to cancel exactly that shift. It uses ONLY
+  // the user multiplier's log, never the base derivation below — the base
+  // varies with bar/bulge params, and compensating for it would change every
+  // existing preset's look at armStart=1.
+  const armStartMultiplier = params.shared.armStart ?? 1;
+  const armStartLogCompensation = Math.log(armStartMultiplier);
+  const armStartRadius =
+    Math.max(category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55, bulgeRadius * 0.4) *
+    armStartMultiplier;
+
   // --- Arm personality: asymStream continues, clump/wave get their own ------
   const numArms = Math.min(Math.max(1, Math.round(params.shared.armCount || 2)), MAX_ARMS);
 
@@ -168,20 +184,24 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     const clumpStream = mulberry32(((params.shared.clumpSeed ?? 0) | 0 || 911) >>> 0);
     const waveStream = mulberry32(((params.shared.waveSeed ?? 0) | 0 || 777) >>> 0);
     for (let a = 0; a < numArms; a++) {
-      const phase = (a / numArms) * Math.PI * 2 + (asymStream() * 2 - 1) * 0.38 * asymmetry;
+      // Draw order unchanged (phase's jitter draw, then pitch's) — only the
+      // combination is reordered, so phase can add pitch's own compensation.
+      const phaseJitter = (asymStream() * 2 - 1) * 0.38 * asymmetry;
       const pitch = windTightness * (1 + (asymStream() * 2 - 1) * 0.3 * asymmetry);
+      const phase = (a / numArms) * Math.PI * 2 + phaseJitter + pitch * armStartLogCompensation;
       const weight = 1 + (asymStream() * 2 - 1) * 0.9 * asymmetry;
       const meanderAmp = asymmetry * (0.05 + 0.14 * asymStream());
       const meanderFreq = 1.2 + 1.6 * asymStream();
-      const meanderPhase = asymStream() * Math.PI * 2;
+      // armRidgeAngle's meander term reads logR as `meanderFreq * logR * 2`.
+      const meanderPhase = asymStream() * Math.PI * 2 + 2 * meanderFreq * armStartLogCompensation;
       const clumpF1 = 2 + 4 * clumpStream();
       const clumpP1 = clumpStream() * Math.PI * 2;
       const clumpF2 = 5 + 6 * clumpStream();
       const clumpP2 = clumpStream() * Math.PI * 2;
       const waveF1 = 3 + 4 * waveStream();
-      const waveP1 = waveStream() * Math.PI * 2;
+      const waveP1 = waveStream() * Math.PI * 2 + waveF1 * armStartLogCompensation;
       const waveF2 = 8 + 8 * waveStream();
-      const waveP2 = waveStream() * Math.PI * 2;
+      const waveP2 = waveStream() * Math.PI * 2 + waveF2 * armStartLogCompensation;
       const fadeRadius = Math.max(
         armFullRadius * 1.3,
         armFadeRadius * (1 + (asymStream() * 2 - 1) * 0.55 * armLengthVar),
@@ -233,11 +253,7 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     warpTwist: params.shared.warpTwist ?? 0,
     warpStartRadius: outerRadius * (params.shared.warpStart ?? 0.3),
     numArms,
-    armStartRadius:
-      Math.max(
-        category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55,
-        bulgeRadius * 0.4,
-      ) * (params.shared.armStart ?? 1),
+    armStartRadius,
     armInnerRampW: Math.max(bulgeRadius * 0.6, outerRadius * 0.14),
     armFullRadius,
     armWidthFactor: 0.1 * (params.legacy?.armWidth ?? 1),

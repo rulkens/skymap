@@ -83,6 +83,10 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     // default would start bending the disc at 5.25 kpc, well inside it.
     warpStart: 0.57,
     irregularity: 0.6,
+    // Pulls the arms' inner truncation halfway in toward the bulge (a look
+    // call, 2026-08-07); pattern azimuths are invariant to this knob by
+    // construction — see `describeGalaxy`'s armStartLogCompensation.
+    armStart: 0.5,
     radius: 1.05,
     seed: MILKY_WAY_GENERATION_SEED,
   },

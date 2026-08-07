@@ -13,6 +13,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
+import { armRidgeCurvePoint } from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
@@ -95,18 +96,39 @@ describe('describeGalaxy', () => {
   });
 
   // armStart is a pure multiplier on armStartRadius applied after the
-  // existing max(...) derivation, so it must scale linearly and leave every
-  // other draw (which never reads params.shared.armStart) untouched.
-  it('armStart scales armStartRadius, leaving the rest of the description alone', () => {
+  // existing max(...) derivation, so it must scale linearly. Every other draw
+  // (which never reads params.shared.armStart) is untouched EXCEPT the four
+  // phase-like arm terms whose logR coefficient is nonzero (phase, via its
+  // own arm's pitch; meanderPhase; waveP1; waveP2) — describeGalaxy adds
+  // coefficient * log(armStart) to each so the curve through space stays
+  // fixed (see describeGalaxy.ts's armStartLogCompensation).
+  it('armStart scales armStartRadius and compensates the phase-like arm terms, leaving the rest alone', () => {
     const params: GalaxyParams = {
       type: 'Sb',
       shared: { seed: 42 },
       legacy: { starCount: 100000 },
     };
     const base = describeGalaxy(params);
-    const halved = describeGalaxy({ ...params, shared: { ...params.shared, armStart: 0.5 } });
-    expect(halved.armStartRadius).toBeCloseTo(base.armStartRadius * 0.5);
-    expect({ ...halved, armStartRadius: base.armStartRadius }).toEqual(base);
+    const m = 0.5;
+    const halved = describeGalaxy({ ...params, shared: { ...params.shared, armStart: m } });
+    expect(halved.armStartRadius).toBeCloseTo(base.armStartRadius * m);
+
+    const logM = Math.log(m);
+    const compensatedArms = base.arms.map((arm) => ({
+      ...arm,
+      phase: arm.phase + arm.pitch * logM,
+      meanderPhase: arm.meanderPhase + 2 * arm.meanderFreq * logM,
+      waveP1: arm.waveP1 + arm.waveF1 * logM,
+      waveP2: arm.waveP2 + arm.waveF2 * logM,
+    }));
+    halved.arms.forEach((arm, i) => {
+      const expected = compensatedArms[i]!;
+      expect(arm.phase).toBeCloseTo(expected.phase, 12);
+      expect(arm.meanderPhase).toBeCloseTo(expected.meanderPhase, 12);
+      expect(arm.waveP1).toBeCloseTo(expected.waveP1, 12);
+      expect(arm.waveP2).toBeCloseTo(expected.waveP2, 12);
+    });
+    expect({ ...halved, armStartRadius: base.armStartRadius, arms: base.arms }).toEqual(base);
   });
 
   it('an absent armStart is identical to armStart 1', () => {
@@ -118,5 +140,34 @@ describe('describeGalaxy', () => {
     expect(describeGalaxy(params)).toEqual(
       describeGalaxy({ ...params, shared: { ...params.shared, armStart: 1 } }),
     );
+  });
+
+  // The regression: before the fix, armStartRadius alone parameterized logR,
+  // so scaling it by armStart rotated the whole log-spiral pattern rigidly
+  // (angle at a fixed physical radius shifted by -pitch*log(armStart)).
+  // irregularity 0 zeroes meanderAmp (asymmetry-scaled to 0) and armWave
+  // defaults to 0, so armRidgeAngle reduces to the pure log-spiral term —
+  // the exact case describeGalaxy's compensation targets — leaving no
+  // second-order meander/wave drift to launder the assertion.
+  it('armStart does not rotate the arm pattern: a fixed physical radius maps to the same point', () => {
+    const params: GalaxyParams = {
+      type: 'Sb',
+      shared: { seed: 42, irregularity: 0, armWave: 0 },
+      legacy: { starCount: 100000 },
+    };
+    const base = describeGalaxy(params);
+    const shifted = describeGalaxy({ ...params, shared: { ...params.shared, armStart: 1.4 } });
+
+    const radius = Math.max(base.armStartRadius, shifted.armStartRadius) * 3;
+    base.arms.forEach((arm, i) => {
+      const pointBase = armRidgeCurvePoint(Math.log(radius / base.armStartRadius), base, arm);
+      const pointShifted = armRidgeCurvePoint(
+        Math.log(radius / shifted.armStartRadius),
+        shifted,
+        shifted.arms[i]!,
+      );
+      expect(Math.abs(pointShifted[0] - pointBase[0])).toBeLessThan(1e-9);
+      expect(Math.abs(pointShifted[2] - pointBase[2])).toBeLessThan(1e-9);
+    });
   });
 });
