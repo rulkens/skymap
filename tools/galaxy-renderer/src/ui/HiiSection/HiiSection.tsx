@@ -315,7 +315,7 @@ function HiiSection(): ReactNode {
             label="Brightness"
             value={hii.associations.brightness}
             min={0}
-            max={2}
+            max={12}
             step={0.05}
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ brightness: v })}
