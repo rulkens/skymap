@@ -346,7 +346,10 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // Mid-range of the observed 30-50% split (docs/research/m74-jwst/
       // 08-realism-notes.md S:B3).
       fraction: 0.35,
-      complexes: 40,
+      // Scaler on the run's own recent-event population (task #10, see
+      // hiiRegions.ts's DIG_COMPLEXES_PER_EVENT) — 1 is the neutral default,
+      // no longer an absolute count.
+      complexes: 1,
       childrenPerComplex: 4,
       armBias: 0.6,
       elongation: 3,
@@ -357,8 +360,18 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // >0 so the tier is visible out of the box; a FEEL calibration, not a
       // measurement (see hiiRegions.ts's brightness anchor).
       brightness: 0.6,
-      complexes: 90,
-      childrenPerComplex: 5,
+      // Scaler on the run's own mid-age-event population (task #10, see
+      // hiiRegions.ts's ASSN_COMPLEXES_PER_EVENT) — 1 is the neutral
+      // default, no longer an absolute count.
+      complexes: 1,
+      // Fewer, larger splats than before (task #10's rendering redesign) —
+      // ASSN_SIGMA_*_PC already covers more area per blob, so each complex
+      // needs fewer children to still read as populated.
+      childrenPerComplex: 3,
+      // Repurposed as the shear-drift strength multiplier (task #10, see
+      // sfEventAgeBands.ts's driftedAssociationSeed) rather than a CDF blend
+      // weight — kept at its old default, which already read as "visible by
+      // default".
       armBias: 0.5,
       elongation: 2.5,
       coherence: 0.6,

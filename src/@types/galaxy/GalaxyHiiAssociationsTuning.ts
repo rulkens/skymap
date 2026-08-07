@@ -14,15 +14,24 @@ export type GalaxyHiiAssociationsTuning = {
    * byte-identical to the tier never having run.
    */
   readonly brightness: number;
-  /** Number of complex seeds the tier's children cluster around. */
+  /**
+   * Scaler on the run's own mid-age-event population (task #10) — a complex
+   * seeds directly off each mid-age SF event
+   * (`resolveEventLifecyclePopulation`'s `midAgeSeeds`), so the count tracks
+   * the run's own activity (`hiiRegions.ts`'s `ASSN_COMPLEXES_PER_EVENT`)
+   * rather than a fixed number; 1 is the neutral default.
+   */
   readonly complexes: number;
   /** Children per complex — total count is `complexes * childrenPerComplex`. */
   readonly childrenPerComplex: number;
   /**
-   * 0..1: concentrates map-seeded complexes toward the analytic arm
-   * envelope — same reweighting `GalaxyHiiDigTuning.armBias` applies, over
-   * this tier's own `associationDensity` CDF instead of DIG's `activity`
-   * one.
+   * 0..1(+) multiplier on the differential-rotation drift that carries a
+   * complex downstream of the gas lane its own SF event was born in
+   * (`sfEventAgeBands.ts`'s `driftedAssociationSeed`) — 0 leaves a complex
+   * sitting exactly on its event's own gas-lane position, 1 is the drift the
+   * shear formula computes exactly. Repurposed from a CDF-blend weight (see
+   * `GalaxyHiiDigTuning.armBias`'s still-CDF-based version) now that
+   * associations no longer draw from a density CDF at all.
    */
   readonly armBias: number;
   /** sigma_along / sigma_across of a complex's own child scatter, area-preserving — same convention `GalaxyHiiDigTuning.elongation` uses. */

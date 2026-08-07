@@ -114,9 +114,13 @@ describe('buildHiiRegions', () => {
       geometry.seed,
       map,
     );
-    const expectedDigCount = tuningOn.hii.dig.complexes * tuningOn.hii.dig.childrenPerComplex;
-    expect(withDig.length).toBe(withoutDig.length + expectedDigCount);
+    // `dig.complexes` is now a SCALER on the run's own recent-event
+    // population (task #10), not a literal count — the count this produces
+    // depends on the SF-event catalog, so this pins "some whole number of
+    // complexes' worth of children got added" rather than an exact formula.
+    expect(withDig.length).toBeGreaterThan(withoutDig.length);
     const dig = withDig.slice(withoutDig.length);
+    expect(dig.length % tuningOn.hii.dig.childrenPerComplex).toBe(0);
     // Individual children can drift past `rMax` (the clustering offset from
     // a complex's seed, same as `armParticleCloud.ts`/`dustParticleCloud.ts`
     // children can land outside their complex's own footprint) — the MEAN
@@ -227,37 +231,18 @@ describe('buildHiiRegions', () => {
     expect(withMap).toEqual(withoutMap);
   });
 
-  it('associations concentrate on a swept old-activity texel and skip a fresh-ignition one', () => {
-    // Both texels carry equal activity; only the hot one's recentSf
-    // differs — isolates the suppression term from a bare "follows
-    // activity" placement.
-    const az = 32;
-    const rings = 16;
-    const hotRing = 2;
-    const hotAz = 4;
-    const oldRing = 12;
-    const oldAz = 20;
-    const data = new Float32Array(rings * az * 4);
-    const hotI = (hotRing * az + hotAz) * 4;
-    data[hotI + 1] = 1; // recentSf: fresh ignition
-    data[hotI + 2] = 1; // activity: same magnitude as the swept texel
-    const oldI = (oldRing * az + oldAz) * 4;
-    data[oldI + 2] = 1; // activity only: swept clear, not currently igniting
-    const map: GalaxyIsmMap = { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
-
+  it('associations render with a null ISM map — placement is event-derived, not CDF-sampled (task #10)', () => {
+    // Associations used to CDF-sample from the map's activity/recentSf
+    // channels the way DIG still does; they now seed off the SF-event
+    // catalog's own mid-age band instead (`resolveEventLifecyclePopulation`),
+    // so a map is no longer a precondition — see `buildBlueAssociations`'s
+    // own header for why it dropped the `ismMap` parameter entirely.
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
-        associations: {
-          ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations,
-          brightness: 1,
-          armBias: 0, // every complex takes the map-CDF path, deterministically
-          complexes: 20,
-          childrenPerComplex: 6,
-        },
+        associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, brightness: 1 },
       },
     };
     const tuningOff = {
@@ -269,34 +254,17 @@ describe('buildHiiRegions', () => {
       tuningOff,
       DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
       geometry.seed,
-      map,
+      null,
     );
     const withAssn = buildHiiRegions(
       geometry,
       tuningOn,
       DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
       geometry.seed,
-      map,
+      null,
     );
-    const expectedCount =
-      tuningOn.hii.associations.complexes * tuningOn.hii.associations.childrenPerComplex;
-    expect(withAssn.length).toBe(withoutAssn.length + expectedCount);
-
+    expect(withAssn.length).toBeGreaterThan(withoutAssn.length);
     const assn = withAssn.slice(withoutAssn.length);
-    const dTheta = (2 * Math.PI) / az;
-    const oldAngleCenter = (oldAz + 0.5) * dTheta;
-    const hotAngleCenter = (hotAz + 0.5) * dTheta;
-    const wrap = (a: number) => Math.abs(a - 2 * Math.PI * Math.round(a / (2 * Math.PI)));
-    for (const component of assn) {
-      const [x, , z] = component.center;
-      const angle = Math.atan2(z, x);
-      const deltaOld = wrap(angle - oldAngleCenter);
-      const deltaHot = wrap(angle - hotAngleCenter);
-      // Generous band, same idea as the arm-bias test above — pins "landed
-      // near the swept texel", not an exact bin match once child scatter and
-      // radial jitter are folded in.
-      expect(deltaOld).toBeLessThan(0.5);
-      expect(deltaOld).toBeLessThan(deltaHot);
-    }
+    expect(assn.length % tuningOn.hii.associations.childrenPerComplex).toBe(0);
   });
 });

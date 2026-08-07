@@ -73,12 +73,12 @@ function HiiSection(): ReactNode {
           label="Texture scale"
           value={hii.textureScale}
           min={0.25}
-          max={4}
+          max={8}
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ textureScale: v })}
           path="fieldTuning.hii.textureScale"
-          info="Shared by every HII group (shells, DIG, associations). Multiplies the noise sample's frequency relative to the dust volume's own tile size — 1 samples at the SAME scale dust erosion does."
+          info="Shared by every HII group (shells, DIG, young stars). Multiplies the noise sample's frequency relative to the dust volume's own tile size — 1 samples at the SAME scale dust erosion does. Range extended past 4 for the young-stars tier's bigger splats, which need a higher frequency to still read as grainy unresolved stars rather than a soft blur."
         />
         <ParamSlider
           label="Texture contrast"
@@ -209,15 +209,15 @@ function HiiSection(): ReactNode {
             info="Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an ISM map; 0 skips the veil."
           />
           <ParamSlider
-            label="Complexes"
+            label="Population"
             value={hii.dig.complexes}
             min={0}
-            max={120}
-            step={1}
-            format={(v) => v.toFixed(0)}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
             onChange={(v) => patchDig({ complexes: v })}
             path="fieldTuning.hii.dig.complexes"
-            info="Number of DIG complex seeds. Total blob count is complexes x children."
+            info="Scaler on the run's own recent star-formation activity — the veil's complex count is now DERIVED from how much SF the current run produced, not a fixed number. 1 is the neutral default; total blob count is the derived complex count x children."
           />
           <ParamSlider
             label="Children"
@@ -277,7 +277,7 @@ function HiiSection(): ReactNode {
         </div>
       </CollapsibleSection>
       <CollapsibleSection
-        title="ASSOCIATIONS"
+        title="YOUNG STARS"
         open={assocOpen}
         onToggle={() => dispatch(sectionToggled('hiiAssociations'))}
         copyPayload={{ fieldTuning: { hii: { associations: hii.associations } } }}
@@ -296,15 +296,15 @@ function HiiSection(): ReactNode {
             info="Blue OB-association tier's flux multiplier, in the embedded cluster's own stellar-continuum currency — the exposed population left once a region's gas is expelled and its shell fades. 0 skips the tier."
           />
           <ParamSlider
-            label="Complexes"
+            label="Population"
             value={hii.associations.complexes}
             min={0}
-            max={180}
-            step={1}
-            format={(v) => v.toFixed(0)}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ complexes: v })}
             path="fieldTuning.hii.associations.complexes"
-            info="Number of association complex seeds. Total blob count is complexes x children."
+            info="Scaler on the run's own mid-age-event population — one complex seeds directly off each B/A-star event the current run produced, so the count tracks its own star-formation history rather than a fixed number. 1 is the neutral default."
           />
           <ParamSlider
             label="Children"
@@ -315,18 +315,18 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(0)}
             onChange={(v) => patchAssociations({ childrenPerComplex: v })}
             path="fieldTuning.hii.associations.childrenPerComplex"
-            info="Blobs scattered around each association complex seed."
+            info="Blobs scattered around each association complex seed. Fewer, larger blobs (see this tier's own sigma range) now read as a wide grainy patch rather than a cluster of small dots — the shared Texture/Texture scale knobs above supply the unresolved-stars grain."
           />
           <ParamSlider
-            label="Arm bias"
+            label="Drift"
             value={hii.associations.armBias}
             min={0}
-            max={1}
+            max={2}
             step={0.05}
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ armBias: v })}
             path="fieldTuning.hii.associations.armBias"
-            info="Fraction of complexes seeded on an arm's lane, offset downstream of the ridge, rather than CDF-sampled from the ISM map's swept-past density."
+            info="Strength of the downstream drift off the gas lane each complex's own SF event was born in — differential rotation carries B/A stars ahead of (or behind) the arm crest as they age. 0 leaves a complex sitting exactly on its birth site; 1 is the shear formula's own computed drift."
           />
           <ParamSlider
             label="Elongation"

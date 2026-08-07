@@ -12,7 +12,13 @@ export type GalaxyHiiDigTuning = {
    * 0 = off, byte-identical to the veil never having run.
    */
   readonly fraction: number;
-  /** Number of complex seeds the veil's blobs cluster around. */
+  /**
+   * Scaler on the run's own recent-event population (task #10) — the veil's
+   * complex count is DERIVED from how much star formation the current run
+   * actually produced (`hiiRegions.ts`'s `DIG_COMPLEXES_PER_EVENT`), not a
+   * fixed number; 1 is the neutral default, 0 turns the veil off regardless
+   * of `fraction`.
+   */
   readonly complexes: number;
   /** Blobs per complex — total blob count is `complexes * childrenPerComplex`. */
   readonly childrenPerComplex: number;
