@@ -76,7 +76,10 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     expect(parsed?.f?.disc?.enabled).toBe(false);
     expect(parsed?.f?.arms?.cloud?.share).toBe(0.42);
-    expect(parsed?.f?.hii?.cavityScale).toBe(0.7);
+    // `hiiCavityScale` lands on flat `hii.cavityScale` first (this v2 pass),
+    // then board 19's own lift (`liftHiiShells`) carries it the rest of the
+    // way onto `hii.shells.cavityScale` — see the dedicated lift tests below.
+    expect(parsed?.f?.hii?.shells?.cavityScale).toBe(0.7);
     expect(parsed?.f?.ismMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.ismMap);
   });
 
@@ -209,7 +212,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     // No `enabled` on the legacy `p.dust` and no `f.dust` at all, so it
     // defaults true, same as every other never-touched section.
-    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: true });
+    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: true, redness: 1 });
     expect(parsed?.f?.starFormation).toEqual({ sfActivity: 1.8 });
   });
 
@@ -234,7 +237,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     // `GalaxyDustTuning`) and `p.dust` (the shape) both present at once —
     // `enabled` comes from `f`, everything else survives from `p` rather
     // than being discarded for a generic default.
-    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: false });
+    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: false, redness: 1 });
   });
 
   it("lifts a legacy `hii.sfMapSeeding` onto `ismMapSeeding` so the field's value survives the rename", () => {
@@ -251,6 +254,88 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     expect(parsed?.f?.hii?.ismMapSeeding).toBe(0.85);
     expect(parsed?.f?.hii).not.toHaveProperty('sfMapSeeding');
+  });
+
+  // Board item 19 — the seven shell params (radiusScale, shellThickness,
+  // clusterStrength, cavityScale, texture, textureScale, textureContrast)
+  // moved off flat `hii` onto `hii.shells`. `migrateGalaxyFieldTuningWire`'s
+  // `liftHiiShells` carries a still-flat preset's values across the same way
+  // `LEGACY_SECTION_KEYS` carries a whole section's old spelling.
+  it('lifts flat legacy hii shell keys onto hii.shells when the nested key is absent', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 4,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        hii: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+          shells: undefined,
+          radiusScale: 1.4,
+          shellThickness: 0.4,
+          clusterStrength: 0.9,
+          cavityScale: 0.5,
+          texture: 0.7,
+          textureScale: 2,
+          textureContrast: 1.5,
+        },
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.hii?.shells).toEqual({
+      radiusScale: 1.4,
+      shellThickness: 0.4,
+      clusterStrength: 0.9,
+      cavityScale: 0.5,
+      texture: 0.7,
+      textureScale: 2,
+      textureContrast: 1.5,
+    });
+    expect(parsed?.f?.hii).not.toHaveProperty('radiusScale');
+  });
+
+  it('keeps a nested hii.shells value over the flat legacy key when a preset names both', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 4,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        hii: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+          radiusScale: 1.4, // stale flat key, must lose to the nested one below
+          shells: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.shells, radiusScale: 2.2 },
+        },
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.hii?.shells?.radiusScale).toBe(2.2);
+  });
+
+  // Board 20 collapsed associations' scattered-children swarm into one splat
+  // per seed, retiring `childrenPerComplex` — the generic defaults-fill only
+  // checks `hii`'s own top-level keys, so this field survived inside a
+  // passed-through `associations` bag until `migrateHiiAssociations` dropped
+  // it explicitly.
+  it('drops the retired hii.associations.childrenPerComplex, keeping the rest of the section', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 4,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        hii: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+          associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, childrenPerComplex: 4 },
+        },
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.hii?.associations).not.toHaveProperty('childrenPerComplex');
+    expect(parsed?.f?.hii?.associations).toEqual(DEFAULT_GALAXY_FIELD_TUNING.hii.associations);
   });
 
   it('matches the v2 envelope shape, with LOD knobs flattened into r', () => {
@@ -344,7 +429,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.p).toEqual({ type: 'Sc', shared: { radius: 1.1 } });
     // f-migrator: still found dust/starFormation on the RAW p, unaffected by
     // the p-migrator's own output.
-    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: true });
+    expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: true, redness: 1 });
     expect(parsed?.f?.starFormation).toEqual({ sfActivity: 1.8 });
   });
 

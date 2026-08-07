@@ -45,7 +45,10 @@ function fluidTuning(overrides: {
     },
     hii: {
       ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-      clusterStrength: overrides.clusterStrength ?? 0,
+      shells: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii.shells,
+        clusterStrength: overrides.clusterStrength ?? 0,
+      },
       dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
       associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, brightness: 0 },
     },

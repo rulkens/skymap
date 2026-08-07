@@ -875,11 +875,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     get hiiTexture(): HiiTextureLanes {
       // `?? 0`/`?? 1`: same stale-stored-tuning guard `hiiRegions.ts` applies
       // at its own per-group `texture` reads — a preset saved before this
-      // knob existed carries an `hii` object with no `textureScale`/
-      // `textureContrast` keys.
+      // knob (or, since board 19, `hii.shells` itself) existed carries no
+      // `shells.textureScale`/`shells.textureContrast` keys.
       return {
-        scale: fieldTuning.hii.textureScale ?? 0,
-        contrast: fieldTuning.hii.textureContrast ?? 1,
+        scale: fieldTuning.hii.shells.textureScale ?? 0,
+        contrast: fieldTuning.hii.shells.textureContrast ?? 1,
       };
     },
     fieldComps,

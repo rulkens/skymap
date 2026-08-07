@@ -9,16 +9,15 @@
  * Gaussian volume, times the galaxy's `luminosity`. Both are physical, so
  * neither an LOD tier nor a sprite constant can move them. Colours stay
  * eyeball values.
- * Imports `armParticleCloud.ts` to reserve the
- * arm cloud's component budget before the ridge chain spends it, with no
- * third caller (the engine) to reserve it for them instead — the shared
- * ridge-curve/width/colour vocabulary both sides need lives in
- * `armRidgeGeometry.ts`, so this import is one-directional.
+ * Imports `armParticleCloud.ts` and `armSpurGeometry.ts`/`armSpurParticleCloud.ts`
+ * to reserve their component budgets before the ridge chain spends it, with
+ * no third caller (the engine) to reserve it for them instead — the shared
+ * ridge-curve/width/colour vocabulary every side needs lives in
+ * `armRidgeGeometry.ts`, so these imports are one-directional.
  */
 
 import { buildArmParticleCloud, deriveArmCloudCount } from './armParticleCloud';
 import {
-  ARM_SPAN_START_FRAC,
   armColor,
   armCrossSigma,
   armExcessSurfaceShape,
@@ -27,6 +26,8 @@ import {
   armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
+import { buildArmSpurs } from './armSpurGeometry';
+import { buildArmSpurParticleCloud, deriveArmSpurCloudCount } from './armSpurParticleCloud';
 import { DEFAULT_GALAXY_DUST_PARAMS } from './defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS } from './defaultGalaxyIsmMapAutomatonParams';
 import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
@@ -317,35 +318,61 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       sizeScale: 0.65,
       elongation: 3,
     },
+    spurs: {
+      // On at a modest share out of the box — same "a section whose sliders
+      // do nothing until another one moves reads as broken" reasoning
+      // `cloud.share` above already states.
+      enabled: true,
+      share: 0.15,
+      spacing: 1,
+      pitchRatio: 1.6,
+      lengthFrac: 0.75,
+      jitter: 0.3,
+      sizeScale: 0.7,
+      elongation: 2.5,
+      // See GalaxyArmSpurTuning.gasWeight's docblock for why 0.5, not 1.
+      gasWeight: 0.5,
+    },
   },
   dust: DEFAULT_GALAXY_DUST_PARAMS,
   starFormation: DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
   hii: {
     enabled: true,
+    // Whole-field master (board item 19) — multiplies shells/dig/associations'
+    // own gains below rather than doubling as the shells' implicit one.
     brightness: 1,
-    radiusScale: 1,
-    // Thin enough that the shell reads as a front rather than a fuzzy ball;
-    // the limb brightening is geometric, so this is the one knob that decides
-    // how sharp the rim can get.
-    shellThickness: 0.25,
-    clusterStrength: 0.6,
-    // Under 1 so the lit wall sits inside the swept dust rather than on it.
-    cavityScale: 0.8,
     // Map-seeded by default on this branch — the whole point is seeing dust
     // and knots driven by the same automaton run. 0 recovers the arm-ridge
     // catalog byte-identically.
     ismMapSeeding: 1,
-    // >0 out of the box, same "visible by default, calibration is a FEEL
-    // call" reasoning `associations.brightness` below already uses — a shell
-    // tier whose every texture knob does nothing until raised reads as
-    // broken, not neutral.
-    texture: 0.5,
-    textureScale: 1,
-    textureContrast: 1,
+    shells: {
+      // 1 = the master alone, same neutral-gain role `associations.brightness`
+      // plays for its own tier.
+      brightness: 1,
+      radiusScale: 1,
+      // Thin enough that the shell reads as a front rather than a fuzzy ball;
+      // the limb brightening is geometric, so this is the one knob that
+      // decides how sharp the rim can get.
+      shellThickness: 0.25,
+      clusterStrength: 0.6,
+      // Under 1 so the lit wall sits inside the swept dust rather than on it.
+      cavityScale: 0.8,
+      // >0 out of the box, same "visible by default, calibration is a FEEL
+      // call" reasoning `associations.brightness` below already uses — a
+      // shell tier whose every texture knob does nothing until raised reads
+      // as broken, not neutral.
+      texture: 0.5,
+      textureScale: 1,
+      textureContrast: 1,
+    },
     dig: {
       // Mid-range of the observed 30-50% split (docs/research/m74-jwst/
-      // 08-realism-notes.md S:B3).
+      // 08-realism-notes.md S:B3). A flux-SPLIT knob, not a gain — see
+      // `brightness` below.
       fraction: 0.35,
+      // 1 = the master alone, same neutral-gain role every tier's own
+      // `brightness` plays now.
+      brightness: 1,
       // Scaler on the run's own recent-event population (task #10, see
       // hiiRegions.ts's DIG_COMPLEXES_PER_EVENT) — 1 is the neutral default,
       // no longer an absolute count.
@@ -364,10 +391,6 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // hiiRegions.ts's ASSN_COMPLEXES_PER_EVENT) — 1 is the neutral
       // default, no longer an absolute count.
       complexes: 1,
-      // Fewer, larger splats than before (task #10's rendering redesign) —
-      // ASSN_SIGMA_*_PC already covers more area per blob, so each complex
-      // needs fewer children to still read as populated.
-      childrenPerComplex: 3,
       // Repurposed as the shear-drift strength multiplier (task #10, see
       // sfEventAgeBands.ts's driftedAssociationSeed) rather than a CDF blend
       // weight — kept at its old default, which already read as "visible by
@@ -376,6 +399,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       elongation: 2.5,
       coherence: 0.6,
       texture: 0.5,
+      sizeScale: 1,
     },
   },
   ismMap: DEFAULT_GALAXY_ISM_MAP_PARAMS,
@@ -599,6 +623,11 @@ export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
   return Math.min(1, Math.max(0, tuning.arms.cloud.share));
 }
 
+/** Same role as `clampedArmCloudShare`, for the spur tier's own `tuning.arms.spurs.share`. */
+export function clampedArmSpurShare(tuning: GalaxyFieldTuning): number {
+  return Math.min(1, Math.max(0, tuning.arms.spurs.share));
+}
+
 /**
  * Spiral-arm RIDGE blobs, placed along the exact log-spiral curve
  * `armStarSample` draws stars around (`generate.wesl` lines ~652-771, cited
@@ -620,14 +649,17 @@ export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
  * `buildGalaxyFieldMixture` then debits back out of the disc components. Why
  * the excess is defined that way: `GalaxyArmTuning.contrast`.
  *
- * The returned total is the FULL excess regardless of `cloudShare`: this
- * function renders only `1 - cloudShare` of it, and `buildGalaxyFieldMixture`
- * hands the rest to `armParticleCloud.ts` as that tier's own flux budget — the
- * two rendered totals still sum to this return value, so the disc debit (which
- * uses the full value) stays correct either way. The caller passes the share
- * the cloud will REALLY carry, never the raw tuning: deriving it here instead
- * let the ridge chain give away a share to a cloud the caller had already
- * decided not to build.
+ * The returned total is the FULL excess regardless of `cloudShare`/`spurShare`:
+ * this function renders only `1 - cloudShare - spurShare` of it, and
+ * `buildGalaxyFieldMixture` hands the rest to `armParticleCloud.ts` and
+ * `armSpurParticleCloud.ts` as those tiers' own flux budgets — the three
+ * rendered totals still sum to this return value, so the disc debit (which
+ * uses the full value) stays correct either way. The caller passes the shares
+ * each tier will REALLY carry, never the raw tuning: deriving them here
+ * instead would let the ridge chain give away a share to a tier the caller
+ * had already decided not to build. `spurShare` arrives pre-clamped so the
+ * two shares can never jointly exceed 1 (`buildGalaxyFieldMixture`'s own
+ * comment on that clamp) — this function only has to subtract, never floor.
  */
 function pushArmRidges(
   geometry: GalaxyDescription,
@@ -636,6 +668,7 @@ function pushArmRidges(
   discFlux: number,
   reservedComponents: number,
   cloudShare: number,
+  spurShare: number,
 ): number {
   if (!tuning.arms.enabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
   const { armStartRadius, diskHeight, outerRadius } = geometry;
@@ -643,9 +676,10 @@ function pushArmRidges(
   const hLight = discLightScaleLength(geometry);
   const K = tuning.arms.contrast;
   // The RENDERED share of each blob's flux — `armExcessFlux` below stays the
-  // FULL, unscaled excess (the disc debit and the particle cloud's own share
+  // FULL, unscaled excess (the disc debit and the two particle tiers' shares
   // both key off that full total; see `buildGalaxyFieldMixture`'s docblock).
-  const renderedShare = 1 - cloudShare;
+  // Never negative: `spurShare` arrives already clamped against `1 - cloudShare`.
+  const renderedShare = 1 - cloudShare - spurShare;
 
   // Components already pushed PLUS the caller's reservation (the disc is
   // built in a local array and appended after the arms — see
@@ -659,10 +693,10 @@ function pushArmRidges(
   let armExcessFlux = 0;
 
   for (const arm of geometry.arms) {
-    const rStart = armStartRadius * ARM_SPAN_START_FRAC;
+    const logStart = arm.spanStartLogR;
+    const rStart = armStartRadius * Math.exp(logStart);
     const rEnd = arm.fadeRadius;
     if (rEnd <= rStart) continue;
-    const logStart = Math.log(rStart / armStartRadius);
     const logEnd = Math.log(rEnd / armStartRadius);
     const blobsPerArm = deriveArmBlobCount(logStart, logEnd, geometry, arm, tuning, perArmBudget);
     const Ki = 1 + (K - 1) * (ARM_AGE_CONTRAST_FLOOR + ARM_AGE_CONTRAST_SPAN * arm.age);
@@ -863,14 +897,14 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
  * (`pushWarpedOuterDisc`, `pushArmRidges`) plus each component's own
  * linearised shear (`shapeOf`) or true surface frame.
  *
- * `armParticleCloud.ts`'s sprites share this same cap: `armCloudReserve`
- * below is computed BEFORE `pushArmRidges` runs and folded into its
- * `reservedComponents`, so the ridge chain's own budget shrinks to leave
- * room rather than the two tiers racing for the same slots. HII regions
- * (`hiiRegions.ts`) do NOT compete for this cap any more — they render into
- * their own target off their own buffer (`createGalaxyEngine.ts`'s
- * `hiiTex`/`hiiCompsBuf`, research doc §18.1), so they never reserve any of
- * it.
+ * `armParticleCloud.ts`'s and `armSpurParticleCloud.ts`'s sprites share this
+ * same cap: `armCloudCount`/`spurCloudCount` below are computed BEFORE
+ * `pushArmRidges` runs and folded into its `reservedComponents`, so the
+ * ridge chain's own budget shrinks to leave room rather than the three
+ * tiers racing for the same slots. HII regions (`hiiRegions.ts`) do NOT
+ * compete for this cap any more — they render into their own target off
+ * their own buffer (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`,
+ * research doc §18.1), so they never reserve any of it.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyDescription,
@@ -913,13 +947,34 @@ export function buildGalaxyFieldMixture(
   // either way, so a share promised to a tier that never runs is light nothing
   // emits.
   const cloudShare = armCloudCount > 0 ? clampedArmCloudShare(tuning) : 0;
+
+  // Spur ROOTS are geometry, not flux — derived once here regardless of the
+  // spur pill, the same way `geometry.arms` itself is built whether or not
+  // any tier ends up rendering them. `spurCloudCount` gates on the pill; the
+  // roots array staying non-empty when the pill is off costs nothing (no
+  // component reserved, no flux spent).
+  const spurArms = buildArmSpurs(geometry, tuning.arms.spurs, geometry.seed);
+  const spurCloudCount =
+    tuning.arms.enabled && tuning.arms.spurs.enabled && clampedArmSpurShare(tuning) > 0
+      ? deriveArmSpurCloudCount(spurArms, geometry, tuning)
+      : 0;
+  // Clamped against what the cloud already claimed, not just [0,1] on its
+  // own: `pushArmRidges`' renderedShare is 1 - cloudShare - spurShare, and a
+  // share that would push that negative would double-spend the excess (the
+  // cloud and the spurs would then jointly draw on more flux than
+  // `armExcessFlux` actually is). A share promised to a tier that will not
+  // build (spurCloudCount 0) hands it back, same as the cloud's own case.
+  const spurShare =
+    spurCloudCount > 0 ? Math.min(clampedArmSpurShare(tuning), Math.max(0, 1 - cloudShare)) : 0;
+
   const armExcessFlux = pushArmRidges(
     geometry,
     out,
     tuning,
     discFlux,
-    (tuning.disc.enabled ? discOut.length : 0) + armCloudCount,
+    (tuning.disc.enabled ? discOut.length : 0) + armCloudCount + spurCloudCount,
     cloudShare,
+    spurShare,
   );
   if (discFlux > 0 && armExcessFlux > 0) {
     const debit = Math.min(armExcessFlux, discFlux * ARM_DISC_DEBIT_CLAMP_FRACTION);
@@ -933,6 +988,11 @@ export function buildGalaxyFieldMixture(
   const cloudFlux = armExcessFlux * cloudShare;
   if (cloudFlux > 0) {
     out.push(...buildArmParticleCloud(geometry, tuning, cloudFlux, geometry.seed));
+  }
+
+  const spurFlux = armExcessFlux * spurShare;
+  if (spurFlux > 0) {
+    out.push(...buildArmSpurParticleCloud(geometry, spurArms, tuning, spurFlux, geometry.seed));
   }
 
   pushBulge(geometry, out, tuning);

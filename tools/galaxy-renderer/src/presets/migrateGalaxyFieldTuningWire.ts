@@ -95,6 +95,63 @@ function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
 }
 
 /**
+ * Board 19: these seven fields sat flat on `hii` before `GalaxyHiiShellsTuning`
+ * existed — same "old key wins only when the new one is absent" discipline
+ * `LEGACY_SECTION_KEYS` uses, one level deeper. Runs before the generic
+ * defaults-fill pass below, which copies `shells` WHOLESALE (like `dig`/
+ * `associations` already do) rather than deep-merging it — a preset naming
+ * only some of the seven re-enters with a partial `shells` bag, which is why
+ * every read of these fields in `hiiRegions.ts`/`dustBubblePlacements.ts`
+ * carries its own `?? default` guard rather than assuming presence.
+ */
+const HII_SHELLS_LIFT_KEYS = [
+  'radiusScale',
+  'shellThickness',
+  'clusterStrength',
+  'cavityScale',
+  'texture',
+  'textureScale',
+  'textureContrast',
+] as const;
+
+function liftHiiShells(hii: Record<string, unknown>): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...hii };
+  const existingShells = rest.shells as Record<string, unknown> | undefined;
+  const shells: Record<string, unknown> = { ...existingShells };
+  let touched = existingShells !== undefined;
+  for (const key of HII_SHELLS_LIFT_KEYS) {
+    if (key in rest) {
+      if (!(key in shells)) shells[key] = rest[key];
+      delete rest[key];
+      touched = true;
+    }
+  }
+  if (touched) rest.shells = shells;
+  return rest;
+}
+
+/**
+ * Drops the retired `associations.childrenPerComplex` (board 20 collapsed the
+ * scattered-children swarm into one splat per seed) — the generic
+ * defaults-fill pass below only checks ONE level of `hii`'s own keys, so a
+ * retired field nested inside a surviving `associations` bag would otherwise
+ * pass through verbatim, the same way `migrateDust` drops `sfMapSeeding`.
+ */
+function migrateHiiAssociations(associations: Record<string, unknown>): Record<string, unknown> {
+  const { childrenPerComplex: _childrenPerComplex, ...rest } = associations;
+  return rest;
+}
+
+function migrateHii(hii: Record<string, unknown>): Record<string, unknown> {
+  const lifted = liftHiiShells(hii);
+  if (!lifted.associations) return lifted;
+  return {
+    ...lifted,
+    associations: migrateHiiAssociations(lifted.associations as Record<string, unknown>),
+  };
+}
+
+/**
  * `dust`/`starFormation` used to live on `p` (`GalaxyParams`), with `dust`
  * additionally split against this section's own `enabled`-only bag (the old
  * `GalaxyDustTuning`) — a REAL preset from that era names both at once. The
@@ -146,6 +203,7 @@ export function migrateGalaxyFieldTuningWire(
 
   if (out.ismMap) out.ismMap = migrateIsmMap(out.ismMap as Record<string, unknown>);
   if (out.dust) out.dust = migrateDust(out.dust as Record<string, unknown>);
+  if (out.hii) out.hii = migrateHii(out.hii as Record<string, unknown>);
 
   for (const [section, renames] of Object.entries(LEGACY_FIELD_RENAMES)) {
     if (!out[section]) continue;

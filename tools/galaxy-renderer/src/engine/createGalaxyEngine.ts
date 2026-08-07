@@ -96,6 +96,7 @@ import splatWgsl from './shaders/milkyWay/field/splat.wesl?static';
 import dustMapWgsl from './shaders/milkyWay/field/dustMap.wesl?static';
 import dustPresentWgsl from './shaders/milkyWay/field/dustPresent.wesl?static';
 import dustNoiseBakeWgsl from './shaders/milkyWay/field/dustNoiseBake.wesl?static';
+import starGrainBakeWgsl from './shaders/milkyWay/field/starGrainBake.wesl?static';
 import bubblePresentWgsl from './shaders/milkyWay/field/bubblePresent.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
@@ -122,6 +123,18 @@ const DUST_NOISE_TEX_SIZE = 128;
 
 /** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const DUST_NOISE_WORKGROUP_SIZE = 4;
+
+/**
+ * Edge length of the baked star-grain volume (starGrainBake.wesl) — 64^3
+ * rgba8unorm, scattered log-normal point grains rather than dust's ridged
+ * bands (see that file's own header). Baked ONCE at construction, same
+ * discipline as `dustNoiseTex`: no camera/galaxy input, so no reason to
+ * rebake inside the per-frame encoder.
+ */
+const STAR_GRAIN_TEX_SIZE = 64;
+
+/** Matches starGrainBake.wesl's `@workgroup_size(4, 4, 4)`. */
+const STAR_GRAIN_WORKGROUP_SIZE = 4;
 
 /** rAF deltas kept for the median — one second at 60 Hz. */
 const FRAME_WINDOW = 60;
@@ -479,6 +492,52 @@ export async function createGalaxyEngine(
     device.queue.submit([bakeEnc.finish()]);
   }
 
+  // ---- star-grain bake: 64^3 scattered log-normal point volume, baked ONCE ----
+  // starGrainBake.wesl — splat.wesl's YOUNG STARS branch only (see that
+  // file's own starGrainTerm). Same one-shot idiom as the dust-noise bake
+  // just above: view- and param-independent, so it bakes here, once, into
+  // its own encoder rather than `drawFrame`'s.
+  const starGrainBakeMod = makeShader(starGrainBakeWgsl, 'galaxy:starGrainBake');
+  const starGrainBakePipe = device.createComputePipeline({
+    label: 'galaxy:starGrainBakePipe',
+    layout: 'auto',
+    compute: { module: starGrainBakeMod, entryPoint: 'cs' },
+  });
+  const starGrainTex = own(
+    device.createTexture({
+      label: 'galaxy:starGrainTex',
+      size: [STAR_GRAIN_TEX_SIZE, STAR_GRAIN_TEX_SIZE, STAR_GRAIN_TEX_SIZE],
+      dimension: '3d',
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    }),
+  );
+  // 'repeat' on all three axes, same reason dustNoiseSampler wraps: the
+  // reader tiles the volume in world space with no manual wrap of its own.
+  const starGrainSampler = device.createSampler({
+    label: 'galaxy:starGrainSampler',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    addressModeW: 'repeat',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  {
+    const bakeBG = device.createBindGroup({
+      label: 'galaxy:starGrainBakeBG',
+      layout: starGrainBakePipe.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: starGrainTex.createView() }],
+    });
+    const bakeEnc = device.createCommandEncoder({ label: 'galaxy:starGrainBake' });
+    const bakePass = bakeEnc.beginComputePass({ label: 'galaxy:starGrainBakePass' });
+    bakePass.setPipeline(starGrainBakePipe);
+    bakePass.setBindGroup(0, bakeBG);
+    const dispatch = STAR_GRAIN_TEX_SIZE / STAR_GRAIN_WORKGROUP_SIZE;
+    bakePass.dispatchWorkgroups(dispatch, dispatch, dispatch);
+    bakePass.end();
+    device.queue.submit([bakeEnc.finish()]);
+  }
+
   // ---- SSPSF star-formation automaton + its orientation chain ----
   // Both own every resource they touch, including their readback staging
   // buffers; the engine keeps only the handles and the perf GATES (which read
@@ -675,6 +734,15 @@ export async function createGalaxyEngine(
         // shader no longer references those bindings, and with
         // layout:'auto' a superfluous entry is a bind-group creation ERROR.
         { binding: 6, resource: dustMapSampler },
+        // Bindings 10/11: starGrainTex/starGrainSampler — splat.wesl's fs
+        // now imports these for starGrainTerm (the YOUNG STARS branch's own
+        // texture, see io.wesl's own doc). Bound here too, not just
+        // `hiiBG`, for the same reason 4/5 are: `layout: 'auto'` derives
+        // from what the SHADER imports, and splat.wesl is one module for
+        // both passes — the field draw's own components never carry a
+        // negative textureWeight, so it reads these but never samples them.
+        { binding: 10, resource: starGrainTex.createView() },
+        { binding: 11, resource: starGrainSampler },
       ],
     });
   }
@@ -718,6 +786,12 @@ export async function createGalaxyEngine(
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },
+        // Bindings 10/11: starGrainTex/starGrainSampler — see
+        // `buildSplatBindGroup`'s own comment; this is the pass that
+        // actually samples them (a negative-textureWeight association
+        // component only exists in `model.hiiComps`).
+        { binding: 10, resource: starGrainTex.createView() },
+        { binding: 11, resource: starGrainSampler },
       ],
     });
   }

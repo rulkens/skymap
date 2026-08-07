@@ -9,9 +9,19 @@ export type GalaxyHiiDigTuning = {
   /**
    * DIG's share of this tier's total Hα, observationally 30-50% of a
    * galaxy's Hα sitting outside HII regions entirely (Haffner+2009 review).
-   * 0 = off, byte-identical to the veil never having run.
+   * 0 = off, byte-identical to the veil never having run. A flux-SPLIT knob
+   * — moves flux out of the shell tier's own total — not a gain; see
+   * `brightness` below for the multiplicative one.
    */
   readonly fraction: number;
+  /**
+   * This tier's own flux GAIN (board item 19), multiplied against
+   * `GalaxyHiiTuning.brightness` (the whole-field master) — 1 leaves DIG at
+   * whatever the master alone would give it. Distinct from `fraction`: that
+   * knob SPLITS flux out of the shell tier's total, this one scales DIG's
+   * resulting share up or down without touching the split.
+   */
+  readonly brightness: number;
   /**
    * Scaler on the run's own recent-event population (task #10) — the veil's
    * complex count is DERIVED from how much star formation the current run

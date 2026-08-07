@@ -129,7 +129,11 @@ export function buildHiiCavityPlacements(
   tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly DustBubblePlacement[] {
-  if (!tuning.hii.enabled || tuning.hii.cavityScale <= 0) return [];
+  // `?? 0.8`: board 19 moved `cavityScale` off `hii` root onto `hii.shells`
+  // — see `hiiRegions.ts`'s matching `radiusScale`/`shellThickness` holes for
+  // why a partial-shells-bag preset can re-enter missing it.
+  const cavityScale = tuning.hii.shells.cavityScale ?? 0.8;
+  if (!tuning.hii.enabled || cavityScale <= 0) return [];
   if (dust.tau <= 0 || geometry.numArms <= 0) return [];
 
   const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
@@ -142,7 +146,7 @@ export function buildHiiCavityPlacements(
     const { center, armRadius } = armEventCenter(event, geometry, arm);
 
     const radius =
-      hiiRadiusUnits(hiiLuminosityOf(event), tuning.hii.radiusScale) * tuning.hii.cavityScale;
+      hiiRadiusUnits(hiiLuminosityOf(event), tuning.hii.shells.radiusScale ?? 1) * cavityScale;
     if (radius <= 0) continue;
 
     if (!armReaches(armRadius, geometry, arm)) continue;

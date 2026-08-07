@@ -35,6 +35,8 @@ import package::milkyWay::field::io::dustMapTex;
 import package::milkyWay::field::io::dustMapSmp;
 import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
+import package::milkyWay::field::io::starGrainTex;
+import package::milkyWay::field::io::starGrainSmp;
 
 // sliceTransmitRatio — (1 - exp(-x)) / x per channel, the exact closed form
 // for emission spread UNIFORMLY through a homogeneous slab of per-channel
@@ -69,6 +71,86 @@ fn hiiNoiseTerm(p: vec3<f32>, scale: f32, contrast: f32) -> f32 {
   let s = 2.0 * n - 1.0;
   let shaped = sign(s) * pow(abs(s), contrast);
   return max(0.0, 1.0 + shaped);
+}
+
+// World span of one full wrap of starGrainBake.wesl's baked volume, sized so
+// several of its 16 lattice cells cross one YOUNG STARS splat's own sigma
+// (hiiRegions.ts's ASSN_SIGMA_MIN_PC..MAX_PC) — several independent grains
+// visible per splat, not one grain spanning several splats. A fixed
+// constant, not a tunable lane: unlike dustNoise.x (which tracks the dust
+// cloud's own live sigma), this volume has no matching live parameter to
+// track.
+const STAR_GRAIN_TILE_UNITS: f32 = 0.32;
+// Compensates the bake's own sparsity (most texels sit far from any grain's
+// centre, so the RAW volume's spatial mean is well under 1) back up toward
+// mean ~1 — eyeballed from the bake's own point density/sigma/amplitude
+// parameters (starGrainBake.wesl), not measured, but chosen so this term
+// shares hiiNoiseTerm's contract: turning a group's Texture weight up
+// reveals grain structure without silently discounting that group's
+// calibrated total flux.
+const STAR_GRAIN_GAIN: f32 = 8.0;
+// Zoom-revealed octaves sample the SAME volume at 4x/16x the base tiling
+// frequency — separated enough that each reads as its own generation of
+// points, not a near-duplicate of its coarser sibling enlarged.
+const STAR_GRAIN_OCTAVE1_DIV: f32 = 4.0;
+const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
+
+// starGrainOctave — one tap of the baked volume, half-tile-offset per
+// dustMap.wesl's S4 breakup precedent ("Half-tile offset decorrelates...")
+// so a finer octave doesn't just resample its coarser sibling's own points,
+// enlarged. Unlike hiiNoiseTerm's signed ridge (mean ~1, gentle wobble
+// either side), the baked field is already mean-near-0 with rare bright
+// spikes (its own log-normal amplitude), so there is no 2n-1 recentring
+// here: 'contrast' sharpens the spike/background contrast directly via
+// pow(), and GAIN restores the mean the caller treats as this tap's
+// meanRef — already ~1, so a further division is unneeded.
+fn starGrainOctave(p: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32>) -> f32 {
+  let n = textureSampleLevel(starGrainTex, starGrainSmp, p / tileUnits + offset, 0.0).x;
+  return pow(n, max(contrast, 1e-4)) * STAR_GRAIN_GAIN;
+}
+
+// starGrainTerm — the YOUNG STARS branch's own counterpart to hiiNoiseTerm:
+// samples the scattered, uncorrelated point-grain volume instead of the
+// shared ridged fbm, so an association splat reads as many independent
+// unresolved stars rather than picking up the same wispy ISM texture a
+// shell/DIG blob correctly does.
+//
+// Two finer octaves (tileUnits/4, tileUnits/16) layer on top of the base tap
+// so zooming in resolves MORE, SMALLER points instead of the base grain just
+// enlarging into a blob. Each factor is mean-1 multiplicative — mix()
+// toward 1, never toward 0 — gated by the same pixel-footprint idiom
+// dustMap.wesl's dustNoiseWeighted band-limits its own octaves with:
+// w_k = clamp(tileUnits_k / (2*pxWorld) - 1, 0, 1), using THIS pass's own
+// resolution (counts2.w, fieldHeightPx — io.wesl: splat.wesl "runs at the
+// FIELD's resolution") where dustMap.wesl's own version reads counts2.y
+// instead. w_k <= 0 skips its textureSampleLevel outright (explicit LOD
+// legalises the divergent branch, same argument as the sign branch below),
+// so a far view still costs exactly today's one fetch.
+//
+// Flux conservation: mean-1 octaves redistribute a splat's light into finer
+// points on zoom without changing its total flux in expectation — riding
+// STAR_GRAIN_GAIN's own eyeballed calibration above, the same debt class as
+// dustNoiseMultiplier's ~0.5 assumption (dustMap.wesl).
+fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
+  let tileUnits0 = STAR_GRAIN_TILE_UNITS / max(scale, 1e-4);
+  var term = starGrainOctave(p, tileUnits0, contrast, vec3<f32>(0.0));
+
+  let pxWorld = 2.0 * depth * u.params.x / u.counts2.w;
+  if (pxWorld > 0.0) {
+    let tileUnits1 = tileUnits0 / STAR_GRAIN_OCTAVE1_DIV;
+    let w1 = clamp(tileUnits1 / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+    if (w1 > 0.0) {
+      term = term * mix(1.0, starGrainOctave(p, tileUnits1, contrast, vec3<f32>(0.5)), w1);
+    }
+
+    let tileUnits2 = tileUnits0 / STAR_GRAIN_OCTAVE2_DIV;
+    let w2 = clamp(tileUnits2 / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+    if (w2 > 0.0) {
+      term = term * mix(1.0, starGrainOctave(p, tileUnits2, contrast, vec3<f32>(0.5)), w2);
+    }
+  }
+
+  return term;
 }
 
 struct SplatOut {
@@ -227,8 +309,16 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // UNIFORM across the whole draw call — the far more numerous primary
   // disc/arm fragments (dustDetail.y == 0 there) skip the sample outright
   // rather than compute a modulation that mix() would discard anyway.
+  //
+  // The SIGN of g2.w picks which volume this component reads (io.wesl's
+  // comps doc): negative is YOUNG STARS (hiiRegions.ts's buildBlueAssociations
+  // negates its own textureWeight), everything else stays on the shared
+  // ridged noise. Branched with 'if', not select(): both textureSampleLevel
+  // calls use an explicit LOD so divergent control flow is legal here, and a
+  // select() would pay for BOTH texture fetches every fragment instead of
+  // the ONE this pass is budgeted for (this pass is the close-zoom hotspot).
   var texMod = 1.0;
-  if (u.dustDetail.y > 0.0 && g2.w > 0.0) {
+  if (u.dustDetail.y > 0.0 && g2.w != 0.0) {
     let tc = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);
     if (tc.x >= 1e-12) {
       // o + d*tPeak is this component's own closest-approach point, the
@@ -236,7 +326,15 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
       // sampling at a shared plane instead would make the texture read as a
       // flat decal rather than something living IN the sprite as it parallaxes.
       let tPeak = max(-tc.y / tc.x, 0.0);
-      texMod = mix(1.0, hiiNoiseTerm(o + d * tPeak, u.dustDetail.y, u.dustDetail.z), g2.w);
+      let p = o + d * tPeak;
+      let weight = abs(g2.w);
+      var term: f32;
+      if (g2.w < 0.0) {
+        term = starGrainTerm(p, tPeak, u.dustDetail.y, u.dustDetail.z);
+      } else {
+        term = hiiNoiseTerm(p, u.dustDetail.y, u.dustDetail.z);
+      }
+      texMod = mix(1.0, term, weight);
     }
   }
   emission = emission * texMod;

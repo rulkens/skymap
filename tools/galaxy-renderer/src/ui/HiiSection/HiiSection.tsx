@@ -17,6 +17,7 @@
 import type { ReactNode } from 'react';
 import type { GalaxyHiiAssociationsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiAssociationsTuning';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
+import type { GalaxyHiiShellsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiShellsTuning';
 import type { GalaxyHiiTuning } from '../../../../../src/@types/galaxy/GalaxyHiiTuning';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
@@ -37,6 +38,10 @@ function HiiSection(): ReactNode {
 
   const patchHii = (patch: Partial<GalaxyHiiTuning>): void => {
     dispatch(fieldTuningPatched({ hii: { ...hii, ...patch } }));
+  };
+
+  const patchShells = (patch: Partial<GalaxyHiiShellsTuning>): void => {
+    patchHii({ shells: { ...hii.shells, ...patch } });
   };
 
   const patchDig = (patch: Partial<GalaxyHiiDigTuning>): void => {
@@ -70,25 +75,36 @@ function HiiSection(): ReactNode {
             stay in the outer body rather than owned by any one of the three
             nested groups below. */}
         <ParamSlider
+          label="Master brightness"
+          value={hii.brightness}
+          min={0}
+          max={4}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchHii({ brightness: v })}
+          path="fieldTuning.hii.brightness"
+          info="Whole-field flux multiplier — multiplies EVERY tier's own gain (the Brightness sliders inside SHELLS, DIG and YOUNG STARS below), rather than being any one tier's own knob. 1 is the calibrated default; each tier's own slider then scales its share up or down from there."
+        />
+        <ParamSlider
           label="Texture scale"
-          value={hii.textureScale}
+          value={hii.shells.textureScale}
           min={0.25}
           max={8}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ textureScale: v })}
-          path="fieldTuning.hii.textureScale"
+          onChange={(v) => patchShells({ textureScale: v })}
+          path="fieldTuning.hii.shells.textureScale"
           info="Shared by every HII group (shells, DIG, young stars). Multiplies the noise sample's frequency relative to the dust volume's own tile size — 1 samples at the SAME scale dust erosion does. Range extended past 4 for the young-stars tier's bigger splats, which need a higher frequency to still read as grainy unresolved stars rather than a soft blur."
         />
         <ParamSlider
           label="Texture contrast"
-          value={hii.textureContrast}
+          value={hii.shells.textureContrast}
           min={0}
           max={2}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ textureContrast: v })}
-          path="fieldTuning.hii.textureContrast"
+          onChange={(v) => patchShells({ textureContrast: v })}
+          path="fieldTuning.hii.shells.textureContrast"
           info="Shared by every HII group. Shapes the noise modulation about its own midpoint, mirroring the dust cloud's own contrast knob."
         />
       </div>
@@ -101,57 +117,57 @@ function HiiSection(): ReactNode {
         <div className={styles.root}>
           <ParamSlider
             label="Brightness"
-            value={hii.brightness}
+            value={hii.shells.brightness}
             min={0}
-            max={4}
+            max={2}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ brightness: v })}
-            path="fieldTuning.hii.brightness"
-            info="Whole-tier flux multiplier. Unlike the arm cloud's share knob this ADDS light on top of the disc mixture, which never contained HII emission to begin with. 1 is the calibrated default."
+            onChange={(v) => patchShells({ brightness: v })}
+            path="fieldTuning.hii.shells.brightness"
+            info="This tier's own gain, multiplied against the Master brightness above — 1 leaves it at whatever the master alone gives it."
           />
           <ParamSlider
             label="Radius scale"
-            value={hii.radiusScale}
+            value={hii.shells.radiusScale}
             min={0.2}
             max={3}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ radiusScale: v })}
-            path="fieldTuning.hii.radiusScale"
+            onChange={(v) => patchShells({ radiusScale: v })}
+            path="fieldTuning.hii.shells.radiusScale"
             info="Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly."
           />
           <ParamSlider
             label="Shell thickness"
-            value={hii.shellThickness}
+            value={hii.shells.shellThickness}
             min={0.02}
             max={1}
             step={0.02}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ shellThickness: v })}
-            path="fieldTuning.hii.shellThickness"
+            onChange={(v) => patchShells({ shellThickness: v })}
+            path="fieldTuning.hii.shells.shellThickness"
             info="Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front."
           />
           <ParamSlider
             label="Cluster strength"
-            value={hii.clusterStrength}
+            value={hii.shells.clusterStrength}
             min={0}
             max={2}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ clusterStrength: v })}
-            path="fieldTuning.hii.clusterStrength"
+            onChange={(v) => patchShells({ clusterStrength: v })}
+            path="fieldTuning.hii.shells.clusterStrength"
             info="Brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell."
           />
           <ParamSlider
             label="Cavity scale"
-            value={hii.cavityScale}
+            value={hii.shells.cavityScale}
             min={0}
             max={2}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ cavityScale: v })}
-            path="fieldTuning.hii.cavityScale"
+            onChange={(v) => patchShells({ cavityScale: v })}
+            path="fieldTuning.hii.shells.cavityScale"
             info="Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed."
           />
           <ParamSlider
@@ -167,13 +183,13 @@ function HiiSection(): ReactNode {
           />
           <ParamSlider
             label="Texture"
-            value={hii.texture}
+            value={hii.shells.texture}
             min={0}
             max={1}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ texture: v })}
-            path="fieldTuning.hii.texture"
+            onChange={(v) => patchShells({ texture: v })}
+            path="fieldTuning.hii.shells.texture"
             info="Breaks up the shell + embedded-cluster sprites' circular Gaussian footprint with the same noise volume the dust cloud erodes with. 0 leaves them untouched."
           />
           <ParamSlider
@@ -197,6 +213,17 @@ function HiiSection(): ReactNode {
         nested
       >
         <div className={styles.root}>
+          <ParamSlider
+            label="Brightness"
+            value={hii.dig.brightness}
+            min={0}
+            max={2}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchDig({ brightness: v })}
+            path="fieldTuning.hii.dig.brightness"
+            info="This tier's own gain, multiplied against the Master brightness above — distinct from Flux fraction below, which SPLITS flux out of the shell tier's own total rather than scaling DIG's resulting share."
+          />
           <ParamSlider
             label="Flux fraction"
             value={hii.dig.fraction}
@@ -299,23 +326,23 @@ function HiiSection(): ReactNode {
             label="Population"
             value={hii.associations.complexes}
             min={0}
-            max={3}
+            max={8}
             step={0.05}
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ complexes: v })}
             path="fieldTuning.hii.associations.complexes"
-            info="Scaler on the run's own mid-age-event population — one complex seeds directly off each B/A-star event the current run produced, so the count tracks its own star-formation history rather than a fixed number. 1 is the neutral default."
+            info="Scaler on the run's own mid-age-event population — one splat seeds directly off each B/A-star event the current run produced, so the count tracks its own star-formation history rather than a fixed number. 1 is the neutral default. Range extended past 3 (board 21) so this lever alone can cover a meaningfully bigger share of the arms; paired with Size below for area, not just count."
           />
           <ParamSlider
-            label="Children"
-            value={hii.associations.childrenPerComplex}
-            min={1}
-            max={10}
-            step={1}
-            format={(v) => v.toFixed(0)}
-            onChange={(v) => patchAssociations({ childrenPerComplex: v })}
-            path="fieldTuning.hii.associations.childrenPerComplex"
-            info="Blobs scattered around each association complex seed. Fewer, larger blobs (see this tier's own sigma range) now read as a wide grainy patch rather than a cluster of small dots — the shared Texture/Texture scale knobs above supply the unresolved-stars grain."
+            label="Size"
+            value={hii.associations.sizeScale}
+            min={0.5}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchAssociations({ sizeScale: v })}
+            path="fieldTuning.hii.associations.sizeScale"
+            info="Splat's own physical size — multiplies the sigma each splat is drawn at. Coverage grows as this knob's SQUARE (a Gaussian footprint scales in both in-plane axes at once), so it is a cheap way to cover more of the arms without raising Population. Doesn't change the tier's total brightness — flux is a fixed budget split across splats, so a bigger splat just spreads the same light thinner."
           />
           <ParamSlider
             label="Drift"
@@ -326,7 +353,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ armBias: v })}
             path="fieldTuning.hii.associations.armBias"
-            info="Strength of the downstream drift off the gas lane each complex's own SF event was born in — differential rotation carries B/A stars ahead of (or behind) the arm crest as they age. 0 leaves a complex sitting exactly on its birth site; 1 is the shear formula's own computed drift."
+            info="Strength of the downstream drift off the gas lane each splat's own SF event was born in — differential rotation carries B/A stars ahead of (or behind) the arm crest as they age. 0 leaves a splat sitting exactly on its birth site; 1 is the shear formula's own computed drift."
           />
           <ParamSlider
             label="Elongation"
@@ -337,7 +364,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(1)}
             onChange={(v) => patchAssociations({ elongation: v })}
             path="fieldTuning.hii.associations.elongation"
-            info="Aspect ratio of a complex's child scatter along vs. across its local flow direction, area-preserving so the complex stretches without also inflating."
+            info="Aspect ratio of the SPLAT's own covariance along vs. across its local drift direction, area-preserving so it stretches without also inflating — one splat per event now (task #20), so this shapes the splat itself rather than a scatter of children around it."
           />
           <ParamSlider
             label="Coherence"
@@ -348,7 +375,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchAssociations({ coherence: v })}
             path="fieldTuning.hii.associations.coherence"
-            info="How strictly a complex's scatter axis follows its local flow direction — 1 follows it exactly, 0 rotates it to a fresh random direction per complex."
+            info="How strictly a splat's own along/across axes follow its local drift direction — 1 follows it exactly, 0 rotates it to a fresh random direction per splat."
           />
           <ParamSlider
             label="Texture"

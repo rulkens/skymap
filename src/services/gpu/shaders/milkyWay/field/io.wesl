@@ -218,8 +218,13 @@
 // boundRadius (world-space max sigma, warp-inflated — see
 // GalaxyFieldComponent) sizes splat.wesl's per-instance quad. textureWeight
 // (GalaxyFieldComponent's own field) is 0 (untouched) for every producer
-// except hiiRegions.ts's pushes — splat.wesl's fs mixes it against
-// hiiNoiseTerm (see dustDetail's own doc above).
+// except hiiRegions.ts's pushes — splat.wesl's fs mixes ITS MAGNITUDE
+// against hiiNoiseTerm or starGrainTerm (see dustDetail's own doc above).
+// The SIGN, not a second lane, is what picks the texture: positive (shell,
+// DIG) samples dustNoiseTex's ridged ISM field, negative (YOUNG STARS)
+// samples starGrainTex's uncorrelated point grains — the smallest per-
+// component flag that fits, since textureWeight was already the one field
+// every HII push threads through and no other producer ever sets it.
 //
 // Dust components (past dustOffset) reuse this exact 4-vec4 record with two
 // re-readings, not two new lanes: [4i].w (amplitude for emission) is the
@@ -314,3 +319,14 @@ struct FieldUniforms {
 // in WebGPU core, so a plain 'filtering' sampler suffices — no comparison,
 // no manual mip selection.
 @group(0) @binding(6) var dustMapSmp: sampler;
+// Bindings 10/11: the baked star-grain volume (starGrainBake.wesl) —
+// splat.wesl's starGrainTerm samples these for the YOUNG STARS
+// (association) branch of the HII texture breakup ONLY; hiiNoiseTerm's
+// shell/DIG branch keeps reading dustNoiseTex/dustNoiseSmp above. Own
+// bindings (not a reuse of 4/5) because the two volumes encode different
+// things — dustNoiseTex is a smooth, correlated ridged field, this one is
+// scattered, uncorrelated point grains — and only splat.wesl imports them
+// (dustMap.wesl has no association branch), so 'layout: auto' only adds
+// these two entries to splatPipe's bind groups, not dustMapPipe's.
+@group(0) @binding(10) var starGrainTex: texture_3d<f32>;
+@group(0) @binding(11) var starGrainSmp: sampler;
