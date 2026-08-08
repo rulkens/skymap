@@ -436,12 +436,12 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           group
         >
           <DebugViewsSection />
+          <IsmMapSection diagnostics={orientationDiagnostics} />
           <FieldSection />
           <ArmFieldSection />
           <ArmCloudSection />
           <SpursSection />
           <HiiSection />
-          <IsmMapSection diagnostics={orientationDiagnostics} />
           <DustSection />
           <DustCloudSection />
         </CollapsibleSection>
