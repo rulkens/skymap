@@ -107,7 +107,7 @@ export function deriveFrameView(input: {
     debugViews,
     ismMapChannels: {
       gasWeight: render.ismMapGasWeight,
-      recentSfWeight: render.ismMapRecentWeight,
+      recentSfWeight: render.ismMapRecentSfWeight,
       activityWeight: render.ismMapActivityWeight,
       dustWeight: render.ismMapDustWeight,
     },

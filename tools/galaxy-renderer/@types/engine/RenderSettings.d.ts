@@ -134,7 +134,7 @@ export type RenderSettings = {
    * `ismMapChannels.y`): `exp(-age/12)`, a cell that fired within roughly the
    * last dozen steps. Only reachable while `ismMapViewIntensity` is above 0.
    */
-  readonly ismMapRecentWeight: number;
+  readonly ismMapRecentSfWeight: number;
   /**
    * ISM-map channel weight, isolating `activity` (io.wesl's
    * `ismMapChannels.z`): the accumulated trace of every front that passed,

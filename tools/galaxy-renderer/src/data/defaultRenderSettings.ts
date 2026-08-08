@@ -127,7 +127,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // existed until the user moves one — same "identity until touched"
   // discipline as saturation/vignette above.
   ismMapGasWeight: 1,
-  ismMapRecentWeight: 1,
+  ismMapRecentSfWeight: 1,
   ismMapActivityWeight: 1,
   ismMapDustWeight: 1,
   // 0, unlike the four raw-channel weights above: this is a composite

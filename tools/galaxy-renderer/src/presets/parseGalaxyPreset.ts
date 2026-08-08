@@ -50,6 +50,9 @@ export function parseGalaxyPreset(json: string): {
   const lod: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(flatR)) {
     if (LOD_KEYS.includes(key)) lod[key] = value;
+    // Pre-rename presets carry the old spelling of the recentSf channel
+    // weight — remap so a saved debug-view setup survives the rename.
+    else if (key === 'ismMapRecentWeight') render.ismMapRecentSfWeight = value;
     else render[key] = value;
   }
 
