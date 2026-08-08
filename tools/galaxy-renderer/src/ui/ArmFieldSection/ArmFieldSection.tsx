@@ -10,8 +10,10 @@ import type { GalaxyArmTuning } from '../../../../../src/@types/galaxy/GalaxyArm
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
+import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
+import SpursSection from '../SpursSection/SpursSection';
 import styles from './ArmFieldSection.module.css';
 
 function ArmFieldSection(): ReactNode {
@@ -23,9 +25,10 @@ function ArmFieldSection(): ReactNode {
     dispatch(fieldTuningPatched({ arms: { ...arms, ...patch } }));
   };
 
-  // `cloud` is ARM CLOUD's own section and copies from there — this one offers
-  // only the ridge knobs its own sliders drive.
-  const { cloud: _cloud, ...ridge } = arms;
+  // `cloud`/`spurs` are the nested ARM CLOUD / SPURS sections' own bags and
+  // copy from there — this one offers only the ridge knobs its own sliders
+  // drive.
+  const { cloud: _cloud, spurs: _spurs, ...ridge } = arms;
 
   return (
     <CollapsibleSection
@@ -82,6 +85,8 @@ function ArmFieldSection(): ReactNode {
           info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
         />
       </div>
+      <ArmCloudSection />
+      <SpursSection />
     </CollapsibleSection>
   );
 }
