@@ -21,9 +21,7 @@ import {
   armColor,
   armCrossSigma,
   armExcessSurfaceShape,
-  armFadeEnvelope,
   armRidgeCurvePoint,
-  armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
 import { buildArmSpurs } from './armSpurGeometry';
@@ -34,6 +32,7 @@ import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidP
 import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from './defaultGalaxyStarFormationParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
+import { sampleArmRidgeNodes } from './sampleArmRidgeNodes';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../../../utils/galaxy/galaxyFieldInverseCovariance';
@@ -517,20 +516,6 @@ function distance3(a: Vec3, b: Vec3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
-/** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
-function armClumpMod(logR: number, geometry: GalaxyDescription, arm: GalaxyFieldArmRecord): number {
-  if (geometry.clumpAmount <= 0) return 1;
-  const noise =
-    Math.sin(logR * arm.clumpF1 + arm.clumpP1) * 0.6 +
-    Math.sin(logR * arm.clumpF2 + arm.clumpP2) * 0.4;
-  return 1 - geometry.clumpAmount * (0.5 - 0.5 * noise);
-}
-
-/** armStarSample's gap-survival fraction for non-HII stars — the smooth stand-in for the WGSL gate's coin flip. */
-function armSurvival(clumpMod: number, geometry: GalaxyDescription): number {
-  return geometry.clumpAmount > 0 ? Math.min(1, 0.4 + 0.6 * clumpMod) : 1;
-}
-
 /** Points to densely re-sample the ridge at, to estimate curvature — see `deriveArmBlobCount`. */
 const ARM_CURVATURE_SAMPLES = 192;
 
@@ -701,51 +686,27 @@ function pushArmRidges(
     const blobsPerArm = deriveArmBlobCount(logStart, logEnd, geometry, arm, tuning, perArmBudget);
     const Ki = 1 + (K - 1) * (ARM_AGE_CONTRAST_FLOOR + ARM_AGE_CONTRAST_SPAN * arm.age);
 
-    // Centres first, uniform steps in log-radius — every other per-blob
-    // quantity (spacing, flux, tangent) is derived from this curve.
-    const logRs: number[] = [];
-    const radii: number[] = [];
-    const centers: Vec3[] = [];
-    for (let k = 0; k < blobsPerArm; k++) {
-      const logR = logStart + ((logEnd - logStart) * k) / (blobsPerArm - 1);
-      logRs.push(logR);
-      radii.push(armStartRadius * Math.exp(logR));
-      centers.push(armRidgeCurvePoint(logR, geometry, arm));
-    }
-
-    // Arc-spacing (for both the along-arm sigma and Delta s_k below) and the
-    // fade/clump/survival modulation, in one pass — forward difference,
-    // backward at the open end, since the arm isn't periodic like a ring.
-    const spacings: number[] = [];
-    const mods: number[] = [];
+    // The shared ridge walk — centres, arc spacing (forward difference,
+    // backward at the open end) and fade*clump*survival, all in one place
+    // now that the young-star chain producer needs the same walk over the
+    // same arm records (`sampleArmRidgeNodes.ts`).
+    const nodes = sampleArmRidgeNodes(blobsPerArm, geometry, arm);
+    if (nodes.length === 0) continue;
     let modSum = 0;
-    for (let k = 0; k < blobsPerArm; k++) {
-      const spacing =
-        k < blobsPerArm - 1
-          ? distance3(centers[k]!, centers[k + 1]!)
-          : distance3(centers[k - 1]!, centers[k]!);
-      spacings.push(spacing);
-      const fade = armFadeEnvelope(radii[k]!, geometry, arm);
-      const clump = armClumpMod(logRs[k]!, geometry, arm);
-      const survival = armSurvival(clump, geometry);
-      const mod = fade * clump * survival;
-      mods.push(mod);
-      modSum += mod;
-    }
+    for (const node of nodes) modSum += node.mod;
     if (modSum <= 0) continue;
     // Renormalised to mean 1 so the modulation shapes the arm's brightness
     // along its length without moving its calibrated total (the contrast
     // law below, not this shape, sets that total).
-    const modMean = modSum / blobsPerArm;
+    const modMean = modSum / nodes.length;
 
-    for (let k = 0; k < blobsPerArm; k++) {
-      const radius = radii[k]!;
-      const center = centers[k]!;
-      const { along, across, pole } = armRidgeFrameAt(logRs[k]!, geometry, arm);
+    for (const node of nodes) {
+      const { radius, center, spacing, mod, frame } = node;
+      const { along, across, pole } = frame;
 
       const sigmaAcross = armCrossSigma(radius, geometry, tuning);
       const sigmas = {
-        along: (spacings[k]! * RING_AZIMUTHAL_OVERLAP) / sharpness,
+        along: (spacing * RING_AZIMUTHAL_OVERLAP) / sharpness,
         across: sigmaAcross / sharpness,
         pole: (diskHeight * 0.8) / sharpness,
       };
@@ -758,7 +719,7 @@ function pushArmRidges(
         discSurfaceBrightness(geometry.armFullRadius, discFlux, hLight) *
         armExcessSurfaceShape(radius, geometry, hLight, tuning.arms.excessScaleRatio);
       const lambda = (Ki - 1) * sigmaDisc * TAU_ROOT * sigmaAcross;
-      const blobFlux = lambda * spacings[k]! * (mods[k]! / modMean);
+      const blobFlux = lambda * spacing * (mod / modMean);
       armExcessFlux += blobFlux; // full excess — see `renderedShare`'s comment above
       const amplitude =
         (blobFlux * renderedShare) / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
