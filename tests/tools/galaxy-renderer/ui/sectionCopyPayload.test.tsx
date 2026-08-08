@@ -9,7 +9,8 @@
 // collapsible header.
 //
 // ArmFieldSection stands in for every section: it is the one that splits a
-// state node with a sibling section, so it also pins that `cloud` stays out.
+// state node with sibling sections, so it also pins that `cloud` and
+// `spurs` stay out.
 
 import { describe, expect, it, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
@@ -46,7 +47,7 @@ describe('section copy control', () => {
 
     expect(writeText).toHaveBeenCalledTimes(1);
     const payload: unknown = JSON.parse(writeText.mock.calls[0]![0]);
-    const { cloud: _cloud, ...ridge } = store.getState().fieldTuning.arms;
+    const { cloud: _cloud, spurs: _spurs, ...ridge } = store.getState().fieldTuning.arms;
     expect(payload).toEqual({ fieldTuning: { arms: { ...ridge, contrast: 3.14 } } });
   });
 
