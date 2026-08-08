@@ -38,6 +38,19 @@ struct IsmMapGrid {
 @group(0) @binding(8) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(9) var ismMapBlurTex: texture_2d<f32>;
 
+// xy = the packed map's (az, ring) uv for world point p; z = 1.0 when p's
+// radius sits inside [grid.rMin, grid.rMax], 0.0 outside (uv undefined there).
+fn ismMapUv(p: vec3<f32>) -> vec3<f32> {
+  let r = length(p.xz);
+  if (r < grid.rMin || r > grid.rMax) {
+    return vec3<f32>(0.0, 0.0, 0.0);
+  }
+  let theta = atan2(p.z, p.x);
+  let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
+  let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
+  return vec3<f32>(azT, ringT, 1.0);
+}
+
 // p: the world-space point to sample at — the caller's splat's own
 // closest-approach point (o + d*tPeak in dustMap.wesl's fs), not a
 // re-derived ray/plane hit, so detail rides each component's own depth
@@ -51,14 +64,11 @@ fn dustDetailMultiplier(p: vec3<f32>, breakup: f32) -> f32 {
   if (u.dustDetail.x <= 0.0) {
     return 1.0;
   }
-  let r = length(p.xz);
-  if (r < grid.rMin || r > grid.rMax) {
+  let mapUv = ismMapUv(p);
+  if (mapUv.z == 0.0) {
     return 1.0;
   }
-  let theta = atan2(p.z, p.x);
-  let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
-  let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
-  let uv = vec2<f32>(azT, ringT);
+  let uv = mapUv.xy;
   // The density the splats were SEEDED from, so the ratio below is structure
   // the splats should carry but blurred away — the same swept-overshoot term
   // the CPU seeding and ismMapDustBlur.wesl read, needing no mean-normalization
