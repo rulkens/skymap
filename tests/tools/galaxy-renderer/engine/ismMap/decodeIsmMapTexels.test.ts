@@ -35,10 +35,10 @@ describe('decodeIsmMapTexels', () => {
     ];
     for (let row = 0; row < rings; row++) {
       for (let a = 0; a < az; a++) {
-        const [gas, recentSf, activity, dust] = texels[row]![a]!;
+        const [gas, stars, activity, dust] = texels[row]![a]!;
         const base = row * rowStrideU16 + a * 4;
         padded[base] = floatToF16(gas);
-        padded[base + 1] = floatToF16(recentSf);
+        padded[base + 1] = floatToF16(stars);
         padded[base + 2] = floatToF16(activity);
         padded[base + 3] = floatToF16(dust);
       }
@@ -70,14 +70,14 @@ describe('decodeIsmMapTexels', () => {
       [0, -0, 3e-5, -3e-5], // zero (both signs) + subnormal (both signs)
       [Infinity, -Infinity, NaN, 1],
     ];
-    for (const [gas, recentSf, activity, dust] of specials) {
+    for (const [gas, stars, activity, dust] of specials) {
       const padded = new Uint16Array(4);
       padded[0] = floatToF16(gas);
-      padded[1] = floatToF16(recentSf);
+      padded[1] = floatToF16(stars);
       padded[2] = floatToF16(activity);
       padded[3] = floatToF16(dust);
       const out = decodeIsmMapTexels(padded, paddedBytesPerRow, az, rings);
-      const reference = [gas, recentSf, activity, dust].map((v) => f16ToFloat(floatToF16(v)));
+      const reference = [gas, stars, activity, dust].map((v) => f16ToFloat(floatToF16(v)));
       for (let i = 0; i < 4; i++) {
         if (Number.isNaN(reference[i])) {
           expect(Number.isNaN(out[i]!)).toBe(true);

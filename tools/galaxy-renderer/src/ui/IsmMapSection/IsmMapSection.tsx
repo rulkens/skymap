@@ -451,6 +451,28 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                 path="fieldTuning.ismMapFluid.eventArmBias"
                 info="How hard event placement is confined to the arms: the CDF floor off the ridge is ARM_BIAS_FLOOR * (1 - eventArmBias). 0 (default) is today's fixed bias — events can land anywhere, weighted toward the arms. 1 zeroes the floor entirely, gating events strictly onto texels with nonzero arm forcing."
               />
+              <ParamSlider
+                label="Stars deposit"
+                value={fluid.starsDeposit}
+                min={0}
+                max={4}
+                step={0.05}
+                format={(v) => v.toFixed(2)}
+                onChange={(v) => patchFluid({ starsDeposit: v })}
+                path="fieldTuning.ismMapFluid.starsDeposit"
+                info="Young-stars tracer mass deposited per step at texels an event stamps, proportional to that texel's own local gas — SF converts gas to stars. The young-stars chain tier's placement field reads this channel, so raising it clumps chains harder onto fresh event sites."
+              />
+              <ParamSlider
+                label="Stars decay"
+                value={fluid.starsDecay}
+                min={0.9}
+                max={1}
+                step={0.001}
+                format={(v) => v.toFixed(3)}
+                onChange={(v) => patchFluid({ starsDecay: v })}
+                path="fieldTuning.ismMapFluid.starsDecay"
+                info="Per-step retention of the advected stars tracer — this run's own dial on the measured ~40-100 Myr structural dissolution clock young stellar associations show. Lower dissolves chains faster behind the advancing front; 1 would never forget a deposit at all."
+              />
             </SliderGroup>
             <SliderGroup title="Turbulence">
               <ParamSlider

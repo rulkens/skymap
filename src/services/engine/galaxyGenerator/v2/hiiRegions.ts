@@ -470,10 +470,15 @@ let seedingCdfCache: CachedCdf | null = null;
  * moving the `ismMapSeeding` slider only ever changes which regions swap
  * centres, never the rng draws (and hence positions) of the ones that don't.
  *
- * Weighted by `recentSf` alone, not `ismMapDustDensity`'s `gas x activity`:
- * ignition zeroes gas and age in the same cell, so this is anti-correlated
- * with the dust CDF by construction — knots avoid the dust the automaton
- * just cleared, the same decorrelation M74 shows (Chevance+2020).
+ * Weighted by `activity` alone (the short-memory EMA of event stamps), NOT
+ * the `stars` channel `hiiRegions.ts` used to read here: `stars` is now a
+ * long-lived advected tracer (fluid) or its exp-decay approximation
+ * (automaton), so a shell CDF-sampled from it would scatter onto 20-100 Myr
+ * drifted material with no ionizing stars left — shells need FRESH sites,
+ * which `activity` still gives (ignition zeroes gas in the same cell, so
+ * this stays anti-correlated with the dust CDF by construction — knots avoid
+ * the dust the automaton just cleared, the same decorrelation M74 shows,
+ * Chevance+2020).
  *
  * NEVER called for `tuning.ismMap.generator === 'fluid'` regions (see
  * `buildHiiRegions`'s call site) — a fluid region's centre already IS a map
@@ -491,10 +496,10 @@ function applyIsmMapSeeding(
   const weight = tuning.hii.ismMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
   if (weight <= 0 || !ismMap || regions.length === 0) return regions;
 
-  // `recentSf` alone, no tuning input at all — this CDF's only discriminant
+  // `activity` alone, no tuning input at all — this CDF's only discriminant
   // is the map itself, so the cache key is just `ismMap`.
   seedingCdfCache = cachedCdf(seedingCdfCache, [ismMap], () =>
-    buildIsmMapDustCdf(ismMap, (texel) => texel.recentSf),
+    buildIsmMapDustCdf(ismMap, (texel) => texel.activity),
   );
   const cdf = seedingCdfCache.cdf;
   if (!(cdf.total > 0)) return regions;

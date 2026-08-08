@@ -44,6 +44,8 @@ const SENTINEL = {
   gasFloor: 4114,
   laneBias: 4115,
   gatherOffset: 4116,
+  starsDeposit: 4117,
+  starsDecay: 4118,
 } as const;
 
 const input: IsmMapFluidConstantsInput = {
@@ -67,6 +69,8 @@ const input: IsmMapFluidConstantsInput = {
     gasFloor: SENTINEL.gasFloor,
     laneBias: SENTINEL.laneBias,
     gatherOffset: SENTINEL.gatherOffset,
+    starsDeposit: SENTINEL.starsDeposit,
+    starsDecay: SENTINEL.starsDecay,
     // CPU-only (galaxyIsmMapFluidEvents.ts) — no UBO member, not part of this
     // parity guard's sentinel set.
     eventArmBias: 0,

@@ -13,7 +13,7 @@ import type { GalaxyIsmMap } from '../../@types/galaxy/GalaxyIsmMap';
 
 export type GalaxyIsmMapSample = {
   readonly gas: number;
-  readonly recentSf: number;
+  readonly stars: number;
   readonly activity: number;
   readonly dust: number;
 };
@@ -42,7 +42,7 @@ export function sampleGalaxyIsmMap(
   const i = (ring * az + azIdx) * 4;
   return {
     gas: data[i]!,
-    recentSf: data[i + 1]!,
+    stars: data[i + 1]!,
     activity: data[i + 2]!,
     dust: data[i + 3]!,
   };

@@ -1,10 +1,13 @@
 // milkyWay/ismMap/ismMapPack.wesl — packs the SSPSF automaton's final
 // ping-pong state into one presentable RGBA texture (see GalaxyIsmMap.ts's
-// contract table for the full state/packed mapping): gas column, recent SF
-// (eventAge's own decay), activity (the EMA ismMapAutomatonStep.wesl already
-// carries in state.z), and the conserved dust channel (state.w). One
-// dispatch, run once per automaton rebuild after the last step — never per
-// frame. finalTex is still in ismMapAutomatonStep.wesl's MATERIAL
+// contract table for the full state/packed mapping): gas column, stars
+// (this generator's own exp(-eventAge/tau) approximation of the fluid
+// generator's advected tracer — eventAge itself stays load-bearing
+// refractory-gating state, see ismMapAutomatonStep.wesl), activity (the EMA
+// ismMapAutomatonStep.wesl already carries in state.z), and the conserved
+// dust channel (state.w). One dispatch, run once per automaton rebuild after
+// the last step — never per frame. finalTex is still in
+// ismMapAutomatonStep.wesl's MATERIAL
 // (Lagrangian) frame; every consumer of THIS pass's output expects WORLD
 // coordinates, so this is the one place that un-shears — a single resample
 // instead of ismMapAutomatonStep.wesl's old per-generation one (see that
@@ -23,7 +26,7 @@
 
 import package::milkyWay::ismMap::ismMapShear::ismMapShearTexels;
 
-const RECENT_SF_TAU: f32 = 12.0; // steps; a look constant, not a measured decay time
+const STARS_APPROX_TAU: f32 = 12.0; // steps; a look constant, not a measured decay time
 
 struct IsmMapUnshear {
   rMin: f32,
@@ -75,6 +78,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let eventAge = state.y;
   let activity = clamp(state.z, 0.0, 1.0);
   let dust = state.w;
-  let recentSf = exp(-eventAge / RECENT_SF_TAU);
-  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, recentSf, activity, dust));
+  // This generator's documented approximation of the fluid generator's
+  // advected stars tracer — see this file's header and GalaxyIsmMap.ts's
+  // contract table. eventAge itself is untouched (refractory-gating math).
+  let stars = exp(-eventAge / STARS_APPROX_TAU);
+  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, stars, activity, dust));
 }

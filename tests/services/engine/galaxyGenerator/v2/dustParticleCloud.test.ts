@@ -27,7 +27,7 @@ function makeMap(dustValue: number): GalaxyIsmMap {
   for (let i = 0; i < data.length; i += 4) {
     const idx = i / 4;
     data[i] = 0.3 + (0.5 * ((idx * 7) % 11)) / 11; // gas
-    data[i + 1] = 0.2; // recentSf, unread by dust placement or its survival filter
+    data[i + 1] = 0.2; // stars, unread by dust placement or its survival filter
     data[i + 2] = 0.4 + (0.4 * ((idx * 13) % 9)) / 9; // activity
     data[i + 3] = dustValue;
   }
@@ -84,7 +84,7 @@ describe('buildDustParticleCloud', () => {
     const data = new Float32Array(rings * az * 4);
     for (let i = 0; i < data.length; i += 4) {
       data[i] = 0.15; // gas
-      data[i + 1] = 0.2; // recentSf
+      data[i + 1] = 0.2; // stars
       data[i + 2] = 0.15; // activity -> legacy baseline 0.0225
       data[i + 3] = 0; // dust baseline: empty
     }
@@ -143,7 +143,7 @@ describe('buildDustParticleCloud', () => {
     const data = new Float32Array(rings * az * 4);
     for (let i = 0; i < data.length; i += 4) {
       data[i] = 0.5; // gas
-      data[i + 1] = 0.2; // recentSf
+      data[i + 1] = 0.2; // stars
       data[i + 2] = 0; // activity: zero everywhere
       data[i + 3] = 1.0; // dust baseline
     }
@@ -183,7 +183,7 @@ describe('buildDustParticleCloud', () => {
     const data = new Float32Array(rings * az * 4);
     for (let i = 0; i < data.length; i += 4) {
       data[i] = 0.5; // gas
-      data[i + 1] = 0.2; // recentSf
+      data[i + 1] = 0.2; // stars
       data[i + 2] = 0.5; // activity
       data[i + 3] = 0; // dust baseline: true cavity
     }
@@ -296,7 +296,7 @@ describe('buildDustParticleCloud', () => {
     const data = new Float32Array(rings * az * 4);
     for (let i = 0; i < data.length; i += 4) {
       data[i] = 0.3; // gas
-      data[i + 1] = 0.2; // recentSf
+      data[i + 1] = 0.2; // stars
       data[i + 2] = 0.3; // activity
       data[i + 3] = 0; // dust baseline: empty (every ring but `ring`)
     }
@@ -362,7 +362,7 @@ describe('buildDustParticleCloud', () => {
       for (let azIdx = 0; azIdx < az; azIdx++) {
         const base = (ring * az + azIdx) * 4;
         data[base] = 0.3; // gas
-        data[base + 1] = 0.2; // recentSf
+        data[base + 1] = 0.2; // stars
         data[base + 2] = 0.3; // activity
         if (ring === ringA) data[base + 3] = 2.0;
         else if (ring === ringB) data[base + 3] = 5.0;

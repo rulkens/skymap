@@ -13,12 +13,19 @@
  * restating it: `ismMapAutomatonStep.wesl`, `ismMapFluidStep.wesl`,
  * `ismMapPack.wesl`, `ismMapFluidPack.wesl`):
  *
- *   state (ping-pong, internal): x gas | y eventAge (steps since event core;
- *     a clock, Eulerian) | z activity (EMA of event stamps / ignition
- *     trace) | w dust (advected/snowploughed, ambient pedestal 1)
- *   packed (this readback):      R gas | G recentSf = exp(-eventAge/tau) |
- *     B activity (clamped 0..1) | A dust (conserved via the snowplough
- *     rule; may exceed 1.0)
+ *   state (ping-pong, internal): x gas | y STARS, generator-specific — fluid:
+ *     a MATERIAL tracer (advected the same as gas/dust, deposited at SF
+ *     events proportional to local gas, decaying per step — the placement
+ *     field for the young-stars chain tier); automaton: `eventAge`, an
+ *     EULERIAN clock (steps since event core; load-bearing refractory-gating
+ *     state, see `ismMapAutomatonStep.wesl`) | z activity (EMA of event
+ *     stamps / ignition trace) | w dust (advected/snowploughed, ambient
+ *     pedestal 1)
+ *   packed (this readback):      R gas | G stars — fluid: the tracer,
+ *     straight unclamped copy; automaton: `exp(-eventAge/tau)`, that
+ *     generator's own documented APPROXIMATION of the fluid tracer, not the
+ *     tracer itself | B activity (clamped 0..1) | A dust (conserved via the
+ *     snowplough rule; may exceed 1.0)
  *
  * All four rgba16float slots are occupied — a fifth channel needs a second
  * output texture (`IsmMapOutput`) + decode, not a slot squeeze here.

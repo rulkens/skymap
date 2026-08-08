@@ -33,6 +33,25 @@ function makeBusyMap(): GalaxyIsmMap {
   return { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
 }
 
+/**
+ * Busy on exactly ONE channel (the other of `stars`/`activity` left at 0,
+ * gas nonzero so admission math elsewhere has something to chew on) — the
+ * shell-seeding CDF's disjoint-support probe: `stars` and `activity` never
+ * overlap here, so whichever one placement actually reads is the one that
+ * moves the output.
+ */
+function makeChannelHotMap(channel: 'stars' | 'activity'): GalaxyIsmMap {
+  const az = 32;
+  const rings = 16;
+  const data = new Float32Array(rings * az * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 0.78;
+    if (channel === 'stars') data[i + 1] = 0.7;
+    if (channel === 'activity') data[i + 2] = 0.6;
+  }
+  return { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
+}
+
 describe('buildHiiRegions', () => {
   it('ismMapSeeding 0 is byte-identical whether or not a map is handed in', () => {
     const tuningOff = {
@@ -63,6 +82,72 @@ describe('buildHiiRegions', () => {
     );
     expect(withMap.length).toBeGreaterThan(0); // sanity: the tier really runs on the MW preset
     expect(withMap).toEqual(withoutMap);
+  });
+
+  // The stars channel is now a long-lived advected tracer (fluid) / its
+  // exp-decay approximation (automaton) — no longer the short-memory signal
+  // shell seeding wants. `applyIsmMapSeeding` switched its CDF weight from
+  // `stars` to `activity` (see `hiiRegions.ts`'s own header); these two pin
+  // that switch against disjoint per-channel maps, since a busy-on-both map
+  // (`makeBusyMap`) can't tell which channel actually drove a reseed.
+  it('shell/cluster seeding ignores the stars channel: a stars-only map (zero activity) leaves placement byte-identical to no map', () => {
+    const tuningOn = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      // Forces the arm-ridge catalog + applyIsmMapSeeding path — the DEFAULT
+      // generator is 'fluid', which never calls applyIsmMapSeeding at all
+      // (candidateRegionsFromFluidEvents derives centres from the sim
+      // itself, ignoring the map object handed in here).
+      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'automaton' as const },
+      hii: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+        ismMapSeeding: 1,
+        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
+      },
+    };
+    const withoutMap = buildHiiRegions(
+      geometry,
+      tuningOn,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      null,
+    );
+    const withStarsOnlyMap = buildHiiRegions(
+      geometry,
+      tuningOn,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      makeChannelHotMap('stars'),
+    );
+    expect(withStarsOnlyMap).toEqual(withoutMap);
+  });
+
+  it('shell/cluster seeding weights by activity: an activity-only map (zero stars) reseeds placement', () => {
+    const tuningOn = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      // Same generator override as the previous test, same reason.
+      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'automaton' as const },
+      hii: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+        ismMapSeeding: 1,
+        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
+      },
+    };
+    const withoutMap = buildHiiRegions(
+      geometry,
+      tuningOn,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      null,
+    );
+    const withActivityOnlyMap = buildHiiRegions(
+      geometry,
+      tuningOn,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      makeChannelHotMap('activity'),
+    );
+    expect(withActivityOnlyMap.length).toBeGreaterThan(0); // sanity: the tier really runs
+    expect(withActivityOnlyMap).not.toEqual(withoutMap);
   });
 
   it('dig.fraction 0 is byte-identical whether or not a map is handed in', () => {
@@ -340,7 +425,7 @@ describe('buildHiiRegions', () => {
   });
 
   it('associations render with a null ISM map — placement is event-derived, not CDF-sampled (task #10)', () => {
-    // Associations used to CDF-sample from the map's activity/recentSf
+    // Associations used to CDF-sample from the map's activity/stars
     // channels the way DIG still does; they now seed off the SF-event
     // catalog's own mid-age band instead (`resolveEventLifecyclePopulation`),
     // so a map is no longer a precondition — see `buildBlueAssociations`'s

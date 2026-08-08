@@ -21,7 +21,7 @@ export function meanIsmMapChannel(
     const base = i * 4;
     sum += extract({
       gas: data[base]!,
-      recentSf: data[base + 1]!,
+      stars: data[base + 1]!,
       activity: data[base + 2]!,
       dust: data[base + 3]!,
     });

@@ -69,7 +69,7 @@ const input: FieldHeaderInput = {
   galaxyWeight: 22000,
   ismMapChannels: {
     gasWeight: 23000,
-    recentSfWeight: 23001,
+    starsWeight: 23001,
     activityWeight: 23002,
     dustWeight: 23003,
   },

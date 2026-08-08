@@ -4,15 +4,16 @@
  * OFFSET AUTHORITY — see `packIsmMapAutomatonConstants.ts`'s own header for
  * why a wrong index is a silent failure, not a thrown one.
  *
- * 16 lanes for 16 members — `gatherOffset` (member 16) exactly fills the
- * buffer; the round-up-to-a-whole-row slack the automaton's own constants
- * packer still carries is gone here.
+ * 20 lanes for 18 members (`starsDeposit`/`starsDecay` pushed the struct past
+ * its old exact-16 fit) — the uniform address space rounds a struct's size up
+ * to a multiple of 16 bytes regardless, so lanes 18/19 are slack, same
+ * discipline `packIsmMapAutomatonConstants.ts`'s own tail already carries.
  */
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
 
-/** Float count of `ismMapFluidStep.wesl`'s `IsmMapFluidConstants` — 12 members, rounded up to a whole 16-byte row. */
-export const ISM_MAP_FLUID_CONSTANTS_FLOATS = 16;
+/** Float count of `ismMapFluidStep.wesl`'s `IsmMapFluidConstants` — 18 members, rounded up to a whole 16-byte row. */
+export const ISM_MAP_FLUID_CONSTANTS_FLOATS = 20;
 
 /** Byte size of the constants struct, for `createBuffer`. */
 export const ISM_MAP_FLUID_CONSTANTS_BUFFER_SIZE = ISM_MAP_FLUID_CONSTANTS_FLOATS * 4;
@@ -42,6 +43,13 @@ export function packIsmMapFluidConstants({ grid, fluid }: IsmMapFluidConstantsIn
   out[13] = fluid.gasFloor;
   out[14] = fluid.laneBias;
   out[15] = fluid.gatherOffset;
+  out[16] = fluid.starsDeposit;
+  out[17] = fluid.starsDecay;
+
+  // Slack past the struct, written rather than left to the allocator — same
+  // discipline `packIsmMapAutomatonConstants.ts`'s own tail uses.
+  out[18] = 0;
+  out[19] = 0;
 
   return out;
 }

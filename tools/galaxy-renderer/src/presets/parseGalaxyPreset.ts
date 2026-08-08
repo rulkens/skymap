@@ -50,10 +50,14 @@ export function parseGalaxyPreset(json: string): {
   const lod: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(flatR)) {
     if (LOD_KEYS.includes(key)) lod[key] = value;
-    // Pre-rename presets carry the old spelling of the recentSf channel
-    // weight — remap so a saved debug-view setup survives the rename.
-    else if (key === 'ismMapRecentWeight') render.ismMapRecentSfWeight = value;
-    else render[key] = value;
+    // Pre-rename presets carry one of two old spellings of the stars channel
+    // weight (`ismMapRecentWeight` predates the recentSf unification,
+    // `ismMapRecentSfWeight` is that unification's own name, since replaced
+    // by the tracer rename) — remap both so a saved debug-view setup
+    // survives either rename.
+    else if (key === 'ismMapRecentWeight' || key === 'ismMapRecentSfWeight') {
+      render.ismMapStarsWeight = value;
+    } else render[key] = value;
   }
 
   return {

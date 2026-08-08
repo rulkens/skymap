@@ -59,6 +59,28 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.ismMapAutomaton).toEqual(tunedAutomaton);
   });
 
+  // Two pre-rename spellings of the same render knob: `ismMapRecentWeight`
+  // predates the recentSf unification, `ismMapRecentSfWeight` is that
+  // unification's own name (since replaced by the stars-tracer rename) —
+  // both must land on today's `ismMapStarsWeight` (`parseGalaxyPreset.ts`'s
+  // legacy shim).
+  it.each(['ismMapRecentWeight', 'ismMapRecentSfWeight'])(
+    'remaps legacy render key %s to ismMapStarsWeight',
+    (legacyKey) => {
+      const wire = JSON.stringify({
+        type: 'galaxy-preset',
+        version: 3,
+        p: DEFAULT_GALAXY_PARAMS,
+        r: { [legacyKey]: 0.42 },
+      });
+
+      const parsed = parseGalaxyPreset(wire);
+
+      expect(parsed?.r?.ismMapStarsWeight).toBe(0.42);
+      expect(parsed?.r).not.toHaveProperty(legacyKey);
+    },
+  );
+
   it('migrates a v2 flat fieldTuning payload to the v3 nested shape', () => {
     const v2Wire = JSON.stringify({
       type: 'galaxy-preset',

@@ -64,15 +64,15 @@ function DebugViewsSection(): ReactNode {
           info="Isolates the gas channel: unspent ISM fuel, driven to 0 by an ignition and refilled over 1/gasRegen steps. The palette's dimmest colour by a wide margin — zero the other three to see it at all."
         />
         <ParamSlider
-          label="ISM map · recentSf"
-          value={render.ismMapRecentSfWeight}
+          label="ISM map · stars"
+          value={render.ismMapStarsWeight}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ ismMapRecentSfWeight: v }))}
-          path="render.ismMapRecentSfWeight"
-          info="Isolates the recentSf channel: exp(-age/12), a cell that fired within roughly the last dozen steps. Warm near-white and usually what washes out the gas channel in the combined view."
+          onChange={(v) => dispatch(renderPatched({ ismMapStarsWeight: v }))}
+          path="render.ismMapStarsWeight"
+          info="Isolates the young-stars channel: fluid — an advected tracer deposited at SF events and decaying over the run; automaton — exp(-age/12), that generator's own approximation of the tracer. Warm near-white and usually what washes out the gas channel in the combined view."
         />
         <ParamSlider
           label="ISM map · activity"

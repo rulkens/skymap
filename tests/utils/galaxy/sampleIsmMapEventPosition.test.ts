@@ -56,7 +56,7 @@ const GEOMETRY: GalaxyDescription = {
   seed: 1,
 };
 
-/** A single hot texel in the `recentSf` (G) channel — the density this sampler weights by. */
+/** A single hot texel in the `stars` (G) channel — the density this sampler weights by. */
 function makeSingleHotMap(ring: number, azIdx: number): GalaxyIsmMap {
   const data = new Float32Array(RINGS * AZ * 4);
   data[(ring * AZ + azIdx) * 4 + 1] = 1;
@@ -68,7 +68,7 @@ describe('sampleIsmMapEventPosition', () => {
     const ring = 3;
     const azIdx = 1;
     const map = makeSingleHotMap(ring, azIdx);
-    const cdf = buildIsmMapDustCdf(map, (texel) => texel.recentSf);
+    const cdf = buildIsmMapDustCdf(map, (texel) => texel.stars);
     const rng = mulberry32(7);
 
     const { rInner, rOuter } = ismMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);

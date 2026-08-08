@@ -178,7 +178,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
 
   // ismMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, dustWeight).
   out[44] = ismMapChannels.gasWeight;
-  out[45] = ismMapChannels.recentSfWeight;
+  out[45] = ismMapChannels.starsWeight;
   out[46] = ismMapChannels.activityWeight;
   out[47] = ismMapChannels.dustWeight;
 

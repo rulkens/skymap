@@ -91,4 +91,21 @@ export type GalaxyIsmMapFluidParams = {
    * member, no WESL mirror.
    */
   readonly eventArmBias: number;
+  /**
+   * Tracer mass deposited per step at texels an event stamps this step,
+   * times the texel's own (post-advection) local gas — SF converts gas to
+   * stars, and the impulse's own multi-step duration is absorbed into this
+   * constant rather than modelled separately. `ismMapFluidStep.wesl`'s
+   * `starsDeposit` UBO lane.
+   */
+  readonly starsDeposit: number;
+  /**
+   * Per-step retention of the advected stars tracer (`stars' = advected(stars)
+   * * starsDecay + ...`) — `retention^steps` over a rebuild's step count is
+   * this generator's own dial on the measured ~40-100 Myr structural
+   * dissolution clock young stellar associations show
+   * (`docs/research/m74-jwst/11-young-star-clustering.md`), not a literal
+   * Myr/step conversion. `ismMapFluidStep.wesl`'s `starsDecay` UBO lane.
+   */
+  readonly starsDecay: number;
 };

@@ -5,11 +5,11 @@
 // material-frame trick and no final un-shear pass — ismMapFluidPack.wesl's
 // own repack is a straight copy.
 //
-// State layout (x=gas, y=eventAge, z=activity, w=dust — see GalaxyIsmMap.ts's
+// State layout (x=gas, y=stars, z=activity, w=dust — see GalaxyIsmMap.ts's
 // contract table) is IDENTICAL to the automaton's own ping-pong texel.
-// gas/dust are ADVECTED (semi-Lagrangian back-trace into prevTex) while
-// eventAge/activity are EULERIAN (read from this texel's own previous
-// value, never resampled).
+// gas/dust/stars are ADVECTED (semi-Lagrangian back-trace into prevTex, the
+// SAME upstream sample) while activity alone is EULERIAN (read from this
+// texel's own previous value, never resampled).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
@@ -43,6 +43,13 @@ struct IsmMapFluidConstants {
   // Pass-A-consumed only (ismMapFluidVelocity.wesl's composedVelocity) — kept
   // here for byte-identical layout, same discipline as laneBias above.
   gatherOffset: f32,
+  // Tracer mass added per step at stamped texels, times local gas — see the
+  // TS param's own doc (GalaxyIsmMapFluidParams.starsDeposit) for the
+  // calibration story.
+  starsDeposit: f32,
+  // Per-step retention of the advected stars tracer — see the TS param's own
+  // doc (GalaxyIsmMapFluidParams.starsDecay) for the tau mapping.
+  starsDecay: f32,
 }
 
 // Same layout as ismMapFluidVelocity.wesl's own copy (packIsmMapFluidStepIndex.ts
@@ -195,7 +202,11 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // velocityTex is dead here.
   if (genStep == 0u) {
     let seedGas = gasProfile(r);
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 1.0e4, 0.0, ISM_MAP_AMBIENT_DUST * seedGas));
+    // y seeds at 0, not the old eventAge clock's huge "long ago" sentinel:
+    // stars is a MATERIAL tracer that accumulates from nothing via deposit,
+    // so an empty disc starts with none, not a decayed trace of an event
+    // that never happened.
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 0.0, 0.0, ISM_MAP_AMBIENT_DUST * seedGas));
     return;
   }
 
@@ -219,9 +230,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let azCountF = f32(azCount);
 
-  // Semi-Lagrangian back-trace, dt = 1 step: gas/dust sample where THIS
-  // texel's material came FROM, not where it self-reads (contrast eventAge/
-  // activity below).
+  // Semi-Lagrangian back-trace, dt = 1 step: gas/dust/stars sample where THIS
+  // texel's material came FROM, not where it self-reads (contrast activity's
+  // Eulerian read below).
   var prevAzF = (f32(az) - velAz) % azCountF;
   if (prevAzF < 0.0) {
     prevAzF += azCountF;
@@ -244,7 +255,6 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let diffusedGas = max(0.0, advectedGas + u.diffusion * lap.x);
   let diffusedDust = max(0.0, advectedDust + u.diffusion * lap.y);
 
-  let selfEventAge = selfState.y;
   let selfActivity = selfState.z;
 
   // gasRegen is now a relaxation RATE toward gasProfile(r), not a flat
@@ -253,14 +263,15 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // identical, and it no longer pushes gas toward GAS_CEILING unconditionally
   // — it relaxes toward the profile, the physically-meaningful equilibrium.
   let gas = min(GAS_CEILING, max(0.0, diffusedGas + u.gasRegen * (gasProfile(r) - diffusedGas)));
-  var eventAge = selfEventAge + 1.0;
-  // "Core" threshold: an event only just born here dominates the intensity
-  // sum, so this fires exactly at its birth texel/step, not its whole tail.
-  if (eventStamp > 0.5) {
-    eventAge = 0.0;
-  }
+  // stars is MATERIAL, not Eulerian (this file's header): 'advected.y' is
+  // already the previous stars value sampled at the SAME back-traced source
+  // point gas/dust read above, so a stamped clump shears into a chain along
+  // with the gas that formed it instead of staying a fixed circle. Deposit
+  // is local (this texel's own gas, not the upstream sample) — the impulse's
+  // own multi-step duration is absorbed into starsDeposit's calibration.
+  let stars = advected.y * u.starsDecay + u.starsDeposit * gas * eventStamp;
   let dust = min(diffusedDust, DUST_OVERSHOOT_CEILING);
   let activity = mix(selfActivity, eventStamp, u.emaRate);
 
-  textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gas, eventAge, activity, dust));
+  textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gas, stars, activity, dust));
 }

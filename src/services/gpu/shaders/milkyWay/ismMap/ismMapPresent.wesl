@@ -95,7 +95,7 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let edgeFade = smoothstep(0.0, 0.03, ringT) * (1.0 - smoothstep(0.94, 1.0, ringT));
 
   let gas = texel.x;
-  let recent = texel.y;
+  let stars = texel.y;
   let old = texel.z;
   // The conserved dust channel (ismMapPack.wesl's state.w, see
   // GalaxyIsmMap.ts's contract table) — written RAW there, so swept-shell
@@ -103,23 +103,26 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let dust = texel.w;
   // Presentation palette, NOT physics — chosen so the four channels stay
   // separable by eye: dim cool navy for unspent gas, bright magenta-violet
-  // for the decaying activity wake, warm near-white for a cell that ignited
-  // recently, teal-green for dust. Activity used to be amber, but that sat
-  // right next to recentSf's warm near-white (the two blended into one warm
-  // smear) and duplicated dustPresent.wesl's own red-orange-white band;
-  // magenta-violet and teal-green are the two hues nothing else in the
-  // debug-view set (dustPresent's red-orange-white, bubble's amber/cyan)
-  // claims. The four peak colours are still deliberately NOT equal-
-  // brightness — gas maxes at 0.25, recentSf at 1.0, activity's red/blue
-  // channels at 1.3 (above the Reinhard whitepoint's linear range, spending
-  // some of the HDR target's real headroom) — so u.ismMapChannels is the only
-  // way to see the gas channel at all against the other three, and zeroing
-  // three weights isolates the fourth. Dust is scaled by its weight the same
-  // raw way, un-clamped, before the sum — the weight is how the slider pulls
-  // rim overshoot back into a readable range, not a clip.
+  // for the decaying activity wake, warm near-white for the stars tracer
+  // (fluid: an advected young-stars density; automaton:
+  // exp(-eventAge/tau), that generator's own approximation of it — see
+  // ismMapPack.wesl/ismMapFluidPack.wesl), teal-green for dust. Activity used
+  // to be amber, but that sat right next to the stars channel's warm
+  // near-white (the two blended into one warm smear) and duplicated
+  // dustPresent.wesl's own red-orange-white band; magenta-violet and
+  // teal-green are the two hues nothing else in the debug-view set
+  // (dustPresent's red-orange-white, bubble's amber/cyan) claims. The four
+  // peak colours are still deliberately NOT equal-brightness — gas maxes at
+  // 0.25, stars at 1.0, activity's red/blue channels at 1.3 (above the
+  // Reinhard whitepoint's linear range, spending some of the HDR target's
+  // real headroom) — so u.ismMapChannels is the only way to see the gas
+  // channel at all against the other three, and zeroing three weights
+  // isolates the fourth. Dust is scaled by its weight the same raw way,
+  // un-clamped, before the sum — the weight is how the slider pulls rim
+  // overshoot back into a readable range, not a clip.
   let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.ismMapChannels.x;
   let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.ismMapChannels.z;
-  let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.ismMapChannels.y;
+  let starsColor = vec3<f32>(1.0, 0.95, 0.85) * stars * u.ismMapChannels.y;
   let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.ismMapChannels.w;
 
   // The fifth, composite term: NOT another raw-channel isolation like the
@@ -156,11 +159,11 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
     let capped = select(local, min(local, cap), cap > 0.0);
     seedingDensity = (ringMean / globalMean) * capped;
   }
-  // Warm-white, deliberately brighter/cooler than recentColor's near-white so
-  // the composite reads as its own layer rather than blending into recentSf.
+  // Warm-white, deliberately brighter/cooler than starsColor's near-white so
+  // the composite reads as its own layer rather than blending into it.
   let seedingColor = vec3<f32>(1.4, 1.3, 1.15) * seedingDensity * u.bubbleView.y;
 
-  let color = (gasColor + oldColor + recentColor + dustColor + seedingColor) * edgeFade;
+  let color = (gasColor + oldColor + starsColor + dustColor + seedingColor) * edgeFade;
 
   // debugView.y is this view's own crossfade weight (io.wesl's debugView
   // doc), same role as dustPresent.wesl's debugView.x multiply.

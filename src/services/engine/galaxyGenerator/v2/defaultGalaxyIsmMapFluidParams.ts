@@ -97,4 +97,12 @@ export const DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS: GalaxyIsmMapFluidParams = {
   // galaxyIsmMapFluidEvents.ts ~line 107) while leaving a thin off-arm
   // floor.
   eventArmBias: 0.83,
+  // Visual calibration start, not measured — see the param's own doc for
+  // what it scales.
+  starsDeposit: 1.0,
+  // Half-life ln(0.5)/ln(0.985) ~= 46 steps at this generator's default
+  // `steps` (144), landing inside the measured 40-100 Myr dissolution
+  // window if one rebuild is read as spanning that range — see the param's
+  // own doc for the citation.
+  starsDecay: 0.985,
 };

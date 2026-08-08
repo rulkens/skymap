@@ -38,7 +38,7 @@ import type { GalaxyIsmMapDustCdf } from '../../@types/galaxy/GalaxyIsmMapDustCd
  */
 export type IsmMapDensityTexel = {
   gas: number;
-  recentSf: number;
+  stars: number;
   activity: number;
   dust: number;
 };
@@ -56,7 +56,7 @@ export function buildIsmMapDustCdf(
   // only reads these fields synchronously inside its `density` callback and
   // never stores the record itself, so mutating it in place is safe; see the
   // type's own doc for the contract this relies on.
-  const texel: IsmMapDensityTexel = { gas: 0, recentSf: 0, activity: 0, dust: 0 };
+  const texel: IsmMapDensityTexel = { gas: 0, stars: 0, activity: 0, dust: 0 };
 
   let total = 0;
   for (let ring = 0; ring < rings; ring++) {
@@ -67,7 +67,7 @@ export function buildIsmMapDustCdf(
       const i = (ring * az + azIdx) * 4;
       const angle = (azIdx + 0.5) * dTheta;
       texel.gas = data[i]!;
-      texel.recentSf = data[i + 1]!;
+      texel.stars = data[i + 1]!;
       texel.activity = data[i + 2]!;
       texel.dust = data[i + 3]!;
       const d = density(texel, radius, angle);

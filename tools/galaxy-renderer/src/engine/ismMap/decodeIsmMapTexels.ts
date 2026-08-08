@@ -1,6 +1,6 @@
 /**
  * decodeIsmMapTexels — unpad + decode a mapped rgba16float readback buffer
- * from ismMapPack.wesl's packed output (gas, recentSf, activity, dust)
+ * from ismMapPack.wesl's packed output (gas, stars, activity, dust)
  * into one tightly-packed `Float32Array`, 4 lanes per texel, row-major
  * (`ring*az + azIdx`) — the layout `GalaxyIsmMap.data` carries.
  *

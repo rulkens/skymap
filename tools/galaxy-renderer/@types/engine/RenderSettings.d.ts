@@ -124,17 +124,19 @@ export type RenderSettings = {
    * ISM-map channel weight, isolating `gas` (io.wesl's `ismMapChannels.x`):
    * unspent ISM fuel, 1 nearly everywhere on a quiet disc, driven to 0 by an
    * ignition and refilled over `1/gasRegen` steps. The palette's dimmest
-   * channel (maxes at colour 0.25 vs `recentSf`'s 1.0), so zeroing the other
-   * three is the only way to see it against them. Only reachable while
+   * channel (maxes at colour 0.25 vs the stars channel's 1.0), so zeroing the
+   * other three is the only way to see it against them. Only reachable while
    * `ismMapViewIntensity` is above 0.
    */
   readonly ismMapGasWeight: number;
   /**
-   * ISM-map channel weight, isolating `recentSf` (io.wesl's
-   * `ismMapChannels.y`): `exp(-age/12)`, a cell that fired within roughly the
-   * last dozen steps. Only reachable while `ismMapViewIntensity` is above 0.
+   * ISM-map channel weight, isolating `stars` (io.wesl's
+   * `ismMapChannels.y`): the young-stars tracer — fluid: an advected density
+   * deposited at SF events and decaying with the run's own dissolution
+   * clock; automaton: `exp(-age/12)`, that generator's own approximation of
+   * it. Only reachable while `ismMapViewIntensity` is above 0.
    */
-  readonly ismMapRecentSfWeight: number;
+  readonly ismMapStarsWeight: number;
   /**
    * ISM-map channel weight, isolating `activity` (io.wesl's
    * `ismMapChannels.z`): the accumulated trace of every front that passed,
