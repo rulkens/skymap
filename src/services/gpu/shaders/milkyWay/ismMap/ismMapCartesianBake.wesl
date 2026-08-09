@@ -1,13 +1,14 @@
 // milkyWay/ismMap/ismMapCartesianBake.wesl — one-shot cartesian re-bake of
 // the packed log-polar ISM map, so stage 2's per-fragment consumers can drop
 // dustDetail.wesl's length+atan2+log+two-fetch cost to one affine UV fetch.
-// R = dustDetail.wesl's pre-divided detail ratio (DETAIL_MAX clamp and
-// strength/breakup mixing stay in the consumer); G = stars, straight copy.
-// Dispatched once per rebuild, right after the dust-blur pass it reads;
-// nothing samples dst yet — stage 2 wires the consumer switch.
+// R = the pre-divided detail ratio (DETAIL_MAX clamp and strength/breakup
+// mixing stay in the consumer); G = stars, straight copy. Dispatched once
+// per rebuild, right after the dust-blur pass it reads; consumed through
+// dustDetail.wesl's ismCartesianUv.
 
 const PI: f32 = 3.14159265358979;
-// Mirrors DETAIL_EPS (dustDetail.wesl).
+// Absolute density floor for the ratio below — sole owner since stage 2
+// (dustDetail.wesl consumes the baked ratio, no copy of its own).
 const DETAIL_EPS: f32 = 0.02;
 // Mirrors ISM_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested.
 const ISM_MAP_AMBIENT_DUST: f32 = 1.0;
@@ -45,9 +46,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
 
-  // Forward log-polar transform — MIRRORS dustDetail.wesl's ismMapUv exactly
-  // (baked once, world -> uv, instead of every fragment deriving it live);
-  // keep the two in lockstep or the two disagree at the same world point.
+  // Forward log-polar transform into the packed map — the ONLY home of this
+  // transform since stage 2 deleted dustDetail.wesl's per-fragment ismMapUv;
+  // must match the (az, ring) layout the ismMap passes write and
+  // ismMapPresent.wesl's fs resolves through the same grid.
   let rSample = max(r, grid.rMin); // radial clamp: continuous extension inside rMin
   let theta = atan2(world.y, world.x);
   let ringT = log(rSample / grid.rMin) / log(grid.rMax / grid.rMin);

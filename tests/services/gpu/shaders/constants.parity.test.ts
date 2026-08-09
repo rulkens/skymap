@@ -117,15 +117,16 @@ describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () =>
 });
 
 /**
- * ISM_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into five WESL
+ * ISM_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into four WESL
  * files that are not dedicated constant-mirror files, so — same idiom as
  * bloomSeedingConstants.parity.test.ts's readWeslConst — this reads one
  * named const per file rather than sweeping each for orphans.
  * ismMapAutomatonStep.wesl/ismMapFluidStep.wesl seed every texel to this
- * pedestal at step 0; ismMapDustBlur.wesl, dustDetail.wesl, and
- * ismMapCartesianBake.wesl (that pass's own bake of dustDetail.wesl's ratio)
- * must all subtract the SAME pedestal, or S4's detail ratio drifts against
- * its own blur divisor. ismMapPresent.wesl no longer subtracts it: the
+ * pedestal at step 0; ismMapDustBlur.wesl and ismMapCartesianBake.wesl must
+ * both subtract the SAME pedestal, or S4's detail ratio (now computed once
+ * by the bake, not per consumer — dustDetail.wesl dropped its own copy in
+ * stage 2 of the dust-seeding perf spike) drifts against its own blur
+ * divisor. ismMapPresent.wesl no longer subtracts it: the
  * "seeding" debug view reads the map's raw dust channel directly now (the
  * ambient pedestal stopped being uniform — it's seeded
  * `ambient * gasProfile(r)` and advected, so it's structure, not a floor to
@@ -150,7 +151,6 @@ describe('ISM_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirror
     'src/services/gpu/shaders/milkyWay/ismMap/ismMapAutomatonStep.wesl',
     'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl',
     'src/services/gpu/shaders/milkyWay/ismMap/ismMapDustBlur.wesl',
-    'src/services/gpu/shaders/milkyWay/field/dustDetail.wesl',
     'src/services/gpu/shaders/milkyWay/ismMap/ismMapCartesianBake.wesl',
   ];
 

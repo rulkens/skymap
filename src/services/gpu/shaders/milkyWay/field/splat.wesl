@@ -37,9 +37,9 @@ import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
 import package::milkyWay::field::io::starGrainTex;
 import package::milkyWay::field::io::starGrainSmp;
-import package::milkyWay::field::dustDetail::ismMapUv;
-import package::milkyWay::field::dustDetail::ismMapTex;
-import package::milkyWay::field::dustDetail::ismMapSmp;
+import package::milkyWay::field::dustDetail::ismCartesianUv;
+import package::milkyWay::field::dustDetail::ismCartesianTex;
+import package::milkyWay::field::dustDetail::ismCartesianSmp;
 
 // sliceTransmitRatio — (1 - exp(-x)) / x per channel, the exact closed form
 // for emission spread UNIFORMLY through a homogeneous slab of per-channel
@@ -436,9 +436,19 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
         // Layered on TOP of the grain term rather than replacing it: a young
         // component carries both textures at once.
         if (g3.w > 0.0) {
-          let uvv = ismMapUv(p);
-          if (uvv.z > 0.0) {
-            let stars = textureSampleLevel(ismMapTex, ismMapSmp, uvv.xy, 0.0).y;
+          let uv = ismCartesianUv(p);
+          // A spur's own fadeRadius can run PAST the ISM grid's rMax
+          // (armSpurGeometry.ts's buildSpurRecord: fadeRadius = root radius
+          // + lengthFrac*gap, unclamped against the parent arm's own
+          // fadeRadius outerArmRadius maxes over) — so this branch keeps an
+          // explicit range test rather than trusting the clamp sampler, the
+          // way dustDetailMultiplier does. Outside the disc the bake's G is
+          // neutral 0, and skipping the test would DARKEN term via
+          // mix(1, 0, g3.w) instead of leaving it untouched — dustDetail's
+          // own neutral value (R=1) is a no-op multiplicatively, this one
+          // (G=0) is not.
+          if (all(uv >= vec2<f32>(0.0)) && all(uv <= vec2<f32>(1.0))) {
+            let stars = textureSampleLevel(ismCartesianTex, ismCartesianSmp, uv, 0.0).g;
             // gamma shapes the read; invMeanNorm (1/mean of the shaped read,
             // packFieldUniforms.ts) renormalises it back to mean 1 so
             // restructuring the contrast doesn't drain the tier's

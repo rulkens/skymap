@@ -699,11 +699,17 @@ export async function createGalaxyEngine(
   //    three pipelines, with different binding sets: dustNoiseTex/Smp (4/5)
   //    everywhere splat.wesl OR dustMap.wesl imports them (both do now — the
   //    former for hiiNoiseTerm, the HII texture-breakup term), the grid
-  //    uniform/ismMapSmp/ismMapTex (3/7/8) everywhere EITHER shader imports
-  //    them (dustMap.wesl for S4's detail term, splat.wesl for §5's
-  //    young-stars read), ismMapBlurTex (9) only where dustMap.wesl imports
-  //    it (S4 alone needs the blurred copy), dustMapSmp (6) only where
-  //    splat.wesl samples `dustMapTex` through a filtered UV.
+  //    uniform/clamp sampler/cartesian bake texture (3/7/8) everywhere EITHER
+  //    shader imports them (dustMap.wesl for S4's detail term, splat.wesl for
+  //    §5's young-stars read) — both now read `ismMapGenerator.cartesianTexture`
+  //    through binding 7's clamp-to-edge bilinear sampler (`dustMapSampler`
+  //    reused, not a second sampler object — its own declaration already
+  //    defaults to clamp-to-edge on both axes), stage 2 of the dust-seeding
+  //    perf spike (see dustDetail.wesl's own header). No binding 9 anywhere
+  //    any more — the packed map's blur divisor fed the bake upstream, not
+  //    any consumer here. dustMapSmp (6, same GPUSampler as 7 but its own
+  //    binding number) is only where splat.wesl samples `dustMapTex` through
+  //    a filtered UV.
   //  - A group holds the EXACT GPUBuffer/GPUTexture objects it names. So each
   //    is a `let` + a builder, and the resource owns the rebuild: the model's
   //    two `onRegrow` hooks above for the comps buffers, and
@@ -722,11 +728,12 @@ export async function createGalaxyEngine(
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
         // S4's ISM-map detail term (dustDetail.wesl) rides the accumulation
-        // pass now, applied per dust splat — see dustMap.wesl's fs.
+        // pass now, applied per dust splat — see dustMap.wesl's fs. Reads
+        // the cartesian bake (stage 2), not the packed log-polar map: no
+        // binding 9 any more — the bake consumed the blur divisor upstream.
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: ismMapGenerator.mapSampler },
-        { binding: 8, resource: ismMapGenerator.texture.createView() },
-        { binding: 9, resource: ismMapGenerator.dustBlurTexture.createView() },
+        { binding: 7, resource: dustMapSampler },
+        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
       ],
     });
   }
@@ -739,15 +746,16 @@ export async function createGalaxyEngine(
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 1, resource: { buffer: model.fieldComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
-        // §5: grid uniform/ismMapSmp/ismMapTex — splat.wesl's fs now imports
-        // `ismMapUv` (pulls in the grid uniform) plus ismMapTex/ismMapSmp
-        // directly, for the YOUNG STARS branch's stars-map read. The SAME
-        // three resources `dustMapBG` already binds for S4's detail term —
-        // not a second copy. No binding 9 (ismMapBlurTex): this read samples
-        // the map's raw 'stars' channel, no blur ratio.
+        // §5: grid uniform/clamp sampler/cartesian bake texture —
+        // splat.wesl's fs now imports `ismCartesianUv` (pulls in the grid
+        // uniform) plus ismCartesianTex/ismCartesianSmp directly, for the
+        // YOUNG STARS branch's stars-map read. The SAME three resources
+        // `dustMapBG` already binds for S4's detail term — not a second
+        // copy. No binding 9 (the old ismMapBlurTex) — that binding is gone
+        // from every render pipeline now, not just this reader.
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: ismMapGenerator.mapSampler },
-        { binding: 8, resource: ismMapGenerator.texture.createView() },
+        { binding: 7, resource: dustMapSampler },
+        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
         // Bindings 4/5: dustNoiseTex/dustNoiseSampler — splat.wesl's fs now
         // imports these for hiiNoiseTerm (the HII texture-breakup term), the
         // SAME resources dustMapBG binds for the dust cloud's own erosion.
@@ -759,9 +767,11 @@ export async function createGalaxyEngine(
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
         // dustMapTex's own declaration comment for why the divisors split).
-        // No 9 here (see the §5 comment above) — S4's OWN detail term
-        // (dustDetail.wesl's dustDetailMultiplier) still rides only
-        // dustMap.wesl's accumulation pass, not this consumer.
+        // The SAME GPUSampler object as binding 7 above, just under its own
+        // binding number — S4's OWN detail term (dustDetail.wesl's
+        // dustDetailMultiplier) still rides only dustMap.wesl's accumulation
+        // pass, not this consumer, so this entry names dustMapTex's sampler
+        // only, unrelated to the cartesian bake read.
         { binding: 6, resource: dustMapSampler },
         // Bindings 10/11: starGrainTex/starGrainSampler — splat.wesl's fs
         // now imports these for starGrainTerm (the YOUNG STARS branch's own
@@ -800,11 +810,11 @@ export async function createGalaxyEngine(
   // darkens with it. Bindings 4/5 (dustNoiseTex/dustNoiseSampler) ARE bound
   // and DO get sampled here — this header's own `dustDetail.y`/`.z` carry
   // the real tier-global texture scale/contrast (`model.hiiTexture`), unlike
-  // `splatBG`'s. Same for 3/7/8 (§5 grid uniform/ismMapSmp/ismMapTex, see
-  // `buildSplatBindGroup`'s own comment): this is the pass that actually
-  // samples them, since a young-stars chain component (nonzero
-  // `starsWeight`) only ever exists in `model.hiiComps`. Still no 9
-  // (ismMapBlurTex) — neither reader needs the blurred copy.
+  // `splatBG`'s. Same for 3/7/8 (§5 grid uniform/clamp sampler/cartesian
+  // bake texture, see `buildSplatBindGroup`'s own comment): this is the pass
+  // that actually samples them, since a young-stars chain component
+  // (nonzero `starsWeight`) only ever exists in `model.hiiComps`. Still no 9
+  // — gone from every render pipeline (see `buildSplatBindGroup`'s comment).
   let hiiBG: GPUBindGroup;
   function buildHiiBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -815,8 +825,8 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: ismMapGenerator.mapSampler },
-        { binding: 8, resource: ismMapGenerator.texture.createView() },
+        { binding: 7, resource: dustMapSampler },
+        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },
@@ -846,8 +856,8 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: ismMapGenerator.mapSampler },
-        { binding: 8, resource: ismMapGenerator.texture.createView() },
+        { binding: 7, resource: dustMapSampler },
+        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },

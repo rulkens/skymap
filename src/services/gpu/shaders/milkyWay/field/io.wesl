@@ -300,15 +300,19 @@
 // splat pipeline (splat.wesl imports it, along with dustMapSmp); the splat
 // pass that WRITES it never reads it.
 //
-// Bindings 3/7/8/9 belong to dustDetail.wesl (grid uniform, ismMapSmp,
-// ismMapTex, ismMapBlurTex) — declared THERE, not here, so io.wesl does not
-// force them into every pipeline's auto layout. dustMap.wesl's pipeline
-// imports all four (the accumulation pass, S4); splat.wesl now imports
-// ismMapUv (pulling in 3) plus ismMapTex/ismMapSmp directly (7/8) for §5's
-// stars-map read (its own fs, the star-grain branch) — NOT 9
-// (ismMapBlurTex), since that branch samples the map's raw 'stars' channel,
-// no blur ratio. The remaining bindings keep their numbers so every pipeline
-// and bind group here stays as written.
+// Bindings 3/7/8 belong to dustDetail.wesl (grid uniform, ismCartesianSmp,
+// ismCartesianTex) — declared THERE, not here, so io.wesl does not force
+// them into every pipeline's auto layout. Binding 9 (the packed map's own
+// blur divisor, ismMapBlurTex) is gone from every render pipeline as of
+// stage 2 of the dust-seeding perf spike (docs/research/m74-jwst/
+// 07-sprite-seeding.md): dustMap.wesl's S4 detail term and splat.wesl's §5
+// stars-map read both now sample ismMapCartesianBake.wesl's one-shot
+// world-xz re-bake (R=detail ratio, G=stars) through the SAME affine UV
+// (dustDetail.wesl's ismCartesianUv) instead of the packed map's own
+// log-polar one — the blur pass that fed the old per-fragment ratio runs
+// once, upstream of the bake, not per consumer any more. The remaining
+// bindings keep their numbers so every pipeline and bind group here stays as
+// written.
 
 struct FieldUniforms {
   eye: vec4<f32>,
