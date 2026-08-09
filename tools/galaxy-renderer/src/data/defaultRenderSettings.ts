@@ -98,7 +98,10 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Same firefly reasoning as `hiiDivisor` above, now the central galaxy's
   // own shells/young-stars tiers (`data/hiiTiers.ts`'s `HII_TIERS`).
   shellsDivisor: 1,
-  youngDivisor: 1,
+  // 2, not 1: the grain band-limit (splat.wesl's starGrainTerm) makes the
+  // half-res young target alias-free, and the tier is the HII pass's worst
+  // overdraw contributor — the 4x fragment cut is the calibrated default.
+  youngDivisor: 2,
   // DIG is the opposite trade from shells/young above: the biggest,
   // softest quads in the tier, and low-frequency, so a coarse target costs no
   // visible detail while cutting fragment work by roughly the square of this.
