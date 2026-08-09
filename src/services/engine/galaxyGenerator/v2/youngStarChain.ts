@@ -55,6 +55,22 @@ const YOUNG_FLUX_REF = 0.005;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
+/** Mirrors splatSilhouette.wesl's own `SPLAT_CUT` — parity guarded by tests/services/gpu/shaders/constants.parity.test.ts so the two can't silently drift. */
+export const SPLAT_CUT_SIGMA = 4.5;
+
+/**
+ * The quad clips at `SPLAT_CUT_SIGMA * boundRadius` (splatSilhouette.wesl),
+ * so under-bounding by this ratio truncates young components at
+ * `YOUNG_BOUND_SIGMA` sigma instead of `SPLAT_CUT_SIGMA` — shaded fragment
+ * area scales with the cut squared, so 3/4.5 cuts it ~2.25x. Smooth
+ * components (disc/halo) need the full 4.5 because a 3σ edge is visible;
+ * young components are grain-textured and the grain masks it (splatSilhouette
+ * .wesl's own justification for 4.5). Near-fade sliders are multiples of
+ * boundRadius (io.wesl), so young fade distances shrink by the same ratio —
+ * live-tunable.
+ */
+const YOUNG_BOUND_SIGMA = 3.0;
+
 /** Reuses the embedded-cluster's own stellar-continuum blue rather than re-deriving a colour for stellar continuum the tier already has a name for. */
 const YOUNG_BLUE = HII_CLUSTER_COLOR;
 
@@ -143,7 +159,8 @@ export function buildYoungStarChain(
         }),
         color: YOUNG_BLUE,
         center: node.center,
-        boundRadius: Math.max(sigmaAlong, sigmaAcross, poleSigma),
+        boundRadius:
+          Math.max(sigmaAlong, sigmaAcross, poleSigma) * (YOUNG_BOUND_SIGMA / SPLAT_CUT_SIGMA),
         textureWeight,
         starsWeight,
       });

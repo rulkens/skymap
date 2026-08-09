@@ -24,6 +24,7 @@ import {
 } from '../../../../src/data/flow/flowFieldConstants';
 import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/sweptDustOvershoot';
 
 /**
@@ -182,5 +183,23 @@ describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ ismMapPresen
       weslValue,
       `${file}: WESL DUST_SURVIVAL_FLOOR_FRAC (${weslValue}) does not match TS DUST_SURVIVAL_FLOOR_FRAC (${DUST_SURVIVAL_FLOOR_FRAC})`,
     ).toBe(DUST_SURVIVAL_FLOOR_FRAC);
+  });
+});
+
+/**
+ * SPLAT_CUT_SIGMA (youngStarChain.ts) mirrors splatSilhouette.wesl's own
+ * SPLAT_CUT — the young-stars chain under-bounds its quad to
+ * YOUNG_BOUND_SIGMA/SPLAT_CUT_SIGMA of the shader's cut, so a drift here
+ * would silently change which sigma the truncation actually lands at.
+ */
+describe('SPLAT_CUT_SIGMA parity (youngStarChain.ts ↔ splatSilhouette.wesl)', () => {
+  it("youngStarChain.ts's SPLAT_CUT_SIGMA equals splatSilhouette.wesl's SPLAT_CUT", () => {
+    const file = 'src/services/gpu/shaders/lib/splatSilhouette.wesl';
+    const weslValue = readWeslConst(file, 'SPLAT_CUT');
+    expect(weslValue, `SPLAT_CUT is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL SPLAT_CUT (${weslValue}) does not match TS SPLAT_CUT_SIGMA (${SPLAT_CUT_SIGMA})`,
+    ).toBe(SPLAT_CUT_SIGMA);
   });
 });
