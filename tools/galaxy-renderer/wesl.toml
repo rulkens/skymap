@@ -11,7 +11,9 @@
 #   src/engine/shaders/milkyWay/sprites -> src/services/gpu/shaders/milkyWay/sprites
 #   src/engine/shaders/milkyWay/field/  real dir: per-file symlinks for the
 #                                       flat .wesl leaves + dir symlinks for
-#                                       fieldSplat/ and hiiSplat/ (see below)
+#                                       fieldSplat/, hiiSplat/, dustMap/,
+#                                       dustPresent/, and bubblePresent/
+#                                       (see below)
 #   src/engine/shaders/milkyWay/ismMap   -> .../shaders/milkyWay/ismMap
 #   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
 #   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom

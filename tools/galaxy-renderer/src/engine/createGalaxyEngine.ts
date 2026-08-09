@@ -107,11 +107,14 @@ import hiiSplatVsWgsl from './shaders/milkyWay/field/hiiSplat/vertex.wesl?static
 import hiiYoungFsWgsl from './shaders/milkyWay/field/hiiSplat/youngFragment.wesl?static';
 import hiiErosionFsWgsl from './shaders/milkyWay/field/hiiSplat/erosionFragment.wesl?static';
 import hiiExtrasFsWgsl from './shaders/milkyWay/field/hiiSplat/extrasFragment.wesl?static';
-import dustMapWgsl from './shaders/milkyWay/field/dustMap.wesl?static';
-import dustPresentWgsl from './shaders/milkyWay/field/dustPresent.wesl?static';
+import dustMapVsWgsl from './shaders/milkyWay/field/dustMap/vertex.wesl?static';
+import dustMapFsWgsl from './shaders/milkyWay/field/dustMap/fragment.wesl?static';
+import dustPresentVsWgsl from './shaders/milkyWay/field/dustPresent/vertex.wesl?static';
+import dustPresentFsWgsl from './shaders/milkyWay/field/dustPresent/fragment.wesl?static';
 import dustNoiseBakeWgsl from './shaders/milkyWay/field/dustNoiseBake.wesl?static';
 import starGrainBakeWgsl from './shaders/milkyWay/field/starGrainBake.wesl?static';
-import bubblePresentWgsl from './shaders/milkyWay/field/bubblePresent.wesl?static';
+import bubblePresentVsWgsl from './shaders/milkyWay/field/bubblePresent/vertex.wesl?static';
+import bubblePresentFsWgsl from './shaders/milkyWay/field/bubblePresent/fragment.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -475,7 +478,7 @@ export async function createGalaxyEngine(
   });
 
   // ---- dust-column map pipeline (screen-space dust splat) ----
-  // `milkyWay/field/dustMap.wesl`: one instanced quad per PRIMARY dust
+  // `milkyWay/field/dustMap/`: one instanced quad per PRIMARY dust
   // component (splat.wesl's own silhouette math via `lib/splatSilhouette`),
   // additively accumulating four depth-sliced optical depths into
   // `dustMapTex`, at its own divisor-matched resolution (see `dustMapTex`'s
@@ -486,13 +489,14 @@ export async function createGalaxyEngine(
   // own pipeline, for the same `layout: 'auto'` reason every other pass pair
   // here is split: two pipelines sharing a module that reads a binding with
   // divergent stage visibility fail the group-equivalent check.
-  const dustMapMod = makeShader(dustMapWgsl, 'galaxy:dustMap');
+  const dustMapVsMod = makeShader(dustMapVsWgsl, 'galaxy:dustMap.vertex');
+  const dustMapFsMod = makeShader(dustMapFsWgsl, 'galaxy:dustMap.fragment');
   const dustMapPipe = device.createRenderPipeline({
     label: 'galaxy:dustMapPipe',
     layout: 'auto',
-    vertex: { module: dustMapMod, entryPoint: 'vs' },
+    vertex: { module: dustMapVsMod, entryPoint: 'vs' },
     fragment: {
-      module: dustMapMod,
+      module: dustMapFsMod,
       entryPoint: 'fs',
       targets: [{ format: DUST_MAP_FORMAT, blend: ADDITIVE_BLEND }],
     },
@@ -500,18 +504,19 @@ export async function createGalaxyEngine(
   });
 
   // ---- dust-map presentation pipeline ("JWST" view) ----
-  // `milkyWay/field/dustPresent.wesl`: a fullscreen triangle over `dustMapTex`,
+  // `milkyWay/field/dustPresent/`: a fullscreen triangle over `dustMapTex`,
   // mapping its column to a hot palette. Drawn ALONGSIDE `fieldSplatPipe`'s
   // emission draw, gated on `render.dustViewIntensity > 0` — see `drawFrame`'s
   // field pass. No blend: it is the pass's only draw into a freshly cleared
   // `dustViewTex`, so a straight overwrite is correct; the crossfade itself
   // happens later, in the scene pass's additive composite.
-  const dustPresentMod = makeShader(dustPresentWgsl, 'galaxy:dustPresent');
+  const dustPresentVsMod = makeShader(dustPresentVsWgsl, 'galaxy:dustPresent.vertex');
+  const dustPresentFsMod = makeShader(dustPresentFsWgsl, 'galaxy:dustPresent.fragment');
   const dustPresentPipe = device.createRenderPipeline({
     label: 'galaxy:dustPresentPipe',
     layout: 'auto',
-    vertex: { module: dustPresentMod, entryPoint: 'vs' },
-    fragment: { module: dustPresentMod, entryPoint: 'fs', targets: [{ format: HDR }] },
+    vertex: { module: dustPresentVsMod, entryPoint: 'vs' },
+    fragment: { module: dustPresentFsMod, entryPoint: 'fs', targets: [{ format: HDR }] },
     primitive: { topology: 'triangle-list' },
   });
 
@@ -521,9 +526,9 @@ export async function createGalaxyEngine(
   // than growing a shared lib for one consumer. View- and param-independent
   // (four fixed octave bands, no camera/galaxy input), so this bakes here,
   // once, into its own one-shot encoder — NOT inside `drawFrame`'s.
-  // `dustMapMod` already imports `dustNoiseTex`/`dustNoiseSmp` from io.wesl
-  // (see dustMap.wesl), which is what gives `dustMapPipe`'s `layout: 'auto'`
-  // bind-group layout entries 4/5 below.
+  // `dustMapFsMod` already imports `dustNoiseTex`/`dustNoiseSmp` from io.wesl
+  // (see dustMap/fragment.wesl), which is what gives `dustMapPipe`'s
+  // `layout: 'auto'` bind-group layout entries 4/5 below.
   const dustNoiseBakeMod = makeShader(dustNoiseBakeWgsl, 'galaxy:dustNoiseBake');
   const dustNoiseBakePipe = device.createComputePipeline({
     label: 'galaxy:dustNoiseBakePipe',
@@ -645,18 +650,19 @@ export async function createGalaxyEngine(
   // be compared directly against the SSPSF automaton's ismMap view — see the
   // model's `rebuildBubblePlacements` for how `model.bubbleComps` is built and
   // packed. One instanced camera-facing quad per
-  // placement, no storage buffer/comps lookup: bubblePresent.wesl reads its
-  // per-instance center/radius/kind straight off the vertex buffer, and
+  // placement, no storage buffer/comps lookup: bubblePresent/vertex.wesl reads
+  // its per-instance center/radius/kind straight off the vertex buffer, and
   // `u` (fieldUbo) only for the camera basis + its own crossfade weight —
   // so this bind group needs just binding 0, built once like
   // `ismMapPresentBG`/`orientationPresentBG` (fieldUbo's OBJECT never
   // changes, only its content, rewritten every `drawFrame`).
-  const bubblePresentMod = makeShader(bubblePresentWgsl, 'galaxy:bubblePresent');
+  const bubblePresentVsMod = makeShader(bubblePresentVsWgsl, 'galaxy:bubblePresent.vertex');
+  const bubblePresentFsMod = makeShader(bubblePresentFsWgsl, 'galaxy:bubblePresent.fragment');
   const bubblePresentPipe = device.createRenderPipeline({
     label: 'galaxy:bubblePresentPipe',
     layout: 'auto',
     vertex: {
-      module: bubblePresentMod,
+      module: bubblePresentVsMod,
       entryPoint: 'vs',
       buffers: [
         {
@@ -670,7 +676,7 @@ export async function createGalaxyEngine(
       ],
     },
     fragment: {
-      module: bubblePresentMod,
+      module: bubblePresentFsMod,
       entryPoint: 'fs',
       targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
     },

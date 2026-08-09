@@ -1,23 +1,17 @@
-// milkyWay/field/dustPresent.wesl — the "JWST" view mode: presents
-// dustMap.wesl's screen-space column map through a hot MIRI-ish palette,
-// crossfaded with the emission splat draw by render.dustViewIntensity
-// (createGalaxyEngine.ts). Writes into dustViewTex, divisor-matched to
-// dustMapTex, not fieldTex (io.wesl's DUST MAP doc).
+// dustPresent/fragment.wesl — the "JWST" view mode: presents dustMap's
+// screen-space column map through a hot MIRI-ish palette, crossfaded with
+// the emission splat draw by render.dustViewIntensity (createGalaxyEngine.ts).
+// Writes into dustViewTex, divisor-matched to dustMapTex, not fieldTex
+// (io.wesl's DUST MAP doc).
 //
 // S4 (docs/research/m74-jwst/07-sprite-seeding.md): the presented column
-// already carries the ISM map's high-pass detail — dustMap.wesl bakes it in
-// at accumulation (dustDetail.wesl), per splat, so this pass needs no
-// second read.
+// already carries the ISM map's high-pass detail — dustMap/fragment.wesl
+// bakes it in at accumulation (dustDetail.wesl), per splat, so this pass
+// needs no second read.
 
-import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::dustMapTex;
-
-@vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
-}
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {

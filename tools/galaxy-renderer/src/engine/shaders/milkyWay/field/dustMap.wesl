@@ -1,1 +1,0 @@
-../../../../../../../src/services/gpu/shaders/milkyWay/field/dustMap.wesl

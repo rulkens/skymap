@@ -1,25 +1,14 @@
-// milkyWay/field/dustMap.wesl — splats the PRIMARY galaxy's dust slice into a
-// screen-space column map: one instanced quad per dust component, additively
-// accumulating FOUR depth-sliced optical-depth channels (tau_0..tau_3, see
-// io.wesl's dustSlices doc) per pixel, at fieldTex's own divisor-matched
-// resolution (see createGalaxyEngine.ts's dustMapTex declaration — NOT full
-// canvas res, its readers' target rate). This is the scaling backbone a
-// filament network needs (grill-session doc, N1):
-// dust component count decouples from emission fragment cost the same way
-// splat.wesl's own quad-per-component scheme decoupled emission from it.
-//
-// splat.wesl's fs reads this map with one textureLoad per primary emission
-// fragment, replacing its former per-fragment dust loop. The JWST view mode
-// (dustPresent.wesl) reads it too, summing the four channels to present the
-// total column through a palette instead of using it to attenuate emission.
-//
-// Vertex geometry is splat.wesl's exact silhouette math (see
-// lib/splatSilhouette.wesl) — a dust component is a Gaussian with a
-// boundRadius like any emission component, so the same per-axis tangent-cone
-// footprint applies unchanged.
+// dustMap/fragment.wesl — splats the PRIMARY galaxy's dust slice into a
+// screen-space column map: additively accumulating FOUR depth-sliced
+// optical-depth channels (tau_0..tau_3, see io.wesl's dustSlices doc) per
+// pixel, at fieldTex's own divisor-matched resolution (createGalaxyEngine.ts's
+// dustMapTex declaration — NOT full canvas res). fieldSplat/fragment.wesl
+// reads this map with one textureLoad per primary emission fragment; the
+// JWST view mode (dustPresent/fragment.wesl) reads it too, summing the four
+// channels to present the total column through a palette instead of using
+// it to attenuate emission.
 
-import package::lib::billboard::quadCorner;
-import package::lib::splatSilhouette::splatNdc;
+import package::milkyWay::field::dustMap::io::DustMapOut;
 import package::lib::splatSilhouette::SPLAT_CUT;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::lib::gaussianIntegral::expHalfErfc;
@@ -29,47 +18,6 @@ import package::milkyWay::field::io::comps;
 import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
 import package::milkyWay::field::dustDetail::dustDetailMultiplier;
-
-struct DustMapOut {
-  @builtin(position) pos: vec4<f32>,
-  @location(0) ndc: vec2<f32>,
-  @location(1) @interpolate(flat) inst: u32,
-}
-
-@vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> DustMapOut {
-  let corner = quadCorner(vi);
-  // counts.y is dustOffset (== the emission count, since dust is appended
-  // last — see io.wesl's layout comment): this draw's own instance index is
-  // relative to the dust slice, not 'comps' as a whole.
-  let dustOffset = u32(u.counts.y);
-  let base = 4u * (dustOffset + inst);
-  let g1 = comps[base + 1u];
-  let g3 = comps[base + 3u];
-  let center = g3.xyz;
-  let r = g1.w;
-
-  let eye = u.eye.xyz;
-  let camRight = u.camRight.xyz;
-  let camUp = u.camUp.xyz;
-  let camFwd = u.camFwd.xyz;
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-
-  // View-space offset of the centre: zv along the gaze, xv/yv across it.
-  let rel = center - eye;
-  let zv = dot(rel, camFwd);
-  let xv = dot(rel, camRight);
-  let yv = dot(rel, camUp);
-
-  var out: DustMapOut;
-  out.inst = inst;
-  let ndc = splatNdc(corner, xv, yv, zv, r, tanHalfFov, aspect, shift, u.perf.x);
-  out.pos = vec4<f32>(ndc, 0.0, 1.0);
-  out.ndc = ndc;
-  return out;
-}
 
 // stretchNoiseCoord — S5 wisp anisotropy, stage 1: elongates the shared
 // noise field along the disc's local AZIMUTHAL (tangential) direction at p
