@@ -336,12 +336,11 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.hii?.shells?.radiusScale).toBe(2.2);
   });
 
-  // Board 20 collapsed associations' scattered-children swarm into one splat
-  // per seed, retiring `childrenPerComplex` — the generic defaults-fill only
-  // checks `hii`'s own top-level keys, so this field survived inside a
-  // passed-through `associations` bag until `migrateHiiAssociations` dropped
-  // it explicitly.
-  it('drops the retired hii.associations.childrenPerComplex, keeping the rest of the section', () => {
+  // Spec 2026-08-09 §4 — the scattered-splat blue-association tier collapsed
+  // into `youngStars`' chain producer, which keeps only enabled/brightness/
+  // texture and drops the dead placement/shape knobs
+  // (complexes/armBias/elongation/coherence/sizeScale) outright.
+  it('lifts a legacy hii.associations bag onto hii.youngStars, keeping only enabled/brightness/texture', () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',
       version: 4,
@@ -349,15 +348,53 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
       f: {
         hii: {
           ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-          associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, childrenPerComplex: 4 },
+          youngStars: undefined,
+          associations: {
+            brightness: 0.9,
+            complexes: 2,
+            armBias: 0.5,
+            elongation: 3,
+            coherence: 0.7,
+            texture: 0.4,
+            sizeScale: 1.2,
+          },
         },
       },
     });
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.hii?.associations).not.toHaveProperty('childrenPerComplex');
-    expect(parsed?.f?.hii?.associations).toEqual(DEFAULT_GALAXY_FIELD_TUNING.hii.associations);
+    // Only the three carried-over fields — `shells`/`dig` set the same
+    // "copied WHOLESALE, never deep-merged" precedent this lift follows, so
+    // width/mapDepth/contrast stay absent rather than defaults-filled; every
+    // read in `youngStarChain.ts` carries its own `?? default` guard for
+    // exactly this hole.
+    expect(parsed?.f?.hii?.youngStars).toEqual({
+      enabled: true,
+      brightness: 0.9,
+      texture: 0.4,
+    });
+    expect(parsed?.f?.hii).not.toHaveProperty('associations');
+  });
+
+  it('keeps a nested hii.youngStars value over the legacy associations bag when a preset names both', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 4,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        hii: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+          associations: { brightness: 0.1 },
+          youngStars: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.youngStars, brightness: 2.2 },
+        },
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.hii?.youngStars?.brightness).toBe(2.2);
+    expect(parsed?.f?.hii).not.toHaveProperty('associations');
   });
 
   it('matches the v2 envelope shape, with LOD knobs flattened into r', () => {

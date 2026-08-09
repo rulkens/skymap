@@ -49,7 +49,7 @@ export type CollapsibleSectionProps = {
    *
    * Open state stays the caller's problem either way (this component owns
    * none): give a nested section its OWN `openSections` key, never the
-   * parent's — e.g. `hiiRegions`/`hiiDig`/`hiiAssociations` under a
+   * parent's — e.g. `hiiRegions`/`hiiDig`/`hiiYoungStars` under a
    * conceptual `hii` parent, the same prefixed-sibling naming `armField`/
    * `armCloud` already use under `arms`. Reusing a key would make the two
    * fold buttons drive the same boolean, which is easy to miss visually and
@@ -115,9 +115,7 @@ function CollapsibleSection({
         )}
       </div>
       {open && (
-        <div
-          className={cx(styles.body, nested && styles.nestedBody, group && styles.groupBody)}
-        >
+        <div className={cx(styles.body, nested && styles.nestedBody, group && styles.groupBody)}>
           {children}
         </div>
       )}

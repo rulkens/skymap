@@ -43,4 +43,14 @@ describe('packFieldComponents ↔ milkyWay/field/io.wesl comps layout', () => {
     expect(packed[4 * 2 + 2]).toBe(1009); // color.b
     expect(packed[4 * 3]).toBe(1010); // center.x, next record's own lane
   });
+
+  it('packs starsWeight into [4i+3].w', () => {
+    const packed = packFieldComponents([{ ...BASE, starsWeight: 0.5 }]);
+    expect(packed[4 * 3 + 3]).toBe(0.5);
+  });
+
+  it('defaults starsWeight to 0 when the component omits it', () => {
+    const packed = packFieldComponents([BASE]);
+    expect(packed[4 * 3 + 3]).toBe(0);
+  });
 });

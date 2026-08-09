@@ -2,8 +2,8 @@
  * GalaxyHiiShellsTuning — the emission-shell tier's own tunable knobs
  * (`hiiRegions.ts`'s per-region shell + embedded-OB-cluster sprites), split
  * off `GalaxyHiiTuning`'s root (board item 19) the way `GalaxyHiiDigTuning`/
- * `GalaxyHiiAssociationsTuning` already nest — these seven fields used to sit
- * flat on `hii` itself, the one asymmetry left once DIG and associations got
+ * `GalaxyYoungStarsTuning` already nest — these seven fields used to sit
+ * flat on `hii` itself, the one asymmetry left once DIG and young stars got
  * their own bags.
  */
 export type GalaxyHiiShellsTuning = {
@@ -11,7 +11,7 @@ export type GalaxyHiiShellsTuning = {
    * This tier's own flux GAIN, multiplied against `GalaxyHiiTuning.brightness`
    * (the whole-field master) — 1 leaves the shell tier at whatever the master
    * alone would give it, the same per-tier-gain role
-   * `GalaxyHiiAssociationsTuning.brightness` plays for its own tier.
+   * `GalaxyYoungStarsTuning.brightness` plays for its own tier.
    */
   readonly brightness: number;
   /**

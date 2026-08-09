@@ -6,20 +6,20 @@
  * `ArmCloudSection`/`DustCloudSection` — a sub-tier with its own knobs, not
  * a settings drawer folded into FLUX FIELD.
  *
- * SHELLS, DIG and ASSOCIATIONS nest inside it (`CollapsibleSection`'s
+ * SHELLS, DIG and YOUNG STARS nest inside it (`CollapsibleSection`'s
  * `nested` prop) rather than living as top-level siblings the way
  * `armField`/`armCloud` do — the panel was long enough that flattening every
- * shell/DIG/assoc slider alongside the tier-shared ones read as one endless
- * list. Texture scale/contrast stay in the outer body: their info text says
- * they're shared by all three nested groups, so they read as tier-global
- * rather than owned by any one of them.
+ * shell/DIG/young-stars slider alongside the tier-shared ones read as one
+ * endless list. Texture scale/contrast stay in the outer body: their info
+ * text says they're shared by all three nested groups, so they read as
+ * tier-global rather than owned by any one of them.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyHiiAssociationsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiAssociationsTuning';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
 import type { GalaxyHiiShellsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiShellsTuning';
 import type { GalaxyHiiTuning } from '../../../../../src/@types/galaxy/GalaxyHiiTuning';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
+import type { GalaxyYoungStarsTuning } from '../../../../../src/@types/galaxy/GalaxyYoungStarsTuning';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
@@ -34,7 +34,7 @@ function HiiSection(): ReactNode {
   const open = useAppSelector((state) => state.ui.openSections.hii);
   const shellsOpen = useAppSelector((state) => state.ui.openSections.hiiShells);
   const digOpen = useAppSelector((state) => state.ui.openSections.hiiDig);
-  const assocOpen = useAppSelector((state) => state.ui.openSections.hiiAssociations);
+  const youngStarsOpen = useAppSelector((state) => state.ui.openSections.hiiYoungStars);
 
   const patchHii = (patch: Partial<GalaxyHiiTuning>): void => {
     dispatch(fieldTuningPatched({ hii: { ...hii, ...patch } }));
@@ -48,18 +48,18 @@ function HiiSection(): ReactNode {
     patchHii({ dig: { ...hii.dig, ...patch } });
   };
 
-  const patchAssociations = (patch: Partial<GalaxyHiiAssociationsTuning>): void => {
-    patchHii({ associations: { ...hii.associations, ...patch } });
+  const patchYoungStars = (patch: Partial<GalaxyYoungStarsTuning>): void => {
+    patchHii({ youngStars: { ...hii.youngStars, ...patch } });
   };
 
   const patchStarFormation = (patch: Partial<GalaxyStarFormationParams>): void => {
     dispatch(fieldTuningPatched({ starFormation: { ...starFormation, ...patch } }));
   };
 
-  // DIG and ASSOCIATIONS copy from their OWN nested sections below — this
+  // DIG and YOUNG STARS copy from their OWN nested sections below — this
   // one offers only the core knobs its own sliders drive, same split
   // `ArmFieldSection` uses to keep `cloud` out of its own payload.
-  const { dig: _dig, associations: _associations, ...core } = hii;
+  const { dig: _dig, youngStars: _youngStars, ...core } = hii;
 
   return (
     <CollapsibleSection
@@ -71,7 +71,7 @@ function HiiSection(): ReactNode {
       copyPayload={{ fieldTuning: { hii: core } }}
     >
       <div className={styles.root}>
-        {/* Tier-global: shared by SHELLS, DIG and ASSOCIATIONS alike, so they
+        {/* Tier-global: shared by SHELLS, DIG and YOUNG STARS alike, so they
             stay in the outer body rather than owned by any one of the three
             nested groups below. */}
         <ParamSlider
@@ -305,87 +305,67 @@ function HiiSection(): ReactNode {
       </CollapsibleSection>
       <CollapsibleSection
         title="YOUNG STARS"
-        open={assocOpen}
-        onToggle={() => dispatch(sectionToggled('hiiAssociations'))}
-        copyPayload={{ fieldTuning: { hii: { associations: hii.associations } } }}
+        open={youngStarsOpen}
+        onToggle={() => dispatch(sectionToggled('hiiYoungStars'))}
+        headerToggle={hii.youngStars.enabled}
+        onHeaderToggleChange={(value) => patchYoungStars({ enabled: value })}
+        copyPayload={{ fieldTuning: { hii: { youngStars: hii.youngStars } } }}
         nested
       >
         <div className={styles.root}>
           <ParamSlider
             label="Brightness"
-            value={hii.associations.brightness}
+            value={hii.youngStars.brightness}
             min={0}
-            max={12}
+            max={4}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchAssociations({ brightness: v })}
-            path="fieldTuning.hii.associations.brightness"
-            info="Blue OB-association tier's flux multiplier, in the embedded cluster's own stellar-continuum currency — the exposed population left once a region's gas is expelled and its shell fades. 0 skips the tier."
+            onChange={(v) => patchYoungStars({ brightness: v })}
+            path="fieldTuning.hii.youngStars.brightness"
+            info="This tier's total flux — the ONE flux knob for the arm-ridge chain. 0 skips the tier."
           />
           <ParamSlider
-            label="Population"
-            value={hii.associations.complexes}
-            min={0}
-            max={8}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchAssociations({ complexes: v })}
-            path="fieldTuning.hii.associations.complexes"
-            info="Scaler on the run's own mid-age-event population — one splat seeds directly off each B/A-star event the current run produced, so the count tracks its own star-formation history rather than a fixed number. 1 is the neutral default. Range extended past 3 (board 21) so this lever alone can cover a meaningfully bigger share of the arms; paired with Size below for area, not just count."
-          />
-          <ParamSlider
-            label="Size"
-            value={hii.associations.sizeScale}
-            min={0.5}
+            label="Width"
+            value={hii.youngStars.width}
+            min={0.2}
             max={3}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchAssociations({ sizeScale: v })}
-            path="fieldTuning.hii.associations.sizeScale"
-            info="Splat's own physical size — multiplies the sigma each splat is drawn at. Coverage grows as this knob's SQUARE (a Gaussian footprint scales in both in-plane axes at once), so it is a cheap way to cover more of the arms without raising Population. Doesn't change the tier's total brightness — flux is a fixed budget split across splats, so a bigger splat just spreads the same light thinner."
+            onChange={(v) => patchYoungStars({ width: v })}
+            path="fieldTuning.hii.youngStars.width"
+            info="Chain ribbon's across-arm sigma, as a fraction of the arm ridge's own measured width law. 1 is that law exactly."
           />
           <ParamSlider
-            label="Drift"
-            value={hii.associations.armBias}
+            label="Clumping"
+            value={hii.youngStars.mapDepth}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchYoungStars({ mapDepth: v })}
+            path="fieldTuning.hii.youngStars.mapDepth"
+            info="0 = a smooth ribbon along the ridge, 1 = fully modulated by the ISM map's stars tracer — the fluid-advected clumps the chain rides."
+          />
+          <ParamSlider
+            label="Contrast"
+            value={hii.youngStars.contrast}
+            min={0.25}
+            max={4}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchYoungStars({ contrast: v })}
+            path="fieldTuning.hii.youngStars.contrast"
+            info="Gamma shaping the stars-map read — flux-neutral, mean-normalized so it restructures the clump contrast without draining the tier's total brightness."
+          />
+          <ParamSlider
+            label="Texture"
+            value={hii.youngStars.texture}
             min={0}
             max={2}
             step={0.05}
             format={(v) => v.toFixed(2)}
-            onChange={(v) => patchAssociations({ armBias: v })}
-            path="fieldTuning.hii.associations.armBias"
-            info="Strength of the downstream drift off the gas lane each splat's own SF event was born in — differential rotation carries B/A stars ahead of (or behind) the arm crest as they age. 0 leaves a splat sitting exactly on its birth site; 1 is the shear formula's own computed drift."
-          />
-          <ParamSlider
-            label="Elongation"
-            value={hii.associations.elongation}
-            min={1}
-            max={8}
-            step={0.1}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => patchAssociations({ elongation: v })}
-            path="fieldTuning.hii.associations.elongation"
-            info="Aspect ratio of the SPLAT's own covariance along vs. across its local drift direction, area-preserving so it stretches without also inflating — one splat per event now (task #20), so this shapes the splat itself rather than a scatter of children around it."
-          />
-          <ParamSlider
-            label="Coherence"
-            value={hii.associations.coherence}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchAssociations({ coherence: v })}
-            path="fieldTuning.hii.associations.coherence"
-            info="How strictly a splat's own along/across axes follow its local drift direction — 1 follows it exactly, 0 rotates it to a fresh random direction per splat."
-          />
-          <ParamSlider
-            label="Texture"
-            value={hii.associations.texture}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchAssociations({ texture: v })}
-            path="fieldTuning.hii.associations.texture"
+            onChange={(v) => patchYoungStars({ texture: v })}
+            path="fieldTuning.hii.youngStars.texture"
             info="This tier's own share of the HII tier's shared texture breakup — independent of the shell tier's own Texture knob above."
           />
         </div>

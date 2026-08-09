@@ -337,7 +337,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   starFormation: DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
   hii: {
     enabled: true,
-    // Whole-field master (board item 19) — multiplies shells/dig/associations'
+    // Whole-field master (board item 19) — multiplies shells/dig/youngStars'
     // own gains below rather than doubling as the shells' implicit one.
     brightness: 1,
     // Map-seeded by default on this branch — the whole point is seeing dust
@@ -345,7 +345,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // catalog byte-identically.
     ismMapSeeding: 1,
     shells: {
-      // 1 = the master alone, same neutral-gain role `associations.brightness`
+      // 1 = the master alone, same neutral-gain role `youngStars.brightness`
       // plays for its own tier.
       brightness: 1,
       radiusScale: 1,
@@ -357,7 +357,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // Under 1 so the lit wall sits inside the swept dust rather than on it.
       cavityScale: 0.8,
       // >0 out of the box, same "visible by default, calibration is a FEEL
-      // call" reasoning `associations.brightness` below already uses — a
+      // call" reasoning `youngStars.brightness` below already uses — a
       // shell tier whose every texture knob does nothing until raised reads
       // as broken, not neutral.
       texture: 0.5,
@@ -382,23 +382,18 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       coherence: 0.7,
       texture: 0.6,
     },
-    associations: {
-      // >0 so the tier is visible out of the box; a FEEL calibration, not a
-      // measurement (see hiiRegions.ts's brightness anchor).
-      brightness: 0.6,
-      // Scaler on the run's own mid-age-event population (task #10, see
-      // hiiRegions.ts's ASSN_COMPLEXES_PER_EVENT) — 1 is the neutral
-      // default, no longer an absolute count.
-      complexes: 1,
-      // Repurposed as the shear-drift strength multiplier (task #10, see
-      // sfEventAgeBands.ts's driftedAssociationSeed) rather than a CDF blend
-      // weight — kept at its old default, which already read as "visible by
-      // default".
-      armBias: 0.5,
-      elongation: 2.5,
-      coherence: 0.6,
-      texture: 0.5,
-      sizeScale: 1,
+    youngStars: {
+      enabled: true,
+      // 1 = neutral: the tier's total flux is YOUNG_FLUX_REF exactly, same
+      // "1 is the calibrated default" role every other tier's own gain plays.
+      brightness: 1,
+      // 1 = armCrossSigma exactly, the arm ridge's own measured width.
+      width: 1,
+      // Mostly stars-map-clumped rather than a smooth ribbon — the tracer's
+      // whole point is to break the old uniform-splat look.
+      mapDepth: 0.8,
+      contrast: 1,
+      texture: 0.6,
     },
   },
   ismMap: DEFAULT_GALAXY_ISM_MAP_PARAMS,

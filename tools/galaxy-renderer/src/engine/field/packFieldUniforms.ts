@@ -266,7 +266,9 @@ export function packFieldComponents(
     out[base + 12] = c.center[0];
     out[base + 13] = c.center[1];
     out[base + 14] = c.center[2];
-    out[base + 15] = 0;
+    // starsWeight (io.wesl's comps doc) — 0 (untouched) for every producer
+    // except youngStarChain.ts's pushes.
+    out[base + 15] = c.starsWeight ?? 0;
   }
   return out;
 }

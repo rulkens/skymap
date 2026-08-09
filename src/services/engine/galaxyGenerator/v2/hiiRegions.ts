@@ -31,16 +31,11 @@ import type { GalaxyIsmMapGridRadius } from './galaxyIsmMapArmForcing';
 import { buildGalaxyIsmMapFluidEvents, ismMapFluidEventWindow } from './galaxyIsmMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import {
-  CATALOG_DRIFT_STEPS,
-  CATALOG_SHEAR_COROTATION_RADIUS,
-  CATALOG_SHEAR_STRENGTH,
   RECENT_EVENT_AGE_FRAC_CEIL,
   deriveComplexCount,
-  driftedAssociationSeed,
   fluidMidAgeEventWindow,
-  selectAssociationSeeds,
 } from './sfEventAgeBands';
-import type { AssociationSeedFrame } from './sfEventAgeBands';
+import { buildYoungStarChain } from './youngStarChain';
 import { buildIsmMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
@@ -146,10 +141,10 @@ const HII_LUMINOSITY_SHARE = 0.068280788;
 
 /**
  * ROOT MASTER only (board item 19) — the per-region split below feeds
- * `shellFluxSum`/`clusterFluxSum`, the anchors `buildDigVeil`/
- * `buildBlueAssociations` scale their OWN gain against, so this must stay
- * free of `shells.brightness` or that gain would leak into DIG/associations
- * too. `shells.brightness` is applied only to the amplitudes pushed below.
+ * `shellFluxSum`, the anchor `buildDigVeil` scales its OWN gain against, so
+ * this must stay free of `shells.brightness` or that gain would leak into
+ * DIG too. `shells.brightness` is applied only to the amplitudes pushed
+ * below.
  */
 function tierFlux(geometry: GalaxyDescription, tuning: GalaxyFieldTuning): number {
   return geometry.luminosity * HII_LUMINOSITY_SHARE * Math.max(0, tuning.hii.brightness);
@@ -341,87 +336,37 @@ function planRegions(
 }
 
 /**
- * Lifecycle population behind the DIG veil and blue-association tiers (task
- * #10): `youngCount` is the same young-event population `planRegions` admits
- * into HII shells (recomputed here rather than threaded — the whole SF-event
- * catalog is cheap and pure, the same "recompute over thread" call
- * `candidateRegionsFromFluidEvents`'s own header already makes), and
- * `midAgeSeeds` is one drifted association seed per event whose age sits in
- * `(youngGate, RECENT_EVENT_AGE_FRAC_CEIL]` — B/A stars that have outlived
- * their HII shell but haven't faded yet.
- *
- * Catalog mode's `ageSteps`/shear params are the FIXED `CATALOG_*` constants
- * (`sfEventAgeBands.ts`), never `tuning.ismMapFluid` — see that module's own
- * doc for the "automaton'/'none' stay fluid-tuning-deaf" invariant this
- * protects.
+ * Recent-event COUNT behind the DIG veil's own complex population (task
+ * #10): young events (same gate `planRegions` admits into HII shells) plus
+ * mid-age ones whose age sits in `(youngGate, RECENT_EVENT_AGE_FRAC_CEIL]` —
+ * recomputed here rather than threaded, the same "recompute over thread"
+ * call `candidateRegionsFromFluidEvents`'s own header already makes.
+ * Positions, not just counts, used to feed the deleted blue-association
+ * tier off this same window — see `sfEventAgeBands.ts`'s
+ * `fluidMidAgeEventWindow` for the window itself, now DIG's only consumer.
  */
 function resolveEventLifecyclePopulation(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
-): { readonly youngCount: number; readonly midAgeSeeds: readonly AssociationSeedFrame[] } {
-  const driftStrength = tuning.hii.associations?.armBias ?? 0;
-
+): number {
   if (tuning.ismMap.generator === 'fluid') {
     const fluid = tuning.ismMapFluid;
     const events = buildGalaxyIsmMapFluidEvents(geometry, tuning, seed);
     const young = ismMapFluidEventWindow(events, fluid.steps, fluid.impulseDuration);
     const midAge = fluidMidAgeEventWindow(events, fluid.steps, fluid.impulseDuration);
-    const grid = ismMapGridRadius(geometry);
-    const midAgeSeeds: AssociationSeedFrame[] = [];
-    for (let i = midAge.start; i < midAge.end; i++) {
-      const event = events[i]!;
-      const angle = (event.az * 2 * Math.PI) / ISM_MAP_AZ;
-      const radius = ismMapRingRadius(event.ring, ISM_MAP_RINGS, grid.rMin, grid.rMax);
-      const center = fluidEventCenter(event, geometry, grid);
-      const ageSteps = fluid.steps - event.birthStep;
-      midAgeSeeds.push(
-        driftedAssociationSeed(
-          center,
-          radius,
-          angle,
-          ageSteps,
-          driftStrength,
-          fluid.corotationRadius,
-          fluid.shearStrength,
-          geometry,
-        ),
-      );
-    }
-    return { youngCount: young.end - young.start, midAgeSeeds };
+    return young.end - young.start + (midAge.end - midAge.start);
   }
 
+  // young (age01 <= HII_AGE_GATE) plus mid-age (up to RECENT_EVENT_AGE_FRAC_CEIL,
+  // strictly past HII_AGE_GATE) collapses to one bound: the ceiling.
   const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
-  let youngCount = 0;
-  const midAgeSeeds: AssociationSeedFrame[] = [];
+  let count = 0;
   for (const event of events) {
-    if (event.age01 <= HII_AGE_GATE) {
-      youngCount++;
-      continue;
-    }
-    if (event.age01 > RECENT_EVENT_AGE_FRAC_CEIL) continue;
-    const arm = geometry.arms[event.armIndex];
-    if (!arm) continue;
-    const radius = geometry.armStartRadius * Math.exp(event.logR);
-    const angle = armRidgeAngle(event.logR, geometry, arm);
-    const center = eventCenter(event, geometry);
-    if (!center) continue;
-    const ageSteps = event.age01 * CATALOG_DRIFT_STEPS;
-    midAgeSeeds.push(
-      driftedAssociationSeed(
-        center,
-        radius,
-        angle,
-        ageSteps,
-        driftStrength,
-        CATALOG_SHEAR_COROTATION_RADIUS,
-        CATALOG_SHEAR_STRENGTH,
-        geometry,
-      ),
-    );
+    if (event.age01 <= RECENT_EVENT_AGE_FRAC_CEIL) count++;
   }
-  return { youngCount, midAgeSeeds };
+  return count;
 }
 
 /** Dedicated rng stream salt for the map-position draws — distinct from "HII " (sprite scatter) and "DUST"/"ARMC". */
@@ -527,10 +472,9 @@ type DigSeedFrame = {
 };
 
 /**
- * A DIG or association complex CDF-sampled from its tier's own map density
- * (`buildDigVeil`'s `activity` CDF, `buildBlueAssociations`'s
- * `associationDensity` one) — the ONE substrate every complex draws from.
- * `armBias` no longer forks this into a second, arm-lane placement path (see
+ * A DIG complex CDF-sampled from the map's own `activity` density
+ * (`buildDigVeil`) — the ONE substrate every complex draws from. `armBias`
+ * no longer forks this into a second, arm-lane placement path (see
  * `buildArmProximityEnvelope`): it reweights the CDF itself before this ever
  * runs, so a caller doesn't need to know it exists.
  */
@@ -794,170 +738,6 @@ function buildDigVeil(
   return out;
 }
 
-/**
- * Blue OB-association tier (see `GalaxyHiiAssociationsTuning`): the exposed
- * phase-3 population left once an HII region's gas is expelled (~5 Myr) and
- * its shell fades — a naked cluster, visible ~50-100 Myr, drifted downstream
- * of the gas lane that formed it. Seeded directly off
- * `resolveEventLifecyclePopulation`'s `midAgeSeeds` (one per mid-age SF
- * event, already carrying the shear-drift displacement) rather than
- * CDF-sampled from the map the way `buildDigVeil` seeds DIG — DIG is a
- * steady-state phase with no single birth site, this tier's whole point is
- * that it HAS one.
- *
- * SINGLE SPLAT PER SEED (task #20): the old complex/children structure
- * (many small isotropic sprites scattered around a seed) existed so an
- * untextured splat could fake extent and grain through particle COUNT —
- * redundant now that the dedicated star-grain texture (splat.wesl's
- * starGrainTerm) supplies the "many unresolved stars" look per-fragment, and
- * strictly more expensive (heavily overlapping children in this pass's own
- * close-zoom hotspot). One ANISOTROPIC splat per admitted seed instead:
- * `elongation` now honestly stretches the SPLAT's own covariance along the
- * seed's local drift/flow axis (`seedFrame.along`, from
- * `driftedAssociationSeed`) rather than scattering children along it — see
- * `associationSplatCovariance`.
- */
-/** Same footprint the "fewer, larger splats" redesign (task #10) settled on — now the size of the ONE splat per seed rather than of each of several children. */
-const ASSN_SIGMA_MIN_PC = 80;
-const ASSN_SIGMA_MAX_PC = 260;
-/** Associations haven't diffused off the disc the way DIG has (300 pc) — still close to their birth height. Now the splat's own POLE sigma (a real vertical extent) rather than a per-child height jitter. */
-const ASSN_SCALE_HEIGHT_PC = 150;
-/** Dedicated rng stream salt — distinct from "SFMP"/"HII "/"DUST"/"ARMC"/"DIG ". */
-const ASSN_SALT = 0x4153534e; // "ASSN"
-/** Splat-count ceiling, sized to `HiiSection.tsx`'s own slider maxima, not derived from them — see `DIG_MAX_COUNT`'s own doc for why. One splat per seed now (task #20), so this is a straight count ceiling, not a `complexes x childrenPerComplex` product. */
-export const ASSOCIATIONS_MAX_COUNT = 1800;
-
-/**
- * `assn.complexes` is a SCALER on the mid-age event population (task #10)
- * rather than an absolute count — `ASSN_COMPLEXES_PER_EVENT` scales
- * `midAgeSeeds.length` down to a sensible splat population before
- * `deriveComplexCount`'s scaler/clamp: even one big splat per event would
- * overpopulate a busy run, so far from every mid-age event should spawn its
- * own splat. A starting point for visual calibration, not a measurement.
- */
-const ASSN_COMPLEXES_PER_EVENT = 0.15;
-
-/** Subtle cool/hot spread around the cluster's own stellar-continuum colour — `hiiCorePerturbed`'s nudge-and-clamp mechanism (`generate.wesl`), blue-anchored instead of `gen.hiiCore`. */
-const ASSN_COLOR_JITTER_MAX = 0.15;
-function associationSplatColor(rng: () => number): Vec3 {
-  const jitter = rng() * ASSN_COLOR_JITTER_MAX;
-  return [
-    HII_CLUSTER_COLOR[0] * (1 - jitter),
-    Math.min(1, HII_CLUSTER_COLOR[1] + jitter * 0.3),
-    HII_CLUSTER_COLOR[2],
-  ];
-}
-
-/**
- * Anisotropic inverse covariance for one YOUNG STARS splat (task #20):
- * `sigma` stretches by `sqrt(elongation)` along `axes.along` and squeezes by
- * the same factor along `axes.across` — area-preserving in that plane, the
- * same convention `buildDigVeil`'s (now-removed-for-this-tier) child scatter
- * used — leaving `axes.pole` at its own independent `poleSigma`. Exported so
- * `hiiRegions.test.ts` can pin the "major axis follows `along`" property
- * directly, without re-deriving the whole SF-event catalog to find one
- * synthetic seed's own component.
- */
-export function associationSplatCovariance(
-  axes: { readonly along: Vec3; readonly across: Vec3; readonly pole: Vec3 },
-  sigma: number,
-  elongation: number,
-  poleSigma: number,
-): { readonly invCovDiagonal: Vec3; readonly invCovOffDiagonal: Vec3 } {
-  return inverseCovarianceFromFrame(axes, {
-    along: sigma * Math.sqrt(elongation),
-    across: sigma / Math.sqrt(elongation),
-    pole: poleSigma,
-  });
-}
-
-function buildBlueAssociations(
-  geometry: GalaxyDescription,
-  tuning: GalaxyFieldTuning,
-  clusterFluxSum: number,
-  midAgeSeeds: readonly AssociationSeedFrame[],
-  seed: number,
-): readonly GalaxyFieldComponent[] {
-  // Stale-stored-tuning guard, same discipline `buildDigVeil` uses for `dig`.
-  const assn = tuning.hii.associations;
-  if (!assn) return [];
-  const brightness = Math.max(0, assn.brightness);
-  if (brightness <= 0 || midAgeSeeds.length === 0) return [];
-
-  // Stellar continuum like the embedded cluster core, not Hα like the
-  // shell/DIG — anchored to that SAME currency (`clusterFluxSum`, not
-  // `totalFlux`), the same reasoning `buildDigVeil` uses for `shellFluxSum`.
-  const assnTotalFlux = brightness * clusterFluxSum;
-  if (!(assnTotalFlux > 0)) return [];
-
-  // One splat per seed now (task #20) — `deriveComplexCount`'s shared
-  // scaler/clamp still applies, `childrenPerComplex` pinned to 1 since
-  // there is no children tier left to multiply the population against.
-  const count = deriveComplexCount(
-    midAgeSeeds.length * ASSN_COMPLEXES_PER_EVENT,
-    assn.complexes,
-    1,
-    ASSOCIATIONS_MAX_COUNT,
-  );
-  if (count <= 0) return [];
-  const seeds = selectAssociationSeeds(midAgeSeeds, count);
-
-  const elongation = assn.elongation;
-  if (!(elongation > 0)) return [];
-  const coherence = Math.min(1, Math.max(0, assn.coherence));
-  const poleSigma = pcToUnits(ASSN_SCALE_HEIGHT_PC);
-
-  const rng = mulberry32(seed ^ ASSN_SALT);
-  const amplitudeBase = assnTotalFlux / seeds.length;
-  // `?? 1`: stale-stored-tuning guard, same discipline every other `hii.*`
-  // knob added after launch carries. `amplitudeBase` above is independent of
-  // sigma, and the amplitude pushed below divides it by the ACTUAL
-  // (sizeScale-adjusted) sigma volume — so a splat's own INTEGRATED flux
-  // never moves with this knob, only its footprint does (board 21: coverage
-  // is count x area, and area goes as sizeScale squared).
-  const sizeScale = assn.sizeScale ?? 1;
-  // Stale-stored-tuning guard, same discipline `buildDigVeil` uses for
-  // `dig.texture`. NEGATED: splat.wesl's fs reads the SIGN of a component's
-  // own textureWeight to pick which noise volume to sample (io.wesl's comps
-  // doc) — negative selects starGrainTex (this tier's own "thousands of
-  // stars" grain), positive/zero stays on shell/DIG's shared ridged fbm.
-  const assnTextureWeight = -(assn.texture ?? 0);
-
-  const out: GalaxyFieldComponent[] = [];
-  for (const seedFrame of seeds) {
-    const axes = scatterAxesForCoherence(seedFrame, coherence, rng);
-    const sigma = pcToUnits(
-      (ASSN_SIGMA_MIN_PC + (ASSN_SIGMA_MAX_PC - ASSN_SIGMA_MIN_PC) * rng()) * sizeScale,
-    );
-    const sigmaAlong = sigma * Math.sqrt(elongation);
-    const sigmaAcross = sigma / Math.sqrt(elongation);
-
-    // No per-child jitter left to offset the centre with — the splat's own
-    // (x, z) IS the seed's already-drifted position, its own covariance
-    // (not a scatter of samples) is what now carries the association's
-    // extent. Warp lift at THIS splat's own (x, z), same discipline
-    // `buildDigVeil`'s per-child re-lift uses.
-    const x = seedFrame.point[0];
-    const z = seedFrame.point[2];
-    const y = seedFrame.point[1] + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
-
-    out.push({
-      amplitude: amplitudeBase / (TAU_ROOT3 * sigmaAlong * sigmaAcross * poleSigma),
-      ...associationSplatCovariance(
-        { along: axes.along, across: axes.across, pole: seedFrame.pole },
-        sigma,
-        elongation,
-        poleSigma,
-      ),
-      color: associationSplatColor(rng),
-      center: [x, y, z],
-      boundRadius: Math.max(sigmaAlong, sigmaAcross, poleSigma),
-      textureWeight: assnTextureWeight,
-    });
-  }
-  return out;
-}
-
 export function buildHiiRegions(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
@@ -1014,24 +794,21 @@ export function buildHiiRegions(
   // above: a preset saved before this knob existed carries no `texture` key.
   const shellTextureWeight = tuning.hii.shells.texture ?? 0;
   // This tier's own gain (board item 19) — applied ONLY to the amplitudes
-  // pushed below, never to `shellFluxSum`/`clusterFluxSum` (see `tierFlux`'s
-  // own doc), so it never leaks into DIG/associations' anchors.
+  // pushed below, never to `shellFluxSum` (see `tierFlux`'s own doc), so it
+  // never leaks into DIG's anchor.
   const shellsBrightness = tuning.hii.shells.brightness ?? 1;
   const out: GalaxyFieldComponent[] = [];
 
   // Accumulated in the SAME currency the shell/cluster amplitudes below are
   // drawn from (flux, pre-division-by-sprite-count) — the DIG veil's total
-  // flux is anchored to `shellFluxSum` (Hα) and the blue-association tier's
-  // to `clusterFluxSum` (stellar continuum), not to `totalFlux`.
+  // flux is anchored to this (Hα), not to `totalFlux`.
   let shellFluxSum = 0;
-  let clusterFluxSum = 0;
 
   for (const region of regions) {
     const regionFlux = (totalFlux * region.luminosity) / luminositySum;
     const clusterFlux = region.clusterCount > 0 ? regionFlux * clusterShare : 0;
     const shellFlux = regionFlux - clusterFlux;
     shellFluxSum += shellFlux;
-    clusterFluxSum += clusterFlux;
 
     if (region.shellCount > 0 && shellFlux > 0 && shellsBrightness > 0) {
       const sigma = region.radius * SHELL_SPRITE_SIGMA_RATIO;
@@ -1082,12 +859,12 @@ export function buildHiiRegions(
     }
   }
 
-  // Lifecycle population behind BOTH tiers below (task #10) — one pass over
-  // the SAME SF-event catalog `planRegions` drew its young regions from, see
-  // `resolveEventLifecyclePopulation`'s own header for why recomputing it
-  // here (rather than threading `planRegions`' own catalog through) is sound.
-  const lifecycle = resolveEventLifecyclePopulation(geometry, tuning, starFormation, seed);
-  const recentEventCount = lifecycle.youngCount + lifecycle.midAgeSeeds.length;
+  // Recent-event population behind DIG's own complex count (task #10) — one
+  // pass over the SAME SF-event catalog `planRegions` drew its young regions
+  // from, see `resolveEventLifecyclePopulation`'s own header for why
+  // recomputing it here (rather than threading `planRegions`' own catalog
+  // through) is sound.
+  const recentEventCount = resolveEventLifecyclePopulation(geometry, tuning, starFormation, seed);
 
   // DIG veil — placed independently of the catalog regions above (its own
   // complex/children structure, own rng stream), so `dig` never perturbs
@@ -1104,17 +881,10 @@ export function buildHiiRegions(
     out.push(component);
   }
 
-  // Blue OB-association tier — placed independently of both the catalog
-  // regions and the DIG veil (its own complex/children structure, own rng
-  // stream). See `buildBlueAssociations`'s own header for the gating and
-  // flux-anchoring discipline.
-  for (const component of buildBlueAssociations(
-    geometry,
-    tuning,
-    clusterFluxSum,
-    lifecycle.midAgeSeeds,
-    seed,
-  )) {
+  // Young-stars chain — placed off the arm ridge itself (v2/youngStarChain.ts),
+  // not off the catalog regions above or DIG's own map CDF. See
+  // `buildYoungStarChain`'s own header for the gating discipline.
+  for (const component of buildYoungStarChain(geometry, tuning, seed)) {
     out.push(component);
   }
 

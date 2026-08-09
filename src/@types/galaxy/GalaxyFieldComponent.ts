@@ -39,4 +39,11 @@ export type GalaxyFieldComponent = {
    * are the only producer that sets it.
    */
   readonly textureWeight?: number;
+  /**
+   * 0..1 how strongly this component's own emission is modulated by the ISM
+   * map's `stars` tracer — packed to `comps[4i+3].w`. Optional, default 0
+   * (untouched) everywhere except `youngStarChain.ts`'s pushes, which are the
+   * only producer that sets it (`GalaxyYoungStarsTuning.mapDepth`).
+   */
+  readonly starsWeight?: number;
 };

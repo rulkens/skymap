@@ -2,7 +2,7 @@
  * HiiTextureLanes — the HII tier's tier-global noise-modulation knobs
  * (`GalaxyHiiTuning.textureScale`/`textureContrast`), packed to the field
  * header's `dustDetail.y`/`.z` (`io.wesl`). Shared by every HII group
- * (shells, DIG, associations) — only each component's own `textureWeight`
+ * (shells, DIG, young stars) — only each component's own `textureWeight`
  * (`GalaxyFieldComponent`, packed to `comps[4i+2].w`) varies per group.
  */
 export type HiiTextureLanes = {

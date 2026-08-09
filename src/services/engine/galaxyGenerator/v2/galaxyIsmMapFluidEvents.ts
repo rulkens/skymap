@@ -8,7 +8,7 @@
  * field — see that file's header for how an event's kernel evolves.
  *
  * Deterministic per `seed` (mulberry32, same salted-seed idiom as
- * `hiiRegions.ts`'s DIG/associations draws): rebuilding the same galaxy at
+ * `hiiRegions.ts`'s DIG draws): rebuilding the same galaxy at
  * the same seed reproduces the same event list, same as the automaton's own
  * GPU hash reproduces the same ignitions.
  *

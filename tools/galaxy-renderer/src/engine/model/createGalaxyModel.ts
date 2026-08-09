@@ -55,11 +55,11 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
-  ASSOCIATIONS_MAX_COUNT,
   buildHiiRegions,
   DIG_MAX_COUNT,
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
+import { YOUNG_CHAIN_MAX_COMPONENTS } from '../../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
@@ -213,7 +213,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // buffer as a bounded group pushed after `HII_MAX_COUNT`'s
     // admission, not a reservation carved out of it — so the common case
     // (dig.fraction on, its default) never regrows on first activation.
-    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + ASSOCIATIONS_MAX_COUNT,
+    // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain (`youngStarChain.ts`)
+    // rides this same buffer too, pushed last.
+    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
     onRegrow: deps.onHiiCompsRegrow,
   });
   // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a plain
@@ -338,7 +340,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         fieldGeometry &&
         (fieldTuning.hii.ismMapSeeding > 0 ||
           (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
-          (fieldTuning.hii.associations?.brightness ?? 0) > 0)
+          (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
       ) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
         repackHiiComponents();
@@ -369,7 +371,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         fieldGeometry &&
         (fieldTuning.hii.ismMapSeeding > 0 ||
           (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
-          (fieldTuning.hii.associations?.brightness ?? 0) > 0)
+          (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
       ) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
         repackHiiComponents();

@@ -1,6 +1,6 @@
-import type { GalaxyHiiAssociationsTuning } from './GalaxyHiiAssociationsTuning';
 import type { GalaxyHiiDigTuning } from './GalaxyHiiDigTuning';
 import type { GalaxyHiiShellsTuning } from './GalaxyHiiShellsTuning';
+import type { GalaxyYoungStarsTuning } from './GalaxyYoungStarsTuning';
 
 /**
  * GalaxyHiiTuning — the HII-region tier (`hiiRegions.ts`)'s cross-tier root.
@@ -14,7 +14,7 @@ export type GalaxyHiiTuning = {
   readonly enabled: boolean;
   /**
    * Whole-field flux master: multiplies EVERY tier's own gain
-   * (`shells.brightness`/`dig.brightness`/`associations.brightness`) rather
+   * (`shells.brightness`/`dig.brightness`/`youngStars.brightness`) rather
    * than doubling as the shells' own gain the way this field used to (F98
    * masked young features out of its fit, so HII emission ADDS light the
    * disc mixture owes no debit for — that reasoning applies to the master,
@@ -22,13 +22,15 @@ export type GalaxyHiiTuning = {
    */
   readonly brightness: number;
   /**
-   * Fraction of HII events placed from the ISM map's `recentSf` channel
+   * Fraction of HII events placed from the ISM map's `activity` channel
    * instead of the arm-ridge catalog (0 = catalog exactly, 1 = fully
-   * map-seeded). `recentSf`, not `gas x activity`, deliberately: ignition
+   * map-seeded). `activity`, not the long-lived `stars` tracer: ignition
    * zeroes gas and age together, so knots avoid the dust the same way M74's
-   * do (Chevance decorrelation). Stays cross-tier rather than moving into
-   * `shells`: it also seeds the DIG/associations lifecycle population
-   * (`resolveEventLifecyclePopulation`), not just the shells' own regions.
+   * do (Chevance decorrelation), and `activity`'s short memory keeps shells
+   * on FRESH sites rather than 20-100 Myr drifted material `stars` now
+   * carries. Stays cross-tier rather than moving into `shells`: it also
+   * seeds DIG's own lifecycle population (`resolveEventLifecyclePopulation`),
+   * not just the shells' own regions.
    */
   readonly ismMapSeeding: number;
   /**
@@ -43,9 +45,9 @@ export type GalaxyHiiTuning = {
    */
   readonly dig: GalaxyHiiDigTuning;
   /**
-   * The exposed blue OB-association tier's own tuning — see
-   * `GalaxyHiiAssociationsTuning`. Without it the shells fade at ~5 Myr with
+   * The chain-placed young-stars tier's own tuning — see
+   * `GalaxyYoungStarsTuning`. Without it the shells fade at ~5 Myr with
    * nothing standing in for the naked cluster left behind.
    */
-  readonly associations: GalaxyHiiAssociationsTuning;
+  readonly youngStars: GalaxyYoungStarsTuning;
 };

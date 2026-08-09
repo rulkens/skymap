@@ -21,7 +21,7 @@ export type UiState = {
       | 'hii'
       | 'hiiShells'
       | 'hiiDig'
-      | 'hiiAssociations'
+      | 'hiiYoungStars'
       | 'ismMap'
       | 'ismMapAutomaton'
       | 'ismMapFluid'

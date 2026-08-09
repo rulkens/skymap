@@ -37,13 +37,13 @@ export const DEFAULT_UI_STATE: UiState = {
     // sliders used to render unconditionally in HII REGIONS' own body.
     hiiShells: true,
     hiiDig: false,
-    hiiAssociations: false,
+    hiiYoungStars: false,
     // The only section expanded by default: the ISM map is the current work,
     // and everything else on the panel is either tuned or downstream of it.
     ismMap: true,
     // Nested under the ISM section (CollapsibleSection's `nested` prop), own open
     // state so folding the parent doesn't fight these for the same key —
-    // the `hiiDig`/`hiiAssociations` precedent. Only one of the two ever
+    // the `hiiDig`/`hiiYoungStars` precedent. Only one of the two ever
     // renders at a time (the generator dropdown is now exclusive), but each
     // keeps its own fold state for whenever it's the one showing. Fluid
     // expanded, since it's the default `ismMap.generator`; automaton collapsed.

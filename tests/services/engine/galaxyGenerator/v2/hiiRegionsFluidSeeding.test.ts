@@ -4,7 +4,10 @@
  * catalog, so the tier's output tracks `eventRate`/`impulseDuration`/`steps`
  * rather than `starFormation.sfActivity`. `'automaton'`/`'none'` keep the
  * pre-existing catalog behaviour untouched — see `hiiRegions.test.ts` for
- * the map-seeding/DIG/associations coverage, orthogonal to this file.
+ * the map-seeding/DIG coverage, orthogonal to this file. `youngStars` is
+ * zeroed throughout: the chain producer places off arm geometry alone
+ * (`youngStarChain.ts`), so it would otherwise pollute every catalog-only
+ * assertion below with components this file isn't testing.
  */
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';
@@ -27,7 +30,7 @@ import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyF
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
-/** Isolates the shell/cluster region tier from DIG/associations/map-seeding so a count only moves for the reason each test is pinning. */
+/** Isolates the shell/cluster region tier from DIG/young-stars/map-seeding so a count only moves for the reason each test is pinning. */
 function fluidTuning(overrides: {
   readonly eventRate: number;
   readonly steps: number;
@@ -50,7 +53,7 @@ function fluidTuning(overrides: {
         clusterStrength: overrides.clusterStrength ?? 0,
       },
       dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
-      associations: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.associations, brightness: 0 },
+      youngStars: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.youngStars, brightness: 0 },
     },
   };
 }
@@ -234,9 +237,17 @@ describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing a
   });
 
   it('starFormation.sfActivity still gates the catalog path off at 0, same as before this change', () => {
+    // youngStars zeroed: the chain producer doesn't read starFormation at
+    // all (`youngStarChain.ts` places off arm geometry alone), so it would
+    // otherwise still contribute components at sfActivity 0 and defeat this
+    // test's own premise.
     const tuning: GalaxyFieldTuning = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       ismMap: { generator: 'automaton' },
+      hii: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+        youngStars: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.youngStars, brightness: 0 },
+      },
     };
     const off = {
       ...DEFAULT_GALAXY_STAR_FORMATION_PARAMS,

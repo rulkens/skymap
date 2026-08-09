@@ -99,7 +99,7 @@ function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
  * existed — same "old key wins only when the new one is absent" discipline
  * `LEGACY_SECTION_KEYS` uses, one level deeper. Runs before the generic
  * defaults-fill pass below, which copies `shells` WHOLESALE (like `dig`/
- * `associations` already do) rather than deep-merging it — a preset naming
+ * `youngStars` already do) rather than deep-merging it — a preset naming
  * only some of the seven re-enters with a partial `shells` bag, which is why
  * every read of these fields in `hiiRegions.ts`/`dustBubblePlacements.ts`
  * carries its own `?? default` guard rather than assuming presence.
@@ -131,24 +131,34 @@ function liftHiiShells(hii: Record<string, unknown>): Record<string, unknown> {
 }
 
 /**
- * Drops the retired `associations.childrenPerComplex` (board 20 collapsed the
- * scattered-children swarm into one splat per seed) — the generic
- * defaults-fill pass below only checks ONE level of `hii`'s own keys, so a
- * retired field nested inside a surviving `associations` bag would otherwise
- * pass through verbatim, the same way `migrateDust` drops `sfMapSeeding`.
+ * `hii.associations` (`GalaxyHiiAssociationsTuning`) renamed to
+ * `hii.youngStars` (`GalaxyYoungStarsTuning`, spec 2026-08-09 §4): the chain
+ * producer that replaced the scattered-splat tier keeps only the fields
+ * that still mean something (`enabled`, `brightness`, `texture`) and drops
+ * the rest (`complexes`, `coherence`, `armBias`, `sizeScale`, `elongation`)
+ * outright — same "old key wins only when the new one is absent" discipline
+ * `LEGACY_SECTION_KEYS` uses, one level deeper. `enabled` defaults true when
+ * absent: the retired type never carried it, so every real preset that named
+ * `associations` predates it.
  */
-function migrateHiiAssociations(associations: Record<string, unknown>): Record<string, unknown> {
-  const { childrenPerComplex: _childrenPerComplex, ...rest } = associations;
-  return rest;
+const YOUNG_STARS_LIFT_KEYS = ['brightness', 'texture'] as const;
+
+function liftHiiYoungStars(hii: Record<string, unknown>): Record<string, unknown> {
+  if (!('associations' in hii)) return hii;
+  const { associations, ...rest } = hii;
+  if ('youngStars' in rest) return rest;
+  const assn = (associations ?? {}) as Record<string, unknown>;
+  const youngStars: Record<string, unknown> = {
+    enabled: 'enabled' in assn ? assn.enabled : true,
+  };
+  for (const key of YOUNG_STARS_LIFT_KEYS) {
+    if (key in assn) youngStars[key] = assn[key];
+  }
+  return { ...rest, youngStars };
 }
 
 function migrateHii(hii: Record<string, unknown>): Record<string, unknown> {
-  const lifted = liftHiiShells(hii);
-  if (!lifted.associations) return lifted;
-  return {
-    ...lifted,
-    associations: migrateHiiAssociations(lifted.associations as Record<string, unknown>),
-  };
+  return liftHiiYoungStars(liftHiiShells(hii));
 }
 
 /**

@@ -9,7 +9,7 @@
  *
  * `density` is a caller-supplied channel blend, not fixed to dust's own
  * `ismMapDustDensity` — every tier that seeds off the map (dust, HII catalog,
- * DIG, associations) weights differently, see each call site. `radius`/
+ * DIG) weights differently, see each call site. `radius`/
  * `angle` are the texel's own centre, in the same units the ring/az geometry
  * below uses internally (ring-centre radius via `ismMapRingRadius`, bin-centre
  * angle) — a caller reweighting by arm proximity (`hiiRegions.ts`'s
