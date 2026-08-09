@@ -402,67 +402,40 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
       // plain path — 'dustApplies' is already true, and a null-space ray
       // integrates to 0 either way.
       if (a >= 1e-12) {
+        // tail(t) is this Gaussian's own column from depth t to infinity —
+        // same expHalfErfc trick dustMap.wesl uses to slice its dust
+        // column, applied here to the EMISSION component instead so each
+        // slice's own emission mass (E_k = tail(t_k) - tail(t_{k+1})) can be
+        // attenuated by that slice's own transmittance before summing.
         let sqrtHalfA = sqrt(2.0 * a);
+        let x0 = coeffs.y / sqrtHalfA;
+        let aOverSqrtHalfA = a / sqrtHalfA;
+        let tail0 = expHalfErfc(coeffs.z, x0);
+        let tail1 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.x);
+        let tail2 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.y);
+        let tail3 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.z);
+        // Clamped for the same reason dustMap.wesl's fs clamps its own tail
+        // differences: two close tail values subtracted can lose precision
+        // to the erfc rational approximation's branch seam, and a tiny
+        // negative E_k would otherwise darken this slice's contribution
+        // rather than the intended "no mass in this slice."
+        let e0 = max(tail0 - tail1, 0.0);
+        let e1 = max(tail1 - tail2, 0.0);
+        let e2 = max(tail2 - tail3, 0.0);
+        let e3 = max(tail3, 0.0);
 
-        // HII-tier shells/chain-nodes/DIG are small against the dust
-        // slices' own depth (unlike the field pass's disc/arm Gaussians,
-        // which SPAN them), so their emission is effectively at one depth:
-        // point extinction at closest approach (tPeak) below replaces the
-        // exact slab decomposition (else branch) with 1 expHalfErfc + 1
-        // vec3 exp, versus that path's 4 expHalfErfc + ~7 vec3 exp —
-        // roughly halves per-fragment ALU on the HII passes (the measured
-        // frame-time leaders). f3 borrows the last finite slice's width as
-        // slice 3's own effective depth — it's otherwise unbounded, [t3,inf)
-        // — so a component just past t3 doesn't instantly see ALL of tau3.
-        // u.dustDetail.y > 0.0 is the same HII-draw discriminant
-        // the near-fade blocks above (vs and fs) use.
-        if (u.dustDetail.y > 0.0) {
-          let tPeak = max(-coeffs.y / a, 0.0);
-          let s1 = max(u.dustSlices.x, 1e-6);
-          let s2 = max(u.dustSlices.y, 1e-6);
-          let s3 = max(u.dustSlices.z, 1e-6);
-          let f0 = clamp(tPeak / s1, 0.0, 1.0);
-          let f1 = clamp((tPeak - s1) / max(s2 - s1, 1e-6), 0.0, 1.0);
-          let f2 = clamp((tPeak - s2) / max(s3 - s2, 1e-6), 0.0, 1.0);
-          let f3 = clamp((tPeak - s3) / max(s3 - s2, 1e-6), 0.0, 1.0);
-          let cFront = (tau0 * f0 + tau1 * f1 + tau2 * f2 + tau3 * f3) * K;
-          emission = g2.xyz * exp(-cFront)
-            * (g0.w * sqrt(GAUSS_PI / (2.0 * a)) * expHalfErfc(coeffs.z, coeffs.y / sqrtHalfA));
-        } else {
-          // tail(t) is this Gaussian's own column from depth t to infinity —
-          // same expHalfErfc trick dustMap.wesl uses to slice its dust
-          // column, applied here to the EMISSION component instead so each
-          // slice's own emission mass (E_k = tail(t_k) - tail(t_{k+1})) can be
-          // attenuated by that slice's own transmittance before summing.
-          let x0 = coeffs.y / sqrtHalfA;
-          let aOverSqrtHalfA = a / sqrtHalfA;
-          let tail0 = expHalfErfc(coeffs.z, x0);
-          let tail1 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.x);
-          let tail2 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.y);
-          let tail3 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.z);
-          // Clamped for the same reason dustMap.wesl's fs clamps its own tail
-          // differences: two close tail values subtracted can lose precision
-          // to the erfc rational approximation's branch seam, and a tiny
-          // negative E_k would otherwise darken this slice's contribution
-          // rather than the intended "no mass in this slice."
-          let e0 = max(tail0 - tail1, 0.0);
-          let e1 = max(tail1 - tail2, 0.0);
-          let e2 = max(tail2 - tail3, 0.0);
-          let e3 = max(tail3, 0.0);
+        // Attenuation of emission spread through slice k: exp(-C_k*K), the
+        // transmittance of everything IN FRONT of the slice, times the
+        // in-slice term (the exact result for uniform emission through a
+        // homogeneous absorbing slab, tau_k thick) — see
+        // sliceTransmitRatio's own header for the tau_k -> 0 limit.
+        let atten0 = sliceTransmitRatio(tau0 * K);
+        let atten1 = exp(-c1) * sliceTransmitRatio(tau1 * K);
+        let atten2 = exp(-c2) * sliceTransmitRatio(tau2 * K);
+        let atten3 = exp(-c3) * sliceTransmitRatio(tau3 * K);
 
-          // Attenuation of emission spread through slice k: exp(-C_k*K), the
-          // transmittance of everything IN FRONT of the slice, times the
-          // in-slice term (the exact result for uniform emission through a
-          // homogeneous absorbing slab, tau_k thick) — see
-          // sliceTransmitRatio's own header for the tau_k -> 0 limit.
-          let atten0 = sliceTransmitRatio(tau0 * K);
-          let atten1 = exp(-c1) * sliceTransmitRatio(tau1 * K);
-          let atten2 = exp(-c2) * sliceTransmitRatio(tau2 * K);
-          let atten3 = exp(-c3) * sliceTransmitRatio(tau3 * K);
-
-          let summed = e0 * atten0 + e1 * atten1 + e2 * atten2 + e3 * atten3;
-          emission = g2.xyz * (g0.w * sqrt(GAUSS_PI / (2.0 * a)) * summed);
-        }
+        let summed = e0 * atten0 + e1 * atten1 + e2 * atten2 + e3 * atten3;
+        emission = g2.xyz * (g0.w * sqrt(GAUSS_PI / (2.0 * a)) * summed);
       }
     }
   }
