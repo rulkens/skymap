@@ -719,6 +719,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               hiiNearFadeStart: render.hiiNearFadeStart,
               hiiNearFadeEnd: render.hiiNearFadeEnd,
               starGrainFeatureScale: render.starGrainFeatureScale,
+              hiiQuadCap: render.hiiQuadCap,
             },
           }}
         >
@@ -842,6 +843,17 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ starGrainFeatureScale: v }))}
             path="render.starGrainFeatureScale"
             info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size splat.wesl's per-octave band-limit fades against, not the bare sigma. The user's own calibration of the grain look, not a derived constant."
+          />
+          <ParamSlider
+            label="HII quad cap"
+            value={render.hiiQuadCap}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(renderPatched({ hiiQuadCap: v }))}
+            path="render.hiiQuadCap"
+            info="Ceiling on an HII component's own projected quad half-extent in NDC — a close silhouette or fullscreen fallback both truncate the Gaussian's screen support at this cap, masked by the tier's grain texture and near-fade. 0 disables it, the byte-identical boot default; this is a live calibration lever, not a derived constant."
           />
         </CollapsibleSection>
 

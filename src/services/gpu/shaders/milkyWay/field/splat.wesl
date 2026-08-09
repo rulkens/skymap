@@ -302,7 +302,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
     }
   }
 
-  let ndc = splatNdc(corner, xv, yv, zv, r, tanHalfFov, aspect, shift);
+  let ndc = splatNdc(corner, xv, yv, zv, r, tanHalfFov, aspect, shift, u.perf.x);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

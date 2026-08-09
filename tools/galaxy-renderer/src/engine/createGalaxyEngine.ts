@@ -1227,6 +1227,11 @@ export async function createGalaxyEngine(
       // header below inherits it via its `{...hiiHeaderInput}` spread rather
       // than a second explicit line.
       starGrainFeatureScale: render.starGrainFeatureScale,
+      // Screen-space quad cap (#71, io.wesl's perf.x doc) — same "only the
+      // HII header carries a real value" asymmetry as starGrainFeatureScale
+      // just above, inherited by every HII_TIERS header below through the
+      // same `{...hiiHeaderInput}` spread.
+      quadCapNdc: render.hiiQuadCap,
       debugViews,
       galaxyWeight,
       ismMapChannels,

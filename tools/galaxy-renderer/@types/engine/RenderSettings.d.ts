@@ -96,6 +96,17 @@ export type RenderSettings = {
    * derived constant; defaults to 8 (`defaultRenderSettings.ts`).
    */
   readonly starGrainFeatureScale: number;
+  /**
+   * Ceiling on an HII component's own projected quad half-extent, in NDC
+   * units (#71) — `splatSilhouette.wesl`'s `splatNdc` clamps to it only when
+   * this header carries a nonzero value (the HII tiers alone). A close-
+   * approach silhouette or fullscreen-fallback quad both truncate the
+   * Gaussian's screen support at the cap; the tier's grain texture and near-
+   * fade already mask the cut edge (the same argument `SPLAT_CUT` makes for
+   * its own truncation). 0 = off, boot's byte-identical default — the user
+   * calibrates this live, so it is not baked to a nonzero value here.
+   */
+  readonly hiiQuadCap: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
   readonly spriteField: boolean;

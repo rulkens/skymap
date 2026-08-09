@@ -15,6 +15,20 @@ const SPLAT_CUT: f32 = 4.5;
 //   r           — the component's boundRadius (world-space max sigma)
 //   tanHalfFov, aspect, shift — the camera's projection terms (io.wesl's
 //                 params.xyz), used to map view-space tangent slopes to NDC
+//   capHalfNdc  — screen-space quad cap (#71), io.wesl's perf.x; 0 disables
+//
+// capHalfNdc truncates the returned quad's own half-extent, which truncates
+// the Gaussian's screen support — fragments outside the smaller quad are
+// simply not shaded. Accepted for the HII tiers only (the header lane that
+// carries a nonzero cap): their grain texture and the existing near-fade
+// already mask a cut edge, the same argument SPLAT_CUT's own 4.5-not-3
+// choice above makes. The fragment stage reconstructs its ray FROM the
+// interpolated NDC position, so shrinking the quad changes only which
+// pixels get shaded, not the fs. The fullscreen fallback below re-centers on
+// the component's own projected centre rather than returning 'corner'
+// outright, guarded by zv > 1e-4: behind that plane the centre's own
+// projection is unstable (dividing by a near-zero or negative zv), and the
+// near-fade already collapses the deepest of those before this is reached.
 //
 // A silhouette cone only exists once the eye clears the blob's bounding
 // sphere by a margin (cut sigma); inside that margin — including "behind"
@@ -37,6 +51,7 @@ fn splatNdc(
   tanHalfFov: f32,
   aspect: f32,
   shift: f32,
+  capHalfNdc: f32,
 ) -> vec2<f32> {
   let bound = SPLAT_CUT * r;
   // Fully behind the camera: the forward ray never gets within cut sigma of
@@ -99,6 +114,10 @@ fn splatNdc(
   }
 
   if (zv < 1.3 * r || denom <= 1e-6 || discX <= 0.0 || discY <= 0.0) {
+    if (capHalfNdc > 0.0 && zv > 1e-4) {
+      let ndcC = vec2<f32>(xv / zv / (tanHalfFov * aspect) - shift, yv / zv / tanHalfFov);
+      return ndcC + corner * capHalfNdc;
+    }
     return corner;
   }
 
@@ -122,6 +141,9 @@ fn splatNdc(
   let ndcYLo = tyLo / tanHalfFov;
   let ndcYHi = tyHi / tanHalfFov;
   let mid = vec2<f32>(ndcXLo + ndcXHi, ndcYLo + ndcYHi) * 0.5;
-  let half = vec2<f32>(ndcXHi - ndcXLo, ndcYHi - ndcYLo) * 0.5;
+  var half = vec2<f32>(ndcXHi - ndcXLo, ndcYHi - ndcYLo) * 0.5;
+  if (capHalfNdc > 0.0) {
+    half = min(half, vec2<f32>(capHalfNdc, capHalfNdc));
+  }
   return mid + corner * half;
 }

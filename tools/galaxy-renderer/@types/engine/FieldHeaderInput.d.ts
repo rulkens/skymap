@@ -72,4 +72,13 @@ export type FieldHeaderInput = {
    * `textureWeight` component never reaches `starGrainTerm` either.
    */
   readonly starGrainFeatureScale?: number;
+  /**
+   * `render.hiiQuadCap` — packs to `io.wesl`'s `perf.x` lane, the ceiling
+   * `splatSilhouette.wesl`'s `splatNdc` clamps its own quad half-extent to,
+   * in NDC units (0 = off). Absent packs 0, the same "only the HII header
+   * carries a real value" asymmetry as `hiiTexture`/`youngStars` above — the
+   * field header's draw (and `dustMap.wesl`, which binds only that header)
+   * stay byte-identical to before this lane existed.
+   */
+  readonly quadCapNdc?: number;
 };

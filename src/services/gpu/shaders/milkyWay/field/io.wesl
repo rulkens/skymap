@@ -30,7 +30,8 @@
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   offset 224 : dustCarve: vec4 (carve, sharpness, stretch, spare)
 //   offset 240 : youngStars: vec4 (contrastGamma, invMeanNorm, nearFadeStart, nearFadeEnd)
-//   total: 256 bytes.
+//   offset 256 : perf: vec4 (quadCapNdc, spare, spare, spare)
+//   total: 272 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -214,6 +215,15 @@
 // row's fade lanes 0 too (dead weight behind the vs/fs's own dustDetail.y
 // gate, but zero is also the fade's own "off" value).
 //
+// perf (offset 256) is the screen-space quad cap (#71): .x, quadCapNdc, is a
+// ceiling on splatSilhouette.wesl's own quad half-extent in NDC — 0 disables
+// it (the mandatory identity, same idiom as dustCarve's carve lane), 1.0
+// spans the full viewport height from a centered quad. Only the HII header
+// carries a real value (same "only the HII header" asymmetry as hiiTexture/
+// youngStars above); the field header packs 0, so its own draw AND
+// dustMap.wesl's (which binds only fieldUbo, never the HII header) stay
+// byte-identical to before this row existed. .yzw are spare.
+//
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
 // already carried into world space — see transformGalaxyFieldComponent.ts —
@@ -335,6 +345,7 @@ struct FieldUniforms {
   dustDetail: vec4<f32>,
   dustCarve: vec4<f32>,
   youngStars: vec4<f32>,
+  perf: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

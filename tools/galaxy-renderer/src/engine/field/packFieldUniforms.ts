@@ -43,8 +43,8 @@ import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../@types/engine/YoungStarsLanes';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 16 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve + youngStars. */
-export const FIELD_HEADER_FLOATS = 64;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 17 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve + youngStars + perf. */
+export const FIELD_HEADER_FLOATS = 68;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -101,7 +101,7 @@ const NO_YOUNG_STARS: YoungStarsLanes = {
 };
 
 /**
- * packFieldHeaderUniforms — one 240-byte `FieldUniforms` header, every lane
+ * packFieldHeaderUniforms — one `FIELD_HEADER_BUFFER_SIZE`-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
  * (createGalaxyEngine's `fieldData`/`hiiData`), so a lane left unwritten
  * silently ships the previous pass's bytes to the GPU — which is why an
@@ -254,6 +254,14 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[61] = youngStars.invMeanNorm;
   out[62] = youngStars.nearFadeStart ?? 0;
   out[63] = youngStars.nearFadeEnd ?? 0;
+
+  // perf 64..67 = (quadCapNdc, spare, spare, spare). Only the HII header
+  // ever passes a real value (`FieldHeaderInput`'s own doc) — absent packs
+  // 0, `splatSilhouette.wesl`'s own "cap disabled" guard value.
+  out[64] = input.quadCapNdc ?? 0;
+  out[65] = 0;
+  out[66] = 0;
+  out[67] = 0;
 
   return out;
 }

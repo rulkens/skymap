@@ -82,6 +82,7 @@ const input: FieldHeaderInput = {
     nearFadeEnd: 29003,
   },
   starGrainFeatureScale: 26000,
+  quadCapNdc: 30000,
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -155,6 +156,8 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     expect(observed(29001)).toBe(at('youngStars') + 4);
     expect(observed(29002)).toBe(at('youngStars') + 8);
     expect(observed(29003)).toBe(at('youngStars') + 12);
+    // perf.x (#71) is quadCapNdc, render.hiiQuadCap's own lane.
+    expect(observed(30000)).toBe(at('perf'));
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {
@@ -175,6 +178,7 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
       ismMapSeeding: _omittedIsmMapSeeding,
       youngStars: _omittedYoungStars,
       starGrainFeatureScale: _omittedStarGrainFeatureScale,
+      quadCapNdc: _omittedQuadCapNdc,
       ...noDust
     } = input;
     packFieldHeaderUniforms(noDust, dst);
@@ -209,5 +213,8 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // than a no-op; nearFadeStart/nearFadeEnd are 0, splat.wesl's own
     // fade-disabled value.
     expect(four(at('youngStars'))).toEqual([1, 1, 0, 0]);
+    // `quadCapNdc` omitted too — 0 is splatSilhouette.wesl's own "cap
+    // disabled" guard value, so a stray read degrades to no-op.
+    expect(four(at('perf'))).toEqual([0, 0, 0, 0]);
   });
 });

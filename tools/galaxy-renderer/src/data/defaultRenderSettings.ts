@@ -117,6 +117,10 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Eyeballed against the reference gallery — the point's visible extent
   // that used to be a hardcoded 4x its sigma, now the user's own calibration.
   starGrainFeatureScale: 8,
+  // 0 = off = byte-identical boot (io.wesl's perf.x, #71): the cap is a live
+  // calibration lever, only baked to a nonzero value once the user settles
+  // on one against the reference gallery.
+  hiiQuadCap: 0,
   // The legacy star bag OFF at boot: it is scheduled for deletion
   // (`docs/research/milky-way/goal-and-history.md`), so the analytic field
   // alone is now the subject rather than one side of a comparison — and an
