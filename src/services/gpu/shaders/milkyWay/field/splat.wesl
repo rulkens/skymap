@@ -245,10 +245,18 @@ fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
   return term;
 }
 
+// Feather start, in quad-corner units (matches 'corner' below, [-1,1] per
+// axis) — where the capped-quad edge fade (this pass's fs tail) begins.
+// Only bites when u.perf.x (the HII quad cap, #71) is live and actually
+// truncated a component's gaussian mid-gradient; see the fs's own comment
+// at the multiply site for why an uncapped quad's edge needs no feather.
+const QUAD_FEATHER_START: f32 = 0.7;
+
 struct SplatOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) ndc: vec2<f32>,
   @location(1) @interpolate(flat) inst: u32,
+  @location(2) corner: vec2<f32>,
 }
 
 // Near-camera fade window, HII-pass-only (see the vs's dustDetail.y gate
@@ -290,6 +298,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
 
   var out: SplatOut;
   out.inst = inst;
+  out.corner = corner;
 
   // dustDetail.y is 0 for every primary-field draw (io.wesl's own doc) and
   // this pass's shared fs also serves that draw, whose disc/bulge
@@ -530,6 +539,19 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
     fade = smoothstep(fadeEnd * r, fadeStart * r, length(po));
   }
 
+  // Capped-quad edge feather (#71's quad cap, u.perf.x — same lane the cap
+  // itself reads; the field/dust draws pack it 0 and skip this entirely).
+  // For a quad the cap did NOT shrink, the edge sits at SPLAT_CUT sigma
+  // where the gaussian is ~4e-5 already, so this feather is invisible
+  // there — it only bites where the cap truncated the gradient mid-slope.
+  // The rare honest-fullscreen case (cap live but the eye inside the
+  // silhouette cone, splatSilhouette.wesl's zv <= 1e-4 branch) has no true
+  // quad edge to feather and accepts a slight dim near the screen border.
+  var feather = 1.0;
+  if (u.perf.x > 0.0) {
+    feather = 1.0 - smoothstep(QUAD_FEATHER_START, 1.0, max(abs(input.corner.x), abs(input.corner.y)));
+  }
+
   // Alpha 0: the aggregate's alpha channel feeds nothing — the additive
   // upsample folds it into HDR and the compositor forces 1.0 — and a quad
   // writing coverage would swamp the sprites' own alpha for no reader's
@@ -544,5 +566,5 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // doc) — 1 with every debug view off, so this multiply is a no-op at the
   // default. This same fs also draws the HII tier (a second bind group over
   // the same pipeline), so HII dims under an active debug view too.
-  return vec4<f32>(emission * u.params.w * u.debugView.w * fade, 0.0);
+  return vec4<f32>(emission * u.params.w * u.debugView.w * fade * feather, 0.0);
 }
