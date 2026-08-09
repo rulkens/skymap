@@ -20,15 +20,12 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   texture: 0.45,
   textureScale: 1,
   textureContrast: 1,
-  // Off while the automaton is being improved — the term amplifies whatever
-  // the map shows.
-  mapDetail: 0,
-  // 0 = uncapped — today's behaviour.
-  dustPlacementCap: 0,
-  // S5 off by default — identity (today's smooth Gaussian silhouette).
-  carve: 0,
-  // Mid window; inert until `carve` is raised off 0.
+  // On since the 2026-08-09 calibration pass: the fluid map is now good
+  // enough that amplifying its detail reads as structure, not noise.
+  mapDetail: 0.45,
+  dustPlacementCap: 2,
+  // S5 carving on — user-calibrated 2026-08-09 with the rest of this block.
+  carve: 0.45,
   carveSharpness: 0.5,
-  // Isotropic — identity.
-  carveStretch: 1,
+  carveStretch: 1.2,
 };
