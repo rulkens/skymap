@@ -15,6 +15,7 @@ import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
 import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
 import type { FieldSliceCounts } from '../../../@types/engine/FieldSliceCounts';
+import type { HiiSegment } from '../../../@types/engine/HiiSegment';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
@@ -57,6 +58,7 @@ import {
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
   buildHiiRegions,
+  buildHiiRegionsWithSegments,
   DIG_MAX_COUNT,
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
@@ -151,6 +153,17 @@ export type GalaxyModel = {
   readonly youngStars: YoungStarsLanes;
   readonly fieldComps: GrowOnlyRecordBuffer;
   readonly hiiComps: GrowOnlyRecordBuffer;
+  /**
+   * `hiiComps`' own contiguous tiers — the central galaxy's shell/cluster,
+   * DIG and young-stars spans (see `hiiRegions.ts`'s `buildHiiRegionsWithSegments`),
+   * plus one trailing `'hii:extras'` span when background extras contribute
+   * (their own three tiers interleave with the central galaxy's across the
+   * buffer, so they can't be split further without a label per extra — see
+   * `repackHiiComponents`). Recomputed on every repack; consumed only by
+   * `createGalaxyEngine.ts`'s per-tier HII sub-passes, gated on the timing
+   * HUD being live.
+   */
+  readonly hiiSegments: readonly HiiSegment[];
   readonly bubbleComps: GrowOnlyRecordBuffer;
   /** Null until the first SSPSF readback lands. */
   readonly ismMapData: GalaxyIsmMap | null;
@@ -270,6 +283,15 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // The CENTRAL galaxy's HII tier, cached like `fieldMixture` but never
   // concatenated into it (see `hiiComps`).
   let hiiMixture: readonly GalaxyFieldComponent[] = [];
+  // The central galaxy's own tier boundaries within `hiiMixture` — captured
+  // alongside it at every rebuild site, never recomputed separately (see
+  // `centralHiiMixtureAndSegments`). `repackHiiComponents` extends this with
+  // the extras span to get the buffer-wide `hiiSegments` the model exposes.
+  let hiiTierSegments: readonly HiiSegment[] = [];
+  // `hiiComps`' buffer-wide segmentation — `hiiTierSegments` plus the
+  // trailing extras span, kept in step with `hiiComps.write` since both are
+  // written by `repackHiiComponents` alone.
+  let hiiSegments: readonly HiiSegment[] = [];
   // The analytic dust lane's mixture, CENTRAL galaxy only — extras get dust in
   // a follow-up with zero rework, since the packed layout already carries
   // per-galaxy dustOffset/dustCount.
@@ -386,7 +408,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
           (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
           (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
       ) {
-        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
+        ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
+          fieldGeometry,
+          currentStarFormation(),
+          readbacks.ismMapData,
+        ));
         repackHiiComponents();
       }
     });
@@ -417,7 +443,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
           (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
           (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
       ) {
-        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
+        ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
+          fieldGeometry,
+          currentStarFormation(),
+          readbacks.ismMapData,
+        ));
         repackHiiComponents();
       }
     });
@@ -611,6 +641,19 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     const combined: GalaxyFieldComponent[] = [...hiiMixture];
     for (const e of extras) combined.push(...e.hiiMixture);
     hiiComps.write(packFieldComponents(combined));
+    // `hiiTierSegments` already covers `hiiMixture` (indices 0..hiiMixture.length)
+    // exactly — extras always trail it in `combined` (the loop above), so one
+    // more span for their WHOLE contribution keeps every segment contiguous
+    // without inventing a label per extra (their own shell/DIG/young split
+    // would interleave across extras and stop being contiguous).
+    const extrasCount = combined.length - hiiMixture.length;
+    hiiSegments =
+      extrasCount > 0
+        ? [
+            ...hiiTierSegments,
+            { label: 'hii:extras', first: hiiMixture.length, count: extrasCount },
+          ]
+        : hiiTierSegments;
   }
 
   /**
@@ -658,6 +701,32 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * Central-galaxy counterpart to `hiiMixtureOf` that also captures the
+   * tier's own segmentation (`hiiTierSegments`) — extras never need it (see
+   * `hiiSegments`' own declaration), so only the central call sites pay for
+   * `buildHiiRegionsWithSegments`' bookkeeping; extras still go through the
+   * plain `hiiMixtureOf`/`buildHiiRegions`. No `transform`: the central
+   * galaxy never takes one (every call site below omits it).
+   */
+  function centralHiiMixtureAndSegments(
+    geometry: GalaxyDescription,
+    starFormation: GalaxyStarFormationParams,
+    ismMap: GalaxyIsmMap | null,
+  ): {
+    readonly mixture: readonly GalaxyFieldComponent[];
+    readonly segments: readonly HiiSegment[];
+  } {
+    const { components, segments } = buildHiiRegionsWithSegments(
+      geometry,
+      fieldTuning,
+      starFormation,
+      geometry.seed,
+      ismMap,
+    );
+    return { mixture: components, segments };
+  }
+
+  /**
    * setParams — regenerate the central galaxy, then rebuild everything derived
    * from its geometry (both analytic tiers, the dust cloud, the SSPISM map).
    *
@@ -692,7 +761,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(ismMapGridRadius(fieldGeometry));
     fieldMixture = fieldMixtureOf(fieldGeometry);
-    hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
+    ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
+      fieldGeometry,
+      currentStarFormation(),
+      readbacks.ismMapData,
+    ));
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
@@ -753,7 +826,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       if (fieldGeometry) {
         if (fieldMoved) fieldMixture = fieldMixtureOf(fieldGeometry);
         if (hiiMoved) {
-          hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.ismMapData);
+          ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
+            fieldGeometry,
+            currentStarFormation(),
+            readbacks.ismMapData,
+          ));
         }
       }
       extras = extras.map((e) => ({
@@ -937,6 +1014,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     },
     fieldComps,
     hiiComps,
+    get hiiSegments(): readonly HiiSegment[] {
+      return hiiSegments;
+    },
     bubbleComps,
     get ismMapData(): GalaxyIsmMap | null {
       return readbacks.ismMapData;

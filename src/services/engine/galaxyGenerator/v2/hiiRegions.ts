@@ -738,13 +738,34 @@ function buildDigVeil(
   return out;
 }
 
-export function buildHiiRegions(
+/** One contiguous range of `buildHiiRegionsWithSegments`' own `components` — see that function's header for why the offsets are captured checkpoints, never a formula. */
+type HiiRegionSegment = { readonly label: string; readonly first: number; readonly count: number };
+
+const EMPTY_HII_RESULT: {
+  readonly components: readonly GalaxyFieldComponent[];
+  readonly segments: readonly HiiRegionSegment[];
+} = { components: [], segments: [] };
+
+/**
+ * buildHiiRegionsWithSegments — `buildHiiRegions`' full computation, plus the
+ * concatenation boundary between each of its three tiers (shell/cluster
+ * sprites, the DIG veil, the young-stars chain) as a `HiiRegionSegment` —
+ * consumed by the timing HUD for per-tier GPU cost rows
+ * (`createGalaxyModel.ts`'s `hiiSegments`, `timing/timingSlots.ts`). Boundaries
+ * are `out.length` checkpoints taken right after each tier's own push loop,
+ * never derived from a count formula, so they can't drift from what actually
+ * landed in `components`.
+ */
+export function buildHiiRegionsWithSegments(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
   ismMap: GalaxyIsmMap | null,
-): readonly GalaxyFieldComponent[] {
+): {
+  readonly components: readonly GalaxyFieldComponent[];
+  readonly segments: readonly HiiRegionSegment[];
+} {
   // `radiusScale ?? 1`: board 19 moved it onto `hii.shells` — see
   // `candidateRegionsFromCatalog`'s own comment for why a hole defaults to
   // the law exactly rather than gating the whole tier off.
@@ -753,7 +774,7 @@ export function buildHiiRegions(
     tuning.hii.brightness <= 0 ||
     (tuning.hii.shells.radiusScale ?? 1) <= 0
   ) {
-    return [];
+    return EMPTY_HII_RESULT;
   }
   // `numArms`/`sfActivity` only gate the arm-ridge catalog path — the fluid
   // event window has neither dependency (a fluid run can legitimately place
@@ -761,11 +782,11 @@ export function buildHiiRegions(
   // comes from `ismMapFluid.eventRate`, never `starFormation.sfActivity`).
   const isFluid = tuning.ismMap.generator === 'fluid';
   if (!isFluid && (geometry.numArms <= 0 || starFormation.sfActivity <= 0)) {
-    return [];
+    return EMPTY_HII_RESULT;
   }
 
   const candidateRegions = planRegions(geometry, tuning, starFormation, seed);
-  if (candidateRegions.length === 0) return [];
+  if (candidateRegions.length === 0) return EMPTY_HII_RESULT;
   // Fluid-sourced regions skip the map-seeding post-pass entirely — see
   // `applyIsmMapSeeding`'s own header for why re-jittering them would be a
   // regression, not a refinement.
@@ -775,10 +796,10 @@ export function buildHiiRegions(
 
   let luminositySum = 0;
   for (const region of regions) luminositySum += region.luminosity;
-  if (!(luminositySum > 0)) return [];
+  if (!(luminositySum > 0)) return EMPTY_HII_RESULT;
 
   const totalFlux = tierFlux(geometry, tuning);
-  if (!(totalFlux > 0)) return [];
+  if (!(totalFlux > 0)) return EMPTY_HII_RESULT;
 
   // The shell IS the ionized gas, so it takes the palette's CORE lane —
   // metallicity sets the [OIII]/Ha balance that decides teal vs crimson, and
@@ -858,6 +879,9 @@ export function buildHiiRegions(
       }
     }
   }
+  // Checkpoint, not a formula: the shell/cluster tier ends exactly here,
+  // whatever `regions`' admission produced.
+  const shellsEnd = out.length;
 
   // Recent-event population behind DIG's own complex count (task #10) — one
   // pass over the SAME SF-event catalog `planRegions` drew its young regions
@@ -880,6 +904,7 @@ export function buildHiiRegions(
   )) {
     out.push(component);
   }
+  const digEnd = out.length; // same checkpoint discipline as `shellsEnd`
 
   // Young-stars chain — placed off the arm ridge itself (v2/youngStarChain.ts),
   // not off the catalog regions above or DIG's own map CDF. See
@@ -888,5 +913,25 @@ export function buildHiiRegions(
     out.push(component);
   }
 
-  return out;
+  const segments: readonly HiiRegionSegment[] = [
+    { label: 'hii:shells', first: 0, count: shellsEnd },
+    { label: 'hii:dig', first: shellsEnd, count: digEnd - shellsEnd },
+    { label: 'hii:young', first: digEnd, count: out.length - digEnd },
+  ];
+  return { components: out, segments };
+}
+
+/**
+ * buildHiiRegions — the flat-array view of `buildHiiRegionsWithSegments`, for
+ * every caller that only wants the mixture (every test in this file's own
+ * suite, and any future consumer that doesn't care about the timing HUD).
+ */
+export function buildHiiRegions(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  starFormation: GalaxyStarFormationParams,
+  seed: number,
+  ismMap: GalaxyIsmMap | null,
+): readonly GalaxyFieldComponent[] {
+  return buildHiiRegionsWithSegments(geometry, tuning, starFormation, seed, ismMap).components;
 }

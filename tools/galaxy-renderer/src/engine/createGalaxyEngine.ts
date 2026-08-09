@@ -1271,15 +1271,45 @@ export async function createGalaxyEngine(
       // under the JWST view, leaving `hiiTex` stale; the field pass no longer
       // skips, so that concern is gone.
       if (drawHii) {
-        encodeSplatPass({
-          enc,
-          label: 'galaxy:hiiPass',
-          timestampWrites: timing.descriptorFor('hii'),
-          targetView: targets.hiiTex.createView(),
-          pipeline: splatPipe,
-          bindGroup: hiiBG,
-          instanceCount: model.hiiComps.count,
-        });
+        // Per-tier sub-passes ONLY while the timing HUD is live (`timing.enabled`
+        // is the service's own active/disabled gate — see `createGpuTimingService`
+        // — not a flag this file invents). Off that path this stays exactly the
+        // one merged draw: reopening `hiiTex` per tier costs a tile store+reload
+        // on TBDR hardware (a pass's END flushes the tile, the next pass's BEGIN
+        // reloads it), which the normal render path shouldn't pay for numbers
+        // nobody reads. Reading the split rows: their sum can exceed the merged
+        // `'hii'` row's own past values on Apple Silicon — per-pass timestamp
+        // overhead inflates each short sub-pass more than it inflated one long
+        // one (see `tools/perf/README.md`'s slot-sum note) — so compare tiers to
+        // EACH OTHER, not the split sum to the old merged number.
+        if (timing.enabled) {
+          let loadOp: GPULoadOp = 'clear';
+          for (const segment of model.hiiSegments) {
+            if (segment.count === 0) continue;
+            encodeSplatPass({
+              enc,
+              label: `galaxy:hiiPass:${segment.label}`,
+              timestampWrites: timing.descriptorFor(segment.label),
+              targetView: targets.hiiTex.createView(),
+              pipeline: splatPipe,
+              bindGroup: hiiBG,
+              instanceCount: segment.count,
+              firstInstance: segment.first,
+              loadOp,
+            });
+            loadOp = 'load';
+          }
+        } else {
+          encodeSplatPass({
+            enc,
+            label: 'galaxy:hiiPass',
+            timestampWrites: timing.descriptorFor('hii'),
+            targetView: targets.hiiTex.createView(),
+            pipeline: splatPipe,
+            bindGroup: hiiBG,
+            instanceCount: model.hiiComps.count,
+          });
+        }
       }
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over

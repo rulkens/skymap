@@ -10,7 +10,10 @@ import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerat
 import { armRidgeAngle } from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
-import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
+import {
+  buildHiiRegions,
+  buildHiiRegionsWithSegments,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
@@ -398,5 +401,38 @@ describe('buildHiiRegions', () => {
     expect(withDig.slice(0, shellCount)).toEqual(withoutDig.slice(0, shellCount));
     // Young-stars tail identical once DIG's own middle slice is skipped over.
     expect(withDig.slice(shellCount + digCount)).toEqual(withoutDig.slice(shellCount));
+  });
+});
+
+// The galaxy-renderer tool's timing HUD draws one sub-pass per segment via
+// `firstInstance`/`instanceCount` (createGalaxyEngine.ts's `drawFrame`) — a
+// gap or overlap between segments would either skip real components or draw
+// some of them twice, and a short total would silently drop the tail of
+// whichever tier's checkpoint drifted from what actually landed in `out`.
+describe('buildHiiRegionsWithSegments', () => {
+  it('segments are contiguous, non-overlapping, and sum to the assembled component count', () => {
+    const map = makeBusyMap();
+    // Defaults alone: `dig.fraction`/`youngStars.brightness` are both nonzero
+    // out of the box (see `galaxyFieldMixture.ts`'s `DEFAULT_GALAXY_FIELD_TUNING`),
+    // so all three tiers actually contribute on the MW preset.
+    const { components, segments } = buildHiiRegionsWithSegments(
+      geometry,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      map,
+    );
+
+    expect(segments.map((s) => s.label)).toEqual(['hii:shells', 'hii:dig', 'hii:young']);
+    // Sanity: the MW preset really exercises every tier, or the contiguity
+    // assertions below would pass trivially over all-zero segments.
+    for (const segment of segments) expect(segment.count).toBeGreaterThan(0);
+
+    let expectedFirst = 0;
+    for (const segment of segments) {
+      expect(segment.first).toBe(expectedFirst);
+      expectedFirst += segment.count;
+    }
+    expect(expectedFirst).toBe(components.length);
   });
 });
