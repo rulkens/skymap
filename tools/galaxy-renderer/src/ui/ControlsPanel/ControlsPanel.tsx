@@ -712,7 +712,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               aggregateDivisor: render.aggregateDivisor,
               fieldDivisor: render.fieldDivisor,
               dustDivisor: render.dustDivisor,
-              hiiDivisor: render.hiiDivisor,
+              extrasDivisor: render.extrasDivisor,
               shellsDivisor: render.shellsDivisor,
               digDivisor: render.digDivisor,
               youngDivisor: render.youngDivisor,
@@ -768,14 +768,14 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             info="Its own divisor, separate from the field's: the dust splat is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
           />
           <ParamSlider
-            label="HII target divisor"
-            value={render.hiiDivisor}
+            label="Extras divisor"
+            value={render.extrasDivisor}
             min={1}
             max={8}
             step={1}
             format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ hiiDivisor: Math.round(v) }))}
-            path="render.hiiDivisor"
+            onChange={(v) => dispatch(renderPatched({ extrasDivisor: Math.round(v) }))}
+            path="render.extrasDivisor"
             info="hiiTex's own divisor — now home to background extras' whole HII contribution alone. An embedded shell is still small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
           />
           <ParamSlider

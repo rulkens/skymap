@@ -511,7 +511,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // built against the old texture — the exact damage class this exists for.
       name: 'target-divisors',
       run: async (page) => {
-        for (const label of ['Field target divisor', 'Dust divisor', 'HII target divisor']) {
+        for (const label of ['Field target divisor', 'Dust divisor', 'Extras divisor']) {
           await pressSlider(page, label, ['ArrowRight']);
           await settleFrames(page, SETTLE_FRAMES);
           await pressSlider(page, label, ['ArrowLeft']);

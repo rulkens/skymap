@@ -94,8 +94,8 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // (`docs/research/milky-way/hii-regions.md`).
   // The slider exists for the user to trade that away if they want to; the
   // default does not.
-  hiiDivisor: 1,
-  // Same firefly reasoning as `hiiDivisor` above, now the central galaxy's
+  extrasDivisor: 1,
+  // Same firefly reasoning as `extrasDivisor` above, now the central galaxy's
   // own shells/young-stars tiers (`data/hiiTiers.ts`'s `HII_TIERS`).
   shellsDivisor: 1,
   // 2, not 1: the grain band-limit (splat.wesl's starGrainTerm) makes the

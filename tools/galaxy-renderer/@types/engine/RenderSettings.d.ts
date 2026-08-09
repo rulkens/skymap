@@ -62,7 +62,7 @@ export type RenderSettings = {
   /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field it used to share a target with — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
   /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `HiiTierSpec`'s own doc for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
-  readonly hiiDivisor: number;
+  readonly extrasDivisor: number;
   /** Downsample divisor of the shells tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
   readonly shellsDivisor: number;
   /** Downsample divisor of the young-stars tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — same firefly reasoning as `shellsDivisor`: a young-stars association is small and bright, not a candidate for the field's coarser compromise. Also reallocates rather than riding the uniform. */
@@ -73,7 +73,7 @@ export type RenderSettings = {
    * boundRadius multiple (an HII component's own truncation-sphere sigma
    * scale, `splat.wesl`'s `g1.w`) where a component the eye is approaching
    * starts fading toward nothing instead of shading its fullscreen-fallback
-   * quad at full cost — the perf lever this window trades against `hiiDivisor`/
+   * quad at full cost — the perf lever this window trades against `extrasDivisor`/
    * `digDivisor` above: those cut resolution everywhere, this instead removes
    * whole components' fragment cost near the camera at the price of an
    * unresolved wash where they used to be. Must exceed `hiiNearFadeEnd`, or

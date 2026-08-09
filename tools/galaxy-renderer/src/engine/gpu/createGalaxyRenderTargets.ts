@@ -101,7 +101,7 @@ export function createGalaxyRenderTargets(
   let dustMapTex: GPUTexture;
   /**
    * The HII tier's own target, sized to ITS OWN divisor,
-   * `reducedSize(render.hiiDivisor)` — defaults to the canvas itself (1), not
+   * `reducedSize(render.extrasDivisor)` — defaults to the canvas itself (1), not
    * `fieldTex`'s coarser one. A shell sprite is small and bright by
    * construction: sharing the field's target once collapsed a whole sprite's
    * flux onto one texel and bloom promoted the spike into a firefly

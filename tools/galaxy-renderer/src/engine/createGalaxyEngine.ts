@@ -270,7 +270,7 @@ export async function createGalaxyEngine(
   // The `hii:extras` pass's own header, byte-identical layout to `fieldUbo`
   // (same `io.wesl` struct, drawn by `hiiExtrasPipe`) — see `model.hiiComps`
   // for why the tier gets its own buffers, its own target (`hiiTex`) and its
-  // own divisor (`render.hiiDivisor`) rather than a slice of the field's.
+  // own divisor (`render.extrasDivisor`) rather than a slice of the field's.
   const hiiUbo = own(
     device.createBuffer({
       label: 'galaxy:hiiUniforms',
@@ -971,7 +971,7 @@ export async function createGalaxyEngine(
     aggregate: render.aggregateDivisor,
     field: render.fieldDivisor,
     dust: render.dustDivisor,
-    hii: render.hiiDivisor,
+    hii: render.extrasDivisor,
     tiers: Object.fromEntries(
       HII_TIERS.map((tier) => [tier.kind, render[tier.divisorKey]]),
     ) as Record<HiiTierKind, number>,
@@ -1252,7 +1252,7 @@ export async function createGalaxyEngine(
       camera: fieldCamera,
       emissionCount: model.hiiComps.count,
       primaryCount: model.hiiComps.count,
-      targetSizePx: targets.reducedSize(render.hiiDivisor),
+      targetSizePx: targets.reducedSize(render.extrasDivisor),
       dust: {
         count: 0,
         extinctionRgb: model.dustHeaderLanes.extinctionRgb,
