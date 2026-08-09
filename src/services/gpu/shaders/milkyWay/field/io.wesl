@@ -30,7 +30,7 @@
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   offset 224 : dustCarve: vec4 (carve, sharpness, stretch, spare)
 //   offset 240 : youngStars: vec4 (contrastGamma, invMeanNorm, nearFadeStart, nearFadeEnd)
-//   offset 256 : perf: vec4 (quadCapNdc, spare, spare, spare)
+//   offset 256 : perf: vec4 (quadCapNdc, starGrainWarpAmp, spare, spare)
 //   total: 272 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
@@ -222,7 +222,15 @@
 // carries a real value (same "only the HII header" asymmetry as hiiTexture/
 // youngStars above); the field header packs 0, so its own draw AND
 // dustMap.wesl's (which binds only fieldUbo, never the HII header) stay
-// byte-identical to before this row existed. .yzw are spare.
+// byte-identical to before this row existed. .y, starGrainWarpAmp
+// (render.starGrainWarpAmp, world units, default 0.12), is starGrain.wesl's
+// own live calibration knob — the domain-warp displacement that keeps the
+// YOUNG STARS point-grain volume from visibly repeating every
+// STAR_GRAIN_TILE_UNITS; see that file's starGrainTerm for the shredding
+// ceiling (~1x tile) the user is expected to stay under. Same "only the HII
+// header" asymmetry as .x — the field header packs 0, harmless since its own
+// components never carry a nonzero textureWeight and starGrainTerm never
+// runs there. .zw are spare.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

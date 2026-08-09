@@ -31,9 +31,11 @@ const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
 // same constellation every STAR_GRAIN_TILE_UNITS. Non-integer multiple of
 // the tile so warp and grain periods never realign in lockstep.
 const STAR_GRAIN_WARP_SCALE: f32 = 2.24;
-// Warp displacement amplitude (world units): large enough to break the
-// repeat, small enough to stay under one tile (shredding starts ~1x).
-const STAR_GRAIN_WARP_AMP: f32 = 0.12;
+// Warp displacement amplitude — u.perf.y (render.starGrainWarpAmp, world
+// units, io.wesl's own doc): large enough to break the repeat, small enough
+// to stay under one tile (shredding starts ~1x). Live, not const, since an
+// A/B against warp-off (which brought the tile repeat straight back) showed
+// warp has to stay on, but the amplitude itself is a look call.
 
 // The firefly-fix gate below tracks the baked POINT's visible extent, not
 // the tile: starGrainBake.wesl's points sit at sigma POINT_SIGMA_CELLS=0.28
@@ -93,7 +95,7 @@ fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
   }
 
   let warpN = textureSampleLevel(dustNoiseTex, dustNoiseSmp, p / STAR_GRAIN_WARP_SCALE, 0.0).xyz;
-  let pWarped = p + STAR_GRAIN_WARP_AMP * (warpN - vec3<f32>(0.5));
+  let pWarped = p + u.perf.y * (warpN - vec3<f32>(0.5));
 
   if (octave0Weight > 0.0) {
     term = term * mix(1.0, starGrainOctave(pWarped, tileUnits0, contrast, vec3<f32>(0.0)), octave0Weight);

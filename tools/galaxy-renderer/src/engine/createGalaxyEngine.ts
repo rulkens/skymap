@@ -1286,6 +1286,10 @@ export async function createGalaxyEngine(
       // header below inherits it via its `{...hiiHeaderInput}` spread rather
       // than a second explicit line.
       starGrainFeatureScale: render.starGrainFeatureScale,
+      // starGrain.wesl's own domain-warp amplitude (io.wesl's perf.y doc) —
+      // same "only the HII header carries a real value" asymmetry as
+      // starGrainFeatureScale just above.
+      starGrainWarpAmp: render.starGrainWarpAmp,
       // Screen-space quad cap (#71, io.wesl's perf.x doc) — same "only the
       // HII header carries a real value" asymmetry as starGrainFeatureScale
       // just above, inherited by every HII_TIERS header below through the

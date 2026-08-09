@@ -719,6 +719,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               hiiNearFadeStart: render.hiiNearFadeStart,
               hiiNearFadeEnd: render.hiiNearFadeEnd,
               starGrainFeatureScale: render.starGrainFeatureScale,
+              starGrainWarpAmp: render.starGrainWarpAmp,
               hiiQuadCap: render.hiiQuadCap,
             },
           }}
@@ -843,6 +844,17 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ starGrainFeatureScale: v }))}
             path="render.starGrainFeatureScale"
             info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size splat.wesl's per-octave band-limit fades against, not the bare sigma. The user's own calibration of the grain look, not a derived constant."
+          />
+          <ParamSlider
+            label="Grain warp amount"
+            value={render.starGrainWarpAmp}
+            min={0}
+            max={0.5}
+            step={0.01}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(renderPatched({ starGrainWarpAmp: v }))}
+            path="render.starGrainWarpAmp"
+            info="Domain-warp displacement (world units) applied to the star-grain lookup before all three octaves — fixes the grain visibly repeating its own tile. Too large and the warp starts shredding the grain apart instead of just breaking the repeat; that begins around 1x the tile width."
           />
           <ParamSlider
             label="HII quad cap"

@@ -81,4 +81,12 @@ export type FieldHeaderInput = {
    * stay byte-identical to before this lane existed.
    */
   readonly quadCapNdc?: number;
+  /**
+   * `render.starGrainWarpAmp` — packs to `io.wesl`'s `perf.y` lane,
+   * `starGrain.wesl`'s domain-warp displacement amplitude (world units) that
+   * keeps the YOUNG STARS point-grain volume from visibly repeating its
+   * tile. Absent packs 0, the same "only the HII header carries a real
+   * value" asymmetry as `starGrainFeatureScale` above.
+   */
+  readonly starGrainWarpAmp?: number;
 };

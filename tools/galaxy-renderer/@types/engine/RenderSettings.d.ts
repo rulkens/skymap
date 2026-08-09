@@ -97,6 +97,17 @@ export type RenderSettings = {
    */
   readonly starGrainFeatureScale: number;
   /**
+   * Domain-warp displacement amplitude (world units) `starGrain.wesl`
+   * applies to the YOUNG STARS point-grain lookup before all three octave
+   * taps — fixes a long chain visibly repeating the same constellation
+   * every tile (`STAR_GRAIN_TILE_UNITS` = 0.64 world units there). An A/B
+   * with the warp off brought the repeat straight back, so it stays on; this
+   * is the amplitude's own live calibration. Too large and the warp itself
+   * starts shredding the grain apart — that begins around 1x the tile
+   * width. Defaults to 0.12 (`defaultRenderSettings.ts`).
+   */
+  readonly starGrainWarpAmp: number;
+  /**
    * Ceiling on an HII component's own projected quad half-extent, in NDC
    * units (#71) — `splatSilhouette.wesl`'s `splatNdc` clamps to it only when
    * this header carries a nonzero value (the HII tiers alone). A close-

@@ -255,11 +255,13 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[62] = youngStars.nearFadeStart ?? 0;
   out[63] = youngStars.nearFadeEnd ?? 0;
 
-  // perf 64..67 = (quadCapNdc, spare, spare, spare). Only the HII header
-  // ever passes a real value (`FieldHeaderInput`'s own doc) — absent packs
-  // 0, `splatSilhouette.wesl`'s own "cap disabled" guard value.
+  // perf 64..67 = (quadCapNdc, starGrainWarpAmp, spare, spare). Both .x/.y
+  // follow the same "only the HII header ever passes a real value" idiom
+  // (`FieldHeaderInput`'s own doc) — absent packs 0, each lane's own
+  // consumer guard value (`splatSilhouette.wesl`'s cap disabled, `starGrain.
+  // wesl`'s zero-amplitude no-op).
   out[64] = input.quadCapNdc ?? 0;
-  out[65] = 0;
+  out[65] = input.starGrainWarpAmp ?? 0;
   out[66] = 0;
   out[67] = 0;
 

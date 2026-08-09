@@ -117,6 +117,11 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Eyeballed against the reference gallery — the point's visible extent
   // that used to be a hardcoded 4x its sigma, now the user's own calibration.
   starGrainFeatureScale: 8,
+  // Large enough to break the grain's tile repeat, small enough to stay
+  // under one tile before the warp itself starts shredding it apart
+  // (starGrain.wesl's own doc) — the A/B that confirmed warp-off brings the
+  // repeat back is what pins this on rather than at 0.
+  starGrainWarpAmp: 0.12,
   // 0 = off = byte-identical boot (io.wesl's perf.x, #71): the cap is a live
   // calibration lever, only baked to a nonzero value once the user settles
   // on one against the reference gallery.
