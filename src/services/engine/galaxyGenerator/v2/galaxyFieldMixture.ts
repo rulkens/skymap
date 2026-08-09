@@ -384,18 +384,21 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     },
     youngStars: {
       enabled: true,
-      // 1 = neutral: the tier's total flux is YOUNG_FLUX_REF exactly, same
-      // "1 is the calibrated default" role every other tier's own gain plays.
-      brightness: 1,
-      // 1 = armCrossSigma exactly, the arm ridge's own measured width.
-      width: 1,
+      // Visual calibration 2026-08-09 against the M74/NGC 1961 references —
+      // NOT the "1 is calibrated" idiom the other tiers' gains follow:
+      // YOUNG_FLUX_REF's eyeballed anchor runs ~15x dim, and folding this
+      // into the constant would silently re-scale every stored preset's own
+      // brightness. Re-anchor both together or neither.
+      brightness: 14.6,
+      // Slightly past armCrossSigma, the arm ridge's own measured width.
+      width: 1.2,
       // Mostly stars-map-clumped rather than a smooth ribbon — the tracer's
       // whole point is to break the old uniform-splat look.
-      mapDepth: 0.8,
-      contrast: 1,
-      texture: 0.6,
+      mapDepth: 0.72,
+      contrast: 0.9,
+      texture: 0.95,
       // ~M74-reference outer-arm dominance (GalaxyYoungStarsTuning's own doc).
-      edgeBias: 1.5,
+      edgeBias: 1.15,
     },
   },
   ismMap: DEFAULT_GALAXY_ISM_MAP_PARAMS,
