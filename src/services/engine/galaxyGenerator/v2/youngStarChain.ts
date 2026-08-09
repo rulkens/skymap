@@ -99,13 +99,20 @@ export function buildYoungStarChain(
     sampleArmRidgeNodes(nodeCounts[i]!, geometry, record),
   );
 
-  // Un-normalized per-node weight (spacing * mod, the arm's own intensity
-  // law) summed across every record first, so each node's SHARE of the
+  const edgeBias = young.edgeBias ?? 1.5;
+
+  // Un-normalized per-node weight (spacing * mod * radius^edgeBias, the
+  // arm's own intensity law biased toward outer reaches) computed once per
+  // node and summed across every record first, so each node's SHARE of the
   // tier's total flux is independent of how many records happened to
-  // contribute nodes.
+  // contribute nodes. No reference radius needed — normalization below
+  // cancels any overall scale factor `radius^edgeBias` introduces.
+  const weightsByRecord = perRecordNodes.map((nodes) =>
+    nodes.map((node) => node.spacing * node.mod * Math.pow(node.radius, edgeBias)),
+  );
   let weightSum = 0;
-  for (const nodes of perRecordNodes) {
-    for (const node of nodes) weightSum += node.spacing * node.mod;
+  for (const weights of weightsByRecord) {
+    for (const weight of weights) weightSum += weight;
   }
   if (!(weightSum > 0)) return [];
 
@@ -116,9 +123,12 @@ export function buildYoungStarChain(
   const starsWeight = young.mapDepth ?? 0.8;
 
   const out: GalaxyFieldComponent[] = [];
-  for (const nodes of perRecordNodes) {
-    for (const node of nodes) {
-      const weight = node.spacing * node.mod;
+  for (let recordIndex = 0; recordIndex < perRecordNodes.length; recordIndex++) {
+    const nodes = perRecordNodes[recordIndex]!;
+    const weights = weightsByRecord[recordIndex]!;
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]!;
+      const weight = weights[i]!;
       if (weight <= 0) continue;
       const flux = (weight / weightSum) * totalFlux;
       const sigmaAlong = node.spacing * OVERLAP;

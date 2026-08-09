@@ -394,6 +394,8 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       mapDepth: 0.8,
       contrast: 1,
       texture: 0.6,
+      // ~M74-reference outer-arm dominance (GalaxyYoungStarsTuning's own doc).
+      edgeBias: 1.5,
     },
   },
   ismMap: DEFAULT_GALAXY_ISM_MAP_PARAMS,

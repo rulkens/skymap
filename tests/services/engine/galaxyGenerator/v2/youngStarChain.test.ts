@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { buildYoungStarChain } from '../../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
+import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
@@ -26,6 +27,7 @@ function tuningWith(overrides: {
   readonly enabled?: boolean;
   readonly brightness?: number;
   readonly width?: number;
+  readonly edgeBias?: number;
 }): GalaxyFieldTuning {
   return {
     ...DEFAULT_GALAXY_FIELD_TUNING,
@@ -43,9 +45,38 @@ function tuningWith(overrides: {
         enabled: overrides.enabled ?? true,
         brightness: overrides.brightness ?? 1,
         width: overrides.width ?? 1,
+        edgeBias: overrides.edgeBias ?? DEFAULT_GALAXY_FIELD_TUNING.hii.youngStars.edgeBias,
       },
     },
   };
+}
+
+/**
+ * A Gaussian's 3D integral from a component's packed INVERSE covariance —
+ * same recovery `galaxyFieldFluxLedger.test.ts`'s own `componentFlux` uses.
+ */
+function componentFlux(component: GalaxyFieldComponent): number {
+  const [xx, yy, zz] = component.invCovDiagonal;
+  const [xy, xz, yz] = component.invCovOffDiagonal;
+  const det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
+  return det > 0 ? (component.amplitude * (2 * Math.PI) ** 1.5) / Math.sqrt(det) : 0;
+}
+
+function totalFlux(components: readonly GalaxyFieldComponent[]): number {
+  return components.reduce((sum, component) => sum + componentFlux(component), 0);
+}
+
+/** In-plane radius from `center`'s [x, y, z], `y` the pole axis — hiiRegions.test.ts's own convention. */
+function fluxWeightedMeanRadius(components: readonly GalaxyFieldComponent[]): number {
+  let fluxSum = 0;
+  let weightedRadiusSum = 0;
+  for (const component of components) {
+    const flux = componentFlux(component);
+    const [x, , z] = component.center;
+    fluxSum += flux;
+    weightedRadiusSum += flux * Math.hypot(x, z);
+  }
+  return weightedRadiusSum / fluxSum;
 }
 
 describe('buildYoungStarChain', () => {
@@ -89,6 +120,15 @@ describe('buildYoungStarChain', () => {
     const withSpurs = buildYoungStarChain(geometry, tuningWith({ spursEnabled: true }), 7);
     expect(withoutSpurs.length).toBeGreaterThan(0);
     expect(withSpurs.length).toBeGreaterThan(withoutSpurs.length);
+  });
+
+  it('edge bias redistributes flux outward, leaving total flux unchanged', () => {
+    const flat = buildYoungStarChain(geometry, tuningWith({ edgeBias: 0 }), 7);
+    const biased = buildYoungStarChain(geometry, tuningWith({ edgeBias: 3 }), 7);
+    expect(flat.length).toBeGreaterThan(0);
+    expect(biased.length).toBe(flat.length);
+    expect(totalFlux(biased) / totalFlux(flat)).toBeCloseTo(1, 5);
+    expect(fluxWeightedMeanRadius(biased)).toBeGreaterThan(fluxWeightedMeanRadius(flat));
   });
 
   it('returns nothing when disabled or brightness is zero', () => {

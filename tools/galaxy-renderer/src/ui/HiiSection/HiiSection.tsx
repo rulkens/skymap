@@ -336,6 +336,17 @@ function HiiSection(): ReactNode {
             info="Chain ribbon's across-arm sigma, as a fraction of the arm ridge's own measured width law. 1 is that law exactly."
           />
           <ParamSlider
+            label="Edge bias"
+            value={hii.youngStars.edgeBias}
+            min={0}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => patchYoungStars({ edgeBias: v })}
+            path="fieldTuning.hii.youngStars.edgeBias"
+            info="Pushes the tier's fixed total flux outward along the arms. 0 = flat (surface brightness falls ~1/r outward), ~2 = outer arms dominate (the M74-reference look)."
+          />
+          <ParamSlider
             label="Clumping"
             value={hii.youngStars.mapDepth}
             min={0}

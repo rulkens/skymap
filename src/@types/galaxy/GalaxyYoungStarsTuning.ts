@@ -20,4 +20,12 @@ export type GalaxyYoungStarsTuning = {
   readonly contrast: number;
   /** Star-grain noise weight, same convention every other HII group's own `texture` knob uses. */
   readonly texture: number;
+  /**
+   * Per-node weight gains a factor `radius^edgeBias`; weights renormalize to
+   * the tier's fixed total flux, so this REDISTRIBUTES flux radially rather
+   * than adding any. 0 = flat (surface brightness falls ~1/r, since
+   * `armCrossSigma` grows with radius), ~1 = constant ribbon surface
+   * brightness, ~2 = outer arms dominate (the M74-reference look).
+   */
+  readonly edgeBias: number;
 };
