@@ -9,7 +9,9 @@
 # symlinks that make them appear inside this root:
 #
 #   src/engine/shaders/milkyWay/sprites -> src/services/gpu/shaders/milkyWay/sprites
-#   src/engine/shaders/milkyWay/field   -> .../shaders/milkyWay/field
+#   src/engine/shaders/milkyWay/field/  real dir: per-file symlinks for the
+#                                       flat .wesl leaves + dir symlinks for
+#                                       fieldSplat/ and hiiSplat/ (see below)
 #   src/engine/shaders/milkyWay/ismMap   -> .../shaders/milkyWay/ismMap
 #   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
 #   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom
@@ -22,11 +24,16 @@
 #   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
 #   src/engine/shaders/lib/splatSilhouette.wesl  -> .../lib/splatSilhouette.wesl
 #
-# milkyWay/ is a REAL directory here holding three leaf symlinks, not one
-# symlink to the runtime's milkyWay/. The include glob below descends INTO a
+# milkyWay/ is a REAL directory here holding leaf symlinks, not one symlink
+# to the runtime's milkyWay/. The include glob below descends INTO a
 # symlinked directory but not into a real subdirectory of one, so a single
 # parent symlink makes package::milkyWay::field::io unresolvable — 'module not
-# found', at link time, in the tool's build only. Symlink the leaves.
+# found', at link time, in the tool's build only. Symlink the leaves. The
+# same rule forced field/ itself to become a real dir the day it grew
+# fieldSplat/ and hiiSplat/ subfolders (#78's splat split): behind the old
+# field dir-symlink those were real-subdirs-of-a-symlink and their modules
+# vanished from the root. A NEW flat field/*.wesl now needs its own leaf
+# symlink here, like lib/'s per-file links; a new SUBFOLDER needs a dir link.
 #
 # Each leaf is shared as a WHOLE DIRECTORY rather than file by file, because a
 # tier's passes share one io.wesl: sprites/stars.wesl and sprites/dust.wesl

@@ -1,8 +1,11 @@
 /**
- * encodeSplatPass — one additive Gaussian-mixture splat (`splat.wesl`: one
- * instanced quad per component) into its own reduced-resolution target. The
- * smooth field, `hiiTex`'s `hii:extras` draw and every `HII_TIERS` tier are
- * the same encoding, differing only in label, timing slot, target, bind
+ * encodeSplatPass — one additive Gaussian-mixture splat (one instanced quad
+ * per component — `fieldSplat/`'s field variant or `hiiSplat/`'s HII
+ * variants, #78's split of the former shared `splat.wesl`) into its own
+ * reduced-resolution target. The smooth field, `hiiTex`'s `hii:extras` draw
+ * and every `HII_TIERS` tier are the same encoding, differing in label,
+ * timing slot, target, PIPELINE (field/young/erosion/extras each draw
+ * through their own — see `createGalaxyEngine.ts`'s pipeline comment), bind
  * group and instance range.
  *
  * `firstInstance` is what lets a tier draw its own contiguous span of the
@@ -32,7 +35,7 @@ export function encodeSplatPass({
   readonly label: string;
   readonly timestampWrites?: GPURenderPassTimestampWrites;
   readonly targetView: GPUTextureView;
-  /** Every caller passes the same pipeline, but a `layout: 'auto'` bind group only satisfies the pipeline it was derived from, so the pair has to travel together. */
+  /** A `layout: 'auto'` bind group only satisfies the pipeline it was derived from, so the caller must pass its OWN pipeline/bindGroup pair — field, `hii:young`, `hii:shells`/`hii:dig` and `hii:extras` each draw through a different one. */
   readonly pipeline: GPURenderPipeline;
   /** Reassigned whenever its storage buffer regrows, so it must be read fresh at the call site. */
   readonly bindGroup: GPUBindGroup;
