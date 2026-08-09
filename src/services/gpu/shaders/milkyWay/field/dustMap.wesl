@@ -20,6 +20,7 @@
 
 import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
+import package::lib::splatSilhouette::SPLAT_CUT;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::lib::gaussianIntegral::expHalfErfc;
 import package::lib::gaussianIntegral::GAUSS_PI;
@@ -213,6 +214,19 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
 
   let dc = gaussianRayCoeffs(po, d, dg0.xyz, dg1.xyz);
   let a = dc.x;
+
+  // dc.z (the ray's closest-approach squared Mahalanobis distance) past
+  // SPLAT_CUT^2 means this fragment sits on a fullscreen-fallback quad
+  // (splatSilhouette.wesl) the ray never actually grazes this component's
+  // support — same cut splat.wesl's fs applies to its own hoisted coeffs,
+  // for the same reason: the slice contribution below is already under the
+  // vertex-side quad's own truncation. a < 1e-12 leaves dc.z at
+  // gaussianRayCoeffs' null-space 0.0, which never trips this, so it falls
+  // through to the null-space guard right below unchanged.
+  if (dc.z > SPLAT_CUT * SPLAT_CUT) {
+    return vec4<f32>(0.0);
+  }
+
   // a < 1e-12: ray in this component's covariance null space — additive
   // blend means "contribute nothing" is the correct default, not a fallback
   // path (there's no other estimate to fall back to for one instance).
