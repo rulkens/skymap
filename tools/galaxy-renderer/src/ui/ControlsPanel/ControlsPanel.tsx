@@ -714,6 +714,8 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               dustDivisor: render.dustDivisor,
               hiiDivisor: render.hiiDivisor,
               digDivisor: render.digDivisor,
+              hiiNearFadeStart: render.hiiNearFadeStart,
+              hiiNearFadeEnd: render.hiiNearFadeEnd,
             },
           }}
         >
@@ -782,6 +784,28 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ digDivisor: Math.round(v) }))}
             path="render.digDivisor"
             info="The diffuse ionized gas veil's own divisor, split off the HII tier's target: DIG is the biggest, softest quads in the tier and the worst overdraw contributor at close zoom, but it is also low-frequency, so it tolerates a much coarser target than shells/young stars do — the opposite trade from HII target divisor above."
+          />
+          <ParamSlider
+            label="Near fade start"
+            value={render.hiiNearFadeStart}
+            min={0}
+            max={24}
+            step={0.1}
+            format={(v) => v.toFixed(1)}
+            onChange={(v) => dispatch(renderPatched({ hiiNearFadeStart: v }))}
+            path="render.hiiNearFadeStart"
+            info="boundRadius multiple where a component the eye is approaching starts fading, instead of shading its fullscreen-fallback quad at full cost. A different perf lever from the divisors above: it removes whole components' fragment cost near the camera rather than cutting resolution everywhere."
+          />
+          <ParamSlider
+            label="Near fade end"
+            value={render.hiiNearFadeEnd}
+            min={0}
+            max={16}
+            step={0.1}
+            format={(v) => v.toFixed(1)}
+            onChange={(v) => dispatch(renderPatched({ hiiNearFadeEnd: v }))}
+            path="render.hiiNearFadeEnd"
+            info="boundRadius multiple where the component has fully collapsed — the physical read past this point is an unresolved wash. End >= start disables the fade. Reach is end times each component's own bound radius, so the big DIG blobs react first."
           />
         </CollapsibleSection>
 

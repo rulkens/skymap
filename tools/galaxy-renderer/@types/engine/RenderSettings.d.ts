@@ -65,6 +65,24 @@ export type RenderSettings = {
   readonly hiiDivisor: number;
   /** Downsample divisor of the DIG (diffuse ionized gas) veil's own offscreen, split off `hiiDivisor`'s target — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
   readonly digDivisor: number;
+  /**
+   * boundRadius multiple (an HII component's own truncation-sphere sigma
+   * scale, `splat.wesl`'s `g1.w`) where a component the eye is approaching
+   * starts fading toward nothing instead of shading its fullscreen-fallback
+   * quad at full cost — the perf lever this window trades against `hiiDivisor`/
+   * `digDivisor` above: those cut resolution everywhere, this instead removes
+   * whole components' fragment cost near the camera at the price of an
+   * unresolved wash where they used to be. Must exceed `hiiNearFadeEnd`, or
+   * the fade disables (`splat.wesl`'s own guard). Defaults to `SPLAT_CUT`
+   * (4.5) — see `defaultRenderSettings.ts`.
+   */
+  readonly hiiNearFadeStart: number;
+  /**
+   * boundRadius multiple where the component has fully collapsed — closer in
+   * than `hiiNearFadeStart`, so it is gone before the fallback regime
+   * dominates the frame. See `hiiNearFadeStart`.
+   */
+  readonly hiiNearFadeEnd: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
   readonly spriteField: boolean;

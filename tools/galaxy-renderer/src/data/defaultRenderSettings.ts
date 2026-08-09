@@ -98,6 +98,14 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // softest quads in the tier, and low-frequency, so a coarse target costs no
   // visible detail while cutting fragment work by roughly the square of this.
   digDivisor: 4,
+  // 4.5 mirrors splatSilhouette.wesl's own SPLAT_CUT — the fade starts
+  // exactly where the eye enters a component's truncation sphere, so there
+  // is no dead band where the fallback quad is already live but still full
+  // brightness. 1.5 is gone well before the fallback regime dominates the
+  // frame — the perf/pop trade this window makes: cheaper close-in frames at
+  // the cost of an unresolved wash where the component used to be.
+  hiiNearFadeStart: 4.5,
+  hiiNearFadeEnd: 1.5,
   // The legacy star bag OFF at boot: it is scheduled for deletion
   // (`docs/research/milky-way/goal-and-history.md`), so the analytic field
   // alone is now the subject rather than one side of a comparison — and an

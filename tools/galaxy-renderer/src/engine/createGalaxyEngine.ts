@@ -1198,8 +1198,16 @@ export async function createGalaxyEngine(
       hiiTexture: model.hiiTexture,
       // §5's stars-map read — same "only this header" asymmetry as
       // `hiiTexture` just above (a young-stars chain component only ever
-      // exists in `model.hiiComps`).
-      youngStars: model.youngStars,
+      // exists in `model.hiiComps`). `nearFadeStart`/`nearFadeEnd` ride the
+      // same row (io.wesl's youngStars doc) but come from `render`, not
+      // `model` — a live perf knob, not per-galaxy tuning — so they're added
+      // here rather than inside `model.youngStars`'s own getter.
+      youngStars: {
+        contrastGamma: model.youngStars.contrastGamma,
+        invMeanNorm: model.youngStars.invMeanNorm,
+        nearFadeStart: render.hiiNearFadeStart,
+        nearFadeEnd: render.hiiNearFadeEnd,
+      },
       debugViews,
       galaxyWeight,
       ismMapChannels,
@@ -1395,14 +1403,14 @@ export async function createGalaxyEngine(
       // timing split — DIG was never more than one row on the HUD, so there
       // is nothing here for the split to separate. `timing.descriptorFor`
       // marks the slot consumed as a side effect (see `beginClearPass`'s own
-      // doc), so calling it unconditionally is what makes the `'dig'` row
+      // doc), so calling it unconditionally is what makes the `'hii:dig'` row
       // vanish from the HUD on the frames this pass doesn't run, exactly like
       // every other always-called slot in this file.
       if (drawDig) {
         encodeSplatPass({
           enc,
           label: 'galaxy:digPass',
-          timestampWrites: timing.descriptorFor('dig'),
+          timestampWrites: timing.descriptorFor('hii:dig'),
           targetView: targets.digTex.createView(),
           pipeline: splatPipe,
           bindGroup: digBG,

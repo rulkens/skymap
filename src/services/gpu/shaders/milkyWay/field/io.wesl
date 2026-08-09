@@ -29,7 +29,7 @@
 //   offset 192 : bubbleView: vec4 (intensity, ismMapSeedingWeight, ismMapSeedingCap, ismMapSeedingGlobalMean)
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   offset 224 : dustCarve: vec4 (carve, sharpness, stretch, spare)
-//   offset 240 : youngStars: vec4 (contrastGamma, invMeanNorm, spare, spare)
+//   offset 240 : youngStars: vec4 (contrastGamma, invMeanNorm, nearFadeStart, nearFadeEnd)
 //   total: 256 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
@@ -190,18 +190,25 @@
 // azimuthal direction (dustMap.wesl's stretchNoiseCoord) — stage 1 of wisp
 // anisotropy; 1 is isotropic (identity). .w is spare.
 //
-// youngStars (offset 240) is §5's shader-side read of the ISM map's `stars`
-// tracer for the YOUNG STARS chain tier — splat.wesl's fs, inside its
-// existing star-grain branch, multiplies a chain component's own term by a
-// shaped sample of comps[4i+3].w (starsWeight, see the comps doc below).
-// contrastGamma (.x) is tuning.hii.youngStars.contrast, the exponent shaping
-// that read; invMeanNorm (.y) is packFieldUniforms.ts's CPU-computed
-// 1/(texel-area-weighted mean of pow(stars, contrastGamma)) — restructuring
-// the read via gamma would otherwise drain or inflate the tier's calibrated
-// total flux, so this renormalises it back to mean 1 (Q3's mean-1 contract).
-// .zw spare. Only the HII header carries real values (mirroring
-// hiiTexture's own doc below) — the primary field draw's own components
-// never carry a nonzero starsWeight.
+// youngStars (offset 240) is the HII header's shading/misc row: §5's
+// shader-side read of the ISM map's `stars` tracer for the YOUNG STARS chain
+// tier PLUS the tier-global near-camera fade window, which applies to every
+// HII group (shells/DIG/associations alike), not just young stars — the row
+// just had the free lanes. splat.wesl's fs, inside its existing star-grain
+// branch, multiplies a chain component's own term by a shaped sample of
+// comps[4i+3].w (starsWeight, see the comps doc below). contrastGamma (.x) is
+// tuning.hii.youngStars.contrast, the exponent shaping that read; invMeanNorm
+// (.y) is packFieldUniforms.ts's CPU-computed 1/(texel-area-weighted mean of
+// pow(stars, contrastGamma)) — restructuring the read via gamma would
+// otherwise drain or inflate the tier's calibrated total flux, so this
+// renormalises it back to mean 1 (Q3's mean-1 contract). nearFadeStart/
+// nearFadeEnd (.zw) are render.hiiNearFadeStart/hiiNearFadeEnd, boundRadius
+// multiples of splat.wesl's near-camera fade (see its own header) — <= 0
+// disables the fade there. Only the HII header carries real values
+// (mirroring hiiTexture's own doc below) — the primary field draw's own
+// components never carry a nonzero starsWeight, and its header packs this
+// row's fade lanes 0 too (dead weight behind the vs/fs's own dustDetail.y
+// gate, but zero is also the fade's own "off" value).
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

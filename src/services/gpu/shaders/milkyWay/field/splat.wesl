@@ -203,17 +203,17 @@ struct SplatOut {
 // Near-camera fade window, HII-pass-only (see the vs's dustDetail.y gate
 // below) — a component the eye has flown inside fades to nothing rather
 // than shading its fullscreen-fallback quad (splatSilhouette.wesl's
-// SPLAT_CUT) at full cost. START is a hand-mirrored copy of SPLAT_CUT (kept
-// a literal, not a reference, per this project's TS<->WESL constant-parity
-// convention — cross-module const folding is untested in this linker):
-// fading begins exactly where the eye enters the component's own
-// truncation sphere, so there is no dead band where the fallback quad is
-// already live but still full brightness. END is closer in than START —
-// gone before the fallback regime dominates the frame; the physical read
-// is an unresolved wash, a deliberate trade approved for perf (see
-// splat.wesl's header / the dust-seeding-spike cost analysis).
-const SPLAT_NEAR_FADE_START: f32 = 4.5; // == SPLAT_CUT, splatSilhouette.wesl
-const SPLAT_NEAR_FADE_END: f32 = 1.5;
+// SPLAT_CUT) at full cost. u.youngStars.z/.w (io.wesl's own doc), live-tunable
+// as render.hiiNearFadeStart/hiiNearFadeEnd: START defaults to SPLAT_CUT
+// (4.5) so fading begins exactly where the eye enters the component's own
+// truncation sphere, with no dead band where the fallback quad is already
+// live but still full brightness; END defaults closer in than START — gone
+// before the fallback regime dominates the frame, the physical read an
+// unresolved wash, a deliberate trade approved for perf (see splat.wesl's
+// header / the dust-seeding-spike cost analysis). GUARD: start <= end or
+// start <= 0 disables the fade (fade stays 1) — defense in depth alongside
+// the dustDetail.y gate below, since it also makes the field pass's zeroed
+// youngStars lanes safe on their own, regardless of that discriminant.
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> SplatOut {
@@ -245,8 +245,10 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
   // components have a boundRadius the eye is ALWAYS inside at any
   // interesting pose — fading there would black the galaxy, so the gate
   // is mandatory, not an optimisation.
-  if (u.dustDetail.y > 0.0) {
-    let fade = smoothstep(SPLAT_NEAR_FADE_END * r, SPLAT_NEAR_FADE_START * r, length(rel));
+  let fadeStart = u.youngStars.z;
+  let fadeEnd = u.youngStars.w;
+  if (u.dustDetail.y > 0.0 && fadeStart > fadeEnd && fadeStart > 0.0) {
+    let fade = smoothstep(fadeEnd * r, fadeStart * r, length(rel));
     if (fade <= 0.0) {
       // Same degenerate off-clip-volume corner splatSilhouette.wesl's own
       // fully-behind-camera branch collapses to: zero fragments, not a
@@ -453,16 +455,18 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   }
   emission = emission * texMod;
 
-  // Near-camera fade (see the vs's SPLAT_NEAR_FADE_START/END consts),
-  // recomputed rather than carried down as a varying: 'po' and 'g1' are
+  // Near-camera fade (see the vs's u.youngStars.zw read above this pass's
+  // header), recomputed rather than carried down as a varying: 'po' and 'g1' are
   // already read up here for the ray math above, so length(po)/g1.w
   // reproduce the vs's distance/boundRadius with no new interpolant — the
   // vs's own gate already collapsed the fade <= 0 case to zero fragments,
   // so only the 0..1 band ever reaches this multiply.
   var fade = 1.0;
-  if (u.dustDetail.y > 0.0) {
+  let fadeStart = u.youngStars.z;
+  let fadeEnd = u.youngStars.w;
+  if (u.dustDetail.y > 0.0 && fadeStart > fadeEnd && fadeStart > 0.0) {
     let r = g1.w;
-    fade = smoothstep(SPLAT_NEAR_FADE_END * r, SPLAT_NEAR_FADE_START * r, length(po));
+    fade = smoothstep(fadeEnd * r, fadeStart * r, length(po));
   }
 
   // Alpha 0: the aggregate's alpha channel feeds nothing — the additive

@@ -75,7 +75,12 @@ const input: FieldHeaderInput = {
   },
   hiiTexture: { scale: 25000, contrast: 25001 },
   ismMapSeeding: { weight: 27000, cap: 27001, globalMean: 27002 },
-  youngStars: { contrastGamma: 29000, invMeanNorm: 29001 },
+  youngStars: {
+    contrastGamma: 29000,
+    invMeanNorm: 29001,
+    nearFadeStart: 29002,
+    nearFadeEnd: 29003,
+  },
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -142,9 +147,12 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     expect(observed(28000)).toBe(at('dustCarve'));
     expect(observed(28001)).toBe(at('dustCarve') + 4);
     expect(observed(28002)).toBe(at('dustCarve') + 8);
-    // youngStars (§5) — contrastGamma/invMeanNorm, .zw spare.
+    // youngStars (§5) — contrastGamma/invMeanNorm, then the near-fade
+    // window's start/end (render.hiiNearFadeStart/hiiNearFadeEnd).
     expect(observed(29000)).toBe(at('youngStars'));
     expect(observed(29001)).toBe(at('youngStars') + 4);
+    expect(observed(29002)).toBe(at('youngStars') + 8);
+    expect(observed(29003)).toBe(at('youngStars') + 12);
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {
@@ -190,9 +198,11 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // too, so INERT_ISM_MAP_SEEDING lands here (its own doc: cap 0 is
     // "uncapped", the SAME neutral value as everything else in this vec4).
     expect(four(at('bubbleView'))).toEqual([21003, 0, 0, 0]);
-    // `youngStars` omitted too — NO_YOUNG_STARS's (1, 1), not (0, 0): a
-    // stray nonzero `starsWeight` reaching this lane would otherwise pow()
-    // toward a black hole rather than a no-op.
+    // `youngStars` omitted too — NO_YOUNG_STARS's (1, 1, 0, 0): contrastGamma/
+    // invMeanNorm are (1, 1), not (0, 0), since a stray nonzero `starsWeight`
+    // reaching those lanes would otherwise pow() toward a black hole rather
+    // than a no-op; nearFadeStart/nearFadeEnd are 0, splat.wesl's own
+    // fade-disabled value.
     expect(four(at('youngStars'))).toEqual([1, 1, 0, 0]);
   });
 });

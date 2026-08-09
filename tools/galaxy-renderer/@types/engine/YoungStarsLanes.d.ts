@@ -11,4 +11,15 @@ export type YoungStarsLanes = {
   readonly contrastGamma: number;
   /** `1 / (texel-area-weighted mean of pow(stars, contrastGamma))` — renormalises the shaped read back to mean 1 so the contrast knob restructures without draining the tier's calibrated flux. */
   readonly invMeanNorm: number;
+  /**
+   * `render.hiiNearFadeStart` — boundRadius multiple where a component the
+   * eye is approaching starts fading (`splat.wesl`'s vs/fs). Optional, not
+   * grouped with `contrastGamma`/`invMeanNorm` above: it rides `render`, not
+   * `fieldTuning`, so `createGalaxyEngine.ts` fills it in at the HII header
+   * call site rather than this row's other two lanes' own getter. Absent (or
+   * <= `nearFadeEnd`) packs 0, which the shader guard reads as "no fade."
+   */
+  readonly nearFadeStart?: number;
+  /** `render.hiiNearFadeEnd` — boundRadius multiple where the component has fully collapsed. See `nearFadeStart`. */
+  readonly nearFadeEnd?: number;
 };

@@ -47,8 +47,9 @@ export const TIMING_SLOTS: readonly string[] = [
   // fifth per-tier row: DIG always draws as one pass regardless of whether
   // the HUD split is active, so this slot is consumed unconditionally
   // whenever the tier has any DIG content (see `drawFrame`), unlike
-  // `'hii:shells'`/`'hii:young'`/`'hii:extras'` above.
-  'dig',
+  // `'hii:shells'`/`'hii:young'`/`'hii:extras'` above. Named like them
+  // anyway — slot name matches the model's segment label (`hii:dig`).
+  'hii:dig',
   // The full-res HDR pass: the aggregate's additive upsample, the field's and
   // the HII tier's, the dust billboards, and each live diagnostic overlay —
   // all summed additively rather than any one replacing the others. They share

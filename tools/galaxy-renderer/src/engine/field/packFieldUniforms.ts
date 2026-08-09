@@ -83,8 +83,22 @@ const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 /** "This pass has no seeding overlay" — the HII header packs this; only the field header (ismMapPresent.wesl's own bind group) ever passes real lanes. `cap: 0` matches `dustPlacementCap`'s own "0 = uncapped" default. */
 const INERT_ISM_MAP_SEEDING: IsmMapSeedingLanes = { weight: 0, cap: 0, globalMean: 0 };
 
-/** "This pass draws no young-stars chain" — neutral (not zero), since splat.wesl's `pow`/multiply would otherwise turn a stray nonzero `starsWeight` into a black hole rather than a no-op; only the HII header ever passes real lanes (`model.youngStars`). */
-const NO_YOUNG_STARS: YoungStarsLanes = { contrastGamma: 1, invMeanNorm: 1 };
+/**
+ * "This pass draws no young-stars chain" — `contrastGamma`/`invMeanNorm` are
+ * neutral (not zero), since splat.wesl's `pow`/multiply would otherwise turn
+ * a stray nonzero `starsWeight` into a black hole rather than a no-op; only
+ * the HII header ever passes real lanes (`model.youngStars`).
+ * `nearFadeStart`/`nearFadeEnd` are 0/0 instead — the field draw's own gate
+ * (`u.dustDetail.y > 0.0`) already keeps this pass's fade branch closed, but
+ * 0 is also splat.wesl's own "fade disabled" guard value, so a stray read
+ * degrades to no-op rather than a bogus window.
+ */
+const NO_YOUNG_STARS: YoungStarsLanes = {
+  contrastGamma: 1,
+  invMeanNorm: 1,
+  nearFadeStart: 0,
+  nearFadeEnd: 0,
+};
 
 /**
  * packFieldHeaderUniforms — one 240-byte `FieldUniforms` header, every lane
@@ -231,15 +245,16 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[58] = dust.carve.stretch;
   out[59] = 0;
 
-  // youngStars 60..63 = (contrastGamma, invMeanNorm, spare, spare). Only the
-  // HII header ever passes real values (`youngStars`'s own doc) — the field
-  // header's `NO_YOUNG_STARS` default is neutral, not 0, since splat.wesl's
-  // fs only ever reaches this lane behind `g3.w > 0.0`, a gate the field
-  // draw's own components never open.
+  // youngStars 60..63 = (contrastGamma, invMeanNorm, nearFadeStart,
+  // nearFadeEnd). Only the HII header ever passes real values (`youngStars`'s
+  // own doc) — the field header's `NO_YOUNG_STARS` default is neutral (1, 1)
+  // for the first two lanes, since splat.wesl's fs only ever reaches them
+  // behind `g3.w > 0.0`, a gate the field draw's own components never open;
+  // the fade lanes default to 0 (`?? 0`), splat.wesl's own "disabled" value.
   out[60] = youngStars.contrastGamma;
   out[61] = youngStars.invMeanNorm;
-  out[62] = 0;
-  out[63] = 0;
+  out[62] = youngStars.nearFadeStart ?? 0;
+  out[63] = youngStars.nearFadeEnd ?? 0;
 
   return out;
 }
