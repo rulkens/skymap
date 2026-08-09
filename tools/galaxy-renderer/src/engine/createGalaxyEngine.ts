@@ -37,6 +37,7 @@ import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadou
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
+import type { HiiTierKind } from '../../@types/engine/HiiTierKind';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
@@ -59,7 +60,7 @@ import { encodeDustPresentPass } from './field/encodeDustPresentPass';
 import { encodePresentOverlay } from './passes/encodePresentOverlay';
 import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './field/encodeSplatPass';
-import { hiiTexSegments } from './field/hiiTexSegments';
+import { findHiiSegment } from './field/findHiiSegment';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
@@ -91,6 +92,7 @@ import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
+import { HII_TIERS } from '../data/hiiTiers';
 
 import starWgsl from './shaders/milkyWay/sprites/stars.wesl?static';
 import dustWgsl from './shaders/milkyWay/sprites/dust.wesl?static';
@@ -252,10 +254,10 @@ export async function createGalaxyEngine(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }),
   );
-  // The HII tier's own header, byte-identical layout to `fieldUbo` (same
-  // `io.wesl` struct, same `splatPipe`) — see `model.hiiComps` for why the tier
-  // gets its own buffers, its own target (`hiiTex`) and its own divisor
-  // (`render.hiiDivisor`) rather than a slice of the field's.
+  // The `hii:extras` pass's own header, byte-identical layout to `fieldUbo`
+  // (same `io.wesl` struct, same `splatPipe`) — see `model.hiiComps` for why
+  // the tier gets its own buffers, its own target (`hiiTex`) and its own
+  // divisor (`render.hiiDivisor`) rather than a slice of the field's.
   const hiiUbo = own(
     device.createBuffer({
       label: 'galaxy:hiiUniforms',
@@ -263,21 +265,27 @@ export async function createGalaxyEngine(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }),
   );
-  // The DIG (diffuse ionized gas) veil's own header, same layout and same
-  // `hiiComps` storage binding as `hiiUbo` — the two headers differ only in
-  // `targetSizePx` (its own `digTex`, own divisor). A separate buffer for the
-  // same reason `hiiUbo` is separate from `fieldUbo`: two passes writing one
+  // The three generalized HII sub-tiers' own headers (`HII_TIERS`), same
+  // layout and same `hiiComps` storage binding as `hiiUbo` — every tier's
+  // header differs from `hiiUbo`'s only in `targetSizePx` (its own tier
+  // target, own divisor). Separate buffers, one per tier, for the same
+  // reason `hiiUbo` is separate from `fieldUbo`: two passes writing one
   // frame both land before either pass runs, so sharing would hand whichever
-  // pass writes last its `targetSizePx` to BOTH — and that lane feeds
+  // pass writes last its `targetSizePx` to every tier — and that lane feeds
   // `counts2.w`, which the shader's footprint gates read directly, so a wrong
   // one there is a silently wrong LOD/splat footprint, not a crash.
-  const digUbo = own(
-    device.createBuffer({
-      label: 'galaxy:digUniforms',
-      size: FIELD_HEADER_BUFFER_SIZE,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }),
-  );
+  const tierUbo: Record<HiiTierKind, GPUBuffer> = Object.fromEntries(
+    HII_TIERS.map((tier) => [
+      tier.kind,
+      own(
+        device.createBuffer({
+          label: `galaxy:hiiTierUniforms:${tier.kind}`,
+          size: FIELD_HEADER_BUFFER_SIZE,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        }),
+      ),
+    ]),
+  ) as Record<HiiTierKind, GPUBuffer>;
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
   const gradeBuf = own(
@@ -668,10 +676,7 @@ export async function createGalaxyEngine(
       splatBG = buildSplatBindGroup();
       dustMapBG = buildDustMapBindGroup();
     },
-    onHiiCompsRegrow: () => {
-      hiiBG = buildHiiBindGroup();
-      digBG = buildDigBindGroup();
-    },
+    onHiiCompsRegrow: rebuildTierBindGroups,
     onStats: opts.onStats,
     onOrientationDiagnostics: opts.onOrientationDiagnostics,
   });
@@ -799,29 +804,33 @@ export async function createGalaxyEngine(
       ],
     });
   }
-  // The HII pass reuses `splatPipe` itself (same shader, same emission math)
-  // against its own header/storage buffers and its own target.
+  // Every HII-buffer pass (the `hii:extras` draw into `hiiTex` AND each of
+  // the three generalized sub-tiers) reuses `splatPipe` itself (same shader,
+  // same emission math) against its own header and a shared storage buffer,
+  // differing ONLY in which uniform buffer binding 0 names — the DIG veil's
+  // bind group used to be a hand-duplicated copy of the HII one; this is the
+  // one function both now go through instead of a third/fourth copy.
   // `dustMapTex`/`dustMapSampler` are bound because splat.wesl's fs samples
-  // them for this pass too now: `packFieldHeaderUniforms`'s `primaryCount` is
-  // packed to this pass's OWN instance count for this header (see
-  // `drawFrame`), so `instanceIndex < primaryCount` is true for every HII
-  // sprite and the dust-attenuation branch fires across the whole tier — the
-  // same dust law the primary disc reads, so a shell embedded in a lane
-  // darkens with it. Bindings 4/5 (dustNoiseTex/dustNoiseSampler) ARE bound
-  // and DO get sampled here — this header's own `dustDetail.y`/`.z` carry
-  // the real tier-global texture scale/contrast (`model.hiiTexture`), unlike
-  // `splatBG`'s. Same for 3/7/8 (§5 grid uniform/clamp sampler/cartesian
-  // bake texture, see `buildSplatBindGroup`'s own comment): this is the pass
-  // that actually samples them, since a young-stars chain component
-  // (nonzero `starsWeight`) only ever exists in `model.hiiComps`. Still no 9
-  // — gone from every render pipeline (see `buildSplatBindGroup`'s comment).
-  let hiiBG: GPUBindGroup;
-  function buildHiiBindGroup(): GPUBindGroup {
+  // them for these passes too: `packFieldHeaderUniforms`'s `primaryCount` is
+  // packed to the WHOLE tier's instance count for every one of these headers
+  // (see `drawFrame`), so `instanceIndex < primaryCount` is true for every
+  // HII sprite regardless of which sub-range a given pass draws, and the
+  // dust-attenuation branch fires across the whole tier — the same dust law
+  // the primary disc reads, so a shell embedded in a lane darkens with it.
+  // Bindings 4/5 (dustNoiseTex/dustNoiseSampler) ARE bound and DO get sampled
+  // here — each header's own `dustDetail.y`/`.z` carry the real tier-global
+  // texture scale/contrast (`model.hiiTexture`), unlike `splatBG`'s. Same for
+  // 3/7/8 (§5 grid uniform/clamp sampler/cartesian bake texture, see
+  // `buildSplatBindGroup`'s own comment): these are the passes that actually
+  // sample them, since a young-stars chain component (nonzero `starsWeight`)
+  // only ever exists in `model.hiiComps`. Still no 9 — gone from every render
+  // pipeline (see `buildSplatBindGroup`'s comment).
+  function buildTierBindGroup(ubo: GPUBuffer, label: string): GPUBindGroup {
     return device.createBindGroup({
-      label: 'galaxy:hiiBG',
+      label,
       layout: splatPipe.getBindGroupLayout(0),
       entries: [
-        { binding: 0, resource: { buffer: hiiUbo } },
+        { binding: 0, resource: { buffer: ubo } },
         { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
@@ -831,40 +840,28 @@ export async function createGalaxyEngine(
         { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },
         // Bindings 10/11: starGrainTex/starGrainSampler — see
-        // `buildSplatBindGroup`'s own comment; this is the pass that
-        // actually samples them (a negative-textureWeight association
+        // `buildSplatBindGroup`'s own comment; these are the passes that
+        // actually sample them (a negative-textureWeight association
         // component only exists in `model.hiiComps`).
         { binding: 10, resource: starGrainTex.createView() },
         { binding: 11, resource: starGrainSampler },
       ],
     });
   }
-
-  // The DIG veil's own pass — byte-identical bind group to `hiiBG` (same
-  // `splatPipe`, same `model.hiiComps.buffer`: DIG is a sub-range of the SAME
-  // storage array, sliced out by `firstInstance`/`instanceCount` at draw time,
-  // not a separate buffer), differing only in which uniform buffer binding 0
-  // names (`digUbo`, its own `targetSizePx`). Rebuilt everywhere `hiiBG` is —
-  // both read `model.hiiComps.buffer` and `targets.dustMapTex`.
-  let digBG: GPUBindGroup;
-  function buildDigBindGroup(): GPUBindGroup {
-    return device.createBindGroup({
-      label: 'galaxy:digBG',
-      layout: splatPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: digUbo } },
-        { binding: 1, resource: { buffer: model.hiiComps.buffer } },
-        { binding: 2, resource: targets.dustMapTex.createView() },
-        { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: dustMapSampler },
-        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
-        { binding: 4, resource: dustNoiseTex.createView() },
-        { binding: 5, resource: dustNoiseSampler },
-        { binding: 6, resource: dustMapSampler },
-        { binding: 10, resource: starGrainTex.createView() },
-        { binding: 11, resource: starGrainSampler },
-      ],
-    });
+  let hiiBG: GPUBindGroup;
+  let tierBG: Record<HiiTierKind, GPUBindGroup>;
+  // Rebuilds `hiiBG` (the `hii:extras` pass) and every `HII_TIERS` row's own
+  // bind group — everywhere ONE of them needs rebuilding (a `hiiComps` regrow,
+  // a `dustMapTex` recreation), every one of them does: all read the SAME
+  // `model.hiiComps.buffer`/`targets.dustMapTex`.
+  function rebuildTierBindGroups(): void {
+    hiiBG = buildTierBindGroup(hiiUbo, 'galaxy:hiiBG');
+    tierBG = Object.fromEntries(
+      HII_TIERS.map((tier) => [
+        tier.kind,
+        buildTierBindGroup(tierUbo[tier.kind], `galaxy:hiiBG:${tier.kind}`),
+      ]),
+    ) as Record<HiiTierKind, GPUBindGroup>;
   }
 
   /**
@@ -878,15 +875,14 @@ export async function createGalaxyEngine(
 
   /**
    * Everything downstream of a `dustMapTex` recreation (every resize, every
-   * `dustDivisor` move): the four bind groups holding a view of it, plus the
+   * `dustDivisor` move): every bind group holding a view of it, plus the
    * stale-map latch — a fresh texture is zero-initialised, so the latch resets
-   * with it. Also the FIRST build of those four, which is why `targets` must
+   * with it. Also the FIRST build of those groups, which is why `targets` must
    * fire this once during `rebuildAll`.
    */
   function rebuildDustMapDependents(): void {
     splatBG = buildSplatBindGroup();
-    hiiBG = buildHiiBindGroup();
-    digBG = buildDigBindGroup();
+    rebuildTierBindGroups();
     dustPresentBG = buildDustPresentBindGroup();
     dustMapPopulated = false;
   }
@@ -909,24 +905,31 @@ export async function createGalaxyEngine(
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
 
   // The targets module never reads the render bag, so both of its entry points
-  // are handed all five divisors at once.
+  // are handed every divisor at once — `tiers` built off `HII_TIERS`' own
+  // `divisorKey` rather than three hand-written lines, so a fourth tier row
+  // is the only edit a fourth divisor needs here.
   const allDivisors = (): TargetDivisors => ({
     aggregate: render.aggregateDivisor,
     field: render.fieldDivisor,
     dust: render.dustDivisor,
     hii: render.hiiDivisor,
-    dig: render.digDivisor,
+    tiers: Object.fromEntries(
+      HII_TIERS.map((tier) => [tier.kind, render[tier.divisorKey]]),
+    ) as Record<HiiTierKind, number>,
   });
 
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.
   // One scratch serves both cloud passes: each pack writes every lane before
   // its `writeBuffer`, so nothing of the star pass's fill survives into the
   // dust pass's. (The BUFFERS still have to be separate — see
-  // `makeCloudUniformBuffer`.)
+  // `makeCloudUniformBuffer`.) `tierData` is the SAME idiom serving all three
+  // `HII_TIERS` headers in their own frame loop below, not one scratch per
+  // tier — the pack-then-writeBuffer pair per iteration is what makes reuse
+  // safe.
   const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
   const fieldData = new Float32Array(FIELD_HEADER_FLOATS);
   const hiiData = new Float32Array(FIELD_HEADER_FLOATS);
-  const digData = new Float32Array(FIELD_HEADER_FLOATS);
+  const tierData = new Float32Array(FIELD_HEADER_FLOATS);
   const gradeData = new Float32Array(GRADE_UNIFORM_FLOATS);
 
   // Every knob here reaches the next frame through the uniform pack, so a merge
@@ -1218,25 +1221,34 @@ export async function createGalaxyEngine(
         nearFadeStart: render.hiiNearFadeStart,
         nearFadeEnd: render.hiiNearFadeEnd,
       },
+      // `starGrainTerm`'s own live calibration knob (io.wesl's dustDetail.w
+      // doc) — same "only the HII header carries a real value" asymmetry as
+      // `youngStars`/`hiiTexture` above, and same reason every `HII_TIERS`
+      // header below inherits it via its `{...hiiHeaderInput}` spread rather
+      // than a second explicit line.
+      starGrainFeatureScale: render.starGrainFeatureScale,
       debugViews,
       galaxyWeight,
       ismMapChannels,
     };
     packFieldHeaderUniforms(hiiHeaderInput, hiiData);
     device.queue.writeBuffer(hiiUbo, 0, hiiData);
-    // The DIG veil's own header — every lane identical to the HII one above
-    // (same `model.hiiComps.buffer`, same whole-tier `primaryCount`, so the
-    // dust-attenuation gate is correct for whichever sub-range this pass
-    // draws) EXCEPT `targetSizePx`: DIG has its OWN reduced target at its OWN
-    // divisor, and that lane is what `counts2.w` feeds the shader's footprint
-    // gates and dustMapTex UV reconstruction with (see `FieldHeaderInput`'s
-    // own doc) — reusing `hiiHeaderInput.targetSizePx` here would silently
-    // hand DIG's splat the HII target's resolution instead of its own.
-    packFieldHeaderUniforms(
-      { ...hiiHeaderInput, targetSizePx: targets.reducedSize(render.digDivisor) },
-      digData,
-    );
-    device.queue.writeBuffer(digUbo, 0, digData);
+    // Every `HII_TIERS` row's own header — every lane identical to the
+    // `hii:extras` one above (same `model.hiiComps.buffer`, same whole-tier
+    // `primaryCount`, so the dust-attenuation gate is correct for whichever
+    // sub-range a given pass draws) EXCEPT `targetSizePx`: each tier has its
+    // OWN reduced target at its OWN divisor, and that lane is what
+    // `counts2.w` feeds the shader's footprint gates and dustMapTex UV
+    // reconstruction with (see `FieldHeaderInput`'s own doc) — reusing
+    // `hiiHeaderInput.targetSizePx` here would silently hand every tier's
+    // splat the extras target's resolution instead of its own.
+    for (const tier of HII_TIERS) {
+      packFieldHeaderUniforms(
+        { ...hiiHeaderInput, targetSizePx: targets.reducedSize(render[tier.divisorKey]) },
+        tierData,
+      );
+      device.queue.writeBuffer(tierUbo[tier.kind], 0, tierData);
+    }
     // The post chain's uniforms are written by the shared factories at draw
     // time (bloom thresholds/texel sizes, compositor exposure + curve), so
     // there is nothing else to pack here.
@@ -1283,16 +1295,19 @@ export async function createGalaxyEngine(
     // into compositing a target this frame never cleared, which sums the
     // previous frame's content into HDR with nothing to catch it.
     const analytic = render.analyticField;
-    // DIG (diffuse ionized gas) draws into its OWN target now (see `digTex`'s
-    // declaration comment), so `drawHii` can no longer be "the whole tier is
-    // nonempty" — a galaxy with DIG content but no shells/young/extras would
-    // enter the hiiTex branch below, draw nothing into it (every segment
-    // filtered or empty), and still composite a target this frame never
-    // cleared. Two independent counts, two independent gates.
-    const digSegment = model.hiiSegments.find((s) => s.label === 'hii:dig');
-    const digCount = digSegment?.count ?? 0;
-    const drawHii = model.hiiComps.count - digCount > 0;
-    const drawDig = digCount > 0;
+    // Each `HII_TIERS` row's own span in `model.hiiSegments`, plus
+    // `hii:extras`' — read once, here, so the pass that fills a tier's target
+    // and the scene composite that reads it can't drift into compositing one
+    // this frame never cleared, which sums the previous frame's content into
+    // HDR with nothing to catch it. Independent per tier, unlike the old
+    // single `drawHii` flag this replaces: a galaxy with DIG content but no
+    // shells/young/extras must still skip the OTHER three targets' composite
+    // push, which one shared flag could not tell apart.
+    const tierSegments = HII_TIERS.map((tier) => ({
+      tier,
+      segment: findHiiSegment(model.hiiSegments, tier.label),
+    }));
+    const extrasSegment = findHiiSegment(model.hiiSegments, 'hii:extras');
     const drawDustView = debugViews.dust > 0;
     if (analytic) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
@@ -1350,82 +1365,48 @@ export async function createGalaxyEngine(
         instanceCount: model.fieldCounts.emission,
       });
 
-      // The HII tier's own pass — see `hiiTex`'s declaration comment for why
-      // it shares neither the field's bind group nor its target. DIG no
-      // longer draws here at all (see `digTex`'s declaration comment) —
-      // `hiiTexSegments` is the ONE filter both branches below apply, so
-      // shells/young/extras can't drift apart between them.
-      // Gated only on a nonempty (non-DIG) HII tier now — the old
-      // `!render.dustView` half of this existed because the field pass used
-      // to skip entirely under the JWST view, leaving `hiiTex` stale; the
-      // field pass no longer skips, so that concern is gone.
-      if (drawHii) {
-        // Per-tier sub-passes ONLY while the timing HUD is live (`timing.enabled`
-        // is the service's own active/disabled gate — see `createGpuTimingService`
-        // — not a flag this file invents). Off that path this stays exactly
-        // ONE pass with one draw per remaining segment: reopening `hiiTex`
-        // per tier costs a tile store+reload on TBDR hardware (a pass's END
-        // flushes the tile, the next pass's BEGIN reloads it), which the
-        // normal render path shouldn't pay for numbers nobody reads. Reading
-        // the split rows: their sum can exceed the merged `'hii'` row's own
-        // past values on Apple Silicon — per-pass timestamp overhead inflates
-        // each short sub-pass more than it inflated one long one (see
-        // `tools/perf/README.md`'s slot-sum note) — so compare tiers to EACH
-        // OTHER, not the split sum to the old merged number.
-        if (timing.enabled) {
-          let loadOp: GPULoadOp = 'clear';
-          for (const segment of hiiTexSegments(model.hiiSegments)) {
-            encodeSplatPass({
-              enc,
-              label: `galaxy:hiiPass:${segment.label}`,
-              timestampWrites: timing.descriptorFor(segment.label),
-              targetView: targets.hiiTex.createView(),
-              pipeline: splatPipe,
-              bindGroup: hiiBG,
-              instanceCount: segment.count,
-              firstInstance: segment.first,
-              loadOp,
-            });
-            loadOp = 'load';
-          }
-        } else {
-          // Multiple draws, ONE pass: shells and young sit either side of the
-          // DIG range this tier no longer includes, so "the rest of the tier"
-          // is not a single contiguous `firstInstance..count` any more.
-          const pass = beginClearPass(
-            enc,
-            'galaxy:hiiPass',
-            targets.hiiTex.createView(),
-            timing.descriptorFor('hii'),
-            0,
-          );
-          pass.setPipeline(splatPipe);
-          pass.setBindGroup(0, hiiBG);
-          for (const segment of hiiTexSegments(model.hiiSegments)) {
-            pass.draw(6, segment.count, 0, segment.first);
-          }
-          pass.end();
-        }
-      }
-      // The DIG veil's own pass, into its OWN target at its OWN divisor —
-      // see `digTex`'s declaration comment for why it earns a target rather
-      // than a coarser corner of `hiiTex`. Always ONE pass regardless of the
-      // timing split — DIG was never more than one row on the HUD, so there
-      // is nothing here for the split to separate. `timing.descriptorFor`
-      // marks the slot consumed as a side effect (see `beginClearPass`'s own
-      // doc), so calling it unconditionally is what makes the `'hii:dig'` row
-      // vanish from the HUD on the frames this pass doesn't run, exactly like
-      // every other always-called slot in this file.
-      if (drawDig) {
+      // Every `HII_TIERS` row's own pass, into its own target at its own
+      // divisor (`allocateTier`'s own doc) — DIG's split used to be the only
+      // tier with its own target; shells and young stars get the SAME
+      // treatment now instead of sharing `hiiTex`'s coarser one. One pass per
+      // tier WITH CONTENT, always into a freshly cleared target (a private
+      // target, so no tile-reload cost the way reopening one shared target
+      // per tier would cost on TBDR hardware), and its timing slot consumed
+      // the same way `'hii:dig'`'s always was: unconditionally with respect
+      // to `timing.enabled` — no more HUD-gated sub-pass split, because every
+      // tier already has its own target, so billing it separately is free on
+      // every frame now, not just while the HUD is live. Still conditional on
+      // content: `timing.descriptorFor` marks a slot consumed as a side
+      // effect (see `beginClearPass`'s own doc), so calling it only inside
+      // `if (segment)` is what makes a tier's HUD row vanish on the frames it
+      // draws nothing, exactly like every other conditional slot in this file.
+      for (const { tier, segment } of tierSegments) {
+        if (!segment) continue;
         encodeSplatPass({
           enc,
-          label: 'galaxy:digPass',
-          timestampWrites: timing.descriptorFor('hii:dig'),
-          targetView: targets.digTex.createView(),
+          label: `galaxy:hiiPass:${tier.kind}`,
+          timestampWrites: timing.descriptorFor(tier.label),
+          targetView: targets.tierTex(tier.kind).createView(),
           pipeline: splatPipe,
-          bindGroup: digBG,
-          instanceCount: digCount,
-          firstInstance: digSegment!.first,
+          bindGroup: tierBG[tier.kind],
+          instanceCount: segment.count,
+          firstInstance: segment.first,
+        });
+      }
+      // `hiiTex`'s own pass now draws ONLY background extras' HII
+      // contribution (`hii:extras` — see `HiiTierSpec`'s own doc for why
+      // extras can't split into their own shell/DIG/young tiers the way the
+      // central galaxy's do). Same unconditional-slot idiom as the loop above.
+      if (extrasSegment) {
+        encodeSplatPass({
+          enc,
+          label: 'galaxy:hiiPass:extras',
+          timestampWrites: timing.descriptorFor('hii:extras'),
+          targetView: targets.hiiTex.createView(),
+          pipeline: splatPipe,
+          bindGroup: hiiBG,
+          instanceCount: extrasSegment.count,
+          firstInstance: extrasSegment.first,
         });
       }
     }
@@ -1447,20 +1428,24 @@ export async function createGalaxyEngine(
       // Every representation here is additive into the SAME attachment, so the
       // crossfade is just which of them ran this frame, each already carrying
       // its own weight (splat.wesl's debugView.w, or a present shader's own
-      // debugView.x/.y/.z) — nothing picks one exclusively any more. The list
-      // order is the composite order: aggregate, analytic field, HII tier,
-      // DIG veil, JWST view. See `hiiTex`'s/`digTex`'s declaration comments
-      // for why they ride their own targets rather than joining the field's
-      // draw. Each push is gated on the SAME condition that gated its pass
-      // above (`drawHii`/`drawDig`), which is what keeps a target this frame
-      // never drew out of the composite — no separate staleness tracking
-      // needed, unlike `dustMapTex` (sampled by a consumer this file doesn't
-      // control the timing of; see `dustMapPopulated`).
+      // debugView.x/.y/.z) — nothing picks one exclusively any more, and
+      // summation order carries no meaning. The list order is the pass encode
+      // order: aggregate, analytic field, every `HII_TIERS` row with content,
+      // `hii:extras`, JWST view. See `allocateTier`'s/`hiiTex`'s declaration
+      // comments for why they ride their own targets rather than joining the
+      // field's draw. Each push is gated on the SAME segment lookup that
+      // gated its pass above (`tierSegments`/`extrasSegment`), which is what
+      // keeps a target this frame never drew out of the composite — no
+      // separate staleness tracking needed, unlike `dustMapTex` (sampled by a
+      // consumer this file doesn't control the timing of; see
+      // `dustMapPopulated`).
       const compositeViews = [targets.aggregateTex.createView()];
       if (analytic) {
         compositeViews.push(targets.fieldTex.createView());
-        if (drawHii) compositeViews.push(targets.hiiTex.createView());
-        if (drawDig) compositeViews.push(targets.digTex.createView());
+        for (const { tier, segment } of tierSegments) {
+          if (segment) compositeViews.push(targets.tierTex(tier.kind).createView());
+        }
+        if (extrasSegment) compositeViews.push(targets.hiiTex.createView());
         if (drawDustView) compositeViews.push(targets.dustViewTex.createView());
       }
       encodeSceneComposites(pass, aggregateUpsample, compositeViews);

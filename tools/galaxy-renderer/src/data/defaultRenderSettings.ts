@@ -87,14 +87,19 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // measurably too expensive there; the detail it buys is not worth it.
   dustDivisor: 5,
   // 1 = full canvas resolution, deliberately not coarsened like `fieldDivisor`
-  // or `dustDivisor`: an HII shell sprite is small and bright by
+  // or `dustDivisor`: `hiiTex` now carries only background extras' HII
+  // contribution, and an embedded shell is still small and bright by
   // construction, so ANY shared or downsampled target collapses it under a
   // texel and bloom promotes the spike into a firefly
   // (`docs/research/milky-way/hii-regions.md`).
   // The slider exists for the user to trade that away if they want to; the
   // default does not.
   hiiDivisor: 1,
-  // DIG is the opposite trade from hiiDivisor right above: the biggest,
+  // Same firefly reasoning as `hiiDivisor` above, now the central galaxy's
+  // own shells/young-stars tiers (`data/hiiTiers.ts`'s `HII_TIERS`).
+  shellsDivisor: 1,
+  youngDivisor: 1,
+  // DIG is the opposite trade from shells/young above: the biggest,
   // softest quads in the tier, and low-frequency, so a coarse target costs no
   // visible detail while cutting fragment work by roughly the square of this.
   digDivisor: 4,
@@ -106,6 +111,9 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // the cost of an unresolved wash where the component used to be.
   hiiNearFadeStart: 4.5,
   hiiNearFadeEnd: 1.5,
+  // Eyeballed against the reference gallery — the point's visible extent
+  // that used to be a hardcoded 4x its sigma, now the user's own calibration.
+  starGrainFeatureScale: 8,
   // The legacy star bag OFF at boot: it is scheduled for deletion
   // (`docs/research/milky-way/goal-and-history.md`), so the analytic field
   // alone is now the subject rather than one side of a comparison — and an

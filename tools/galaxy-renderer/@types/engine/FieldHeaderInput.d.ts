@@ -24,13 +24,14 @@ export type FieldHeaderInput = {
    */
   readonly primaryCount: number;
   /**
-   * The pixel size of THIS pass's own target (fieldTex for the field header,
-   * hiiTex for the HII one, digTex for the DIG one) — not the canvas, and not
-   * dustMapTex, which carries its own divisor. Feeds `counts2.w`, which
-   * splat.wesl's fs reads for its footprint gates AND turns a fragment
-   * position into a normalized dustMapTex UV with (io.wesl's DUST MAP doc) —
-   * so this must always be the pass's REAL resolution, never borrowed from a
-   * sibling pass sharing the same `comps` buffer.
+   * The pixel size of THIS pass's own target (`fieldTex` for the field
+   * header, `hiiTex` for the `hii:extras` one, each `HII_TIERS` tier's own
+   * texture for its own header) — not the canvas, and not dustMapTex, which
+   * carries its own divisor. Feeds `counts2.w`, which splat.wesl's fs reads
+   * for its footprint gates AND turns a fragment position into a normalized
+   * dustMapTex UV with (io.wesl's DUST MAP doc) — so this must always be the
+   * pass's REAL resolution, never borrowed from a sibling pass sharing the
+   * same `comps` buffer.
    */
   readonly targetSizePx: Vec2;
   /** Absent means the pass has no dust; the lanes are still written, inert. */
@@ -61,4 +62,14 @@ export type FieldHeaderInput = {
    * never carry a nonzero `starsWeight`.
    */
   readonly youngStars?: YoungStarsLanes;
+  /**
+   * `render.starGrainFeatureScale` — packs to `io.wesl`'s free `dustDetail.w`
+   * lane (that struct's own doc), the multiplier `splat.wesl`'s
+   * `starGrainTerm` applies to the baked star-grain point's fixed sigma to
+   * get its per-octave band-limit's feature size. Absent packs 0, the same
+   * "only the HII header carries a real value" asymmetry as `hiiTexture`/
+   * `youngStars` above — harmless, since a pass with no nonzero
+   * `textureWeight` component never reaches `starGrainTerm` either.
+   */
+  readonly starGrainFeatureScale?: number;
 };

@@ -61,9 +61,13 @@ export type RenderSettings = {
   readonly fieldDivisor: number;
   /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field it used to share a target with — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
-  /** Downsample divisor of the HII-region tier's own offscreen. Separate from `fieldDivisor` for the same reason `dustDivisor` is: a shell sprite is small and bright by construction, so sharing the smooth field's coarser target collapsed it under a texel and bloom promoted the spike into a firefly — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `HiiTierSpec`'s own doc for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
   readonly hiiDivisor: number;
-  /** Downsample divisor of the DIG (diffuse ionized gas) veil's own offscreen, split off `hiiDivisor`'s target — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the shells tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
+  readonly shellsDivisor: number;
+  /** Downsample divisor of the young-stars tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — same firefly reasoning as `shellsDivisor`: a young-stars association is small and bright, not a candidate for the field's coarser compromise. Also reallocates rather than riding the uniform. */
+  readonly youngDivisor: number;
+  /** Downsample divisor of the DIG (diffuse ionized gas) tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`, the original split `shellsDivisor`/`youngDivisor` generalize) — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
   readonly digDivisor: number;
   /**
    * boundRadius multiple (an HII component's own truncation-sphere sigma
@@ -83,6 +87,15 @@ export type RenderSettings = {
    * dominates the frame. See `hiiNearFadeStart`.
    */
   readonly hiiNearFadeEnd: number;
+  /**
+   * Multiplier on the baked star-grain point's fixed sigma (`splat.wesl`'s
+   * `STAR_GRAIN_POINT_SIGMA_FRAC`) that sets `starGrainTerm`'s per-octave
+   * band-limit feature size — the point's visible EXTENT, not its bare
+   * sigma (see that function's own header for why bare sigma fades the
+   * grain too early). The user's own calibration of the look, not a
+   * derived constant; defaults to 8 (`defaultRenderSettings.ts`).
+   */
+  readonly starGrainFeatureScale: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
   readonly spriteField: boolean;

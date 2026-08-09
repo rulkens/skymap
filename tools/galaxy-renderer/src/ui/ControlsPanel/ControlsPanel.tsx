@@ -713,9 +713,12 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               fieldDivisor: render.fieldDivisor,
               dustDivisor: render.dustDivisor,
               hiiDivisor: render.hiiDivisor,
+              shellsDivisor: render.shellsDivisor,
               digDivisor: render.digDivisor,
+              youngDivisor: render.youngDivisor,
               hiiNearFadeStart: render.hiiNearFadeStart,
               hiiNearFadeEnd: render.hiiNearFadeEnd,
+              starGrainFeatureScale: render.starGrainFeatureScale,
             },
           }}
         >
@@ -772,7 +775,18 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ hiiDivisor: Math.round(v) }))}
             path="render.hiiDivisor"
-            info="Its own divisor, separate from the field's: an HII shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
+            info="hiiTex's own divisor — now home to background extras' whole HII contribution alone. An embedded shell is still small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
+          />
+          <ParamSlider
+            label="Shells divisor"
+            value={render.shellsDivisor}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ shellsDivisor: Math.round(v) }))}
+            path="render.shellsDivisor"
+            info="The central galaxy's HII shells, split onto their own target/divisor — same firefly reasoning as HII target divisor above, now isolated so shells can be tuned without moving DIG or young stars."
           />
           <ParamSlider
             label="DIG divisor"
@@ -783,7 +797,18 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ digDivisor: Math.round(v) }))}
             path="render.digDivisor"
-            info="The diffuse ionized gas veil's own divisor, split off the HII tier's target: DIG is the biggest, softest quads in the tier and the worst overdraw contributor at close zoom, but it is also low-frequency, so it tolerates a much coarser target than shells/young stars do — the opposite trade from HII target divisor above."
+            info="The diffuse ionized gas veil's own divisor, split off the HII tier's target: DIG is the biggest, softest quads in the tier and the worst overdraw contributor at close zoom, but it is also low-frequency, so it tolerates a much coarser target than shells/young stars do — the opposite trade from Shells/Young divisor."
+          />
+          <ParamSlider
+            label="Young divisor"
+            value={render.youngDivisor}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ youngDivisor: Math.round(v) }))}
+            path="render.youngDivisor"
+            info="The central galaxy's young-stars chain, split onto its own target/divisor — same firefly reasoning as Shells divisor above: a young-stars association is small and bright, not a candidate for a coarser shared target."
           />
           <ParamSlider
             label="Near fade start"
@@ -806,6 +831,17 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ hiiNearFadeEnd: v }))}
             path="render.hiiNearFadeEnd"
             info="boundRadius multiple where the component has fully collapsed — the physical read past this point is an unresolved wash. End >= start disables the fade. Reach is end times each component's own bound radius, so the big DIG blobs react first."
+          />
+          <ParamSlider
+            label="Grain feature scale"
+            value={render.starGrainFeatureScale}
+            min={1}
+            max={16}
+            step={0.5}
+            format={(v) => v.toFixed(1)}
+            onChange={(v) => dispatch(renderPatched({ starGrainFeatureScale: v }))}
+            path="render.starGrainFeatureScale"
+            info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size splat.wesl's per-octave band-limit fades against, not the bare sigma. The user's own calibration of the grain look, not a derived constant."
           />
         </CollapsibleSection>
 

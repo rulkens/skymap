@@ -25,31 +25,30 @@ export const TIMING_SLOTS: readonly string[] = [
   // in a frame, and a presentation pass nobody bills separately from the field
   // it runs alongside does not earn a slot of its own.
   'field',
-  // The HII tier's own splat — the same `splatPipe`, a different bind group
-  // and target (`hiiTex`, `render.hiiDivisor`). See `hiiTex`'s declaration
-  // comment for why it cannot share `'field'`'s slot or target.
-  'hii',
-  // Per-tier HII rows, consumed INSTEAD of `'hii'` while the HUD is live:
-  // `drawFrame` then encodes one sub-pass per non-empty `model.hiiSegments`
-  // entry EXCEPT `hii:dig` (own timestamp pair per pass — see this file's own
-  // header) rather than the single merged draw `'hii'` bills off the timing
-  // path. Off the timing path `'hii'` alone still covers shells/young/extras,
-  // so these three never consume a slot there. `'hii:extras'` is every
-  // background extra's HII contribution lumped into one row — see
-  // `createGalaxyModel.ts`'s `repackHiiComponents` for why extras can't split
-  // further (their own shell/DIG/young spans interleave across extras, so
-  // per-extra labels would stop being HUD-short and stop being contiguous).
+  // Every `HII_TIERS` row's own splat — the same `splatPipe`, its own bind
+  // group and its own target/divisor (`data/hiiTiers.ts`'s `HII_TIERS`,
+  // `createGalaxyRenderTargets.ts`'s `allocateTier`). DIG was the first tier
+  // to earn this split (small, bright shells collapsing under `fieldTex`'s
+  // shared coarser texel and blooming into fireflies); shells and young stars
+  // get the identical treatment now via the same table rather than a
+  // hand-duplicated third/fourth copy. Each slot is consumed whenever
+  // `drawFrame` finds that tier's span in `model.hiiSegments` nonempty —
+  // there is no HUD-gated merged-vs-split toggle any more: the old merged
+  // `'hii'` slot is gone, since every tier already owns a private target and
+  // billing it separately now costs nothing extra on any frame.
   'hii:shells',
   'hii:young',
-  'hii:extras',
-  // The DIG (diffuse ionized gas) veil's OWN pass into its OWN target
-  // (`digTex`, `render.digDivisor`) — split off the HII tier entirely, not a
-  // fifth per-tier row: DIG always draws as one pass regardless of whether
-  // the HUD split is active, so this slot is consumed unconditionally
-  // whenever the tier has any DIG content (see `drawFrame`), unlike
-  // `'hii:shells'`/`'hii:young'`/`'hii:extras'` above. Named like them
-  // anyway — slot name matches the model's segment label (`hii:dig`).
   'hii:dig',
+  // `hiiTex`'s own pass, which now draws ONLY background extras' whole HII
+  // contribution lumped into one row — see `createGalaxyModel.ts`'s
+  // `repackHiiComponents` for why extras can't split into their own
+  // shell/DIG/young tiers the way the central galaxy's components do (their
+  // own spans interleave across extras, so per-extra labels would stop being
+  // HUD-short and stop being contiguous). Same unconditional-on-content
+  // billing as the three tiers above; there used to be a merged `'hii'` slot
+  // covering shells/young/extras together off the timing path — deleted once
+  // every tier had its own target made the merge pointless.
+  'hii:extras',
   // The full-res HDR pass: the aggregate's additive upsample, the field's and
   // the HII tier's, the dust billboards, and each live diagnostic overlay —
   // all summed additively rather than any one replacing the others. They share

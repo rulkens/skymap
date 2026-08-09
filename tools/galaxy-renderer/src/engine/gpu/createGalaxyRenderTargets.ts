@@ -7,20 +7,27 @@
  * tool-only grade trailer reads.
  *
  * Bind groups are not cached here — the shared pass factories rebuild theirs
- * per draw. The engine's four that bind `dustMapTex` can't; hence the callback.
+ * per draw. The engine's several that bind `dustMapTex` can't; hence the callback.
  */
+import type { HiiTierKind } from '../../../@types/engine/HiiTierKind';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
 import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';
+import { HII_TIERS } from '../../data/hiiTiers';
 import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSize';
 
-/** The four reduced targets' divisors, each its own live slider. */
+/**
+ * The reduced targets' divisors, each its own live slider — `tiers` is keyed
+ * by `HiiTierKind` (`data/hiiTiers.ts`'s `HII_TIERS`) rather than three more
+ * named fields, so a fourth tier is one table row, not a third field here
+ * plus a third `reallocateIfResized` call below.
+ */
 export type TargetDivisors = {
   readonly aggregate: number;
   readonly field: number;
   readonly dust: number;
   readonly hii: number;
-  readonly dig: number;
+  readonly tiers: Readonly<Record<HiiTierKind, number>>;
 };
 
 /**
@@ -35,7 +42,8 @@ type GalaxyRenderTargets = {
   readonly fieldTex: GPUTexture;
   readonly dustMapTex: GPUTexture;
   readonly hiiTex: GPUTexture;
-  readonly digTex: GPUTexture;
+  /** One of the three generalized HII sub-tiers' own targets — see `allocateTier`'s own doc. */
+  tierTex(kind: HiiTierKind): GPUTexture;
   readonly dustViewTex: GPUTexture;
   readonly bloomMips: readonly GPUTexture[];
   /** Pixel size of a target at `divisor` — also what the passes pack as `viewportPx`. */
@@ -104,16 +112,20 @@ export function createGalaxyRenderTargets(
    */
   let hiiTex: GPUTexture;
   /**
-   * The DIG (diffuse ionized gas) veil's own target, split off `hiiTex` —
-   * DIG is the biggest, softest quads in the tier (worst overdraw at close
-   * zoom) but also its lowest-frequency content, the opposite trade from the
-   * shell sprites `hiiTex` still carries: it tolerates ITS OWN coarser
-   * divisor (`reducedSize(render.digDivisor)`, default 4) with no visible
-   * loss, buying back roughly divisor² of fragment cost. Drawn by `splatPipe`
-   * again (`digBG`), composited into HDR through the same `aggregateUpsample`
-   * as every other reduced target.
+   * The three generalized HII sub-tiers' own targets (`data/hiiTiers.ts`'s
+   * `HII_TIERS`), split off `hiiTex` one at a time — DIG first (the biggest,
+   * softest quads in the tier, worst overdraw at close zoom but also the
+   * lowest-frequency content, so it tolerates its own much coarser divisor
+   * with no visible loss), shells and young stars for the SAME firefly reason
+   * `hiiTex` itself split off `fieldTex`: small, bright sprites collapse under
+   * a shared coarser texel and bloom promotes the spike into a firefly. A
+   * `Map` rather than three more `let`s — `allocateTier` is the one function
+   * a fourth tier would extend, not a fourth near-copy of `allocateHii`.
+   * Drawn by `splatPipe` again (one bind group per tier, see
+   * `createGalaxyEngine.ts`'s `buildTierBindGroup`), composited into HDR
+   * through the same `aggregateUpsample` as every other reduced target.
    */
-  let digTex: GPUTexture;
+  const tierTextures = new Map<HiiTierKind, GPUTexture>();
   /**
    * The JWST-view's own presentation target (dustPresent.wesl), divisor-
    * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
@@ -201,23 +213,26 @@ export function createGalaxyRenderTargets(
     });
   }
 
-  // Rebuilds no bind group, same reason `allocateHii` doesn't — `digBG`
-  // references `digUbo`/`hiiCompsBuf`/`dustMapTex`, none of which this
-  // touches; the render PASS binds `digTex` as its attachment view freshly
-  // every `drawFrame`.
-  function allocateDig(w: number, h: number): void {
-    if (digTex) digTex.destroy();
-    digTex = device.createTexture({
-      label: 'galaxy:digTex',
-      size: [w, h],
-      format: formats.hdr,
-      usage: RA_TB,
-    });
+  // Rebuilds no bind group, same reason `allocateHii` doesn't — the per-tier
+  // bind group references the per-tier UBO/`hiiCompsBuf`/`dustMapTex`, none
+  // of which this touches; the render PASS binds the tier's texture as its
+  // attachment view freshly every `drawFrame`.
+  function allocateTier(kind: HiiTierKind, w: number, h: number): void {
+    tierTextures.get(kind)?.destroy();
+    tierTextures.set(
+      kind,
+      device.createTexture({
+        label: `galaxy:hiiTierTex:${kind}`,
+        size: [w, h],
+        format: formats.hdr,
+        usage: RA_TB,
+      }),
+    );
   }
 
   /**
-   * The ONE allocation path for the five reduced targets, keyed on the pixel
-   * size already on the live texture rather than on a remembered divisor: the
+   * The ONE allocation path for the reduced targets, keyed on the pixel size
+   * already on the live texture rather than on a remembered divisor: the
    * texture is the authoritative record of what it was built at, so a divisor
    * drag and a canvas resize both reduce to the same question, and `rebuildAll`
    * delegates here. Two divisors that floor to the same size — or a resize that
@@ -243,7 +258,14 @@ export function createGalaxyRenderTargets(
     // divisor-matched contract exists to prevent.
     reallocateIfResized(dustMapTex, divisors.dust, allocateDust);
     reallocateIfResized(hiiTex, divisors.hii, allocateHii);
-    reallocateIfResized(digTex, divisors.dig, allocateDig);
+    // One call per row of `HII_TIERS` rather than one hand-written
+    // `reallocateIfResized` line per tier — a fourth tier is a table row, not
+    // a fourth line here.
+    for (const tier of HII_TIERS) {
+      reallocateIfResized(tierTextures.get(tier.kind), divisors.tiers[tier.kind], (w, h) =>
+        allocateTier(tier.kind, w, h),
+      );
+    }
   }
 
   function rebuildAll(divisors: TargetDivisors): void {
@@ -300,8 +322,11 @@ export function createGalaxyRenderTargets(
     get hiiTex(): GPUTexture {
       return hiiTex;
     },
-    get digTex(): GPUTexture {
-      return digTex;
+    tierTex(kind: HiiTierKind): GPUTexture {
+      // Non-null: `rebuildAll`'s unconditional first `setDivisors` allocates
+      // every row of `HII_TIERS` before any caller can reach this getter,
+      // same contract `aggregateTex`'s (unchecked) getter above relies on.
+      return tierTextures.get(kind)!;
     },
     get dustViewTex(): GPUTexture {
       return dustViewTex;
@@ -334,7 +359,7 @@ export function createGalaxyRenderTargets(
       if (fieldTex) fieldTex.destroy();
       if (dustMapTex) dustMapTex.destroy();
       if (hiiTex) hiiTex.destroy();
-      if (digTex) digTex.destroy();
+      for (const tex of tierTextures.values()) tex.destroy();
       if (dustViewTex) dustViewTex.destroy();
       for (const m of bloomMips) m.destroy();
     },

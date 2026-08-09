@@ -81,6 +81,7 @@ const input: FieldHeaderInput = {
     nearFadeStart: 29002,
     nearFadeEnd: 29003,
   },
+  starGrainFeatureScale: 26000,
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -138,11 +139,12 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     expect(observed(24000)).toBe(at('dustDetail'));
     // dustDetail.y/.z are the HII tier's own tier-global texture scale/
     // contrast, unrelated to S4's own strength lane at .x — they ride this
-    // vec4's two free lanes (io.wesl's dustDetail doc). .w is spare (freed
-    // when dustDetail.wesl's legacy/swept blend weight was deleted; briefly
-    // the seeding view's cap before that moved back into bubbleView.z).
+    // vec4's two free lanes (io.wesl's dustDetail doc). .w is
+    // starGrainFeatureScale (render.starGrainFeatureScale), splat.wesl's
+    // starGrainTerm calibration knob.
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);
+    expect(observed(26000)).toBe(at('dustDetail') + 12);
     // dustCarve (S5) — carve/sharpness/stretch, .w spare.
     expect(observed(28000)).toBe(at('dustCarve'));
     expect(observed(28001)).toBe(at('dustCarve') + 4);
@@ -172,6 +174,7 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
       hiiTexture: _omittedHiiTexture,
       ismMapSeeding: _omittedIsmMapSeeding,
       youngStars: _omittedYoungStars,
+      starGrainFeatureScale: _omittedStarGrainFeatureScale,
       ...noDust
     } = input;
     packFieldHeaderUniforms(noDust, dst);
@@ -187,7 +190,9 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // .x (S4 strength) is 0 like every other inert dust lane; .y (hiiTexture
     // scale) is 0 too, but .z (hiiTexture contrast) is 1, not 0 — same
     // "the neutral value, not zero" reasoning `dustNoise`'s tileUnits/
-    // contrastExp lanes use just above. .w is spare, always 0.
+    // contrastExp lanes use just above. .w (starGrainFeatureScale) is 0 too,
+    // omitted here alongside `youngStars` — the same pass, no nonzero
+    // textureWeight, that never reaches starGrainTerm to read it.
     expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
     // .x (carve) is the mandatory-identity 0; .y/.z (sharpness/stretch) are
     // INERT_DUST's own named identity values, not 0, since dustMap.wesl skips

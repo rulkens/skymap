@@ -223,19 +223,18 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[51] = ismMapSeeding.globalMean;
 
   // dustDetail 52..55 = (strength, hiiTextureScale, hiiTextureContrast,
-  // spare). .y/.z are unrelated to S4's own strength lane — they ride this
-  // vec4's two free lanes for the HII tier's tier-global texture modulation
-  // (io.wesl's dustDetail doc); NO_HII_TEXTURE's scale 0 is what lets
-  // splat.wesl's fs skip the noise sample on a uniform branch for every pass
-  // but the HII one. .w was dustDetail.wesl's legacy/swept blend weight,
-  // then briefly the seeding view's placement cap before that moved back
-  // into bubbleView.z (freed once the view's gamma lane was deleted) —
-  // spare again, still written every frame (packFieldHeaderUniforms's
-  // no-stale-lanes contract), just always 0.
+  // starGrainFeatureScale). .y/.z are unrelated to S4's own strength lane —
+  // they ride this vec4's two free lanes for the HII tier's tier-global
+  // texture modulation (io.wesl's dustDetail doc); NO_HII_TEXTURE's scale 0
+  // is what lets splat.wesl's fs skip the noise sample on a uniform branch
+  // for every pass but the HII one. .w is `starGrainFeatureScale` (io.wesl's
+  // own doc) — absent packs 0, harmless for the same reason NO_HII_TEXTURE's
+  // scale 0 is: a pass whose components never carry a nonzero textureWeight
+  // never reaches starGrainTerm.
   out[52] = dust.detail;
   out[53] = hiiTexture.scale;
   out[54] = hiiTexture.contrast;
-  out[55] = 0;
+  out[55] = input.starGrainFeatureScale ?? 0;
 
   // dustCarve 56..59 = (carve, sharpness, stretch, spare). S5 (io.wesl's own
   // doc) — carve <= 0 is dustMap.wesl's mandatory identity branch, so the

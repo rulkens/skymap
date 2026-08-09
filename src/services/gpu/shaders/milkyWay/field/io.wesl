@@ -169,13 +169,17 @@
 // lets the shader skip the noise sample entirely via a uniform branch — the
 // primary field pass packs 0 here always, since its own components never
 // carry a nonzero textureWeight, so the far larger disc/arms fragment count
-// never pays for a sample it would just multiply by zero. .w is SPARE —
-// freed when dustDetail.wesl's legacy/swept blend weight
-// (GalaxyDustTuning.sweptMix) was deleted, briefly used for the seeding
-// view's own cap before that moved back into bubbleView.z once the view's
-// tempering EXPONENT (gamma) was deleted outright — cap is the only
-// placement knob now, and bubbleView had room again. Still written every
-// frame (packFieldHeaderUniforms's no-stale-lanes contract), just always 0.
+// never pays for a sample it would just multiply by zero. .w is the SAME
+// free lane the seeding view's cap and dustDetail.wesl's legacy/swept blend
+// weight passed through before each moved on — now starGrainFeatureScale,
+// render.starGrainFeatureScale (default 8, live-tunable): splat.wesl's
+// starGrainTerm multiplies it by STAR_GRAIN_POINT_SIGMA_FRAC (the baked
+// point's fixed sigma-as-tile-fraction, splat.wesl's own const) to get the
+// per-octave band-limit's feature size — see that function's header for why
+// sigma alone is the wrong gate. Same "only the HII header carries a real
+// value" asymmetry as hiiTextureScale/Contrast above; the primary field
+// pass packs 0, harmless for the same reason (its components never carry a
+// nonzero textureWeight, so starGrainTerm never runs there).
 //
 // dustCarve (offset 224) is S5's silhouette carving — dustMap.wesl's fs turns
 // the smooth Gaussian envelope into a sharp fractal edge instead of eroding
