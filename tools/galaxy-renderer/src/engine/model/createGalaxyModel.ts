@@ -21,6 +21,7 @@ import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
+import type { YoungStarsLanes } from '../../../@types/engine/YoungStarsLanes';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
@@ -61,6 +62,7 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { YOUNG_CHAIN_MAX_COMPONENTS } from '../../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
+import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
@@ -139,6 +141,14 @@ export type GalaxyModel = {
   readonly dustHeaderLanes: DustHeaderLanes;
   /** The HII tier's own tier-global texture knobs — cheap to derive, so read straight off `fieldTuning.hii` rather than cached like `dustHeaderLanes`. */
   readonly hiiTexture: HiiTextureLanes;
+  /**
+   * §5's shader-side young-stars stars-map read (`splat.wesl`'s `g3.w`
+   * branch) — `contrastGamma` reads `fieldTuning.hii.youngStars.contrast`
+   * live, `invMeanNorm` is `areaWeightedMeanIsmMapChannel`'s texel-area-
+   * weighted `pow(stars, contrastGamma)` mean, inverted and memoized per
+   * (map identity, gamma) since gamma can move between readback landings.
+   */
+  readonly youngStars: YoungStarsLanes;
   readonly fieldComps: GrowOnlyRecordBuffer;
   readonly hiiComps: GrowOnlyRecordBuffer;
   readonly bubbleComps: GrowOnlyRecordBuffer;
@@ -286,6 +296,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // nothing on the CPU side needs it back, since `buildDustParticleCloud`
   // computes its own copy straight off `ismMap` each rebuild.
   let ismMapGlobalMeanDust = 0;
+  // §5's `invMeanNorm` cache — keyed on (map identity, gamma) rather than
+  // recomputed at readback landing like `ismMapGlobalMeanDust` above: gamma
+  // is a live tuning knob (`fieldTuning.hii.youngStars.contrast`) that can
+  // move on its own between readbacks, so the `youngStars` getter below
+  // recomputes lazily instead, same `cachedCdf` idiom `hiiRegions.ts` uses.
+  let youngStarsMeanCache: {
+    readonly map: GalaxyIsmMap | null;
+    readonly gamma: number;
+    readonly invMeanNorm: number;
+  } | null = null;
   // What the orientation chain was last dispatched at — see `noteRenderChanged`.
   let orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
   let orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
@@ -311,6 +331,30 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
     ismMapGenerator.writeRingMeans(ringMeans);
     ismMapGlobalMeanDust = arrayMean(ringMeans);
+  }
+
+  /**
+   * invMeanNormFor — §5's `1 / (area-weighted mean of pow(stars, gamma))`,
+   * memoized against `youngStarsMeanCache` (its own doc above). No map yet,
+   * or a map whose shaped mean is 0 (quiet disc, cleared tracer), returns 1:
+   * the identity multiplier, not a divide-by-zero — splat.wesl's fs only
+   * ever reaches this lane behind a component's own `starsWeight > 0` gate,
+   * so an inert 1 here costs nothing on the frames it's never read.
+   */
+  function invMeanNormFor(map: GalaxyIsmMap | null, gamma: number): number {
+    if (
+      youngStarsMeanCache &&
+      Object.is(youngStarsMeanCache.map, map) &&
+      youngStarsMeanCache.gamma === gamma
+    ) {
+      return youngStarsMeanCache.invMeanNorm;
+    }
+    const shapedMean = map
+      ? areaWeightedMeanIsmMapChannel(map, (texel) => Math.pow(Math.max(texel.stars, 0), gamma))
+      : 0;
+    const invMeanNorm = shapedMean > 0 ? 1 / shapedMean : 1;
+    youngStarsMeanCache = { map, gamma, invMeanNorm };
+    return invMeanNorm;
   }
 
   /**
@@ -883,6 +927,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         scale: fieldTuning.hii.shells.textureScale ?? 0,
         contrast: fieldTuning.hii.shells.textureContrast ?? 1,
       };
+    },
+    get youngStars(): YoungStarsLanes {
+      // `?? 1`: same stale-stored-tuning guard as `hiiTexture` above — a
+      // preset saved before `youngStars.contrast` existed carries no such
+      // key, and 1 (gamma identity) is that field's own neutral default.
+      const gamma = fieldTuning.hii.youngStars?.contrast ?? 1;
+      return { contrastGamma: gamma, invMeanNorm: invMeanNormFor(readbacks.ismMapData, gamma) };
     },
     fieldComps,
     hiiComps,

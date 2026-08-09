@@ -11,6 +11,7 @@ import type { FieldDust } from './FieldDust';
 import type { HiiTextureLanes } from './HiiTextureLanes';
 import type { IsmMapChannelWeights } from './IsmMapChannelWeights';
 import type { IsmMapSeedingLanes } from './IsmMapSeedingLanes';
+import type { YoungStarsLanes } from './YoungStarsLanes';
 
 export type FieldHeaderInput = {
   readonly camera: FieldCamera;
@@ -49,4 +50,12 @@ export type FieldHeaderInput = {
   readonly ismMapChannels: IsmMapChannelWeights;
   /** Absent means this pass's `bubbleView` carries no seeding overlay — packed inert (all 0), same idiom as `dust`/`hiiTexture`. Only the FIELD header (not the HII one) passes real values: ismMapPresent.wesl binds the field header alone. */
   readonly ismMapSeeding?: IsmMapSeedingLanes;
+  /**
+   * Absent means this pass draws no young-stars chain — packed to a neutral
+   * (1, 1) so splat.wesl's shaped-read multiply is a no-op if ever reached.
+   * Only the HII header (`model.youngStars`) carries real values, same
+   * asymmetry `hiiTexture` documents above: the field draw's own components
+   * never carry a nonzero `starsWeight`.
+   */
+  readonly youngStars?: YoungStarsLanes;
 };

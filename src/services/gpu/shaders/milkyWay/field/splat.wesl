@@ -37,6 +37,9 @@ import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
 import package::milkyWay::field::io::starGrainTex;
 import package::milkyWay::field::io::starGrainSmp;
+import package::milkyWay::field::dustDetail::ismMapUv;
+import package::milkyWay::field::dustDetail::ismMapTex;
+import package::milkyWay::field::dustDetail::ismMapSmp;
 
 // sliceTransmitRatio — (1 - exp(-x)) / x per channel, the exact closed form
 // for emission spread UNIFORMLY through a homogeneous slab of per-channel
@@ -331,6 +334,22 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
       var term: f32;
       if (g2.w < 0.0) {
         term = starGrainTerm(p, tPeak, u.dustDetail.y, u.dustDetail.z);
+        // g3.w is starsWeight (io.wesl's comps doc) — the chain's own
+        // stars-map modulation depth, 0 for every other star-grain producer.
+        // Layered on TOP of the grain term rather than replacing it: a young
+        // component carries both textures at once.
+        if (g3.w > 0.0) {
+          let uvv = ismMapUv(p);
+          if (uvv.z > 0.0) {
+            let stars = textureSampleLevel(ismMapTex, ismMapSmp, uvv.xy, 0.0).y;
+            // gamma shapes the read; invMeanNorm (1/mean of the shaped read,
+            // packFieldUniforms.ts) renormalises it back to mean 1 so
+            // restructuring the contrast doesn't drain the tier's
+            // calibrated flux (io.wesl's youngStars doc, Q3's contract).
+            let shaped = pow(max(stars, 0.0), u.youngStars.x) * u.youngStars.y;
+            term = term * mix(1.0, shaped, g3.w);
+          }
+        }
       } else {
         term = hiiNoiseTerm(p, u.dustDetail.y, u.dustDetail.z);
       }

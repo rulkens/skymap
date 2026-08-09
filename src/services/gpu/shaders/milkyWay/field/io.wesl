@@ -29,7 +29,8 @@
 //   offset 192 : bubbleView: vec4 (intensity, ismMapSeedingWeight, ismMapSeedingCap, ismMapSeedingGlobalMean)
 //   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   offset 224 : dustCarve: vec4 (carve, sharpness, stretch, spare)
-//   total: 240 bytes.
+//   offset 240 : youngStars: vec4 (contrastGamma, invMeanNorm, spare, spare)
+//   total: 256 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -189,6 +190,19 @@
 // azimuthal direction (dustMap.wesl's stretchNoiseCoord) — stage 1 of wisp
 // anisotropy; 1 is isotropic (identity). .w is spare.
 //
+// youngStars (offset 240) is §5's shader-side read of the ISM map's `stars`
+// tracer for the YOUNG STARS chain tier — splat.wesl's fs, inside its
+// existing star-grain branch, multiplies a chain component's own term by a
+// shaped sample of comps[4i+3].w (starsWeight, see the comps doc below).
+// contrastGamma (.x) is tuning.hii.youngStars.contrast, the exponent shaping
+// that read; invMeanNorm (.y) is packFieldUniforms.ts's CPU-computed
+// 1/(texel-area-weighted mean of pow(stars, contrastGamma)) — restructuring
+// the read via gamma would otherwise drain or inflate the tier's calibrated
+// total flux, so this renormalises it back to mean 1 (Q3's mean-1 contract).
+// .zw spare. Only the HII header carries real values (mirroring
+// hiiTexture's own doc below) — the primary field draw's own components
+// never carry a nonzero starsWeight.
+//
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
 // already carried into world space — see transformGalaxyFieldComponent.ts —
@@ -211,7 +225,7 @@
 //   [4i]   = (m00, m11, m22, amplitude)
 //   [4i+1] = (m01, m02, m12, boundRadius)
 //   [4i+2] = (colorR, colorG, colorB, textureWeight)
-//   [4i+3] = (cx, cy, cz, unused)
+//   [4i+3] = (cx, cy, cz, starsWeight)
 // Six independent M entries, not three sigmas and a tilt: a component's own
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
@@ -225,6 +239,12 @@
 // samples starGrainTex's uncorrelated point grains — the smallest per-
 // component flag that fits, since textureWeight was already the one field
 // every HII push threads through and no other producer ever sets it.
+// starsWeight is 0 (untouched) for every producer except youngStarChain.ts's
+// pushes (GalaxyYoungStarsTuning.mapDepth) — a SEPARATE lane from
+// textureWeight, not a second sign flag on it, since a chain component
+// carries both at once (its own star-grain texture AND its stars-map
+// modulation depth). splat.wesl's fs reads it as g3.w inside the same
+// negative-textureWeight branch — see the youngStars header row above.
 //
 // Dust components (past dustOffset) reuse this exact 4-vec4 record with two
 // re-readings, not two new lanes: [4i].w (amplitude for emission) is the
@@ -274,11 +294,14 @@
 // pass that WRITES it never reads it.
 //
 // Bindings 3/7/8/9 belong to dustDetail.wesl (grid uniform, ismMapSmp,
-// ismMapTex, ismMapBlurTex) — declared THERE, not here, because only
-// dustMap.wesl's pipeline references them now (the accumulation pass), and
-// io.wesl must not force them into every pipeline's auto layout. The
-// remaining bindings keep their numbers so every pipeline and bind group
-// here stays as written.
+// ismMapTex, ismMapBlurTex) — declared THERE, not here, so io.wesl does not
+// force them into every pipeline's auto layout. dustMap.wesl's pipeline
+// imports all four (the accumulation pass, S4); splat.wesl now imports
+// ismMapUv (pulling in 3) plus ismMapTex/ismMapSmp directly (7/8) for §5's
+// stars-map read (its own fs, the star-grain branch) — NOT 9
+// (ismMapBlurTex), since that branch samples the map's raw 'stars' channel,
+// no blur ratio. The remaining bindings keep their numbers so every pipeline
+// and bind group here stays as written.
 
 struct FieldUniforms {
   eye: vec4<f32>,
@@ -296,6 +319,7 @@ struct FieldUniforms {
   bubbleView: vec4<f32>,
   dustDetail: vec4<f32>,
   dustCarve: vec4<f32>,
+  youngStars: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

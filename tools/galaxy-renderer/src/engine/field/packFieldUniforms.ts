@@ -41,9 +41,10 @@ import type { FieldDust } from '../../../@types/engine/FieldDust';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
+import type { YoungStarsLanes } from '../../../@types/engine/YoungStarsLanes';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 15 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve. */
-export const FIELD_HEADER_FLOATS = 60;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 16 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve + youngStars. */
+export const FIELD_HEADER_FLOATS = 64;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -82,6 +83,9 @@ const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 /** "This pass has no seeding overlay" — the HII header packs this; only the field header (ismMapPresent.wesl's own bind group) ever passes real lanes. `cap: 0` matches `dustPlacementCap`'s own "0 = uncapped" default. */
 const INERT_ISM_MAP_SEEDING: IsmMapSeedingLanes = { weight: 0, cap: 0, globalMean: 0 };
 
+/** "This pass draws no young-stars chain" — neutral (not zero), since splat.wesl's `pow`/multiply would otherwise turn a stray nonzero `starsWeight` into a black hole rather than a no-op; only the HII header ever passes real lanes (`model.youngStars`). */
+const NO_YOUNG_STARS: YoungStarsLanes = { contrastGamma: 1, invMeanNorm: 1 };
+
 /**
  * packFieldHeaderUniforms — one 240-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
@@ -102,6 +106,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   const dust = input.dust ?? INERT_DUST;
   const hiiTexture = input.hiiTexture ?? NO_HII_TEXTURE;
   const ismMapSeeding = input.ismMapSeeding ?? INERT_ISM_MAP_SEEDING;
+  const youngStars = input.youngStars ?? NO_YOUNG_STARS;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
   const { view } = cam;
 
@@ -225,6 +230,16 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[57] = dust.carve.sharpness;
   out[58] = dust.carve.stretch;
   out[59] = 0;
+
+  // youngStars 60..63 = (contrastGamma, invMeanNorm, spare, spare). Only the
+  // HII header ever passes real values (`youngStars`'s own doc) — the field
+  // header's `NO_YOUNG_STARS` default is neutral, not 0, since splat.wesl's
+  // fs only ever reaches this lane behind `g3.w > 0.0`, a gate the field
+  // draw's own components never open.
+  out[60] = youngStars.contrastGamma;
+  out[61] = youngStars.invMeanNorm;
+  out[62] = 0;
+  out[63] = 0;
 
   return out;
 }
