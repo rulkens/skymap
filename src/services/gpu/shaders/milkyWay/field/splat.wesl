@@ -25,7 +25,7 @@
 
 import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
-import package::lib::gaussianIntegral::gaussianRayIntegral;
+import package::lib::splatSilhouette::SPLAT_CUT;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::lib::gaussianIntegral::expHalfErfc;
 import package::lib::gaussianIntegral::GAUSS_PI;
@@ -200,6 +200,21 @@ struct SplatOut {
   @location(1) @interpolate(flat) inst: u32,
 }
 
+// Near-camera fade window, HII-pass-only (see the vs's dustDetail.y gate
+// below) — a component the eye has flown inside fades to nothing rather
+// than shading its fullscreen-fallback quad (splatSilhouette.wesl's
+// SPLAT_CUT) at full cost. START is a hand-mirrored copy of SPLAT_CUT (kept
+// a literal, not a reference, per this project's TS<->WESL constant-parity
+// convention — cross-module const folding is untested in this linker):
+// fading begins exactly where the eye enters the component's own
+// truncation sphere, so there is no dead band where the fallback quad is
+// already live but still full brightness. END is closer in than START —
+// gone before the fallback regime dominates the frame; the physical read
+// is an unresolved wash, a deliberate trade approved for perf (see
+// splat.wesl's header / the dust-seeding-spike cost analysis).
+const SPLAT_NEAR_FADE_START: f32 = 4.5; // == SPLAT_CUT, splatSilhouette.wesl
+const SPLAT_NEAR_FADE_END: f32 = 1.5;
+
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> SplatOut {
   let corner = quadCorner(vi);
@@ -224,6 +239,24 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
 
   var out: SplatOut;
   out.inst = inst;
+
+  // dustDetail.y is 0 for every primary-field draw (io.wesl's own doc) and
+  // this pass's shared fs also serves that draw, whose disc/bulge
+  // components have a boundRadius the eye is ALWAYS inside at any
+  // interesting pose — fading there would black the galaxy, so the gate
+  // is mandatory, not an optimisation.
+  if (u.dustDetail.y > 0.0) {
+    let fade = smoothstep(SPLAT_NEAR_FADE_END * r, SPLAT_NEAR_FADE_START * r, length(rel));
+    if (fade <= 0.0) {
+      // Same degenerate off-clip-volume corner splatSilhouette.wesl's own
+      // fully-behind-camera branch collapses to: zero fragments, not a
+      // shaded-then-discarded quad.
+      out.ndc = vec2<f32>(2.0, 2.0);
+      out.pos = vec4<f32>(out.ndc, 0.0, 1.0);
+      return out;
+    }
+  }
+
   let ndc = splatNdc(corner, xv, yv, zv, r, tanHalfFov, aspect, shift);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
@@ -250,6 +283,29 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   let g2 = comps[4u * input.inst + 2u];
   let g3 = comps[4u * input.inst + 3u];
   let po = o - g3.xyz;
+
+  // Hoisted once per fragment: the dust-integral path below, its
+  // no-dust-column fallback, and the HII texture branch further down all
+  // need this component's own ray-quadratic (a, b, q — gaussianIntegral.wesl's
+  // header), and re-deriving it per consumer was half this pass's
+  // close-zoom cost (verified: both former call sites read po, d, g0.xyz,
+  // g1.xyz with nothing else in between that could change them).
+  let coeffs = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);
+  let a = coeffs.x;
+
+  // q (coeffs.z) is the ray's own closest-approach squared Mahalanobis
+  // distance (gaussianRayCoeffs' doc) — exceeding SPLAT_CUT^2 means this
+  // fragment sits on a fullscreen-fallback quad (splatSilhouette.wesl,
+  // fired whenever the eye is near/inside the component's bound) at a
+  // pixel the ray never actually grazes the component's support, so the
+  // dust fetch/integral and texture branch below would all multiply to a
+  // contribution already below the vertex-side quad's own truncation.
+  // a < 1e-12 leaves q at gaussianRayCoeffs' own null-space 0.0, which does
+  // NOT trip this cutoff — that case still falls through to the 'a >=
+  // 1e-12' guards below, unchanged from before this hoist.
+  if (coeffs.z > SPLAT_CUT * SPLAT_CUT) {
+    return vec4<f32>(0.0);
+  }
 
   // counts.x is the emission count (this draw's own instance count, unused
   // here); .w is the primary galaxy's own emission count — see io.wesl's
@@ -296,25 +352,23 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
       let c2 = c1 + tau1 * K;
       let c3 = c2 + tau2 * K;
 
-      let ec = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);
-      let ea = ec.x;
-      // ea < 1e-12 (ray in this component's covariance null space) leaves
+      // a < 1e-12 (ray in this component's covariance null space) leaves
       // 'emission' at its zero default rather than falling back to the
       // plain path — 'dustApplies' is already true, and a null-space ray
       // integrates to 0 either way.
-      if (ea >= 1e-12) {
+      if (a >= 1e-12) {
         // tail(t) is this Gaussian's own column from depth t to infinity —
         // same expHalfErfc trick dustMap.wesl uses to slice its dust
         // column, applied here to the EMISSION component instead so each
         // slice's own emission mass (E_k = tail(t_k) - tail(t_{k+1})) can be
         // attenuated by that slice's own transmittance before summing.
-        let sqrtHalfA = sqrt(2.0 * ea);
-        let x0 = ec.y / sqrtHalfA;
-        let aOverSqrtHalfA = ea / sqrtHalfA;
-        let tail0 = expHalfErfc(ec.z, x0);
-        let tail1 = expHalfErfc(ec.z, x0 + aOverSqrtHalfA * u.dustSlices.x);
-        let tail2 = expHalfErfc(ec.z, x0 + aOverSqrtHalfA * u.dustSlices.y);
-        let tail3 = expHalfErfc(ec.z, x0 + aOverSqrtHalfA * u.dustSlices.z);
+        let sqrtHalfA = sqrt(2.0 * a);
+        let x0 = coeffs.y / sqrtHalfA;
+        let aOverSqrtHalfA = a / sqrtHalfA;
+        let tail0 = expHalfErfc(coeffs.z, x0);
+        let tail1 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.x);
+        let tail2 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.y);
+        let tail3 = expHalfErfc(coeffs.z, x0 + aOverSqrtHalfA * u.dustSlices.z);
         // Clamped for the same reason dustMap.wesl's fs clamps its own tail
         // differences: two close tail values subtracted can lose precision
         // to the erfc rational approximation's branch seam, and a tiny
@@ -336,12 +390,16 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
         let atten3 = exp(-c3) * sliceTransmitRatio(tau3 * K);
 
         let summed = e0 * atten0 + e1 * atten1 + e2 * atten2 + e3 * atten3;
-        emission = g2.xyz * (g0.w * sqrt(GAUSS_PI / (2.0 * ea)) * summed);
+        emission = g2.xyz * (g0.w * sqrt(GAUSS_PI / (2.0 * a)) * summed);
       }
     }
   }
-  if (!dustApplies) {
-    emission = g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
+  // No-dust-column fallback, inlined from gaussianRayIntegral's own body
+  // (gaussianIntegral.wesl) against the hoisted 'coeffs' rather than
+  // calling it: the a < 1e-12 case already leaves 'emission' at its zero
+  // default, matching that function's own a < 1e-12 -> 0.0 return exactly.
+  if (!dustApplies && a >= 1e-12) {
+    emission = g2.xyz * (g0.w * sqrt(GAUSS_PI / (2.0 * a)) * expHalfErfc(coeffs.z, coeffs.y / sqrt(2.0 * a)));
   }
 
   // HII texture breakup: g2.w is comp.textureWeight (io.wesl's comps doc), 0
@@ -360,13 +418,12 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // the ONE this pass is budgeted for (this pass is the close-zoom hotspot).
   var texMod = 1.0;
   if (u.dustDetail.y > 0.0 && g2.w != 0.0) {
-    let tc = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);
-    if (tc.x >= 1e-12) {
+    if (a >= 1e-12) {
       // o + d*tPeak is this component's own closest-approach point, the
       // same choice dustMap.wesl's fs makes for its erosion/S4 samples —
       // sampling at a shared plane instead would make the texture read as a
       // flat decal rather than something living IN the sprite as it parallaxes.
-      let tPeak = max(-tc.y / tc.x, 0.0);
+      let tPeak = max(-coeffs.y / a, 0.0);
       let p = o + d * tPeak;
       let weight = abs(g2.w);
       var term: f32;
@@ -396,6 +453,18 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   }
   emission = emission * texMod;
 
+  // Near-camera fade (see the vs's SPLAT_NEAR_FADE_START/END consts),
+  // recomputed rather than carried down as a varying: 'po' and 'g1' are
+  // already read up here for the ray math above, so length(po)/g1.w
+  // reproduce the vs's distance/boundRadius with no new interpolant — the
+  // vs's own gate already collapsed the fade <= 0 case to zero fragments,
+  // so only the 0..1 band ever reaches this multiply.
+  var fade = 1.0;
+  if (u.dustDetail.y > 0.0) {
+    let r = g1.w;
+    fade = smoothstep(SPLAT_NEAR_FADE_END * r, SPLAT_NEAR_FADE_START * r, length(po));
+  }
+
   // Alpha 0: the aggregate's alpha channel feeds nothing — the additive
   // upsample folds it into HDR and the compositor forces 1.0 — and a quad
   // writing coverage would swamp the sprites' own alpha for no reader's
@@ -410,5 +479,5 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // doc) — 1 with every debug view off, so this multiply is a no-op at the
   // default. This same fs also draws the HII tier (a second bind group over
   // the same pipeline), so HII dims under an active debug view too.
-  return vec4<f32>(emission * u.params.w * u.debugView.w, 0.0);
+  return vec4<f32>(emission * u.params.w * u.debugView.w * fade, 0.0);
 }
