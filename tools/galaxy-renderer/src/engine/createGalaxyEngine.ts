@@ -129,13 +129,13 @@ const DUST_NOISE_TEX_SIZE = 128;
 const DUST_NOISE_WORKGROUP_SIZE = 4;
 
 /**
- * Edge length of the baked star-grain volume (starGrainBake.wesl) — 64^3
+ * Edge length of the baked star-grain volume (starGrainBake.wesl) — 128^3
  * rgba8unorm, scattered log-normal point grains rather than dust's ridged
  * bands (see that file's own header). Baked ONCE at construction, same
  * discipline as `dustNoiseTex`: no camera/galaxy input, so no reason to
  * rebake inside the per-frame encoder.
  */
-const STAR_GRAIN_TEX_SIZE = 64;
+const STAR_GRAIN_TEX_SIZE = 128;
 
 /** Matches starGrainBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const STAR_GRAIN_WORKGROUP_SIZE = 4;

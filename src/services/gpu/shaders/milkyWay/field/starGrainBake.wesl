@@ -1,4 +1,4 @@
-// milkyWay/field/starGrainBake.wesl — one-shot compute bake of the 64^3
+// milkyWay/field/starGrainBake.wesl — one-shot compute bake of the 128^3
 // star-grain volume splat.wesl's associations branch samples for its
 // "thousands of unresolved stars" look (see starGrainTerm in splat.wesl).
 //
@@ -39,9 +39,9 @@ fn saturate(x: f32) -> f32 {
 
 @group(0) @binding(0) var dst: texture_storage_3d<rgba8unorm, write>;
 
-/** Lattice cells per axis — one point per cell, ~CELLS^3 points total (4096 at 16). */
-const CELLS: u32 = 16u;
-/** Point sigma as a fraction of one cell's own width, balanced against this bake's own texel density (64/CELLS = 4 texels/cell): small enough that most of a cell reads near-zero between points (spacing-to-sigma ~3.6, so points stay visually discrete rather than merging into a lumpy field), large enough (~1.1 texels) that the trilinear sampler still resolves each one as a soft blob rather than a single hard texel. */
+/** Lattice cells per axis — one point per cell, ~CELLS^3 points total (32768 at 32). */
+const CELLS: u32 = 32u;
+/** Point sigma as a fraction of one cell's own width, balanced against this bake's own texel density (128/CELLS = 4 texels/cell): small enough that most of a cell reads near-zero between points (spacing-to-sigma ~3.6, so points stay visually discrete rather than merging into a lumpy field), large enough (~1.1 texels) that the trilinear sampler still resolves each one as a soft blob rather than a single hard texel. */
 const POINT_SIGMA_CELLS: f32 = 0.28;
 /** mu/sigma of the UNDERLYING normal (not the amplitude itself) — eyeballed so most draws stay under ~0.4 and roughly one cell in twenty clears 1 (clipped to full brightness by saturate() below). A starting point for visual calibration, not a measurement. */
 const LOGNORMAL_MU: f32 = -1.4;

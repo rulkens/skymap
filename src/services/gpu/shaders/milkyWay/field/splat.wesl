@@ -77,13 +77,17 @@ fn hiiNoiseTerm(p: vec3<f32>, scale: f32, contrast: f32) -> f32 {
 }
 
 // World span of one full wrap of starGrainBake.wesl's baked volume, sized so
-// several of its 16 lattice cells cross one YOUNG STARS splat's own sigma
+// several of its 32 lattice cells cross one YOUNG STARS splat's own sigma
 // (hiiRegions.ts's ASSN_SIGMA_MIN_PC..MAX_PC) — several independent grains
 // visible per splat, not one grain spanning several splats. A fixed
 // constant, not a tunable lane: unlike dustNoise.x (which tracks the dust
 // cloud's own live sigma), this volume has no matching live parameter to
-// track.
-const STAR_GRAIN_TILE_UNITS: f32 = 0.32;
+// track. Doubled from its prior value alongside CELLS (starGrainBake.wesl):
+// a longer physical repeat period means ¼ as many visible repeats at any
+// zoom, with POINT_SIGMA_CELLS/CELLS below rescaled in lockstep so a
+// point's own physical size and density are unchanged (see this file's
+// STAR_GRAIN_POINT_SIGMA_FRAC doc).
+const STAR_GRAIN_TILE_UNITS: f32 = 0.64;
 // Compensates the bake's own sparsity (most texels sit far from any grain's
 // centre, so the RAW volume's spatial mean is well under 1) back up toward
 // mean ~1 — eyeballed from the bake's own point density/sigma/amplitude
@@ -100,7 +104,7 @@ const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
 
 // Domain-warp period, in world units, of the low-frequency shift applied to
 // the grain lookup before all three octave taps (starGrainTerm) — the fix
-// for a long YOUNG STARS chain visibly repeating the same ~4096-point
+// for a long YOUNG STARS chain visibly repeating the same ~32768-point
 // constellation every STAR_GRAIN_TILE_UNITS. 3.5x the grain tile: LOW
 // enough that the warp varies slowly across one grain tile (a point's own
 // extent sees only a small slice of the warp's gradient, so points stay
@@ -108,18 +112,22 @@ const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
 // and grain periods don't realign in lockstep — their combined repeat is
 // the product of both (7 grain tiles here), long enough nothing recognizes
 // it as a repeat.
-const STAR_GRAIN_WARP_SCALE: f32 = 1.12;
-// Displacement amplitude, in world units. 0.75x the grain tile: large
+const STAR_GRAIN_WARP_SCALE: f32 = 2.24;
+// Displacement amplitude, in world units — added directly to the UNSCALED
+// p above (not divided by any tile first), so this IS the physical shear
+// the warp imparts on a star point's apparent position. Halved from its
+// prior value (0.24) to halve that shear at close zoom, independent of
+// the tile-period doubling above: ~0.19x the new grain tile, still large
 // enough to shift the lookup by a substantial fraction of a wrap (so
 // adjacent wraps sample genuinely different regions of starGrainTex,
 // killing the recognizable repeat), small enough to stay well under one
 // full tile (shredding the local point field — folding a point onto its
 // own neighbour — starts past ~1x).
-const STAR_GRAIN_WARP_AMP: f32 = 0.24;
+const STAR_GRAIN_WARP_AMP: f32 = 0.12;
 
 // The aliasing feature the firefly fix below must gate on is the baked
 // POINT, not the tile: starGrainBake.wesl places one point per lattice cell
-// (CELLS=16) with sigma POINT_SIGMA_CELLS=0.28 cell-widths — an order of
+// (CELLS=32) with sigma POINT_SIGMA_CELLS=0.28 cell-widths — an order of
 // magnitude under the tile itself. dustMap.wesl's w_k idiom gates on the
 // tile because its ridged fbm's finest visible feature IS the tile; reusing
 // that idiom unmodified here would fade octaves far too late to stop
@@ -131,7 +139,7 @@ const STAR_GRAIN_WARP_AMP: f32 = 0.24;
 // multiplier is u.dustDetail.w (render.starGrainFeatureScale, default 8) —
 // live-tunable because it is the user's own calibration of the look against
 // the reference gallery, not a derived constant.
-const STAR_GRAIN_POINT_SIGMA_FRAC: f32 = 0.28 / 16.0;
+const STAR_GRAIN_POINT_SIGMA_FRAC: f32 = 0.28 / 32.0;
 
 // starGrainOctave — one tap of the baked volume, half-tile-offset per
 // dustMap.wesl's S4 breakup precedent ("Half-tile offset decorrelates...")
