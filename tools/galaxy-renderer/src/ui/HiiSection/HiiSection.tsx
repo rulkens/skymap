@@ -317,7 +317,7 @@ function HiiSection(): ReactNode {
             label="Brightness"
             value={hii.youngStars.brightness}
             min={0}
-            max={4}
+            max={20}
             step={0.05}
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchYoungStars({ brightness: v })}
