@@ -344,6 +344,59 @@ describe('buildHiiRegions', () => {
     expect(tail).toEqual(withoutShells);
   });
 
+  // The `enabled` toggle (perf-measurement gate, project rule "opacity 0
+  // implies no render") must skip BUILDING the shell/cluster sprites, not
+  // just zero their flux the way `brightness: 0` already does above — this
+  // pins the `hii:shells` segment itself down to 0, and that DIG (whose flux
+  // anchors on `shellFluxSum`, accumulated regardless of the toggle) and
+  // young stars (an independent producer) build byte-identically either way.
+  it('shells.enabled false zeroes the hii:shells segment — DIG and young stars segments/components unchanged', () => {
+    const tuningOn = {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      hii: {
+        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
+        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0.35 },
+        youngStars: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.youngStars, brightness: 1 },
+      },
+    };
+    const tuningShellsDisabled = {
+      ...tuningOn,
+      hii: { ...tuningOn.hii, shells: { ...tuningOn.hii.shells, enabled: false } },
+    };
+    const map = makeBusyMap();
+
+    const withShells = buildHiiRegionsWithSegments(
+      geometry,
+      tuningOn,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      map,
+    );
+    const withoutShells = buildHiiRegionsWithSegments(
+      geometry,
+      tuningShellsDisabled,
+      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+      geometry.seed,
+      map,
+    );
+
+    const shellsSegmentOn = withShells.segments.find((s) => s.label === 'hii:shells')!;
+    const shellsSegmentOff = withoutShells.segments.find((s) => s.label === 'hii:shells')!;
+    expect(shellsSegmentOn.count).toBeGreaterThan(0); // sanity: shells really contributed something
+    expect(shellsSegmentOff.count).toBe(0);
+
+    const digSegmentOn = withShells.segments.find((s) => s.label === 'hii:dig')!;
+    const digSegmentOff = withoutShells.segments.find((s) => s.label === 'hii:dig')!;
+    const youngSegmentOn = withShells.segments.find((s) => s.label === 'hii:young')!;
+    const youngSegmentOff = withoutShells.segments.find((s) => s.label === 'hii:young')!;
+    expect(digSegmentOff.count).toBe(digSegmentOn.count);
+    expect(youngSegmentOff.count).toBe(youngSegmentOn.count);
+
+    // DIG + young stars' actual components, not just their counts — the
+    // shells prefix is dropped, the rest is byte-identical.
+    expect(withoutShells.components).toEqual(withShells.components.slice(shellsSegmentOn.count));
+  });
+
   it("dig.brightness 0 zeroes only DIG's own components — shells and young stars survive unchanged", () => {
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,

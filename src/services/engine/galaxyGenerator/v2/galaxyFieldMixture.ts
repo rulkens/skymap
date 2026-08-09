@@ -345,6 +345,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // catalog byte-identically.
     ismMapSeeding: 1,
     shells: {
+      enabled: true,
       // 1 = the master alone, same neutral-gain role `youngStars.brightness`
       // plays for its own tier.
       brightness: 1,

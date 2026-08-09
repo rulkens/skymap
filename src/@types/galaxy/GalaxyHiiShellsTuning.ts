@@ -7,6 +7,7 @@
  * their own bags.
  */
 export type GalaxyHiiShellsTuning = {
+  readonly enabled: boolean;
   /**
    * This tier's own flux GAIN, multiplied against `GalaxyHiiTuning.brightness`
    * (the whole-field master) — 1 leaves the shell tier at whatever the master

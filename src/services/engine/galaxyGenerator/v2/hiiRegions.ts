@@ -818,6 +818,15 @@ export function buildHiiRegionsWithSegments(
   // pushed below, never to `shellFluxSum` (see `tierFlux`'s own doc), so it
   // never leaks into DIG's anchor.
   const shellsBrightness = tuning.hii.shells.brightness ?? 1;
+  // `?? true`: same stale-stored-tuning guard as `radiusScale`/`shellThickness`
+  // above — gates ONLY the sprite-emission loops below, never `shellFluxSum`'s
+  // accumulation (unconditional, just below), so DIG's flux anchor and
+  // `recentEventCount` (a separate catalog pass, see
+  // `resolveEventLifecyclePopulation`) are untouched by this toggle. Building
+  // zero components is the point (project rule: opacity 0 must still skip
+  // BUILDING, not just zero the flux) — a disabled tier still needs its flux
+  // split computed so the tiers that anchor off it don't see a discontinuity.
+  const shellsEnabled = tuning.hii.shells.enabled ?? true;
   const out: GalaxyFieldComponent[] = [];
 
   // Accumulated in the SAME currency the shell/cluster amplitudes below are
@@ -831,7 +840,7 @@ export function buildHiiRegionsWithSegments(
     const shellFlux = regionFlux - clusterFlux;
     shellFluxSum += shellFlux;
 
-    if (region.shellCount > 0 && shellFlux > 0 && shellsBrightness > 0) {
+    if (shellsEnabled && region.shellCount > 0 && shellFlux > 0 && shellsBrightness > 0) {
       const sigma = region.radius * SHELL_SPRITE_SIGMA_RATIO;
       const amplitude =
         (shellFlux * shellsBrightness) / region.shellCount / (TAU_ROOT3 * sigma * sigma * sigma);
@@ -855,7 +864,7 @@ export function buildHiiRegionsWithSegments(
       }
     }
 
-    if (region.clusterCount > 0 && clusterFlux > 0 && shellsBrightness > 0) {
+    if (shellsEnabled && region.clusterCount > 0 && clusterFlux > 0 && shellsBrightness > 0) {
       const sigma = region.radius * CLUSTER_SPRITE_SIGMA_RATIO;
       const amplitude =
         (clusterFlux * shellsBrightness) /

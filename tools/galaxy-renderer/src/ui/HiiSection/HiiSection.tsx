@@ -112,6 +112,8 @@ function HiiSection(): ReactNode {
         title="SHELLS"
         open={shellsOpen}
         onToggle={() => dispatch(sectionToggled('hiiShells'))}
+        headerToggle={hii.shells.enabled}
+        onHeaderToggleChange={(value) => patchShells({ enabled: value })}
         nested
       >
         <div className={styles.root}>
