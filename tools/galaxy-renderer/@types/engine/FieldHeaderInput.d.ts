@@ -25,9 +25,12 @@ export type FieldHeaderInput = {
   readonly primaryCount: number;
   /**
    * The pixel size of THIS pass's own target (fieldTex for the field header,
-   * hiiTex for the HII one) — not the canvas, and not dustMapTex, which carries
-   * its own divisor. splat.wesl's fs turns a fragment position into a normalized
-   * dustMapTex UV with it (io.wesl's DUST MAP doc).
+   * hiiTex for the HII one, digTex for the DIG one) — not the canvas, and not
+   * dustMapTex, which carries its own divisor. Feeds `counts2.w`, which
+   * splat.wesl's fs reads for its footprint gates AND turns a fragment
+   * position into a normalized dustMapTex UV with (io.wesl's DUST MAP doc) —
+   * so this must always be the pass's REAL resolution, never borrowed from a
+   * sibling pass sharing the same `comps` buffer.
    */
   readonly targetSizePx: Vec2;
   /** Absent means the pass has no dust; the lanes are still written, inert. */

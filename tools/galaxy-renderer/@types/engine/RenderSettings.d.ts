@@ -63,6 +63,8 @@ export type RenderSettings = {
   readonly dustDivisor: number;
   /** Downsample divisor of the HII-region tier's own offscreen. Separate from `fieldDivisor` for the same reason `dustDivisor` is: a shell sprite is small and bright by construction, so sharing the smooth field's coarser target collapsed it under a texel and bloom promoted the spike into a firefly — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly hiiDivisor: number;
+  /** Downsample divisor of the DIG (diffuse ionized gas) veil's own offscreen, split off `hiiDivisor`'s target — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
+  readonly digDivisor: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
   readonly spriteField: boolean;

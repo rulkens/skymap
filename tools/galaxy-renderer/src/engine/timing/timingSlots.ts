@@ -31,18 +31,24 @@ export const TIMING_SLOTS: readonly string[] = [
   'hii',
   // Per-tier HII rows, consumed INSTEAD of `'hii'` while the HUD is live:
   // `drawFrame` then encodes one sub-pass per non-empty `model.hiiSegments`
-  // entry (own timestamp pair per pass — see this file's own header) rather
-  // than the single merged draw `'hii'` bills off the timing path. Off the
-  // timing path `'hii'` alone still covers the whole tier, so these four
-  // never consume a slot there. `'hii:extras'` is every background extra's
-  // HII contribution lumped into one row — see `createGalaxyModel.ts`'s
-  // `repackHiiComponents` for why extras can't split further (their own
-  // shell/DIG/young spans interleave across extras, so per-extra labels
-  // would stop being HUD-short and stop being contiguous).
+  // entry EXCEPT `hii:dig` (own timestamp pair per pass — see this file's own
+  // header) rather than the single merged draw `'hii'` bills off the timing
+  // path. Off the timing path `'hii'` alone still covers shells/young/extras,
+  // so these three never consume a slot there. `'hii:extras'` is every
+  // background extra's HII contribution lumped into one row — see
+  // `createGalaxyModel.ts`'s `repackHiiComponents` for why extras can't split
+  // further (their own shell/DIG/young spans interleave across extras, so
+  // per-extra labels would stop being HUD-short and stop being contiguous).
   'hii:shells',
-  'hii:dig',
   'hii:young',
   'hii:extras',
+  // The DIG (diffuse ionized gas) veil's OWN pass into its OWN target
+  // (`digTex`, `render.digDivisor`) — split off the HII tier entirely, not a
+  // fifth per-tier row: DIG always draws as one pass regardless of whether
+  // the HUD split is active, so this slot is consumed unconditionally
+  // whenever the tier has any DIG content (see `drawFrame`), unlike
+  // `'hii:shells'`/`'hii:young'`/`'hii:extras'` above.
+  'dig',
   // The full-res HDR pass: the aggregate's additive upsample, the field's and
   // the HII tier's, the dust billboards, and each live diagnostic overlay —
   // all summed additively rather than any one replacing the others. They share

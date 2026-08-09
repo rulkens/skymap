@@ -7,7 +7,7 @@
  * tool-only grade trailer reads.
  *
  * Bind groups are not cached here — the shared pass factories rebuild theirs
- * per draw. The engine's three that bind `dustMapTex` can't; hence the callback.
+ * per draw. The engine's four that bind `dustMapTex` can't; hence the callback.
  */
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
@@ -20,6 +20,7 @@ export type TargetDivisors = {
   readonly field: number;
   readonly dust: number;
   readonly hii: number;
+  readonly dig: number;
 };
 
 /**
@@ -34,6 +35,7 @@ type GalaxyRenderTargets = {
   readonly fieldTex: GPUTexture;
   readonly dustMapTex: GPUTexture;
   readonly hiiTex: GPUTexture;
+  readonly digTex: GPUTexture;
   readonly dustViewTex: GPUTexture;
   readonly bloomMips: readonly GPUTexture[];
   /** Pixel size of a target at `divisor` — also what the passes pack as `viewportPx`. */
@@ -101,6 +103,17 @@ export function createGalaxyRenderTargets(
    * star aggregate use.
    */
   let hiiTex: GPUTexture;
+  /**
+   * The DIG (diffuse ionized gas) veil's own target, split off `hiiTex` —
+   * DIG is the biggest, softest quads in the tier (worst overdraw at close
+   * zoom) but also its lowest-frequency content, the opposite trade from the
+   * shell sprites `hiiTex` still carries: it tolerates ITS OWN coarser
+   * divisor (`reducedSize(render.digDivisor)`, default 4) with no visible
+   * loss, buying back roughly divisor² of fragment cost. Drawn by `splatPipe`
+   * again (`digBG`), composited into HDR through the same `aggregateUpsample`
+   * as every other reduced target.
+   */
+  let digTex: GPUTexture;
   /**
    * The JWST-view's own presentation target (dustPresent.wesl), divisor-
    * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
@@ -188,8 +201,22 @@ export function createGalaxyRenderTargets(
     });
   }
 
+  // Rebuilds no bind group, same reason `allocateHii` doesn't — `digBG`
+  // references `digUbo`/`hiiCompsBuf`/`dustMapTex`, none of which this
+  // touches; the render PASS binds `digTex` as its attachment view freshly
+  // every `drawFrame`.
+  function allocateDig(w: number, h: number): void {
+    if (digTex) digTex.destroy();
+    digTex = device.createTexture({
+      label: 'galaxy:digTex',
+      size: [w, h],
+      format: formats.hdr,
+      usage: RA_TB,
+    });
+  }
+
   /**
-   * The ONE allocation path for the four reduced targets, keyed on the pixel
+   * The ONE allocation path for the five reduced targets, keyed on the pixel
    * size already on the live texture rather than on a remembered divisor: the
    * texture is the authoritative record of what it was built at, so a divisor
    * drag and a canvas resize both reduce to the same question, and `rebuildAll`
@@ -216,6 +243,7 @@ export function createGalaxyRenderTargets(
     // divisor-matched contract exists to prevent.
     reallocateIfResized(dustMapTex, divisors.dust, allocateDust);
     reallocateIfResized(hiiTex, divisors.hii, allocateHii);
+    reallocateIfResized(digTex, divisors.dig, allocateDig);
   }
 
   function rebuildAll(divisors: TargetDivisors): void {
@@ -272,6 +300,9 @@ export function createGalaxyRenderTargets(
     get hiiTex(): GPUTexture {
       return hiiTex;
     },
+    get digTex(): GPUTexture {
+      return digTex;
+    },
     get dustViewTex(): GPUTexture {
       return dustViewTex;
     },
@@ -303,6 +334,7 @@ export function createGalaxyRenderTargets(
       if (fieldTex) fieldTex.destroy();
       if (dustMapTex) dustMapTex.destroy();
       if (hiiTex) hiiTex.destroy();
+      if (digTex) digTex.destroy();
       if (dustViewTex) dustViewTex.destroy();
       for (const m of bloomMips) m.destroy();
     },

@@ -713,6 +713,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               fieldDivisor: render.fieldDivisor,
               dustDivisor: render.dustDivisor,
               hiiDivisor: render.hiiDivisor,
+              digDivisor: render.digDivisor,
             },
           }}
         >
@@ -770,6 +771,17 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ hiiDivisor: Math.round(v) }))}
             path="render.hiiDivisor"
             info="Its own divisor, separate from the field's: an HII shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
+          />
+          <ParamSlider
+            label="DIG divisor"
+            value={render.digDivisor}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ digDivisor: Math.round(v) }))}
+            path="render.digDivisor"
+            info="The diffuse ionized gas veil's own divisor, split off the HII tier's target: DIG is the biggest, softest quads in the tier and the worst overdraw contributor at close zoom, but it is also low-frequency, so it tolerates a much coarser target than shells/young stars do — the opposite trade from HII target divisor above."
           />
         </CollapsibleSection>
 

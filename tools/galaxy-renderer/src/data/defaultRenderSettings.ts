@@ -94,6 +94,10 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // The slider exists for the user to trade that away if they want to; the
   // default does not.
   hiiDivisor: 1,
+  // DIG is the opposite trade from hiiDivisor right above: the biggest,
+  // softest quads in the tier, and low-frequency, so a coarse target costs no
+  // visible detail while cutting fragment work by roughly the square of this.
+  digDivisor: 4,
   // The legacy star bag OFF at boot: it is scheduled for deletion
   // (`docs/research/milky-way/goal-and-history.md`), so the analytic field
   // alone is now the subject rather than one side of a comparison — and an
