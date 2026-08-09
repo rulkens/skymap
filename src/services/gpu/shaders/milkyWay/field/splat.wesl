@@ -98,6 +98,25 @@ const STAR_GRAIN_GAIN: f32 = 8.0;
 const STAR_GRAIN_OCTAVE1_DIV: f32 = 4.0;
 const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
 
+// Domain-warp period, in world units, of the low-frequency shift applied to
+// the grain lookup before all three octave taps (starGrainTerm) — the fix
+// for a long YOUNG STARS chain visibly repeating the same ~4096-point
+// constellation every STAR_GRAIN_TILE_UNITS. 3.5x the grain tile: LOW
+// enough that the warp varies slowly across one grain tile (a point's own
+// extent sees only a small slice of the warp's gradient, so points stay
+// round, not smeared), and a NON-integer multiple of the tile so the warp
+// and grain periods don't realign in lockstep — their combined repeat is
+// the product of both (7 grain tiles here), long enough nothing recognizes
+// it as a repeat.
+const STAR_GRAIN_WARP_SCALE: f32 = 1.12;
+// Displacement amplitude, in world units. 0.75x the grain tile: large
+// enough to shift the lookup by a substantial fraction of a wrap (so
+// adjacent wraps sample genuinely different regions of starGrainTex,
+// killing the recognizable repeat), small enough to stay well under one
+// full tile (shredding the local point field — folding a point onto its
+// own neighbour — starts past ~1x).
+const STAR_GRAIN_WARP_AMP: f32 = 0.24;
+
 // starGrainOctave — one tap of the baked volume, half-tile-offset per
 // dustMap.wesl's S4 breakup precedent ("Half-tile offset decorrelates...")
 // so a finer octave doesn't just resample its coarser sibling's own points,
@@ -134,22 +153,41 @@ fn starGrainOctave(p: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32
 // points on zoom without changing its total flux in expectation — riding
 // STAR_GRAIN_GAIN's own eyeballed calibration above, the same debt class as
 // dustNoiseMultiplier's ~0.5 assumption (dustMap.wesl).
+//
+// Domain warp: pWarped displaces the lookup ONCE, shared by all three
+// octaves (independently warping each would drift them apart and break the
+// half-tile decorrelation between them), so each STAR_GRAIN_WARP_SCALE-ish
+// wrap of starGrainTex samples a differently-shifted region and the same
+// constellation stops recurring along a long chain. Reuses dustNoiseTex,
+// already bound for hiiNoiseTerm — its rgba8unorm bake stores four
+// independent ridged bands (one per channel, dustNoiseBake.wesl), so one
+// fetch's .xyz is already a serviceable vec3 displacement with no new
+// texture. Each band is a ridge fold of a uniform field (r = 1-|2n-1|), mean
+// exactly 0.5, hence the '- 0.5' recentring below. Built from the UNSCALED
+// p (not p / tileUnits0): the warp's own geometry is fixed in world space,
+// so the Texture-scale slider zooms the grain without re-randomizing which
+// shift each point sees. A pure position shift resamples the same mean-1
+// field elsewhere — it does not change starGrainOctave's sampled
+// distribution or its mean, only which points a given wrap lands on.
 fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
+  let warpN = textureSampleLevel(dustNoiseTex, dustNoiseSmp, p / STAR_GRAIN_WARP_SCALE, 0.0).xyz;
+  let pWarped = p + STAR_GRAIN_WARP_AMP * (warpN - vec3<f32>(0.5));
+
   let tileUnits0 = STAR_GRAIN_TILE_UNITS / max(scale, 1e-4);
-  var term = starGrainOctave(p, tileUnits0, contrast, vec3<f32>(0.0));
+  var term = starGrainOctave(pWarped, tileUnits0, contrast, vec3<f32>(0.0));
 
   let pxWorld = 2.0 * depth * u.params.x / u.counts2.w;
   if (pxWorld > 0.0) {
     let tileUnits1 = tileUnits0 / STAR_GRAIN_OCTAVE1_DIV;
     let w1 = clamp(tileUnits1 / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
     if (w1 > 0.0) {
-      term = term * mix(1.0, starGrainOctave(p, tileUnits1, contrast, vec3<f32>(0.5)), w1);
+      term = term * mix(1.0, starGrainOctave(pWarped, tileUnits1, contrast, vec3<f32>(0.5)), w1);
     }
 
     let tileUnits2 = tileUnits0 / STAR_GRAIN_OCTAVE2_DIV;
     let w2 = clamp(tileUnits2 / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
     if (w2 > 0.0) {
-      term = term * mix(1.0, starGrainOctave(p, tileUnits2, contrast, vec3<f32>(0.5)), w2);
+      term = term * mix(1.0, starGrainOctave(pWarped, tileUnits2, contrast, vec3<f32>(0.5)), w2);
     }
   }
 
