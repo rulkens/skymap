@@ -198,6 +198,10 @@ export function createIsmMapAutomatonRunner(
       // S4's low-pass, in the same encoder right after the pack pass writes
       // `output.texture` — the blur reads exactly what pack just produced.
       output.encodeDustBlurPass(enc);
+      // Cartesian re-bake (stage 1 of the dust-seeding perf spike) — same
+      // encoder, right after the blur it reads, so it always sees this
+      // rebuild's fresh pack+blur, never a stale prior one.
+      output.encodeCartesianBakePass(enc);
 
       device.queue.submit([enc.finish()]);
     },

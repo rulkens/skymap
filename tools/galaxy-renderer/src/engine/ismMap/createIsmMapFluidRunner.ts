@@ -259,6 +259,10 @@ export function createIsmMapFluidRunner(
       packPass.end();
 
       output.encodeDustBlurPass(enc);
+      // Cartesian re-bake (stage 1 of the dust-seeding perf spike) — same
+      // encoder, right after the blur it reads, so it always sees this
+      // rebuild's fresh pack+blur, never a stale prior one.
+      output.encodeCartesianBakePass(enc);
 
       device.queue.submit([enc.finish()]);
     },

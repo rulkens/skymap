@@ -20,9 +20,20 @@ import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPer
 
 import ismMapPresentWgsl from '../shaders/milkyWay/ismMap/ismMapPresent.wesl?static';
 import ismMapDustBlurWgsl from '../shaders/milkyWay/ismMap/ismMapDustBlur.wesl?static';
+import ismMapCartesianBakeWgsl from '../shaders/milkyWay/ismMap/ismMapCartesianBake.wesl?static';
 
 /** Mirrored by BLUR_FACTOR in ismMapDustBlur.wesl; also sets the S4 high-pass crossover (~8 texels, roughly the scale the dust splats stop resolving). */
 const DUST_BLUR_FACTOR = 8;
+/**
+ * Cartesian re-bake side length (stage 1 of the dust-seeding perf spike —
+ * docs/research/m74-jwst/07-sprite-seeding.md). Trade: ~15 pc/texel flat
+ * across the square, vs the log-polar map's r-proportional 4-37 pc/texel —
+ * finer than log-polar beyond roughly 1/3 of the disc radius, coarser near
+ * the center. If the center visibly softens under a real consumer (stage 2),
+ * the escalation is a two-level cascade (fine inner tile + this coarser
+ * outer one), not a blanket resolution bump.
+ */
+export const ISM_MAP_CARTESIAN_SIZE = 2048;
 
 export type IsmMapOutput = {
   /** The packed, presentable output (gas / recent SF / older SF / dust) the orientation chain and the CPU readback both read. */
@@ -33,6 +44,8 @@ export type IsmMapOutput = {
   readonly presentBindGroup: GPUBindGroup;
   /** 8x-downsampled gas x activity density, S4's low-pass divisor — see ismMapDustBlur.wesl. */
   readonly dustBlurTexture: GPUTexture;
+  /** ISM_MAP_CARTESIAN_SIZE-square world-xz re-bake of the packed map's detail ratio (R) and stars (G) — see ismMapCartesianBake.wesl. Written, not yet read by any consumer (stage 2). */
+  readonly cartesianTexture: GPUTexture;
   /** rMin/rMax — dustPresent.wesl's S4 read needs the same log-polar mapping the present pass uses. */
   readonly gridBuffer: GPUBuffer;
   readonly mapSampler: GPUSampler;
@@ -57,6 +70,14 @@ export type IsmMapOutput = {
    * its generator's step+pack passes.
    */
   encodeDustBlurPass(enc: GPUCommandEncoder): void;
+  /**
+   * Encode the cartesian re-bake (ismMapCartesianBake.wesl) against whatever
+   * `texture`/`dustBlurTexture` currently hold, into `cartesianTexture`,
+   * inside the CALLER's encoder — same one-encoder-one-submit contract as
+   * `encodeDustBlurPass`, and always called AFTER it so the bake reads the
+   * blur pass's fresh output, not the previous rebuild's.
+   */
+  encodeCartesianBakePass(enc: GPUCommandEncoder): void;
   dispose(): void;
 };
 
@@ -76,6 +97,12 @@ export function createIsmMapOutput(
     label: 'galaxy:ismMapDustBlurPipe',
     layout: 'auto',
     compute: { module: dustBlurMod, entryPoint: 'cs' },
+  });
+  const cartesianBakeMod = makeShader(ismMapCartesianBakeWgsl, 'galaxy:ismMapCartesianBake');
+  const cartesianBakePipe = device.createComputePipeline({
+    label: 'galaxy:ismMapCartesianBakePipe',
+    layout: 'auto',
+    compute: { module: cartesianBakeMod, entryPoint: 'cs' },
   });
   const presentMod = makeShader(ismMapPresentWgsl, 'galaxy:ismMapPresent');
   const presentPipe = device.createRenderPipeline({
@@ -122,6 +149,17 @@ export function createIsmMapOutput(
   const ismMapDustBlurTex = device.createTexture({
     label: 'galaxy:ismMapDustBlurTex',
     size: [ISM_MAP_AZ / DUST_BLUR_FACTOR, ISM_MAP_RINGS / DUST_BLUR_FACTOR],
+    format: 'rgba16float',
+    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+  });
+  // Stage 1 of the dust-seeding perf spike (docs/research/m74-jwst/
+  // 07-sprite-seeding.md): a cartesian re-bake of ismMapCartesianBake.wesl's
+  // R=detail-ratio/G=stars over world xz — see ISM_MAP_CARTESIAN_SIZE's own
+  // doc for the resolution trade. rgba16float for the same filterable-
+  // storage-format reason as the two textures above; B/A unused.
+  const cartesianTexture = device.createTexture({
+    label: 'galaxy:ismMapCartesianTex',
+    size: [ISM_MAP_CARTESIAN_SIZE, ISM_MAP_CARTESIAN_SIZE],
     format: 'rgba16float',
     usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
   });
@@ -178,6 +216,18 @@ export function createIsmMapOutput(
       { binding: 1, resource: ismMapDustBlurTex.createView() },
     ],
   });
+  // Binding order mirrors ismMapCartesianBake.wesl's own @binding declarations.
+  const cartesianBakeBindGroup = device.createBindGroup({
+    label: 'galaxy:ismMapCartesianBakeBG',
+    layout: cartesianBakePipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: texture.createView() },
+      { binding: 1, resource: ismMapDustBlurTex.createView() },
+      { binding: 2, resource: mapSampler },
+      { binding: 3, resource: { buffer: gridUbo } },
+      { binding: 4, resource: cartesianTexture.createView() },
+    ],
+  });
 
   function encodeDustBlurPass(enc: GPUCommandEncoder): void {
     const pass = enc.beginComputePass({ label: 'galaxy:ismMapDustBlurPass' });
@@ -190,6 +240,14 @@ export function createIsmMapOutput(
     pass.end();
   }
 
+  function encodeCartesianBakePass(enc: GPUCommandEncoder): void {
+    const pass = enc.beginComputePass({ label: 'galaxy:ismMapCartesianBakePass' });
+    pass.setPipeline(cartesianBakePipe);
+    pass.setBindGroup(0, cartesianBakeBindGroup);
+    pass.dispatchWorkgroups(ISM_MAP_CARTESIAN_SIZE / 16, ISM_MAP_CARTESIAN_SIZE / 16);
+    pass.end();
+  }
+
   return {
     texture,
     readbackBuffer,
@@ -197,6 +255,7 @@ export function createIsmMapOutput(
     presentPipeline: presentPipe,
     presentBindGroup,
     dustBlurTexture: ismMapDustBlurTex,
+    cartesianTexture,
     gridBuffer: gridUbo,
     mapSampler,
 
@@ -226,13 +285,25 @@ export function createIsmMapOutput(
         { bytesPerRow: (ISM_MAP_AZ / DUST_BLUR_FACTOR) * 8 },
         [ISM_MAP_AZ / DUST_BLUR_FACTOR, ISM_MAP_RINGS / DUST_BLUR_FACTOR],
       );
+      // No consumer reads cartesianTexture yet (stage 2), but zeroing it here
+      // keeps its lifecycle owned by the same clear/rebuild discipline as the
+      // two textures above rather than leaving a third, differently-governed
+      // artifact.
+      device.queue.writeTexture(
+        { texture: cartesianTexture },
+        new Uint8Array(ISM_MAP_CARTESIAN_SIZE * ISM_MAP_CARTESIAN_SIZE * 8),
+        { bytesPerRow: ISM_MAP_CARTESIAN_SIZE * 8 },
+        [ISM_MAP_CARTESIAN_SIZE, ISM_MAP_CARTESIAN_SIZE],
+      );
     },
 
     encodeDustBlurPass,
+    encodeCartesianBakePass,
 
     dispose(): void {
       texture.destroy();
       ismMapDustBlurTex.destroy();
+      cartesianTexture.destroy();
       readbackBuffer.destroy();
       gridUbo.destroy();
       ringMeansBuf.destroy();
