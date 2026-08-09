@@ -10,11 +10,13 @@ export const DEFAULT_UI_STATE: UiState = {
   // EXPANDED: the current work is the analytic field and the sections being
   // built beside it, and eight open legacy sections push those below the fold.
   openSections: {
-    // The two top-level model groups default OPEN regardless of the
-    // generator-era/flux-field-era split below: folding them would hide
-    // every section's own open state behind an extra click on every boot.
+    // ANALYTIC MODEL defaults OPEN (folding it would hide every child
+    // section's own open state behind an extra click on every boot). LEGACY
+    // MODEL starts folded whole: the generator-era model is not the active
+    // work, and one closed group header is quieter than its section stack.
+    // Children keep their own open states below for whenever it's unfolded.
     analyticModel: true,
-    legacyModel: true,
+    legacyModel: false,
     morphology: false,
     shape: false,
     // Its own section, and doomed: the star bag is scheduled for deletion,
@@ -29,7 +31,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // Collapsed, the `armCloud` precedent: a new sub-tier that renders
     // visibly by default but isn't the section currently being tuned.
     armSpurs: false,
-    hii: false,
+    // Open: YOUNG STARS below is the tier being calibrated, and a nested
+    // section only shows when its parent is unfolded.
+    hii: true,
     // Nested under HII REGIONS (CollapsibleSection's `nested` prop) — own
     // open state so folding the parent doesn't fight these for the same key
     // (the `armField`/`armCloud` sibling precedent, prefixed instead since
@@ -37,7 +41,8 @@ export const DEFAULT_UI_STATE: UiState = {
     // sliders used to render unconditionally in HII REGIONS' own body.
     hiiShells: true,
     hiiDig: false,
-    hiiYoungStars: false,
+    // Open: the tier under active calibration (grain scale, divisors).
+    hiiYoungStars: true,
     // The only section expanded by default: the ISM map is the current work,
     // and everything else on the panel is either tuned or downstream of it.
     ismMap: true,

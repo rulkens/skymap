@@ -469,7 +469,16 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
   steps.push(
     {
       name: 'param-nudge:arm-width',
-      run: (page) => pressSlider(page, 'Arm width', ['ArrowRight', 'ArrowRight', 'ArrowLeft']),
+      // 'Arm width' lives under LEGACY MODEL, which boots FOLDED
+      // (defaultUiState.ts) — this step runs ahead of the section sweep, so
+      // it opens the group itself rather than assuming boot-open state.
+      run: async (page) => {
+        const legacy = page.getByRole('button', { name: 'LEGACY MODEL', exact: true });
+        if ((await legacy.getAttribute('aria-expanded')) !== 'true') {
+          await legacy.click();
+        }
+        await pressSlider(page, 'Arm width', ['ArrowRight', 'ArrowRight', 'ArrowLeft']);
+      },
     },
     // Ahead of `regenerate:randomize` on purpose: the Hubble category decides
     // which sections exist at all (no SPIRAL ARMS on an elliptical), so a
