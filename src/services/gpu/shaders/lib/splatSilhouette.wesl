@@ -53,6 +53,51 @@ fn splatNdc(
   let discX = xv * xv + zv * zv - bound * bound;
   let discY = yv * yv + zv * zv - bound * bound;
   let denom = zv * zv - bound * bound;
+
+  // Angular cull: zv < 1.3*r below only catches a component the eye is NEAR in
+  // depth. A component far off-axis at any zv (everything the camera just flew
+  // past, at a disc-plane pose) slips past that test and falls all the way to
+  // 'return corner' — a fullscreen quad for something no frustum ray comes
+  // within SPLAT_CUT sigma of. Test whether the eye-to-bound-sphere tangent cone
+  // (half-angle thetaC) can intersect the frustum's own cone (half-angle
+  // halfDiag) at all; skip when the eye is inside the bound sphere (dist2 <=
+  // bound^2), where discX/discY below are already <= 0 (xv^2+zv^2 <= bound^2 -
+  // yv^2 <= bound^2, same for Y) and force the honest fullscreen return anyway.
+  let dist2 = xv * xv + yv * yv + zv * zv;
+  let boundSq = bound * bound;
+  if (dist2 > boundSq) {
+    let distEye = sqrt(dist2);
+    let sinThetaC = bound / distEye; // < 1: dist2 > boundSq => distEye > bound.
+    let cosThetaC = sqrt(max(0.0, 1.0 - sinThetaC * sinThetaC));
+    let cosA = zv / distEye; // signed: negative when the centre trails the eye.
+
+    // Diagonal frustum half-tangent. The fs's own ray reconstruction (this
+    // file's callers) is d = camRight*(ndc.x+shift)*tanHalfFov*aspect +
+    // camUp*ndc.y*tanHalfFov + camFwd — so shift re-centres the x tangent
+    // range to [(shift-1), (shift+1)]*tanHalfFov*aspect over ndc.x in [-1,1];
+    // its farthest-from-axis edge is tanHalfFov*aspect*(1+|shift|), which is
+    // what tanHalfX below bounds (a widening, not the tighter true half-width,
+    // so the cone we test against is never narrower than the real frustum's).
+    let tanHalfX = tanHalfFov * aspect * (1.0 + abs(shift));
+    let tanHalfDiag = sqrt(tanHalfX * tanHalfX + tanHalfFov * tanHalfFov);
+    let cosHalfDiag = 1.0 / sqrt(1.0 + tanHalfDiag * tanHalfDiag);
+    let sinHalfDiag = tanHalfDiag * cosHalfDiag;
+
+    // Cull iff angle(centerDir, camFwd) > halfDiag + thetaC, i.e.
+    // cosA < cos(halfDiag + thetaC), expanded by the angle-sum identity so no
+    // acos/asin is needed. Continuous through zv < 0 (cosA negative, "beside or
+    // behind the depth plane"): the fully-behind case (zv < -bound) already
+    // returned above, so only the "beside" half reaches here, and the identity
+    // holds for any angle in [0, pi] without a separate branch.
+    // Conservative: a culled sphere's ENTIRE tangent cone misses the frustum's
+    // entire cone, so no frustum ray comes within SPLAT_CUT sigma of it —
+    // its true contribution is already below the truncation SPLAT_CUT accepts
+    // everywhere else, so dropping it is image-identical, not an approximation.
+    if (cosA < cosHalfDiag * cosThetaC - sinHalfDiag * sinThetaC) {
+      return vec2<f32>(2.0, 2.0);
+    }
+  }
+
   if (zv < 1.3 * r || denom <= 1e-6 || discX <= 0.0 || discY <= 0.0) {
     return corner;
   }
