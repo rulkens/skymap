@@ -6,8 +6,8 @@
 // split) — see that file's git history for the calibration narrative.
 
 import package::milkyWay::field::io::u;
-import package::milkyWay::field::io::dustNoiseTex;
-import package::milkyWay::field::io::dustNoiseSmp;
+import package::milkyWay::field::io::warpNoiseTex;
+import package::milkyWay::field::io::warpNoiseSmp;
 import package::milkyWay::field::io::starGrainTex;
 import package::milkyWay::field::io::starGrainSmp;
 
@@ -71,10 +71,15 @@ fn starGrainOctave(p: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32
 //
 // pWarped displaces the lookup ONCE, shared by all three octaves (warping
 // each independently would drift them apart and break the half-tile
-// decorrelation between them). Reuses dustNoiseTex's rgba8unorm ridged
-// bands (already bound for hiiNoiseTerm) as a free vec3 displacement, mean
-// 0.5 per band hence the '- 0.5' recentring — built from the UNSCALED p so
-// the Texture-scale slider zooms the grain without re-randomizing the shift.
+// decorrelation between them). Samples warpNoiseTex's own baked volume
+// (warpNoiseBake.wesl) as a vec3 displacement — its own bake, not a reuse
+// of dustNoiseTex, because the '- 0.5' recentring below is only honest if
+// each band's true mean IS 0.5; dustNoiseTex's ridged bands measure closer
+// to 0.70 (a folded field's mode sits near its ceiling, not its midpoint),
+// which made this a net directional shift, not symmetric jitter, before
+// warpNoiseBake.wesl's own centerFold fixed it at the source. Built from
+// the UNSCALED p so the Texture-scale slider zooms the grain without
+// re-randomizing the shift.
 fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
   let pxWorld = 2.0 * depth * u.params.x / u.counts2.w;
   let featureFrac = max(u.dustDetail.w, 0.0) * STAR_GRAIN_POINT_SIGMA_FRAC;
@@ -99,7 +104,7 @@ fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
     return term;
   }
 
-  let warpN = textureSampleLevel(dustNoiseTex, dustNoiseSmp, p / STAR_GRAIN_WARP_SCALE, 0.0).xyz;
+  let warpN = textureSampleLevel(warpNoiseTex, warpNoiseSmp, p / STAR_GRAIN_WARP_SCALE, 0.0).xyz;
   let pWarped = p + u.perf.y * (warpN - vec3<f32>(0.5));
 
   if (octave0Weight > 0.0) {

@@ -112,6 +112,7 @@ import dustMapFsWgsl from './shaders/milkyWay/field/dustMap/fragment.wesl?static
 import dustPresentVsWgsl from './shaders/milkyWay/field/dustPresent/vertex.wesl?static';
 import dustPresentFsWgsl from './shaders/milkyWay/field/dustPresent/fragment.wesl?static';
 import dustNoiseBakeWgsl from './shaders/milkyWay/field/dustNoiseBake.wesl?static';
+import warpNoiseBakeWgsl from './shaders/milkyWay/field/warpNoiseBake.wesl?static';
 import starGrainBakeWgsl from './shaders/milkyWay/field/starGrainBake.wesl?static';
 import bubblePresentVsWgsl from './shaders/milkyWay/field/bubblePresent/vertex.wesl?static';
 import bubblePresentFsWgsl from './shaders/milkyWay/field/bubblePresent/fragment.wesl?static';
@@ -140,6 +141,18 @@ const DUST_NOISE_TEX_SIZE = 128;
 
 /** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const DUST_NOISE_WORKGROUP_SIZE = 4;
+
+/**
+ * Edge length of the baked warp volume (warpNoiseBake.wesl) — 64^3
+ * rgba8unorm, VALUE noise (not dustNoiseTex's gradient noise) for
+ * starGrain.wesl's domain-warp displacement only. Low-frequency by design
+ * (three octaves at 1x/2x/4x an 8-cell base lattice), so 64^3 resolves it
+ * with headroom; baked ONCE at construction like dustNoiseTex.
+ */
+const WARP_NOISE_TEX_SIZE = 64;
+
+/** Matches warpNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
+const WARP_NOISE_WORKGROUP_SIZE = 4;
 
 /**
  * Edge length of the baked star-grain volume (starGrainBake.wesl) — 128^3
@@ -582,6 +595,53 @@ export async function createGalaxyEngine(
     device.queue.submit([bakeEnc.finish()]);
   }
 
+  // ---- warp-noise bake: 64^3 value-noise volume, baked ONCE ----
+  // warpNoiseBake.wesl — starGrain.wesl's own domain-warp displacement, split
+  // out of dustNoiseTex so it can stay VALUE noise (see that file's header
+  // for why gradient noise was the wrong fit here). Same one-shot idiom as
+  // the dust-noise bake above: view- and param-independent, so it bakes
+  // once, here, not inside `drawFrame`'s encoder.
+  const warpNoiseBakeMod = makeShader(warpNoiseBakeWgsl, 'galaxy:warpNoiseBake');
+  const warpNoiseBakePipe = device.createComputePipeline({
+    label: 'galaxy:warpNoiseBakePipe',
+    layout: 'auto',
+    compute: { module: warpNoiseBakeMod, entryPoint: 'cs' },
+  });
+  const warpNoiseTex = own(
+    device.createTexture({
+      label: 'galaxy:warpNoiseTex',
+      size: [WARP_NOISE_TEX_SIZE, WARP_NOISE_TEX_SIZE, WARP_NOISE_TEX_SIZE],
+      dimension: '3d',
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    }),
+  );
+  // 'repeat', same reason dustNoiseSampler wraps: starGrain.wesl's warp tap
+  // relies entirely on this addressing mode to tile in world space.
+  const warpNoiseSampler = device.createSampler({
+    label: 'galaxy:warpNoiseSampler',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    addressModeW: 'repeat',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  {
+    const bakeBG = device.createBindGroup({
+      label: 'galaxy:warpNoiseBakeBG',
+      layout: warpNoiseBakePipe.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: warpNoiseTex.createView() }],
+    });
+    const bakeEnc = device.createCommandEncoder({ label: 'galaxy:warpNoiseBake' });
+    const bakePass = bakeEnc.beginComputePass({ label: 'galaxy:warpNoiseBakePass' });
+    bakePass.setPipeline(warpNoiseBakePipe);
+    bakePass.setBindGroup(0, bakeBG);
+    const dispatch = WARP_NOISE_TEX_SIZE / WARP_NOISE_WORKGROUP_SIZE;
+    bakePass.dispatchWorkgroups(dispatch, dispatch, dispatch);
+    bakePass.end();
+    device.queue.submit([bakeEnc.finish()]);
+  }
+
   // ---- star-grain bake: 64^3 scattered log-normal point volume, baked ONCE ----
   // starGrainBake.wesl — splat.wesl's YOUNG STARS branch only (see that
   // file's own starGrainTerm). Same one-shot idiom as the dust-noise bake
@@ -767,15 +827,20 @@ export async function createGalaxyEngine(
   // another's draw-time compatibility check even for byte-identical WGSL, so
   // #78's four-pipeline split means four DIFFERENT binding sets, not one
   // shared shape reused four times:
-  //   fieldSplatPipe        — {0 u, 1 comps, 2 dustMapTex, 6 dustMapSmp}: no
-  //     HII texture machinery at all (fieldSplat/fragment.wesl never imports
-  //     dustNoiseTex/starGrainTex/the ISM cartesian bake) — the occupancy
-  //     win #78 is for.
-  //   hiiYoungPipe/hiiExtrasPipe — the full {0,1,2,3,4,5,6,7,8,10,11}: both
-  //     still need dustNoiseTex/Smp (starGrainTerm's own domain-warp tap
-  //     reuses it) plus the star-grain and ISM-cartesian bindings.
-  //   hiiErosionPipe         — {0,1,2,4,5,6}: no star-grain or ISM-cartesian
-  //     bindings — erosionFragment.wesl (shells+dig) never imports them.
+  //   fieldSplatPipe — {0 u, 1 comps, 2 dustMapTex, 6 dustMapSmp}: no HII
+  //     texture machinery at all (fieldSplat/fragment.wesl never imports
+  //     dustNoiseTex/starGrainTex/warpNoiseTex/the ISM cartesian bake) — the
+  //     occupancy win #78 is for.
+  //   hiiExtrasPipe — the full {0,1,2,3,4,5,6,7,8,10,11,12,13}: imports BOTH
+  //     hiiNoiseTerm (dustNoiseTex/Smp, shells/DIG's ridged read) and
+  //     starGrainTerm (star-grain + warp-noise + ISM-cartesian).
+  //   hiiYoungPipe — {0,1,2,3,6,7,8,10,11,12,13}, no 4/5: youngFragment.wesl
+  //     keeps the starGrainTerm branch ONLY, and starGrain.wesl's own warp
+  //     tap moved off dustNoiseTex onto its own warpNoiseTex bake, so this
+  //     pipe's 'auto' layout has no dustNoiseTex/Smp entry at all any more.
+  //   hiiErosionPipe — {0,1,2,4,5,6}: no star-grain, warp-noise or
+  //     ISM-cartesian bindings — erosionFragment.wesl (shells+dig) never
+  //     imports them.
   //
   // A group holds the EXACT GPUBuffer/GPUTexture objects it names, so each
   // is a `let` + a builder, and the resource owns the rebuild: the model's
@@ -849,36 +914,53 @@ export async function createGalaxyEngine(
   // the primary disc reads, so a shell embedded in a lane darkens with it.
   //
   // Two builders, not one: `hiiYoungPipe`/`hiiExtrasPipe` need the
-  // star-grain and ISM-cartesian bindings erosionFragment.wesl never
-  // imports — handing `buildHiiErosionBindGroup`'s reduced entry list to
-  // either of those pipelines' layout would leave the bind group missing
+  // star-grain, warp-noise and ISM-cartesian bindings erosionFragment.wesl
+  // never imports — handing `buildHiiErosionBindGroup`'s reduced entry list
+  // to either of those pipelines' layout would leave the bind group missing
   // entries the shader DOES reference, a validation error, not a silent gap.
+  //
+  // 4/5 (dustNoiseTex/Smp) is now a THIRD split within this pair, not shared
+  // by both: extrasFragment.wesl imports hiiNoiseTerm (shells/DIG's ridged
+  // read) alongside starGrainTerm, so hiiExtrasPipe still references 4/5 —
+  // but youngFragment.wesl keeps the starGrainTerm branch ONLY, and
+  // starGrain.wesl's own warp tap moved off dustNoiseTex onto warpNoiseTex
+  // (12/13) below, so hiiYoungPipe's 'auto' layout no longer has 4/5 in it
+  // at all. Binding them there anyway is the exact trap: an entry for a
+  // binding the layout doesn't declare is a validation error, not a no-op.
   function buildHiiFullBindGroup(
     ubo: GPUBuffer,
     label: string,
     pipe: GPURenderPipeline,
   ): GPUBindGroup {
-    return device.createBindGroup({
-      label,
-      layout: pipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: ubo } },
-        { binding: 1, resource: { buffer: model.hiiComps.buffer } },
-        { binding: 2, resource: targets.dustMapTex.createView() },
-        { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: dustMapSampler },
-        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
+    const entries: GPUBindGroupEntry[] = [
+      { binding: 0, resource: { buffer: ubo } },
+      { binding: 1, resource: { buffer: model.hiiComps.buffer } },
+      { binding: 2, resource: targets.dustMapTex.createView() },
+      { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
+      { binding: 7, resource: dustMapSampler },
+      { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
+    ];
+    if (pipe === hiiExtrasPipe) {
+      entries.push(
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
-        { binding: 6, resource: dustMapSampler },
-        // Star-grain volume — the YOUNG STARS branch's own texture
-        // (starGrain.wesl), imported by both youngFragment.wesl and
-        // extrasFragment.wesl's own sign test; erosionFragment.wesl does
-        // not (see `buildHiiErosionBindGroup`).
-        { binding: 10, resource: starGrainTex.createView() },
-        { binding: 11, resource: starGrainSampler },
-      ],
-    });
+      );
+    }
+    entries.push(
+      { binding: 6, resource: dustMapSampler },
+      // Star-grain volume — the YOUNG STARS branch's own texture
+      // (starGrain.wesl), imported by both youngFragment.wesl and
+      // extrasFragment.wesl's own sign test; erosionFragment.wesl does
+      // not (see `buildHiiErosionBindGroup`).
+      { binding: 10, resource: starGrainTex.createView() },
+      { binding: 11, resource: starGrainSampler },
+      // Warp-noise volume — starGrain.wesl's own domain-warp displacement
+      // (warpNoiseBake.wesl), imported by the same file as starGrainTex
+      // above, so it rides the same two pipelines and no others.
+      { binding: 12, resource: warpNoiseTex.createView() },
+      { binding: 13, resource: warpNoiseSampler },
+    );
+    return device.createBindGroup({ label, layout: pipe.getBindGroupLayout(0), entries });
   }
   // hiiErosionPipe (shells+dig): no starGrainTex/Smp (10/11) —
   // erosionFragment.wesl only ever imports hiiNoise.wesl's own

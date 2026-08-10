@@ -389,3 +389,13 @@ struct FieldUniforms {
 // these two entries to splatPipe's bind groups, not dustMapPipe's.
 @group(0) @binding(10) var starGrainTex: texture_3d<f32>;
 @group(0) @binding(11) var starGrainSmp: sampler;
+// Bindings 12/13: the baked warp volume (warpNoiseBake.wesl) — split out of
+// dustNoiseTex so starGrain.wesl's domain-warp displacement can stay VALUE
+// noise (blocky, high headroom) after dustNoiseBake.wesl itself went
+// gradient-noise for dust/DIG/shell erosion (a smoother field that made a
+// mean-0.5-honest warp signal a bad fit). Only starGrain.wesl imports
+// these, so 'layout: auto' adds them to hiiYoungPipe/hiiExtrasPipe's bind
+// groups exactly like 10/11, and leaves hiiErosionPipe/fieldSplatPipe
+// (which never import starGrain.wesl) untouched.
+@group(0) @binding(12) var warpNoiseTex: texture_3d<f32>;
+@group(0) @binding(13) var warpNoiseSmp: sampler;

@@ -861,7 +861,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             label="Grain warp amount"
             value={render.starGrainWarpAmp}
             min={0}
-            max={0.5}
+            max={0.6}
             step={0.01}
             format={(v) => v.toFixed(2)}
             onChange={(v) => dispatch(renderPatched({ starGrainWarpAmp: v }))}
