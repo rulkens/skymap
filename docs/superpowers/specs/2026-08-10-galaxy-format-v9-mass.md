@@ -29,6 +29,10 @@ format bump.
   version as an epoch segment (`/data/galaxy-catalog/v9/…`), so browser/CDN
   caches can never pair mismatched code and bins (the `earth-tiles/v1`
   precedent, generalized to every family).
+- Data filenames carry a content hash resolved through a boot-fetched
+  `manifest.json`, so a data refresh propagates immediately, releases are
+  coherent (no mixed-generation file pairings), and unchanged files cache
+  immutably for a year.
 - Stride stays 64 B — no growth on ~280 MB of shipped bins.
 
 ## Non-goals
@@ -161,9 +165,41 @@ family fetchers, `tierTargets.ts:87–92`, the builders (`buildAllBins`,
 both its galaxy-bin *input* and filament *output* paths),
 `collectDataFiles.ts`, `tools/deploy/r2/allowDataFile.ts`. Old flat R2
 objects are left in place until the next sync prune (in-flight old
-clients keep working through a deploy); `public/_headers` unchanged —
-`max-age=86400` is now safe for every family. A future bump of any
-family adds a sibling epoch folder.
+clients keep working through a deploy). A future bump of any family adds
+a sibling epoch folder.
+
+### Content hashing + manifest
+
+The epoch guarantees *compatibility*, not *freshness*: a rebuild at the
+same format version reuses the URL, and `max-age=86400` would serve it
+stale for up to 24 h. So every tracked file also carries a truncated
+content hash (first 8 hex chars of SHA-256, before the extension:
+`sdss-large.a3f19c2e.bin`), and the build emits `public/data/manifest.json`
+mapping logical path → hashed path
+(`"galaxy-catalog/v9/sdss-large.bin": "galaxy-catalog/v9/sdss-large.a3f19c2e.bin"`).
+The manifest is written **last**, after every file it references — one
+manifest describes one coherent build, so mixed-generation pairings
+(`famous.bin` vs `famous_galaxies_meta.json`, filaments vs the catalog
+they were traced from) cannot be served.
+
+Coverage: the five family folders plus the root JSON (`famous_*_meta`,
+`constellations`, `pgc_aliases`). `images/` stays path-stable and
+unhashed — thousands of lazily-fetched thumbnails would bloat the
+manifest, and `images/earth-tiles/` already carries its own
+`TILE_PREFIX` epoch.
+
+Resolution: boot fetches the manifest once with `no-cache` (tiny,
+ETag-revalidated) before any data load; `dataUrl()` resolves logical →
+hashed. `public/_headers`: `manifest.json` gets `no-cache`; hashed files
+get `Cache-Control: immutable, max-age=31536000`. A missing manifest
+falls through to the existing missing-data path (the synthetic fallback
+dev worktrees already exercise). Tool-side readers (`buildFilaments`'s
+galaxy-bin input) resolve through a shared manifest-reader helper in
+`tools/utils/` so dev server, tools, and production share one regime —
+the on-disk `public/data/` itself holds hashed names, dev included.
+`allowDataFile` accepts hashed names; superseded hashed objects on R2
+are removed by the ordinary sync prune, never before the manifest that
+references them stops being served.
 
 ## Build-order + doc sweep
 
@@ -191,6 +227,10 @@ family adds a sibling epoch folder.
 - `estimateLog10StellarMass`: one test per source branch against
   hand-computed values; NaN propagation.
 - Retry policy: `FormatVersionError` → `'give-up'`, single fetch.
+- Manifest: emitted name-set exactly matches the files written (catches a
+  file added to a builder but not tracked); `dataUrl()` resolves a
+  logical name through a stubbed manifest; hash is a pure function of
+  file bytes.
 - `npm run build-tiers` smoke on the real catalogs, then decode + spot
   check mass percentiles per source against the calibration expectations
   (SDSS median ≈ 10^10.3 M☉).
