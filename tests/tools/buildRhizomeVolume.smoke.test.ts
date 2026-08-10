@@ -158,4 +158,58 @@ describe('buildRhizomeVolume (smoke)', () => {
     expect(error?.message).toMatch(/exceeds 0.5%/);
     expect(error?.message).toContain('sizes 1, 1, 1.02');
   });
+
+  it('places a hot voxel at the x-fastest index after the C-order transpose', async () => {
+    // Asymmetric dims (2x3x4) so an axis swap is observable — a symmetric
+    // cube can't distinguish a transpose from a straight copy. All zero
+    // except C-order index 9, which is (i,j,k)=(0,2,1) since
+    // 9 = 0*3*4 + 2*4 + 1. The x-fastest index is
+    // i + j*Nx + k*Nx*Ny = 0 + 2*2 + 1*(2*3) = 10 — a straight no-transpose
+    // copy would leave the hot value at index 9 instead.
+    const cubeDims: [number, number, number] = [2, 3, 4];
+    const values = new Array(24).fill(0);
+    values[9] = 1.0;
+    writeF32Npy(npyPath, values, cubeDims);
+    writeSidecar(join(dir, 'cube.json'), { dims: cubeDims });
+
+    await buildRhizomeVolume({ npyPath, outPath });
+    const buf = readFileSync(outPath);
+    const cube = decodeScalarField(
+      buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+    );
+
+    // valueMax = 1 (only one nonzero input), so the hot voxel normalises
+    // to log(2)/log(2) = 1 exactly (f16 bit pattern 0x3C00) and every
+    // other voxel stays at log(1)/log(2) = 0.
+    expect(cube.voxels[10]).toBe(0x3c00);
+    for (let i = 0; i < cube.voxels.length; i++) {
+      if (i !== 10) expect(cube.voxels[i]).toBe(0);
+    }
+  });
+
+  it('accepts a raw PolyPhy 4D cube with a trailing singleton', async () => {
+    const cubeDims: [number, number, number] = [2, 3, 4];
+    const values = Array.from({ length: 24 }, (_, i) => i / 23);
+    writeF32Npy(npyPath, values, [2, 3, 4, 1]);
+    // Sidecar dims are post-squeeze per the schema — 3D, not 4D.
+    writeSidecar(join(dir, 'cube.json'), { dims: cubeDims });
+
+    await buildRhizomeVolume({ npyPath, outPath });
+    const buf = readFileSync(outPath);
+    const cube = decodeScalarField(
+      buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+    );
+
+    expect(cube.dims).toEqual(cubeDims);
+  });
+
+  it('refuses a 4D cube whose last axis is not a singleton', async () => {
+    const values = new Array(48).fill(0);
+    writeF32Npy(npyPath, values, [2, 3, 4, 2]);
+    // dims here are irrelevant — the rank check fires before the npy is
+    // compared against the sidecar's dims.
+    writeSidecar(join(dir, 'cube.json'), { dims: [2, 3, 4] });
+
+    await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/expected 3D cube/);
+  });
 });
