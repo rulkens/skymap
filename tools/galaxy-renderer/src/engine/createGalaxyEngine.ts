@@ -56,6 +56,7 @@ import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
 import { encodeBloomPyramid } from './post/encodeBloomPyramid';
+import { createFieldPipelines } from './field/createFieldPipelines';
 import { encodeDustMapPass } from './field/encodeDustMapPass';
 import { encodeDustPresentPass } from './field/encodeDustPresentPass';
 import { encodePresentOverlay } from './passes/encodePresentOverlay';
@@ -97,21 +98,8 @@ import { HII_TIERS } from '../data/hiiTiers';
 
 import starWgsl from './shaders/milkyWay/sprites/stars.wesl?static';
 import dustWgsl from './shaders/milkyWay/sprites/dust.wesl?static';
-// The per-splat-type split: field (disc/arm/bulge) and HII (shells/young/dig/extras) no
-// longer share one shader — each pipeline below is built from its own
-// vertex+fragment pair, and 'auto' layout derives a SMALLER bind-group
-// layout for whichever bindings that pair actually references (see each
-// pipeline's own comment).
-import fieldSplatVsWgsl from './shaders/milkyWay/field/fieldSplat/vertex.wesl?static';
-import fieldSplatFsWgsl from './shaders/milkyWay/field/fieldSplat/fragment.wesl?static';
-import hiiSplatVsWgsl from './shaders/milkyWay/field/hiiSplat/vertex.wesl?static';
-import hiiYoungFsWgsl from './shaders/milkyWay/field/hiiSplat/youngFragment.wesl?static';
-import hiiErosionFsWgsl from './shaders/milkyWay/field/hiiSplat/erosionFragment.wesl?static';
-import hiiExtrasFsWgsl from './shaders/milkyWay/field/hiiSplat/extrasFragment.wesl?static';
-import dustMapVsWgsl from './shaders/milkyWay/field/dustMap/vertex.wesl?static';
-import dustMapFsWgsl from './shaders/milkyWay/field/dustMap/fragment.wesl?static';
-import dustPresentVsWgsl from './shaders/milkyWay/field/dustPresent/vertex.wesl?static';
-import dustPresentFsWgsl from './shaders/milkyWay/field/dustPresent/fragment.wesl?static';
+// The field/HII/dustMap/dustPresent shader pairs themselves live in
+// `createFieldPipelines.ts` now, alongside the pipelines built from them.
 import dustNoiseBakeWgsl from './shaders/milkyWay/field/dustNoiseBake.wesl?static';
 import warpNoiseBakeWgsl from './shaders/milkyWay/field/warpNoiseBake.wesl?static';
 import starGrainBakeWgsl from './shaders/milkyWay/field/starGrainBake.wesl?static';
@@ -373,83 +361,6 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
-  // ---- field/HII splat pipelines (analytic field: one instanced quad per
-  // component) ----
-  // Draws the closed-form Gaussian-mixture field additively into its own
-  // reduced-resolution target, which the scene pass upsamples into HDR
-  // alongside the sprites' aggregate. One billboard PER COMPONENT rather
-  // than a fullscreen pass over all of them — see fieldSplat/fragment.wesl's
-  // header for why that wins at N~300+ mixtures. No vertex buffers:
-  // `quadCorner`/the per-instance `comps` lookup both come off
-  // `vertex_index`/`instance_index` alone.
-  //
-  // The per-splat-type split broke the former single `splat.wesl` (one shared vs+fs serving both
-  // the primary field draw AND every HII draw, discriminated at runtime by
-  // `dustDetail.y`) into a field variant and three HII fragment variants —
-  // young/erosion(shells+dig)/extras — sharing one HII vertex stage. Each
-  // pipeline gets its own module pair (not a second entry point on another
-  // pipeline's module): `layout: 'auto'` derives the bind-group layout from
-  // the bindings the PAIR actually references, and two pipelines sharing a
-  // module that reads a binding with divergent stage visibility fail the
-  // group-equivalent check. This is also the occupancy win the split is
-  // for: fieldSplatPipe's real binding set is just {u, comps, dustMapTex,
-  // dustMapSmp} (no HII texture machinery at all, since fieldSplat's own
-  // fragment never imports it) and hiiErosionPipe drops the star-grain and
-  // ISM-cartesian bindings youngFragment/extrasFragment still need — see
-  // each bind-group builder below for the exact set.
-  const fieldSplatVsMod = makeShader(fieldSplatVsWgsl, 'galaxy:fieldSplat.vertex');
-  const fieldSplatFsMod = makeShader(fieldSplatFsWgsl, 'galaxy:fieldSplat.fragment');
-  const fieldSplatPipe = device.createRenderPipeline({
-    label: 'galaxy:fieldSplatPipe',
-    layout: 'auto',
-    vertex: { module: fieldSplatVsMod, entryPoint: 'vs' },
-    fragment: {
-      module: fieldSplatFsMod,
-      entryPoint: 'fs',
-      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-  // One vertex stage shared by every HII draw (young/shells/dig/extras) —
-  // its near-camera fade is unconditional now (the module IS an HII draw
-  // structurally, no `dustDetail.y` proxy needed — see hiiSplat/vertex.wesl).
-  const hiiSplatVsMod = makeShader(hiiSplatVsWgsl, 'galaxy:hiiSplat.vertex');
-  const hiiYoungFsMod = makeShader(hiiYoungFsWgsl, 'galaxy:hiiSplat.youngFragment');
-  const hiiErosionFsMod = makeShader(hiiErosionFsWgsl, 'galaxy:hiiSplat.erosionFragment');
-  const hiiExtrasFsMod = makeShader(hiiExtrasFsWgsl, 'galaxy:hiiSplat.extrasFragment');
-  const hiiPipeDescriptor = (
-    fsMod: GPUShaderModule,
-    label: string,
-  ): GPURenderPipelineDescriptor => ({
-    label,
-    layout: 'auto',
-    vertex: { module: hiiSplatVsMod, entryPoint: 'vs' },
-    fragment: {
-      module: fsMod,
-      entryPoint: 'fs',
-      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-  // HII_TIERS' own 'young' tier — every component in this tier's span is a
-  // YOUNG STARS chain component (hiiTiers.ts's routing), so this fragment
-  // keeps the starGrainTerm branch only.
-  const hiiYoungPipe = device.createRenderPipeline(
-    hiiPipeDescriptor(hiiYoungFsMod, 'galaxy:hiiYoungPipe'),
-  );
-  // HII_TIERS' 'shells' AND 'dig' tiers both route here — shells/DIG share
-  // the exact same hiiNoiseTerm-only fragment (erosionFragment.wesl's own
-  // header), so one pipeline serves both rather than two byte-identical ones.
-  const hiiErosionPipe = device.createRenderPipeline(
-    hiiPipeDescriptor(hiiErosionFsMod, 'galaxy:hiiErosionPipe'),
-  );
-  // The `hii:extras` pass — background extras' concatenated shells/DIG/young
-  // mixture, the one draw that legitimately keeps the per-instance sign test
-  // (extrasFragment.wesl's own header).
-  const hiiExtrasPipe = device.createRenderPipeline(
-    hiiPipeDescriptor(hiiExtrasFsMod, 'galaxy:hiiExtrasPipe'),
-  );
-
   // ---- dust pipeline (transmittance billboards) ----
   // The runtime's `milkyWay/sprites/dust.wesl`, drawn FULL-RES into `sceneTex`
   // (not the aggregate) — the app's split, because multiplicative
@@ -491,49 +402,6 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
-  // ---- dust-column map pipeline (screen-space dust splat) ----
-  // `milkyWay/field/dustMap/`: one instanced quad per PRIMARY dust
-  // component (dustMap/vertex.wesl's own silhouette math via `lib/splatSilhouette`),
-  // additively accumulating four depth-sliced optical depths into
-  // `dustMapTex`, at its own divisor-matched resolution (see `dustMapTex`'s
-  // declaration below).
-  // Replaces splat.wesl's former per-fragment dust loop with a texture read
-  // — see dustAttenuation.wesl's header and the grill-session doc's N1.
-  // Its own module (not a second entry point on `fieldSplatFsMod`) and its
-  // own pipeline, for the same `layout: 'auto'` reason every other pass pair
-  // here is split: two pipelines sharing a module that reads a binding with
-  // divergent stage visibility fail the group-equivalent check.
-  const dustMapVsMod = makeShader(dustMapVsWgsl, 'galaxy:dustMap.vertex');
-  const dustMapFsMod = makeShader(dustMapFsWgsl, 'galaxy:dustMap.fragment');
-  const dustMapPipe = device.createRenderPipeline({
-    label: 'galaxy:dustMapPipe',
-    layout: 'auto',
-    vertex: { module: dustMapVsMod, entryPoint: 'vs' },
-    fragment: {
-      module: dustMapFsMod,
-      entryPoint: 'fs',
-      targets: [{ format: DUST_MAP_FORMAT, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-
-  // ---- dust-map presentation pipeline ("JWST" view) ----
-  // `milkyWay/field/dustPresent/`: a fullscreen triangle over `dustMapTex`,
-  // mapping its column to a hot palette. Drawn ALONGSIDE `fieldSplatPipe`'s
-  // emission draw, gated on `render.dustViewIntensity > 0` — see `drawFrame`'s
-  // field pass. No blend: it is the pass's only draw into a freshly cleared
-  // `dustViewTex`, so a straight overwrite is correct; the crossfade itself
-  // happens later, in the scene pass's additive composite.
-  const dustPresentVsMod = makeShader(dustPresentVsWgsl, 'galaxy:dustPresent.vertex');
-  const dustPresentFsMod = makeShader(dustPresentFsWgsl, 'galaxy:dustPresent.fragment');
-  const dustPresentPipe = device.createRenderPipeline({
-    label: 'galaxy:dustPresentPipe',
-    layout: 'auto',
-    vertex: { module: dustPresentVsMod, entryPoint: 'vs' },
-    fragment: { module: dustPresentFsMod, entryPoint: 'fs', targets: [{ format: HDR }] },
-    primitive: { topology: 'triangle-list' },
-  });
-
   // ---- three baked volumes, each baked ONCE via bakeVolumeTexture ----
   // dustNoiseTex (128^3 ridged-fbm — dustNoiseBake.wesl's header explains why
   // ridged, not plain value noise, and why the tileable lattice hash lives in
@@ -544,9 +412,9 @@ export async function createGalaxyEngine(
   // YOUNG STARS branch). All three are view- and param-independent (fixed
   // octave bands, no camera/galaxy input), which is what `bakeVolumeTexture`
   // relies on to bake once here rather than inside `drawFrame`'s encoder.
-  // `dustMapFsMod` already imports `dustNoiseTex`/`dustNoiseSmp` from io.wesl
-  // (see dustMap/fragment.wesl), which is what gives `dustMapPipe`'s
-  // `layout: 'auto'` bind-group layout entries 4/5 below.
+  // `dustMap/fragment.wesl` already imports `dustNoiseTex`/`dustNoiseSmp` from
+  // io.wesl, which is what gives `dustMapPipe`'s `layout: 'auto'` bind-group
+  // layout entries 4/5 — see `createFieldPipelines.ts`, which owns that pipeline.
   const dustNoiseBaked = bakeVolumeTexture(device, {
     label: 'galaxy:dustNoise',
     code: dustNoiseBakeWgsl,
@@ -601,6 +469,33 @@ export async function createGalaxyEngine(
     hdrFormat: HDR,
     fieldUbo,
     sourceTexture: ismMapGenerator.texture,
+  });
+
+  // ---- field/HII splat pipelines + their bind-group apparatus ----
+  // `createFieldPipelines.ts` — the four splat pipelines, the dust-column-map
+  // pass and its JWST presentation pass, and every `layout: 'auto'` bind group
+  // built against them. Constructed here, BEFORE `model`/`targets` exist:
+  // their own constructors take this module's rebuild functions as callbacks
+  // (below), so `getDustMapTex` stays a thunk until `targets` is assigned.
+  // See the module's own header for the 'auto'-layout contract this apparatus
+  // depends on.
+  const fieldPipelines = createFieldPipelines({
+    device,
+    makeShader,
+    hdrFormat: HDR,
+    dustMapFormat: DUST_MAP_FORMAT,
+    fieldUbo,
+    hiiUbo,
+    tierUbo,
+    ismMapGenerator,
+    dustNoiseTex,
+    dustNoiseSampler,
+    warpNoiseTex,
+    warpNoiseSampler,
+    starGrainTex,
+    starGrainSampler,
+    dustMapSampler,
+    getDustMapTex: () => targets.dustMapTex,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
@@ -691,17 +586,14 @@ export async function createGalaxyEngine(
   // ---- the galaxy itself: geometry, mixtures, generated buffers ----
   // Everything derived from (params, tuning, seed) lives in the model; this
   // file keeps the pipelines, the targets and the per-frame headers. The two
-  // regrow hooks are the `layout: 'auto'` contract — see the bind groups below.
+  // regrow hooks are the `layout: 'auto'` contract — see `createFieldPipelines`.
   const model = createGalaxyModel({
     device,
     ismMapGenerator,
     orientation: ismMapOrientation,
     render,
-    onFieldCompsRegrow: () => {
-      fieldSplatBG = buildFieldSplatBindGroup();
-      dustMapBG = buildDustMapBindGroup();
-    },
-    onHiiCompsRegrow: rebuildTierBindGroups,
+    onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
+    onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),
     onStats: opts.onStats,
     onOrientationDiagnostics: opts.onOrientationDiagnostics,
   });
@@ -720,225 +612,23 @@ export async function createGalaxyEngine(
     layout: dustPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: dustUbo } }],
   });
-  // The analytic field's groups. `layout: 'auto'` derives each pipeline's
-  // bind-group layout from the bindings its OWN vertex+fragment pair
-  // actually references — a group built from one pipeline's layout fails
-  // another's draw-time compatibility check even for byte-identical WGSL, so
-  // The four-pipeline split means four DIFFERENT binding sets, not one
-  // shared shape reused four times:
-  //   fieldSplatPipe — {0 u, 1 comps, 2 dustMapTex, 6 dustMapSmp}: no HII
-  //     texture machinery at all (fieldSplat/fragment.wesl never imports
-  //     dustNoiseTex/starGrainTex/warpNoiseTex/the ISM cartesian bake) — the
-  //     occupancy win the split is for.
-  //   hiiExtrasPipe — the full {0,1,2,3,4,5,6,7,8,10,11,12,13}: imports BOTH
-  //     hiiNoiseTerm (dustNoiseTex/Smp, shells/DIG's ridged read) and
-  //     starGrainTerm (star-grain + warp-noise + ISM-cartesian).
-  //   hiiYoungPipe — {0,1,2,3,6,7,8,10,11,12,13}, no 4/5: youngFragment.wesl
-  //     keeps the starGrainTerm branch ONLY, and starGrain.wesl's own warp
-  //     tap moved off dustNoiseTex onto its own warpNoiseTex bake, so this
-  //     pipe's 'auto' layout has no dustNoiseTex/Smp entry at all any more.
-  //   hiiErosionPipe — {0,1,2,4,5,6}: no star-grain, warp-noise or
-  //     ISM-cartesian bindings — erosionFragment.wesl (shells+dig) never
-  //     imports them.
-  //
-  // A group holds the EXACT GPUBuffer/GPUTexture objects it names, so each
-  // is a `let` + a builder, and the resource owns the rebuild: the model's
-  // two `onRegrow` hooks above for the comps buffers, and
-  // `rebuildDustMapDependents` below for `dustMapTex`.
-  //
-  // Only `dustMapBG` can build here. The others bind `dustMapTex`, which
-  // `targets` has not allocated yet.
-  let dustMapBG = buildDustMapBindGroup();
-  function buildDustMapBindGroup(): GPUBindGroup {
-    return device.createBindGroup({
-      label: 'galaxy:dustMapBG',
-      layout: dustMapPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 1, resource: { buffer: model.fieldComps.buffer } },
-        { binding: 4, resource: dustNoiseTex.createView() },
-        { binding: 5, resource: dustNoiseSampler },
-        // S4's ISM-map detail term (dustDetail.wesl) rides the accumulation
-        // pass now, applied per dust splat — see dustMap.wesl's fs. Reads
-        // the cartesian bake (stage 2), not the packed log-polar map: no
-        // binding 9 any more — the bake consumed the blur divisor upstream.
-        { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-        { binding: 7, resource: dustMapSampler },
-        { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
-      ],
-    });
-  }
-  let fieldSplatBG: GPUBindGroup;
-  function buildFieldSplatBindGroup(): GPUBindGroup {
-    return device.createBindGroup({
-      label: 'galaxy:fieldSplatBG',
-      layout: fieldSplatPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 1, resource: { buffer: model.fieldComps.buffer } },
-        // dustAttenuation.wesl's own two bindings — fieldSplat/fragment.wesl
-        // is the only reader of dustMapTex through a FILTERED sample
-        // (dustPresent.wesl still gets away with a 1:1 texel load at its own
-        // divisor-matched resolution).
-        { binding: 2, resource: targets.dustMapTex.createView() },
-        { binding: 6, resource: dustMapSampler },
-      ],
-    });
-  }
-  let dustPresentBG: GPUBindGroup;
-  function buildDustPresentBindGroup(): GPUBindGroup {
-    return device.createBindGroup({
-      label: 'galaxy:dustPresentBG',
-      layout: dustPresentPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 2, resource: targets.dustMapTex.createView() },
-        // No 3/7/8/9: S4's detail term now applies at accumulation
-        // (dustMap.wesl); this pass just presents the already-modulated
-        // column.
-      ],
-    });
-  }
-  // Every HII-buffer pass (the `hii:extras` draw into `hiiTex` AND each of
-  // the three generalized sub-tiers) shares its dust-attenuated emission math
-  // (dustAttenuation.wesl's `componentEmission`, common to every HII
-  // fragment) against its own header and the shared `hiiComps` storage
-  // buffer, differing ONLY in which uniform buffer binding 0 names.
-  // `dustMapTex`/`dustMapSampler` are bound because every HII fragment
-  // samples them: `packFieldHeaderUniforms`'s `primaryCount` is packed to
-  // the WHOLE tier's instance count for every one of these headers (see
-  // `drawFrame`), so `instanceIndex < primaryCount` is true for every HII
-  // sprite regardless of which sub-range a given pass draws, and the
-  // dust-attenuation branch fires across the whole tier — the same dust law
-  // the primary disc reads, so a shell embedded in a lane darkens with it.
-  //
-  // Two builders, not one: `hiiYoungPipe`/`hiiExtrasPipe` need the
-  // star-grain, warp-noise and ISM-cartesian bindings erosionFragment.wesl
-  // never imports — handing `buildHiiErosionBindGroup`'s reduced entry list
-  // to either of those pipelines' layout would leave the bind group missing
-  // entries the shader DOES reference, a validation error, not a silent gap.
-  //
-  // 4/5 (dustNoiseTex/Smp) is now a THIRD split within this pair, not shared
-  // by both: extrasFragment.wesl imports hiiNoiseTerm (shells/DIG's ridged
-  // read) alongside starGrainTerm, so hiiExtrasPipe still references 4/5 —
-  // but youngFragment.wesl keeps the starGrainTerm branch ONLY, and
-  // starGrain.wesl's own warp tap moved off dustNoiseTex onto warpNoiseTex
-  // (12/13) below, so hiiYoungPipe's 'auto' layout no longer has 4/5 in it
-  // at all. Binding them there anyway is the exact trap: an entry for a
-  // binding the layout doesn't declare is a validation error, not a no-op.
-  function buildHiiFullBindGroup(
-    ubo: GPUBuffer,
-    label: string,
-    pipe: GPURenderPipeline,
-  ): GPUBindGroup {
-    const entries: GPUBindGroupEntry[] = [
-      { binding: 0, resource: { buffer: ubo } },
-      { binding: 1, resource: { buffer: model.hiiComps.buffer } },
-      { binding: 2, resource: targets.dustMapTex.createView() },
-      { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
-      { binding: 7, resource: dustMapSampler },
-      { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
-    ];
-    if (pipe === hiiExtrasPipe) {
-      entries.push(
-        { binding: 4, resource: dustNoiseTex.createView() },
-        { binding: 5, resource: dustNoiseSampler },
-      );
-    }
-    entries.push(
-      { binding: 6, resource: dustMapSampler },
-      // Star-grain volume — the YOUNG STARS branch's own texture
-      // (starGrain.wesl), imported by both youngFragment.wesl and
-      // extrasFragment.wesl's own sign test; erosionFragment.wesl does
-      // not (see `buildHiiErosionBindGroup`).
-      { binding: 10, resource: starGrainTex.createView() },
-      { binding: 11, resource: starGrainSampler },
-      // Warp-noise volume — starGrain.wesl's own domain-warp displacement
-      // (warpNoiseBake.wesl), imported by the same file as starGrainTex
-      // above, so it rides the same two pipelines and no others.
-      { binding: 12, resource: warpNoiseTex.createView() },
-      { binding: 13, resource: warpNoiseSampler },
-    );
-    return device.createBindGroup({ label, layout: pipe.getBindGroupLayout(0), entries });
-  }
-  // hiiErosionPipe (shells+dig): no starGrainTex/Smp (10/11) —
-  // erosionFragment.wesl only ever imports hiiNoise.wesl's own
-  // dustNoiseTex/Smp for its ridged-noise term, never the star-grain volume.
-  function buildHiiErosionBindGroup(ubo: GPUBuffer, label: string): GPUBindGroup {
-    return device.createBindGroup({
-      label,
-      layout: hiiErosionPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: ubo } },
-        { binding: 1, resource: { buffer: model.hiiComps.buffer } },
-        { binding: 2, resource: targets.dustMapTex.createView() },
-        { binding: 4, resource: dustNoiseTex.createView() },
-        { binding: 5, resource: dustNoiseSampler },
-        { binding: 6, resource: dustMapSampler },
-      ],
-    });
-  }
-  let hiiBG: GPUBindGroup;
-  let tierBG: Record<HiiTierKind, GPUBindGroup>;
-  // Which pipeline draws a given `HII_TIERS` row — 'young' gets its own
-  // starGrainTerm-only fragment, 'shells'/'dig' share the ridged-noise-only
-  // erosion fragment (hiiTiers.ts routes both there; erosionFragment.wesl's
-  // own header explains why one pipeline serves both instead of two
-  // byte-identical ones).
-  function hiiTierPipeline(kind: HiiTierKind): GPURenderPipeline {
-    return kind === 'young' ? hiiYoungPipe : hiiErosionPipe;
-  }
-  // Rebuilds `hiiBG` (the `hii:extras` pass) and every `HII_TIERS` row's own
-  // bind group — everywhere ONE of them needs rebuilding (a `hiiComps` regrow,
-  // a `dustMapTex` recreation), every one of them does: all read the SAME
-  // `model.hiiComps.buffer`/`targets.dustMapTex`.
-  function rebuildTierBindGroups(): void {
-    hiiBG = buildHiiFullBindGroup(hiiUbo, 'galaxy:hiiBG', hiiExtrasPipe);
-    tierBG = Object.fromEntries(
-      HII_TIERS.map((tier) => [
-        tier.kind,
-        tier.kind === 'young'
-          ? buildHiiFullBindGroup(tierUbo[tier.kind], `galaxy:hiiBG:${tier.kind}`, hiiYoungPipe)
-          : buildHiiErosionBindGroup(tierUbo[tier.kind], `galaxy:hiiBG:${tier.kind}`),
-      ]),
-    ) as Record<HiiTierKind, GPUBindGroup>;
-  }
-
-  /**
-   * Whether `dustMapTex` currently holds anything but zeros. `drawFrame` skips
-   * the dust-map pass when there is no dust to draw, and a skipped pass leaves
-   * the last frame's contents — so this is what lets the skip stay correct
-   * across the nonzero -> zero transition (an elliptical, or tau pulled to 0)
-   * instead of stranding the previous galaxy's dust in front of the new one.
-   */
-  let dustMapPopulated = false;
-
-  /**
-   * Everything downstream of a `dustMapTex` recreation (every resize, every
-   * `dustDivisor` move): every bind group holding a view of it, plus the
-   * stale-map latch — a fresh texture is zero-initialised, so the latch resets
-   * with it. Also the FIRST build of those groups, which is why `targets` must
-   * fire this once during `rebuildAll`.
-   */
-  function rebuildDustMapDependents(): void {
-    fieldSplatBG = buildFieldSplatBindGroup();
-    rebuildTierBindGroups();
-    dustPresentBG = buildDustPresentBindGroup();
-    dustMapPopulated = false;
-  }
+  // The field module's `dustMapBG` is the only one of its five bind groups
+  // that doesn't reference `targets.dustMapTex` (it's the pass that WRITES
+  // that texture, not one that samples it), so it is also the only one safe
+  // to build before `targets` exists — see `createFieldPipelines`'s header.
+  fieldPipelines.rebuildDustMapBindGroup(model.fieldComps.buffer);
 
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
   //
   // Allocates nothing yet — the first `rebuildAll` is the unconditional one
   // below the ResizeObserver, once the canvas has adopted its backing size.
-  // The callback stays on this side because the groups also read
-  // `fieldUbo`/`hiiUbo`/the comps buffers, which the target module has no
-  // business knowing about.
+  // The callback stays on this side because it also needs `model`'s comps
+  // buffers, which the target module has no business knowing about.
   const targets = createGalaxyRenderTargets(
     device,
     canvas,
     { hdr: HDR, swap: format, dustMap: DUST_MAP_FORMAT },
-    rebuildDustMapDependents,
+    () => fieldPipelines.rebuildDustMapDependents(model.fieldComps.buffer, model.hiiComps.buffer),
   );
 
   // ---- camera state (orbit) ----
@@ -1376,15 +1066,17 @@ export async function createGalaxyEngine(
       // has to run — as the clear that empties the map. Assigning the returned
       // latch is what carries that across; drop the assignment and the map
       // freezes at the previous galaxy's dust.
-      if (model.fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
-        dustMapPopulated = encodeDustMapPass({
-          enc,
-          timestampWrites: timing.descriptorFor('dustMap'),
-          targetView: targets.dustMapTex.createView(),
-          pipeline: dustMapPipe,
-          bindGroup: dustMapBG,
-          instanceCount: model.fieldCounts.dust,
-        });
+      if (model.fieldCounts.dust > 0 || drawDustView || fieldPipelines.dustMapPopulated) {
+        fieldPipelines.setDustMapPopulated(
+          encodeDustMapPass({
+            enc,
+            timestampWrites: timing.descriptorFor('dustMap'),
+            targetView: targets.dustMapTex.createView(),
+            pipeline: fieldPipelines.dustMapPipe,
+            bindGroup: fieldPipelines.dustMapBG,
+            instanceCount: model.fieldCounts.dust,
+          }),
+        );
       }
 
       // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
@@ -1396,8 +1088,8 @@ export async function createGalaxyEngine(
         encodeDustPresentPass({
           enc,
           targetView: targets.dustViewTex.createView(),
-          pipeline: dustPresentPipe,
-          bindGroup: dustPresentBG,
+          pipeline: fieldPipelines.dustPresentPipe,
+          bindGroup: fieldPipelines.dustPresentBG,
         });
       }
 
@@ -1414,8 +1106,8 @@ export async function createGalaxyEngine(
         label: 'galaxy:fieldPass',
         timestampWrites: timing.descriptorFor('field'),
         targetView: targets.fieldTex.createView(),
-        pipeline: fieldSplatPipe,
-        bindGroup: fieldSplatBG,
+        pipeline: fieldPipelines.fieldSplatPipe,
+        bindGroup: fieldPipelines.fieldSplatBG,
         instanceCount: model.fieldCounts.emission,
       });
 
@@ -1441,8 +1133,8 @@ export async function createGalaxyEngine(
           label: `galaxy:hiiPass:${tier.kind}`,
           timestampWrites: timing.descriptorFor(tier.label),
           targetView: targets.tierTex(tier.kind).createView(),
-          pipeline: hiiTierPipeline(tier.kind),
-          bindGroup: tierBG[tier.kind],
+          pipeline: fieldPipelines.hiiTierPipeline(tier.kind),
+          bindGroup: fieldPipelines.tierBG(tier.kind),
           instanceCount: segment.count,
           firstInstance: segment.first,
         });
@@ -1457,8 +1149,8 @@ export async function createGalaxyEngine(
           label: 'galaxy:hiiPass:extras',
           timestampWrites: timing.descriptorFor('hii:extras'),
           targetView: targets.hiiTex.createView(),
-          pipeline: hiiExtrasPipe,
-          bindGroup: hiiBG,
+          pipeline: fieldPipelines.hiiExtrasPipe,
+          bindGroup: fieldPipelines.hiiBG,
           instanceCount: extrasSegment.count,
           firstInstance: extrasSegment.first,
         });
