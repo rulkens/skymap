@@ -56,12 +56,15 @@ import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
 import { encodeBloomPyramid } from './post/encodeBloomPyramid';
+import { createGradePipeline } from './post/createGradePipeline';
+import { createCloudPipelines } from './sprites/createCloudPipelines';
 import { createFieldPipelines } from './field/createFieldPipelines';
 import { encodeDustMapPass } from './field/encodeDustMapPass';
 import { encodeDustPresentPass } from './field/encodeDustPresentPass';
 import { encodePresentOverlay } from './passes/encodePresentOverlay';
 import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './field/encodeSplatPass';
+import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
 import { findHiiSegment } from './field/findHiiSegment';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
@@ -84,28 +87,22 @@ import {
   FIELD_HEADER_FLOATS,
   packFieldHeaderUniforms,
 } from './field/packFieldUniforms';
-import type { FieldCamera } from '../../@types/engine/FieldCamera';
-import type { FieldHeaderInput } from '../../@types/engine/FieldHeaderInput';
-import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
 import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
-import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { HII_TIERS } from '../data/hiiTiers';
 
-import starWgsl from './shaders/milkyWay/sprites/stars.wesl?static';
-import dustWgsl from './shaders/milkyWay/sprites/dust.wesl?static';
-// The field/HII/dustMap/dustPresent shader pairs themselves live in
-// `createFieldPipelines.ts` now, alongside the pipelines built from them.
+// The star/dust sprite shader pairs live in `createCloudPipelines.ts` now,
+// and the field/HII/dustMap/dustPresent pairs in `createFieldPipelines.ts`,
+// alongside the pipelines built from them.
 import dustNoiseBakeWgsl from './shaders/milkyWay/field/dustNoiseBake.wesl?static';
 import warpNoiseBakeWgsl from './shaders/milkyWay/field/warpNoiseBake.wesl?static';
 import starGrainBakeWgsl from './shaders/milkyWay/field/starGrainBake.wesl?static';
 import bubblePresentVsWgsl from './shaders/milkyWay/field/bubblePresent/vertex.wesl?static';
 import bubblePresentFsWgsl from './shaders/milkyWay/field/bubblePresent/fragment.wesl?static';
-import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
@@ -237,25 +234,6 @@ export async function createGalaxyEngine(
   new Float32Array(quad.getMappedRange()).set([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]);
   quad.unmap();
 
-  // ---- cloud uniform buffers: ONE PER PASS ----
-  // Both hold `milkyWay/sprites/io.wesl`'s `Uniforms`, and every lane but
-  // `viewportPx` is identical between them — but that one lane differs (the
-  // star pass renders into the reduced-resolution aggregate, the dust pass
-  // full-res) and `queue.writeBuffer` is ordered against `queue.submit`, not
-  // against the passes encoded in between. Two writes to one buffer in a frame
-  // would both land before either pass executed and the second would win for
-  // BOTH, silently handing the star pass the canvas viewport and scaling every
-  // px-clamped sprite by the divisor. The app splits them for the same reason.
-  const makeCloudUniformBuffer = (label: string): GPUBuffer =>
-    own(
-      device.createBuffer({
-        label,
-        size: MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      }),
-    );
-  const starUbo = makeCloudUniformBuffer('galaxy:starUniforms');
-  const dustUbo = makeCloudUniformBuffer('galaxy:dustUniforms');
   // The analytic field's own buffer, own struct — see `packFieldUniforms`.
   // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
   // ray, and this pass reads none of the billboard lanes. Camera/params/dust-
@@ -314,93 +292,17 @@ export async function createGalaxyEngine(
   const makeShader = (code: string, label: string): GPUShaderModule =>
     createShaderModuleWithDevLog(device, code, label);
 
-  // ---- star pipeline (additive billboards) ----
-  // The module is the runtime's `milkyWay/sprites/stars.wesl`. It must stay a
-  // SEPARATE GPUShaderModule from the dust pass even though the two share
-  // `io.wesl`: WebGPU's `auto` pipeline layout derives its bind-group layout
-  // from the entry points a module exposes, and two pipelines sharing a module
-  // that references the binding with divergent stage visibility fail the
-  // group-equivalent check. `io.wesl`'s header spells this out; the runtime's
-  // `milkyWayCloudRenderer` keeps them disjoint for exactly this reason.
-  //
-  // The instance layout is unchanged from the tool's own former star pass —
-  // both read `pos@0, color@12, (size, brightness)@24` off the same
-  // `generate.wesl`-written record, which is what makes the shader swap a
-  // shader swap and nothing more.
-  const starMod = makeShader(starWgsl, 'galaxy:star');
-  const starPipe = device.createRenderPipeline({
-    label: 'galaxy:starPipe',
-    layout: 'auto',
-    vertex: {
-      module: starMod,
-      entryPoint: 'vs',
-      buffers: [
-        { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
-        {
-          arrayStride: GEN_RECORD_BYTES,
-          stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: 'float32x3' },
-            { shaderLocation: 2, offset: 12, format: 'float32x3' },
-            { shaderLocation: 3, offset: 24, format: 'float32x2' },
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: starMod,
-      entryPoint: 'fs',
-      // The aggregate offscreen is `rgba16float` like `sceneTex`, so one HDR
-      // format still describes both cloud pipelines. `ADDITIVE_BLEND` is the
-      // runtime's shared descriptor — the same one `milkyWayCloudRenderer`
-      // hands its star pipeline, and the same algebra `createAdditiveUpsample`
-      // composites the result back with (that pairing is what makes the
-      // reduced-res detour mathematically equal to drawing straight into HDR).
-      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-
-  // ---- dust pipeline (transmittance billboards) ----
-  // The runtime's `milkyWay/sprites/dust.wesl`, drawn FULL-RES into `sceneTex`
-  // (not the aggregate) — the app's split, because multiplicative
-  // transmittance has to land on the real accumulation.
-  const dustMod = makeShader(dustWgsl, 'galaxy:dust');
-  const dustPipe = device.createRenderPipeline({
-    label: 'galaxy:dustPipe',
-    layout: 'auto',
-    vertex: {
-      module: dustMod,
-      entryPoint: 'vs',
-      buffers: [
-        { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
-        {
-          arrayStride: GEN_RECORD_BYTES,
-          stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: 'float32x3' },
-            { shaderLocation: 2, offset: 12, format: 'float32' },
-            { shaderLocation: 3, offset: 16, format: 'float32x3' },
-            { shaderLocation: 4, offset: 28, format: 'float32' },
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: dustMod,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: HDR,
-          blend: {
-            color: { srcFactor: 'dst', dstFactor: 'zero', operation: 'add' },
-            alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
-          },
-        },
-      ],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
+  // ---- sprite-billboard pipelines: `createCloudPipelines.ts` ----
+  // The two additive/transmittance sprite passes, their own `io.wesl` shader
+  // pairs, and the one bind group each needs — see that module's own header
+  // for the "ONE uniform buffer per pass" and "SEPARATE shader module per
+  // pass" landmines. `starUbo`/`dustUbo` are the module's own allocations, so
+  // they're wrapped in this file's ownership ledger here, same idiom as
+  // `bakeVolumeTexture`'s returned textures below.
+  const cloudPipelines = createCloudPipelines({ device, makeShader, hdrFormat: HDR });
+  const starUbo = own(cloudPipelines.starUbo);
+  const dustUbo = own(cloudPipelines.dustUbo);
+  const { starPipe, dustPipe, starBG, dustBG } = cloudPipelines;
 
   // ---- three baked volumes, each baked ONCE via bakeVolumeTexture ----
   // dustNoiseTex (128^3 ridged-fbm — dustNoiseBake.wesl's header explains why
@@ -558,23 +460,8 @@ export async function createGalaxyEngine(
   const bloomPyramid = createBloomPyramid(device, HDR);
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: HDR });
 
-  // ---- the one tool-only post pipeline: the grade trailer ----
-  // See `shaders/grade.wesl` — saturation / vignette / optional gamma encode,
-  // none of which the app has. Skipped entirely at identity settings, which is
-  // the default, so it costs nothing in the app-parity configuration.
-  const gradeMod = makeShader(gradeWgsl, 'galaxy:grade');
-  const gradePipe = device.createRenderPipeline({
-    label: 'galaxy:gradePipe',
-    layout: 'auto',
-    vertex: { module: gradeMod, entryPoint: 'vs' },
-    fragment: { module: gradeMod, entryPoint: 'fs', targets: [{ format }] },
-    primitive: { topology: 'triangle-list' },
-  });
-  const gradeSampler = device.createSampler({
-    label: 'galaxy:gradeSampler',
-    magFilter: 'nearest',
-    minFilter: 'nearest',
-  });
+  // ---- the one tool-only post pipeline: `createGradePipeline.ts` ----
+  const { gradePipe, gradeSampler } = createGradePipeline({ device, makeShader, swapFormat: format });
 
   // One internal render bag merged by setRender (the spike's Object.assign).
   // Seeded from the same two constants the UI pushes on its first sync, so this
@@ -598,20 +485,9 @@ export async function createGalaxyEngine(
     onOrientationDiagnostics: opts.onOrientationDiagnostics,
   });
 
-  // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
-  // and never cross pipelines, so each pass needs its own group even where the
-  // buffer is the same — and here the buffers differ too (see
-  // `makeCloudUniformBuffer` above on why the two passes cannot share one).
-  const starBG = device.createBindGroup({
-    label: 'galaxy:cloudBG-star',
-    layout: starPipe.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: starUbo } }],
-  });
-  const dustBG = device.createBindGroup({
-    label: 'galaxy:cloudBG-dust',
-    layout: dustPipe.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: dustUbo } }],
-  });
+  // The cloud sprite bind groups (`starBG`/`dustBG`) are built by
+  // `createCloudPipelines` itself, above.
+  //
   // The field module's `dustMapBG` is the only one of its five bind groups
   // that doesn't reference `targets.dustMapTex` (it's the pass that WRITES
   // that texture, not one that samples it), so it is also the only one safe
@@ -810,18 +686,7 @@ export async function createGalaxyEngine(
     // the sprite passes and BOTH field headers below read the same objects out
     // of it, which is what keeps the two representations of the cloud summing
     // to the same image as they fade and dim.
-    const {
-      view,
-      viewProj: vp,
-      aspect,
-      fade,
-      galaxyWeight,
-      debugViews,
-      ismMapChannels,
-      dustSlices,
-      analyticExposure,
-      starGrainFeatureScale,
-    } = deriveFrameView({
+    const frameView = deriveFrameView({
       eye,
       target,
       fov,
@@ -831,6 +696,7 @@ export async function createGalaxyEngine(
       render,
       dustReachR: model.dustHeaderLanes.reachR,
     });
+    const { view, viewProj: vp, fade, galaxyWeight, debugViews } = frameView;
     lastFade = fade;
 
     // Two packs of the same struct, differing only in `viewportPx`: the star
@@ -856,146 +722,46 @@ export async function createGalaxyEngine(
       cloudData,
     );
     device.queue.writeBuffer(dustUbo, 0, cloudData);
-    // The analytic field's ray basis, shared by both headers below. `aspect`
-    // is the PROJECTION's (the canvas's), not the aggregate's: the fullscreen
-    // triangle covers the aggregate, but the frustum it must reconstruct is
-    // the one `proj` was built with.
-    const fieldCamera: FieldCamera = {
-      eye,
-      view,
-      fov,
-      aspect,
-      lensShiftX: shiftX,
-      exposure: analyticExposure,
-    };
-    packFieldHeaderUniforms(
-      {
-        camera: fieldCamera,
-        emissionCount: model.fieldCounts.emission,
-        primaryCount: model.fieldCounts.primary,
-        targetSizePx: targets.reducedSize(render.fieldDivisor),
-        dust: {
-          count: model.fieldCounts.dust,
-          // All three cached by rebuildDustMixture, not recomputed per frame.
-          extinctionRgb: model.dustHeaderLanes.extinctionRgb,
-          noise: model.dustHeaderLanes.noise,
-          carve: model.dustHeaderLanes.carve,
-          detail: model.dustHeaderLanes.detail,
-          // VIEW-dependent, unlike every other lane in this bag.
-          slices: dustSlices,
-          mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
-        },
-        // Each present shader reads its own view's lane out of this; bubble's
-        // does so through its own bind group, bound to THIS header's
-        // `fieldUbo` and never to the HII one below.
-        debugViews,
-        galaxyWeight,
-        ismMapChannels,
-        // ismMapPresent.wesl binds ONLY this header (createIsmMapOutput.ts's
-        // presentBindGroup, shared by both generators) — the HII header
-        // below omits this and packs the seeding lanes inert.
-        ismMapSeeding: model.ismMapSeedingView,
-      },
-      fieldData,
-    );
-    device.queue.writeBuffer(fieldUbo, 0, fieldData);
 
-    // The HII tier's own header, same camera basis, its own target's pixel
-    // size. `primaryCount` is packed to this pass's OWN instance count
-    // (`emissionCount` below), not the primary galaxy's — dustAttenuation.wesl's
-    // componentEmission gates its attenuation branch on `instanceIndex < primaryCount`,
-    // which is then true for every HII sprite, so the whole tier darkens under the
-    // same dust law the disc reads (an embedded shell/DIG/association is not
-    // exempt just because its sprite lives on its own target).
-    //
-    // `dust.extinctionRgb`/`.slices` carry the field header's own live values
-    // — the only two lanes dustAttenuation.wesl's componentEmission reads. Everything
-    // else in the bag stays INERT (matching the previous no-dust default):
-    // `noise`/`detail`/`count`/`mapHeightPx` feed dustMap.wesl's
-    // accumulation pass, which this draw never runs — carrying the field's
-    // real `dust.noise` here would silently retune `hiiNoiseTerm`'s sampling
-    // frequency (`u.dustNoise.x`, hiiSplat/hiiNoise.wesl's OWN reader of that lane) as a
-    // side effect of a fix that is only about attenuation.
-    //
-    // `debugViews`/`ismMapChannels` are the same values as above. Only
-    // `galaxyWeight` is read by this pass's own draw (hiiBG binds none of the
-    // present pipelines), but sharing them keeps HII's dimming in lockstep
-    // with the rest of the galaxy under an active view.
-    const hiiHeaderInput: FieldHeaderInput = {
-      camera: fieldCamera,
-      emissionCount: model.hiiComps.count,
-      primaryCount: model.hiiComps.count,
-      targetSizePx: targets.reducedSize(render.extrasDivisor),
-      dust: {
-        count: 0,
-        extinctionRgb: model.dustHeaderLanes.extinctionRgb,
-        noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
-        // S5, like `noise`/`detail` just above, feeds dustMap.wesl's
-        // accumulation pass only — this draw never runs it.
-        carve: { carve: 0, sharpness: 0.5, stretch: 1 },
-        detail: 0,
-        slices: dustSlices,
-        mapHeightPx: 0,
+    // Every FieldHeaderInput this frame needs — field, `hii:extras`, and
+    // every `HII_TIERS` row — assembled in one pure call off explicit model
+    // lanes, render settings and this frame's own derived view; see
+    // `buildFieldHeaderInputs.ts` for the shared camera basis and which lanes
+    // carry real values versus the packer's own inert defaults.
+    const headers = buildFieldHeaderInputs({
+      eye,
+      fov,
+      shiftX,
+      frame: frameView,
+      render,
+      model: {
+        fieldCounts: model.fieldCounts,
+        dustHeaderLanes: model.dustHeaderLanes,
+        ismMapSeeding: model.ismMapSeedingView,
+        hiiCount: model.hiiComps.count,
+        hiiTexture: model.hiiTexture,
+        youngStars: model.youngStars,
       },
-      // The tier-global texture scale/contrast — see `hiiTexture`'s own
-      // doc for why only THIS header (never the field one above) carries
-      // real values.
-      hiiTexture: model.hiiTexture,
-      // §5's stars-map read — same "only this header" asymmetry as
-      // `hiiTexture` just above (a young-stars chain component only ever
-      // exists in `model.hiiComps`). `nearFadeStart`/`nearFadeEnd` ride the
-      // same row (io.wesl's youngStars doc) but come from `render`, not
-      // `model` — a live perf knob, not per-galaxy tuning — so they're added
-      // here rather than inside `model.youngStars`'s own getter.
-      youngStars: {
-        contrastGamma: model.youngStars.contrastGamma,
-        invMeanNorm: model.youngStars.invMeanNorm,
-        nearFadeStart: render.hiiNearFadeStart,
-        nearFadeEnd: render.hiiNearFadeEnd,
+      targetSizes: {
+        field: targets.reducedSize(render.fieldDivisor),
+        dustMapHeightPx: targets.reducedSize(render.dustDivisor)[1],
+        hii: targets.reducedSize(render.extrasDivisor),
+        tiers: Object.fromEntries(
+          HII_TIERS.map((tier) => [tier.kind, targets.reducedSize(render[tier.divisorKey])]),
+        ) as Record<HiiTierKind, Vec2>,
       },
-      // `starGrainTerm`'s own live calibration knob (io.wesl's dustDetail.w
-      // doc) — same "only the HII header carries a real value" asymmetry as
-      // `youngStars`/`hiiTexture` above, and same reason every `HII_TIERS`
-      // header below inherits it via its `{...hiiHeaderInput}` spread rather
-      // than a second explicit line. `deriveFrameView`'s own blend of
-      // `render.starGrainFeatureScaleNear`/`Far`, not a flat render read —
-      // one static value can't serve both close approach and whole-galaxy
-      // framing.
-      starGrainFeatureScale,
-      // starGrain.wesl's own domain-warp amplitude (io.wesl's perf.y doc) —
-      // same "only the HII header carries a real value" asymmetry as
-      // starGrainFeatureScale just above.
-      starGrainWarpAmp: render.starGrainWarpAmp,
-      // Screen-space quad cap (#71, io.wesl's perf.x doc) — same "only the
-      // HII header carries a real value" asymmetry as starGrainFeatureScale
-      // just above, inherited by every HII_TIERS header below through the
-      // same `{...hiiHeaderInput}` spread.
-      quadCapNdc: render.hiiQuadCap,
-      debugViews,
-      galaxyWeight,
-      ismMapChannels,
-    };
-    packFieldHeaderUniforms(hiiHeaderInput, hiiData);
+    });
+    packFieldHeaderUniforms(headers.field, fieldData);
+    device.queue.writeBuffer(fieldUbo, 0, fieldData);
+    packFieldHeaderUniforms(headers.hii, hiiData);
     device.queue.writeBuffer(hiiUbo, 0, hiiData);
-    // Every `HII_TIERS` row's own header — every lane identical to the
-    // `hii:extras` one above (same `model.hiiComps.buffer`, same whole-tier
-    // `primaryCount`, so the dust-attenuation gate is correct for whichever
-    // sub-range a given pass draws) EXCEPT `targetSizePx`: each tier has its
-    // OWN reduced target at its OWN divisor, and that lane is what
-    // `counts2.w` feeds the shader's footprint gates and dustMapTex UV
-    // reconstruction with (see `FieldHeaderInput`'s own doc) — reusing
-    // `hiiHeaderInput.targetSizePx` here would silently hand every tier's
-    // splat the extras target's resolution instead of its own.
-    for (const tier of HII_TIERS) {
-      packFieldHeaderUniforms(
-        { ...hiiHeaderInput, targetSizePx: targets.reducedSize(render[tier.divisorKey]) },
-        tierData,
-      );
-      device.queue.writeBuffer(tierUbo[tier.kind], 0, tierData);
-    }
     // The post chain's uniforms are written by the shared factories at draw
     // time (bloom thresholds/texel sizes, compositor exposure + curve), so
     // there is nothing else to pack here.
+    for (const tier of HII_TIERS) {
+      packFieldHeaderUniforms(headers.tiers[tier.kind], tierData);
+      device.queue.writeBuffer(tierUbo[tier.kind], 0, tierData);
+    }
 
     // Before the encoder exists, not after: a rebuild can destroy and replace
     // `bubbleComps`'s buffer, which a recorded draw would already be holding,
