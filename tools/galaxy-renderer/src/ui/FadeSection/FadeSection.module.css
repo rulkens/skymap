@@ -1,0 +1,77 @@
+.root {
+}
+
+.toggleRow {
+  composes: toggleRow from '../shared.module.css';
+}
+
+.toggleLabel {
+  composes: toggleLabel from '../shared.module.css';
+}
+
+.checkbox {
+  composes: checkbox from '../shared.module.css';
+}
+
+.anchorWrap {
+  margin-top: 8px;
+  margin-bottom: 10px;
+}
+
+.anchorLabel {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-base);
+  margin-bottom: 5px;
+}
+
+.anchorSelect {
+  composes: control from '../shared.module.css';
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-lg);
+}
+
+/* The readout borrows PassTimings' scannable two-column shape: a fixed label
+   column so the numbers form a straight right edge, which is what makes
+   "which band moved" readable at a glance while dragging. */
+.readout {
+  margin-top: 12px;
+  font-family: var(--font-family-mono);
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--color-fg-muted);
+}
+
+.readoutHeader {
+  color: var(--color-fg-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  margin-bottom: 3px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.slot {
+  width: 118px;
+  color: var(--color-fg-dim);
+}
+
+.value {
+  color: var(--color-accent);
+}
+
+/* The composed alpha is the answer the other rows explain — set apart so it
+   reads as the total rather than a sixth peer. */
+.alphaRow {
+  composes: row;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-default);
+  padding-top: 4px;
+  font-weight: 600;
+}

@@ -1,11 +1,12 @@
 # Galaxy Renderer
 
 A WebGPU dev tool that draws a single **procedural, parametric
-Hubble-sequence galaxy** — hundreds of thousands of instanced star sprites
-behind an HDR bloom pipeline — tunable to match real astrophotography. It
-ports a proven spike into the repo as a first-class instrument for judging
-whether that richer representation is "up to par" to eventually replace the
-main renderer's per-galaxy point billboard on close approach.
+Hubble-sequence galaxy** — a closed-form Gaussian-mixture emission field, a
+dust-column map, HII shells, and (off at boot, scheduled for deletion) a
+legacy bag of instanced star sprites — behind an HDR bloom pipeline, tunable
+to match real astrophotography. It is the instrument for judging whether that
+richer representation is "up to par" to eventually replace the main renderer's
+per-galaxy point billboard on close approach.
 
 This is a sibling dev tool, like `tools/flow-workbench/` and
 `tools/famous-curator/` — its own self-contained Vite + React + TS app, not
@@ -27,9 +28,10 @@ all four can run side-by-side.
 - **Right-drag / middle-drag** — pan the orbit target.
 - **Wheel** — zoom in/out (damped, clamped range).
 - **Idle** — after 2.5 s without input, auto-rotate resumes.
-- **Controls panel** (right) — Hubble-type chips, every generator/render/LOD
-  slider, a randomize-everything button, the multi-galaxy perf-test toggle,
-  and the JSON preset row.
+- **Controls panel** (right) — Hubble-type chips, the analytic-field / arms /
+  HII / star-formation / dust-cloud sections, the debug-view crossfades, every
+  generator/render/LOD slider, a randomize-everything button, the multi-galaxy
+  perf-test toggle, and the JSON preset row.
 
 ## Compare workflow
 
@@ -53,9 +55,9 @@ same JSON on the clipboard for pasting elsewhere.
 ## Generation
 
 Each galaxy is built by two GPU compute passes — `generateStars.wesl` and
-`generateDust.wesl`, both linked from the shared `galaxyGen/generate.wesl` (bind
+`generateDust.wesl`, both linked from the shared `milkyWay/sprites/generate.wesl` (bind
 group, population builders, RNG). Changing a galaxy's params triggers exactly
-one dispatch of this pair (`createGalaxyEngine`'s `setParams`), not a
+one dispatch of this pair (`createGalaxyModel`'s `setParams`), not a
 per-frame step: the CPU side carves _layouts_ — for every star and dust
 population, a `(start, iterations, stride, populationId)` range — with cheap
 pure arithmetic (`carveStarLayout` / `carveDustLayout`), packs one
@@ -93,24 +95,23 @@ own draw stream so dialling one never perturbs another:
 | `waveSeed`  | each arm's high-frequency waviness                                   | a real `mulberry32` stream, CPU-side |
 
 The three family seeds don't feed the per-invocation hash — they seed genuine
-`mulberry32` generators that run once, CPU-side, inside
-`packGenerationUniforms`, producing the handful of _shared_ values every GPU
-invocation reads (arm phase, pitch, weight, meander amplitude/frequency/phase,
-...). Those values ride the UBO as plain floats; the GPU never draws them
-itself.
+`mulberry32` generators that run once, CPU-side, inside `describeGalaxy`,
+producing the handful of _shared_ values every GPU invocation reads (arm phase,
+pitch, weight, meander amplitude/frequency/phase, ...). Those values ride the
+UBO as plain floats; the GPU never draws them itself.
 
 ### Re-derived main-seed values
 
 A few more galaxy-level values also come from a CPU-side serial draw rather
 than the per-invocation hash — from `seed` itself, not a family seed.
-`packGenerationUniforms` runs a fresh `mulberry32(seed)` stream and draws, in
-fixed order: the bar tilt angle (via `computeBarGeometry`, unconditionally
-for every category), then the seven irregular-galaxy clump centres if the
-category is `'irregular'`, then the 34 lenticular dust-cloud centres if the
-category is `'lenticular'`. A galaxy is only ever one category, so at most
-one of the two centre blocks actually draws. Reproducing this draw order
-CPU-side, once per galaxy, is what lets every GPU invocation read the same
-shared geometry instead of each needing to re-derive it independently.
+`describeGalaxy` runs a fresh `mulberry32(seed)` stream and draws, in fixed
+order: the bar tilt angle (via `computeBarGeometry`, unconditionally for every
+category), then the seven irregular-galaxy clump centres if the category is
+`'irregular'`, then the 34 lenticular dust-cloud centres if the category is
+`'lenticular'`. A galaxy is only ever one category, so at most one of the two
+centre blocks actually draws. Reproducing this draw order CPU-side, once per
+galaxy, is what lets every GPU invocation read the same shared geometry instead
+of each needing to re-derive it independently.
 
 ### Over-allocation and dead points
 
@@ -145,7 +146,7 @@ intended behaviour.
 barred-spiral morphology (NGC 1300 / NGC 1365) rather than as straight
 parallel rails: each lane hugs its bar half's leading edge, then the pair
 swaps sides through the nucleus via a tanh S-curve (`BAR_LANE_S_STEEP` in
-`galaxyGen/generate.wesl` sets how sharply the lanes cross), while an antisymmetric
+`milkyWay/sprites/generate.wesl` sets how sharply the lanes cross), while an antisymmetric
 cubic bow (`BAR_LANE_BOW`) peels the lane ends outward toward the arm roots,
 in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 `buildBarDust`.
@@ -154,29 +155,39 @@ in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 
 **The whole chain is the main app's, not this tool's.** The tool is only
 useful if a look tuned here transfers, so nothing about the image is
-hand-matched: the shaders are the runtime's `shaders/milkyWayCloud/`,
-`shaders/additiveUpsample/`, `shaders/bloom/` and `shaders/compositor/` trees,
-symlinked into this tool's WESL root (see `wesl.toml`), and the passes that
-drive them are the runtime's `createAdditiveUpsample`, `createBloomPyramid`
-and `createCompositor`. Editing any of those shaders changes both apps.
+hand-matched: the shaders are the runtime's `shaders/milkyWay/sprites/`,
+`shaders/milkyWay/{sprites,field,ismMap}/`, `shaders/additiveUpsample/`,
+`shaders/bloom/` and `shaders/compositor/` trees, symlinked into this tool's
+WESL root (see `wesl.toml`), and the post passes that drive them are the
+runtime's `createAdditiveUpsample`, `createBloomPyramid` and
+`createCompositor`. Editing any of those shaders changes both apps.
 
-The scene draws in two passes. First, additive star billboards into a
-reduced-resolution offscreen at `floor(canvas / divisor)` — the app's
-`mw-aggregate` row, for the app's reason: a summed additive glow field is
-low-frequency, so it reconstructs from a coarser target for free while its
-fragment cost (the actual wall, measured) falls as the divisor's square. Then
-that offscreen is bilinearly added into the `rgba16float` HDR target and
-absorptive dust (multiplicative transmittance, so it darkens and reddens
-whatever's behind it) draws over it at FULL resolution — also the app's split,
-because dust has to multiply the real accumulation and is not the fill-bound
-half.
+`src/engine/`'s own [README](src/engine/README.md) maps that tree: which folders
+are the sprite tier (v1), which the analytic field (v2), and which are neither.
 
-All seven of the app's `MILKY_WAY_TUNING_DEFAULTS` knobs therefore mean the
+The pass chain itself is `createGalaxyEngine.ts`'s `TIMING_SLOTS` docblock —
+its one account, and the one that stays current; read it there rather than a
+copy here. The shape: each tier splats into its OWN reduced-resolution
+offscreen at `floor(canvas / divisor)` (sprites into the aggregate, the
+analytic field, the dust-column map and the HII shells each at their own
+divisor), then one FULL-resolution `scene` pass sums them into the
+`rgba16float` HDR target and draws absorptive dust (multiplicative
+transmittance, so it darkens and reddens whatever's behind it) over the
+result. The reduced-resolution detour is the app's `mw-aggregate` row, for the
+app's reason: a summed additive glow field is low-frequency, so it
+reconstructs from a coarser target for free while its fragment cost (the
+actual wall, measured) falls as the divisor's square. Dust stays full-res —
+also the app's split — because it has to multiply the real accumulation and is
+not the fill-bound half.
+
+All eight of the app's `MILKY_WAY_TUNING_DEFAULTS` knobs therefore mean the
 same thing here: `sizeScale` / `starIntensity` (spelled `starSizeScale` /
 `exposure` in the app), the `starPxMin` / `starPxMax` sprite clamp, `softness`,
-`lodApparent`, and the star target's `aggregateDivisor`. The two px knobs clamp
-in pixels OF THE STAR TARGET, so the divisor and they are one trade — at
-divisor 2 a clamp of 48 is 96 screen pixels.
+`lodApparent`, `starCount` (which rides `DEFAULT_GALAXY_PARAMS` here rather
+than the render bag, since it feeds generation rather than compositing), and
+the star target's `aggregateDivisor`. The two px knobs clamp in pixels OF THE
+STAR TARGET, so the divisor and they are one trade — at divisor 2 a clamp of
+48 is 96 screen pixels.
 
 From HDR onward:
 bright-pass → 5-level dual-filter pyramid (Karis firefly-suppressed averaging
@@ -203,14 +214,13 @@ The median (rather than a mean) is what keeps one GC pause or shader recompile
 from parking the readout several milliseconds high for a second afterwards.
 
 Adding **`?gpuTimings`** to the URL turns on per-pass GPU timestamps, listed
-under the badges: `stars` (the additive star pass into the reduced-resolution
-target — the fill-bound half, and the one the sprite-size and divisor knobs
-move), `scene` (the full-res HDR pass: the aggregate's upsample plus the dust
-billboards, which share one render pass), `bloom` (the whole pyramid as one
-span, exactly how the app's frame program bills it), `composite`, and `grade`
-on frames the tool-only trailer ran. A timestamp pair can only bracket a whole
-pass, which is what decides that split. They come from the runtime's
-`gpuTimingService`, imported rather than copied.
+under the badges in `TIMING_SLOTS` order: `stars`, `dustMap`, `field`, `hii`,
+`scene`, `bloom`, `composite`, and `grade`. A timestamp pair can only bracket
+a whole pass, which is what decides that split; several slots run only when
+their tier has something to draw, and a slot that stops reporting drops out of
+the list rather than freezing. `TIMING_SLOTS`'s own docblock in
+`createGalaxyEngine.ts` says what each covers and what makes it drop. They come
+from the runtime's `gpuTimingService`, imported rather than copied.
 
 **Those per-pass numbers are ordinal.** A tile-based deferred GPU — every
 Apple Silicon machine — overlaps passes, so a pass's begin/end timestamps
@@ -223,17 +233,20 @@ perturbs a TBDR driver, and the wall clock has to stay clean.
 Generation is not in the list: it dispatches once per `setParams`, not per
 frame, so it never appears in a frame's measurement.
 
-The engine around the passes — camera, orbit input, frame loop — is a
-verbatim, cited port of the spike's `galaxy-engine.js`. The draw shaders it
-once carried (`galaxy-shaders.js`, ported to a local `star.wesl` / `dust.wesl`)
-have since been superseded by the runtime's `milkyWayCloud/` pair, which grew
-out of them; see the shader/engine source comments and
-[`docs/superpowers/plans/2026-07-02-galaxy-renderer-02-engine-and-shaders.md`](../../docs/superpowers/plans/2026-07-02-galaxy-renderer-02-engine-and-shaders.md)
-for the full line-cited port map.
+The engine around the passes — camera, orbit input, frame loop — began as a
+port of a standalone `.js` spike that lived outside this repo, so the spike's
+files are not findable here; the plan that ported it carries the full
+line-cited port map
+([`docs/superpowers/plans/completed/2026-07-02-galaxy-renderer-02-engine-and-shaders.md`](../../docs/superpowers/plans/completed/2026-07-02-galaxy-renderer-02-engine-and-shaders.md)).
+The spike's draw shaders came over as a local `star.wesl` / `dust.wesl` pair
+and have since been deleted, superseded by the runtime's `milkyWay/sprites/`
+shaders that grew out of them.
 
 ## Status
 
-Feature-complete: model, engine, shaders, the full control panel, the
-compare/auto-fit panel, and JSON presets are all live. See
-[`docs/superpowers/specs/2026-07-02-galaxy-renderer-tool-design.md`](../../docs/superpowers/specs/2026-07-02-galaxy-renderer-tool-design.md)
-for the full design.
+Model, engine, shaders, the full control panel, the compare/auto-fit panel and
+JSON presets are all live; the analytic field that replaces the legacy star bag
+is the work still in flight. See
+[`docs/superpowers/specs/completed/2026-07-02-galaxy-renderer-tool-design.md`](../../docs/superpowers/specs/completed/2026-07-02-galaxy-renderer-tool-design.md)
+for the original design and [`docs/research/milky-way/`](../../docs/research/milky-way/)
+(its README indexes the files) for the field work.

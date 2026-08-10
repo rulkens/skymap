@@ -1,4 +1,7 @@
-// lib/pickDepthBands.wesl — the shared NEAR0 pick-priority depth bands.
+// lib/pickDepthBands.wesl — shader-math derivation file (exceeds the usual
+// header/comment budget on that basis): the shared NEAR0 pick-priority depth
+// bands, and the float-precision argument for why their ordering can never
+// invert.
 //
 // ## The problem: importance is not distance
 //
@@ -85,7 +88,7 @@
 //                                per-instance glint CLASS band (earth / planet /
 //                                moon eps below) so importance, not nearness,
 //                                decides among glints.
-//   - milkyWayPick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
+//   - milkyWay/pick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
 //                                impostor is the ultimate fallback).
 //
 // The constants live here, not in any one consumer, so the bands can never drift
@@ -109,9 +112,9 @@ const PICK_BAND_MOON_EPS: f32 = 4.0e-4; // z/w 0.00040
 
 // Scene / famous stars — deeper than the glint bands, so a within-far scene star
 // still loses a contested pixel to a sub-pixel glint but beats every survey star
-// and the backdrop. This is the value the survey and scene pick stages previously
-// each spelled inline as their local 'CLIP_Z_EPS' far-plane clamp; naming it as a
-// band keeps that class exactly where it was while making the ordering explicit.
+// and the backdrop. This is the far-plane clamp the survey and scene pick stages
+// read as their local 'CLIP_Z_EPS'; naming it as a band here makes the ordering
+// explicit.
 const PICK_BAND_SCENE_STAR_EPS: f32 = 1e-4;
 
 // Gaia survey stars — deeper than the scene band, so a survey star always loses

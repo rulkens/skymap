@@ -1,6 +1,6 @@
 /**
  * dominantArms — the arm harmonic (m = 1..6) with the largest magnitude in a
- * descriptor, for reporting. Ported verbatim from galaxy-matcher.js:124-128.
+ * descriptor, for reporting. Ported verbatim from the spike's `galaxy-matcher.js`.
  * The seed (best=2, bv=-1) is overwritten by any non-negative magnitude at
  * m=1, so flat spectra return 1; ties break to the lowest harmonic.
  */

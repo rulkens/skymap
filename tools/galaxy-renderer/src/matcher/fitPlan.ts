@@ -1,15 +1,13 @@
 /**
  * fitPlan — per-category descriptor-loss weights + optimisable param ranges
- * for `autoFit`. Ported verbatim from galaxy-matcher.js:141-157; the weight
- * values, param bounds, and their order are load-bearing (they set the
- * coordinate-descent's step sizes via `(hi - lo)`), so this is a straight
- * transcription rather than a "cleaned up" table.
- *
- * `armOK = q > 0.4` gates the arm-harmonic channel: near edge-on (q ≤ 0.4)
- * the azimuthal DFT `computeDescriptor` extracts is unreliable (foreshortened
- * arms alias into spurious harmonics), so the arm weight drops from 5 to 1
- * and the discrete arm-count sweep is skipped entirely (`arms: null`) rather
- * than searched against noise.
+ * for `autoFit`. The weight values, param bounds, and their order are
+ * load-bearing (they set the coordinate-descent's step sizes via
+ * `(hi - lo)`), so this is a straight transcription, not a "cleaned up"
+ * table. `armOK = q > 0.4` gates the arm-harmonic channel: near edge-on
+ * (q ≤ 0.4) the azimuthal DFT `computeDescriptor` extracts is unreliable
+ * (foreshortened arms alias into spurious harmonics), so the arm weight
+ * drops from 5 to 1 and the discrete arm-count sweep is skipped entirely
+ * (`arms: null`) rather than searched against noise.
  */
 
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
@@ -32,7 +30,7 @@ export function fitPlan(category: GalaxyCategory, q: number): FitPlan {
       params: [
         ['hii', 0, 2],
         ['youngStars', 0.1, 1],
-        ['dust', 0, 1.6],
+        ['spriteDust', 0, 1.6],
         ['diskThickness', 0.5, 1.8],
         ['bulgeSize', 0.1, 0.8],
       ],
@@ -44,7 +42,7 @@ export function fitPlan(category: GalaxyCategory, q: number): FitPlan {
       w: { profile: 6, q: 4.5, color: 1.6, arm: 0.4, dust: 2.2 },
       params: [
         ['bulgeSize', 0.4, 1.8],
-        ['dust', 0, 1.6],
+        ['spriteDust', 0, 1.6],
         ['dustRing', 0.4, 1.0],
         ['diskThickness', 0.4, 1.4],
       ],
@@ -58,7 +56,7 @@ export function fitPlan(category: GalaxyCategory, q: number): FitPlan {
     ['armWinding', 0, 1],
     ['armWidth', 0.4, 1.8],
     ['armStrength', 0.25, 1.5],
-    ['dust', 0, 2],
+    ['spriteDust', 0, 2],
     ['hii', 0, 2],
     ['youngStars', 0.15, 1],
     ['diskThickness', 0.5, 1.6],

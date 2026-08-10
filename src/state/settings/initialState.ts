@@ -1,19 +1,15 @@
 /**
  * buildInitialSettings — assemble the engine's boot-time settings literal.
  *
- * Every settings field lives under a named cluster (galaxy-catalog billboard
- * knobs under `galaxyCatalogs`, extended-range headroom under `hdr`, etc.). This
- * function is the *assembly* step that composes the per-field defaults from
- * `data/defaults.ts` (mirroring how those constants are defined one place) plus
- * the registry-derived item rows into the single `EngineSettingsState` that the
- * settings slice seeds. The data tier is NOT a settings field — it lives in its
- * own root slice and is seeded separately via the store's `preloadedState`.
+ * Composes the per-field defaults from `data/defaults.ts` plus the
+ * registry-derived item rows into the single `EngineSettingsState` the
+ * settings slice seeds. The data tier is NOT a settings field — it lives in
+ * its own root slice, seeded separately via the store's `preloadedState`.
  *
- * It lives apart from `createEngine` for two reasons: the boot-defaults shape
- * becomes independently testable (assert every cluster + every derived item row
- * is seeded) without standing up the whole engine, and `createEngine` sheds ~70
- * lines of construction noise. The function is pure and total — it takes no
- * arguments, so there's no ambient default to drift.
+ * Lives apart from `createEngine` so the boot-defaults shape is independently
+ * testable (assert every cluster + derived item row is seeded) without
+ * standing up the whole engine. Pure and total — no arguments, so there's no
+ * ambient default to drift.
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
@@ -60,7 +56,7 @@ import { DEFAULT_REFINE_THRESHOLD } from '../../services/gpu/renderers/starCatal
 // Same relationship: the Milky-Way star-cloud look knobs are owned by the
 // renderer's calibration module, so seed them from there rather than restating
 // six numbers here.
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,

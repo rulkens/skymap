@@ -22,7 +22,7 @@ load-bearing; each is an independent cleanup.
    stride is single-homed (`GEN_RECORD_BYTES`), but the field offsets
    (stars f32x3@0 / f32x3@12 / f32x2@24; dust f32x3@0 / f32@12 / f32x3@16 /
    f32@28) are spelled independently in the app's `milkyWayCloudRenderer`,
-   the tool's engine, and the `galaxyGen` WESL writers. A shared offsets
+   the tool's engine, and the `milkyWay/sprites` WESL writers. A shared offsets
    table (or a parity test in the style of `generationShaderParity`) would
    catch a reorder in any one home.
 

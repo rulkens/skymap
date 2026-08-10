@@ -1,0 +1,24 @@
+.root {
+}
+
+/* Same small-caps treatment as the ISM section's own readout header, plus a top rule
+   since this sits between sliders rather than above a readout block. No
+   rule/margin when this group is the FIRST child of its container, so a
+   section body doesn't open with a floating divider line right under the
+   fold — `.root:first-child` rather than `:first-child` on `.header` itself
+   because the title+children are now one wrapper, not a bare sibling div. */
+.header {
+  margin: 14px 0 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-default);
+  color: var(--color-fg-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+
+.root:first-child .header {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}

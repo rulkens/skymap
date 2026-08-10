@@ -18,7 +18,7 @@ import { describe, it, expect } from 'vitest';
 import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
-import { MILKY_WAY_RADIUS_MPC } from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { regionById } from '../../../../src/utils/scene/regionById';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';

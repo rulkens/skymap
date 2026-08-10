@@ -25,7 +25,7 @@ import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
@@ -399,8 +399,8 @@ function makeInput(
     canvasHeight,
     viewProj,
     // Expose the local settings bag so tests can assert against it
-    // (e.g. exposure, toneMapCurve) without reaching into input.settings,
-    // which no longer exists on RenderFrameInput.
+    // (e.g. exposure, toneMapCurve) — RenderFrameInput carries no settings
+    // field of its own.
     settings,
     input: {
       ctx,

@@ -1,0 +1,47 @@
+.root {
+}
+
+.toggleRow {
+  composes: toggleRow from '../shared.module.css';
+}
+
+/* Generator picker — same control surface as TonemapSelect's own .root, sized to sit inline in a .toggleRow rather than filling the panel width. */
+.select {
+  composes: control from '../shared.module.css';
+  padding: 4px 6px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-lg);
+}
+
+/* Same scannable two-column shape as FadeSection's readout — see that
+   module's own comment for why: a fixed label column keeps the numbers on
+   a straight right edge. */
+.readout {
+  margin-top: 12px;
+  font-family: var(--font-family-mono);
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--color-fg-muted);
+}
+
+.readoutHeader {
+  color: var(--color-fg-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  margin-bottom: 3px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.slot {
+  width: 140px;
+  color: var(--color-fg-dim);
+}
+
+.value {
+  color: var(--color-accent);
+}

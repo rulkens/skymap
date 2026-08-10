@@ -1,23 +1,18 @@
-// lib/cloudSprite.wesl — shared shading math for the generated-galaxy sprite
-// passes (star + dust billboards). These functions are the SINGLE HOME for
-// tuned constants that previously lived, verbatim, in both the main app's
-// milkyWayCloud shaders and the galaxy-renderer tool's draw shaders — the
-// duplication was tolerated at port time ("adaptations, not copies") with a
-// consolidate-on-second-retune rule, and the fade-band fix below was that
-// second retune.
+// lib/cloudSprite.wesl — shading math for the generated-galaxy sprite passes
+// (milkyWay/sprites/ star + dust billboards), which the galaxy-renderer tool
+// also draws through a directory symlink.
 //
-// The galaxy-renderer tool reaches this module through a file symlink at
+// The tool reaches this module through a file symlink at
 // tools/galaxy-renderer/src/engine/shaders/lib/cloudSprite.wesl — WESL
 // package binding is root-driven, so the file must appear inside the tool's
 // own shader root to be addressable as package::lib::cloudSprite (same
-// mechanism as the galaxyGen/ directory symlink; see the tool's wesl.toml).
+// mechanism as the milkyWay/sprites/ directory symlink; see the tool's wesl.toml).
 //
-// What deliberately STAYS per-pass (adaptation points, not shared):
-//   - The screen-size clamp: the app's star pass clamps in PIXELS (the
-//     anti-sparkle floor is a star-only calibration lever), while the tool's
-//     star pass and both dust passes clamp in NDC (0.11 / 0.16).
-//   - The fade knob: the app multiplies fadeAlpha into emission (stars) or
-//     mixes transmittance toward identity (dust); the tool has no fade.
+// What deliberately STAYS per-pass:
+//   - The screen-size clamp: the star pass clamps in PIXELS (the anti-sparkle
+//     floor is a star-only calibration lever), the dust pass in NDC (0.16).
+//   - The fade knob: stars multiply fadeAlpha into emission, dust mixes
+//     transmittance toward identity.
 
 // Result of the flux-conserving LOD decision for one sprite. A culled
 // sprite should park its quad outside clip space (all corners on one point

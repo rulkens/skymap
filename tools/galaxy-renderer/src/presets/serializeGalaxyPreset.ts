@@ -1,34 +1,37 @@
 /**
  * serializeGalaxyPreset — the JSON wire format for a saved/shared galaxy
- * preset, byte-for-byte compatible with the spike's `downloadJSON`
- * (`Galaxy Renderer.dc.html:640`): `{ type: 'galaxy-preset', version: 1, p, r }`.
- *
- * The spike's `r` bag was a flat merge of render + LOD knobs — there was no
- * split, because the spike had no split to preserve. This port's STORE keeps
- * `RenderSettings` and `LodSettings` as separate slices (they map to two
- * different GPU uniform buffers — see `RenderSettings.d.ts`'s header), but
- * the WIRE format has no reason to inherit that boundary: it's an external
- * contract, and flattening it back to the spike's shape is what makes old
- * exported presets (and this format) round-trip through either shape. This
- * function is the one place that folds the two slices back into the flat
- * `r` bag; `parseGalaxyPreset` is the one place that splits it apart again.
+ * preset: `{ type, version, p, r, f, x }`. `r` flattens `RenderSettings` +
+ * `LodSettings` into one wire bag; `parseGalaxyPreset` splits it back apart.
+ * `x` carries extras' `enabled`/`count` (`regenNonce` dropped — a re-roll
+ * trigger, not a seed). v3 nests `f` (`GalaxyFieldTuning`) by UI section
+ * instead of v2's flat keys; v4 nests `p` (`GalaxyParams`) into its
+ * `shared`/`legacy` bags instead of v3's flat keys — see
+ * `parseGalaxyPreset`'s header for the fallback chain and
+ * `migrateGalaxyFieldTuningWire`/`migrateGalaxyParamsWire`'s headers for the
+ * lifts.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
+import type { ExtrasState } from '../../@types/state/ExtrasState';
 
 export function serializeGalaxyPreset(
   galaxy: GalaxyParams,
   render: RenderSettings,
   lod: LodSettings,
+  fieldTuning: GalaxyFieldTuning,
+  extras: Pick<ExtrasState, 'enabled' | 'count'>,
 ): string {
   return JSON.stringify(
     {
       type: 'galaxy-preset',
-      version: 1,
+      version: 4,
       p: galaxy,
       r: { ...render, ...lod },
+      f: fieldTuning,
+      x: { enabled: extras.enabled, count: extras.count },
     },
     null,
     2,
