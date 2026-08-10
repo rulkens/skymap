@@ -7,7 +7,7 @@
  * a settings drawer folded into FLUX FIELD.
  *
  * SHELLS, DIG and YOUNG STARS nest inside it (`CollapsibleSection`'s
- * `nested` prop) rather than living as top-level siblings the way
+ * `variant="nested"`) rather than living as top-level siblings the way
  * `armField`/`armCloud` do — the panel was long enough that flattening every
  * shell/DIG/young-stars slider alongside the tier-shared ones read as one
  * endless list. Texture scale/contrast stay in the outer body: their info
@@ -114,7 +114,7 @@ function HiiSection(): ReactNode {
         onToggle={() => dispatch(sectionToggled('hiiShells'))}
         headerToggle={hii.shells.enabled}
         onHeaderToggleChange={(value) => patchShells({ enabled: value })}
-        nested
+        variant="nested"
       >
         <div className={styles.root}>
           <ParamSlider
@@ -212,7 +212,7 @@ function HiiSection(): ReactNode {
         open={digOpen}
         onToggle={() => dispatch(sectionToggled('hiiDig'))}
         copyPayload={{ fieldTuning: { hii: { dig: hii.dig } } }}
-        nested
+        variant="nested"
       >
         <div className={styles.root}>
           <ParamSlider
@@ -312,7 +312,7 @@ function HiiSection(): ReactNode {
         headerToggle={hii.youngStars.enabled}
         onHeaderToggleChange={(value) => patchYoungStars({ enabled: value })}
         copyPayload={{ fieldTuning: { hii: { youngStars: hii.youngStars } } }}
-        nested
+        variant="nested"
       >
         <div className={styles.root}>
           <ParamSlider

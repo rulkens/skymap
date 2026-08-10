@@ -3,11 +3,11 @@
 // CollapsibleSection is controlled (open/onToggle are plain props, no
 // internal state of its own), so nesting is just composition — render one
 // inside another's `children`, each wired to its own open/onToggle pair.
-// What's worth pinning here is the `nested` prop's contract: a section
-// rendered WITHOUT it must stay byte-identical to every section already in
-// the panel (no stray class, no stray data attribute), a section rendered
-// WITH it must carry the probe's `data-nested` discovery hook and the
-// diminished header/indented-body classes, and a nested section's open
+// What's worth pinning here is `variant="nested"`'s contract: a section
+// rendered without a variant must stay byte-identical to every section
+// already in the panel (no stray class, no stray data attribute), a section
+// rendered WITH it must carry the probe's `data-nested` discovery hook and
+// the diminished header/indented-body classes, and a nested section's open
 // state must be independent of its parent's.
 
 import { describe, expect, it } from 'vitest';
@@ -30,7 +30,7 @@ describe('CollapsibleSection nesting', () => {
 
   it('marks a nested section for the probe and applies the diminished style', () => {
     const { container } = render(
-      <CollapsibleSection title="DIG" open onToggle={() => {}} nested>
+      <CollapsibleSection title="DIG" open onToggle={() => {}} variant="nested">
         <div />
       </CollapsibleSection>,
     );
@@ -53,7 +53,7 @@ describe('CollapsibleSection nesting', () => {
             title="DIG"
             open={childOpen}
             onToggle={() => setChildOpen((v) => !v)}
-            nested
+            variant="nested"
           >
             <div data-testid="dig-body" />
           </CollapsibleSection>

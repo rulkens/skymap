@@ -29,6 +29,7 @@ import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams
 import type { GalaxySharedParams } from '../../../../../src/@types/galaxy/GalaxySharedParams';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
+import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import Button from '../../../../../src/components/common/Button/Button';
@@ -264,6 +265,156 @@ const GLOB_SLIDERS: readonly SliderSpec[] = [
   { key: 'globularBright', label: 'Cluster brightness' },
 ];
 
+// The PERF section's own key subset — every one of these is a plain number on
+// `RenderSettings`, unlike `GalaxySliderKey` above which spans two bags.
+type RenderSliderKey =
+  | 'fieldDivisor'
+  | 'dustDivisor'
+  | 'extrasDivisor'
+  | 'shellsDivisor'
+  | 'digDivisor'
+  | 'youngDivisor'
+  | 'hiiNearFadeStart'
+  | 'hiiNearFadeEnd'
+  | 'starGrainFeatureScaleNear'
+  | 'starGrainFeatureScaleFar'
+  | 'starGrainWarpAmp'
+  | 'hiiQuadCap';
+
+type RenderSliderSpec = {
+  readonly key: RenderSliderKey;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format?: (value: number) => string;
+  readonly info: string;
+  /** The six divisor knobs are integer-stepped; the rest read fractionally. */
+  readonly round?: boolean;
+};
+
+const roundedCount = (v: number): string => String(Math.round(v));
+
+// LOD's own min-on-screen-size slider and the star-target divisor stay
+// hand-written above this table — both predate the divisor family below and
+// the LOD one drives `lod.lodApparent`, a different state bag entirely.
+const PERF_SLIDERS: readonly RenderSliderSpec[] = [
+  {
+    key: 'fieldDivisor',
+    label: 'Field target divisor',
+    min: 1,
+    max: 8,
+    step: 1,
+    format: roundedCount,
+    round: true,
+    info: 'The same trade for the ANALYTIC field, on its own target. It goes coarser than the sprites can: the field is a sum of wide Gaussians with no point-like detail to lose, and it is fill-bound, so cost falls as N². The ceiling is bloom fireflies zoomed out, not blur — the ray integral is a POINT sample with no pixel-footprint filtering, so a core narrower than a texel aliases into a value that crosses the bloom threshold.',
+  },
+  {
+    key: 'dustDivisor',
+    label: 'Dust divisor',
+    min: 1,
+    max: 8,
+    step: 1,
+    format: roundedCount,
+    round: true,
+    info: "Its own divisor, separate from the field's: the dust splat is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads.",
+  },
+  {
+    key: 'extrasDivisor',
+    label: 'Extras divisor',
+    min: 1,
+    max: 8,
+    step: 1,
+    format: roundedCount,
+    round: true,
+    info: "hiiTex's own divisor — now home to background extras' whole HII contribution alone. An embedded shell is still small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason.",
+  },
+  {
+    key: 'shellsDivisor',
+    label: 'Shells divisor',
+    min: 1,
+    max: 8,
+    step: 1,
+    format: roundedCount,
+    round: true,
+    info: "The central galaxy's HII shells, split onto their own target/divisor — same firefly reasoning as HII target divisor above, now isolated so shells can be tuned without moving DIG or young stars.",
+  },
+  {
+    key: 'digDivisor',
+    label: 'DIG divisor',
+    min: 1,
+    max: 8,
+    step: 1,
+    format: roundedCount,
+    round: true,
+    info: "The diffuse ionized gas veil's own divisor, split off the HII tier's target: DIG is the biggest, softest quads in the tier and the worst overdraw contributor at close zoom, but it is also low-frequency, so it tolerates a much coarser target than shells/young stars do — the opposite trade from Shells/Young divisor.",
+  },
+  {
+    key: 'youngDivisor',
+    label: 'Young divisor',
+    min: 1,
+    max: 8,
+    step: 1,
+    format: roundedCount,
+    round: true,
+    info: "The central galaxy's young-stars chain, split onto its own target/divisor — same firefly reasoning as Shells divisor above: a young-stars association is small and bright, not a candidate for a coarser shared target.",
+  },
+  {
+    key: 'hiiNearFadeStart',
+    label: 'Near fade start',
+    min: 0,
+    max: 24,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    info: "boundRadius multiple where a component the eye is approaching starts fading, instead of shading its fullscreen-fallback quad at full cost. A different perf lever from the divisors above: it removes whole components' fragment cost near the camera rather than cutting resolution everywhere.",
+  },
+  {
+    key: 'hiiNearFadeEnd',
+    label: 'Near fade end',
+    min: 0,
+    max: 16,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    info: "boundRadius multiple where the component has fully collapsed — the physical read past this point is an unresolved wash. End >= start disables the fade. Reach is end times each component's own bound radius, so the big DIG blobs react first.",
+  },
+  {
+    key: 'starGrainFeatureScaleNear',
+    label: 'Grain feature near',
+    min: 1,
+    max: 16,
+    step: 0.5,
+    format: (v) => v.toFixed(1),
+    info: "Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out.",
+  },
+  {
+    key: 'starGrainFeatureScaleFar',
+    label: 'Grain feature far',
+    min: 1,
+    max: 24,
+    step: 0.5,
+    format: (v) => v.toFixed(1),
+    info: "Same knob as 'Grain feature near', calibrated for whole-galaxy framing instead — one static value can't serve both distances.",
+  },
+  {
+    key: 'starGrainWarpAmp',
+    label: 'Grain warp amount',
+    min: 0,
+    max: 0.6,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "Domain-warp displacement (world units) applied to the star-grain lookup before all three octaves — fixes the grain visibly repeating its own tile. Too large and the warp starts shredding the grain apart instead of just breaking the repeat; that begins around 1x the tile width.",
+  },
+  {
+    key: 'hiiQuadCap',
+    label: 'HII quad cap',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "Ceiling on an HII component's own projected quad half-extent in NDC — a close silhouette or fullscreen fallback both truncate the Gaussian's screen support at this cap, masked by the tier's grain texture and near-fade. 0 disables it, the byte-identical boot default; this is a live calibration lever, not a derived constant.",
+  },
+];
+
 function freshRng(): () => number {
   return mulberry32((Math.random() * 1e9) | 0);
 }
@@ -339,6 +490,25 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
       />
     );
   };
+
+  const renderPerfSlider = (spec: RenderSliderSpec): ReactNode => (
+    <ParamSlider
+      key={spec.key}
+      label={spec.label}
+      value={render[spec.key]}
+      min={spec.min}
+      max={spec.max}
+      step={spec.step}
+      format={spec.format}
+      onChange={(v) =>
+        dispatch(
+          renderPatched({ [spec.key]: spec.round ? Math.round(v) : v } as Partial<RenderSettings>),
+        )
+      }
+      path={`render.${spec.key}`}
+      info={spec.info}
+    />
+  );
 
   return (
     <div className={styles.root}>
@@ -431,7 +601,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           onToggle={() => dispatch(sectionToggled('analyticModel'))}
           headerToggle={render.analyticField}
           onHeaderToggleChange={(value) => dispatch(renderPatched({ analyticField: value }))}
-          group
+          variant="group"
         >
           <DebugViewsSection />
           <IsmMapSection diagnostics={orientationDiagnostics} />
@@ -460,7 +630,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           onToggle={() => dispatch(sectionToggled('legacyModel'))}
           headerToggle={render.spriteField}
           onHeaderToggleChange={(value) => dispatch(renderPatched({ spriteField: value }))}
-          group
+          variant="group"
         >
           <CollapsibleSection
             title="STAR BUDGET (TO BE DELETED)"
@@ -747,138 +917,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             path="render.aggregateDivisor"
             info="Stars render into an offscreen at 1/N the canvas and are bilinearly added back into HDR, so their fragment cost — the actual wall — falls as N². 1 is full resolution, the reference the reconstruction has to be judged against. Moving it reallocates that target and rescales the two px knobs above, which clamp in its pixels."
           />
-          <ParamSlider
-            label="Field target divisor"
-            value={render.fieldDivisor}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ fieldDivisor: Math.round(v) }))}
-            path="render.fieldDivisor"
-            info="The same trade for the ANALYTIC field, on its own target. It goes coarser than the sprites can: the field is a sum of wide Gaussians with no point-like detail to lose, and it is fill-bound, so cost falls as N². The ceiling is bloom fireflies zoomed out, not blur — the ray integral is a POINT sample with no pixel-footprint filtering, so a core narrower than a texel aliases into a value that crosses the bloom threshold."
-          />
-          <ParamSlider
-            label="Dust divisor"
-            value={render.dustDivisor}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ dustDivisor: Math.round(v) }))}
-            path="render.dustDivisor"
-            info="Its own divisor, separate from the field's: the dust splat is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
-          />
-          <ParamSlider
-            label="Extras divisor"
-            value={render.extrasDivisor}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ extrasDivisor: Math.round(v) }))}
-            path="render.extrasDivisor"
-            info="hiiTex's own divisor — now home to background extras' whole HII contribution alone. An embedded shell is still small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
-          />
-          <ParamSlider
-            label="Shells divisor"
-            value={render.shellsDivisor}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ shellsDivisor: Math.round(v) }))}
-            path="render.shellsDivisor"
-            info="The central galaxy's HII shells, split onto their own target/divisor — same firefly reasoning as HII target divisor above, now isolated so shells can be tuned without moving DIG or young stars."
-          />
-          <ParamSlider
-            label="DIG divisor"
-            value={render.digDivisor}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ digDivisor: Math.round(v) }))}
-            path="render.digDivisor"
-            info="The diffuse ionized gas veil's own divisor, split off the HII tier's target: DIG is the biggest, softest quads in the tier and the worst overdraw contributor at close zoom, but it is also low-frequency, so it tolerates a much coarser target than shells/young stars do — the opposite trade from Shells/Young divisor."
-          />
-          <ParamSlider
-            label="Young divisor"
-            value={render.youngDivisor}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => String(Math.round(v))}
-            onChange={(v) => dispatch(renderPatched({ youngDivisor: Math.round(v) }))}
-            path="render.youngDivisor"
-            info="The central galaxy's young-stars chain, split onto its own target/divisor — same firefly reasoning as Shells divisor above: a young-stars association is small and bright, not a candidate for a coarser shared target."
-          />
-          <ParamSlider
-            label="Near fade start"
-            value={render.hiiNearFadeStart}
-            min={0}
-            max={24}
-            step={0.1}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => dispatch(renderPatched({ hiiNearFadeStart: v }))}
-            path="render.hiiNearFadeStart"
-            info="boundRadius multiple where a component the eye is approaching starts fading, instead of shading its fullscreen-fallback quad at full cost. A different perf lever from the divisors above: it removes whole components' fragment cost near the camera rather than cutting resolution everywhere."
-          />
-          <ParamSlider
-            label="Near fade end"
-            value={render.hiiNearFadeEnd}
-            min={0}
-            max={16}
-            step={0.1}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => dispatch(renderPatched({ hiiNearFadeEnd: v }))}
-            path="render.hiiNearFadeEnd"
-            info="boundRadius multiple where the component has fully collapsed — the physical read past this point is an unresolved wash. End >= start disables the fade. Reach is end times each component's own bound radius, so the big DIG blobs react first."
-          />
-          <ParamSlider
-            label="Grain feature near"
-            value={render.starGrainFeatureScaleNear}
-            min={1}
-            max={16}
-            step={0.5}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => dispatch(renderPatched({ starGrainFeatureScaleNear: v }))}
-            path="render.starGrainFeatureScaleNear"
-            info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out."
-          />
-          <ParamSlider
-            label="Grain feature far"
-            value={render.starGrainFeatureScaleFar}
-            min={1}
-            max={24}
-            step={0.5}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => dispatch(renderPatched({ starGrainFeatureScaleFar: v }))}
-            path="render.starGrainFeatureScaleFar"
-            info="Same knob as 'Grain feature near', calibrated for whole-galaxy framing instead — one static value can't serve both distances."
-          />
-          <ParamSlider
-            label="Grain warp amount"
-            value={render.starGrainWarpAmp}
-            min={0}
-            max={0.6}
-            step={0.01}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => dispatch(renderPatched({ starGrainWarpAmp: v }))}
-            path="render.starGrainWarpAmp"
-            info="Domain-warp displacement (world units) applied to the star-grain lookup before all three octaves — fixes the grain visibly repeating its own tile. Too large and the warp starts shredding the grain apart instead of just breaking the repeat; that begins around 1x the tile width."
-          />
-          <ParamSlider
-            label="HII quad cap"
-            value={render.hiiQuadCap}
-            min={0}
-            max={1}
-            step={0.01}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => dispatch(renderPatched({ hiiQuadCap: v }))}
-            path="render.hiiQuadCap"
-            info="Ceiling on an HII component's own projected quad half-extent in NDC — a close silhouette or fullscreen fallback both truncate the Gaussian's screen support at this cap, masked by the tier's grain texture and near-fade. 0 disables it, the byte-identical boot default; this is a live calibration lever, not a derived constant."
-          />
+          {PERF_SLIDERS.map(renderPerfSlider)}
         </CollapsibleSection>
 
         <CollapsibleSection
