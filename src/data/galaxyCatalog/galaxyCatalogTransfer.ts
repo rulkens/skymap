@@ -25,10 +25,7 @@ function sliceColumn(
   return new Float32Array(buffer);
 }
 
-/**
- * Slices every typed-array buffer into a detached-ready copy, plus the
- * matching Transferable[] for `postMessage`.
- */
+/** Slices every typed-array buffer into a detached-ready copy, plus a matching Transferable[] for `postMessage`. */
 export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGalaxyCatalog {
   const columns: Partial<Record<GalaxyCatalogColumn, BigUint64Array | Float32Array | Uint8Array>> =
     {};
@@ -41,6 +38,9 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     transfer.push(view.buffer);
   }
 
+  // `columns` was built by iterating every GALAXY_CATALOG_FIELD_SPECS key —
+  // compiler-proven (via that table's `satisfies` clause) to cover
+  // GalaxyCatalogColumn exactly — so this cast asserts what the loop delivers.
   const copy = {
     count: catalog.count,
     ...columns,

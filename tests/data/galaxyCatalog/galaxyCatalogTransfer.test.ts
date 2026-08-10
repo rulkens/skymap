@@ -21,11 +21,14 @@
  * ### Why derive the expectation from the copy, not the field-spec table
  *
  * `cloneGalaxyCatalogForTransfer` and `GALAXY_CATALOG_FIELD_SPECS` are
- * implemented by the same module. Asserting the transfer list against the
- * table would be a mirror test — it would pass even if both were wrong
- * together. Deriving the expectation from `copy` (typed as `GalaxyCatalog`,
- * so the compiler proves it structurally complete) can't share that blind
- * spot.
+ * implemented by the same module — asserting the transfer list against the
+ * table would be a mirror test, passing even if both were wrong together.
+ * `copy`'s own completeness isn't compiler-checked here (the helper casts
+ * its loop-built object to `GalaxyCatalog`); that proof lives one file over,
+ * in `GalaxyCatalogColumn`'s `Exclude<keyof GalaxyCatalog, …>` definition
+ * plus `GALAXY_CATALOG_FIELD_SPECS`'s `satisfies` clause. What THIS test
+ * catches is narrower and independent of that proof: a column present in
+ * `copy` that the transfer list drops, duplicates, or misorders.
  */
 
 import { describe, it, expect } from 'vitest';
