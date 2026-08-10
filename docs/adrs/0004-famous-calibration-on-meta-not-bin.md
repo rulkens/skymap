@@ -34,8 +34,8 @@ The galaxies are already described by two artefacts that ship together:
 
 - `famous.bin` — the fixed-stride `GalaxyCatalog` binary (position,
   magnitudes, `diameterKpc`, orientation, …) consumed by the
-  point/billboard renderer. Same v9 64-byte stride as every other tier,
-  with [only a few spare bytes per row](../../src/data/galaxyCatalog/galaxyCatalogFormat.ts).
+  point/billboard renderer. Same v6 fixed-stride format as every other
+  tier, with [only a few spare bytes per row](../../src/data/galaxyCatalog/galaxyCatalogFormat.ts).
 - `famous_meta.json` — the string + per-galaxy-metadata sidecar
   (`FamousMetaEntry[]`: id, names, description, type), produced by
   `buildFamous.ts` and already routed to the runtime

@@ -224,6 +224,16 @@ describe('galaxyCatalogFormat — field spec table invariants', () => {
     expect(flagBits.length).toBeGreaterThan(0);
     expect(new Set(flagBits.map((f) => f.offset)).size).toBe(1);
     expect(new Set(flagBits.map((f) => f.bit)).size).toBe(flagBits.length);
+
+    // The flags byte occupies a real byte in the 64 B record too — a future
+    // 'field' entry claiming that same byte would be silently clobbered by
+    // the flags write instead of failing here (final-review-report.md, the
+    // FLAGS_BYTE_OFFSET minor).
+    const flagsByteOffset = flagBits[0]!.offset;
+    for (const r of fieldRanges) {
+      const disjoint = r.end <= flagsByteOffset || flagsByteOffset + 1 <= r.start;
+      expect(disjoint).toBe(true);
+    }
   });
 });
 

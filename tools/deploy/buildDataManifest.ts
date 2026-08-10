@@ -72,6 +72,12 @@ function resolveKeeper(
 }
 
 export function buildDataManifest(dataDir: string): DataManifest {
+  // `npm run predev` calls this unconditionally; a checkout that has never
+  // built any bins (or a symlink target that hasn't been created yet) has
+  // no public/data/ at all, and lstatSync would throw ENOENT instead of the
+  // "nothing to do here" this and the symlink case both mean.
+  if (!existsSync(dataDir)) return {};
+
   // A worktree's public/data can be a symlink into the main checkout
   // (`/link-data`); renaming through it would hash-convert data out from
   // under a checkout whose code may predate or postdate this regime.

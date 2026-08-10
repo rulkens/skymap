@@ -26,6 +26,17 @@ never pair mismatched code and bytes:
 | `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*` `.scfd`                              | `scalarFieldFormat.ts` (3)      |
 | `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
 
+Some family-folder residents are deliberately untracked and stay at their
+logical name forever — `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`)
+is the allow-list, and this boundary _is_ the drift guard's condition 3
+(a tracked file still under its logical name means a builder skipped
+`build-data-manifest`; an untracked one is just never supposed to be
+hashed). In `galaxy-catalog/v9/`: `sdss.bin`/`glade.bin` are pre-tier
+DisPerSE inputs, not runtime tiers. In `filament/v1/`: `filaments-sdss.bin`
+is the matching pre-tier input. `clusters.ccat`/`clusters_meta.json` (superseded
+by `structures.ccat`/`structures_meta.json`) are outside `allowDataFile`
+entirely and are dead files (see the BACKLOG item), not a family resident.
+
 Loose JSON (`famous_*_meta`, `constellations`, `pgc_aliases`) and `images/`
 stay at the root — no version gate, schemas evolve compatibly. "Stay at the
 root" is about the version gate only: the JSON still gets a content hash

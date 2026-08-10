@@ -44,13 +44,21 @@ function estimateSdss(input: StellarMassEstimateInput): number {
   return log10StellarMass(log10ML, absR, 4.65);
 }
 
+// Flat K-band M/L = 0.6 (McGaugh & Schombert 2014) — shared by 2MRS and
+// GLADE's K branch below because both feed it a real 2MASS K magnitude;
+// near-IR M/L is close to colour-independent, so one relation serves both.
+const K_BAND_LOG10_ML = Math.log10(0.6);
+const K_BAND_SOLAR_ABS_MAG = 3.27;
+
 function estimateTwoMrs(input: StellarMassEstimateInput): number {
-  const log10ML = Math.log10(0.6); // McGaugh & Schombert 2014 flat K-band M/L
   const absK = absoluteFromApparent(input.magI, input.distMpc); // 2MRS K_s lives in magI
-  return log10StellarMass(log10ML, absK, 3.27);
+  return log10StellarMass(K_BAND_LOG10_ML, absK, K_BAND_SOLAR_ABS_MAG);
 }
 
-function estimateGlade(input: StellarMassEstimateInput): number {
+/** GLADE's real bands are B (magG) and 2MASS K (magZ) — magR holds 2MASS J,
+ *  not V (see glade.ts's photometric mapping), so the Bell+03 B−V relation
+ *  below is FamousGalaxy-only, where magR really is V (buildFamous.ts). */
+function estimateGladeBV(input: StellarMassEstimateInput): number {
   const magB = input.magG;
   const magV = input.magR;
   const bFinite = Number.isFinite(magB);
@@ -75,6 +83,25 @@ function estimateGlade(input: StellarMassEstimateInput): number {
   return NaN;
 }
 
+/** GLADE has no V band (see glade.ts's photometric mapping: magG=B, magZ=K).
+ *  K-first because near-IR M/L is the physically better estimator; falls
+ *  back to the single-band B relation (assumed B−V=0.75) only when K is
+ *  missing, which the real catalog leaves as the majority of coverage. */
+function estimateGlade(input: StellarMassEstimateInput): number {
+  const magK = input.magZ; // GLADE's 2MASS K lives in magZ, not magI
+  if (Number.isFinite(magK)) {
+    const absK = absoluteFromApparent(magK, input.distMpc);
+    return log10StellarMass(K_BAND_LOG10_ML, absK, K_BAND_SOLAR_ABS_MAG);
+  }
+  const magB = input.magG;
+  if (Number.isFinite(magB)) {
+    const log10ML = -0.942 + 1.737 * ASSUMED_BV_COLOR + DIET_SALPETER_TO_KROUPA_DEX;
+    const absB = absoluteFromApparent(magB, input.distMpc);
+    return log10StellarMass(log10ML, absB, 5.44);
+  }
+  return NaN;
+}
+
 /** log10(stellar mass / solar mass), or NaN when this source/photometry can't yield one. */
 export function estimateLog10StellarMass(input: StellarMassEstimateInput): number {
   switch (input.source) {
@@ -83,8 +110,9 @@ export function estimateLog10StellarMass(input: StellarMassEstimateInput): numbe
     case Source.TwoMRS:
       return estimateTwoMrs(input);
     case Source.Glade:
-    case Source.FamousGalaxy:
       return estimateGlade(input);
+    case Source.FamousGalaxy:
+      return estimateGladeBV(input);
     default:
       return NaN;
   }

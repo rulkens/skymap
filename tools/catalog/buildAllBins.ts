@@ -11,7 +11,7 @@
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
  * written under `public/data/galaxy-catalog/v9/` — the epoch-prefixed
- * path `tierFilenameForSource` returns (see galaxyCatalogFormat.ts).
+ * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`

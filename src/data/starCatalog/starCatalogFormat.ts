@@ -74,7 +74,9 @@ export const VERSION = 1;
 // Version-stamped folder: max-age=86400 lets a CDN serve an old .bin
 // alongside new code for up to a day, so the epoch has to live in the
 // path itself to make that pairing impossible (images/earth-tiles/'s
-// TILE_PREFIX precedent).
+// TILE_PREFIX precedent). The family segment "star-catalog" is duplicated
+// (uncheckably, across the language boundary) in tools/stars-rs/src/main.rs —
+// update both if this ever renames.
 export const STAR_CATALOG_DATA_PREFIX = `star-catalog/v${VERSION}`;
 
 /** Fixed file-header size in bytes (magic, version, count, octree bounds …). */

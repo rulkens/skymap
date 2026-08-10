@@ -269,8 +269,9 @@ export type GalaxyCatalog = {
    * field alone carries presence.
    *
    * Do NOT confuse with `StructureCatalog.significance`: that field is a
-   * LINEAR mass proxy (M500 in solar masses, ~10¹⁴) for clusters/super-
-   * clusters, not a log stellar mass, and the two are never comparable.
+   * LINEAR mass proxy (M500 in solar masses, ~10¹⁴) for MCXC clusters —
+   * MSCC superclusters carry an N_m member count there instead — never a
+   * log stellar mass, and never comparable to this field either way.
    */
   log10StellarMass: Float32Array;
 };

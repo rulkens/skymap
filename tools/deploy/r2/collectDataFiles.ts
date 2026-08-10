@@ -43,8 +43,9 @@ export function collectDataFiles(sourceDir: string): R2Upload[] {
     if (logicalDataName(name) === name) {
       throw new Error(
         `${rel} is tracked but still has its logical name — a builder ran without ` +
-          `"npm run build-data-manifest"; publishing now would ship a manifest that ` +
-          `describes the previous generation.`,
+          `"npm run build-data-manifest", or a linked worktree staged a file through your ` +
+          `public/data symlink; publishing now would ship a manifest that describes the ` +
+          `previous generation.`,
       );
     }
   }

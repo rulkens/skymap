@@ -23,6 +23,11 @@ const BYTES_PER_GALAXY = 64;
 // `Number.isFinite(log10StellarMass[i])` instead. When measured masses land
 // this becomes a real `flagBit` column and this constant goes away.
 const MASS_ESTIMATED_BIT = 1 << 2;
+// Byte 54 is a property of the 64-byte record layout (the flagBit column
+// above), not derived from which flagBit specs happen to be in the table —
+// it must stay correct even if every flagBit entry were removed, since it
+// also positions the column-less MASS_ESTIMATED_BIT write below.
+const FLAGS_BYTE_OFFSET = 54;
 
 // Version-stamped folder: max-age=86400 lets a CDN serve an old .bin
 // alongside new code for up to a day, so the epoch has to live in the
@@ -109,13 +114,14 @@ const UNALIGNED_FLOATS: OffsetField[] = [];
 const BYTE_FIELDS: OffsetField[] = [];
 const U64_FIELDS: OffsetField[] = [];
 const FLAG_FIELDS: FlagBitField[] = [];
-let FLAGS_BYTE_OFFSET = -1;
 
 for (const column of Object.keys(GALAXY_CATALOG_FIELD_SPECS) as GalaxyCatalogColumn[]) {
   const spec = GALAXY_CATALOG_FIELD_SPECS[column];
   if (spec.disk.kind === 'flagBit') {
+    if (spec.disk.offset !== FLAGS_BYTE_OFFSET) {
+      throw new Error(`${column}: flagBit offset must be FLAGS_BYTE_OFFSET (${FLAGS_BYTE_OFFSET})`);
+    }
     FLAG_FIELDS.push({ column, bit: spec.disk.bit });
-    FLAGS_BYTE_OFFSET = spec.disk.offset; // shared by every flagBit entry
     continue;
   }
   const { offset } = spec.disk;
