@@ -79,7 +79,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
 

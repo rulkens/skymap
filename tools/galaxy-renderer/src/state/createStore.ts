@@ -1,20 +1,13 @@
 /**
  * createGalaxyStore — a FACTORY that builds a fresh Redux store per call,
  * for the same isolation reason as the main app's `src/store/createAppStore`:
- * the galaxy-renderer tool constructs a fresh engine per test (and per
- * Viewport mount), and a shared module-singleton store would leak one run's
- * params into the next.
+ * a shared module-singleton would leak one test/Viewport run's params into
+ * the next.
  *
- * All six `AppState` routes are mounted: the three param slices
- * (`galaxy`/`render`/`lod`) plus the UI-adjacent trio (`compare`/`extras`/
- * `ui`). `AppStore`/`AppDispatch` are both DERIVED from the reducer map
- * (never hand-typed against `AppState` directly) so they can't drift from
- * what's actually combined below; the `_rootStateMatchesAppState` trip-wire
- * a few lines down catches the opposite drift — `AppState.d.ts` gaining or
- * losing a field without a matching edit here.
- *
- * `preloaded` is typed against the full `AppState` so a caller writes seed
- * code directly against the documented contract.
+ * `AppStore`/`AppDispatch` are DERIVED from the reducer map (never hand-typed
+ * against `AppState`), so they can't drift from what's actually combined
+ * below; the `_rootStateMatchesAppState` trip-wire a few lines down catches
+ * the opposite drift.
  */
 
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
@@ -22,6 +15,7 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import galaxyReducer from './slices/galaxySlice';
 import renderReducer from './slices/renderSlice';
 import lodReducer from './slices/lodSlice';
+import fieldTuningReducer from './slices/fieldTuningSlice';
 import compareReducer from './slices/compareSlice';
 import extrasReducer from './slices/extrasSlice';
 import uiReducer from './slices/uiSlice';
@@ -31,6 +25,7 @@ const rootReducer = combineReducers({
   galaxy: galaxyReducer,
   render: renderReducer,
   lod: lodReducer,
+  fieldTuning: fieldTuningReducer,
   compare: compareReducer,
   extras: extrasReducer,
   ui: uiReducer,

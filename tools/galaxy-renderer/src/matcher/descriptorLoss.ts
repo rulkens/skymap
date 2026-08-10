@@ -1,6 +1,6 @@
 /**
  * descriptorLoss — weighted squared distance between two `GalaxyDescriptor`s.
- * Ported verbatim from galaxy-matcher.js:131-138. Each structural channel
+ * Ported verbatim from the spike's `galaxy-matcher.js`. Each structural channel
  * (radial profile, axis ratio, inner/outer colour, arm harmonics, dust) is a
  * squared gap scaled by its per-category weight, so the fit loop can silence
  * channels that are meaningless for a given morphology by zeroing their weight

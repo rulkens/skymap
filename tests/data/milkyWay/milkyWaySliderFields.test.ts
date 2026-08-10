@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { MILKY_WAY_SLIDER_FIELDS } from '../../../src/data/milkyWay/milkyWaySliderFields';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 describe('MILKY_WAY_SLIDER_FIELDS — parity with the tuning knobs', () => {
   it('covers exactly the keys of MILKY_WAY_TUNING_DEFAULTS', () => {

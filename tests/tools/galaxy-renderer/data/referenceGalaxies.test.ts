@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import { REFERENCE_GALAXIES } from '../../../../tools/galaxy-renderer/src/data/referenceGalaxies';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../../..');

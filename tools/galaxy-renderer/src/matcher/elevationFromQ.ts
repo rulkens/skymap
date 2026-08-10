@@ -1,6 +1,6 @@
 /**
  * elevationFromQ — infer a disk's camera elevation (inclination) from its
- * apparent axis ratio q. Ported verbatim from galaxy-matcher.js:161-163.
+ * apparent axis ratio q. Ported verbatim from the spike's `galaxy-matcher.js`.
  * Ellipticals and irregulars have no disk plane to tilt, so they return null;
  * every other category maps q through asin and clamps the result into
  * [0.05, 1.45] rad (never fully edge-on, never fully face-on).

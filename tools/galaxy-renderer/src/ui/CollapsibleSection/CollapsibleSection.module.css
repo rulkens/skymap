@@ -4,18 +4,47 @@
 .header {
   composes: sectionHeader from '../shared.module.css';
   display: flex;
-  justify-content: space-between;
   align-items: center;
   width: 100%;
   margin: 4px 0 14px;
   padding: 16px 0 0;
-  border: none;
   border-top: 1px solid var(--border-divider);
-  background: transparent;
   font-family: var(--font-family-mono);
-  cursor: pointer;
   user-select: none;
+}
+
+/* The fold affordance. A button's UA style resets font, letter-spacing,
+ * colour and text-transform — none of which this one wants, since the header
+ * row above already composes all four. */
+.foldButton {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
   text-align: left;
+}
+
+/* The app SettingsPanel's pill-toggle vocabulary, composed across the tree
+ * rather than copied: the tool boots the app's global.css, so every token the
+ * pill references resolves here too, and a retune of the app's control look
+ * follows automatically. */
+.headerToggle {
+  composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  margin-right: 8px;
+}
+
+/* Pushes the chevron to the fold button's far edge; with no copy button
+ * present that is the header's far edge too. */
+.headerTitle {
+  flex: 1;
 }
 
 .chevron {
@@ -23,5 +52,48 @@
   opacity: 0.7;
 }
 
+/* Descendant selector on purpose: it has to outrank the shared `Button`
+ * primitive's own padding whichever order the bundler emits the two modules
+ * in. Width is pinned so the "copied ✓" feedback doesn't shove the chevron. */
+.header .copyButton {
+  margin-left: 8px;
+  padding: 2px 4px;
+  min-width: 9ch;
+  font-size: var(--font-size-xs);
+}
+
 .body {
+}
+
+/* Nested sub-section variant, opt-in via the `nested` prop — every existing
+ * (top-level) section keeps its exact look, since these rules only take
+ * effect when the modifier class rides alongside `.header`/`.body`.
+ * Declared AFTER them on purpose: same specificity, same module file, so
+ * source order is what lets these properties win the ones both share. */
+.nestedHeader {
+  margin: 2px 0 8px;
+  padding: 10px 0 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-fg-faint);
+  font-weight: 500;
+}
+
+/* Must precede its two `composes` users below — postcss-modules-scope
+ * resolves composes top-down and errors on a not-yet-seen class. */
+.containedInset {
+  padding-left: 14px;
+  border-left: 1px solid var(--border-divider);
+}
+
+.nestedBody {
+  composes: containedInset;
+}
+
+/* Opt-in via the `group` prop: same inset as `nestedBody`, defined once
+ * (`containedInset`) and composed into both — a group's body reads as
+ * "these are contained in here" without touching its own header, unlike
+ * `nestedHeader`/`nestedBody`, which diminish both together. */
+.groupBody {
+  composes: containedInset;
 }

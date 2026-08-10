@@ -1,35 +1,24 @@
 /**
  * MILKY_WAY_SLIDER_FIELDS — the one enumeration of the Milky-Way star cloud's
- * tuning knobs, with the UI metadata each needs.
+ * tuning knobs, with the UI metadata each needs. Same shape as
+ * `data/flow/flowFields.ts`: label, range, granularity and formatting live in
+ * ONE row per knob, and the DebugPanel section iterates this list rather than
+ * re-spelling sliders by hand. A parity test
+ * (`tests/data/milkyWay/milkyWaySliderFields.test.ts`) fails if a
+ * `MilkyWayTuning` leaf is added without a matching row.
  *
- * Same shape and same reason as `data/flow/flowFields.ts`: label, range,
- * granularity and value formatting live in ONE registry row per knob, and the
- * DebugPanel section *iterates* this list rather than re-spelling six sliders
- * by hand. A new knob is one row here plus its `MilkyWayTuning` leaf — the
- * panel picks it up for free, and the parity test in
- * `tests/data/milkyWay/milkyWaySliderFields.test.ts` fails if a leaf is added
- * without a row.
- *
- * The RANGES are the interesting content. These knobs exist to answer "does
- * the star field read as a smooth galaxy or as visible particles?", and the
- * hypothesis under test is that a much larger, much dimmer-per-sprite splat
- * reads smoother than many tight ones (the Celestia / Space Engine model:
- * a few thousand large soft billboards sampled from a density model, where
- * each sample already carries a smooth spatial profile so only a handful need
- * to overlap per pixel). Ranges of ±20% around the defaults could not reach
+ * The RANGES test whether a much larger, much dimmer-per-sprite splat reads
+ * as a smooth galaxy rather than visible particles (the Celestia/Space Engine
+ * model — a few thousand large soft billboards, each already carrying a
+ * smooth spatial profile). Ranges of ±20% around the defaults couldn't reach
  * that regime, so `starSizeScale` and `exposure` span more than an order of
  * magnitude around theirs.
  *
- * `enabled` / `labelEnabled` are deliberately NOT here: boolean visibility
- * axes aren't sliders, and forcing them into a slider row would complect the
- * control kind with the field list. The bar for everything else is that moving
- * it changes the NEXT frame. `aggregateDivisor` clears that bar by having the
- * frame loop reallocate the star pass's offscreen when the setting no longer
- * matches the table in force, even though it isn't a uniform. `starCount`
- * clears it the same way — the frame loop compares the live setting against
- * the count the cloud's current buffers were generated with, and regenerates
- * on a mismatch — but the reaction is heavier: a full regeneration (destroy +
- * allocate + compute dispatch) rather than a render-target rebuild.
+ * `enabled` / `labelEnabled` are deliberately NOT here — boolean visibility
+ * axes aren't sliders. Everything else here changes the NEXT frame, though not
+ * always via a uniform: `aggregateDivisor` reallocates the star pass's
+ * offscreen; `starCount` regenerates the cloud outright (destroy + allocate +
+ * compute dispatch) when it no longer matches the buffers in force.
  */
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { MilkyWaySliderKey } from '../../@types/data/milkyWay/MilkyWaySliderKey';
@@ -124,10 +113,10 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
   {
     key: 'starCount',
     label: 'count',
-    // `splitStarBudget` floors the TOTAL at 20,000 stars regardless of what's
+    // `totalStarBudget` floors the TOTAL at 20,000 stars regardless of what's
     // requested — this IS that floor, not a taste choice. A lower `min` would
     // let the slider display a number the renderer silently ignores; if the
-    // floor in `splitStarBudget` ever moves, this must move with it.
+    // floor in `totalStarBudget` ever moves, this must move with it.
     min: 20000,
     // 4x the medium tier's default budget is already a heavy regenerate (see
     // the runFrame branch's cost note); past that the count/size trade this
@@ -137,7 +126,7 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     step: 5000,
     format: (v) => Math.round(v).toLocaleString(),
     title:
-      'Absolute star count — regenerates the cloud (destroy + allocate + compute dispatch), not a uniform write. splitStarBudget floors the total at 20,000 stars.',
+      'Absolute star count — regenerates the cloud (destroy + allocate + compute dispatch), not a uniform write. totalStarBudget floors the total at 20,000 stars.',
   },
 ];
 

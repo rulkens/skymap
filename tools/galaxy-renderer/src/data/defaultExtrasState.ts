@@ -1,6 +1,6 @@
 /**
  * DEFAULT_EXTRAS_STATE — the spike's boot extra-galaxies scatter toggle
- * (`Galaxy Renderer.dc.html:471`): off by default, 8 satellites once enabled.
+ * (`Galaxy Renderer.dc.html`): off by default, 8 satellites once enabled.
  */
 
 import type { ExtrasState } from '../../@types/state/ExtrasState';

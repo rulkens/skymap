@@ -1,36 +1,13 @@
-// lib/util.wesl — orphan utilities: useful names today, lib graduates tomorrow.
+// lib/util.wesl — orphan utilities: single-consumer functions general
+// enough to reuse, kept out of their one caller so a second consumer's
+// import-and-rename work is already done.
 //
-// What lives here: small pure functions that have exactly ONE consumer
-// in the engine right now, but whose name and signature are general
-// enough that a second consumer is plausible — and whose presence in
-// the host renderer file was diluting the file's domain focus.
-//
-// Why a 'util' bucket and not just leave them inline?
-//
-// Two reasons. First, the renamed identifiers (see below) are the
-// real win — 'rand' is misleading (it's a deterministic hash, not a
-// pseudo-random sequence) and 'noise1' is a numbered slot rather than
-// a description of the algorithm. Pulling them out of the renderer
-// forces us to give them honest names. Second, when the *next*
-// renderer wants any of these, the import-and-rename work is already
-// done — they just import 'package::lib::util::hash21'.
-//
-// Why NOT split each function into its own 'lib/<name>.wesl' file?
-//
-// Same reason 'lib/math.wesl' is consolidated: WESL's import-path
-// resolution treats the last path segment as the function name. A
-// per-file split would force imports like
-// 'package::lib::util::hash21::hash21' (duplicated leaf), which is
-// noise. One file with section dividers reads cleaner at the import
-// site and at the definition site.
-//
-// Promotion criterion — when to graduate something out of here:
-//
-// As soon as a function gains a second consumer AND is part of a
-// coherent domain (e.g. multiple noise variants, or a small geometry
-// suite), move it to a domain-named file: 'lib/noise.wesl',
-// 'lib/raycast.wesl', 'lib/galacticFrame.wesl', etc. Until then it
-// sits here and we don't pre-emptively design module boundaries.
+// One file, not one-per-function (unlike src/utils/'s usual convention):
+// WESL's import-path resolution treats the last path segment as the
+// function name, so a per-file split would force imports like
+// 'package::lib::util::hash21::hash21' (duplicated leaf). Graduate a
+// function to its own domain file once it gains a second consumer AND
+// belongs to a coherent domain suite.
 
 // ── noise / hash ─────────────────────────────────────────────────────
 //
@@ -55,8 +32,8 @@
 // deterministic pseudo-random number for this 2D coordinate" on a
 // GPU, which is what star-field placement and similar effects need.
 //
-// Renamed from 'rand' because 'rand' implies a stateful pseudo-random
-// generator, which this is not: the same input ALWAYS yields the same
+// Named hash21, not 'rand': 'rand' implies a stateful pseudo-random
+// generator, which this is not — the same input ALWAYS yields the same
 // output. The '21' suffix encodes the type signature (vec2→f32) in
 // the GLSL noise-library tradition where you'll also see 'hash22',
 // 'hash33', etc.
@@ -85,6 +62,31 @@ fn hash21Hq(p: vec2<f32>) -> f32 {
   return fract((p3.x + p3.y) * p3.z);
 }
 
+// hashAvalanche — the mixing tail shared by integerHash3 below and
+// generate.wesl's nHash: two xor-shift/multiply rounds that scramble a
+// summed hash word. Callers differ upstream (nHash sums a 4th seed term
+// with its own z-prime, then normalizes by a slightly different constant),
+// so only this shared tail is factored out — extracting more would change
+// what one of the two callers returns.
+fn hashAvalanche(h: u32) -> u32 {
+  var hh = h;
+  hh = (hh ^ (hh >> 13u)) * 1274126177u;
+  return hh ^ (hh >> 16u);
+}
+
+// integerHash3 — Bob Jenkins/Squirrel-family 3-int avalanche: three large
+// odd multiplies then two xor-shifts. Promoted here once a second consumer
+// (warpNoiseBake.wesl, starGrainBake.wesl) needed the exact same tileable-3D
+// hash dustNoiseBake.wesl already had — no diagonal banding at the low
+// lattice resolutions those bakes sample (8..128 cells/axis).
+fn integerHash3(p: vec3<i32>) -> f32 {
+  let x = bitcast<u32>(p.x);
+  let y = bitcast<u32>(p.y);
+  let z = bitcast<u32>(p.z);
+  let h = x * 374761393u + y * 668265263u + z * 2246822519u;
+  return f32(hashAvalanche(h)) / 4294967295.0;
+}
+
 // valueNoise2 — 2D analytic noise via products of cosines.
 //
 // Not a value-noise grid in the strict Perlin/Worley sense — there's
@@ -99,8 +101,8 @@ fn hash21Hq(p: vec2<f32>) -> f32 {
 // which suits a procedural galaxy centre where the bulge should
 // dominate without competing high-frequency arm chatter.
 //
-// Renamed from 'noise1' (a numbered slot — there was never a 'noise2'
-// or 'noise3') to 'valueNoise2' which describes the shape. The '2'
+// Named valueNoise2, not a numbered slot: the name describes the shape
+// (value-noise-like) rather than an arbitrary sequence position. The '2'
 // suffix is the input dimensionality, matching 'hash21'.
 fn valueNoise2(p_in: vec2<f32>, tm: f32) -> f32 {
   let p = p_in * tanh(0.1 * length(p_in));
@@ -109,6 +111,26 @@ fn valueNoise2(p_in: vec2<f32>, tm: f32) -> f32 {
   let c = cos(p.x * sqrt(3.5) + tm);
   let d = cos(p.y * sqrt(1.5) + tm);
   return a * b * c * d;
+}
+
+// ── color ────────────────────────────────────────────────────────────
+
+// hueToRgb — fully-saturated hue -> rgb for hue in [0, 1). Reconstructs
+// the three RGB ramps of an HSV wheel at S=1, V=1 directly from the hue:
+// each channel is a clamped triangle peaking 1/3 of the wheel apart. The
+// caller scales the result by the desired value (brightness). Cheaper and
+// branch-free versus a full hsv2rgb with sector selection, for the many
+// callers that only ever need the S=1 slice.
+//
+// Two independent consumers share this exact derivation
+// (pickDebugOverlay/fragment.wesl's per-source golden-angle hue,
+// milkyWay/ismMap/orientationPresent.wesl's orientation-angle hue) — the
+// shared home keeps the two from drifting apart.
+fn hueToRgb(h: f32) -> vec3<f32> {
+  let r = abs(h * 6.0 - 3.0) - 1.0;
+  let g = 2.0 - abs(h * 6.0 - 2.0);
+  let b = 2.0 - abs(h * 6.0 - 4.0);
+  return clamp(vec3<f32>(r, g, b), vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 // ── geometry / raycast ───────────────────────────────────────────────
@@ -149,6 +171,18 @@ fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> ve
   if (discr < 0.0) { return vec2<f32>(-1.0, -1.0); }
   let s = sqrt(discr);
   return vec2<f32>(-b - s, -b + s);
+}
+
+// rayPlaneY0 — ray intersection with the horizontal plane y=0 (a disc's own
+// plane in the frame milkyWay/ismMap's Present shaders share). Returns the
+// hit parameter t such that 'ro + t*rd' lies in the plane, or -1.0 — same
+// miss-sentinel idiom as raySphere above — when the ray is (near-)parallel
+// to the plane (the 1e-6 guard keeps a near-parallel ray from dividing into
+// a wild, spuriously-positive t) or the intersection sits behind the origin.
+fn rayPlaneY0(ro: vec3<f32>, rd: vec3<f32>) -> f32 {
+  if (abs(rd.y) < 1e-6) { return -1.0; }
+  let t = -ro.y / rd.y;
+  return select(t, -1.0, t <= 0.0);
 }
 
 // ── galactic-frame transforms ────────────────────────────────────────

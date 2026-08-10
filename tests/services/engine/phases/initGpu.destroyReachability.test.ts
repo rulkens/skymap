@@ -2,29 +2,19 @@
  * initGpu.destroyReachability — guards that GPU-owning renderers are
  * reachable from the teardown chain.
  *
- * ### What this protects
- *
  * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
- * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU
- * resources and expose
- * `.destroy()`. They must live on `state.gpu.*` (alongside `renderer`,
- * `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()` has a
- * reachable reference to each — otherwise every HMR / StrictMode remount
- * leaks their GPU buffers.
- *
- * ### What this test asserts
- *
- *   After `initGpu(state, deps)`, each renderer field on `state.gpu.*`
- *   holds the constructed renderer (not null/undefined) — so the
- *   `engine.ts.destroy()` chain has a reachable reference to release.
- *
- * ### Why mock the heavy modules
+ * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU resources
+ * and expose `.destroy()`. They must live on `state.gpu.*` (alongside
+ * `renderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
+ * has a reachable reference to each — otherwise every HMR / StrictMode
+ * remount leaks their GPU buffers. After `initGpu(state, deps)`, this test
+ * checks each renderer field on `state.gpu.*` holds the constructed
+ * renderer, not null/undefined.
  *
  * `initGpu` calls `gpuInitGpu(canvas)` (real WebGPU device acquisition),
- * `loadFontAtlases()` (network fetch), and the renderer constructors —
- * none of which work in JSDOM. Mocking them lets the phase body run to
- * completion so we can observe its writes to `state.gpu.*`. Each mock
- * returns a spy-bearing stub whose `destroy` we can assert was called.
+ * `loadFontAtlases()` (network fetch), and the renderer constructors — none
+ * of which work in JSDOM, so each is mocked with a spy-bearing stub whose
+ * `destroy` calls can be asserted.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -169,7 +159,7 @@ vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRend
   createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
+vi.mock('../../../../src/services/engine/galaxyGenerator/v1/milkyWayCloud', () => ({
   createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
 }));
 
@@ -605,12 +595,11 @@ describe('initGpu — HDR capability dispatch wiring', () => {
   });
 
   it('publishes phaseLocals.unwatchHdrCapability even when a later step throws', async () => {
-    // Regression for the leak: phaseLocals used to be assigned only at the
-    // very end of initGpu, so any throw between the listener registration
-    // and that final line (here, the font-atlas fetch) left
-    // `bootstrapDeps.phaseLocals` undefined and `engine.ts`'s destroy() a
-    // no-op — the matchMedia listener (and its closure over the store) then
-    // leaks for the page's lifetime.
+    // Guards against phaseLocals being assigned only at the very end of
+    // initGpu: a throw between the listener registration and any later step
+    // (here, the font-atlas fetch) would then leave `bootstrapDeps.phaseLocals`
+    // undefined and `engine.ts`'s destroy() a no-op — the matchMedia listener
+    // (and its closure over the store) leaks for the page's lifetime.
     vi.mocked(loadFontAtlases).mockRejectedValueOnce(new Error('font atlas fetch failed'));
     const state = makeState();
     const deps = makeDeps();

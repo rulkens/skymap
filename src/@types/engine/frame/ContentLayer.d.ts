@@ -40,17 +40,16 @@ export type ContentLayer = {
   readonly target: string;
   /**
    * How this layer's fragments combine with what's already in its target.
-   * Declared now as part of the locked row shape: today every layer sharing
-   * a `target` also shares a `blend` (additive across the nine HDR layers,
-   * OVER across the five swap-chain overlays), so nothing groups or checks
-   * by blend at runtime — it's consumed only as a human-readable contract,
-   * with the renderer pipeline baking the actual blend state. This value
-   * must match the profile baked into the renderer pipeline its `draw`
-   * calls, but nothing enforces that today; a layer↔pipeline parity check
-   * is the intended guardrail once a target's layers stop agreeing on
-   * blend — no target mixes blends today (the near-field fold kept its
-   * opaque bodies on `foreground:0` and its OVER captions on `swap`), so
-   * the check stays a future guardrail.
+   * Declared now as part of the locked row shape: most layers sharing a
+   * `target` also share a `blend` (OVER across the five swap-chain
+   * overlays; the near-field fold kept its opaque bodies on
+   * `foreground:0` and its OVER captions on `swap`), but `hdr` already
+   * mixes two — additive emission across most HDR layers, and
+   * `milkyWayLayer`'s genuinely multiplicative dust pass, order-dependent
+   * against the emission it darkens (see `Blend.d.ts`). This value must
+   * match the profile baked into the renderer pipeline its `draw` calls,
+   * but nothing enforces that today; a layer↔pipeline parity check across
+   * a target's mixed blends is the intended guardrail, not yet built.
    */
   readonly blend: Blend;
   /** Whether this layer should record draw commands this frame. Pure: no side effects. */

@@ -2,14 +2,11 @@
  * renderTargets — the single owner of every offscreen render target's
  * lifecycle, driven by the `RenderTargetSpec` table.
  *
- * Pre-unification the HDR target lived in `postProcess.ts` and the half-res
- * volume target in `volumeOffscreen.ts` — two modules with identical
- * construct / resize / destroy shapes, two `state.gpu.*` fields that always
- * flipped together, and a frame resize handler that enumerated the pair by
- * hand. The target table collapses that: an offscreen target is a ROW
- * (`id`, `format`, `depth`, `scale`), and this module allocates, resizes,
- * and releases every row uniformly. A new offscreen (a pick target, a
- * foreground slab) is a new row, not a new module + handle + resize call.
+ * An offscreen target is a ROW (`id`, `format`, `depth`, `scale`), and this
+ * module allocates, resizes, and releases every row uniformly — a new
+ * offscreen (a pick target, a foreground slab) is a new row, not a new
+ * module + handle + resize call, and the resize path never has to enumerate
+ * targets by hand.
  *
  * ### Why the HDR offscreen exists at all
  *
@@ -131,7 +128,7 @@
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
-import { BLOOM_LEVELS } from '../../data/bloomConstants';
+import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 
 /**
  * Per-target first-touch clear values, consumed by the executor: the first
@@ -201,20 +198,19 @@ function buildSpecs(
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
     { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: mwAggregateDivisor },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
-    // Bloom mip pyramid: level 0 at half-res, each further level halving again
-    // (scale 2/4/8/16/32 — that is 2**(n+1)) — an ever-wider glow. rgba16float
-    // mirrors the HDR precision so the additive fold keeps its dynamic range. No
-    // depth: these are fullscreen post passes, not depth-tested geometry. The
-    // rows are generated from BLOOM_LEVELS (the shared pyramid-depth home) so
-    // adding a level is a one-line edit that stays consistent with the uniform
-    // arrays and pass loops that derive from the same number.
+    // Bloom mip pyramid: an ever-wider glow. rgba16float mirrors the HDR
+    // precision so the additive fold keeps its dynamic range. No depth: these
+    // are fullscreen post passes, not depth-tested geometry. Both the depth and
+    // the per-level divisor come from `bloomConstants` (the shared pyramid-shape
+    // home) so adding a level or respacing the pyramid is a one-line edit that
+    // stays consistent with the uniform arrays and pass loops deriving from it.
     ...Array.from(
       { length: BLOOM_LEVELS },
       (_unused, n): RenderTargetSpec => ({
         id: `bloom${n}`,
         format: 'rgba16float',
         depth: null,
-        scale: 2 ** (n + 1),
+        scale: bloomScale(n),
       }),
     ),
     { id: 'swap', format: swapFormat, depth: null, scale: 1 },

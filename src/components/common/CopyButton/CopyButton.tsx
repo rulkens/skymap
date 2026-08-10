@@ -3,27 +3,18 @@
  * CopyButton — a button that copies `text` to the clipboard on click and
  * shows transient success/failure feedback in place of its label.
  *
- * Generic on purpose: the first consumer is the DebugPanel's "Milky Way
- * tuning" section (copying a paste-ready diff for `MILKY_WAY_TUNING_DEFAULTS`),
- * but the flow-field tuning section has the same shape of need, and nothing
- * about "write a string to the clipboard, then say whether it worked" is
- * Milky-Way-specific. `text` + `label` is the whole domain-agnostic surface;
- * `title` is a plain passthrough for a consumer-specific hint (e.g. *where*
- * the copied text is meant to be pasted), which this component has no way to
- * know on its own.
+ * Domain-agnostic on purpose (DebugPanel's Milky-Way and flow-field tuning
+ * sections both use it): `text` + `label` is the whole surface, `title` a
+ * plain passthrough for a consumer-specific hint. Disabled whenever `text`
+ * is empty — pasting nothing is never useful — so callers don't have to
+ * compute a redundant `disabled` prop from the same fact.
  *
- * Disabled whenever `text` is empty: clicking would put an empty string on
- * the clipboard, which is never a useful action for any consumer — not just
- * the "nothing changed this tuning session" case that motivated the button.
- * That reads as the button correctly, without needing a separate `disabled`
- * prop the caller would have to compute redundantly from the same fact.
- *
- * Renders through the shared `Button` primitive for chrome (border, hover,
- * disabled treatment); this component owns only the clipboard call and the
- * feedback timer, not pixels.
+ * Renders through the shared `Button` primitive for chrome; this component
+ * owns only the clipboard call and the feedback timer, not pixels.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import cx from 'classnames';
 import Button from '../Button/Button';
 import styles from './CopyButton.module.css';
 
@@ -36,9 +27,11 @@ export type CopyButtonProps = {
   readonly label: string;
   /** Passed through to the underlying `<button title>` — consumer-specific. */
   readonly title?: string;
+  /** Composed onto the underlying `Button` for LAYOUT only — chrome stays the primitive's. */
+  readonly className?: string;
 };
 
-function CopyButton({ text, label, title }: CopyButtonProps): ReactNode {
+function CopyButton({ text, label, title, className }: CopyButtonProps): ReactNode {
   const [feedback, setFeedback] = useState<string | null>(null);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -64,7 +57,7 @@ function CopyButton({ text, label, title }: CopyButtonProps): ReactNode {
 
   return (
     <Button
-      className={styles.root}
+      className={cx(styles.root, className)}
       disabled={text.length === 0}
       title={title}
       onClick={() => void handleClick()}
