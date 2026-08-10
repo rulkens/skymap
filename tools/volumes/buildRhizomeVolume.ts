@@ -9,8 +9,9 @@
  * calibration quick-look and the shipped MCPM reference render under
  * identical normalisation (spec Decision 1).
  *
- * CLI wrapper (`--out` / `--quick-look` / `--shell`) lands in a later task;
- * this file exports the builder only.
+ * CLI: `--out <path>` (passthrough), `--quick-look` (overwrite the shipped
+ * MCPM large tier for calibration), `--shell inner|middle|outer` (stub —
+ * lands with the rhizome-shells plan).
  *
  * Spec: docs/superpowers/specs/2026-08-10-rhizome-scfd-importer-design.md
  */
@@ -20,6 +21,8 @@ import { basename, dirname, extname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { quickLookSentinelPath } from '../utils/volume/quickLookSentinelPath';
+import { MCPM_TIER_FILENAME } from './buildMcpmVolume';
 import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -136,4 +139,93 @@ export async function buildRhizomeVolume(args: {
       `min=${valueMin.toFixed(3)}, max=${valueMax.toFixed(3)}, ` +
       `${out.byteLength} bytes)`,
   );
+}
+
+const SHELL_NAMES = ['inner', 'middle', 'outer'] as const;
+
+function printUsage(): void {
+  console.error(
+    'usage: tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --out <path.scfd>\n' +
+      '       tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look\n' +
+      '       tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner|middle|outer',
+  );
+}
+
+// ── CLI wrapper ────────────────────────────────────────────────────
+// Exactly one of --out / --quick-look / --shell (Decision 4) — scan for
+// all three rather than just the first flag, so "both --out and
+// --quick-look" is caught as a usage error instead of silently taking
+// whichever came first.
+async function main(): Promise<void> {
+  const [npyPath, ...rest] = process.argv.slice(2);
+  const outIndex = rest.indexOf('--out');
+  const hasQuickLook = rest.includes('--quick-look');
+  const shellIndex = rest.indexOf('--shell');
+  const modeCount = [outIndex !== -1, hasQuickLook, shellIndex !== -1].filter(Boolean).length;
+
+  if (!npyPath || modeCount !== 1) {
+    printUsage();
+    process.exit(1);
+    return;
+  }
+
+  if (outIndex !== -1) {
+    const outPath = rest[outIndex + 1];
+    if (!outPath) {
+      printUsage();
+      process.exit(1);
+      return;
+    }
+    await buildRhizomeVolume({ npyPath, outPath });
+    return;
+  }
+
+  if (hasQuickLook) {
+    // Composed from the imported tier map, never a restated literal —
+    // the filename has exactly one home (quickLookSentinelPath.ts).
+    const outPath = `public/data/${MCPM_TIER_FILENAME[2]}`;
+    await buildRhizomeVolume({ npyPath, outPath });
+    writeFileSync(
+      quickLookSentinelPath('public/data'),
+      `quick-look cube written by buildRhizomeVolume --quick-look from ${npyPath}; ` +
+        `run "npm run build-mcpm" to restore the shipped reference and clear this sentinel.\n`,
+    );
+    console.log(
+      `[buildRhizomeVolume] quick-look cube is only visible with the MCPM tier set to ` +
+        `large — the viewer fetches mcpm-<tier>.scfd per the tier setting.`,
+    );
+    console.log(
+      `[buildRhizomeVolume] run "npm run build-mcpm" to restore the shipped reference ` +
+        `and clear the quick-look sentinel.`,
+    );
+    return;
+  }
+
+  // --shell
+  const shellName = rest[shellIndex + 1];
+  if (!shellName || !(SHELL_NAMES as readonly string[]).includes(shellName)) {
+    printUsage();
+    process.exit(1);
+    return;
+  }
+  // Argument surface is stable now so the later rhizome-shells plan lands
+  // without a CLI-shape change; wiring to blockAverageCube is out of scope
+  // here (spec Decision 4, plan Task 8).
+  throw new Error(
+    'buildRhizomeVolume: --shell is not implemented yet — it lands with the rhizome-shells plan',
+  );
+}
+
+const invokedDirectly = (() => {
+  try {
+    return import.meta.url === `file://${process.argv[1]}`;
+  } catch {
+    return false;
+  }
+})();
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
