@@ -97,7 +97,7 @@ export type RenderSettings = {
    * `deriveFrameView.ts` blends `starGrainFeatureScaleNear`/`Far` by log
    * camera distance (in disc radii) into the single scalar the header still
    * carries. Calibrated at close approach (camera at/inside the disc);
-   * defaults to 2 (`defaultRenderSettings.ts`).
+   * defaults to 4 (`defaultRenderSettings.ts`).
    */
   readonly starGrainFeatureScaleNear: number;
   /**

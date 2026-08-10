@@ -117,7 +117,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Eyeballed against the reference gallery, one static value could not
   // serve both regimes — deriveFrameView.ts blends these two by camera
   // distance (in disc radii) into the header's single scalar.
-  starGrainFeatureScaleNear: 2,
+  starGrainFeatureScaleNear: 4,
   starGrainFeatureScaleFar: 15,
   // Large enough to break the grain's tile repeat, small enough to stay
   // under one tile before the warp itself starts shredding it apart
