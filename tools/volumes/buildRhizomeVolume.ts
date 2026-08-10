@@ -96,11 +96,22 @@ export async function buildRhizomeVolume(args: {
   // ── 3. Pack (shared with buildMcpmVolume.ts) + collapse voxel size ──
   const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, dims);
 
-  // Rule 6's spread ASSERT lands in Task 6; the mean collapse is
-  // implemented now so nothing downstream ever carries per-axis sizes
-  // (spec Decision 3).
-  const voxelSize =
-    (sidecar.voxelSizeMpc[0] + sidecar.voxelSizeMpc[1] + sidecar.voxelSizeMpc[2]) / 3;
+  // SCFD's header stores a single cubic voxel_size (scalarFieldFormat.ts:40)
+  // but PolyPhy rounds grid dims per axis, so the sidecar's triple can
+  // disagree slightly. A small disagreement is exporter rounding noise and
+  // collapsing to the mean is fine; a large one means the cube isn't really
+  // cubic and averaging would silently squash it. If a real export trips
+  // this, fix the exporter's grid rounding — don't raise the tolerance.
+  const [vx, vy, vz] = sidecar.voxelSizeMpc;
+  const meanVoxelSize = (vx + vy + vz) / 3;
+  const spread = (Math.max(vx, vy, vz) - Math.min(vx, vy, vz)) / meanVoxelSize;
+  if (spread > 0.005) {
+    throw new Error(
+      `buildRhizomeVolume: voxel_size_mpc spread ${(spread * 100).toFixed(2)}% exceeds 0.5% ` +
+        `(sizes ${vx}, ${vy}, ${vz}); SCFD stores one cubic voxel size — fix the exporter's grid rounding`,
+    );
+  }
+  const voxelSize = meanVoxelSize;
 
   const cube: ScalarCube = {
     dims,

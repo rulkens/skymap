@@ -142,4 +142,20 @@ describe('buildRhizomeVolume (smoke)', () => {
 
     await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/export f32/);
   });
+
+  it('refuses a cube whose per-axis voxel sizes disagree beyond 0.5%', async () => {
+    const values = Array.from({ length: 64 }, (_, i) => i / 63);
+    writeF32Npy(npyPath, values, dims);
+    // Spread = (1.02 - 1.0) / mean(1.0, 1.0, 1.02) = 0.02 / 1.006667 ≈ 1.99%.
+    writeSidecar(join(dir, 'cube.json'), { dims, voxelSizeMpc: [1.0, 1.0, 1.02] });
+
+    let error: Error | undefined;
+    try {
+      await buildRhizomeVolume({ npyPath, outPath });
+    } catch (err) {
+      error = err as Error;
+    }
+    expect(error?.message).toMatch(/exceeds 0.5%/);
+    expect(error?.message).toContain('sizes 1, 1, 1.02');
+  });
 });
