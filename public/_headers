@@ -21,3 +21,17 @@
 # atlas is regenerated.
 /images/famous/*.webp
   Cache-Control: public, max-age=86400
+
+# Belt-and-braces only: `npm run build` ends in `rm -rf dist/data`, so in
+# production every data byte is served from R2 under the buildGroups()
+# policy in tools/deploy/syncR2.ts — that group cacheControl is the
+# load-bearing edit. These rules only reach public/data/ under a local
+# `vite preview`. Both match manifest.json; Cloudflare's docs say the more
+# specific (exact-path) rule wins a duplicate header, so it's listed last
+# to win over the wildcard — unverified against a live deploy, so treat it
+# as an assumption, not a guarantee.
+/data/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/manifest.json
+  Cache-Control: public, max-age=0, must-revalidate
