@@ -138,6 +138,14 @@ fn dustCarveMask(rho: f32, n: f32, carve: f32, sharpness: f32) -> f32 {
   return 1.0 - smoothstep(rhoB - w, rhoB + w, rho);
 }
 
+// Edge-on gate for S4: the ISM map is 2D (p.xz only), so near edge-on a
+// vertical run of fragments hits nearly one texel -> stripes 'breakup' above
+// can't hide. camFwd.y (dot with the +Y disc pole), not ray 'd', discriminates
+// face/edge-on — 'd' is camFwd-dominated, FOV deflection only softens this.
+// Eyeballed; |camFwd.y| -> 1 (face-on) must stay an exact no-op below.
+const EDGE_ON_START: f32 = 0.15;
+const EDGE_ON_FULL: f32 = 0.45;
+
 @fragment
 fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC, exactly as
@@ -298,7 +306,9 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
       let resolved = clamp((u.dustNoise.x / 2.0) / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
       breakup = mix(1.0, w, resolved);
     }
-    slices = slices * dustDetailMultiplier(p, breakup);
+    let detail = dustDetailMultiplier(p, breakup);
+    let edgeOnFade = smoothstep(EDGE_ON_START, EDGE_ON_FULL, abs(u.camFwd.y));
+    slices = slices * (1.0 + (detail - 1.0) * edgeOnFade);
   }
   return slices;
 }
