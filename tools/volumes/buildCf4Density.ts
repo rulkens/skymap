@@ -31,10 +31,14 @@
  * standard paths in data/raw/cf4/ → public/data/.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
-import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import {
+  encodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -208,6 +212,7 @@ export async function buildCf4Density(args: {
 
   // ── 6. Encode + write ────────────────────────────────────────────
   const out = encodeScalarField(cube);
+  mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, Buffer.from(out));
 
   console.log(
@@ -225,7 +230,7 @@ export async function buildCf4Density(args: {
 async function main(): Promise<void> {
   await buildCf4Density({
     npyPath: rawDataPath('cf4.density-mean'),
-    outPath: 'public/data/cf4_density.scfd',
+    outPath: `public/data/${SCALAR_FIELD_DATA_PREFIX}/cf4_density.scfd`,
   });
 }
 

@@ -37,7 +37,10 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import {
+  decodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../src/data/volume/scalarFieldFormat';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { eqToSg } from '../utils/math/eqToSg';
@@ -178,7 +181,7 @@ function divergenceAtCell(cube: FlowCube, i: number, j: number, k: number): numb
 }
 
 function main(): void {
-  const path = process.argv[2] ?? 'public/data/flowfield.scfd';
+  const path = process.argv[2] ?? `public/data/${SCALAR_FIELD_DATA_PREFIX}/flowfield.scfd`;
   const buf = readFileSync(path);
   const decoded = decodeScalarField(
     buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),

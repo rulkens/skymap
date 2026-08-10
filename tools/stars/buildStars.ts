@@ -68,7 +68,7 @@
  * the tag-on-the-row form has no such collection at all.
  */
 
-import { createReadStream, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { createReadStream, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -101,6 +101,7 @@ import {
   STAR_ABSMAG_MIN,
   STAR_ABSMAG_STEP,
   STAR_ABSMAG_LEVELS,
+  STAR_CATALOG_DATA_PREFIX,
   STAR_COLORIDX_MIN,
   STAR_COLORIDX_STEP,
   STAR_COLORIDX_LEVELS,
@@ -825,11 +826,14 @@ async function runCli(): Promise<void> {
       `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
   );
 
+  const starOutDir = join(outDir, STAR_CATALOG_DATA_PREFIX);
+  mkdirSync(starOutDir, { recursive: true });
+
   let anyOverBudget = false;
   for (const t of result.tiers) {
     if (t.overBudget) anyOverBudget = true;
     const filename = `stars-${t.tier}.bin`;
-    const outPath = resolve(outDir, filename);
+    const outPath = resolve(starOutDir, filename);
     writeFileSync(outPath, Buffer.from(t.encoded));
     const gCut = t.gCutMag === null ? 'supplement-only' : `G≤${t.gCutMag.toFixed(2)}`;
     process.stderr.write(

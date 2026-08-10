@@ -2,8 +2,9 @@
 
 Rust reimplementation of the Gaia star-bin build. It reads the paged Gaia DR3
 CSVs plus the GCNS 100 pc supplement and the Hipparcos-2 bright-star patch, and
-emits the per-tier SKST binaries `public/data/stars-{small,medium,large}.bin`
-the browser renderer loads.
+emits the per-tier SKST binaries `public/data/star-catalog/v1/stars-{small,
+medium,large}.bin` the browser renderer loads (`constellations.json` writes
+straight to the `--out` dir, unversioned).
 
 This is the **canonical builder for real-scale runs**. The TypeScript builder at
 `tools/stars/buildStars.ts` is the **reference implementation** — it is the
@@ -36,9 +37,10 @@ npm run build-stars-rs
 ```
 
 which runs `cargo run --manifest-path tools/stars-rs/Cargo.toml --release --
---out public/data`. The binary resolves its raw inputs from `data/raw/gaia`
+--out public/data`. `--out` names the data root, same as the TS builder's
+`--out-dir` — the binary resolves its raw inputs from `data/raw/gaia`
 (anchored to the crate location, so cwd does not matter) and writes the three
-`.bin` files to `public/data`. Both directories can be overridden:
+`.bin` files under `public/data/star-catalog/v1/`. Both directories can be overridden:
 
 ```bash
 cargo run --release -- [--data <gaia dir>] [--out <dir>] [--pages <n>] [--compare <ref bin dir>]
@@ -56,7 +58,7 @@ five behaviours from `tools/stars/buildStars.ts` exactly (each has a
 corresponding constant/test in this crate):
 
 1. **Mean-flux aggregate encode.** Octree aggregate nodes carry their subtree's
-   summed linear flux and star count *unquantized* up the tree, and the emitted
+   summed linear flux and star count _unquantized_ up the tree, and the emitted
    record stores the subtree's **mean** star flux
    (`-2.5·log10(total_flux / star_count)`), not the summed flux — so the 7-bit
    magnitude LUT sized for a single star never clamps, and flux is conserved

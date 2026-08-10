@@ -18,7 +18,10 @@
  *   npx tsx tools/verifyCf4Scfd.ts
  */
 import { readFileSync } from 'node:fs';
-import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import {
+  decodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../src/data/volume/scalarFieldFormat';
 import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -63,7 +66,7 @@ function sampleAtAnchor(
 }
 
 function main(): void {
-  const buf = readFileSync('public/data/cf4_density.scfd');
+  const buf = readFileSync(`public/data/${SCALAR_FIELD_DATA_PREFIX}/cf4_density.scfd`);
   const cube = decodeScalarField(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const dims = cube.dims;
   const [Nx, Ny, Nz] = dims;

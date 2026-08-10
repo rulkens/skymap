@@ -47,7 +47,10 @@ import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
 import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
-import { decodeScalarField } from '../../../src/data/volume/scalarFieldFormat';
+import {
+  decodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../../src/data/volume/scalarFieldFormat';
 import { makeShaderFactory } from './engine/gpu/makeShaderFactory';
 import { createRenderGraph } from './engine/RenderGraph';
 import { setCameraViewProj } from './state/slices/cameraSlice';
@@ -60,7 +63,7 @@ export type FlowHarness = {
 
 // The velocity cube — served from the repo's `public/data/` (the workbench's
 // publicDir points there), so this is the same `.scfd` the runtime fetches.
-const FIELD_URL = '/data/flowfield.scfd';
+const FIELD_URL = `/data/${SCALAR_FIELD_DATA_PREFIX}/flowfield.scfd`;
 
 // Camera projection. Distances are Mpc (the canonical renderer places the cube
 // at physical extent — a ±500 Mpc box), so near/far bracket that scale with

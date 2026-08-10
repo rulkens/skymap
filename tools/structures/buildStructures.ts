@@ -8,8 +8,8 @@
  *   - `data/seeds/structure_anchors.seed.json`     (featured curated anchors)
  *
  * Writes:
- *   - `public/data/structures.ccat`          (StructureCatalog binary, renderer input)
- *   - `public/data/structures_meta.json`     (per-localIdx id/names/abell/description)
+ *   - `public/data/structure-catalog/v1/structures.ccat`       (StructureCatalog binary, renderer input)
+ *   - `public/data/structure-catalog/v1/structures_meta.json`  (per-localIdx id/names/abell/description)
  *
  * The two artefacts are index-parallel: record i in the .ccat corresponds
  * to entry i in the meta JSON, allowing the runtime to look up human-readable
@@ -33,14 +33,17 @@
  * bulk entry within a featured anchor's exclusion sphere is dropped so the
  * same structure never appears twice (curated-wins rule).
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseMcxc, type McxcRow } from '../parsers/parseMcxc';
 import { parseMscc, type MsccRow } from '../parsers/parseMscc';
 import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStructureSeed';
-import { encodeStructureCatalog } from '../../src/data/structure/structureCatalogFormat';
+import {
+  encodeStructureCatalog,
+  STRUCTURE_CATALOG_DATA_PREFIX,
+} from '../../src/data/structure/structureCatalogFormat';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { dedupeByProximity } from '../curation/dedupeByProximity';
@@ -348,7 +351,8 @@ function toMeta(e: StructureBuildEntry): StructureMetaEntry {
 // ── main ──────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const outDir = resolve('public/data');
+  const outDir = resolve('public/data', STRUCTURE_CATALOG_DATA_PREFIX);
+  mkdirSync(outDir, { recursive: true });
 
   // ── Parse raw catalogs ─────────────────────────────────────────────────────
   process.stderr.write('parsing MCXC…\n');

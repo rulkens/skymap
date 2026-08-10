@@ -18,11 +18,14 @@
  * for the anti-drift pin on those constants.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
-import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import {
+  encodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -180,6 +183,7 @@ export async function buildMcpmVolume(args: {
   };
 
   const out = encodeScalarField(cube);
+  mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, Buffer.from(out));
 
   console.log(
@@ -195,7 +199,7 @@ export async function buildMcpmTier(factor: 8 | 4 | 2): Promise<void> {
   const a = mcpmTierAnchors(factor);
   await buildMcpmVolume({
     npyPath: join(rawDataPath('mcpm.dir'), `mcpm_sdss_d${factor}.npy`),
-    outPath: `public/data/${MCPM_TIER_FILENAME[factor]}`,
+    outPath: `public/data/${SCALAR_FIELD_DATA_PREFIX}/${MCPM_TIER_FILENAME[factor]}`,
     origin: a.origin,
     voxelSizeMpc: a.voxelSize,
   });

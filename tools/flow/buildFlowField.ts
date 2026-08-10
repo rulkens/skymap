@@ -28,10 +28,14 @@
  * exits non-zero on missing inputs.  Output is gitignored and synced to R2.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
-import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import {
+  encodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -150,7 +154,7 @@ export async function buildFlowField(args?: {
 }): Promise<void> {
   const vfieldNpyPath = args?.vfieldNpyPath ?? rawDataPath('cf4.vfield-mean');
   const densityNpyPath = args?.densityNpyPath ?? rawDataPath('cf4.density-mean');
-  const outPath = args?.outPath ?? 'public/data/flowfield.scfd';
+  const outPath = args?.outPath ?? `public/data/${SCALAR_FIELD_DATA_PREFIX}/flowfield.scfd`;
 
   // ── 1. Load velocity (4D) + density (3D) ─────────────────────────────
   const vRaw = loadNpyValues(vfieldNpyPath);
@@ -247,6 +251,7 @@ export async function buildFlowField(args?: {
   };
 
   const out = encodeScalarField(cube);
+  mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, Buffer.from(out));
 
   console.log(
