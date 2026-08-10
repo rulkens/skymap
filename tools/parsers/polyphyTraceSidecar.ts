@@ -77,7 +77,8 @@ export function parsePolyphyTraceSidecar(text: string): PolyphyTraceSidecar {
   const originMpc = assertVec3('origin_mpc', obj.origin_mpc);
   const voxelSizeMpc = assertVec3('voxel_size_mpc', obj.voxel_size_mpc, (n) => n > 0);
 
-  if (typeof obj.frame !== 'string' || !(obj.frame in ALLOWED_FRAMES)) {
+  // own-property: 'in' would admit Object.prototype keys (toString, constructor, …)
+  if (typeof obj.frame !== 'string' || !Object.hasOwn(ALLOWED_FRAMES, obj.frame)) {
     throw new Error(
       `parsePolyphyTraceSidecar: unknown frame ${JSON.stringify(obj.frame)} (expected ${Object.keys(ALLOWED_FRAMES).join(' | ')})`,
     );

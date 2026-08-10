@@ -61,6 +61,15 @@ describe('parsePolyphyTraceSidecar', () => {
     expect(() => parsePolyphyTraceSidecar(text)).toThrow('unknown frame');
   });
 
+  it('rejects an inherited Object.prototype key posing as a frame', () => {
+    // 'in' matches inherited keys too — 'toString'/'__proto__' must not
+    // slip past the membership check as if they were allowed frames.
+    for (const frame of ['toString', '__proto__']) {
+      const text = JSON.stringify({ ...VALID_SIDECAR, frame });
+      expect(() => parsePolyphyTraceSidecar(text)).toThrow('unknown frame');
+    }
+  });
+
   it('parses the calibration sidecar into camelCase fields', () => {
     const result = parsePolyphyTraceSidecar(JSON.stringify(VALID_SIDECAR));
     expect(result.dims).toEqual([282, 512, 289]);
