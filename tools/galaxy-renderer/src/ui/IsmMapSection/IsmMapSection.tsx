@@ -375,13 +375,13 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
               <ParamSlider
                 label="Gather offset"
                 value={fluid.gatherOffset}
-                min={-24}
-                max={24}
+                min={-60}
+                max={60}
                 step={0.5}
                 format={(v) => v.toFixed(1)}
                 onChange={(v) => patchFluid({ gatherOffset: v })}
                 path="fieldTuning.ismMapFluid.gatherOffset"
-                info="Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. Range covers roughly the ridge's own half-FWHM (~17-24 texels across this app's Milky Way preset's grid, per galaxyIsmMapArmForcing.ts's armCrossSigma)."
+                info="Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. The ridge's own half-FWHM is ~17-24 texels across this app's Milky Way preset's grid (galaxyIsmMapArmForcing.ts's armCrossSigma); the range deliberately reaches well past it so the gather target can sit fully off-arm."
               />
             </SliderGroup>
             <SliderGroup title="SF events">
