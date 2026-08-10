@@ -24,9 +24,11 @@
  *      emitter, over both point + sidecar slots.
  *   7. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
- *      `installFormatVersionAlert` shares the same window and shape, dispatching
- *      an `{ kind: 'error', cause: 'format-version' }` status the first time any
- *      slot's error is a `FormatVersionError`.
+ *      `installFormatVersionAlert` shares the same window and shape: the first
+ *      time any slot's error is a `FormatVersionError`, it dispatches a
+ *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
+ *      visitor's `seenVersion` already hid the splash, so the alert needs
+ *      both to actually reach them.
  *   8. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
@@ -49,7 +51,8 @@
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
  *     `installFormatVersionAlert` subscriber; the latter may later dispatch
- *     `engineStatusChanged({ kind: 'error', cause: 'format-version' })`.
+ *     `engineStatusChanged({ kind: 'error', cause: 'format-version' })` AND
+ *     `reopenSplash()`.
  *
  * ### Side effects on `deps`
  *
@@ -143,10 +146,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Same window: a stale-.bin version mismatch turns into a splash-visible
   // error instead of silently falling through to the synthetic backstop
   // (createSyntheticFallback suppresses arming on the same error type).
-  installFormatVersionAlert(
-    (status) => cb.store.dispatch(engineStatusChanged(status)),
-    deps.allSlots,
-  );
+  installFormatVersionAlert(cb.store.dispatch, deps.allSlots);
 
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.

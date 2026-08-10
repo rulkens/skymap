@@ -4,19 +4,23 @@
  * Mirrors installSlotReadyWake.test.ts: a hand-rolled fake slot whose
  * `subscribe` stores the callback, plus an `emit` helper to drive it through
  * states. Three invariants:
- *   - a `FormatVersionError` slot error dispatches the mapped status;
+ *   - a `FormatVersionError` slot error dispatches the mapped status AND
+ *     `reopenSplash()` — a returning visitor's `seenVersion` already hid the
+ *     splash, so the alert needs both to actually reach them;
  *   - any other slot error is ignored (no message-string sniffing);
- *   - every family fails at once after a version bump, so only one dispatch
- *     reaches the caller, not one per slot.
+ *   - every family fails at once after a version bump, so only one alert
+ *     (one status dispatch, one reopen) reaches the caller, not one per slot.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { EngineStatus } from '../../../../src/@types/engine/EngineStatus';
+import type { AppDispatch } from '../../../../src/store/types';
 import { installFormatVersionAlert } from '../../../../src/services/engine/wiring/installFormatVersionAlert';
 import { FormatVersionError } from '../../../../src/data/formatVersionError';
 import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
+import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
+import { reopenSplash } from '../../../../src/state/ui/uiSlice';
 
 // Hand-rolled fake slot: `subscribe(fn)` stores the callback, `emit(state)`
 // drives it — no real AssetSlot machinery needed for this pure fan-in test.
@@ -44,9 +48,16 @@ function fakeSlot(name: string): AssetSlot<unknown, unknown> & {
   };
 }
 
+// The dispatch mock records actions (like a real store dispatch would); cast
+// past the thunk-dispatch overload rather than standing up a real store —
+// this test only cares which plain actions land, not middleware behaviour.
+function fakeDispatch(): AppDispatch & ReturnType<typeof vi.fn> {
+  return vi.fn() as unknown as AppDispatch & ReturnType<typeof vi.fn>;
+}
+
 describe('installFormatVersionAlert', () => {
-  it('dispatches a format-version error status when a slot fails to decode', () => {
-    const dispatch = vi.fn<(status: EngineStatus) => void>();
+  it('dispatches a format-version error status AND reopens the splash when a slot fails to decode', () => {
+    const dispatch = fakeDispatch();
     const slot = fakeSlot('sdss');
     const allSlots = new Map([['sdss', slot]]);
 
@@ -60,15 +71,15 @@ describe('installFormatVersionAlert', () => {
     );
     slot.emit({ kind: 'error', req: {}, error, finalAttempt: 1 });
 
-    expect(dispatch).toHaveBeenCalledExactlyOnceWith({
-      kind: 'error',
-      message: error.message,
-      cause: 'format-version',
-    });
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch).toHaveBeenCalledWith(
+      engineStatusChanged({ kind: 'error', message: error.message, cause: 'format-version' }),
+    );
+    expect(dispatch).toHaveBeenCalledWith(reopenSplash());
   });
 
   it('ignores non-version slot errors', () => {
-    const dispatch = vi.fn<(status: EngineStatus) => void>();
+    const dispatch = fakeDispatch();
     const slot = fakeSlot('sdss');
     const allSlots = new Map([['sdss', slot]]);
 
@@ -82,10 +93,11 @@ describe('installFormatVersionAlert', () => {
     });
 
     expect(dispatch).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalledWith(reopenSplash());
   });
 
   it('dispatches once even when every slot reports the same mismatch', () => {
-    const dispatch = vi.fn<(status: EngineStatus) => void>();
+    const dispatch = fakeDispatch();
     const slotA = fakeSlot('sdss');
     const slotB = fakeSlot('twomrs');
     const slotC = fakeSlot('glade');
@@ -108,6 +120,10 @@ describe('installFormatVersionAlert', () => {
     slotB.emit({ kind: 'error', req: {}, error: mkError(), finalAttempt: 1 });
     slotC.emit({ kind: 'error', req: {}, error: mkError(), finalAttempt: 1 });
 
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    // One alert = one status dispatch + one reopen, not one pair per slot.
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch.mock.calls.filter((call) => call[0].type === reopenSplash.type)).toHaveLength(
+      1,
+    );
   });
 });
