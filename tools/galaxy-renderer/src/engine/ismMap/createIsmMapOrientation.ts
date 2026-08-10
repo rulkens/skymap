@@ -42,7 +42,7 @@ export type IsmMapOrientation = {
     /** `ismMapOrientationField.wesl`'s pedestal-subtraction inputs — see `IsmMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the blank-map case, generator off); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
     readonly gasFloor: number;
     readonly gasScaleLength: number;
-    /** The ambient dust pedestal the generator seeds at step 0 — `ISM_MAP_AMBIENT_DUST` (`sweptDustOvershoot.ts`), passed live rather than baked in so the shader carries no restated constant. */
+    /** The ambient dust pedestal the generator seeds at step 0 — `ISM_MAP_AMBIENT_DUST` (`ismMapAmbientDust.ts`), passed live rather than baked in so the shader carries no restated constant. */
     readonly ambient: number;
   }): void;
   dispose(): void;

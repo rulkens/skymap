@@ -1,13 +1,13 @@
 // milkyWay/ismMap/ismMapDustBlur.wesl — S4's low-pass divisor: an 8x-downsampled
 // copy of the PLACEMENT density (the swept-dust channel's overshoot above the
-// generator's ambient pedestal — see sweptDustOvershoot.ts), blurred by
+// generator's ambient pedestal — see ismMapAmbientDust.ts), blurred by
 // box-averaging the density rather than the product of two blurs — those
 // differ, and only the former is the density field's own low-pass.
 // dustDetail.wesl divides the full-res density by this to isolate the octave
 // the dust splats can't carry (docs/research/m74-jwst/07-sprite-seeding.md, S4).
 
 const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createIsmMapOutput.ts (TS is authoritative)
-// Mirrors ISM_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested in
+// Mirrors ISM_MAP_AMBIENT_DUST (ismMapAmbientDust.ts) — parity-tested in
 // constants.parity.test.ts. CONTRACT: dustDetail.wesl's numerator must
 // subtract the identical pedestal, or the detail ratio drifts against its
 // own blur divisor.

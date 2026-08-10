@@ -65,7 +65,7 @@ import { YOUNG_CHAIN_MAX_COMPONENTS } from '../../../../../src/services/engine/g
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
-import { ISM_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
+import { ISM_MAP_AMBIENT_DUST } from '../../../../../src/utils/galaxy/ismMapAmbientDust';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 

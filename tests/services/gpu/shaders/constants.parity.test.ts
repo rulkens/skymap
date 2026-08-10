@@ -25,7 +25,7 @@ import {
 import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
-import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/sweptDustOvershoot';
+import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidEvents';
 
 /**
@@ -117,7 +117,7 @@ describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () =>
 });
 
 /**
- * ISM_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into three WESL
+ * ISM_MAP_AMBIENT_DUST (ismMapAmbientDust.ts) is mirrored into three WESL
  * files that are not dedicated constant-mirror files, so — same idiom as
  * bloomSeedingConstants.parity.test.ts's readWeslConst — this reads one
  * named const per file rather than sweeping each for orphans.
@@ -142,7 +142,7 @@ function readWeslConst(relPath: string, name: string): number | undefined {
   return undefined;
 }
 
-describe('ISM_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirrors)', () => {
+describe('ISM_MAP_AMBIENT_DUST parity (ismMapAmbientDust.ts ↔ its WESL mirrors)', () => {
   const files = [
     'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl',
     'src/services/gpu/shaders/milkyWay/ismMap/ismMapDustBlur.wesl',

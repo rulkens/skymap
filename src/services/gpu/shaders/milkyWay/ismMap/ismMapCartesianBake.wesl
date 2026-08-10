@@ -10,7 +10,7 @@ const PI: f32 = 3.14159265358979;
 // Absolute density floor for the ratio below — sole owner since stage 2
 // (dustDetail.wesl consumes the baked ratio, no copy of its own).
 const DETAIL_EPS: f32 = 0.02;
-// Mirrors ISM_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested.
+// Mirrors ISM_MAP_AMBIENT_DUST (ismMapAmbientDust.ts) — parity-tested.
 const ISM_MAP_AMBIENT_DUST: f32 = 1.0;
 
 // rMin/rMax — same grid dustDetail.wesl's ismMapUv resolves through.
