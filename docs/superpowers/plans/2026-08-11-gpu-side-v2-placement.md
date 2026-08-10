@@ -72,8 +72,9 @@ tasks that follow:
 
 ## Corrections to spec anchors (verified against the current tree; see report)
 
-- **Velocity-texture free lanes.** The spec's design section says the
-  stars-only advection velocity "packs into the free `.zw` lanes" of
+- **Velocity-texture free lanes.** The arm-gather fold-in decision (not the
+  spec, which predates it) described the stars-only advection velocity as
+  "packed into the free `.zw` lanes" of
   `velocityTex`. Verified against `ismMapFluidVelocity.wesl:368` and
   `ismMapFluidStep.wesl:210`: `.z` already carries `eventStamp` (consumed by
   Pass B for the `stars`/`activity` update), so **only `.w` is free**, not
@@ -288,8 +289,8 @@ its own shear+curl-only velocity. Folded into this PR (not spec-mandated
 Ground Prep, but user-approved scope) so its look shift and the RNG re-roll
 (Tasks 7/8) land together for Task 11's single recalibration pass.
 
-**Design correction (see "Corrections to spec anchors" above):** the spec
-describes packing this into `velocityTex`'s free `.zw` lanes; `.z` is
+**Design correction (see "Corrections to spec anchors" above):** the fold-in
+decision described packing this into `velocityTex`'s free `.zw` lanes; `.z` is
 occupied by `eventStamp` (`ismMapFluidVelocity.wesl:368`,
 `ismMapFluidStep.wesl:210`). This task instead adds a second small storage
 texture.
