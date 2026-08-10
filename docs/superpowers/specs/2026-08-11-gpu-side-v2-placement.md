@@ -175,9 +175,13 @@ Four `vec4`s, matching `io.wesl`'s existing comment-documented layout and
 `GalaxyFieldComponent` (`src/@types/galaxy/GalaxyFieldComponent.ts`)
 field-for-field — this is a naming pass over the existing bytes, not a
 relayout. `io.wesl:365`'s `comps: array<vec4<f32>>` becomes
-`comps: array<FieldComponentRec>`; every splat shader that reads `comps[i].xyz`-style
-swizzles today keeps working unchanged (a `FieldComponentRec` reinterpreted
-as 4 `vec4`s is bit-identical). `packFieldUniforms.ts`'s `packFieldComponents`
+`comps: array<FieldComponentRec>`; the BYTES are identical, but the read
+sites are not source-compatible — the six splat shaders index flat
+(`comps[4u * inst + 1u]`) and swizzle the fetched `vec4`, and WGSL has no
+element-type reinterpret, so each read site rewrites to named field access
+(`comps[inst].amplitude`). That rewrite is the point, not a cost: the
+hand-multiplied offsets ARE the undocumented layout contract this prep
+exists to kill. `packFieldUniforms.ts`'s `packFieldComponents`
 (`:288-309`) stops being the layout authority and becomes a mirror the parity
 test checks against the struct.
 

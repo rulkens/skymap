@@ -205,11 +205,16 @@ struct documents.
 - [ ] Write `records.wesl` with the struct above, importable as
       `package::milkyWay::field::records::FieldComponentRec`.
 - [ ] Update `io.wesl` to import it and change the `comps` binding's type.
-      Every existing `comps[i].xyz`-style swizzle read elsewhere
-      (`fieldSplat/`, `hiiSplat/`, `dustMap/fragment.wesl:165-167`) must keep
-      compiling unchanged — a `FieldComponentRec` reinterpreted as 4 `vec4`s
-      is bit-identical, so if a read site breaks, the struct field order is
-      wrong, not the read site.
+- [ ] Rewrite every existing flat-indexed read of `comps` to named field
+      access (`comps[4u * inst + 1u]`-style fetch + swizzle →
+      `comps[inst].<field>`): `fieldSplat/vertex.wesl`,
+      `fieldSplat/fragment.wesl`, `hiiSplat/vertex.wesl`,
+      `hiiSplat/shadeCommon.wesl`, `dustMap/vertex.wesl`,
+      `dustMap/fragment.wesl`. The bytes don't change — the packer is
+      untouched — so any visual difference is a mis-mapped field. (The plan
+      originally claimed these sites compile unchanged; WGSL has no
+      element-type reinterpret, and the flat offsets are exactly the
+      hand-tracked contract this task deletes.)
 - [ ] Write `records.parity.test.ts` following
       `tests/tools/galaxy-renderer/engine/ismMap/packIsmMapFluidConstants.test.ts`'s
       technique exactly: `parseWgslStructFields` + `layoutWgslStruct` +
