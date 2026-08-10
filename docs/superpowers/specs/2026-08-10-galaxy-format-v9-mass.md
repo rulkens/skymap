@@ -25,8 +25,10 @@ format bump.
 - A version mismatch in the browser fails **once**, with a user-legible
   "app updated — reload" splash, not three re-downloads and
   `npm run build-tiers` advice.
-- Data URLs carry the format epoch (`/data/v9/…`), so browser/CDN caches
-  can never pair mismatched code and bins (the `earth-tiles/v1` precedent).
+- Data files live under one folder per binary family with the format
+  version as an epoch segment (`/data/galaxy-catalog/v9/…`), so browser/CDN
+  caches can never pair mismatched code and bins (the `earth-tiles/v1`
+  precedent, generalized to every family).
 - Stride stays 64 B — no growth on ~280 MB of shipped bins.
 
 ## Non-goals
@@ -50,8 +52,8 @@ The field list is restated in ~10 places (encode, decode,
 copy + transfer list, `recordsToCloud`, `buildFamous`'s hand-rolled
 duplicate, `synthetic.ts`, `makeGalaxyCatalog.ts`), and
 `galaxyCatalogTransfer.ts:25–30` falsely claims to be the only one.
-**Before the v9 feature**, a prep refactor introduces a `FIELD_SPECS`
-table in `galaxyCatalogFormat.ts` — name, offset, view type, per-field
+**Before the v9 feature**, a prep refactor introduces a
+`GALAXY_CATALOG_FIELD_SPECS` table in `galaxyCatalogFormat.ts` — name, offset, view type, per-field
 doc — that drives encode, decode, `emptyGalaxyCatalog`, and the transfer
 clone mechanically (the `structureCatalogFormat.ts` named-`OFF_*` pattern,
 completed). `recordsToCloud`, `buildFamous`, `synthetic.ts`, and the test
@@ -130,18 +132,38 @@ page to fetch matching data" instead of the raw
 `unsupported version: … build-tiers` developer string (which remains for
 tool-side callers like `buildFilaments`).
 
-## Data URL epoch
+## Data layout & URL epoch
 
-`dataUrl()` prefixes the format epoch: `/data/v9/sdss-large.bin`. Bumps
-ride the existing constant in `galaxyCatalogFormat.ts` so URL and gate
-cannot diverge. Touch points: `fetchWithProgress.ts:24–27` (`dataUrl`),
-`tierTargets.ts:87–92`, `tools/deploy/r2/allowDataFile.ts`,
-`collectDataFiles.ts`, R2 key layout (old `/data/*.bin` objects are left
-in place until the next sync prune; `public/_headers` unchanged —
-`max-age=86400` is now safe). Non-versioned families (`.scfd`, `.ccat`,
-stars, filaments, images) keep their current paths; only SKMP galaxy bins
-move under the epoch prefix. `filaments*.bin` are **not** SKMP files and
-do not move.
+`public/data/` reorganizes into one folder per binary family, named after
+its format module, with the family's **current** format version as an
+epoch segment:
+
+| folder | files | format module (version) |
+|---|---|---|
+| `galaxy-catalog/v9/` | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin` | `galaxyCatalogFormat.ts` (9) |
+| `star-catalog/v1/` | `stars-{small,medium,large}.bin` | `starCatalogFormat.ts` (1) |
+| `structure-catalog/v1/` | `structures`/`clusters` `.ccat` **+ their `*_meta.json`** (fetched as a pair) | `structureCatalogFormat.ts` (1) |
+| `scalar-field/v3/` | `cf4_density`, `flowfield`, `mcpm-*` `.scfd` | `scalarFieldFormat.ts` (3) |
+| `filament/v1/` | `filaments{,-sdss,-small}.bin` | `filamentBinaryFormat.ts` (1) |
+
+Loose JSON (`famous_*_meta`, `constellations`, `pgc_aliases`) and
+`images/` stay at the root — no version gate, schemas evolve compatibly
+(`images/earth-tiles/` already carries its own `TILE_PREFIX` epoch).
+
+Each format module exports its epoch prefix derived from its own
+`VERSION` constant (e.g. ``GALAXY_CATALOG_DATA_PREFIX =
+`galaxy-catalog/v${VERSION}` ``); fetchers pass prefixed filenames to the
+existing `dataUrl()` (`fetchWithProgress.ts:24–27`, itself unchanged) and
+build tools write under `public/data/<prefix>/` via the same constant —
+URL, disk layout, and decode gate cannot diverge. Touch points: the five
+family fetchers, `tierTargets.ts:87–92`, the builders (`buildAllBins`,
+`buildFamous`, star/structure/volume/flow builders, `buildFilaments` on
+both its galaxy-bin *input* and filament *output* paths),
+`collectDataFiles.ts`, `tools/deploy/r2/allowDataFile.ts`. Old flat R2
+objects are left in place until the next sync prune (in-flight old
+clients keep working through a deploy); `public/_headers` unchanged —
+`max-age=86400` is now safe for every family. A future bump of any
+family adds a sibling epoch folder.
 
 ## Build-order + doc sweep
 
@@ -149,10 +171,12 @@ do not move.
   version pre-check + friendly message) that `build-tiers` must precede
   `build-filaments` after a bump.
 - Stale docs fixed in the same branch: `docs/DATA.md:12/16` (says v6, has
-  the pre-rename file path), `README.md:672–686` (whole section still
-  documents v4), `docs/adrs/0004…md:37` (v6 + stale link),
+  the pre-rename file path; also gains the `<family>/v<N>/` layout table
+  above), `README.md:672–686` (whole section still documents v4),
+  `docs/adrs/0004…md:37` (v6 + stale link),
   `.claude/skills/add-data-source/SKILL.md` gains the "bump = regenerate
-  bins + R2 epoch + purge" checklist step.
+  bins + R2 epoch + purge" checklist step and the family-folder rule for
+  new sources.
 
 ## Testing
 
