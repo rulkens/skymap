@@ -24,16 +24,17 @@
  *      emitter, over both point + sidecar slots.
  *   7. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
- *   8. `reevaluateDemand` — the single place loads start. It walks every wiring
- *      row and triggers each demanded slot with its tier-derived request. The
- *      same loop re-runs on every state change, so "is this asset required?"
- *      has one answer in one place.
+ *   8. `reevaluateDemand` — the single place loads start, awaited on
+ *      `loadDataManifest` immediately before it so no fetch can race the
+ *      manifest. It walks every wiring row and triggers each demanded slot
+ *      with its tier-derived request. The same loop re-runs on every state
+ *      change, so "is this asset required?" has one answer in one place.
  *
  * The phase does not block on data arrival: `engineStatusChanged({ kind:
- * 'loading' })` dispatches synchronously and `wireInput`/`startLoop` run
- * immediately after, so the camera and rAF loop come up with whatever has
- * landed. Per-arrival `ready` dispatch and the synthetic fallback run as
- * background subscribers wired here.
+ * 'loading' })` dispatches synchronously (before the manifest await) and
+ * `wireInput`/`startLoop` run immediately after this returns, so the camera
+ * and rAF loop come up with whatever has landed. Per-arrival `ready` dispatch
+ * and the synthetic fallback run as background subscribers wired here.
  *
  * ### State writes
  *
@@ -62,6 +63,7 @@ import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
+import { loadDataManifest } from '../../loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -135,6 +137,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.
   cb.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+
+  // reevaluateDemand is the only place loads start, so awaiting the manifest
+  // here — after the loading dispatch, before any fetch can begin — makes
+  // "no data fetch can race the manifest" structural rather than a hope.
+  await loadDataManifest();
 
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the

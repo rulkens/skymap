@@ -147,6 +147,15 @@ vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
   })),
 }));
 
+// Task 12: wireSlots awaits loadDataManifest() before reevaluateDemand.
+// Default resolves immediately (a resolved microtask) so every other test in
+// this file sees the same "returns synchronously" shape as before; the
+// deferred-manifest test below overrides this once with mockReturnValueOnce.
+vi.mock('../../../../src/services/loading/dataManifest', () => ({
+  loadDataManifest: vi.fn(async () => {}),
+  resolveDataPath: vi.fn((p: string) => p),
+}));
+
 vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
   syntheticVolumeFetcher: vi.fn(async () => ({
     dims: [4, 4, 4],
@@ -234,6 +243,7 @@ import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetch
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
+import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -556,6 +566,56 @@ describe('wireSlots', () => {
       return action.type === engineStatusChanged.type && action.payload.kind === 'loading';
     });
     expect(loadingDispatches.length).toBe(1);
+  });
+
+  it('starts no load until the data manifest has resolved', async () => {
+    // Same setup as "returns synchronously ... and fires `loading` status"
+    // above — plain, unfired point slots, no sidecar-fetcher assertions.
+    // The only novelty here is the deferred manifest: (1) before it
+    // resolves, reevaluateDemand hasn't run yet, so nothing is loaded; (2)
+    // after it resolves, drain the same way the other test does and expect
+    // the exact same four `.load()` calls — the default boot set, unchanged.
+    let resolveManifest!: () => void;
+    const deferred = new Promise<void>((resolve) => {
+      resolveManifest = resolve;
+    });
+    vi.mocked(loadDataManifest).mockReturnValueOnce(deferred);
+
+    const sdssSlot = makeFakeSlot('sdss-points');
+    const twoMrsSlot = makeFakeSlot('2mrs-points');
+    const gladeSlot = makeFakeSlot('glade-points');
+    const famousSlot = makeFakeSlot('famous-points');
+    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+      [Source.SDSS, sdssSlot],
+      [Source.TwoMRS, twoMrsSlot],
+      [Source.Glade, gladeSlot],
+      [Source.FamousGalaxy, famousSlot],
+    ]);
+    const state = makeState({ points });
+    const deps = makeDeps();
+
+    const pending = wireSlots(state, deps);
+    // Flush pending microtasks without resolving the manifest deferred —
+    // reevaluateDemand sits behind the await, so nothing should fire yet.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sdssSlot.load).not.toHaveBeenCalled();
+    expect(twoMrsSlot.load).not.toHaveBeenCalled();
+    expect(gladeSlot.load).not.toHaveBeenCalled();
+    expect(famousSlot.load).not.toHaveBeenCalled();
+
+    resolveManifest();
+    await pending;
+    // Same drain as the sibling test: the boot demand pass enqueues rather
+    // than loading, so every demanded row needs the queue drained before
+    // its slot's `.load()` is observable.
+    await state.subsystems.assetQueue.drain();
+
+    expect(sdssSlot.load).toHaveBeenCalled();
+    expect(twoMrsSlot.load).toHaveBeenCalled();
+    expect(gladeSlot.load).toHaveBeenCalled();
+    expect(famousSlot.load).toHaveBeenCalled();
   });
 
   it('assigns all five impostor subsystems onto state.subsystems', async () => {
