@@ -38,6 +38,7 @@ import {
 import { buildYoungStarChain } from './youngStarChain';
 import { buildIsmMapDustCdf } from '../../../../utils/galaxy/buildIsmMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
+import { memoizeLastByKeys } from '../../../../utils/cache/memoizeLastByKeys';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleIsmMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
 import { sampleIsmMapEventPosition } from '../../../../utils/galaxy/sampleIsmMapEventPosition';
@@ -373,33 +374,19 @@ function resolveEventLifecyclePopulation(
 const ISM_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
 
 /**
- * Last-value memo for one of the three per-call `buildIsmMapDustCdf` builds
- * below — each is an O(rings x az [x arms]) pass that a tuning drag outside
- * that tier's own discriminant (map identity, `armBias`, `arms.widthScale`)
- * leaves byte-identical, since `buildIsmMapDustCdf` is a pure function of
- * exactly those inputs. `createGalaxyModel.ts` keeps `ismMap`/`geometry`
- * reference-stable across a `setFieldTuning` call that doesn't touch them,
- * so a single slot per tier is enough: only the CENTRAL galaxy's call ever
- * hands in a non-null `ismMap` (extras pass `null` and never reach these three
- * builders), so nothing else contends for the slot within one rebuild. Sound
- * under ANY interleaving regardless — a key miss just rebuilds — so this can
- * only cost performance, never correctness.
+ * Last-value memo for one of the two per-call `buildIsmMapDustCdf` builds
+ * below (`memoizeLastByKeys` — see its own header for the Object.is/miss
+ * discipline) — each is an O(rings x az [x arms]) pass that a tuning drag
+ * outside that tier's own discriminant (map identity, `armBias`,
+ * `arms.widthScale`) leaves byte-identical, since `buildIsmMapDustCdf` is a
+ * pure function of exactly those inputs. `createGalaxyModel.ts` keeps
+ * `ismMap`/`geometry` reference-stable across a `setFieldTuning` call that
+ * doesn't touch them, so a single slot per tier is enough: only the CENTRAL
+ * galaxy's call ever hands in a non-null `ismMap` (extras pass `null` and
+ * never reach these builders), so nothing else contends for the slot within
+ * one rebuild.
  */
-type CachedCdf = { readonly key: readonly unknown[]; readonly cdf: GalaxyIsmMapDustCdf };
-
-function sameCdfKey(a: readonly unknown[], b: readonly unknown[]): boolean {
-  return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
-}
-
-function cachedCdf(
-  cache: CachedCdf | null,
-  key: readonly unknown[],
-  build: () => GalaxyIsmMapDustCdf,
-): CachedCdf {
-  return cache && sameCdfKey(cache.key, key) ? cache : { key, cdf: build() };
-}
-
-let seedingCdfCache: CachedCdf | null = null;
+const seedingCdfMemo = memoizeLastByKeys<GalaxyIsmMapDustCdf>();
 
 /**
  * applyIsmMapSeeding — a POST-PASS over `planRegions`' output rather than a
@@ -442,10 +429,9 @@ function applyIsmMapSeeding(
 
   // `activity` alone, no tuning input at all — this CDF's only discriminant
   // is the map itself, so the cache key is just `ismMap`.
-  seedingCdfCache = cachedCdf(seedingCdfCache, [ismMap], () =>
+  const cdf = seedingCdfMemo.get([ismMap], () =>
     buildIsmMapDustCdf(ismMap, (texel) => texel.activity),
   );
-  const cdf = seedingCdfCache.cdf;
   if (!(cdf.total > 0)) return regions;
 
   const rng = mulberry32(seed ^ ISM_MAP_POSITION_SALT);
@@ -623,7 +609,7 @@ function scatterAxesForCoherence(
  */
 const DIG_COMPLEXES_PER_EVENT = 0.12;
 
-let digCdfCache: CachedCdf | null = null;
+const digCdfMemo = memoizeLastByKeys<GalaxyIsmMapDustCdf>();
 
 function buildDigVeil(
   geometry: GalaxyDescription,
@@ -652,13 +638,15 @@ function buildDigVeil(
   // cache miss, so a `complexes`/`elongation`/`coherence`/`texture` drag
   // (this tier's actually-common sliders) skips both the envelope setup AND
   // the CDF's O(rings x az x arms) sweep.
-  digCdfCache = cachedCdf(digCdfCache, [ismMap, geometry, tuning.arms.widthScale, armBias], () => {
-    const envelope = buildArmProximityEnvelope(geometry, tuning);
-    return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
-      armBiasedDensity(texel.activity, armBias, envelope, radius, angle),
-    );
-  });
-  const cdf = digCdfCache.cdf;
+  const cdf = digCdfMemo.get(
+    [ismMap, geometry, tuning.arms.widthScale, armBias],
+    () => {
+      const envelope = buildArmProximityEnvelope(geometry, tuning);
+      return buildIsmMapDustCdf(ismMap, (texel, radius, angle) =>
+        armBiasedDensity(texel.activity, armBias, envelope, radius, angle),
+      );
+    },
+  );
   if (!(cdf.total > 0)) return [];
 
   const digRatio = Math.min(DIG_FLUX_RATIO_MAX, fraction / (1 - fraction));

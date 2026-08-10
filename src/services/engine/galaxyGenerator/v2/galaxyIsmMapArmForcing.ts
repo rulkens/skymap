@@ -28,6 +28,7 @@
 import { armRidgeCurvePoint, armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import { buildArmSpurs } from './armSpurGeometry';
 import { ismMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
+import { memoizeLastByKeys } from '../../../../utils/cache/memoizeLastByKeys';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
@@ -235,19 +236,12 @@ function computeGalaxyIsmMapArmForcing(
   return out;
 }
 
-type CachedForcing = { readonly key: readonly unknown[]; readonly field: Float32Array };
-
-function sameForcingKey(a: readonly unknown[], b: readonly unknown[]): boolean {
-  return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
-}
-
 /**
- * Single-slot memo — same pattern as `hiiRegions.ts`'s `cachedCdf`. Sound
- * under any interleaving: a key miss just rebuilds, so this can only cost
- * performance, never correctness. Callers must treat the returned array as
- * read-only (both current call sites do: GPU upload, CDF read).
+ * Single-slot memo (`memoizeLastByKeys` — same helper `hiiRegions.ts`'s CDF
+ * caches use). Callers must treat the returned array as read-only (both
+ * current call sites do: GPU upload, CDF read).
  */
-let forcingCache: CachedForcing | null = null;
+const forcingMemo = memoizeLastByKeys<Float32Array>();
 
 export function buildGalaxyIsmMapArmForcing(
   geometry: GalaxyDescription,
@@ -268,8 +262,5 @@ export function buildGalaxyIsmMapArmForcing(
     spurs.lengthFrac,
     spurs.jitter,
   ];
-  if (forcingCache && sameForcingKey(forcingCache.key, key)) return forcingCache.field;
-  const field = computeGalaxyIsmMapArmForcing(geometry, tuning);
-  forcingCache = { key, field };
-  return field;
+  return forcingMemo.get(key, () => computeGalaxyIsmMapArmForcing(geometry, tuning));
 }

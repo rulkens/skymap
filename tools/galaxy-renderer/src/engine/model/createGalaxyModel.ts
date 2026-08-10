@@ -379,6 +379,32 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * rebuildHiiIfSeeded — the HII tier's own "map landed late" rebuild,
+   * shared by `scheduleIsmMapReadback` and `scheduleOrientationReadback`:
+   * same "map landed after the synchronous build that asked for it"
+   * determinism problem `rebuildDustMixture` solves for dust, for the HII
+   * tier's own map-seeded positions AND its DIG veil (also map-seeded).
+   * File-local — closes over `fieldGeometry`/`fieldTuning`/`hiiMixture`/
+   * `hiiTierSegments`/`readbacks`, none of which are pure inputs, so this
+   * isn't a `utils/` candidate.
+   */
+  function rebuildHiiIfSeeded(): void {
+    if (
+      fieldGeometry &&
+      (fieldTuning.hii.ismMapSeeding > 0 ||
+        (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
+        (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
+    ) {
+      ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
+        fieldGeometry,
+        currentStarFormation(),
+        readbacks.ismMapData,
+      ));
+      repackHiiComponents();
+    }
+  }
+
+  /**
    * scheduleIsmMapReadback — what happens WHEN the one-per-generation copy of
    * `ismMapTex` lands. Called from `rebuildIsmMap`'s own two exits with the grid
    * it just wrote, so `GalaxyIsmMap.rMin/rMax` always matches the CONTENT being
@@ -398,22 +424,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         rebuildDustMixture();
         repackFieldComponents();
       }
-      // Same "map landed after the synchronous build that asked for it"
-      // determinism problem `rebuildDustMixture` above solves, for the HII
-      // tier's own map-seeded positions AND its DIG veil (also map-seeded).
-      if (
-        fieldGeometry &&
-        (fieldTuning.hii.ismMapSeeding > 0 ||
-          (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
-          (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
-      ) {
-        ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
-          fieldGeometry,
-          currentStarFormation(),
-          readbacks.ismMapData,
-        ));
-        repackHiiComponents();
-      }
+      rebuildHiiIfSeeded();
     });
   }
 
@@ -436,19 +447,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       } else {
         reportOrientationDiagnostics();
       }
-      if (
-        fieldGeometry &&
-        (fieldTuning.hii.ismMapSeeding > 0 ||
-          (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
-          (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
-      ) {
-        ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
-          fieldGeometry,
-          currentStarFormation(),
-          readbacks.ismMapData,
-        ));
-        repackHiiComponents();
-      }
+      rebuildHiiIfSeeded();
     });
   }
 

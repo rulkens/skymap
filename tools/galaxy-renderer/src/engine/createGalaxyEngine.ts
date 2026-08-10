@@ -49,6 +49,7 @@ import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
 import { createRafLoop } from './createRafLoop';
+import { bakeVolumeTexture } from './gpu/bakeVolumeTexture';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
@@ -533,41 +534,47 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
-  // ---- dust-noise bake: 128^3 ridged-fbm volume, baked ONCE ----
-  // dustNoiseBake.wesl — see its header for why ridged (not plain value
-  // noise) and why the tileable lattice hash lives inside that file rather
-  // than growing a shared lib for one consumer. View- and param-independent
-  // (four fixed octave bands, no camera/galaxy input), so this bakes here,
-  // once, into its own one-shot encoder — NOT inside `drawFrame`'s.
+  // ---- three baked volumes, each baked ONCE via bakeVolumeTexture ----
+  // dustNoiseTex (128^3 ridged-fbm — dustNoiseBake.wesl's header explains why
+  // ridged, not plain value noise, and why the tileable lattice hash lives in
+  // that file rather than a shared lib for one consumer), warpNoiseTex (64^3
+  // VALUE noise — starGrain.wesl's own domain-warp displacement, split out of
+  // dustNoiseTex so it can stay a different noise kind) and starGrainTex
+  // (128^3 scattered log-normal point grains — hiiSplat/starGrain.wesl's
+  // YOUNG STARS branch). All three are view- and param-independent (fixed
+  // octave bands, no camera/galaxy input), which is what `bakeVolumeTexture`
+  // relies on to bake once here rather than inside `drawFrame`'s encoder.
   // `dustMapFsMod` already imports `dustNoiseTex`/`dustNoiseSmp` from io.wesl
   // (see dustMap/fragment.wesl), which is what gives `dustMapPipe`'s
   // `layout: 'auto'` bind-group layout entries 4/5 below.
-  const dustNoiseBakeMod = makeShader(dustNoiseBakeWgsl, 'galaxy:dustNoiseBake');
-  const dustNoiseBakePipe = device.createComputePipeline({
-    label: 'galaxy:dustNoiseBakePipe',
-    layout: 'auto',
-    compute: { module: dustNoiseBakeMod, entryPoint: 'cs' },
+  const dustNoiseBaked = bakeVolumeTexture(device, {
+    label: 'galaxy:dustNoise',
+    code: dustNoiseBakeWgsl,
+    makeShader,
+    size: DUST_NOISE_TEX_SIZE,
+    workgroupSize: DUST_NOISE_WORKGROUP_SIZE,
   });
-  const dustNoiseTex = own(
-    device.createTexture({
-      label: 'galaxy:dustNoiseTex',
-      size: [DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE],
-      dimension: '3d',
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-    }),
-  );
-  // 'repeat' on all three axes is what makes the bake tile seamlessly in
-  // world space: dustMap.wesl samples at world-position / tileUnits with no
-  // manual wrap, relying entirely on this addressing mode.
-  const dustNoiseSampler = device.createSampler({
-    label: 'galaxy:dustNoiseSampler',
-    addressModeU: 'repeat',
-    addressModeV: 'repeat',
-    addressModeW: 'repeat',
-    magFilter: 'linear',
-    minFilter: 'linear',
+  const dustNoiseTex = own(dustNoiseBaked.texture);
+  const dustNoiseSampler = dustNoiseBaked.sampler;
+  const warpNoiseBaked = bakeVolumeTexture(device, {
+    label: 'galaxy:warpNoise',
+    code: warpNoiseBakeWgsl,
+    makeShader,
+    size: WARP_NOISE_TEX_SIZE,
+    workgroupSize: WARP_NOISE_WORKGROUP_SIZE,
   });
+  const warpNoiseTex = own(warpNoiseBaked.texture);
+  const warpNoiseSampler = warpNoiseBaked.sampler;
+  const starGrainBaked = bakeVolumeTexture(device, {
+    label: 'galaxy:starGrain',
+    code: starGrainBakeWgsl,
+    makeShader,
+    size: STAR_GRAIN_TEX_SIZE,
+    workgroupSize: STAR_GRAIN_WORKGROUP_SIZE,
+  });
+  const starGrainTex = own(starGrainBaked.texture);
+  const starGrainSampler = starGrainBaked.sampler;
+
   // dustAttenuation.wesl's own sampler for `dustMapTex` (io.wesl binding 6) — a plain
   // filtering sampler, no address-mode wrap needed since the UV it is fed is
   // always clamped to the [0,1] the field pass's own fragment coords cover.
@@ -579,114 +586,6 @@ export async function createGalaxyEngine(
     magFilter: 'linear',
     minFilter: 'linear',
   });
-  {
-    const bakeBG = device.createBindGroup({
-      label: 'galaxy:dustNoiseBakeBG',
-      layout: dustNoiseBakePipe.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: dustNoiseTex.createView() }],
-    });
-    const bakeEnc = device.createCommandEncoder({ label: 'galaxy:dustNoiseBake' });
-    const bakePass = bakeEnc.beginComputePass({ label: 'galaxy:dustNoiseBakePass' });
-    bakePass.setPipeline(dustNoiseBakePipe);
-    bakePass.setBindGroup(0, bakeBG);
-    const dispatch = DUST_NOISE_TEX_SIZE / DUST_NOISE_WORKGROUP_SIZE;
-    bakePass.dispatchWorkgroups(dispatch, dispatch, dispatch);
-    bakePass.end();
-    device.queue.submit([bakeEnc.finish()]);
-  }
-
-  // ---- warp-noise bake: 64^3 value-noise volume, baked ONCE ----
-  // warpNoiseBake.wesl — starGrain.wesl's own domain-warp displacement, split
-  // out of dustNoiseTex so it can stay VALUE noise (see that file's header
-  // for why gradient noise was the wrong fit here). Same one-shot idiom as
-  // the dust-noise bake above: view- and param-independent, so it bakes
-  // once, here, not inside `drawFrame`'s encoder.
-  const warpNoiseBakeMod = makeShader(warpNoiseBakeWgsl, 'galaxy:warpNoiseBake');
-  const warpNoiseBakePipe = device.createComputePipeline({
-    label: 'galaxy:warpNoiseBakePipe',
-    layout: 'auto',
-    compute: { module: warpNoiseBakeMod, entryPoint: 'cs' },
-  });
-  const warpNoiseTex = own(
-    device.createTexture({
-      label: 'galaxy:warpNoiseTex',
-      size: [WARP_NOISE_TEX_SIZE, WARP_NOISE_TEX_SIZE, WARP_NOISE_TEX_SIZE],
-      dimension: '3d',
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-    }),
-  );
-  // 'repeat', same reason dustNoiseSampler wraps: starGrain.wesl's warp tap
-  // relies entirely on this addressing mode to tile in world space.
-  const warpNoiseSampler = device.createSampler({
-    label: 'galaxy:warpNoiseSampler',
-    addressModeU: 'repeat',
-    addressModeV: 'repeat',
-    addressModeW: 'repeat',
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-  {
-    const bakeBG = device.createBindGroup({
-      label: 'galaxy:warpNoiseBakeBG',
-      layout: warpNoiseBakePipe.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: warpNoiseTex.createView() }],
-    });
-    const bakeEnc = device.createCommandEncoder({ label: 'galaxy:warpNoiseBake' });
-    const bakePass = bakeEnc.beginComputePass({ label: 'galaxy:warpNoiseBakePass' });
-    bakePass.setPipeline(warpNoiseBakePipe);
-    bakePass.setBindGroup(0, bakeBG);
-    const dispatch = WARP_NOISE_TEX_SIZE / WARP_NOISE_WORKGROUP_SIZE;
-    bakePass.dispatchWorkgroups(dispatch, dispatch, dispatch);
-    bakePass.end();
-    device.queue.submit([bakeEnc.finish()]);
-  }
-
-  // ---- star-grain bake: 64^3 scattered log-normal point volume, baked ONCE ----
-  // starGrainBake.wesl — hiiSplat/starGrain.wesl's YOUNG STARS branch only
-  // (see that file's own starGrainTerm). Same one-shot idiom as the dust-noise bake
-  // just above: view- and param-independent, so it bakes here, once, into
-  // its own encoder rather than `drawFrame`'s.
-  const starGrainBakeMod = makeShader(starGrainBakeWgsl, 'galaxy:starGrainBake');
-  const starGrainBakePipe = device.createComputePipeline({
-    label: 'galaxy:starGrainBakePipe',
-    layout: 'auto',
-    compute: { module: starGrainBakeMod, entryPoint: 'cs' },
-  });
-  const starGrainTex = own(
-    device.createTexture({
-      label: 'galaxy:starGrainTex',
-      size: [STAR_GRAIN_TEX_SIZE, STAR_GRAIN_TEX_SIZE, STAR_GRAIN_TEX_SIZE],
-      dimension: '3d',
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-    }),
-  );
-  // 'repeat' on all three axes, same reason dustNoiseSampler wraps: the
-  // reader tiles the volume in world space with no manual wrap of its own.
-  const starGrainSampler = device.createSampler({
-    label: 'galaxy:starGrainSampler',
-    addressModeU: 'repeat',
-    addressModeV: 'repeat',
-    addressModeW: 'repeat',
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-  {
-    const bakeBG = device.createBindGroup({
-      label: 'galaxy:starGrainBakeBG',
-      layout: starGrainBakePipe.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: starGrainTex.createView() }],
-    });
-    const bakeEnc = device.createCommandEncoder({ label: 'galaxy:starGrainBake' });
-    const bakePass = bakeEnc.beginComputePass({ label: 'galaxy:starGrainBakePass' });
-    bakePass.setPipeline(starGrainBakePipe);
-    bakePass.setBindGroup(0, bakeBG);
-    const dispatch = STAR_GRAIN_TEX_SIZE / STAR_GRAIN_WORKGROUP_SIZE;
-    bakePass.dispatchWorkgroups(dispatch, dispatch, dispatch);
-    bakePass.end();
-    device.queue.submit([bakeEnc.finish()]);
-  }
 
   // ---- ISM-map generator + its orientation chain ----
   // Both own every resource they touch, including their readback staging
