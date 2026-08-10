@@ -120,7 +120,7 @@ export type RenderSettings = {
   readonly starGrainWarpAmp: number;
   /**
    * Ceiling on an HII component's own projected quad half-extent, in NDC
-   * units (#71) — `splatSilhouette.wesl`'s `splatNdc` clamps to it only when
+   * units (the quad-cap lever) — `splatSilhouette.wesl`'s `splatNdc` clamps to it only when
    * this header carries a nonzero value (the HII tiers alone). A close-
    * approach silhouette or fullscreen-fallback quad both truncate the
    * Gaussian's screen support at the cap; the tier's grain texture and near-

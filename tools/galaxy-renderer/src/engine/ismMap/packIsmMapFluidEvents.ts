@@ -1,13 +1,13 @@
 /**
  * packIsmMapFluidEvents — flattens `buildGalaxyIsmMapFluidEvents`' output into
- * the storage buffer `ismMapFluidStep.wesl` reads. THAT FILE'S `EVENT_STRIDE`
- * (8 floats: az, ring, birthStep, strength, radiusScale, + 3 slack) IS THE
- * LAYOUT AUTHORITY — a stride mismatch ships garbage silently, same as every
- * other ismMap uniform/storage packer in this directory.
+ * the storage buffer `ismMapFluidVelocity.wesl` reads. THAT FILE'S
+ * `EVENT_STRIDE` (8 floats: az, ring, birthStep, strength, radiusScale, + 3
+ * slack) IS THE LAYOUT AUTHORITY — a stride mismatch ships garbage silently,
+ * same as every other ismMap uniform/storage packer in this directory.
  */
 import type { IsmMapFluidEvent } from '../../../../../src/@types/galaxy/IsmMapFluidEvent';
 
-/** Mirrors `EVENT_STRIDE` in `ismMapFluidStep.wesl`. */
+/** Mirrors `EVENT_STRIDE` in `ismMapFluidVelocity.wesl`. */
 export const ISM_MAP_FLUID_EVENT_STRIDE = 8;
 
 export function packIsmMapFluidEvents(events: readonly IsmMapFluidEvent[]): Float32Array {

@@ -1,6 +1,6 @@
 // fieldSplat/vertex.wesl — silhouette-quad vertex stage for the primary
 // field emission pass. Passes capHalfNdc = 0.0 as a LITERAL rather than
-// reading u.perf.x: the quad cap (#71) is an HII-only knob (io.wesl's
+// reading u.perf.x: the quad cap (the quad-cap lever) is an HII-only knob (io.wesl's
 // perf.x doc) and this pass's own header always packs it 0, so the literal
 // makes that dead weight visible at the call site instead of only in a
 // header comment. No near-fade either (contrast hiiSplat/vertex.wesl): the

@@ -52,8 +52,9 @@ fn expHalfErfc(q: f32, x: f32) -> f32 {
 // gaussianRayCoeffs — the ray-quadratic's three coefficients (a, b, q) for a
 // general symmetric M, split as mDiag = (m00, m11, m22) and
 // mOff = (m01, m02, m12). Split out of gaussianRayIntegral so the dust
-// splat's finite-bound split (splat.wesl's fs) can evaluate the SAME
-// quadratic at a truncation point x1 rather than only x0's full-ray form.
+// splat's finite-bound split (dustMap/fragment.wesl's and
+// dustAttenuation.wesl's fs) can evaluate the SAME quadratic at a
+// truncation point x1 rather than only x0's full-ray form.
 // a < 1e-12 (ray direction in M's null space) returns vec3(0.0); callers
 // must check .x themselves before dividing by it, same discipline
 // gaussianRayIntegral applies below.

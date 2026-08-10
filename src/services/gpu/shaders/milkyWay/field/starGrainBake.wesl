@@ -1,6 +1,7 @@
 // milkyWay/field/starGrainBake.wesl — one-shot compute bake of the 128^3
-// star-grain volume splat.wesl's associations branch samples for its
-// "thousands of unresolved stars" look (see starGrainTerm in splat.wesl).
+// star-grain volume hiiSplat/youngFragment.wesl's (and extrasFragment.wesl's
+// association branch) samples for its "thousands of unresolved stars" look
+// (see starGrainTerm in hiiSplat/starGrain.wesl).
 //
 // Deliberately NOT dustNoiseBake.wesl's ridged fbm: that field is a smooth,
 // spatially CORRELATED lattice (each octave's value at one point predicts

@@ -36,7 +36,7 @@ struct IsmMapGrid {
 // World xz -> the cartesian bake's own affine UV (ismMapCartesianBake.wesl's
 // dst texel centers are laid out the same way, in reverse) — ONE home for
 // the transform since two consumers (this file's own dustDetailMultiplier
-// and splat.wesl's young-stars read) both need it.
+// and hiiSplat/youngFragment.wesl's young-stars read) both need it.
 fn ismCartesianUv(p: vec3<f32>) -> vec2<f32> {
   return p.xz / (2.0 * grid.rMax) + vec2<f32>(0.5, 0.5);
 }

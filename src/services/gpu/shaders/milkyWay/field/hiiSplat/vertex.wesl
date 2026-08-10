@@ -1,5 +1,5 @@
 // hiiSplat/vertex.wesl — silhouette-quad vertex stage shared by every HII
-// pipeline (hiiYoung, hiiErosion, hiiExtras — #78's split). Every draw
+// pipeline (hiiYoung, hiiErosion, hiiExtras — the per-splat-type split). Every draw
 // through this module IS an HII draw now, so splat.wesl's former shared vs
 // used 'u.dustDetail.y > 0.0' as an is-HII proxy alongside the real
 // fadeStart/fadeEnd window check; that proxy half is gone here — it is

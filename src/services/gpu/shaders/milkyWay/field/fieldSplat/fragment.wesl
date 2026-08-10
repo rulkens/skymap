@@ -3,8 +3,8 @@
 // attenuated emission via dustAttenuation.wesl. No texture machinery, no
 // near-fade, no quad-cap feather — this pass's header always packs
 // dustDetail.y (the HII texture gate) and perf.x (the quad cap) at 0, so
-// splat.wesl's former shared fs would have skipped all three anyway; #78
-// makes that skip structural instead of a runtime no-op.
+// splat.wesl's former shared fs would have skipped all three anyway; the
+// per-splat-type split makes that skip structural instead of a runtime no-op.
 
 import package::milkyWay::field::fieldSplat::io::FieldSplatOut;
 import package::lib::splatSilhouette::SPLAT_CUT;

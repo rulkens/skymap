@@ -149,8 +149,8 @@ const EDGE_ON_FULL: f32 = 0.45;
 @fragment
 fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC, exactly as
-  // splat.wesl's fs does — the two must agree pixel-for-pixel since the map
-  // is later read back at the SAME framebuffer coordinates.
+  // fieldSplat/fragment.wesl's fs does — the two must agree pixel-for-pixel
+  // since the map is later read back at the SAME framebuffer coordinates.
   let tanHalfFov = u.params.x;
   let aspect = u.params.y;
   let shift = u.params.z;
@@ -174,7 +174,7 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // dc.z (the ray's closest-approach squared Mahalanobis distance) past
   // SPLAT_CUT^2 means this fragment sits on a fullscreen-fallback quad
   // (splatSilhouette.wesl) the ray never actually grazes this component's
-  // support — same cut splat.wesl's fs applies to its own hoisted coeffs,
+  // support — same cut fieldSplat/fragment.wesl's fs applies to its own hoisted coeffs,
   // for the same reason: the slice contribution below is already under the
   // vertex-side quad's own truncation. a < 1e-12 leaves dc.z at
   // gaussianRayCoeffs' null-space 0.0, which never trips this, so it falls

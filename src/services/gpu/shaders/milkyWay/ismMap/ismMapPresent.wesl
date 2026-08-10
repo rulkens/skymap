@@ -5,7 +5,7 @@
 // Unlike dustPresent.wesl's 1:1 texel read (its map is already screen-space,
 // splatted there by dustMap.wesl), ismMapTex is GALAXY-FRAME log-polar: this
 // shader reconstructs the camera ray per fragment (io.wesl's own basis, the
-// same formula splat.wesl's fs uses) and intersects the disc plane (y=0 —
+// same formula fieldSplat/fragment.wesl's fs uses) and intersects the disc plane (y=0 —
 // the warp is ignored, a diagnostic overlay's own simplification, not
 // claimed anywhere else) to find which (r, theta) texel to sample. That
 // resample makes this pass's own target resolution independent of the map's
@@ -59,8 +59,8 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let shift = u.params.z;
   // FullscreenOut carries 'uv' (its @builtin(position) is FRAMEBUFFER
   // pixels in the fragment stage, not NDC) — undo fullscreenVertex's own
-  // uv transform to recover the NDC splat.wesl's fs reconstructs its ray
-  // from.
+  // uv transform to recover the NDC fieldSplat/fragment.wesl's fs
+  // reconstructs its ray from.
   let ndcX = input.uv.x * 2.0 - 1.0;
   let ndcY = 1.0 - input.uv.y * 2.0;
   let d = normalize(

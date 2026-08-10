@@ -144,8 +144,8 @@ export type GalaxyModel = {
   /** The HII tier's own tier-global texture knobs — cheap to derive, so read straight off `fieldTuning.hii` rather than cached like `dustHeaderLanes`. */
   readonly hiiTexture: HiiTextureLanes;
   /**
-   * §5's shader-side young-stars stars-map read (`splat.wesl`'s `g3.w`
-   * branch) — `contrastGamma` reads `fieldTuning.hii.youngStars.contrast`
+   * §5's shader-side young-stars stars-map read (`hiiSplat/youngFragment.wesl`'s
+   * `g3.w` branch) — `contrastGamma` reads `fieldTuning.hii.youngStars.contrast`
    * live, `invMeanNorm` is `areaWeightedMeanIsmMapChannel`'s texel-area-
    * weighted `pow(stars, contrastGamma)` mean, inverted and memoized per
    * (map identity, gamma) since gamma can move between readback landings.
@@ -159,9 +159,11 @@ export type GalaxyModel = {
    * plus one trailing `'hii:extras'` span when background extras contribute
    * (their own three tiers interleave with the central galaxy's across the
    * buffer, so they can't be split further without a label per extra — see
-   * `repackHiiComponents`). Recomputed on every repack; consumed only by
-   * `createGalaxyEngine.ts`'s per-tier HII sub-passes, gated on the timing
-   * HUD being live.
+   * `repackHiiComponents`). Recomputed on every repack; feeds
+   * `createGalaxyEngine.ts`'s per-tier HII sub-passes as their own draw-call
+   * bounds AND gates the scene composite's target list — see that file's own
+   * doc for why every tier's pass now runs unconditionally, not just while
+   * the timing HUD is live.
    */
   readonly hiiSegments: readonly HiiSegment[];
   readonly bubbleComps: GrowOnlyRecordBuffer;

@@ -5,7 +5,7 @@
 // tau does — a single mean-depth split put a hard 50% floor on obscuration,
 // since the dust's own tau centroid sits INSIDE the emitting material from
 // both an edge-on and an inside-the-disc view. Moved verbatim from
-// splat.wesl's former fs (#78's per-splat-type split); see io.wesl's
+// splat.wesl's former fs (the per-splat-type split); see io.wesl's
 // dustSlices doc for the depth-partition derivation.
 //
 // The tau fetch lives HERE, not with callers: every caller needs the exact

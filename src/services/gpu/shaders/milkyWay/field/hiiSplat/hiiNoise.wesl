@@ -1,7 +1,7 @@
 // hiiSplat/hiiNoise.wesl — the shells/DIG erosion term: reuses dust's own
 // baked ridged-noise volume (dustNoiseBake.wesl) so shells/DIG blobs read
 // as the same wispy ISM texture their nearby dust already has, rather than
-// a second, uncorrelated pattern. Moved verbatim from splat.wesl (#78's
+// a second, uncorrelated pattern. Moved verbatim from splat.wesl (the
 // per-splat-type split).
 
 import package::milkyWay::field::io::u;

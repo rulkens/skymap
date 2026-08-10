@@ -34,14 +34,15 @@
 //   total: 272 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
-// every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
+// every extra's, drawn one quad each (see fieldSplat/vertex.wesl). counts.y/.z locate
 // the dust slice that follows them: dustOffset == emissionCount (dust is
 // always appended AFTER every emission component), dustCount its length.
 // Dust components are NEVER drawn as quads — the draw call's instance count
 // is counts.x, not counts.x + counts.z — each primary emission fragment
-// instead walks the dust slice itself (splat.wesl's fs). counts.w is
-// primaryCount, the CENTRAL galaxy's own emission share of counts.x (its
-// components are packed first): the gate 'instanceIndex < primaryCount'
+// instead reads the dust slice back for it (dustAttenuation.wesl's
+// componentEmission). counts.w is primaryCount, the CENTRAL galaxy's own
+// emission share of counts.x (its components are packed first): the gate
+// 'instanceIndex < primaryCount'
 // is what keeps an extra's emission from ever reading the primary's dust.
 //
 // counts2.x is unused; it stays a lane rather than shrinking the header so
@@ -53,7 +54,8 @@
 // multiplier below, to band-limit the baked volume's four octaves against
 // the fragment's own world-space pixel footprint. counts2.zw is fieldSizePx
 // (fieldWidthPx, fieldHeightPx), fieldTex's own pixel size
-// (reducedSize(render.fieldDivisor)) — splat.wesl's fs is the one reader: it
+// (reducedSize(render.fieldDivisor)) — dustAttenuation.wesl's componentEmission
+// is the one reader: it
 // runs at the FIELD's resolution but samples dustMapTex at the DUST map's own
 // (now different, usually finer) resolution, so it needs its own target's
 // extent to turn 'input.pos.xy' into a normalized UV instead of a direct
@@ -73,7 +75,7 @@
 // cloud starts — always 0 now that it's the only tier, kept as a live field
 // rather than deleted since the byte layout below still reserves it. The
 // multiplier rides THIS accumulation pass rather than a consumer
-// (splat.wesl, dustPresent.wesl): both read the eroded column from here
+// (dustAttenuation.wesl, dustPresent/fragment.wesl): both read the eroded column from here
 // with no second code path. contrastExp (.w) is dustMap.wesl's signed power
 // exponent shaping the noise about its own midpoint — 1/textureContrast,
 // inverted CPU-side (createGalaxyEngine.ts's rebuildDustMixture) so a HIGHER
@@ -97,7 +99,7 @@
 // span the dust occupies; from INSIDE, D-R goes negative, the 0.02*R floor
 // engages, and the spacing turns logarithmic — right for a view where dust
 // in the observer's own arm matters as much as dust 8 kpc away. Packed once
-// here so dustMap.wesl (which writes the slices) and splat.wesl (which reads
+// here so dustMap.wesl (which writes the slices) and dustAttenuation.wesl (which reads
 // all four back) agree on the same edges.
 //
 // debugView (offset 160) carries the three debug-view crossfade sliders
@@ -105,8 +107,9 @@
 // orientationViewIntensity, each in [0,1]) plus galaxyWeight, the ONE
 // combined dimming factor for the galaxy's own emission — 1 minus the
 // largest of the three, floored at 0, so two views live at once never
-// double-dim the galaxy. splat.wesl's fs multiplies its final colour by
-// .w; dustPresent.wesl/ismMapPresent.wesl/orientationPresent.wesl each
+// double-dim the galaxy. Every emission fragment's fs (fieldSplat/fragment.wesl,
+// hiiSplat/shadeCommon.wesl's hiiExposureMultiply) multiplies its final colour
+// by .w; dustPresent.wesl/ismMapPresent.wesl/orientationPresent.wesl each
 // multiply by their own lane (.x/.y/.z) instead of gating a whole pass on
 // a boolean, which is what makes the three crossfade independently rather
 // than replace one another.
@@ -154,7 +157,7 @@
 // detail ratio (map density over an 8-texel-blurred copy, ismMapDustBlur.wesl)
 // at that splat's closest-approach point — applied once, at ACCUMULATION, so
 // it parallaxes with the splats instead of stamping one flat pattern across
-// the whole depth column. Both consumers (splat.wesl, dustPresent.wesl) see
+// the whole depth column. Both consumers (dustAttenuation.wesl, dustPresent/fragment.wesl) see
 // it through the column with no second read; 0 disables it. The
 // accumulation multiply scales its deviation by a mean-1 sample of the baked
 // noise volume so the 2D map's contrast doesn't extrude into vertical
@@ -163,7 +166,7 @@
 // .yz are unrelated to S4 — they ride this vec4's two free lanes only
 // because they were free, not because they are "dust detail": hiiTextureScale/
 // hiiTextureContrast are the HII tier's own tier-global noise-modulation knobs
-// (GalaxyHiiTuning.textureScale/textureContrast), read by splat.wesl's
+// (GalaxyHiiTuning.textureScale/textureContrast), read by hiiNoise.wesl's
 // hiiNoiseTerm for EVERY HII draw's fragments regardless of which group
 // (shell/DIG/associations) a component belongs to — only each component's own
 // comps[4i+2].w (textureWeight) varies per group. hiiTextureScale 0 is what
@@ -174,9 +177,9 @@
 // free lane the seeding view's cap and dustDetail.wesl's legacy/swept blend
 // weight passed through before each moved on — now starGrainFeatureScale,
 // deriveFrameView.ts's per-frame blend of render.starGrainFeatureScaleNear/
-// Far by camera distance (defaults 2/15, live-tunable): splat.wesl's
+// Far by camera distance (defaults 2/15, live-tunable): starGrain.wesl's
 // starGrainTerm multiplies it by STAR_GRAIN_POINT_SIGMA_FRAC (the baked
-// point's fixed sigma-as-tile-fraction, splat.wesl's own const) to get the
+// point's fixed sigma-as-tile-fraction, starGrain.wesl's own const) to get the
 // per-octave band-limit's feature size — see that function's header for why
 // sigma alone is the wrong gate. Same "only the HII header carries a real
 // value" asymmetry as hiiTextureScale/Contrast above; the primary field
@@ -200,7 +203,8 @@
 // shader-side read of the ISM map's `stars` tracer for the YOUNG STARS chain
 // tier PLUS the tier-global near-camera fade window, which applies to every
 // HII group (shells/DIG/associations alike), not just young stars — the row
-// just had the free lanes. splat.wesl's fs, inside its existing star-grain
+// just had the free lanes. hiiSplat/youngFragment.wesl's fs (and
+// extrasFragment.wesl's young branch), inside its existing star-grain
 // branch, multiplies a chain component's own term by a shaped sample of
 // comps[4i+3].w (starsWeight, see the comps doc below). contrastGamma (.x) is
 // tuning.hii.youngStars.contrast, the exponent shaping that read; invMeanNorm
@@ -209,14 +213,14 @@
 // otherwise drain or inflate the tier's calibrated total flux, so this
 // renormalises it back to mean 1 (Q3's mean-1 contract). nearFadeStart/
 // nearFadeEnd (.zw) are render.hiiNearFadeStart/hiiNearFadeEnd, boundRadius
-// multiples of splat.wesl's near-camera fade (see its own header) — <= 0
+// multiples of shadeCommon.wesl's near-camera fade (hiiNearFade; see its own header) — <= 0
 // disables the fade there. Only the HII header carries real values
 // (mirroring hiiTexture's own doc below) — the primary field draw's own
 // components never carry a nonzero starsWeight, and its header packs this
 // row's fade lanes 0 too (dead weight behind the vs/fs's own dustDetail.y
 // gate, but zero is also the fade's own "off" value).
 //
-// perf (offset 256) is the screen-space quad cap (#71): .x, quadCapNdc, is a
+// perf (offset 256) is the screen-space quad cap (the quad-cap lever): .x, quadCapNdc, is a
 // ceiling on splatSilhouette.wesl's own quad half-extent in NDC — 0 disables
 // it (the mandatory identity, same idiom as dustCarve's carve lane), 1.0
 // spans the full viewport height from a centered quad. Only the HII header
@@ -260,10 +264,12 @@
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
 // boundRadius (world-space max sigma, warp-inflated — see
-// GalaxyFieldComponent) sizes splat.wesl's per-instance quad. textureWeight
+// GalaxyFieldComponent) sizes the per-instance quad in fieldSplat/vertex.wesl
+// and hiiSplat/vertex.wesl. textureWeight
 // (GalaxyFieldComponent's own field) is 0 (untouched) for every producer
-// except hiiRegions.ts's pushes — splat.wesl's fs mixes ITS MAGNITUDE
-// against hiiNoiseTerm or starGrainTerm (see dustDetail's own doc above).
+// except hiiRegions.ts's pushes — hiiSplat's fragments mix ITS MAGNITUDE
+// against hiiNoiseTerm or starGrainTerm (erosionFragment.wesl/youngFragment.wesl/
+// extrasFragment.wesl; see dustDetail's own doc above).
 // The SIGN, not a second lane, is what picks the texture: positive (shell,
 // DIG) samples dustNoiseTex's ridged ISM field, negative (YOUNG STARS)
 // samples starGrainTex's uncorrelated point grains — the smallest per-
@@ -273,8 +279,9 @@
 // pushes (GalaxyYoungStarsTuning.mapDepth) — a SEPARATE lane from
 // textureWeight, not a second sign flag on it, since a chain component
 // carries both at once (its own star-grain texture AND its stars-map
-// modulation depth). splat.wesl's fs reads it as g3.w inside the same
-// negative-textureWeight branch — see the youngStars header row above.
+// modulation depth). hiiSplat/youngFragment.wesl's fs reads it as g3.w
+// unconditionally (extrasFragment.wesl's fs the same, inside its
+// negative-textureWeight branch) — see the youngStars header row above.
 //
 // Dust components (past dustOffset) reuse this exact 4-vec4 record with two
 // re-readings, not two new lanes: [4i].w (amplitude for emission) is the
@@ -283,20 +290,20 @@
 // (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
 // component for a future per-extra dust loop, but NOT what the primary
 // galaxy's attenuation actually reads: dustMap.wesl sums every dust
-// component down to four depth-sliced tau columns before splat.wesl ever
-// sees it, so the per-component colour lane has nowhere left to apply for the
-// primary. The law splat.wesl uses instead arrives per-frame, in this
+// component down to four depth-sliced tau columns before dustAttenuation.wesl's
+// componentEmission ever sees it, so the per-component colour lane has nowhere left to apply for the
+// primary. The law dustAttenuation.wesl's componentEmission uses instead arrives per-frame, in this
 // header's own dustExtinction lane below. [4i+1].w (boundRadius) and
 // [4i+3].xyz (center) mean the same thing they do for an emission
 // component; [4i+2].w (textureWeight) is left 0, since dust never sets it.
 // Dust components are consumed by dustMap.wesl's own splat pass now, not
-// looped over inside splat.wesl's fs — see binding 2.
+// looped over inside the emission fragment's fs anymore — see binding 2.
 //
 // DUST MAP (binding 2) — the screen-space depth-sliced optical-depth
 // accumulation dustMap.wesl splats the PRIMARY galaxy's dust into,
 // additively: (tau_0, tau_1, tau_2, tau_3), one channel per dustSlices bin
 // above, replacing splat.wesl's former per-fragment dust loop (see
-// splat.wesl's header and the grill-session doc's N1). Purely additive and
+// dustAttenuation.wesl's header and the grill-session doc's N1). Purely additive and
 // order-independent like the single-column map it replaced — each channel is
 // still just an optical-depth sum, only partitioned by depth now instead of
 // collapsed to one mean. Sized to reducedSize(render.dustDivisor) — its OWN
@@ -313,23 +320,23 @@
 // thinner than the mismatch into beads, or misregisters the whole map toward
 // one corner.
 //
-// splat.wesl runs at fieldTex's (coarser) resolution instead, so its 1:1
-// texel load no longer applies — it reads this map through 'dustMapSmp'
-// (binding 6), a normalized-UV, linearly filtered sample built from
-// counts2.zw (fieldSizePx) above. Bilinear is not a correct box downsample
-// of a finer source, so fine dust structure can shimmer under camera
-// motion; a mip chain sampled at the resolution ratio's LOD would fix that
-// and is a deliberate, not-yet-done follow-up. Only bound by the emission
-// splat pipeline (splat.wesl imports it, along with dustMapSmp); the splat
-// pass that WRITES it never reads it.
+// dustAttenuation.wesl's componentEmission runs at each pass's own (coarser)
+// resolution instead, so its 1:1 texel load no longer applies — it reads
+// this map through 'dustMapSmp' (binding 6), a normalized-UV, linearly
+// filtered sample built from counts2.zw (fieldSizePx) above. Bilinear is
+// not a correct box downsample of a finer source, so fine dust structure
+// can shimmer under camera motion; a mip chain sampled at the resolution
+// ratio's LOD would fix that and is a deliberate, not-yet-done follow-up.
+// Only bound by the emission splat pipeline (dustAttenuation.wesl imports
+// it, along with dustMapSmp); the splat pass that WRITES it never reads it.
 //
 // Bindings 3/7/8 belong to dustDetail.wesl (grid uniform, ismCartesianSmp,
 // ismCartesianTex) — declared THERE, not here, so io.wesl does not force
 // them into every pipeline's auto layout. Binding 9 (the packed map's own
 // blur divisor, ismMapBlurTex) is gone from every render pipeline as of
 // stage 2 of the dust-seeding perf spike (docs/research/m74-jwst/
-// 07-sprite-seeding.md): dustMap.wesl's S4 detail term and splat.wesl's §5
-// stars-map read both now sample ismMapCartesianBake.wesl's one-shot
+// 07-sprite-seeding.md): dustMap.wesl's S4 detail term and youngFragment.wesl's
+// §5 stars-map read both now sample ismMapCartesianBake.wesl's one-shot
 // world-xz re-bake (R=detail ratio, G=stars) through the SAME affine UV
 // (dustDetail.wesl's ismCartesianUv) instead of the packed map's own
 // log-polar one — the blur pass that fed the old per-fragment ratio runs
@@ -361,7 +368,7 @@ struct FieldUniforms {
 @group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
 // Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) —
-// dustMap.wesl's own erosion term AND splat.wesl's hiiNoiseTerm both import
+// dustMap.wesl's own erosion term AND hiiNoise.wesl's hiiNoiseTerm both import
 // these two (the latter is what lets HII sprites share dust's ISM texture
 // rather than baking a second volume). Every pipeline here uses
 // 'layout: auto' (createGalaxyEngine.ts), which derives a bind-group layout
@@ -371,7 +378,7 @@ struct FieldUniforms {
 // unaffected by this file growing.
 @group(0) @binding(4) var dustNoiseTex: texture_3d<f32>;
 @group(0) @binding(5) var dustNoiseSmp: sampler;
-// Binding 6: dustMapTex's own sampler — ONLY splat.wesl imports it (see the
+// Binding 6: dustMapTex's own sampler — ONLY dustAttenuation.wesl imports it (see the
 // DUST MAP entry above for why its fs needs a filtered UV sample where
 // dustMap.wesl is write-only and dustPresent.wesl's still-1:1 read of its
 // own divisor-matched target does not). rgba16float is filterable
@@ -379,14 +386,15 @@ struct FieldUniforms {
 // no manual mip selection.
 @group(0) @binding(6) var dustMapSmp: sampler;
 // Bindings 10/11: the baked star-grain volume (starGrainBake.wesl) —
-// splat.wesl's starGrainTerm samples these for the YOUNG STARS
+// starGrain.wesl's starGrainTerm samples these for the YOUNG STARS
 // (association) branch of the HII texture breakup ONLY; hiiNoiseTerm's
 // shell/DIG branch keeps reading dustNoiseTex/dustNoiseSmp above. Own
 // bindings (not a reuse of 4/5) because the two volumes encode different
 // things — dustNoiseTex is a smooth, correlated ridged field, this one is
-// scattered, uncorrelated point grains — and only splat.wesl imports them
-// (dustMap.wesl has no association branch), so 'layout: auto' only adds
-// these two entries to splatPipe's bind groups, not dustMapPipe's.
+// scattered, uncorrelated point grains — and only starGrain.wesl imports
+// them (dustMap.wesl has no association branch), so 'layout: auto' only
+// adds these two entries to hiiYoungPipe's and hiiExtrasPipe's bind
+// groups, not dustMapPipe's.
 @group(0) @binding(10) var starGrainTex: texture_3d<f32>;
 @group(0) @binding(11) var starGrainSmp: sampler;
 // Bindings 12/13: the baked warp volume (warpNoiseBake.wesl) — split out of

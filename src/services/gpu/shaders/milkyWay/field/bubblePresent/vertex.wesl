@@ -34,7 +34,7 @@ fn vs(
   // matrix's own rows — see io.wesl's header), so offsetting along
   // camRight/camUp can never change the view-space depth zv: only xv/yv
   // shift, by the corner's own radius-scaled offset. Same simplification
-  // splat.wesl's vs relies on implicitly by never touching zv per-corner.
+  // fieldSplat/vertex.wesl's vs relies on implicitly by never touching zv per-corner.
   let rel = center - eye;
   let zv = dot(rel, camFwd);
   let xv = dot(rel, camRight) + corner.x * r;

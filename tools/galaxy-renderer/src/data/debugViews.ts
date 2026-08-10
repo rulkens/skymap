@@ -23,7 +23,7 @@ export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {
   ismMap: {
     intensityKey: 'ismMapViewIntensity',
     label: 'ISM map view',
-    info: "Crossfades in the SSPSF automaton's log-polar output, same seam as the dust view. The automaton also seeds the dust and the orientation field, so this is where to look when either of those reads wrong.",
+    info: "Crossfades in the ISM-map generator's log-polar output, same seam as the dust view. Whichever generator is active also seeds the dust and the orientation field, so this is where to look when either of those reads wrong.",
   },
   orientation: {
     intensityKey: 'orientationViewIntensity',

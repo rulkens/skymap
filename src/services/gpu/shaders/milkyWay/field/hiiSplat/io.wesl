@@ -1,7 +1,7 @@
 // hiiSplat/io.wesl — HiiSplatOut, the vertex-to-fragment interface shared
 // by every HII pipeline (young stars, shells/DIG erosion, background
 // extras). Carries 'corner' — contrast fieldSplat/io.wesl's FieldSplatOut —
-// because every HII draw's header can carry a live quad cap (#71, io.wesl's
+// because every HII draw's header can carry a live quad cap (the quad-cap lever, io.wesl's
 // perf.x doc), and shadeCommon.wesl's quadCapFeather needs the quad-local
 // coordinate to fade a truncated edge.
 

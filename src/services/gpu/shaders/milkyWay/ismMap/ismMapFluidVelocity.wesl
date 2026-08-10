@@ -24,16 +24,18 @@ struct IsmMapFluidConstants {
   impulseDuration: f32,
   armGather: f32,
   // Unused here — this pass composes velocity only. Consumed by
-  // ismMapFluidStep.wesl (Pass B) as a density-diffusion coefficient. Kept in
-  // both struct copies for byte-identical layout (packIsmMapFluidConstants.ts
-  // is the offset authority).
+  // ismMapFluidStep.wesl (Pass B) as a density-diffusion coefficient. Kept so
+  // the shared fields stay a byte-identical PREFIX of Pass B's longer copy
+  // (packIsmMapFluidConstants.ts is the offset authority; Pass B's trailing
+  // starsDeposit/starsDecay are deliberately absent here — a shorter struct
+  // binds validly, and the prefix contract is what the parity test pins).
   diffusion: f32,
   // Shear drag by the arm-forcing field at this texel — see composedVelocity
   // below. Forcing peaks at 1 (galaxyIsmMapArmForcing.ts's clamp), so full
   // stall at a ridge crest needs armDrag >= 1.
   armDrag: f32,
-  // Pass-B-consumed only (ismMapFluidStep.wesl's gasProfile) — kept here for
-  // byte-identical layout, same discipline as diffusion above.
+  // Pass-B-consumed only (ismMapFluidStep.wesl's gasProfile) — kept for the
+  // shared-prefix layout, same discipline as diffusion above.
   gasScaleLength: f32,
   // Pass-B-consumed only — see gasScaleLength above.
   gasFloor: f32,

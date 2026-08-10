@@ -1,9 +1,10 @@
 // lib/splatSilhouette.wesl — the per-component silhouette-quad vertex math
-// shared by the analytic Milky Way field's two splat passes: splat.wesl
-// (one quad per EMISSION component) and dustMap.wesl (one quad per DUST
-// component). Both draw instanced quads sized to a Gaussian's own screen
-// footprint from the same camera basis; this is that footprint, extracted
-// so the two vertex stages cannot drift apart.
+// shared by the analytic Milky Way field's splat passes: fieldSplat/vertex.wesl
+// and hiiSplat/vertex.wesl (one quad per EMISSION component) and
+// dustMap/vertex.wesl (one quad per DUST component). All draw instanced
+// quads sized to a Gaussian's own screen footprint from the same camera
+// basis; this is that footprint, extracted so the vertex stages cannot
+// drift apart.
 
 const SPLAT_CUT: f32 = 4.5;
 
@@ -15,7 +16,7 @@ const SPLAT_CUT: f32 = 4.5;
 //   r           — the component's boundRadius (world-space max sigma)
 //   tanHalfFov, aspect, shift — the camera's projection terms (io.wesl's
 //                 params.xyz), used to map view-space tangent slopes to NDC
-//   capHalfNdc  — screen-space quad cap (#71), io.wesl's perf.x; 0 disables
+//   capHalfNdc  — screen-space quad cap (the quad-cap lever), io.wesl's perf.x; 0 disables
 //
 // capHalfNdc truncates the returned quad's own half-extent, which truncates
 // the Gaussian's screen support — fragments outside the smaller quad are

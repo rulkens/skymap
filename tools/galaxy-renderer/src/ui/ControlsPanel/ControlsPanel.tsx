@@ -844,7 +844,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             format={(v) => v.toFixed(1)}
             onChange={(v) => dispatch(renderPatched({ starGrainFeatureScaleNear: v }))}
             path="render.starGrainFeatureScaleNear"
-            info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size splat.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out."
+            info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out."
           />
           <ParamSlider
             label="Grain feature far"

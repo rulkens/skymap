@@ -30,7 +30,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // debug presents' own intensity multiply.
   let a = shell * u.bubbleView.x;
   // Alpha 0: additive blend (ADDITIVE_BLEND) sums colour directly; the
-  // alpha channel feeds nothing downstream, same convention splat.wesl's fs
-  // documents for its own return.
+  // alpha channel feeds nothing downstream, same convention fieldSplat/fragment.wesl's
+  // fs documents for its own return.
   return vec4<f32>(color * a, 0.0);
 }

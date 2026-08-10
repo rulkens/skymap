@@ -98,7 +98,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Same firefly reasoning as `extrasDivisor` above, now the central galaxy's
   // own shells/young-stars tiers (`data/hiiTiers.ts`'s `HII_TIERS`).
   shellsDivisor: 1,
-  // 2, not 1: the grain band-limit (splat.wesl's starGrainTerm) makes the
+  // 2, not 1: the grain band-limit (hiiSplat/starGrain.wesl's starGrainTerm) makes the
   // half-res young target alias-free, and the tier is the HII pass's worst
   // overdraw contributor — the 4x fragment cut is the calibrated default.
   youngDivisor: 2,
@@ -126,9 +126,9 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // calibration under the golden-ratio warp scale: the equidistributed
   // phases need far less displacement than the old 7-tile cycle did.
   starGrainWarpAmp: 0.04,
-  // 0 = off = byte-identical boot (io.wesl's perf.x, #71): the cap is a live
-  // calibration lever, only baked to a nonzero value once the user settles
-  // on one against the reference gallery.
+  // 0 = off = byte-identical boot (io.wesl's perf.x, the quad-cap lever): a
+  // live calibration knob, only baked to a nonzero value once the user
+  // settles on one against the reference gallery.
   hiiQuadCap: 0,
   // The legacy star bag OFF at boot: it is scheduled for deletion
   // (`docs/research/milky-way/goal-and-history.md`), so the analytic field

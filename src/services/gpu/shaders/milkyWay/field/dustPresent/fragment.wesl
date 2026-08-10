@@ -43,7 +43,8 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let warm = mix(mix(black, deepRed, smoothstep(0.0, 0.5, i)), orange, smoothstep(0.5, 0.8, i));
   let color = mix(warm, white, smoothstep(0.8, 1.0, i));
 
-  // Alpha 0, matching splat.wesl's fs: this target's alpha channel feeds
+  // Alpha 0, matching every emission fragment's fs (fieldSplat/fragment.wesl,
+  // hiiSplat's fragments): this target's alpha channel feeds
   // nothing downstream (the additive upsample folds RGB into HDR and the
   // compositor forces alpha 1.0).
   //

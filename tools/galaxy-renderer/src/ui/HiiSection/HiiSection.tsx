@@ -181,7 +181,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchHii({ ismMapSeeding: v })}
             path="fieldTuning.hii.ismMapSeeding"
-            info="Fraction of HII events placed from the ISM-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
+            info="Fraction of HII events placed from the ISM map's activity channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
           />
           <ParamSlider
             label="Texture"

@@ -15,8 +15,8 @@ import package::milkyWay::field::io::comps;
 import package::milkyWay::field::dustAttenuation::componentEmission;
 
 // Feather start, in quad-corner units ([-1,1] per axis) — where the
-// capped-quad edge fade begins. Only bites when u.perf.x (the HII quad cap,
-// #71) is live and actually truncated a component's gaussian mid-gradient.
+// capped-quad edge fade begins. Only bites when u.perf.x (the HII quad-cap
+// lever) is live and actually truncated a component's gaussian mid-gradient.
 const QUAD_FEATHER_START: f32 = 0.7;
 
 // HiiComponentShading — everything a fragment file needs, computed once:
@@ -98,7 +98,7 @@ fn hiiNearFade(po: vec3<f32>, boundRadius: f32) -> f32 {
   return 1.0;
 }
 
-// quadCapFeather — the capped-quad edge fade (#71). For a quad the cap did
+// quadCapFeather — the capped-quad edge fade (the quad-cap lever). For a quad the cap did
 // NOT shrink (u.perf.x == 0), the edge sits at SPLAT_CUT sigma where the
 // gaussian is already ~4e-5, so this feather is invisible there — it only
 // bites where the cap truncated the gradient mid-slope.
