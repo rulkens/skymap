@@ -19,16 +19,17 @@ export type FieldHeaderInput = {
   readonly emissionCount: number;
   /**
    * The CENTRAL galaxy's share of `emissionCount` (its components pack first).
-   * splat.wesl gates dust application on it, so an extra's emission can never
-   * read the primary's dust; 0 keeps a whole pass out of the attenuation branch.
+   * dustAttenuation.wesl's componentEmission gates dust application on it, so
+   * an extra's emission can never read the primary's dust; 0 keeps a whole
+   * pass out of the attenuation branch.
    */
   readonly primaryCount: number;
   /**
    * The pixel size of THIS pass's own target (`fieldTex` for the field
    * header, `hiiTex` for the `hii:extras` one, each `HII_TIERS` tier's own
    * texture for its own header) — not the canvas, and not dustMapTex, which
-   * carries its own divisor. Feeds `counts2.w`, which splat.wesl's fs reads
-   * for its footprint gates AND turns a fragment position into a normalized
+   * carries its own divisor. Feeds `counts2.w`, which dustAttenuation.wesl's
+   * componentEmission reads for its footprint gates AND turns a fragment position into a normalized
    * dustMapTex UV with (io.wesl's DUST MAP doc) — so this must always be the
    * pass's REAL resolution, never borrowed from a sibling pass sharing the
    * same `comps` buffer.
@@ -38,8 +39,9 @@ export type FieldHeaderInput = {
   readonly dust?: FieldDust;
   /**
    * Absent means the pass draws no HII texture — packed 0/1 (scale/contrast),
-   * which is what lets splat.wesl's fs skip the noise sample on a UNIFORM
-   * branch. Only the HII draw's own header (`model.hiiTexture`) passes real
+   * which is what lets hiiSplat's per-tier fragments (youngFragment.wesl/
+   * erosionFragment.wesl/extrasFragment.wesl) skip the noise sample on a
+   * UNIFORM branch. Only the HII draw's own header (`model.hiiTexture`) passes real
    * values; the primary field draw's own components never carry a nonzero
    * `textureWeight`, so leaving this absent costs it nothing.
    */
@@ -56,7 +58,8 @@ export type FieldHeaderInput = {
   readonly ismMapSeeding?: IsmMapSeedingLanes;
   /**
    * Absent means this pass draws no young-stars chain — packed to a neutral
-   * (1, 1) so splat.wesl's shaped-read multiply is a no-op if ever reached.
+   * (1, 1) so hiiSplat/youngFragment.wesl's (and extrasFragment.wesl's young
+   * branch) shaped-read multiply is a no-op if ever reached.
    * Only the HII header (`model.youngStars`) carries real values, same
    * asymmetry `hiiTexture` documents above: the field draw's own components
    * never carry a nonzero `starsWeight`.
@@ -65,7 +68,7 @@ export type FieldHeaderInput = {
   /**
    * `deriveFrameView.ts`'s per-frame blend of `render.starGrainFeatureScaleNear`/
    * `Far` by camera distance — packs to `io.wesl`'s free `dustDetail.w` lane
-   * (that struct's own doc), the multiplier `splat.wesl`'s `starGrainTerm`
+   * (that struct's own doc), the multiplier `hiiSplat/starGrain.wesl`'s `starGrainTerm`
    * applies to the baked star-grain point's fixed sigma to get its per-octave
    * band-limit's feature size. Absent packs 0, the same "only the HII header
    * carries a real value" asymmetry as `hiiTexture`/`youngStars` above —

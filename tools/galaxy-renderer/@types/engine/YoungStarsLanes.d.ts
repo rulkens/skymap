@@ -1,6 +1,7 @@
 /**
  * YoungStarsLanes — §5's shader-side shaping of the YOUNG STARS chain tier's
- * stars-map read (`splat.wesl`'s `g3.w` branch), packed to the field
+ * stars-map read (`hiiSplat/youngFragment.wesl`'s `g3.w` branch, mirrored in
+ * `extrasFragment.wesl`'s young branch), packed to the field
  * header's `youngStars` row (`io.wesl`). Only the HII header carries real
  * values — the field draw's own components never carry a nonzero
  * `starsWeight`, same asymmetry `HiiTextureLanes` documents for its own scale/
@@ -13,7 +14,8 @@ export type YoungStarsLanes = {
   readonly invMeanNorm: number;
   /**
    * `render.hiiNearFadeStart` — boundRadius multiple where a component the
-   * eye is approaching starts fading (`splat.wesl`'s vs/fs). Optional, not
+   * eye is approaching starts fading (`hiiSplat/vertex.wesl`'s vs and
+   * `hiiSplat/shadeCommon.wesl`'s fs, `hiiNearFade`). Optional, not
    * grouped with `contrastGamma`/`invMeanNorm` above: it rides `render`, not
    * `fieldTuning`, so `createGalaxyEngine.ts` fills it in at the HII header
    * call site rather than this row's other two lanes' own getter. Absent (or

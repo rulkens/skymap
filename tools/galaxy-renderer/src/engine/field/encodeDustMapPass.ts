@@ -1,7 +1,7 @@
 /**
  * encodeDustMapPass — the primary galaxy's dust slice splatted into
  * `dustMapTex` (`dustMap.wesl`, additive, four depth-sliced optical depths):
- * the map both splat.wesl's attenuation and the JWST view read.
+ * the map both dustAttenuation.wesl's componentEmission and the JWST view read.
  *
  * RETURNS the new value of the caller's "holds anything but zeros" latch, and
  * the caller MUST assign it — a skipped pass leaves whatever the last frame

@@ -71,13 +71,16 @@ export type RenderSettings = {
   readonly digDivisor: number;
   /**
    * boundRadius multiple (an HII component's own truncation-sphere sigma
-   * scale, `splat.wesl`'s `g1.w`) where a component the eye is approaching
-   * starts fading toward nothing instead of shading its fullscreen-fallback
-   * quad at full cost — the perf lever this window trades against `extrasDivisor`/
+   * scale, `hiiSplat`'s own `g1.w` — `vertex.wesl`'s fade gate and
+   * `shadeCommon.wesl`'s `baseHiiShading`) where a component the eye is
+   * approaching starts fading toward nothing instead of shading its
+   * fullscreen-fallback quad at full cost — the perf lever this window
+   * trades against `extrasDivisor`/
    * `digDivisor` above: those cut resolution everywhere, this instead removes
    * whole components' fragment cost near the camera at the price of an
    * unresolved wash where they used to be. Must exceed `hiiNearFadeEnd`, or
-   * the fade disables (`splat.wesl`'s own guard). Defaults to `SPLAT_CUT`
+   * the fade disables (`hiiSplat/shadeCommon.wesl`'s own guard, `hiiNearFade`).
+   * Defaults to `SPLAT_CUT`
    * (4.5) — see `defaultRenderSettings.ts`.
    */
   readonly hiiNearFadeStart: number;
@@ -88,7 +91,7 @@ export type RenderSettings = {
    */
   readonly hiiNearFadeEnd: number;
   /**
-   * Multiplier on the baked star-grain point's fixed sigma (`splat.wesl`'s
+   * Multiplier on the baked star-grain point's fixed sigma (`hiiSplat/starGrain.wesl`'s
    * `STAR_GRAIN_POINT_SIGMA_FRAC`) that sets `starGrainTerm`'s per-octave
    * band-limit feature size — the point's visible EXTENT, not its bare
    * sigma (see that function's own header for why bare sigma fades the

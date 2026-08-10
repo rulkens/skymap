@@ -1,7 +1,7 @@
 /**
  * encodeSplatPass — one additive Gaussian-mixture splat (one instanced quad
  * per component — `fieldSplat/`'s field variant or `hiiSplat/`'s HII
- * variants, #78's split of the former shared `splat.wesl`) into its own
+ * variants, the per-splat-type split of the former shared `splat.wesl`) into its own
  * reduced-resolution target. The smooth field, `hiiTex`'s `hii:extras` draw
  * and every `HII_TIERS` tier are the same encoding, differing in label,
  * timing slot, target, PIPELINE (field/young/erosion/extras each draw

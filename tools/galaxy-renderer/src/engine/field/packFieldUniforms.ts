@@ -73,10 +73,11 @@ const INERT_DUST: FieldDust = {
 };
 
 /**
- * "This pass draws no HII texture" — scale 0 is what lets splat.wesl's fs
- * skip the noise sample on a uniform branch (see `FieldHeaderInput`'s
- * `hiiTexture` doc); contrast 1 is inert but never read while scale gates
- * the branch closed.
+ * "This pass draws no HII texture" — scale 0 is what lets hiiSplat's
+ * per-tier fragments (youngFragment.wesl/erosionFragment.wesl/
+ * extrasFragment.wesl) skip the noise sample on a uniform branch (see
+ * `FieldHeaderInput`'s `hiiTexture` doc); contrast 1 is inert but never
+ * read while scale gates the branch closed.
  */
 const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 
@@ -85,13 +86,15 @@ const INERT_ISM_MAP_SEEDING: IsmMapSeedingLanes = { weight: 0, cap: 0, globalMea
 
 /**
  * "This pass draws no young-stars chain" — `contrastGamma`/`invMeanNorm` are
- * neutral (not zero), since splat.wesl's `pow`/multiply would otherwise turn
+ * neutral (not zero), since hiiSplat/youngFragment.wesl's (and
+ * extrasFragment.wesl's young branch) `pow`/multiply would otherwise turn
  * a stray nonzero `starsWeight` into a black hole rather than a no-op; only
  * the HII header ever passes real lanes (`model.youngStars`).
  * `nearFadeStart`/`nearFadeEnd` are 0/0 instead — the field draw's own gate
  * (`u.dustDetail.y > 0.0`) already keeps this pass's fade branch closed, but
- * 0 is also splat.wesl's own "fade disabled" guard value, so a stray read
- * degrades to no-op rather than a bogus window.
+ * 0 is also hiiSplat/shadeCommon.wesl's own "fade disabled" guard value
+ * (`hiiNearFade`, mirrored in hiiSplat/vertex.wesl's own gate), so a stray
+ * read degrades to no-op rather than a bogus window.
  */
 const NO_YOUNG_STARS: YoungStarsLanes = {
   contrastGamma: 1,
@@ -226,8 +229,9 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   // starGrainFeatureScale). .y/.z are unrelated to S4's own strength lane —
   // they ride this vec4's two free lanes for the HII tier's tier-global
   // texture modulation (io.wesl's dustDetail doc); NO_HII_TEXTURE's scale 0
-  // is what lets splat.wesl's fs skip the noise sample on a uniform branch
-  // for every pass but the HII one. .w is `starGrainFeatureScale` (io.wesl's
+  // is what lets hiiSplat's per-tier fragments (youngFragment.wesl/
+  // erosionFragment.wesl/extrasFragment.wesl) skip the noise sample on a
+  // uniform branch for every pass but the HII one. .w is `starGrainFeatureScale` (io.wesl's
   // own doc) — absent packs 0, harmless for the same reason NO_HII_TEXTURE's
   // scale 0 is: a pass whose components never carry a nonzero textureWeight
   // never reaches starGrainTerm.
@@ -247,9 +251,11 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   // youngStars 60..63 = (contrastGamma, invMeanNorm, nearFadeStart,
   // nearFadeEnd). Only the HII header ever passes real values (`youngStars`'s
   // own doc) — the field header's `NO_YOUNG_STARS` default is neutral (1, 1)
-  // for the first two lanes, since splat.wesl's fs only ever reaches them
+  // for the first two lanes, since hiiSplat/youngFragment.wesl's fs (and
+  // extrasFragment.wesl's young branch) only ever reaches them
   // behind `g3.w > 0.0`, a gate the field draw's own components never open;
-  // the fade lanes default to 0 (`?? 0`), splat.wesl's own "disabled" value.
+  // the fade lanes default to 0 (`?? 0`), hiiSplat/shadeCommon.wesl's own
+  // "disabled" value (`hiiNearFade`).
   out[60] = youngStars.contrastGamma;
   out[61] = youngStars.invMeanNorm;
   out[62] = youngStars.nearFadeStart ?? 0;
@@ -275,10 +281,11 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
  * — then the central galaxy's dust mixture last) into the storage buffer's
  * bytes. Unlike the old uniform packer, there is no tail to zero: bytes past
  * `mixture.length` are never read even when the backing GPUBuffer's capacity
- * (grown, never shrunk) is larger. The draw call instances `emissionCount`
- * quads, NOT `mixture.length` — dust components ride this same buffer but
- * are read only from inside a primary emission fragment (splat.wesl's `fs`),
- * never drawn as their own quad.
+ * (grown, never shrunk) is larger. `fieldSplatPipe`'s draw instances
+ * `emissionCount` quads, NOT `mixture.length` — dust components ride this
+ * same buffer but are drawn by their own separate pass instead
+ * (`dustMapPipe`'s `dustMap/vertex.wesl`+`dustMap/fragment.wesl`, instanced
+ * over `dust.count`; see `createGalaxyEngine.ts`'s dust-column map pipeline).
  */
 export function packFieldComponents(
   mixture: readonly GalaxyFieldComponent[],

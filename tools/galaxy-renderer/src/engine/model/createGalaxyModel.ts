@@ -361,9 +361,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * invMeanNormFor — §5's `1 / (area-weighted mean of pow(stars, gamma))`,
    * memoized against `youngStarsMeanCache` (its own doc above). No map yet,
    * or a map whose shaped mean is 0 (quiet disc, cleared tracer), returns 1:
-   * the identity multiplier, not a divide-by-zero — splat.wesl's fs only
-   * ever reaches this lane behind a component's own `starsWeight > 0` gate,
-   * so an inert 1 here costs nothing on the frames it's never read.
+   * the identity multiplier, not a divide-by-zero — hiiSplat/youngFragment.wesl's
+   * fs (and extrasFragment.wesl's young branch) only ever reaches this lane
+   * behind a component's own `starsWeight > 0` gate, so an inert 1 here
+   * costs nothing on the frames it's never read.
    */
   function invMeanNormFor(map: GalaxyIsmMap | null, gamma: number): number {
     if (

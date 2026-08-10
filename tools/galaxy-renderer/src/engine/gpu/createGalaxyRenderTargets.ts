@@ -93,9 +93,9 @@ export function createGalaxyRenderTargets(
    * decimated thin lanes into beads — see `allocateDust`). dustPresent.wesl
    * (the JWST view) still reads it via a 1:1 `input.pos.xy` texel lookup, but
    * into its OWN divisor-matched target (`dustViewTex`, not `fieldTex`);
-   * splat.wesl's fs, which runs at fieldTex's coarser resolution, instead
+   * dustAttenuation.wesl's componentEmission, which runs at fieldTex's coarser resolution, instead
    * samples it through a linear sampler (`dustMapSmp`) at a normalized UV —
-   * see splat.wesl's fs comment for why that is a deliberate, imperfect
+   * see field/io.wesl's DUST MAP doc for why that is a deliberate, imperfect
    * trade rather than an oversight.
    */
   let dustMapTex: GPUTexture;

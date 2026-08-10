@@ -96,7 +96,7 @@ import { HII_TIERS } from '../data/hiiTiers';
 
 import starWgsl from './shaders/milkyWay/sprites/stars.wesl?static';
 import dustWgsl from './shaders/milkyWay/sprites/dust.wesl?static';
-// #78's split: field (disc/arm/bulge) and HII (shells/young/dig/extras) no
+// The per-splat-type split: field (disc/arm/bulge) and HII (shells/young/dig/extras) no
 // longer share one shader — each pipeline below is built from its own
 // vertex+fragment pair, and 'auto' layout derives a SMALLER bind-group
 // layout for whichever bindings that pair actually references (see each
@@ -382,7 +382,7 @@ export async function createGalaxyEngine(
   // `quadCorner`/the per-instance `comps` lookup both come off
   // `vertex_index`/`instance_index` alone.
   //
-  // #78 split the former single `splat.wesl` (one shared vs+fs serving both
+  // The per-splat-type split broke the former single `splat.wesl` (one shared vs+fs serving both
   // the primary field draw AND every HII draw, discriminated at runtime by
   // `dustDetail.y`) into a field variant and three HII fragment variants —
   // young/erosion(shells+dig)/extras — sharing one HII vertex stage. Each
@@ -492,12 +492,12 @@ export async function createGalaxyEngine(
 
   // ---- dust-column map pipeline (screen-space dust splat) ----
   // `milkyWay/field/dustMap/`: one instanced quad per PRIMARY dust
-  // component (splat.wesl's own silhouette math via `lib/splatSilhouette`),
+  // component (dustMap/vertex.wesl's own silhouette math via `lib/splatSilhouette`),
   // additively accumulating four depth-sliced optical depths into
   // `dustMapTex`, at its own divisor-matched resolution (see `dustMapTex`'s
   // declaration below).
   // Replaces splat.wesl's former per-fragment dust loop with a texture read
-  // — see splat.wesl's header and the grill-session doc's N1.
+  // — see dustAttenuation.wesl's header and the grill-session doc's N1.
   // Its own module (not a second entry point on `fieldSplatFsMod`) and its
   // own pipeline, for the same `layout: 'auto'` reason every other pass pair
   // here is split: two pipelines sharing a module that reads a binding with
@@ -568,7 +568,7 @@ export async function createGalaxyEngine(
     magFilter: 'linear',
     minFilter: 'linear',
   });
-  // splat.wesl's own sampler for `dustMapTex` (io.wesl binding 6) — a plain
+  // dustAttenuation.wesl's own sampler for `dustMapTex` (io.wesl binding 6) — a plain
   // filtering sampler, no address-mode wrap needed since the UV it is fed is
   // always clamped to the [0,1] the field pass's own fragment coords cover.
   // `rgba16float` is filterable in WebGPU core. See io.wesl's DUST MAP doc
@@ -643,8 +643,8 @@ export async function createGalaxyEngine(
   }
 
   // ---- star-grain bake: 64^3 scattered log-normal point volume, baked ONCE ----
-  // starGrainBake.wesl — splat.wesl's YOUNG STARS branch only (see that
-  // file's own starGrainTerm). Same one-shot idiom as the dust-noise bake
+  // starGrainBake.wesl — hiiSplat/starGrain.wesl's YOUNG STARS branch only
+  // (see that file's own starGrainTerm). Same one-shot idiom as the dust-noise bake
   // just above: view- and param-independent, so it bakes here, once, into
   // its own encoder rather than `drawFrame`'s.
   const starGrainBakeMod = makeShader(starGrainBakeWgsl, 'galaxy:starGrainBake');
@@ -825,12 +825,12 @@ export async function createGalaxyEngine(
   // bind-group layout from the bindings its OWN vertex+fragment pair
   // actually references — a group built from one pipeline's layout fails
   // another's draw-time compatibility check even for byte-identical WGSL, so
-  // #78's four-pipeline split means four DIFFERENT binding sets, not one
+  // The four-pipeline split means four DIFFERENT binding sets, not one
   // shared shape reused four times:
   //   fieldSplatPipe — {0 u, 1 comps, 2 dustMapTex, 6 dustMapSmp}: no HII
   //     texture machinery at all (fieldSplat/fragment.wesl never imports
   //     dustNoiseTex/starGrainTex/warpNoiseTex/the ISM cartesian bake) — the
-  //     occupancy win #78 is for.
+  //     occupancy win the split is for.
   //   hiiExtrasPipe — the full {0,1,2,3,4,5,6,7,8,10,11,12,13}: imports BOTH
   //     hiiNoiseTerm (dustNoiseTex/Smp, shells/DIG's ridged read) and
   //     starGrainTerm (star-grain + warp-noise + ISM-cartesian).
@@ -1250,7 +1250,8 @@ export async function createGalaxyEngine(
     // before either pass is encoded, which is safe precisely because they
     // target different buffers. `fadeAlpha` carries `debugGalaxyWeight` too —
     // dimming the legacy sprites (primary AND extras) under an active debug
-    // view exactly like the analytic field's own splat.wesl multiply does,
+    // view exactly like the analytic field's own fieldSplat/fragment.wesl and
+    // hiiSplat/shadeCommon.wesl (hiiExposureMultiply) multiplies do,
     // rather than the old suppression that hid the primary's sprites outright
     // but deliberately left extras' alone (see the field/scene passes below).
     const tuning = toMilkyWayTuning(render, model.starCount);
@@ -1312,19 +1313,19 @@ export async function createGalaxyEngine(
 
     // The HII tier's own header, same camera basis, its own target's pixel
     // size. `primaryCount` is packed to this pass's OWN instance count
-    // (`emissionCount` below), not the primary galaxy's — splat.wesl's fs
-    // gates its attenuation branch on `input.inst < primaryCount`, which is
-    // then true for every HII sprite, so the whole tier darkens under the
+    // (`emissionCount` below), not the primary galaxy's — dustAttenuation.wesl's
+    // componentEmission gates its attenuation branch on `instanceIndex < primaryCount`,
+    // which is then true for every HII sprite, so the whole tier darkens under the
     // same dust law the disc reads (an embedded shell/DIG/association is not
     // exempt just because its sprite lives on its own target).
     //
     // `dust.extinctionRgb`/`.slices` carry the field header's own live values
-    // — the only two lanes splat.wesl's attenuation branch reads. Everything
+    // — the only two lanes dustAttenuation.wesl's componentEmission reads. Everything
     // else in the bag stays INERT (matching the previous no-dust default):
     // `noise`/`detail`/`count`/`mapHeightPx` feed dustMap.wesl's
     // accumulation pass, which this draw never runs — carrying the field's
     // real `dust.noise` here would silently retune `hiiNoiseTerm`'s sampling
-    // frequency (`u.dustNoise.x`, splat.wesl's OWN reader of that lane) as a
+    // frequency (`u.dustNoise.x`, hiiSplat/hiiNoise.wesl's OWN reader of that lane) as a
     // side effect of a fix that is only about attenuation.
     //
     // `debugViews`/`ismMapChannels` are the same values as above. Only
@@ -1466,7 +1467,7 @@ export async function createGalaxyEngine(
     if (analytic) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
       // its own divisor-matched resolution (`dustMapPipe`, additive). Feeds
-      // splat.wesl's fs (the grey/RGB split) always now, and IS the
+      // dustAttenuation.wesl's componentEmission (the grey/RGB split) always now, and IS the
       // dustPresent pass's own source whenever the JWST view is live — so it
       // has to run whenever either consumer needs it: `dustViewIntensity > 0`
       // (the image itself) or a nonzero dust slice.
@@ -1581,7 +1582,8 @@ export async function createGalaxyEngine(
       );
       // Every representation here is additive into the SAME attachment, so the
       // crossfade is just which of them ran this frame, each already carrying
-      // its own weight (splat.wesl's debugView.w, or a present shader's own
+      // its own weight (fieldSplat/fragment.wesl's and hiiSplat/shadeCommon.wesl's
+      // own debugView.w, or a present shader's own
       // debugView.x/.y/.z) — nothing picks one exclusively any more, and
       // summation order carries no meaning. The list order is the pass encode
       // order: aggregate, analytic field, every `HII_TIERS` row with content,
