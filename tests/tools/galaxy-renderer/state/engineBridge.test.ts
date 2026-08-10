@@ -27,10 +27,12 @@ import {
   extrasToggled,
 } from '../../../../tools/galaxy-renderer/src/state/slices/extrasSlice';
 import { autoRotateSet } from '../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
+import { fieldTuningPatched } from '../../../../tools/galaxy-renderer/src/state/slices/fieldTuningSlice';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
 import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
 import { DEFAULT_EXTRAS_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
 
@@ -257,6 +259,50 @@ describe('connectEngineBridge', () => {
     expect(mocks.setParams).toHaveBeenLastCalledWith(
       expect.objectContaining({ shared: expect.objectContaining({ armCount: 10 }) }),
     );
+
+    disconnect();
+  });
+
+  it('fieldTuning slice change calls setFieldTuning with the new object; an unrelated slice change does not', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setFieldTuning).toHaveBeenCalledTimes(1); // initial sync only
+
+    const patchedTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, disc: { enabled: false } };
+    store.dispatch(fieldTuningPatched(patchedTuning));
+    expect(mocks.setFieldTuning).toHaveBeenCalledTimes(2);
+    expect(mocks.setFieldTuning).toHaveBeenLastCalledWith(patchedTuning);
+
+    // Unrelated dispatch must not re-fire setFieldTuning — the bridge gates
+    // on `next.fieldTuning !== prev.fieldTuning` (reference identity), and
+    // this dispatch changes neither that slice nor render.dustCloudEnabled.
+    store.dispatch(renderPatched({ exposure: 1.5 }));
+    expect(mocks.setFieldTuning).toHaveBeenCalledTimes(2);
+
+    disconnect();
+  });
+
+  it('the DUST CLOUD pill zeroes dust.cloud.count for the engine while the store keeps the user count', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+
+    const userCount = 12345;
+    store.dispatch(
+      fieldTuningPatched({
+        dust: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.dust,
+          cloud: { ...DEFAULT_GALAXY_FIELD_TUNING.dust.cloud, count: userCount },
+        },
+      }),
+    );
+    store.dispatch(renderPatched({ dustCloudEnabled: false }));
+
+    expect(mocks.setFieldTuning).toHaveBeenLastCalledWith(
+      expect.objectContaining({ dust: expect.objectContaining({ cloud: expect.objectContaining({ count: 0 }) }) }),
+    );
+    // The pill patches only the OUTGOING copy — the stored slice still shows
+    // what the sliders display, so re-enabling the pill restores it exactly.
+    expect(store.getState().fieldTuning.dust.cloud.count).toBe(userCount);
 
     disconnect();
   });

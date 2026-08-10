@@ -26,6 +26,7 @@ import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxy
 import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/sweptDustOvershoot';
+import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidEvents';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -139,7 +140,7 @@ describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () =>
  */
 function readWeslConst(relPath: string, name: string): number | undefined {
   const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
-  const re = /const\s+(\w+)\s*:\s*f32\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
+  const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m[1] === name) return parseFloat(m[2]!);
@@ -201,5 +202,24 @@ describe('SPLAT_CUT_SIGMA parity (youngStarChain.ts ↔ splatSilhouette.wesl)', 
       weslValue,
       `${file}: WESL SPLAT_CUT (${weslValue}) does not match TS SPLAT_CUT_SIGMA (${SPLAT_CUT_SIGMA})`,
     ).toBe(SPLAT_CUT_SIGMA);
+  });
+});
+
+/**
+ * ISM_MAP_FLUID_EVENT_STRIDE (packIsmMapFluidEvents.ts) mirrors
+ * ismMapFluidVelocity.wesl's own EVENT_STRIDE — the packer flattens each
+ * event into that many floats and ismMapFluidStep.wesl's storage-buffer read
+ * (`events[base + N]`) trusts the same stride, so a drift ships silently
+ * misaligned event records to the GPU.
+ */
+describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMapFluidVelocity.wesl)', () => {
+  it("ismMapFluidVelocity.wesl's EVENT_STRIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidVelocity.wesl';
+    const weslValue = readWeslConst(file, 'EVENT_STRIDE');
+    expect(weslValue, `EVENT_STRIDE is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL EVENT_STRIDE (${weslValue}) does not match TS ISM_MAP_FLUID_EVENT_STRIDE (${ISM_MAP_FLUID_EVENT_STRIDE})`,
+    ).toBe(ISM_MAP_FLUID_EVENT_STRIDE);
   });
 });

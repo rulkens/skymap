@@ -42,4 +42,39 @@ describe('hubbleTypePatch', () => {
     expect(c.shared?.armWinding).toBe(0.78);
     expect(a.shared?.armWinding).toBe(0.24);
   });
+
+  // paramsPatched Object.assigns whole bags (this file's own header doc), so
+  // a patch naming only the nudged fields would ERASE every other field the
+  // user already had set in `shared`/`legacy`. CURRENT above is always an
+  // empty bag pair, so that erasure risk has never been exercised — a
+  // non-empty CURRENT is the only way to catch a stage branch that forgets
+  // its own `{ ...shared, ... }`/`{ ...legacy, ... }` spread.
+  it('carries UNRELATED existing shared/legacy fields through a spiral-stage patch untouched', () => {
+    const current: GalaxyParams = {
+      type: 'placeholder',
+      shared: { armCount: 4, bulgeSize: 99 },
+      legacy: { spriteDust: 0.42, armStrength: 99 },
+    };
+    const patch = hubbleTypePatch(current, 'Sb');
+
+    // Untouched fields carry through unchanged.
+    expect(patch.shared?.armCount).toBe(4);
+    expect(patch.legacy?.spriteDust).toBe(0.42);
+    // Fields the stage-b nudge DOES own take the nudge, not CURRENT's value.
+    expect(patch.shared?.bulgeSize).toBe(0.7);
+    expect(patch.legacy?.armStrength).toBe(1.1);
+  });
+
+  it('a lenticular patch (S0, legacy-only) carries legacy fields through and leaves shared untouched', () => {
+    const current: GalaxyParams = {
+      type: 'placeholder',
+      shared: { armCount: 4 },
+      legacy: { spriteDust: 0.9, armStrength: 99 },
+    };
+    const patch = hubbleTypePatch(current, 'S0');
+
+    expect(patch.shared).toBeUndefined();
+    expect(patch.legacy?.armStrength).toBe(99); // untouched, carried through
+    expect(patch.legacy?.spriteDust).toBe(0.15); // lenticular's own nudge
+  });
 });

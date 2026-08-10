@@ -99,3 +99,58 @@ describe('packIsmMapFluidConstants ↔ milkyWay/ismMap/ismMapFluidStep.wesl IsmM
     }
   });
 });
+
+/**
+ * Both passes bind the SAME uniform buffers (Pass A = ismMapFluidVelocity.wesl,
+ * Pass B = ismMapFluidStep.wesl) but each declares its own copy of
+ * `IsmMapFluidConstants`/`IsmMapFluidStepIndex` — WGSL has no cross-file struct
+ * import, and every field-doc pair in both files says "kept here for
+ * byte-identical layout" rather than pointing at a shared source. The test
+ * above only checks the step copy against the TS packer; this checks the two
+ * WGSL copies against EACH OTHER, field name, order and byte offset, so a
+ * reorder or drop in either file (not just a packer drift) fails loudly
+ * instead of shipping two passes that silently disagree on what byte N means.
+ */
+describe('IsmMapFluidConstants / IsmMapFluidStepIndex parity across ismMapFluidStep.wesl and ismMapFluidVelocity.wesl', () => {
+  const STEP_FILE = 'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl';
+  const VELOCITY_FILE = 'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidVelocity.wesl';
+
+  function fieldsOf(file: string, structName: string) {
+    return parseWgslStructFields(readShaderSource(file), structName);
+  }
+
+  function layoutOf(fields: ReturnType<typeof parseWgslStructFields>) {
+    return layoutWgslStruct(fields, (type) => {
+      const p = wgslPrimitiveLayout(type);
+      if (!p) throw new Error(`field type ${type} has no layout entry`);
+      return p;
+    });
+  }
+
+  // ismMapFluidVelocity.wesl's copy is currently SHORTER than
+  // ismMapFluidStep.wesl's (16 fields vs 18 — it never declares
+  // starsDeposit/starsDecay, Pass-B-only fields Pass A never reads). A
+  // shorter struct still binds fine against the longer packed buffer, so
+  // that asymmetry itself isn't a bug; what WOULD be a bug is the two copies
+  // disagreeing on the fields they DO share — a reorder, a dropped/renamed
+  // member, or a type change anywhere in the shared prefix silently shifts
+  // every offset after it.
+  it("IsmMapFluidConstants: Pass A's copy matches a PREFIX of Pass B's copy field-for-field", () => {
+    const stepFields = fieldsOf(STEP_FILE, 'IsmMapFluidConstants');
+    const veloFields = fieldsOf(VELOCITY_FILE, 'IsmMapFluidConstants');
+    expect(veloFields).toEqual(stepFields.slice(0, veloFields.length));
+
+    const stepOffsets = layoutOf(stepFields).offsets;
+    const veloOffsets = layoutOf(veloFields).offsets;
+    for (const [name, offset] of veloOffsets) {
+      expect(stepOffsets.get(name), `member ${name}`).toBe(offset);
+    }
+  });
+
+  it('IsmMapFluidStepIndex has identical fields, order and offsets in both files', () => {
+    const stepFields = fieldsOf(STEP_FILE, 'IsmMapFluidStepIndex');
+    const veloFields = fieldsOf(VELOCITY_FILE, 'IsmMapFluidStepIndex');
+    expect(veloFields).toEqual(stepFields);
+    expect([...layoutOf(veloFields).offsets]).toEqual([...layoutOf(stepFields).offsets]);
+  });
+});
