@@ -253,23 +253,14 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
 }
 
 export function emptyGalaxyCatalog(): GalaxyCatalog {
+  const columns: Partial<Record<GalaxyCatalogColumn, BigUint64Array | Float32Array | Uint8Array>> =
+    {};
+  for (const column of Object.keys(GALAXY_CATALOG_FIELD_SPECS) as GalaxyCatalogColumn[]) {
+    columns[column] = allocateColumn(GALAXY_CATALOG_FIELD_SPECS[column], 0);
+  }
   return {
     count: 0,
-    objIDs: new BigUint64Array(0),
-    positions: new Float32Array(0),
-    magU: new Float32Array(0),
-    magG: new Float32Array(0),
-    magR: new Float32Array(0),
-    magI: new Float32Array(0),
-    magZ: new Float32Array(0),
-    axisRatio: new Float32Array(0),
-    positionAngleDeg: new Float32Array(0),
-    diameterKpc: new Float32Array(0),
-    classByte: new Uint8Array(0),
-    parentSurveyByte: new Uint8Array(0),
-    spectroscopicZ: new Float32Array(0),
+    ...columns,
     medianAbsMag: -20.5, // count-0 fallback — same sentinel galaxyMedianAbsMag returns for count===0.
-    orientationIsFallback: new Uint8Array(0),
-    diameterIsFallback: new Uint8Array(0),
-  };
+  } as unknown as GalaxyCatalog;
 }

@@ -14,17 +14,18 @@
  *    buffers and break every later picker / InfoCard read.
  * 3. The transfer list points to the COPY's buffers, not the original's
  *    — for the same reason: the original catalog must survive the call.
- * 4. The transfer list contains exactly one entry per typed-array field
- *    (15 entries) and they appear in a stable order — so the helper
- *    doesn't accidentally drop a field when GalaxyCatalog grows.
+ * 4. The transfer list contains exactly one entry per typed-array field of
+ *    the copy, in `Object.keys` order — so the helper doesn't accidentally
+ *    drop, duplicate, or misorder a field when GalaxyCatalog grows.
  *
- * ### Why a stable field order matters
+ * ### Why derive the expectation from the copy, not the field-spec table
  *
- * Adding a new typed-array field to GalaxyCatalog must require editing
- * exactly one place (this helper). A test that pins the order catches
- * "added the field to the copy but forgot to add it to the transfer
- * list" — a class of bug that would silently send `undefined` through
- * the worker boundary.
+ * `cloneGalaxyCatalogForTransfer` and `GALAXY_CATALOG_FIELD_SPECS` are
+ * implemented by the same module. Asserting the transfer list against the
+ * table would be a mirror test — it would pass even if both were wrong
+ * together. Deriving the expectation from `copy` (typed as `GalaxyCatalog`,
+ * so the compiler proves it structurally complete) can't share that blind
+ * spot.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -111,18 +112,31 @@ describe('cloneGalaxyCatalogForTransfer', () => {
     }
   });
 
-  it('transfer list has one entry per typed-array field (15 total)', () => {
+  it('transfers exactly one buffer per typed-array column of the copy, in field order', () => {
     const cloud = makeCloud(4);
-    const { transfer } = cloneGalaxyCatalogForTransfer(cloud);
-    expect(transfer.length).toBe(15);
+    const { copy, transfer } = cloneGalaxyCatalogForTransfer(cloud);
+
+    // The expected name list — every `copy` key whose value is a typed-array
+    // view, in Object.keys order. `count` and `medianAbsMag` are scalars and
+    // drop out here, not by name but because they aren't typed-array views.
+    const expectedColumns = (Object.keys(copy) as (keyof GalaxyCatalog)[]).filter((key) =>
+      ArrayBuffer.isView(copy[key]),
+    );
+
+    const columnByBuffer = new Map<ArrayBufferLike, string>();
+    for (const key of expectedColumns) {
+      columnByBuffer.set((copy[key] as { buffer: ArrayBufferLike }).buffer, key);
+    }
+    const transferredColumns = transfer.map((buf) => columnByBuffer.get(buf as ArrayBufferLike));
+
+    expect(transferredColumns).toEqual(expectedColumns);
   });
 
   it('handles count = 0 (empty catalog)', () => {
     const cloud = makeCloud(0);
-    const { copy, transfer } = cloneGalaxyCatalogForTransfer(cloud);
+    const { copy } = cloneGalaxyCatalogForTransfer(cloud);
     expect(copy.count).toBe(0);
     expect(copy.objIDs.length).toBe(0);
     expect(copy.positions.length).toBe(0);
-    expect(transfer.length).toBe(15);
   });
 });
