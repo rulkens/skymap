@@ -101,8 +101,7 @@ binary format family. Treat it as a sibling precedent, not a Path A instance:
   from `galaxyCatalogFormat.ts`: cell-quantized + compressed, sized for tens
   of millions of stars rather than millions of galaxies. Don't reuse
   `galaxyCatalogFormat.ts` machinery for star data — the encodings diverge.
-- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run
-build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
+- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
 - **R2 sync** — a new binary family needs its own entries in
   `tools/deploy/r2/allowDataFile.ts`, same step as adding a new galaxy-catalog
   tier.
@@ -127,8 +126,7 @@ renderer/layer order the galaxy catalogs use:
   the star-only analogue of the galaxy-catalog id domain. Add the row and both
   widen with no further edit.
 - **Settings cluster** — `settings.starCatalogs` mirrors `settings.galaxyCatalogs`
-  exactly: an `enabled` master plus `items: Record<StarCatalogId,
-StarCatalogItemSettings>`, driven from `StarsSection` the way `galaxyCatalogs`
+  exactly: an `enabled` master plus `items: Record<StarCatalogId, StarCatalogItemSettings>`, driven from `StarsSection` the way `galaxyCatalogs`
   drives its survey rows. The two clusters share shape — no divergent per-item
   accessor.
 - **Fetcher + slot + wiring** — one source-parameterized `starCatalogFetcher`
