@@ -1,14 +1,13 @@
 /**
- * createGalaxyModel — what a galaxy IS, as opposed to how a frame draws it: the
- * central galaxy's generated sprite buffers and its background extras, the two
+ * createGalaxyModel — what a galaxy IS, as opposed to how a frame draws it:
+ * the central galaxy's sprite buffers and background extras, the two
  * analytic mixtures (emission + HII), the dust cloud, the SSPISM map, and the
  * GPU record buffers all of that packs into.
  *
- * `setParams` / `setFieldTuning` / `setExtras` are the only writers; everything
- * else is derived from the geometry those three cache, which is what makes a
- * tuning slider a CPU rebuild rather than a regenerate. Nothing here encodes a
- * render pass or reads a camera: the engine owns the pipelines, the targets and
- * the per-frame headers, and binds the buffers this exposes.
+ * `setParams` / `setFieldTuning` / `setExtras` are the only writers; a tuning
+ * slider is a CPU rebuild rather than a regenerate. Nothing here encodes a
+ * render pass or reads a camera — the engine owns the pipelines, targets and
+ * per-frame headers, and binds the buffers this exposes.
  */
 
 import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
@@ -862,14 +861,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // is a pure function of `texture` since `sweptMix` was deleted, so a
     // dust-only drag has nothing left for it to re-dispatch over.
 
-    // `generator` gates `buildDustParticleCloud`'s own placement mode (map-seeded
-    // vs `smoothDisc`) directly — before the three-state dropdown, that switch
-    // lived AS `dust.ismMapSeeding`, inside the `dust` section, so `dustMoved`
-    // caught it for free. Now that it lives in `ismMap`, a generator flip needs
-    // its own synchronous dust rebuild or the previous generator's map-seeded
-    // placement (and its `OrientationDeltaStats` coupling readout) keeps
-    // drawing/reporting as live until an unrelated dust/geometry change happens
-    // to rebuild it. Uses whatever `readbacks.ismMapData`/`orientationData` are
+    // `generator` gates `buildDustParticleCloud`'s own placement mode
+    // (map-seeded vs `smoothDisc`) directly, from the `ismMap` section rather
+    // than `dust` — so a generator flip is invisible to `dustMoved` and needs
+    // its own synchronous dust rebuild, or the previous generator's
+    // map-seeded placement (and its `OrientationDeltaStats` coupling readout)
+    // keeps drawing/reporting as live until an unrelated dust/geometry change
+    // rebuilds it. Uses whatever `readbacks.ismMapData`/`orientationData` are
     // cached right now — the same determinism tradeoff `scheduleIsmMapReadback`
     // documents, corrected again once this rebuild's own readback lands.
     if (generatorMoved && !dustMoved) {

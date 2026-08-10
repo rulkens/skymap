@@ -32,10 +32,10 @@ export const TIMING_SLOTS: readonly string[] = [
   // shared coarser texel and blooming into fireflies); shells and young stars
   // get the identical treatment now via the same table rather than a
   // hand-duplicated third/fourth copy. Each slot is consumed whenever
-  // `drawFrame` finds that tier's span in `model.hiiSegments` nonempty —
-  // there is no HUD-gated merged-vs-split toggle any more: the old merged
-  // `'hii'` slot is gone, since every tier already owns a private target and
-  // billing it separately now costs nothing extra on any frame.
+  // `drawFrame` finds that tier's span in `model.hiiSegments` nonempty,
+  // billed unconditionally on content rather than behind a HUD-gated
+  // toggle: every tier owns a private target, so billing it separately
+  // costs nothing extra on any frame.
   'hii:shells',
   'hii:young',
   'hii:dig',
@@ -45,9 +45,7 @@ export const TIMING_SLOTS: readonly string[] = [
   // shell/DIG/young tiers the way the central galaxy's components do (their
   // own spans interleave across extras, so per-extra labels would stop being
   // HUD-short and stop being contiguous). Same unconditional-on-content
-  // billing as the three tiers above; there used to be a merged `'hii'` slot
-  // covering shells/young/extras together off the timing path — deleted once
-  // every tier had its own target made the merge pointless.
+  // billing as the three tiers above, off its own target.
   'hii:extras',
   // The full-res HDR pass: the aggregate's additive upsample, the field's and
   // the HII tier's, the dust billboards, and each live diagnostic overlay —

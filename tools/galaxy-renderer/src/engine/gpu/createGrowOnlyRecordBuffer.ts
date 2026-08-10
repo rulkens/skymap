@@ -1,13 +1,11 @@
 /**
- * createGrowOnlyRecordBuffer — a GPU buffer of fixed-stride records that grows
- * to fit and never shrinks. `setFieldTuning` fires on every frame of a tuning
- * slider drag, so reallocating on each change of size would be pure churn.
- *
- * Two facts the handle exists to make structural rather than remembered:
- *  - A regrow REPLACES the GPUBuffer, and a `layout: 'auto'` bind group is
- *    bound to the exact buffer it was built against — hence `onRegrow`.
- *  - `buffer` is a live getter. Anything that caches it across a `write` is
- *    holding a destroyed buffer.
+ * createGrowOnlyRecordBuffer — a GPU buffer of fixed-stride records that
+ * grows to fit and never shrinks (`setFieldTuning` fires every frame of a
+ * tuning slider drag, so reallocating on each size change would be pure
+ * churn). A regrow REPLACES the GPUBuffer, and a `layout: 'auto'` bind
+ * group is bound to the exact buffer it was built against — hence
+ * `onRegrow`. `buffer` is a live getter; anything that caches it across a
+ * `write` is holding a destroyed buffer.
  */
 
 export type GrowOnlyRecordBufferSpec = {

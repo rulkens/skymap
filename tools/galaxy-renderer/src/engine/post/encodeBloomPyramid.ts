@@ -15,10 +15,8 @@
  *   fold          bloom0   -> hdr             (load, additive, x strength)
  *
  * The fold puts the glow back into the HDR scene BEFORE the tone curve, so
- * bloom rides that one curve. Adding it inside the composite instead — as this
- * tool used to — is the same sum through the same curve arithmetically, but
- * leaves the composite carrying a second texture bind and a strength knob the
- * shared compositor has no slot for.
+ * bloom rides that one curve rather than needing a second texture bind and
+ * a strength knob the shared compositor has no slot for.
  */
 import type { BloomPyramid } from '../../../../../src/@types/rendering/BloomPyramid';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';

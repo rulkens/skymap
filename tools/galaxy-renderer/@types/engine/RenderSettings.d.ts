@@ -1,4 +1,9 @@
 /**
+ * Cross-file naming/units contract (comments.md budget exception): every field
+ * below states which app setting it mirrors, under what name, and in what
+ * units — that mapping is the source of truth for keeping the tool and the
+ * runtime from drifting apart, not prose to trim.
+ *
  * RenderSettings — per-frame compositing and display knobs. Separated from
  * LodSettings to mirror the GPU boundary: camera UBO (view-dependent LOD)
  * vs post-chain uniforms (view-independent render quality).
@@ -59,7 +64,7 @@ export type RenderSettings = {
   readonly aggregateDivisor: number;
   /** Downsample divisor of the ANALYTIC field's own offscreen. Separate from `aggregateDivisor` because the field is fill-bound and low-frequency: it takes a far coarser target than sprites do without a visible difference. Also reallocates rather than riding the uniform. */
   readonly fieldDivisor: number;
-  /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field it used to share a target with — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
   /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `HiiTierSpec`'s own doc for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
   readonly extrasDivisor: number;

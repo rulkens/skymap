@@ -1,23 +1,12 @@
 /**
- * createCloudPipelines — the two sprite-billboard render pipelines (additive
- * stars into the reduced-resolution aggregate, transmittance dust into
- * `sceneTex` full-res) and the one `layout: 'auto'` bind group each needs.
- * Both are the runtime's own `milkyWay/sprites/{stars,dust}.wesl` (symlinked
- * into this tool's WESL root — see `createGalaxyEngine.ts`'s own header), so
- * editing either shader changes both apps.
- *
- * ONE uniform buffer per pass, never shared — `queue.writeBuffer` is ordered
- * against `queue.submit`, not against the passes encoded in between, so two
- * writes to one buffer in a frame both land before either pass runs and the
- * second write wins for BOTH, silently handing the star pass the canvas
- * viewport (`starUbo`/`dustUbo` differ ONLY in that `viewportPx` lane).
- *
- * SEPARATE `GPUShaderModule`s per pass even though both wrap the same
- * `io.wesl` struct — `layout: 'auto'` derives a pipeline's bind-group layout
- * from the bindings its OWN module's entry points reference, and two
- * pipelines sharing a module whose entry points read a binding with divergent
- * stage visibility fail the group-equivalent check. Same contract
- * `createFieldPipelines.ts`'s header documents for the field/HII pairs.
+ * createCloudPipelines — the two sprite-billboard pipelines (additive stars
+ * into the aggregate, transmittance dust into `sceneTex`), each its own
+ * `layout: 'auto'` bind group over the runtime's own
+ * `milkyWay/sprites/{stars,dust}.wesl`. ONE uniform buffer per pass, never
+ * shared — two writes before either pass runs would silently hand the star
+ * pass the dust pass's viewport. SEPARATE shader modules per pass: a module
+ * shared across pipelines whose entry points disagree on a binding's stage
+ * visibility fails `layout: 'auto'`'s check.
  */
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';

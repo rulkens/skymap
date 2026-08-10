@@ -89,8 +89,8 @@ export function createGalaxyRenderTargets(
    * primary galaxy's dust slice. Sized to ITS OWN divisor,
    * `reducedSize(render.dustDivisor)` — much finer than fieldTex's, because
    * the dust splat carries far higher-frequency structure than the smooth
-   * emission field it used to share a target with (that sharing once
-   * decimated thin lanes into beads — see `allocateDust`). dustPresent.wesl
+   * emission field — sharing one target decimates thin lanes into beads
+   * (see `allocateDust`). dustPresent.wesl
    * (the JWST view) still reads it via a 1:1 `input.pos.xy` texel lookup, but
    * into its OWN divisor-matched target (`dustViewTex`, not `fieldTex`);
    * dustAttenuation.wesl's componentEmission, which runs at fieldTex's coarser resolution, instead

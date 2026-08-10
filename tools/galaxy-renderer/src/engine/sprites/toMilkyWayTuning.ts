@@ -3,13 +3,11 @@
  * `MilkyWayTuning`: the shape `packCloudUniforms` and the shared shaders
  * speak. Two knobs are renamed rather than shared outright — the tool's
  * `starIntensity` is the app's per-sprite `exposure` (the tool already spells
- * `exposure` for the post chain's whole-frame multiplier, a different quantity
- * at a different stage), and `sizeScale` is `starSizeScale`.
- *
- * `aggregateDivisor` and `starCount` ride along for completeness even though
- * the uniform ignores both: the divisor reaches the frame by sizing
- * `aggregateTex`, the count by carving the layouts, neither through
- * `params0`/`params1`.
+ * `exposure` for the post chain's whole-frame multiplier, a different
+ * quantity at a different stage), and `sizeScale` is `starSizeScale`.
+ * `aggregateDivisor`/`starCount` ride along for completeness even though the
+ * uniform ignores both: the divisor reaches the frame by sizing
+ * `aggregateTex`, the count by carving the layouts.
  */
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';

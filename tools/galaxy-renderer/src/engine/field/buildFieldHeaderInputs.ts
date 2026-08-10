@@ -2,15 +2,12 @@
  * buildFieldHeaderInputs — the three `FieldHeaderInput` object literals one
  * frame needs (the primary field draw, the `hii:extras` draw, and every
  * `HII_TIERS` row), assembled from explicit inputs rather than an engine
- * closure. `packFieldHeaderUniforms` + `queue.writeBuffer` — the GPU half —
- * stay in `drawFrame`; this is only the pure arithmetic ahead of them, split
- * out for the same reason `deriveFrameView.ts` is: it's what a test can reach
- * without a device.
+ * closure — pure arithmetic split out of `drawFrame` so a test can reach it
+ * without a device (`packFieldHeaderUniforms` + `queue.writeBuffer` stay put).
  *
- * The three share one `camera` (assembled here from `eye`/`fov`/`shiftX` plus
- * `frame`'s view/aspect/exposure) and mostly diverge on which lanes carry
- * REAL values versus the packer's own inert defaults — see each field's own
- * comment below and `FieldHeaderInput`'s own doc for the asymmetry.
+ * The three share one `camera` and mostly diverge on which lanes carry REAL
+ * values versus the packer's own inert defaults — see each field's own
+ * comment below and `FieldHeaderInput`'s own doc.
  */
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';

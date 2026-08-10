@@ -1,13 +1,12 @@
 /**
  * encodeDustMapPass — the primary galaxy's dust slice splatted into
- * `dustMapTex` (`dustMap.wesl`, additive, four depth-sliced optical depths):
+ * `dustMapTex` (`dustMap.wesl`, additive, four depth-sliced optical depths),
  * the map both dustAttenuation.wesl's componentEmission and the JWST view read.
  *
  * RETURNS the new value of the caller's "holds anything but zeros" latch, and
  * the caller MUST assign it — a skipped pass leaves whatever the last frame
- * wrote, so that latch is the whole reason skipping is safe across a nonzero
- * -> zero transition (see `dustMapPopulated`'s declaration). Returned rather
- * than written through a box, so the write stays visible in `drawFrame`.
+ * wrote, so the latch is what makes skipping safe across a nonzero -> zero
+ * transition (see `dustMapPopulated`'s declaration).
  */
 import { beginClearPass } from '../passes/beginClearPass';
 

@@ -2,13 +2,10 @@
  * packIsmMapFluidStepIndex — the fluid runner's per-step uniform packer:
  * `step` plus the `ismMapFluidEventWindow` active-event index range, so
  * `ismMapFluidStep.wesl`'s texel loop only walks events active THIS step
- * instead of the whole run's event list on every dispatch (the fix for the
- * O(steps^2 * texels) rebuild cost — see `createIsmMapFluidRunner.ts`'s
- * `rebuild` docblock).
- *
- * `strideBytes` is `device.limits.minUniformBufferOffsetAlignment`, never
- * assume 256, and each step's row leaves the tail of its stride zeroed
- * (unread slack, not a layout requirement past `ismMapFluidStep.wesl`'s own
+ * instead of the whole run's event list on every dispatch. `strideBytes` is
+ * `device.limits.minUniformBufferOffsetAlignment`, never assume 256, and
+ * each step's row leaves the tail of its stride zeroed (unread slack, not a
+ * layout requirement past `ismMapFluidStep.wesl`'s own
  * `IsmMapFluidStepIndex`).
  */
 import { ismMapFluidEventWindow } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';

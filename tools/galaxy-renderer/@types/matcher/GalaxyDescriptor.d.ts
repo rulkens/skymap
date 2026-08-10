@@ -4,10 +4,8 @@
  * Every field is normalised so the same galaxy at a different size, brightness
  * or on-screen rotation lands on (nearly) the same descriptor, which is what
  * lets `descriptorLoss` hill-climb the generator's parameters toward a
- * reference photo without first solving for pose.
- *
- * See `computeDescriptor` for how each field is measured; ported from the
- * spike's `galaxy-matcher.js`.
+ * reference photo without first solving for pose. See `computeDescriptor` for
+ * how each field is measured.
  */
 
 export type GalaxyDescriptor = {

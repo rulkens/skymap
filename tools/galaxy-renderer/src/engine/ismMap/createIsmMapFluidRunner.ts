@@ -1,20 +1,18 @@
 /**
- * createIsmMapFluidRunner — the ISM-map generator: its pipelines, its
- * ping-ponged state, its event-impulse buffer, and the dispatch loop that
- * reruns it from scratch, writing into a `IsmMapOutput` it does not own (see
- * `createIsmMapOutput.ts`). `createIsmMapGenerator.ts`'s dispatcher owns
- * whether it runs at all. See `ismMapFluidStep.wesl`'s header for the
- * integration scheme.
+ * createIsmMapFluidRunner — the ISM-map generator: its pipelines,
+ * ping-ponged state, event-impulse buffer, and the dispatch loop that
+ * reruns it from scratch, writing into an `IsmMapOutput` it does not own
+ * (see `createIsmMapOutput.ts`). See `ismMapFluidStep.wesl`'s header for
+ * the integration scheme.
  *
  * Each step is TWO dispatches sharing one compute pass: `ismMapFluidVelocity`
- * (Pass A) composes this step's velocity field once per texel into
- * `velocityTex`, then `ismMapFluidStep` (Pass B) reads it back to advect and
- * difference — WebGPU synchronizes a storage-texture write against a later
- * read within the same compute pass, so no pass split is needed. Step 0
- * only ever dispatches Pass B (it seeds and returns; velocity is unused).
- *
- * `rebuild` takes the geometry/tuning/seed/grid it runs against as ARGUMENTS
- * — no hidden module-level state to disagree with a caller about.
+ * composes this step's velocity field into `velocityTex`, then
+ * `ismMapFluidStep` reads it back to advect and difference — WebGPU
+ * synchronizes a storage-texture write against a later read within the same
+ * compute pass, so no pass split is needed. Step 0 only dispatches the
+ * second (it seeds and returns; velocity is unused). `rebuild` takes the
+ * geometry/tuning/seed/grid it runs against as ARGUMENTS — no hidden
+ * module-level state to disagree with a caller about.
  */
 import {
   buildGalaxyIsmMapArmForcing,

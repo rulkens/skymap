@@ -63,8 +63,8 @@ export function deriveDustHeaderLanes(
       ? {
           tileUnits: dustNoiseTileUnits(dust.cloud.textureScale),
           amplitude: dust.cloud.texture,
-          // The smooth lane this used to skip past was deleted, so the
-          // particle cloud starts at index 0 of the dust slice.
+          // The particle cloud IS the dust slice (no smooth-lane offset to
+          // skip), so it starts at index 0.
           cloudOffset: 0,
           // Inverted here, not in the shader, so dustMap.wesl stays one plain
           // pow(): a higher slider value means a SMALLER exponent (pushes |s|

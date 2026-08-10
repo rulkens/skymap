@@ -3,12 +3,9 @@
  * and everything downstream of it: the present pass, the S4 dust-blur
  * low-pass, and the CPU readback's staging buffer. Runner-agnostic by
  * construction — it never imports the runner, only ever a `texture` object
- * something else fills. `createIsmMapGenerator.ts`'s dispatcher owns one
- * instance and hands it to `createIsmMapFluidRunner`, which is what lets
- * every OTHER downstream consumer (orientation chain, readback, present
- * draw) stay wired to ONE stable texture/bind-group regardless of whether
- * the generator is running — flipping the toggle never rebuilds a single
- * bind group outside this file.
+ * something else fills, which is what lets every downstream consumer
+ * (orientation chain, readback, present draw) stay wired to ONE stable
+ * texture/bind-group regardless of whether the generator is running.
  */
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {
@@ -165,8 +162,8 @@ export function createIsmMapOutput(
   });
   // `copyTextureToBuffer` forces `bytesPerRow` to a 256-byte multiple; the
   // readback's decode strips the padding so it never reaches `GalaxyIsmMap.data`.
-  // 8 bytes/texel (rgba16float = 4 lanes x 2 bytes), not 4: `decodeIsmMapTexels`
-  // is the f16 counterpart of the old direct-byte read.
+  // 8 bytes/texel (rgba16float = 4 lanes x 2 bytes), not 4 —
+  // `decodeIsmMapTexels` reads f16, not raw bytes.
   const readbackBytesPerRow = alignedBytesPerRow(ISM_MAP_AZ * 8);
   const readbackBuffer = device.createBuffer({
     label: 'galaxy:ismMapReadbackBuf',

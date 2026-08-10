@@ -3,17 +3,15 @@
  * shape most of this engine's passes share. `alpha` is the clear alpha (0 for
  * the offscreens an additive composite reads, 1 for the HDR scene and the
  * post chain's LDR targets). `loadOp` defaults to `'clear'`; a caller opening
- * several sub-passes into the SAME attachment within one frame would pass
+ * several sub-passes into the SAME attachment within one frame passes
  * `'load'` for every pass after the first, so `clearValue` is simply ignored
- * by WebGPU on those — no caller in this file needs that today (every
- * `HII_TIERS` tier and `hii:extras` now own a private target), but the
- * parameter stays generic rather than HII-specific.
+ * by WebGPU on those.
  *
  * `timestampWrites` arrives ALREADY RESOLVED, here and in every pass module:
  * `gpuTimingService.descriptorFor` marks its slot consumed as a side effect,
- * so that call has to stay on the branch that actually opens the pass — a slot
- * consumed on a frame its pass never ran makes the HUD decode stale ticks as
- * live.
+ * so that call has to stay on the branch that actually opens the pass — a
+ * slot consumed on a frame its pass never ran makes the HUD decode stale
+ * ticks as live.
  */
 export function beginClearPass(
   enc: GPUCommandEncoder,

@@ -5,9 +5,8 @@
  * just ships garbage, and on WebKit a mislaid uniform drops the frame with
  * no error.
  *
- * 20 lanes for 18 members (`starsDeposit`/`starsDecay` pushed the struct past
- * its old exact-16 fit) — the uniform address space rounds a struct's size up
- * to a multiple of 16 bytes regardless, so lanes 18/19 are slack.
+ * 20 lanes for 18 members — the uniform address space rounds a struct's
+ * size up to a multiple of 16 bytes, so lanes 18/19 are slack.
  */
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';

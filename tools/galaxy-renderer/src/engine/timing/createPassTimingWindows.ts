@@ -2,8 +2,6 @@
  * createPassTimingWindows — per-slot rolling means over `gpuTimingService`
  * frames, in the shape the HUD reads.
  *
- * Two things this owns and why:
- *
  *  - `timings()` walks `slots` in the caller's declared order rather than
  *    Map-insertion order: a slot that only starts running later (the tool's
  *    grade trailer) would otherwise insert at the end and pin itself there,

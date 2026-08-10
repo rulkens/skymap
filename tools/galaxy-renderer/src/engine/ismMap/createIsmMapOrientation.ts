@@ -3,15 +3,13 @@
  * generator's packed map (this module only ever sees `sourceTexture`, never
  * whether the generator that wrote it is even running): field blur
  * (separable) -> tensor -> tensor blur (separable) -> coherence, plus the
- * overlay that presents it.
- *
- * Entirely GPU-side: no readback to run FROM, no JS blur, no upload back. The
- * source is a texture WebGPU zero-initialises, so `dispatch` is safe to call
- * before the generator has ever run.
+ * overlay that presents it. Entirely GPU-side: no readback to run FROM, no
+ * JS blur, no upload back. The source is a texture WebGPU zero-initialises,
+ * so `dispatch` is safe to call before the generator has ever run.
  *
  * The perf GATE (is any consumer live?) stays with the caller — it reads the
  * render bag and the field tuning, neither of which this module should know
- * about. What lives here is every resource and the pass order.
+ * about.
  */
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {

@@ -1,13 +1,12 @@
 /**
  * IsmMapSeedingLanes — the ISM-map "seeding" debug view's three scalars,
  * `bubbleView`'s free .y/.z/.w lanes (io.wesl). Not a channel isolation like
- * `IsmMapChannelWeights` — this is the exact composite density
+ * `IsmMapChannelWeights`: this is the exact composite density
  * `dustParticleCloud.ts`'s S1 CDF sampler consumes, rendered so placement can
- * be judged directly rather than inferred from raw channels. Mirrors
- * `dustParticleCloud.ts`'s density callback in `ismMapPresent.wesl` — change
- * both together. The per-ring means these normalise against ride a SEPARATE
- * storage buffer (`createIsmMapOutput.ts`'s `writeRingMeans`), not a lane
- * here — 512 floats has no home in a vec4.
+ * be judged directly. Mirrors `dustParticleCloud.ts`'s density callback in
+ * `ismMapPresent.wesl` — change both together. Per-ring means ride a
+ * SEPARATE storage buffer (`createIsmMapOutput.ts`'s `writeRingMeans`); 512
+ * floats has no home in a vec4.
  */
 
 export type IsmMapSeedingLanes = {

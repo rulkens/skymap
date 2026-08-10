@@ -82,7 +82,7 @@ export type FieldHeaderInput = {
    * in NDC units (0 = off). Absent packs 0, the same "only the HII header
    * carries a real value" asymmetry as `hiiTexture`/`youngStars` above — the
    * field header's draw (and `dustMap.wesl`, which binds only that header)
-   * stay byte-identical to before this lane existed.
+   * never reads this lane, so leaving it absent doesn't change their bytes.
    */
   readonly quadCapNdc?: number;
   /**

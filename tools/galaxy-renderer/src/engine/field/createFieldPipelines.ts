@@ -1,23 +1,12 @@
 /**
  * createFieldPipelines — the analytic field's six render pipelines (field
  * splat, three HII splats, dust-column map, dust-map presentation) and every
- * `layout: 'auto'` bind group built against them. `createGalaxyEngine.ts`
- * constructs this before `model`/`targets` exist (their own constructors take
- * this module's rebuild functions as callbacks), so nothing here reads
- * `model`'s comps buffers or `targets.dustMapTex` at construction — only
- * `getDustMapTex` and the explicit `rebuild*` calls below ever touch them,
- * always later, once both are live.
- *
- * AUTHORITATIVE 'auto'-layout doc — the one copy; every builder below just
- * points back here. `layout: 'auto'` derives a pipeline's bind-group layout
- * from the bindings its OWN vertex+fragment PAIR statically references, never
- * from what a byte-identical shader used by another pipeline references. Two
- * pipelines sharing a module whose two entry points read a binding with
- * divergent stage visibility fail the group-equivalent check — why field,
- * young, erosion, extras, dustMap and dustPresent are six separate module
- * pairs. Binding an entry the layout doesn't declare is a validation error,
- * not a no-op, so every builder's entry list must match its pipeline's own
- * shaders exactly, byte for byte.
+ * `layout: 'auto'` bind group built against them, constructed before
+ * `model`/`targets` exist via callbacks (`getDustMapTex`, `rebuild*`).
+ * `layout: 'auto'` derives a bind-group layout from a pipeline's OWN
+ * vertex+fragment pair, so a binding two pipelines' modules disagree on
+ * (stage visibility) forces separate module pairs per pipeline — a mismatched
+ * entry list is a validation error, not a no-op.
  */
 import type { HiiTierKind } from '../../../@types/engine/HiiTierKind';
 import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
@@ -171,8 +160,8 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   // `milkyWay/field/dustMap/`: one instanced quad per PRIMARY dust component
   // (dustMap/vertex.wesl's own silhouette math via `lib/splatSilhouette`),
   // additively accumulating four depth-sliced optical depths into
-  // `dustMapTex`. Replaces the former per-fragment dust loop — see
-  // dustAttenuation.wesl's header.
+  // `dustMapTex` — see dustAttenuation.wesl's header for how the shader
+  // consumes it.
   const dustMapVsMod = makeShader(dustMapVsWgsl, 'galaxy:dustMap.vertex');
   const dustMapFsMod = makeShader(dustMapFsWgsl, 'galaxy:dustMap.fragment');
   const dustMapPipe = device.createRenderPipeline({

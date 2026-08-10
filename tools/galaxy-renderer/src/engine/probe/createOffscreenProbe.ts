@@ -1,13 +1,11 @@
 /**
  * createOffscreenProbe — the two headless readback paths: `sample`, the smoke
- * check "did anything render at all", and `grab`, the RGBA image the descriptor
- * matcher scores against reference photographs.
- *
- * Both re-render the current camera and run the SAME `encodePost` the on-screen
- * frame does, so a live grade trailer is in the image either scores — that
- * parity is the whole reason this takes `encodePost` rather than compositing
- * its own way. This module owns its three persistent allocations outright; the
- * engine's ownership ledger must not also hold them.
+ * check "did anything render at all", and `grab`, the RGBA image the
+ * descriptor matcher scores against reference photographs. Both re-render
+ * the current camera and run the SAME `encodePost` the on-screen frame does,
+ * so a live grade trailer is in the image either scores. Owns its three
+ * persistent allocations outright; the engine's ownership ledger must not
+ * also hold them.
  */
 import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
 

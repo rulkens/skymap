@@ -1,33 +1,12 @@
 /**
- * createGalaxyEngine — GPU orchestration: the WebGPU device, every pipeline,
- * render target and bind group, and the per-frame encode. What a galaxy IS —
- * geometry, mixtures, generated buffers, the SSPISM map — lives in
- * `model/createGalaxyModel.ts`, and the orbit camera in
- * `createOrbitCameraInput`; both are driven from here.
- * `timing/timingSlots.ts` is the one account of the pass chain — a second copy
- * here would be the copy that drifts.
- *
- * ## The whole chain is the APP's, not this tool's
- *
- * A look tuned here only transfers while the two chains ARE one chain, so
- * nothing about the image is hand-matched: the sprite draws are the runtime's
- * `milkyWay/sprites/` shaders over its `io.wesl` struct, the analytic field's are
- * its `milkyWay/{field,ismMap}/`, and the post chain is the runtime's
- * `createAdditiveUpsample` / `createBloomPyramid` / `createCompositor` — all
- * symlinked into this tool's WESL root (`wesl.toml`). Editing any of those
- * shaders changes both apps.
- *
- * What could NOT be shared is the ORCHESTRATION: `runBloom` and
- * `createMilkyWayCloudRenderer` each need engine-side context this tool has no
- * equivalent of (a `ReadyFrameContext`; one uniform buffer per draw, where this
- * tool draws N extras through one pipeline). So `encodeBloomPyramid` duplicates
- * `runBloom`'s pass ORDER and the cloud pipelines are built here — a change to
- * either runtime SEQUENCE has to be mirrored, a change to any shared SHADER
- * arrives for free.
- *
- * Design provenance: `docs/research/milky-way/` (its README indexes the files)
- * and `docs/superpowers/specs/completed/2026-07-02-galaxy-renderer-tool-design.md`;
- * `tools/galaxy-renderer/README.md` covers the controls and the perf HUD.
+ * createGalaxyEngine — GPU orchestration: device, pipelines, render targets,
+ * bind groups, per-frame encode. Galaxy state lives in
+ * `model/createGalaxyModel.ts`; camera in `createOrbitCameraInput`;
+ * `timing/timingSlots.ts` is the one account of the pass chain. Shaders here
+ * are the runtime's own, symlinked via `wesl.toml` — editing one changes both
+ * apps. Only the ORCHESTRATION is duplicated (`runBloom`'s pass order, the
+ * cloud pipelines), so a runtime sequence change must be mirrored here by
+ * hand.
  */
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
@@ -111,9 +90,9 @@ const HDR: GPUTextureFormat = 'rgba16float';
  * Format of `dustMapTex`, the dust-column map: four channels, one optical
  * depth per depth slice (tau_0..tau_3 — see io.wesl's dustSlices doc and
  * dustMap.wesl's fs), `float16` for headroom on a summed column that has no
- * natural upper bound the way a normalized colour does. Was `rg16float`
- * (tau, tau*tPeak) before the depth-sliced attenuation fix — a single
- * tau-weighted mean depth put a hard 50% floor on obscuration.
+ * natural upper bound the way a normalized colour does. A single tau-weighted
+ * mean depth puts a hard 50% floor on obscuration, which is why this needs
+ * one channel per slice rather than a smaller packed encoding.
  */
 const DUST_MAP_FORMAT: GPUTextureFormat = 'rgba16float';
 
@@ -706,9 +685,9 @@ export async function createGalaxyEngine(
     // target different buffers. `fadeAlpha` carries `debugGalaxyWeight` too —
     // dimming the legacy sprites (primary AND extras) under an active debug
     // view exactly like the analytic field's own fieldSplat/fragment.wesl and
-    // hiiSplat/shadeCommon.wesl (hiiExposureMultiply) multiplies do,
-    // rather than the old suppression that hid the primary's sprites outright
-    // but deliberately left extras' alone (see the field/scene passes below).
+    // hiiSplat/shadeCommon.wesl (hiiExposureMultiply) multiplies do — a
+    // symmetric dim across primary and extras, not a hard suppression of the
+    // primary alone (see the field/scene passes below).
     const tuning = toMilkyWayTuning(render, model.starCount);
     const aggregatePx = targets.reducedSize(render.aggregateDivisor);
     packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * galaxyWeight, cloudData);
@@ -809,10 +788,10 @@ export async function createGalaxyEngine(
     // `hii:extras`' — read once, here, so the pass that fills a tier's target
     // and the scene composite that reads it can't drift into compositing one
     // this frame never cleared, which sums the previous frame's content into
-    // HDR with nothing to catch it. Independent per tier, unlike the old
-    // single `drawHii` flag this replaces: a galaxy with DIG content but no
-    // shells/young/extras must still skip the OTHER three targets' composite
-    // push, which one shared flag could not tell apart.
+    // HDR with nothing to catch it. Independent per tier: a galaxy with DIG
+    // content but no shells/young/extras must still skip the OTHER three
+    // targets' composite push, which a single shared flag could not tell
+    // apart.
     const tierSegments = HII_TIERS.map((tier) => ({
       tier,
       segment: findHiiSegment(model.hiiSegments, tier.label),
@@ -878,20 +857,17 @@ export async function createGalaxyEngine(
       });
 
       // Every `HII_TIERS` row's own pass, into its own target at its own
-      // divisor (`allocateTier`'s own doc) — DIG's split used to be the only
-      // tier with its own target; shells and young stars get the SAME
-      // treatment now instead of sharing `hiiTex`'s coarser one. One pass per
-      // tier WITH CONTENT, always into a freshly cleared target (a private
-      // target, so no tile-reload cost the way reopening one shared target
-      // per tier would cost on TBDR hardware), and its timing slot consumed
-      // the same way `'hii:dig'`'s always was: unconditionally with respect
-      // to `timing.enabled` — no more HUD-gated sub-pass split, because every
-      // tier already has its own target, so billing it separately is free on
-      // every frame now, not just while the HUD is live. Still conditional on
-      // content: `timing.descriptorFor` marks a slot consumed as a side
-      // effect (see `beginClearPass`'s own doc), so calling it only inside
-      // `if (segment)` is what makes a tier's HUD row vanish on the frames it
-      // draws nothing, exactly like every other conditional slot in this file.
+      // divisor (`allocateTier`'s own doc): shells, young stars, and DIG each
+      // get a private target rather than sharing `hiiTex`'s coarser one,
+      // since a shell or young-stars association is small and bright enough
+      // that a coarser shared target would collapse it under a texel. One
+      // pass per tier WITH CONTENT, into a freshly cleared target — a private
+      // target avoids the tile-reload cost of reopening one shared target per
+      // tier on TBDR hardware. `timing.descriptorFor` marks a slot consumed as
+      // a side effect (see `beginClearPass`'s own doc), so calling it only
+      // inside `if (segment)` is what makes a tier's HUD row vanish on the
+      // frames it draws nothing, exactly like every other conditional slot in
+      // this file.
       for (const { tier, segment } of tierSegments) {
         if (!segment) continue;
         encodeSplatPass({

@@ -1,28 +1,14 @@
 /**
  * deriveMilkyWayFade — the app's Milky-Way visibility fade, evaluated against
- * this tool's camera. The app's own composition is
- * `services/engine/frame/milkyWayCloudLiveness.ts`; it takes an `EngineState`
- * and so cannot be called here, but the two PRIMITIVES it folds are imported
- * rather than restated, and the band edges seed from the app's constants.
- *
- * ## The anchor is not the orbit target
- *
- * The app keys both bands on `hypot(drawCamPos)` — distance from the
- * heliocentric render origin, i.e. from the SUN. This tool's camera orbits the
- * generator origin, which is the galactic CENTRE. `FadeAnchor` makes the
- * difference a control; the Sun's generator-space position is derived here
- * (never hardcoded) from the two numbers that already own it: `|Sgr A* world
- * position|` is the Sun→centre distance, and `milkyWayModelMatrix`'s local +x
- * column is the direction from the centre TOWARD the Sun's line of sight, so
- * the Sun sits at −x by exactly that distance.
- *
- * ## Why fadeBand runs the apparent-size band too
- *
- * `milkyWayFadeAlpha` is `smoothstep(GONE_PX, FULL_PX, px)` over two module
- * constants — it has no tunable edges and cannot report the pixel size the
- * readout needs. `fadeBand` produces the identical curve for `fullAt > goneAt`,
- * so at the seeded edges this IS `milkyWayFadeAlpha`, with the edges movable
- * and `apparentPx` in hand.
+ * this tool's camera. Imports the app's two fade PRIMITIVES rather than
+ * restating them; band edges seed from the app's own constants. The app keys
+ * both bands on distance from the SUN; this tool's camera orbits the
+ * GALACTIC CENTRE, so `FadeAnchor` makes the difference a control — the
+ * Sun's generator-space position is derived here (never hardcoded) from
+ * `|Sgr A* world position|` and `milkyWayModelMatrix`'s own +x column.
+ * `fadeBand` also covers the apparent-size band: `milkyWayFadeAlpha` is a
+ * fixed `smoothstep` with no tunable edges, but produces the identical curve
+ * at the seeded ones.
  */
 
 import type { FadeAnchor } from '../../../@types/engine/FadeAnchor';

@@ -1,22 +1,23 @@
 /**
- * packFieldUniforms — the packers for the analytic Milky Way field pass,
- * matching `milkyWay/field/io.wesl`'s `FieldUniforms` header and `comps`
- * storage array byte-for-byte. THAT FILE'S HEADER IS THE OFFSET AUTHORITY; a
- * wrong index here produces no error, just silently garbage uniforms.
+ * Byte-layout contract (comments.md budget exception): matches
+ * `milkyWay/field/io.wesl`'s `FieldUniforms` header and `comps` storage array
+ * byte-for-byte. THAT FILE'S HEADER IS THE OFFSET AUTHORITY; a wrong index
+ * here produces no error, just silently garbage uniforms.
+ *
+ * packFieldUniforms — the packers for the analytic Milky Way field pass.
  *
  * Two packers, not one, because the header and the components change at
  * different rates: `packFieldHeaderUniforms` runs every `drawFrame` (its
  * `exposure` lane tracks the per-frame visibility fade), while
  * `packFieldComponents` only needs to run when a mixture actually changes —
  * a galaxy (re)generated, an extra set replaced, or the field tuning
- * dragged. Baking both into one packed buffer, as this module used to,
- * meant repacking every background galaxy's Gaussians on every frame for no
- * reader. The split also drops the component cap a uniform array forced: the
- * old layout's 64 KiB uniform held at most ~1000 components (~3 galaxies'
- * worth); `comps` is now a read-only storage array with no such ceiling, so
- * N background extras can outgrow it (`createGalaxyModel.ts` sizes and
- * grows the backing GPUBuffer; `GALAXY_FIELD_MAX_COMPONENTS` remains only
- * the PER-GALAXY cap `buildGalaxyFieldMixture` enforces).
+ * dragged. A single packed buffer would force repacking every background
+ * galaxy's Gaussians every frame for no reader, and would cap `comps` around
+ * ~1000 components (~3 galaxies' worth) at a 64 KiB uniform limit; `comps` is
+ * instead a read-only storage array with no such ceiling, so N background
+ * extras can outgrow it (`createGalaxyModel.ts` sizes and grows the backing
+ * GPUBuffer; `GALAXY_FIELD_MAX_COMPONENTS` remains only the PER-GALAXY cap
+ * `buildGalaxyFieldMixture` enforces).
  *
  * ## Why a camera BASIS and not an inverse view-projection
  *
@@ -207,17 +208,14 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   // bubbleView 48..51 = (intensity, ismMapSeedingWeight, ismMapSeedingCap,
   // ismMapSeedingGlobalMean). .y/.z/.w ride bubbleView's free lanes for the
   // same reason dustDetail's .yz do (io.wesl's doc) — ismMapPresent.wesl's
-  // "seeding" debug view, dust-seeding spike. .z used to be
-  // ismMapSeedingMeanLegacy, freed when the seeding view's legacy term was
-  // deleted, then briefly a tempering exponent (gamma) that the placement
-  // formula no longer has (deleted for a single knob — placement CAP —
-  // instead); it carries that cap now. .w is the mean of the map's own
-  // per-ring dust means (`arrayMean(ismMapRingMeans(...))`, `createGalaxyModel.ts`'s
-  // `ismMapSeedingView` getter), the divisor of the radial-envelope term
-  // BOTH sides of the CDF density share — see io.wesl's own doc and
-  // dustParticleCloud.ts's placement comment for why per-RING, not one flat
-  // map-wide mean, is what keeps the cap from also flattening the radial
-  // profile. The per-ring means themselves ride a separate storage buffer
+  // "seeding" debug view. .z carries the placement CAP (`ismMapSeeding.cap`),
+  // .w the mean of the map's own per-ring dust means
+  // (`arrayMean(ismMapRingMeans(...))`, `createGalaxyModel.ts`'s
+  // `ismMapSeedingView` getter) — the divisor of the radial-envelope term
+  // both sides of the CDF density share. Per-RING, not one flat map-wide
+  // mean, is what keeps the cap from also flattening the radial profile (see
+  // io.wesl's own doc and dustParticleCloud.ts's placement comment). The
+  // per-ring means themselves ride a separate storage buffer
   // (createIsmMapOutput.ts's ringMeansBuffer/writeRingMeans) — 512 floats has
   // no home in a vec4.
   out[48] = debugViews.bubble;
@@ -279,7 +277,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
  * caller concatenates the central galaxy's emission mixture, every extra's
  * — already transformed into world space, see `transformGalaxyFieldComponent.ts`
  * — then the central galaxy's dust mixture last) into the storage buffer's
- * bytes. Unlike the old uniform packer, there is no tail to zero: bytes past
+ * bytes. There is no tail to zero: bytes past
  * `mixture.length` are never read even when the backing GPUBuffer's capacity
  * (grown, never shrunk) is larger. `fieldSplatPipe`'s draw instances
  * `emissionCount` quads, NOT `mixture.length` — dust components ride this

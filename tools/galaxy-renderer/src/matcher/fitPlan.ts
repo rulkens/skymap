@@ -1,15 +1,13 @@
 /**
  * fitPlan — per-category descriptor-loss weights + optimisable param ranges
- * for `autoFit`. Ported verbatim from the spike's `galaxy-matcher.js`; the weight
- * values, param bounds, and their order are load-bearing (they set the
- * coordinate-descent's step sizes via `(hi - lo)`), so this is a straight
- * transcription rather than a "cleaned up" table.
- *
- * `armOK = q > 0.4` gates the arm-harmonic channel: near edge-on (q ≤ 0.4)
- * the azimuthal DFT `computeDescriptor` extracts is unreliable (foreshortened
- * arms alias into spurious harmonics), so the arm weight drops from 5 to 1
- * and the discrete arm-count sweep is skipped entirely (`arms: null`) rather
- * than searched against noise.
+ * for `autoFit`. The weight values, param bounds, and their order are
+ * load-bearing (they set the coordinate-descent's step sizes via
+ * `(hi - lo)`), so this is a straight transcription, not a "cleaned up"
+ * table. `armOK = q > 0.4` gates the arm-harmonic channel: near edge-on
+ * (q ≤ 0.4) the azimuthal DFT `computeDescriptor` extracts is unreliable
+ * (foreshortened arms alias into spurious harmonics), so the arm weight
+ * drops from 5 to 1 and the discrete arm-count sweep is skipped entirely
+ * (`arms: null`) rather than searched against noise.
  */
 
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';

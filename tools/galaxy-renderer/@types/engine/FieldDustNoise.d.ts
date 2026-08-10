@@ -10,7 +10,7 @@ export type FieldDustNoise = {
   readonly tileUnits: number;
   /** Erosion strength — 0 disables the multiplier and the shader branches out entirely (`GalaxyDustCloudParams.texture`). */
   readonly amplitude: number;
-  /** Index WITHIN the dust slice (relative to `dustOffset`) where the particle-cloud components start. Always 0 now — the smooth lane tier this used to skip past was deleted, so the particle cloud IS the dust slice. */
+  /** Index WITHIN the dust slice (relative to `dustOffset`) where the particle-cloud components start. Always 0 — the particle cloud IS the dust slice, not a lane within it, so there is no offset to skip. */
   readonly cloudOffset: number;
   /** Signed-power exponent shaping the noise about its midpoint (dustMap.wesl's `dustNoiseMultiplier`) — `1 / GalaxyDustCloudParams.textureContrast`, inverted here so a higher slider value hardens filament edges. */
   readonly contrastExp: number;

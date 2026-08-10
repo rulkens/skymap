@@ -1,7 +1,9 @@
 /**
+ * Byte-layout contract (comments.md budget exception): matches
+ * `milkyWay/sprites/io.wesl`'s `Uniforms` struct byte-for-byte.
+ *
  * packCloudUniforms — the 208-byte uniform packer for the star + dust
- * billboard passes, matching `milkyWay/sprites/io.wesl`'s `Uniforms` struct
- * byte-for-byte.
+ * billboard passes.
  *
  * ## Why the tool packs the APP's struct
  *
@@ -85,8 +87,7 @@ const IDENTITY_MODEL = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
  *                   canvas (see the module header).
  * @param tuning     The live look knobs, the app's own `MilkyWayTuning`.
  * @param fadeAlpha  The composed visibility fade (`deriveMilkyWayFade`).
- *                   Defaults to 1 — no fade — which is what this packer emitted
- *                   before the fade was ported.
+ *                   Defaults to 1 — no fade — for callers that don't track it.
  */
 export function packCloudUniforms(
   viewProj: Float32Array,

@@ -434,10 +434,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       },
     },
     {
-      // The old standalone "Legacy sprite stars" checkbox was folded into
-      // LEGACY MODEL's own header pill by the group restructure — same
-      // `render.spriteField` state, same treatment as `pill:analytic-model`
-      // above (its sibling header pill on the other group).
+      // LEGACY MODEL's own header pill toggles `render.spriteField`, same
+      // treatment as `pill:analytic-model` above (its sibling header pill on
+      // the other group).
       name: 'pill:legacy-model',
       run: async (page) => {
         const pill = page.getByRole('checkbox', { name: 'Toggle legacy model' });

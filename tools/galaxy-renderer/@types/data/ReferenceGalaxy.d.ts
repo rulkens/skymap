@@ -1,20 +1,13 @@
 /**
  * ReferenceGalaxy — one entry of the spike's REFS gallery
- * (`Galaxy Renderer.dc.html`): prose + a param preset + a camera
- * pose for a real named galaxy the generator can be dialled toward.
+ * (`Galaxy Renderer.dc.html`): prose + a param preset + a camera pose for a
+ * real named galaxy the generator can be dialled toward.
  *
- * The spike's object literal declares `view` twice — once as a display
- * string ('Face-on', 'Edge-on (6°)', …) and again a few lines later as the
- * `{ az, el, dist }` pose. In plain JS the second key silently overwrites
- * the first, so the display string never actually reached the UI. That's a
- * duplicate-key bug, not a real union — this type un-braids it into two
- * named fields (`viewLabel` for the string, `view` for the pose) so both
- * survive.
- *
- * The spike also carried a `cat` field per entry, but morphological
- * category is a pure function of `params.type` (`classifyHubbleType`), so
- * duplicating it here would just be a second source of truth that could
- * drift from the type string. Dropped; callers derive it on demand.
+ * The spike's object literal declared `view` twice — a display string, then
+ * a few lines later the `{ az, el, dist }` pose — so the second key silently
+ * won and the string never reached the UI; split here into `viewLabel`
+ * (string) and `view` (pose). No `cat` field: morphological category is
+ * `classifyHubbleType(params.type)`, derived on demand rather than duplicated.
  */
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { ViewPose } from '../engine/ViewPose';

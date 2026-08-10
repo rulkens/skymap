@@ -1,24 +1,14 @@
 /**
  * autoFit — coordinate-descent optimiser that drives a `GalaxyEngineHandle`
- * toward a reference `GalaxyDescriptor`. Ported from the spike's
- * `galaxy-matcher.js`: for spirals/barred it first sweeps the discrete arm
- * count (1..6), accepting strictly-better counts as it goes, then runs
- * `passes` rounds of ±1D descent over `fitPlan`'s param ranges with a
- * shrinking step (`(hi-lo)·0.32·0.5^pass` per pass), accepting any trial that
- * beats the current loss by more than `1e-6`.
- *
- * One deliberate deviation from the spike: `engine.setParams` is awaited
- * before `grab` reads the frame. The spike's bespoke engine updated its
- * canvas synchronously enough for the race to not matter in practice, but
- * `GalaxyEngineHandle.setParams` packs the generation UBO and dispatches the
- * GPU compute passes, resolving only once that work is submitted — so
- * skipping the await would score whatever frame was on screen from the
- * *previous* candidate.
- *
- * Runs at a reduced `fitStars` budget (default 220000, well under the
- * spike's normal 600000) so each candidate renders fast enough for a live
- * fit loop; `finish()` restores the seed's full star count on the winning
- * params so the caller doesn't have to re-render before showing the result.
+ * toward a reference `GalaxyDescriptor`: for spirals/barred it first sweeps
+ * the discrete arm count (1..6), then runs `passes` rounds of ±1D descent
+ * over `fitPlan`'s param ranges with a shrinking step
+ * (`(hi-lo)·0.32·0.5^pass`), accepting any trial that beats the current loss
+ * by more than `1e-6`. `engine.setParams` is awaited before `grab` reads the
+ * frame — it resolves only once its GPU compute passes are submitted, so
+ * skipping the await would score the *previous* candidate's frame. Runs at a
+ * reduced `fitStars` budget (default 220000) so each candidate renders fast
+ * enough for a live loop; `finish()` restores the full seed star count.
  */
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../@types/matcher/GalaxyDescriptor';

@@ -1,9 +1,12 @@
 /**
- * computeDescriptor — extract a rotation- and scale-invariant `GalaxyDescriptor`
- * from an RGBA buffer (a real photo or one of our renders). Ported verbatim
- * from the spike's `galaxy-matcher.js`; the numeric constants and the exact order of
- * operations are load-bearing, since the fit loop compares descriptors of the
- * reference and the render and any drift here shifts the optimum.
+ * Algorithmic derivation (comments.md budget exception): the numbered
+ * pipeline below is the source of truth for `computeDescriptor`'s numeric
+ * constants and operation order — the fit loop compares descriptors of the
+ * reference and the render, so any drift here shifts the optimum.
+ *
+ * computeDescriptor — extract a rotation- and scale-invariant
+ * `GalaxyDescriptor` from an RGBA buffer (a real photo or one of our
+ * renders).
  *
  * The pipeline, in order:
  *   1. Estimate the sky background as the median luma of the border ring, and

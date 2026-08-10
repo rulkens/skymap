@@ -1,17 +1,18 @@
 /**
+ * Byte-layout contract (comments.md budget exception): this instance buffer
+ * must match `milkyWay/field/bubblePresent.wesl`'s vertex attributes
+ * byte-for-byte — a mismatch is silent garbage on screen, not a crash.
+ *
  * packBubbleInstances — packs the bubble-view overlay's two independent
  * placement lists (relic bubbles, HII cavities — dustBubblePlacements.ts)
- * into one instance buffer, byte-for-byte matching
- * `milkyWay/field/bubblePresent.wesl`'s vertex attributes: `@location(0)`
- * `vec4<f32>` (center.xyz, radius) and `@location(1)` `f32` kind, at an
- * instance-stepped `arrayStride` of `BUBBLE_RECORD_FLOATS * 4`. A mismatch
- * here is silent garbage on screen, not a crash.
+ * into one instance buffer: `@location(0)` `vec4<f32>` (center.xyz, radius)
+ * and `@location(1)` `f32` kind, at an instance-stepped `arrayStride` of
+ * `BUBBLE_RECORD_FLOATS * 4`.
  *
  * Relics land first (kind 0), cavities second (kind 1) — the shader's own
- * palette switch (`select(RELIC_COLOR, CAVITY_COLOR, kind > 0.5)`) depends
- * on the lane value alone, not on record order, but callers (
- * `createGalaxyModel.ts`'s `rebuildBubblePlacements`) size their buffer to
- * `relics.length + cavities.length` and expect that contiguous layout.
+ * palette switch depends on the lane value alone, not record order, but
+ * `createGalaxyModel.ts`'s `rebuildBubblePlacements` sizes the buffer to
+ * `relics.length + cavities.length` and expects that contiguous layout.
  */
 import type { DustBubblePlacement } from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
 

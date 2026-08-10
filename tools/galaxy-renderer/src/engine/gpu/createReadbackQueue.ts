@@ -2,17 +2,14 @@
  * createReadbackQueue — texture-to-CPU readbacks, serialized through ONE
  * promise chain no matter how many streams share the queue.
  *
- * The single chain is the whole point, and it is load-bearing twice over.
  * `mapAsync` throws if the buffer is already mapped, so a fast slider drag
  * that re-requests before the last map lands must queue rather than race —
  * and the copy/submit must sit INSIDE the chain with the map, not run
  * eagerly, or a later request submits into a buffer an earlier one still has
- * mapped ('used in submit while mapped'). Two streams on two independent
- * chains reintroduce exactly that, which is why `stream()` hands out separate
- * TOKENS but never a separate chain.
- *
- * Tokens are per-stream: a request supersedes only its own stream's pending
- * work, so an unrelated trigger cannot drop a still-pending readback.
+ * mapped. Two independent chains reintroduce exactly that, which is why
+ * `stream()` hands out separate TOKENS but never a separate chain — tokens
+ * are per-stream, so an unrelated trigger cannot drop a still-pending
+ * readback.
  */
 
 /** One readback source: a texture, its staging buffer, and how to turn the mapped bytes into a result. */
