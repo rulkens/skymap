@@ -153,7 +153,6 @@ vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
 // deferred-manifest test below overrides this once with mockReturnValueOnce.
 vi.mock('../../../../src/services/loading/dataManifest', () => ({
   loadDataManifest: vi.fn(async () => {}),
-  resolveDataPath: vi.fn((p: string) => p),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
@@ -569,17 +568,23 @@ describe('wireSlots', () => {
   });
 
   it('starts no load until the data manifest has resolved', async () => {
-    // Same setup as "returns synchronously ... and fires `loading` status"
-    // above — plain, unfired point slots, no sidecar-fetcher assertions.
-    // The only novelty here is the deferred manifest: (1) before it
-    // resolves, reevaluateDemand hasn't run yet, so nothing is loaded; (2)
-    // after it resolves, drain the same way the other test does and expect
-    // the exact same four `.load()` calls — the default boot set, unchanged.
+    // Point-slot setup copied from "returns synchronously ... and fires
+    // `loading` status" above — plain, unfired point slots, same drain, same
+    // four `.load()` assertions. Also pins two sidecar fetchers from the
+    // default boot set (mcpm + structureCatalog — see the sibling
+    // "demand loop loads the default boot sidecar set" test) so a future
+    // refactor that split sidecar dispatch onto a second, differently-awaited
+    // path would fail here, not just on the point-slot half. Famous-galaxies
+    // -meta is left out: its demand predicate reads Famous's slot state,
+    // which needing an extra pre-fire here would collide with the point-slot
+    // assertions above (a fired slot is no longer "about to load").
     let resolveManifest!: () => void;
     const deferred = new Promise<void>((resolve) => {
       resolveManifest = resolve;
     });
     vi.mocked(loadDataManifest).mockReturnValueOnce(deferred);
+    vi.mocked(mcpmFetcher).mockClear();
+    vi.mocked(structureCatalogFetcher).mockClear();
 
     const sdssSlot = makeFakeSlot('sdss-points');
     const twoMrsSlot = makeFakeSlot('2mrs-points');
@@ -604,6 +609,8 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).not.toHaveBeenCalled();
     expect(gladeSlot.load).not.toHaveBeenCalled();
     expect(famousSlot.load).not.toHaveBeenCalled();
+    expect(mcpmFetcher).not.toHaveBeenCalled();
+    expect(structureCatalogFetcher).not.toHaveBeenCalled();
 
     resolveManifest();
     await pending;
@@ -616,6 +623,8 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
+    expect(mcpmFetcher).toHaveBeenCalled();
+    expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
   it('assigns all five impostor subsystems onto state.subsystems', async () => {
