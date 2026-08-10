@@ -2,8 +2,7 @@
 // texture: three band-limited octaves of a baked scattered-point volume
 // (starGrainBake.wesl), giving an association splat many independent
 // unresolved stars rather than the shared ridged ISM texture hiiNoise.wesl
-// gives shells/DIG. Moved verbatim from splat.wesl (the per-splat-type
-// split) — see that file's git history for the calibration narrative.
+// gives shells/DIG.
 
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::warpNoiseTex;

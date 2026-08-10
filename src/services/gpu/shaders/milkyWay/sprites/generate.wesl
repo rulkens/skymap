@@ -1,6 +1,8 @@
-// milkyWay/sprites/generate.wesl — the shared GPU galaxy-generation library: a stateless
-// hash RNG plus every population's generation math, consumed by the two
-// compute entry points (star pass, dust pass).
+// milkyWay/sprites/generate.wesl — shader-math derivation file (exceeds the usual
+// header/comment budget on that basis): the shared GPU galaxy-generation library, a
+// stateless hash RNG plus every population's generation math, consumed by the two
+// compute entry points (star pass, dust pass). Slot budgets are a caller contract —
+// every helper's reserved-slot count is load-bearing, not decorative.
 //
 // ## Why a STATELESS hash instead of a serial PRNG
 //

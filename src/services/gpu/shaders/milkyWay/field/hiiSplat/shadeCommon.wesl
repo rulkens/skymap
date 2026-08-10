@@ -23,7 +23,7 @@ const QUAD_FEATHER_START: f32 = 0.7;
 // the ray coeffs, the base (dust-attenuated, not yet texture-modulated)
 // emission, this component's own comps rows, and the ray origin/direction/
 // near-vector every texture-modulation term re-derives its own sample point
-// from (splat.wesl's former "cheap to recompute, avoids a varying" idiom).
+// from (cheap to recompute, avoids a varying).
 struct HiiComponentShading {
   coeffs: vec3<f32>,
   emission: vec3<f32>,
@@ -38,8 +38,7 @@ struct HiiComponentShading {
 
 // baseHiiShading — ray reconstruction, the SPLAT_CUT early-out and the base
 // dust-attenuated emission every HII fragment starts from. Callers must
-// return vec4(0) without evaluating anything else when '.cut' is true,
-// matching splat.wesl's former early return.
+// return vec4(0) without evaluating anything else when '.cut' is true.
 fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
   let tanHalfFov = u.params.x;
   let aspect = u.params.y;
@@ -88,8 +87,8 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
 // hiiNearFadeActive — the fade window's own GUARD: start <= end or start <=
 // 0 disables the fade. Shared by vertex.wesl's vs (which must skip clipping
 // a component the eye is still approaching) and hiiNearFade below (which
-// recomputes the smoothstep once the fragment stage is reached) — both used
-// to write this predicate out independently.
+// recomputes the smoothstep once the fragment stage is reached), so the two
+// can't drift onto different definitions of "is the fade active".
 fn hiiNearFadeActive(fadeStart: f32, fadeEnd: f32) -> bool {
   return fadeStart > fadeEnd && fadeStart > 0.0;
 }

@@ -1,54 +1,40 @@
-// milkyWay/sprites/stars.wesl — the star billboard pass. Each generated star is
-// one instanced point expanded on the GPU into a camera-facing quad, shaded
-// as a soft radial glow, and drawn with ADDITIVE blending (pipeline-side) so
-// overlapping stars sum their light — the physically-correct model for
-// unresolved point sources.
+// milkyWay/sprites/stars.wesl — shader-math derivation file (exceeds the
+// usual header budget on that basis): the star billboard pass. Each
+// generated star is one instanced point expanded on the GPU into a
+// camera-facing quad, shaded as a soft radial glow, and drawn with ADDITIVE
+// blending (pipeline-side) so overlapping stars sum their light — the
+// physically-correct model for unresolved point sources.
 //
-// The galaxy-renderer tool draws THIS pass — its shader root symlinks
-// milkyWay/sprites/ (see the tool's wesl.toml), so an edit here changes both.
+// The galaxy-renderer tool draws THIS pass too, through a directory symlink
+// onto milkyWay/sprites/ (see the tool's wesl.toml) — one shader, two
+// consumers, so an edit here changes both.
 //
-// ## What changed vs the tool's own star.wesl, since deleted
+// ## Why the screen-size clamp is flux-conserving
 //
-// 'The tool' below means that deleted predecessor, which this file grew out
-// of and replaced.
+// The vertex stage clamps each sprite's on-screen half-extent to
+// [starPxMin, starPxMax] pixels: starPxMin is the anti-sparkle FLOOR (a
+// distant star never shrinks below a stable dot, so it stops twinkling as
+// sub-pixel coverage flickers); starPxMax CAPS foreground swell on close
+// flythroughs. Resizing a sprite also resizes how much light it emits: the
+// fragment falloff runs over the quad's OWN corner coords, so peak alpha
+// never learns the quad's screen size and total emission tracks screen
+// AREA. The vertex stage therefore divides emission by the square of the
+// size ratio, which keeps the clamp a pure SIZE decision in both
+// directions — the floor stabilises coverage without inflating the far
+// field, the cap bounds fill without dimming a close approach. A dead
+// record (size 0) projects its corner onto its center, giving a
+// zero-length delta that the 'lPx > 0' guard skips — so the floor never
+// resurrects a dead sprite (it stays zero-area) and its flux correction
+// stays exactly 1.
 //
-//   1. Model-matrix placement. The tool projected 'inPos' directly; here the
-//      particle CENTER is 'model * vec4(inPos, 1)' first, so one generated
-//      cloud can be positioned/oriented/scaled into the scene. The billboard
-//      corner is still added in WORLD space along camRight/camUp AFTER the
-//      model transform, so sprites face the camera regardless of the model's
-//      rotation.
+// ## Why the flux-conserving LOD exists
 //
-//   2. Screen-size clamp in PIXELS, not NDC — and FLUX-CONSERVING. The tool
-//      capped the projected half-extent at 0.11 NDC. Here we convert the NDC
-//      delta to pixels via viewportPx and clamp to [starPxMin, starPxMax].
-//      The px FLOOR is the anti-sparkle lever the tool lacked — a distant
-//      star never shrinks below a stable dot, so it stops twinkling as
-//      sub-pixel coverage flickers; the px CAP bounds foreground swell on
-//      close flythroughs. Resizing a sprite also resizes how much light it
-//      emits: the fragment falloff runs over the quad's OWN corner coords, so
-//      peak alpha never learns the quad's screen size and total emission
-//      tracks screen AREA. The vertex stage therefore divides emission by the
-//      square of the size ratio, which keeps the clamp a pure SIZE decision
-//      in both directions — the floor stabilises coverage without inflating
-//      the far field, the cap bounds fill without dimming a close approach.
-//      A dead record (size 0) projects its corner onto its center, giving a
-//      zero-length delta that the 'lPx > 0' guard skips — so the floor never
-//      resurrects a dead sprite (it stays zero-area) and its flux correction
-//      stays exactly 1.
-//
-//   3. Fade multiplies EMISSION. fadeAlpha scales the final star colour, so a
-//      faded-out Milky Way adds no light under the additive blend.
-//
-// The flux-conserving LOD (the vertex tail below) matters here because at
-// mid/far views the whole star budget collapses onto a handful of pixels,
-// and additive blending serializes the blender per pixel — so subpixel
-// stars are culled in the VERTEX stage (degenerate quad, zero fragments).
-// The LOD works on the NDC apparent size (the band was tuned in NDC units
-// in the tool), captured before the px-space clamp rescales the corner
-// delta. The tool's cull-bright block (a hard brightness floor on params.w)
-// is NOT ported — a quality knob defaulted off, unrelated to the perf
-// lever.
+// At mid/far views the whole star budget collapses onto a handful of
+// pixels, and additive blending serializes the blender per pixel — so
+// subpixel stars are culled in the VERTEX stage (degenerate quad, zero
+// fragments) instead, with survivors brightened so total light holds. The
+// LOD works on the NDC apparent size, captured before the px-space clamp
+// rescales the corner delta.
 
 import package::milkyWay::sprites::io::u;
 import package::lib::camera::worldToClip;

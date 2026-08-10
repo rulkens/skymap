@@ -1,9 +1,8 @@
 // hiiSplat/erosionFragment.wesl — shells AND DIG share this whole path
 // (hiiTiers.ts routes both to the same pipeline): base emission times the
-// ridged-noise erosion term (hiiNoise.wesl) ONLY. Same "no sign test"
-// removal as youngFragment.wesl — splat.wesl's former shared fs picked this
-// branch whenever textureWeight was non-negative, which every shell/DIG
-// component always is.
+// ridged-noise erosion term (hiiNoise.wesl) ONLY. No sign test needed, same
+// as youngFragment.wesl: every shell/DIG component's textureWeight is
+// non-negative, so there is nothing to branch on.
 
 import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::milkyWay::field::hiiSplat::shadeCommon::baseHiiShading;

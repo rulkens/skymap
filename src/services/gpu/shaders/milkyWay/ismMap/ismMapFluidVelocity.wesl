@@ -1,9 +1,10 @@
 // milkyWay/ismMap/ismMapFluidVelocity.wesl — Pass A of the fluid ISM-map step:
 // composes the velocity field ONCE per texel (shear + curl noise + event
 // impulses + arm-gather) and writes it to velocityTex for
-// ismMapFluidStep.wesl (Pass B) to advect and difference. Used to be
-// evaluated 5x per texel per step (self + 4 neighbours) in Pass B's old
-// divergence estimate; this turns that into 1 evaluation + 4 textureLoads.
+// ismMapFluidStep.wesl (Pass B) to advect and difference. Pass B's own
+// divergence estimate needs the velocity at 5 points (self + 4 neighbours)
+// per step; composing it here once and letting Pass B read it back via 4
+// textureLoads avoids re-running this composition 5x per texel per step.
 // Events are also tile-culled: each 16x16 workgroup builds a SHARED list of
 // only the events whose kernel can reach this tile, so the per-texel loop
 // walks a handful of events, not the whole active window. See
@@ -106,10 +107,9 @@ fn wrapLatticeX(x: f32, period: f32) -> f32 {
   return x - period * floor(x / period);
 }
 
-// Diverged from ismMapFluidStep.wesl's history (see git log) by the addition
-// of xPeriod: wraps both lattice corners' x BEFORE hashing so x and
-// x + xPeriod hash identically. y is left unwrapped — the ring axis never
-// wraps.
+// Wraps both lattice corners' x BEFORE hashing so x and x + xPeriod hash
+// identically — the wrap that makes the noise seamless across the az wrap.
+// y is left unwrapped — the ring axis never wraps.
 fn valueNoiseRaw(p: vec2<f32>, xPeriod: f32) -> f32 {
   let i = floor(p);
   let f = fract(p);
@@ -167,9 +167,9 @@ fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
   return textureLoad(armForcingTex, vec2<i32>(a, r), 0).x;
 }
 
-// Steepest-ascent direction of the arm-forcing field — see
-// ismMapFluidStep.wesl's original for the azToRingMetric rationale (verbatim
-// here, that file no longer needs its own copy).
+// Steepest-ascent direction of the arm-forcing field, in (az, ring) units —
+// dFdRing is scaled by azToRingMetric so both components are comparable
+// before curlVelocity/composedVelocity blend them with the az-axis gradient.
 fn forcingGradient(az: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
   let fAzPlus = armForcingAt(az + 1, ring, azCount, ringCount);
   let fAzMinus = armForcingAt(az - 1, ring, azCount, ringCount);

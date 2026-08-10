@@ -1,11 +1,9 @@
 // hiiSplat/vertex.wesl — silhouette-quad vertex stage shared by every HII
-// pipeline (hiiYoung, hiiErosion, hiiExtras — the per-splat-type split). Every draw
-// through this module IS an HII draw now, so splat.wesl's former shared vs
-// used 'u.dustDetail.y > 0.0' as an is-HII proxy alongside the real
-// fadeStart/fadeEnd window check; that proxy half is gone here — it is
-// structurally always true for this module. The window check itself stays:
-// fadeStart/fadeEnd (io.wesl's youngStars.zw) is a genuine live value this
-// module's own header carries, independent of which draw family runs.
+// pipeline (hiiYoung, hiiErosion, hiiExtras). Every draw through this module
+// IS an HII draw, so there is no need for an is-HII proxy check here — only
+// the fadeStart/fadeEnd window check below, since that is a genuine live
+// value this module's own header carries, independent of which draw family
+// runs.
 
 import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::lib::billboard::quadCorner;

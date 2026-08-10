@@ -4,10 +4,10 @@
 // [0,1] field into a filament-like V) at 1x/2x/4x/8x the base tile
 // frequency, each band itself base + 0.5x double-frequency octave (fbm2)
 // BEFORE the fold — ridged(fbm2(n)), one V per band, not two summed ridges.
-// Quintic fade (not the old smoothstep): gradient noise needs C2 continuity
-// or the fold's own kink at n=0.5 lines up with the interpolant's kink and
-// shows as a lattice-aligned crease. TILEABLE: every lattice corner wraps
-// its integer index modulo the band's own cell count.
+// Quintic fade, not smoothstep: gradient noise needs C2 continuity or the
+// fold's own kink at n=0.5 lines up with the interpolant's kink and shows
+// as a lattice-aligned crease. TILEABLE: every lattice corner wraps its
+// integer index modulo the band's own cell count.
 
 import package::lib::util::integerHash3;
 
@@ -43,9 +43,9 @@ fn latticeGradient(idx: vec3<i32>) -> vec3<f32> {
 
 // gradientNoise3D — tileable Perlin-style gradient noise: each corner's
 // gradient dotted with the corner-to-sample offset, quintic-faded trilinear
-// blend. Wraps (not clamps) the GRADIENT lattice indices at 'cells' — same
-// seamless-tiling contract the old value-noise version had. Raw output,
-// NOT yet remapped to [0,1]; see ridgedBand below.
+// blend. Wraps (not clamps) the GRADIENT lattice indices at 'cells' for
+// seamless tiling. Raw output, NOT yet remapped to [0,1]; see ridgedBand
+// below.
 fn gradientNoise3D(uv: vec3<f32>, cells: u32) -> f32 {
   let cellsI = i32(cells);
   let i0f = floor(uv);

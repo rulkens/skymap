@@ -118,8 +118,7 @@ fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric:
 // 5-point Laplacian of gas (prevTex.x) and dust (prevTex.w), in TEXEL units
 // on both axes — deliberately NOT physical (theta, ln r) space: the
 // pathology this term exists to kill (1-texel density-spike collapse,
-// grid-scale checkerboard modes, both artifacts of the OLD velocity-gradient
-// pressure term this replaced) is itself a grid-scale artifact, so texel
+// grid-scale checkerboard modes) is itself a grid-scale artifact, so texel
 // space is the space that treats it. Same edge semantics as divVelocity: az
 // wraps, ring clamps (a clamped ring neighbour equals self, i.e. zero-flux
 // boundary).
@@ -188,10 +187,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // dead here.
   if (genStep == 0u) {
     let seedGas = gasProfile(r);
-    // y seeds at 0, not the old eventAge clock's huge "long ago" sentinel:
-    // stars is a MATERIAL tracer that accumulates from nothing via deposit,
-    // so an empty disc starts with none, not a decayed trace of an event
-    // that never happened.
+    // y seeds at 0: stars is a MATERIAL tracer that accumulates from nothing
+    // via deposit, so an empty disc starts with none, not a decayed trace of
+    // an event that never happened.
     textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 0.0, 0.0, ISM_MAP_AMBIENT_DUST * seedGas));
     return;
   }
@@ -206,8 +204,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let selfState = textureLoad(prevTex, vec2<i32>(i32(az), i32(ring)), 0);
 
-  // Pass A already composed this texel's velocity + event stamp — one load
-  // replaces what used to be a full composedVelocity() re-evaluation.
+  // Pass A already composed this texel's velocity + event stamp, so a
+  // single load suffices here instead of re-evaluating composedVelocity().
   let velSample = textureLoad(velocityTex, vec2<i32>(i32(az), i32(ring)), 0);
   let velAz = velSample.x;
   let velRing = velSample.y;
@@ -243,11 +241,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let selfActivity = selfState.z;
 
-  // gasRegen is now a relaxation RATE toward gasProfile(r), not a flat
-  // refill: at the default profile (gasFloor=1, profile===1) it is close in
-  // scale to the old term (0.028*(1-gas) vs the old flat +0.028) but not
-  // identical, and it no longer pushes gas toward GAS_CEILING unconditionally
-  // — it relaxes toward the profile, the physically-meaningful equilibrium.
+  // gasRegen is a relaxation RATE toward gasProfile(r), not a flat refill —
+  // it relaxes gas toward the profile (the physically-meaningful
+  // equilibrium) rather than pushing it toward GAS_CEILING unconditionally.
   let gas = min(GAS_CEILING, max(0.0, diffusedGas + u.gasRegen * (gasProfile(r) - diffusedGas)));
   // stars is MATERIAL, not Eulerian (this file's header): 'advected.y' is
   // already the previous stars value sampled at the SAME back-traced source

@@ -3,11 +3,10 @@
 // into one rgba16float texture's RGB so stage 3 blurs all three channels in
 // one separable pass instead of six.
 //
-// Regression signatures from the deleted buildIsmMapOrientation.test.ts: a
-// 40-texel ridge recovers pitch <=0.18deg flat across radii; dropping the
-// aspect weight below biases it a flat 5.33deg; a purely azimuthal ridge
-// must recover ~0deg, never ~90deg (sign finished in
-// ismMapOrientationCoherence.wesl).
+// Invariants this tensor must preserve: a 40-texel ridge recovers pitch
+// <=0.18deg flat across radii; dropping the aspect weight below biases it a
+// flat 5.33deg; a purely azimuthal ridge must recover ~0deg, never ~90deg
+// (sign finished in ismMapOrientationCoherence.wesl).
 
 import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;
 import package::milkyWay::ismMap::ismMapOrientationLib::clampIndex;
@@ -47,8 +46,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let aNext = wrapIndex(i32(gid.x) + 1, dims.x);
   let rPrev = clampIndex(i32(gid.y) - 1, dims.y);
   let rNext = clampIndex(i32(gid.y) + 1, dims.y);
-  // Guards the degenerate 1-ring-grid divide-by-zero, matching the deleted
-  // CPU builder's own rSpan fallback.
+  // Guards the degenerate 1-ring-grid divide-by-zero.
   let rSpan = f32(max(1, i32(rNext) - i32(rPrev)));
 
   let gx = (textureLoad(srcTex, vec2<i32>(i32(aNext), i32(gid.y)), 0).x

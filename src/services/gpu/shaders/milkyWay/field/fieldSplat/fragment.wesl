@@ -1,10 +1,10 @@
 // fieldSplat/fragment.wesl — primary field emission fragment (disc/arm/
 // bulge). Ray coeffs + SPLAT_CUT early-out, then the four-slice dust-
 // attenuated emission via dustAttenuation.wesl. No texture machinery, no
-// near-fade, no quad-cap feather — this pass's header always packs
-// dustDetail.y (the HII texture gate) and perf.x (the quad cap) at 0, so
-// splat.wesl's former shared fs would have skipped all three anyway; the
-// per-splat-type split makes that skip structural instead of a runtime no-op.
+// near-fade, no quad-cap feather: this pass's header always packs
+// dustDetail.y (the HII texture gate) and perf.x (the quad cap) at 0, so the
+// absence of that code here is structural, matching what those knobs
+// already force at runtime.
 
 import package::milkyWay::field::fieldSplat::io::FieldSplatOut;
 import package::lib::splatSilhouette::SPLAT_CUT;

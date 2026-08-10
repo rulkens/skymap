@@ -1,9 +1,9 @@
 // milkyWay/ismMap/ismMapOrientationTensorBlur.wesl — stage 3: separable
 // Gaussian blur (sigmaInteg — see ismMapOrientationLib.wesl's struct comment
 // on why it differs from stage 1's sigmaDeriv) of the packed (Jxx,Jxy,Jyy)
-// tensor, all three channels through ONE pass per axis — the main
-// structural win over the deleted CPU builder's six single-channel passes.
-// Same wrap/clamp asymmetry as ismMapOrientationField.wesl.
+// tensor, all three channels through ONE pass per axis, rather than a
+// separate single-channel pass per channel per axis (six passes for the
+// same work). Same wrap/clamp asymmetry as ismMapOrientationField.wesl.
 
 import package::milkyWay::ismMap::ismMapOrientationLib::IsmMapOrientationSigma;
 import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;

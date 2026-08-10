@@ -1,5 +1,6 @@
-// lib/splatSilhouette.wesl — the per-component silhouette-quad vertex math
-// shared by the analytic Milky Way field's splat passes: fieldSplat/vertex.wesl
+// lib/splatSilhouette.wesl — shader-math derivation file (exceeds the usual
+// comment budget on that basis): the per-component silhouette-quad vertex
+// math shared by the analytic Milky Way field's splat passes: fieldSplat/vertex.wesl
 // and hiiSplat/vertex.wesl (one quad per EMISSION component) and
 // dustMap/vertex.wesl (one quad per DUST component). All draw instanced
 // quads sized to a Gaussian's own screen footprint from the same camera

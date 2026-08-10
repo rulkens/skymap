@@ -3,15 +3,12 @@
 // emission draw by weight render.ismMapViewIntensity, same seam as
 // dustPresent.wesl.
 //
-// Unlike dustPresent.wesl's 1:1 texel read (its map is already screen-space,
-// splatted there by dustMap.wesl), ismMapTex is GALAXY-FRAME log-polar: this
-// shader reconstructs the camera ray per fragment (io.wesl's own basis, the
-// same formula fieldSplat/fragment.wesl's fs uses) and intersects the disc plane (y=0 —
-// the warp is ignored, a diagnostic overlay's own simplification, not
-// claimed anywhere else) to find which (r, theta) texel to sample. That
-// resample makes this pass's own target resolution independent of the map's
-// — there is no equal-extent 1:1-load contract here to violate (research
-// doc §17.1's decimation trap).
+// Unlike dustPresent.wesl's 1:1 texel read (its map is already screen-space),
+// ismMapTex is GALAXY-FRAME log-polar: this shader reconstructs the camera
+// ray per fragment (io.wesl's basis, cameraRayFromUv) and intersects the
+// disc plane (y=0 — warp ignored, a diagnostic-only simplification) to find
+// the (r, theta) texel to sample, decoupling this pass's target resolution
+// from the map's own (avoids the decimation trap in research doc §17.1).
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
@@ -95,11 +92,11 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // Presentation palette, NOT physics — chosen so the four channels stay
   // separable by eye: dim cool navy for unspent gas, bright magenta-violet
   // for the decaying activity wake, warm near-white for the stars tracer
-  // (an advected young-stars density), teal-green for dust. Activity used
-  // to be amber, but that sat right next to the stars channel's warm
-  // near-white (the two blended into one warm smear) and duplicated
-  // dustPresent.wesl's own red-orange-white band; magenta-violet and
-  // teal-green are the two hues nothing else in the debug-view set
+  // (an advected young-stars density), teal-green for dust. Activity avoids
+  // amber: that would sit right next to the stars channel's warm near-white
+  // (the two would blend into one warm smear) and duplicate dustPresent.wesl's
+  // own red-orange-white band; magenta-violet and teal-green are the two
+  // hues nothing else in the debug-view set
   // (dustPresent's red-orange-white, bubble's amber/cyan) claims. The four
   // peak colours are still deliberately NOT equal-brightness — gas maxes at
   // 0.25, stars at 1.0, activity's red/blue channels at 1.3 (above the
@@ -119,8 +116,8 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // one passed to buildIsmMapDustCdf) exactly, so seeding can be judged
   // directly instead of inferred from channels an ambient pedestal can glow
   // in without contributing placement mass. Change both together. No
-  // ambient subtraction: the pedestal is no longer uniform (it's seeded
-  // ambient*gasProfile(r) and advected) and is itself part of the structure
+  // ambient subtraction: the pedestal is seeded ambient*gasProfile(r) and
+  // advected, not held uniform, so it is itself part of the structure
   // placement seeds into. Two terms, exactly like the CPU: a STRUCTURAL
   // radial envelope (ringMean/globalMean) the cap never touches, times a
   // within-ring ratio the cap DOES clamp — see dustParticleCloud.ts's own

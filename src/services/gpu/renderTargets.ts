@@ -2,14 +2,11 @@
  * renderTargets — the single owner of every offscreen render target's
  * lifecycle, driven by the `RenderTargetSpec` table.
  *
- * Pre-unification the HDR target lived in `postProcess.ts` and the half-res
- * volume target in `volumeOffscreen.ts` — two modules with identical
- * construct / resize / destroy shapes, two `state.gpu.*` fields that always
- * flipped together, and a frame resize handler that enumerated the pair by
- * hand. The target table collapses that: an offscreen target is a ROW
- * (`id`, `format`, `depth`, `scale`), and this module allocates, resizes,
- * and releases every row uniformly. A new offscreen (a pick target, a
- * foreground slab) is a new row, not a new module + handle + resize call.
+ * An offscreen target is a ROW (`id`, `format`, `depth`, `scale`), and this
+ * module allocates, resizes, and releases every row uniformly — a new
+ * offscreen (a pick target, a foreground slab) is a new row, not a new
+ * module + handle + resize call, and the resize path never has to enumerate
+ * targets by hand.
  *
  * ### Why the HDR offscreen exists at all
  *

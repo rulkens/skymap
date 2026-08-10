@@ -48,10 +48,9 @@ fn stretchNoiseCoord(p: vec3<f32>, stretch: f32) -> vec3<f32> {
 }
 
 // dustNoiseWeighted — the shared, band-limited ridged-fbm sample BOTH S5's
-// carve mask and dustNoiseMultiplier's interior erosion read (previously two
-// separate concerns pointed at the same volume independently; sharing the
-// fetch means they describe one coherent noisy cloud instead of two
-// decorrelated ones — see dustCarveMask's own doc). 'p' is the ray's
+// carve mask and dustNoiseMultiplier's interior erosion read; sharing the
+// fetch means the two describe one coherent noisy cloud instead of two
+// decorrelated ones (see dustCarveMask's own doc). 'p' is the ray's
 // world-space closest-approach point to this Gaussian, 'depth' its distance
 // along the ray (both already computed by the caller as o + d*tPeak /
 // tPeak). Sampled at explicit LOD 0, no derivatives: this is a splat quad,
@@ -226,17 +225,17 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
     carveMask = dustCarveMask(rho, n, u.dustCarve.x, u.dustCarve.y);
     // The early-out: a carved-away fragment skips the four expHalfErfc
     // evaluations below entirely, the perf win this feature buys back for
-    // itself (io.wesl's dustCarve doc) — and a STRONGER one than the old
-    // density-space form, since the boundary rhoB now shrinks toward the
-    // core as carve rises, instead of sitting at a fixed density contour.
+    // itself (io.wesl's dustCarve doc) — the boundary rhoB shrinks toward
+    // the core as carve rises, so the early-out fires more often the harder
+    // the carve.
     if (carveMask <= 0.0) {
       return vec4<f32>(0.0);
     }
   }
 
-  // tail(t) is this component's own column from depth t to infinity, the
-  // same closed form splat.wesl's former per-fragment loop used for the
-  // whole ray (t=0). amplitude (dg0.w) is the component's central V-band
+  // tail(t) is this component's own column from depth t to infinity — the
+  // same closed form as a whole-ray (t=0) column integral. amplitude (dg0.w)
+  // is the component's central V-band
   // extinction density — see io.wesl's layout comment. x(t) = (b + a*t) /
   // sqrt(2a) is expHalfErfc's own lower-limit argument (gaussianIntegral.wesl);
   // x0 is x(0), and each further edge just adds a*t_k/sqrtHalfA to it.

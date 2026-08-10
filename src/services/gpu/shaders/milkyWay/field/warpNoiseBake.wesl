@@ -1,12 +1,11 @@
 // milkyWay/field/warpNoiseBake.wesl — one-shot compute bake of a 64^3
-// VALUE-noise volume for starGrain.wesl's domain-warp displacement only,
-// split out of the shared dust-noise bake now that bake went gradient-noise
-// (dust/DIG/shell erosion wants smoother; the warp wants value noise's
-// blockier, higher-headroom character). Reuses dustNoiseBake.wesl's
-// PRE-gradient construction (integerHash3, now lib::util's shared hash +
-// tileableValueNoise3D + ridged fold, see git history at c76d8adbe) for
-// three xyz channels at 1x/2x/4x frequency, the bands starGrain.wesl used
-// to read off dustNoiseTex.xyz. TILEABLE: every lattice index wraps its
+// VALUE-noise volume, for starGrain.wesl's domain-warp displacement ONLY —
+// a separate volume from dustNoiseBake.wesl's ridged fbm, since dust/DIG/
+// shell erosion wants a smoother, spatially correlated field while the warp
+// wants value noise's blockier, higher-headroom character. Builds three xyz
+// channels (integerHash3 + tileableValueNoise3D + ridged fold) at
+// 1x/2x/4x frequency — the bands starGrain.wesl reads for its warp, kept
+// independent of dustNoiseTex.xyz. TILEABLE: every lattice index wraps its
 // band's cells.
 
 import package::lib::util::integerHash3;
@@ -15,7 +14,8 @@ import package::lib::util::integerHash3;
 
 const BASE_CELLS: u32 = 8u;
 
-// tileableValueNoise3D — verbatim from the same commit; wraps at 'cells'.
+// tileableValueNoise3D — trilinear value noise; wraps lattice indices at
+// 'cells' for seamless tiling.
 fn tileableValueNoise3D(uv: vec3<f32>, cells: u32) -> f32 {
   let cellsI = i32(cells);
   let i0f = floor(uv);

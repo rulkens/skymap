@@ -21,23 +21,9 @@
 // calibration lever (anti-sparkle), so dust keeps a fixed 0.16-NDC cap with no
 // starPxMin/starPxMax knob.
 //
-// ## What changed vs the tool's own dust.wesl, since deleted
-//
-// The galaxy-renderer tool draws THIS pass now — its shader root symlinks
-// milkyWay/sprites/ (see the tool's wesl.toml). 'The tool' below means the
-// deleted predecessor this file grew out of and replaced.
-//
-//   1. Model-matrix placement — identical to stars.wesl: the particle CENTER
-//      is 'model * vec4(inPos, 1)', the billboard corner is added in world
-//      space along camRight/camUp afterward.
-//
-//   2. Fade FADES TO IDENTITY, not to emission. The tool returned 'vec4(T, 1)'.
-//      Here the output is 'vec4(mix(vec3(1), T, fadeAlpha), 1)': at fadeAlpha 0
-//      the transmittance collapses to vec3(1) — the multiplicative identity —
-//      so a faded-out Milky Way stops darkening the scene entirely (mirroring
-//      the star pass, where fadeAlpha 0 stops it brightening the scene).
-//
-// The tool's flux-conserving LOD block is OMITTED (defaulted off in the tool).
+// The galaxy-renderer tool draws this pass too, through a directory symlink
+// onto milkyWay/sprites/ (see the tool's wesl.toml) — one shader, two
+// consumers.
 
 import package::milkyWay::sprites::io::u;
 import package::lib::camera::worldToClip;

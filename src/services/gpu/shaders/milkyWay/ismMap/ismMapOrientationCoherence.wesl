@@ -2,9 +2,10 @@
 // blurred tensor (Jxx,Jxy,Jyy) -> coherence-scaled double-angle vector
 // (cos2theta, sin2theta), no eigen-solve needed. Along-filament sign is
 // (Jyy-Jxx, -2*Jxy), rotated pi/2 from the ACROSS-ridge gradient form
-// (Jxx-Jyy, 2*Jxy) — negating it turns a pitch-0 azimuthal ridge into
-// exactly 90deg (the deleted buildIsmMapOrientation.test.ts's regression).
-// Written into orientationTex's .xy; rgba16float not rg16float — see
+// (Jxx-Jyy, 2*Jxy) — getting the sign wrong turns a pitch-0 azimuthal ridge
+// into exactly a 90-degree error, silently rotating every orientation
+// reading a quarter turn. Written into orientationTex's .xy; rgba16float
+// not rg16float — see
 // createGalaxyEngine.ts's orientationTex comment on storage-format support.
 
 const EPS: f32 = 1e-12;

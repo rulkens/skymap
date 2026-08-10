@@ -1,4 +1,5 @@
-// lib/camera.wesl — shared camera uniform layout + projection helpers.
+// lib/camera.wesl — byte-layout contract (exceeds the usual header budget on
+// that basis): shared camera uniform layout + projection helpers.
 //
 // Every renderer that touches world space ends up writing the same
 // half-dozen lines: 'u.viewProj * vec4<f32>(p, 1.0)' to land in clip

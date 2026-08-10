@@ -49,8 +49,8 @@
 // the offsets below it (and packFieldUniforms.ts's FIELD_HEADER_FLOATS) do
 // not move. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
 // (createGalaxyRenderTargets.ts's rebuildDust sizes it to
-// reducedSize(render.dustDivisor) — see the DUST MAP entry below; dustMapTex
-// no longer shares fieldTex's extent) — read by dustMap.wesl's dust-noise
+// reducedSize(render.dustDivisor) — see the DUST MAP entry below; dustMapTex's
+// extent is independent of fieldTex's) — read by dustMap.wesl's dust-noise
 // multiplier below, to band-limit the baked volume's four octaves against
 // the fragment's own world-space pixel footprint. counts2.zw is fieldSizePx
 // (fieldWidthPx, fieldHeightPx), fieldTex's own pixel size
@@ -62,11 +62,10 @@
 // texel index — see the DUST MAP entry below.
 //
 // dustNoise (offset 128) erodes the primary's whole dust slice
-// (dustMap.wesl's fs) — the particle cloud is the ONLY dust tier now (the
-// smooth analytic disc mixture this loop used to skip past was deleted; see
-// galaxyDustMixture.ts's header on the CPU side), so there is no longer a
-// kiloparsec-scale component whose single noise sample would read as a
-// giant blotch rather than erosion.
+// (dustMap.wesl's fs) — the particle cloud is the ONLY dust tier (see
+// galaxyDustMixture.ts's header on the CPU side for why there is no
+// kiloparsec-scale smooth-disc component alongside it), so a single noise
+// sample here erodes texture rather than reading as one giant blotch.
 // tileUnits (.x) is the world span of one full wrap of dustNoiseBake.wesl's
 // baked volume; amplitude (.y) is the erosion strength — 0 disables it, and
 // the shader branches out entirely rather than sampling for a no-op 1.0;
@@ -119,7 +118,8 @@
 // weight): the palette there sums gas+old+recent+dust, and with all four
 // always visible there was no way to tell which one you were looking at. .w
 // (dustWeight) scales the packed texel's own .w lane — the conserved dust
-// channel, unclamped since 9aa9fe5d (rims legitimately overshoot to 8). Each
+// channel, deliberately unclamped: rims legitimately overshoot to 8, and
+// clamping would clip real signal. Each
 // weight independently scales its channel before the palette multiply, so
 // zeroing three isolates the fourth.
 //
@@ -200,7 +200,7 @@
 // anisotropy; 1 is isotropic (identity). .w is spare.
 //
 // youngStars (offset 240) is the HII header's shading/misc row: §5's
-// shader-side read of the ISM map's `stars` tracer for the YOUNG STARS chain
+// shader-side read of the ISM map's 'stars' tracer for the YOUNG STARS chain
 // tier PLUS the tier-global near-camera fade window, which applies to every
 // HII group (shells/DIG/associations alike), not just young stars — the row
 // just had the free lanes. hiiSplat/youngFragment.wesl's fs (and
@@ -314,14 +314,14 @@
 //
 // dustPresent.wesl (the JWST view) renders into its OWN target, dustViewTex,
 // ALSO sized to reducedSize(render.dustDivisor) by that same rebuildDust
-// call — so its 1:1 framebuffer-coord texel load stays valid
-// despite the two maps no longer sharing fieldTex's extent. A resolution
+// call — so its 1:1 framebuffer-coord texel load stays valid even though the
+// two maps do not share fieldTex's extent. A resolution
 // mismatch there is still invisible in types: it silently decimates any lane
 // thinner than the mismatch into beads, or misregisters the whole map toward
 // one corner.
 //
 // dustAttenuation.wesl's componentEmission runs at each pass's own (coarser)
-// resolution instead, so its 1:1 texel load no longer applies — it reads
+// resolution instead, so a 1:1 texel load would be wrong here — it reads
 // this map through 'dustMapSmp' (binding 6), a normalized-UV, linearly
 // filtered sample built from counts2.zw (fieldSizePx) above. Bilinear is
 // not a correct box downsample of a finer source, so fine dust structure
@@ -332,17 +332,14 @@
 //
 // Bindings 3/7/8 belong to dustDetail.wesl (grid uniform, ismCartesianSmp,
 // ismCartesianTex) — declared THERE, not here, so io.wesl does not force
-// them into every pipeline's auto layout. Binding 9 (the packed map's own
-// blur divisor, ismMapBlurTex) is gone from every render pipeline as of
-// stage 2 of the dust-seeding perf spike (docs/research/m74-jwst/
-// 07-sprite-seeding.md): dustMap.wesl's S4 detail term and youngFragment.wesl's
-// §5 stars-map read both now sample ismMapCartesianBake.wesl's one-shot
-// world-xz re-bake (R=detail ratio, G=stars) through the SAME affine UV
-// (dustDetail.wesl's ismCartesianUv) instead of the packed map's own
-// log-polar one — the blur pass that fed the old per-fragment ratio runs
-// once, upstream of the bake, not per consumer any more. The remaining
-// bindings keep their numbers so every pipeline and bind group here stays as
-// written.
+// them into every pipeline's auto layout. Binding 9 (a packed map's blur
+// divisor) is absent from every render pipeline: dustMap.wesl's S4 detail
+// term and youngFragment.wesl's §5 stars-map read both sample
+// ismMapCartesianBake.wesl's one-shot world-xz re-bake (R=detail ratio,
+// G=stars) through the same affine UV (dustDetail.wesl's ismCartesianUv);
+// the blur pass that produces it runs once, upstream of the bake, not per
+// consumer. The remaining bindings keep their numbers so every pipeline and
+// bind group here stays as written.
 
 struct FieldUniforms {
   eye: vec4<f32>,

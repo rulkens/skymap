@@ -19,10 +19,10 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // construction — createGalaxyRenderTargets.ts's rebuildDust sizes BOTH to
   // reducedSize(render.dustDivisor) in one call, and reruns whenever that
   // divisor moves, so neither can be left behind at the other's extent.
-  // Framebuffer coords therefore ARE map texels, a direct 1:1 load. A UV rescale here
-  // previously papered over a resolution MISMATCH (dustMapTex at full canvas
-  // res, this target at a coarser divisor); that decimated any lane thinner
-  // than the divisor into beads, which is why it's gone.
+  // Framebuffer coords therefore ARE map texels, a direct 1:1 load. A UV
+  // rescale here would paper over a resolution mismatch and decimate any
+  // lane thinner than the divisor into beads — this depends on dustMapTex
+  // and this target staying divisor-matched.
   let coord = vec2<i32>(input.pos.xy);
   // dustMapTex now carries four depth-sliced optical depths (io.wesl's
   // dustSlices doc), not one column — this presentation has no notion of

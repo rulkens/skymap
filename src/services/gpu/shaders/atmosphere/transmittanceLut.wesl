@@ -1,4 +1,5 @@
-// atmosphere/transmittanceLut.wesl — the transmittance LUT bake (compute).
+// atmosphere/transmittanceLut.wesl — shader-math derivation file (exceeds
+// the usual header budget on that basis): the transmittance LUT bake (compute).
 //
 // Writes the 256x64 view-INDEPENDENT transmittance table: each texel stores the
 // rgb fraction of sunlight that survives the trip from a point (radius r,

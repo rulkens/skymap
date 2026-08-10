@@ -1,9 +1,9 @@
 // hiiSplat/youngFragment.wesl — YOUNG STARS chain fragment: base emission
 // times the star-grain texture (starGrain.wesl) ONLY. hiiTiers.ts routes
-// only 'young' comps.ts components through this pipeline, so the sign test
-// splat.wesl's former shared fs used to pick star-grain vs ridged-noise is
-// gone here — textureWeight's MAGNITUDE (its sign is now structural, not
-// data this fragment needs to read) still comes straight off the comp.
+// only 'young' comps.ts components through this pipeline, so no sign test
+// is needed to pick star-grain vs ridged-noise; textureWeight's MAGNITUDE
+// (its sign is structural routing, not data this fragment reads) comes
+// straight off the comp.
 
 import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::milkyWay::field::hiiSplat::shadeCommon::baseHiiShading;

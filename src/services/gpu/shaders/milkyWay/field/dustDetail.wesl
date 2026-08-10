@@ -1,12 +1,11 @@
 // milkyWay/field/dustDetail.wesl — S4's high-pass term (docs/research/
 // m74-jwst/07-sprite-seeding.md): the ISM map's own density over an
-// 8-texel-blurred copy, now READ from ismMapCartesianBake.wesl's one-shot
-// world-xz re-bake instead of derived per-fragment — stage 2 of the spike
-// collapses the old length+atan2+log+two-fetch log-polar lookup to one
-// affine UV and one fetch. Applied at ACCUMULATION (dustMap.wesl's fs), per
-// splat fragment, at that splat's own closest-approach point — so the
-// pattern parallaxes with the splats instead of stamping one flat decal
-// across the whole depth column.
+// 8-texel-blurred copy, read from ismMapCartesianBake.wesl's one-shot
+// world-xz re-bake via one affine UV and one fetch, rather than deriving
+// the log-polar lookup (length+atan2+log, two fetches) per fragment.
+// Applied at ACCUMULATION (dustMap.wesl's fs), per splat fragment, at that
+// splat's own closest-approach point — so the pattern parallaxes with the
+// splats instead of stamping one flat decal across the whole depth column.
 
 import package::milkyWay::field::io::u;
 
@@ -26,9 +25,9 @@ struct IsmMapGrid {
 
 // Binding numbers: dustMap.wesl's own closure is io's 0/1 (u/comps), its
 // dust-noise volume 4/5, and these three — collision-free there, which is
-// the only constraint that mattered picking them. Binding 9 (the packed
-// map's blur divisor) is gone: the bake consumed it upstream, so no render
-// pipeline needs it any more.
+// the only constraint that mattered picking them. Binding 9 (a packed map's
+// blur divisor) is absent: the bake consumes it upstream, so no render
+// pipeline needs it.
 @group(0) @binding(3) var<uniform> grid: IsmMapGrid;
 @group(0) @binding(7) var ismCartesianSmp: sampler;
 @group(0) @binding(8) var ismCartesianTex: texture_2d<f32>;
