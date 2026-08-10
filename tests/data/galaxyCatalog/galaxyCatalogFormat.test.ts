@@ -24,6 +24,7 @@ import {
   decodeGalaxyCatalog,
   GALAXY_CATALOG_FIELD_SPECS,
 } from '../../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { FormatVersionError } from '../../../src/data/formatVersionError';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
 const BYTES_PER_GALAXY = 64;
@@ -293,6 +294,26 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     dv.setUint32(12, 0, true);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 8/);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
+  });
+
+  it('rejects a stale version with a typed FormatVersionError carrying found/expected', () => {
+    const buf = new ArrayBuffer(16);
+    const dv = new DataView(buf);
+    dv.setUint32(0, 0x504d4b53, true); // "SKMP"
+    dv.setUint32(4, 8, true); // v8 — the previous on-disk shape
+    dv.setUint32(8, 0, true);
+    dv.setUint32(12, 0, true);
+
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(FormatVersionError);
+    try {
+      decodeGalaxyCatalog(buf);
+      expect.unreachable('decodeGalaxyCatalog should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(FormatVersionError);
+      const versionError = err as FormatVersionError;
+      expect(versionError.found).toBe(8);
+      expect(versionError.expected).toBe(9);
+    }
   });
 
   it('rejects every earlier version (v1–v8) with the same regenerate message', () => {

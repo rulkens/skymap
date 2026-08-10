@@ -12,6 +12,7 @@ import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalo
 import type { GalaxyCatalogColumn } from '../../@types/data/galaxyCatalog/GalaxyCatalogColumn';
 import type { GalaxyCatalogFieldSpec } from '../../@types/data/galaxyCatalog/GalaxyCatalogFieldSpec';
 import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
+import { FormatVersionError } from '../formatVersionError';
 
 const MAGIC = 0x504d4b53;
 const VERSION = 9;
@@ -228,7 +229,10 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   // reload until `npm run build-tiers` is re-run.
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
-    throw new Error(
+    throw new FormatVersionError(
+      'galaxy catalog',
+      version,
+      VERSION,
       `unsupported version: ${version} — please regenerate the .bin via "npm run build-tiers"`,
     );
   }

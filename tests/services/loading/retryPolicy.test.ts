@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultRetryPolicy } from '../../../src/services/loading/retryPolicy';
 import { HttpError } from '../../../src/services/loading/fetchWithProgress';
+import { FormatVersionError } from '../../../src/data/formatVersionError';
 
 describe('defaultRetryPolicy', () => {
   it('gives up on 404', () => {
@@ -37,5 +38,11 @@ describe('defaultRetryPolicy', () => {
     const abort = new Error('aborted');
     abort.name = 'AbortError';
     expect(defaultRetryPolicy(0, abort)).toBe('give-up');
+  });
+
+  it('gives up immediately on a format-version mismatch (no re-download)', () => {
+    expect(defaultRetryPolicy(0, new FormatVersionError('galaxy catalog', 8, 9, 'x'))).toBe(
+      'give-up',
+    );
   });
 });
