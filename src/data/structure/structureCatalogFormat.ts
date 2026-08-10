@@ -51,6 +51,12 @@ const VERSION = 1;
 const HEADER_BYTES = 16;
 const BYTES_PER_RECORD = 28;
 
+// Version-stamped folder: max-age=86400 lets a CDN serve an old .ccat
+// alongside new code for up to a day, so the epoch has to live in the
+// path itself to make that pairing impossible (images/earth-tiles/'s
+// TILE_PREFIX precedent).
+export const STRUCTURE_CATALOG_DATA_PREFIX = `structure-catalog/v${VERSION}`;
+
 // Per-record byte offset for the category field.  The six float fields
 // (posX, posY, posZ, physR, appR, sig) occupy float-slots 0..5 at the
 // record start — indexed as f+0 … f+5 in the loop bodies below.

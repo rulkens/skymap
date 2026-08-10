@@ -43,7 +43,10 @@ import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { SurveyStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { decodeStarCatalog } from '../../../data/starCatalog/starCatalogFormat';
+import {
+  decodeStarCatalog,
+  STAR_CATALOG_DATA_PREFIX,
+} from '../../../data/starCatalog/starCatalogFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
@@ -68,6 +71,10 @@ export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
   const name = starEntry.tiered
     ? `${starEntry.binBaseName}-${req.tier}.bin`
     : `${starEntry.binBaseName}.bin`;
-  const buf = await fetchWithProgress(dataUrl(name), signal, onProgress);
+  const buf = await fetchWithProgress(
+    dataUrl(`${STAR_CATALOG_DATA_PREFIX}/${name}`),
+    signal,
+    onProgress,
+  );
   return decodeStarCatalog(buf);
 };

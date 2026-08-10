@@ -35,6 +35,12 @@ const HEADER_BYTES = 16;
 const FLOATS_PER_VERTEX = 4;
 const BYTES_PER_VERTEX = FLOATS_PER_VERTEX * 4;
 
+// Version-stamped folder: max-age=86400 lets a CDN serve an old .bin
+// alongside new code for up to a day, so the epoch has to live in the
+// path itself to make that pairing impossible (images/earth-tiles/'s
+// TILE_PREFIX precedent).
+export const FILAMENT_DATA_PREFIX = `filament/v${VERSION}`;
+
 /**
  * Encode a `FilamentCloud` to an ArrayBuffer.  Pure — no I/O.
  *

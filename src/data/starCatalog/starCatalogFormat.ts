@@ -71,6 +71,12 @@ export const MAGIC = 0x54534b53;
 /** On-disk format version. Bumping this rejects every older `.bin` on load. */
 export const VERSION = 1;
 
+// Version-stamped folder: max-age=86400 lets a CDN serve an old .bin
+// alongside new code for up to a day, so the epoch has to live in the
+// path itself to make that pairing impossible (images/earth-tiles/'s
+// TILE_PREFIX precedent).
+export const STAR_CATALOG_DATA_PREFIX = `star-catalog/v${VERSION}`;
+
 /** Fixed file-header size in bytes (magic, version, count, octree bounds …). */
 export const HEADER_BYTES = 64;
 

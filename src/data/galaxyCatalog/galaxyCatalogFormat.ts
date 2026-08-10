@@ -24,6 +24,12 @@ const BYTES_PER_GALAXY = 64;
 // this becomes a real `flagBit` column and this constant goes away.
 const MASS_ESTIMATED_BIT = 1 << 2;
 
+// Version-stamped folder: max-age=86400 lets a CDN serve an old .bin
+// alongside new code for up to a day, so the epoch has to live in the
+// path itself to make that pairing impossible (images/earth-tiles/'s
+// TILE_PREFIX precedent).
+export const GALAXY_CATALOG_DATA_PREFIX = `galaxy-catalog/v${VERSION}`;
+
 export const GALAXY_CATALOG_FIELD_SPECS = {
   /** SDSS object id — full 64-bit precision (exceeds Number.MAX_SAFE_INTEGER). */
   objIDs: { column: 'u64', components: 1, disk: { kind: 'field', offset: 0 } },

@@ -32,6 +32,7 @@
  */
 
 import { SOURCE_REGISTRY } from './sources';
+import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalog/galaxyCatalogFormat';
 import type { Tier } from '../@types/data/Tier';
 import type { SourceType } from '../@types/data/SourceType';
 
@@ -72,7 +73,11 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
 }
 
 /**
- * Returns the on-disk filename for a (source, tier) pair.
+ * Returns the `GALAXY_CATALOG_DATA_PREFIX`-relative path for a (source, tier)
+ * pair — e.g. `galaxy-catalog/v9/sdss-large.bin`. This is the single site
+ * both the browser fetcher (`galaxyCatalogFetcher`, via `dataUrl`) and
+ * `buildAllBins` (writing to disk) read, which is what keeps the fetch URL
+ * and the on-disk layout from diverging.
  *
  * A galaxy catalog is "tiered" — i.e. ships per-tier `.bin` variants — iff it
  * carries any per-tier cap.  Sources with an empty `tierTargets` (2MRS,
@@ -88,6 +93,9 @@ export function tierFilenameForSource(source: SourceType, tier: Tier): string {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   }
   const targets: Partial<Record<Tier, number>> = entry.tierTargets;
-  if (Object.keys(targets).length > 0) return `${entry.binBaseName}-${tier}.bin`;
-  return `${entry.binBaseName}.bin`;
+  const filename =
+    Object.keys(targets).length > 0
+      ? `${entry.binBaseName}-${tier}.bin`
+      : `${entry.binBaseName}.bin`;
+  return `${GALAXY_CATALOG_DATA_PREFIX}/${filename}`;
 }
