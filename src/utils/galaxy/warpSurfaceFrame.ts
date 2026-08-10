@@ -7,6 +7,7 @@
  * `warpHeight`. Its two tangents and their normal ARE the blob's three axes:
  * long azimuthally, narrow radially, thin along the normal.
  */
+import { normalize3 } from '../math/normalize3';
 import type { GalaxyDescription } from '../../@types/galaxy/GalaxyDescription';
 import type { Vec3 } from '../../@types/math/Vec3';
 
@@ -39,10 +40,10 @@ export function warpSurfaceFrame(
     dhdPhi = amp * Math.cos(azimuth - node);
   }
 
-  const along = normalize([-sinPhi, dhdPhi / Math.max(1e-6, radius), cosPhi]);
+  const along = normalize3([-sinPhi, dhdPhi / Math.max(1e-6, radius), cosPhi]);
   const radial: Vec3 = [cosPhi, dhdR, sinPhi];
   const dot = radial[0] * along[0] + radial[1] * along[1] + radial[2] * along[2];
-  const across = normalize([
+  const across = normalize3([
     radial[0] - dot * along[0],
     radial[1] - dot * along[1],
     radial[2] - dot * along[2],
@@ -54,9 +55,4 @@ export function warpSurfaceFrame(
     along[0] * across[1] - along[1] * across[0],
   ];
   return { along, across, pole };
-}
-
-function normalize(v: Vec3): Vec3 {
-  const len = Math.hypot(v[0], v[1], v[2]) || 1;
-  return [v[0] / len, v[1] / len, v[2] / len];
 }

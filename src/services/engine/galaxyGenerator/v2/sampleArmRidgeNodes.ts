@@ -8,14 +8,11 @@
  * modulation, left un-normalized so each consumer picks its own law.
  */
 import { armFadeEnvelope, armRidgeCurvePoint, armRidgeFrameAt } from './armRidgeGeometry';
+import { distance3 } from '../../../../utils/math/distance3';
 import type { GalaxyArmRidgeNode } from '../../../../@types/galaxy/GalaxyArmRidgeNode';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-
-function distance3(a: Vec3, b: Vec3): number {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-}
 
 /** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
 function armClumpMod(logR: number, geometry: GalaxyDescription, arm: GalaxyFieldArmRecord): number {

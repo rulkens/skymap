@@ -6,6 +6,7 @@
  * knots (`hiiRegions.ts`) both read this one catalog so cavities and their
  * glow correlate instead of being two independent sprinkles.
  */
+import { distance3 } from '../../../../utils/math/distance3';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
@@ -23,10 +24,6 @@ const MAX_EVENTS = 512;
 // against MILKY_WAY_GALAXY_PARAMS, its own seed) so sfActivity 1 lands the
 // preset at ~125 events — inside the 120-180 target band.
 const RATE_SCALE = 3;
-
-function distance3(a: readonly number[], b: readonly number[]): number {
-  return Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
-}
 
 export function buildSfEventCatalog(
   geometry: GalaxyDescription,

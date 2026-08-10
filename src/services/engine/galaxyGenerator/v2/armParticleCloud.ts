@@ -19,6 +19,7 @@ import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPla
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
+import { distance3 } from '../../../../utils/math/distance3';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
@@ -57,10 +58,6 @@ const SPRITE_POLE_RATIO = 0.6;
 const COMPLEX_SPREAD_RATIO = 0.6;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
-
-function distance3(a: Vec3, b: Vec3): number {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-}
 
 /**
  * The covering-factor integral behind `GalaxyArmCloudTuning.coverage` — the

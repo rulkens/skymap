@@ -10,6 +10,7 @@
  */
 import { ARM_SPAN_START_FRAC } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
+import { cross3 } from '../../../../utils/math/cross3';
 import { sampleIsmMapOrientation } from '../../../../utils/galaxy/sampleIsmMapOrientation';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
@@ -143,10 +144,6 @@ export function pickWeighted(rng: () => number, weights: readonly number[], sum:
 
 function dot3(a: Vec3, b: Vec3): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-function cross3(a: Vec3, b: Vec3): Vec3 {
-  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 function recordOrientationDelta(

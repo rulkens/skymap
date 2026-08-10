@@ -7,7 +7,9 @@
  * because `armParticleCloud.ts` needs it too and `galaxyFieldMixture.ts`
  * imports `armParticleCloud.ts` — hosting it there would cycle.
  */
+import { cross3 } from '../../../../utils/math/cross3';
 import { lerpVec3 } from '../../../../utils/math/lerpVec3';
+import { normalize3 } from '../../../../utils/math/normalize3';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
@@ -37,16 +39,6 @@ export function armColor(youngFraction: number, radialT: number): Vec3 {
   const radial = Math.min(1, Math.max(0, radialT));
   const radialColor = lerpVec3(ARM_RADIAL_INNER, ARM_RADIAL_OUTER, radial);
   return lerpVec3(ageColor, radialColor, ARM_RADIAL_STRENGTH);
-}
-
-function normalize3(v: Vec3): Vec3 {
-  const len = Math.hypot(v[0], v[1], v[2]) || 1;
-  return [v[0] / len, v[1] / len, v[2] / len];
-}
-
-/** Exported so `galaxyFieldMixture.ts`'s `deriveArmBlobCount` can share it rather than restate it. */
-export function cross3(a: Vec3, b: Vec3): Vec3 {
-  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 function smoothstep01(t: number): number {

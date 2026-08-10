@@ -15,7 +15,6 @@ import {
   armCrossSigma,
   armExcessSurfaceShape,
   armRidgeCurvePoint,
-  cross3,
 } from './armRidgeGeometry';
 import { buildArmSpurs } from './armSpurGeometry';
 import { buildArmSpurParticleCloud, deriveArmSpurCloudCount } from './armSpurParticleCloud';
@@ -25,8 +24,10 @@ import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from './defaultGalaxyStarFormationParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { sampleArmRidgeNodes } from './sampleArmRidgeNodes';
+import { cross3 } from '../../../../utils/math/cross3';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
+import { distance3 } from '../../../../utils/math/distance3';
 import { galaxyFieldInverseCovariance } from '../../../../utils/galaxy/galaxyFieldInverseCovariance';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { lerpVec3 } from '../../../../utils/math/lerpVec3';
@@ -498,10 +499,6 @@ function pushWarpedOuterDisc(
     }
   }
   return totalFlux;
-}
-
-function distance3(a: Vec3, b: Vec3): number {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
 /** Points to densely re-sample the ridge at, to estimate curvature — see `deriveArmBlobCount`. */

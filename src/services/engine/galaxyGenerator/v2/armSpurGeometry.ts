@@ -9,11 +9,11 @@
  * Pure `(arm, geometry, tuning, rng) -> flat data`, no engine state.
  */
 import { armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
+import { distance3 } from '../../../../utils/math/distance3';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyArmSpurTuning } from '../../../../@types/galaxy/GalaxyArmSpurTuning';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /** Log-radius samples per parent arm's own span — same order of magnitude as `sfEventCatalog.ts`'s STEPS_PER_ARM, fine enough to track arc length without a curvature-adaptive bound (`deriveArmBlobCount`'s finer 192 exists for a stricter chord-sag tolerance this walk doesn't need). */
 const SPUR_WALK_STEPS = 128;
@@ -33,10 +33,6 @@ const SPUR_SPACING_SLOPE = 0.03;
 /** A spur is young by construction (post-shock gas, not the arm's own stellar population) — low floor, small spread, independent of the parent's own `age`. */
 const SPUR_AGE_FLOOR = 0.05;
 const SPUR_AGE_JITTER = 0.15;
-
-function distance3(a: Vec3, b: Vec3): number {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-}
 
 /** Physical root-to-root spacing at a radius — read by both the walk below and `armSpurParticleCloud.ts`'s size draw, so a spur's sprites size against the SAME gap its root spacing was drawn from. */
 export function spurRootSpacing(
