@@ -18,10 +18,11 @@
  * for the anti-drift pin on those constants.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { quickLookSentinelPath } from '../utils/volume/quickLookSentinelPath';
 import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -144,6 +145,10 @@ export async function buildMcpmTier(factor: 8 | 4 | 2): Promise<void> {
     origin: a.origin,
     voxelSizeMpc: a.voxelSize,
   });
+  // A real large-tier rebuild retires any quick-look calibration cube left
+  // at this same path — force: true because the sentinel is absent on
+  // almost every run (only --quick-look, a later task, ever writes it).
+  if (factor === 2) rmSync(quickLookSentinelPath('public/data'), { force: true });
 }
 
 // ── CLI wrapper ────────────────────────────────────────────────────
