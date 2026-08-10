@@ -64,7 +64,9 @@ geometry keys the importer needs (see "Exporter-side changes" below).
 - Ground preparation: extract the shared log1p/transpose/f16 pack step out of
   `buildMcpmVolume.ts` so both builders share one value transform.
 - Skymap-side block-averaging for the shell tiers (decision + rules below).
-- Quick-look mode overwriting `public/data/mcpm-large.scfd`.
+- Quick-look mode overwriting `public/data/mcpm-large.scfd`, plus the overwrite
+  sentinel + `syncR2` refusal guard that keep the reproduced cube out of R2
+  (see "Quick-look mode, precisely").
 
 **Out of scope (later rhizome-shells plan):**
 
@@ -74,7 +76,8 @@ geometry keys the importer needs (see "Exporter-side changes" below).
   shell plan, when there are actual shell npys to register).
 - Any change to how the VAC reference pipeline works — `extractMcpmCube.py` and
   `buildMcpmVolume.ts`'s CLI stay exactly as they are (modulo the pack-helper
-  extraction, which is behaviour-preserving).
+  extraction, which is behaviour-preserving, and the one-line quick-look
+  sentinel cleanup in `buildMcpmTier`, below).
 
 ## Decision 1 — new tool, not a generalised `buildMcpmVolume.ts`
 
@@ -183,7 +186,7 @@ wins), messages prefixed with the function name per house style
 | 3   | `version === 1`                                                                                                                 | `parsePolyphyTraceSidecar: unsupported version <n> (expected 1); regenerate the cube with the current exporter`                                                                                      |
 | 4   | `dims`, `origin_mpc`, `voxel_size_mpc` are 3-element finite-number arrays; dims are positive integers; voxel sizes are positive | `parsePolyphyTraceSidecar: <field> must be 3 finite numbers, got <json>`                                                                                                                             |
 | 5   | `frame` is in the `ScalarFieldFrameKind` union                                                                                  | `parsePolyphyTraceSidecar: unknown frame "<x>" (expected equatorial-cartesian \| supergalactic-cartesian \| galactic)`                                                                               |
-| 6   | Voxel-size spread within tolerance (Decision 3)                                                                                 | `parsePolyphyTraceSidecar: voxel_size_mpc spread <p>% exceeds 0.5% (sizes <vx>, <vy>, <vz>); SCFD stores one cubic voxel size — fix the exporter's grid rounding`                                    |
+| 6   | Voxel-size spread within tolerance (Decision 3)                                                                                 | `buildRhizomeVolume: voxel_size_mpc spread <p>% exceeds 0.5% (sizes <vx>, <vy>, <vz>); SCFD stores one cubic voxel size — fix the exporter's grid rounding`                                          |
 | 7   | npy rank is 3 (after squeeze)                                                                                                   | `buildRhizomeVolume: expected 3D cube (or 4D with trailing singleton), got shape <s>`                                                                                                                |
 | 8   | npy shape equals sidecar `dims`                                                                                                 | `buildRhizomeVolume: npy shape <s> does not match sidecar dims <d> — stale sidecar?`                                                                                                                 |
 | 9   | dtype `<f4` or `<f8`                                                                                                            | `buildRhizomeVolume: expected f32/f64 .npy, got dtype <d> (f16 input loses precision before normalisation — export f32)`                                                                             |
@@ -198,9 +201,12 @@ PolyPhy rounds grid dims per-axis, so the three voxel edge lengths differ by
 <1%. SCFD v3 stores one float (`scalarFieldFormat.ts` header offset 36) and the
 renderer assumes cubic voxels. **Rule: the importer asserts relative spread
 `(max − min) / mean ≤ 0.005`, then uses the mean.** Enforced in
-`parsePolyphyTraceSidecar` (rule 6 above) — consumer-side, because the importer
-is the single gate every cube passes through regardless of which exporter
-produced it.
+`buildRhizomeVolume` (rule 6 above), beside the SCFD encoder — the cubic
+constraint is SCFD's, not the sidecar schema's, so `parsePolyphyTraceSidecar`
+returns `voxel_size_mpc` per-axis verbatim and stays a faithful parse of the
+cross-repo contract. A future non-SCFD consumer of the sidecar (a diagnostic
+tool, another volume format) is then not bound by this tolerance or robbed of
+the per-axis values.
 
 Why 0.5%: using the mean, the worst-case positional error at the far face of a
 512-voxel axis is `≤ spread × N = 0.005 × 512 ≈ 2.5 voxels` (typically half
@@ -211,9 +217,9 @@ voxels. The example calibration cube (`1.8367 / 1.8351 / 1.8394`) has spread
 accidentally exported in the wrong units) fails loudly rather than rendering
 subtly squashed.
 
-The mean-collapse happens in the parser and the _collapsed_ value flows to the
-encoder — the tool never carries per-axis sizes past validation, so no
-downstream code can half-adopt them.
+The builder collapses to the mean immediately after the spread assert, and only
+the _collapsed_ value flows onward — no code past that point carries per-axis
+sizes, so nothing downstream can half-adopt them.
 
 ## Decision 4 — CLI shape
 
@@ -231,7 +237,10 @@ npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner|middle|oute
   the mode tests exercise and the escape hatch for one-off cubes.
 - **`--quick-look`** — single-cube passthrough written over
   **`public/data/mcpm-large.scfd`** (gitignored, served by the running Vite dev
-  server). This is the calibration loop's viewer mode; details below.
+  server). The output path is composed from `MCPM_TIER_FILENAME[2]` imported
+  from `buildMcpmVolume.ts` — not a restated literal — so the filename keeps
+  one home and quick-look can never silently write a file the viewer doesn't
+  fetch. This is the calibration loop's viewer mode; details below.
 - **`--shell <name>`** — tiered production mode for the rhizome shells; emits
   `public/data/rhizome-<shell>-{small,medium,large}.scfd` per Decision 5. The
   flag is _specified_ here so the tool's argument surface is stable, but its
@@ -263,12 +272,25 @@ Operational notes the tool prints on completion:
   so. We deliberately do not overwrite all three tier files — a ≥512-axis cube
   is ~150 MB of f16 and triplicating it buys nothing.
 - Restore the shipped reference with `npm run build-mcpm` (rebuilds all three
-  mcpm tiers from `data/raw/mcpm/mcpm_sdss_d{8,4,2}.npy`).
+  mcpm tiers from `data/raw/mcpm/mcpm_sdss_d{8,4,2}.npy` and clears the
+  quick-look sentinel, below).
 
-Zero skymap code changes are needed for quick-look — that constraint is the
-mode's entire design. It also means the reproduced-vs-reference comparison is
-apples-to-apples: same renderer, same presentation defaults, same normalisation
-(guaranteed by the shared pack helper, Decision 1).
+**R2 guard.** `mcpm-large.scfd` matches the `sync-r2` allow-list
+(`tools/deploy/r2/allowDataFile.ts:14`), so an overwritten reference plus one
+forgotten rebuild would silently ship the reproduced cube to production as the
+MCPM reference. Quick-look therefore writes a sentinel
+`public/data/mcpm-large.scfd.quicklook` beside its output; `syncR2.ts`
+hard-fails while the sentinel exists (message: run `npm run build-mcpm`), and
+`buildMcpmTier(2)` deletes it when it rewrites the real reference. The sentinel
+itself never syncs — `allowDataFile` is an allow-list. Same principle as the
+shared pack helper: the corrupted-ship path is made structurally impossible
+rather than documented away.
+
+Zero **runtime** code changes are needed for quick-look — that constraint is
+the mode's entire design; the R2 guard touches two tool files, never the viewer
+path. It also means the reproduced-vs-reference comparison is apples-to-apples:
+same renderer, same presentation defaults, same normalisation (guaranteed by
+the shared pack helper, Decision 1).
 
 ## Decision 5 — tiering lives skymap-side (in the importer)
 
@@ -379,10 +401,15 @@ it ever fail on a real bug nothing else catches?":
   rather than the full `--shell` CLI): 4×4×4 of exactly-representable values →
   2×2×2 known means; derived header dims/2, voxelSize×2, origin unchanged;
   non-divisible dims error.
+- **Quick-look R2 guard**: with the `.quicklook` sentinel present, `syncR2`'s
+  gate refuses (exercised via the exported check, not a live sync). This is the
+  only line defending production from a calibration overwrite, so it earns a
+  pin.
 
 Deliberately **not** tested (per `docs/superpowers/conventions/testing.md`): the
-tier-filename mapping table and quick-look's output-path constant (constant
-restatements), sidecar JSON round-trips of `provenance` (pass-through), and any
+tier-filename mapping table (a constant restatement; quick-look's output path
+is the imported `MCPM_TIER_FILENAME[2]`, so there is no second copy to pin),
+sidecar JSON round-trips of `provenance` (pass-through), and any
 re-assertion of `encodeScalarField` behaviour already covered by
 `tests/data/volume/scalarFieldFormat.test.ts`.
 
