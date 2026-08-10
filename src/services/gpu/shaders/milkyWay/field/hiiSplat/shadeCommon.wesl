@@ -85,6 +85,15 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
   return result;
 }
 
+// hiiNearFadeActive — the fade window's own GUARD: start <= end or start <=
+// 0 disables the fade. Shared by vertex.wesl's vs (which must skip clipping
+// a component the eye is still approaching) and hiiNearFade below (which
+// recomputes the smoothstep once the fragment stage is reached) — both used
+// to write this predicate out independently.
+fn hiiNearFadeActive(fadeStart: f32, fadeEnd: f32) -> bool {
+  return fadeStart > fadeEnd && fadeStart > 0.0;
+}
+
 // hiiNearFade — recomputes the vs's own fade gate from 'po'/'boundRadius'
 // rather than carrying it down as a varying: both are already in scope for
 // the ray math above, and the vs's own gate already collapsed the fade <= 0
@@ -92,7 +101,7 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
 fn hiiNearFade(po: vec3<f32>, boundRadius: f32) -> f32 {
   let fadeStart = u.youngStars.z;
   let fadeEnd = u.youngStars.w;
-  if (fadeStart > fadeEnd && fadeStart > 0.0) {
+  if (hiiNearFadeActive(fadeStart, fadeEnd)) {
     return smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(po));
   }
   return 1.0;

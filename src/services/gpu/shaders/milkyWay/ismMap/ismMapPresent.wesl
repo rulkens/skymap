@@ -15,9 +15,11 @@
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
+import package::lib::camera::cameraRayFromUv;
+import package::lib::util::rayPlaneY0;
 import package::milkyWay::field::io::u;
-
-const PI: f32 = 3.14159265358979;
+import package::milkyWay::ismMap::ismMapPresentLib::logPolarUv;
+import package::milkyWay::ismMap::ismMapPresentLib::ismMapEdgeFade;
 
 // Mirrors dustParticleCloud.ts's DUST_SURVIVAL_FLOOR_FRAC — parity-tested in
 // constants.parity.test.ts. A texel below this FRACTION of ITS OWN RING'S
@@ -59,41 +61,29 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let aspect = u.params.y;
   let shift = u.params.z;
   // FullscreenOut carries 'uv' (its @builtin(position) is FRAMEBUFFER
-  // pixels in the fragment stage, not NDC) — undo fullscreenVertex's own
-  // uv transform to recover the NDC fieldSplat/fragment.wesl's fs
-  // reconstructs its ray from.
-  let ndcX = input.uv.x * 2.0 - 1.0;
-  let ndcY = 1.0 - input.uv.y * 2.0;
-  let d = normalize(
-    u.camRight.xyz * ((ndcX + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (ndcY * tanHalfFov)
-      + u.camFwd.xyz,
-  );
+  // pixels in the fragment stage, not NDC) — cameraRayFromUv undoes
+  // fullscreenVertex's own uv transform to recover the NDC
+  // fieldSplat/fragment.wesl's fs reconstructs its ray from.
+  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
   let o = u.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the
   // plane has nothing to show.
-  if (abs(d.y) < 1e-6) {
-    return vec4<f32>(0.0);
-  }
-  let t = -o.y / d.y;
+  let t = rayPlaneY0(o, d);
   if (t <= 0.0) {
     return vec4<f32>(0.0);
   }
   let hit = o + d * t;
-  let r = length(hit.xz);
-  let theta = atan2(hit.z, hit.x);
 
-  if (r < grid.rMin || r > grid.rMax) {
+  let uvGrid = logPolarUv(hit, grid.rMin, grid.rMax);
+  if (uvGrid.z < 0.5) {
     return vec4<f32>(0.0);
   }
-  let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
-  let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
+  let azT = uvGrid.x;
+  let ringT = uvGrid.y;
   let texel = textureSampleLevel(ismMapTex, ismMapSmp, vec2<f32>(azT, ringT), 0.0);
 
-  // Fade the last few percent toward each radial edge so the map doesn't
-  // end in a hard ring — presentation, not physics.
-  let edgeFade = smoothstep(0.0, 0.03, ringT) * (1.0 - smoothstep(0.94, 1.0, ringT));
+  let edgeFade = ismMapEdgeFade(ringT);
 
   let gas = texel.x;
   let stars = texel.y;

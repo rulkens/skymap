@@ -11,6 +11,7 @@
 
 import package::lib::util::hash21;
 import package::milkyWay::ismMap::ismMapShear::ismMapShearTexels;
+import package::milkyWay::ismMap::ismMapShear::wrapAz;
 
 struct IsmMapFluidConstants {
   rMin: f32,
@@ -158,16 +159,6 @@ fn curlVelocity(gridPos: vec2<f32>, azCount: u32, curlScale: f32, genStep: f32) 
   let dPsiDy = (n1 - n2) / (2.0 * CURL_FD_EPS);
   let dPsiDx = (n3 - n4) / (2.0 * CURL_FD_EPS);
   return vec2<f32>(dPsiDy, -dPsiDx);
-}
-
-// Periodic az wrap — armForcingAt's own neighbour reads (the grid is
-// periodic in az everywhere it is read).
-fn wrapAz(az: i32, azCount: i32) -> i32 {
-  var a = az % azCount;
-  if (a < 0) {
-    a += azCount;
-  }
-  return a;
 }
 
 fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {

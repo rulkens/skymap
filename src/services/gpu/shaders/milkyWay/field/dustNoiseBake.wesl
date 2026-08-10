@@ -9,25 +9,13 @@
 // shows as a lattice-aligned crease. TILEABLE: every lattice corner wraps
 // its integer index modulo the band's own cell count.
 
+import package::lib::util::integerHash3;
+
 @group(0) @binding(0) var dst: texture_storage_3d<rgba8unorm, write>;
 
 /** Lattice cells per axis for BAND_FREQ 1.0 (band 0); later bands scale this
  * up by their own frequency, so the bake stays one function of (uv, cells). */
 const BASE_CELLS: u32 = 8u;
-
-// integerHash3 — Bob Jenkins/Squirrel-family 3-int avalanche: three large
-// odd multiplies then two xor-shifts, no diagonal banding at the low
-// lattice resolutions this bake samples (8..128 cells/axis). Kept local
-// rather than growing lib/util.wesl's 2D screen-space hash for this one
-// tileable-3D consumer.
-fn integerHash3(p: vec3<i32>) -> f32 {
-  let x = bitcast<u32>(p.x);
-  let y = bitcast<u32>(p.y);
-  let z = bitcast<u32>(p.z);
-  var h = x * 374761393u + y * 668265263u + z * 2246822519u;
-  h = (h ^ (h >> 13u)) * 1274126177u;
-  return f32(h ^ (h >> 16u)) / 4294967295.0;
-}
 
 // GRAD_BOUND — the [0,1] remap denominator below. Not a tight analytic
 // bound (the naive per-corner dot is <=3 worst-case); empirically checked

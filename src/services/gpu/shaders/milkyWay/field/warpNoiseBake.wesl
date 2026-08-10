@@ -3,24 +3,17 @@
 // split out of the shared dust-noise bake now that bake went gradient-noise
 // (dust/DIG/shell erosion wants smoother; the warp wants value noise's
 // blockier, higher-headroom character). Reuses dustNoiseBake.wesl's
-// PRE-gradient construction verbatim (integerHash3 + tileableValueNoise3D +
-// ridged fold, see git history at c76d8adbe) for three xyz channels at
-// 1x/2x/4x frequency, the bands starGrain.wesl used to read off
-// dustNoiseTex.xyz. TILEABLE: every lattice index wraps its band's cells.
+// PRE-gradient construction (integerHash3, now lib::util's shared hash +
+// tileableValueNoise3D + ridged fold, see git history at c76d8adbe) for
+// three xyz channels at 1x/2x/4x frequency, the bands starGrain.wesl used
+// to read off dustNoiseTex.xyz. TILEABLE: every lattice index wraps its
+// band's cells.
+
+import package::lib::util::integerHash3;
 
 @group(0) @binding(0) var dst: texture_storage_3d<rgba8unorm, write>;
 
 const BASE_CELLS: u32 = 8u;
-
-// integerHash3 — verbatim from dustNoiseBake.wesl@c76d8adbe.
-fn integerHash3(p: vec3<i32>) -> f32 {
-  let x = bitcast<u32>(p.x);
-  let y = bitcast<u32>(p.y);
-  let z = bitcast<u32>(p.z);
-  var h = x * 374761393u + y * 668265263u + z * 2246822519u;
-  h = (h ^ (h >> 13u)) * 1274126177u;
-  return f32(h ^ (h >> 16u)) / 4294967295.0;
-}
 
 // tileableValueNoise3D — verbatim from the same commit; wraps at 'cells'.
 fn tileableValueNoise3D(uv: vec3<f32>, cells: u32) -> f32 {

@@ -5,9 +5,10 @@
 // emission draw by weight render.orientationViewIntensity, same seam as
 // ismMapPresent.wesl.
 //
-// The camera-ray -> (r, theta) log-polar resample below is
-// ismMapPresent.wesl's own disc-plane-intersection mapping, copied rather
-// than re-derived — see that file's header for the derivation.
+// The camera-ray reconstruction, disc-plane intersection and (r, theta)
+// log-polar resample below are shared with ismMapPresent.wesl — see
+// lib::camera::cameraRayFromUv, lib::util::rayPlaneY0 and
+// ismMapPresentLib::logPolarUv for the derivations.
 //
 // Display rule: hue = orientation angle, value = coherence. The angle
 // (0.5*atan2(sin2t, cos2t)) spans only (-pi/2, pi/2] — a filament has no
@@ -18,8 +19,15 @@
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
+import package::lib::camera::cameraRayFromUv;
+import package::lib::util::rayPlaneY0;
+import package::lib::util::hueToRgb;
 import package::milkyWay::field::io::u;
+import package::milkyWay::ismMap::ismMapPresentLib::logPolarUv;
+import package::milkyWay::ismMap::ismMapPresentLib::ismMapEdgeFade;
 
+// Still needed locally for the hue conversion below (angle/PI) — only the
+// log-polar resample's own PI use moved into ismMapPresentLib.wesl.
 const PI: f32 = 3.14159265358979;
 
 // This galaxy's log-radial grid bounds — same shape as ismMapPresent.wesl's
@@ -39,48 +47,28 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
   return fullscreenVertex(vi);
 }
 
-// Fully-saturated hue -> rgb for hue in [0, 1) — the same branch-free
-// triangle-wave reconstruction pickDebugOverlay/fragment.wesl uses (S=1,
-// V=1 slice; the caller scales by the desired value/brightness).
-fn hueToRgb(h: f32) -> vec3<f32> {
-  let r = abs(h * 6.0 - 3.0) - 1.0;
-  let g = 2.0 - abs(h * 6.0 - 2.0);
-  let b = 2.0 - abs(h * 6.0 - 4.0);
-  return clamp(vec3<f32>(r, g, b), vec3<f32>(0.0), vec3<f32>(1.0));
-}
-
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let tanHalfFov = u.params.x;
   let aspect = u.params.y;
   let shift = u.params.z;
-  let ndcX = input.uv.x * 2.0 - 1.0;
-  let ndcY = 1.0 - input.uv.y * 2.0;
-  let d = normalize(
-    u.camRight.xyz * ((ndcX + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (ndcY * tanHalfFov)
-      + u.camFwd.xyz,
-  );
+  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
   let o = u.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the
   // plane has nothing to show.
-  if (abs(d.y) < 1e-6) {
-    return vec4<f32>(0.0);
-  }
-  let t = -o.y / d.y;
+  let t = rayPlaneY0(o, d);
   if (t <= 0.0) {
     return vec4<f32>(0.0);
   }
   let hit = o + d * t;
-  let r = length(hit.xz);
-  let theta = atan2(hit.z, hit.x);
 
-  if (r < grid.rMin || r > grid.rMax) {
+  let uvGrid = logPolarUv(hit, grid.rMin, grid.rMax);
+  if (uvGrid.z < 0.5) {
     return vec4<f32>(0.0);
   }
-  let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
-  let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
+  let azT = uvGrid.x;
+  let ringT = uvGrid.y;
   // Linear filtering is safe here specifically because the texture packs
   // the (cos2t, sin2t) DOUBLE-ANGLE vector, not a bare angle — only that
   // form interpolates across the pi wrap without a false zero-crossing
@@ -89,7 +77,7 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
 
   // Fade the last few percent toward each radial edge, same as
   // ismMapPresent.wesl — presentation, not physics.
-  let edgeFade = smoothstep(0.0, 0.03, ringT) * (1.0 - smoothstep(0.94, 1.0, ringT));
+  let edgeFade = ismMapEdgeFade(ringT);
 
   let cos2t = texel.x;
   let sin2t = texel.y;

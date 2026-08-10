@@ -48,21 +48,9 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 import package::lib::selectionEncoding::SELECTION_LOCAL_IDX_MASK;
 import package::lib::selectionEncoding::SOURCE_GAIA_STARS;
+import package::lib::util::hueToRgb;
 
 @group(0) @binding(0) var pickTex: texture_2d<u32>;
-
-// Fully-saturated hue -> rgb for hue in [0, 1). Reconstructs the three
-// RGB ramps of an HSV wheel at S=1, V=1 directly from the hue: each
-// channel is a clamped triangle peaking 1/3 of the wheel apart. The
-// caller scales the result by the desired value (brightness). Cheaper
-// and branch-free versus a full hsv2rgb with sector selection, and we
-// only ever need the S=1 slice.
-fn hueToRgb(h: f32) -> vec3<f32> {
-  let r = abs(h * 6.0 - 3.0) - 1.0;
-  let g = 2.0 - abs(h * 6.0 - 2.0);
-  let b = 2.0 - abs(h * 6.0 - 4.0);
-  return clamp(vec3<f32>(r, g, b), vec3<f32>(0.0), vec3<f32>(1.0));
-}
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {

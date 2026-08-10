@@ -10,6 +10,7 @@
 // (read from this texel's own previous value, never resampled).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
+import package::milkyWay::ismMap::ismMapShear::wrapAz;
 
 struct IsmMapFluidConstants {
   rMin: f32,
@@ -88,16 +89,6 @@ const CONTINUITY_MULT_MAX: f32 = 1.4;
 // target below converge to this, not to a bare 1.0.
 fn gasProfile(r: f32) -> f32 {
   return u.gasFloor + (1.0 - u.gasFloor) * exp(-r / u.gasScaleLength);
-}
-
-// Periodic az wrap, shared by divVelocity's own neighbour lookups — the
-// grid is periodic in az the same way everywhere it is read.
-fn wrapAz(az: i32, azCount: i32) -> i32 {
-  var a = az % azCount;
-  if (a < 0) {
-    a += azCount;
-  }
-  return a;
 }
 
 // Divergence of velocityTex at (az, ring), central-differenced over each

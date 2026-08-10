@@ -1,11 +1,23 @@
 // milkyWay/ismMap/ismMapShear.wesl — log-polar ring radius <-> per-ring shear
-// (in texels). ismMapFluidVelocity.wesl reads ismMapShearTexels for its own
+// (in texels), plus the periodic azimuth wrap the fluid chain's neighbour
+// reads share. ismMapFluidVelocity.wesl reads ismMapShearTexels for its own
 // shear velocity term. Restated from galaxyIsmMapArmForcing.ts's
 // ismMapRingRadius on the TS side (WGSL cannot import TS); ringCount/azCount/
 // rMin/rMax are params, not baked in, so this module owns no grid-size
 // dependency.
 
 const ISM_MAP_SHEAR_PI: f32 = 3.14159265358979;
+
+// wrapAz — periodic az wrap: the fluid grid is periodic in azimuth
+// everywhere it is read (ismMapFluidVelocity.wesl's armForcingAt,
+// ismMapFluidStep.wesl's divVelocity neighbour lookups).
+fn wrapAz(az: i32, azCount: i32) -> i32 {
+  var a = az % azCount;
+  if (a < 0) {
+    a += azCount;
+  }
+  return a;
+}
 
 fn ismMapRingRadius(ring: u32, ringCount: u32, rMin: f32, rMax: f32) -> f32 {
   let t = f32(ring) / f32(ringCount - 1u);

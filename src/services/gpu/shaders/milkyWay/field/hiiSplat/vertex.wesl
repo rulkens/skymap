@@ -12,6 +12,7 @@ import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
+import package::milkyWay::field::hiiSplat::shadeCommon::hiiNearFadeActive;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> HiiSplatOut {
@@ -44,7 +45,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
   // at full cost. GUARD: start <= end or start <= 0 disables the fade.
   let fadeStart = u.youngStars.z;
   let fadeEnd = u.youngStars.w;
-  if (fadeStart > fadeEnd && fadeStart > 0.0) {
+  if (hiiNearFadeActive(fadeStart, fadeEnd)) {
     let fade = smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(rel));
     if (fade <= 0.0) {
       // Same degenerate off-clip-volume corner splatSilhouette.wesl's own

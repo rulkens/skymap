@@ -24,14 +24,17 @@
 // tileable-cellular-noise split, so a point near one face still lights up
 // texels just past the seam on the far side.
 
-// Self-contained like dustNoiseBake.wesl beside it: the tool's own WESL root
-// (tools/galaxy-renderer/wesl.toml) symlinks lib/camera.wesl, lib/tonemap.wesl
-// etc. leaf by leaf, and 'lib/math.wesl' is not among them — importing
-// package::lib::math::TAU/saturate resolves fine in the MAIN app's build but
-// fails to link ('module not found') in the tool's, so TAU and saturate are
-// both declared locally instead. WGSL has no built-in 'saturate' (see
-// lib/math.wesl's own header); this is 'clamp(x, 0.0, 1.0)' under a name
-// that reads as intent, same as that module's version.
+import package::lib::util::integerHash3;
+
+// TAU/saturate stay local rather than importing lib::math: the tool's own
+// WESL root (tools/galaxy-renderer/wesl.toml) symlinks lib/camera.wesl,
+// lib/tonemap.wesl etc. leaf by leaf, and 'lib/math.wesl' is not among them —
+// importing package::lib::math::TAU/saturate resolves fine in the MAIN app's
+// build but fails to link ('module not found') in the tool's. WGSL has no
+// built-in 'saturate' (see lib/math.wesl's own header); this is
+// 'clamp(x, 0.0, 1.0)' under a name that reads as intent, same as that
+// module's version. integerHash3 above has no such constraint — lib/util.wesl
+// IS symlinked leaf-by-leaf (see wesl.toml) — so it imports from there.
 const TAU: f32 = 6.28318530717958;
 
 fn saturate(x: f32) -> f32 {
@@ -47,20 +50,6 @@ const POINT_SIGMA_CELLS: f32 = 0.28;
 /** mu/sigma of the UNDERLYING normal (not the amplitude itself) — eyeballed so most draws stay under ~0.4 and roughly one cell in twenty clears 1 (clipped to full brightness by saturate() below). A starting point for visual calibration, not a measurement. */
 const LOGNORMAL_MU: f32 = -1.4;
 const LOGNORMAL_SIGMA: f32 = 0.9;
-
-// integerHash3 — same avalanche dustNoiseBake.wesl's own uses, duplicated
-// rather than imported: that file's own header already declined to grow a
-// shared lib for one 3D tileable consumer, and importing across two compute
-// bakes would couple this file's tiling to whatever dustNoiseBake.wesl's
-// hash happens to do next.
-fn integerHash3(p: vec3<i32>) -> f32 {
-  let x = bitcast<u32>(p.x);
-  let y = bitcast<u32>(p.y);
-  let z = bitcast<u32>(p.z);
-  var h = x * 374761393u + y * 668265263u + z * 2246822519u;
-  h = (h ^ (h >> 13u)) * 1274126177u;
-  return f32(h ^ (h >> 16u)) / 4294967295.0;
-}
 
 /** One hash draw for 'cell', salted so a cell's position (x/y/z) and amplitude (u1/u2) never share a lattice offset. */
 fn cellHash(cell: vec3<i32>, salt: i32) -> f32 {
