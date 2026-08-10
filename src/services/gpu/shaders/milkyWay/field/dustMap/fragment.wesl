@@ -161,13 +161,10 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   let o = u.eye.xyz;
 
   let dustOffset = u32(u.counts.y);
-  let base = 4u * (dustOffset + input.inst);
-  let dg0 = comps[base];
-  let dg1 = comps[base + 1u];
-  let dg3 = comps[base + 3u];
-  let po = o - dg3.xyz;
+  let rec = comps[dustOffset + input.inst];
+  let po = o - rec.center;
 
-  let dc = gaussianRayCoeffs(po, d, dg0.xyz, dg1.xyz);
+  let dc = gaussianRayCoeffs(po, d, rec.invCovDiagonal, rec.invCovOffDiagonal);
   let a = dc.x;
 
   // dc.z (the ray's closest-approach squared Mahalanobis distance) past
@@ -199,12 +196,12 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   let p = o + d * tPeak;
 
   // Erosion and S5 carving both apply to every dust component — input.inst
-  // is this draw's index within the dust slice (see 'base' above), and
-  // cloudOffset (dustNoise.z) is where the cloud components start within
-  // that same slice (io.wesl's dustNoise doc); it is always 0 now that the
-  // particle cloud is the only dust tier, so this gate never skips either
-  // path. Kept rather than deleted since the uniform layout still reserves
-  // the field.
+  // is this draw's index within the dust slice ('rec' above indexes comps by
+  // dustOffset + input.inst), and cloudOffset (dustNoise.z) is where the
+  // cloud components start within that same slice (io.wesl's dustNoise doc);
+  // it is always 0 now that the particle cloud is the only dust tier, so
+  // this gate never skips either path. Kept rather than deleted since the
+  // uniform layout still reserves the field.
   let cloudActive = input.inst >= u32(u.dustNoise.z);
   let noiseActive = u.dustNoise.y > 0.0 && cloudActive;
   let carveActive = u.dustCarve.x > 0.0 && cloudActive;
@@ -234,13 +231,13 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   }
 
   // tail(t) is this component's own column from depth t to infinity — the
-  // same closed form as a whole-ray (t=0) column integral. amplitude (dg0.w)
-  // is the component's central V-band
-  // extinction density — see io.wesl's layout comment. x(t) = (b + a*t) /
+  // same closed form as a whole-ray (t=0) column integral. amplitude
+  // (rec.amplitude) is the component's central V-band extinction density —
+  // see io.wesl's layout comment. x(t) = (b + a*t) /
   // sqrt(2a) is expHalfErfc's own lower-limit argument (gaussianIntegral.wesl);
   // x0 is x(0), and each further edge just adds a*t_k/sqrtHalfA to it.
   let sqrtHalfA = sqrt(2.0 * a);
-  let coeff = dg0.w * sqrt(GAUSS_PI / (2.0 * a));
+  let coeff = rec.amplitude * sqrt(GAUSS_PI / (2.0 * a));
   let x0 = dc.y / sqrtHalfA;
   let aOverSqrtHalfA = a / sqrtHalfA;
   let tail0 = coeff * expHalfErfc(dc.z, x0);

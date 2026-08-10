@@ -17,11 +17,9 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   // last — see io.wesl's layout comment): this draw's own instance index is
   // relative to the dust slice, not 'comps' as a whole.
   let dustOffset = u32(u.counts.y);
-  let base = 4u * (dustOffset + inst);
-  let g1 = comps[base + 1u];
-  let g3 = comps[base + 3u];
-  let center = g3.xyz;
-  let r = g1.w;
+  let compIndex = dustOffset + inst;
+  let center = comps[compIndex].center;
+  let r = comps[compIndex].boundRadius;
 
   let eye = u.eye.xyz;
   let camRight = u.camRight.xyz;

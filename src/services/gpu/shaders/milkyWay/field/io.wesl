@@ -341,6 +341,8 @@
 // consumer. The remaining bindings keep their numbers so every pipeline and
 // bind group here stays as written.
 
+import package::milkyWay::field::records::FieldComponentRec;
+
 struct FieldUniforms {
   eye: vec4<f32>,
   camRight: vec4<f32>,
@@ -362,7 +364,7 @@ struct FieldUniforms {
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
-@group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read> comps: array<FieldComponentRec>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
 // Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) —
 // dustMap.wesl's own erosion term AND hiiNoise.wesl's hiiNoiseTerm both import

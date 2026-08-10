@@ -284,6 +284,10 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
  * same buffer but are drawn by their own separate pass instead
  * (`dustMapPipe`'s `dustMap/vertex.wesl`+`dustMap/fragment.wesl`, instanced
  * over `dust.count`; see `createGalaxyEngine.ts`'s dust-column map pipeline).
+ *
+ * The byte order below is a MIRROR, not the authority: `records.wesl`'s
+ * `FieldComponentRec` is the layout SSoT (`comps: array<FieldComponentRec>`,
+ * `io.wesl`), checked against this function by `records.parity.test.ts`.
  */
 export function packFieldComponents(
   mixture: readonly GalaxyFieldComponent[],

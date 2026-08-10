@@ -50,19 +50,19 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
   );
   let o = u.eye.xyz;
 
-  let mDiagAmplitude = comps[4u * input.inst];
-  let mOffBoundRadius = comps[4u * input.inst + 1u];
-  let emissionColorTextureWeight = comps[4u * input.inst + 2u];
-  let centerStarsWeight = comps[4u * input.inst + 3u];
-  let po = o - centerStarsWeight.xyz;
+  let rec = comps[input.inst];
+  let po = o - rec.center;
 
-  let coeffs = gaussianRayCoeffs(po, d, mDiagAmplitude.xyz, mOffBoundRadius.xyz);
+  let coeffs = gaussianRayCoeffs(po, d, rec.invCovDiagonal, rec.invCovOffDiagonal);
 
   var result: HiiComponentShading;
   result.coeffs = coeffs;
-  result.emissionColorTextureWeight = emissionColorTextureWeight;
-  result.centerStarsWeight = centerStarsWeight;
-  result.boundRadius = mOffBoundRadius.w;
+  // HiiComponentShading's own two fields stay vec4 — youngFragment.wesl/
+  // erosionFragment.wesl/extrasFragment.wesl (outside this task's scope)
+  // still read '.w' off them for textureWeight/starsWeight.
+  result.emissionColorTextureWeight = vec4<f32>(rec.color, rec.textureWeight);
+  result.centerStarsWeight = vec4<f32>(rec.center, rec.starsWeight);
+  result.boundRadius = rec.boundRadius;
   result.po = po;
   result.rayOrigin = o;
   result.rayDir = d;
@@ -78,8 +78,8 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
     input.inst,
     primaryCount,
     coeffs,
-    mDiagAmplitude.w,
-    emissionColorTextureWeight.xyz,
+    rec.amplitude,
+    rec.color,
   );
   return result;
 }

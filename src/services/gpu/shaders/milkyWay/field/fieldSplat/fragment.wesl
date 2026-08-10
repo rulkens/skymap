@@ -27,13 +27,10 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   );
   let o = u.eye.xyz;
 
-  let mDiagAmplitude = comps[4u * input.inst];
-  let mOffBoundRadius = comps[4u * input.inst + 1u];
-  let emissionColorTextureWeight = comps[4u * input.inst + 2u];
-  let centerStarsWeight = comps[4u * input.inst + 3u];
-  let po = o - centerStarsWeight.xyz;
+  let rec = comps[input.inst];
+  let po = o - rec.center;
 
-  let coeffs = gaussianRayCoeffs(po, d, mDiagAmplitude.xyz, mOffBoundRadius.xyz);
+  let coeffs = gaussianRayCoeffs(po, d, rec.invCovDiagonal, rec.invCovOffDiagonal);
 
   // q (coeffs.z) is the ray's own closest-approach squared Mahalanobis
   // distance. Exceeding SPLAT_CUT^2 means this fragment sits on a
@@ -49,8 +46,8 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
     input.inst,
     primaryCount,
     coeffs,
-    mDiagAmplitude.w,
-    emissionColorTextureWeight.xyz,
+    rec.amplitude,
+    rec.color,
   );
 
   // Exposure (params.w) multiplies emission only, never the attenuation
