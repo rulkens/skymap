@@ -279,7 +279,9 @@ Operational notes the tool prints on completion:
 (`tools/deploy/r2/allowDataFile.ts:14`), so an overwritten reference plus one
 forgotten rebuild would silently ship the reproduced cube to production as the
 MCPM reference. Quick-look therefore writes a sentinel
-`public/data/mcpm-large.scfd.quicklook` beside its output; `syncR2.ts`
+`public/data/mcpm-large.scfd.quicklook` beside its output — **before** the
+overwrite begins, so a mid-write failure can never leave a truncated
+reference unflagged; `syncR2.ts`
 hard-fails while the sentinel exists (message: run `npm run build-mcpm`), and
 `buildMcpmTier(2)` deletes it when it rewrites the real reference. The sentinel
 itself never syncs — `allowDataFile` is an allow-list. Same principle as the

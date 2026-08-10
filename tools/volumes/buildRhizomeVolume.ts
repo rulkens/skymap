@@ -166,7 +166,6 @@ async function main(): Promise<void> {
   if (!npyPath || modeCount !== 1) {
     printUsage();
     process.exit(1);
-    return;
   }
 
   if (outIndex !== -1) {
@@ -174,7 +173,6 @@ async function main(): Promise<void> {
     if (!outPath) {
       printUsage();
       process.exit(1);
-      return;
     }
     await buildRhizomeVolume({ npyPath, outPath });
     return;
@@ -184,12 +182,17 @@ async function main(): Promise<void> {
     // Composed from the imported tier map, never a restated literal —
     // the filename has exactly one home (quickLookSentinelPath.ts).
     const outPath = `public/data/${MCPM_TIER_FILENAME[2]}`;
-    await buildRhizomeVolume({ npyPath, outPath });
+    // Sentinel BEFORE the build, not after: writeFileSync isn't atomic, so
+    // a mid-write failure (ENOSPC, EIO) can leave outPath truncated. Setting
+    // early over-blocks sync-r2 on an ordinary validation failure (annoying,
+    // recoverable with build-mcpm); setting late would let a truncated
+    // reference ship with no sentinel to catch it (dangerous, silent).
     writeFileSync(
       quickLookSentinelPath('public/data'),
       `quick-look cube written by buildRhizomeVolume --quick-look from ${npyPath}; ` +
         `run "npm run build-mcpm" to restore the shipped reference and clear this sentinel.\n`,
     );
+    await buildRhizomeVolume({ npyPath, outPath });
     console.log(
       `[buildRhizomeVolume] quick-look cube is only visible with the MCPM tier set to ` +
         `large — the viewer fetches mcpm-<tier>.scfd per the tier setting.`,
@@ -206,7 +209,6 @@ async function main(): Promise<void> {
   if (!shellName || !(SHELL_NAMES as readonly string[]).includes(shellName)) {
     printUsage();
     process.exit(1);
-    return;
   }
   // Argument surface is stable now so the later rhizome-shells plan lands
   // without a CLI-shape change; wiring to blockAverageCube is out of scope
