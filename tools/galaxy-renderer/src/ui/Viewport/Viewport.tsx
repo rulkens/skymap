@@ -2,21 +2,14 @@
  * Viewport — owns the <canvas>, boots the galaxy engine, and reports the
  * live handle to its parent.
  *
- * On mount it creates the engine against the canvas, seeds it with the
- * tool's boot defaults (`DEFAULT_RENDER_SETTINGS` + `DEFAULT_LOD_SETTINGS`
- * merged into one `setRender` patch, then `setParams(DEFAULT_GALAXY_PARAMS)`
- * to trigger the first generation), and only then reports the handle via
- * `onEngine` — a caller that reaches for the handle before that point would
- * find an engine with nothing drawn on it yet. `createGalaxyEngine` is
- * async and can still be in flight when this component unmounts (fast
- * route change, StrictMode double-invoke); the `disposed` flag guards that
- * race by disposing the just-resolved handle instead of handing it to a
- * parent that already stopped listening.
+ * On mount it creates the engine, seeds it with the tool's boot defaults,
+ * and only then reports the handle via `onEngine` — a caller that reaches
+ * for it earlier would find nothing drawn yet. `createGalaxyEngine` is
+ * async and can still be in flight when this component unmounts; the
+ * `disposed` flag guards that race by disposing the just-resolved handle
+ * rather than handing it to a parent that already stopped listening.
  *
- * Camera input (orbit drag, pan, wheel zoom) is engine-internal — see
- * `createGalaxyEngine`'s pointer listeners — so this component adds none of
- * its own, unlike flow-workbench's Viewport which bridges input into an
- * external store.
+ * Camera input is engine-internal, so this component adds none of its own.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';

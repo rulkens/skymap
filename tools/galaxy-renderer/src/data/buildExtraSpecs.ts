@@ -1,16 +1,11 @@
 /**
- * buildExtraSpecs — port of the spike's `applyExtras` method
- * (`Galaxy Renderer.dc.html`): the multi-galaxy perf-test scatter.
- * Each spec gets a full random parameter set, a lighter star count than a
- * hero galaxy (40k-200k, so N of them stays affordable), a random distance
- * in the near-field shell, a random spherical placement flattened on Y to
- * keep the scatter disk-like rather than a sphere, and a random scale +
- * orientation.
+ * buildExtraSpecs — port of the spike's `applyExtras` scatter
+ * (`Galaxy Renderer.dc.html`): each spec gets a full random parameter set, a
+ * lighter star count than a hero galaxy so N of them stays affordable, and a
+ * random near-field placement flattened on Y to keep the scatter disk-like.
  *
- * The spike's `params.background = false` line is dead code — `GalaxyParams`
- * dropped the `background` field entirely (see its module header) because
- * `galaxy-model.js` hardcoded that field to 0 regardless of the param —
- * so it isn't ported.
+ * The spike's `params.background = false` isn't ported — `GalaxyParams`
+ * dropped that field entirely (see its module header).
  */
 
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';

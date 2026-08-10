@@ -90,11 +90,10 @@ export function randomGalaxyParams(
   const clumpSeed = (rng() * 1e9) | 0;
   const waveSeed = (rng() * 1e9) | 0;
 
-  // No dust/starFormation draw any more: both moved onto `GalaxyFieldTuning`
-  // (2026-08-06 reshape), which is scene-wide rather than per-galaxy, so a
-  // "randomize this galaxy" click has nothing left to roll for either — every
-  // background extra now shares the one scene-wide look instead of rolling
-  // its own.
+  // No dust/starFormation draw: both live on `GalaxyFieldTuning`, which is
+  // scene-wide rather than per-galaxy, so a "randomize this galaxy" click has
+  // nothing left to roll for either — every background extra shares the one
+  // scene-wide look instead of rolling its own.
   return {
     type,
     shared: { ...sharedOut, seed, asymSeed, clumpSeed, waveSeed },

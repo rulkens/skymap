@@ -1,21 +1,14 @@
 /**
  * FieldSection — the FLUX FIELD group: the analytic field's exposure and its
  * base/warped-disc toggle (the header pill; arms live in `ArmFieldSection`).
- * Ring layout is frozen in `galaxyFieldMixture.ts` (`pushWarpedOuterDisc`) —
- * the outer disc's warp support, not a separately tunable part — so this
- * section owns exposure and the part toggle only, never ring shape.
+ * Ring layout is frozen in `galaxyFieldMixture.ts` (`pushWarpedOuterDisc`),
+ * not a separately tunable part, so this section owns exposure and the part
+ * toggle only, never ring shape.
  *
- * Values live in the `fieldTuning`/`render` slices; `engineBridge` forwards
- * every change to `engine.setFieldTuning` / the field pass, which rebuilds
- * the mixture from the geometry the last `setParams` cached — no
- * regenerate, no GPU compute dispatch, just a CPU-side rebuild picked up by
- * next frame's uniform pack.
- *
- * Arm blob count is no longer a slider value the readout can echo — it's
- * derived per arm from ridge curvature and budget-clamped against
- * `GALAXY_FIELD_MAX_COMPONENTS` (`deriveArmBlobCount` in
- * `galaxyFieldMixture.ts`), so cap overflow is structurally impossible and
- * this readout states only the static, still-honest smooth-field part.
+ * `engineBridge` forwards changes to `engine.setFieldTuning`, a CPU-side
+ * rebuild from the geometry the last `setParams` cached — no GPU dispatch.
+ * Arm blob count is derived per arm and budget-clamped
+ * (`deriveArmBlobCount`), so this readout states only the static part.
  */
 import type { ReactNode } from 'react';
 import {

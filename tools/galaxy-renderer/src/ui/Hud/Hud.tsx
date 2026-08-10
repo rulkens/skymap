@@ -2,16 +2,13 @@
  * Hud — top-left title block + live telemetry badges.
  *
  * Purely presentational. `perf`/`stars`/`dust` are engine telemetry `App`
- * samples off `Viewport`'s `onPerf`/`onStats` callbacks and keeps in local
- * `useState` — routing them through the store would mean a Redux dispatch
- * twice a second for values nothing outside this pill reads.
+ * samples off `Viewport`'s callbacks and keeps in local `useState` — routing
+ * them through the store would mean a Redux dispatch twice a second for
+ * values nothing outside this pill reads.
  *
- * The badge leads with milliseconds and puts fps second. Frame time is the
- * quantity that moves linearly with the work a change adds or removes, so it
- * is the one to compare between two variants; fps is the same measurement
- * compressed through a reciprocal, useful only for "am I still smooth". The
- * per-pass GPU spans below the badges are a further step removed — see
- * `PassTimings`.
+ * The badge leads with milliseconds, fps second: frame time moves linearly
+ * with the work a change adds or removes, so it's the one to compare
+ * between variants; fps is the same measurement through a reciprocal.
  */
 import type { ReactNode } from 'react';
 import cx from 'classnames';

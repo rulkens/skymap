@@ -1,18 +1,14 @@
 /**
- * HiiSection — the analytic field's HII-region tier (`src/services/engine/galaxyGenerator/v2/hiiRegions.ts`):
- * discrete emission sprites with a limb-brightened shell, an embedded OB
- * cluster core, and a dust cavity they carve into the analytic dust lane.
- * Own section, own header pill (`fieldTuning.hii.enabled`), same idiom as
- * `ArmCloudSection`/`DustCloudSection` — a sub-tier with its own knobs, not
- * a settings drawer folded into FLUX FIELD.
+ * HiiSection — the analytic field's HII-region tier
+ * (`src/services/engine/galaxyGenerator/v2/hiiRegions.ts`): discrete
+ * emission sprites with a limb-brightened shell, an embedded OB cluster
+ * core, and a dust cavity they carve into the analytic dust lane. Own
+ * section, own header pill (`fieldTuning.hii.enabled`).
  *
- * SHELLS, DIG and YOUNG STARS nest inside it (`CollapsibleSection`'s
- * `variant="nested"`) rather than living as top-level siblings the way
- * `armField`/`armCloud` do — the panel was long enough that flattening every
- * shell/DIG/young-stars slider alongside the tier-shared ones read as one
- * endless list. Texture scale/contrast stay in the outer body: their info
- * text says they're shared by all three nested groups, so they read as
- * tier-global rather than owned by any one of them.
+ * SHELLS, DIG and YOUNG STARS nest inside it (`variant="nested"`) rather
+ * than as top-level siblings — flattening every slider alongside the
+ * tier-shared ones read as one endless list. Texture scale/contrast stay in
+ * the outer body: they're shared by all three nested groups.
  */
 import type { ReactNode } from 'react';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';

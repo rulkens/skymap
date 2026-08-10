@@ -1,18 +1,15 @@
 /**
  * migrateGalaxyFieldTuningWire — lifts a v2 preset's FLAT `f` keys into their
- * v3 nested homes, retires the two dead boolean gates the generator
- * dropdown replaced (`sfMap.enabled`, `dust.sfMapSeeding` — see
- * `GalaxyIsmMapGeneratorKind`), lifts the pre-ISM-rename `sfMap*` wire
- * spellings onto their `ismMap*` homes, AND lifts `dust`/`starFormation` off
- * an even older preset's `p` (`GalaxyParams` dropped both fields — see
- * `GalaxyFieldTuning`'s header). Exists because presets already saved carry
- * the old shapes forever; `parseGalaxyPreset` routes every `f` (plus its own
- * `p`, for the `legacyParams` lift) through this before handing it to the
- * store. Total, per this parser's no-validation contract (see
- * `parseGalaxyPreset`'s header). A section is emitted only when the payload
- * actually named one of its keys (on `f` OR, for `dust`/`starFormation`, on
- * legacy `p`), so an absent section stays absent — which is what makes
- * loading a partial preset leave the rest of the tuning alone.
+ * v3 nested homes; retires the two dead boolean gates the generator dropdown
+ * replaced (`sfMap.enabled`, `dust.sfMapSeeding`); renames the pre-ISM
+ * `sfMap*` wire spellings onto their `ismMap*` homes; and lifts
+ * `dust`/`starFormation` off an even older preset's `p` (`GalaxyParams`
+ * dropped both fields — see `GalaxyFieldTuning`'s header).
+ *
+ * Total, per this parser's no-validation contract (see `parseGalaxyPreset`'s
+ * header). A section is emitted only when the payload actually named one of
+ * its keys, so an absent section stays absent — loading a partial preset
+ * leaves the rest of the tuning alone.
  */
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
@@ -101,7 +98,7 @@ function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
 }
 
 /**
- * Board 19: these seven fields sat flat on `hii` before `GalaxyHiiShellsTuning`
+ * These seven fields sat flat on `hii` before `GalaxyHiiShellsTuning`
  * existed — same "old key wins only when the new one is absent" discipline
  * `LEGACY_SECTION_KEYS` uses, one level deeper. Runs before the generic
  * defaults-fill pass below, which copies `shells` WHOLESALE (like `dig`/

@@ -1,21 +1,15 @@
 /**
  * PARAM_SPEC — verbatim port of the spike's `SPEC` table
- * (`Galaxy Renderer.dc.html`), plus the four sliders whose ranges the spike
- * sourced from `mk()`'s inline fallback args instead of `SPEC`
- * (`hii`/`dustRing`/`dustRingWidth`/`dustRingStrength` — see the appended
- * block below). The `[min, max, step]` shape is reshaped from a tuple into
- * `ParamSpecEntry`'s named fields.
+ * (`Galaxy Renderer.dc.html`), reshaped from `[min, max, step]` tuples into
+ * `ParamSpecEntry`'s named fields, plus four sliders
+ * (`hii`/`dustRing`/`dustRingWidth`/`dustRingStrength`) whose ranges SPEC
+ * never covered — the spike's `mk()` inline fallback was their only range,
+ * so they're ported from there instead (see the appended block below).
  *
- * This is the ONLY place slider ranges exist. The spike's individual
- * `<input type="range">` elements also carried their own min/max attributes
- * (`Galaxy Renderer.dc.html`), but those were always overwritten by the
- * SPEC lookup at render time whenever SPEC had an entry — dead fallback
- * values that never took effect for those keys. They are not ported; a
- * slider with no range entry at all (e.g. `seed`, the `*Seed` fields,
- * `warpStart`) simply isn't range-constrained. The four keys `SPEC` never
- * covered are different: `mk()`'s inline fallback was the only range they
- * ever had, so it was live, not dead — those four are ported from `mk()`'s
- * call-site args instead of from `SPEC`.
+ * This is the ONLY place slider ranges exist; the spike's per-`<input>`
+ * min/max attributes were always overwritten by the SPEC lookup and are
+ * not ported. A key with no entry here (e.g. `seed`, `warpStart`) is
+ * simply not range-constrained.
  */
 
 import type { GalaxyLegacyParams } from '../../../../src/@types/galaxy/GalaxyLegacyParams';

@@ -1,15 +1,14 @@
 /**
  * REFERENCE_GALAXIES — verbatim port of the spike's `REFS` gallery
- * (`Galaxy Renderer.dc.html`): eight real named galaxies with a
- * param preset, a camera pose, and prose, used to seed the generator toward
+ * (`Galaxy Renderer.dc.html`): eight real named galaxies with a param
+ * preset, camera pose, and prose, used to seed the generator toward
  * something recognisable and to eyeball how close the model gets.
  *
- * Images are the curated famous-galaxy starless renders already published
- * under `public/images/famous-curated/<id>/starless.webp`. The id used for
- * the image path isn't always the REFS entry's own id — `ngc6946` ships
- * under its Caldwell catalog number (`c12`), and the generic `ell` entry
- * uses M49 as its illustrative giant elliptical. The Milky Way has no
- * external photograph (we live inside it), so its `img` is `null`.
+ * Images are curated famous-galaxy starless renders under
+ * `public/images/famous-curated/<id>/starless.webp`; the id isn't always
+ * the REFS entry's own id — `ngc6946` ships under its Caldwell number
+ * (`c12`), `ell` uses M49 as its illustrative giant elliptical, and the
+ * Milky Way's `img` is `null` (no external photograph is possible).
  */
 
 import type { ReferenceGalaxy } from '../../@types/data/ReferenceGalaxy';

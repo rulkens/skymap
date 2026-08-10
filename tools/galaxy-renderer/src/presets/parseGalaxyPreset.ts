@@ -2,15 +2,12 @@
  * parseGalaxyPreset — the read side of the preset wire format (see
  * `serializeGalaxyPreset`'s header). Total, like the spike's `onUploadFile`:
  * bad JSON or a non-object `p` yields `null`; `r`/`f`/`x` tolerate missing or
- * non-object (empty bag) — deliberate, this file has never had a validation
- * framework, so a malformed nested value still reaches the store as-is.
+ * non-object input — this file has never had a validation framework, so a
+ * malformed nested value still reaches the store as-is.
  *
- * `p` is routed through `migrateGalaxyParamsWire` to lift a v3-or-older
- * preset's flat keys into v4's `shared`/`legacy` bags. `f` is separately
- * routed through `migrateGalaxyFieldTuningWire` to lift a v2 file's flat keys
- * into v3's nested-by-section shape, AND (passing the RAW, unmigrated `p`
- * alongside — see `migrateGalaxyParamsWire`'s header for why it has to be the
- * raw one) an even older preset's `dust`/`starFormation` off `p` itself. `r`
+ * `p` routes through `migrateGalaxyParamsWire`, `f` through
+ * `migrateGalaxyFieldTuningWire` (passing the RAW, unmigrated `p` alongside
+ * for its own `dust`/`starFormation` lift — see that migrator's header). `r`
  * splits back into `render`/`lod` by key: `lodApparent` is the only
  * `LodSettings` field.
  */

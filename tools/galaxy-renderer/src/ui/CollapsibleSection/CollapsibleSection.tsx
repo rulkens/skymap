@@ -23,44 +23,33 @@ export type CollapsibleSectionProps = {
   readonly headerToggle?: boolean;
   readonly onHeaderToggleChange?: (value: boolean) => void;
   /**
-   * This section's live values keyed by their own path in the store —
-   * `{ fieldTuning: { arms: { widthScale: 2.3, … } } }`. The path is the whole
-   * point: pasted back, the block says which state it patches, so a value
-   * tuned by eye reaches its default site without a label-to-field guess.
-   * Omit it where a section drives no tuning state (DEBUG VIEWS) — an empty
-   * object is worse than no button.
+   * This section's live values keyed by their own path in the store — e.g.
+   * `{ fieldTuning: { arms: { widthScale: 2.3, … } } }` — so a value tuned by
+   * eye reaches its default site without a label-to-field guess. Omit where a
+   * section drives no tuning state (an empty object is worse than no button).
    *
    * Partial by design: two sections may split one state node (ARM OVERDENSITIES
-   * and ARM CLOUD both sit under `fieldTuning.arms`), and each carries only its
-   * own half. That makes a payload a transcription target, NOT something to
-   * dispatch — `fieldTuningPatched` replaces a node wholesale, so feeding it
-   * half a node drops the other half.
+   * and ARM CLOUD both sit under `fieldTuning.arms`). This is a transcription
+   * target, NOT something to dispatch — `fieldTuningPatched` replaces a node
+   * wholesale, so feeding it half a node drops the other half.
    */
   readonly copyPayload?: Record<string, unknown>;
   /**
    * Renders this section as a SUB-section of whatever CollapsibleSection it
-   * sits inside — nesting itself is plain composition (put one in another's
-   * `children`), so this prop only carries what composition can't: the
-   * diminished header/indented-body look that tells the two levels apart,
-   * and a `data-nested` marker on the fold button. probeGpuErrors.ts's
-   * root-level sweep excludes that marker, so a nested section whose parent
-   * already defaults open doesn't get queued twice — once as if it were
-   * top-level, once (correctly) from its parent's own body scan.
+   * sits inside — nesting itself is plain composition (put one in
+   * `children`); this prop only carries the diminished header/indented-body
+   * look and a `data-nested` marker. `probeGpuErrors.ts`'s root-level sweep
+   * excludes that marker, so a nested section whose parent already defaults
+   * open doesn't get queued twice.
    *
-   * Open state stays the caller's problem either way (this component owns
-   * none): give a nested section its OWN `openSections` key, never the
-   * parent's — e.g. `hiiRegions`/`hiiDig`/`hiiYoungStars` under a
-   * conceptual `hii` parent, the same prefixed-sibling naming `armField`/
-   * `armCloud` already use under `arms`. Reusing a key would make the two
-   * fold buttons drive the same boolean, which is easy to miss visually and
-   * easy to catch by grep — `openSections` keys all live in one file.
+   * Give a nested section its OWN `openSections` key, never the parent's —
+   * reusing one makes two fold buttons drive the same boolean.
    *
    * `'nested'` vs `'group'`: `'nested'` marks a section that IS contained
-   * (styles its OWN header+body as the diminished sub-tier, and tags itself
-   * for the probe). `'group'` marks a section whose CHILDREN are themselves
-   * sections (ANALYTIC MODEL, LEGACY MODEL) — it insets the body only,
-   * leaving this section's own header at full (outermost-tier) weight, and
-   * never touches `data-nested`. Absent, a section is neither.
+   * (styles itself as the sub-tier, tags itself for the probe). `'group'`
+   * marks a section whose CHILDREN are themselves sections (insets the body
+   * only, leaving its own header at full weight). Absent, a section is
+   * neither.
    */
   readonly variant?: 'nested' | 'group';
   readonly children: ReactNode;

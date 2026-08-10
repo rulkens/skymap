@@ -4,17 +4,13 @@
  * validation panel.
  *
  * The one imperative wire this component owns: `Viewport.onEngine` hands
- * back the live `GalaxyEngineHandle`, and `connectEngineBridge` is the
- * ONLY place that handle gets attached to the store (see its own
- * docblock). `Viewport` itself guarantees an `onEngine(null)` call on
- * unmount (its own cleanup — see `Viewport.tsx`), so tearing the bridge
- * down on engine loss needs no separate effect here: `handleEngine`
- * disconnects the previous bridge before attaching a new one (or none),
- * whichever direction the handle changes.
+ * back the live `GalaxyEngineHandle`, and `connectEngineBridge` is the ONLY
+ * place that handle gets attached to the store. `handleEngine` disconnects
+ * the previous bridge before attaching a new one, so tearing the bridge down
+ * on engine loss needs no separate effect here.
  *
- * `perf`/`stats` are engine telemetry, not app state — they live in
- * local `useState` and feed `Hud` directly, never the store (see
- * `HudProps`'s docblock for why).
+ * `perf`/`stats` are engine telemetry, not app state — they live in local
+ * `useState` and feed `Hud` directly, never the store.
  */
 import { useRef, useState, type ReactNode } from 'react';
 import cx from 'classnames';

@@ -44,9 +44,9 @@
   margin-bottom: 5px;
 }
 
-/* The checkbox-row vocabulary moved to `shared.module.css` when `FadeSection`
-   became a second consumer; these keep the local names so the markup here is
-   unchanged. */
+/* Composes from `shared.module.css`, which also backs `FadeSection`'s
+   checkbox rows — shared vocabulary, local class names so the markup here
+   stays unchanged. */
 .toggleRow {
   composes: toggleRow from '../shared.module.css';
 }

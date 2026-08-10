@@ -1,40 +1,18 @@
 /**
  * runCompareFit — the "compare against a reference photo" auto-fit run,
- * ported from the spike's `autoFit` handler (`Galaxy Renderer.dc.html`)
- * as a store-driven procedure instead of a component method. Kept out of
- * `engineBridge` because the bridge is a plain diff table (state → engine
- * calls), not an async orchestrator; kept out of the component because the
- * sequence — camera setup, a progress estimate, a coordinate-descent fit, a
- * post-fit render — is exactly the kind of multi-step control flow that's
+ * ported from the spike's `autoFit` handler (`Galaxy Renderer.dc.html`) as a
+ * store-driven procedure: camera setup, a progress estimate, a
+ * coordinate-descent fit, and a post-fit render is control flow that's
  * miserable to unit-test through a React tree and trivial to test as a
- * function.
+ * plain function.
  *
- * The sequence:
- *   1. Dispatch `fitStarted` (resets the compare slice's fit-run fields,
- *      including the 'reading photo…' note that covers the reference-photo
- *      fetch below) BEFORE that fetch starts, not after.
- *   2. Load (or reuse) the reference photo's descriptor at 116px.
- *   3. Point the camera at an inclination inferred from the descriptor's
- *      axis ratio, and stop auto-rotate so the fit's own renders are stable.
- *   4. Warm up 40 frames so that new view is actually on screen before the
- *      fit starts scoring against it.
- *   5. Estimate the total candidate count `autoFit` will evaluate, so
- *      progress can be reported as a fraction rather than a raw counter —
- *      the per-category `nParams` table and the "+6 for the discrete
- *      arm-count sweep" term both mirror `autoFit`'s own candidate
- *      generation (arm sweep, then `passes` rounds of ±1D descent).
- *   6. Run `autoFit`, mirroring each step into the store so the panel can
- *      show live params/progress/score, and mirroring `compare.stopRequested`
- *      into `autoFit`'s stop signal so the panel's "stop" button works.
- *   7. On completion, commit the best params to both the engine and the
- *      store, settle 20 frames, grab a render, and diff its descriptor
- *      against the reference for the match report.
- *   8. Any failure (bad photo, dead render, …) is reported as an error note
- *      rather than thrown — the panel has no other channel to show it.
- *   9. Always end the run: clear `fitting` and restore auto-rotate to
- *      whatever the store's `ui.autoRotate` currently says (not necessarily
- *      what it was when the run started — the user may have toggled it mid
- *      fit).
+ * `fitStarted` dispatches BEFORE the reference-photo fetch starts, so its
+ * 'reading photo…' note covers the fetch, and `compare.stopRequested`
+ * mirrors into `autoFit`'s stop signal for the whole run, not just the fit
+ * itself. Auto-rotate is restored on completion or failure to whatever
+ * `ui.autoRotate` currently says, not what it was at the start — the user
+ * may have toggled it mid-fit. Failure is reported as an error note rather
+ * than thrown; the panel has no other channel to show it.
  */
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';

@@ -1,27 +1,14 @@
 /**
- * ControlsPanel — the 340px right column: every galaxy-shape,
- * rendering, and perf-test knob in one scrollable rail. A layout/dispatch
- * shell — the actual domain logic (what a Hubble-type pick nudges,
- * what a "randomize everything" draw looks like, what range each slider
- * gets) lives in `hubbleTypePatch`/`randomGalaxyParams`/`PARAM_SPEC`; this
- * component only decides which sliders are visible for the current
- * category and wires their `onChange` to a `paramsPatched` dispatch.
+ * ControlsPanel — the 340px right column: every galaxy-shape, rendering,
+ * and perf-test knob in one scrollable rail. A layout/dispatch shell — the
+ * domain logic (Hubble-type nudges, random draws, slider ranges) lives in
+ * `hubbleTypePatch`/`randomGalaxyParams`/`PARAM_SPEC`; this component only
+ * decides which sliders show for the current category and wires their
+ * `onChange` to a `paramsPatched` dispatch.
  *
- * Slider visibility per Hubble category mirrors the spike's `renderVals`
- * exactly, including `hii` (POPULATIONS) and the lenticular-only dust-ring
- * trio (DUST). Those four had no `SPEC` entry in the spike, so their range
- * came from `mk()`'s inline fallback args instead — live, not dead, for
- * exactly these keys (see `paramSpec.ts`'s docblock). `PARAM_SPEC` now
- * carries those four ranges too, so it stays this tool's ONLY range table.
- *
- * Every entropy-consuming click (randomize-all, new-seed, reseed-one-die)
- * seeds a fresh `mulberry32` from `Math.random()` at the click site — the
- * house rule that pure functions never own their own entropy source
- * (`randomGalaxyParams`'s docblock) means the RNG has to come from
- * somewhere, and a fresh seed per click is what makes repeated clicks
- * keep producing new results (a single component-lifetime RNG would
- * replay the same sequence across remounts, and doesn't buy anything a
- * plain per-click reseed doesn't).
+ * Every entropy-consuming click seeds a fresh `mulberry32` from
+ * `Math.random()` at the click site, per the house rule that pure functions
+ * never own their own entropy source (`randomGalaxyParams`'s docblock).
  */
 import { type ReactNode } from 'react';
 import type { GalaxyLegacyParams } from '../../../../../src/@types/galaxy/GalaxyLegacyParams';

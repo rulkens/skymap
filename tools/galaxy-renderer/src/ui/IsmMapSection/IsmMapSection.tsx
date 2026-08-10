@@ -1,8 +1,8 @@
 /**
  * IsmMapSection — the shared ISM-map switch: `GalaxyFieldTuning.ismMap.generator`
- * (none | fluid) is the ONLY control here — the old separate `enabled`
- * toggle and "seed dust from gas" checkbox both folded into it, since dust
- * seeding is just "the generator is running".
+ * (none | fluid) is the ONLY control here — dust seeding is just "the
+ * generator is running", with no separate enable/seed toggles to keep in
+ * sync.
  *
  * The COUPLING readout is permanent, not a one-off debug print — "sliders
  * don't move the dust" has three structurally different causes (readback

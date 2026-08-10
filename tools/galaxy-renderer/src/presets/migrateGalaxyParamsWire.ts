@@ -1,19 +1,15 @@
 /**
  * migrateGalaxyParamsWire — lifts a v3-or-older preset's FLAT `p.<key>` keys
- * into `GalaxyParams` v4's `shared`/`legacy` bags (see that type's header for
- * the split). Mirrors `migrateGalaxyFieldTuningWire`'s shape: total, and a
- * key naming neither bag (an unknown field, or `dust`/`starFormation` — the
- * fields the 2026-08-06 reshape moved onto `f`) is silently dropped rather
- * than rejected.
+ * into `GalaxyParams` v4's `shared`/`legacy` bags (see that type's header).
+ * Mirrors `migrateGalaxyFieldTuningWire`'s shape: total, and a key naming
+ * neither bag (an unknown field, or `dust`/`starFormation`, now on `f`) is
+ * silently dropped rather than rejected.
  *
- * `parseGalaxyPreset` runs this on the preset's RAW `p` and, independently,
- * hands that SAME raw `p` to `migrateGalaxyFieldTuningWire` for its own
- * `p.dust`/`p.starFormation` lift — this migrator dropping those two keys
- * from ITS OWN output never starves that lift, since it never sees this
- * migrator's output at all.
+ * `parseGalaxyPreset` also hands the SAME raw `p` to
+ * `migrateGalaxyFieldTuningWire` for its own `dust`/`starFormation` lift, so
+ * this migrator dropping those two keys never starves that lift.
  *
- * A v4 preset (already `{ type, shared, legacy }`) passes through untouched —
- * idempotent, so re-parsing a freshly-saved file is a no-op.
+ * A v4 preset (already `{ type, shared, legacy }`) passes through untouched.
  */
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import { GALAXY_LEGACY_PARAM_KEYS } from '../data/galaxyLegacyParamKeys';

@@ -1,21 +1,16 @@
 /**
  * PresetsSection — Download / Upload / Copy for the current galaxy +
- * rendering settings, as portable JSON. The spike's
- * `localStorage` round-trip (save-to-browser button, saved-preset chips)
- * isn't ported: it doesn't survive a page reload of THIS tool being run
- * from a different origin/path across sessions, and download/upload already
- * covers "keep this for later" more durably than an in-browser list would.
+ * rendering settings, as portable JSON. The spike's `localStorage`
+ * round-trip isn't ported: download/upload already covers "keep this for
+ * later" more durably than an in-browser list would.
  *
- * `serializeGalaxyPreset`/`parseGalaxyPreset` own the wire format (the
- * flat-vs-split render/LOD fold); this component only drives the three
- * browser-native transports (Blob download, file input, Clipboard API) and
- * reports success/failure via `ui.copyFeedback`, self-clearing after
- * 1600ms — the same feedback window the spike used.
+ * `serializeGalaxyPreset`/`parseGalaxyPreset` own the wire format; this
+ * component only drives the three browser-native transports (Blob download,
+ * file input, Clipboard API) and reports success/failure via
+ * `ui.copyFeedback`, self-clearing after 1600ms.
  *
- * Unlike every other group in `ControlsPanel`, this one has no chevron:
- * the spike's "SAVED SETTINGS" heading was never wired to
- * `toggleSection`, so the static label here is a plain div, not a
- * `CollapsibleSection`.
+ * Unlike every other group in `ControlsPanel`, this one has no chevron —
+ * the static "PRESETS" label is a plain div, not a `CollapsibleSection`.
  */
 import { useRef, type ChangeEvent, type ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';

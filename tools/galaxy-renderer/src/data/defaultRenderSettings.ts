@@ -121,10 +121,9 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   starGrainFeatureScaleFar: 15,
   // Large enough to break the grain's tile repeat, small enough to stay
   // under one tile before the warp itself starts shredding it apart
-  // (starGrain.wesl's own doc) — the A/B that confirmed warp-off brings the
-  // repeat back is what pins this on rather than at 0. The user's own
-  // calibration under the golden-ratio warp scale: the equidistributed
-  // phases need far less displacement than the old 7-tile cycle did.
+  // (starGrain.wesl's own doc). Warp-off makes the repeat visible again,
+  // which is why this stays nonzero rather than at 0; the equidistributed
+  // phases under the golden-ratio warp scale need only a small displacement.
   starGrainWarpAmp: 0.04,
   // 0 = off = byte-identical boot (io.wesl's perf.x, the quad-cap lever): a
   // live calibration knob, only baked to a nonzero value once the user
