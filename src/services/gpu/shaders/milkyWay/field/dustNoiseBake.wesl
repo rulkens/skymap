@@ -1,24 +1,13 @@
 // milkyWay/field/dustNoiseBake.wesl — one-shot compute bake of the 128^3
-// ridged-fbm volume dustMap.wesl multiplies the particle cloud's tau by (see
-// its header). One ridged BAND per channel at 1x/2x/4x/8x the base tile
-// frequency, so a single textureSampleLevel call in the reader is already a
-// 4-octave result — the whole point of baking instead of evaluating fbm
-// per-fragment.
-//
-// RIDGED, not plain value noise: r = 1 - abs(2n - 1) folds a [0,1] value
-// field into a sharp V at n=0.5, so it reads as thin bright filaments over a
-// dark field instead of plain fbm's isotropic soft lumps — the erosion this
-// exists for is filamentary erosion, not a lumpier ellipsoid.
-//
-// TILEABLE by construction: every lattice lookup wraps its integer index
-// modulo the band's own cell count, so the volume repeats seamlessly when
-// dustMap.wesl samples it with a 'repeat' sampler at world-position /
-// tileUnits. A non-tiling bake would show a hard seam at every tile
-// boundary — the one defect here that looks broken and isn't a quick fix.
-//
-// The hash lives in this file rather than growing lib/util.wesl's
-// hash21/valueNoise2 (2D, non-tileable, tuned for screen-space dither) into
-// a second variant for this one 3D tileable consumer.
+// GRADIENT-noise volume dustMap.wesl multiplies the particle cloud's tau by.
+// Each of 4 channels is its own RIDGED band (r = 1-abs(2n-1), folding a
+// [0,1] field into a filament-like V) at 1x/2x/4x/8x the base tile
+// frequency, each band itself base + 0.5x double-frequency octave (fbm2)
+// BEFORE the fold — ridged(fbm2(n)), one V per band, not two summed ridges.
+// Quintic fade (not the old smoothstep): gradient noise needs C2 continuity
+// or the fold's own kink at n=0.5 lines up with the interpolant's kink and
+// shows as a lattice-aligned crease. TILEABLE: every lattice corner wraps
+// its integer index modulo the band's own cell count.
 
 @group(0) @binding(0) var dst: texture_storage_3d<rgba8unorm, write>;
 
@@ -27,9 +16,10 @@
 const BASE_CELLS: u32 = 8u;
 
 // integerHash3 — Bob Jenkins/Squirrel-family 3-int avalanche: three large
-// odd multiplies then two xor-shifts. Cheap, no transcendentals, and (unlike
-// hash21's dot-then-sin) has no diagonal banding at the low lattice
-// resolutions this bake samples at (8..64 cells/axis).
+// odd multiplies then two xor-shifts, no diagonal banding at the low
+// lattice resolutions this bake samples (8..128 cells/axis). Kept local
+// rather than growing lib/util.wesl's 2D screen-space hash for this one
+// tileable-3D consumer.
 fn integerHash3(p: vec3<i32>) -> f32 {
   let x = bitcast<u32>(p.x);
   let y = bitcast<u32>(p.y);
@@ -39,25 +29,60 @@ fn integerHash3(p: vec3<i32>) -> f32 {
   return f32(h ^ (h >> 16u)) / 4294967295.0;
 }
 
-// tileableValueNoise3D — trilinear value noise over an integer lattice of
-// 'cells' per axis, wrapping (not clamping) at the lattice edge: that wrap
-// is what makes the bake's own [0,1) UV space tile seamlessly.
-fn tileableValueNoise3D(uv: vec3<f32>, cells: u32) -> f32 {
+// GRAD_BOUND — the [0,1] remap denominator below. Not a tight analytic
+// bound (the naive per-corner dot is <=3 worst-case); empirically checked
+// to sqrt(3)/2 with ~9% headroom over 2M random samples per band's cell
+// count — the same figure classic unit-gradient Perlin noise cites.
+const GRAD_BOUND: f32 = 0.8660254;
+
+// quinticFade — C2-continuous ease (t^3(6t^2-15t+10)); see the module
+// header for why gradient noise needs this over a cubic smoothstep.
+fn quinticFade(t: vec3<f32>) -> vec3<f32> {
+  return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+// latticeGradient — one lattice corner's gradient vector: integerHash3
+// called 3x with a decorrelated per-axis offset (not reused three ways,
+// which would give a gradient always parallel to (1,1,1)), each result
+// remapped [0,1) -> [-1,1]. Left unnormalized — GRAD_BOUND already accounts
+// for the unnormalized magnitude, so skipping the inverse-sqrt is free.
+fn latticeGradient(idx: vec3<i32>) -> vec3<f32> {
+  let gx = 2.0 * integerHash3(idx + vec3<i32>(1013, 0, 0)) - 1.0;
+  let gy = 2.0 * integerHash3(idx + vec3<i32>(0, 1741, 0)) - 1.0;
+  let gz = 2.0 * integerHash3(idx + vec3<i32>(0, 0, 2749)) - 1.0;
+  return vec3<f32>(gx, gy, gz);
+}
+
+// gradientNoise3D — tileable Perlin-style gradient noise: each corner's
+// gradient dotted with the corner-to-sample offset, quintic-faded trilinear
+// blend. Wraps (not clamps) the GRADIENT lattice indices at 'cells' — same
+// seamless-tiling contract the old value-noise version had. Raw output,
+// NOT yet remapped to [0,1]; see ridgedBand below.
+fn gradientNoise3D(uv: vec3<f32>, cells: u32) -> f32 {
   let cellsI = i32(cells);
   let i0f = floor(uv);
   let f = uv - i0f;
-  let t = f * f * (3.0 - 2.0 * f);
+  let t = quinticFade(f);
   let i0 = vec3<i32>(i0f) % vec3<i32>(cellsI);
   let i1 = (i0 + vec3<i32>(1)) % vec3<i32>(cellsI);
 
-  let c000 = integerHash3(vec3<i32>(i0.x, i0.y, i0.z));
-  let c100 = integerHash3(vec3<i32>(i1.x, i0.y, i0.z));
-  let c010 = integerHash3(vec3<i32>(i0.x, i1.y, i0.z));
-  let c110 = integerHash3(vec3<i32>(i1.x, i1.y, i0.z));
-  let c001 = integerHash3(vec3<i32>(i0.x, i0.y, i1.z));
-  let c101 = integerHash3(vec3<i32>(i1.x, i0.y, i1.z));
-  let c011 = integerHash3(vec3<i32>(i0.x, i1.y, i1.z));
-  let c111 = integerHash3(vec3<i32>(i1.x, i1.y, i1.z));
+  let g000 = latticeGradient(vec3<i32>(i0.x, i0.y, i0.z));
+  let g100 = latticeGradient(vec3<i32>(i1.x, i0.y, i0.z));
+  let g010 = latticeGradient(vec3<i32>(i0.x, i1.y, i0.z));
+  let g110 = latticeGradient(vec3<i32>(i1.x, i1.y, i0.z));
+  let g001 = latticeGradient(vec3<i32>(i0.x, i0.y, i1.z));
+  let g101 = latticeGradient(vec3<i32>(i1.x, i0.y, i1.z));
+  let g011 = latticeGradient(vec3<i32>(i0.x, i1.y, i1.z));
+  let g111 = latticeGradient(vec3<i32>(i1.x, i1.y, i1.z));
+
+  let c000 = dot(g000, f - vec3<f32>(0.0, 0.0, 0.0));
+  let c100 = dot(g100, f - vec3<f32>(1.0, 0.0, 0.0));
+  let c010 = dot(g010, f - vec3<f32>(0.0, 1.0, 0.0));
+  let c110 = dot(g110, f - vec3<f32>(1.0, 1.0, 0.0));
+  let c001 = dot(g001, f - vec3<f32>(0.0, 0.0, 1.0));
+  let c101 = dot(g101, f - vec3<f32>(1.0, 0.0, 1.0));
+  let c011 = dot(g011, f - vec3<f32>(0.0, 1.0, 1.0));
+  let c111 = dot(g111, f - vec3<f32>(1.0, 1.0, 1.0));
 
   let x00 = mix(c000, c100, t.x);
   let x10 = mix(c010, c110, t.x);
@@ -68,13 +93,20 @@ fn tileableValueNoise3D(uv: vec3<f32>, cells: u32) -> f32 {
   return mix(y0, y1, t.z);
 }
 
-// ridgedBand — one octave: sample tileable value noise at 'freqMul' times
-// BASE_CELLS, then fold it into a ridge. n is in [0,1] by construction
-// (mix of hashes that are each in [0,1)), so r = 1-abs(2n-1) lands in [0,1]
-// with no clamp needed.
+// ridgedBand — one CHANNEL: base octave + 0.5x double-frequency octave,
+// summed and remapped to [0,1] BEFORE the fold (ridged(fbm2(n)), not
+// fbm(ridged(n)) — one V-shaped fold per band, same structure the
+// single-octave code had, just fed a richer smooth field). The 0.5x-weight
+// second octave adds amplitude 0.5 atop the base's 1.0, so the combined raw
+// range is 1.5x a single octave's GRAD_BOUND; the clamp is a defensive
+// backstop, not load-bearing (empirically the remap never clips).
 fn ridgedBand(uv: vec3<f32>, freqMul: u32) -> f32 {
   let cells = BASE_CELLS * freqMul;
-  let n = tileableValueNoise3D(uv * f32(cells), cells);
+  let base = uv * f32(cells);
+  let n0 = gradientNoise3D(base, cells);
+  let n1 = gradientNoise3D(base * 2.0, cells * 2u);
+  let raw = n0 + 0.5 * n1;
+  let n = clamp(0.5 + 0.5 * raw / (1.5 * GRAD_BOUND), 0.0, 1.0);
   return 1.0 - abs(2.0 * n - 1.0);
 }
 
