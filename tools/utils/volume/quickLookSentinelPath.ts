@@ -1,9 +1,6 @@
 /**
- * Path of the quick-look sentinel: written when a `--quick-look` PolyPhy
- * run overwrites `mcpm-large.scfd` with a calibration cube, checked by
- * `assertNoQuickLookSentinel`, deleted once `buildMcpmTier` rebuilds the
- * real reference. One home for the `.quicklook` suffix + tier filename so
- * writer, deleter and guard can never drift apart on the name.
+ * Path of the quick-look sentinel: one shared home for the `.quicklook`
+ * suffix + tier filename, so the writer, deleter, and guard can't drift.
  */
 import { MCPM_TIER_FILENAME } from '../../volumes/buildMcpmVolume';
 
