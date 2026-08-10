@@ -190,7 +190,7 @@ wins), messages prefixed with the function name per house style
 | 7   | npy rank is 3 (after squeeze)                                                                                                   | `buildRhizomeVolume: expected 3D cube (or 4D with trailing singleton), got shape <s>`                                                                                                                |
 | 8   | npy shape equals sidecar `dims`                                                                                                 | `buildRhizomeVolume: npy shape <s> does not match sidecar dims <d> — stale sidecar?`                                                                                                                 |
 | 9   | dtype `<f4` or `<f8`                                                                                                            | `buildRhizomeVolume: expected f32/f64 .npy, got dtype <d> (f16 input loses precision before normalisation — export f32)`                                                                             |
-| 10  | (shell mode only) dims divisible by the block-average factor                                                                    | `buildRhizomeVolume: dims <s> not divisible by <f> — shell cubes must be 256³`                                                                                                                       |
+| 10  | (shell mode only) dims divisible by the block-average factor                                                                    | `blockAverageCube: dims <s> not divisible by <f> — shell cubes must be 256³` (the check lives in the exported block-average helper; the thrower names itself)                                         |
 
 Negative voxel values are **not** an error: the pack step clamps to ≥ 0 before
 log, inheriting the guard and its rationale from `buildMcpmVolume.ts:136-139`.
@@ -363,8 +363,11 @@ checkpoint, per convention):
   `tools/utils/volume/packLogTraceVoxels.ts` — one exported function per the
   tools-utils convention:
   `packLogTraceVoxels(values: Float32Array | Float64Array, dims: Vec3): { voxels: Uint16Array; valueMin: number; valueMax: number }`.
-  `buildMcpmVolume.ts` calls it; behaviour pinned by the existing
-  `tests/tools/buildMcpmVolume.smoke.test.ts` (no new tests for the refactor).
+  `buildMcpmVolume.ts` calls it; no new tests for the refactor. (The existing
+  `tests/tools/buildMcpmVolume.smoke.test.ts` pins only dims/header fields — its
+  symmetric 4×4×4 cube cannot see an axis swap or a normalisation change. The
+  real pin is the importer plan's asymmetric transpose fixture, which guards
+  both builders through the shared helper.)
   The didactic comments about heavy-tailed log mapping and the transpose move
   with the code.
 
