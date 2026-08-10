@@ -26,12 +26,53 @@ import styles from './FieldSection.module.css';
 const OTHER_COMPONENTS = 8; // 4 inner disc + 2 bulge + 1 bar + 1 halo, unconditional
 const WARPED_DISC_BLOBS = WARP_RING_COUNT * RING_BLOBS_PER_RING;
 
+type FieldSliderKey = 'analyticExposure';
+
+type FieldSliderSpec = {
+  readonly key: FieldSliderKey;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format: (value: number) => string;
+  readonly info: string;
+};
+
+// Single-entry table for consistency with every other section — the whole
+// panel reads sliders off `<Section>_SLIDERS`, not a mix of tables and hand-rolled JSX.
+const FIELD_SLIDERS: readonly FieldSliderSpec[] = [
+  {
+    key: 'analyticExposure',
+    label: 'Analytic exposure',
+    min: 0,
+    max: 3,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "Whole-field multiplier on the integrated mixture, independent of the star pass's own exposure and size sliders. 1.0 is the calibration point tuned by eye against the reference gallery, not a parity point with the sprite field.",
+  },
+];
+
 function FieldSection(): ReactNode {
   const dispatch = useAppDispatch();
   const disc = useAppSelector((state) => state.fieldTuning.disc);
   const render = useAppSelector((state) => state.render);
   const open = useAppSelector((state) => state.ui.openSections.field);
   const smoothFieldBlobs = disc.enabled ? OTHER_COMPONENTS + WARPED_DISC_BLOBS : 0;
+
+  const renderFieldSlider = (spec: FieldSliderSpec): ReactNode => (
+    <ParamSlider
+      key={spec.key}
+      label={spec.label}
+      value={render[spec.key]}
+      min={spec.min}
+      max={spec.max}
+      step={spec.step}
+      format={spec.format}
+      onChange={(v) => dispatch(renderPatched({ [spec.key]: v }))}
+      path={`render.${spec.key}`}
+      info={spec.info}
+    />
+  );
 
   return (
     <CollapsibleSection
@@ -45,17 +86,7 @@ function FieldSection(): ReactNode {
       copyPayload={{ fieldTuning: { disc }, render: { analyticExposure: render.analyticExposure } }}
     >
       <div className={styles.root}>
-        <ParamSlider
-          label="Analytic exposure"
-          value={render.analyticExposure}
-          min={0}
-          max={3}
-          step={0.01}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
-          path="render.analyticExposure"
-          info="Whole-field multiplier on the integrated mixture, independent of the star pass's own exposure and size sliders. 1.0 is the calibration point tuned by eye against the reference gallery, not a parity point with the sprite field."
-        />
+        {FIELD_SLIDERS.map(renderFieldSlider)}
         <p className={styles.readout}>
           smooth field {smoothFieldBlobs} (base {OTHER_COMPONENTS} + warped outer disc{' '}
           {WARPED_DISC_BLOBS}) + arms (blob count derived from pitch/width, budget-capped), each

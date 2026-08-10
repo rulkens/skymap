@@ -16,6 +16,75 @@ import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import styles from './ArmCloudSection.module.css';
 
+type ArmCloudSliderKey = Exclude<keyof GalaxyArmCloudTuning, 'enabled'>;
+
+type ArmCloudSliderSpec = {
+  readonly key: ArmCloudSliderKey;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format: (value: number) => string;
+  readonly info: string;
+};
+
+const ARM_CLOUD_SLIDERS: readonly ArmCloudSliderSpec[] = [
+  {
+    key: 'share',
+    label: 'Cloud share',
+    min: 0,
+    max: 1,
+    step: 0.02,
+    format: (v) => v.toFixed(2),
+    info: 'Fraction of the arm excess carried by stochastic sprites instead of the deterministic ridge chain. The two totals always sum to the same excess.',
+  },
+  {
+    key: 'coverage',
+    label: 'Coverage',
+    min: 0.2,
+    max: 12,
+    step: 0.1,
+    format: (v) => v.toFixed(2),
+    info: 'Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is one sprite-footprint per unit arm area. Clumpiness piles the sprites into complexes, so with it above 0 the setting that actually FILLS an arm is several times higher.',
+  },
+  {
+    key: 'radialBias',
+    label: 'Radial bias',
+    min: 0,
+    max: 3,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    info: "Pushes sprites outward along the arm — 0 spends them by coverage demand, which crowds the inner arm where they are small and lost under the bulge. Brightness-neutral: the extra outer sprites split the same light and stay dim. At the top of the slider that neutrality frays and the tier's light creeps back inward.",
+  },
+  {
+    key: 'clumpiness',
+    label: 'Clumpiness',
+    min: 0,
+    max: 1,
+    step: 0.02,
+    format: (v) => v.toFixed(2),
+    info: 'Hierarchical clustering amplitude — 0 = Poisson-scattered along the ridge, 1 = strongly hierarchical complexes.',
+  },
+  {
+    key: 'sizeScale',
+    label: 'Size scale',
+    min: 0.2,
+    max: 4,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Multiplier on each sprite's size draw, itself a fraction of the LOCAL arm width — so this scales with the arm's own flare rather than an absolute parsec span.",
+  },
+  {
+    key: 'elongation',
+    label: 'Elongation',
+    min: 1,
+    max: 8,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    info: "sigma_along / sigma_across — how stretched each sprite is along the arm's own flow.",
+  },
+];
+
 function ArmCloudSection(): ReactNode {
   const dispatch = useAppDispatch();
   const arms = useAppSelector((state) => state.fieldTuning.arms);
@@ -26,6 +95,21 @@ function ArmCloudSection(): ReactNode {
     dispatch(fieldTuningPatched({ arms: { ...arms, cloud: { ...cloud, ...patch } } }));
   };
 
+  const renderArmCloudSlider = (spec: ArmCloudSliderSpec): ReactNode => (
+    <ParamSlider
+      key={spec.key}
+      label={spec.label}
+      value={cloud[spec.key]}
+      min={spec.min}
+      max={spec.max}
+      step={spec.step}
+      format={spec.format}
+      onChange={(v) => patchCloud({ [spec.key]: v })}
+      path={`fieldTuning.arms.cloud.${spec.key}`}
+      info={spec.info}
+    />
+  );
+
   return (
     <CollapsibleSection
       title="ARM CLOUD"
@@ -35,74 +119,7 @@ function ArmCloudSection(): ReactNode {
       onHeaderToggleChange={(value) => patchCloud({ enabled: value })}
       copyPayload={{ fieldTuning: { arms: { cloud } } }}
     >
-      <div className={styles.root}>
-        <ParamSlider
-          label="Cloud share"
-          value={cloud.share}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ share: v })}
-          path="fieldTuning.arms.cloud.share"
-          info="Fraction of the arm excess carried by stochastic sprites instead of the deterministic ridge chain. The two totals always sum to the same excess."
-        />
-        <ParamSlider
-          label="Coverage"
-          value={cloud.coverage}
-          min={0.2}
-          max={12}
-          step={0.1}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ coverage: v })}
-          path="fieldTuning.arms.cloud.coverage"
-          info="Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is one sprite-footprint per unit arm area. Clumpiness piles the sprites into complexes, so with it above 0 the setting that actually FILLS an arm is several times higher."
-        />
-        <ParamSlider
-          label="Radial bias"
-          value={cloud.radialBias}
-          min={0}
-          max={3}
-          step={0.1}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => patchCloud({ radialBias: v })}
-          path="fieldTuning.arms.cloud.radialBias"
-          info="Pushes sprites outward along the arm — 0 spends them by coverage demand, which crowds the inner arm where they are small and lost under the bulge. Brightness-neutral: the extra outer sprites split the same light and stay dim. At the top of the slider that neutrality frays and the tier's light creeps back inward."
-        />
-        <ParamSlider
-          label="Clumpiness"
-          value={cloud.clumpiness}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ clumpiness: v })}
-          path="fieldTuning.arms.cloud.clumpiness"
-          info="Hierarchical clustering amplitude — 0 = Poisson-scattered along the ridge, 1 = strongly hierarchical complexes."
-        />
-        <ParamSlider
-          label="Size scale"
-          value={cloud.sizeScale}
-          min={0.2}
-          max={4}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ sizeScale: v })}
-          path="fieldTuning.arms.cloud.sizeScale"
-          info="Multiplier on each sprite's size draw, itself a fraction of the LOCAL arm width — so this scales with the arm's own flare rather than an absolute parsec span."
-        />
-        <ParamSlider
-          label="Elongation"
-          value={cloud.elongation}
-          min={1}
-          max={8}
-          step={0.1}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => patchCloud({ elongation: v })}
-          path="fieldTuning.arms.cloud.elongation"
-          info="sigma_along / sigma_across — how stretched each sprite is along the arm's own flow."
-        />
-      </div>
+      <div className={styles.root}>{ARM_CLOUD_SLIDERS.map(renderArmCloudSlider)}</div>
     </CollapsibleSection>
   );
 }

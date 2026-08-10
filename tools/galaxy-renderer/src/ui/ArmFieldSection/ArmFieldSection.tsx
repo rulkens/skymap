@@ -16,6 +16,59 @@ import ParamSlider from '../ParamSlider/ParamSlider';
 import SpursSection from '../SpursSection/SpursSection';
 import styles from './ArmFieldSection.module.css';
 
+// `cloud`/`spurs` are the nested ARM CLOUD / SPURS sections' own bags and
+// copy from there — excluded from the slider key type as well as `ridge` below.
+type ArmFieldSliderKey = Exclude<keyof GalaxyArmTuning, 'cloud' | 'spurs' | 'enabled'>;
+
+type ArmFieldSliderSpec = {
+  readonly key: ArmFieldSliderKey;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format: (value: number) => string;
+  readonly info: string;
+};
+
+const ARM_FIELD_SLIDERS: readonly ArmFieldSliderSpec[] = [
+  {
+    key: 'widthScale',
+    label: 'Width × measured law',
+    min: 0.5,
+    max: 2.5,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "1.0 is the Milky Way's measured maser-arm width. Higher = wider arms, more overlap; old stellar arms are plausibly broader, so above 1 is physical.",
+  },
+  {
+    key: 'contrast',
+    label: 'Arm contrast K',
+    min: 1.05,
+    max: 4,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "Arm/interarm surface-brightness ratio in old stellar light: the Milky Way measures ~1.3, strong grand designs ~2. Each arm's age scales it — old arms carry the full contrast, young ones fade toward 1. The light comes out of the disc, so raising it never brightens the galaxy.",
+  },
+  {
+    key: 'excessScaleRatio',
+    label: 'Light scale × disc',
+    min: 1,
+    max: 4,
+    step: 0.05,
+    format: (v) => `${v.toFixed(2)}x`,
+    info: "How fast the arms' light falls off, as a multiple of the disc's own scale length. BRIGHTNESS only — it cannot move where an arm ends; the 'Arm edge falloff' generation knob does that. 1 holds contrast K flat with radius; above 1 the arms outrun the disc and the outer arm brightens. Governs the ridge chain and the sprite cloud together.",
+  },
+  {
+    key: 'blobSharpness',
+    label: 'Blob sharpness',
+    min: 1,
+    max: 12,
+    step: 0.5,
+    format: (v) => v.toFixed(1),
+    info: "Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field.",
+  },
+];
+
 function ArmFieldSection(): ReactNode {
   const dispatch = useAppDispatch();
   const arms = useAppSelector((state) => state.fieldTuning.arms);
@@ -30,6 +83,21 @@ function ArmFieldSection(): ReactNode {
   // drive.
   const { cloud: _cloud, spurs: _spurs, ...ridge } = arms;
 
+  const renderArmFieldSlider = (spec: ArmFieldSliderSpec): ReactNode => (
+    <ParamSlider
+      key={spec.key}
+      label={spec.label}
+      value={arms[spec.key]}
+      min={spec.min}
+      max={spec.max}
+      step={spec.step}
+      format={spec.format}
+      onChange={(v) => patchArms({ [spec.key]: v })}
+      path={`fieldTuning.arms.${spec.key}`}
+      info={spec.info}
+    />
+  );
+
   return (
     <CollapsibleSection
       title="ARM OVERDENSITIES"
@@ -39,52 +107,7 @@ function ArmFieldSection(): ReactNode {
       onHeaderToggleChange={(value) => patchArms({ enabled: value })}
       copyPayload={{ fieldTuning: { arms: ridge } }}
     >
-      <div className={styles.root}>
-        <ParamSlider
-          label="Width × measured law"
-          value={arms.widthScale}
-          min={0.5}
-          max={2.5}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchArms({ widthScale: v })}
-          path="fieldTuning.arms.widthScale"
-          info="1.0 is the Milky Way's measured maser-arm width. Higher = wider arms, more overlap; old stellar arms are plausibly broader, so above 1 is physical."
-        />
-        <ParamSlider
-          label="Arm contrast K"
-          value={arms.contrast}
-          min={1.05}
-          max={4}
-          step={0.01}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchArms({ contrast: v })}
-          path="fieldTuning.arms.contrast"
-          info="Arm/interarm surface-brightness ratio in old stellar light: the Milky Way measures ~1.3, strong grand designs ~2. Each arm's age scales it — old arms carry the full contrast, young ones fade toward 1. The light comes out of the disc, so raising it never brightens the galaxy."
-        />
-        <ParamSlider
-          label="Light scale × disc"
-          value={arms.excessScaleRatio}
-          min={1}
-          max={4}
-          step={0.05}
-          format={(v) => `${v.toFixed(2)}x`}
-          onChange={(v) => patchArms({ excessScaleRatio: v })}
-          path="fieldTuning.arms.excessScaleRatio"
-          info="How fast the arms' light falls off, as a multiple of the disc's own scale length. BRIGHTNESS only — it cannot move where an arm ends; the 'Arm edge falloff' generation knob does that. 1 holds contrast K flat with radius; above 1 the arms outrun the disc and the outer arm brightens. Governs the ridge chain and the sprite cloud together."
-        />
-        <ParamSlider
-          label="Blob sharpness"
-          value={arms.blobSharpness}
-          min={1}
-          max={12}
-          step={0.5}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => patchArms({ blobSharpness: v })}
-          path="fieldTuning.arms.blobSharpness"
-          info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
-        />
-      </div>
+      <div className={styles.root}>{ARM_FIELD_SLIDERS.map(renderArmFieldSlider)}</div>
       <ArmCloudSection />
       <SpursSection />
     </CollapsibleSection>
