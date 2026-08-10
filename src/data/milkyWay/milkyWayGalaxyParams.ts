@@ -102,12 +102,3 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     starCount: 75000,
   },
 };
-
-// UNRESOLVED (2026-08-06 dust/starFormation reshape): this preset used to
-// carry one MW divergence past the shared defaults, `dust.heightRatio: 0.35`
-// (~100-134 pc scale height vs the ~314 pc stellar sigma; Drimmel & Spergel
-// 2001, Misiriotis et al. 2006) — dropped here rather than silently lost,
-// since `dust` moved onto `GalaxyFieldTuning`, which is scene-wide and
-// unkeyed by which preset/galaxy is loaded (no per-preset fieldTuning
-// mechanism exists in the app or the tool). Needs a follow-up, not an
-// invented mechanism.
