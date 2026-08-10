@@ -92,10 +92,21 @@ export type RenderSettings = {
    * `STAR_GRAIN_POINT_SIGMA_FRAC`) that sets `starGrainTerm`'s per-octave
    * band-limit feature size — the point's visible EXTENT, not its bare
    * sigma (see that function's own header for why bare sigma fades the
-   * grain too early). The user's own calibration of the look, not a
-   * derived constant; defaults to 8 (`defaultRenderSettings.ts`).
+   * grain too early). One static value can't serve both the close-approach
+   * look and the whole-galaxy framing, so this is the NEAR end of a pair —
+   * `deriveFrameView.ts` blends `starGrainFeatureScaleNear`/`Far` by log
+   * camera distance (in disc radii) into the single scalar the header still
+   * carries. Calibrated at close approach (camera at/inside the disc);
+   * defaults to 2 (`defaultRenderSettings.ts`).
    */
-  readonly starGrainFeatureScale: number;
+  readonly starGrainFeatureScaleNear: number;
+  /**
+   * The FAR end of the `starGrainFeatureScaleNear` pair — calibrated for
+   * whole-galaxy framing, where the grain must read at a coarser scale to
+   * stay visible. Defaults to 15 (`defaultRenderSettings.ts`). See
+   * `starGrainFeatureScaleNear`'s own doc for the blend.
+   */
+  readonly starGrainFeatureScaleFar: number;
   /**
    * Domain-warp displacement amplitude (world units) `starGrain.wesl`
    * applies to the YOUNG STARS point-grain lookup before all three octave
@@ -104,7 +115,7 @@ export type RenderSettings = {
    * with the warp off brought the repeat straight back, so it stays on; this
    * is the amplitude's own live calibration. Too large and the warp itself
    * starts shredding the grain apart — that begins around 1x the tile
-   * width. Defaults to 0.12 (`defaultRenderSettings.ts`).
+   * width. Defaults to 0.04 (`defaultRenderSettings.ts`).
    */
   readonly starGrainWarpAmp: number;
   /**

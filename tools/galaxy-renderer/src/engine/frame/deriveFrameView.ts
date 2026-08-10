@@ -23,6 +23,8 @@ import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { dustSliceEdges } from '../field/dustSliceEdges';
+import { lerp } from '../../../../../src/utils/math/lerp';
+import { smoothstep } from '../../../../../src/utils/math/smoothstep';
 
 /**
  * The gauge for the analytic field's arbitrary flux units: the scalar at which
@@ -38,6 +40,15 @@ import { dustSliceEdges } from '../field/dustSliceEdges';
  */
 const FIELD_EXPOSURE_GAUGE = 0.0539;
 
+/**
+ * Anchors (disc radii) for the star-grain feature-scale blend: below
+ * `NEAR_R` the camera is close enough that the near calibration alone
+ * applies, beyond `FAR_R` the far one does. Eyeballed, not derived — tunable
+ * alongside `starGrainFeatureScaleNear`/`Far` in `defaultRenderSettings.ts`.
+ */
+const STAR_GRAIN_SCALE_NEAR_R = 1.0;
+const STAR_GRAIN_SCALE_FAR_R = 4.0;
+
 export type FrameView = {
   readonly view: Float32Array;
   readonly proj: Float32Array;
@@ -50,6 +61,12 @@ export type FrameView = {
   readonly dustSlices: FieldDustSlices;
   /** `render.analyticExposure` against `FIELD_EXPOSURE_GAUGE`, scaled by the fade. Independent of the sprite pass's `starIntensity`/`sizeScale`. */
   readonly analyticExposure: number;
+  /**
+   * `render.starGrainFeatureScaleNear`/`Far`, blended by log camera distance
+   * (disc radii) — the single scalar `FieldHeaderInput.starGrainFeatureScale`
+   * still carries. See `STAR_GRAIN_SCALE_NEAR_R`/`FAR_R` above.
+   */
+  readonly starGrainFeatureScale: number;
 };
 
 export function deriveFrameView(input: {
@@ -97,6 +114,23 @@ export function deriveFrameView(input: {
   // amount whichever representation is drawing it.
   const galaxyWeight = debugGalaxyWeight(debugViews);
 
+  // Distance from the galaxy's centre (not the orbit target — see the
+  // `dustSlices` comment below), in disc radii, on a log axis: a linear
+  // blend would spend nearly its whole range in the far regime, since
+  // `dist` traverses orders of magnitude between close approach and a
+  // whole-galaxy framing.
+  const camDistFromOrigin = Math.hypot(eye[0], eye[1], eye[2]);
+  const grainT = smoothstep(
+    Math.log(STAR_GRAIN_SCALE_NEAR_R),
+    Math.log(STAR_GRAIN_SCALE_FAR_R),
+    Math.log(camDistFromOrigin / input.dustReachR),
+  );
+  const starGrainFeatureScale = lerp(
+    render.starGrainFeatureScaleNear,
+    render.starGrainFeatureScaleFar,
+    grainT,
+  );
+
   return {
     view,
     proj,
@@ -113,7 +147,8 @@ export function deriveFrameView(input: {
     },
     // D is the eye's distance to the primary galaxy's centre (the tool's
     // origin, NOT the orbit target — the two differ once the camera pans).
-    dustSlices: dustSliceEdges(Math.hypot(eye[0], eye[1], eye[2]), input.dustReachR),
+    dustSlices: dustSliceEdges(camDistFromOrigin, input.dustReachR),
     analyticExposure: render.analyticExposure * FIELD_EXPOSURE_GAUGE * fade.alpha,
+    starGrainFeatureScale,
   };
 }

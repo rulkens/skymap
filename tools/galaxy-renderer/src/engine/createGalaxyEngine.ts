@@ -1149,6 +1149,7 @@ export async function createGalaxyEngine(
       ismMapChannels,
       dustSlices,
       analyticExposure,
+      starGrainFeatureScale,
     } = deriveFrameView({
       eye,
       target,
@@ -1284,8 +1285,11 @@ export async function createGalaxyEngine(
       // doc) — same "only the HII header carries a real value" asymmetry as
       // `youngStars`/`hiiTexture` above, and same reason every `HII_TIERS`
       // header below inherits it via its `{...hiiHeaderInput}` spread rather
-      // than a second explicit line.
-      starGrainFeatureScale: render.starGrainFeatureScale,
+      // than a second explicit line. `deriveFrameView`'s own blend of
+      // `render.starGrainFeatureScaleNear`/`Far`, not a flat render read —
+      // one static value can't serve both close approach and whole-galaxy
+      // framing.
+      starGrainFeatureScale,
       // starGrain.wesl's own domain-warp amplitude (io.wesl's perf.y doc) —
       // same "only the HII header carries a real value" asymmetry as
       // starGrainFeatureScale just above.

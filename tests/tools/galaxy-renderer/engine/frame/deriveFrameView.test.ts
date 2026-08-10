@@ -62,4 +62,14 @@ describe('deriveFrameView', () => {
     const b = deriveFrameView({ ...base(), target: [12, 0, -4] });
     expect(b.dustSlices).toEqual(a.dustSlices);
   });
+
+  it('blends the star-grain feature scale from near to far as the camera pulls out', () => {
+    // dustReachR: 5 (the fixture's disc radius) — 1 radius out is inside the
+    // NEAR anchor, 40 radii out is well past the FAR one.
+    const grain = { starGrainFeatureScaleNear: 2, starGrainFeatureScaleFar: 15 };
+    const close = deriveFrameView({ ...base(grain), eye: [0, 0, 5] });
+    const far = deriveFrameView({ ...base(grain), eye: [0, 0, 200] });
+    expect(close.starGrainFeatureScale).toBeCloseTo(2, 5);
+    expect(far.starGrainFeatureScale).toBeCloseTo(15, 5);
+  });
 });

@@ -63,6 +63,13 @@ export function parseGalaxyPreset(json: string): {
     // divisors and left this one governing extras alone.
     else if (key === 'hiiDivisor') {
       render.extrasDivisor = value;
+    }
+    // Pre-split presets carry one flat `starGrainFeatureScale`, from before
+    // the near/far distance blend existed — both ends get the same value,
+    // degrading to the old static behaviour.
+    else if (key === 'starGrainFeatureScale') {
+      render.starGrainFeatureScaleNear = value;
+      render.starGrainFeatureScaleFar = value;
     } else render[key] = value;
   }
 

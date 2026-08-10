@@ -114,14 +114,18 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // the cost of an unresolved wash where the component used to be.
   hiiNearFadeStart: 4.5,
   hiiNearFadeEnd: 1.5,
-  // Eyeballed against the reference gallery — the point's visible extent
-  // that used to be a hardcoded 4x its sigma, now the user's own calibration.
-  starGrainFeatureScale: 8,
+  // Eyeballed against the reference gallery, one static value could not
+  // serve both regimes — deriveFrameView.ts blends these two by camera
+  // distance (in disc radii) into the header's single scalar.
+  starGrainFeatureScaleNear: 2,
+  starGrainFeatureScaleFar: 15,
   // Large enough to break the grain's tile repeat, small enough to stay
   // under one tile before the warp itself starts shredding it apart
   // (starGrain.wesl's own doc) — the A/B that confirmed warp-off brings the
-  // repeat back is what pins this on rather than at 0.
-  starGrainWarpAmp: 0.12,
+  // repeat back is what pins this on rather than at 0. The user's own
+  // calibration under the golden-ratio warp scale: the equidistributed
+  // phases need far less displacement than the old 7-tile cycle did.
+  starGrainWarpAmp: 0.04,
   // 0 = off = byte-identical boot (io.wesl's perf.x, #71): the cap is a live
   // calibration lever, only baked to a nonzero value once the user settles
   // on one against the reference gallery.

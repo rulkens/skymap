@@ -28,9 +28,14 @@ const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
 
 // Domain-warp period (world units) of the low-frequency shift applied
 // before all three octave taps — fixes a long chain visibly repeating the
-// same constellation every STAR_GRAIN_TILE_UNITS. Non-integer multiple of
-// the tile so warp and grain periods never realign in lockstep.
-const STAR_GRAIN_WARP_SCALE: f32 = 2.24;
+// same constellation every STAR_GRAIN_TILE_UNITS. 0.64 x (2 + phi), NOT a
+// round multiple: the composite pattern repeats at the LCM of warp and tile
+// periods, and the old 2.24 = 7/2 tiles cycled just 7 distinct warped
+// constellations (and integer-locked the /4 and /16 octaves at 14x/56x).
+// A golden-ratio multiple is worst-approximable by small fractions, so the
+// tile phases equidistribute and never cycle — merely "non-integer" is not
+// enough, commensurate ratios with small denominators still lock.
+const STAR_GRAIN_WARP_SCALE: f32 = 0.64 * 3.6180339887;
 // Warp displacement amplitude — u.perf.y (render.starGrainWarpAmp, world
 // units, io.wesl's own doc): large enough to break the repeat, small enough
 // to stay under one tile (shredding starts ~1x). Live, not const, since an

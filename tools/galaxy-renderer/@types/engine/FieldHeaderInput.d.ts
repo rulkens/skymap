@@ -63,13 +63,14 @@ export type FieldHeaderInput = {
    */
   readonly youngStars?: YoungStarsLanes;
   /**
-   * `render.starGrainFeatureScale` — packs to `io.wesl`'s free `dustDetail.w`
-   * lane (that struct's own doc), the multiplier `splat.wesl`'s
-   * `starGrainTerm` applies to the baked star-grain point's fixed sigma to
-   * get its per-octave band-limit's feature size. Absent packs 0, the same
-   * "only the HII header carries a real value" asymmetry as `hiiTexture`/
-   * `youngStars` above — harmless, since a pass with no nonzero
-   * `textureWeight` component never reaches `starGrainTerm` either.
+   * `deriveFrameView.ts`'s per-frame blend of `render.starGrainFeatureScaleNear`/
+   * `Far` by camera distance — packs to `io.wesl`'s free `dustDetail.w` lane
+   * (that struct's own doc), the multiplier `splat.wesl`'s `starGrainTerm`
+   * applies to the baked star-grain point's fixed sigma to get its per-octave
+   * band-limit's feature size. Absent packs 0, the same "only the HII header
+   * carries a real value" asymmetry as `hiiTexture`/`youngStars` above —
+   * harmless, since a pass with no nonzero `textureWeight` component never
+   * reaches `starGrainTerm` either.
    */
   readonly starGrainFeatureScale?: number;
   /**

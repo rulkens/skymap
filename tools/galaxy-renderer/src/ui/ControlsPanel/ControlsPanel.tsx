@@ -718,7 +718,8 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
               youngDivisor: render.youngDivisor,
               hiiNearFadeStart: render.hiiNearFadeStart,
               hiiNearFadeEnd: render.hiiNearFadeEnd,
-              starGrainFeatureScale: render.starGrainFeatureScale,
+              starGrainFeatureScaleNear: render.starGrainFeatureScaleNear,
+              starGrainFeatureScaleFar: render.starGrainFeatureScaleFar,
               starGrainWarpAmp: render.starGrainWarpAmp,
               hiiQuadCap: render.hiiQuadCap,
             },
@@ -835,15 +836,26 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             info="boundRadius multiple where the component has fully collapsed — the physical read past this point is an unresolved wash. End >= start disables the fade. Reach is end times each component's own bound radius, so the big DIG blobs react first."
           />
           <ParamSlider
-            label="Grain feature scale"
-            value={render.starGrainFeatureScale}
+            label="Grain feature near"
+            value={render.starGrainFeatureScaleNear}
             min={1}
             max={16}
             step={0.5}
             format={(v) => v.toFixed(1)}
-            onChange={(v) => dispatch(renderPatched({ starGrainFeatureScale: v }))}
-            path="render.starGrainFeatureScale"
-            info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size splat.wesl's per-octave band-limit fades against, not the bare sigma. The user's own calibration of the grain look, not a derived constant."
+            onChange={(v) => dispatch(renderPatched({ starGrainFeatureScaleNear: v }))}
+            path="render.starGrainFeatureScaleNear"
+            info="Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size splat.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out."
+          />
+          <ParamSlider
+            label="Grain feature far"
+            value={render.starGrainFeatureScaleFar}
+            min={1}
+            max={24}
+            step={0.5}
+            format={(v) => v.toFixed(1)}
+            onChange={(v) => dispatch(renderPatched({ starGrainFeatureScaleFar: v }))}
+            path="render.starGrainFeatureScaleFar"
+            info="Same knob as 'Grain feature near', calibrated for whole-galaxy framing instead — one static value can't serve both distances."
           />
           <ParamSlider
             label="Grain warp amount"
