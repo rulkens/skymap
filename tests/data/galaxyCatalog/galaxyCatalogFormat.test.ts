@@ -304,7 +304,6 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     dv.setUint32(8, 0, true);
     dv.setUint32(12, 0, true);
 
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(FormatVersionError);
     try {
       decodeGalaxyCatalog(buf);
       expect.unreachable('decodeGalaxyCatalog should have thrown');
