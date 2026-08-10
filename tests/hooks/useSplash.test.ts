@@ -283,6 +283,18 @@ describe('useSplash error mapping', () => {
     });
   });
 
+  it('returns error.kind=data-version-mismatch when the engine reports cause=format-version', () => {
+    const { result } = renderWithStatus({
+      kind: 'error',
+      message: 'unsupported version: 8 — please regenerate the .bin via "npm run build-tiers"',
+      cause: 'format-version',
+    });
+    expect(result.current.error).toEqual({
+      kind: 'data-version-mismatch',
+      message: 'unsupported version: 8 — please regenerate the .bin via "npm run build-tiers"',
+    });
+  });
+
   it('returns error.kind=catalog-fetch-failed for non-webgpu engine errors', () => {
     const { result } = renderWithStatus({
       kind: 'error',

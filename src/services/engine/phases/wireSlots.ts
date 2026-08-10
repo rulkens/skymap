@@ -24,6 +24,9 @@
  *      emitter, over both point + sidecar slots.
  *   7. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
+ *      `installFormatVersionAlert` shares the same window and shape, dispatching
+ *      an `{ kind: 'error', cause: 'format-version' }` status the first time any
+ *      slot's error is a `FormatVersionError`.
  *   8. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
@@ -44,7 +47,9 @@
  *     subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
- *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` subscriber.
+ *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
+ *     `installFormatVersionAlert` subscriber; the latter may later dispatch
+ *     `engineStatusChanged({ kind: 'error', cause: 'format-version' })`.
  *
  * ### Side effects on `deps`
  *
@@ -56,6 +61,7 @@ import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
+import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
 import { createEarthTileSubsystem } from '../subsystems/earthTileSubsystem';
@@ -133,6 +139,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Channel-mouth render wake.  After installLoadProgress (allSlots fully
   // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
+
+  // Same window: a stale-.bin version mismatch turns into a splash-visible
+  // error instead of silently falling through to the synthetic backstop
+  // (createSyntheticFallback suppresses arming on the same error type).
+  installFormatVersionAlert(
+    (status) => cb.store.dispatch(engineStatusChanged(status)),
+    deps.allSlots,
+  );
 
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.
