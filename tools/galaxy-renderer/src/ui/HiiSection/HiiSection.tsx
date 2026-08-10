@@ -9,6 +9,12 @@
  * than as top-level siblings — flattening every slider alongside the
  * tier-shared ones read as one endless list. Texture scale/contrast stay in
  * the outer body: they're shared by all three nested groups.
+ *
+ * A slider's `bag` isn't always the group it visually sits in — SHELLS mixes
+ * in `hii.ismMapSeeding` and `starFormation.sfActivity` alongside its own
+ * fields — so each spec carries its own bag rather than the group inheriting
+ * one, dispatched through the `bag`-keyed tables below (table dispatch, not
+ * a branch per slider).
  */
 import type { ReactNode } from 'react';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
@@ -22,6 +28,303 @@ import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import styles from './HiiSection.module.css';
+
+type SliderFields = {
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format: (value: number) => string;
+  readonly info: string;
+};
+
+type HiiSliderSpec =
+  | (SliderFields & { readonly bag: 'hii'; readonly key: 'brightness' | 'ismMapSeeding' })
+  | (SliderFields & {
+      readonly bag: 'shells';
+      readonly key: keyof Omit<GalaxyHiiShellsTuning, 'enabled'>;
+    })
+  | (SliderFields & { readonly bag: 'dig'; readonly key: keyof GalaxyHiiDigTuning })
+  | (SliderFields & {
+      readonly bag: 'youngStars';
+      readonly key: keyof Omit<GalaxyYoungStarsTuning, 'enabled'>;
+    })
+  | (SliderFields & {
+      readonly bag: 'starFormation';
+      readonly key: keyof GalaxyStarFormationParams;
+    });
+
+const HII_BAG_PATH_PREFIX: Record<HiiSliderSpec['bag'], string> = {
+  hii: 'fieldTuning.hii',
+  shells: 'fieldTuning.hii.shells',
+  dig: 'fieldTuning.hii.dig',
+  youngStars: 'fieldTuning.hii.youngStars',
+  starFormation: 'fieldTuning.starFormation',
+};
+
+// Tier-global: shared by SHELLS, DIG and YOUNG STARS alike, so these render
+// in the outer body rather than under any one of the three nested groups.
+const HII_CORE_SLIDERS: readonly HiiSliderSpec[] = [
+  {
+    bag: 'hii',
+    key: 'brightness',
+    label: 'Master brightness',
+    min: 0,
+    max: 4,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Whole-field flux multiplier — multiplies EVERY tier's own gain (the Brightness sliders inside SHELLS, DIG and YOUNG STARS below), rather than being any one tier's own knob. 1 is the calibrated default; each tier's own slider then scales its share up or down from there.",
+  },
+  {
+    bag: 'shells',
+    key: 'textureScale',
+    label: 'Texture scale',
+    min: 0.25,
+    max: 8,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Shared by every HII group (shells, DIG, young stars). Multiplies the noise sample's frequency relative to the dust volume's own tile size — 1 samples at the SAME scale dust erosion does. Range extended past 4 for the young-stars tier's bigger splats, which need a higher frequency to still read as grainy unresolved stars rather than a soft blur.",
+  },
+  {
+    bag: 'shells',
+    key: 'textureContrast',
+    label: 'Texture contrast',
+    min: 0,
+    max: 2,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Shared by every HII group. Shapes the noise modulation about its own midpoint, mirroring the dust cloud's own contrast knob.",
+  },
+];
+
+const HII_SHELLS_SLIDERS: readonly HiiSliderSpec[] = [
+  {
+    bag: 'shells',
+    key: 'brightness',
+    label: 'Brightness',
+    min: 0,
+    max: 2,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "This tier's own gain, multiplied against the Master brightness above — 1 leaves it at whatever the master alone gives it.",
+  },
+  {
+    bag: 'shells',
+    key: 'radiusScale',
+    label: 'Radius scale',
+    min: 0.2,
+    max: 3,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: 'Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly.',
+  },
+  {
+    bag: 'shells',
+    key: 'shellThickness',
+    label: 'Shell thickness',
+    min: 0.02,
+    max: 1,
+    step: 0.02,
+    format: (v) => v.toFixed(2),
+    info: "Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front.",
+  },
+  {
+    bag: 'shells',
+    key: 'clusterStrength',
+    label: 'Cluster strength',
+    min: 0,
+    max: 2,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell.",
+  },
+  {
+    bag: 'shells',
+    key: 'cavityScale',
+    label: 'Cavity scale',
+    min: 0,
+    max: 2,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: 'Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed.',
+  },
+  {
+    bag: 'hii',
+    key: 'ismMapSeeding',
+    label: 'Map seeding',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Fraction of HII events placed from the ISM map's activity channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly.",
+  },
+  {
+    bag: 'shells',
+    key: 'texture',
+    label: 'Texture',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Breaks up the shell + embedded-cluster sprites' circular Gaussian footprint with the same noise volume the dust cloud erodes with. 0 leaves them untouched.",
+  },
+  {
+    bag: 'starFormation',
+    key: 'sfActivity',
+    label: 'SF activity',
+    min: 0,
+    max: 2.5,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Fallback event-catalog rate — sizes the HII tier only when the ISM generator is 'none'. The fluid generator ignores it: its regions come from the sim's own events.",
+  },
+];
+
+const HII_DIG_SLIDERS: readonly HiiSliderSpec[] = [
+  {
+    bag: 'dig',
+    key: 'brightness',
+    label: 'Brightness',
+    min: 0,
+    max: 2,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "This tier's own gain, multiplied against the Master brightness above — distinct from Flux fraction below, which SPLITS flux out of the shell tier's own total rather than scaling DIG's resulting share.",
+  },
+  {
+    bag: 'dig',
+    key: 'fraction',
+    label: 'Flux fraction',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an ISM map; 0 skips the veil.",
+  },
+  {
+    bag: 'dig',
+    key: 'complexes',
+    label: 'Population',
+    min: 0,
+    max: 3,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Scaler on the run's own recent star-formation activity — the veil's complex count is now DERIVED from how much SF the current run produced, not a fixed number. 1 is the neutral default; total blob count is the derived complex count x children.",
+  },
+  {
+    bag: 'dig',
+    key: 'childrenPerComplex',
+    label: 'Children',
+    min: 1,
+    max: 12,
+    step: 1,
+    format: (v) => v.toFixed(0),
+    info: 'Blobs scattered around each DIG complex seed.',
+  },
+  {
+    bag: 'dig',
+    key: 'armBias',
+    label: 'Arm bias',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the ISM map's activity channel.",
+  },
+  {
+    bag: 'dig',
+    key: 'elongation',
+    label: 'Elongation',
+    min: 1,
+    max: 8,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    info: "Aspect ratio of a complex's child scatter along vs. across its local flow direction, area-preserving so the complex stretches without also inflating.",
+  },
+  {
+    bag: 'dig',
+    key: 'coherence',
+    label: 'Coherence',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "How strictly a complex's scatter axis follows its local flow direction — 1 follows it exactly, 0 rotates it to a fresh random direction per complex.",
+  },
+  {
+    bag: 'dig',
+    key: 'texture',
+    label: 'Texture',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "This veil's own share of the HII tier's shared texture breakup — independent of the shell tier's own Texture knob above.",
+  },
+];
+
+const HII_YOUNG_STARS_SLIDERS: readonly HiiSliderSpec[] = [
+  {
+    bag: 'youngStars',
+    key: 'brightness',
+    label: 'Brightness',
+    min: 0,
+    max: 20,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "This tier's total flux — the ONE flux knob for the arm-ridge chain. 0 skips the tier.",
+  },
+  {
+    bag: 'youngStars',
+    key: 'width',
+    label: 'Width',
+    min: 0.2,
+    max: 3,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Chain ribbon's across-arm sigma, as a fraction of the arm ridge's own measured width law. 1 is that law exactly.",
+  },
+  {
+    bag: 'youngStars',
+    key: 'edgeBias',
+    label: 'Edge bias',
+    min: 0,
+    max: 3,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Pushes the tier's fixed total flux outward along the arms. 0 = flat (surface brightness falls ~1/r outward), ~2 = outer arms dominate (the M74-reference look).",
+  },
+  {
+    bag: 'youngStars',
+    key: 'mapDepth',
+    label: 'Clumping',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "0 = a smooth ribbon along the ridge, 1 = fully modulated by the ISM map's stars tracer — the fluid-advected clumps the chain rides.",
+  },
+  {
+    bag: 'youngStars',
+    key: 'contrast',
+    label: 'Contrast',
+    min: 0.25,
+    max: 4,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "Gamma shaping the stars-map read — flux-neutral, mean-normalized so it restructures the clump contrast without draining the tier's total brightness.",
+  },
+  {
+    bag: 'youngStars',
+    key: 'texture',
+    label: 'Texture',
+    min: 0,
+    max: 2,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: "This tier's own share of the HII tier's shared texture breakup — independent of the shell tier's own Texture knob above.",
+  },
+];
 
 function HiiSection(): ReactNode {
   const dispatch = useAppDispatch();
@@ -52,6 +355,58 @@ function HiiSection(): ReactNode {
     dispatch(fieldTuningPatched({ starFormation: { ...starFormation, ...patch } }));
   };
 
+  // One switch (not two) pairs each bag's current value with its own patch
+  // dispatch, so `renderHiiSlider` below has a single generic body.
+  const resolveHiiSlider = (
+    spec: HiiSliderSpec,
+  ): { value: number; patch: (value: number) => void } => {
+    switch (spec.bag) {
+      case 'hii':
+        return {
+          value: hii[spec.key],
+          patch: (v) => patchHii({ [spec.key]: v } as Partial<GalaxyHiiTuning>),
+        };
+      case 'shells':
+        return {
+          value: hii.shells[spec.key],
+          patch: (v) => patchShells({ [spec.key]: v } as Partial<GalaxyHiiShellsTuning>),
+        };
+      case 'dig':
+        return {
+          value: hii.dig[spec.key],
+          patch: (v) => patchDig({ [spec.key]: v } as Partial<GalaxyHiiDigTuning>),
+        };
+      case 'youngStars':
+        return {
+          value: hii.youngStars[spec.key],
+          patch: (v) => patchYoungStars({ [spec.key]: v } as Partial<GalaxyYoungStarsTuning>),
+        };
+      case 'starFormation':
+        return {
+          value: starFormation[spec.key],
+          patch: (v) => patchStarFormation({ [spec.key]: v } as Partial<GalaxyStarFormationParams>),
+        };
+    }
+  };
+
+  const renderHiiSlider = (spec: HiiSliderSpec): ReactNode => {
+    const { value, patch } = resolveHiiSlider(spec);
+    return (
+      <ParamSlider
+        key={`${spec.bag}.${spec.key}`}
+        label={spec.label}
+        value={value}
+        min={spec.min}
+        max={spec.max}
+        step={spec.step}
+        format={spec.format}
+        onChange={patch}
+        path={`${HII_BAG_PATH_PREFIX[spec.bag]}.${spec.key}`}
+        info={spec.info}
+      />
+    );
+  };
+
   // DIG and YOUNG STARS copy from their OWN nested sections below — this
   // one offers only the core knobs its own sliders drive, same split
   // `ArmFieldSection` uses to keep `cloud` out of its own payload.
@@ -66,44 +421,7 @@ function HiiSection(): ReactNode {
       onHeaderToggleChange={(value) => patchHii({ enabled: value })}
       copyPayload={{ fieldTuning: { hii: core } }}
     >
-      <div className={styles.root}>
-        {/* Tier-global: shared by SHELLS, DIG and YOUNG STARS alike, so they
-            stay in the outer body rather than owned by any one of the three
-            nested groups below. */}
-        <ParamSlider
-          label="Master brightness"
-          value={hii.brightness}
-          min={0}
-          max={4}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ brightness: v })}
-          path="fieldTuning.hii.brightness"
-          info="Whole-field flux multiplier — multiplies EVERY tier's own gain (the Brightness sliders inside SHELLS, DIG and YOUNG STARS below), rather than being any one tier's own knob. 1 is the calibrated default; each tier's own slider then scales its share up or down from there."
-        />
-        <ParamSlider
-          label="Texture scale"
-          value={hii.shells.textureScale}
-          min={0.25}
-          max={8}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchShells({ textureScale: v })}
-          path="fieldTuning.hii.shells.textureScale"
-          info="Shared by every HII group (shells, DIG, young stars). Multiplies the noise sample's frequency relative to the dust volume's own tile size — 1 samples at the SAME scale dust erosion does. Range extended past 4 for the young-stars tier's bigger splats, which need a higher frequency to still read as grainy unresolved stars rather than a soft blur."
-        />
-        <ParamSlider
-          label="Texture contrast"
-          value={hii.shells.textureContrast}
-          min={0}
-          max={2}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchShells({ textureContrast: v })}
-          path="fieldTuning.hii.shells.textureContrast"
-          info="Shared by every HII group. Shapes the noise modulation about its own midpoint, mirroring the dust cloud's own contrast knob."
-        />
-      </div>
+      <div className={styles.root}>{HII_CORE_SLIDERS.map(renderHiiSlider)}</div>
       <CollapsibleSection
         title="SHELLS"
         open={shellsOpen}
@@ -112,96 +430,7 @@ function HiiSection(): ReactNode {
         onHeaderToggleChange={(value) => patchShells({ enabled: value })}
         variant="nested"
       >
-        <div className={styles.root}>
-          <ParamSlider
-            label="Brightness"
-            value={hii.shells.brightness}
-            min={0}
-            max={2}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchShells({ brightness: v })}
-            path="fieldTuning.hii.shells.brightness"
-            info="This tier's own gain, multiplied against the Master brightness above — 1 leaves it at whatever the master alone gives it."
-          />
-          <ParamSlider
-            label="Radius scale"
-            value={hii.shells.radiusScale}
-            min={0.2}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchShells({ radiusScale: v })}
-            path="fieldTuning.hii.shells.radiusScale"
-            info="Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly."
-          />
-          <ParamSlider
-            label="Shell thickness"
-            value={hii.shells.shellThickness}
-            min={0.02}
-            max={1}
-            step={0.02}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchShells({ shellThickness: v })}
-            path="fieldTuning.hii.shells.shellThickness"
-            info="Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front."
-          />
-          <ParamSlider
-            label="Cluster strength"
-            value={hii.shells.clusterStrength}
-            min={0}
-            max={2}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchShells({ clusterStrength: v })}
-            path="fieldTuning.hii.shells.clusterStrength"
-            info="Brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell."
-          />
-          <ParamSlider
-            label="Cavity scale"
-            value={hii.shells.cavityScale}
-            min={0}
-            max={2}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchShells({ cavityScale: v })}
-            path="fieldTuning.hii.shells.cavityScale"
-            info="Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed."
-          />
-          <ParamSlider
-            label="Map seeding"
-            value={hii.ismMapSeeding}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchHii({ ismMapSeeding: v })}
-            path="fieldTuning.hii.ismMapSeeding"
-            info="Fraction of HII events placed from the ISM map's activity channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
-          />
-          <ParamSlider
-            label="Texture"
-            value={hii.shells.texture}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchShells({ texture: v })}
-            path="fieldTuning.hii.shells.texture"
-            info="Breaks up the shell + embedded-cluster sprites' circular Gaussian footprint with the same noise volume the dust cloud erodes with. 0 leaves them untouched."
-          />
-          <ParamSlider
-            label="SF activity"
-            value={starFormation.sfActivity}
-            min={0}
-            max={2.5}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchStarFormation({ sfActivity: v })}
-            path="fieldTuning.starFormation.sfActivity"
-            info="Fallback event-catalog rate — sizes the HII tier only when the ISM generator is 'none'. The fluid generator ignores it: its regions come from the sim's own events."
-          />
-        </div>
+        <div className={styles.root}>{HII_SHELLS_SLIDERS.map(renderHiiSlider)}</div>
       </CollapsibleSection>
       <CollapsibleSection
         title="DIG"
@@ -210,96 +439,7 @@ function HiiSection(): ReactNode {
         copyPayload={{ fieldTuning: { hii: { dig: hii.dig } } }}
         variant="nested"
       >
-        <div className={styles.root}>
-          <ParamSlider
-            label="Brightness"
-            value={hii.dig.brightness}
-            min={0}
-            max={2}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchDig({ brightness: v })}
-            path="fieldTuning.hii.dig.brightness"
-            info="This tier's own gain, multiplied against the Master brightness above — distinct from Flux fraction below, which SPLITS flux out of the shell tier's own total rather than scaling DIG's resulting share."
-          />
-          <ParamSlider
-            label="Flux fraction"
-            value={hii.dig.fraction}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchDig({ fraction: v })}
-            path="fieldTuning.hii.dig.fraction"
-            info="Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an ISM map; 0 skips the veil."
-          />
-          <ParamSlider
-            label="Population"
-            value={hii.dig.complexes}
-            min={0}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchDig({ complexes: v })}
-            path="fieldTuning.hii.dig.complexes"
-            info="Scaler on the run's own recent star-formation activity — the veil's complex count is now DERIVED from how much SF the current run produced, not a fixed number. 1 is the neutral default; total blob count is the derived complex count x children."
-          />
-          <ParamSlider
-            label="Children"
-            value={hii.dig.childrenPerComplex}
-            min={1}
-            max={12}
-            step={1}
-            format={(v) => v.toFixed(0)}
-            onChange={(v) => patchDig({ childrenPerComplex: v })}
-            path="fieldTuning.hii.dig.childrenPerComplex"
-            info="Blobs scattered around each DIG complex seed."
-          />
-          <ParamSlider
-            label="Arm bias"
-            value={hii.dig.armBias}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchDig({ armBias: v })}
-            path="fieldTuning.hii.dig.armBias"
-            info="Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the ISM map's activity channel."
-          />
-          <ParamSlider
-            label="Elongation"
-            value={hii.dig.elongation}
-            min={1}
-            max={8}
-            step={0.1}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => patchDig({ elongation: v })}
-            path="fieldTuning.hii.dig.elongation"
-            info="Aspect ratio of a complex's child scatter along vs. across its local flow direction, area-preserving so the complex stretches without also inflating."
-          />
-          <ParamSlider
-            label="Coherence"
-            value={hii.dig.coherence}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchDig({ coherence: v })}
-            path="fieldTuning.hii.dig.coherence"
-            info="How strictly a complex's scatter axis follows its local flow direction — 1 follows it exactly, 0 rotates it to a fresh random direction per complex."
-          />
-          <ParamSlider
-            label="Texture"
-            value={hii.dig.texture}
-            min={0}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchDig({ texture: v })}
-            path="fieldTuning.hii.dig.texture"
-            info="This veil's own share of the HII tier's shared texture breakup — independent of the shell tier's own Texture knob above."
-          />
-        </div>
+        <div className={styles.root}>{HII_DIG_SLIDERS.map(renderHiiSlider)}</div>
       </CollapsibleSection>
       <CollapsibleSection
         title="YOUNG STARS"
@@ -310,74 +450,7 @@ function HiiSection(): ReactNode {
         copyPayload={{ fieldTuning: { hii: { youngStars: hii.youngStars } } }}
         variant="nested"
       >
-        <div className={styles.root}>
-          <ParamSlider
-            label="Brightness"
-            value={hii.youngStars.brightness}
-            min={0}
-            max={20}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchYoungStars({ brightness: v })}
-            path="fieldTuning.hii.youngStars.brightness"
-            info="This tier's total flux — the ONE flux knob for the arm-ridge chain. 0 skips the tier."
-          />
-          <ParamSlider
-            label="Width"
-            value={hii.youngStars.width}
-            min={0.2}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchYoungStars({ width: v })}
-            path="fieldTuning.hii.youngStars.width"
-            info="Chain ribbon's across-arm sigma, as a fraction of the arm ridge's own measured width law. 1 is that law exactly."
-          />
-          <ParamSlider
-            label="Edge bias"
-            value={hii.youngStars.edgeBias}
-            min={0}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchYoungStars({ edgeBias: v })}
-            path="fieldTuning.hii.youngStars.edgeBias"
-            info="Pushes the tier's fixed total flux outward along the arms. 0 = flat (surface brightness falls ~1/r outward), ~2 = outer arms dominate (the M74-reference look)."
-          />
-          <ParamSlider
-            label="Clumping"
-            value={hii.youngStars.mapDepth}
-            min={0}
-            max={1}
-            step={0.01}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchYoungStars({ mapDepth: v })}
-            path="fieldTuning.hii.youngStars.mapDepth"
-            info="0 = a smooth ribbon along the ridge, 1 = fully modulated by the ISM map's stars tracer — the fluid-advected clumps the chain rides."
-          />
-          <ParamSlider
-            label="Contrast"
-            value={hii.youngStars.contrast}
-            min={0.25}
-            max={4}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchYoungStars({ contrast: v })}
-            path="fieldTuning.hii.youngStars.contrast"
-            info="Gamma shaping the stars-map read — flux-neutral, mean-normalized so it restructures the clump contrast without draining the tier's total brightness."
-          />
-          <ParamSlider
-            label="Texture"
-            value={hii.youngStars.texture}
-            min={0}
-            max={2}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => patchYoungStars({ texture: v })}
-            path="fieldTuning.hii.youngStars.texture"
-            info="This tier's own share of the HII tier's shared texture breakup — independent of the shell tier's own Texture knob above."
-          />
-        </div>
+        <div className={styles.root}>{HII_YOUNG_STARS_SLIDERS.map(renderHiiSlider)}</div>
       </CollapsibleSection>
     </CollapsibleSection>
   );
