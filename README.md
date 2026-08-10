@@ -95,7 +95,7 @@ You can run with any one, any two, or all three. The renderer falls back to synt
 
 ## Loading real data
 
-The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` at startup, using whichever are present. The pipeline below produces those files from raw catalog downloads.
+The renderer fetches the SDSS / 2MRS / GLADE galaxy-catalog bins at startup (from `/data/galaxy-catalog/v9/`, resolved through the boot-fetched `manifest.json` — see [docs/DATA.md](docs/DATA.md)), using whichever are present. The pipeline below produces those files from raw catalog downloads.
 
 ### 1. Download the catalogs
 
@@ -149,7 +149,7 @@ npm run build-all -- \
 
 Omit any `--xxx` flag you don't have — the merger treats missing inputs as empty and skips writing that output file. So `--sdss only` is a fine single-survey workflow.
 
-The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes v4 binary files to `public/data/sdss.bin`, `2mrs.bin`, `glade.bin`. Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 32 + 2.6 + 130 MB on disk.
+The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes v9 binary files under `public/data/galaxy-catalog/v9/` with content-hashed names (e.g. `sdss.<hash>.bin`, `2mrs.<hash>.bin`, `glade.<hash>.bin` — see [docs/DATA.md](docs/DATA.md)). Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 32 + 2.6 + 130 MB on disk.
 
 ### 3. (Optional) Enrich with real galaxy orientations
 

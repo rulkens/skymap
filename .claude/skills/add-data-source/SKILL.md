@@ -73,13 +73,15 @@ work (memory `feedback_seed_data_early`). Order: type union → parser/seed →
      docs/DATA.md → "Data layout: family/epoch folders"),
    - re-sync R2 (`npm run sync-r2-secure`) and purge the CDN so old clients
      stop being served the previous epoch's now-stale bins.
-     A **new** binary family (not a bump to an existing one, e.g. a source that
-     doesn't fit `galaxyCatalogFormat.ts` at all) gets its own `<family>/v<N>/`
-     folder and its own epoch-prefix constant, the same pattern as
-     `galaxy-catalog/v9/`. Either way, every runtime-fetched file must be added
-     to `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`) or it is never
-     hashed, never manifested, and never uploaded (docs/DATA.md → "Content hash
-   * manifest").
+
+   A **new** binary family (not a bump to an existing one, e.g. a source that
+   doesn't fit `galaxyCatalogFormat.ts` at all) gets its own `<family>/v<N>/`
+   folder and its own epoch-prefix constant, the same pattern as
+   `galaxy-catalog/v9/`. Either way, every runtime-fetched file must be added
+   to `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`), or it is never
+   hashed, never manifested, and never uploaded — see docs/DATA.md's
+   "Content hash + manifest" section.
+
 5. Surveys carry photometry/orientation — mind the per-catalog gotchas in
    CLAUDE.md (2MRS negative cz, GLADE PGC cross-match, SDSS column variance).
 

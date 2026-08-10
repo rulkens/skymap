@@ -27,16 +27,19 @@ never pair mismatched code and bytes:
 | `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
 
 Loose JSON (`famous_*_meta`, `constellations`, `pgc_aliases`) and `images/`
-stay at the root — no version gate, schemas evolve compatibly. The rule:
-the folder name is the family's format-module `VERSION`, exported as that
-module's epoch-prefix constant — never hand-typed at a call site.
+stay at the root — no version gate, schemas evolve compatibly. "Stay at the
+root" is about the version gate only: the JSON still gets a content hash
+(next section), `images/` does not. The rule: the folder name is the
+family's format-module `VERSION`, exported as that module's epoch-prefix
+constant — never hand-typed at a call site.
 
 ### Content hash + manifest
 
 `public/data/` holds hashed filenames in every environment (dev included):
 every tracked file — the five family folders above, plus the root JSON —
-carries a truncated content hash before its extension
-(`sdss-large.a3f19c2e.bin`), and the build emits `public/data/manifest.json`
+carries the first 8 hex characters of its SHA-256 content hash before its
+extension (`sdss-large.a3f19c2e.bin`), and the build emits
+`public/data/manifest.json`
 mapping logical path → hashed path. The manifest is written **last**, after
 every file it names, so a reload can never see a mixed-generation pairing
 (a stale `famous_galaxies_meta.json` against a fresh `famous.bin`). Boot
