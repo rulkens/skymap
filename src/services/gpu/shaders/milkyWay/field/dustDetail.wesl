@@ -8,6 +8,7 @@
 // splats instead of stamping one flat decal across the whole depth column.
 
 import package::milkyWay::field::io::u;
+import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
 
 // One hot texel over a dead 8x8 block ratios near 30; uncapped that turns a
 // texel into a beacon rather than texture. The ratio ITSELF (density over
@@ -18,10 +19,6 @@ const DETAIL_MAX: f32 = 8.0;
 // rMax: the same grid ismMapCartesianBake.wesl resolves world xz through —
 // the one scalar the affine UV below needs. rMin stays in the struct only to
 // match gridUbo's byte layout (written once per rebuildIsmMap, not read here).
-struct IsmMapGrid {
-  rMin: f32,
-  rMax: f32,
-}
 
 // Binding numbers: dustMap.wesl's own closure is io's 0/1 (u/comps), its
 // dust-noise volume 4/5, and these three — collision-free there, which is

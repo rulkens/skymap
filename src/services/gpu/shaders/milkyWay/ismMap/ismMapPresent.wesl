@@ -17,6 +17,7 @@ import package::lib::util::rayPlaneY0;
 import package::milkyWay::field::io::u;
 import package::milkyWay::ismMap::ismMapPresentLib::logPolarUv;
 import package::milkyWay::ismMap::ismMapPresentLib::ismMapEdgeFade;
+import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
 
 // Mirrors dustParticleCloud.ts's DUST_SURVIVAL_FLOOR_FRAC — parity-tested in
 // constants.parity.test.ts. A texel below this FRACTION of ITS OWN RING'S
@@ -29,14 +30,9 @@ import package::milkyWay::ismMap::ismMapPresentLib::ismMapEdgeFade;
 // splats.
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
-// rMin/rMax: the log-radial bounds THIS galaxy's grid was built over
+// grid: the log-radial bounds THIS galaxy's grid was built over
 // (galaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per
 // rebuildIsmMap, not every frame like io.wesl's 'u' above.
-struct IsmMapGrid {
-  rMin: f32,
-  rMax: f32,
-}
-
 @group(0) @binding(1) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(2) var ismMapSmp: sampler;
 @group(0) @binding(3) var<uniform> grid: IsmMapGrid;

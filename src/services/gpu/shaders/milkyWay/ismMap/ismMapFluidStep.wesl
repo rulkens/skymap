@@ -10,7 +10,7 @@
 // (read from this texel's own previous value, never resampled).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
-import package::milkyWay::ismMap::ismMapShear::wrapAz;
+import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;
 
 struct IsmMapFluidConstants {
   rMin: f32,
@@ -98,10 +98,9 @@ fn gasProfile(r: f32) -> f32 {
 // rescaled by azToRingMetric before summing, same az-equivalent-units
 // convention ismMapFluidVelocity.wesl's forcingGradient uses.
 fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric: f32) -> f32 {
-  let azCountI = i32(azCount);
   let ringCountI = i32(ringCount);
-  let azPlus = wrapAz(az + 1, azCountI);
-  let azMinus = wrapAz(az - 1, azCountI);
+  let azPlus = i32(wrapIndex(az + 1, azCount));
+  let azMinus = i32(wrapIndex(az - 1, azCount));
   let ringPlus = clamp(ring + 1, 0, ringCountI - 1);
   let ringMinus = clamp(ring - 1, 0, ringCountI - 1);
 
@@ -123,10 +122,9 @@ fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric:
 // wraps, ring clamps (a clamped ring neighbour equals self, i.e. zero-flux
 // boundary).
 fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasDust: vec2<f32>) -> vec2<f32> {
-  let azCountI = i32(azCount);
   let ringCountI = i32(ringCount);
-  let azPlus = wrapAz(az + 1, azCountI);
-  let azMinus = wrapAz(az - 1, azCountI);
+  let azPlus = i32(wrapIndex(az + 1, azCount));
+  let azMinus = i32(wrapIndex(az - 1, azCount));
   let ringPlus = clamp(ring + 1, 0, ringCountI - 1);
   let ringMinus = clamp(ring - 1, 0, ringCountI - 1);
 

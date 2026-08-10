@@ -42,6 +42,8 @@
 // dispatch time — same declaration, different backing buffer per pass — which
 // is precisely what module-scope bindings are for.
 
+import package::lib::util::hashAvalanche;
+
 // pi, in f32. The f32 rounding is in the ~7th digit — a negligible angular
 // error everywhere it is used (Box-Muller phase, arm/bar angles).
 const PI: f32 = 3.14159265358979323846;
@@ -244,18 +246,18 @@ fn nLerp(a: f32, b: f32, t: f32) -> f32 {
 }
 
 // nHash — u32 lattice hash: three large-prime multiplies plus an
-// avalanche/xor-shift pair, matching a 32-bit wrap-multiply hash's bit
-// pattern up to the final f32 division (which rounds the 32-bit word to f32,
-// a small precision loss). The integer lattice coords arrive as i32 (they
-// can be negative) and are bitcast to u32 so the wrap-multiply matches
+// avalanche/xor-shift pair (lib/util.wesl's hashAvalanche, shared with
+// integerHash3 there), matching a 32-bit wrap-multiply hash's bit pattern up
+// to the final f32 division (which rounds the 32-bit word to f32, a small
+// precision loss). The integer lattice coords arrive as i32 (they can be
+// negative) and are bitcast to u32 so the wrap-multiply matches
 // two's-complement 32-bit truncation semantics.
 fn nHash(xi: i32, yi: i32, zi: i32, s: u32) -> f32 {
   let xu = bitcast<u32>(xi);
   let yu = bitcast<u32>(yi);
   let zu = bitcast<u32>(zi);
-  var h = xu * 374761393u + yu * 668265263u + zu * 2147483647u + s * 974711u;
-  h = (h ^ (h >> 13u)) * 1274126177u;
-  return f32(h ^ (h >> 16u)) * INV_2POW32;
+  let h = xu * 374761393u + yu * 668265263u + zu * 2147483647u + s * 974711u;
+  return f32(hashAvalanche(h)) * INV_2POW32;
 }
 
 // valueNoise3 — seeded 3D value noise, [0, 1). floor() BEFORE the i32 cast so
@@ -1133,11 +1135,6 @@ fn dustMod(p: vec3<f32>, seed: u32, pop: u32, idx: u32, slot: u32) -> DustMod {
   return m;
 }
 
-// radialFalloff — exponential radial dust falloff.
-fn radialFalloff(r: f32) -> f32 {
-  return exp(-r / (gen.diskScaleLen * 1.5));
-}
-
 // Resample tuning for the budget-exact dust builders (armDust, irregularDust —
 // see the batch-C header). A thread makes at most DUST_ATTEMPTS tries; each try
 // owns a disjoint ATTEMPT_STRIDE-slot hash block, its candidate pick drawn at
@@ -1241,7 +1238,7 @@ fn buildArmDust(j: u32) -> DustRec {
     // arms rather than drawing twice.
     let r8 = genRand(seed, pop, j, base + 8u);
     let opJitter = select(0.05 + 0.11 * r8, 0.22 + 0.3 * r8, dense);
-    let opacity = opJitter * gen.dustAmount * s.armFade * (0.4 + 1.4 * radialFalloff(s.radius)) * m.op;
+    let opacity = opJitter * gen.dustAmount * s.armFade * (0.4 + 1.4 * diskFalloff(s.radius, 1.5)) * m.op;
     // slot 9: size jitter. Dense knots are 1.25x, wisps 0.8x.
     let sizeJitter = 0.007 + 0.015 * genRand(seed, pop, j, base + 9u);
     let size = gen.outerRadius * sizeJitter * gen.grainScale * select(0.8, 1.25, dense) * m.sz;
@@ -1295,7 +1292,7 @@ fn buildBarDust(i: u32) -> DustRec {
 // buildLenticularNucDust — S0's dust-poor nuclear disk: cloudy scatter around
 // 34 cloud centres. The cloud centres come from gen.cloudCenters (packed as
 // (cos*rr, sin*rr, rr, 0) — the .z lane is the cloud's own radius, fed to
-// radialFalloff). No seed reuse.
+// diskFalloff). No seed reuse.
 fn buildLenticularNucDust(i: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
@@ -1310,7 +1307,7 @@ fn buildLenticularNucDust(i: u32) -> DustRec {
   let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 6u); // slot 6 keep gate
   if (!m.keep) { return dead; }
   let size = gen.outerRadius * (0.007 + 0.012 * genRand(seed, pop, i, 7u)) * gen.grainScale * m.sz; // slot 7
-  let opacity = (0.05 + 0.15 * genRand(seed, pop, i, 8u)) * gen.dustAmount * (0.3 + radialFalloff(center.z)) * m.op; // slot 8
+  let opacity = (0.05 + 0.15 * genRand(seed, pop, i, 8u)) * gen.dustAmount * (0.3 + diskFalloff(center.z, 1.5)) * m.op; // slot 8
   return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
 }
 

@@ -12,7 +12,7 @@
 
 import package::lib::util::hash21;
 import package::milkyWay::ismMap::ismMapShear::ismMapShearTexels;
-import package::milkyWay::ismMap::ismMapShear::wrapAz;
+import package::milkyWay::ismMap::ismMapOrientationLib::wrapIndex;
 
 struct IsmMapFluidConstants {
   rMin: f32,
@@ -162,7 +162,7 @@ fn curlVelocity(gridPos: vec2<f32>, azCount: u32, curlScale: f32, genStep: f32) 
 }
 
 fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
-  let a = wrapAz(az, azCount);
+  let a = i32(wrapIndex(az, u32(azCount)));
   let r = clamp(ring, 0, ringCount - 1);
   return textureLoad(armForcingTex, vec2<i32>(a, r), 0).x;
 }
@@ -218,7 +218,7 @@ fn composedVelocity(
   // shift collapses to 0 regardless of gatherOffset: no drift, no flank to
   // prefer. Only this sample moves — forcingSelf below (armDrag) and grad
   // above (the laneBias direction test) keep reading the unshifted texel.
-  let gatherAz = wrapAz(az + i32(round(sign(shearVelAz) * u.gatherOffset)), azCountI);
+  let gatherAz = i32(wrapIndex(az + i32(round(sign(shearVelAz) * u.gatherOffset)), azCount));
   let gatherGrad = forcingGradient(gatherAz, ring, azCountI, ringCountI, azToRingMetric);
   // Counterweight so 120 steps of convergent gathering can't run the local
   // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.

@@ -6,6 +6,8 @@
 // per rebuild, right after the dust-blur pass it reads; consumed through
 // dustDetail.wesl's ismCartesianUv.
 
+import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
+
 const PI: f32 = 3.14159265358979;
 // Absolute density floor for the ratio below — sole owner since stage 2
 // (dustDetail.wesl consumes the baked ratio, no copy of its own).
@@ -14,11 +16,6 @@ const DETAIL_EPS: f32 = 0.02;
 const ISM_MAP_AMBIENT_DUST: f32 = 1.0;
 
 // rMin/rMax — same grid dustDetail.wesl's ismMapUv resolves through.
-struct IsmMapGrid {
-  rMin: f32,
-  rMax: f32,
-}
-
 @group(0) @binding(0) var srcTex: texture_2d<f32>; // packed ismMap: x=gas, y=stars, z=activity, w=dust
 @group(0) @binding(1) var blurTex: texture_2d<f32>; // S4's low-pass divisor (ismMapDustBlur.wesl)
 // Reused from IsmMapOutput's mapSampler (repeat-U matches azT, clamp-V

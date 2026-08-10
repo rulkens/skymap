@@ -62,6 +62,18 @@ fn hash21Hq(p: vec2<f32>) -> f32 {
   return fract((p3.x + p3.y) * p3.z);
 }
 
+// hashAvalanche — the mixing tail shared by integerHash3 below and
+// generate.wesl's nHash: two xor-shift/multiply rounds that scramble a
+// summed hash word. Callers differ upstream (nHash sums a 4th seed term
+// with its own z-prime, then normalizes by a slightly different constant),
+// so only this shared tail is factored out — extracting more would change
+// what one of the two callers returns.
+fn hashAvalanche(h: u32) -> u32 {
+  var hh = h;
+  hh = (hh ^ (hh >> 13u)) * 1274126177u;
+  return hh ^ (hh >> 16u);
+}
+
 // integerHash3 — Bob Jenkins/Squirrel-family 3-int avalanche: three large
 // odd multiplies then two xor-shifts. Promoted here once a second consumer
 // (warpNoiseBake.wesl, starGrainBake.wesl) needed the exact same tileable-3D
@@ -71,9 +83,8 @@ fn integerHash3(p: vec3<i32>) -> f32 {
   let x = bitcast<u32>(p.x);
   let y = bitcast<u32>(p.y);
   let z = bitcast<u32>(p.z);
-  var h = x * 374761393u + y * 668265263u + z * 2246822519u;
-  h = (h ^ (h >> 13u)) * 1274126177u;
-  return f32(h ^ (h >> 16u)) / 4294967295.0;
+  let h = x * 374761393u + y * 668265263u + z * 2246822519u;
+  return f32(hashAvalanche(h)) / 4294967295.0;
 }
 
 // valueNoise2 — 2D analytic noise via products of cosines.
