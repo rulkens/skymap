@@ -28,7 +28,7 @@ import type { GalaxySharedParams } from '../../../../src/@types/galaxy/GalaxySha
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { AutoFitOptions } from '../../@types/matcher/AutoFitOptions';
 import type { FitResult } from '../../@types/matcher/FitResult';
-import type { NumericGalaxyParamKey } from '../../@types/matcher/FitParamRange';
+import type { NumericGalaxyParamKey } from '../../@types/matcher/NumericGalaxyParamKey';
 import { GALAXY_LEGACY_PARAM_KEYS } from '../data/galaxyLegacyParamKeys';
 import { fitPlan } from './fitPlan';
 import { computeDescriptor } from './computeDescriptor';

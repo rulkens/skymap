@@ -32,11 +32,15 @@ export type GalaxyFieldComponent = {
    */
   readonly boundRadius: number;
   /**
-   * 0..1+ how strongly this component's own emission is modulated by the
-   * HII tier's tier-global noise texture (`splat.wesl`'s `hiiNoiseTerm`,
-   * `io.wesl`'s `dustDetail.y`/`.z`) — packed to `comps[4i+2].w`. Optional,
-   * default 0 (untouched) everywhere except `hiiRegions.ts`'s pushes, which
-   * are the only producer that sets it.
+   * Magnitude (0..1+) how strongly this component's own emission is
+   * modulated by the HII tier's tier-global noise texture (`hiiNoise.wesl`'s
+   * `hiiNoiseTerm`, `io.wesl`'s `dustDetail.y`/`.z`) — packed to
+   * `comps[4i+2].w`. The SIGN picks WHICH texture, not a second lane
+   * (`field/io.wesl`'s comps doc): positive (shell, DIG) samples
+   * `dustNoiseTex`'s ridged ISM field, negative (young stars) samples
+   * `starGrainTex`'s uncorrelated point grains. Optional, default 0
+   * (untouched) everywhere except `hiiRegions.ts`'s and
+   * `youngStarChain.ts`'s pushes, the only producers that set it.
    */
   readonly textureWeight?: number;
   /**

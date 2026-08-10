@@ -135,7 +135,7 @@ export function buildYoungStarChain(
   const totalFlux = young.brightness * geometry.luminosity * YOUNG_FLUX_REF;
   const width = young.width ?? 1;
   const poleSigma = pcToUnits(YOUNG_SCALE_HEIGHT_PC);
-  const textureWeight = -(young.texture ?? 0.6); // negative selects splat.wesl's star-grain branch
+  const textureWeight = -(young.texture ?? 0.6); // sign contract: GalaxyFieldComponent.textureWeight
   const starsWeight = young.mapDepth ?? 0.8;
 
   const out: GalaxyFieldComponent[] = [];

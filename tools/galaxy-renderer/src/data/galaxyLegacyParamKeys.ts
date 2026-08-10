@@ -7,19 +7,25 @@
  */
 import type { GalaxyLegacyParams } from '../../../../src/@types/galaxy/GalaxyLegacyParams';
 
-export const GALAXY_LEGACY_PARAM_KEYS: ReadonlySet<keyof GalaxyLegacyParams> = new Set([
-  'starCount',
-  'armWidth',
-  'armStrength',
-  'subArms',
-  'hii',
-  'spriteDust',
-  'dustNoise',
-  'dustNoiseScale',
-  'dustRing',
-  'dustRingWidth',
-  'dustRingStrength',
-  'globularCount',
-  'globularSize',
-  'globularBright',
-]);
+// `satisfies Record<keyof GalaxyLegacyParams, true>` makes a field this map
+// forgets (or misspells) a compile error, not a silent migration hole.
+const GALAXY_LEGACY_PARAM_KEY_MAP = {
+  starCount: true,
+  armWidth: true,
+  armStrength: true,
+  subArms: true,
+  hii: true,
+  spriteDust: true,
+  dustNoise: true,
+  dustNoiseScale: true,
+  dustRing: true,
+  dustRingWidth: true,
+  dustRingStrength: true,
+  globularCount: true,
+  globularSize: true,
+  globularBright: true,
+} satisfies Record<keyof GalaxyLegacyParams, true>;
+
+export const GALAXY_LEGACY_PARAM_KEYS: ReadonlySet<keyof GalaxyLegacyParams> = new Set(
+  Object.keys(GALAXY_LEGACY_PARAM_KEY_MAP) as (keyof GalaxyLegacyParams)[],
+);
