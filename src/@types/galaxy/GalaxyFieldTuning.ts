@@ -12,7 +12,6 @@ import type { GalaxyArmTuning } from './GalaxyArmTuning';
 import type { GalaxyDiscTuning } from './GalaxyDiscTuning';
 import type { GalaxyDustParams } from './GalaxyDustParams';
 import type { GalaxyHiiTuning } from './GalaxyHiiTuning';
-import type { GalaxyIsmMapAutomatonParams } from './GalaxyIsmMapAutomatonParams';
 import type { GalaxyIsmMapFluidParams } from './GalaxyIsmMapFluidParams';
 import type { GalaxyIsmMapParams } from './GalaxyIsmMapParams';
 import type { GalaxyStarFormationParams } from './GalaxyStarFormationParams';
@@ -25,10 +24,8 @@ export type GalaxyFieldTuning = {
   /** The seeded SF-event model driving HII placement — formerly `p.starFormation`, scene-wide like every other section rather than per-galaxy. */
   readonly starFormation: GalaxyStarFormationParams;
   readonly hii: GalaxyHiiTuning;
-  /** Shared switch: which generator writes the ISM map, if any (`ismMap.generator`, `'none'` | `'automaton'` | `'fluid'`) — the ONLY branch point. */
+  /** Shared switch: whether the fluid generator writes the ISM map (`ismMap.generator`, `'none'` | `'fluid'`) — the ONLY branch point. */
   readonly ismMap: GalaxyIsmMapParams;
-  /** The SSPSF automaton that grows the ISM structure the dust tier is seeded from — live only while `ismMap.generator === 'automaton'`. */
-  readonly ismMapAutomaton: GalaxyIsmMapAutomatonParams;
-  /** The fluid alternative to `ismMapAutomaton` — live only while `ismMap.generator === 'fluid'`. Symmetric with it, not a fallback. */
+  /** The fluid ISM-map generator's params — live only while `ismMap.generator === 'fluid'`. */
   readonly ismMapFluid: GalaxyIsmMapFluidParams;
 };

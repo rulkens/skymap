@@ -40,13 +40,13 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     });
   });
 
-  it('preserves fieldTuning.ismMapAutomaton — a nested sub-object, not just top-level scalars', () => {
-    const tunedAutomaton = {
-      ...DEFAULT_GALAXY_FIELD_TUNING.ismMapAutomaton,
+  it('preserves fieldTuning.ismMapFluid — a nested sub-object, not just top-level scalars', () => {
+    const tunedFluid = {
+      ...DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid,
       steps: 123,
-      armForcing: 0.42,
+      armGather: 0.42,
     };
-    const tuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMapAutomaton: tunedAutomaton };
+    const tuning = { ...DEFAULT_GALAXY_FIELD_TUNING, ismMapFluid: tunedFluid };
     const wire = serializeGalaxyPreset(
       DEFAULT_GALAXY_PARAMS,
       DEFAULT_RENDER_SETTINGS,
@@ -56,7 +56,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     );
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.ismMapAutomaton).toEqual(tunedAutomaton);
+    expect(parsed?.f?.ismMapFluid).toEqual(tunedFluid);
   });
 
   // Two pre-rename spellings of the same render knob: `ismMapRecentWeight`
@@ -105,10 +105,10 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.ismMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.ismMap);
   });
 
-  // The three-state generator dropdown retired two booleans it used to take
-  // separate presets through: `sfMap.enabled` and `dust.sfMapSeeding`. Old
-  // files on disk still carry both — under their pre-ISM-rename spellings,
-  // which is why every legacy fixture below feeds `sfMap*` keys and expects
+  // The generator dropdown retired two booleans it used to take separate
+  // presets through: `sfMap.enabled` and `dust.sfMapSeeding`. Old files on
+  // disk still carry both — under their pre-ISM-rename spellings, which is
+  // why every legacy fixture below feeds `sfMap*` keys and expects
   // `ismMap*` out — `migrateGalaxyFieldTuningWire` folds the first into
   // `generator` and drops the second outright (see its header).
   it('migrates a disabled legacy sfMap section to ismMap generator "none", dropping `enabled`', () => {
@@ -116,7 +116,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
       type: 'galaxy-preset',
       version: 3,
       p: DEFAULT_GALAXY_PARAMS,
-      f: { sfMap: { enabled: false, generator: 'automaton' } },
+      f: { sfMap: { enabled: false, generator: 'fluid' } },
     });
 
     const parsed = parseGalaxyPreset(wire);
@@ -129,12 +129,51 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
       type: 'galaxy-preset',
       version: 3,
       p: DEFAULT_GALAXY_PARAMS,
+      f: { sfMap: { enabled: true, generator: 'fluid' } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.ismMap).toEqual({ generator: 'fluid' });
+  });
+
+  // The SSPSF automaton generator was removed outright (`GalaxyIsmMapGeneratorKind`
+  // collapsed to 'none' | 'fluid'); a preset saved while it still existed
+  // forward-migrates its `generator: 'automaton'` onto 'fluid' rather than
+  // failing to load — see `migrateIsmMap`'s own header.
+  it('forward-migrates a legacy `generator: "automaton"` to `"fluid"`', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
       f: { sfMap: { enabled: true, generator: 'automaton' } },
     });
 
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.ismMap).toEqual({ generator: 'automaton' });
+    expect(parsed?.f?.ismMap).toEqual({ generator: 'fluid' });
+  });
+
+  // The automaton's own wire bag (`sfMapAutomaton`/`ismMapAutomaton`) has
+  // nowhere to land now that the type is gone — dropped outright rather than
+  // uploaded as an unknown key.
+  it('drops a legacy `ismMapAutomaton` bag entirely, without touching a preset-named `ismMapFluid`', () => {
+    const tunedFluid = { ...DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid, steps: 200 };
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        sfMap: { enabled: true, generator: 'automaton' },
+        ismMapAutomaton: { steps: 99, spread: 0.3 },
+        ismMapFluid: tunedFluid,
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f).not.toHaveProperty('ismMapAutomaton');
+    expect(parsed?.f?.ismMapFluid).toEqual(tunedFluid);
   });
 
   it('defaults the generator when an old section named only `enabled`', () => {

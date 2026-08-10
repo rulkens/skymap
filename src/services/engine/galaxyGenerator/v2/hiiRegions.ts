@@ -417,13 +417,12 @@ let seedingCdfCache: CachedCdf | null = null;
  *
  * Weighted by `activity` alone (the short-memory EMA of event stamps), NOT
  * the `stars` channel `hiiRegions.ts` used to read here: `stars` is now a
- * long-lived advected tracer (fluid) or its exp-decay approximation
- * (automaton), so a shell CDF-sampled from it would scatter onto 20-100 Myr
- * drifted material with no ionizing stars left — shells need FRESH sites,
- * which `activity` still gives (ignition zeroes gas in the same cell, so
- * this stays anti-correlated with the dust CDF by construction — knots avoid
- * the dust the automaton just cleared, the same decorrelation M74 shows,
- * Chevance+2020).
+ * long-lived advected tracer, so a shell CDF-sampled from it would scatter
+ * onto 20-100 Myr drifted material with no ionizing stars left — shells
+ * need FRESH sites, which `activity` still gives (ignition zeroes gas in
+ * the same cell, so this stays anti-correlated with the dust CDF by
+ * construction — knots avoid the dust the generator just cleared, the same
+ * decorrelation M74 shows, Chevance+2020).
  *
  * NEVER called for `tuning.ismMap.generator === 'fluid'` regions (see
  * `buildHiiRegions`'s call site) — a fluid region's centre already IS a map

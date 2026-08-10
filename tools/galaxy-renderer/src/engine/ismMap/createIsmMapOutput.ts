@@ -1,14 +1,14 @@
 /**
- * createIsmMapOutput — the packed artifact BOTH ISM-map generators write into,
+ * createIsmMapOutput — the packed artifact the ISM-map generator writes into,
  * and everything downstream of it: the present pass, the S4 dust-blur
- * low-pass, and the CPU readback's staging buffer. Generator-agnostic by
- * construction — it never imports either runner, only ever a `texture`
- * object something else fills. `createIsmMapGenerator.ts`'s dispatcher owns
- * one instance and hands it to both `createIsmMapAutomatonRunner` and
- * `createIsmMapFluidRunner`, which is what lets every OTHER downstream
- * consumer (orientation chain, readback, present draw) stay wired to ONE
- * stable texture/bind-group regardless of which generator last wrote it —
- * switching the toggle never rebuilds a single bind group outside this file.
+ * low-pass, and the CPU readback's staging buffer. Runner-agnostic by
+ * construction — it never imports the runner, only ever a `texture` object
+ * something else fills. `createIsmMapGenerator.ts`'s dispatcher owns one
+ * instance and hands it to `createIsmMapFluidRunner`, which is what lets
+ * every OTHER downstream consumer (orientation chain, readback, present
+ * draw) stay wired to ONE stable texture/bind-group regardless of whether
+ * the generator is running — flipping the toggle never rebuilds a single
+ * bind group outside this file.
  */
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {

@@ -3,7 +3,7 @@
  * dust-elongation coupling (`IsmMapSection`'s "measured filament coupling"
  * block). The three numbers discriminate where a "sliders don't move the
  * dust" report is coming from: `hasData: false` means the readback never
- * landed; near-zero coherence means the automaton has no measurable
+ * landed; near-zero coherence means the generator has no measurable
  * structure yet; fine coherence with near-zero delta means the coupling
  * works but the measured orientation already agrees with the arm tangent.
  */

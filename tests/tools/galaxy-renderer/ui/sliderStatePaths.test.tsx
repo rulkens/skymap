@@ -24,7 +24,6 @@ import { createGalaxyStore, type AppStore } from '../../../../tools/galaxy-rende
 import { DEFAULT_UI_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultUiState';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
 import { DEFAULT_EXTRAS_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import type { UiState } from '../../../../tools/galaxy-renderer/@types/state/UiState';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 
@@ -116,28 +115,4 @@ describe('slider state paths', () => {
     // passes every assertion above vacuously.
     expect(checked.size).toBeGreaterThan(50);
   }, 30000);
-
-  // The sweep above only ever mounts ismMap.generator === 'fluid' (the
-  // default), so IsmMapSection's AUTOMATON panel (gated at
-  // ismMap.generator === 'automaton', IsmMapSection.tsx) never mounts and its
-  // ~12 sliders escape the label<->path contract entirely.
-  it("the AUTOMATON panel (gated behind ismMap.generator === 'automaton') also passes the contract", () => {
-    const checked = new Set<string>();
-    const stale: string[] = [];
-    const fieldTuning: GalaxyFieldTuning = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'automaton' },
-    };
-
-    const { store, container } = mountPanel('Sb', fieldTuning);
-    sweepPanel(store, container, checked, stale);
-    cleanup();
-
-    expect(stale).toEqual([]);
-    // Proves the gated panel actually mounted and got swept, not just that
-    // SOME sliders elsewhere on the page did.
-    expect(checked.has('fieldTuning.ismMapAutomaton.spread')).toBe(true);
-    expect(checked.has('fieldTuning.ismMapAutomaton.shearRate')).toBe(true);
-    expect(checked.size).toBeGreaterThan(50);
-  }, 15000);
 });

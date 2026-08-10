@@ -128,7 +128,7 @@
 // SECOND, independent star-formation model drawn alongside ismMap's own view
 // so the two can be compared directly. Not folded into debugView: that vec4
 // is full (dust/ismMap/orientation/galaxyWeight), and reusing
-// ismMapChannels.w would name a bubble weight after an unrelated automaton
+// ismMapChannels.w would name a bubble weight after an unrelated ismMap
 // channel. Only .x is bubblePresent.wesl's own; .y/.z/.w are ismMapPresent.wesl's
 // "seeding" debug view (dust-seeding spike) — the exact composite density
 // dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
@@ -140,7 +140,7 @@
 // arrayMean(ismMapRingMeans(map, texel => texel.dust)) — the mean of the
 // map's own per-ring means, the SAME global mean the placement CDF's
 // radial-envelope term divides by. No ambient subtraction: the pedestal is
-// seeded ambient*gasProfile(r) and advected by the automaton, so it is
+// seeded ambient*gasProfile(r) and advected by the generator, so it is
 // itself structure the CDF places into, not a floor to clear. The per-ring
 // means .z/.w normalise against are NOT here — 512 floats has no home in a
 // vec4 — they ride ismMapRingMeansBuf, a dedicated read-only storage buffer

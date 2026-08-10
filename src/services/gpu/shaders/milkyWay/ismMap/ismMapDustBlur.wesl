@@ -1,6 +1,6 @@
 // milkyWay/ismMap/ismMapDustBlur.wesl — S4's low-pass divisor: an 8x-downsampled
 // copy of the PLACEMENT density (the swept-dust channel's overshoot above the
-// automaton's ambient pedestal — see sweptDustOvershoot.ts), blurred by
+// generator's ambient pedestal — see sweptDustOvershoot.ts), blurred by
 // box-averaging the density rather than the product of two blurs — those
 // differ, and only the former is the density field's own low-pass.
 // dustDetail.wesl divides the full-res density by this to isolate the octave

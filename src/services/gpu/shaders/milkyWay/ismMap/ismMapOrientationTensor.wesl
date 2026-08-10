@@ -35,7 +35,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // texel spans r*ln(rMax/rMin)/(rings-1) — the ratio is r-INDEPENDENT, so
   // ONE constant equalises the two derivative axes at every radius. Via
   // ismMapRingRadius (ratio of consecutive rings), the same shared module
-  // ismMapAutomatonStep.wesl/ismMapPack.wesl use for shear, never a restated formula.
+  // ismMapFluidStep.wesl uses for shear, never a restated formula.
   let azTexelSize = 2.0 * PI / f32(dims.x);
   let ringTexelSize = log(
     ismMapRingRadius(1u, dims.y, grid.rMin, grid.rMax)

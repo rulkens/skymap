@@ -154,8 +154,8 @@ export type RenderSettings = {
    */
   readonly dustViewIntensity: number;
   /**
-   * ISM-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
-   * log-polar output alone, same seam as `dustViewIntensity`. The automaton
+   * ISM-map crossfade weight: 0 = pure galaxy, 1 = the fluid generator's
+   * log-polar output alone, same seam as `dustViewIntensity`. The generator
    * seeds the dust placement and the orientation field, so this is the view
    * that says whether a fault in either starts here.
    */
@@ -191,8 +191,9 @@ export type RenderSettings = {
   readonly orientationSigmaIntegTexels: number;
   /**
    * ISM-map channel weight, isolating `gas` (io.wesl's `ismMapChannels.x`):
-   * unspent ISM fuel, 1 nearly everywhere on a quiet disc, driven to 0 by an
-   * ignition and refilled over `1/gasRegen` steps. The palette's dimmest
+   * unspent ISM fuel, 1 nearly everywhere on a quiet disc, advected and
+   * relaxed toward the radial `gasProfile(r)` equilibrium by `gasRegen` each
+   * step. The palette's dimmest
    * channel (maxes at colour 0.25 vs the stars channel's 1.0), so zeroing the
    * other three is the only way to see it against them. Only reachable while
    * `ismMapViewIntensity` is above 0.
@@ -200,10 +201,9 @@ export type RenderSettings = {
   readonly ismMapGasWeight: number;
   /**
    * ISM-map channel weight, isolating `stars` (io.wesl's
-   * `ismMapChannels.y`): the young-stars tracer — fluid: an advected density
+   * `ismMapChannels.y`): the young-stars tracer, an advected density
    * deposited at SF events and decaying with the run's own dissolution
-   * clock; automaton: `exp(-age/12)`, that generator's own approximation of
-   * it. Only reachable while `ismMapViewIntensity` is above 0.
+   * clock. Only reachable while `ismMapViewIntensity` is above 0.
    */
   readonly ismMapStarsWeight: number;
   /**
@@ -214,7 +214,7 @@ export type RenderSettings = {
    */
   readonly ismMapActivityWeight: number;
   /**
-   * ISM-map channel weight, isolating the automaton's conserved dust channel
+   * ISM-map channel weight, isolating the conserved dust channel
    * (io.wesl's `ismMapChannels.w`, sourced from the packed texel's `.w` since
    * 9aa9fe5d): swept dust, unclamped past ambient — rims legitimately
    * overshoot to the 8.0 ceiling. Scaled in linearly like the other three, so
@@ -241,7 +241,7 @@ export type RenderSettings = {
    * catalog's own bubble/cavity placements alone (dustBubblePlacements.ts),
    * same seam as `ismMapViewIntensity`/`orientationViewIntensity`. That
    * catalog is a SECOND, independent star-formation model — resolved from
-   * the same `sfEventCatalog.ts` events the SSPSF automaton never sees —
+   * the same `sfEventCatalog.ts` events the ISM-map generator never sees —
    * and this is the only way to compare the two side by side. Also this
    * layer's own gate: the placement rebuild only runs while this is above
    * 0, see `createGalaxyModel.ts`'s `rebuildBubblePlacements`.

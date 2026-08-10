@@ -31,7 +31,6 @@ import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/Gala
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
-import type { GalaxyIsmMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
 import type { GalaxyIsmMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
@@ -274,13 +273,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // to rebuild.
   let fieldGeometry: GalaxyDescription | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
-  // What the ISM map was last rebuilt against — see `setFieldTuning`. Three
-  // keys, not one: `ismMap` is the shared switch, but only the ACTIVE
-  // generator's own param block needs to move the identity check — an
-  // inactive generator's slider drag would otherwise pay a rebuild for a
-  // change nothing on screen reflects.
+  // What the ISM map was last rebuilt against — see `setFieldTuning`. Two
+  // keys: `ismMap` is the shared switch, `ismMapFluid` the generator's own
+  // param block.
   let ismMapKey: GalaxyIsmMapParams = fieldTuning.ismMap;
-  let ismMapAutomatonKey: GalaxyIsmMapAutomatonParams = fieldTuning.ismMapAutomaton;
   let ismMapFluidKey: GalaxyIsmMapFluidParams = fieldTuning.ismMapFluid;
   // The CENTRAL galaxy's HII tier, cached like `fieldMixture` but never
   // concatenated into it (see `hiiComps`).
@@ -345,7 +341,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * `buildDustParticleCloud` normalises its own CDF term by — load-bearing:
    * computing this any other way would let the view drift from what
    * placement actually consumes. No ambient subtraction: the pedestal is
-   * seeded `ambient * gasProfile(r)` and advected by the automaton, so it is
+   * seeded `ambient * gasProfile(r)` and advected by the generator, so it is
    * itself structure the CDF places into, not a floor to clear first. The
    * per-ring array goes straight to the GPU (`writeRingMeans`) — the
    * shader's own radial-envelope divisor — while only its `arrayMean` is
@@ -490,12 +486,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const orientationTexRebuild = createKeyedRebuild({
     wanted: () => viewIntensity('orientation') > 0 || fieldTuning.ismMap.generator !== 'none',
     build: () => {
-      // gasFloor=1 (fluid params carry no such sentinel) is the automaton
-      // case: ismMapOrientationField.wesl's IsmMapOrientationPedestal derives
-      // its zero-gradient invariant from gasProfile(r) collapsing to a flat
-      // 1.0 there — see that file's header. gasScaleLength must still be
-      // finite even though it's then algebraically unused.
-      const fluidPedestal =
+      // gasFloor=1 when the generator is off: the map texture is a cleared
+      // (all-zero) blank then, and ismMapOrientationField.wesl's
+      // IsmMapOrientationPedestal derives its zero-gradient invariant from
+      // gasProfile(r) collapsing to a flat 1.0 — a real fluid gasFloor here
+      // would subtract a non-flat pedestal from that blank data and paint a
+      // fake radial gradient into the orientation view. gasScaleLength must
+      // still be finite even though it's then algebraically unused.
+      const pedestal =
         fieldTuning.ismMap.generator === 'fluid'
           ? fieldTuning.ismMapFluid
           : { gasFloor: 1, gasScaleLength: 1 };
@@ -503,8 +501,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         grid: ismMapGridRadiusOrDefault(fieldGeometry),
         sigmaDerivTexels: render.orientationSigmaDerivTexels,
         sigmaIntegTexels: render.orientationSigmaIntegTexels,
-        gasFloor: fluidPedestal.gasFloor,
-        gasScaleLength: fluidPedestal.gasScaleLength,
+        gasFloor: pedestal.gasFloor,
+        gasScaleLength: pedestal.gasScaleLength,
         ambient: ISM_MAP_AMBIENT_DUST,
       });
       orientationDataRebuild.invalidate();
@@ -555,7 +553,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * rebuildBubblePlacements — the SF-event catalog's own bubble/cavity
    * placements, packed into `bubbleComps` for the debug overlay. A SECOND,
    * independent star-formation model: both builders read the SAME
-   * `sfEventCatalog.ts` events the SSPSF automaton never sees, which is what
+   * `sfEventCatalog.ts` events the ISM-map generator never sees, which is what
    * makes the two comparable side by side. Central galaxy only, off the same
    * cached inputs `rebuildDustMixture` reads.
    *
@@ -590,13 +588,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
-   * rebuildIsmMap — reruns whichever ISM-map generator `fieldTuning.ismMap.generator`
-   * names, from scratch, off the CACHED geometry. NEVER per frame, per the
-   * params contract. `createIsmMapGenerator` owns the dispatch (and the
-   * automaton/fluid branch, its ONLY branch point); what stays here is the
-   * pair of things that follow it either way — and the readback runs on BOTH
-   * of its exits, the disabled one too, so `ismMapData` reflects the cleared
-   * texture it just wrote rather than an earlier galaxy's map.
+   * rebuildIsmMap — reruns the fluid ISM-map generator when
+   * `fieldTuning.ismMap.generator` says to, from scratch, off the CACHED
+   * geometry. NEVER per frame, per the params contract. `createIsmMapGenerator`
+   * owns the dispatch (and the none/fluid gate, its ONLY branch point); what
+   * stays here is the pair of things that follow it either way — and the
+   * readback runs on BOTH of its exits, the disabled one too, so `ismMapData`
+   * reflects the cleared texture it just wrote rather than an earlier
+   * galaxy's map.
    */
   function rebuildIsmMap(): void {
     const grid = ismMapGenerator.rebuild({
@@ -689,7 +688,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
    * not a re-derivation. `ismMap` is null for every extra (same asymmetry as
    * `rebuildDustMixture`'s central-only readback below) — extras have no
-   * ISM-map generator of their own, automaton or fluid.
+   * ISM-map generator of their own.
    */
   function hiiMixtureOf(
     geometry: GalaxyDescription,
@@ -798,8 +797,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   //   starFormation -> HII tier, bubble overlay (same path as hii, above)
   //   dust          -> dust mixture + the header's dust lanes
   //   ismMap         -> the shared enabled/generator switch
-  //   ismMapAutomaton -> the automaton, only while it is the active generator
-  //   ismMapFluid     -> the fluid generator, only while it is the active one
+  //   ismMapFluid     -> the fluid generator's own params
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     const prev = fieldTuning;
     fieldTuning = { ...fieldTuning, ...patch };
@@ -854,19 +852,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // the CPU mixture rebuilds above. `arms.widthScale` feeds the ridge its
     // forcing field bakes, but re-triggering on it would make an arm-width drag
     // pay this cost per frame — deliberately left stale until `ismMap` moves.
-    // Only the ACTIVE generator's own block gates the rebuild (see the key
-    // declarations' own comment) — `ismMapGenerator.rebuild` always reads the
-    // CURRENT full tuning regardless, so switching `generator` itself (which
-    // moves `ismMap`) always picks up whatever the inactive block drifted to
-    // meanwhile.
     const generatorMoved = ismMapKey !== fieldTuning.ismMap;
-    const activeGeneratorParamsMoved =
-      fieldTuning.ismMap.generator === 'fluid'
-        ? ismMapFluidKey !== fieldTuning.ismMapFluid
-        : ismMapAutomatonKey !== fieldTuning.ismMapAutomaton;
-    if (generatorMoved || activeGeneratorParamsMoved) {
+    const fluidParamsMoved = ismMapFluidKey !== fieldTuning.ismMapFluid;
+    if (generatorMoved || fluidParamsMoved) {
       ismMapKey = fieldTuning.ismMap;
-      ismMapAutomatonKey = fieldTuning.ismMapAutomaton;
       ismMapFluidKey = fieldTuning.ismMapFluid;
       rebuildIsmMap(); // also re-dispatches the S4 blur, which now reads no dust tuning of its own
     }

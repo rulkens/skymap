@@ -23,7 +23,6 @@ export type UiState = {
       | 'hiiDig'
       | 'hiiYoungStars'
       | 'ismMap'
-      | 'ismMapAutomaton'
       | 'ismMapFluid'
       | 'debugViews'
       | 'pop'

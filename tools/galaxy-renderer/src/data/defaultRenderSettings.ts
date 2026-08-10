@@ -146,7 +146,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // map, which is not the default look.
   dustViewIntensity: 0,
   // 0 at boot, same rationale as `dustViewIntensity`: it crossfades in a
-  // debug presentation of the automaton's output.
+  // debug presentation of the ISM-map generator's output.
   ismMapViewIntensity: 0,
   // 0 at boot, same rationale — and the pass-chain gate: it only
   // (re-)dispatches while this is above 0 (see createGalaxyModel.ts).
@@ -155,8 +155,8 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // suppression before the central-difference gradient) and a larger
   // INTEGRATION scale (averaging orientations after the tensor is built,
   // conventionally 2-3x the derivative one). 1.5/4 sit mid-range on the
-  // tool's sliders — enough to average out single-cell automaton noise
-  // without smearing distinct spurs together.
+  // tool's sliders — enough to average out single-cell noise without
+  // smearing distinct spurs together.
   orientationSigmaDerivTexels: 1.5,
   orientationSigmaIntegTexels: 4,
   // All four at 1: the composite is unchanged from before these knobs

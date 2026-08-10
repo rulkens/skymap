@@ -15,9 +15,9 @@
  * No cavity carving here any more — the seeded SF-event catalog
  * (`dustBubblePlacements.ts`) used to sweep particles onto bubble/HII rims,
  * a second, independent star-formation model carving the same holes the
- * SSPSF automaton's own gas depletion already produces (`ismMap`, read via
+ * fluid generator's own gas depletion already produces (`ismMap`, read via
  * its own raw `dust` channel below). The map is now the only thing that
- * shapes dust, so until the automaton's depletion is tuned to carve on its
+ * shapes dust, so until the generator's depletion is tuned to carve on its
  * own, dust has no cavity holes and HII regions (still seeded from the
  * event catalog) can sit inside dust that no longer has a hole for them.
  *
@@ -216,10 +216,9 @@ export function buildDustParticleCloud(
   //
   // RAW dust, not overshoot-above-ambient: the ambient pedestal used to be
   // uniform (subtracted via the now-deleted `sweptDustOvershoot`), but it is
-  // now seeded `ambient * gasProfile(r)` and advected by the automaton — it
-  // IS structure, and subtracting it erased the faint wisps this placement
-  // is supposed to seed clouds into. `ismMapActivityHistogramHarness.ts`
-  // calls `ismMapDustDensity` instead; this file no longer imports either.
+  // now seeded `ambient * gasProfile(r)` and advected by the fluid generator
+  // — it IS structure, and subtracting it erased the faint wisps this
+  // placement is supposed to seed clouds into.
   //
   // RING-normalised, not a single map-wide mean: the map-wide mean was flat
   // enough for a hot texel's tempering knob to also flatten the RADIAL
@@ -247,7 +246,7 @@ export function buildDustParticleCloud(
     const map = ismMap; // narrowed alias so the closures below don't re-null-check
     const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
     const globalMean = arrayMean(ringMeans);
-    // Guard: a map with no dust anywhere (transport off, or the automaton
+    // Guard: a map with no dust anywhere (transport off, or the generator
     // hasn't run long enough yet) leaves `placement` at its `smoothDisc`
     // default instead of dividing by ~0 — the SAME fallback an absent map
     // takes, not a crash.

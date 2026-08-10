@@ -1,7 +1,6 @@
 /**
  * packIsmMapFluidStepIndex — the two things a real bug could break: the
- * per-step row landing at the wrong strideBytes-aligned offset (same class
- * of bug `ismMapStepIndexData.test.ts` guards for the shared packer), and the
+ * per-step row landing at the wrong strideBytes-aligned offset, and the
  * active-event window landing in the wrong float slot within that row.
  * Expected windows below are hand-computed from the fixture, not delegated
  * to `ismMapFluidEventWindow` (that function has its own test) — so this

@@ -2,10 +2,10 @@
  * `tuning.ismMap.generator === 'fluid'` — HII regions seed directly from the
  * fluid sim's own young-event window instead of the parallel arm-ridge
  * catalog, so the tier's output tracks `eventRate`/`impulseDuration`/`steps`
- * rather than `starFormation.sfActivity`. `'automaton'`/`'none'` keep the
- * pre-existing catalog behaviour untouched — see `hiiRegions.test.ts` for
- * the map-seeding/DIG coverage, orthogonal to this file. `youngStars` is
- * zeroed throughout: the chain producer places off arm geometry alone
+ * rather than `starFormation.sfActivity`. `'none'` keeps the pre-existing
+ * catalog behaviour untouched — see `hiiRegions.test.ts` for the
+ * map-seeding/DIG coverage, orthogonal to this file. `youngStars` is zeroed
+ * throughout: the chain producer places off arm geometry alone
  * (`youngStarChain.ts`), so it would otherwise pollute every catalog-only
  * assertion below with components this file isn't testing.
  */
@@ -189,33 +189,22 @@ describe('buildHiiRegions — fluid generator seeding', () => {
   });
 });
 
-describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing arm-ridge catalog", () => {
-  it("'automaton' and 'none' are byte-identical to each other, and neither reacts to ismMapFluid tuning (proving neither reads the fluid path)", () => {
-    const automaton: GalaxyFieldTuning = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      ismMap: { generator: 'automaton' },
-    };
+describe("buildHiiRegions — 'none' falls back to the pre-existing arm-ridge catalog", () => {
+  it("'none' never reacts to ismMapFluid tuning (proving it doesn't read the fluid path)", () => {
     const none: GalaxyFieldTuning = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       ismMap: { generator: 'none' },
     };
-    const automatonFluidParamsChanged: GalaxyFieldTuning = {
-      ...automaton,
+    const noneFluidParamsChanged: GalaxyFieldTuning = {
+      ...none,
       ismMapFluid: {
-        ...automaton.ismMapFluid,
-        eventRate: automaton.ismMapFluid.eventRate * 50,
+        ...none.ismMapFluid,
+        eventRate: none.ismMapFluid.eventRate * 50,
         steps: 5,
         impulseDuration: 1,
       },
     };
 
-    const a = buildHiiRegions(
-      geometry,
-      automaton,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      null,
-    );
     const n = buildHiiRegions(
       geometry,
       none,
@@ -223,17 +212,16 @@ describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing a
       geometry.seed,
       null,
     );
-    const aFluidChanged = buildHiiRegions(
+    const nFluidChanged = buildHiiRegions(
       geometry,
-      automatonFluidParamsChanged,
+      noneFluidParamsChanged,
       DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
       geometry.seed,
       null,
     );
 
-    expect(a.length).toBeGreaterThan(0); // sanity: the MW preset's defaults really produce regions
-    expect(n).toEqual(a);
-    expect(aFluidChanged).toEqual(a);
+    expect(n.length).toBeGreaterThan(0); // sanity: the MW preset's defaults really produce regions
+    expect(nFluidChanged).toEqual(n);
   });
 
   it('starFormation.sfActivity still gates the catalog path off at 0, same as before this change', () => {
@@ -243,7 +231,7 @@ describe("buildHiiRegions — 'automaton'/'none' fall back to the pre-existing a
     // test's own premise.
     const tuning: GalaxyFieldTuning = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
-      ismMap: { generator: 'automaton' },
+      ismMap: { generator: 'none' },
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
         youngStars: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.youngStars, brightness: 0 },

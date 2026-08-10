@@ -1,10 +1,10 @@
 /**
- * createIsmMapFluidRunner — the fluid ISM-map generator: its pipelines, its
+ * createIsmMapFluidRunner — the ISM-map generator: its pipelines, its
  * ping-ponged state, its event-impulse buffer, and the dispatch loop that
  * reruns it from scratch, writing into a `IsmMapOutput` it does not own (see
- * `createIsmMapOutput.ts`). Sibling of `createIsmMapAutomatonRunner.ts`; only
- * `createIsmMapGenerator.ts`'s dispatcher decides which one runs. See
- * `ismMapFluidStep.wesl`'s header for the integration scheme.
+ * `createIsmMapOutput.ts`). `createIsmMapGenerator.ts`'s dispatcher owns
+ * whether it runs at all. See `ismMapFluidStep.wesl`'s header for the
+ * integration scheme.
  *
  * Each step is TWO dispatches sharing one compute pass: `ismMapFluidVelocity`
  * (Pass A) composes this step's velocity field once per texel into
@@ -13,9 +13,8 @@
  * read within the same compute pass, so no pass split is needed. Step 0
  * only ever dispatches Pass B (it seeds and returns; velocity is unused).
  *
- * `rebuild` takes the geometry/tuning/seed/grid it runs against as ARGUMENTS,
- * same contract as the automaton runner's own `rebuild` — no shared
- * step-dispatch code between the two, just the shape of the contract.
+ * `rebuild` takes the geometry/tuning/seed/grid it runs against as ARGUMENTS
+ * — no hidden module-level state to disagree with a caller about.
  */
 import {
   buildGalaxyIsmMapArmForcing,
@@ -97,13 +96,10 @@ export function createIsmMapFluidRunner(
     format: 'rgba16float',
     usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
   });
-  // This generator's OWN copy of the automaton's armForcingTex — same upload
-  // pattern as createIsmMapAutomatonRunner.ts, deliberately not shared: the
-  // two runners are un-complected siblings, and a shared texture would tie
-  // their dispose()/rebuild() lifecycles together for no benefit (neither
-  // runs while the other doesn't need this data). The gather velocity term
-  // in ismMapFluidVelocity.wesl samples it directly, unlike the events
-  // builder below which reads the same CPU field (never the texture).
+  // This runner's own copy of the arm-forcing field, uploaded as a texture:
+  // the gather velocity term in ismMapFluidVelocity.wesl samples it
+  // directly, unlike the events builder below which reads the same CPU
+  // field (never the texture).
   const armForcingTex = device.createTexture({
     label: 'galaxy:ismMapFluidArmForcingTex',
     size: [ISM_MAP_AZ, ISM_MAP_RINGS],
@@ -115,11 +111,9 @@ export function createIsmMapFluidRunner(
     size: ISM_MAP_FLUID_CONSTANTS_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // Allocated once at the fixed CAP (`ISM_MAP_FLUID_MAX_EVENTS`), same
-  // reuse-the-object-vary-the-content precedent as the automaton runner's
-  // armForcingTex/state textures — each rebuild only rewrites the USED
-  // prefix and binds a sub-range (`size:` below) matching that rebuild's
-  // actual event count.
+  // Allocated once at the fixed CAP (`ISM_MAP_FLUID_MAX_EVENTS`) and reused
+  // across rebuilds — each rebuild only rewrites the USED prefix and binds a
+  // sub-range (`size:` below) matching that rebuild's actual event count.
   const eventsBuf = device.createBuffer({
     label: 'galaxy:ismMapFluidEventsBuf',
     size: ISM_MAP_FLUID_MAX_EVENTS * ISM_MAP_FLUID_EVENT_STRIDE * 4,
@@ -174,8 +168,7 @@ export function createIsmMapFluidRunner(
       );
 
       // Every step's bind groups share the SAME eventsBuf sub-range — only
-      // constUbo/prev/next/stepIndex vary per step, same shape as the
-      // automaton runner's own per-step bind groups. Step 0 gets no Pass A
+      // constUbo/prev/next/stepIndex vary per step. Step 0 gets no Pass A
       // bind group: its shader seeds and returns without touching velocity.
       const stepBindGroupsB: GPUBindGroup[] = [];
       const stepBindGroupsA: (GPUBindGroup | null)[] = [];
@@ -183,8 +176,8 @@ export function createIsmMapFluidRunner(
         const prev = s % 2 === 0 ? stateA : stateB;
         const next = s % 2 === 0 ? stateB : stateA;
         // size: 12 — step, activeStart, activeEnd (IsmMapFluidStepIndex,
-        // ismMapFluidVelocity.wesl/ismMapFluidStep.wesl), up from the single
-        // `step` float the shared ismMapStepIndexData.ts shape carries.
+        // ismMapFluidVelocity.wesl/ismMapFluidStep.wesl) —
+        // packIsmMapFluidStepIndex.ts's own packed shape.
         const stepIndexEntry = {
           binding: 3,
           resource: { buffer: stepIndexBuf, offset: s * stride, size: 12 },
@@ -241,8 +234,7 @@ export function createIsmMapFluidRunner(
       }
       stepPass.end();
 
-      // Same even/odd parity as the automaton runner: step 0 only seeds, so
-      // the last DISPATCHED step is index steps-1.
+      // step 0 only seeds, so the last DISPATCHED step is index steps-1.
       const finalState = (steps - 1) % 2 === 0 ? stateB : stateA;
       const packBG = device.createBindGroup({
         label: 'galaxy:ismMapFluidPackBG',

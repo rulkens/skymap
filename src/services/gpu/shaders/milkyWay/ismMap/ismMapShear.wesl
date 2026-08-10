@@ -1,9 +1,6 @@
 // milkyWay/ismMap/ismMapShear.wesl — log-polar ring radius <-> per-ring shear
-// (in texels), shared by ismMapAutomatonStep.wesl (the automaton) and
-// ismMapPack.wesl (the final un-shear) so the two passes cannot disagree on
-// what a ring's shear means. ismMapFluidVelocity.wesl reuses the SAME
-// ismMapShearTexels for its own shear velocity term — same physical formula,
-// no reason for a second copy. Restated from galaxyIsmMapArmForcing.ts's
+// (in texels). ismMapFluidVelocity.wesl reads ismMapShearTexels for its own
+// shear velocity term. Restated from galaxyIsmMapArmForcing.ts's
 // ismMapRingRadius on the TS side (WGSL cannot import TS); ringCount/azCount/
 // rMin/rMax are params, not baked in, so this module owns no grid-size
 // dependency.

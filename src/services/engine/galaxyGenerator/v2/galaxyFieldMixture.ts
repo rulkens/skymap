@@ -27,7 +27,6 @@ import {
 import { buildArmSpurs } from './armSpurGeometry';
 import { buildArmSpurParticleCloud, deriveArmSpurCloudCount } from './armSpurParticleCloud';
 import { DEFAULT_GALAXY_DUST_PARAMS } from './defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS } from './defaultGalaxyIsmMapAutomatonParams';
 import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
 import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from './defaultGalaxyStarFormationParams';
@@ -341,8 +340,8 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // own gains below rather than doubling as the shells' implicit one.
     brightness: 1,
     // Map-seeded by default on this branch — the whole point is seeing dust
-    // and knots driven by the same automaton run. 0 recovers the arm-ridge
-    // catalog byte-identically.
+    // and knots driven by the same fluid-generator run. 0 recovers the
+    // arm-ridge catalog byte-identically.
     ismMapSeeding: 1,
     shells: {
       enabled: true,
@@ -403,7 +402,6 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     },
   },
   ismMap: DEFAULT_GALAXY_ISM_MAP_PARAMS,
-  ismMapAutomaton: DEFAULT_GALAXY_ISM_MAP_AUTOMATON_PARAMS,
   ismMapFluid: DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS,
 };
 

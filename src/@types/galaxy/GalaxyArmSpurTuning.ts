@@ -48,7 +48,7 @@ export type GalaxyArmSpurTuning = {
   /** sigma_along / sigma_across — mirrors `GalaxyArmCloudTuning.elongation`. */
   readonly elongation: number;
   /**
-   * How strongly a spur forces the ISM map's fluid/automaton gas — 0..1
+   * How strongly a spur forces the ISM map's fluid gas — 0..1
    * against a parent arm's own forcing (1 = a spur pushes gas exactly as
    * hard as the arm it branches from; `galaxyIsmMapArmForcing.ts`'s
    * `buildGalaxyIsmMapArmForcing` walks `buildArmSpurs`' records the same way

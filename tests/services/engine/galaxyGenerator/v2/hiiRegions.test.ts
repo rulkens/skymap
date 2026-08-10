@@ -82,12 +82,12 @@ describe('buildHiiRegions', () => {
     expect(withMap).toEqual(withoutMap);
   });
 
-  // The stars channel is now a long-lived advected tracer (fluid) / its
-  // exp-decay approximation (automaton) — no longer the short-memory signal
-  // shell seeding wants. `applyIsmMapSeeding` switched its CDF weight from
-  // `stars` to `activity` (see `hiiRegions.ts`'s own header); these two pin
-  // that switch against disjoint per-channel maps, since a busy-on-both map
-  // (`makeBusyMap`) can't tell which channel actually drove a reseed.
+  // The stars channel is now a long-lived advected tracer — no longer the
+  // short-memory signal shell seeding wants. `applyIsmMapSeeding` switched
+  // its CDF weight from `stars` to `activity` (see `hiiRegions.ts`'s own
+  // header); these two pin that switch against disjoint per-channel maps,
+  // since a busy-on-both map (`makeBusyMap`) can't tell which channel
+  // actually drove a reseed.
   it('shell/cluster seeding ignores the stars channel: a stars-only map (zero activity) leaves placement byte-identical to no map', () => {
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
@@ -95,7 +95,7 @@ describe('buildHiiRegions', () => {
       // generator is 'fluid', which never calls applyIsmMapSeeding at all
       // (candidateRegionsFromFluidEvents derives centres from the sim
       // itself, ignoring the map object handed in here).
-      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'automaton' as const },
+      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'none' as const },
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
         ismMapSeeding: 1,
@@ -123,7 +123,7 @@ describe('buildHiiRegions', () => {
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       // Same generator override as the previous test, same reason.
-      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'automaton' as const },
+      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'none' as const },
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
         ismMapSeeding: 1,

@@ -1,13 +1,13 @@
 /**
- * createIsmMapOrientation — the GPU structure-tensor chain over the active
- * ISM-map generator's packed map (automaton or fluid, whichever
- * `ismMap.generator` names — this module only ever sees `sourceTexture`, never
- * which generator wrote it): field blur (separable) -> tensor -> tensor blur
- * (separable) -> coherence, plus the overlay that presents it.
+ * createIsmMapOrientation — the GPU structure-tensor chain over the ISM-map
+ * generator's packed map (this module only ever sees `sourceTexture`, never
+ * whether the generator that wrote it is even running): field blur
+ * (separable) -> tensor -> tensor blur (separable) -> coherence, plus the
+ * overlay that presents it.
  *
  * Entirely GPU-side: no readback to run FROM, no JS blur, no upload back. The
  * source is a texture WebGPU zero-initialises, so `dispatch` is safe to call
- * before either generator has ever run.
+ * before the generator has ever run.
  *
  * The perf GATE (is any consumer live?) stays with the caller — it reads the
  * render bag and the field tuning, neither of which this module should know
@@ -39,10 +39,10 @@ export type IsmMapOrientation = {
     readonly grid: GalaxyIsmMapGridRadius;
     readonly sigmaDerivTexels: number;
     readonly sigmaIntegTexels: number;
-    /** `ismMapOrientationField.wesl`'s pedestal-subtraction inputs — see `IsmMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the automaton's own case); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
+    /** `ismMapOrientationField.wesl`'s pedestal-subtraction inputs — see `IsmMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the blank-map case, generator off); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
     readonly gasFloor: number;
     readonly gasScaleLength: number;
-    /** The ambient dust pedestal both generators seed at step 0 — `ISM_MAP_AMBIENT_DUST` (`sweptDustOvershoot.ts`), passed live rather than baked in so the shader carries no restated constant. */
+    /** The ambient dust pedestal the generator seeds at step 0 — `ISM_MAP_AMBIENT_DUST` (`sweptDustOvershoot.ts`), passed live rather than baked in so the shader carries no restated constant. */
     readonly ambient: number;
   }): void;
   dispose(): void;

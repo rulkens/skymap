@@ -1,7 +1,10 @@
 /**
  * Parity guard: `milkyWay/ismMap/ismMapFluidStep.wesl`'s `IsmMapFluidConstants`
- * is the offset authority — same sentinel-search idiom as
- * `packIsmMapAutomatonConstants.test.ts`, see that file's header for why.
+ * is the offset authority — every field gets a distinct sentinel value, the
+ * packer runs, and each sentinel's byte offset in the packed buffer is
+ * asserted against the struct the shader actually declares, so a reorder or
+ * a dropped field in either the packer or the WGSL struct fails loudly
+ * instead of shipping a silently misaligned uniform.
  */
 import { describe, expect, it } from 'vitest';
 

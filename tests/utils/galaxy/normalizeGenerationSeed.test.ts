@@ -1,5 +1,5 @@
 /**
- * Both the GPU pack and the CPU dust/bubble/automaton builders seed off this,
+ * Both the GPU pack and the CPU dust/bubble/ISM-map builders seed off this,
  * so a galaxy only reproduces while they agree. The `|| 1` is the load-bearing
  * part: `mulberry32` is degenerate at state 0, and the obvious "simplification"
  * to `seed ?? 1` passes every other test in the suite.

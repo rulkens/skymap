@@ -7,7 +7,7 @@ say which is which:
 | --------------- | ----------------------------------------------------------------------------- |
 | `sprites/`      | **v1** — the sprite-star tier (`galaxyGenerator/v1/`), scheduled for deletion |
 | `field/`        | **v2** — the analytic Gaussian-mixture field (`galaxyGenerator/v2/`)          |
-| `ismMap/`        | **v2** — the SSPSF star-formation map and its orientation chain               |
+| `ismMap/`        | **v2** — the fluid ISM-map generator and its orientation chain                |
 | everything else | tier-independent: both tiers use it, or neither does                          |
 
 ## The tree
@@ -23,12 +23,11 @@ field/     encodeSplatPass, encodeDustMapPass, encodeDustPresentPass,
            packFieldUniforms, packBubbleInstances, deriveDustHeaderLanes,
            dustSliceEdges
 ismMap/     createIsmMapGenerator (dispatcher) + createIsmMapOutput (shared
-           artifact) + createIsmMapAutomatonRunner/createIsmMapFluidRunner
-           (the two generators), createIsmMapOrientation, createIsmMapReadbacks,
+           artifact) + createIsmMapFluidRunner (the generator),
+           createIsmMapOrientation, createIsmMapReadbacks,
            createOrientationDiagnostics, decodeOrientationTexels,
-           orientationCoherenceStats, ismMapStepIndexData,
-           packIsmMapAutomatonConstants, packIsmMapFluidConstants,
-           packIsmMapFluidEvents, packIsmMapUnshear
+           orientationCoherenceStats, packIsmMapFluidConstants,
+           packIsmMapFluidEvents, packIsmMapFluidStepIndex
 
 model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
 frame/     deriveFrameView + the pure per-frame arithmetic under it

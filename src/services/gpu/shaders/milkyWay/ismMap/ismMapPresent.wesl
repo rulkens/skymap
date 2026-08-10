@@ -1,6 +1,7 @@
-// milkyWay/ismMap/ismMapPresent.wesl — presents the SSPSF automaton's packed
-// output (ismMapPack.wesl), crossfaded with the analytic field's emission
-// draw by weight render.ismMapViewIntensity, same seam as dustPresent.wesl.
+// milkyWay/ismMap/ismMapPresent.wesl — presents the fluid generator's packed
+// output (ismMapFluidPack.wesl), crossfaded with the analytic field's
+// emission draw by weight render.ismMapViewIntensity, same seam as
+// dustPresent.wesl.
 //
 // Unlike dustPresent.wesl's 1:1 texel read (its map is already screen-space,
 // splatted there by dustMap.wesl), ismMapTex is GALAXY-FRAME log-polar: this
@@ -97,16 +98,14 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let gas = texel.x;
   let stars = texel.y;
   let old = texel.z;
-  // The conserved dust channel (ismMapPack.wesl's state.w, see
+  // The conserved dust channel (ismMapFluidPack.wesl's state.w, see
   // GalaxyIsmMap.ts's contract table) — written RAW there, so swept-shell
   // rims legitimately read above 1, up to the snowplough's 8.0 ceiling.
   let dust = texel.w;
   // Presentation palette, NOT physics — chosen so the four channels stay
   // separable by eye: dim cool navy for unspent gas, bright magenta-violet
   // for the decaying activity wake, warm near-white for the stars tracer
-  // (fluid: an advected young-stars density; automaton:
-  // exp(-eventAge/tau), that generator's own approximation of it — see
-  // ismMapPack.wesl/ismMapFluidPack.wesl), teal-green for dust. Activity used
+  // (an advected young-stars density), teal-green for dust. Activity used
   // to be amber, but that sat right next to the stars channel's warm
   // near-white (the two blended into one warm smear) and duplicated
   // dustPresent.wesl's own red-orange-white band; magenta-violet and

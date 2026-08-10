@@ -3,7 +3,7 @@
  * shared by every stochastic particle tier on the analytic field (dust GMCs,
  * arm emission sprites): seed one "complex" via one of three modes —
  * `'analytic'` (weighted arm lane, falling back to the smooth disc),
- * `'mapDensity'` (the SSPSF automaton's measured density), or bare
+ * `'mapDensity'` (the fluid generator's measured density), or bare
  * `'smoothDisc'` — then scatter its children around it. See
  * `ClusteredDiscPlacementMode` for what each mode needs from its caller.
  * Extracted out of `dustParticleCloud.ts` so a second tier doesn't restate
@@ -63,8 +63,8 @@ export type OrientationDeltaStats = {
  * How a complex picks its seed point — the one axis the two current
  * consumers genuinely differ on. `'analytic'` is the arm-lane/smooth-disc
  * roll (`armParticleCloud.ts`, which IS the arm feature and always passes
- * `armBias: 1`); `'mapDensity'` replaces that roll entirely with the SSPSF
- * automaton's measured density (`dustParticleCloud.ts`, once its ISM map is
+ * `armBias: 1`); `'mapDensity'` replaces that roll entirely with the fluid
+ * generator's measured density (`dustParticleCloud.ts`, once its ISM map is
  * usable); `'smoothDisc'` is the bare disc profile with no lane concept at
  * all (`dustParticleCloud.ts`'s no-map fallback). A tagged union rather than
  * three optional sibling fields: the dust caller has no lane callbacks to
@@ -128,7 +128,7 @@ export type ClusteredDiscPlacementConfig = {
   readonly discWeights: readonly number[];
   readonly discWeightSum: number;
   /**
-   * The SSPSF automaton's measured filament orientation, coherence-weighted
+   * The fluid generator's measured filament orientation, coherence-weighted
    * so a texel with no measured structure reproduces today's frame exactly —
    * see `rotateFrameToOrientation`. `null` (the default, and every caller's
    * `ismMap.generator === 'none'` path) is a pure no-op: no extra work, no
@@ -174,7 +174,7 @@ function recordOrientationDelta(
 
 /**
  * rotateFrameToOrientation — bends a lane/disc frame's in-plane axes
- * (`along`/`across`) toward the ISM-map automaton's measured filament
+ * (`along`/`across`) toward the ISM-map generator's measured filament
  * orientation, coherence-weighted so a texel with no measured structure
  * (coherence 0) reproduces `frame` exactly. `pole` never moves.
  *
@@ -297,7 +297,7 @@ export function buildClusteredDiscPlacement<TPayload>(
     // toward the measured filament. Sampled at `frame.point` itself (not the
     // un-offset ridge, which this shared config type doesn't carry): the
     // lane offset is a small fraction of `discLightScaleLength`, well under
-    // the automaton grid's own resolution.
+    // the ISM map grid's own resolution.
     const orientedFrame = rotateFrameToOrientation(
       { along: frame.along, across: frame.across, pole: frame.pole },
       Math.hypot(frame.point[0], frame.point[2]),

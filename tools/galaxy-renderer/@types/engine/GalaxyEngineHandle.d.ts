@@ -28,8 +28,8 @@ export type GalaxyEngineHandle = {
   sample(): Promise<{ mean: number; max: number; litPct: number; stars: number }>;
   grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // see createOffscreenProbe
   getCamera(): ViewPose;
-  // The SSPSF star-formation automaton's packed output (gas / recent SF /
-  // older SF, log-polar) — see createGalaxyModel.ts's rebuildIsmMap.
+  // The ISM-map generator's packed output (gas / stars / activity / dust,
+  // log-polar) — see createGalaxyModel.ts's rebuildIsmMap.
   // Consumed by nothing but its own overlay yet; exposed for the sibling UI
   // and future consumers.
   getIsmMapTexture(): GPUTexture;

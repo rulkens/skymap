@@ -203,7 +203,7 @@ function HiiSection(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => patchStarFormation({ sfActivity: v })}
             path="fieldTuning.starFormation.sfActivity"
-            info="Fallback event-catalog rate — sizes the HII tier only when the ISM generator is 'automaton' or 'none'. The fluid generator ignores it: its regions come from the sim's own events."
+            info="Fallback event-catalog rate — sizes the HII tier only when the ISM generator is 'none'. The fluid generator ignores it: its regions come from the sim's own events."
           />
         </div>
       </CollapsibleSection>

@@ -1,18 +1,17 @@
 /**
- * galaxyIsmMapArmForcing — bakes the SSPSF automaton's arm-forcing field on
- * the CPU, onto the SAME 1536x512 log-polar grid `ismMapAutomatonStep.wesl`
- * steps, from the EXISTING ridge functions the sprite/analytic arms are
- * placed against (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`) —
- * never re-derived in WGSL, per research doc §19's "shared ridge truth by
- * import, not by re-deriving the curve" rule. Uploaded once per generation
- * (`rebuildIsmMap` in createGalaxyEngine.ts) as a small R32F texture the
- * automaton samples with a plain 1:1 `textureLoad`. The fluid generator
- * reuses this SAME CPU field (never the texture) — see
- * `galaxyIsmMapFluidEvents.ts`. Single-slot memo, same discipline as
- * `hiiRegions.ts`'s CDF memos: keyed on geometry identity plus the tuning
- * values the walk below actually reads (`tuning.arms.widthScale`, and —
- * board 18 — the spur-shape/weight fields), so a same-generation rebuild —
- * this file's two call sites, plus any fluid/automaton/dust slider drag that
+ * galaxyIsmMapArmForcing — bakes the ISM map's arm-forcing field on the CPU,
+ * onto the SAME 1536x512 log-polar grid `ismMapFluidStep.wesl` steps, from
+ * the EXISTING ridge functions the sprite/analytic arms are placed against
+ * (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`) — never re-derived
+ * in WGSL, per research doc §19's "shared ridge truth by import, not by
+ * re-deriving the curve" rule. Uploaded once per generation (`rebuildIsmMap`
+ * in createGalaxyEngine.ts) as a small R32F texture the fluid step shader
+ * samples with a plain 1:1 `textureLoad`. `galaxyIsmMapFluidEvents.ts`
+ * reuses this SAME CPU field (never the texture). Single-slot memo, same
+ * discipline as `hiiRegions.ts`'s CDF memos: keyed on geometry identity plus
+ * the tuning values the walk below actually reads (`tuning.arms.widthScale`,
+ * and — board 18 — the spur-shape/weight fields), so a same-generation
+ * rebuild — this file's two call sites, plus any fluid/dust slider drag that
  * leaves arm geometry alone — hits cache instead of repaying the
  * O(rings x (arms + spurs) x az) bake.
  *
@@ -91,7 +90,7 @@ export function ismMapGridRadius(geometry: GalaxyDescription): GalaxyIsmMapGridR
 
 /**
  * The same bounds for a galaxy that may not be generated yet. The ismMap chain
- * dispatches before the first geometry exists, and the automaton's grid must
+ * dispatches before the first geometry exists, and the generator's grid must
  * agree with the orientation chain's texel for texel or the two silently
  * sample different rings — so the placeholder lives here, once, rather than
  * being written out at each site.
@@ -115,7 +114,7 @@ function wrapAngle(a: number): number {
   return a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 }
 
-/** Gaussian support beyond this many sigma is exp(-12.5) ~ 4e-6 — invisible to every consumer (automaton forcing, fluid CDF, percolation thresholds). */
+/** Gaussian support beyond this many sigma is exp(-12.5) ~ 4e-6 — invisible to every consumer (fluid forcing, fluid CDF). */
 const CROSS_SIGMA_SUPPORT = 5;
 
 /**

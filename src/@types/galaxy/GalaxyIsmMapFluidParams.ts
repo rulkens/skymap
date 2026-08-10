@@ -1,20 +1,16 @@
 /**
- * GalaxyIsmMapFluidParams — the fluid alternative to the SSPSF automaton
- * (`GalaxyIsmMapAutomatonParams`): density advected through a composed,
- * analytically-evaluated velocity field (shear + curl noise + event
- * impulses), semi-Lagrangian, directly in world/grid coordinates every step
- * — no percolation, no ignition roll. See `ismMapFluidStep.wesl`'s header for
- * the integration scheme and `galaxyIsmMapFluidEvents.ts` for how the event
+ * GalaxyIsmMapFluidParams — the ISM map's generator: density advected
+ * through a composed, analytically-evaluated velocity field (shear + curl
+ * noise + event impulses), semi-Lagrangian, directly in world/grid
+ * coordinates every step. See `ismMapFluidStep.wesl`'s header for the
+ * integration scheme and `galaxyIsmMapFluidEvents.ts` for how the event
  * list is generated.
  *
- * Deliberately carries NO automaton fields (`spread`/`refractorySteps`/
- * `baseIgnition`/…) even where a name would coincide (`corotationRadius`,
- * `gasRegen`) — this generator's own copy, tuned against its own dynamics,
- * never `GalaxyIsmMapAutomatonParams`'s. `enabled`/`generator` live on the
- * shared `GalaxyIsmMapParams` (`GalaxyFieldTuning.ismMap`), not here.
+ * `enabled`/`generator` live on the shared `GalaxyIsmMapParams`
+ * (`GalaxyFieldTuning.ismMap`), not here.
  */
 export type GalaxyIsmMapFluidParams = {
-  /** Advection iterations per rebuild — the fluid's own step budget, parallel to `GalaxyIsmMapAutomatonParams.steps`. */
+  /** Advection iterations per rebuild. */
   readonly steps: number;
   /** Events spawned per step, on average — total events over a run is ~`eventRate * steps` (capped, see `galaxyIsmMapFluidEvents.ts`). */
   readonly eventRate: number;
@@ -38,15 +34,15 @@ export type GalaxyIsmMapFluidParams = {
   readonly curlStrength: number;
   /** Curl-noise spatial frequency, in texels^-1 — higher values give smaller stirring cells. */
   readonly curlScale: number;
-  /** Differential-rotation shear amplitude, same `(1/r - 1/corotationRadius)` formula `GalaxyIsmMapAutomatonParams.shearRate` uses — this generator's own copy. */
+  /** Differential-rotation shear amplitude, `(1/r - 1/corotationRadius)` formula. */
   readonly shearStrength: number;
-  /** Pattern-speed radius the shear vanishes at — this generator's own copy, not `GalaxyIsmMapAutomatonParams.corotationRadius`. */
+  /** Pattern-speed radius the shear vanishes at. */
   readonly corotationRadius: number;
-  /** Gas relaxation rate toward 1.0 per step, applied AFTER advection — this generator's own copy, same role as `GalaxyIsmMapAutomatonParams.gasRegen`. */
+  /** Gas relaxation rate toward 1.0 per step, applied AFTER advection. */
   readonly gasRegen: number;
-  /** Blend rate of the per-texel `activity` trace toward this step's event intensity (`w' = mix(w, eventStamp, emaRate)`) — an EMA, not the automaton's decay+gain pair. */
+  /** Blend rate of the per-texel `activity` trace toward this step's event intensity (`w' = mix(w, eventStamp, emaRate)`) — an EMA. */
   readonly emaRate: number;
-  /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field the automaton samples (`galaxyIsmMapArmForcing.ts`), read here as a texture instead of biasing event placement. Damped by `ismMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
+  /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field `galaxyIsmMapArmForcing.ts` builds, read here as a texture instead of biasing event placement. Damped by `ismMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
   readonly armGather: number;
   /**
    * Drag on the shear velocity by the arm-forcing field at THIS texel (not

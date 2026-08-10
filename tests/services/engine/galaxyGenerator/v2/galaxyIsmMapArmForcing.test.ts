@@ -1,11 +1,12 @@
 /**
  * The bake this module does is expensive (O(rings x arms x az)) and gets
- * called twice per ISM-map rebuild (automaton runner + fluid events) with
- * geometry/tuning objects that are byte-identical on every non-arm slider
- * drag — the memo and the windowed inner loop are both there to make that
- * NOT repay the full bake. Two things can break: the memo keying on the
- * wrong thing (either missing a real change, or thrashing on irrelevant
- * ones), and the windowed loop dropping real signal.
+ * called twice per ISM-map rebuild (the fluid runner's own texture upload +
+ * `galaxyIsmMapFluidEvents.ts`'s event draw) with geometry/tuning objects
+ * that are byte-identical on every non-arm slider drag — the memo and the
+ * windowed inner loop are both there to make that NOT repay the full bake.
+ * Two things can break: the memo keying on the wrong thing (either missing
+ * a real change, or thrashing on irrelevant ones), and the windowed loop
+ * dropping real signal.
  */
 import { describe, expect, it } from 'vitest';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';

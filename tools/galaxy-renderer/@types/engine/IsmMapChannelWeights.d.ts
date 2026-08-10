@@ -3,16 +3,15 @@
  * (io.wesl's `ismMapChannels`), orthogonal to `debugViews.ismMap` (the whole
  * view's crossfade weight) — ismMapPresent.wesl's palette sums all four
  * channels, so with no per-channel control there was no way to tell gas from
- * activity from stars from dust. Each field names what the channel MEANS
- * to the generator producing it (automaton or fluid), not just that it's a
- * weight — see `RenderSettings`'s own docblocks for the same four explained
- * from the slider side.
+ * activity from stars from dust. Each field names what the channel MEANS,
+ * not just that it's a weight — see `RenderSettings`'s own docblocks for the
+ * same four explained from the slider side.
  */
 
 export type IsmMapChannelWeights = {
-  /** Unspent ISM fuel — 1 nearly everywhere on a quiet disc, driven to 0 by an ignition, refilled over `1/gasRegen` steps. */
+  /** Unspent ISM fuel — advected and relaxed toward the radial `gasProfile(r)` equilibrium by `gasRegen` each step. */
   readonly gasWeight: number;
-  /** Young-stars tracer — fluid: an advected density deposited at SF events and decaying over the run; automaton: `exp(-age/12)`, that generator's own approximation of it. */
+  /** Young-stars tracer — an advected density deposited at SF events and decaying over the run. */
   readonly starsWeight: number;
   /** The accumulated trace of every front that passed, decayed per step by `activityDecay`. */
   readonly activityWeight: number;

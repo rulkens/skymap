@@ -1,20 +1,15 @@
 /**
- * packIsmMapFluidStepIndex — the fluid runner's OWN per-step uniform packer,
- * parallel to the shared `ismMapStepIndexData.ts` (still used unmodified by
- * the automaton runner and the percolation harness) but carrying two extra
- * floats per step: the `ismMapFluidEventWindow` active-event index range,
- * so `ismMapFluidStep.wesl`'s texel loop only walks events active THIS step
+ * packIsmMapFluidStepIndex — the fluid runner's per-step uniform packer:
+ * `step` plus the `ismMapFluidEventWindow` active-event index range, so
+ * `ismMapFluidStep.wesl`'s texel loop only walks events active THIS step
  * instead of the whole run's event list on every dispatch (the fix for the
  * O(steps^2 * texels) rebuild cost — see `createIsmMapFluidRunner.ts`'s
- * `rebuild` docblock). A fluid-only copy, not a generalization of the shared
- * packer: the automaton has no event buffer to window, and changing the
- * shared packer's shape would ship a dead pair of floats to every automaton
- * dispatch for no benefit.
+ * `rebuild` docblock).
  *
- * Same alignment contract as `ismMapStepIndexData.ts`: `strideBytes` is
- * `device.limits.minUniformBufferOffsetAlignment`, never assume 256, and
- * each step's row leaves the tail of its stride zeroed (unread slack, not a
- * layout requirement past `ismMapFluidStep.wesl`'s own `IsmMapFluidStepIndex`).
+ * `strideBytes` is `device.limits.minUniformBufferOffsetAlignment`, never
+ * assume 256, and each step's row leaves the tail of its stride zeroed
+ * (unread slack, not a layout requirement past `ismMapFluidStep.wesl`'s own
+ * `IsmMapFluidStepIndex`).
  */
 import { ismMapFluidEventWindow } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import type { IsmMapFluidEvent } from '../../../../../src/@types/galaxy/IsmMapFluidEvent';

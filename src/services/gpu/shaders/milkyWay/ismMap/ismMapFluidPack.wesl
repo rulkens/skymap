@@ -1,11 +1,10 @@
-// milkyWay/ismMap/ismMapFluidPack.wesl — the fluid generator's own final
-// repack. ismMapFluidStep.wesl already advects directly in WORLD/grid
-// coordinates every step (see its header), so unlike ismMapPack.wesl (the
-// automaton's material-frame un-shear) there is nothing to invert here —
-// this is a straight 1:1 texel copy. State order already matches the packed
-// slot order (GalaxyIsmMap.ts's contract table), so this pass reorders
-// nothing: y (stars) is now a straight, unclamped copy, like dust — the
-// tracer is already a presentable density, not a clock to decay-transform.
+// milkyWay/ismMap/ismMapFluidPack.wesl — the generator's final repack.
+// ismMapFluidStep.wesl already advects directly in WORLD/grid coordinates
+// every step (see its header), so there is nothing to invert here — this is
+// a straight 1:1 texel copy. State order already matches the packed slot
+// order (GalaxyIsmMap.ts's contract table), so this pass reorders nothing: y
+// (stars) is a straight, unclamped copy, like dust — the tracer is already a
+// presentable density, not a clock to decay-transform.
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>;
 @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;

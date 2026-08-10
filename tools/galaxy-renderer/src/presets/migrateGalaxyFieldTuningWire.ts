@@ -1,7 +1,7 @@
 /**
  * migrateGalaxyFieldTuningWire — lifts a v2 preset's FLAT `f` keys into their
- * v3 nested homes, retires the two dead boolean gates the three-state
- * generator dropdown replaced (`sfMap.enabled`, `dust.sfMapSeeding` — see
+ * v3 nested homes, retires the two dead boolean gates the generator
+ * dropdown replaced (`sfMap.enabled`, `dust.sfMapSeeding` — see
  * `GalaxyIsmMapGeneratorKind`), lifts the pre-ISM-rename `sfMap*` wire
  * spellings onto their `ismMap*` homes, AND lifts `dust`/`starFormation` off
  * an even older preset's `p` (`GalaxyParams` dropped both fields — see
@@ -24,7 +24,6 @@ const SECTION_KEYS = [
   'starFormation',
   'hii',
   'ismMap',
-  'ismMapAutomaton',
   'ismMapFluid',
 ] as const;
 
@@ -32,11 +31,13 @@ const SECTION_KEYS = [
  * Pre-ISM-rename presets carry these spellings forever; the sf* strings here
  * are deliberate legacy wire keys, not a missed rename sweep. A section's old
  * key only applies when the new one is absent, so a hand-merged preset naming
- * both keeps the new spelling.
+ * both keeps the new spelling. `sfMapAutomaton`/`ismMapAutomaton` are NOT
+ * here: the automaton generator was removed outright, so an old preset's
+ * automaton bag has nowhere to land and is simply dropped (`SECTION_KEYS`
+ * no longer names it, so the copy loop below never picks it up).
  */
 const LEGACY_SECTION_KEYS: Readonly<Record<string, (typeof SECTION_KEYS)[number]>> = {
   sfMap: 'ismMap',
-  sfMapAutomaton: 'ismMapAutomaton',
   sfMapFluid: 'ismMapFluid',
 };
 
@@ -75,10 +76,15 @@ const V2_FLAT_PATHS: Readonly<Record<string, readonly [string, ...string[]]>> = 
  * a bare `{ enabled: true }` section, say). Either way `enabled` itself is
  * dropped: a stale `enabled: false` sitting beside a real `generator` would
  * silently look meaningful to the next reader.
+ *
+ * `generator: 'automaton'` forward-migrates to `'fluid'` (the automaton
+ * generator was removed outright) — a preset saved before the removal keeps
+ * loading, just against the surviving generator.
  */
 function migrateIsmMap(ismMap: Record<string, unknown>): Record<string, unknown> {
   const { enabled, ...rest } = ismMap;
   if (enabled === false) return { ...rest, generator: 'none' };
+  if (rest.generator === 'automaton') return { ...rest, generator: 'fluid' };
   return 'generator' in rest
     ? rest
     : { ...rest, generator: DEFAULT_GALAXY_FIELD_TUNING.ismMap.generator };

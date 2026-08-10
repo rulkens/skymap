@@ -1,12 +1,11 @@
 /**
- * createIsmMapGenerator — the ONE dispatcher that picks between the two
- * independent ISM-map pipelines (`createIsmMapAutomatonRunner`,
- * `createIsmMapFluidRunner`) on `tuning.ismMap.generator`, and owns the shared
- * output artifact (`createIsmMapOutput`) both write into. This is the ONLY
- * place that branches on `generator` — neither runner knows the other
- * exists, and every OTHER consumer (present pass, orientation chain,
- * readback) binds to `IsmMapOutput`'s stable objects, never to a runner
- * directly, so switching the toggle never touches their bind groups.
+ * createIsmMapGenerator — owns the fluid ISM-map pipeline
+ * (`createIsmMapFluidRunner`) and the shared output artifact
+ * (`createIsmMapOutput`) it writes into. `tuning.ismMap.generator` is still
+ * the ONE gate for whether it runs at all (`'none'` vs `'fluid'`) — every
+ * OTHER consumer (present pass, orientation chain, readback) binds to
+ * `IsmMapOutput`'s stable objects, never to the runner directly, so
+ * flipping the toggle never touches their bind groups.
  */
 import {
   ismMapGridRadiusOrDefault,
@@ -16,7 +15,6 @@ import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyD
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
 import { createIsmMapOutput } from './createIsmMapOutput';
-import { createIsmMapAutomatonRunner } from './createIsmMapAutomatonRunner';
 import { createIsmMapFluidRunner } from './createIsmMapFluidRunner';
 
 export type IsmMapGenerator = {
@@ -57,10 +55,6 @@ export function createIsmMapGenerator(
   },
 ): IsmMapGenerator {
   const output = createIsmMapOutput(device, deps);
-  const automatonRunner = createIsmMapAutomatonRunner(device, {
-    makeShader: deps.makeShader,
-    output,
-  });
   const fluidRunner = createIsmMapFluidRunner(device, { makeShader: deps.makeShader, output });
 
   return {
@@ -80,10 +74,8 @@ export function createIsmMapGenerator(
       output.writeGrid(grid);
 
       const generator = tuning.ismMap.generator;
-      const activeSteps =
-        generator === 'fluid' ? tuning.ismMapFluid.steps : tuning.ismMapAutomaton.steps;
 
-      if (!geometry || generator === 'none' || activeSteps <= 0) {
+      if (!geometry || generator === 'none' || tuning.ismMapFluid.steps <= 0) {
         // No generator selected (or no galaxy yet): leave nothing stale for
         // the ismMap view to show. Cleared once rather than latched, since
         // this path is a rare toggle, not a per-frame branch.
@@ -91,17 +83,11 @@ export function createIsmMapGenerator(
         return grid;
       }
 
-      // The ONLY branch point — see this file's header.
-      if (generator === 'fluid') {
-        fluidRunner.rebuild({ geometry, tuning, seed, grid });
-      } else {
-        automatonRunner.rebuild({ geometry, tuning, seed, grid });
-      }
+      fluidRunner.rebuild({ geometry, tuning, seed, grid });
       return grid;
     },
 
     dispose(): void {
-      automatonRunner.dispose();
       fluidRunner.dispose();
       output.dispose();
     },

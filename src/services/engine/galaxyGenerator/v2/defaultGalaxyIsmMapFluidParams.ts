@@ -9,10 +9,9 @@
 import type { GalaxyIsmMapFluidParams } from '../../../../@types/galaxy/GalaxyIsmMapFluidParams';
 
 export const DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS: GalaxyIsmMapFluidParams = {
-  // The automaton's own budget is 100; this generator needs more because
-  // each step here is a full-grid advection, not a local percolation
-  // growth, so shear/curl need more generations to wind and stir visibly
-  // at this calibration. Per-run cost is linear in this.
+  // Each step is a full-grid advection; shear/curl need this many
+  // generations to wind and stir visibly at this calibration. Per-run cost
+  // is linear in this.
   steps: 144,
   // Events spawned per step; total requested over a run is eventRate * steps
   // (1152 here), which buildGalaxyIsmMapFluidEvents CLAMPS to
@@ -39,18 +38,11 @@ export const DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS: GalaxyIsmMapFluidParams = {
   // 1/0.04 = 25-texel noise period — several stirring cells across the
   // disc at this grid's 1536-texel azimuthal span.
   curlScale: 0.04,
-  // Differential-rotation shear amplitude, same `(1/r - 1/corotationRadius)`
-  // formula `GalaxyIsmMapAutomatonParams.shearRate` uses — this generator's
-  // own copy, calibrated separately (no longer pinned to the automaton's
-  // shipped 0.16).
+  // Differential-rotation shear amplitude, `(1/r - 1/corotationRadius)` formula.
   shearStrength: 0.015,
-  // Pattern-speed radius the shear vanishes at — this generator's own copy,
-  // calibrated separately from (not wired to) the automaton's shipped 7.9;
-  // now close to that value, but coincidentally, not because it's pinned.
+  // Pattern-speed radius the shear vanishes at.
   corotationRadius: 8.9,
-  // Gas relaxation rate toward 1.0 per step, applied AFTER advection — this
-  // generator's own copy, calibrated separately from the automaton's shipped
-  // `gasRegen` (0.06), not pinned to it.
+  // Gas relaxation rate toward 1.0 per step, applied AFTER advection.
   gasRegen: 0.032,
   // Half-life ln(0.5)/ln(1-0.35) ~= 1.6 steps — far shorter than
   // `impulseDuration` (33), so the activity trace tracks only the last

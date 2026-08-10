@@ -136,7 +136,7 @@ describe('buildDustParticleCloud', () => {
     // away from: under the old `gas x activity` criterion, activity = 0
     // everywhere dropped every placed particle regardless of where the map's
     // own dust actually was. The RAW dust channel doesn't have that failure
-    // mode: it's conserved/advected, not an EMA, so a texel the automaton
+    // mode: it's conserved/advected, not an EMA, so a texel the generator
     // swept keeps its dust long after the front that made it.
     const az = MAP_AZ;
     const rings = MAP_RINGS;

@@ -1,13 +1,13 @@
 /**
  * packIsmMapFluidConstants — the constants uniform every `ismMapFluidStep.wesl`
  * dispatch of one rebuild reads. THAT FILE'S `IsmMapFluidConstants` IS THE
- * OFFSET AUTHORITY — see `packIsmMapAutomatonConstants.ts`'s own header for
- * why a wrong index is a silent failure, not a thrown one.
+ * OFFSET AUTHORITY — a lane written to the wrong index throws nothing, it
+ * just ships garbage, and on WebKit a mislaid uniform drops the frame with
+ * no error.
  *
  * 20 lanes for 18 members (`starsDeposit`/`starsDecay` pushed the struct past
  * its old exact-16 fit) — the uniform address space rounds a struct's size up
- * to a multiple of 16 bytes regardless, so lanes 18/19 are slack, same
- * discipline `packIsmMapAutomatonConstants.ts`'s own tail already carries.
+ * to a multiple of 16 bytes regardless, so lanes 18/19 are slack.
  */
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
@@ -46,8 +46,8 @@ export function packIsmMapFluidConstants({ grid, fluid }: IsmMapFluidConstantsIn
   out[16] = fluid.starsDeposit;
   out[17] = fluid.starsDecay;
 
-  // Slack past the struct, written rather than left to the allocator — same
-  // discipline `packIsmMapAutomatonConstants.ts`'s own tail uses.
+  // Slack past the struct, written rather than left to the allocator: this
+  // is the shape the buffer holds, not an artifact of how the array was made.
   out[18] = 0;
   out[19] = 0;
 

@@ -688,7 +688,7 @@ export async function createGalaxyEngine(
     device.queue.submit([bakeEnc.finish()]);
   }
 
-  // ---- SSPSF star-formation automaton + its orientation chain ----
+  // ---- ISM-map generator + its orientation chain ----
   // Both own every resource they touch, including their readback staging
   // buffers; the engine keeps only the handles and the perf GATES (which read
   // the render bag / field tuning, which those modules deliberately don't).
@@ -707,7 +707,7 @@ export async function createGalaxyEngine(
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
   // A SECOND, independent star-formation model (dustBubblePlacements.ts,
   // resolved from sfEventCatalog.ts) drawn as its own debug layer so it can
-  // be compared directly against the SSPSF automaton's ismMap view — see the
+  // be compared directly against the fluid generator's ismMap view — see the
   // model's `rebuildBubblePlacements` for how `model.bubbleComps` is built and
   // packed. One instanced camera-facing quad per
   // placement, no storage buffer/comps lookup: bubblePresent/vertex.wesl reads
@@ -1629,7 +1629,7 @@ export async function createGalaxyEngine(
         // (one camera-facing quad per placement, see bubblePresent.wesl), and
         // independent of the other three: the SF-event catalog is a second,
         // unrelated star-formation model, not another lens on the same
-        // automaton — hence its own `if`, never an `else if`.
+        // generator — hence its own `if`, never an `else if`.
         //
         // Both conjuncts, and neither is the other's duplicate: `bubblesLive`
         // is "a consumer wants this", `bubbleComps.count` is "we have
@@ -1722,8 +1722,8 @@ export async function createGalaxyEngine(
     step: (now?: number): void => drawFrame(now ?? performance.now()),
     sample: probe.sample,
     getCamera: camera.getCamera,
-    // The SSPSF automaton's packed output (ismMapPack.wesl) — a persistent
-    // GPU texture, always non-null, whose CONTENT is only meaningful once
+    // The ISM-map generator's packed output (ismMapFluidPack.wesl) — a
+    // persistent GPU texture, always non-null, whose CONTENT is only meaningful once
     // rebuildIsmMap has run at least once (setParams). Consumed by nothing
     // yet but ismMapPresent.wesl's own overlay; exposed here for the sibling
     // UI and future consumers, per `docs/research/milky-way/ism-map.md`'s

@@ -1,15 +1,13 @@
 // milkyWay/ismMap/ismMapFluidStep.wesl — Pass B of the fluid ISM-map step:
 // density advected through the velocity field ismMapFluidVelocity.wesl
 // (Pass A) already composed into velocityTex this step, semi-Lagrangian,
-// directly in WORLD/grid coordinates. Unlike the automaton there is no
-// material-frame trick and no final un-shear pass — ismMapFluidPack.wesl's
-// own repack is a straight copy.
+// directly in WORLD/grid coordinates. No material-frame trick and no final
+// un-shear pass — ismMapFluidPack.wesl's own repack is a straight copy.
 //
 // State layout (x=gas, y=stars, z=activity, w=dust — see GalaxyIsmMap.ts's
-// contract table) is IDENTICAL to the automaton's own ping-pong texel.
-// gas/dust/stars are ADVECTED (semi-Lagrangian back-trace into prevTex, the
-// SAME upstream sample) while activity alone is EULERIAN (read from this
-// texel's own previous value, never resampled).
+// contract table). gas/dust/stars are ADVECTED (semi-Lagrangian back-trace
+// into prevTex, the SAME upstream sample) while activity alone is EULERIAN
+// (read from this texel's own previous value, never resampled).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
@@ -154,8 +152,7 @@ fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasD
   return neighbourSum - 4.0 * selfGasDust;
 }
 
-// Bilinear sample of prevTex — wraps in az, clamps in ring, same edge
-// semantics as ismMapAutomatonStep.wesl's own neighbour reads.
+// Bilinear sample of prevTex — wraps in az, clamps in ring.
 fn sampleBilinear(azF: f32, ringF: f32, azCount: u32, ringCount: u32) -> vec4<f32> {
   let a0f = floor(azF);
   let fracAz = azF - a0f;
@@ -194,12 +191,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   // Gas and the ambient dust pedestal both seed at gasProfile(r) (dust
   // scaled by ISM_MAP_AMBIENT_DUST — roughly constant dust-to-gas ratio):
-  // identical to the automaton's uniform seed at the default gasFloor=1
-  // (profile === 1 everywhere), and deliberately diverging once this
-  // generator's own radial profile is dialed in — the automaton has no such
-  // knob and stays uniform, so the two only match AT that default, not in
-  // general. Pass A is not dispatched for step 0 (velocity is unused), so
-  // velocityTex is dead here.
+  // uniform at the default gasFloor=1 (profile === 1 everywhere), and
+  // diverging once this generator's own radial profile is dialed in. Pass A
+  // is not dispatched for step 0 (velocity is unused), so velocityTex is
+  // dead here.
   if (genStep == 0u) {
     let seedGas = gasProfile(r);
     // y seeds at 0, not the old eventAge clock's huge "long ago" sentinel:

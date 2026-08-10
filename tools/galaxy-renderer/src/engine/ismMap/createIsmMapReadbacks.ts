@@ -1,8 +1,7 @@
 /**
- * createIsmMapReadbacks — the two CPU copies of the ISM-map chain (the packed
- * generator output — automaton OR fluid, whichever `ismMap.generator` names —
- * and the orientation field), each with the stream that fills it, over ONE
- * `createReadbackQueue`.
+ * createIsmMapReadbacks — the two CPU copies of the ISM-map chain (the
+ * generator's packed output and the orientation field), each with the
+ * stream that fills it, over ONE `createReadbackQueue`.
  *
  * One queue is load-bearing, not tidiness: two independent promise chains
  * reintroduce the 'buffer used in submit while mapped' race that queue exists
@@ -34,7 +33,7 @@ export type IsmMapReadbacks = {
   /** The orientation stream's request count — the diagnostics readout's `generation`. */
   readonly orientationGeneration: number;
   /**
-   * Copy the automaton's texture as it stands, tagged with the grid it was
+   * Copy the generator's texture as it stands, tagged with the grid it was
    * written over. `onLand` runs after the cache holds the result, and only if
    * no later request superseded this one.
    */

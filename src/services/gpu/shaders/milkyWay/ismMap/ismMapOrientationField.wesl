@@ -1,6 +1,6 @@
 // milkyWay/ismMap/ismMapOrientationField.wesl — stage 1 of the GPU
 // structure-tensor orientation pass chain: separable Gaussian blur
-// (sigmaDeriv) of ismMapPack.wesl's dust (A) channel — not activity,
+// (sigmaDeriv) of ismMapFluidPack.wesl's dust (A) channel — not activity,
 // which is an Eulerian EMA of isotropic event stamps and yields ring-
 // shaped tensors, not lane-shaped ones. Two dispatches (csBlurAzimuth then
 // csBlurRing), ping-ponging through one scratch texture — a single
@@ -20,10 +20,9 @@ import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 // (ismMapFluidStep.wesl) — a smooth RADIAL gradient the structure tensor
 // below would otherwise read as a confident TANGENTIAL ridge (jyy >> jxx),
 // biasing orientation circumferentially wherever real structure is faint.
-// gasFloor=1 makes gasProfile(r) === 1 everywhere, i.e. the automaton's own
-// flat ISM_MAP_AMBIENT_DUST pedestal — one formula, two generators; the CPU
-// packer feeds gasFloor=1 for the automaton and the live fluid-tuning
-// values otherwise.
+// gasFloor=1 makes gasProfile(r) === 1 everywhere, a flat pedestal — the CPU
+// packer feeds gasFloor=1 when the map is blank (no generator running) and
+// the live fluid-tuning value otherwise (createGalaxyModel.ts).
 struct IsmMapOrientationPedestal {
   gasFloor: f32,
   gasScaleLength: f32,

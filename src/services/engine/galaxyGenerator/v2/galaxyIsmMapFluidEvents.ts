@@ -1,16 +1,14 @@
 /**
  * galaxyIsmMapFluidEvents — the fluid ISM-map generator's own event list,
  * built once per rebuild from a seeded RNG and biased toward the SAME
- * CPU arm-forcing field the automaton samples GPU-side
- * (`buildGalaxyIsmMapArmForcing` — the shared arm-geometry helper this
- * generator is allowed to reuse; the automaton's OWN step logic is not).
+ * CPU arm-forcing field the fluid step shader samples GPU-side
+ * (`buildGalaxyIsmMapArmForcing` — the shared arm-geometry helper).
  * `ismMapFluidStep.wesl` reads the packed result as impulses in its velocity
  * field — see that file's header for how an event's kernel evolves.
  *
  * Deterministic per `seed` (mulberry32, same salted-seed idiom as
- * `hiiRegions.ts`'s DIG draws): rebuilding the same galaxy at
- * the same seed reproduces the same event list, same as the automaton's own
- * GPU hash reproduces the same ignitions.
+ * `hiiRegions.ts`'s DIG draws): rebuilding the same galaxy at the same seed
+ * reproduces the same event list.
  *
  * Returned events are sorted ascending by `birthStep` — a load-bearing
  * contract, not incidental ordering: `ismMapFluidEventWindow` below binary
@@ -43,8 +41,7 @@ const ISM_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
  * `armForcing` alone: a pure arm-forcing CDF is IDENTICALLY ZERO off the ridge
  * (`armForcing`'s own `r <= armStartRadius` skip and its Gaussian cross-track
  * falloff), which would confine every event to the arms outright — the floor
- * exists to give the whole grid a BIAS, the same "light touch" the
- * automaton's own `armForcing` param documents, not a gate. `eventArmBias`
+ * exists to give the whole grid a light-touch BIAS, not a gate. `eventArmBias`
  * (`GalaxyIsmMapFluidParams`) is now what decides bias-vs-gate: 0 (default)
  * keeps the fixed floor below, byte-identical to before this param existed;
  * 1 zeroes it, turning the floor into a hard gate — every event lands

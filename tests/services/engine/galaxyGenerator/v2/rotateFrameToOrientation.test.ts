@@ -1,6 +1,6 @@
 /**
  * rotateFrameToOrientation (`clusteredDiscPlacement.ts`) bends a lane frame
- * toward the ISM-map automaton's measured filament orientation. None of its
+ * toward the ISM-map generator's measured filament orientation. None of its
  * four defining properties — identity at a matching angle, a genuine 90deg
  * turn, the mod-pi headless wrap, and the coherence-0 no-op — had a test;
  * a sign flip or a dropped wrap term would pass every other suite untouched

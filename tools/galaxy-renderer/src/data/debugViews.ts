@@ -33,7 +33,7 @@ export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {
   bubble: {
     intensityKey: 'bubbleViewIntensity',
     label: 'Bubble view',
-    info: "Crossfades in the SF-event catalog's own bubble/cavity placements — a second, independent star-formation model nobody has ever seen, resolved from the same events the SSPSF automaton never reads. Amber shells are old relic bubbles, cyan shells are actively-swept HII cavities. The only way to compare this model against the ISM map view above.",
+    info: "Crossfades in the SF-event catalog's own bubble/cavity placements — a second, independent star-formation model nobody has ever seen, resolved from the same events the ISM-map generator never reads. Amber shells are old relic bubbles, cyan shells are actively-swept HII cavities. The only way to compare this model against the ISM map view above.",
   },
 };
 

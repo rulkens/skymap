@@ -46,13 +46,10 @@ export const DEFAULT_UI_STATE: UiState = {
     // The only section expanded by default: the ISM map is the current work,
     // and everything else on the panel is either tuned or downstream of it.
     ismMap: true,
-    // Nested under the ISM section (CollapsibleSection's `nested` prop), own open
-    // state so folding the parent doesn't fight these for the same key —
-    // the `hiiDig`/`hiiYoungStars` precedent. Only one of the two ever
-    // renders at a time (the generator dropdown is now exclusive), but each
-    // keeps its own fold state for whenever it's the one showing. Fluid
-    // expanded, since it's the default `ismMap.generator`; automaton collapsed.
-    ismMapAutomaton: false,
+    // Nested under the ISM section (CollapsibleSection's `nested` prop), own
+    // open state so folding the parent doesn't fight it for the same key —
+    // the `hiiDig`/`hiiYoungStars` precedent. Expanded, since fluid is the
+    // only generator now.
     ismMapFluid: true,
     // Collapsed: the crossfade sliders default to 0 (pure galaxy), so this
     // section is an occasional A/B tool, not something tuned every session.

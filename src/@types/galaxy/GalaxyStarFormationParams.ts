@@ -1,6 +1,6 @@
 /**
  * GalaxyStarFormationParams — the seeded SF-event model's own knobs
- * (`sfEventCatalog.ts`), which is a different model from the SSPSF automaton
+ * (`sfEventCatalog.ts`), which is a different model from the fluid generator
  * on the field tuning's `ismMap` and shares nothing with it.
  *
  * Its own group rather than a corner of `GalaxyDustCloudParams`: nothing in

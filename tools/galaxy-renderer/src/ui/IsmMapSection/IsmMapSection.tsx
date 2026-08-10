@@ -1,17 +1,15 @@
 /**
  * IsmMapSection — the shared ISM-map switch: `GalaxyFieldTuning.ismMap.generator`
- * (none | automaton | fluid) is the ONLY control here — the old separate
- * `enabled` toggle and "seed dust from gas" checkbox both folded into it,
- * since dust seeding is just "a generator is running". AUTOMATON and FLUID
- * below are mutually exclusive: only the active generator's panel renders.
+ * (none | fluid) is the ONLY control here — the old separate `enabled`
+ * toggle and "seed dust from gas" checkbox both folded into it, since dust
+ * seeding is just "the generator is running".
  *
  * The COUPLING readout is permanent, not a one-off debug print — "sliders
  * don't move the dust" has three structurally different causes (readback
  * never landed, the generator has no measurable structure, or the coupling
- * already agrees with the arm tangent) — shown whenever a generator is active.
+ * already agrees with the arm tangent) — shown whenever the generator is active.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyIsmMapAutomatonParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapAutomatonParams';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
 import type { GalaxyIsmMapGeneratorKind } from '../../../../../src/@types/galaxy/GalaxyIsmMapGeneratorKind';
 import type { GalaxyIsmMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
@@ -32,17 +30,12 @@ export type IsmMapSectionProps = {
 function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
   const dispatch = useAppDispatch();
   const ismMap = useAppSelector((state) => state.fieldTuning.ismMap);
-  const automaton = useAppSelector((state) => state.fieldTuning.ismMapAutomaton);
   const fluid = useAppSelector((state) => state.fieldTuning.ismMapFluid);
   const open = useAppSelector((state) => state.ui.openSections.ismMap);
-  const automatonOpen = useAppSelector((state) => state.ui.openSections.ismMapAutomaton);
   const fluidOpen = useAppSelector((state) => state.ui.openSections.ismMapFluid);
 
   const patchIsmMap = (patch: Partial<GalaxyIsmMapParams>): void => {
     dispatch(fieldTuningPatched({ ismMap: { ...ismMap, ...patch } }));
-  };
-  const patchAutomaton = (patch: Partial<GalaxyIsmMapAutomatonParams>): void => {
-    dispatch(fieldTuningPatched({ ismMapAutomaton: { ...automaton, ...patch } }));
   };
   const patchFluid = (patch: Partial<GalaxyIsmMapFluidParams>): void => {
     dispatch(fieldTuningPatched({ ismMapFluid: { ...fluid, ...patch } }));
@@ -66,7 +59,6 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
             }
           >
             <option value="none">No simulation</option>
-            <option value="automaton">Automaton (SSPSF)</option>
             <option value="fluid">Fluid (advection)</option>
           </select>
         </label>
@@ -102,150 +94,6 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
           </div>
         )}
       </div>
-      {ismMap.generator === 'automaton' && (
-        <CollapsibleSection
-          title="AUTOMATON"
-          open={automatonOpen}
-          onToggle={() => dispatch(sectionToggled('ismMapAutomaton'))}
-          copyPayload={{ fieldTuning: { ismMapAutomaton: automaton } }}
-          nested
-        >
-          <div className={styles.root}>
-            <ParamSlider
-              label="Steps"
-              value={automaton.steps}
-              min={1}
-              max={200}
-              step={1}
-              format={(v) => String(Math.round(v))}
-              onChange={(v) => patchAutomaton({ steps: Math.round(v) })}
-              path="fieldTuning.ismMapAutomaton.steps"
-              info="Automaton iterations per rebuild. Structure coarsens with more steps; the shear winds it. Rebuild latency is linear in this — the dominant cost of a slider drag."
-            />
-            <ParamSlider
-              label="Base ignition"
-              value={automaton.baseIgnition}
-              min={0}
-              max={0.002}
-              step={0.00005}
-              format={(v) => v.toFixed(5)}
-              onChange={(v) => patchAutomaton({ baseIgnition: v })}
-              path="fieldTuning.ismMapAutomaton.baseIgnition"
-              info="Spontaneous ignition probability per cell per step, independent of neighbours — the seed that keeps a quiet disc from dying out. Seeds should be RARE: propagation does the work, and the whole grid rolls this every step."
-            />
-            <ParamSlider
-              label="Spread"
-              value={automaton.spread}
-              min={0}
-              max={0.5}
-              step={0.002}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchAutomaton({ spread: v })}
-              path="fieldTuning.ismMapAutomaton.spread"
-              info="Added ignition probability per already-ignited neighbour. Two thresholds, and the higher one is what governs whether SPURS form: 1/8 = 0.125 is where a cell with all eight neighbours lit becomes critical, but the cells behind a front are refractory and gas-depleted, so only its leading edge propagates — with ~3 live neighbours there, fronts need ~1/3 to survive and grow. Below that the disc only ever shows short-lived isolated blobs."
-            />
-            <ParamSlider
-              label="Refractory steps"
-              value={automaton.refractorySteps}
-              min={1}
-              max={30}
-              step={1}
-              format={(v) => String(Math.round(v))}
-              onChange={(v) => patchAutomaton({ refractorySteps: Math.round(v) })}
-              path="fieldTuning.ismMapAutomaton.refractorySteps"
-              info="Steps a cell stays spent before its gas can ignite again. Sets the width of the trailing wake behind a propagating front."
-            />
-            <ParamSlider
-              label="Gas regen"
-              value={automaton.gasRegen}
-              min={0}
-              max={0.1}
-              step={0.002}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchAutomaton({ gasRegen: v })}
-              path="fieldTuning.ismMapAutomaton.gasRegen"
-              info="Gas recovered per step as a fraction of full — the star/gas feedback the original stars-only model lacked. Recovery takes 1/gasRegen steps, so this is the CONTRAST knob: it sets how long a burnt void stays a void rather than simmering back."
-            />
-            <ParamSlider
-              label="Activity decay"
-              value={automaton.activityDecay}
-              min={0.9}
-              max={1}
-              step={0.001}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchAutomaton({ activityDecay: v })}
-              path="fieldTuning.ismMapAutomaton.activityDecay"
-              info="Per-step multiplier on the trailing 'old activity' trace the overlay's structure is mostly made of. At 1.0 the channel integrates the WHOLE run, everywhere a front ever passed; below that it forgets with half-life ln(0.5)/ln(decay) steps. Raising this toward 1 without lowering gain saturates the channel to flat white — and flat white reads as 'no structure' exactly like flat black does."
-            />
-            <ParamSlider
-              label="Activity gain"
-              value={automaton.activityGain}
-              min={0.005}
-              max={0.5}
-              step={0.005}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchAutomaton({ activityGain: v })}
-              path="fieldTuning.ismMapAutomaton.activityGain"
-              info="Added to the activity trace on each ignition. Its steady state at firing period T is gain/(1 - decay^T), so this is NOT independent of decay: a sparse regime (long T) needs a much bigger gain than a busy one just to stay visible, and too much saturates the channel flat instead."
-            />
-            <ParamSlider
-              label="Arm forcing"
-              value={automaton.armForcing}
-              min={0}
-              max={0.1}
-              step={0.001}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchAutomaton({ armForcing: v })}
-              path="fieldTuning.ismMapAutomaton.armForcing"
-              info="How much the spiral ridge raises local ignition probability, per step. 0 makes the automaton blind to the arms and the output goes purely flocculent. Past ~0.06 the arms IGNITE rather than bias — a forced cell then fires as often as its refractory window allows, whatever spread does."
-            />
-            <ParamSlider
-              label="Arm flux ref"
-              value={automaton.armFluxRef}
-              min={0.05}
-              max={2}
-              step={0.05}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchAutomaton({ armFluxRef: v })}
-              path="fieldTuning.ismMapAutomaton.armFluxRef"
-              info="Shear magnitude (texels/step) at which arm forcing saturates to full strength. Forcing weights by |shear|/armFluxRef, which sends corotation (shear = 0) to a DEFICIT instead of the residence-time ring the raw forcing term produces there — lower this to widen the deficit band, raise it to narrow it."
-            />
-            <ParamSlider
-              label="Dust floor fraction"
-              value={automaton.dustFloorFraction}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(v) => v.toFixed(2)}
-              onChange={(v) => patchAutomaton({ dustFloorFraction: v })}
-              path="fieldTuning.ismMapAutomaton.dustFloorFraction"
-              info="On ignition a cell keeps this fraction of its own dust; the rest sweeps onto its 8 neighbours (the snowplough rule). Lower carves darker cavities behind an advancing front. Colliding fronts pile dust past ambient into the rim by design — that overshoot is never clamped."
-            />
-            <ParamSlider
-              label="Corotation radius"
-              value={automaton.corotationRadius}
-              min={1}
-              max={20}
-              step={0.1}
-              format={(v) => v.toFixed(1)}
-              onChange={(v) => patchAutomaton({ corotationRadius: v })}
-              path="fieldTuning.ismMapAutomaton.corotationRadius"
-              info="Generator units. Sets the pattern speed the shear is measured against — shear vanishes at corotation and reverses across it."
-            />
-            <ParamSlider
-              label="Shear rate"
-              value={automaton.shearRate}
-              min={0}
-              max={0.5}
-              step={0.005}
-              format={(v) => v.toFixed(3)}
-              onChange={(v) => patchAutomaton({ shearRate: v })}
-              path="fieldTuning.ismMapAutomaton.shearRate"
-              info="Angular offset scale per step, in radians at unit (1/r - 1/corotationRadius). Total winding is shearRate * steps, so dropping steps to 100 cut the wind by 3x — expect to raise this to get the same pitch back."
-            />
-          </div>
-        </CollapsibleSection>
-      )}
       {ismMap.generator === 'fluid' && (
         <CollapsibleSection
           title="FLUID"
@@ -265,7 +113,7 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                 format={(v) => String(Math.round(v))}
                 onChange={(v) => patchFluid({ steps: Math.round(v) })}
                 path="fieldTuning.ismMapFluid.steps"
-                info="Advection iterations per rebuild — this generator's own step budget, parallel to the automaton's. Rebuild latency is linear in this."
+                info="Advection iterations per rebuild. Rebuild latency is linear in this."
               />
             </SliderGroup>
             <SliderGroup title="Disc & rotation">
@@ -278,7 +126,7 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                 format={(v) => v.toFixed(3)}
                 onChange={(v) => patchFluid({ shearStrength: v })}
                 path="fieldTuning.ismMapFluid.shearStrength"
-                info="Differential-rotation shear amplitude, same (1/r - 1/corotationRadius) formula the automaton's shearRate uses — this generator's own copy, not wired to it."
+                info="Differential-rotation shear amplitude, (1/r - 1/corotationRadius) formula."
               />
               <ParamSlider
                 label="Corotation radius"
@@ -289,7 +137,7 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                 format={(v) => v.toFixed(1)}
                 onChange={(v) => patchFluid({ corotationRadius: v })}
                 path="fieldTuning.ismMapFluid.corotationRadius"
-                info="Pattern-speed radius the shear vanishes at — this generator's own copy, not the automaton's."
+                info="Pattern-speed radius the shear vanishes at."
               />
             </SliderGroup>
             <SliderGroup title="Gas supply">
@@ -348,7 +196,7 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                 format={(v) => v.toFixed(1)}
                 onChange={(v) => patchFluid({ armGather: v })}
                 path="fieldTuning.ismMapFluid.armGather"
-                info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild. Above ~15 gather speed exceeds a texel/step at ridge gradients and spikes."
+                info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild. Above ~15 gather speed exceeds a texel/step at ridge gradients and spikes."
               />
               <ParamSlider
                 label="Arm drag"
@@ -438,7 +286,7 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                 format={(v) => v.toFixed(2)}
                 onChange={(v) => patchFluid({ emaRate: v })}
                 path="fieldTuning.ismMapFluid.emaRate"
-                info="Blend rate of the per-texel activity trace toward this step's event intensity (z' = mix(z, eventStamp, emaRate)) — an EMA, not the automaton's decay+gain pair."
+                info="Blend rate of the per-texel activity trace toward this step's event intensity (z' = mix(z, eventStamp, emaRate)) — an EMA."
               />
               <ParamSlider
                 label="Event arm bias"
