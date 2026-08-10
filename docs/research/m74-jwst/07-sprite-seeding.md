@@ -13,7 +13,7 @@ Constraint from the user: whatever changes, per-frame cost must not grow.
    (double-angle × coherence, f32).
 2. ≤40k particles in complexes of `1 + 15·clumpiness` children. The COMPLEX
    centre is the only thing that reads the map density: 24 uniform proposals
-   over the annulus, rejection-sampled against `gas × activity`
+   over the annulus, rejection-sampled against `gas × oldActivity`
    (normalised by grid max), best-of-24 fallback.
 3. The complex frame is rotated toward the orientation field once, at the
    complex centre, coherence-weighted. Children scatter around it as a fixed
@@ -29,6 +29,10 @@ Constraint from the user: whatever changes, per-frame cost must not grow.
 then lands wherever a fixed isotropic-ish Gaussian says, walls or cavities
 alike. A 1–2-texel wall convolved with a 250 pc σ blob is gone; a cavity
 straddled by a complex gets bridged. This is the dominant loss.
+(2026-08-05: dead at DEFAULTS on tip `19eb238e` — the tier ships
+`clumpiness: 0` and `clusteredDiscPlacement` forces `childSpread` to 0 for
+one-child complexes, so every particle sits exactly on its seed point. The
+loss returns the moment clustering is re-enabled.)
 
 **M2 — the rejection sampler is biased against exactly the structures that
 matter.** Thin walls are high-density but tiny-area, so 24 uniform proposals
@@ -47,7 +51,7 @@ cannot express "thin where coherent".
 centre inherit one texel's orientation; filament curvature inside a complex is
 lost, so even well-placed children cross their own wall.
 
-**M5 — 8-bit saturation flattens placement inside walls.** `activity`'s
+**M5 — 8-bit saturation flattens placement inside walls.** `oldActivity`'s
 EMA pins at 1.0 over active regions (the display-saturation trap sf-map.md
 already records); density becomes a plateau there, so placement within a
 saturated wall complex is uniform — no ridge-line preference.
@@ -87,14 +91,15 @@ u·(r1²−r0²))`) — reconstructs the map piecewise-constant at its own
 - Accumulate the sum in f64 (plain JS number), store Float32Array (~768 KB,
   rebuilt per readback, not per frame).
 
-**S2 — children trace the filament instead of a blind Gaussian.** Walk
-children from the complex centre in arc steps along the locally RE-SAMPLED
-orientation (±along the double-angle direction, one orientation read per
-child — nearest-texel, trivial), with across-jitter σ tied to wall width
-(small, or ∝ (1 − coherence)). Complexes become short streamline segments —
-beads strung along walls, following curvature — instead of blobs straddling
-them. Kills M1 and M4. Cost: one extra map read per child (~40k reads,
-microseconds against the gaussians already drawn).
+**S2 — children trace the filament: DEAD at current defaults (2026-08-05).**
+The mechanism it fixed no longer runs: the tier ships `clumpiness: 0`, and
+`clusteredDiscPlacement` forces `childSpread` to 0 for one-child complexes
+(tip `19eb238e`) — no children, no blind Gaussian, and M1/M4 die with it.
+Beads-along-walls comes from S1's exact placement plus S3's orientation
+instead. Revisit only if clumpiness returns as a look knob (hierarchical
+clumping WITHIN walls); the sketch was: walk children in arc steps along the
+locally re-sampled orientation with across-jitter tied to wall width — one
+extra map read per child.
 
 **S3 — let the map set child size, aspect, and survival.** Per child, read
 density + coherence at its own position: density below a floor (cavity) →
@@ -127,7 +132,7 @@ fidelity work could silently cost per-frame time; gate it with `npm run perf`
 before/after per the perf skill.
 
 **S6 — if wall placement still looks plateau-flat after S1–S3:** the fix is
-at the PACK, not the sampler — log-encode or rescale `activity` so walls
+at the PACK, not the sampler — log-encode or rescale `oldActivity` so walls
 keep gradient (same landmine as the dust-channel sketch's clamp note), or
 widen the readback to 16-bit. 8-bit is fine once the channel isn't pinned.
 
@@ -141,7 +146,7 @@ render round splats.
 
 Structural weaknesses (all input-side, not tensor-side):
 
-1. It differentiates `activity`, whose EMA pins at 1.0 over active
+1. It differentiates `oldActivity`, whose EMA pins at 1.0 over active
    regions — and flat-white ≡ black to a structure tensor (zero gradient,
    coherence 0) exactly on the structures that need orientation. A starved
    input, not an estimator defect (sf-map.md's display-saturation trap).
@@ -215,13 +220,12 @@ Perf: one `warpHeight` call + one modified σ per particle, build-time only.
 
 ## Sequencing and how this meets the dust-channel sketch
 
-S1→S2→S3 are self-contained CPU changes, individually toggleable, testable in
+S1 and S3 are self-contained CPU changes, individually toggleable, testable in
 the tool's debug-view crossfade against the map overlay; S4 is a shader
 change with a natural first home in the JWST view; S5/S6 are gated
 follow-ups. When the CA grows the conserved dust channel
 ([06-ca-dust-channel-sketch.md](06-ca-dust-channel-sketch.md)), only the density
-callback changes (`dust` channel instead of `gas × activity`) — the CDF
-sampler, streamline children and per-child modulation all carry over
-unchanged. That decoupling is the argument for doing the seeding work first:
+callback changes (`dust` channel instead of `gas × oldActivity`) — the CDF
+sampler and per-child modulation carry over unchanged. That decoupling is the argument for doing the seeding work first:
 it improves fidelity now and becomes the delivery mechanism for the rims and
 cavities later.
