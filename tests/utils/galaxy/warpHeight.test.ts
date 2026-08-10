@@ -4,8 +4,8 @@
  * placement correct in the first place: `discWarpShear`'s linear map,
  * evaluated at a blob's own (radius, azimuth), must reproduce this
  * function's value there EXACTLY (it is a linearisation about that point,
- * not a distinct approximation) — the bug this whole feature fixes was
- * treating the derivative as if it were the displacement.
+ * not a distinct approximation) — treating the derivative as the
+ * displacement itself would silently misplace every warped ring.
  */
 import { describe, it, expect } from 'vitest';
 import { warpHeight } from '../../../src/utils/galaxy/warpHeight';

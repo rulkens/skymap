@@ -1,12 +1,13 @@
 /**
  * How bright a galaxy is must be a property of the GALAXY, never of the LOD
- * tier drawing it. The field's anchor used to be the sprite budget
- * (`modelledStars * starSize^2`, so flux went as N^(1/3)): a tier step moved
- * the Milky Way's absolute flux by 26% with its structure untouched, which no
- * internal-consistency ledger can see and which the screen hid because the
- * sprite bag drifted by the same factor. Both flux sites are covered — the
- * mixture and the additive HII tier — because re-anchoring one alone silently
- * rescales the HII-to-disc ratio instead.
+ * tier drawing it. Guards against the flux anchor tracking the sprite budget
+ * (`modelledStars * starSize^2`, flux going as N^(1/3)) instead of physical
+ * quantities — that coupling lets a tier step shift the Milky Way's absolute
+ * flux while its structure stays untouched, invisible to any
+ * internal-consistency ledger and hidden on screen because the sprite bag
+ * drifts by the same factor. Both flux sites are covered — the mixture and
+ * the additive HII tier — because re-anchoring one alone silently rescales
+ * the HII-to-disc ratio instead.
  */
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';

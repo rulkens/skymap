@@ -171,8 +171,8 @@ describe('createMilkyWayCloudRenderer — the two entry points', () => {
   // Stars and dust render into DIFFERENT targets (mw-aggregate vs hdr), so each
   // entry point must issue only its own pipeline — a star draw leaking into the
   // dust pass would put multiplicative-transmittance quads in the additive
-  // offscreen, and vice versa. Their relative ORDER is no longer this module's
-  // business; it is the CONTENT_LAYERS row order (see passes/index.ts).
+  // offscreen, and vice versa. Their relative ORDER is CONTENT_LAYERS row
+  // order (see passes/index.ts), not this module's concern.
   it('drawStars records only the star pipeline', () => {
     const { device } = mockDevice();
     const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });

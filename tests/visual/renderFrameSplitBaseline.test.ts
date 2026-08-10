@@ -1,57 +1,25 @@
 /**
- * Visual baseline — renderFrame draw-command sequence (pre/post pass-split).
+ * Visual baseline — renderFrame's draw-command sequence, independent of how
+ * many `beginRenderPass` blocks host those draws. A pass-split refactor that
+ * changes pass boundaries but not renderer dispatch must still produce a
+ * byte-identical hash here.
  *
- * Captures, in order, every renderer-level draw command the orchestrator
- * records during one call to `renderFrame`, irrespective of how many
- * `beginRenderPass` blocks the orchestrator opens to host those draws.
+ * The hash excludes `beginRenderPass` boundaries on purpose: a pass split
+ * intentionally changes their count, so including them would fail the
+ * baseline by definition. It captures the per-renderer draw payload instead
+ * (renderer name + argument shape).
  *
- * Run pre-split (1 HDR mega-pass + tone-map post-process) the snapshot
- * recorded here is the baseline.  Run post-split (1 clear + 8 HDR
- * sub-passes + tone-map) the same fixture MUST still produce a
- * byte-identical hash — proving the split changed nothing about WHAT
- * the GPU is told to draw, only the boundary structure of the render
- * passes.
+ * Recorded at the renderer-mock entry point (`pointRenderer.draw`,
+ * `milkyWayCloudRenderer.drawStars`/`.drawDust`, etc.), not `pass.draw` on
+ * the GPU encoder — the mocks short-circuit before the encoder ever sees
+ * `draw`, so "what did the orchestrator dispatch?" is the only granularity
+ * observable here.
  *
- * ### Why we don't include `beginRenderPass` boundaries in the hash
- *
- * The whole point of Task 8 of the GPU-timestamp-query plan is to
- * split one mega-pass into 9 — that change WILL alter the number of
- * `beginRenderPass` calls.  If we included those in the hash, the
- * baseline would fail by definition after the split (defeating its
- * purpose).  Instead the hash captures the per-renderer draw payload
- * (renderer name + argument shape) — the encoder commands that
- * actually drive the GPU.
- *
- * ### Why we record at the renderer-mock level, not `pass.draw`
- *
- * Each `ContentLayer.draw` in `passes/` delegates to a renderer method
- * (`pointRenderer.draw`, `milkyWayCloudRenderer.drawStars` / `.drawDust`, etc.)
- * that we stub at the test boundary.  The real renderers internally call
- * `pass.draw(vertexCount, instanceCount, ...)` on the GPU encoder, but
- * those WGSL-pipeline-bound calls never fire here — the mocks
- * short-circuit before the encoder ever sees `draw`.  Recording at
- * the renderer-mock entry point gives us "what did the orchestrator
- * dispatch?", which is the right granularity for the visual-
- * equivalence guarantee: same renderers, same args, same order.
- *
- * ### Why this fixture lights up every HDR pass
- *
- * To keep the snapshot a meaningful regression target we wire each of
- * the HDR passes' `enabled` gates to return true (subsystems with
- * non-empty lastOutput, optional renderers non-null with positive
- * glyph/line counts, settings toggles on, camera inside the Milky-Way
- * fade band).  Result: one renderer-draw entry per enabled layer +
- * 1 compositor.draw (the hdr→swap tone-map).
- *
- * The horizon shell is the lone exception: its distance fade is the
- * mirror image of the Milky Way's, so a camera close enough to light
- * the impostor is by construction outside the shell's fade band.  The
- * two never co-exist in one frame; the shell's gating + dispatch is
- * covered in `passes.test.ts` and `utils/math/horizonShellFadeAlpha`.
- *
- * If the post-split renderFrame skips a pass, drops a draw, or
- * reorders the renderers, this snapshot fails.  That's the gate
- * Task 8 must respect.
+ * Every HDR pass's `enabled` gate is wired true so the fixture exercises one
+ * renderer-draw entry per layer plus the hdr→swap composite. The horizon
+ * shell is excluded: its fade band is the mirror image of the Milky Way's,
+ * so the two never co-exist in one frame (covered separately in
+ * `passes.test.ts` and `horizonShellFadeAlpha`).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -397,9 +365,8 @@ describe('renderFrame visual baseline', () => {
 
     renderFrame({
       ctx,
-      // Engine state with every optional renderer wired in.  This is
-      // what makes all eight HDR passes fire — pre-split today and
-      // post-split tomorrow.
+      // Engine state with every optional renderer wired in — this is what
+      // makes all eight HDR passes fire.
       state: {
         gpu: {
           labelRenderer,
@@ -409,9 +376,10 @@ describe('renderFrame visual baseline', () => {
           debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
-          // Flow's ribbon draw lands in Task 5; here flow stays off (null
-          // renderer + disabled below) so encodeFlowCompute is a no-op and
-          // the recorded single-vs-split sequence is unchanged.
+          // Flow is CONTENT_LAYERS row 5 (see passes/index.ts); here it
+          // stays off (null renderer + disabled below) so encodeFlowCompute
+          // is a no-op and the recorded single-vs-split sequence is
+          // unchanged.
           flowFieldRenderer: null,
           volumeUpsample,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
@@ -581,12 +549,11 @@ describe('renderFrame visual baseline', () => {
     // (hdr, NEAR0) pass (the cloud's upsample + dust, on their own slab since
     // the fixed COSMO near plane clipped the disc mid-descent), the hdr→swap
     // composite pass, and the swap-chain overlay pass (marker-lines +
-    // labels). Unlike the old inline path, the tone-map's
-    // beginRenderPass is NOT hidden inside a bespoke blit helper — the
-    // executor opens the composite pass, so it appears here. Counts are
-    // asserted SEPARATELY from the inline snapshot: drawSequence captures the
-    // renderer-dispatch invariant, these counts capture the pass-boundary
-    // structure.
+    // labels). The tone-map's beginRenderPass is not hidden inside a bespoke
+    // blit helper — the executor opens the composite pass, so it appears
+    // here. Counts are asserted SEPARATELY from the inline snapshot:
+    // drawSequence captures the renderer-dispatch invariant, these counts
+    // capture the pass-boundary structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
     expect(beginCount).toBe(6);

@@ -105,12 +105,12 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.ismMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.ismMap);
   });
 
-  // The generator dropdown retired two booleans it used to take separate
-  // presets through: `sfMap.enabled` and `dust.sfMapSeeding`. Old files on
-  // disk still carry both — under their pre-ISM-rename spellings, which is
-  // why every legacy fixture below feeds `sfMap*` keys and expects
-  // `ismMap*` out — `migrateGalaxyFieldTuningWire` folds the first into
-  // `generator` and drops the second outright (see its header).
+  // Old preset files on disk carry two separate booleans, under their
+  // pre-ISM-rename spellings, that the generator dropdown collapsed into one
+  // value: `sfMap.enabled` and `dust.sfMapSeeding`. That's why every legacy
+  // fixture below feeds `sfMap*` keys and expects `ismMap*` out —
+  // `migrateGalaxyFieldTuningWire` folds the first into `generator` and drops
+  // the second outright (see its header).
   it('migrates a disabled legacy sfMap section to ismMap generator "none", dropping `enabled`', () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',
@@ -137,10 +137,10 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.ismMap).toEqual({ generator: 'fluid' });
   });
 
-  // The SSPSF automaton generator was removed outright (`GalaxyIsmMapGeneratorKind`
-  // collapsed to 'none' | 'fluid'); a preset saved while it still existed
-  // forward-migrates its `generator: 'automaton'` onto 'fluid' rather than
-  // failing to load — see `migrateIsmMap`'s own header.
+  // `GalaxyIsmMapGeneratorKind` is `'none' | 'fluid'` — there is no SSPSF
+  // automaton generator. A preset naming `generator: 'automaton'`
+  // forward-migrates onto `'fluid'` rather than failing to load — see
+  // `migrateIsmMap`'s own header.
   it('forward-migrates a legacy `generator: "automaton"` to `"fluid"`', () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',
@@ -154,9 +154,9 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.ismMap).toEqual({ generator: 'fluid' });
   });
 
-  // The automaton's own wire bag (`sfMapAutomaton`/`ismMapAutomaton`) has
-  // nowhere to land now that the type is gone — dropped outright rather than
-  // uploaded as an unknown key.
+  // The automaton's own wire bag (`sfMapAutomaton`/`ismMapAutomaton`) has no
+  // corresponding field on `GalaxyIsmMapParams` — dropped outright rather
+  // than uploaded as an unknown key.
   it('drops a legacy `ismMapAutomaton` bag entirely, without touching a preset-named `ismMapFluid`', () => {
     const tunedFluid = { ...DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid, steps: 200 };
     const wire = JSON.stringify({
@@ -244,17 +244,17 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     const parsed = parseGalaxyPreset(wire);
 
-    // `dust` is now the FULL merged section (shape + `enabled`), so an old
+    // `dust` is the FULL merged section (shape + `enabled`), so an old
     // preset naming only `enabled` (the pre-reshape `GalaxyDustTuning` shape)
     // still gates the tier, with tau/scaleLenRatio/etc. filled from defaults —
     // see `migrateGalaxyFieldTuningWire`'s `liftLegacyParamSections` header.
     expect(parsed?.f?.dust).toEqual({ ...DEFAULT_GALAXY_FIELD_TUNING.dust, enabled: false });
   });
 
-  // `dust`/`starFormation` moved off `p` (`GalaxyParams`) onto `f`
-  // (`GalaxyFieldTuning`) in the 2026-08-06 reshape; every preset saved
-  // before then carries them on `p` instead, sometimes alongside an `f.dust`
-  // that named only the pre-reshape `GalaxyDustTuning` shape (`{ enabled }`).
+  // `dust`/`starFormation` can arrive on `p` (`GalaxyParams`) instead of `f`
+  // (`GalaxyFieldTuning`) — an old preset shape, sometimes alongside an
+  // `f.dust` that names only the pre-reshape `GalaxyDustTuning` shape
+  // (`{ enabled }`).
   it('lifts a legacy preset’s p.dust/p.starFormation onto f, filling the rest from defaults', () => {
     const legacyDust = {
       tau: 2.5,
@@ -317,11 +317,11 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.hii).not.toHaveProperty('sfMapSeeding');
   });
 
-  // Board item 19 — the seven shell params (radiusScale, shellThickness,
-  // clusterStrength, cavityScale, texture, textureScale, textureContrast)
-  // moved off flat `hii` onto `hii.shells`. `migrateGalaxyFieldTuningWire`'s
-  // `liftHiiShells` carries a still-flat preset's values across the same way
-  // `LEGACY_SECTION_KEYS` carries a whole section's old spelling.
+  // The seven shell params (radiusScale, shellThickness, clusterStrength,
+  // cavityScale, texture, textureScale, textureContrast) live on `hii.shells`,
+  // not flat `hii`. `migrateGalaxyFieldTuningWire`'s `liftHiiShells` carries a
+  // still-flat preset's values across the same way `LEGACY_SECTION_KEYS`
+  // carries a whole section's old spelling.
   it('lifts flat legacy hii shell keys onto hii.shells when the nested key is absent', () => {
     const wire = JSON.stringify({
       type: 'galaxy-preset',

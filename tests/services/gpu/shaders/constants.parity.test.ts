@@ -124,13 +124,12 @@ describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () =>
  * ismMapFluidStep.wesl seeds every texel to this pedestal, scaled by its own
  * radial gasProfile(r), at step 0; ismMapDustBlur.wesl and
  * ismMapCartesianBake.wesl must both subtract the SAME pedestal, or S4's
- * detail ratio (now computed once by the bake, not per consumer —
- * dustDetail.wesl dropped its own copy in stage 2 of the dust-seeding perf
- * spike) drifts against its own blur divisor. ismMapPresent.wesl no longer
- * subtracts it: the "seeding" debug view reads the map's raw dust channel
- * directly now (the ambient pedestal stopped being uniform — it's seeded
- * `ambient * gasProfile(r)` and advected, so it's structure, not a floor to
- * clear — see dustParticleCloud.ts's DUST_SURVIVAL_FLOOR_FRAC doc).
+ * detail ratio (computed once by the bake, shared by every consumer) drifts
+ * against its own blur divisor. ismMapPresent.wesl does not subtract it: its
+ * "seeding" debug view reads the map's raw dust channel directly — the
+ * pedestal is seeded `ambient * gasProfile(r)` and advected, so it's
+ * structure, not a floor to clear (see dustParticleCloud.ts's
+ * DUST_SURVIVAL_FLOOR_FRAC doc).
  */
 function readWeslConst(relPath: string, name: string): number | undefined {
   const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
@@ -163,10 +162,9 @@ describe('ISM_MAP_AMBIENT_DUST parity (ismMapAmbientDust.ts ↔ its WESL mirrors
 
 /**
  * DUST_SURVIVAL_FLOOR_FRAC (dustParticleCloud.ts) is mirrored into
- * ismMapPresent.wesl's "seeding" debug view (dust-seeding spike), so a texel
- * that would never keep a map-seeded particle past S3's alive gate never
- * glows in the view either — same `readWeslConst` idiom as
- * ISM_MAP_AMBIENT_DUST above.
+ * ismMapPresent.wesl's "seeding" debug view, so a texel that would never
+ * keep a map-seeded particle past S3's alive gate never glows in the view
+ * either — same `readWeslConst` idiom as ISM_MAP_AMBIENT_DUST above.
  */
 describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ ismMapPresent.wesl)', () => {
   it("ismMapPresent.wesl's DUST_SURVIVAL_FLOOR_FRAC equals the TS export", () => {

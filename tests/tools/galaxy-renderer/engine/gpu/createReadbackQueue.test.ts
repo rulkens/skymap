@@ -1,8 +1,9 @@
 /**
  * The queue exists to serialize GPU readbacks. Its failure mode is an
- * ORDERING one that no type or GPU-free render test can reach, and it has
- * already shipped once ('used in submit while mapped'), so these assert the
- * event ORDER a fake device records rather than any returned value.
+ * ORDERING one that no type or GPU-free render test can reach — a race here
+ * surfaces only as a WebGPU validation error ('used in submit while
+ * mapped'), so these assert the event ORDER a fake device records rather
+ * than any returned value.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

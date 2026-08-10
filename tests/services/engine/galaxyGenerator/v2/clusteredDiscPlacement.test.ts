@@ -1,10 +1,11 @@
 /**
  * At clumpiness 0 every complex holds exactly one child, so the placement
  * density IS the particle distribution — nothing sits between the seed point
- * and the particle. The sampler used to scatter that lone child anyway,
- * convolving the density with the intra-complex kernel; against `'mapDensity'`
- * mode that silently blurred the ISM map the tier exists to follow, and no
- * other check sees it (the field is only ever read as pixels).
+ * and the particle. Guards against the sampler scattering that lone child
+ * anyway, which would convolve the density with the intra-complex kernel;
+ * against `'mapDensity'` mode that silently blurs the ISM map the tier exists
+ * to follow, and no other check sees it (the field is only ever read as
+ * pixels).
  */
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';

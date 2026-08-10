@@ -43,11 +43,10 @@ describe('deriveFrameView', () => {
   });
 
   it("keeps the field's exposure independent of the sprite pass's starIntensity/sizeScale", () => {
-    // Regression for the fold this replaced: `analyticExposure` used to be
-    // multiplied by the sprite pass's own knobs, so retuning a SPRITE slider
-    // (#541) silently moved the FIELD's brightness with it. The two passes
-    // are separate representations of the same cloud and must be tunable
-    // independently.
+    // Guards against `analyticExposure` being multiplied by the sprite pass's
+    // own knobs — that coupling would let retuning a SPRITE slider silently
+    // move the FIELD's brightness with it. The two passes are separate
+    // representations of the same cloud and must be tunable independently.
     const reference = deriveFrameView(base({ analyticExposure: 2 }));
     const movedSprites = deriveFrameView({
       ...base({ analyticExposure: 2, starIntensity: 3, sizeScale: 4 }),

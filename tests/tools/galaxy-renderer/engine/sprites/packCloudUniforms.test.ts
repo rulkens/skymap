@@ -6,9 +6,8 @@
  * at its documented float index, and the two viewports (star pass vs dust
  * pass) landing in the one lane the shader reads for the pixel clamp.
  *
- * The known-lookAt right/up cases stay from the previous 112-byte packer —
- * they cover the stride-4 gather off the view matrix's rotation rows, which is
- * real index arithmetic rather than a restatement.
+ * The known-lookAt right/up cases cover the stride-4 gather off the view
+ * matrix's rotation rows — real index arithmetic rather than a restatement.
  */
 import { describe, expect, it } from 'vitest';
 import { mat4 } from 'wgpu-matrix';

@@ -82,12 +82,11 @@ describe('buildHiiRegions', () => {
     expect(withMap).toEqual(withoutMap);
   });
 
-  // The stars channel is now a long-lived advected tracer — no longer the
-  // short-memory signal shell seeding wants. `applyIsmMapSeeding` switched
-  // its CDF weight from `stars` to `activity` (see `hiiRegions.ts`'s own
-  // header); these two pin that switch against disjoint per-channel maps,
-  // since a busy-on-both map (`makeBusyMap`) can't tell which channel
-  // actually drove a reseed.
+  // The stars channel is a long-lived advected tracer, not the short-memory
+  // signal shell seeding wants — `applyIsmMapSeeding`'s CDF weight is
+  // `activity`, not `stars` (see `hiiRegions.ts`'s own header). These two pin
+  // that weighting against disjoint per-channel maps, since a busy-on-both
+  // map (`makeBusyMap`) can't tell which channel actually drove a reseed.
   it('shell/cluster seeding ignores the stars channel: a stars-only map (zero activity) leaves placement byte-identical to no map', () => {
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
@@ -206,10 +205,10 @@ describe('buildHiiRegions', () => {
       geometry.seed,
       map,
     );
-    // `dig.complexes` is now a SCALER on the run's own recent-event
-    // population (task #10), not a literal count — the count this produces
-    // depends on the SF-event catalog, so this pins "some whole number of
-    // complexes' worth of children got added" rather than an exact formula.
+    // `dig.complexes` is a SCALER on the run's own recent-event population,
+    // not a literal count — the count this produces depends on the SF-event
+    // catalog, so this pins "some whole number of complexes' worth of
+    // children got added" rather than an exact formula.
     expect(withDig.length).toBeGreaterThan(withoutDig.length);
     const dig = withDig.slice(withoutDig.length);
     expect(dig.length % tuningOn.hii.dig.childrenPerComplex).toBe(0);
@@ -224,12 +223,12 @@ describe('buildHiiRegions', () => {
   });
 
   it('armBias 1 pulls DIG complexes onto the arm envelope, closer than armBias 0 on the identical map', () => {
-    // armBias no longer forks a second, analytic arm-lane placement — it
-    // reweights the SAME `activity` CDF every complex draws from toward
-    // `buildArmProximityEnvelope`'s arm-proximity kernel (`hiiRegions.ts`'s
-    // `armBiasedDensity`). `makeBusyMap` is uniform, so any difference in
-    // cross-arm distance between armBias 0/1 comes from that reweighting
-    // alone, not from the map's own (flat, here) shape.
+    // armBias reweights the SAME `activity` CDF every complex draws from
+    // toward `buildArmProximityEnvelope`'s arm-proximity kernel
+    // (`hiiRegions.ts`'s `armBiasedDensity`), rather than forking a second,
+    // analytic arm-lane placement path. `makeBusyMap` is uniform, so any
+    // difference in cross-arm distance between armBias 0/1 comes from that
+    // reweighting alone, not from the map's own (flat, here) shape.
     const map = makeBusyMap();
     const baseDig = {
       ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig,
@@ -300,12 +299,11 @@ describe('buildHiiRegions', () => {
     expect(meanBiased).toBeLessThan(meanUnbiased * 0.5);
   });
 
-  // Board item 19 — shells/dig/young-stars each got their OWN gain,
-  // multiplied against the whole-field master rather than one of them
-  // (shells, historically) doubling as it. The real bug this catches: a gain
-  // that's supposed to be per-tier instead zeroing (or scaling) a SHARED
-  // upstream value like `shellFluxSum`, which would move every OTHER tier's
-  // output too.
+  // shells/dig/young-stars each have their OWN gain, multiplied against the
+  // whole-field master rather than any one of them doubling as it. The real
+  // bug this catches: a gain that's supposed to be per-tier instead zeroing
+  // (or scaling) a SHARED upstream value like `shellFluxSum`, which would
+  // move every OTHER tier's output too.
   it('shells.brightness 0 zeroes only the shell/cluster sprites — DIG and young stars survive unchanged', () => {
     const tuningOn = {
       ...DEFAULT_GALAXY_FIELD_TUNING,

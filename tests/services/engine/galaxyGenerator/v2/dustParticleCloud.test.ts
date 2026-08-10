@@ -72,13 +72,12 @@ describe('buildDustParticleCloud', () => {
     // TRULY empty (0) baseline. Placement AND (S3) survival both key off the
     // RAW `dust` channel, not gas x activity, so B's legacy-only heat buys it
     // neither placement mass nor a pass through the survival filter. Baseline
-    // 0, not ISM_MAP_AMBIENT_DUST's old uniform 1.0 pedestal: that pedestal is
-    // no longer subtracted off (it IS structure now — see
-    // dustParticleCloud.ts's header), so any nonzero baseline here would
-    // itself carry ring-normalised placement mass everywhere it sits — only
-    // an exactly-zero baseline (every OTHER ring included) leaves A's ring
-    // the sole nonzero one, isolating the hot texel the way this test is
-    // named for.
+    // is exactly 0, not ISM_MAP_AMBIENT_DUST's uniform pedestal — the pedestal
+    // is seeded structure, not subtracted off (see dustParticleCloud.ts), so
+    // any nonzero baseline here would itself carry ring-normalised placement
+    // mass everywhere it sits — only an exactly-zero baseline (every OTHER
+    // ring included) leaves A's ring the sole nonzero one, isolating the hot
+    // texel the way this test is named for.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -132,12 +131,12 @@ describe('buildDustParticleCloud', () => {
 
   it('keeps particles alive on the dust lane even when activity is zero everywhere', () => {
     // The FLUID generator's `activity` is an EMA of event stamps that decays
-    // to ~0 away from a recent ignition — the bug this filter was re-keyed
-    // away from: under the old `gas x activity` criterion, activity = 0
-    // everywhere dropped every placed particle regardless of where the map's
-    // own dust actually was. The RAW dust channel doesn't have that failure
-    // mode: it's conserved/advected, not an EMA, so a texel the generator
-    // swept keeps its dust long after the front that made it.
+    // to ~0 away from a recent ignition. Guards against keying survival off
+    // `gas x activity`: that product is 0 everywhere once activity has
+    // decayed, which would drop every placed particle regardless of where
+    // the map's own dust actually is. The RAW dust channel doesn't share
+    // that failure mode — it's conserved/advected, not an EMA, so a texel
+    // the generator swept keeps its dust long after the front that made it.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -159,8 +158,6 @@ describe('buildDustParticleCloud', () => {
     };
     const swept = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, map, null);
 
-    // Pre-fix this was empty: `gas x activity` is 0 at every texel when
-    // activity is 0 everywhere, regardless of where the dust channel's mass is.
     expect(swept.length).toBeGreaterThan(0);
   });
 
@@ -172,12 +169,13 @@ describe('buildDustParticleCloud', () => {
     // CHILDREN scatter COMPLEX_SPREAD_PC around the centre and can land in
     // an adjacent, untouched texel the CDF would never have picked on its
     // own — that's what this filter exists to catch, not placement itself.
-    // Baseline TRULY 0, not ISM_MAP_AMBIENT_DUST's old uniform 1.0 pedestal:
-    // the pedestal is no longer subtracted off (dustParticleCloud.ts's
-    // header), so a nonzero baseline here would sit well above the survival
-    // floor (`DUST_SURVIVAL_FLOOR_FRAC * ringMean[ring]`, a fraction of the
-    // TEXEL'S OWN RING mean — and the baseline all but IS that ring's mean
-    // when it covers virtually the whole ring) and nothing would get culled.
+    // Baseline TRULY 0, not ISM_MAP_AMBIENT_DUST's uniform pedestal: the
+    // pedestal is seeded structure, not subtracted off (see
+    // dustParticleCloud.ts), so a nonzero baseline here would sit well above
+    // the survival floor (`DUST_SURVIVAL_FLOOR_FRAC * ringMean[ring]`, a
+    // fraction of the TEXEL'S OWN RING mean — and the baseline all but IS
+    // that ring's mean when it covers virtually the whole ring) and nothing
+    // would get culled.
     const az = MAP_AZ;
     const rings = MAP_RINGS;
     const data = new Float32Array(rings * az * 4);
@@ -439,10 +437,10 @@ describe('buildDustParticleCloud', () => {
     // `buildIsmMapDustCdf`'s total comes out 0, and `buildDustParticleCloud`
     // leaves `placement` at its `smoothDisc` default — the same code path an
     // absent map takes (see the guard's own comment in
-    // dustParticleCloud.ts). A flat ISM_MAP_AMBIENT_DUST (1.0) map, the OLD
-    // trigger for this fallback, no longer qualifies: 1.0 is now real
-    // (nonzero) placement mass, not an ambient pedestal subtracted down to
-    // zero.
+    // dustParticleCloud.ts). A flat ISM_MAP_AMBIENT_DUST (1.0) map does NOT
+    // trigger this fallback: 1.0 is real (nonzero) placement mass, not an
+    // ambient pedestal subtracted down to zero — flat 0 is the only map that
+    // degenerates the CDF's total to zero.
     const emptyMap = makeMap(0);
     const dust = {
       ...DEFAULT_GALAXY_DUST_PARAMS,

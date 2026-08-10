@@ -3,7 +3,7 @@
  * draw to its own footprint (guards the binary search + jitter formulas),
  * and two texels of very different bin width (log-spaced rings) split draws
  * in proportion to their `texelArea x density`, not their raw count (guards
- * the area weighting the old rejection sampler didn't need).
+ * the CDF's texel-area weighting).
  */
 import { describe, expect, it } from 'vitest';
 import { buildIsmMapDustCdf } from '../../../src/utils/galaxy/buildIsmMapDustCdf';

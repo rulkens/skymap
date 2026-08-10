@@ -2,8 +2,7 @@
  * deriveArmSpurs' two load-bearing geometric contracts: roots walk outward
  * along the parent arm at roughly the jittered spacing law (not clustered,
  * not unbounded), and each root's curve is EXACTLY continuous with the
- * parent's at that root — the whole point of `spanStartLogR` being per-arm
- * rather than the old global `ARM_SPAN_START_FRAC`.
+ * parent's at that root — the reason `spanStartLogR` is computed per-arm.
  */
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';

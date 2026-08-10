@@ -4,9 +4,9 @@
  * arm bias that points the wrong way (or isn't a bias at all), and a
  * requested count that overruns the GPU buffer's fixed capacity.
  *
- * ismMapFluidEventWindow — the binary search that replaced a per-step, whole
- * -list GPU scan (`createIsmMapFluidRunner.ts`'s own docblock); a boundary
- * bug here would silently drop or duplicate active events per step.
+ * ismMapFluidEventWindow — the binary search that avoids a per-step,
+ * whole-list GPU scan (`createIsmMapFluidRunner.ts`'s own docblock); a
+ * boundary bug here would silently drop or duplicate active events per step.
  */
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';

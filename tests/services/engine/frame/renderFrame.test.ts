@@ -399,8 +399,8 @@ function makeInput(
     canvasHeight,
     viewProj,
     // Expose the local settings bag so tests can assert against it
-    // (e.g. exposure, toneMapCurve) without reaching into input.settings,
-    // which no longer exists on RenderFrameInput.
+    // (e.g. exposure, toneMapCurve) — RenderFrameInput carries no settings
+    // field of its own.
     settings,
     input: {
       ctx,

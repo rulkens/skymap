@@ -375,10 +375,10 @@ describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
 
 describe('CONTENT_LAYERS blend legality', () => {
   it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
-    // The registry half of the target<->blend invariant (the renderer half
-    // — that the WebGPU pipeline's actual blend state matches — lands in
-    // task 10). A layer whose target/blend pair falls outside this table
-    // is a data-entry bug in its own file, not a new legal combination.
+    // The registry half of the target<->blend invariant — the renderer half,
+    // that the WebGPU pipeline's actual blend state matches, is covered
+    // elsewhere. A layer whose target/blend pair falls outside this table is
+    // a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
       if (
         layer.target === 'volume' ||
@@ -912,9 +912,9 @@ describe('drawPick migration-table rows', () => {
     // Pins the spec's migration table: the five COSMO/near-field survey
     // pickables (pointSprites / proceduralDisks / structureMarkers / milkyWay /
     // starCatalog) PLUS the six NEAR0 true-scale foreground bodies (starPoints /
-    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets — Task 11
-    // + the selection-gated focused-field-star sphere's pick + the sub-pixel body
-    // glints' pick). Order is registry order: the COSMO pick pass leads with
+    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets),
+    // the selection-gated focused-field-star sphere's pick and the sub-pixel
+    // body glints' pick among them. Order is registry order: the COSMO pick pass leads with
     // point-sprites (the @group(0) prefix contract); every NEAR0 body self-binds
     // its own slot-0 camera in its own pass, so their relative order carries no
     // @group(0) dependence (it is depth-resolved, nearest-wins). The production

@@ -1,36 +1,31 @@
 /**
  * renderFrame — verify timing service is consulted per pass.
  *
- * Stubs renderFrame's dependencies, attaches a mock timingService,
- * runs one frame, then asserts:
+ * Stubs renderFrame's dependencies, attaches a mock timingService, runs one
+ * frame, then asserts:
  *
  *   1. `beginFrame` was called once.
- *   2. `descriptorFor(pass.name)` was called once per enabled layer.
- *      In this fixture only point-sprites and the Milky-Way cloud's
- *      three rows (milky-way-aggregate, milky-way-upsample, milky-way)
- *      fire — the remaining pass slots are gated off via null
- *      subsystems / null optional renderers.
- *   3. The descriptor returned by the mock landed on the
- *      `timestampWrites` field of the corresponding `beginRenderPass`
- *      call — the orchestrator's `...(timestampWrites ? { ... } : {})`
- *      spread must materialise the field when the service is active.
+ *   2. `descriptorFor(pass.name)` was called once per enabled layer — in
+ *      this fixture point-sprites and the Milky-Way cloud's three rows
+ *      (milky-way-aggregate, milky-way-upsample, milky-way); the rest are
+ *      gated off via null subsystems / null optional renderers.
+ *   3. The descriptor lands on `timestampWrites` of the corresponding
+ *      `beginRenderPass` call — the orchestrator's
+ *      `...(timestampWrites ? { ... } : {})` spread must materialise the
+ *      field when the service is active.
  *   4. `endFrame` was called once with the encoder.
- *   5. When `state.gpu.timingService` is null (the common case), none
- *      of `beginFrame` / `descriptorFor` / `endFrame` fire and the
- *      encoder commands stay byte-identical to the pre-timing path.
- *      The visual-baseline test in `tests/visual/renderFrameSplitBaseline.test.ts`
- *      backs up the byte-identical claim with a snapshot; this test
- *      asserts the structural "no-call" invariant.
+ *   5. With `state.gpu.timingService` null (the common case), none of
+ *      `beginFrame`/`descriptorFor`/`endFrame` fire and the encoder
+ *      commands stay byte-identical to the pre-timing path — the
+ *      byte-identical claim itself is a snapshot in
+ *      `renderFrameSplitBaseline.test.ts`; this test asserts the
+ *      structural "no-call" invariant.
  *
- * ### Why a local helper instead of importing renderFrame.test.ts's
- *
- * Per the Task-9 plan note: keep the fixture local to this test
- * (no shared module extraction in this task).  The shape mirrors
- * `tests/visual/renderFrameSplitBaseline.test.ts`'s `makeMinimalInput`
- * — encoder + pass stubs that record what they were called with,
- * renderers that no-op, and a `state` that gates every optional
- * pass off so the trace stays focused on the always-on passes
- * (point-sprites + the Milky-Way cloud's three rows).
+ * The fixture stays local rather than importing `renderFrame.test.ts`'s
+ * helper; its shape mirrors `renderFrameSplitBaseline.test.ts`'s
+ * `makeMinimalInput` — encoder + pass stubs that record their call args,
+ * renderers that no-op, and a `state` that gates every optional pass off so
+ * the trace stays focused on the always-on passes.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -408,7 +403,7 @@ describe('renderFrame — timing service hookup', () => {
     // layer's pass carries the clear AND its own descriptor (no dedicated
     // clear pass in the unified path), so all five begins are tagged. The
     // composite's beginRenderPass is opened by the executor (against the swap
-    // view), so — unlike the old inline tone-map blit — it DOES appear here.
+    // view), so it counts among the five begins.
     expect(beginCalls).toHaveLength(5);
     const stubSlots = beginCalls.map((b) => {
       const tw = (

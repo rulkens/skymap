@@ -1,32 +1,18 @@
 /**
  * milkyWayModelMatrix places the GPU-generated Milky Way point cloud at the
- * galaxy's real world position, in the exact frame the old impostor rendered
- * in. Two contracts have to stay pinned for that placement to be correct, and
- * tests — not the compiler — are what keep them from drifting:
+ * galaxy's real-world position, in the galactic frame every frame consumer
+ * shares. Two contracts hold this in place, guarded here rather than by the
+ * compiler:
  *
- *   1. WESL ↔ registry parity. The shader's galactic basis literals
- *      (`GAL_X_EQ` etc. in `util.wesl`) must equal the TS copy that lives in the
- *      orientation-frame registry (`data/orientation/orientationFrames`) — the
- *      single source `milkyWayModelMatrix`, and every other frame consumer,
- *      imports. We scrape those literals straight out of `util.wesl` (the
- *      `constants.parity.test.ts` pattern — read the `.wesl` as text, regex the
- *      `vec3<f32>(...)` literal, `parseFloat`) rather than re-typing them here,
- *      and compare against `ORIENTATION_FRAMES.galactic`, whose columns are
- *      `(GAL_X_EQ, GAL_Z_EQ, −GAL_Y_EQ)`. Drift becomes a test failure, not a
- *      silent rendering bug.
+ *   1. WESL ↔ registry parity: the shader's galactic basis literals (`GAL_X_EQ`
+ *      etc. in `util.wesl`) must equal `ORIENTATION_FRAMES.galactic`
+ *      (`data/orientation/orientationFrames`), scraped from `util.wesl` as
+ *      text (see `constants.parity.test.ts`) rather than re-typed.
+ *   2. The matrix's own placement: local +x → `GAL_X_EQ`, +y → `GAL_Z_EQ`
+ *      (NGP), +z → `+GAL_Y_EQ` — a deliberate det −1 reflection that diverges
+ *      from the registry's `−GAL_Y_EQ`; translation is the MW's world centre.
  *
- *   2. `milkyWayModelMatrix`'s own placement. Its rotation columns arrange the
- *      same registry constants into the generator's local-frame layout (local
- *      +x → `GAL_X_EQ`, +y → `GAL_Z_EQ` (NGP, the disk normal), +z →
- *      `GAL_Y_EQ`), its translation lanes are the Milky Way's world centre, and
- *      its bottom row is `(0,0,0,1)`. Note column 2 is `+GAL_Y_EQ`, a deliberate
- *      det −1 reflection for the symmetric disk — it diverges from the registry
- *      basis's `−GAL_Y_EQ` (det +1), so the two swizzles genuinely need separate
- *      guards, not one shared assertion.
- *
- * Path is resolved from `process.cwd()` (repo root under Vitest), matching the
- * convention `constants.parity.test.ts` documents — `__dirname` would not work
- * under the Vite/Vitest ESM runner.
+ * Path resolves from `process.cwd()`, not `__dirname` (Vite/Vitest ESM).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

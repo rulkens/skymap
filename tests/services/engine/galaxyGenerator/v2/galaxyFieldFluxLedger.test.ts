@@ -5,10 +5,10 @@
  * split — so they fail on a lane counted twice or a debit skipped, which
  * nothing else reaches `buildGalaxyFieldMixture` to notice.
  *
- * The first test needs no per-population multiplier to state, which is the
- * property step 5 bought: `light`'s lanes sum to 1, so a lane that quietly
- * re-acquires a sprite constant or a dependency on the star budget fails here
- * as well as in `galaxyFieldTierInvariance.test.ts`.
+ * The first test needs no per-population multiplier to state — `light`'s
+ * lanes sum to 1, so a lane that quietly re-acquires a sprite constant or a
+ * dependency on the star budget fails here as well as in
+ * `galaxyFieldTierInvariance.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';

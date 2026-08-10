@@ -1,7 +1,7 @@
 /**
- * Pure-function coverage for the lifecycle math task #10 introduced: the
- * mid-age fluid-event band boundary, and the population-scaler ->
- * complex-count clamp the DIG veil uses.
+ * Pure-function coverage for the lifecycle math behind the mid-age
+ * fluid-event band boundary, and the population-scaler -> complex-count
+ * clamp the DIG veil uses.
  */
 import { describe, expect, it } from 'vitest';
 import {

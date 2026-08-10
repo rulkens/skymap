@@ -155,12 +155,11 @@ describe('describeGalaxy', () => {
     );
   });
 
-  // The regression: before the fix, armStartRadius alone parameterized logR,
-  // so scaling it by armStart rotated the whole log-spiral pattern rigidly
-  // (angle at a fixed physical radius shifted by -pitch*log(armStart)).
-  // irregularity 0 zeroes meanderAmp (asymmetry-scaled to 0) and armWave
-  // defaults to 0, so armRidgeAngle reduces to the pure log-spiral term —
-  // the exact case describeGalaxy's compensation targets — leaving no
+  // Guards against armStartRadius alone parameterizing logR: scaling it by
+  // armStart would then rotate the whole log-spiral pattern rigidly (angle at
+  // a fixed physical radius shifting by -pitch*log(armStart)). irregularity 0
+  // zeroes meanderAmp and armWave defaults to 0, so armRidgeAngle reduces to
+  // the pure log-spiral term describeGalaxy's compensation targets — no
   // second-order meander/wave drift to launder the assertion.
   it('armStart does not rotate the arm pattern: a fixed physical radius maps to the same point', () => {
     const params: GalaxyParams = {
