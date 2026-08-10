@@ -61,6 +61,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Layer blend is declared twice** `needs-design` — `ContentLayer.blend` and the pipeline's `GPUBlendState` restate each other with nothing tying them; parity wants `blendStateOf` threaded through every renderer. → [details](backlog/2026-07-31-layer-blend-declared-twice.md)
+- [ ] **`MilkyWayTuning` is one flat bag** `needs-design` — eight sprite knobs shared by consumers that ignore nearly all of them; a third radiance contributor is the second special case. → [details](backlog/2026-07-31-milkyway-tuning-is-one-flat-bag.md)
 - [ ] **`CaptionKind` shadows the label-bearing registry** `deferred` — the union is still hand-typed, but it was never 1:1 with `bearsLabel`, so deriving it needs a new registry flag rather than a filter. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).

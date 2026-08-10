@@ -312,7 +312,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');
-      expect(layer.blend).toBe('additive');
+      expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
     }
   });
 });
@@ -381,18 +381,25 @@ describe('CONTENT_LAYERS blend legality', () => {
     // is a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
       if (
-        layer.target === 'hdr' ||
         layer.target === 'volume' ||
         layer.target === 'star-aggregates' ||
         layer.target === 'mw-aggregate'
       ) {
-        // The three reduced-resolution offscreens accumulate the same way
+        // These three reduced-resolution offscreens accumulate the same way
         // their contents would have accumulated straight into HDR — the
         // raymarched volume, the survey aggregate glow, and the Milky Way
         // cloud's star billboards are all additive sums, which is what makes
         // "render small, bilinearly upsample, add" equivalent to drawing them
-        // full-res.
+        // full-res. A non-additive row here would break that equivalence, so
+        // it's a correctness bug, not a new legal combination.
         expect(layer.blend).toBe('additive');
+      } else if (layer.target === 'hdr') {
+        // hdr admits exactly one multiplicative row: the Milky Way dust pass
+        // extincts the emission already accumulated in HDR rather than adding
+        // to it, which is why its position in the near-hdr group is
+        // load-bearing. A second multiplicative hdr row should fail this test
+        // and be a deliberate decision.
+        expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
         // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
@@ -400,8 +407,8 @@ describe('CONTENT_LAYERS blend legality', () => {
         // them but writing no depth, straight-alpha OVER (spec §8 / §8.3 / grill
         // Q9). Their pipelines bake exactly that profile (foreground:0 formats,
         // depth read / no write, over blend), so those rows legitimately carry
-        // `over` where their siblings carry `opaque` — the sole target that admits
-        // two blends today.
+        // `over` where their siblings carry `opaque` — one of two targets that
+        // admit two blends today (hdr's dust row is the other).
         if (
           layer.name === 'rings' ||
           layer.name === 'cloud-shell' ||

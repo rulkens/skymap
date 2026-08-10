@@ -138,7 +138,7 @@ export const milkyWayLayer: ContentLayer = {
   // mid-descent before the approach fade completes — see the module header.
   slab: NEAR0,
   target: 'hdr',
-  blend: 'additive',
+  blend: 'multiply',
 
   // Shared with the aggregate producer and its upsample consumer — see
   // `milkyWayCloudLiveness` on why all three must answer identically.
