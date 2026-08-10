@@ -1,13 +1,12 @@
 /**
  * areaWeightedMeanIsmMapChannel — the texel-AREA-weighted mean of one
- * extracted quantity over a `GalaxyIsmMap`, unlike `meanIsmMapChannel`'s
- * plain per-texel mean: the log-radial grid's outer rings each cover far
- * more physical area than the inner ones (`ismMapDustRingEdges`,
- * `buildIsmMapDustCdf`'s own `texelArea`), so an unweighted mean over-counts
- * the centre. Every texel within one ring shares the same area, so this
- * reduces to a per-ring mean weighted by that ring's own annulus area rather
- * than a full per-texel accumulation — `dTheta` cancels in the ratio, so it
- * never needs computing.
+ * extracted quantity over a `GalaxyIsmMap`: the log-radial grid's outer
+ * rings each cover far more physical area than the inner ones
+ * (`ismMapDustRingEdges`, `buildIsmMapDustCdf`'s own `texelArea`), so an
+ * unweighted per-texel mean over-counts the centre. Every texel within one
+ * ring shares the same area, so this reduces to a per-ring mean weighted by
+ * that ring's own annulus area rather than a full per-texel accumulation —
+ * `dTheta` cancels in the ratio, so it never needs computing.
  */
 import { ismMapDustRingEdges } from './ismMapDustRingEdges';
 import type { GalaxyIsmMap } from '../../@types/galaxy/GalaxyIsmMap';

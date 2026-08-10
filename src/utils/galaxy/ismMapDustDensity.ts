@@ -2,8 +2,8 @@
  * ismMapDustDensity — a texel's `gas * activity` product, where `activity` is
  * the automaton's ACCUMULATED trace, not `recentSf`. FORMERLY dust
  * placement's own density and its S3 survival filter's criterion; both now
- * key off the swept `dust` channel's overshoot instead
- * (`sweptDustOvershoot`, see `dustParticleCloud.ts`'s header for why). This
+ * key off the swept `dust` channel directly (see `dustParticleCloud.ts`'s
+ * header for why). This
  * stays as a mass-weighting metric for `ismMapActivityHistogramHarness.ts`'s
  * debug stats, and as a two-channel density fixture in `buildIsmMapDustCdf`'s
  * own tests.

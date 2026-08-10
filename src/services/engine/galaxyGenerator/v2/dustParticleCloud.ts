@@ -215,11 +215,11 @@ export function buildDustParticleCloud(
   // consequence of the ISM map leading, not a regression.
   //
   // RAW dust, not overshoot-above-ambient: the ambient pedestal used to be
-  // uniform (`sweptDustOvershoot`'s old subtraction), but it is now seeded
-  // `ambient * gasProfile(r)` and advected by the automaton — it IS
-  // structure, and subtracting it erased the faint wisps this placement is
-  // supposed to seed clouds into. `sweptDustOvershoot` stays in the codebase
-  // for the histogram harness; this file no longer imports it.
+  // uniform (subtracted via the now-deleted `sweptDustOvershoot`), but it is
+  // now seeded `ambient * gasProfile(r)` and advected by the automaton — it
+  // IS structure, and subtracting it erased the faint wisps this placement
+  // is supposed to seed clouds into. `ismMapActivityHistogramHarness.ts`
+  // calls `ismMapDustDensity` instead; this file no longer imports either.
   //
   // RING-normalised, not a single map-wide mean: the map-wide mean was flat
   // enough for a hot texel's tempering knob to also flatten the RADIAL
