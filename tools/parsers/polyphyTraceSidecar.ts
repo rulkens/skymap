@@ -21,13 +21,14 @@ export type PolyphyTraceSidecar = {
   readonly provenance?: Record<string, unknown>;
 };
 
-// Single source for the frame check AND the error message's "expected"
-// list, so the two can't drift as ScalarFieldFrameKind grows a member.
-const ALLOWED_FRAMES: readonly ScalarFieldFrameKind[] = [
-  'supergalactic-cartesian',
-  'equatorial-cartesian',
-  'galactic',
-];
+// Exhaustive record (cf. FRAME_KIND_TO_ID at scalarFieldFormat.ts:81) rather
+// than an array literal — a union growth that forgets a member here is a
+// compile error, not a silent gap in the membership check.
+const ALLOWED_FRAMES: Record<ScalarFieldFrameKind, true> = {
+  'supergalactic-cartesian': true,
+  'equatorial-cartesian': true,
+  galactic: true,
+};
 
 // Shared by dims / origin_mpc / voxel_size_mpc (rule 4): same "3 finite
 // numbers" shape check, with an optional extra per-element predicate for
@@ -55,6 +56,12 @@ export function parsePolyphyTraceSidecar(text: string): PolyphyTraceSidecar {
   }
   const obj = raw as Record<string, unknown>;
 
+  if (!('format' in obj)) {
+    throw new Error(
+      'parsePolyphyTraceSidecar: sidecar has no "format" key — the exporter must be upgraded ' +
+        'to polyphy-trace v1 (see docs/superpowers/specs/2026-08-10-rhizome-scfd-importer-design.md)',
+    );
+  }
   if (obj.format !== 'polyphy-trace') {
     throw new Error(
       `parsePolyphyTraceSidecar: format ${JSON.stringify(obj.format)} is not "polyphy-trace" — wrong sidecar?`,
@@ -70,9 +77,9 @@ export function parsePolyphyTraceSidecar(text: string): PolyphyTraceSidecar {
   const originMpc = assertVec3('origin_mpc', obj.origin_mpc);
   const voxelSizeMpc = assertVec3('voxel_size_mpc', obj.voxel_size_mpc, (n) => n > 0);
 
-  if (!ALLOWED_FRAMES.includes(obj.frame as ScalarFieldFrameKind)) {
+  if (typeof obj.frame !== 'string' || !(obj.frame in ALLOWED_FRAMES)) {
     throw new Error(
-      `parsePolyphyTraceSidecar: unknown frame ${JSON.stringify(obj.frame)} (expected ${ALLOWED_FRAMES.join(' | ')})`,
+      `parsePolyphyTraceSidecar: unknown frame ${JSON.stringify(obj.frame)} (expected ${Object.keys(ALLOWED_FRAMES).join(' | ')})`,
     );
   }
   const frame = obj.frame as ScalarFieldFrameKind;

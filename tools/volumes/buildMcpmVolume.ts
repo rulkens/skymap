@@ -147,7 +147,8 @@ export async function buildMcpmTier(factor: 8 | 4 | 2): Promise<void> {
   });
   // A real large-tier rebuild retires any quick-look calibration cube left
   // at this same path — force: true because the sentinel is absent on
-  // almost every run (only --quick-look, a later task, ever writes it).
+  // almost every run (written by buildRhizomeVolume when its output
+  // targets this file).
   if (factor === 2) rmSync(quickLookSentinelPath('public/data'), { force: true });
 }
 

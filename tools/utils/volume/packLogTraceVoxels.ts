@@ -36,6 +36,7 @@ export function packLogTraceVoxels(
       for (let k = 0; k < dims[2]; k++) {
         const inputIdx = i * dims[1] * dims[2] + j * dims[2] + k;
         const outputIdx = k * dims[1] * dims[0] + j * dims[0] + i;
+        // Guards a possible future negative noise floor; today's data is non-negative by construction.
         const v = Math.max(0, values[inputIdx]!);
         const normalised = Math.log(1 + v) * invLogMax;
         const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;

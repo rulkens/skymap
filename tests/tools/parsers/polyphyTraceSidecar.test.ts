@@ -25,6 +25,12 @@ const VALID_SIDECAR = {
 };
 
 describe('parsePolyphyTraceSidecar', () => {
+  it('rejects a sidecar with no "format" key at all, distinctly from a wrong value', () => {
+    const { format: _format, ...withoutFormat } = VALID_SIDECAR;
+    const text = JSON.stringify(withoutFormat);
+    expect(() => parsePolyphyTraceSidecar(text)).toThrow('sidecar has no "format" key');
+  });
+
   it('rejects a sidecar whose format is not polyphy-trace', () => {
     const text = JSON.stringify({ ...VALID_SIDECAR, format: 'scfd-meta' });
     expect(() => parsePolyphyTraceSidecar(text)).toThrow('is not "polyphy-trace"');

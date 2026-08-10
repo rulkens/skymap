@@ -17,7 +17,7 @@ export function assertNoQuickLookSentinel(dataDir: string): void {
     throw new Error(
       `assertNoQuickLookSentinel: ${targetName} was last written by a --quick-look run ` +
         '(sentinel file present) — run `npm run build-mcpm` to rebuild the real reference ' +
-        'before syncing.',
+        `before syncing, or delete ${sentinelPath} if the reference was never overwritten.`,
     );
   }
 }

@@ -7,17 +7,13 @@
  *
  * Reuses `packLogTraceVoxels` (shared with `buildMcpmVolume.ts`) so the
  * calibration quick-look and the shipped MCPM reference render under
- * identical normalisation (spec Decision 1).
- *
- * CLI: `--out <path>` (passthrough), `--quick-look` (overwrite the shipped
- * MCPM large tier for calibration), `--shell inner|middle|outer` (stub —
- * lands with the rhizome-shells plan).
+ * identical normalisation (spec Decision 1). CLI usage: see `printUsage()`.
  *
  * Spec: docs/superpowers/specs/2026-08-10-rhizome-scfd-importer-design.md
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
@@ -39,6 +35,13 @@ function sidecarPathFor(npyPath: string): string {
 // `packLogTraceVoxels` reads it correctly as-is.
 function squeezeTrailingSingleton(shape: readonly number[]): readonly number[] {
   return shape.length === 4 && shape[3] === 1 ? shape.slice(0, 3) : shape;
+}
+
+// Pure path comparison, split out of buildRhizomeVolume() so the R2-guard
+// branch (item below) is pinnable by a test without touching the real
+// public/data directory.
+export function isQuickLookOutput(outPath: string): boolean {
+  return resolve(outPath) === resolve('public/data', MCPM_TIER_FILENAME[2]);
 }
 
 export async function buildRhizomeVolume(args: {
@@ -96,9 +99,10 @@ export async function buildRhizomeVolume(args: {
     );
   }
 
-  // ── 3. Pack (shared with buildMcpmVolume.ts) + collapse voxel size ──
-  const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, dims);
-
+  // ── 3. Voxel-size spread assert + mean collapse (rule 6) — ahead of the
+  // pack so a bad sidecar rejects in microseconds, not after 42M voxels of
+  // pack work.
+  //
   // SCFD's header stores a single cubic voxel_size (scalarFieldFormat.ts:40)
   // but PolyPhy rounds grid dims per axis, so the sidecar's triple can
   // disagree slightly. A small disagreement is exporter rounding noise and
@@ -115,6 +119,25 @@ export async function buildRhizomeVolume(args: {
     );
   }
   const voxelSize = meanVoxelSize;
+
+  // ── 4. Quick-look R2 guard — checked here, not just in the CLI's
+  // --quick-look branch, so --out pointed at the same path is covered too
+  // (both modes converge on this one call). Sentinel BEFORE the reference
+  // write, not after: writeFileSync isn't atomic, so a mid-write failure
+  // (ENOSPC, EIO) can leave outPath truncated. Setting early over-blocks
+  // sync-r2 on an ordinary validation failure (annoying, recoverable with
+  // build-mcpm); setting late would let a truncated reference ship with no
+  // sentinel to catch it (dangerous, silent).
+  if (isQuickLookOutput(outPath)) {
+    writeFileSync(
+      quickLookSentinelPath('public/data'),
+      `quick-look cube written by buildRhizomeVolume from ${npyPath}; ` +
+        `run "npm run build-mcpm" to restore the shipped reference and clear this sentinel.\n`,
+    );
+  }
+
+  // ── 5. Pack (shared with buildMcpmVolume.ts) ──
+  const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, dims);
 
   const cube: ScalarCube = {
     dims,
@@ -180,18 +203,10 @@ async function main(): Promise<void> {
 
   if (hasQuickLook) {
     // Composed from the imported tier map, never a restated literal —
-    // the filename has exactly one home (quickLookSentinelPath.ts).
+    // the filename has exactly one home (quickLookSentinelPath.ts). The
+    // sentinel write itself lives in buildRhizomeVolume() (keyed off
+    // outPath), so --out targeting this same path is guarded too.
     const outPath = `public/data/${MCPM_TIER_FILENAME[2]}`;
-    // Sentinel BEFORE the build, not after: writeFileSync isn't atomic, so
-    // a mid-write failure (ENOSPC, EIO) can leave outPath truncated. Setting
-    // early over-blocks sync-r2 on an ordinary validation failure (annoying,
-    // recoverable with build-mcpm); setting late would let a truncated
-    // reference ship with no sentinel to catch it (dangerous, silent).
-    writeFileSync(
-      quickLookSentinelPath('public/data'),
-      `quick-look cube written by buildRhizomeVolume --quick-look from ${npyPath}; ` +
-        `run "npm run build-mcpm" to restore the shipped reference and clear this sentinel.\n`,
-    );
     await buildRhizomeVolume({ npyPath, outPath });
     console.log(
       `[buildRhizomeVolume] quick-look cube is only visible with the MCPM tier set to ` +
@@ -227,7 +242,7 @@ const invokedDirectly = (() => {
 })();
 if (invokedDirectly) {
   main().catch((err) => {
-    console.error(err);
+    console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   });
 }

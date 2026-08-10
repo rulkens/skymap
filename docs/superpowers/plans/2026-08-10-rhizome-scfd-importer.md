@@ -45,11 +45,11 @@ export function packLogTraceVoxels(
 
 **`npm run refactor -- extract` does NOT apply here.** It moves an *existing exported symbol*; this is an inline statement block being promoted into a new function. Write the new file by hand. There is no file move, so `npm run move-files` is not involved either.
 
-- [ ] Move the block verbatim into the new function: stats loop (`:105-111`), `safeMax`/`logMax`/`invLogMax` (`:139-141`), the triple loop with the axis-0↔2 transpose (`:151-162`). Return the three values instead of closing over locals.
-- [ ] Carry the two load-bearing comments across — the heavy-tailed log-mapping derivation (`:113-138`) and the C-order→x-fastest transpose landmine (`:144-150`) — trimmed to the destination's ≤10-line header budget plus at most one inline note. **Drop the stale `(Task 3)` cross-reference** in the transpose comment; it points at a plan that shipped. Delete both blocks from `buildMcpmVolume.ts`; do not leave summaries behind (echoes don't earn their place).
-- [ ] Call it from `buildMcpmVolume` between the dtype guard (`:98-101`) and the cube literal (`:165`).
-- [ ] `npm run typecheck && npm test -- buildMcpmVolume` → GREEN, with **zero test-file edits**. If a test needed changing, the extraction was not behaviour-preserving — stop and find out why.
-- [ ] Commit (own commit, prep-refactor).
+- [x] Move the block verbatim into the new function: stats loop (`:105-111`), `safeMax`/`logMax`/`invLogMax` (`:139-141`), the triple loop with the axis-0↔2 transpose (`:151-162`). Return the three values instead of closing over locals.
+- [x] Carry the two load-bearing comments across — the heavy-tailed log-mapping derivation (`:113-138`) and the C-order→x-fastest transpose landmine (`:144-150`) — trimmed to the destination's ≤10-line header budget plus at most one inline note. **Drop the stale `(Task 3)` cross-reference** in the transpose comment; it points at a plan that shipped. Delete both blocks from `buildMcpmVolume.ts`; do not leave summaries behind (echoes don't earn their place).
+- [x] Call it from `buildMcpmVolume` between the dtype guard (`:98-101`) and the cube literal (`:165`).
+- [x] `npm run typecheck && npm test -- buildMcpmVolume` → GREEN, with **zero test-file edits**. If a test needed changing, the extraction was not behaviour-preserving — stop and find out why.
+- [x] Commit (own commit, prep-refactor).
 
 **Known coverage gap, deliberately accepted:** `tests/tools/buildMcpmVolume.smoke.test.ts` uses a symmetric 4×4×4 cube and asserts only dims / header fields / voxel count — it would **not** catch an axis swap or a changed normalisation curve. The real pin on this helper arrives in Task 7 (asymmetric transpose fixture through `buildRhizomeVolume`). Do not add mcpm-side tests here; Task 7 covers it once, through the shared code path.
 
@@ -91,14 +91,14 @@ Takes the raw file text (so "JSON parses" is genuinely this function's job); the
 | 4 | `dims`/`origin_mpc`/`voxel_size_mpc` are 3 finite numbers; dims positive integers; voxel sizes positive | `must be 3 finite numbers` |
 | 5 | `frame` ∈ `ScalarFieldFrameKind`                                                  | `unknown frame`                |
 
-- [ ] Add `rejects a sidecar whose format is not polyphy-trace` — `{"format":"scfd-meta","version":1,…}`.
-- [ ] Add `rejects an unsupported schema version` — `version: 2`, asserting the message carries the regenerate hint (same shape as `scalarFieldFormat.ts:201-204`).
-- [ ] Add `rejects a non-3-element voxel_size_mpc` — `voxel_size_mpc: [1.8, 1.8]`.
-- [ ] Add `rejects a non-finite origin` — `origin_mpc: [0, null, 0]` (this is the case a plain `Array.isArray` + length check lets through).
-- [ ] Add `rejects an unknown frame` — `frame: "ecliptic"`.
-- [ ] Add `parses the calibration sidecar into camelCase fields` — the spec's example JSON verbatim; assert `voxelSizeMpc` comes back as the **three** values `[1.8367, 1.8351, 1.8394]` (uncollapsed), `frame === 'equatorial-cartesian'`, and `provenance.polyphy_commit === '704d755'` (pass-through, not reshaped).
-- [ ] `npm test -- polyphyTraceSidecar` → RED, then implement, then GREEN.
-- [ ] Commit.
+- [x] Add `rejects a sidecar whose format is not polyphy-trace` — `{"format":"scfd-meta","version":1,…}`.
+- [x] Add `rejects an unsupported schema version` — `version: 2`, asserting the message carries the regenerate hint (same shape as `scalarFieldFormat.ts:201-204`).
+- [x] Add `rejects a non-3-element voxel_size_mpc` — `voxel_size_mpc: [1.8, 1.8]`.
+- [x] Add `rejects a non-finite origin` — `origin_mpc: [0, null, 0]` (this is the case a plain `Array.isArray` + length check lets through).
+- [x] Add `rejects an unknown frame` — `frame: "ecliptic"`.
+- [x] Add `parses the calibration sidecar into camelCase fields` — the spec's example JSON verbatim; assert `voxelSizeMpc` comes back as the **three** values `[1.8367, 1.8351, 1.8394]` (uncollapsed), `frame === 'equatorial-cartesian'`, and `provenance.polyphy_commit === '704d755'` (pass-through, not reshaped).
+- [x] `npm test -- polyphyTraceSidecar` → RED, then implement, then GREEN.
+- [x] Commit.
 
 ---
 
@@ -125,11 +125,11 @@ export function blockAverageCube(args: {
 
 Geometry rule (spec, Decision 5): `dims / factor`, `voxelSizeMpc × factor`, **`origin` unchanged** — the lower corner of voxel (0,0,0) is the same point; only the cell size changes. Same invariant as `mcpmTierAnchors` (`buildMcpmVolume.ts:47-64`), where origin is tier-independent.
 
-- [ ] Add `averages each 2×2×2 block in C-order` — 4×4×4 input with `values[n] = n` (so `n = i*16 + j*4 + k`), factor 2. Hand-computed: the first output cell averages indices {0,1,4,5,16,17,20,21} → sum 84 → **10.5**; the last averages {42,43,46,47,58,59,62,63} → sum 420 → **52.5**. Assert both, and `dims === [2,2,2]`.
-- [ ] Add `halves the grid and doubles the voxel size, leaving the origin put` — `origin: [-100, -50, 25]`, `voxelSizeMpc: 1.5` → origin unchanged, `voxelSizeMpc === 3`.
-- [ ] Add `rejects dims that do not divide by the factor` — dims `[4,4,3]`, factor 2; assert the substring `not divisible by 2`.
-- [ ] `npm test -- blockAverageCube` → RED, then implement, then GREEN.
-- [ ] Commit.
+- [x] Add `averages each 2×2×2 block in C-order` — 4×4×4 input with `values[n] = n` (so `n = i*16 + j*4 + k`), factor 2. Hand-computed: the first output cell averages indices {0,1,4,5,16,17,20,21} → sum 84 → **10.5**; the last averages {42,43,46,47,58,59,62,63} → sum 420 → **52.5**. Assert both, and `dims === [2,2,2]`.
+- [x] Add `halves the grid and doubles the voxel size, leaving the origin put` — `origin: [-100, -50, 25]`, `voxelSizeMpc: 1.5` → origin unchanged, `voxelSizeMpc === 3`.
+- [x] Add `rejects dims that do not divide by the factor` — dims `[4,4,3]`, factor 2; assert the substring `not divisible by 2`.
+- [x] `npm test -- blockAverageCube` → RED, then implement, then GREEN.
+- [x] Commit.
 
 ---
 
@@ -159,13 +159,13 @@ The `.quicklook` suffix and the `MCPM_TIER_FILENAME[2]` import have exactly one 
 
 The assert lives in its own file rather than inline in `syncR2.ts` because `syncR2.ts` reads `.env.production` at module scope (`:40`), so importing it from a test drags in deploy configuration the test has no business needing. `syncR2.ts` still owns the call site.
 
-- [ ] Add `refuses to sync while the quick-look sentinel exists` — tmpdir containing `mcpm-large.scfd.quicklook`; assert the throw mentions `npm run build-mcpm`.
-- [ ] Add `permits a sync when no sentinel is present` — same tmpdir without the file; assert no throw.
-- [ ] `npm test -- assertNoQuickLookSentinel` → RED, then implement both new files, then GREEN.
-- [ ] Wire the call into `syncR2.ts`'s `main()` pre-flight block. Note `main()` catches and prints `err.message` (`:155-158`), so a plain `Error` reads correctly at the CLI — no `process.exit` inside the assert.
-- [ ] Delete the sentinel in `buildMcpmTier` when `factor === 2`, after `buildMcpmVolume` returns. Use `rmSync(path, { force: true })` — `force` is mandatory, the sentinel is absent on almost every run.
-- [ ] `npm run typecheck && npm test` → GREEN.
-- [ ] Commit.
+- [x] Add `refuses to sync while the quick-look sentinel exists` — tmpdir containing `mcpm-large.scfd.quicklook`; assert the throw mentions `npm run build-mcpm`.
+- [x] Add `permits a sync when no sentinel is present` — same tmpdir without the file; assert no throw.
+- [x] `npm test -- assertNoQuickLookSentinel` → RED, then implement both new files, then GREEN.
+- [x] Wire the call into `syncR2.ts`'s `main()` pre-flight block. Note `main()` catches and prints `err.message` (`:155-158`), so a plain `Error` reads correctly at the CLI — no `process.exit` inside the assert.
+- [x] Delete the sentinel in `buildMcpmTier` when `factor === 2`, after `buildMcpmVolume` returns. Use `rmSync(path, { force: true })` — `force` is mandatory, the sentinel is absent on almost every run.
+- [x] `npm run typecheck && npm test` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -210,13 +210,13 @@ The sidecar is discovered at the npy's basename with a `.json` extension. **No `
 | 8 | npy shape equals sidecar `dims`     | `does not match sidecar dims`   |
 | 9 | dtype `<f4` or `<f8` (reject `<f2`) | `export f32`                    |
 
-- [ ] Copy the `writeF32Npy` tmpdir helper pattern from `tests/tools/buildMcpmVolume.smoke.test.ts:18-32` into the new test file (a local fixture writer per test file is the established shape here — do not extract a shared one).
-- [ ] Add `writes a decodable SCFD carrying the sidecar's frame, origin and mean voxel size` — 4×4×4 f32 cube, sidecar `frame: 'supergalactic-cartesian'`, `origin_mpc: [-100,-50,25]`, `voxel_size_mpc: [1.8367, 1.8351, 1.8394]`. Decode with `decodeScalarField` and assert `frameKind`, origin to 3 dp, `voxelSize ≈ 1.83707` (the hand-computed mean of the three: `5.5112 / 3`), identity `rotation`, and raw `valueMin`/`valueMax` matching the input's range (not the normalised [0,1] range).
-- [ ] Add `refuses to build without a sidecar` — npy alone in the tmpdir.
-- [ ] Add `refuses a stale sidecar whose dims disagree with the npy` — 4×4×4 npy, sidecar `dims: [4,4,8]`.
-- [ ] Add `refuses an f16 npy` — write an `<f2` fixture; assert the message tells the operator to export f32.
-- [ ] `npm test -- buildRhizomeVolume` → RED, then implement, then GREEN.
-- [ ] Commit.
+- [x] Copy the `writeF32Npy` tmpdir helper pattern from `tests/tools/buildMcpmVolume.smoke.test.ts:18-32` into the new test file (a local fixture writer per test file is the established shape here — do not extract a shared one).
+- [x] Add `writes a decodable SCFD carrying the sidecar's frame, origin and mean voxel size` — 4×4×4 f32 cube, sidecar `frame: 'supergalactic-cartesian'`, `origin_mpc: [-100,-50,25]`, `voxel_size_mpc: [1.8367, 1.8351, 1.8394]`. Decode with `decodeScalarField` and assert `frameKind`, origin to 3 dp, `voxelSize ≈ 1.83707` (the hand-computed mean of the three: `5.5112 / 3`), identity `rotation`, and raw `valueMin`/`valueMax` matching the input's range (not the normalised [0,1] range).
+- [x] Add `refuses to build without a sidecar` — npy alone in the tmpdir.
+- [x] Add `refuses a stale sidecar whose dims disagree with the npy` — 4×4×4 npy, sidecar `dims: [4,4,8]`.
+- [x] Add `refuses an f16 npy` — write an `<f2` fixture; assert the message tells the operator to export f32.
+- [x] `npm test -- buildRhizomeVolume` → RED, then implement, then GREEN.
+- [x] Commit.
 
 ---
 
@@ -229,10 +229,10 @@ Rule 6. SCFD stores **one** cubic `voxel_size` (`scalarFieldFormat.ts:40` header
 - Modify: `tools/volumes/buildRhizomeVolume.ts`
 - Test: `tests/tools/buildRhizomeVolume.smoke.test.ts` (extend)
 
-- [ ] Add `refuses a cube whose per-axis voxel sizes disagree beyond 0.5%` — `voxel_size_mpc: [1.0, 1.0, 1.02]` (spread ≈ 1.99%); assert the substring `exceeds 0.5%` and that the message names all three sizes.
-- [ ] Confirm the Task 5 happy-path case still passes: `[1.8367, 1.8351, 1.8394]` has spread ≈ 0.23%, roughly 2× headroom under the tolerance.
-- [ ] `npm test -- buildRhizomeVolume` → RED on the new case, then implement, then GREEN.
-- [ ] Commit.
+- [x] Add `refuses a cube whose per-axis voxel sizes disagree beyond 0.5%` — `voxel_size_mpc: [1.0, 1.0, 1.02]` (spread ≈ 1.99%); assert the substring `exceeds 0.5%` and that the message names all three sizes.
+- [x] Confirm the Task 5 happy-path case still passes: `[1.8367, 1.8351, 1.8394]` has spread ≈ 0.23%, roughly 2× headroom under the tolerance.
+- [x] `npm test -- buildRhizomeVolume` → RED on the new case, then implement, then GREEN.
+- [x] Commit.
 
 **Do not "fix" a future spread failure by raising the tolerance.** The spec flags this explicitly: if a real PolyPhy run trips it, the fix is exporter-side (pad dims to equalise). A looser bar renders the cube subtly squashed instead of failing loudly.
 
@@ -246,11 +246,11 @@ The pin the MCPM builder has never had. `buildMcpmVolume.ts:144-150` states outr
 
 - Test: `tests/tools/buildRhizomeVolume.smoke.test.ts` (extend). Implementation changes expected only if the squeeze path is incomplete.
 
-- [ ] Add `places a hot voxel at the x-fastest index after the C-order transpose` — dims **2×3×4**, all zeros except value `1.0` at C-order index **9**, i.e. `(i,j,k) = (0,2,1)`. Since `valueMax = 1`, that voxel normalises to `log(2)/log(2) = 1` and every other voxel to 0. Decode and assert `voxels[10]` is the f16 bit pattern for 1.0 (`0x3C00`) and every other entry is `0`. Hand-derived: the x-fastest index is `i + j·Nx + k·Nx·Ny = 0 + 2·2 + 1·2·3 = 10`; a straight no-transpose copy would leave it at index 9, so this assertion is genuinely distinguishing.
-- [ ] Add `accepts a raw PolyPhy 4D cube with a trailing singleton` — npy shape `(2,3,4,1)`, sidecar `dims: [2,3,4]` (post-squeeze, per the schema); assert it builds and decodes to `dims === [2,3,4]`.
-- [ ] Add `refuses a 4D cube whose last axis is not a singleton` — shape `(2,3,4,2)`; assert the rank error.
-- [ ] `npm test -- buildRhizomeVolume` → GREEN (the transpose case is a characterization pin and may pass on the first run; the squeeze cases should drive real code if Task 5 left the path partial).
-- [ ] Commit.
+- [x] Add `places a hot voxel at the x-fastest index after the C-order transpose` — dims **2×3×4**, all zeros except value `1.0` at C-order index **9**, i.e. `(i,j,k) = (0,2,1)`. Since `valueMax = 1`, that voxel normalises to `log(2)/log(2) = 1` and every other voxel to 0. Decode and assert `voxels[10]` is the f16 bit pattern for 1.0 (`0x3C00`) and every other entry is `0`. Hand-derived: the x-fastest index is `i + j·Nx + k·Nx·Ny = 0 + 2·2 + 1·2·3 = 10`; a straight no-transpose copy would leave it at index 9, so this assertion is genuinely distinguishing.
+- [x] Add `accepts a raw PolyPhy 4D cube with a trailing singleton` — npy shape `(2,3,4,1)`, sidecar `dims: [2,3,4]` (post-squeeze, per the schema); assert it builds and decodes to `dims === [2,3,4]`.
+- [x] Add `refuses a 4D cube whose last axis is not a singleton` — shape `(2,3,4,2)`; assert the rank error.
+- [x] `npm test -- buildRhizomeVolume` → GREEN (the transpose case is a characterization pin and may pass on the first run; the squeeze cases should drive real code if Task 5 left the path partial).
+- [x] Commit.
 
 ---
 
@@ -268,13 +268,13 @@ npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look
 npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner|middle|outer
 ```
 
-- [ ] Parse the positional npy path plus **exactly one** of the three modes; anything else is a usage error printed to stderr with `process.exit(1)`.
-- [ ] `--quick-look`: compose the output path as `public/data/${MCPM_TIER_FILENAME[2]}` with `MCPM_TIER_FILENAME` **imported** from `buildMcpmVolume.ts` — never a restated `'mcpm-large.scfd'` literal. Create the sentinel at `quickLookSentinelPath('public/data')` (Task 4) **before** invoking the build: a mid-write failure must leave the sentinel present (worst case: sync blocked after a failed run — annoying), never a truncated reference with no sentinel (sync ships a broken file). [Amended at execution: the original "after the write" ordering inverted the guard's safety direction; review finding, ruled at Task 8's fix round.]
-- [ ] `--quick-look`: print the two operational notes the spec requires — the cube is only visible with the MCPM tier set to **large** (the viewer fetches per-tier, `src/data/sources/mcpm.ts:16`), and `npm run build-mcpm` restores the shipped reference and clears the sentinel.
-- [ ] `--shell <name>`: validate the name against `inner|middle|outer`, then throw a not-yet-implemented error naming the rhizome-shells plan as the owner. The flag exists so the argument surface is stable; wiring it to `blockAverageCube` is out of scope here.
-- [ ] Guard `main()` with the `invokedDirectly` check (`buildMcpmVolume.ts:219-231`) so importing the module from a test never runs the CLI.
-- [ ] `npm run typecheck && npm test` → GREEN. No test for the CLI arg parsing — it is a thin dispatch over already-tested functions, and the spec's test list does not include it.
-- [ ] Commit.
+- [x] Parse the positional npy path plus **exactly one** of the three modes; anything else is a usage error printed to stderr with `process.exit(1)`.
+- [x] `--quick-look`: compose the output path as `public/data/${MCPM_TIER_FILENAME[2]}` with `MCPM_TIER_FILENAME` **imported** from `buildMcpmVolume.ts` — never a restated `'mcpm-large.scfd'` literal. Create the sentinel at `quickLookSentinelPath('public/data')` (Task 4) **before** invoking the build: a mid-write failure must leave the sentinel present (worst case: sync blocked after a failed run — annoying), never a truncated reference with no sentinel (sync ships a broken file). [Amended at execution: the original "after the write" ordering inverted the guard's safety direction; review finding, ruled at Task 8's fix round.]
+- [x] `--quick-look`: print the two operational notes the spec requires — the cube is only visible with the MCPM tier set to **large** (the viewer fetches per-tier, `src/data/sources/mcpm.ts:16`), and `npm run build-mcpm` restores the shipped reference and clears the sentinel.
+- [x] `--shell <name>`: validate the name against `inner|middle|outer`, then throw a not-yet-implemented error naming the rhizome-shells plan as the owner. The flag exists so the argument surface is stable; wiring it to `blockAverageCube` is out of scope here.
+- [x] Guard `main()` with the `invokedDirectly` check (`buildMcpmVolume.ts:219-231`) so importing the module from a test never runs the CLI.
+- [x] `npm run typecheck && npm test` → GREEN. No test for the CLI arg parsing — it is a thin dispatch over already-tested functions, and the spec's test list does not include it.
+- [x] Commit.
 
 ---
 
@@ -312,10 +312,15 @@ Edges are `blocker → blocked`. Task 1 is the prep refactor and gates everythin
 Flagged rather than silently resolved. Each needs a call before or during the task that hits it.
 
 1. **Rule 10's error prefix.** The spec's rules table writes rule 10 as `buildRhizomeVolume: dims <s> not divisible by <f> …`, but the spec's testing section exercises it "via its exported function", and the check naturally lives in `blockAverageCube`. This plan puts the throw in `blockAverageCube` with its own name as the prefix (house style: the throwing function names itself) and pins only the substring `not divisible by 2`. If the `buildRhizomeVolume:` prefix is load-bearing for cross-repo debugging, move the check up into the builder instead.
+   **Resolved:** prefix is `blockAverageCube`, the thrower names itself; spec amended.
 2. **Where the R2 refusal lives.** The spec says "refusal check in `syncR2.ts`". `syncR2.ts` reads `.env.production` at module scope (`:40`), so a test importing it would need deploy configuration present. This plan splits it: the *check* is `tools/deploy/r2/assertNoQuickLookSentinel.ts` (testable against a tmpdir), the *call site* is `syncR2.ts`. Functionally identical; structurally different from the spec's literal wording.
+   **Resolved:** split check/call-site implemented as planned.
 3. **The prep refactor's claimed pin is weaker than the spec states.** The spec says `packLogTraceVoxels` is "pinned by the existing `tests/tools/buildMcpmVolume.smoke.test.ts` (no new tests for the refactor)". Read the test: its cube is symmetric 4×4×4 and its assertions cover dims, header fields and voxel count — it cannot detect an axis swap, and its `valueMin`/`valueMax` assertions read the **raw** stats, so a changed normalisation curve also slips through. (Its comment at `:83-85` still describes CF-4's symmetric normalisation and is simply stale.) Task 1 therefore ships genuinely under-pinned; Task 7 is what actually pins the shared helper. If that ordering is unacceptable, Task 7's transpose fixture should move ahead of Task 1 as an mcpm-side test — at the cost of writing it twice.
+   **Resolved:** shipped under-pinned as planned; Task 7's fixture is the pin.
 4. **The DoD manual pass depends on the PolyPhy fork.** Everything in this plan is verifiable from synthetic fixtures, but the quick-look observable behaviour needs a real `sdss_reproduced.npy` **with a v1 sidecar**, and the fork's sidecar does not yet carry the geometry keys (spec, "Exporter-side changes required"). If the fork has not shipped them when this plan completes, the quick-look DoD line is blocked on the other repo — either hold `/feature-done` or hand-write a sidecar for the existing cube to unblock the visual check.
+   **Resolved:** four of five manual lines are runnable with a hand-written sidecar; only the renders-in-place line is cross-repo blocked.
 5. **`blockAverageCube` ships dead.** Task 3 is an explicitly-in-scope deliverable whose only future caller is `--shell`, which this plan leaves inert. That is the spec's decision (Decision 5 plus the `--shell` deferral), not an oversight — but it does mean one new tested helper with zero production call sites lands on `main`.
+   **Resolved:** shipped unwired, conscious yes.
 
 ---
 
@@ -323,19 +328,19 @@ Flagged rather than silently resolved. Each needs a call before or during the ta
 
 **Deliverable inventory**
 
-- [ ] `tools/utils/volume/packLogTraceVoxels.ts` exports `packLogTraceVoxels`; `buildMcpmVolume.ts` no longer contains its own copy of the stats/log1p/transpose/pack block.
-- [ ] `tools/parsers/polyphyTraceSidecar.ts` exports `PolyphyTraceSidecar` + `parsePolyphyTraceSidecar`.
-- [ ] `tools/utils/volume/blockAverageCube.ts` exports `blockAverageCube`.
-- [ ] `tools/utils/volume/quickLookSentinelPath.ts` and `tools/deploy/r2/assertNoQuickLookSentinel.ts` exist, and `syncR2.ts` calls the assert before any byte moves.
-- [ ] `tools/volumes/buildRhizomeVolume.ts` exports `buildRhizomeVolume` and accepts all three CLI modes.
+- [x] `tools/utils/volume/packLogTraceVoxels.ts` exports `packLogTraceVoxels`; `buildMcpmVolume.ts` no longer contains its own copy of the stats/log1p/transpose/pack block.
+- [x] `tools/parsers/polyphyTraceSidecar.ts` exports `PolyphyTraceSidecar` + `parsePolyphyTraceSidecar`.
+- [x] `tools/utils/volume/blockAverageCube.ts` exports `blockAverageCube`.
+- [x] `tools/utils/volume/quickLookSentinelPath.ts` and `tools/deploy/r2/assertNoQuickLookSentinel.ts` exist, and `syncR2.ts` calls the assert before any byte moves.
+- [x] `tools/volumes/buildRhizomeVolume.ts` exports `buildRhizomeVolume` and accepts all three CLI modes.
 
 **Named observable behaviours** (manual pass, against a real PolyPhy cube + v1 sidecar — see Open question 4)
 
-- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look` writes `public/data/mcpm-large.scfd` and `public/data/mcpm-large.scfd.quicklook`, and prints both operational notes (tier must be **large**; `npm run build-mcpm` to restore).
-- [ ] With the dev server running and the MCPM tier set to **large**, the reproduced cube renders in place of the reference — inferno palette, filament structure visible at the default contrast 1.7, positioned in the frame its sidecar declares.
-- [ ] `npm run sync-r2` **refuses** while the sentinel is present, naming `npm run build-mcpm` in the refusal.
-- [ ] `npm run build-mcpm` restores the reference, removes the sentinel, and `npm run sync-r2` then proceeds normally.
-- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner` exits with the not-yet-implemented error, not a stack trace or a silent no-op.
+- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look` writes `public/data/mcpm-large.scfd` and `public/data/mcpm-large.scfd.quicklook`, and prints both operational notes (tier must be **large**; `npm run build-mcpm` to restore). (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
+- [ ] With the dev server running and the MCPM tier set to **large**, the reproduced cube renders in place of the reference — inferno palette, filament structure visible at the default contrast 1.7, positioned in the frame its sidecar declares. (needs a real PolyPhy calibration cube — cross-repo)
+- [ ] `npm run sync-r2` **refuses** while the sentinel is present, naming `npm run build-mcpm` in the refusal. (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
+- [ ] `npm run build-mcpm` restores the reference, removes the sentinel, and `npm run sync-r2` then proceeds normally. (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
+- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner` exits with the not-yet-implemented error, not a stack trace or a silent no-op. (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
 
 **Deferral boundary** — explicitly NOT in this plan, do not chase in review
 

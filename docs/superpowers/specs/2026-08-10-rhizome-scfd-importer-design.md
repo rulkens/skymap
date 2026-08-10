@@ -239,8 +239,10 @@ npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner|middle|oute
   **`public/data/mcpm-large.scfd`** (gitignored, served by the running Vite dev
   server). The output path is composed from `MCPM_TIER_FILENAME[2]` imported
   from `buildMcpmVolume.ts` — not a restated literal — so the filename keeps
-  one home and quick-look can never silently write a file the viewer doesn't
-  fetch. This is the calibration loop's viewer mode; details below.
+  one home **in `tools/`** (the runtime fetcher composes its own tier
+  filenames independently — `src/services/loading/fetchers/mcpmFetcher.ts:24-26`
+  — so a divergence there fails loud as a 404, not silently). This is the
+  calibration loop's viewer mode; details below.
 - **`--shell <name>`** — tiered production mode for the rhizome shells; emits
   `public/data/rhizome-<shell>-{small,medium,large}.scfd` per Decision 5. The
   flag is _specified_ here so the tool's argument surface is stable, but its
@@ -414,8 +416,7 @@ it ever fail on a real bug nothing else catches?":
 Deliberately **not** tested (per `docs/superpowers/conventions/testing.md`): the
 tier-filename mapping table (a constant restatement; quick-look's output path
 is the imported `MCPM_TIER_FILENAME[2]`, so there is no second copy to pin),
-sidecar JSON round-trips of `provenance` (pass-through), and any
-re-assertion of `encodeScalarField` behaviour already covered by
+and any re-assertion of `encodeScalarField` behaviour already covered by
 `tests/data/volume/scalarFieldFormat.test.ts`.
 
 ## Exporter-side changes required (PolyPhy fork — for its implementer)

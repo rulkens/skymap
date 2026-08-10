@@ -1,7 +1,7 @@
 /**
  * blockAverageCube — linear-space N×N×N block-average downsample for
  * rhizome shell tiers (spec, Decision 5). Unwired by design: `--shell`
- * stays inert this plan (Task 8).
+ * stays unwired pending the rhizome-shells plan.
  *
  * Averages on LINEAR values before any log normalisation — matches the
  * Python VAC pipeline's downscale_local_mean ordering
