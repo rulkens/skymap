@@ -4,8 +4,8 @@
  * consumed by the scalar-volume renderer.
  *
  * Pure Node/TS — no Python required. Mirrors the conventions of
- * `tools/buildCf4Density.ts`; the f16 packing helper is shared via
- * `tools/utils/math/f32ToF16Bits.ts`.
+ * `tools/buildCf4Density.ts`; the log-normalise + f16-pack step is
+ * shared via `tools/utils/volume/packLogTraceVoxels.ts`.
  *
  * Output is gitignored and synced to R2 by `npm run sync-r2`.
  *
@@ -18,10 +18,11 @@
  * for the anti-drift pin on those constants.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
-import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
+import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { quickLookSentinelPath } from '../utils/volume/quickLookSentinelPath';
 import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -101,67 +102,12 @@ export async function buildMcpmVolume(args: {
   const values: Float64Array | Float32Array = npy.values;
   const dims: [number, number, number] = [npy.shape[0]!, npy.shape[1]!, npy.shape[2]!];
 
-  // ── 2. Compute stats ─────────────────────────────────────────────
-  let valueMin = +Infinity;
-  let valueMax = -Infinity;
-  for (let i = 0; i < values.length; i++) {
-    const v = values[i]!;
-    if (v < valueMin) valueMin = v;
-    if (v > valueMax) valueMax = v;
-  }
+  // ── 2. Stats + log-normalise + f16-pack (shared with the rhizome
+  // importer — see packLogTraceVoxels for the normalisation derivation
+  // and the C-order→x-fastest transpose it performs) ─────────────────
+  const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, dims);
 
-  // ── 3. Log normalisation log(1+v) / log(1+max) → [0, 1] and pack as f16 ──
-  // MCPM trace density is non-negative AND heavy-tailed: the SDSS cube
-  // has min=0, max≈40000, mean≈16, p99≈320 — values span four decades
-  // and 99% of voxels sit in the bottom 0.8% of the linear range.
-  //
-  // The CF-4 builder uses symmetric normalisation [−half, +half] → [0, 1]
-  // because CF-4 carries signed density contrast (overdensity δ) where
-  // 0 means "cosmic mean" and the divergent palette wants that as the
-  // transparent midpoint.  Re-using that here would map nearly every
-  // MCPM voxel to LUT t≈0.5 (a single warm-red colour) and the
-  // contrast slider would become a knife-edge — the user's first
-  // visual check confirmed exactly this: contrast 1.00 → solid red,
-  // 1.05 → filaments visible, 1.10 → overlay disappears.
-  //
-  // Log mapping (Polyphorm / MCPM convention) compresses the heavy tail
-  // so that representative voxels span the full LUT range:
-  //   v=0     → log(1)/log(1+max) = 0       (transparent void)
-  //   v=16    → log(17)/log(40430) ≈ 0.27   (dim warm)
-  //   v=320   → log(321)/log(40430) ≈ 0.54  (mid orange)
-  //   v=40k+  → log(40430)/log(40430) = 1   (bright cream peak)
-  // Now contrast=1.0 already shows structure; the slider tunes
-  // emphasis instead of being a load-bearing visibility gate.
-  //
-  // We clamp v to ≥0 before log to guard against any negative noise
-  // floor a future MCPM release might ship; today every value is
-  // non-negative by construction.
-  const safeMax = Math.max(0, valueMax);
-  const logMax = Math.log(1 + safeMax);
-  const invLogMax = logMax > 0 ? 1 / logMax : 0;
-  const voxels = new Uint16Array(values.length);
-
-  // ── Axis transpose: numpy C-order → WebGPU x-fastest ─────────────
-  // Same transpose buildCf4Density.ts performs (lines 178-215). The .npy
-  // from extractMcpmCube.py is C-order with axis 0 = X (slowest), axis 2
-  // = Z (fastest). WebGPU's writeTexture interprets the buffer as
-  // x-fastest. A straight copy would visually swap X and Z; the
-  // tier-anchors test (Task 3) doesn't catch this — only a visual smoke
-  // test or a per-axis fixture would. Keep the transpose in place.
-  for (let i = 0; i < dims[0]; i++) {
-    for (let j = 0; j < dims[1]; j++) {
-      for (let k = 0; k < dims[2]; k++) {
-        const inputIdx = i * dims[1] * dims[2] + j * dims[2] + k;
-        const outputIdx = k * dims[1] * dims[0] + j * dims[0] + i;
-        const v = Math.max(0, values[inputIdx]!);
-        const normalised = Math.log(1 + v) * invLogMax;
-        const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
-        voxels[outputIdx] = f32ToF16Bits(clamped);
-      }
-    }
-  }
-
-  // ── 4. Build the data-only cube ────────────────────────────────────
+  // ── 3. Build the data-only cube ────────────────────────────────────
   const cube: ScalarCube = {
     dims,
     channels: 1,
@@ -199,6 +145,11 @@ export async function buildMcpmTier(factor: 8 | 4 | 2): Promise<void> {
     origin: a.origin,
     voxelSizeMpc: a.voxelSize,
   });
+  // A real large-tier rebuild retires any quick-look calibration cube left
+  // at this same path — force: true because the sentinel is absent on
+  // almost every run (written by buildRhizomeVolume when its output
+  // targets this file).
+  if (factor === 2) rmSync(quickLookSentinelPath('public/data'), { force: true });
 }
 
 // ── CLI wrapper ────────────────────────────────────────────────────
