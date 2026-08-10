@@ -22,7 +22,17 @@ export type GalaxyIsmMapFluidParams = {
   readonly impulseStrength: number;
   /** Steps an event stays active after birth — sets both the wall's growth window and how many events overlap at once. */
   readonly impulseDuration: number;
-  /** Base kernel radius in ring-texel-equivalent units; grows with an event's own age (age^0.6, snowplough-ish) up to this scale. */
+  /**
+   * Base kernel radius in ring-texel-equivalent units; grows with an event's
+   * own age (age^0.6, snowplough-ish) up to this scale. The grid is
+   * log-radial (`ismMapRingRadius`), so a fixed texel radius is a physical
+   * size that grows `∝ r` — outer-disc events blow physically larger bubbles
+   * than inner-disc ones. That happens to match real discs (superbubbles
+   * scale with the falling ambient pressure), but it's a coincidence of the
+   * grid parameterisation, not a modeled choice, and the tuned look leans on
+   * it — converting to physical units without recalibrating would visibly
+   * shrink every outer-disc wall.
+   */
   readonly radiusScale: number;
   /** Curl-noise (divergence-free) velocity amplitude, in texels/step — the turbulent stirring term. */
   readonly curlStrength: number;
