@@ -9,7 +9,9 @@
  *     --glade   path/to/glade2.3.dat \
  *     --out-dir public/data
  *
- * Output files: sdss.bin, 2mrs.bin, glade.bin (one per source).
+ * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
+ * written under `public/data/galaxy-catalog/v9/` — the epoch-prefixed
+ * path `tierFilenameForSource` returns (see galaxyCatalogFormat.ts).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
@@ -37,12 +39,13 @@
 import {
   createReadStream,
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
@@ -883,6 +886,10 @@ async function runCli(): Promise<void> {
       const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
+      // `filename` carries the family's epoch prefix (`galaxy-catalog/v9/…`,
+      // see `tierFilenameForSource`), so the subfolder doesn't exist on a
+      // fresh checkout — recursive mkdir is a no-op once it does.
+      mkdirSync(dirname(outPath), { recursive: true });
       writeFileSync(outPath, Buffer.from(buf));
       process.stderr.write(
         `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,

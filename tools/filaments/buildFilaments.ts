@@ -4,11 +4,12 @@
  *
  * Pipeline:
  *
- *   1. Read the user-selected subset of public/data/{sdss,2mrs,glade}.bin
- *      → merged xyz positions, filtered to D < MAX_DISTANCE_MPC.  By
- *      default we read 2MRS + GLADE only and exclude SDSS — its wedge
- *      footprint dominates the density field at the survey edges and
- *      DisPerSE locks onto those boundaries instead of the cosmic web.
+ *   1. Read the user-selected subset of
+ *      public/data/galaxy-catalog/v9/{sdss,2mrs,glade}.bin → merged xyz
+ *      positions, filtered to D < MAX_DISTANCE_MPC.  By default we read
+ *      2MRS + GLADE only and exclude SDSS — its wedge footprint
+ *      dominates the density field at the survey edges and DisPerSE
+ *      locks onto those boundaries instead of the cosmic web.
  *      The `--sources` flag overrides this default for diagnostic
  *      builds: e.g. `--sources sdss` produces an SDSS-only skeleton
  *      whose ridges should trace the wedge boundary, empirically
@@ -25,7 +26,7 @@
  *      simplicial complex + DTFE density field that delaunay_3D produces.
  *   4. Parse the resulting .NDskl, convert to FilamentCloud, encode FILA v1
  *   5. Write the configured `--output` path (default
- *      public/data/filaments.bin).
+ *      public/data/filament/v1/filaments.bin).
  *
  * CLI flags:
  *   --cut N        persistence cut in σ (default 5)
@@ -35,17 +36,20 @@
  *                  above; the default produces the canonical merged
  *                  cosmic-web skeleton).
  *   --output path  destination `.bin` path (default
- *                  public/data/filaments.bin).  Use a non-default path
- *                  for diagnostic builds so the canonical filaments.bin
- *                  isn't clobbered, e.g.:
- *                    --sources sdss --output public/data/filaments-sdss.bin
+ *                  public/data/filament/v1/filaments.bin).  Use a
+ *                  non-default path for diagnostic builds so the
+ *                  canonical filaments.bin isn't clobbered, e.g.:
+ *                    --sources sdss --output public/data/filament/v1/filaments-sdss.bin
  *
- * Run order: must be after `npm run build-all` so the survey .bin files
- * exist on disk in `public/data/`.  The orchestrator reads those instead
- * of re-parsing the raw catalogues, because by the time DisPerSE runs we
- * already have the cross-matched, deduped positions on disk and reusing
- * them keeps this script from depending on the (slow, GLADE-streaming)
- * raw-catalogue path.
+ * Run order: must be after `npm run build-tiers` so the survey .bin
+ * files exist on disk under `public/data/galaxy-catalog/v9/`.  The
+ * orchestrator reads those instead of re-parsing the raw catalogues,
+ * because by the time DisPerSE runs we already have the cross-matched,
+ * deduped positions on disk and reusing them keeps this script from
+ * depending on the (slow, GLADE-streaming) raw-catalogue path. A stale
+ * `.bin` from before a format bump fails loudly (`FormatVersionError`,
+ * caught in `readMergedPositions` and rethrown naming the ordering fix)
+ * rather than silently misreading bytes.
  *
  * External requirements:
  *   - DisPerSE installed (`delaunay_3D`, `mse`, and `skelconv` on PATH).
@@ -71,9 +75,16 @@ import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import {
+  decodeGalaxyCatalog,
+  GALAXY_CATALOG_DATA_PREFIX,
+} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
-import { encodeFilaments } from '../../src/data/filament/filamentBinaryFormat';
+import {
+  encodeFilaments,
+  FILAMENT_DATA_PREFIX,
+} from '../../src/data/filament/filamentBinaryFormat';
+import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../src/data/sources';
 import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
@@ -128,8 +139,8 @@ export type ParsedBuildFilamentsArgs = {
   sources: SourceKey[];
   /**
    * Output `.bin` path (relative to repo root or absolute).  Defaults to
-   * `public/data/filaments.bin` so the canonical merged build is a
-   * zero-flag invocation.
+   * `public/data/filament/v1/filaments.bin` so the canonical merged
+   * build is a zero-flag invocation.
    */
   outputPath: string;
   /**
@@ -156,7 +167,7 @@ export type ParsedBuildFilamentsArgs = {
  *   --sources csv comma-separated subset of {sdss, 2mrs, glade}
  *                 (default: 2mrs,glade — preserves the canonical
  *                 SDSS-excluding merged build, see module header)
- *   --output path output `.bin` path (default public/data/filaments.bin)
+ *   --output path output `.bin` path (default public/data/filament/v1/filaments.bin)
  *
  * Why does this take `argv` as a parameter (instead of reading
  * `process.argv` directly)?  Tests construct argv arrays inline and call
@@ -178,7 +189,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedBuildFi
   // the canonical merged default) from "user passed --sources <something>"
   // (validate strictly, no implicit fallback).
   let rawSources: string | undefined;
-  let outputPath = 'public/data/filaments.bin';
+  let outputPath = `public/data/${FILAMENT_DATA_PREFIX}/filaments.bin`;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--cut') cut = Number(argv[++i] ?? cut);
@@ -522,7 +533,11 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   type LoadedCloud = { cloud: GalaxyCatalog; source: SourceType; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
   for (const { name, source } of sourceFiles) {
-    const path = resolve('public/data', name);
+    // `name` is the bare, un-tiered filename (`sdss.bin`/`glade.bin` are
+    // pre-tier legacy artefacts `buildAllBins` no longer writes; only
+    // `2mrs.bin` — tier-agnostic — actually exists here). Pre-existing,
+    // out of scope: only the directory gets the epoch prefix.
+    const path = resolve('public/data', GALAXY_CATALOG_DATA_PREFIX, name);
     if (!existsSync(path)) {
       process.stderr.write(`warning: ${path} not found — skipping\n`);
       continue;
@@ -532,7 +547,18 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
     // file length, sidestepping the pooled-Buffer offset gotcha noted
     // above.
     const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    const cloud = decodeGalaxyCatalog(ab);
+    let cloud: GalaxyCatalog;
+    try {
+      cloud = decodeGalaxyCatalog(ab);
+    } catch (err) {
+      if (err instanceof FormatVersionError) {
+        throw new Error(
+          `${path} is format v${err.found}, this build reads v${err.expected} — ` +
+            `run "npm run build-tiers" before "npm run build-filaments"`,
+        );
+      }
+      throw err;
+    }
 
     // Compute the HEALPix angular re-weight on the FULL cloud BEFORE
     // distance-filtering.  Two reasons this has to happen here, not later:
@@ -1107,6 +1133,9 @@ async function main(): Promise<void> {
 
   const outPath = resolve(outputPath);
   const buf = encodeFilaments(cloud);
+  // The `filament/v1/` epoch folder doesn't exist on a fresh checkout —
+  // recursive mkdir is a no-op once it does.
+  mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, Buffer.from(buf));
   process.stderr.write(`wrote ${outputPath} (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`);
 }

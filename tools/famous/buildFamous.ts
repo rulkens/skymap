@@ -6,8 +6,9 @@
  *   - `data/seeds/famous_galaxies.seed.json`           (curated entries)
  *
  * Writes:
- *   - `public/data/famous.bin`         (GalaxyCatalog, normal renderer input)
- *   - `public/data/famous_galaxies_meta.json`   (per-localIdx → id + names + description)
+ *   - `public/data/galaxy-catalog/v9/famous.bin` (GalaxyCatalog, normal renderer input)
+ *   - `public/data/famous_galaxies_meta.json`   (per-localIdx → id + names + description;
+ *     stays at the data root — loose JSON sidecars are unversioned, see docs/DATA.md)
  *
  * Why two artefacts instead of one fat .bin?  The .bin has to stay in
  * the GalaxyCatalog format so the existing decoder + renderer code paths
@@ -19,12 +20,15 @@
  * outputs are needed by buildAllBins's famous-dedup pass), so always run
  * after `npm run build-tiers`. The npm script lives at `build-famous`.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed';
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import {
+  encodeGalaxyCatalog,
+  GALAXY_CATALOG_DATA_PREFIX,
+} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { Source } from '../../src/data/sources';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -232,10 +236,16 @@ async function main(): Promise<void> {
   );
 
   // ── Write the artefacts ──────────────────────────────────────────────
+  // famous.bin rides the GalaxyCatalog epoch folder (galaxy-catalog/v9/);
+  // the meta sidecar stays flat at the data root — see module docblock.
   const binBuf = encodeGalaxyCatalog(cloud);
-  writeFileSync(resolve(outDir, 'famous.bin'), Buffer.from(binBuf));
-  process.stderr.write(`wrote ${count} points to famous.bin (${binBuf.byteLength} bytes)\n`);
-  writeMetaSidecar(metaByIdx, resolve(outDir, 'famous_galaxies_meta.json'));
+  const binPath = resolve(outDir, GALAXY_CATALOG_DATA_PREFIX, 'famous.bin');
+  mkdirSync(dirname(binPath), { recursive: true });
+  writeFileSync(binPath, Buffer.from(binBuf));
+  process.stderr.write(`wrote ${count} points to ${binPath} (${binBuf.byteLength} bytes)\n`);
+  const metaPath = resolve(outDir, 'famous_galaxies_meta.json');
+  mkdirSync(dirname(metaPath), { recursive: true });
+  writeMetaSidecar(metaByIdx, metaPath);
   process.stderr.write(`wrote famous_galaxies_meta.json\n`);
 
   // Quick sanity reference: log the Source enum value baked into the

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseArgs } from '../../tools/filaments/buildFilaments';
+import { FILAMENT_DATA_PREFIX } from '../../src/data/filament/filamentBinaryFormat';
 
 /**
  * Tests for `parseArgs` in `tools/filaments/buildFilaments.ts`.
@@ -53,12 +54,12 @@ describe('parseArgs', () => {
 
   it('returns the merged-build defaults when --sources is omitted', () => {
     // The default-when-omitted contract preserves the original behavior:
-    // 2MRS + GLADE merged, written to public/data/filaments.bin, with
+    // 2MRS + GLADE merged, written under the filament epoch folder, with
     // a stable cache prefix derived from those two source names.  Any
     // change here flips every existing build script, so we pin it.
     const result = parseArgs([]);
     expect(result.sources).toEqual(['2mrs', 'glade']);
-    expect(result.outputPath).toBe('public/data/filaments.bin');
+    expect(result.outputPath).toBe(`public/data/${FILAMENT_DATA_PREFIX}/filaments.bin`);
     expect(result.cachePrefix).toBe('2mrs+glade');
   });
 
@@ -69,7 +70,7 @@ describe('parseArgs', () => {
     // outputPath default is unchanged — caller is expected to pass
     // --output explicitly for a diagnostic build to avoid clobbering the
     // canonical filaments.bin.
-    expect(result.outputPath).toBe('public/data/filaments.bin');
+    expect(result.outputPath).toBe(`public/data/${FILAMENT_DATA_PREFIX}/filaments.bin`);
   });
 
   it('sorts --sources alphabetically when deriving cache prefix', () => {
