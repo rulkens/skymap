@@ -336,11 +336,11 @@ Flagged rather than silently resolved. Each needs a call before or during the ta
 
 **Named observable behaviours** (manual pass, against a real PolyPhy cube + v1 sidecar — see Open question 4)
 
-- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look` writes `public/data/mcpm-large.scfd` and `public/data/mcpm-large.scfd.quicklook`, and prints both operational notes (tier must be **large**; `npm run build-mcpm` to restore). (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
-- [ ] With the dev server running and the MCPM tier set to **large**, the reproduced cube renders in place of the reference — inferno palette, filament structure visible at the default contrast 1.7, positioned in the frame its sidecar declares. (needs a real PolyPhy calibration cube — cross-repo)
-- [ ] `npm run sync-r2` **refuses** while the sentinel is present, naming `npm run build-mcpm` in the refusal. (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
-- [ ] `npm run build-mcpm` restores the reference, removes the sentinel, and `npm run sync-r2` then proceeds normally. (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
-- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner` exits with the not-yet-implemented error, not a stack trace or a silent no-op. (manual pass pending — runnable with a hand-written v1 sidecar over the existing d2 npy)
+- [ ] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look` writes `public/data/mcpm-large.scfd` and `public/data/mcpm-large.scfd.quicklook`, and prints both operational notes (tier must be **large**; `npm run build-mcpm` to restore). (deferred at landing, 2026-08-11: live cycle runs post-merge in a worktree; sentinel/notes behaviour unit-tested, and the `--out` build over the d2 npy + hand-written v1 sidecar reproduced the shipped reference **byte-identically**)
+- [ ] With the dev server running and the MCPM tier set to **large**, the reproduced cube renders in place of the reference — inferno palette, filament structure visible at the default contrast 1.7, positioned in the frame its sidecar declares. (cross-repo: needs the PolyPhy fork's real calibration cube, PR rulkens/PolyPhy#114)
+- [ ] `npm run sync-r2` **refuses** while the sentinel is present, naming `npm run build-mcpm` in the refusal. (deferred at landing, 2026-08-11 — see the quick-look line; refusal unit-tested against a tmpdir)
+- [ ] `npm run build-mcpm` restores the reference, removes the sentinel, and `npm run sync-r2` then proceeds normally. (deferred at landing, 2026-08-11 — see the quick-look line; sentinel deletion unit-covered via `buildMcpmTier`)
+- [x] `npx tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner` exits with the not-yet-implemented error, not a stack trace or a silent no-op. (verified 2026-08-11 against the d2 npy + hand-written v1 sidecar: clean one-line error naming the rhizome-shells plan, exit 1)
 
 **Deferral boundary** — explicitly NOT in this plan, do not chase in review
 
