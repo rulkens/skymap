@@ -36,6 +36,7 @@ import { deriveFamousCalibration } from './deriveFamousCalibration';
 import { willDeproject } from './deprojectDisk';
 import { squareDeprojectCrop } from './squareDeprojectCrop';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
+import { estimateLog10StellarMass } from '../catalog/estimateLog10StellarMass';
 
 /**
  * Convert a curated entry's (RA, Dec, distanceMpc) to Cartesian (x, y, z).
@@ -157,8 +158,7 @@ async function main(): Promise<void> {
     // Famous entries always carry a curated real diameter (e.diameterKpc), so
     // no row is a flat-default fallback; every flag stays 0.
     diameterIsFallback: new Uint8Array(count),
-    // Famous entries have no photometric mass estimate; NaN = no estimate.
-    log10StellarMass: new Float32Array(count).fill(NaN),
+    log10StellarMass: new Float32Array(count),
   };
 
   for (let i = 0; i < count; i++) {
@@ -209,6 +209,18 @@ async function main(): Promise<void> {
     if (e.magB != null) cloud.magG[i] = e.magB;
     if (e.magV != null) cloud.magR[i] = e.magV;
     if (e.magK != null) cloud.magI[i] = e.magK;
+    // Stellar mass estimate, fed the same B/G, V/R mapping above and the
+    // adopted distance from entryToXyz — after the photometry assignment
+    // so the estimator sees the filled mags, not the NaN pre-fill.
+    cloud.log10StellarMass[i] = estimateLog10StellarMass({
+      source: Source.FamousGalaxy,
+      magU: cloud.magU[i]!,
+      magG: cloud.magG[i]!,
+      magR: cloud.magR[i]!,
+      magI: cloud.magI[i]!,
+      magZ: cloud.magZ[i]!,
+      distMpc: Math.hypot(xyz[0], xyz[1], xyz[2]),
+    });
   }
 
   // Build the meta sidecar after the cloud loop so cloud.axisRatio is fully
