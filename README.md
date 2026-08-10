@@ -669,23 +669,28 @@ The scheduler abstraction lives in
 `src/services/engine/renderScheduler.ts` and is unit-tested
 independently of WebGPU.
 
-## Browser binary format (SKMP v4)
+## Browser binary format (SKMP v9)
 
-Little-endian, 16-byte header (`magic = "SKMP"`, `version = 4`, `count`, `reserved`) followed by `count × 64` bytes per point:
+Little-endian, 16-byte header (`magic = "SKMP"`, `version = 9`, `count`, `reserved`) followed by `count × 64` bytes per point:
 
-```
-offset  size  field
-──────  ────  ─────
-0       8     objID            (uint64)
-8       12    xyz              (3 × float32, Mpc)
-20      20    magU/G/R/I/Z     (5 × float32)
-40      4     axisRatio        (float32, b/a in [0,1] or NaN)
-44      4     positionAngleDeg (float32, PA in [0,180) or NaN)
-48      4     diameterKpc      (float32, physical diameter or NaN)
-52      12    padding          (zeroed; keeps records 16-byte aligned)
-```
+| offset | size | type      | field                                                                                     |
+| ------ | ---- | --------- | ----------------------------------------------------------------------------------------- |
+| 0      | 8    | uint64    | `objID`                                                                                   |
+| 8      | 12   | 3×float32 | `x`,`y`,`z` (Mpc)                                                                         |
+| 20     | 20   | 5×float32 | `magU`…`magZ`                                                                             |
+| 40     | 4    | float32   | `axisRatio` (b/a in [0,1] or NaN)                                                         |
+| 44     | 4    | float32   | `positionAngleDeg` (PA in [0,180) or NaN)                                                 |
+| 48     | 4    | float32   | `diameterKpc` (physical diameter or NaN)                                                  |
+| 52     | 1    | uint8     | `classByte` (source-interpreted classification)                                           |
+| 53     | 1    | uint8     | `parentSurveyByte` (Milliquas parent-survey enum, 0 elsewhere)                            |
+| 54     | 1    | uint8     | `flagsByte`: bit 0 orientation-fallback, bit 1 diameter-fallback, bit 2 mass-is-estimated |
+| 55     | 1    | —         | reserved, zeroed                                                                          |
+| 56     | 4    | float32   | `spectroscopicZ`                                                                          |
+| 60     | 4    | float32   | `log10StellarMass` (log₁₀ M★/M☉, NaN = absent)                                            |
 
-Old v1/v2/v3 files are no longer accepted — re-run `npm run build-all` to upgrade.
+`src/data/galaxyCatalog/galaxyCatalogFormat.ts` (`GALAXY_CATALOG_FIELD_SPECS`) is the field-by-field authoritative source; this table is a summary.
+
+Old pre-v9 files are no longer accepted — re-run `npm run build-tiers` to upgrade.
 
 ## Roadmap
 
