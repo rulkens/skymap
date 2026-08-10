@@ -1,28 +1,16 @@
 /**
- * encodeGeneration — records the compute dispatches for one galaxy's
- * star and dust generation passes onto an existing `GPUCommandEncoder`.
+ * encodeGeneration — records the compute dispatches for one galaxy's star
+ * and dust generation passes onto an existing `GPUCommandEncoder`.
  *
- * Bind groups are built HERE, at the two compute pipelines, rather than once
- * up front and reused: `layout: 'auto'` (`createGenerationPipelines.ts`)
- * derives a bind-group layout that is specific to the pipeline it came from,
- * even when — as here — the star and dust shaders declare byte-identical
- * `@group(0)` bindings (`milkyWay/sprites/generate.wesl`'s `gen` uniform and `outBuf`
- * storage array). A bind group made against one pipeline's derived layout is
- * not valid on the other, so each pass needs its own, built against its own
- * pipeline's `getBindGroupLayout(0)` — the same rule `createGalaxyEngine.ts`
- * already follows for the star/dust RENDER pipelines sharing the camera
- * buffer (`camBG` vs `camBGdust`).
+ * Bind groups are built HERE, at each pipeline, not once and reused:
+ * `layout: 'auto'` derives a layout specific to the pipeline it came from,
+ * even though the star and dust shaders declare byte-identical `@group(0)`
+ * bindings — a bind group built against one pipeline's layout is invalid on
+ * the other.
  *
- * Both shaders use `@workgroup_size(256)`, so the dispatch count is the
- * capacity rounded up to the next multiple of 256 — any thread past
- * `gen.starCapacity`/`gen.dustCapacity` returns immediately (see the shaders'
- * own bounds check) rather than writing out of range.
- *
- * The dust pass is skipped entirely when `dustLayout.capacity === 0`: a
- * galaxy category ineligible for dust (see `carveDustLayout`'s elliptical
- * gate) carves an empty layout, and there is no buffer to bind or work to
- * dispatch — recording a zero-workgroup pass would be a no-op that still
- * costs a bind-group allocation and a pass begin/end pair for nothing.
+ * The dust pass is skipped when `dustLayout.capacity === 0` (an
+ * elliptical-gated empty layout, see `carveDustLayout`) — nothing to bind or
+ * dispatch.
  */
 import type { GenerationPipelines } from '../../../../@types/galaxy/GenerationPipelines';
 import type { GenerationLayout } from '../../../../@types/galaxy/GenerationLayout';
@@ -31,7 +19,7 @@ import type { GenerationLayout } from '../../../../@types/galaxy/GenerationLayou
 const WORKGROUP_SIZE = 256;
 
 function dispatchCount(capacity: number): number {
-  return Math.ceil(capacity / WORKGROUP_SIZE);
+  return Math.ceil(capacity / WORKGROUP_SIZE); // shader threads past capacity return immediately
 }
 
 export function encodeGeneration(args: {

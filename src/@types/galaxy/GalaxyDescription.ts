@@ -1,13 +1,10 @@
 /**
  * GalaxyDescription — what one galaxy IS, independent of how it gets drawn:
- * the derived lengths, the orientations and per-arm personalities its
- * construction-time RNG drew, and how its light divides across populations.
- *
- * `describeGalaxy` is its only producer, and it owns every shared RNG draw a
- * galaxy has. Both tiers are then readers: `packGenerationUniforms` writes
- * this out as v1's generation UBO, and `buildGalaxyFieldMixture` builds v2's
- * Gaussians from it. Neither re-derives — a second draw sequence would
- * silently misalign the field's bar and bulge against the sprites'.
+ * derived lengths, orientations, per-arm personalities and how its light
+ * divides across populations. `describeGalaxy` is its only producer and owns
+ * every shared RNG draw; `packGenerationUniforms` (v1) and
+ * `buildGalaxyFieldMixture` (v2) both read it rather than re-deriving — a
+ * second draw sequence would silently misalign the field against the sprites.
  */
 import type { GalaxyCategory } from './GalaxyCategory';
 import type { GalaxyFieldArmRecord } from './GalaxyFieldArmRecord';
@@ -26,17 +23,12 @@ export type GalaxyDescription = {
    * (Freeman 1970) and this model holds that brightness fixed across presets,
    * so SIZE carries all of it.
    *
-   * Deliberately not a function of v1's star budget: that is an LOD number,
-   * and while flux was anchored on it the anchor went as N^(1/3), so switching
-   * tier changed how bright a galaxy is by 26% a step. This type no longer
-   * names a sprite quantity at all — `StarBudget` lives under `v1/` and never
-   * reaches here. Nor of any per-population sprite multiplier: `light`'s lanes
-   * are light fractions summing to 1, so this IS the galaxy's total emitted
-   * light and every preset now emits strictly what its disc area says it does.
-   *
-   * The additive HII tier rides on top of it rather than inside it
-   * (`hiiRegions.ts`'s `HII_LUMINOSITY_SHARE`), because those regions are
-   * young-star light the smooth populations were never fit to carry.
+   * Deliberately independent of `StarBudget` (a v1-only LOD number: an
+   * anchor there would tie brightness to N^(1/3), moving it a visible amount
+   * per LOD tier switch). `light`'s lanes are light fractions summing to 1,
+   * so this IS the galaxy's total emitted light. The HII tier's flux rides
+   * additively on top of it (`hiiRegions.ts`'s `HII_LUMINOSITY_SHARE`),
+   * since those regions are young-star light the smooth populations don't carry.
    */
   readonly luminosity: number;
   readonly outerRadius: number;

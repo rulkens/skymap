@@ -1,17 +1,12 @@
 /**
- * buildHiiRegions — the young end of the SF-event catalog (`age01 <=
- * HII_AGE_GATE`) as glowing shells: isotropic Gaussian sprites scattered on
- * each event's Stromgren sphere, plus an optional embedded OB cluster. Limb
- * brightening is NOT a rim term — it falls out of line-of-sight column
- * density through a radially-jittered shell, the way a real thin shell does.
- *
- * Flux is ADDITIVE and split across regions by their own `hiiLuminosityOf`
- * draw. PURITY INVARIANT: pure `(geometry, tuning, starFormation, seed,
- * ismMap) -> flat data`, same discipline as `sfEventCatalog.ts`. Drawn by
- * `createGalaxyEngine.ts` into its OWN target (`hiiTex`), never folded into
- * `galaxyFieldMixture.ts`'s output — see research doc §18.1: a shell sprite
- * is small and bright by construction, so sharing the smooth field's
- * downsampled target collapsed it into a bloom firefly.
+ * The young end of the SF-event catalog (`age01 <= HII_AGE_GATE`) as
+ * glowing shells: isotropic Gaussian sprites on each event's Stromgren
+ * sphere, plus an optional embedded OB cluster. Limb brightening falls out
+ * of line-of-sight column density through a radially-jittered shell, not a
+ * rim term. Drawn into its own target (`hiiTex`), never folded into
+ * `galaxyFieldMixture.ts`'s output: a shell sprite is small and bright by
+ * construction, and sharing the smooth field's downsampled target
+ * collapses it into a bloom firefly.
  */
 import {
   HII_AGE_GATE,
@@ -58,15 +53,13 @@ import type { IsmMapFluidEvent } from '../../../../@types/galaxy/IsmMapFluidEven
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
- * Component-budget ceiling for the whole tier. HII draws into its OWN
- * target now (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`), so this is
- * no longer a RESERVATION against `GALAXY_FIELD_MAX_COMPONENTS` — it used to
- * be (`galaxyFieldMixture.ts`'s `pushArmRidges` shrank its own budget to
- * leave room for it), but the two tiers no longer share a cap to fight over.
- * It is now a plain per-galaxy admission ceiling: `planRegions` sorts
- * regions brightest-first and drops the faintest ones once their sprite
- * cost would cross it, which bounds a single galaxy's worst-case component
- * count regardless of how many SF events its catalog produced.
+ * Component-budget ceiling for the whole tier. HII draws into its own
+ * target (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`), not a
+ * reservation against `GALAXY_FIELD_MAX_COMPONENTS` — a plain per-galaxy
+ * admission ceiling: `planRegions` sorts regions brightest-first and drops
+ * the faintest ones once their sprite cost would cross it, bounding a
+ * single galaxy's worst-case component count regardless of how many SF
+ * events its catalog produced.
  */
 export const HII_MAX_COUNT = 600;
 
@@ -107,12 +100,11 @@ const DIG_SALT = 0x44494720; // "DIG "
  * Component-budget ceiling for the DIG veil, exported so a caller sizing a
  * fixed-capacity buffer (`createGalaxyModel.ts`'s `HII_MAX_COUNT +
  * DIG_MAX_COUNT`) has a worst case to reserve against: `dig.complexes` and
- * `dig.childrenPerComplex` are now live-tunable rather than the fixed
- * `150 = complexes*childrenPerComplex` this tier used to hard-code, so their
- * product needs a ceiling the way `HII_MAX_COUNT`/`ARM_CLOUD_MAX_COUNT`
- * already ceiling their own tiers. Sized to the UI's own slider ceilings
- * (120 complexes x 12 children = 1440), not derived from them, so a future
- * slider-range change doesn't silently resize a GPU buffer.
+ * `dig.childrenPerComplex` are live-tunable, so their product needs a
+ * ceiling the way `HII_MAX_COUNT`/`ARM_CLOUD_MAX_COUNT` ceiling their own
+ * tiers. Sized to the UI's own slider ceilings (120 complexes x 12 children
+ * = 1440), not derived from them, so a future slider-range change doesn't
+ * silently resize a GPU buffer.
  */
 export const DIG_MAX_COUNT = 1440;
 /** A complex's child scatter before `dig.elongation` stretches/squeezes it — GMC-association scale, mirroring `dustParticleCloud.ts`'s own `COMPLEX_SPREAD_PC`; an eyeballed starting point, not a measurement. */
@@ -337,14 +329,13 @@ function planRegions(
 }
 
 /**
- * Recent-event COUNT behind the DIG veil's own complex population (task
- * #10): young events (same gate `planRegions` admits into HII shells) plus
- * mid-age ones whose age sits in `(youngGate, RECENT_EVENT_AGE_FRAC_CEIL]` —
- * recomputed here rather than threaded, the same "recompute over thread"
- * call `candidateRegionsFromFluidEvents`'s own header already makes.
- * Positions, not just counts, used to feed the deleted blue-association
- * tier off this same window — see `sfEventAgeBands.ts`'s
- * `fluidMidAgeEventWindow` for the window itself, now DIG's only consumer.
+ * Recent-event count behind the DIG veil's own complex population: young
+ * events (same gate `planRegions` admits into HII shells) plus mid-age ones
+ * whose age sits in `(youngGate, RECENT_EVENT_AGE_FRAC_CEIL]` — recomputed
+ * here rather than threaded, the same "recompute over thread" call
+ * `candidateRegionsFromFluidEvents`'s own header already makes. See
+ * `sfEventAgeBands.ts`'s `fluidMidAgeEventWindow` for the window itself,
+ * DIG's only consumer.
  */
 function resolveEventLifecyclePopulation(
   geometry: GalaxyDescription,
@@ -402,10 +393,10 @@ const seedingCdfMemo = memoizeLastByKeys<GalaxyIsmMapDustCdf>();
  * moving the `ismMapSeeding` slider only ever changes which regions swap
  * centres, never the rng draws (and hence positions) of the ones that don't.
  *
- * Weighted by `activity` alone (the short-memory EMA of event stamps), NOT
- * the `stars` channel `hiiRegions.ts` used to read here: `stars` is now a
- * long-lived advected tracer, so a shell CDF-sampled from it would scatter
- * onto 20-100 Myr drifted material with no ionizing stars left — shells
+ * Weighted by `activity` alone (the short-memory EMA of event stamps), not
+ * the `stars` channel: `stars` is a long-lived advected tracer, so a shell
+ * CDF-sampled from it would scatter onto 20-100 Myr drifted material with
+ * no ionizing stars left — shells
  * need FRESH sites, which `activity` still gives (ignition zeroes gas in
  * the same cell, so this stays anti-correlated with the dust CDF by
  * construction — knots avoid the dust the generator just cleared, the same
@@ -458,10 +449,10 @@ type DigSeedFrame = {
 
 /**
  * A DIG complex CDF-sampled from the map's own `activity` density
- * (`buildDigVeil`) — the ONE substrate every complex draws from. `armBias`
- * no longer forks this into a second, arm-lane placement path (see
- * `buildArmProximityEnvelope`): it reweights the CDF itself before this ever
- * runs, so a caller doesn't need to know it exists.
+ * (`buildDigVeil`) — the one substrate every complex draws from. `armBias`
+ * (see `buildArmProximityEnvelope`) reweights the CDF itself before this
+ * ever runs, rather than forking a second arm-lane placement path, so a
+ * caller doesn't need to know it exists.
  */
 function placeDigMapComplex(
   rng: () => number,
@@ -475,14 +466,14 @@ function placeDigMapComplex(
 }
 
 /**
- * arm-proximity reweighting kernel for `armBias` — how close a (radius,
- * angle) point sits to ANY arm's ridge, age-weighted the way the arm-lane
- * picker this replaced used to weight WHICH arm to draw from
- * (`armAgeWeight`). Radius-keyed memo rather than a caller-driven per-ring
- * table: `buildIsmMapDustCdf`'s own loop is ring-major (the same radius
- * repeats `az` times before the next ring), so caching on "radius changed
- * since the last call" gets the one-recompute-per-ring cost without this
- * function needing to know a ring loop drives it.
+ * Arm-proximity reweighting kernel for `armBias` — how close a (radius,
+ * angle) point sits to any arm's ridge, age-weighted the same way
+ * `armAgeWeight` weights which arm to draw from. Radius-keyed memo rather
+ * than a caller-driven per-ring table: `buildIsmMapDustCdf`'s own loop is
+ * ring-major (the same radius repeats `az` times before the next ring), so
+ * caching on "radius changed since the last call" gets the
+ * one-recompute-per-ring cost without this function needing to know a ring
+ * loop drives it.
  *
  * Cross-arm distance is the small-angle arc length `radius * deltaAngle`
  * against `armCrossSigma`'s own Gaussian width (matches `pushArmRidges`'s
@@ -593,16 +584,16 @@ function scatterAxesForCoherence(
  * aspect convention (`along = spread*sqrt(e)`, `across = spread/sqrt(e)`).
  *
  * Gated (and its rng stream only consulted) when `dig.fraction > 0`, a map
- * is handed in, and that map's `activity` CDF has nonzero mass — same
- * discipline `buildHiiRegions`' old inline block used. Total flux is
- * anchored to `shellFluxSum` (the shell tier's own flux, not `totalFlux`),
- * because the cluster share folded into `totalFlux` is stellar continuum,
- * not Hα — see that binding's own comment at the call site.
+ * is handed in, and that map's `activity` CDF has nonzero mass. Total flux
+ * is anchored to `shellFluxSum` (the shell tier's own flux, not
+ * `totalFlux`), because the cluster share folded into `totalFlux` is
+ * stellar continuum, not Hα — see that binding's own comment at the call
+ * site.
  *
- * `dig.complexes` is now a SCALER on `recentEventCount` (task #10) rather
- * than an absolute count — `recentEventCount` (young + mid-age events, see
+ * `dig.complexes` is a scaler on `recentEventCount`, not an absolute count
+ * — `recentEventCount` (young + mid-age events, see
  * `resolveEventLifecyclePopulation`) can run into the hundreds on an active
- * fluid run, far more than a diffuse HAZE should ever resolve into discrete
+ * fluid run, far more than a diffuse haze should ever resolve into discrete
  * complexes, so `DIG_COMPLEXES_PER_EVENT` scales it down to the tier's own
  * population before `deriveComplexCount`'s scaler/clamp — a starting point
  * for visual calibration, not a measurement.

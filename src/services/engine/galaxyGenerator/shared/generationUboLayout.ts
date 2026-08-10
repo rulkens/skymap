@@ -1,38 +1,23 @@
 /**
- * generationUboLayout — `GENERATION_UBO`, the single offset authority for
- * the GPU galaxy-generation uniform buffer.
- *
- * The alternative — scattering `f32[17] = barLength` / `f32[41] =
- * globularBright` literals across `packGenerationUniforms.ts`, the WGSL
- * struct (Task 3), and every test that reads a lane back out — is exactly
- * the braid this file exists to cut. Three independent authors (the packer,
- * the shader, the test) would each need to derive the same byte math from
- * the field inventory by hand, and a single off-by-one in any one of them
- * produces a silent GPU/CPU mismatch: no compiler error, just a wrong
- * float landing at the wrong lane. Centralising the arithmetic here means
- * every offset is *computed once* from the field inventory below and named,
- * not re-derived — the packer writes through `GENERATION_UBO`, the tests
- * read through it, and the WGSL struct (Task 3) is hand-mirrored against
- * this file's declaration order as its one required manual step.
+ * generationUboLayout — WIRE-FORMAT CONTRACT: `GENERATION_UBO` is the single
+ * offset authority for the GPU galaxy-generation uniform buffer, and its
+ * declaration order is what the WGSL struct is hand-mirrored against — no
+ * compiler enforces that seam, so an off-by-one here is a silent GPU/CPU
+ * mismatch, a wrong float in the wrong lane.
  *
  * Layout rule: every field is vec4-aligned. Scalars pack four-per-vec4 in
- * declaration order within their group, with the group's own trailing lanes
- * left as zero-filled padding (never reused by the next group) — that's
- * what makes "vec4-aligned" true for every *group*, not just the buffer as
- * a whole, matching a WGSL `struct` whose fields are laid out the same way
- * by the language's own alignment rules. A field that is itself vec4-valued
- * (a palette colour, a position, a fixed-size array record) gets its own
- * `arrays` entry instead — `f32`/`u32` are for single-lane scalars only, so
- * a reader never has to guess whether a given name is one float or four.
+ * declaration order within their group; each group pads its own trailing
+ * lanes to the next vec4 boundary (never reused by the next group), matching
+ * how a WGSL `struct` aligns its own fields. A field that is itself
+ * vec4-valued (a palette colour, a position, a fixed-size array record) gets
+ * its own `arrays` entry — `f32`/`u32` are single-lane scalars only.
  *
- * Field groups, in the order the WGSL struct (Task 3) must mirror:
- * scale, asymmetry, bar, warp, dust, arms, misc, hiiCore/hiiHalo palette
- * vec4s, extraPos/extraRot transform vec4s, the u32 group, then the five
- * fixed-size arrays (armTable, clumpCenters, cloudCenters, starRanges,
- * dustRanges). If porting the generator reveals a missing field, *append*
- * it to the relevant group/array — never renumber an existing field
- * mid-branch, since that would silently desync anything already reading a
- * previously-assigned offset.
+ * Field groups, in WGSL struct order: scale, asymmetry, bar, warp, dust,
+ * arms, misc, hiiCore/hiiHalo/extraPos/extraRot vec4s, the u32 group, then
+ * the five fixed-size arrays (armTable, clumpCenters, cloudCenters,
+ * starRanges, dustRanges). *Append* a new field to its group/array — never
+ * renumber an existing one, which would silently desync any offset already
+ * read elsewhere.
  */
 
 /** Per-arm personality/meander + clump + wave records, `armCount`'s max. */
@@ -182,7 +167,7 @@ function buildLayout() {
     armTableLayout: {
       strideVec4: ARM_RECORD_STRIDE_VEC4, // number of vec4 slots per arm record (16 floats)
       // phase, pitch, weight, fadeRadius, meanderAmp, meanderFreq, meanderPhase, age — lane 7
-      // (age) used to be padding; it is now drawn off the same asym stream, one draw later.
+      // (age) draws off the same asym stream as lanes 0-6, after fadeRadius.
       asymLanes: [0, 1, 2, 3, 4, 5, 6, 7],
       clumpLanes: [8, 9, 10, 11], // clumpF1, clumpP1, clumpF2, clumpP2
       waveLanes: [12, 13, 14, 15], // waveF1, waveP1, waveF2, waveP2

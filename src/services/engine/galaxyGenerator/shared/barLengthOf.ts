@@ -1,12 +1,9 @@
 /**
  * barLengthOf — the single home of a barred galaxy's bar-length formula:
- * `outerRadius * 0.42 * (barStrength ?? 1)` for the `'barred'` category, and
- * exactly 0 for every other category. The length is RNG-free (only the bar's
- * tilt angle draws — see `computeBarGeometry`), so it is a pure function of
- * geometry. It was duplicated between `computeBarGeometry` (which packs the
- * value into the generation UBO) and `carveDustLayout` (which gates the
- * barDust population on `> 0`); routing both through here keeps the two from
- * drifting.
+ * `outerRadius * 0.42 * (barStrength ?? 1)` for `'barred'`, else 0. RNG-free
+ * (only the tilt angle draws — see `computeBarGeometry`). Both
+ * `computeBarGeometry` and `carveDustLayout`'s `barDust > 0` gate read this,
+ * not their own copy of the formula, so the two can't drift apart.
  */
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 

@@ -1,52 +1,14 @@
 /**
- * Renderer / engine default settings — single source of truth.
+ * Renderer / engine default settings — the single source of truth for every
+ * user-controllable setting's INITIAL value (sliders, toggles, mode
+ * selectors, the visible-source bitmask).
  *
- * ### Why this module exists
- *
- * The engine (in `services/engine/engine.ts`) and the React shell (in
- * `App.tsx`) each carry their own copy of every user-controllable
- * setting: the engine as a closure variable that flows into per-frame
- * uniforms, React as a `useState` initial value that drives the
- * SettingsPanel.  Both copies must agree on the *initial* value so the
- * first paint isn't visibly out of sync with the panel's controls.
- *
- * A single shared module keeps them in agreement: duplicating the
- * values by hand at both sites means every default change needs
- * parallel edits, or the panel briefly flashes a stale value before
- * the engine's first echo callback syncs React state.
- *
- * ### What's in scope
- *
- * Only user-facing initial values that ship in both files:
- *   - sliders (point size, brightness, exposure, abs-mag limit, ...)
- *   - toggles (auto-rotate, galaxy textures, highlight fallback, depth
- *     fade, etc.)
- *   - mode selectors (bias mode, tone-map curve, LOD mode)
- *   - the visible-source bitmask
- *
- * ### What's deliberately NOT in scope
- *
- * - Per-source astrophysics constants (Schechter triples, flux limits,
- *   colour ramps).  Those live in `data/sources.ts`,
- *   `data/galaxyCatalogFluxLimits.ts`, `data/colourIndex.ts` — domain-specific
- *   data, not user-configurable settings.
- * - Bake-derived per-galaxy weights (Schechter ratio, angular-density
- *   weight).  `biasCorrectionSubsystem` splices these straight into the
- *   per-vertex buffer after each upload bake — they're never settings and
- *   never pass through engine state.
- * - GPU-pipeline constants (uniform layout offsets, vertex stride,
- *   texture atlas dimensions).  Those live with their consumers in
- *   `services/gpu/`.
- *
- * ### Consumers
- *
- * - `services/engine/engine.ts` — closure variables seeded from these.
- * - `src/App.tsx` — `useState` initial values seeded from these.
- *
- * Both consumers import this module's constants by name; nothing here
- * is mutable.  If a consumer needs to derive a value (e.g., compute a
- * point-size range from `DEFAULT_POINT_SIZE_PX`), do that at the call
- * site — keep this file flat.
+ * `buildInitialSettings` (`state/settings/initialState.ts`) assembles these
+ * into the Redux `EngineSettingsState` the settings slice seeds; a handful of
+ * other sites import a constant directly when they need the same default
+ * outside the store. Out of scope: per-source astrophysics constants
+ * (`data/sources.ts` et al. — domain data, not settings) and GPU-pipeline
+ * constants, which live with their consumers in `services/gpu/`.
  */
 
 import { BiasMode } from './galaxyCatalog/biasMode';
@@ -123,13 +85,12 @@ export const DEFAULT_STAR_EXPOSURE_NEAR_X = 6;
  * (3 kpc), the knot that splits the ramp so the dense central clump can be
  * darkened without touching either end.
  *
- * 23 is the OLD two-point (near→far) curve's own value at 3 kpc:
- * 6·(28/6)^(log₁₀(3000)/4) = 22.9 (the 3 kpc anchor sits at log-fraction
- * log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). Seeding the mid anchor
- * ON that continuation makes the three-anchor ramp reproduce today's look at the
- * defaults — a knot on a straight line doesn't bend it. 23 vs the exact 22.9 is
- * visually indistinguishable. Live-tunable (UI range 5–150) so the middle can be
- * pulled down against the running renderer.
+ * 23 sits on the log-interpolated line between the near (6) and far (28)
+ * anchors at 3 kpc: 6·(28/6)^(log₁₀(3000)/4) = 22.9 (3 kpc sits at
+ * log-fraction log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). A knot
+ * on that line doesn't bend the three-anchor ramp at the defaults; 23 vs the
+ * exact 22.9 is visually indistinguishable. Live-tunable (UI range 5–150) so
+ * the middle can be pulled down against the running renderer.
  */
 export const DEFAULT_STAR_EXPOSURE_MID_X = 23;
 
@@ -177,10 +138,10 @@ export const DEFAULT_AUTO_ROTATE = false;
 /**
  * Default overall physical-SB → HDR gain for galaxy point billboards — seeds
  * `settings.galaxyCatalogs.sbScale`. Multiplies each galaxy's baked
- * surface-brightness amplitude (`sbAmp`) into the additive HDR field. Replaces
- * the old hardcoded `GALAXY_SB_SCALE` shader const; 5.0 places the per-catalog
- * mean galaxy's resolved core relative to the 2.0 bloom threshold. Live-tunable
- * (UI range 0.5–30) so the galaxy look can be re-eye-tuned without a rebuild.
+ * surface-brightness amplitude (`sbAmp`) into the additive HDR field; 5.0
+ * places the per-catalog mean galaxy's resolved core relative to the 2.0
+ * bloom threshold. Live-tunable (UI range 0.5–30) so the galaxy look can be
+ * re-eye-tuned without a rebuild.
  */
 export const DEFAULT_GALAXY_SB_SCALE = 5.0;
 
@@ -188,8 +149,8 @@ export const DEFAULT_GALAXY_SB_SCALE = 5.0;
  * Default bloom ceiling for galaxy point billboards — seeds
  * `settings.galaxyCatalogs.sbMax`. The maximum baked surface-brightness
  * amplitude a compact galaxy can emit; the vertex stage clamps `sbAmp` to it
- * live. Moved out of the bake-time clamp (now only a float-safety guard) so the
- * ceiling is a live knob; 30.0 reproduces the old bake clamp. UI range 1–100.
+ * live, so this ceiling is a live knob rather than a bake-time clamp. UI
+ * range 1–100.
  */
 export const DEFAULT_GALAXY_SB_MAX = 30.0;
 

@@ -1,54 +1,14 @@
 /**
  * milkyWayCloud — generates the app's Milky Way star+dust point cloud on the
- * GPU and hands the resulting instance buffers to the draw side. It is the
- * app-side reduction of `createGalaxyEngine.ts`'s central-galaxy generation
- * (`setParams`, ~lines 520-566) to the one fixed preset the Milky Way needs:
- * `MILKY_WAY_GALAXY_PARAMS` with the live `starCount` folded in. `starCount`
- * is an absolute count, not tier-derived — see `MilkyWayCloud`'s docblock for
- * why this module carries no notion of `Tier` at all.
+ * GPU and hands the resulting instance buffers to the draw side. The app-side
+ * reduction of the tool's central-galaxy generation (`createGalaxyModel.ts`'s
+ * `setParams`) to the one fixed preset the Milky Way needs, with the live
+ * `starCount` folded in as an absolute count (see `MilkyWayCloud`'s docblock
+ * for why this module carries no notion of `Tier`).
  *
- * ## The generation flow (one count's worth), mirroring `setParams`
- *
- *   carve star + dust layouts  (pure CPU arithmetic — cheap, on this thread)
- *        │
- *        ▼
- *   createBuffer starVB / dustVB  (VERTEX | STORAGE, size = capacity * GEN_RECORD_BYTES)
- *        │
- *        ▼
- *   queue.writeBuffer(ubo, packGenerationUniforms(...))   ── THEN ──►
- *        │
- *        ▼
- *   encodeGeneration(star + dust compute passes)  ── THEN ──►  queue.submit
- *
- * The write-then-encode-then-submit order is the same queue-ordering guarantee
- * `setParams`'s docblock spells out: WebGPU processes everything enqueued on a
- * queue in submission order, so by the time these compute passes run the
- * preceding `writeBuffer` has already landed — no CPU readback, no fence. Any
- * `drawFrame` the app records afterwards shares this device's one queue, so its
- * draws are likewise guaranteed to run after this submit's writes.
- *
- * ## What is built once vs. per generation
- *
- * The two generation compute pipelines (`createGenerationPipelines`) and the
- * generation UBO are built ONCE at factory time and reused by every
- * `regenerate`: the pipelines are pure shader compilation with no per-count
- * state, and the UBO is `GENERATION_UBO.byteLength` — a fixed size — so a
- * count change only rewrites its contents in place rather than reallocating
- * it. Only the star/dust vertex buffers, whose size IS the carved capacity,
- * get destroyed and recreated per generation.
- *
- * ## `extra = null` — placement is draw-side, not baked in
- *
- * Unlike the tool's background extras (which fold their world transform into
- * the generation UBO's extra lanes so their vertices come out world-placed),
- * the Milky Way is generated in its own LOCAL frame and placed by the draw
- * side's model matrix (`milkyWayModelMatrix`). So `packGenerationUniforms` is
- * called with `extra = null`: the compute passes emit local-space records, and
- * nothing about placement lives in the UBO.
- *
- * The generated buffers are the carved layout's full CAPACITY (dead slots
- * included) — see `MilkyWayCloudBuffers`'s docblock and `setParams` for why
- * that is correct rather than wasteful.
+ * Write → encode → submit, in that order, on the device's one queue: WebGPU
+ * processes a queue in submission order, so the compute passes below see the
+ * `writeBuffer`'d UBO with no readback and no fence needed.
  */
 import type { MilkyWayCloud } from '../../../../@types/galaxy/MilkyWayCloud';
 import type { MilkyWayCloudBuffers } from '../../../../@types/galaxy/MilkyWayCloudBuffers';
@@ -74,10 +34,6 @@ export function createMilkyWayCloud(device: GPUDevice, starCount: number): Milky
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  // Carve the preset (with the live starCount knob folded straight in —
-  // absolute, not a tier-relative multiplier), allocate the star/dust
-  // buffers, pack + write the UBO, then dispatch generation into a fresh
-  // encoder and submit. Returns the freshly-generated buffer snapshot.
   function generate(count: number): MilkyWayCloudBuffers {
     const params = {
       ...MILKY_WAY_GALAXY_PARAMS,

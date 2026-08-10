@@ -1,22 +1,12 @@
 /**
- * galaxyIsmMapFluidEvents — the fluid ISM-map generator's own event list,
- * built once per rebuild from a seeded RNG and biased toward the SAME
- * CPU arm-forcing field the fluid step shader samples GPU-side
- * (`buildGalaxyIsmMapArmForcing` — the shared arm-geometry helper).
- * `ismMapFluidStep.wesl` reads the packed result as impulses in its velocity
- * field — see that file's header for how an event's kernel evolves.
+ * The fluid ISM-map generator's own event list, built once per rebuild from
+ * a seeded RNG (mulberry32) and biased toward the same CPU arm-forcing field
+ * the fluid step shader samples GPU-side (`buildGalaxyIsmMapArmForcing`).
+ * `ismMapFluidStep.wesl` reads the packed result as velocity-field impulses.
  *
- * Deterministic per `seed` (mulberry32, same salted-seed idiom as
- * `hiiRegions.ts`'s DIG draws): rebuilding the same galaxy at the same seed
- * reproduces the same event list.
- *
- * Returned events are sorted ascending by `birthStep` — a load-bearing
- * contract, not incidental ordering: `ismMapFluidEventWindow` below binary
- * searches this order to hand `createIsmMapFluidRunner.ts` a per-step
- * [start, end) slice of ACTIVE events only, instead of every dispatch
- * scanning the whole list (was the quadratic-rebuild-cost bug — total cost
- * grew as steps^2 * texels since the scanned range never shrank as the run
- * got longer).
+ * Returned events are sorted ascending by `birthStep` — a contract:
+ * `ismMapFluidEventWindow` below binary-searches this order to hand a
+ * per-step [start, end) slice of active events, not the whole list.
  */
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import { ismMapGasProfile } from '../../../../utils/galaxy/ismMapGasProfile';
@@ -38,14 +28,11 @@ const ISM_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
 
 /**
  * Placement weight is `ARM_BIAS_FLOOR * (1 - eventArmBias) + armForcing`, not
- * `armForcing` alone: a pure arm-forcing CDF is IDENTICALLY ZERO off the ridge
- * (`armForcing`'s own `r <= armStartRadius` skip and its Gaussian cross-track
- * falloff), which would confine every event to the arms outright — the floor
- * exists to give the whole grid a light-touch BIAS, not a gate. `eventArmBias`
- * (`GalaxyIsmMapFluidParams`) is now what decides bias-vs-gate: 0 (default)
- * keeps the fixed floor below, byte-identical to before this param existed;
- * 1 zeroes it, turning the floor into a hard gate — every event lands
- * strictly on the ridge.
+ * `armForcing` alone: a pure arm-forcing CDF is zero off the ridge
+ * (`armForcing`'s own `r <= armStartRadius` skip and Gaussian cross-track
+ * falloff), which would confine every event to the arms — the floor gives
+ * the whole grid a light-touch bias, not a gate. `eventArmBias` (0..1) tunes
+ * bias-vs-gate: at 1 the floor zeroes out and every event lands on the ridge.
  */
 const ARM_BIAS_FLOOR = 0.15;
 
@@ -70,14 +57,10 @@ const MAX_GAS_WEIGHT_TRIES = 32;
 /**
  * Acceptance test for the rejection sampler below: probability
  * `gasProfile(r)^KENNICUTT_SCHMIDT_INDEX` (`gasProfile`'s own max is ~1 at
- * r=rMin, so the ratio to that max is the profile value itself — no
- * rescaling needed). Short-circuits WITHOUT drawing from `rng` when the
- * probability is exactly 1: at `gasFloor=1` (or any r where the profile
- * saturates) every candidate is always accepted, and an unconditional extra
- * `rng()` draw would shift every LATER event's RNG stream even though
- * nothing about placement actually changed — this is the only way
- * `buildGalaxyIsmMapFluidEvents` stays byte-identical to its pre-profile
- * output at the default `gasFloor=1`.
+ * r=rMin, so no rescaling is needed). Short-circuits without drawing from
+ * `rng` when the probability is exactly 1 — an unconditional extra `rng()`
+ * draw would shift every later event's RNG stream even when nothing about
+ * placement changed.
  */
 function acceptGasWeightedCandidate(
   r: number,
@@ -115,9 +98,7 @@ export function buildGalaxyIsmMapFluidEvents(
   for (let k = 0; k < count; k++) {
     // Kennicutt-Schmidt-weighted rejection sampling: redraw the whole
     // candidate (arm-biased index + sub-texel jitter) on reject, bounded by
-    // MAX_GAS_WEIGHT_TRIES rather than looping forever — see
-    // acceptGasWeightedCandidate for the byte-identical-at-gasFloor=1
-    // invariant this loop depends on.
+    // MAX_GAS_WEIGHT_TRIES rather than looping forever.
     let az = 0;
     let ring = 0;
     for (let attempt = 0; attempt < MAX_GAS_WEIGHT_TRIES; attempt++) {
@@ -140,9 +121,7 @@ export function buildGalaxyIsmMapFluidEvents(
       radiusScale: fluid.radiusScale * (0.7 + 0.6 * rng()),
     };
   }
-  // Ascending by birthStep — see this function's own docblock for why this
-  // order is a contract, not a convenience.
-  events.sort((a, b) => a.birthStep - b.birthStep);
+  events.sort((a, b) => a.birthStep - b.birthStep); // ascending by birthStep — see docblock above
   return events;
 }
 
@@ -154,12 +133,10 @@ export type IsmMapFluidEventWindow = {
 
 /**
  * `[start, end)` slice of a birthStep-sorted `events` list active at
- * generation `step` — same age window `ismMapFluidStep.wesl`'s own per-event
- * `age < 0.0 || age >= impulseDuration` skip tests, but computed once
- * CPU-side per step via two binary searches instead of every GPU texel
- * walking every event ever generated. `events` MUST already be sorted
- * ascending by `birthStep` (`buildGalaxyIsmMapFluidEvents`'s own contract) —
- * this function does not sort, so a caller with an unsorted list gets a
+ * generation `step`, mirroring `ismMapFluidStep.wesl`'s per-event
+ * `age < 0.0 || age >= impulseDuration` skip but computed once CPU-side via
+ * two binary searches. `events` must already be sorted ascending by
+ * `birthStep`; this function does not sort, so an unsorted list produces a
  * silently wrong window, not a thrown error.
  */
 export function ismMapFluidEventWindow(

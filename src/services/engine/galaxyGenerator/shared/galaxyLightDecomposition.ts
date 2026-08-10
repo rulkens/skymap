@@ -1,13 +1,15 @@
 /**
- * galaxyLightDecomposition — one galaxy's light split across bulge / bar /
- * disc / halo, read off a table keyed by RC3 stage. Where the numbers come
- * from, in which band, and what each lane means: `GalaxyLightDecomposition`.
+ * galaxyLightDecomposition — literature-calibrated table: one galaxy's light
+ * split across bulge / bar / disc / halo, read off by RC3 stage. Provenance
+ * for two anomalous rows is the source of truth for not "fixing" them, hence
+ * the longer-than-usual comments below. Where the numbers come from, in
+ * which band, and what each lane means: `GalaxyLightDecomposition`.
  *
- * Which lanes a galaxy may SPEND is the category's call, not the stage's. The
+ * Which lanes a galaxy may SPEND is the category's call, not the stage's: the
  * generator builds a bar only where `barLengthOf` returns one and a disc only
- * outside the elliptical family, so a lane it cannot build would be light
- * nothing emits — the two gates below are where the literature's taxonomy and
- * the generator's five families meet, and the only place they do.
+ * outside the elliptical family, so a lane it cannot build is light nothing
+ * emits — the two gates below are where the literature's taxonomy and the
+ * generator's five families meet, and the only place they do.
  */
 import { barLengthOf } from './barLengthOf';
 import { hubbleStageOf } from './hubbleStageOf';

@@ -1,13 +1,12 @@
 /**
- * sampleIsmMapEventPosition — draws one world position exactly proportional
- * to a built ISM-map CDF (`sampleIsmMapDustCdf`), warp-lifted the way every
- * other map-seeded placement is (`warpHeight`) — a flat placement here would
- * be a regression against the arm-ridge path it stands in for.
+ * sampleIsmMapEventPosition — draws one world position proportional to a
+ * built ISM-map CDF (`sampleIsmMapDustCdf`), warp-lifted like every other
+ * map-seeded placement (`warpHeight`) — flat here would regress the
+ * arm-ridge path this stands in for.
  *
- * x/z axis pairing mirrors `placeMapDensityComplex` in
- * `clusteredDiscPlacement.ts` (`x = cos(angle)*radius`, `z = sin(angle)*radius`),
- * which itself matches `ismMapPresent.wesl`'s `atan2(z, x)` convention (see
- * `sampleGalaxyIsmMap.ts`'s header).
+ * x/z pairing (`cos(angle)*radius`, `sin(angle)*radius`) matches the
+ * `atan2(z, x)` convention shared by the generator shaders and
+ * `clusteredDiscPlacement.ts`'s `placeMapDensityComplex`.
  */
 import { sampleIsmMapDustCdf } from './sampleIsmMapDustCdf';
 import { warpHeight } from './warpHeight';

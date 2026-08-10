@@ -2,8 +2,7 @@
  * GalaxyDustCloudParams — the structured 3D dust particle cloud: thousands
  * of small anisotropic Gaussians standing in for individual GMC/cloud
  * complexes, giving the dust field actual volumetric depth. This is the
- * galaxy's ONLY dust tier — the smooth analytic lane it used to be layered
- * on was deleted (`galaxyDustMixture.ts`'s header) — so it carries the
+ * galaxy's ONLY dust tier (see `galaxyDustMixture.ts`), carrying the
  * galaxy's FULL measured `tau`. See `dustParticleCloud.ts` for the
  * size/mass/placement model. Refiners are ×measured-default scalers where
  * 1.0 reproduces the literature value.
@@ -37,46 +36,30 @@ export type GalaxyDustCloudParams = {
   /**
    * Caps the map-seeded placement CDF's WITHIN-RING ratio (`dust /
    * ringMean[ring]`, dustParticleCloud.ts), in multiples of the texel's own
-   * ring mean; 0 disables it (uncapped, today's behaviour). The ONLY
-   * placement-tempering knob: a single texel that accumulates a runaway
-   * share of splats (a blazing rim pixel, say 40x its ring's own mean)
-   * starves every other texel in the same ring of placement mass — capping
-   * clips just that texel, leaving the CDF exactly proportional everywhere
-   * below the cap. Deliberately RING-relative, not map-global: the radial
-   * dust profile (ringMean[ring] / the map's own global mean) is a SEPARATE,
-   * structural envelope term this cap never touches — see
-   * `buildDustParticleCloud`'s own placement comment for why a global cap
-   * would let the outer disc's sheer texel count win a contrast fight
-   * against the inner disc. The ISM-map "seeding" debug view
-   * (ismMapPresent.wesl) applies the same `min()` against the same per-ring
-   * means, so the view never drifts from what placement caps.
+   * ring mean; 0 disables it. The ONLY placement-tempering knob: a runaway
+   * texel (a blazing rim pixel) starves the rest of its ring of placement
+   * mass, so capping clips just that texel. Deliberately RING-relative, not
+   * map-global — the radial dust profile is a separate, structural envelope
+   * term this cap never touches. The ISM-map "seeding" debug view
+   * (ismMapPresent.wesl) applies the same cap so it never drifts from placement.
    */
   readonly dustPlacementCap: number;
   /**
-   * S5 silhouette-carving depth: turns the particle cloud's smooth Gaussian
-   * envelope into a sharp fractal-coastline edge (dustMap.wesl's
-   * `dustCarveMask`), rather than eroding only its interior the way `texture`
-   * above does. 0 is the MANDATORY identity — the shader branches out
-   * entirely, since the mask's `smoothstep` would reshape the profile even
-   * near 0. UNLIKE `texture`'s mean-1 multiplier, carving REMOVES mass — the
-   * cloud's total measured tau drops as this rises. Deliberate: the tau
-   * slider compensates, and a mean-preserving carve would defeat the
-   * defined-edge purpose. 0..1: 1 lets full-noise bites reach the core.
+   * S5 silhouette-carving depth: turns the cloud's smooth Gaussian envelope
+   * into a sharp fractal-coastline edge (dustMap.wesl's `dustCarveMask`),
+   * rather than eroding only its interior the way `texture` does. 0 is the
+   * MANDATORY identity — the shader branches out entirely, since the mask's
+   * `smoothstep` would reshape the profile even near 0. UNLIKE `texture`,
+   * carving REMOVES mass, so the tau slider compensates as this rises.
    */
   readonly carve: number;
-  /**
-   * Shapes the carve mask's smoothstep window: 0 is wide/soft (a gradual
-   * transition), 1 is narrow/hard (a crisply defined edge). Read only when
-   * `carve > 0`.
-   */
+  /** Shapes the carve mask's smoothstep window: 0 is wide/soft, 1 is narrow/hard. Read only when `carve > 0`. */
   readonly carveSharpness: number;
   /**
-   * Elongates the noise field `carve` (and, since they share the SAME
-   * band-limited sample, `texture`'s erosion too) reads along the disc's
-   * local azimuthal direction at each splat — stage 1 of wisp anisotropy,
-   * see dustMap.wesl's `stretchNoiseCoord`. 1 is isotropic (identity); >1
-   * stretches features along rotation. A future stage 2 would replace this
-   * generic tangent with the per-instance ISM orientation field.
+   * Elongates the noise field `carve` (and `texture`, which shares the same
+   * band-limited sample) reads along the disc's local azimuthal direction at
+   * each splat (dustMap.wesl's `stretchNoiseCoord`). 1 is isotropic; >1
+   * stretches features along rotation.
    */
   readonly carveStretch: number;
 };

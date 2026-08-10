@@ -1,11 +1,10 @@
 /**
  * GalaxyYoungStarsTuning — the chain-placed young-stars tier's own tunable
  * knobs (`v2/youngStarChain.ts`'s `buildYoungStarChain`), nested under
- * `GalaxyHiiTuning` where `GalaxyHiiAssociationsTuning`'s scattered-splat
- * tier used to sit. Replaces it: chains ride every arm's own ridge walk
- * (`sampleArmRidgeNodes`) instead of seeding off SF-event positions, so the
- * placement/shape knobs that bag carried (`complexes`, `armBias`,
- * `elongation`, `coherence`, `sizeScale`) have no analogue here — see
+ * `GalaxyHiiTuning`. Chains ride every arm's own ridge walk
+ * (`sampleArmRidgeNodes`) rather than seeding off SF-event positions, so
+ * this carries no placement/shape knobs of its own kind (`complexes`,
+ * `armBias`, `elongation`, `coherence`) — see
  * docs/superpowers/specs/2026-08-09-young-stars-field-design.md §3-4.
  */
 export type GalaxyYoungStarsTuning = {

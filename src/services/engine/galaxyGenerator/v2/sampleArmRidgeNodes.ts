@@ -5,9 +5,7 @@
  * uniform log-radius steps along `armRidgeCurvePoint`, each node's arc
  * spacing to its neighbour (forward difference, backward at the open
  * end — an arm isn't periodic like a ring) and its fade*clump*survival
- * modulation, left UN-normalized so each consumer picks its own law.
- * `armClumpMod`/`armSurvival` moved in from galaxyFieldMixture.ts: this
- * walk was their only caller.
+ * modulation, left un-normalized so each consumer picks its own law.
  */
 import { armFadeEnvelope, armRidgeCurvePoint, armRidgeFrameAt } from './armRidgeGeometry';
 import type { GalaxyArmRidgeNode } from '../../../../@types/galaxy/GalaxyArmRidgeNode';

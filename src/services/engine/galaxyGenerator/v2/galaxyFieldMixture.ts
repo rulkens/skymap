@@ -1,19 +1,12 @@
 /**
- * buildGalaxyFieldMixture — the Gaussian mixture the analytic field pass
- * integrates in closed form, derived from the SAME geometry the sprite
- * generator ran with, so the two renderings of one galaxy agree by
- * construction and every preset gets its own field.
- *
- * Each sigma mirrors a `milkyWay/sprites/generate.wesl` builder, cited on the line;
- * each amplitude is its population's `light` fraction over the component's own
- * Gaussian volume, times the galaxy's `luminosity`. Both are physical, so
- * neither an LOD tier nor a sprite constant can move them. Colours stay
- * eyeball values.
- * Imports `armParticleCloud.ts` and `armSpurGeometry.ts`/`armSpurParticleCloud.ts`
- * to reserve their component budgets before the ridge chain spends it, with
- * no third caller (the engine) to reserve it for them instead — the shared
- * ridge-curve/width/colour vocabulary every side needs lives in
- * `armRidgeGeometry.ts`, so these imports are one-directional.
+ * Math-derivation exception (comments.md): the Gaussian mixture the
+ * analytic field pass integrates in closed form, derived from the same
+ * geometry the sprite generator ran with, so the two renderings of one
+ * galaxy agree by construction. Each sigma mirrors a
+ * `milkyWay/sprites/generate.wesl` builder, cited on the line; each
+ * amplitude is its population's `light` fraction over the component's own
+ * Gaussian volume, times the galaxy's `luminosity` — both physical, so no
+ * LOD tier or sprite constant can move them.
  */
 
 import { buildArmParticleCloud, deriveArmCloudCount } from './armParticleCloud';
@@ -47,22 +40,18 @@ import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTun
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
- * PER-GALAXY component cap. Not a shader limit: `io.wesl`'s `comps` is a
- * runtime-sized `array<vec4<f32>>` storage binding whose backing buffer
- * `createGalaxyEngine.ts` grows on demand, so this bounds ONE mixture, not
- * the scene (N background extras sum past it freely).
- *
- * Nor is it a fill-cost ceiling any more: the splat path draws one quad per
- * component covering only that Gaussian's own silhouette, so cost tracks
- * covered screen AREA — which the tiers' own coverage/contrast knobs set —
- * rather than component count. What a component still costs is one instance
- * and 64 B; the cap exists so a pathological geometry cannot make either
+ * Per-galaxy component cap, not a shader limit: `io.wesl`'s `comps` is a
+ * runtime-sized storage binding the engine grows on demand, so this bounds
+ * one mixture, not the scene (N background extras sum past it freely). Nor
+ * a fill-cost ceiling: the splat path draws one quad per component covering
+ * only that Gaussian's own silhouette, so cost tracks covered screen area,
+ * not component count — what a component still costs is one instance and
+ * 64 B, and the cap exists so a pathological geometry can't make either
  * unbounded.
  *
- * `pushArmRidges` derives its per-arm blob count from ridge curvature and
- * budgets it against this cap (`perArmBudget`, net of the arm cloud's
- * reservation), so arm overflow is impossible by construction;
- * `packFieldUniforms` still CLAMPS silently if some other population pushes
+ * `pushArmRidges` budgets its per-arm blob count against this cap
+ * (`perArmBudget`), so arm overflow is impossible by construction;
+ * `packFieldUniforms` still clamps silently if another population pushes
  * past it.
  */
 export const GALAXY_FIELD_MAX_COMPONENTS = 3000;
@@ -372,9 +361,9 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // 1 = the master alone, same neutral-gain role every tier's own
       // `brightness` plays now.
       brightness: 1,
-      // Scaler on the run's own recent-event population (task #10, see
-      // hiiRegions.ts's DIG_COMPLEXES_PER_EVENT) — 1 is the neutral default,
-      // no longer an absolute count.
+      // Scaler on the run's own recent-event population (see
+      // hiiRegions.ts's DIG_COMPLEXES_PER_EVENT), not an absolute count —
+      // 1 is the neutral default.
       complexes: 1,
       childrenPerComplex: 4,
       armBias: 0.6,
@@ -384,8 +373,8 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     },
     youngStars: {
       enabled: true,
-      // Visual calibration 2026-08-09 against the M74/NGC 1961 references —
-      // NOT the "1 is calibrated" idiom the other tiers' gains follow:
+      // Visual calibration against the M74/NGC 1961 references — not the
+      // "1 is calibrated" idiom the other tiers' gains follow:
       // YOUNG_FLUX_REF's eyeballed anchor runs ~15x dim, and folding this
       // into the constant would silently re-scale every stored preset's own
       // brightness. Re-anchor both together or neither.
@@ -393,7 +382,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // Slightly past armCrossSigma, the arm ridge's own measured width.
       width: 1.2,
       // Mostly stars-map-clumped rather than a smooth ribbon — the tracer's
-      // whole point is to break the old uniform-splat look.
+      // whole point is to avoid a uniform-splat look.
       mapDepth: 0.72,
       contrast: 0.9,
       texture: 0.95,
@@ -861,10 +850,10 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
  * same cap: `armCloudCount`/`spurCloudCount` below are computed BEFORE
  * `pushArmRidges` runs and folded into its `reservedComponents`, so the
  * ridge chain's own budget shrinks to leave room rather than the three
- * tiers racing for the same slots. HII regions (`hiiRegions.ts`) do NOT
- * compete for this cap any more — they render into their own target off
- * their own buffer (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`,
- * research doc §18.1), so they never reserve any of it.
+ * tiers racing for the same slots. HII regions (`hiiRegions.ts`) don't
+ * compete for this cap — they render into their own target off their own
+ * buffer (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`), so they never
+ * reserve any of it.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyDescription,

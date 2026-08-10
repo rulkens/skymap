@@ -1,11 +1,11 @@
 /**
- * The arm-ridge curve/width/envelope/colour vocabulary: shared truth for
- * "where the ridge is" and "how it looks" that the ridge chain
- * (`galaxyFieldMixture.ts`), the arm particle cloud (`armParticleCloud.ts`)
- * and the dust lane code all place themselves against. It used to live in
- * `galaxyFieldMixture.ts`, with `armParticleCloud.ts` importing from it and
- * it importing back — a real cycle. Extracted here so neither side owns the
- * other.
+ * Math-derivation exception (comments.md): the arm-ridge curve/width/
+ * envelope/colour vocabulary — shared truth for "where the ridge is" and
+ * "how it looks" that the ridge chain (`galaxyFieldMixture.ts`), the arm
+ * particle cloud (`armParticleCloud.ts`) and the dust lane code all place
+ * themselves against. Lives in its own module, not `galaxyFieldMixture.ts`,
+ * because `armParticleCloud.ts` needs it too and `galaxyFieldMixture.ts`
+ * imports `armParticleCloud.ts` — hosting it there would cycle.
  */
 import { lerpVec3 } from '../../../../utils/math/lerpVec3';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
@@ -22,9 +22,9 @@ const ARM_COLOR_YOUNG: Readonly<Vec3> = [0.65, 0.78, 1.0];
 /**
  * Arms sit inside the disc, so their populations skew with radius the same
  * way the disc's do (inside-out formation — see `galaxyFieldMixture.ts`'s
- * DISC_COLOR_INNER/OUTER). This is a second, independent cross-fade on top of
- * the age one above, kept a minority share (`ARM_RADIAL_STRENGTH`) so
- * `youngFraction` stays the dominant signal for what "this arm" looks like.
+ * DISC_COLOR_INNER/OUTER). A second, independent cross-fade on top of the
+ * age one above, kept a minority share (`ARM_RADIAL_STRENGTH`) so
+ * `youngFraction` stays the dominant signal.
  */
 const ARM_RADIAL_INNER: Readonly<Vec3> = [0.9, 0.85, 0.68];
 const ARM_RADIAL_OUTER: Readonly<Vec3> = [0.6, 0.75, 1.0];
@@ -54,9 +54,7 @@ function smoothstep01(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
-// Exported so the SF-event catalog (`sfEventCatalog.ts`) and the dust lane
-// share the same ridge truth by import, not by re-deriving the curve.
-/** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
+/** Ridge angle: log-spiral phase + meander + (gated) high-frequency wave — shared by `sfEventCatalog.ts` and the dust lane rather than re-derived. */
 export function armRidgeAngle(
   logR: number,
   geometry: GalaxyDescription,
@@ -66,9 +64,8 @@ export function armRidgeAngle(
     arm.phase +
     arm.pitch * logR +
     arm.meanderAmp * Math.sin(arm.meanderFreq * logR * 2 + arm.meanderPhase);
-  // waveAmount is 0 for most presets, in which case this term is 0 too — no
-  // separate gate needed, unlike the WGSL source's `if` (a branch that only
-  // exists there to skip four sin() calls per star).
+  // waveAmount is 0 for most presets, so no separate gate is needed here,
+  // unlike the WGSL source's `if` (which skips four sin() calls per star).
   return (
     angle +
     geometry.waveAmount *
@@ -108,9 +105,8 @@ export type ArmRidgeFrame = { readonly point: Vec3 } & {
  * The ridge's own orthonormal frame at a log-radius — `point` is
  * `armRidgeCurvePoint`, `along` its tangent (central difference), `across`/
  * `pole` the surface-tangent pair Gram-Schmidt'd off it. Shared by
- * `pushArmRidges`' own per-blob placement and `armParticleCloud.ts`'s
- * lane-frame provider, so both agree on what "the ridge" is by construction
- * rather than by staying in sync across two copies.
+ * `pushArmRidges`' per-blob placement and `armParticleCloud.ts`'s lane-frame
+ * provider, so both agree on what "the ridge" is by construction.
  */
 export function armRidgeFrameAt(
   logR: number,
@@ -130,40 +126,30 @@ export function armRidgeFrameAt(
 }
 
 /**
- * Where an ORDINARY arm starts placing, as a fraction of `armStartRadius` —
+ * Where an ordinary arm starts placing, as a fraction of `armStartRadius` —
  * `describeGalaxy` stores `log` of this as every non-spur arm's own
- * `GalaxyFieldArmRecord.spanStartLogR`, which is what the ridge chain, the
- * sprite cloud and the SF-event catalog actually read now (a spur's is its
- * own root, further out — `armSpurGeometry.ts`). This constant remains the
- * one still-global consumer, `clusteredDiscPlacement.ts`'s arm-lane seeding,
- * which only ever runs over `geometry.arms` (never spurs). Unrelated to the
- * outer margins below, which are fractions of `fadeRadius`.
+ * `GalaxyFieldArmRecord.spanStartLogR` (a spur's is its own root, further
+ * out — `armSpurGeometry.ts`). This constant's one remaining direct
+ * consumer is `clusteredDiscPlacement.ts`'s arm-lane seeding, which only
+ * ever runs over `geometry.arms`, never spurs.
  */
 export const ARM_SPAN_START_FRAC = 1.05;
 
 /**
- * Where the outer taper begins, as a fraction of this arm's own `fadeRadius`.
- * The taper spans the outer 40% of the arm: 2.0 of the arm excess's own
- * scale lengths on the Milky Way preset, 1.2 on every gallery one (the MW
- * is the only preset overriding `diskScaleLenFrac`, which is the whole
- * difference) — comparable to the brightness law it multiplies rather than
- * swamping it.
+ * Where the outer taper begins, as a fraction of this arm's own `fadeRadius`
+ * — the taper spans the outer 40% of the arm, comparable to the brightness
+ * law it multiplies rather than swamping it.
  *
- * NOT `armFullRadius` (0.42 * fadeRadius), which `generate.wesl`'s sprite copy
- * of this envelope still uses: at 0.42 the smoothstep is a SECOND radial
- * brightness law on top of `armExcessSurfaceShape`, and one no knob can reach
- * past — it alone cost the Milky Way preset's arms a factor ~2 by the disc
- * edge and drove them to exactly zero half a disc radius later, so the arms
- * died while the disc's own light ran on to ~1.3 * outerRadius.
+ * NOT `armFullRadius` (0.42 * fadeRadius, `describeGalaxy.ts`), which
+ * `generate.wesl`'s sprite copy of this envelope still uses: at 0.42 the
+ * smoothstep is a second radial brightness law on top of
+ * `armExcessSurfaceShape`, one no knob can reach past — it alone cost the
+ * Milky Way preset's arms a factor ~2 by the disc edge and drove them to
+ * zero half a disc radius before the disc's own light ran out.
  */
 const ARM_TAPER_START_FRAC = 0.6;
 
-/**
- * The analytic arms' radial extent: `armStarSample`'s inner ramp, and an
- * outer taper to zero at this arm's own fadeRadius (rec0.w). The arm's
- * BRIGHTNESS along that extent is `armExcessSurfaceShape`'s job, not this
- * one's — see ARM_TAPER_START_FRAC.
- */
+/** The analytic arms' radial extent: an inner ramp, and an outer taper to zero at this arm's own `fadeRadius`. Brightness along that extent is `armExcessSurfaceShape`'s job, not this one's — see `ARM_TAPER_START_FRAC`. */
 export function armFadeEnvelope(
   radius: number,
   geometry: GalaxyDescription,
@@ -176,21 +162,19 @@ export function armFadeEnvelope(
 }
 
 /**
- * Reid et al. 2019's maser-arm width law re-expressed in units of the disc
+ * Reid et al. 2019's maser-arm width law, re-expressed in units of the disc
  * scale length (h = 2.605 kpc for the MW) so it scales to any galaxy: w/h =
- * FLOOR_H + SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R. The law and what
- * `tuning.arms.widthScale` means against it: `GalaxyArmTuning.widthScale`.
+ * FLOOR_H + SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R.
  */
 const ARM_WIDTH_FLOOR_H = 0.017;
 const ARM_WIDTH_SLOPE = 0.036;
 
 /**
- * The arm excess's own radial surface-brightness shape, exp(-(R - R_full) /
- * (hLight * scaleRatio)), normalised to 1 at `armFullRadius`. Read by BOTH arm
- * tiers (`pushArmRidges` and `armParticleCloud.ts`), which is what leaves
- * `cloud.share` a grain knob (`GalaxyArmCloudTuning.share` for the residual it
- * still moves). What `scaleRatio` means physically, and why the pivot is where
- * it is: `GalaxyArmTuning.excessScaleRatio`.
+ * The arm excess's radial surface-brightness shape, exp(-(R - R_full) /
+ * (hLight * scaleRatio)), normalised to 1 at `armFullRadius`. Read by both
+ * arm tiers (`pushArmRidges` and `armParticleCloud.ts`), leaving
+ * `GalaxyArmCloudTuning.share` a grain knob on the residual. What
+ * `scaleRatio` means physically: `GalaxyArmTuning.excessScaleRatio`.
  */
 export function armExcessSurfaceShape(
   radius: number,

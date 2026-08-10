@@ -1,17 +1,15 @@
 /**
- * sampleIsmMapDustCdf — S1's sample step: one upper-bound binary search over
- * `buildIsmMapDustCdf`'s prefix sum (~18 steps for a 768x256 grid) picks a
- * texel exactly proportional to its accumulated mass, then jitters INSIDE
- * that texel's footprint — uniform in angle, area-uniform in radius
- * (`r = sqrt(r0^2 + u*(r1^2-r0^2))`) — reconstructing the map
- * piecewise-constant at its own resolution instead of collapsing every draw
- * onto the texel centre.
+ * Exception: dust-CDF sampling math, unreadable without the derivation.
  *
- * Exactly THREE rng draws every call (bin pick, angle jitter, radius
- * jitter) — fixed regardless of map contrast, unlike the rejection loop it
- * replaces — so a placement's downstream draws never re-roll when only the
- * map changes (see clusteredDiscPlacement.ts's header on why draw order is
- * load-bearing).
+ * One upper-bound binary search over `buildIsmMapDustCdf`'s prefix sum picks
+ * a texel proportional to its mass, then jitters inside that texel's
+ * footprint — uniform in angle, area-uniform in radius (`r = sqrt(r0^2 +
+ * u*(r1^2-r0^2))`) — so the map reconstructs piecewise-constant rather than
+ * collapsing every draw onto the texel centre.
+ *
+ * Three rng draws every call, independent of map contrast, keep a
+ * placement's downstream draws from re-rolling when only the map changes
+ * (draw order is load-bearing — see `clusteredDiscPlacement.ts`).
  */
 import { ismMapDustRingEdges } from './ismMapDustRingEdges';
 import type { GalaxyIsmMapDustCdf } from '../../@types/galaxy/GalaxyIsmMapDustCdf';

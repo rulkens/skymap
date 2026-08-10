@@ -1,15 +1,12 @@
 /**
  * ismMapRingIndexForSample — nearest-texel ring lookup shared by
  * `sampleGalaxyIsmMap` and `sampleIsmMapOrientation`: binary-searches
- * `ismMapRingRadius`'s monotonic ring->radius mapping for the largest ring
- * whose radius is <= the query, rather than restating its log-radial
- * formula — the two samplers must never disagree about which ring a radius
- * falls in. Distinct from `ismMapRingIndexForRadius` (closed-form nearest,
- * exact only for radii that came FROM `ismMapRingRadius` itself): this is a
- * floor bucket over an arbitrary radius, for texel selection, not exact
- * inversion — and because `hi` starts at `rings - 1` unvalidated, it can
- * never return `rings - 1` itself (see this file's test for the concrete
- * out-of-range case).
+ * `ismMapRingRadius`'s monotonic ring->radius mapping for the floor ring at
+ * an arbitrary radius, so the two samplers can't disagree about which ring
+ * it falls in. Unlike `ismMapRingIndexForRadius` (closed-form, exact only
+ * for radii that came FROM `ismMapRingRadius` itself), `hi` starts
+ * unclamped at `rings - 1`, so this can never return that index (see the
+ * test for the concrete out-of-range case).
  */
 import { ismMapRingRadius } from './ismMapRingRadius';
 

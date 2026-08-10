@@ -3,10 +3,9 @@
  * back out of `gen.armTable` (`generationUboLayout.ts`'s `armTable` array) in
  * the exact field order `generate.wesl`'s `armStarSample` consumes them.
  *
- * `age` (lane 7) is the one field the sprite shader does NOT consume — it
- * used to be padding. It exists for the analytic field's contrast law
- * (`pushArmRidges` in `galaxyFieldMixture.ts`): 0 = young gas arm, 1 = old
- * stellar arm.
+ * `age` (lane 7) is the one field the sprite shader does NOT consume: it
+ * exists for the analytic field's contrast law (`pushArmRidges` in
+ * `galaxyFieldMixture.ts`), 0 = young gas arm, 1 = old stellar arm.
  */
 export type GalaxyFieldArmRecord = {
   readonly phase: number;
@@ -16,8 +15,7 @@ export type GalaxyFieldArmRecord = {
   /**
    * Log-radius (armRidgeAngle's `logR`, 0 at `armStartRadius`) where THIS
    * arm's rendered span begins — an ordinary arm's is
-   * `log(ARM_SPAN_START_FRAC)` (`armRidgeGeometry.ts`), the same value every
-   * span-start consumer used to hardcode before it became per-arm. A spur
+   * `log(ARM_SPAN_START_FRAC)` (`armRidgeGeometry.ts`). A spur
    * (`armSpurGeometry.ts`) sets its own: the log-radius of the root it grows
    * from on its parent, not the galaxy-wide default. Not read by
    * `armStarSample` — v1 has no spurs.

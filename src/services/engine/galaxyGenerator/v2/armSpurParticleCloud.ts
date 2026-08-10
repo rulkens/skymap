@@ -1,27 +1,12 @@
 /**
- * buildArmSpurParticleCloud — sprite placement for interarm spurs
- * (`armSpurGeometry.ts`'s `deriveArmSpurs`), mirroring `armParticleCloud.ts`'s
- * 'analytic' arm-lane placement (a per-particle roll onto a lane frame,
- * rejection-sampled against the lane's own fade envelope) with each spur's
- * OWN curve as the lane.
- *
- * NOT routed through `buildClusteredDiscPlacement`: that sampler's arm-lane
- * mode hardcodes `armRidgeGeometry.ts`'s global `ARM_SPAN_START_FRAC` as its
- * rejection floor (`clusteredDiscPlacement.ts`'s `placeArmLaneComplex`),
- * exactly the assumption a spur breaks — its span starts at its own root
- * (`GalaxyFieldArmRecord.spanStartLogR`), which can sit anywhere in the disc.
- * This module re-implements the single-particle half of that idiom (no
- * complex/children clustering — a spur is already a sparse, short feature)
- * rather than fork the shared sampler to carry a case it doesn't need
- * elsewhere.
- *
- * Flux ledger: `totalFlux` is this tier's share of `pushArmRidges`'
- * `armExcessFlux`, split out by `galaxyFieldMixture.ts`'s
- * `buildGalaxyFieldMixture` the same way the arm cloud's is — see that
- * function's docblock for the arithmetic.
- *
- * PURITY INVARIANT: pure `(geometry, spurArms, tuning, totalFlux, seed) ->
- * flat data`, no `Math.random`/`Date`/engine state.
+ * Sprite placement for interarm spurs (`armSpurGeometry.ts`'s
+ * `deriveArmSpurs`), mirroring `armParticleCloud.ts`'s arm-lane placement
+ * but keyed to each spur's own curve. Not routed through
+ * `buildClusteredDiscPlacement`: that sampler hardcodes `ARM_SPAN_START_FRAC`
+ * as its rejection floor, which a spur breaks — its span starts at its own
+ * root (`GalaxyFieldArmRecord.spanStartLogR`), which can sit anywhere in the
+ * disc. `totalFlux` is this tier's share of `pushArmRidges`' `armExcessFlux`,
+ * split from `galaxyFieldMixture.ts`. Pure function, no engine state.
  */
 import {
   armColor,

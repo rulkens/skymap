@@ -1,7 +1,9 @@
 /**
- * milkyWayModelMatrix — the transform that drops the GPU-generated Milky Way
- * point cloud into the scene at the galaxy's real place and orientation:
- * centred on Sgr A* (`MILKY_WAY_CENTER_WORLD`), disk in the galactic plane.
+ * milkyWayModelMatrix — DERIVATION: the frame-rotation maths below is
+ * unreadable without it, hence the longer-than-usual header. Builds the
+ * transform that drops the GPU-generated Milky Way point cloud into the
+ * scene at the galaxy's real place and orientation: centred on Sgr A*
+ * (`MILKY_WAY_CENTER_WORLD`), disk in the galactic plane.
  *
  * ## The frame chain
  *
@@ -55,23 +57,14 @@ import { GAL_X_EQ, GAL_Y_EQ, GAL_Z_EQ } from '../../../../data/orientation/orien
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_MODEL_SCALE } from './milkyWayCalibration';
 
-/**
- * Model matrix placing the generated point cloud at the Milky Way's world
- * position, in the galactic-plane orientation. Column-major `Float32Array(16)`:
- * `translate(MILKY_WAY_CENTER_WORLD) x R_localToWorld x uniformScale(k)`.
- */
 export function milkyWayModelMatrix(): Float32Array {
   const k = MILKY_WAY_MODEL_SCALE;
 
   // prettier-ignore
   return new Float32Array([
-    // column 0 — local +x (in-disk, toward GC) = GAL_X_EQ * k
-    GAL_X_EQ[0] * k, GAL_X_EQ[1] * k, GAL_X_EQ[2] * k, 0,
-    // column 1 — local +y (disk normal) = GAL_Z_EQ (NGP) * k
-    GAL_Z_EQ[0] * k, GAL_Z_EQ[1] * k, GAL_Z_EQ[2] * k, 0,
-    // column 2 — local +z (in-disk, rotation dir) = GAL_Y_EQ * k
-    GAL_Y_EQ[0] * k, GAL_Y_EQ[1] * k, GAL_Y_EQ[2] * k, 0,
-    // column 3 — translation to the Milky Way's world centre
-    MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2], 1,
+    GAL_X_EQ[0] * k, GAL_X_EQ[1] * k, GAL_X_EQ[2] * k, 0, // column 0: local +x
+    GAL_Z_EQ[0] * k, GAL_Z_EQ[1] * k, GAL_Z_EQ[2] * k, 0, // column 1: local +y (disk normal)
+    GAL_Y_EQ[0] * k, GAL_Y_EQ[1] * k, GAL_Y_EQ[2] * k, 0, // column 2: local +z
+    MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2], 1, // column 3: translation
   ]);
 }

@@ -1,17 +1,16 @@
 /**
- * GalaxyIsmMap — one CPU-side readback of the fluid generator's packed
- * output (`ismMapFluidPack.wesl`), decoded from rgba16float storage to
- * LINEAR floats. `data` is TIGHTLY packed (4 floats/texel, row-major, no
+ * GalaxyIsmMap — wire-format contract: this file's channel layout is the
+ * source of truth `ismMapFluidStep.wesl`/`ismMapFluidPack.wesl` point back
+ * to rather than restating. One CPU-side readback of the fluid generator's
+ * packed output (`ismMapFluidPack.wesl`), decoded from rgba16float storage
+ * to LINEAR floats. `data` is TIGHTLY packed (4 floats/texel, row-major, no
  * GPU `copyTextureToBuffer` row-alignment padding or f16 bit pattern) — see
  * the galaxy tool's `createIsmMapReadbacks` for where both get
  * stripped/decoded. `rMin`/`rMax` are the log-radial bounds this readback's
  * grid was built over (`ismMapGridRadius`), needed to invert
  * `ismMapRingRadius` when sampling.
  *
- * CONTRACT (the generator's GPU ping-pong state texel AND this readback's
- * packed layout — `ismMapFluidStep.wesl`/`ismMapFluidPack.wesl` point back
- * here rather than restating it):
- *
+ * CONTRACT:
  *   state (ping-pong, internal): x gas | y a MATERIAL stars tracer (advected
  *     the same as gas/dust, deposited at SF events proportional to local
  *     gas, decaying per step — the placement field for the young-stars

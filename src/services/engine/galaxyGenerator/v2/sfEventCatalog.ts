@@ -1,11 +1,10 @@
 /**
- * buildSfEventCatalog — the shared star-formation placement truth (design
- * doc N3): a pure function of (geometry, starFormation, seed) → flat SF-event
- * data. No engine state, no clock, no global RNG — this module is destined
- * for a Worker or a GPU compute pass so galaxies can keep generating in real
- * time while the camera navigates. Dust bubbles (this pass) and HII
- * star-forming knots (later, #20) both read this one catalog so cavities and
- * their glow correlate instead of being two independent sprinkles.
+ * buildSfEventCatalog — the shared star-formation placement truth: a pure
+ * function of (geometry, starFormation, seed) → flat SF-event data. No
+ * engine state, no clock, no global RNG — a Worker/GPU-compute-pass
+ * candidate. Dust bubbles (`dustBubblePlacements.ts`) and HII star-forming
+ * knots (`hiiRegions.ts`) both read this one catalog so cavities and their
+ * glow correlate instead of being two independent sprinkles.
  */
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';

@@ -2,47 +2,32 @@
  * milkyWayAggregateLayer — the Milky Way point cloud's ADDITIVE star pass,
  * drawn into the reduced-resolution `mw-aggregate` offscreen.
  *
- * ### Why the star pass left the HDR target
- *
  * The cloud stands in for ~1e11 stars with a budget in the hundreds of
  * thousands, so wherever the disc covers real screen area its sprites fall
- * below one per pixel and the field reads as discrete particles rather than as
- * a galaxy. The cure is more overlap per pixel — bigger, softer, fewer sprites
- * — and the wall that stops you is FILL, not instance count: measured, ~5x the
- * baseline sprite area collapses the frame rate while the instance count is
- * going down.
+ * below one per pixel and read as discrete particles rather than a galaxy.
+ * The cure is more overlap per pixel (bigger, softer, fewer sprites), and the
+ * wall that stops you is FILL, not instance count — measured, ~5x the
+ * baseline sprite area collapses the frame rate while instance count drops.
+ * A summed additive glow field is low-frequency, so rendering at `1/scale`
+ * and bilinearly upsampling buys back the square of the divisor in fragment
+ * cost — the same split the survey star pass makes (`starAggregatesLayer` →
+ * `star-aggregates` → `starAggregateUpsampleLayer`); full rationale on the
+ * `mw-aggregate` spec row in `renderTargets.ts`. The DUST pass stays in
+ * `milkyWayLayer`, full-res in HDR, since its multiplicative transmittance
+ * has to land on the real cosmological accumulation.
  *
- * A summed additive glow field is low-frequency, so it can be rendered at
- * `1/scale` and bilinearly upsampled for free while its fragment cost drops by
- * the square of the divisor. That is exactly the split the survey star pass
- * already makes (`starAggregatesLayer` → `star-aggregates` →
- * `starAggregateUpsampleLayer`), for exactly the same reason, and this row is
- * its Milky-Way twin. The full rationale lives on the `mw-aggregate` spec row
- * in `renderTargets.ts`.
+ * Viewport is the DOWNSCALED size, not the canvas: `stars.wesl` clamps each
+ * sprite's half-extent to `[starPxMin, starPxMax]` pixels OF THE TARGET BEING
+ * RENDERED, so the canvas size would make every clamped sprite `scale` times
+ * too big once upsampled. Computed with the same `floor(canvas / scale)`,
+ * min-1-px formula `renderTargets` uses, reading the SAME `scale` off the
+ * `'mw-aggregate'` spec row.
  *
- * The DUST pass stays in `milkyWayLayer`, full-res in HDR: its multiplicative
- * transmittance has to land on the real cosmological accumulation, and it is
- * not the fill-bound half.
- *
- * ### Why the downscaled viewport (not the canvas viewport)
- *
- * `stars.wesl` clamps each sprite's on-screen half-extent to
- * `[starPxMin, starPxMax]` PIXELS, converting from NDC via the uniform's
- * `viewportPx`. Those are pixels OF THE TARGET BEING RENDERED. Handing it the
- * canvas size while drawing into a downscaled target would make every clamped
- * sprite come out `scale` times its intended size once upsampled. So the viewport is
- * computed from the same `floor(canvas / scale)`, min-1-px formula
- * `renderTargets` allocates with, reading the SAME `scale` off the
- * `'mw-aggregate'` spec row — the identical discipline `scalarVolumeLayer`
- * follows for its dither frequency.
- *
- * ### Why NEAR0
- *
- * Same reason `milkyWayLayer` uses it: COSMO's near plane is fixed at 10 kpc,
- * but the disc's near edge sits ~9.5 kpc from the heliocentric origin, so that
- * plane slices through the cloud mid-descent while the approach fade still
- * shows it. See `milkyWayLayer`'s header for the full note, including why
- * NEAR0's ADAPTIVE far plane is why both shaders clamp clip-z.
+ * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc, but the
+ * disc's near edge sits ~9.5 kpc out, so that plane would slice the cloud
+ * mid-descent while the approach fade still shows it — see `milkyWayLayer`'s
+ * header for the full note, including why NEAR0's adaptive far plane means
+ * both shaders clamp clip-z.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';

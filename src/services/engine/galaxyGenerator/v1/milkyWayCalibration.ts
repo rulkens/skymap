@@ -1,17 +1,14 @@
 /**
  * milkyWayCalibration — every hand-tuned constant the Milky Way point-cloud
- * renderer needs, in one file. The generation preset (`MILKY_WAY_GALAXY_PARAMS`)
- * decides what the galaxy *looks like* (arm count, bar, warp, ...); this module
- * decides how that generated cloud gets placed and lit in the app's scene
- * (its physical size, its per-tier star budget, its on-screen sprite size, its
- * brightness). Splitting the two means a visual-gate tuning pass touches only
- * this file, never the shared preset the tool's reference gallery also reads.
+ * renderer needs, in one file. `MILKY_WAY_GALAXY_PARAMS` decides what the
+ * galaxy *looks like* generatively (arm count, bar, warp, ...); this module
+ * decides how the generated cloud is placed and lit in the scene (size,
+ * per-tier star budget, sprite size, brightness) — a visual-gate tuning pass
+ * touches only this file, never the shared preset the tool's gallery reads.
  *
- * The look knobs are the exception to "constants the renderer needs": they are
- * BOOT values (`MILKY_WAY_TUNING_DEFAULTS`) that `settings.milkyWay` spreads in
- * at startup, and the renderer reads the live settings copy instead. That is
- * what lets the DebugPanel's "Milky Way tuning" sliders move them without a
- * reload; this module stays their single source of truth for where they start.
+ * Exception: the look knobs are BOOT values (`MILKY_WAY_TUNING_DEFAULTS`)
+ * that `settings.milkyWay` spreads in; the renderer reads the live settings
+ * copy, which is what lets the DebugPanel sliders move them without a reload.
  */
 import type { Tier } from '../../../../@types/data/Tier';
 import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
@@ -112,11 +109,10 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // trade — change it and they move with it.
   aggregateDivisor: 3,
   // By reference to `MILKY_WAY_STARS_PER_TIER.medium`, never a copied
-  // literal: medium IS the tier the preset was tuned against, and the tier
-  // slice always boots at 'medium' (see `tierSlice.ts`), so this reproduces
-  // exactly what shipped before this knob existed. Moving it live is a
-  // count/size trade-off exploration, not a steady-state look — see
-  // `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row.
+  // literal: medium IS the tier the preset is tuned against, and the tier
+  // slice always boots at 'medium' (see `tierSlice.ts`), so the two can't
+  // drift apart. Moving it live is a count/size trade-off exploration, not a
+  // steady-state look — see `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row.
   starCount: MILKY_WAY_STARS_PER_TIER.medium,
 };
 

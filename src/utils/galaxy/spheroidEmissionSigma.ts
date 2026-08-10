@@ -1,13 +1,12 @@
 /**
- * spheroidEmissionSigma — the per-axis Gaussian sigma matching the
+ * spheroidEmissionSigma — per-axis Gaussian sigma matching the
  * emission-weighted second moment of `generate.wesl`'s spheroid draws
  * (`buildBulge`, `buildHalo`): radius = scale * pow(-log(1 - u*uClamp),
  * exponent), rejected past maxRadius, weighted by exp(-radius/falloffLength).
  *
- * Quadrature rather than a closed form because the brightness falloff is not
- * optional bookkeeping: it cuts the MW bulge's RMS radius by well over half,
- * and it moves with the `bulgeFalloff` knob, so a moment computed without it
- * is wrong by a preset-dependent factor.
+ * Quadrature, not closed form: the falloff weight moves with the
+ * `bulgeFalloff` knob and roughly halves the RMS radius, so a moment
+ * computed without it is wrong by a preset-dependent factor.
  */
 
 /** Enough for a smooth, cheap integral of a monotone weight — this runs once per regeneration. */

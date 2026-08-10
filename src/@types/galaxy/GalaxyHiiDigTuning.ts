@@ -2,8 +2,7 @@
  * GalaxyHiiDigTuning — the diffuse ionized gas (DIG) veil's own tunable
  * complex/children structure (`hiiRegions.ts`'s DIG block), nested under
  * `GalaxyHiiTuning` the way `GalaxyArmCloudTuning` nests under
- * `GalaxyArmTuning`. Replaces the flat `diffuse: number` this tier shipped
- * with (see `hiiRegions.ts` for the placement/scatter it drives).
+ * `GalaxyArmTuning`. See `hiiRegions.ts` for the placement/scatter it drives.
  */
 export type GalaxyHiiDigTuning = {
   /**
@@ -15,19 +14,17 @@ export type GalaxyHiiDigTuning = {
    */
   readonly fraction: number;
   /**
-   * This tier's own flux GAIN (board item 19), multiplied against
-   * `GalaxyHiiTuning.brightness` (the whole-field master) — 1 leaves DIG at
-   * whatever the master alone would give it. Distinct from `fraction`: that
-   * knob SPLITS flux out of the shell tier's total, this one scales DIG's
-   * resulting share up or down without touching the split.
+   * This tier's own flux GAIN, multiplied against `GalaxyHiiTuning.brightness`
+   * (the whole-field master) — 1 leaves DIG at whatever the master alone
+   * would give it. Distinct from `fraction`: that knob SPLITS flux out of
+   * the shell tier's total, this one scales DIG's resulting share.
    */
   readonly brightness: number;
   /**
-   * Scaler on the run's own recent-event population (task #10) — the veil's
-   * complex count is DERIVED from how much star formation the current run
-   * actually produced (`hiiRegions.ts`'s `DIG_COMPLEXES_PER_EVENT`), not a
-   * fixed number; 1 is the neutral default, 0 turns the veil off regardless
-   * of `fraction`.
+   * Scaler on the run's own recent-event population — the veil's complex
+   * count is DERIVED from how much star formation the current run actually
+   * produced (`hiiRegions.ts`'s `DIG_COMPLEXES_PER_EVENT`), not a fixed
+   * number; 1 is the neutral default, 0 turns the veil off regardless of `fraction`.
    */
   readonly complexes: number;
   /** Blobs per complex — total blob count is `complexes * childrenPerComplex`. */

@@ -20,7 +20,7 @@ import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/Galaxy
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
-/** Debug-overlay-only knob, deleted from GalaxyStarFormationParams 2026-08-06 — the BUBBLE view was its only consumer. */
+/** Fixed at 1, not exposed as a slider — kept as a single multiplication point rather than inlining `1` at both use sites below. */
 const BUBBLE_RADIUS_SCALE = 1;
 
 /** Placement cap — bubbles are sparse, large-footprint features. */
@@ -59,11 +59,11 @@ function armEventCenter(
 }
 
 /**
- * An event only carves where its arm actually reaches: past the fade envelope
- * there is no arm to sweep dust out of. This used to route through the lane
- * ledger's amplitude, but every other factor in that product (age weight, lane
- * width, carried column) is strictly positive wherever tau is — so the fade
- * was the only thing the gate ever tested.
+ * An event only carves where its arm actually reaches: past the fade
+ * envelope there is no arm to sweep dust out of. Testing the fade envelope
+ * directly rather than the lane ledger's full amplitude is equivalent —
+ * every other factor in that product (age weight, lane width, carried
+ * column) is strictly positive wherever tau is.
  */
 function armReaches(
   armRadius: number,
@@ -129,9 +129,9 @@ export function buildHiiCavityPlacements(
   tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly DustBubblePlacement[] {
-  // `?? 0.8`: board 19 moved `cavityScale` off `hii` root onto `hii.shells`
-  // — see `hiiRegions.ts`'s matching `radiusScale`/`shellThickness` holes for
-  // why a partial-shells-bag preset can re-enter missing it.
+  // `cavityScale` moved from `hii` root onto `hii.shells`; a preset saved
+  // with a partial `shells` bag can re-enter missing it (same idiom as
+  // `hiiRegions.ts`'s `radiusScale`/`shellThickness` holes).
   const cavityScale = tuning.hii.shells.cavityScale ?? 0.8;
   if (!tuning.hii.enabled || cavityScale <= 0) return [];
   if (dust.tau <= 0 || geometry.numArms <= 0) return [];

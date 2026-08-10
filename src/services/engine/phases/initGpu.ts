@@ -1,50 +1,17 @@
 /**
- * initGpu — bootstrap phase that owns GPU acquisition + renderer
- * construction.
+ * initGpu — bootstrap phase that acquires the WebGPU device + swap-chain
+ * context, then constructs every renderer the engine uses (points, disks,
+ * Milky Way, filaments, bodies, …), all writing into the shared HDR
+ * offscreen target set up here. Runs first because every later phase depends
+ * on the device: `wireSlots` commits decoded clouds and mints slots that
+ * bind to these renderers, `wireInput` builds the pick renderer, `startLoop`
+ * packages everything into `RunFrameDeps`.
  *
- * ### What this phase does
- *
- * Acquires the WebGPU device + swap-chain context + format from
- * `initGpu(canvas)` (the lower-level helper in `services/gpu/device.ts`),
- * then constructs every renderer the engine uses:
- *
- *   - `PointRenderer` — instanced billboards into the HDR offscreen
- *     target.  Stored on `state.gpu.renderer`.
- *   - `RenderTargets` — the offscreen target table (full-res rgba16float
- *     `hdr` + 1/3-scale `volume`) every content layer draws into.
- *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`,
- *     `MilkyWayCloudRenderer`, `FilamentRenderer`, … — thumbnail +
- *     overlay renderers that write into the same HDR target as the
- *     points pass.
- *
- * The 5 galaxy-catalog source asset slots are also wired here via the
- * `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table —
- * `wireGalaxyCatalogSourceSlot`'s commit step uploads to
- * `state.gpu.renderer`, so the slots must be minted AFTER renderer
- * construction in the same phase to keep that lifecycle obvious.
- *
- * ### Why this runs first
- *
- * Every later phase depends on the device:
- *   - `wireSlots` commits decoded clouds into `state.gpu.renderer`,
- *     constructs the thumbnail subsystem (wants a `device`), and mints
- *     the filament + sidecar slots that bind to the renderers built
- *     here.
- *   - `wireInput` builds the pick renderer (which shares vertex/uniform
- *     buffers with the visual renderer) and the click resolver.
- *   - `startLoop` packages `device`, `context`, and every renderer into
- *     `RunFrameDeps` for the frame body.
- *
- * `device` and `context` survive past this phase via the `phaseLocals`
- * carrier (read by `wireSlots` / `wireInput` / `startLoop`) — that stays the
- * canonical route for phases that need them directly. `state.gpu.uiCtx` is a
- * separate, narrower home for the same two values (plus `canvas`), read only
- * by `buildSwapRenderers` for a later swap-format rebuild. Every renderer is
- * stored on `state.gpu.*` directly, which is also how later phases consume
- * them. `phaseLocals` also carries `unwatchHdrCapability` — the sole reader
- * is `engine.ts`'s `destroy()`, not a later bootstrap phase, but it has no
- * `state.gpu.*` home either. See `BootstrapDeps` in `bootstrap.ts` for the
- * `phaseLocals` wiring.
+ * `device` / `context` survive past this phase via the `phaseLocals` carrier
+ * (see `BootstrapDeps` in `bootstrap.ts`); `state.gpu.uiCtx` is a separate,
+ * narrower home for the same two values (plus `canvas`), read only by
+ * `buildSwapRenderers` for a later swap-format rebuild. Every renderer is
+ * stored on `state.gpu.*` directly.
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
@@ -348,8 +315,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // identities by reading `state.gpu.X` directly.
   //
   // Lifecycle invariant: do NOT add these fields to `isEngineReady` (in
-  // `helpers/engineReady.ts`).  That predicate intentionally tracks only
-  // the five bootstrap-complete fields whose simultaneous non-null state
+  // `helpers/engineReady.ts`).  That predicate intentionally tracks only the
+  // handful of bootstrap-complete fields whose simultaneous non-null state
   // means "every phase has finished" — bootstrap progression isn't the
   // inverse of teardown, and over-eager predicate growth re-creates the
   // black-screen bug class.

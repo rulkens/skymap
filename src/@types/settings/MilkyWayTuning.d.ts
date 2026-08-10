@@ -1,27 +1,14 @@
 /**
- * MilkyWayTuning — the Milky Way star-cloud's per-frame LOOK knobs.
+ * MilkyWayTuning — the Milky Way star-cloud's per-frame LOOK knobs, kept apart
+ * from `MilkyWaySettings` (adds `enabled` / `labelEnabled`) so a knob patch
+ * can never flip the layer's visibility by accident. Shared by three
+ * consumers: `MILKY_WAY_TUNING_DEFAULTS` (calibration seed), `setMilkyWayTuning`
+ * (patch payload), `MilkyWayCloudDrawArgs.tuning` (per-frame renderer arg).
  *
- * Named apart from `MilkyWaySettings` (which adds the two visibility axes) for
- * the same reason `FlowFieldDefaults` is named apart from `FlowSettings`: three
- * consumers reference exactly this shape and would otherwise re-spell it — the
- * calibration seed (`MILKY_WAY_TUNING_DEFAULTS`), the slice's patch payload
- * (`setMilkyWayTuning`), and the renderer's per-frame draw argument
- * (`MilkyWayCloudDrawArgs.tuning`). Keeping the knobs in their own type also
- * keeps the visibility intent (`enabled` / `labelEnabled`) off the generic
- * merge path, so a knob patch can never flip the layer off by accident.
- *
- * What unites the set is that moving any of them changes the NEXT frame — not
- * that the frame loop reacts by the SAME mechanism. Most get there via
- * `milkyWayCloudRenderer.writeUniforms`, landing in the `params0` / `params1`
- * lanes of `milkyWay/sprites/io.wesl`'s `Uniforms` — a uniform write.
- * `aggregateDivisor` gets there by sizing the offscreen the star pass draws
- * into, which the frame loop reallocates when the number moves — a render-
- * target rebuild. `starCount` gets there the heaviest way of the three: it
- * feeds generation directly (`milkyWayCloud.generate` carves the star/dust
- * layouts and allocates buffers from it), so the frame loop answers a
- * mismatch by regenerating the cloud outright. All three still clear the same
- * bar — moving the knob changes the next frame — because "the frame loop
- * reacts" was never a promise about uniform buffers specifically.
+ * Most fields reach the frame via `milkyWayCloudRenderer.writeUniforms`;
+ * `aggregateDivisor` resizes the star pass's offscreen target instead;
+ * `starCount` regenerates the cloud's instance buffers outright. All three
+ * still change the NEXT frame — the mechanism just differs.
  */
 
 export type MilkyWayTuning = {
@@ -76,24 +63,18 @@ export type MilkyWayTuning = {
   aggregateDivisor: number;
   /**
    * Absolute star count fed straight into `milkyWayCloud.generate`'s
-   * `GalaxyParams.starCount` before carving the star/dust layouts. Seeded
-   * from the CURRENT tier's budget (`MILKY_WAY_STARS_PER_TIER[tier]`) at boot
-   * and re-seeded by `watchTierSaga` on every explicit tier change, so an
-   * absolute count doesn't quietly decouple the cloud from tier LOD — a
-   * device that drops to the small tier gets the small tier's budget, not
-   * whatever count a previous tier's panel session left behind. Between tier
-   * changes the DebugPanel slider owns it. The heaviest-reaction knob in the
-   * set: moving it doesn't touch a uniform or a render target, it regenerates
-   * the cloud's instance buffers outright (destroy + allocate + compute
-   * dispatch) — see `runFrame`'s mismatch branch, which mirrors
-   * `aggregateDivisor`'s render-target rebuild but for generated data instead
-   * of a texture.
+   * `GalaxyParams.starCount`. Seeded from the current tier's budget
+   * (`MILKY_WAY_STARS_PER_TIER[tier]`) at boot and re-seeded by
+   * `watchTierSaga` on every tier change, so a device that drops to the
+   * small tier gets the small tier's budget rather than whatever a previous
+   * session's slider left behind; the DebugPanel slider owns it between tier
+   * changes. Moving it regenerates the cloud's instance buffers outright
+   * (`runFrame`'s mismatch branch), unlike the uniform-write/render-target
+   * paths the other fields take.
    *
-   * `totalStarBudget` floors the total at 20,000 stars — not a taste choice,
-   * a hard floor the renderer always honours regardless of what's requested —
-   * so `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row sets its `min` to that same
-   * floor. Lowering the row's `min` below 20,000 would let the slider display
-   * a number the renderer silently ignores.
+   * `totalStarBudget` floors the total at 20,000 regardless of what's
+   * requested, so `MILKY_WAY_SLIDER_FIELDS`'s `starCount.min` must match —
+   * a lower `min` would let the slider display a count the renderer ignores.
    */
   starCount: number;
 };

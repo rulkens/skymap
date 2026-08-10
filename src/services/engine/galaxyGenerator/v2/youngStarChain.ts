@@ -1,11 +1,9 @@
 /**
  * buildYoungStarChain — the young-stars tier as chains laid along every arm's
  * own ridge walk (spec docs/superpowers/specs/2026-08-09-young-stars-field-
- * design.md §3), replacing the deleted `buildBlueAssociations`' scattered
- * per-event splats. Reuses `sampleArmRidgeNodes` (P1) over BOTH the real arms
- * and their spurs. PURITY INVARIANT: pure `(geometry, tuning, seed) -> flat
- * data`, same discipline as every other `v2/` builder — no `ismMap`/
- * `starFormation` input, unlike the tier it replaces.
+ * design.md §3). Reuses `sampleArmRidgeNodes` over both the real arms and
+ * their spurs. Pure `(geometry, tuning, seed) -> flat data`, same discipline
+ * as every other `v2/` builder — no `ismMap`/`starFormation` input.
  */
 import { armCrossSigma } from './armRidgeGeometry';
 import { buildArmSpurs } from './armSpurGeometry';
@@ -37,19 +35,17 @@ const NODES_PER_LOG_UNIT = 80;
 /** 2-3 chain neighbours overlap at this fraction of a node's own arc spacing — the spec's documented 0.6-0.7 band, midpoint. */
 const OVERLAP = 0.65;
 
-/** Fixed vertical extent every chain node shares — young stars haven't diffused off their birth height (cf. `ASSN_SCALE_HEIGHT_PC` in the deleted association tier, kept here). */
+/** Fixed vertical extent every chain node shares — young stars haven't diffused off their birth height. */
 const YOUNG_SCALE_HEIGHT_PC = 100;
 
 /**
  * Free-standing per-luminosity flux anchor (spec §3, Q3) — total tier flux
  * at `brightness` 1 is `geometry.luminosity * YOUNG_FLUX_REF`, the same
  * "fraction of the galaxy's own luminosity" idiom `hiiRegions.ts`'s
- * `HII_LUMINOSITY_SHARE` uses, standing in until the pivot to `clusterFluxSum`
- * (Q3's one-line anchor swap) wires this tier back into the HII pass' own
- * flux ledger. Eyeballed against the deleted `buildBlueAssociations`' own
- * typical total (its `brightness` default 0.6 times `clusterFluxSum`, which
- * itself ran a few percent of `tierFlux`'s ~6.8%-of-luminosity HII budget) —
- * a visual-calibration starting point, not a measurement.
+ * `HII_LUMINOSITY_SHARE` uses, standing in until the pivot to
+ * `clusterFluxSum` (Q3's one-line anchor swap) wires this tier back into
+ * the HII pass' own flux ledger. A visual-calibration starting point, not
+ * a measurement.
  */
 const YOUNG_FLUX_REF = 0.005;
 
@@ -61,17 +57,15 @@ export const SPLAT_CUT_SIGMA = 4.5;
 /**
  * The quad clips at `SPLAT_CUT_SIGMA * boundRadius` (splatSilhouette.wesl),
  * so under-bounding by this ratio truncates young components at
- * `YOUNG_BOUND_SIGMA` sigma instead of `SPLAT_CUT_SIGMA` — shaded fragment
- * area scales with the cut squared, so 3/4.5 cuts it ~2.25x. Smooth
- * components (disc/halo) need the full 4.5 because a 3σ edge is visible;
- * young components are grain-textured and the grain masks it (splatSilhouette
- * .wesl's own justification for 4.5). Near-fade sliders are multiples of
- * boundRadius (io.wesl), so young fade distances shrink by the same ratio —
- * live-tunable.
+ * `YOUNG_BOUND_SIGMA` sigma instead of `SPLAT_CUT_SIGMA` — fragment area
+ * scales with the cut squared, so 3/4.5 cuts it ~2.25x. Smooth components
+ * (disc/halo) need the full 4.5 because a 3σ edge is visible; young
+ * components are grain-textured and the grain masks it. Near-fade sliders
+ * are multiples of boundRadius (io.wesl), so this shrinks fade distance too.
  */
 const YOUNG_BOUND_SIGMA = 3.0;
 
-/** Reuses the embedded-cluster's own stellar-continuum blue rather than re-deriving a colour for stellar continuum the tier already has a name for. */
+/** Reuses the embedded-cluster's own stellar-continuum blue rather than re-deriving one. */
 const YOUNG_BLUE = HII_CLUSTER_COLOR;
 
 function recordLogSpan(record: GalaxyFieldArmRecord, geometry: GalaxyDescription): number {

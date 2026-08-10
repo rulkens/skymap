@@ -1,13 +1,10 @@
 /**
- * galaxyDustMixture — the dust disc's shared shape (`dustDiscShape`,
- * `dustSigmaR`) and its closed-form face-on column (`dustFaceOnColumn`).
- * There is no longer a GPU mixture built here: the azimuthally-symmetric
- * smooth tier this file used to pack as its own Gaussian components was
- * deleted (the ISM map now leads — `dustParticleCloud.ts` carries the
- * galaxy's ENTIRE measured `tau`). What remains anchors that particle
- * cloud's mass budget to the measured disc profile, and feeds
- * `dustLaneFeatures.ts`'s arm-lane amplitude (used to gate where cloud
- * bubbles carve).
+ * Math-derivation exception (comments.md): the dust disc's shared shape
+ * (`dustDiscShape`, `dustSigmaR`) and its closed-form face-on column
+ * (`dustFaceOnColumn`). No GPU mixture is built here: the ISM map leads
+ * (`dustParticleCloud.ts` carries the galaxy's entire measured `tau`); this
+ * module only anchors that particle cloud's mass budget to the measured
+ * disc profile, and feeds `dustLaneFeatures.ts`'s arm-lane amplitude.
  */
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
@@ -23,12 +20,12 @@ export type DustDiscShape = {
 };
 
 /**
- * This mixture is flat (grill Q5); the disc itself isn't past warpStartRadius.
- * Capping sigmaR there is a flat-model VALIDITY boundary, not a physical dust
- * truncation — it stops the widest component's 2-sigma tail from reaching into
- * the warped ring band and visibly disagreeing with it. Warped outer dust is
- * deferred to the particle-cloud tier, where ring-placed clouds are affordable.
- * sigmaZ (and so the face-on central tau, which depends only on sigmaZ) is untouched.
+ * Flat model (grill Q5) — the disc itself isn't past `warpStartRadius`.
+ * Capping sigmaR there is a validity boundary, not a physical truncation: it
+ * stops the widest component's 2-sigma tail from reaching into the warped
+ * ring band. Warped outer dust is deferred to the particle-cloud tier.
+ * sigmaZ (and so face-on central tau, which depends only on sigmaZ) is
+ * untouched.
  */
 export function dustDiscShape(geometry: GalaxyDescription, dust: GalaxyDustParams): DustDiscShape {
   return {
@@ -45,14 +42,11 @@ export function dustSigmaR(i: number, shape: DustDiscShape): number {
 }
 
 /**
- * dustFaceOnColumn — the disc's azimuthally-symmetric face-on V-band column
- * Sigma(R), evaluated in closed form from the same four-Gaussian disc fit
- * `dustDiscShape`/`dustSigmaR` describe. Exported so `dustLaneFeatures.ts`
- * can read "how much column exists at this radius" (to redistribute into
- * arm-concentrated lane amplitude — see its own ledger comment) without
- * re-deriving the profile. Carries the FULL `dust.tau`: there is no smooth
- * GPU tier anymore to debit a share against, so this is exactly what
- * `dustParticleCloud.ts` renders, read back in closed form.
+ * The disc's azimuthally-symmetric face-on V-band column Sigma(R), in
+ * closed form from the same four-Gaussian fit `dustDiscShape`/`dustSigmaR`
+ * describe. `dustLaneFeatures.ts` reads this to redistribute column into
+ * arm-concentrated lane amplitude. Carries the full `dust.tau` — this is
+ * exactly what `dustParticleCloud.ts` renders, read back in closed form.
  */
 export function dustFaceOnColumn(
   radius: number,

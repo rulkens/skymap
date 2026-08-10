@@ -2,15 +2,11 @@
  * deriveArmSpurs / buildArmSpurs — interarm spurs ("feathers"): short
  * `GalaxyFieldArmRecord`s rooted at quasi-regular intervals along a parent
  * arm, so the wide interarm gap at larger radii isn't empty. Shape-compatible
- * with an ordinary arm record by construction, so the shared ridge vocabulary
+ * with an ordinary arm record, so the shared ridge vocabulary
  * (`armRidgeAngle`, `armRidgeCurvePoint`, `armRidgeFrameAt`, `armFadeEnvelope`)
- * renders a spur exactly like it renders an arm — nothing here re-derives a
- * curve. Rendering itself is `armSpurParticleCloud.ts`'s job; this module only
- * produces the records.
- *
- * PURITY INVARIANT: pure `(arm, geometry, tuning, rng) -> flat data`, no
- * `Math.random`/`Date`/engine state — same contract as every other `v2/`
- * builder (see `v2/README.md`).
+ * renders a spur exactly like an arm. Rendering itself is
+ * `armSpurParticleCloud.ts`'s job; this module only produces the records.
+ * Pure `(arm, geometry, tuning, rng) -> flat data`, no engine state.
  */
 import { armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
@@ -24,14 +20,12 @@ const SPUR_WALK_STEPS = 128;
 
 /**
  * Root-spacing law: `w/h = FLOOR_H + SLOPE*(R/h)`, the same re-expression
- * idiom `armRidgeGeometry.ts`'s `armCrossSigma` uses for Reid et al. 2019's
- * width law, applied here to La Vigne, Vogel & Ostriker (2006)'s measured
- * feather spacing of 300-800 pc in nearby grand-design spirals (~0.12-0.31 of
- * the Milky Way's own 2.605 kpc disc scale length). The floor anchors the
- * inner-disc end of that range; the slope carries it past the upper end
- * at large radius, which is the point — spurs growing apart with radius is
- * what the arm cloud's own contrast law would predict "gets emptier" without
- * a filling feature.
+ * idiom `armRidgeGeometry.ts`'s `armCrossSigma` uses for Reid et al.'s width
+ * law, applied to La Vigne, Vogel & Ostriker (2006)'s measured feather
+ * spacing of 300-800 pc (~0.12-0.31 of the Milky Way's 2.605 kpc disc scale
+ * length). The floor anchors the inner-disc end of that range; the slope
+ * carries it past the upper end at large radius, filling the gap the arm
+ * cloud's own contrast law would otherwise leave empty.
  */
 const SPUR_SPACING_FLOOR_H = 0.12;
 const SPUR_SPACING_SLOPE = 0.03;

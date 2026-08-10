@@ -1,10 +1,8 @@
 /**
  * GalaxyHiiShellsTuning — the emission-shell tier's own tunable knobs
- * (`hiiRegions.ts`'s per-region shell + embedded-OB-cluster sprites), split
- * off `GalaxyHiiTuning`'s root (board item 19) the way `GalaxyHiiDigTuning`/
- * `GalaxyYoungStarsTuning` already nest — these seven fields used to sit
- * flat on `hii` itself, the one asymmetry left once DIG and young stars got
- * their own bags.
+ * (`hiiRegions.ts`'s per-region shell + embedded-OB-cluster sprites), nested
+ * under `GalaxyHiiTuning` the way `GalaxyHiiDigTuning`/`GalaxyYoungStarsTuning`
+ * nest their own tiers.
  */
 export type GalaxyHiiShellsTuning = {
   readonly enabled: boolean;

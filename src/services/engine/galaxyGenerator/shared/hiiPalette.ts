@@ -1,13 +1,10 @@
 /**
  * hiiPalette — the metallicity-driven HII (ionized hydrogen) emission
- * palette. Extracted from the spike's inline computation in
- * `galaxy-model.js`.
- *
- * Real HII colour is set by metallicity/ionization state: low-metallicity
- * regions run teal ([OIII]-strong), typical ones pink (H-alpha plus blue
- * cluster light), metal-rich ones deep red. The extended halo is red-
- * dominant (diffuse H-alpha) and tracks metallicity across the full range in
- * one lerp, independent of the core's two-segment path.
+ * palette. Real HII colour is set by metallicity/ionization state:
+ * low-metallicity regions run teal ([OIII]-strong), typical ones pink
+ * (H-alpha plus blue cluster light), metal-rich ones deep red. The extended
+ * halo is red-dominant (diffuse H-alpha) and tracks metallicity across the
+ * full range in one lerp, independent of the core's two-segment path.
  */
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { HiiPalette } from '../../../../@types/galaxy/HiiPalette';
@@ -24,13 +21,7 @@ const DEEP_RED: Vec3 = [1.0, 0.3, 0.32];
 const HALO_LOW: Vec3 = [0.42, 0.78, 0.72];
 const HALO_HIGH: Vec3 = [1.0, 0.26, 0.3];
 
-/**
- * Derive the core/halo HII palette for a given metallicity.
- *
- * @param metallicity 0..1. Core lerps teal -> pink over [0, 0.5], then
- *                    pink -> deep red over [0.5, 1]; halo lerps its own
- *                    teal -> red pair over the full [0, 1] range in one step.
- */
+/** @param metallicity 0..1. Core lerps teal->pink->deep red over two segments; halo lerps teal->red over the full range in one. */
 export function hiiPalette(metallicity: number): HiiPalette {
   const core =
     metallicity < 0.5

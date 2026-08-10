@@ -1,22 +1,12 @@
 /**
- * transformGalaxyFieldComponent — carries one analytic-field Gaussian from a
- * galaxy's own local space into world space, using EXACTLY the rigid
- * transform the sprite path bakes into generation: `applyExtraTransform` in
- * `milkyWay/sprites/generate.wesl` scales, then Y-spins (disk axis), then X-tilts
- * (inclination), then translates. Reusing that same composition (not a
- * generic rotation) is what keeps a background galaxy's analytic mixture
- * registered with its own sprites.
+ * transformGalaxyFieldComponent — carries one analytic-field Gaussian into
+ * world space using the same rigid transform `applyExtraTransform`
+ * (`generate.wesl`) bakes into generation — scale, Y-spin, X-tilt, translate
+ * — so a background galaxy's mixture stays registered with its sprites.
  *
- * Amplitude case found: `writeStar` bakes the transform onto a star record
- * as
- *   let pos = applyExtraTransform(rec.pos);
- *   ...
- *   outBuf[base + 6u] = rec.size * gen.extraScale;   // size scaled by s
- *   outBuf[base + 7u] = rec.brightness;              // brightness untouched
- * so a sprite's flux (quad area, hence size^2) scales as s^2 while nothing
- * scales brightness. Matching that against the mixture's amplitude — whose
- * total flux is its volume integral, scaling as sigma^3 i.e. s^3 once every
- * length is scaled by s — needs amplitude' = A * s^2 / s^3 = A / s.
+ * Amplitude scales as `A/s`: `writeStar` scales sprite size (flux ~ s^2) but
+ * leaves brightness untouched, while the mixture's own flux (volume
+ * integral) scales as `s^3` — matching needs `amplitude' = A*s^2/s^3 = A/s`.
  */
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';
 import type { ExtraGalaxySpec } from '../../@types/galaxy/ExtraGalaxySpec';

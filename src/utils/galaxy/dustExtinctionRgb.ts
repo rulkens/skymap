@@ -6,12 +6,8 @@
  * a(x)/b(x) polynomials have exactly one useful answer per channel — baking
  * that answer in trades three polynomial evaluations for two lookups.
  *
- * R_V (total-to-selective extinction, A_V / E(B-V)) is a real per-galaxy/
- * per-sightline dust GRAIN property, not a brightness knob: diffuse Milky
- * Way ISM sits at 3.1; dense molecular clouds run up to ~5.5 and read
- * GREYER (larger grains scatter more uniformly across the optical); SMC and
- * starburst sightlines run ~2-2.5 and read more strongly reddening (smaller
- * grains, steeper blue-vs-red attenuation).
+ * R_V's physical meaning (grain size / sightline) is documented on
+ * `GalaxyDustParams.rV`, not restated here.
  */
 import type { Vec3 } from '../../@types/math/Vec3';
 

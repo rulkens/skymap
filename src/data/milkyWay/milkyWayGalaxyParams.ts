@@ -1,13 +1,10 @@
 /**
  * MILKY_WAY_GALAXY_PARAMS — the single canonical `GalaxyParams` for the
  * Milky Way, shared by the galaxy-renderer tool's reference gallery
- * (`tools/galaxy-renderer/src/data/referenceGalaxies.ts`, `id: 'mw'`) and
- * the main app's Milky Way point cloud (`milkyWayCloud` generation).
- * One object means the tool and the app can never quietly drift onto two
- * different "Milky Way"s — tune it here and both pick up the change.
- *
- * Most knobs (arms, dust, bulge, brightness) are hand-dialled to look right;
- * the ones measured against the real Galaxy carry their derivation inline.
+ * (`referenceGalaxies.ts`, `id: 'mw'`) and the app's Milky Way point cloud
+ * (`milkyWayCloud` generation), so the two can never drift onto two
+ * different "Milky Way"s. Most knobs are hand-dialled to look right; the
+ * ones measured against the real Galaxy carry their derivation inline.
  */
 import type { GalaxyParams } from '../../@types/galaxy/GalaxyParams';
 import { MILKY_WAY_DISC_RADIUS_KPC } from './galacticCenter';

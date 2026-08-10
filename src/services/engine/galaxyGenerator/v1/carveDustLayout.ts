@@ -1,40 +1,12 @@
 /**
  * carveDustLayout — table-driven CPU-side slot carving for the dust
  * populations the generation compute shaders draw, mirroring
- * `carveStarLayout`'s shape (see its docblock for why carving lives here,
- * CPU-side, ahead of any GPU dispatch). Every dust population is gated on
- * the same outer condition that governs dust at all — `(params.legacy?.spriteDust ?? 1) >
- * 0 && category !== 'elliptical'` — so an ineligible combination returns the
- * empty layout up front rather than evaluating a table of formulas that
- * would all come out zero anyway.
- *
- * Per-population budgets, matching the equivalent shader population's own
- * budget, all scaled by `grainScale(budget.totalStars) ** 2` (fewer stars ->
- * coarser grains -> proportionally fewer particles for the same visual
- * density). Each budget is a target the shader meets exactly: the GPU dust
- * pass runs one thread per output slot and hash-resamples the population's
- * candidate space with a fresh draw stream until each slot lands an
- * accepted candidate (see the resample-to-budget note in `generate.wesl`),
- * so the shader always emits ~budget particles regardless of how sparse the
- * accept rate is — a deliberate departure from a candidate cap, which would
- * under-emit in seed-limited regimes.
- *  - armDust: `floor(30000*spriteDust/g^2)` for spiral/barred with a nonzero arm
- *    budget. The `armStarCount > 0` gate mirrors the shader, which reads its
- *    candidate space from the spiralArms star range and dies when that range
- *    is absent — reserving budget slots for a galaxy with no arm seeds to
- *    sample would be pure dead capacity.
- *  - barDust: `floor(9000*spriteDust/g^2)` when the barred bar has nonzero length
- *    — gated on the bar geometry rather than `category` directly, mirroring
- *    the shader population's own `barLength > 0` guard.
- *  - lenticularNucDust: `floor(12000*spriteDust/g^2)` for lenticular galaxies,
- *    independent of the ring gate below.
- *  - lenticularRingDust: `floor(34000*dustRingStrength/g^2)` for lenticular
- *    galaxies, only when `dustRingStrength > 0` — a Sombrero-style ring is
- *    driven by its own strength knob, not `spriteDust`.
- *  - irregularDust: `floor(16000*spriteDust/g^2)` for irregular galaxies with a
- *    nonzero clump budget, the same resample-to-budget and
- *    `armStarCount > 0` gate as armDust above (the clump seeds live in the
- *    irregularClumps star range, sized by `armStarCount`).
+ * `carveStarLayout`'s shape (see its docblock for why carving happens here,
+ * CPU-side, ahead of any GPU dispatch). Each budget below is a target the
+ * GPU dust pass meets exactly via resample-to-budget, not a candidate cap
+ * (see `generate.wesl`) — it hash-resamples the population's candidate space
+ * with a fresh draw stream until every slot lands an accepted candidate, so
+ * it always emits ~budget particles regardless of accept rate.
  */
 import { barLengthOf } from '../shared/barLengthOf';
 import { grainScale } from './grainScale';
@@ -61,6 +33,8 @@ type DustRangeSpec = {
 
 const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
   {
+    // Gated on the shader's own candidate space: spiralArms seeds this
+    // population, and dies with no range to sample from otherwise.
     popId: POPULATION_IDS.armDust,
     stride: 1,
     iterations: (category, params, budget, g) =>
@@ -69,6 +43,8 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
         : 0,
   },
   {
+    // Gated on bar geometry (mirrors the shader's own barLength>0 guard),
+    // not on category directly.
     popId: POPULATION_IDS.barDust,
     stride: 1,
     iterations: (category, params, _budget, g) =>
@@ -77,6 +53,7 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
         : 0,
   },
   {
+    // Independent of the ring gate below.
     popId: POPULATION_IDS.lenticularNucDust,
     stride: 1,
     iterations: (category, params, _budget, g) =>
@@ -85,6 +62,7 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
         : 0,
   },
   {
+    // A Sombrero-style ring is driven by its own strength knob, not spriteDust.
     popId: POPULATION_IDS.lenticularRingDust,
     stride: 1,
     iterations: (category, params, _budget, g) => {
@@ -93,6 +71,8 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     },
   },
   {
+    // Same arm-budget gate as armDust: clump seeds live in the
+    // irregularClumps star range, sized by armStarCount.
     popId: POPULATION_IDS.irregularDust,
     stride: 1,
     iterations: (category, params, budget, g) =>
@@ -107,6 +87,9 @@ export function carveDustLayout(
   params: GalaxyParams,
   budget: StarBudget,
 ): GenerationLayout {
+  // Dust as a whole is off for spriteDust<=0 or an elliptical category —
+  // return the empty layout up front rather than evaluate every spec's
+  // formula, which would all come out zero anyway.
   const dustAmount = params.legacy?.spriteDust ?? 1;
   if (!(dustAmount > 0) || category === 'elliptical') {
     return { ranges: [], capacity: 0 };

@@ -1,13 +1,12 @@
 /**
  * sampleIsmMapOrientation — nearest-texel read of a `GalaxyIsmMapOrientation`
- * at a world (radius, angle). Ring and azimuth lookup are the shared
- * `ismMapRingIndexForSample`/`ismMapAzIndexForAngle` — also used by
- * `sampleGalaxyIsmMap` — so the two samplers can never silently disagree
- * about which texel a world point lands in. Nearest-texel, not
- * interpolated: the double-angle vector wraps at π, and interpolating angle
- * directly (rather than the packed vector) would average opposite
- * orientations into a false perpendicular — nearest texel sidesteps the
- * question entirely rather than getting it wrong.
+ * at a world (radius, angle), sharing `ismMapRingIndexForSample`/
+ * `ismMapAzIndexForAngle` with `sampleGalaxyIsmMap` so the two samplers can
+ * never disagree about which texel a point lands in.
+ *
+ * Nearest-texel, not interpolated: the double-angle vector wraps at π, and
+ * interpolating angle directly (rather than the packed vector) would
+ * average opposite orientations into a false perpendicular.
  */
 import { ismMapAzIndexForAngle } from './ismMapAzIndexForAngle';
 import { ismMapRingIndexForSample } from './ismMapRingIndexForSample';

@@ -1,49 +1,25 @@
 /**
  * fadeLayers — the fade-ownership manifest + the generic construction seed.
+ * Every fadeable layer in the engine is declared here as one `FadeLayer` row;
+ * `seedFades(state)` walks the whole manifest once at bootstrap to register
+ * and seed each layer's controller. This is the ONE registration site — no
+ * other module calls `fades.register` — so the "every fadeable layer" list
+ * can never scatter across files and frame-1 coherence stays assertable in
+ * one place. Registration is idempotent, so a stray duplicate call would be
+ * a harmless no-op regardless.
  *
- * Every fadeable layer in the engine is declared here as one `FadeLayer` row,
- * and `seedFades(state)` walks the whole manifest once at bootstrap to register
- * and seed each layer's controller. This is the relocation of what used to be
- * the hand-written `registerOverlayFades` body plus the four out-of-band
- * `register` calls that lived in the demand-loaded slots — now a single
- * declarative table.
+ * Initial opacities are settings-derived, not a blanket 1.0: registering a
+ * disabled layer at 1 draws it on frame 1 before its fade-out fires, and
+ * registering an enabled layer at 0 leaves it invisible until `fadeTo(1)`
+ * completes. Each row's `seed(settings, item)` returns the value matching the
+ * session's persisted settings.
  *
- * ### Why initial opacities are settings-derived (not a blanket 1.0)
- *
- * For every row a reader actually resolves an opacity from, registering at the
- * wrong initial value produces a one-frame flash: a disabled layer registered
- * at 1 draws on frame 1 before a `setImmediate(0)` fires; an enabled layer
- * registered at 0 is invisible until a `fadeTo(1)` completes. Each row's
- * `seed(settings, item)` returns the value that matches the session's
- * persisted settings so frame 1 is always coherent — milkyWay/volumesMaster/the
- * label and structure rows seed from their toggles, the always-on disk overlays
- * seed at 1. (`starCatalogLabel` and `bodyLabel` are the two rows where this
- * reasoning is moot rather than load-bearing — see their own comments below —
- * but they follow the same settings-derived convention anyway, since nothing
- * about writing this manifest tells a reader which rows are the exception.)
- *
- * ### Registration now has exactly one home
- *
- * Before this manifest, four demand-loaded sets registered their fade
- * controllers out-of-band — the galaxy-catalog slot, the filament slot, the flow
- * slot, and the volume renderer's `onFieldAdded` callback each called
- * `register` at their own commit time. That scattered the "every fadeable layer"
- * list across five files and made it impossible to assert frame-1 coherence in
- * one place. `seedFades` absorbs all of them: the slot factories and `initGpu`
- * no longer call `register` at all. Registration is idempotent, so even if a
- * stray duplicate `register` survived it would be a harmless no-op — but the
- * intent is that this manifest is the sole registration site.
- *
- * ### Why the demand-loaded sets seed at 0 — the seed is DATA, not a rule
- *
- * The galaxy catalogs, filament, flow, and volume fields are demand-loaded: they
- * have no payload at construction and fade *in* (`fadeTo(1)`) when their data
- * arrives. They must therefore seed at 0 so that first-load fade-in is visible.
- * A single uniform `settings ? 1 : 0` rule across all rows would erase that
- * fade-in — a demand-loaded layer whose setting is on would pop to full opacity
- * on frame 1 instead of dissolving in. So the seed asymmetry is carried per row
- * as a `seed()` closure (settings-derived for the overlay/structure rows, a
- * constant 0 for the demand-loaded rows), not as one branch over a shared flag.
+ * Demand-loaded rows (galaxy catalogs, filaments, flow, volume fields) seed
+ * at a constant 0 instead, even when their setting is on: they have no
+ * payload at construction and fade IN when their data arrives, so a
+ * settings-derived seed would pop them to full opacity on frame 1 instead of
+ * dissolving in. The seed asymmetry is carried per row as a `seed()` closure
+ * rather than one branch over a shared flag.
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';

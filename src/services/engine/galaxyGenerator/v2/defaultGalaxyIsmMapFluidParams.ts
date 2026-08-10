@@ -1,10 +1,9 @@
 /**
- * User-calibrated defaults for the fluid ISM-map generator (2026-08-07) —
- * tuned by eye against the M74 reference look, not derived from first
- * principles or measurement. Supersedes the 2026-08-06 calibration: this
- * pass turns the arm-response terms — gather, drag, laneBias, gatherOffset,
- * eventArmBias — into the dominant shaping terms, no longer a minor
- * modulation atop shear/curl.
+ * User-calibrated defaults for the fluid ISM-map generator — tuned by eye
+ * against the M74 reference look, not derived from first principles or
+ * measurement. The arm-response terms (gather, drag, laneBias, gatherOffset,
+ * eventArmBias) are the dominant shaping terms here, not a minor modulation
+ * atop shear/curl.
  */
 import type { GalaxyIsmMapFluidParams } from '../../../../@types/galaxy/GalaxyIsmMapFluidParams';
 
@@ -67,27 +66,24 @@ export const DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS: GalaxyIsmMapFluidParams = {
   // that's ~11% strength, so the gather is now strongly one-sided rather
   // than a mild lean.
   laneBias: 0.89,
-  // Calibrated by eye in the 2026-08-07 pass. Negative samples AGAINST the
-  // local drift ('az + sign(shearVelAz) * gatherOffset') — ~19.5 az texels
-  // upstream, the "where the drift feeds it from" placement the param's own
-  // doc motivates; positive would sample downstream of the texel.
+  // Negative samples against the local drift
+  // ('az + sign(shearVelAz) * gatherOffset') — ~19.5 az texels upstream, the
+  // "where the drift feeds it from" placement the param's own doc
+  // motivates; positive would sample downstream of the texel.
   gatherOffset: -19.5,
   // Exponential decline length of the radial gas profile `gasRegen` relaxes
   // toward, in grid-radius units (same as rMin/rMax/corotationRadius) —
-  // roughly a third of this app's own Milky Way preset's rMax (~10.5-15.5,
-  // per galaxyIsmMapArmForcing.ts's own comment on outerRadius vs per-arm
-  // fadeRadius).
+  // roughly a third of the Milky Way preset's own rMax (`ismMapGridRadius`,
+  // galaxyIsmMapArmForcing.ts).
   gasScaleLength: 4.75,
   // Flat HI floor the radial gas profile approaches at large r, as a
   // fraction of the disc-centre value. 0 = pure exponential disc, no floor:
   // gas (and with it events, dust, activity) dies off entirely toward the
   // outer edge — `gasScaleLength` above alone sets the falloff.
   gasFloor: 0,
-  // Calibrated by eye in the 2026-08-07 pass: floor drops to
-  // ARM_BIAS_FLOOR * (1 - 0.83) ~= 0.026, a near-hard gate that concentrates
-  // events onto the arms (see the param's own doc and
-  // galaxyIsmMapFluidEvents.ts ~line 107) while leaving a thin off-arm
-  // floor.
+  // Floor drops to ARM_BIAS_FLOOR * (1 - 0.83) ~= 0.026 (galaxyIsmMapFluidEvents.ts),
+  // a near-hard gate that concentrates events onto the arms while leaving a
+  // thin off-arm floor.
   eventArmBias: 0.83,
   // Visual calibration start, not measured — see the param's own doc for
   // what it scales.

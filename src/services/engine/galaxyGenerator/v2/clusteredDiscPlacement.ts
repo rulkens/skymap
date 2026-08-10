@@ -1,21 +1,12 @@
 /**
- * buildClusteredDiscPlacement — the two-level complex/children scatter
- * shared by every stochastic particle tier on the analytic field (dust GMCs,
- * arm emission sprites): seed one "complex" via one of three modes —
- * `'analytic'` (weighted arm lane, falling back to the smooth disc),
- * `'mapDensity'` (the fluid generator's measured density), or bare
- * `'smoothDisc'` — then scatter its children around it. See
- * `ClusteredDiscPlacementMode` for what each mode needs from its caller.
+ * The two-level complex/children scatter shared by every stochastic
+ * particle tier on the analytic field: seed one "complex" per
+ * `ClusteredDiscPlacementMode`, then scatter its children around it.
  * Extracted out of `dustParticleCloud.ts` so a second tier doesn't restate
- * this sampler.
- *
- * Per-child payload (a size draw, in both current consumers) is drawn via
- * `drawPayload`, called INLINE in the placement loop rather than in a
- * separate pass over the result: the rng draw ORDER is load-bearing (same
- * seed must keep producing the same cloud), and a separate payload pass
- * would interleave differently against the next complex's own draws.
- *
- * PURITY INVARIANT: pure given its `rng`, no Math.random/Date/engine state.
+ * this sampler. `drawPayload` runs inline in the placement loop — rng draw
+ * order is load-bearing (same seed reproduces the same cloud) — rather than
+ * a separate pass that would interleave differently against the next
+ * complex's draws. Pure given its `rng`, no engine state.
  */
 import { ARM_SPAN_START_FRAC } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
@@ -46,12 +37,10 @@ export type CloudFrame = { readonly along: Vec3; readonly across: Vec3; readonly
 export type LaneFrame = { readonly point: Vec3 } & CloudFrame;
 
 /**
- * OrientationDeltaStats — an out-param `rotateFrameToOrientation` mutates in
- * place, never reads: the diagnostic tool's engine wants "mean/max |delta|
- * actually applied over the whole build" without either function losing its
- * `(args) -> data` purity by returning a second shape or reaching for
- * module-level state. Caller supplies a fresh `{ count: 0, sumAbsDeltaDeg:
- * 0, maxAbsDeltaDeg: 0 }` and reads it back after the call returns.
+ * Out-param `rotateFrameToOrientation` mutates in place, never reads — lets
+ * the diagnostic tool total "mean/max |delta| applied over the whole build"
+ * without either function losing its `(args) -> data` purity to a second
+ * return shape or module-level state.
  */
 export type OrientationDeltaStats = {
   count: number;
@@ -62,14 +51,12 @@ export type OrientationDeltaStats = {
 /**
  * How a complex picks its seed point — the one axis the two current
  * consumers genuinely differ on. `'analytic'` is the arm-lane/smooth-disc
- * roll (`armParticleCloud.ts`, which IS the arm feature and always passes
- * `armBias: 1`); `'mapDensity'` replaces that roll entirely with the fluid
- * generator's measured density (`dustParticleCloud.ts`, once its ISM map is
- * usable); `'smoothDisc'` is the bare disc profile with no lane concept at
- * all (`dustParticleCloud.ts`'s no-map fallback). A tagged union rather than
- * three optional sibling fields: the dust caller has no lane callbacks to
- * give in the latter two modes, so nullable siblings would only exist to
- * satisfy the type.
+ * roll (`armParticleCloud.ts`, always `armBias: 1`); `'mapDensity'` replaces
+ * that roll with the fluid generator's measured density
+ * (`dustParticleCloud.ts`, once its ISM map is usable); `'smoothDisc'` is
+ * the bare disc profile, no lane concept (`dustParticleCloud.ts`'s no-map
+ * fallback). A tagged union, not three optional sibling fields: the dust
+ * caller has no lane callbacks to give in the latter two modes.
  */
 export type ClusteredDiscPlacementMode =
   | {
@@ -173,27 +160,23 @@ function recordOrientationDelta(
 }
 
 /**
- * rotateFrameToOrientation — bends a lane/disc frame's in-plane axes
- * (`along`/`across`) toward the ISM-map generator's measured filament
- * orientation, coherence-weighted so a texel with no measured structure
- * (coherence 0) reproduces `frame` exactly. `pole` never moves.
+ * Bends a lane/disc frame's in-plane axes (`along`/`across`) toward the
+ * ISM-map generator's measured filament orientation, coherence-weighted so
+ * a texel with no measured structure (coherence 0) reproduces `frame`
+ * exactly. `pole` never moves.
  *
- * The measured angle is relative to the AZIMUTHAL/RADIAL axes
- * (`warpSurfaceFrame`'s own `along`/`across` at this point), never to
- * `frame`'s own axes: a lane frame's `along` (e.g. `armRidgeFrameAt`'s) runs
- * along the WOUND arm tangent, not azimuthally, so `frame` and the reference
- * frame generally disagree about where angle zero is.
+ * The measured angle is relative to the azimuthal/radial axes
+ * (`warpSurfaceFrame`'s own `along`/`across`), never `frame`'s own: a lane
+ * frame's `along` runs along the wound arm tangent, not azimuthally, so the
+ * two generally disagree about where angle zero is. `across`'s handedness
+ * relative to `pole x along` is caller-defined; `s` below recovers whichever
+ * sign the passed-in frame uses so the rotation turns the physically
+ * correct direction, not its mirror.
  *
- * `across`'s handedness relative to `pole x along` is caller-defined, not
- * fixed by this function — `s` below recovers whichever sign the passed-in
- * frame actually uses so the frame turns the same physical direction the
- * measured angle was defined in, not its mirror image.
- *
- * `stats`, when supplied, records every |delta| this call actually applied
- * — INCLUDING the coherence-0 early return (delta 0, a real "no rotation
- * here" data point, not a skip) — so `OrientationDeltaStats`'s mean stays
+ * `stats`, when supplied, records every |delta| applied, including the
+ * coherence-0 early return (delta 0, a real data point) — so its mean stays
  * honest about how much of the grid has no measured structure to turn
- * toward, rather than only averaging over the texels that did.
+ * toward, rather than only averaging over texels that did.
  */
 export function rotateFrameToOrientation(
   frame: CloudFrame,
@@ -250,20 +233,18 @@ export function buildClusteredDiscPlacement<TPayload>(
 ): PlacedParticle<TPayload>[] {
   const { geometry, rng, count, clumpiness, complexSpread, elongation, sigmaZComplex } = config;
   const childrenPerComplex = Math.max(1, Math.round(1 + 15 * clumpiness));
-  // A one-member complex has no siblings to scatter AROUND anything: the child
-  // IS the complex, so it belongs at the seed point `placeComplex` drew from
-  // the placement density. Scattering it anyway convolves that density with a
-  // ~complexSpread kernel — at clumpiness 0, where every complex is a lone
-  // child, that blurs the ISM map the `'mapDensity'` mode exists to follow.
-  // Keyed on the CONFIGURED children per complex, not the per-complex
-  // `childCount` below, which the count budget can truncate to 1 on the tail
-  // complex of a genuinely clustered build.
+  // A one-member complex has no siblings to scatter around: the child IS the
+  // complex, so it belongs at the seed point `placeComplex` drew. Scattering
+  // it anyway would convolve the placement density with a ~complexSpread
+  // kernel, blurring the ISM map at clumpiness 0. Keyed on the configured
+  // children per complex, not the per-complex `childCount` below, which the
+  // count budget can truncate to 1 on the tail complex.
   const childSpread = childrenPerComplex > 1 ? complexSpread : 0;
   const canUseArms = geometry.numArms > 0;
   const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
   const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
 
-  /** A complex seeded on an arm's lane, or null if this arm has no valid span (falls back to the smooth disc). */
+  /** A complex seeded on an arm's lane, or null if this arm has no valid span — falls back to the smooth disc. */
   function placeArmLaneComplex(
     mode: Extract<ClusteredDiscPlacementMode, { kind: 'analytic' }>,
   ): { center: Vec3; frame: CloudFrame; warped: boolean } | null {
@@ -292,12 +273,11 @@ export function buildClusteredDiscPlacement<TPayload>(
       frame.point[1] + frame.across[1] * acrossOffset + frame.pole[1] * poleOffset,
       frame.point[2] + frame.across[2] * acrossOffset + frame.pole[2] * poleOffset,
     ];
-    // The RETURNED frame — not `center` above, which stays on the true
-    // lane geometry — is what elongation ultimately reads, so only it turns
-    // toward the measured filament. Sampled at `frame.point` itself (not the
-    // un-offset ridge, which this shared config type doesn't carry): the
-    // lane offset is a small fraction of `discLightScaleLength`, well under
-    // the ISM map grid's own resolution.
+    // The returned frame — not `center` above, which stays on the true lane
+    // geometry — is what elongation reads, so only it turns toward the
+    // measured filament. Sampled at `frame.point`: the lane offset is a
+    // small fraction of `discLightScaleLength`, well under the ISM map
+    // grid's resolution.
     const orientedFrame = rotateFrameToOrientation(
       { along: frame.along, across: frame.across, pole: frame.pole },
       Math.hypot(frame.point[0], frame.point[2]),
@@ -329,12 +309,12 @@ export function buildClusteredDiscPlacement<TPayload>(
   }
 
   /**
-   * Map-density-only placement: the ISM map IS the density, no arm-lane roll
-   * involved. `mode.samplePoint` (S1's inverse-CDF sampler, built once per
-   * cloud by the caller) draws the centre exactly proportional to the map's
-   * accumulated density x area — no rejection, no fallback, so unlike the
-   * old rejection loop this mode's rng draw count never varies with map
-   * contrast. `y` isn't part of that draw, so it's drawn once after.
+   * Map-density-only placement: the ISM map is the density, no arm-lane
+   * roll. `mode.samplePoint` (an inverse-CDF sampler, built once per cloud
+   * by the caller) draws the centre exactly proportional to the map's
+   * accumulated density x area — no rejection, no fallback, so this mode's
+   * rng draw count never varies with map contrast. `y` isn't part of that
+   * draw, so it's drawn once after.
    */
   function placeMapDensityComplex(
     mode: Extract<ClusteredDiscPlacementMode, { kind: 'mapDensity' }>,
@@ -373,13 +353,7 @@ export function buildClusteredDiscPlacement<TPayload>(
     );
   }
 
-  /**
-   * One dispatch per mode kind — a switch rather than a lookup table: unlike
-   * a uniform "call the function matching this key", the `'analytic'` branch
-   * carries its own extra logic (the arm-bias roll and lane/smooth-disc
-   * fallback) rather than a single 1:1 function call, so a table entry would
-   * just be this same function wrapped in an object literal.
-   */
+  /** A switch, not a lookup table: the `'analytic'` branch carries its own extra logic (arm-bias roll, lane/smooth-disc fallback), not a 1:1 function call, so a table entry would just wrap this same function. */
   function placeComplex(mode: ClusteredDiscPlacementMode): {
     center: Vec3;
     frame: CloudFrame;
@@ -425,12 +399,11 @@ export function buildClusteredDiscPlacement<TPayload>(
         placement.frame.pole[1] * pole;
       // `placement.warped` is false for `smoothDisc`/`mapDensity` complexes
       // (and the arm-lane fallback): those seed at y=0, tilted but never
-      // lifted (`armRidgeCurvePoint` bakes the lift in for the arm-lane path
-      // already). Cross-tier contract: a cloud must warp like the analytic
-      // components it renders alongside (`pushWarpedOuterDisc`, the ridge
-      // blobs) or the tiers split at the rim. Lifted at THIS child's own
-      // (x, z), not the complex's, so a spread-out child bends with the disc
-      // — no rng draw, so draw order is unaffected.
+      // lifted (`armRidgeCurvePoint` bakes the lift in for the arm-lane
+      // path). Cross-tier contract: a cloud must warp like the analytic
+      // components it renders alongside, or the tiers split at the rim —
+      // lifted at this child's own (x, z), not the complex's, so a
+      // spread-out child bends with the disc (no rng draw, order unaffected).
       const y = placement.warped
         ? yFlat
         : yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);

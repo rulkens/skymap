@@ -34,15 +34,15 @@ const ARM_AGE_JITTER_RANGE = 0.3;
 
 /**
  * Total emitted light per unit disc area — a GAUGE for the field's arbitrary
- * flux units, not a measurement. Pinned so the Milky Way preset emits exactly
- * what it did before either sprite term left the flux path; repin it and every
- * tuned `analyticExposure` moves with it. What the number MEANS is on
+ * flux units, not a measurement. Repinning it moves every tuned
+ * `analyticExposure` along with it. What the number MEANS is on
  * `GalaxyDescription.luminosity`.
  *
- * 7.4268687 (the sprite-budget anchor's own value) x 1.155747, the MW's old
- * sum(count share x SPRITE_POPULATION_BRIGHTNESS) — 0.246x0.85 + 0.15834x0.9 +
- * 0.59566x1.35 — which is the per-galaxy factor the population multipliers
- * used to contribute and the decomposition now leaves at exactly 1.
+ * Derivation: 7.4268687 (the sprite-budget anchor's own value) x 1.155747,
+ * where 1.155747 = sum(count share x SPRITE_POPULATION_BRIGHTNESS) for the MW
+ * preset — 0.246x0.85 + 0.15834x0.9 + 0.59566x1.35 — the per-galaxy factor the
+ * light decomposition here leaves at exactly 1 instead of applying per
+ * population.
  */
 const GALAXY_LUMINOSITY_PER_AREA = 8.5835812;
 

@@ -1,16 +1,12 @@
 /**
  * GalaxyFieldComponent — one Gaussian blob of the analytic galaxy emission
- * field (`milkyWay/field/fieldSplat/` and `hiiSplat/`).
- *
- * All lengths are GENERATOR units, the space `milkyWay/sprites/generate.wesl` places
- * stars in (for the Milky Way preset 1 unit = 1.6667 kpc). The disc plane is
- * XZ and the pole is +Y.
- *
- * The shape is carried as the inverse covariance M of
- * exp(-0.5*(p-center)^T*M*(p-center)) rather than as sigmas plus a tilt: a
- * component's own warp shear (linearised about ITS centre) tilts it out of
- * any axis-aligned frame, and a general symmetric M is the only form that
- * stays closed under that (see `galaxyFieldInverseCovariance`).
+ * field (`milkyWay/field/fieldSplat/` and `hiiSplat/`). Lengths are GENERATOR
+ * units (Milky Way preset: 1 unit = 1.6667 kpc); disc plane is XZ, pole +Y.
+ * Shape is carried as the inverse covariance M of
+ * exp(-0.5*(p-center)^T*M*(p-center)) rather than sigmas plus a tilt: a
+ * component's own warp shear tilts it out of any axis-aligned frame, and a
+ * general symmetric M is the only form closed under that (see
+ * `galaxyFieldInverseCovariance`).
  */
 import type { Vec3 } from '../math/Vec3';
 
@@ -34,20 +30,16 @@ export type GalaxyFieldComponent = {
   /**
    * Magnitude (0..1+) how strongly this component's own emission is
    * modulated by the HII tier's tier-global noise texture (`hiiNoise.wesl`'s
-   * `hiiNoiseTerm`, `io.wesl`'s `dustDetail.y`/`.z`) — packed to
-   * `comps[4i+2].w`. The SIGN picks WHICH texture, not a second lane
+   * `hiiNoiseTerm`) — packed to `comps[4i+2].w`. The SIGN picks WHICH texture
    * (`field/io.wesl`'s comps doc): positive (shell, DIG) samples
    * `dustNoiseTex`'s ridged ISM field, negative (young stars) samples
-   * `starGrainTex`'s uncorrelated point grains. Optional, default 0
-   * (untouched) everywhere except `hiiRegions.ts`'s and
-   * `youngStarChain.ts`'s pushes, the only producers that set it.
+   * `starGrainTex`'s uncorrelated point grains. Optional, default 0.
    */
   readonly textureWeight?: number;
   /**
    * 0..1 how strongly this component's own emission is modulated by the ISM
-   * map's `stars` tracer — packed to `comps[4i+3].w`. Optional, default 0
-   * (untouched) everywhere except `youngStarChain.ts`'s pushes, which are the
-   * only producer that sets it (`GalaxyYoungStarsTuning.mapDepth`).
+   * map's `stars` tracer — packed to `comps[4i+3].w`. Optional, default 0;
+   * only `youngStarChain.ts`'s pushes set it (`GalaxyYoungStarsTuning.mapDepth`).
    */
   readonly starsWeight?: number;
 };

@@ -13,7 +13,7 @@ import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyField
 const AGE_WEIGHT_FLOOR = 0.25;
 const AGE_WEIGHT_SPAN = 0.75;
 
-/** This arm's own age weight (0 = young gas arm, 1 = old stellar arm), floored so old arms stay faintly featured rather than bare. */
+/** 0 = young gas arm, 1 = old stellar arm. */
 export function armAgeWeight(arm: GalaxyFieldArmRecord): number {
   return AGE_WEIGHT_FLOOR + AGE_WEIGHT_SPAN * (1 - arm.age);
 }

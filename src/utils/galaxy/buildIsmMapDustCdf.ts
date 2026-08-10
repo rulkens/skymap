@@ -1,27 +1,20 @@
 /**
- * buildIsmMapDustCdf — S1: replaces rejection sampling of the ISM map's
- * placement density with an exact inverse-CDF. One pass over every (ring,
- * az) texel accumulates `density(texel, radius, angle) x texelArea` into a
- * running prefix sum; `sampleIsmMapDustCdf` then draws exactly proportional
- * to that mass with a single binary search — no rejection, no grid-max
- * normalisation (a CDF needs neither; see
- * docs/research/m74-jwst/07-sprite-seeding.md S1).
+ * buildIsmMapDustCdf — math-derivation contract: the annular-sector area
+ * term below isn't obvious from the log-radial grid alone. Accumulates
+ * `density(texel, radius, angle) x texelArea` into a running prefix sum per
+ * (ring, az) texel, so sampling can draw proportional to mass via one binary
+ * search — no rejection, no grid-max normalisation.
  *
- * `density` is a caller-supplied channel blend, not fixed to dust's own
- * `ismMapDustDensity` — every tier that seeds off the map (dust, HII catalog,
- * DIG) weights differently, see each call site. `radius`/
- * `angle` are the texel's own centre, in the same units the ring/az geometry
- * below uses internally (ring-centre radius via `ismMapRingRadius`, bin-centre
- * angle) — a caller reweighting by arm proximity (`hiiRegions.ts`'s
- * `armBias`) needs them; one that doesn't just ignores the extra args.
+ * `density` is caller-supplied: every seeding tier (dust, HII, DIG) weights
+ * channels differently, see call sites. `radius`/`angle` are the texel's own
+ * centre, letting a caller reweight by arm proximity (`hiiRegions.ts`'s
+ * `armBias`).
  *
  * texelArea is an annular-SECTOR area (`0.5 x dTheta x (rOuter^2 -
- * rInner^2)`), not a bare `dr x r x dTheta`: the grid's rings are LOG-spaced
- * (`ismMapRingRadius`), so a linear-width approximation would under-weight
- * the geometrically-wider outer rings and over-seed the centre.
- *
- * Accumulated in a plain JS number (f64) so ~786k adds don't drift; only the
- * STORED prefix entries round to f32 (~3 MB for the 1536x512 grid).
+ * rInner^2)`), not `dr x r x dTheta`: rings are LOG-spaced, so the linear
+ * approximation would under-weight the wider outer rings and over-seed the
+ * centre. Accumulated in f64 so ~786k adds don't drift; only the stored
+ * prefix rounds to f32.
  */
 import { ismMapDustRingEdges } from './ismMapDustRingEdges';
 import { ismMapRingRadius } from './ismMapRingRadius';
@@ -51,11 +44,8 @@ export function buildIsmMapDustCdf(
   const dTheta = (2 * Math.PI) / az;
   const prefix = new Float32Array(rings * az);
 
-  // Reused across all ~786k texels rather than a fresh object literal per
-  // texel — every call site (`hiiRegions.ts` x3, `dustParticleCloud.ts`)
-  // only reads these fields synchronously inside its `density` callback and
-  // never stores the record itself, so mutating it in place is safe; see the
-  // type's own doc for the contract this relies on.
+  // Reused per texel rather than allocated fresh — see IsmMapDensityTexel's
+  // own doc for the mutation contract this relies on.
   const texel: IsmMapDensityTexel = { gas: 0, stars: 0, activity: 0, dust: 0 };
 
   let total = 0;

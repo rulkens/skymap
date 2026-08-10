@@ -5,9 +5,9 @@
  * irregular category's `arm` count share runs through) has no `* K`.
  *
  * The flux path reads it BACKWARDS: `galaxyPopulationCountShares` divides a
- * population's light by it to learn how many sprites buy that much. The
- * analytic field applies no per-population multiplier at all — its amplitudes
- * are light fractions already — which is why this table dies with `v1/`.
+ * population's light by it to learn how many sprites buy that much — unlike
+ * the analytic field, whose amplitudes are light fractions already and so
+ * apply no per-population multiplier at all.
  */
 export const SPRITE_POPULATION_BRIGHTNESS: Readonly<
   Record<'bulge' | 'bar' | 'disk' | 'arm' | 'irregularClump' | 'halo', number>

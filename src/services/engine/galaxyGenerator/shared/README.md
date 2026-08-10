@@ -68,12 +68,11 @@ pushed.
 this folder by design: `StarBudget`, the count shares it quantises and the
 per-sprite brightness those divide by all live under `v1/`, and
 `GalaxyDescription` carries no sprite quantity — so a re-introduction has to add
-the import edge the landmine above forbids. It is worth the guard —
-`emissionScale` and `hiiRegions`' `tierFlux` once anchored absolute flux on the
-sprite count, which goes as N^(1/3), so switching tier changed how bright a
-galaxy is by 26% a step, with the structure untouched and the sprite bag
-drifting by the same factor, which is why it never showed. Both now scale off
-`GalaxyDescription.luminosity`, a function of size alone.
+the import edge the landmine above forbids. It is worth the guard: sprite count
+goes as N^(1/3), so an `emissionScale` or `hiiRegions.tierFlux` anchored on it
+would change brightness by 26% per tier step with the structure untouched —
+invisible on screen, since the sprite bag itself drifts by the same factor.
+Both scale off `GalaxyDescription.luminosity`, a function of size alone.
 
 **Arm-table lane 7 (`age`) is analytic-field-only.** The sprite shader never
 reads it. Lanes 0-6 are what `armStarSample` consumes.

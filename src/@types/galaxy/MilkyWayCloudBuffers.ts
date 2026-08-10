@@ -1,28 +1,14 @@
 /**
- * MilkyWayCloudBuffers — the GPU-filled instance buffers one generation pass
- * produced for the Milky Way point cloud, plus their draw-time instance
- * counts. This is what `MilkyWayCloud.buffers()` hands the draw side each
- * frame; it is a plain snapshot of the current generation, replaced wholesale
- * on every tier switch rather than mutated in place.
- *
- * `starCount`/`dustCount` are the carved layout CAPACITIES, not a tally of
- * "live" (visibly nonzero) records — a population's `iterations` is its CPU
- * builder's loop bound, and some slots write a zero-brightness/opacity record
- * (a dead star past its fade radius) without shrinking the layout. The draw
- * pass instances every capacity slot; a dead one rasterizes a zero-area quad,
- * so nothing draws wrong (see `createGalaxyEngine.ts`'s `setParams` docblock
- * for the same reasoning on the tool side).
- *
- * `dustBuf` is nullable: a galaxy category ineligible for dust (elliptical, or
- * `spriteDust <= 0`) carves an empty dust layout and gets no buffer. The
- * Milky Way preset (SBb, `spriteDust = 0.5`) always carves dust, so this is
- * null-in-principle rather than null-in-practice — but the type stays honest
- * so a future preset change can't silently produce an invalid zero-size
- * buffer.
+ * MilkyWayCloudBuffers — the GPU-filled instance buffers and draw-time
+ * instance counts one generation pass produced for the Milky Way point
+ * cloud. What `MilkyWayCloud.buffers()` hands the draw side each frame: a
+ * plain snapshot, replaced wholesale on every tier switch.
  */
 export type MilkyWayCloudBuffers = {
   readonly starBuf: GPUBuffer;
+  /** Carved layout CAPACITY, not a "live" tally — a dead star past its fade radius keeps its slot and rasterizes a zero-area quad instead of shrinking the count. */
   readonly starCount: number;
+  /** Null for a galaxy category ineligible for dust (elliptical, or `spriteDust <= 0`); the Milky Way preset always carves dust. */
   readonly dustBuf: GPUBuffer | null;
   readonly dustCount: number;
 };

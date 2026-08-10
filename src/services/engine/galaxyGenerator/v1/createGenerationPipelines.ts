@@ -1,25 +1,14 @@
 /**
  * createGenerationPipelines — links the two galaxy-generation compute
  * shaders (`generateStars.wesl`, `generateDust.wesl`) into GPU pipelines.
+ * Both import `milkyWay/sprites/generate.wesl`'s shared bindings via WESL's
+ * `package::` syntax; `?static` (see `vite.config.ts`) resolves that graph
+ * at build time into one flat WGSL string per entry point.
  *
- * This is the first place either shader gets linked and compiled: both
- * import `milkyWay/sprites/generate.wesl`'s shared bindings/helpers via WESL's
- * `package::` syntax, and the `?static` suffix (wired in `vite.config.ts`)
- * resolves that import graph at BUILD time into one flat WGSL string per
- * entry point — same shape as the plain `.wesl?static` imports
- * `createGalaxyEngine.ts` already uses for the render pipelines. Any linker
- * or compile error in the shared lib surfaces here, through
- * `createShaderModuleWithDevLog`'s dev-mode `getCompilationInfo()` dump,
- * exactly like every other shader module in this renderer.
- *
- * `layout: 'auto'` mirrors the render pipelines' convention: WebGPU derives
- * each pipeline's bind-group layout from its own shader, so the layout is
- * guaranteed to match what the shader actually declares. The house-rule cost
- * of `'auto'` is that the derived layout is pipeline-specific — it can't be
- * reused to build a bind group for the OTHER pipeline, even though both
- * shaders declare the identical `@group(0)` bindings in `milkyWay/sprites/generate.wesl`.
- * `encodeGeneration.ts` is where that's handled: it builds one bind group per
- * pipeline, at dispatch time, rather than trying to share one.
+ * `layout: 'auto'` derives each pipeline's bind-group layout from its own
+ * shader — the two layouts are NOT interchangeable even though both shaders
+ * declare identical `@group(0)` bindings; `encodeGeneration.ts` builds a
+ * separate bind group per pipeline for that reason.
  */
 import { createShaderModuleWithDevLog } from '../../../gpu/shaderCompileLogger';
 import generateStarsWgsl from '../../../gpu/shaders/milkyWay/sprites/generateStars.wesl?static';

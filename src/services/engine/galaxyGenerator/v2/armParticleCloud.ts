@@ -1,25 +1,11 @@
 /**
- * buildArmParticleCloud — additive-emission twin of the dust particle cloud
- * (`dustParticleCloud.ts`): stochastic Gaussian sprites scattered along each
- * arm's own ridge via the SAME two-level complex/children sampler
- * (`clusteredDiscPlacement.ts`), giving the arms the clumpy, parallaxing
- * variation the dust tier gets from that sampler — no fbm/noise erosion, the
- * clustering itself supplies the texture.
- *
- * Sprite SIZE tracks the LOCAL arm cross-section (`armCrossSigma`), not an
- * absolute parsec span: GMC sizes are near-universal ISM physics, but arm
- * WIDTH flares with radius (`GalaxyArmTuning.widthScale`), so sizing off the
- * arm's own width reproduces that flare at every radius instead of fattening
- * the inner arm relative to it and starving the outer one.
- *
- * Flux ledger: `totalFlux` is this tier's share of `pushArmRidges`'
- * `armExcessFlux`, already split out by the caller
- * (`galaxyFieldMixture.ts`'s `buildGalaxyFieldMixture` — see that
- * function's and `pushArmRidges`' docblocks for the arithmetic). This module
- * does not re-derive the split.
- *
- * PURITY INVARIANT: pure `(geometry, tuning, totalFlux, seed) -> flat data`,
- * no Math.random/Date/engine state.
+ * Additive-emission twin of the dust particle cloud (`dustParticleCloud.ts`):
+ * stochastic Gaussian sprites scattered along each arm's ridge via the same
+ * two-level complex/children sampler (`clusteredDiscPlacement.ts`). Sprite
+ * size tracks the local arm cross-section (`armCrossSigma`), not an
+ * absolute parsec span, so it flares with radius the same way arm width
+ * does (`GalaxyArmTuning.widthScale`). `totalFlux` is this tier's share of
+ * `pushArmRidges`' `armExcessFlux`, already split out by the caller.
  */
 import {
   armColor,
@@ -40,21 +26,17 @@ import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTun
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
- * Component-budget ceiling for this tier. `galaxyFieldMixture.ts` reserves
- * exactly this many slots (via `pushArmRidges`' `reservedComponents`)
- * before sizing the ridge chain, so a geometry that derives a huge count
- * (see `deriveArmCloudCount`) clamps here rather than overflowing
- * `GALAXY_FIELD_MAX_COMPONENTS`.
- *
- * Sized so the COVERAGE knob leads and this stays a backstop across the
- * slider's range — at 400 the Milky Way preset saturated at coverage ~2.7,
- * which read as the slider going dead rather than as a budget being hit.
- * Coverage has to reach that high at all because of clustered placement; see
- * `GalaxyArmCloudTuning.coverage`.
+ * Component-budget ceiling. `galaxyFieldMixture.ts` reserves exactly this
+ * many slots (`pushArmRidges`' `reservedComponents`) before sizing the ridge
+ * chain, so a huge derived count (`deriveArmCloudCount`) clamps here rather
+ * than overflowing `GALAXY_FIELD_MAX_COMPONENTS`. Sized so the coverage
+ * slider leads and this stays a backstop — at 400 the Milky Way preset
+ * saturated around coverage 2.7, reading as a dead slider rather than a
+ * budget hit.
  */
 export const ARM_CLOUD_MAX_COUNT = 2000;
 
-/** Sprite radius as a fraction of the LOCAL `armCrossSigma`, drawn uniform — see this module's docblock for why this is a ratio and not an absolute span. */
+/** Sprite radius as a fraction of the local `armCrossSigma`, drawn uniform (see module docblock for why a ratio, not an absolute span). */
 const SIZE_MIN_RATIO = 0.35;
 const SIZE_MAX_RATIO = 1.0;
 
@@ -62,12 +44,7 @@ const SIZE_MAX_RATIO = 1.0;
 const MEAN_SIZE_FRAC_SQ =
   (SIZE_MIN_RATIO ** 2 + SIZE_MIN_RATIO * SIZE_MAX_RATIO + SIZE_MAX_RATIO ** 2) / 3;
 
-/**
- * Ridge samples for the coverage integral below. Unlike `deriveArmBlobCount`'s
- * curvature bound (which needs a fine mesh to catch a tight local wiggle),
- * this integral only sees arc length and local width, both smooth in
- * log-radius, so a coarser sample suffices.
- */
+/** Ridge samples for the coverage integral below — arc length and local width are both smooth in log-radius, so a coarse sample suffices. */
 const ARM_COVERAGE_SAMPLES = 48;
 
 /** Complex-level vertical scatter, a fraction of the disc's own height — matches `pushArmRidges`' calibrated arm-population thickness (its own `sigmas.pole = diskHeight * 0.8`). */
@@ -88,19 +65,17 @@ function distance3(a: Vec3, b: Vec3): number {
 /**
  * The covering-factor integral behind `GalaxyArmCloudTuning.coverage` — the
  * same f = N * <sprite footprint> / area argument `dustParticleCloud.ts`
- * documents for the dust tier, not `deriveArmBlobCount`'s chord sag (which
- * bounds a polyline approximating a curve, where this is a scattered cloud).
+ * documents for the dust tier.
  *
- * Per arc-length element ds at radius r the strip area is `2 * armCrossSigma(r)
- * * ds`, fade-weighted so a faded outer arm doesn't demand sprites nothing will
- * see; a sprite drawn there has mean footprint `PI * elongation *
- * armCrossSigma(r)^2 * sizeScale^2 * MEAN_SIZE_FRAC_SQ`. Dividing cancels one
- * power of armCrossSigma(r), leaving `2 * coverage * fade(r) / (PI * elongation
- * * sizeScale^2 * MEAN_SIZE_FRAC_SQ * armCrossSigma(r)) ds`, evaluated by
- * trapezoid over a log-radius ridge sample and summed across arms.
+ * Per arc-length element ds at radius r the strip area is `2 *
+ * armCrossSigma(r) * ds`, fade-weighted so a faded outer arm doesn't demand
+ * sprites nothing will see; a sprite there has mean footprint `PI *
+ * elongation * armCrossSigma(r)^2 * sizeScale^2 * MEAN_SIZE_FRAC_SQ`.
+ * Dividing cancels one power of armCrossSigma(r), evaluated by trapezoid
+ * over a log-radius ridge sample and summed across arms.
  *
- * `cloud.radialBias` is deliberately absent: it moves sprites without resizing
- * the arm, so the whole-arm demand is unchanged.
+ * `cloud.radialBias` is deliberately absent: it moves sprites without
+ * resizing the arm, so demand is unchanged.
  */
 export function deriveArmCloudCount(
   geometry: GalaxyDescription,
@@ -148,16 +123,13 @@ export function deriveArmCloudCount(
 type CloudParticle = { center: Vec3; readonly frame: CloudFrame; readonly radius: number };
 
 /**
- * Reference radius for the radial tilt: the outermost arm's own fade radius,
- * so `(radius / this) ** bias` never exceeds 1 anywhere a complex can be
- * proposed. That bound is load-bearing — the sampler rejection-tests against
- * this weight, and a weight above 1 silently flattens into a uniform tail
- * instead of erroring.
+ * Reference radius for the radial tilt: the outermost arm's own fade
+ * radius, so `(radius / this) ** bias` never exceeds 1 anywhere a complex
+ * can be proposed — a weight above 1 would silently flatten the sampler's
+ * rejection test into a uniform tail instead of erroring.
  *
- * ONE reference across all arms, not each arm's own fadeRadius, so the tilt
- * cannot redistribute light BETWEEN arms of different lengths: a per-arm
- * reference would normalise each arm's tilt separately and hand the short
- * arms a brightness offset that grows with `bias`.
+ * One reference across all arms, not each arm's own fadeRadius, so the tilt
+ * can't redistribute light between arms of different lengths.
  */
 function tiltReferenceRadius(geometry: GalaxyDescription): number {
   let max = 0;
@@ -168,15 +140,11 @@ function tiltReferenceRadius(geometry: GalaxyDescription): number {
 /**
  * Floor on the radial tilt, and so a ceiling of 1/this on how much flux one
  * sprite can be handed relative to an outer one. The tilt suppresses inner
- * placements and the flux weight divides the same factor back out, which is
- * exact in EXPECTATION but unbounded in variance: at bias 3 an inner sprite
+ * placements and the flux weight divides the same factor back out — exact
+ * in expectation but unbounded in variance: at bias 3 an inner sprite
  * survives with probability ~0.007 and would then carry ~138x an outer
- * sprite's flux, so one unlucky complex took a third of the tier's light and
- * read as a bright knot inside the bulge — the opposite of the knob's point.
- *
- * Applied to BOTH sides, so the cancellation stays exact; what it costs is
- * that the tilt saturates in the inner arm at high bias rather than
- * continuing to bite.
+ * sprite's flux, reading as a bright knot inside the bulge. Applied to both
+ * sides so the cancellation stays exact.
  */
 const TILT_FLOOR = 0.05;
 
@@ -198,11 +166,9 @@ export function buildArmParticleCloud(
 
   const hLight = discLightScaleLength(geometry);
   // A representative radius for the complex-level clustering scale below —
-  // per-PARTICLE size still reads the true local armCrossSigma at that
-  // particle's own radius (see `drawPayload`); this only sets how tightly
-  // children huddle around their complex, which `pushArmRidges` itself also
-  // treats as roughly constant along an arm (its own `pole` sigma is a
-  // single `diskHeight` figure, not radius-dependent either).
+  // per-particle size still reads the true local armCrossSigma at that
+  // particle's own radius; this only sets how tightly children huddle
+  // around their complex, treated as roughly constant along an arm.
   const complexSpread = armCrossSigma(hLight, geometry, tuning) * COMPLEX_SPREAD_RATIO;
   const sigmaZComplex = geometry.diskHeight * COMPLEX_HEIGHT_RATIO;
   const discWeightSum = DISC_SURFACE_WEIGHTS.reduce((s, w) => s + w, 0);
@@ -223,10 +189,9 @@ export function buildArmParticleCloud(
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * hLight,
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum,
-      // This tier has no ISM-map placement mode of its own — it stays on the
-      // analytic arm-lane path unconditionally (`armBias: 1` — this tier IS
-      // the arm feature, the smooth-disc fallback only fires when an arm has
-      // no valid span).
+      // This tier has no ISM-map placement mode — it stays on the analytic
+      // arm-lane path unconditionally (`armBias: 1`; the smooth-disc
+      // fallback only fires when an arm has no valid span).
       placement: {
         kind: 'analytic',
         armBias: 1,
@@ -237,11 +202,10 @@ export function buildArmParticleCloud(
       },
     },
     (childRng, center) => {
-      // The along-arm brightness shading is carried by the SAMPLING density
-      // (`laneAcceptance`'s fade envelope), not by per-particle flux, so the
-      // tier reads as smoothly graded rather than clumped on top of its own
-      // clustering. The radial tilt is the one part of that density that
-      // ISN'T brightness, which is why the flux weight below cancels it.
+      // Along-arm brightness shading is carried by the sampling density
+      // (`laneAcceptance`'s fade envelope), not per-particle flux, so the
+      // tier reads as smoothly graded. The radial tilt is the one part of
+      // that density that isn't brightness — the flux weight below cancels it.
       const radiusAtParticle = Math.hypot(center[0], center[2]);
       const sizeFrac = SIZE_MIN_RATIO + childRng() * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
       const radius =
@@ -250,14 +214,12 @@ export function buildArmParticleCloud(
     },
   );
 
-  // Per-particle flux weight. The R^2 term holds SURFACE brightness constant
+  // Per-particle flux weight. The R^2 term holds surface brightness constant
   // across the size draw (flux/R^2 fixed, so amplitude ~ 1/R) — a big sprite
-  // is a wider cloud, not a brighter one, which is what stops the size draw
-  // from reading as a brightness lottery. Dividing by `radialTilt` cancels the
-  // factor `laneAcceptance` multiplied into the placement density
-  // (`GalaxyArmCloudTuning.radialBias`), and `armExcessSurfaceShape` — the SAME
-  // function the ridge chain's `lambda` uses — is what leaves a radial law
-  // behind once that cancels.
+  // is a wider cloud, not a brighter one. Dividing by `radialTilt` cancels
+  // the factor `laneAcceptance` multiplied into the placement density;
+  // `armExcessSurfaceShape` — the same function the ridge chain's `lambda`
+  // uses — is what leaves a radial law behind once that cancels.
   const shape = (p: CloudParticle): number =>
     armExcessSurfaceShape(
       Math.hypot(p.center[0], p.center[2]),
@@ -283,9 +245,9 @@ export function buildArmParticleCloud(
     };
     const flux = fluxPerWeight * weights[i]!;
     const amplitude = flux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
-    // Per-particle, same radial cross-fade the ridge chain now carries — this
-    // tier renders alongside those blobs and would otherwise sit at a single
-    // flat hue while its neighbours graded from bulge-warm to disc-blue.
+    // Per-particle radial cross-fade, matching the ridge chain's — this tier
+    // renders alongside those blobs and would otherwise sit at one flat hue
+    // while neighbours grade bulge-warm to disc-blue.
     const particleRadius = Math.hypot(p.center[0], p.center[2]);
     const color = armColor(geometry.youngFraction, particleRadius / geometry.outerRadius);
     return {

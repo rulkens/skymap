@@ -4,21 +4,20 @@ import type { GalaxyYoungStarsTuning } from './GalaxyYoungStarsTuning';
 
 /**
  * GalaxyHiiTuning — the HII-region tier (`hiiRegions.ts`)'s cross-tier root.
- * Everything tier-specific (board item 19) now lives in one of the three
- * nested bags below, each with its OWN `brightness` GAIN multiplied against
- * this root's master (see each bag's own doc for how the two compose, and
- * `hiiRegions.ts`'s `buildHiiRegions`/`buildDigVeil` for where).
+ * Everything tier-specific lives in one of the three nested bags below, each
+ * with its OWN `brightness` GAIN multiplied against this root's master (see
+ * each bag's own doc for how the two compose, and `hiiRegions.ts`'s
+ * `buildHiiRegions`/`buildDigVeil` for where).
  */
 export type GalaxyHiiTuning = {
   /** Master toggle — off skips the sprites, their cavities and their component-budget reservation. */
   readonly enabled: boolean;
   /**
    * Whole-field flux master: multiplies EVERY tier's own gain
-   * (`shells.brightness`/`dig.brightness`/`youngStars.brightness`) rather
-   * than doubling as the shells' own gain the way this field used to (F98
-   * masked young features out of its fit, so HII emission ADDS light the
-   * disc mixture owes no debit for — that reasoning applies to the master,
-   * not to any one tier). 1 is the calibrated default.
+   * (`shells.brightness`/`dig.brightness`/`youngStars.brightness`). HII
+   * emission ADDS light the disc mixture owes no debit for — F98's fit
+   * masked young features out — so this stacks on top rather than
+   * redistributing anything. 1 is the calibrated default.
    */
   readonly brightness: number;
   /**

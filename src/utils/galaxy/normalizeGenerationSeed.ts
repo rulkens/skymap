@@ -1,14 +1,11 @@
 /**
- * The generation chain's seed rule, from the spike's `model.js`. Anything
- * that has to reproduce a galaxy's placement — `packGenerationUniforms`'s two
- * streams, and the CPU-side dust/bubble/ISM-map builders — must agree on it
- * exactly, since the same params must yield the same galaxy on both sides.
+ * The generation chain's seed rule, from the spike's `model.js`. Every path
+ * that must reproduce a galaxy's placement — `describeGalaxy.ts`'s streams,
+ * the CPU dust/bubble/ISM-map builders — applies this exact rule.
  *
- * `| 0` truncates toward zero and wraps to int32; `|| 1` then maps 0 (and an
- * absent seed) to 1, because a zero state makes `mulberry32` degenerate.
- * Signed, deliberately: the UBO's own `>>> 0` reinterpretation is applied at
- * the pack site, not here, so a CPU builder and the shader stream that shares
- * this seed cannot disagree about it.
+ * `| 0` truncates to int32; `|| 1` maps a zero seed to 1 (mulberry32
+ * degenerates at zero). Left signed: the UBO's `>>> 0` reinterpretation
+ * happens at the pack site, not here.
  */
 export function normalizeGenerationSeed(seed: number | undefined): number {
   return (seed ?? 0) | 0 || 1;
