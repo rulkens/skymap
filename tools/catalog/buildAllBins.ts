@@ -153,6 +153,8 @@ export function recordsToCloud(
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
     diameterIsFallback: new Uint8Array(count),
+    // NaN = no estimate yet; a later pass wires estimateLog10StellarMass in.
+    log10StellarMass: new Float32Array(count).fill(NaN),
   };
   let overridesApplied = 0;
   for (let i = 0; i < count; i++) {

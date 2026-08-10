@@ -1,25 +1,33 @@
 /**
- * Format-level tests for the v8 galaxy-catalog binary.
+ * Format-level tests for the v9 galaxy-catalog binary.
  *
- * Two contracts under test:
+ * Three contracts under test:
  *
  *   1. encode → decode is a faithful round trip for every field —
- *      the v8 `diameterIsFallback` byte, the v7 `orientationIsFallback`
- *      byte, the v6 `spectroscopicZ` float, the v5 uint8 slots
- *      (`classByte`, `parentSurveyByte`), the v4 `diameterKpc`, the v3
- *      orientation pair, the five magnitude bands, and full 64-bit
- *      `objID` precision (no silent coercion through `number`).
+ *      the v9 `log10StellarMass` float and packed flags byte, the v8
+ *      `diameterIsFallback` bit, the v7 `orientationIsFallback` bit, the
+ *      v6 `spectroscopicZ` float, the v5 uint8 slots (`classByte`,
+ *      `parentSurveyByte`), the v4 `diameterKpc`, the v3 orientation pair,
+ *      the five magnitude bands, and full 64-bit `objID` precision (no
+ *      silent coercion through `number`).
  *   2. Any foreign on-disk shape (bad magic, or any earlier format
  *      version) is rejected with the documented "regenerate" error —
  *      the format-version gate is the single source of truth for "do
  *      I understand this file?".
+ *   3. `GALAXY_CATALOG_FIELD_SPECS` itself lays out a self-consistent 64 B
+ *      record — no two `'field'` byte ranges overlap, everything fits the
+ *      stride, and the flag bits share one byte at distinct positions.
  */
 import { describe, it, expect } from 'vitest';
 import {
   encodeGalaxyCatalog,
   decodeGalaxyCatalog,
+  GALAXY_CATALOG_FIELD_SPECS,
 } from '../../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+
+const BYTES_PER_GALAXY = 64;
+const COLUMN_SIZE: Record<'u64' | 'f32' | 'u8', number> = { u64: 8, f32: 4, u8: 1 };
 
 describe('galaxyCatalogFormat — full round trip', () => {
   it('round-trips every scalar field plus full 64-bit objID precision', () => {
@@ -100,9 +108,9 @@ describe('galaxyCatalogFormat — v5/v6 fields', () => {
   });
 
   it('round-trips the persisted diameterIsFallback flag per record', () => {
-    // Same authoritative-byte contract as orientationIsFallback, one byte
-    // over at offset 59: 1 = diameterKpc is the flat 30-kpc fallback, 0 = a
-    // real / angular-derived measurement.
+    // Same authoritative-flag contract as orientationIsFallback, the
+    // neighbouring bit in the same flags byte: 1 = diameterKpc is the flat
+    // 30-kpc fallback, 0 = a real / angular-derived measurement.
     const cat = makeGalaxyCatalog(4);
     cat.diameterIsFallback.set([1, 0, 1, 0]);
 
@@ -124,6 +132,97 @@ describe('galaxyCatalogFormat — v5/v6 fields', () => {
     expect(out.spectroscopicZ[1]).toBeCloseTo(-0.00094, 5);
     expect(out.spectroscopicZ[2]).toBe(0);
     expect(Number.isNaN(out.spectroscopicZ[3])).toBe(true);
+  });
+});
+
+describe('galaxyCatalogFormat — v9 fields', () => {
+  it('packs the three provenance bits into the flags byte at record offset 54', () => {
+    // Rows 0-3 cover (orientationIsFallback, diameterIsFallback) ∈ {0,1}²
+    // with a finite mass (bit 2 set); rows 4-7 repeat the same four
+    // combinations with mass = NaN (bit 2 clear).
+    const cat = makeGalaxyCatalog(8);
+    cat.orientationIsFallback.set([0, 0, 1, 1, 0, 0, 1, 1]);
+    cat.diameterIsFallback.set([0, 1, 0, 1, 0, 1, 0, 1]);
+    cat.log10StellarMass.set([10.5, 10.5, 10.5, 10.5, NaN, NaN, NaN, NaN]);
+
+    const buf = encodeGalaxyCatalog(cat);
+    const bytes = new Uint8Array(buf);
+    const flagsByte = (i: number) => bytes[16 + i * 64 + 54]!;
+
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(flagsByte)).toEqual([
+      0b100, // orientation=0 diameter=0 mass=finite
+      0b110, // orientation=0 diameter=1 mass=finite
+      0b101, // orientation=1 diameter=0 mass=finite
+      0b111, // orientation=1 diameter=1 mass=finite
+      0b000, // orientation=0 diameter=0 mass=NaN
+      0b010, // orientation=0 diameter=1 mass=NaN
+      0b001, // orientation=1 diameter=0 mass=NaN
+      0b011, // orientation=1 diameter=1 mass=NaN
+    ]);
+
+    const decoded = decodeGalaxyCatalog(buf);
+    expect(Array.from(decoded.orientationIsFallback)).toEqual(
+      Array.from(cat.orientationIsFallback),
+    );
+    expect(Array.from(decoded.diameterIsFallback)).toEqual(Array.from(cat.diameterIsFallback));
+  });
+
+  it('writes spectroscopicZ at record offset 56 and log10StellarMass at 60', () => {
+    const cat = makeGalaxyCatalog(1);
+    cat.spectroscopicZ[0] = 0.12345;
+    cat.log10StellarMass[0] = 10.75;
+
+    const buf = encodeGalaxyCatalog(cat);
+    const dv = new DataView(buf);
+
+    // Catches an encoder/decoder pair that agrees with itself at the wrong
+    // offsets — the round-trip test alone wouldn't notice a swap.
+    expect(dv.getFloat32(16 + 56, true)).toBeCloseTo(0.12345, 5);
+    expect(dv.getFloat32(16 + 60, true)).toBeCloseTo(10.75, 5);
+  });
+
+  it('round-trips log10StellarMass including the NaN absent sentinel', () => {
+    const cat = makeGalaxyCatalog(3);
+    cat.log10StellarMass.set([10.75, -1.5, NaN]);
+
+    const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
+
+    expect(decoded.log10StellarMass[0]).toBeCloseTo(10.75, 5);
+    expect(decoded.log10StellarMass[1]).toBeCloseTo(-1.5, 5);
+    expect(Number.isNaN(decoded.log10StellarMass[2])).toBe(true);
+  });
+});
+
+describe('galaxyCatalogFormat — field spec table invariants', () => {
+  it('lays out disjoint field byte ranges within the 64 B stride, with flag bits sharing one byte at distinct positions', () => {
+    const fieldRanges: { start: number; end: number }[] = [];
+    const flagBits: { offset: number; bit: number }[] = [];
+
+    for (const spec of Object.values(GALAXY_CATALOG_FIELD_SPECS)) {
+      if (spec.disk.kind === 'field') {
+        const size = COLUMN_SIZE[spec.column] * spec.components;
+        fieldRanges.push({ start: spec.disk.offset, end: spec.disk.offset + size });
+      } else {
+        flagBits.push({ offset: spec.disk.offset, bit: spec.disk.bit });
+      }
+    }
+
+    for (const r of fieldRanges) {
+      expect(r.start).toBeGreaterThanOrEqual(0);
+      expect(r.end).toBeLessThanOrEqual(BYTES_PER_GALAXY);
+    }
+    for (let i = 0; i < fieldRanges.length; i++) {
+      for (let j = i + 1; j < fieldRanges.length; j++) {
+        const a = fieldRanges[i]!;
+        const b = fieldRanges[j]!;
+        const disjoint = a.end <= b.start || b.end <= a.start;
+        expect(disjoint).toBe(true);
+      }
+    }
+
+    expect(flagBits.length).toBeGreaterThan(0);
+    expect(new Set(flagBits.map((f) => f.offset)).size).toBe(1);
+    expect(new Set(flagBits.map((f) => f.bit)).size).toBe(flagBits.length);
   });
 });
 
@@ -185,21 +284,21 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/magic/);
   });
 
-  it('rejects v7 with the version-specific regenerate error', () => {
+  it('rejects v8 with the version-specific regenerate error', () => {
     const buf = new ArrayBuffer(16);
     const dv = new DataView(buf);
     dv.setUint32(0, 0x504d4b53, true); // "SKMP"
-    dv.setUint32(4, 7, true); // v7 — the previous on-disk shape
+    dv.setUint32(4, 8, true); // v8 — the previous on-disk shape
     dv.setUint32(8, 0, true);
     dv.setUint32(12, 0, true);
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 7/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 8/);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
   });
 
-  it('rejects every earlier version (v1–v7) with the same regenerate message', () => {
+  it('rejects every earlier version (v1–v8) with the same regenerate message', () => {
     // The version check fires before the per-record loop, so a 16-byte
     // header with count=0 is enough to exercise every foreign version.
-    for (const version of [1, 2, 3, 4, 5, 6, 7]) {
+    for (const version of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const buf = new ArrayBuffer(16);
       const dv = new DataView(buf);
       dv.setUint32(0, 0x504d4b53, true);

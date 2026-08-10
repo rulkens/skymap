@@ -157,6 +157,8 @@ async function main(): Promise<void> {
     // Famous entries always carry a curated real diameter (e.diameterKpc), so
     // no row is a flat-default fallback; every flag stays 0.
     diameterIsFallback: new Uint8Array(count),
+    // Famous entries have no photometric mass estimate; NaN = no estimate.
+    log10StellarMass: new Float32Array(count).fill(NaN),
   };
 
   for (let i = 0; i < count; i++) {

@@ -92,24 +92,15 @@ describe('cloneGalaxyCatalogForTransfer', () => {
 
     // Every transfer entry must be one of the copy buffers — never the
     // original. Sending an original-buffer entry to postMessage would
-    // detach the engine's authoritative catalog.
-    const copyBuffers = new Set<ArrayBufferLike>([
-      copy.objIDs.buffer,
-      copy.positions.buffer,
-      copy.magU.buffer,
-      copy.magG.buffer,
-      copy.magR.buffer,
-      copy.magI.buffer,
-      copy.magZ.buffer,
-      copy.axisRatio.buffer,
-      copy.positionAngleDeg.buffer,
-      copy.diameterKpc.buffer,
-      copy.classByte.buffer,
-      copy.parentSurveyByte.buffer,
-      copy.spectroscopicZ.buffer,
-      copy.orientationIsFallback.buffer,
-      copy.diameterIsFallback.buffer,
-    ]);
+    // detach the engine's authoritative catalog. Derived from `copy` itself
+    // (every typed-array view's `.buffer`), not hand-listed: a hand list
+    // silently stops covering new columns as GalaxyCatalog grows, which is
+    // exactly how this test missed `log10StellarMass` the first time round.
+    const copyBuffers = new Set<ArrayBufferLike>(
+      (Object.values(copy) as unknown[])
+        .filter((v): v is ArrayBufferView => ArrayBuffer.isView(v))
+        .map((v) => v.buffer),
+    );
     for (const t of transfer) {
       expect(copyBuffers.has(t as ArrayBufferLike)).toBe(true);
     }

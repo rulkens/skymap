@@ -211,6 +211,9 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     // real (non-fallback) size like the orientation sentinel, so every row is
     // flagged 0. Uint8Array default-fills with 0.
     diameterIsFallback: new Uint8Array(count),
+    // Synthetic galaxies have no photometric mass estimate; NaN is the
+    // "no estimate" sentinel (0 would mean 1 M☉ and set the estimated bit).
+    log10StellarMass: new Float32Array(count).fill(NaN),
   };
   cloud.medianAbsMag = galaxyMedianAbsMag(cloud);
   return cloud;
