@@ -1,5 +1,5 @@
 /**
- * SplashError — discriminated union of the two runtime failure modes
+ * SplashError — discriminated union of the three runtime failure modes
  * the splash can surface.  Each kind carries the minimum information
  * needed to render a specific recovery affordance.
  *

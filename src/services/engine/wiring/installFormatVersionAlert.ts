@@ -1,19 +1,8 @@
 /**
- * installFormatVersionAlert — subscribe every asset slot to surface a
- * decoder/data version mismatch as a splash-visible error.
- *
- * Mirrors `installSlotReadyWake` (same file, same shape): one subscription
- * per slot in `allSlots`, absorbed here rather than scattered across every
- * slot factory. `allSlots` is the complete enumeration built by
- * `installLoadProgress`, so "every slot that can fail" is covered in one
- * enforcement site.
- *
- * A stale `.bin` (last built before this decoder's format version landed)
- * fails EVERY family at once — SDSS, 2MRS, GLADE all decode the same on-disk
- * bytes with the same outdated version stamp. Without the once-guard this
- * would fire one dispatch per catalog; `alerted` is scoped to the install
- * call (a fresh closure per `wireSlots` run), not module-level state that
- * would leak between engine instances or tests.
+ * installFormatVersionAlert — mirrors `installSlotReadyWake`: one
+ * subscription per slot in `allSlots`. A stale `.bin` fails every family at
+ * once, so `alerted` is a closure-local once-guard (fresh per install call,
+ * not module state) fanning every matching slot into a single dispatch.
  */
 
 import { FormatVersionError } from '../../../data/formatVersionError';
