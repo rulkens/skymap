@@ -37,6 +37,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
@@ -45,6 +46,7 @@ import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { eqToSg } from '../utils/math/eqToSg';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import { resolveDataFile } from '../utils/data/resolveDataFile';
 
 /**
  * Well-known velocity SINKS — overdense clusters / superclusters the local
@@ -181,7 +183,9 @@ function divergenceAtCell(cube: FlowCube, i: number, j: number, k: number): numb
 }
 
 function main(): void {
-  const path = process.argv[2] ?? `public/data/${SCALAR_FIELD_DATA_PREFIX}/flowfield.scfd`;
+  const path =
+    process.argv[2] ??
+    resolveDataFile(resolve('public/data'), `${SCALAR_FIELD_DATA_PREFIX}/flowfield.scfd`);
   const buf = readFileSync(path);
   const decoded = decodeScalarField(
     buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),

@@ -79,6 +79,7 @@ import {
   decodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
 } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { resolveDataFile } from '../utils/data/resolveDataFile';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
 import {
   encodeFilaments,
@@ -537,7 +538,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
     // pre-tier legacy artefacts `buildAllBins` no longer writes; only
     // `2mrs.bin` — tier-agnostic — actually exists here). Pre-existing,
     // out of scope: only the directory gets the epoch prefix.
-    const path = resolve('public/data', GALAXY_CATALOG_DATA_PREFIX, name);
+    const path = resolveDataFile(resolve('public/data'), `${GALAXY_CATALOG_DATA_PREFIX}/${name}`);
     if (!existsSync(path)) {
       process.stderr.write(`warning: ${path} not found — skipping\n`);
       continue;
