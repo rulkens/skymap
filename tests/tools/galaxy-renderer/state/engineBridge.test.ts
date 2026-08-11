@@ -70,9 +70,9 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
     getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
     requestRingMeansReadback: vi.fn<GalaxyEngineHandle['requestRingMeansReadback']>(),
     requestArmRidgeSampleReadback: vi.fn<GalaxyEngineHandle['requestArmRidgeSampleReadback']>(),
-    requestIsmMapDustCdfScanReadback: vi.fn<
-      GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']
-    >(),
+    requestIsmMapDustCdfScanReadback:
+      vi.fn<GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']>(),
+    requestDustPlacementReadback: vi.fn<GalaxyEngineHandle['requestDustPlacementReadback']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, mocks };
@@ -303,7 +303,9 @@ describe('connectEngineBridge', () => {
     store.dispatch(renderPatched({ dustCloudEnabled: false }));
 
     expect(mocks.setFieldTuning).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dust: expect.objectContaining({ cloud: expect.objectContaining({ count: 0 }) }) }),
+      expect.objectContaining({
+        dust: expect.objectContaining({ cloud: expect.objectContaining({ count: 0 }) }),
+      }),
     );
     // The pill patches only the OUTGOING copy — the stored slice still shows
     // what the sliders display, so re-enabling the pill restores it exactly.

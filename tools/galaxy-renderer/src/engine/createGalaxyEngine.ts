@@ -19,6 +19,10 @@ import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { HiiTierKind } from '../../@types/engine/HiiTierKind';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import {
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
+} from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -50,6 +54,8 @@ import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
 import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
+import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
+import { createIsmMapPlaceDust } from './ismMap/createIsmMapPlaceDust';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
@@ -360,6 +366,16 @@ export async function createGalaxyEngine(
     ismMapTexture: ismMapGenerator.texture,
     ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
   });
+  // GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum — Task 7's
+  // dust-weight table only; Task 8 adds the DIG veil's arm-biased weights at
+  // the same real ISM_MAP_RINGS x ISM_MAP_AZ ceiling.
+  const dustCdfScan = createIsmMapDustCdfScan(device, {
+    makeShader,
+    maxRings: ISM_MAP_RINGS,
+    maxAz: ISM_MAP_AZ,
+  });
+  // GPU replacement for `buildDustParticleCloud`'s map-seeded placement.
+  const placeDust = createIsmMapPlaceDust(device, { makeShader });
   // Task 12's own numeric-validation exception (armRidge.wesl vs.
   // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
   const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
@@ -456,7 +472,11 @@ export async function createGalaxyEngine(
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: HDR });
 
   // ---- the one tool-only post pipeline: `createGradePipeline.ts` ----
-  const { gradePipe, gradeSampler } = createGradePipeline({ device, makeShader, swapFormat: format });
+  const { gradePipe, gradeSampler } = createGradePipeline({
+    device,
+    makeShader,
+    swapFormat: format,
+  });
 
   // One internal render bag merged by setRender (the spike's Object.assign).
   // Seeded from the same two constants the UI pushes on its first sync, so this
@@ -474,6 +494,8 @@ export async function createGalaxyEngine(
     ismMapGenerator,
     orientation: ismMapOrientation,
     ringReduce,
+    dustCdfScan,
+    placeDust,
     render,
     onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
     onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),
@@ -1102,6 +1124,9 @@ export async function createGalaxyEngine(
     // Debug-only: Task 6's own numeric-validation exception — see
     // createIsmMapDustCdfScanDebugSample.ts's own header. No production caller.
     requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
+    // Debug-only: Task 7's own determinism/survival-floor numeric exception —
+    // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
+    requestDustPlacementReadback: () => model.requestDustPlacementReadback(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1112,6 +1137,8 @@ export async function createGalaxyEngine(
       aggregateUpsample.destroy();
       ismMapGenerator.dispose();
       ismMapOrientation.dispose();
+      dustCdfScan.dispose();
+      placeDust.dispose();
       armRidgeDebugSample.dispose();
       ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they

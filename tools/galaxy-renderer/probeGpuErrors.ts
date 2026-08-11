@@ -38,6 +38,11 @@ import {
   armExcessSurfaceShape,
   armColor,
 } from '../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
+import { describeGalaxy } from '../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
+import { MILKY_WAY_GALAXY_PARAMS } from '../../src/data/milkyWay/milkyWayGalaxyParams';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
+import { computePlaceDustBudget } from './src/engine/ismMap/computePlaceDustBudget';
+import { FIELD_COMPONENT_FLOATS } from './src/engine/field/packFieldUniforms';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,
@@ -589,7 +594,10 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
           if (!bridge) {
-            return { ok: false as const, reason: 'no __probeEngine — the probeReadback gate never installed it' };
+            return {
+              ok: false as const,
+              reason: 'no __probeEngine — the probeReadback gate never installed it',
+            };
           }
           const map = bridge.getIsmMapData();
           if (!map) return { ok: false as const, reason: 'getIsmMapData() is still null' };
@@ -773,7 +781,109 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               `(Tasks 7/8's binary search needs a non-decreasing prefix)`,
           );
         }
-        console.error('  readback:ismMapDustCdfScan prefix buffer is non-decreasing across all texels');
+        console.error(
+          '  readback:ismMapDustCdfScan prefix buffer is non-decreasing across all texels',
+        );
+      },
+    },
+    {
+      // Task 7's own numeric-validation exception — placeDust.wesl has no
+      // CPU reference to diff against (unlike ringMeans/ismMapDustCdfScan
+      // above, it's a fresh algorithm, not a port of a still-live CPU
+      // twin): what's checked instead is the plan's own three DoD
+      // properties — (1) determinism: two independent dispatches at the
+      // same (seed, grid) must be bit-identical, no epsilon slack;
+      // (2) count matches `computePlaceDustBudget`'s own CPU budget math
+      // for the boot preset; (3) the survival floor is OBSERVABLE — at
+      // least one record's amplitude reads exactly 0, not merely absent.
+      name: 'readback:placeDust',
+      run: async (page) => {
+        await settleFrames(page, SETTLE_FRAMES);
+        const first = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            throw new Error(
+              'readback:placeDust — no __probeEngine — the probeReadback gate never installed it',
+            );
+          }
+          const landed = await bridge.requestDustPlacementReadback();
+          if (!landed) return null;
+          return { count: landed.count, records: Array.from(landed.records) };
+        });
+        if (!first) {
+          throw new Error(
+            'readback:placeDust — requestDustPlacementReadback() returned null at boot (no dust reserved)',
+          );
+        }
+
+        const second = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDustPlacementReadback();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!second) {
+          throw new Error(
+            'readback:placeDust — second requestDustPlacementReadback() returned null',
+          );
+        }
+
+        // (1) Determinism — bit-identical, no tolerance: two dispatches at
+        // the same (seed, grid) are the SAME pure function of a stateless
+        // hash, not two independent random draws.
+        if (first.records.length !== second.length) {
+          throw new Error(
+            `readback:placeDust — length mismatch across two dispatches: ${first.records.length} vs ${second.length}`,
+          );
+        }
+        let mismatchIndex = -1;
+        for (let i = 0; i < first.records.length; i++) {
+          if (first.records[i] !== second[i]) {
+            mismatchIndex = i;
+            break;
+          }
+        }
+        if (mismatchIndex >= 0) {
+          throw new Error(
+            `readback:placeDust — non-deterministic at float ${mismatchIndex}: ` +
+              `${first.records[mismatchIndex]} vs ${second[mismatchIndex]} (expected bit-identical)`,
+          );
+        }
+        console.error(`  readback:placeDust two dispatches bit-identical (${first.count} records)`);
+
+        // (2) Count matches computePlaceDustBudget's own CPU budget math for
+        // the boot preset (defaultGalaxyGenerationParams.ts's MILKY_WAY_GALAXY_PARAMS
+        // + DEFAULT_GALAXY_DUST_PARAMS — the same params/tuning the tool boots with).
+        const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
+        const expectedBudget = computePlaceDustBudget(geometry, DEFAULT_GALAXY_DUST_PARAMS);
+        if (!expectedBudget) {
+          throw new Error(
+            'readback:placeDust — CPU computePlaceDustBudget returned null for the boot preset',
+          );
+        }
+        if (first.count !== expectedBudget.count) {
+          throw new Error(
+            `readback:placeDust — count ${first.count} does not match computePlaceDustBudget's own budget math (${expectedBudget.count})`,
+          );
+        }
+        console.error(`  readback:placeDust count matches budget math (${first.count})`);
+
+        // (3) Survival-floor zeroing is OBSERVABLE — amplitude sits at lane 3
+        // of every FIELD_COMPONENT_FLOATS-wide record (records.wesl's own
+        // layout: invCovDiagonal.xyz then amplitude).
+        let zeroAmplitudeCount = 0;
+        for (let i = 0; i < first.count; i++) {
+          if (first.records[i * FIELD_COMPONENT_FLOATS + 3] === 0) zeroAmplitudeCount++;
+        }
+        if (zeroAmplitudeCount === 0) {
+          throw new Error(
+            'readback:placeDust — no record has amplitude exactly 0; the survival floor never fired for the boot preset (expected at least one cavity-dropped particle at DUST_SURVIVAL_FLOOR_FRAC)',
+          );
+        }
+        console.error(
+          `  readback:placeDust survival floor zeroed ${zeroAmplitudeCount}/${first.count} records`,
+        );
       },
     },
     {

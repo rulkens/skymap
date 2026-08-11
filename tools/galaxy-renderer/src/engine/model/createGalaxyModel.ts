@@ -36,20 +36,20 @@ import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy
 
 import { createGenerationPipelines } from '../../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
-import type { OrientationDeltaStats } from '../../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
 import {
   buildDustBubblePlacements,
   buildHiiCavityPlacements,
   BUBBLE_BUDGET,
   HII_CAVITY_BUDGET,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
-import { buildDustParticleCloud } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import {
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
   ismMapGridRadius,
   ismMapGridRadiusOrDefault,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
@@ -78,6 +78,10 @@ import { createOrientationDiagnostics } from '../ismMap/createOrientationDiagnos
 import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
 import type { IsmMapOrientation } from '../ismMap/createIsmMapOrientation';
 import type { IsmMapRingReduce } from '../ismMap/createIsmMapRingReduce';
+import type { IsmMapDustCdfScan } from '../ismMap/createIsmMapDustCdfScan';
+import { computePlaceDustBudget } from '../ismMap/computePlaceDustBudget';
+import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
+import type { IsmMapPlaceDust, PlaceDustDispatchInput } from '../ismMap/createIsmMapPlaceDust';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
@@ -111,6 +115,10 @@ export type GalaxyModelDeps = {
   readonly orientation: IsmMapOrientation;
   /** GPU replacement for `ismMapRingMeans.ts`'s CPU loop — see `recomputeIsmMapSeedingMeans`. */
   readonly ringReduce: IsmMapRingReduce;
+  /** GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum — dust-weight table, see `rebuildIsmMap`. */
+  readonly dustCdfScan: IsmMapDustCdfScan;
+  /** GPU replacement for `buildDustParticleCloud`'s map-seeded placement — see `dustPlacementRebuild`. */
+  readonly placeDust: IsmMapPlaceDust;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   /**
@@ -196,6 +204,16 @@ export type GalaxyModel = {
     onError?: (err: unknown) => void,
   ): void;
   /**
+   * Debug-only: dispatches `placeDust.wesl` fresh into its own encoder and
+   * maps the dust slot range straight back — the probe's own determinism/
+   * survival-floor numeric exception (no production caller). `null` when
+   * nothing is reserved this rebuild (`dustBudget` is null).
+   */
+  requestDustPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
    * list is a destroyed buffer.
@@ -206,7 +224,7 @@ export type GalaxyModel = {
 };
 
 export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
-  const { device, ismMapGenerator, orientation, ringReduce, render } = deps;
+  const { device, ismMapGenerator, orientation, ringReduce, dustCdfScan, placeDust, render } = deps;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
   // settings key — what the rebuild gates' `wanted` predicates read.
@@ -232,7 +250,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const fieldComps = createGrowOnlyRecordBuffer({
     device,
     label: 'galaxy:fieldComps',
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    // COPY_SRC beyond STORAGE|COPY_DST's production need: Task 7's own
+    // debug-only readback (`requestDustPlacementReadback`) copies the dust
+    // slot range back to the CPU, same "debug readback rides the production
+    // buffer's own COPY_SRC flag" precedent `ismMapGenerator.texture`/
+    // `orientation.texture` already establish.
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     floatsPerRecord: FIELD_COMPONENT_FLOATS,
     initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
     onRegrow: deps.onFieldCompsRegrow,
@@ -304,10 +327,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // trailing extras span, kept in step with `hiiComps.write` since both are
   // written by `repackHiiComponents` alone.
   let hiiSegments: readonly HiiSegment[] = [];
-  // The analytic dust lane's mixture, CENTRAL galaxy only — extras get dust in
-  // a follow-up with zero rework, since the packed layout already carries
-  // per-galaxy dustOffset/dustCount.
-  let dustMixture: readonly GalaxyFieldComponent[] = [];
+  // The analytic dust lane's RESERVATION, CENTRAL galaxy only — extras get
+  // dust in a follow-up with zero rework, since the packed layout already
+  // carries per-galaxy dustOffset/dustCount. `null` means no dust reserved
+  // this rebuild (`computePlaceDustBudget`'s own early-exit gates). The CPU
+  // only ever sees this budget/uniform shape now — `placeDust.wesl` decides
+  // slot CONTENT on the GPU (`dustPlacementRebuild` below); there is no CPU
+  // particle array to cache any more.
+  let dustBudget: PlaceDustBudget | null = null;
   // What `setParams` was last handed — only `seed` still comes off it; dust
   // and starFormation moved onto `fieldTuning` (scene-wide, not per-galaxy).
   let lastParams: GalaxyParams | null = null;
@@ -432,43 +459,32 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * it just wrote, so `GalaxyIsmMap.rMin/rMax` always matches the CONTENT being
    * copied.
    *
-   * DETERMINISM: the copy lands asynchronously, so the dust mixture built
-   * synchronously inside `setParams`/`setFieldTuning` never sees the map from
-   * the rebuild that triggered it. Rather than defer the dust build until a map
-   * is ready (a blank tool on first load), this REBUILDS it a second time once
-   * the map lands. Either choice reaches the same final state for a given
-   * (params, tuning, seed); this one keeps the tool always showing something.
+   * Dust placement no longer reads this landing at all — `placeDust.wesl`
+   * runs entirely off GPU-resident buffers (`dustPlacementRebuild`,
+   * invalidated directly from `rebuildIsmMap`, not from here). What remains
+   * on this path is diagnostics (`recomputeIsmMapSeedingMeans`'s "seeding"
+   * debug-view means) and the HII tier, which still builds CPU-side
+   * (`rebuildHiiIfSeeded` — Task 8's own move).
    */
   function scheduleIsmMapReadback(grid: GalaxyIsmMapGridRadius): void {
     readbacks.requestIsmMap(grid, (map) => {
       recomputeIsmMapSeedingMeans(map);
-      if (fieldTuning.ismMap.generator !== 'none') {
-        rebuildDustMixture();
-        repackFieldComponents();
-      }
       rebuildHiiIfSeeded();
     });
   }
 
   /**
-   * The same, for the CPU copy of `orientationTex`. Dust-gated because the
-   * dust placement is the only consumer of the CPU copy — the debug overlay
-   * samples the texture on the GPU directly. Mirrors the HII re-run above:
-   * `orientationDataRebuild` only runs while a generator is active (see its
-   * own `wanted`), so this landing is the SAME opportunity
-   * `scheduleIsmMapReadback`'s already took, not a second independent one.
+   * The same, for the CPU copy of `orientationTex` — diagnostics-only now
+   * (`reportOrientationDiagnostics`'s coherence stat); dust placement reads
+   * `orientationTex` on the GPU directly (`dustPlacementRebuild`), not this
+   * CPU copy. HII stays CPU-side, so its own re-run still belongs here.
    */
   function scheduleOrientationReadback(grid: GalaxyIsmMapGridRadius): void {
     readbacks.requestOrientation(grid, ({ data }) => {
       // Folded in once here, at the one point a fresh grid exists — not per
       // frame or per dust build.
       orientationDiagnostics.noteCoherence(data);
-      if (fieldTuning.ismMap.generator !== 'none') {
-        rebuildDustMixture(); // also reports — see its own doc
-        repackFieldComponents();
-      } else {
-        reportOrientationDiagnostics();
-      }
+      reportOrientationDiagnostics();
       rebuildHiiIfSeeded();
     });
   }
@@ -488,8 +504,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
-   * The CPU copy of the orientation field. Only the dust placement reads it,
-   * so seeding alone decides whether a readback is worth scheduling.
+   * The CPU copy of the orientation field — diagnostics-only now (the
+   * coherence-stat report `scheduleOrientationReadback` feeds); dust
+   * placement reads `orientationTex` on the GPU directly
+   * (`dustPlacementRebuild`). Still gated on the generator being active:
+   * a disabled generator has nothing coherent to report either.
    */
   const orientationDataRebuild = createKeyedRebuild({
     wanted: () => fieldTuning.ismMap.generator !== 'none',
@@ -531,42 +550,31 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
-   * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
-   * geometry + dust params, gated on `fieldTuning.dust.enabled` the same way
-   * `disc.enabled`/`arms.enabled` gate their shader loops (an off pill skips the
-   * work entirely, not just zeroes tau). Called from the two repack triggers
-   * `fieldMixture` uses, and again from each readback landing above — the only
-   * way a map the placement seeds from can arrive after the build that asked
-   * for it.
+   * rebuildDustMixture — recomputes the central galaxy's dust RESERVATION
+   * (`computePlaceDustBudget`'s pure budget math off the CACHED geometry +
+   * dust params) and invalidates `dustPlacementRebuild` below. Gated on
+   * `fieldTuning.dust.enabled` the same way `disc.enabled`/`arms.enabled`
+   * gate their shader loops (an off pill skips the work entirely, not just
+   * zeroes tau).
    *
-   * `currentSeed()`, not a literal, so this galaxy's particle placement is
-   * reproducible from `setParams`'s params alone. The `else` branch leaves the
-   * `OrientationDeltaStats` out-param at its zeroed default, which is the honest
-   * answer: no placement ran, so no delta was applied.
+   * This no longer PLACES anything — `placeDust.wesl` decides slot content
+   * on the GPU, off whatever `ismMapTex`/`orientationTex`/the CDF prefix
+   * buffer hold at `dustPlacementRebuild`'s own build time, not off any CPU
+   * readback. `currentSeed()` still flows through so placement stays
+   * reproducible from `setParams`'s params alone. No per-particle
+   * `OrientationDeltaStats` any more (that was the CPU sampler's own
+   * out-param) — the diagnostics report keeps firing off a zeroed delta, the
+   * same honest "no CPU placement ran" default the old `else` branch used.
    */
   function rebuildDustMixture(): void {
     const dust = currentDust();
     dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dust.enabled);
-    const orientationDeltaStats: OrientationDeltaStats = {
-      count: 0,
-      sumAbsDeltaDeg: 0,
-      maxAbsDeltaDeg: 0,
-    };
-    if (fieldGeometry && fieldTuning.dust.enabled) {
-      const cloudMixture = buildDustParticleCloud(
-        fieldGeometry,
-        dust,
-        fieldTuning,
-        currentSeed(),
-        readbacks.ismMapData,
-        readbacks.orientationData,
-        orientationDeltaStats,
-      );
-      dustMixture = [...cloudMixture];
-    } else {
-      dustMixture = [];
-    }
-    orientationDiagnostics.noteDelta(orientationDeltaStats);
+    dustBudget =
+      fieldGeometry && fieldTuning.dust.enabled
+        ? computePlaceDustBudget(fieldGeometry, dust)
+        : null;
+    dustPlacementRebuild.invalidate();
+    orientationDiagnostics.noteDelta({ count: 0, sumAbsDeltaDeg: 0, maxAbsDeltaDeg: 0 });
     reportOrientationDiagnostics();
   }
 
@@ -635,18 +643,89 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     if (fieldTuning.ismMap.generator === 'fluid') {
       const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
       ringReduce.dispatchRingMeans(enc);
+      // Dust-weight prefix sum over the FRESH ismMapTex, same encoder as the
+      // ring-means reduction above — placeDust.wesl's binary search needs
+      // this current before `dustPlacementRebuild` next dispatches, and
+      // WebGPU submission order alone guarantees that (see this file's own
+      // "Rebuild-encode seam" doc; no readback in the loop).
+      dustCdfScan.dispatchScan(enc, {
+        ismMapTexture: ismMapGenerator.texture,
+        grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+        weights: { kind: 'channel', channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 } },
+      });
       device.queue.submit([enc.finish()]);
     }
     scheduleIsmMapReadback(grid);
     orientationTexRebuild.invalidate();
+    // The map itself just changed (or was cleared) — placement must
+    // re-dispatch even when `dustBudget`'s OWN inputs (geometry/dust params)
+    // didn't move, e.g. a bare ismMapFluid tuning drag.
+    dustPlacementRebuild.invalidate();
+  }
+
+  /**
+   * dustPlacementRebuild — encodes `placeDust.wesl` into its own encoder,
+   * off the CURRENT `dustBudget` reservation. Consumed from
+   * `GalaxyModel.ensureFresh()` AFTER `orientationTexRebuild`, never
+   * synchronously from `rebuildDustMixture`/`rebuildIsmMap` themselves: this
+   * dispatch needs `orientationTex` already fresh for whatever `ismMapTex`
+   * this rebuild wrote, and `orientationTexRebuild`'s own lazy per-frame gate
+   * is what guarantees that ordering (see `ensureFresh`'s sequencing below).
+   * A one-frame-late fill is the honest cost of that guarantee — strictly
+   * cheaper than the CPU path's async mapAsync round trip it replaces, and
+   * still zero readbacks on the path from a rebuild to a drawn frame.
+   */
+  const dustPlacementRebuild = createKeyedRebuild({
+    wanted: () => dustBudget !== null,
+    build: () => {
+      const budget = dustBudget;
+      if (!fieldGeometry || !budget) return;
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
+      placeDust.dispatchPlaceDust(enc, dustDispatchInput(fieldGeometry, budget));
+      device.queue.submit([enc.finish()]);
+    },
+  });
+
+  /** Shared by `dustPlacementRebuild` and the debug readback below — one input shape, one place that assembles it. */
+  function dustDispatchInput(
+    geometry: GalaxyDescription,
+    budget: PlaceDustBudget,
+  ): PlaceDustDispatchInput {
+    const grid = ismMapGridRadiusOrDefault(geometry);
+    return {
+      seed: currentSeed(),
+      budget,
+      dustOffset: fieldCounts.emission,
+      generatorIsFluid: fieldTuning.ismMap.generator === 'fluid',
+      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+      warp: {
+        warpStrength: geometry.warpStrength,
+        warpTwist: geometry.warpTwist,
+        warpStartRadius: geometry.warpStartRadius,
+        outerRadius: geometry.outerRadius,
+      },
+      prefixBuffer: dustCdfScan.prefixBuffer,
+      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+      ismMapTexture: ismMapGenerator.texture,
+      orientationTexture: orientation.texture,
+      fieldCompsBuffer: fieldComps.buffer,
+    };
   }
 
   /**
    * repackFieldComponents — central galaxy's emission mixture, then every
-   * extra's (already in world space), then the central galaxy's dust mixture
-   * LAST, into one `fieldComps` write. Runs whenever a mixture changes, never
-   * per frame, unlike the header (see `packFieldUniforms`'s header for the
-   * split).
+   * extra's (already in world space), then the central galaxy's dust
+   * RESERVATION last, into one `fieldComps` write. Runs whenever a mixture
+   * changes, never per frame, unlike the header (see `packFieldUniforms`'s
+   * header for the split).
+   *
+   * The dust range is written ZERO here (amplitude 0 draws nothing) —
+   * `dustPlacementRebuild` fills it in a LATER, separate GPU pass (see that
+   * rebuild's own doc for why it can't run synchronously in this call). This
+   * write's only job is sizing/growing `fieldComps` so that pass has
+   * somewhere to write into; `createGrowOnlyRecordBuffer`'s regrow (and the
+   * `onFieldCompsRegrow` bind-group rebuild it triggers) still happens HERE,
+   * synchronously, same as every other tier.
    *
    * Dust trails every emission component (never interleaved) so
    * `dustOffset == fieldCounts.emission` always holds without a separate
@@ -655,13 +734,20 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   function repackFieldComponents(): void {
     const emission: GalaxyFieldComponent[] = [...fieldMixture];
     for (const e of extras) emission.push(...e.fieldMixture);
+    const dustCount = dustBudget?.count ?? 0;
     fieldCounts = {
       emission: emission.length,
       primary: fieldMixture.length,
-      dust: dustMixture.length,
+      dust: dustCount,
     };
-    const combined = fieldCounts.dust > 0 ? [...emission, ...dustMixture] : emission;
-    fieldComps.write(packFieldComponents(combined));
+    const packedEmission = packFieldComponents(emission);
+    if (dustCount <= 0) {
+      fieldComps.write(packedEmission);
+      return;
+    }
+    const combined = new Float32Array(packedEmission.length + dustCount * FIELD_COMPONENT_FLOATS);
+    combined.set(packedEmission, 0);
+    fieldComps.write(combined);
   }
 
   /**
@@ -1008,6 +1094,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       const bubblesLive = bubblePlacements.ensureFresh();
       orientationTexRebuild.ensureFresh();
       orientationDataRebuild.ensureFresh();
+      // AFTER orientationTexRebuild, never before: placeDust.wesl reads
+      // orientationTex on the GPU directly, so it needs THIS rebuild's own
+      // dispatch (if any) to have already run this same call — see
+      // `dustPlacementRebuild`'s own doc.
+      dustPlacementRebuild.ensureFresh();
       return { bubblesLive };
     },
 
@@ -1067,6 +1158,18 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
     requestRingMeansReadback(onLand, onError): void {
       readbacks.requestRingMeans(onLand, onError);
+    },
+
+    async requestDustPlacementReadback(): Promise<{
+      readonly count: number;
+      readonly records: Float32Array;
+    } | null> {
+      const budget = dustBudget;
+      if (!fieldGeometry || !budget) return null;
+      const records = await placeDust.dispatchAndReadbackDust(
+        dustDispatchInput(fieldGeometry, budget),
+      );
+      return { count: budget.count, records };
     },
 
     starInstances(): InstanceDraw[] {

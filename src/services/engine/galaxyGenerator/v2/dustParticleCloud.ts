@@ -37,7 +37,8 @@ import type { GalaxyIsmMap } from '../../../../@types/galaxy/GalaxyIsmMap';
 import type { GalaxyIsmMapOrientation } from '../../../../@types/galaxy/GalaxyIsmMapOrientation';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
-const MAX_PARTICLE_COUNT = 40000;
+/** Exported: createIsmMapPlaceDust.ts's GPU-side budget math reads the same fixed slot ceiling. */
+export const MAX_PARTICLE_COUNT = 40000;
 
 /**
  * GMC size function dN/dR ~ R^-2.2, over the measured 15-200 pc span —
@@ -55,7 +56,8 @@ const MAX_PARTICLE_COUNT = 40000;
  * `massPerR2 = totalMass / sumR2`).
  */
 export const SIZE_MIN_PC = 15;
-const SIZE_MAX_PC = 200;
+/** Exported: createIsmMapPlaceDust.ts's GPU-side size sampler reads the same span. */
+export const SIZE_MAX_PC = 200;
 const GMC_SIZE_POWER = 2.2;
 
 /**
@@ -79,7 +81,8 @@ export function dustNoiseTileUnits(textureScale: number): number {
  * would translate every particle away from its complex's seed point rather
  * than growing each cloud in place.
  */
-const COMPLEX_SPREAD_PC = 250;
+/** Exported: createIsmMapPlaceDust.ts's GPU-side child scatter reads the same one-sigma spread. */
+export const COMPLEX_SPREAD_PC = 250;
 
 /** Clouds are flattened relative to their in-plane extent. */
 const CLOUD_POLE_RATIO = 0.6;

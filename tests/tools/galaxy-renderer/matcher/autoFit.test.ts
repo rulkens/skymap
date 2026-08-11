@@ -104,9 +104,9 @@ function makeFakeEngine(blackOnCall?: number): {
     getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
     requestRingMeansReadback: vi.fn<GalaxyEngineHandle['requestRingMeansReadback']>(),
     requestArmRidgeSampleReadback: vi.fn<GalaxyEngineHandle['requestArmRidgeSampleReadback']>(),
-    requestIsmMapDustCdfScanReadback: vi.fn<
-      GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']
-    >(),
+    requestIsmMapDustCdfScanReadback:
+      vi.fn<GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']>(),
+    requestDustPlacementReadback: vi.fn<GalaxyEngineHandle['requestDustPlacementReadback']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, setParams, grab };

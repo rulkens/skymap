@@ -54,9 +54,24 @@ export type GalaxyEngineHandle = {
   // `probeGpuErrors.ts`'s `readback:ismMapDustCdfScan` step. No production
   // caller yet — Tasks 7/8 wire the real ISM-map texture through it.
   requestIsmMapDustCdfScanReadback(): Promise<{
-    readonly grid: { readonly rings: number; readonly az: number; readonly rMin: number; readonly rMax: number };
+    readonly grid: {
+      readonly rings: number;
+      readonly az: number;
+      readonly rMin: number;
+      readonly rMax: number;
+    };
     readonly data: readonly number[];
     readonly prefix: readonly number[];
   }>;
+  // Debug-only: Task 7's own numeric-validation exception
+  // (`placeDust.wesl` has no non-GPU path to check its output against) —
+  // dispatches fresh and maps the dust slot range straight back, read by
+  // `probeGpuErrors.ts`'s `readback:placeDust` step (determinism, budget
+  // count, survival-floor zeroing). No production caller. `null` when
+  // nothing is reserved this rebuild.
+  requestDustPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly records: Float32Array;
+  } | null>;
   dispose(): void;
 };
