@@ -9,11 +9,62 @@ data/raw/*  ─parsers─▶ ParsedRecord[] ─crossMatch─▶ GalaxyCatalog �
   ─fetch─▶ decodeGalaxyCatalog ─▶ GPU vertex/index buffers ─pointRenderer─▶ WGSL ─▶ canvas
 ```
 
-Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v6, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`; the `magic + version + count` header makes old bins fail loudly. (The PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
+Binary format is in `src/data/galaxyCatalog/galaxyCatalogFormat.ts` — currently v9, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`; the `magic + version + count` header makes old bins fail loudly. (The PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
+
+### Data layout: family/epoch folders
+
+`public/data/` holds one folder per binary family, named after its format
+module, with that family's **current** format version as an epoch segment —
+a bumped family moves to a new folder, so a stale browser/CDN cache can
+never pair mismatched code and bytes:
+
+| folder                  | files                                                                     | format module (version)         |
+| ----------------------- | ------------------------------------------------------------------------- | ------------------------------- |
+| `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`     | `galaxyCatalogFormat.ts` (9)    |
+| `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                          | `starCatalogFormat.ts` (1)      |
+| `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair) | `structureCatalogFormat.ts` (1) |
+| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*` `.scfd`                              | `scalarFieldFormat.ts` (3)      |
+| `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
+
+Some family-folder residents are deliberately untracked and stay at their
+logical name forever — `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`)
+is the allow-list, and this boundary _is_ the drift guard's condition 3
+(a tracked file still under its logical name means a builder skipped
+`build-data-manifest`; an untracked one is just never supposed to be
+hashed). In `galaxy-catalog/v9/`: `sdss.bin`/`glade.bin` are pre-tier
+DisPerSE inputs, not runtime tiers. In `filament/v1/`: `filaments-sdss.bin`
+is the matching pre-tier input. `clusters.ccat`/`clusters_meta.json` (superseded
+by `structures.ccat`/`structures_meta.json`) are outside `allowDataFile`
+entirely and are dead files (see the BACKLOG item), not a family resident.
+
+Loose JSON (`famous_*_meta`, `constellations`, `pgc_aliases`) and `images/`
+stay at the root — no version gate, schemas evolve compatibly. "Stay at the
+root" is about the version gate only: the JSON still gets a content hash
+(next section), `images/` does not. The rule: the folder name is the
+family's format-module `VERSION`, exported as that module's epoch-prefix
+constant — never hand-typed at a call site.
+
+### Content hash + manifest
+
+`public/data/` holds hashed filenames in every environment (dev included):
+every tracked file — the five family folders above, plus the root JSON —
+carries the first 8 hex characters of its SHA-256 content hash before its
+extension (`sdss-large.a3f19c2e.bin`), and the build emits
+`public/data/manifest.json`
+mapping logical path → hashed path. The manifest is written **last**, after
+every file it names, so a reload can never see a mixed-generation pairing
+(a stale `famous_galaxies_meta.json` against a fresh `famous.bin`). Boot
+fetches the manifest once with `no-cache` before any data load; `dataUrl()`
+resolves every logical name through it. `images/` is excluded — unhashed,
+path-stable. The tracked set is exactly `allowDataFile`'s: a file absent
+from it is never hashed, never manifested, never uploaded. Every build
+script ends with `npm run build-data-manifest` — a hand-run `tsx tools/…`
+invocation must be followed by that pass, or `sync-r2` refuses to run
+against an incomplete manifest.
 
 ### Local-volume distance override
 
-Inside `CUTOFF_MPC = 30` the pipeline replaces the cz-derived position with a Cosmicflows-4 (or HyperLEDA `mod0`) measured distance; the catalogued spectroscopic z is stored separately on the .bin (v6, byte 54) so the InfoCard shows the published value. See `docs/superpowers/specs/2026-05-27-local-volume-distances.md`. Coverage: ~2,030 of CF4's 2,159 PGCs via GLADE-by-PGC; 2MRS rows get CF4 distances via the `2MASX → PGC` patching step in `buildAllBins`; famous/SDSS rows without PGCs fall through to the cz path.
+Inside `CUTOFF_MPC = 30` the pipeline replaces the cz-derived position with a Cosmicflows-4 (or HyperLEDA `mod0`) measured distance; the catalogued spectroscopic z is stored separately on the .bin (v9, byte 56) so the InfoCard shows the published value. See `docs/superpowers/specs/2026-05-27-local-volume-distances.md`. Coverage: ~2,030 of CF4's 2,159 PGCs via GLADE-by-PGC; 2MRS rows get CF4 distances via the `2MASX → PGC` patching step in `buildAllBins`; famous/SDSS rows without PGCs fall through to the cz path.
 
 ### Data-refresh re-run orders
 

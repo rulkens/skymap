@@ -260,4 +260,18 @@ export type GalaxyCatalog = {
    * exact signal.
    */
   diameterIsFallback: Uint8Array;
+
+  /**
+   * log₁₀(M★/M☉), photometric stellar-mass estimate — length === count.
+   * NaN means no estimate. Every v9 mass is photometric (build-time,
+   * `estimateLog10StellarMass`); the on-disk "mass-is-estimated" flag bit is
+   * derived from `Number.isFinite` rather than a stored column, so this
+   * field alone carries presence.
+   *
+   * Do NOT confuse with `StructureCatalog.significance`: that field is a
+   * LINEAR mass proxy (M500 in solar masses, ~10¹⁴) for MCXC clusters —
+   * MSCC superclusters carry an N_m member count there instead — never a
+   * log stellar mass, and never comparable to this field either way.
+   */
+  log10StellarMass: Float32Array;
 };

@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { HttpError, fetchWithProgress, dataUrl } from '../../../src/services/loading/fetchWithProgress';
+import {
+  HttpError,
+  fetchWithProgress,
+  dataUrl,
+} from '../../../src/services/loading/fetchWithProgress';
 import { useFetchMock } from '../../setup/fetchMock';
 
 describe('HttpError', () => {
@@ -13,6 +17,9 @@ describe('HttpError', () => {
   });
 });
 
+// None of these cases call loadDataManifest, so resolveDataPath (Task 12)
+// stays identity — dataManifest.test.ts covers the hashed-path resolution
+// this suite doesn't exercise.
 describe('dataUrl', () => {
   afterEach(() => vi.unstubAllEnvs());
   it('uses VITE_DATA_BASE_URL when set', () => {

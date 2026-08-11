@@ -23,7 +23,7 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
-import { decodeFilaments } from '../../../data/filament/filamentBinaryFormat';
+import { decodeFilaments, FILAMENT_DATA_PREFIX } from '../../../data/filament/filamentBinaryFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 export const filamentFetcher: Fetcher<FilamentCloud, FilamentReq> = async (
@@ -32,6 +32,10 @@ export const filamentFetcher: Fetcher<FilamentCloud, FilamentReq> = async (
   onProgress,
 ) => {
   const filename = req.tier === 'small' ? 'filaments-small.bin' : 'filaments.bin';
-  const buf = await fetchWithProgress(dataUrl(filename), signal, onProgress);
+  const buf = await fetchWithProgress(
+    dataUrl(`${FILAMENT_DATA_PREFIX}/${filename}`),
+    signal,
+    onProgress,
+  );
   return decodeFilaments(buf);
 };

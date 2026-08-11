@@ -9,7 +9,9 @@
  *     --glade   path/to/glade2.3.dat \
  *     --out-dir public/data
  *
- * Output files: sdss.bin, 2mrs.bin, glade.bin (one per source).
+ * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
+ * written under `public/data/galaxy-catalog/v9/` — the epoch-prefixed
+ * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
@@ -37,12 +39,13 @@
 import {
   createReadStream,
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
@@ -87,6 +90,7 @@ import {
 import type { Tier } from '../../src/@types/data/Tier';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { estimateLog10StellarMass } from './estimateLog10StellarMass';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -153,6 +157,7 @@ export function recordsToCloud(
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
     diameterIsFallback: new Uint8Array(count),
+    log10StellarMass: new Float32Array(count),
   };
   let overridesApplied = 0;
   for (let i = 0; i < count; i++) {
@@ -194,6 +199,10 @@ export function recordsToCloud(
     cloud.positions[i * 3 + 0] = x;
     cloud.positions[i * 3 + 1] = y;
     cloud.positions[i * 3 + 2] = z;
+    // Adopted distance — the one the position above just used (override,
+    // blueshift-safety, or Hubble flow) — feeds both the angular-diameter
+    // re-derivation below and the stellar-mass estimator.
+    const adoptedDistMpc = Math.hypot(x, y, z);
     cloud.magU[i] = r.magU;
     cloud.magG[i] = r.magG;
     cloud.magR[i] = r.magR;
@@ -243,7 +252,6 @@ export function recordsToCloud(
     //   3. else the flat DEFAULT_GALAXY_DIAMETER_KPC = 30.
     let diameterKpc = r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : null;
     if (diameterKpc === null && r.angularMajorAxisArcsec !== undefined) {
-      const adoptedDistMpc = Math.hypot(x, y, z);
       const fromAngular = arcsecToKpc(r.angularMajorAxisArcsec, adoptedDistMpc);
       if (Number.isFinite(fromAngular) && fromAngular > 0) diameterKpc = fromAngular;
     }
@@ -271,6 +279,15 @@ export function recordsToCloud(
     // peculiar-velocity correction) doesn't accidentally leak into the
     // InfoCard's display channel.
     cloud.spectroscopicZ[i] = r.spectroscopicZ;
+    cloud.log10StellarMass[i] = estimateLog10StellarMass({
+      source: r.source,
+      magU: r.magU,
+      magG: r.magG,
+      magR: r.magR,
+      magI: r.magI,
+      magZ: r.magZ,
+      distMpc: adoptedDistMpc,
+    });
   }
   if (overrides !== null && overridesApplied > 0) {
     process.stderr.write(
@@ -869,6 +886,10 @@ async function runCli(): Promise<void> {
       const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
+      // `filename` carries the family's epoch prefix (`galaxy-catalog/v9/…`,
+      // see `tierFilenameForSource`), so the subfolder doesn't exist on a
+      // fresh checkout — recursive mkdir is a no-op once it does.
+      mkdirSync(dirname(outPath), { recursive: true });
       writeFileSync(outPath, Buffer.from(buf));
       process.stderr.write(
         `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,

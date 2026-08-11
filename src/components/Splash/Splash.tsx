@@ -13,9 +13,11 @@
  *
  * A11y: role="dialog", aria-modal, focus trap, Esc dismiss.
  *
- * Failure modes:
- *   - webgpu-init-failed   → error box + Reload (no CTAs)
- *   - catalog-fetch-failed → error box + Reload (no CTAs)
+ * Failure modes — all three render the same error box + Reload (no CTAs),
+ * copy keyed by `SplashError['kind']` via ERROR_COPY below:
+ *   - webgpu-init-failed
+ *   - catalog-fetch-failed
+ *   - data-version-mismatch
  *
  * The synchronous "no navigator.gpu" path is handled in main.tsx
  * before React mounts; the splash never sees it.
@@ -42,6 +44,16 @@ export type SplashProps = {
 const TITLE_ID = 'splash-title';
 const BODY_ID = 'splash-body';
 
+// Copy keyed by SplashError['kind'] — the project's >2-way rule: a Record
+// scales to a new error kind by adding a row, not another ternary branch.
+const ERROR_COPY: Record<SplashError['kind'], string> = {
+  'webgpu-init-failed':
+    'WebGPU failed to initialize on this device. Try reloading, or use a recent version of Chrome or Edge.',
+  'catalog-fetch-failed':
+    'Failed to load the galaxy data. Check your connection and try reloading.',
+  'data-version-mismatch': 'Skymap was updated — reload the page to fetch matching data',
+};
+
 function Splash({
   blocked,
   canContinueAnyway,
@@ -52,7 +64,7 @@ function Splash({
   onContinueAnyway,
   onReload,
 }: SplashProps): ReactNode {
-  const hardError = error?.kind === 'webgpu-init-failed' || error?.kind === 'catalog-fetch-failed';
+  const hardError = error !== null;
 
   // Focus trap: move focus inside on mount, cycle on Tab boundaries,
   // dismiss on Esc. Smaller than pulling in focus-trap-react for ≤5
@@ -131,11 +143,9 @@ function Splash({
           past the galaxies. The bright glow near the centre is home (our Milky Way).
         </p>
 
-        {hardError ? (
+        {error ? (
           <div className={styles.errorBox} aria-live="polite">
-            {error?.kind === 'webgpu-init-failed'
-              ? 'WebGPU failed to initialize on this device. Try reloading, or use a recent version of Chrome or Edge.'
-              : 'Failed to load the galaxy data. Check your connection and try reloading.'}
+            {ERROR_COPY[error.kind]}
           </div>
         ) : null}
 

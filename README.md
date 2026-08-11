@@ -95,7 +95,7 @@ You can run with any one, any two, or all three. The renderer falls back to synt
 
 ## Loading real data
 
-The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` at startup, using whichever are present. The pipeline below produces those files from raw catalog downloads.
+The renderer fetches the SDSS / 2MRS / GLADE galaxy-catalog bins at startup (from `/data/galaxy-catalog/v9/`, resolved through the boot-fetched `manifest.json` — see [docs/DATA.md](docs/DATA.md)), using whichever are present. The pipeline below produces those files from raw catalog downloads.
 
 ### 1. Download the catalogs
 
@@ -149,7 +149,7 @@ npm run build-all -- \
 
 Omit any `--xxx` flag you don't have — the merger treats missing inputs as empty and skips writing that output file. So `--sdss only` is a fine single-survey workflow.
 
-The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes v4 binary files to `public/data/sdss.bin`, `2mrs.bin`, `glade.bin`. Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 32 + 2.6 + 130 MB on disk.
+The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes v9 binary files under `public/data/galaxy-catalog/v9/` with content-hashed names (e.g. `sdss.<hash>.bin`, `2mrs.<hash>.bin`, `glade.<hash>.bin` — see [docs/DATA.md](docs/DATA.md)). Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 32 + 2.6 + 130 MB on disk.
 
 ### 3. (Optional) Enrich with real galaxy orientations
 
@@ -669,23 +669,28 @@ The scheduler abstraction lives in
 `src/services/engine/renderScheduler.ts` and is unit-tested
 independently of WebGPU.
 
-## Browser binary format (SKMP v4)
+## Browser binary format (SKMP v9)
 
-Little-endian, 16-byte header (`magic = "SKMP"`, `version = 4`, `count`, `reserved`) followed by `count × 64` bytes per point:
+Little-endian, 16-byte header (`magic = "SKMP"`, `version = 9`, `count`, `reserved`) followed by `count × 64` bytes per point:
 
-```
-offset  size  field
-──────  ────  ─────
-0       8     objID            (uint64)
-8       12    xyz              (3 × float32, Mpc)
-20      20    magU/G/R/I/Z     (5 × float32)
-40      4     axisRatio        (float32, b/a in [0,1] or NaN)
-44      4     positionAngleDeg (float32, PA in [0,180) or NaN)
-48      4     diameterKpc      (float32, physical diameter or NaN)
-52      12    padding          (zeroed; keeps records 16-byte aligned)
-```
+| offset | size | type      | field                                                                                     |
+| ------ | ---- | --------- | ----------------------------------------------------------------------------------------- |
+| 0      | 8    | uint64    | `objID`                                                                                   |
+| 8      | 12   | 3×float32 | `x`,`y`,`z` (Mpc)                                                                         |
+| 20     | 20   | 5×float32 | `magU`…`magZ`                                                                             |
+| 40     | 4    | float32   | `axisRatio` (b/a in [0,1] or NaN)                                                         |
+| 44     | 4    | float32   | `positionAngleDeg` (PA in [0,180) or NaN)                                                 |
+| 48     | 4    | float32   | `diameterKpc` (physical diameter or NaN)                                                  |
+| 52     | 1    | uint8     | `classByte` (source-interpreted classification)                                           |
+| 53     | 1    | uint8     | `parentSurveyByte` (Milliquas parent-survey enum, 0 elsewhere)                            |
+| 54     | 1    | uint8     | `flagsByte`: bit 0 orientation-fallback, bit 1 diameter-fallback, bit 2 mass-is-estimated |
+| 55     | 1    | —         | reserved, zeroed                                                                          |
+| 56     | 4    | float32   | `spectroscopicZ`                                                                          |
+| 60     | 4    | float32   | `log10StellarMass` (log₁₀ M★/M☉, NaN = absent)                                            |
 
-Old v1/v2/v3 files are no longer accepted — re-run `npm run build-all` to upgrade.
+`src/data/galaxyCatalog/galaxyCatalogFormat.ts` (`GALAXY_CATALOG_FIELD_SPECS`) is the field-by-field authoritative source; this table is a summary.
+
+Old pre-v9 files are no longer accepted — re-run `npm run build-tiers` to upgrade.
 
 ## Roadmap
 

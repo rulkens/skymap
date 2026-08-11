@@ -143,15 +143,20 @@ export function useSplash(): UseSplashReturn {
 
   // ── Error mapping ────────────────────────────────────────────────────────
   //
-  // We discriminate engine errors by inspecting the message: anything
-  // mentioning "WebGPU" is reported as a webgpu-init failure (since the
-  // synchronous "no navigator.gpu at all" case is handled in main.tsx, the
-  // only thing left to surface here is the requestAdapter-returned-null
-  // path).  Everything else is bucketed as a catalog fetch failure, which
-  // is the dominant non-WebGPU error mode (a network blip on sdss.bin /
-  // glade.bin / 2mrs.bin).
+  // `cause` is checked first: `installFormatVersionAlert` sets it to
+  // `'format-version'` on a machine-readable status, so a version mismatch is
+  // discriminated without touching the message at all. Everything else falls
+  // through to the existing message-sniffing split: anything mentioning
+  // "WebGPU" is a webgpu-init failure (the synchronous "no navigator.gpu at
+  // all" case is handled in main.tsx before React mounts, so the only thing
+  // left to surface here is the requestAdapter-returned-null path); the rest
+  // is bucketed as a catalog fetch failure, the dominant non-WebGPU error mode
+  // (a network blip on sdss.bin / glade.bin / 2mrs.bin).
   const error = useMemo<SplashError | null>(() => {
     if (status.kind === 'error') {
+      if (status.cause === 'format-version') {
+        return { kind: 'data-version-mismatch', message: status.message };
+      }
       if (/webgpu/i.test(status.message)) {
         return { kind: 'webgpu-init-failed', message: status.message };
       }

@@ -20,6 +20,8 @@ import { createSyntheticFallback } from '../../../../src/services/engine/wiring/
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import { Source } from '../../../../src/data/sources';
+import { FormatVersionError } from '../../../../src/data/formatVersionError';
+import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -86,6 +88,28 @@ function ready(count: number): LoadState<GalaxyCatalog> {
 /** A final `error` LoadState. */
 function errored(): LoadState<GalaxyCatalog> {
   return { kind: 'error', req: {}, error: new Error('boom'), finalAttempt: 1 };
+}
+
+/** A final `error` LoadState wrapping an HttpError — an ordinary fetch
+ * failure, distinct from `formatVersionErrored` below. */
+function httpErrored(): LoadState<GalaxyCatalog> {
+  return { kind: 'error', req: {}, error: new HttpError(500, '/data/sdss.bin'), finalAttempt: 1 };
+}
+
+/** A final `error` LoadState wrapping a FormatVersionError — the stale-.bin
+ * case that must suppress the fallback rather than arm it. */
+function formatVersionErrored(): LoadState<GalaxyCatalog> {
+  return {
+    kind: 'error',
+    req: {},
+    error: new FormatVersionError(
+      'galaxy catalog',
+      8,
+      9,
+      'unsupported version: 8 — please regenerate the .bin via "npm run build-tiers"',
+    ),
+    finalAttempt: 1,
+  };
 }
 
 // ── State + callbacks builders ───────────────────────────────────────────────
@@ -193,6 +217,40 @@ describe('createSyntheticFallback', () => {
     // turn. Nothing in a synchronous test body gives them one.
     await state.subsystems.assetQueue.drain();
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('still arms when every real galaxy catalog fails with an ordinary HttpError', async () => {
+    // Confirms the suppression added for FormatVersionError is type-specific,
+    // not a blanket "any error present" check — an ordinary fetch failure
+    // (HttpError) must still trip the backstop.
+    const { state, slots, cb } = makeState();
+    createSyntheticFallback(state, cb);
+
+    settleGalaxyCatalogs(slots, () => httpErrored());
+
+    expect(state.requests.has('syntheticFallback')).toBe(true);
+    await state.subsystems.assetQueue.drain();
+    expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not arm when a real galaxy catalog settles with a FormatVersionError', async () => {
+    // The regression this task exists to prevent: a stale-.bin version
+    // mismatch must suppress the backstop rather than let the synthetic
+    // cloud paper over "this build cannot read this data".
+    const { state, slots, cb } = makeState();
+    createSyntheticFallback(state, cb);
+
+    slots.get(Source.SDSS)?.emit(formatVersionErrored());
+    slots.get(Source.TwoMRS)?.emit(errored());
+    slots.get(Source.Glade)?.emit(errored());
+    slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
+    slots.get(Source.DesiSgw)?.emit(errored());
+
+    expect(state.requests.has('syntheticFallback')).toBe(false);
+    await state.subsystems.assetQueue.drain();
+    expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
   });
 
   it('does not arm when any real galaxy catalog succeeds (ready count>0)', () => {

@@ -47,7 +47,12 @@ import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
 import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
-import { decodeScalarField } from '../../../src/data/volume/scalarFieldFormat';
+import {
+  decodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../../src/data/volume/scalarFieldFormat';
+import { loadDataManifest } from '../../../src/services/loading/dataManifest';
+import { dataUrl } from '../../../src/services/loading/fetchWithProgress';
 import { makeShaderFactory } from './engine/gpu/makeShaderFactory';
 import { createRenderGraph } from './engine/RenderGraph';
 import { setCameraViewProj } from './state/slices/cameraSlice';
@@ -57,10 +62,6 @@ export type FlowHarness = {
   stop(): void;
   dispose(): void;
 };
-
-// The velocity cube — served from the repo's `public/data/` (the workbench's
-// publicDir points there), so this is the same `.scfd` the runtime fetches.
-const FIELD_URL = '/data/flowfield.scfd';
 
 // Camera projection. Distances are Mpc (the canonical renderer places the cube
 // at physical extent — a ±500 Mpc box), so near/far bracket that scale with
@@ -87,8 +88,13 @@ export async function createFlowHarness(
   // Fetch → decode → hand the cube to the renderer (which uploads it to a 3D
   // texture internally and arms the first reseed). We pass the decoded
   // ScalarCube, not an uploaded FlowField — upload owns the GPU upload.
+  // The workbench's publicDir points at the repo's public/, so this resolves
+  // through the same manifest the runtime boot sequence fetches.
   let loaded = false;
-  const buf = await (await fetch(FIELD_URL)).arrayBuffer();
+  await loadDataManifest();
+  const buf = await (
+    await fetch(dataUrl(`${SCALAR_FIELD_DATA_PREFIX}/flowfield.scfd`))
+  ).arrayBuffer();
   renderer.upload(decodeScalarField(buf));
   loaded = true;
 

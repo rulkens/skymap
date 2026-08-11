@@ -13,6 +13,7 @@ import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './r2/R2SyncGroup';
 import { assertNoQuickLookSentinel } from './r2/assertNoQuickLookSentinel';
 import { collectDataFiles } from './r2/collectDataFiles';
+import { collectDataManifest } from './r2/collectDataManifest';
 import { collectEarthTileManifest } from './r2/collectEarthTileManifest';
 import { collectEarthTiles } from './r2/collectEarthTiles';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
@@ -36,6 +37,8 @@ const BUCKET = 'skymap-data';
 const DAY = 'public, max-age=86400';
 /** A given tile key's bytes never change once baked, so it can cache forever. */
 const IMMUTABLE = 'public, max-age=31536000, immutable';
+/** For the one pointer file whose bytes are expected to change every sync. */
+const NO_CACHE = 'public, max-age=0, must-revalidate';
 
 /** Public URL the CDN serves R2 from — single source of truth in `.env.production`. */
 const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
@@ -46,8 +49,10 @@ function buildGroups(): R2SyncGroup[] {
       label: 'public/data',
       files: collectDataFiles(DATA_DIR),
       transport: { kind: 'wrangler' },
-      cacheControl: DAY,
-      purge: true,
+      // Every upload here is content-hashed by build-data-manifest, so the
+      // bytes at a given key never change — no TTL to wait out, no purge to run.
+      cacheControl: IMMUTABLE,
+      purge: false,
     },
     {
       label: 'Hi-res famous-galaxy images',
@@ -77,13 +82,25 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: IMMUTABLE,
       purge: false,
     },
-    // Must stay last: it's the pointer the runtime reads to discover tiles, so
-    // it must never name tiles that this same run hasn't finished uploading.
+    // Must come after 'Earth surface tiles': it's the pointer the runtime
+    // reads to discover tiles, so it must never name tiles that this same
+    // run hasn't finished uploading.
     {
       label: 'Earth tile manifest',
       files: collectEarthTileManifest(IMAGES_DIR),
       transport: { kind: 'wrangler' },
       cacheControl: DAY,
+      purge: true,
+    },
+    // Must stay last of all: it's the pointer the runtime reads to resolve
+    // every logical data path, so it must never name a hashed file this run
+    // hasn't finished uploading — the same rule as the Earth tile manifest
+    // above, one level up.
+    {
+      label: 'Data manifest',
+      files: collectDataManifest(DATA_DIR),
+      transport: { kind: 'wrangler' },
+      cacheControl: NO_CACHE,
       purge: true,
     },
   ];

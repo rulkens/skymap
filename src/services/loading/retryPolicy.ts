@@ -19,12 +19,17 @@
  */
 import type { RetryDecision } from '../../@types/loading/RetryDecision';
 import type { RetryPolicy } from '../../@types/loading/RetryPolicy';
+import { FormatVersionError } from '../../data/formatVersionError';
 import { HttpError } from './fetchWithProgress';
 
 const BACKOFF_MS = [1000, 3000];
 
 export const defaultRetryPolicy: RetryPolicy = (attempt: number, error: Error): RetryDecision => {
   if (error.name === 'AbortError') return 'give-up';
+
+  // A version mismatch is deterministic — retrying re-downloads ~100 MB for
+  // the same answer.
+  if (error instanceof FormatVersionError) return 'give-up';
 
   if (error instanceof HttpError) {
     const code = error.status;

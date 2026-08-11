@@ -9,7 +9,10 @@ description: Symlink the current worktree's `public/data/` to the main checkout'
 
 Every fresh worktree starts with no `public/data/` directory (it's gitignored
 — see CLAUDE.md "The `.bin` files are intentionally not in git"). The
-on-disk binary format also bumps every few weeks (currently v6); .bin files
+on-disk binary format also bumps every few weeks. Main's `public/data/` now
+holds content-hashed filenames behind `manifest.json` (see docs/DATA.md
+"Content hash + manifest") — a linked worktree resolves logical names the
+same way, through main's manifest, since it's the same directory. .bin files
 left over from older sessions trigger
 `unsupported version: N — please regenerate the .bin via "npm run build-tiers"`
 warnings in the browser console, and the engine falls back to the synthetic
@@ -26,8 +29,8 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
 ## What this skill does
 
 1. **Detect environment** — confirm cwd is a linked worktree (`GIT_DIR !=
-   GIT_COMMON`), find the main checkout's root via `git rev-parse
-   --git-common-dir` (its parent is the main checkout).
+GIT_COMMON`), find the main checkout's root via `git rev-parse
+--git-common-dir` (its parent is the main checkout).
 2. **Detect main's data** — confirm `<main>/public/data/` exists, is a real
    directory (not itself a symlink), and contains at least one `.bin` or
    `.scfd` file. Bail with a clear error if main has no built bins.
@@ -46,7 +49,7 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
    - **Symlink to main's `public/data`** → no-op, report "already linked".
    - **Symlink to elsewhere** → ask the user before replacing.
 4. **Remove-then-link, atomically** — the detect and swap MUST happen in a
-   single script run. `ln -s <target> public/data` descends *into*
+   single script run. `ln -s <target> public/data` descends _into_
    `public/data` when it already exists as a directory, creating a nested
    `public/data/data` link instead of replacing it — so always remove or
    rename the existing path first, in the same pass, then
@@ -54,7 +57,7 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
    main. Use the absolute path (rather than a relative `../../../../public/data`)
    so the symlink survives moving the worktree directory.
 5. **Report** — one line: `Linked public/data → <main>/public/data (N files
-   visible)`.
+visible)`.
 
 ## When NOT to use
 
@@ -67,10 +70,10 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
   (compare mtimes + presence — see step 3) and the action is `ask user`,
   never silent overwrite.
 - **When `data/` is needed read-write.** Symlinks are transparent for
-  *reads* but writes go through to the target. If the user is iterating on
+  _reads_ but writes go through to the target. If the user is iterating on
   the bin-building pipeline in this worktree and expects `public/data/` to
   be sandboxed, this skill is the wrong tool — they should `unlink
-  public/data && mkdir public/data && npm run build-tiers` instead. The
+public/data && mkdir public/data && npm run build-tiers` instead. The
   `project_worktree_data_isolation` memory documents this trade-off.
 
 ## Why a symlink, not a bind-mount or hardlink
@@ -98,7 +101,7 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
   from the task description and links when the work could touch the render
   (see its step 5); a fresh worktree has no `public/data/` at all, so the
   default for anything visual is to link. Announce it, don't prompt for it.
-  The judgement is only about *which* of the three cases applies — visual
+  The judgement is only about _which_ of the three cases applies — visual
   work (link), doc/planning (skip), deliberate pipeline rebuild (skip, it
   wants its own directory). Note that this skill still asks before
   **clobbering** an existing `public/data/` with unique content — that guard

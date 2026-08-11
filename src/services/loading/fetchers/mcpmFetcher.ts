@@ -17,13 +17,16 @@ import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { Tier } from '../../../@types/data/Tier';
-import { decodeScalarField } from '../../../data/volume/scalarFieldFormat';
+import {
+  decodeScalarField,
+  SCALAR_FIELD_DATA_PREFIX,
+} from '../../../data/volume/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 const FILENAME: Record<Tier, string> = {
-  small: 'mcpm-small.scfd',
-  medium: 'mcpm-medium.scfd',
-  large: 'mcpm-large.scfd',
+  small: `${SCALAR_FIELD_DATA_PREFIX}/mcpm-small.scfd`,
+  medium: `${SCALAR_FIELD_DATA_PREFIX}/mcpm-medium.scfd`,
+  large: `${SCALAR_FIELD_DATA_PREFIX}/mcpm-large.scfd`,
 };
 
 export const mcpmFetcher: Fetcher<ScalarCube, MCPMReq> = async (req, signal, onProgress) => {

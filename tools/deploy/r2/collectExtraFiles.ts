@@ -20,11 +20,6 @@ const EXTRA_FILES: readonly R2Upload[] = [
     r2Key: 'robots.txt',
   },
   {
-    // Committed source artefact in data/, not a public/data build output.
-    localPath: 'data/pgc_aliases.json',
-    r2Key: 'data/pgc_aliases.json',
-  },
-  {
     // ~1 h HyperLEDA pull, gzipped. Contributors curl it instead of refetching:
     //   curl -L -o data/raw/hyperleda/hyperleda_pa.csv.gz \
     //     https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz

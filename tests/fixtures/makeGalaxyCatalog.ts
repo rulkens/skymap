@@ -1,5 +1,5 @@
 /**
- * makeGalaxyCatalog — one shared builder for the 16-field `GalaxyCatalog`
+ * makeGalaxyCatalog — one shared builder for the 17-field `GalaxyCatalog`
  * struct-of-arrays that ~40 test files otherwise hand-assemble inline.
  *
  * The churn this kills: every test that constructs a catalog restates the full
@@ -41,6 +41,10 @@ export function makeGalaxyCatalog(
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
     diameterIsFallback: new Uint8Array(count),
+    // NaN, not the neutral-zero default every other column uses: 0 would
+    // mean "1 solar mass" AND would set the on-disk estimated-mass bit on
+    // every fixture row, corrupting the flags-byte tests.
+    log10StellarMass: new Float32Array(count).fill(NaN),
     ...overrides,
     count,
   };

@@ -169,11 +169,12 @@ fn main() {
         }
     });
 
-    std::fs::create_dir_all(&args.out_dir).expect("create out dir");
+    let star_out_dir = args.out_dir.join(format!("star-catalog/v{}", format::VERSION));
+    std::fs::create_dir_all(&star_out_dir).expect("create out dir");
     let mut any_over_budget = false;
     let mut finals: Vec<tiers::TierResult> = Vec::new();
     for r in results.into_iter().flatten() {
-        let path = args.out_dir.join(format!("stars-{}.bin", r.tier));
+        let path = star_out_dir.join(format!("stars-{}.bin", r.tier));
         std::fs::write(&path, &r.encoded).expect("write bin");
         let g_cut = r
             .g_cut_mag

@@ -53,4 +53,22 @@ describe('allowDataFile', () => {
     expect(allowDataFile('stars-large.bin')).toBe(true);
     expect(allowDataFile('stars-huge.bin')).toBe(false);
   });
+
+  it('accepts a content-hashed name', () => {
+    expect(allowDataFile('2mrs.a3f19c2e.bin')).toBe(true);
+  });
+
+  it('still rejects the pre-tier DisPerSE inputs when hashed-looking', () => {
+    expect(allowDataFile('sdss.a3f19c2e.bin')).toBe(false);
+  });
+
+  it('accepts a nested epoch-folder path by basename, and admits pgc_aliases.json', () => {
+    expect(allowDataFile('galaxy-catalog/v9/2mrs.bin')).toBe(true);
+    expect(allowDataFile('star-catalog/v1/stars-small.bin')).toBe(true);
+    expect(allowDataFile('pgc_aliases.json')).toBe(true);
+  });
+
+  it('rejects anything under images/, regardless of basename', () => {
+    expect(allowDataFile('images/famous/x.webp')).toBe(false);
+  });
 });

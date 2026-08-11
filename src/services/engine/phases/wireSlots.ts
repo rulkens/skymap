@@ -24,16 +24,22 @@
  *      emitter, over both point + sidecar slots.
  *   7. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
- *   8. `reevaluateDemand` — the single place loads start. It walks every wiring
- *      row and triggers each demanded slot with its tier-derived request. The
- *      same loop re-runs on every state change, so "is this asset required?"
- *      has one answer in one place.
+ *      `installFormatVersionAlert` shares the same window and shape: the first
+ *      time any slot's error is a `FormatVersionError`, it dispatches a
+ *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
+ *      visitor's `seenVersion` already hid the splash, so the alert needs
+ *      both to actually reach them.
+ *   8. `reevaluateDemand` — the single place loads start, awaited on
+ *      `loadDataManifest` immediately before it so no fetch can race the
+ *      manifest. It walks every wiring row and triggers each demanded slot
+ *      with its tier-derived request. The same loop re-runs on every state
+ *      change, so "is this asset required?" has one answer in one place.
  *
  * The phase does not block on data arrival: `engineStatusChanged({ kind:
- * 'loading' })` dispatches synchronously and `wireInput`/`startLoop` run
- * immediately after, so the camera and rAF loop come up with whatever has
- * landed. Per-arrival `ready` dispatch and the synthetic fallback run as
- * background subscribers wired here.
+ * 'loading' })` dispatches synchronously (before the manifest await) and
+ * `wireInput`/`startLoop` run immediately after this returns, so the camera
+ * and rAF loop come up with whatever has landed. Per-arrival `ready` dispatch
+ * and the synthetic fallback run as background subscribers wired here.
  *
  * ### State writes
  *
@@ -43,7 +49,10 @@
  *     subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
- *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` subscriber.
+ *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
+ *     `installFormatVersionAlert` subscriber; the latter may later dispatch
+ *     `engineStatusChanged({ kind: 'error', cause: 'format-version' })` AND
+ *     `reopenSplash()`.
  *
  * ### Side effects on `deps`
  *
@@ -55,6 +64,7 @@ import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
+import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
 import { createEarthTileSubsystem } from '../subsystems/earthTileSubsystem';
@@ -62,6 +72,7 @@ import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
+import { loadDataManifest } from '../../loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -132,9 +143,19 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
 
+  // Same window: a stale-.bin version mismatch turns into a splash-visible
+  // error instead of silently falling through to the synthetic backstop
+  // (createSyntheticFallback suppresses arming on the same error type).
+  installFormatVersionAlert(cb.store.dispatch, deps.allSlots);
+
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.
   cb.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+
+  // reevaluateDemand is the only place loads start, so awaiting the manifest
+  // here — after the loading dispatch, before any fetch can begin — makes
+  // "no data fetch can race the manifest" structural rather than a hope.
+  await loadDataManifest();
 
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the
