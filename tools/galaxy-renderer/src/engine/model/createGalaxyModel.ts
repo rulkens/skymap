@@ -88,6 +88,7 @@ import type {
   PlaceArmSpurCloudDispatchInput,
 } from '../ismMap/createIsmMapPlaceArmSpurCloud';
 import { SPUR_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
+import { MAX_PARTICLE_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
@@ -224,6 +225,20 @@ export type GalaxyModel = {
    */
   requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
     readonly count: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
+   * Debug-only: COPIES the dust tail's CURRENT slot range out of the LIVE
+   * `fieldComps` buffer, without dispatching anything — the dust twin of
+   * `requestArmSpurCloudBufferPeek` (own doc below); see `dustPeekBuffer`'s
+   * own doc for why this is a distinct method from
+   * `requestDustPlacementReadback` (that one's own fresh re-dispatch would
+   * mask a stale `dustPlacementRebuild` the same way the spur-cloud one did
+   * — Task 14's own fix-round dust twin). `null` when nothing is reserved.
+   */
+  requestDustBufferPeek(): Promise<{
+    readonly count: number;
+    readonly offset: number;
     readonly records: Float32Array;
   } | null>;
   /**
@@ -653,10 +668,19 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * dust params), re-scans the CDF for the CURRENT `cloud.dustPlacementCap`
    * (`dispatchDustCdfScan` — the map itself may already be fresh from an
    * earlier `rebuildIsmMap`, but the cap value is this function's own to
-   * apply), and invalidates `dustPlacementRebuild` below. Gated on
-   * `fieldTuning.dust.enabled` the same way `disc.enabled`/`arms.enabled`
-   * gate their shader loops (an off pill skips the work entirely, not just
-   * zeroes tau).
+   * apply). Gated on `fieldTuning.dust.enabled` the same way
+   * `disc.enabled`/`arms.enabled` gate their shader loops (an off pill skips
+   * the work entirely, not just zeroes tau).
+   *
+   * Does NOT invalidate `dustPlacementRebuild` itself any more —
+   * `repackFieldComponents` owns that (its own doc explains why: a new
+   * `dustBudget.count` has no effect on the GPU buffer until a repack
+   * applies it, and every call site of THIS function is unconditionally
+   * followed by one in the same synchronous invocation, so the pairing was
+   * never optional). `dispatchDustCdfScan`'s own invalidate call still fires
+   * as a side effect of the call below — harmless, pre-existing redundancy
+   * this fix leaves alone (Task 14's own dust-twin fix scope is the
+   * repack-without-invalidate gap, not a general redundant-invalidate sweep).
    *
    * This no longer PLACES anything — `placeDust.wesl` decides slot content
    * on the GPU, off whatever `ismMapTex`/`orientationTex`/the CDF prefix
@@ -675,7 +699,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         ? computePlaceDustBudget(fieldGeometry, dust)
         : null;
     dispatchDustCdfScan();
-    dustPlacementRebuild.invalidate();
     orientationDiagnostics.noteDelta({ count: 0, sumAbsDeltaDeg: 0, maxAbsDeltaDeg: 0 });
     reportOrientationDiagnostics();
   }
@@ -887,6 +910,23 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
+   * dustPeekBuffer — the dust twin of `spurCloudPeekBuffer` (own doc above):
+   * `requestDustPlacementReadback` always re-dispatches `placeDust.wesl`
+   * fresh, so it cannot see whether `ensureFresh()`'s own
+   * `dustPlacementRebuild` kept the buffer filled — `requestDustBufferPeek`
+   * (below) only ever COPIES the CURRENT `fieldComps` dust range, the same
+   * "cannot paper over a stale keyed rebuild" property the spur-cloud peek
+   * needs, now needed here too for the dust twin of Task 14's vanish bug
+   * (an arms/disc-only `setFieldTuning` patch repacks — and re-zeroes — the
+   * dust tail without dust's own inputs having moved at all).
+   */
+  const dustPeekBuffer = device.createBuffer({
+    label: 'galaxy:dustPeek',
+    size: MAX_PARTICLE_COUNT * FIELD_COMPONENT_FLOATS * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  /**
    * repackFieldComponents — central galaxy's emission mixture, then every
    * extra's (already in world space), then the central galaxy's dust
    * RESERVATION last, into one `fieldComps` write. Runs whenever a mixture
@@ -918,6 +958,23 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * review caught: `setFieldTuning`'s dust-only branch called this without
    * ever re-invalidating the spur rebuild, so the vanish stuck until an
    * unrelated arms/disc change happened to fire it again.
+   *
+   * `dustPlacementRebuild` gets the SAME unconditional invalidate here, for
+   * the same reason and the same shape of bug: the mirror-image gap
+   * (`setFieldTuning`'s `fieldMoved`-only branch repacks — and so re-zeroes
+   * the dust tail — without touching dust at all) was flagged during Task
+   * 14's review as pre-existing from Task 7, out of that task's scope; fixed
+   * here as this task's own dust twin. `rebuildDustMixture`'s own
+   * `dustPlacementRebuild.invalidate()` call is gone (below) — every one of
+   * its 3 call sites is unconditionally followed by a `repackFieldComponents()`
+   * call in the same synchronous invocation (a new `dustBudget.count` has no
+   * effect until this function's own regrow/repack applies it, so the pairing
+   * isn't incidental — a future caller of `rebuildDustMixture` alone, with no
+   * repack, would already be shipping a wrongly-sized buffer, not just a
+   * stale rebuild flag). `rebuildIsmMap`'s own invalidate call stays: a bare
+   * `ismMapFluid` params drag (`fluidParamsMoved`, `fieldMoved`/`dustMoved`
+   * both false) reaches `rebuildIsmMap` WITHOUT ever calling this function —
+   * that path has no repack to own the invalidation, so it must keep its own.
    */
   function repackFieldComponents(): void {
     const emission: GalaxyFieldComponent[] = [...fieldMixture];
@@ -929,6 +986,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       dust: dustCount,
     };
     spurCloudPlacementRebuild.invalidate();
+    dustPlacementRebuild.invalidate();
     const packedEmission = packFieldComponents(emission);
     if (dustCount <= 0) {
       fieldComps.write(packedEmission);
@@ -1391,6 +1449,28 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       return { count: budget.count, records };
     },
 
+    async requestDustBufferPeek(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly records: Float32Array;
+    } | null> {
+      const budget = dustBudget;
+      if (!budget || budget.count <= 0) return null;
+      const offset = fieldCounts.emission;
+      const byteSize = budget.count * FIELD_COMPONENT_FLOATS * 4;
+      const byteOffset = offset * FIELD_COMPONENT_FLOATS * 4;
+      const enc = device.createCommandEncoder({ label: 'galaxy:dustPeek' });
+      enc.copyBufferToBuffer(fieldComps.buffer, byteOffset, dustPeekBuffer, 0, byteSize);
+      device.queue.submit([enc.finish()]);
+      await dustPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+      try {
+        const records = new Float32Array(dustPeekBuffer.getMappedRange(0, byteSize).slice(0));
+        return { count: budget.count, offset, records };
+      } finally {
+        dustPeekBuffer.unmap();
+      }
+    },
+
     async requestArmSpurCloudPlacementReadback(): Promise<{
       readonly count: number;
       readonly offset: number;
@@ -1460,6 +1540,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       hiiComps.destroy();
       bubbleComps.destroy();
       spurCloudPeekBuffer.destroy();
+      dustPeekBuffer.destroy();
       genUbo.destroy();
     },
   };

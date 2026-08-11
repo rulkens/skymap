@@ -1131,6 +1131,7 @@ export async function createGalaxyEngine(
     // Debug-only: Task 7's own determinism/survival-floor numeric exception —
     // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
     requestDustPlacementReadback: (opts) => model.requestDustPlacementReadback(opts),
+    requestDustBufferPeek: () => model.requestDustBufferPeek(),
     // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
     requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),

@@ -1266,6 +1266,79 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       },
     },
     {
+      // Task 14's own dust-twin follow-up — the review confirmed
+      // `dustPlacementRebuild` has the mirror-image gap: `setFieldTuning`'s
+      // `fieldMoved`-only path (an arms/disc-only slider drag) ALSO reaches
+      // `repackFieldComponents()` (`if (fieldMoved || dustMoved)`), which
+      // re-zeroes the dust tail the same unconditional way it re-zeroes the
+      // spur range — but `dustMoved` stays false on this path, so nothing
+      // used to re-invalidate `dustPlacementRebuild`. Fixed by the SAME
+      // change that fixed spur: `repackFieldComponents()` now owns both
+      // invalidations unconditionally. This step is the exact mirror of the
+      // one above, `requestDustBufferPeek` in place of
+      // `requestArmSpurCloudBufferPeek`, an arms-only patch in place of a
+      // dust-only one.
+      name: 'readback:placeDust (survives arms-only tuning change)',
+      run: async (page) => {
+        const before = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDustBufferPeek();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!before) {
+          throw new Error(
+            'readback:placeDust (survives arms-only tuning change) — requestDustBufferPeek() returned null before the arms patch',
+          );
+        }
+        let beforeLive = 0;
+        for (let i = 0; i < before.length / FIELD_COMPONENT_FLOATS; i++) {
+          if (before[i * FIELD_COMPONENT_FLOATS + 3]! > 0) beforeLive++;
+        }
+        if (beforeLive === 0) {
+          throw new Error(
+            'readback:placeDust (survives arms-only tuning change) — every record already reads amplitude 0 BEFORE the arms-only patch; this step cannot tell a vanish from a pre-existing empty buffer',
+          );
+        }
+
+        // An arms-only patch: a NEW `arms` object (reference inequality
+        // drives `fieldMoved`) with `contrast` nudged rather than
+        // `widthScale` — `widthScale` also flips `armsWidthMoved`
+        // (`hiiMoved`), which this step has no need to exercise; `dust`
+        // stays untouched so `dustMoved` reads false.
+        await page.evaluate(async (arms) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({ arms: { ...arms, contrast: arms.contrast * 1.01 } });
+        }, DEFAULT_GALAXY_FIELD_TUNING.arms);
+        await settleFrames(page, SETTLE_FRAMES);
+
+        const after = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDustBufferPeek();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!after) {
+          throw new Error(
+            'readback:placeDust (survives arms-only tuning change) — requestDustBufferPeek() returned null after the arms patch',
+          );
+        }
+        let afterLive = 0;
+        for (let i = 0; i < after.length / FIELD_COMPONENT_FLOATS; i++) {
+          if (after[i * FIELD_COMPONENT_FLOATS + 3]! > 0) afterLive++;
+        }
+        if (afterLive === 0) {
+          throw new Error(
+            `readback:placeDust (survives arms-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before an arms-only setFieldTuning patch, 0 after — repackFieldComponents() zeroed the dust range and dustPlacementRebuild was never re-invalidated to refill it`,
+          );
+        }
+        console.error(
+          `  readback:placeDust survives an arms-only tuning change (${beforeLive} live before, ${afterLive} live after)`,
+        );
+      },
+    },
+    {
       name: 'pill:analytic-model',
       run: async (page) => {
         const pill = page.getByRole('checkbox', { name: 'Toggle analytic model' });

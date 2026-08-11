@@ -81,6 +81,18 @@ export type GalaxyEngineHandle = {
     readonly count: number;
     readonly records: Float32Array;
   } | null>;
+  // Debug-only: Task 14 fix round 2's own dust-twin regression exception —
+  // COPIES the dust tail's CURRENT slot range out of the LIVE `fieldComps`
+  // buffer, without dispatching `placeDust.wesl` first (the readback above
+  // always re-dispatches fresh and so cannot observe whether the PRODUCTION
+  // `ensureFresh()` path actually kept the buffer filled). Read by
+  // `probeGpuErrors.ts`'s own "survives an arms-only tuning change"
+  // assertion. No production caller.
+  requestDustBufferPeek(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
   // Debug-only: Task 14's own numeric-validation exception
   // (`placeArmSpurCloud.wesl` has no non-GPU path to check its output
   // against) — dispatches fresh and maps the spur-cloud reservation's slot
