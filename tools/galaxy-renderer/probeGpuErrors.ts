@@ -753,6 +753,27 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               `${readback.prefix[maxIndex]}, diff ${maxDiff} exceeds tolerance ${ISM_MAP_DUST_CDF_SCAN_TOLERANCE}`,
           );
         }
+
+        // Tasks 7/8's binary search assumes a non-decreasing prefix buffer —
+        // the review flagged this as ASSERTED, not proven (float
+        // non-associativity across the tree-scan/fold boundary could in
+        // principle produce a tiny local decrease). Check it on the real
+        // GPU output rather than argue it analytically.
+        let decreaseIndex = -1;
+        for (let i = 1; i < readback.prefix.length; i++) {
+          if (readback.prefix[i]! < readback.prefix[i - 1]!) {
+            decreaseIndex = i;
+            break;
+          }
+        }
+        if (decreaseIndex >= 0) {
+          throw new Error(
+            `readback:ismMapDustCdfScan — prefix buffer decreases at texel ${decreaseIndex}: ` +
+              `${readback.prefix[decreaseIndex - 1]} -> ${readback.prefix[decreaseIndex]} ` +
+              `(Tasks 7/8's binary search needs a non-decreasing prefix)`,
+          );
+        }
+        console.error('  readback:ismMapDustCdfScan prefix buffer is non-decreasing across all texels');
       },
     },
     {

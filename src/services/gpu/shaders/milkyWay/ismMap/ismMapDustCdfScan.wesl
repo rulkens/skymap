@@ -63,17 +63,21 @@ fn ismMapDustRingEdges(ring: u32, rings: u32, rMin: f32, rMax: f32) -> vec2<f32>
 }
 
 // evalWeight — base channel weight, optionally reweighted toward the
-// nearest arm ridge (armBiasedDensity, hiiRegions.ts:527-539): armBias<=0 or
-// armCount==0 skips the envelope sum entirely, so a dust-weight caller pays
-// nothing for it. 'round' ties-to-even vs. JS's Math.round ties-away-from-
-// zero only disagrees exactly on an angle-wrap half-integer boundary —
-// unreachable for real (non-adversarial) angles.
+// nearest arm ridge (armBiasedDensity, hiiRegions.ts:527-539): armBias<=0
+// is the ONLY short-circuit (a dust-weight caller pays nothing for it).
+// armCount==0u is NOT special-cased — the loop below just runs zero times,
+// leaving envelope at 0, which is buildArmProximityEnvelope's own
+// zero-arms behaviour (a constant-zero envelope, not "reweight disabled"):
+// at armBias>0 this still applies base*(1-armBias), same as the CPU.
+// 'round' ties-to-even vs. JS's Math.round ties-away-from-zero only
+// disagrees exactly on an angle-wrap half-integer boundary — unreachable
+// for real (non-adversarial) angles.
 fn evalWeight(texel: vec4<f32>, ring: u32, radius: f32, angle: f32) -> f32 {
   let base = dot(params.channelWeights, texel);
-  let armCount = u32(params.armCount);
-  if (params.armBias <= 0.0 || armCount == 0u) {
+  if (params.armBias <= 0.0) {
     return base;
   }
+  let armCount = u32(params.armCount);
   var acc = 0.0;
   for (var a = 0u; a < armCount; a++) {
     let e = armEnvelopeBuf[ring * armCount + a];
