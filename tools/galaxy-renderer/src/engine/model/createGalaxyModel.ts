@@ -1038,15 +1038,18 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // is a pure function of `texture` since `sweptMix` was deleted, so a
     // dust-only drag has nothing left for it to re-dispatch over.
 
-    // `generator` gates `buildDustParticleCloud`'s own placement mode
+    // `generator` gates `placeDust.wesl`'s own in-shader placement mode
     // (map-seeded vs `smoothDisc`) directly, from the `ismMap` section rather
     // than `dust` — so a generator flip is invisible to `dustMoved` and needs
-    // its own synchronous dust rebuild, or the previous generator's
-    // map-seeded placement (and its `OrientationDeltaStats` coupling readout)
-    // keeps drawing/reporting as live until an unrelated dust/geometry change
-    // rebuilds it. Uses whatever `readbacks.ismMapData`/`orientationData` are
-    // cached right now — the same determinism tradeoff `scheduleIsmMapReadback`
-    // documents, corrected again once this rebuild's own readback lands.
+    // its own `rebuildDustMixture` call, or the previous generator's
+    // reservation/CDF-scan state keeps drawing as live until an unrelated
+    // dust/geometry change rebuilds it. `rebuildDustMixture` reads no CPU
+    // readback here — it recomputes `dustBudget` (pure function of geometry
+    // + dust params, unaffected by `generator`) and calls
+    // `dispatchDustCdfScan` (GPU-resident `ismMapTex`/`ringMeansBuf` only),
+    // then invalidates `dustPlacementRebuild`; the actual placement dispatch
+    // runs off whatever the NOW-CURRENT `generator` value produces, deferred
+    // to the next `ensureFresh()` (see `dustPlacementRebuild`'s own doc).
     if (generatorMoved && !dustMoved) {
       rebuildDustMixture();
       repackFieldComponents();

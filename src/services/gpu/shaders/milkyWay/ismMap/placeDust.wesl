@@ -16,6 +16,7 @@ import package::milkyWay::field::records::FieldComponentRec;
 import package::milkyWay::ismMap::clusteredDiscPlacement::genRand;
 import package::milkyWay::ismMap::clusteredDiscPlacement::sampleOrientationNearest;
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRingIndexForSample;
+import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRingIndexForRadius;
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpAzIndexForAngle;
 import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromFrame;
 import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlacementChild;
@@ -136,10 +137,19 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     let coherence = sampleOrientationNearest(
       orientationTex, childRadius, childAngle, params.gridRings, params.gridAz, params.rMin, params.rMax,
     ).y;
-    let ring = cdpRingIndexForSample(childRadius, params.gridRings, params.rMin, params.rMax);
     let azIdx = cdpAzIndexForAngle(childAngle, params.gridAz);
-    let dustSample = textureLoad(ismMapTex, vec2<i32>(i32(azIdx), i32(ring)), 0).w;
-    let ringMean = ringMeansBuf[ring];
+    // dustSample's own ring index: FLOOR bucket (cdpRingIndexForSample),
+    // matching sampleGalaxyIsmMap's internals exactly — this is the texel
+    // the CPU's own 'sample.dust' reads.
+    let sampleRing = cdpRingIndexForSample(childRadius, params.gridRings, params.rMin, params.rMax);
+    let dustSample = textureLoad(ismMapTex, vec2<i32>(i32(azIdx), i32(sampleRing)), 0).w;
+    // ringMean's own ring index: ROUND-to-nearest (cdpRingIndexForRadius) —
+    // dustParticleCloud.ts:228-238's sampleMapTraits divides by
+    // ringMeans[ismMapRingIndexForRadius(radius, ...)], a DIFFERENT ring
+    // selection than the sample above. Two ring semantics in one ratio is
+    // the CPU's own oddity; ported as such, not "fixed".
+    let meanRing = cdpRingIndexForRadius(childRadius, params.gridRings, params.rMin, params.rMax);
+    let ringMean = ringMeansBuf[meanRing];
     aspect = 1.0 + (params.elongation - 1.0) * coherence;
     alive = dustSample >= DUST_SURVIVAL_FLOOR_FRAC * ringMean;
   }

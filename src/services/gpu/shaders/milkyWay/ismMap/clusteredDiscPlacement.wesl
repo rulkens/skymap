@@ -98,6 +98,23 @@ fn cdpAzIndexForAngle(angle: f32, az: u32) -> u32 {
   return min(az - 1u, u32(floor((wrapped / twoPi) * f32(az))));
 }
 
+// cdpRingIndexForRadius — ismMapRingIndexForRadius.ts ported verbatim:
+// ROUND-to-nearest ring index (as opposed to cdpRingIndexForSample's floor
+// bucket above) — dustParticleCloud.ts:228-238's sampleMapTraits uses THIS
+// one, not the floor bucket, for its ringMean divisor lookup. Mirror the
+// CPU's own two-ring-semantics-in-one-ratio oddity exactly, don't fix it:
+// callers pairing a floor-bucket numerator with a round-bucket divisor are
+// porting a real (if odd) CPU behaviour, not a bug this file should paper
+// over. 'round' ties-to-even vs. JS's Math.round ties-away-from-zero only
+// disagrees on an exact half-integer boundary — unreachable for a
+// continuously-scattered placement radius.
+fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
+  if (rings <= 1u) { return 0u; }
+  let t = log(radius / rMin) / log(rMax / rMin);
+  let ring = i32(round(t * f32(rings - 1u)));
+  return u32(clamp(ring, 0, i32(rings - 1u)));
+}
+
 // sampleOrientationNearest — sampleIsmMapOrientation.ts ported verbatim:
 // nearest-texel read of the packed (cos2theta, sin2theta) double-angle
 // vector (orientationTex's .xy — createIsmMapOrientation.ts). Returns
