@@ -1,15 +1,13 @@
 /**
- * ParamSlider — one tunable galaxy parameter: the app's `Slider` pill, plus
- * an optional reseed die.
+ * ParamSlider — one tunable galaxy parameter: the app's `Slider` pill, an ⓘ
+ * tip naming the state it writes, and an optional reseed die.
  *
  * The 20 px die slot always renders, even when `onReseed` is absent, so a
  * column of sliders — some seed-linked (irregularity, arm clumping), most
  * not — keeps its pills flush-left instead of the seeded rows jogging
- * narrower than their neighbours (html:199-208's `hasSeed` slot).
+ * narrower than their neighbours (the spike's `hasSeed` slot).
  *
- * Label + value used to be a row this component drew itself; `Slider`
- * already folds both into the pill, so drawing them again here would
- * double them up.
+ * Label + value are the `Slider` pill's own; drawing them here too doubles them.
  */
 import type { ReactNode } from 'react';
 import Slider from '../../../../../src/components/common/Slider/Slider';
@@ -27,6 +25,14 @@ export type ParamSliderProps = {
   readonly onReseed?: () => void;
   /** Hover/focus explainer, revealed from a ⓘ affordance ahead of the pill. */
   readonly info?: string;
+  /**
+   * Dotted store path this slider writes (`fieldTuning.arms.cloud.radialBias`),
+   * in the same vocabulary the section copy control keys its payload by.
+   * Required so a new slider cannot ship without naming its field, and
+   * machine-readable so `sliderStatePaths.test.tsx` can resolve every one
+   * against the real state and fail when a field is renamed out from under it.
+   */
+  readonly path: string;
 };
 
 function ParamSlider({
@@ -39,16 +45,23 @@ function ParamSlider({
   onChange,
   onReseed,
   info,
+  path,
 }: ParamSliderProps): ReactNode {
   return (
     <div className={styles.root}>
-      {info && (
-        <CompactInfoTip label={info} align="start">
-          <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
-            ⓘ
-          </button>
-        </CompactInfoTip>
-      )}
+      <CompactInfoTip
+        label={
+          <>
+            {info && <span className={styles.tipProse}>{info}</span>}
+            <code className={styles.tipPath}>{path}</code>
+          </>
+        }
+        align="start"
+      >
+        <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
+          ⓘ
+        </button>
+      </CompactInfoTip>
       <div className={styles.main}>
         <Slider
           label={label}

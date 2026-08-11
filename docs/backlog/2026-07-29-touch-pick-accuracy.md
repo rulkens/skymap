@@ -74,7 +74,7 @@ Options 1 and 3 compose; 2 substitutes for 1.
 - `src/services/engine/helpers/pickUniformBytesOf.ts`,
   `src/utils/gpu/packPointUniforms.ts` — where the padding is applied.
 - `src/services/gpu/shaders/structureMarker/ringPick.wesl`,
-  `src/services/gpu/shaders/milkyWayPick/{vertex,io}.wesl` — bake the same
+  `src/services/gpu/shaders/milkyWay/pick/{vertex,io}.wesl` — bake the same
   padding into their own floors; any change here has to reach them too.
 - `src/services/engine/frame/pickProgram.ts:244-302` — the texel read, for
   option 3.

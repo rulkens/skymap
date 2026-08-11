@@ -50,7 +50,7 @@ import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -312,7 +312,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');
-      expect(layer.blend).toBe('additive');
+      expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
     }
   });
 });
@@ -375,24 +375,31 @@ describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
 
 describe('CONTENT_LAYERS blend legality', () => {
   it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
-    // The registry half of the target<->blend invariant (the renderer half
-    // — that the WebGPU pipeline's actual blend state matches — lands in
-    // task 10). A layer whose target/blend pair falls outside this table
-    // is a data-entry bug in its own file, not a new legal combination.
+    // The registry half of the target<->blend invariant — the renderer half,
+    // that the WebGPU pipeline's actual blend state matches, is covered
+    // elsewhere. A layer whose target/blend pair falls outside this table is
+    // a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
       if (
-        layer.target === 'hdr' ||
         layer.target === 'volume' ||
         layer.target === 'star-aggregates' ||
         layer.target === 'mw-aggregate'
       ) {
-        // The three reduced-resolution offscreens accumulate the same way
+        // These three reduced-resolution offscreens accumulate the same way
         // their contents would have accumulated straight into HDR — the
         // raymarched volume, the survey aggregate glow, and the Milky Way
         // cloud's star billboards are all additive sums, which is what makes
         // "render small, bilinearly upsample, add" equivalent to drawing them
-        // full-res.
+        // full-res. A non-additive row here would break that equivalence, so
+        // it's a correctness bug, not a new legal combination.
         expect(layer.blend).toBe('additive');
+      } else if (layer.target === 'hdr') {
+        // hdr admits exactly one multiplicative row: the Milky Way dust pass
+        // extincts the emission already accumulated in HDR rather than adding
+        // to it, which is why its position in the near-hdr group is
+        // load-bearing. A second multiplicative hdr row should fail this test
+        // and be a deliberate decision.
+        expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
         // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
@@ -400,8 +407,8 @@ describe('CONTENT_LAYERS blend legality', () => {
         // them but writing no depth, straight-alpha OVER (spec §8 / §8.3 / grill
         // Q9). Their pipelines bake exactly that profile (foreground:0 formats,
         // depth read / no write, over blend), so those rows legitimately carry
-        // `over` where their siblings carry `opaque` — the sole target that admits
-        // two blends today.
+        // `over` where their siblings carry `opaque` — one of two targets that
+        // admit two blends today (hdr's dust row is the other).
         if (
           layer.name === 'rings' ||
           layer.name === 'cloud-shell' ||
@@ -905,9 +912,9 @@ describe('drawPick migration-table rows', () => {
     // Pins the spec's migration table: the five COSMO/near-field survey
     // pickables (pointSprites / proceduralDisks / structureMarkers / milkyWay /
     // starCatalog) PLUS the six NEAR0 true-scale foreground bodies (starPoints /
-    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets — Task 11
-    // + the selection-gated focused-field-star sphere's pick + the sub-pixel body
-    // glints' pick). Order is registry order: the COSMO pick pass leads with
+    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets),
+    // the selection-gated focused-field-star sphere's pick and the sub-pixel
+    // body glints' pick among them. Order is registry order: the COSMO pick pass leads with
     // point-sprites (the @group(0) prefix contract); every NEAR0 body self-binds
     // its own slot-0 camera in its own pass, so their relative order carries no
     // @group(0) dependence (it is depth-resolved, nearest-wins). The production

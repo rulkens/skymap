@@ -11,6 +11,7 @@
 import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './r2/R2SyncGroup';
+import { assertNoQuickLookSentinel } from './r2/assertNoQuickLookSentinel';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectEarthTileManifest } from './r2/collectEarthTileManifest';
@@ -116,6 +117,7 @@ async function main(): Promise<void> {
   // Fail before the first byte moves rather than part-way through: a run that
   // uploads some groups and then dies on a missing credential leaves the
   // bucket in a state no one asked for.
+  assertNoQuickLookSentinel(DATA_DIR);
   const rcloneCredentials = readRcloneCredentials();
   const needsRclone = groups.some((g) => g.transport.kind === 'bulk' && g.files.length > 0);
   if (needsRclone && rcloneCredentials === null) {

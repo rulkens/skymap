@@ -1,9 +1,9 @@
 /**
  * TypePicker — the Hubble-sequence type chips (E0–E7 / S0 / Irr / Sa–Sc /
- * SBa–SBc, html:154-193). Four rows, ported verbatim from the spike's
- * `typesE`/`typesS0`/`typesIrr`/`typesSpiral`/`typesBarred` lists
- * (html:804-808): elliptical (8, wraps), lenticular + irregular side by
- * side (1 each), spiral (3), barred spiral (3).
+ * SBa–SBc). Four rows, ported verbatim from the spike's
+ * `typesE`/`typesS0`/`typesIrr`/`typesSpiral`/`typesBarred` lists: elliptical
+ * (8, wraps), lenticular + irregular side by side (1 each), spiral (3),
+ * barred spiral (3).
  *
  * Purely presentational — the parent owns what a click means (`onSelect`
  * is handed the raw type string; ControlsPanel dispatches the Hubble-stage

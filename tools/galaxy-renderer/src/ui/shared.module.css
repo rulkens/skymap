@@ -1,19 +1,14 @@
 /*
  * shared.module.css — the Galaxy Renderer's composable HUD classes (form
  * controls, section headers, the block-width button modifier). Buttons and
- * every slider now render through the app's own `Button` and `Slider`
- * primitives (`src/components/common/`); this file no longer owns their
- * chrome. Design *tokens* live in the main app's `src/styles/global.css`,
- * imported once from the tool's `main.tsx` — the tool and the app share one
- * palette so a look tuned here transfers directly to the renderer's own UI.
- * This file owns only the three tool-local status colours with no app
- * equivalent, plus the classes built on top of the shared tokens.
+ * sliders render through the app's own `Button`/`Slider` primitives; this
+ * file no longer owns their chrome. Design tokens live in the main app's
+ * `src/styles/global.css`, imported once from the tool's `main.tsx`, so a
+ * look tuned here transfers directly to the app's own UI. This file owns
+ * only the three tool-local status colours with no app equivalent.
  *
  * The `:root` block below is CSS custom properties, not class names — CSS
- * Modules only renames class/id selectors, so these tokens stay as-written
- * and are available via `var(--token)` from any module in the tool once
- * this file is pulled into the bundle (which happens as soon as any
- * component composes from it).
+ * Modules only renames class/id selectors, so these tokens stay as-written.
  */
 
 :root {
@@ -41,7 +36,36 @@
   cursor: pointer;
 }
 
-/* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
+/* ── Checkbox rows — a label that fills the row with its control right-aligned.
+   The ⓘ affordance sits OUTSIDE `.toggleLabel` at every call site: a label
+   forwards clicks to its control, which would fire on the info button too. ── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.toggleLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-base);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* ── Section headers — uppercase, letter-spaced ──────────────────────────── */
 
 .sectionHeader {
   font-size: var(--font-size-md);

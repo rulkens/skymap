@@ -1,11 +1,11 @@
 /**
  * FitParamRange — one optimisable knob in a `FitPlan`: the `GalaxyParams` key
  * to vary, and the inclusive `[lo, hi]` bounds `autoFit`'s coordinate descent
- * clamps trial values to. A plain tuple (not an object) because `fitPlan`'s
- * per-category tables read as literal arrays ported verbatim from
- * galaxy-matcher.js:141-157 — an object shape would just add punctuation.
+ * clamps trial values to. A plain tuple, not an object, since `fitPlan`'s
+ * per-category tables read as literal arrays. `key` is `NumericGalaxyParamKey`
+ * — narrowed to numeric fields only, see that type's own docblock for why.
  */
 
-import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { NumericGalaxyParamKey } from './NumericGalaxyParamKey';
 
-export type FitParamRange = readonly [key: keyof GalaxyParams & string, lo: number, hi: number];
+export type FitParamRange = readonly [key: NumericGalaxyParamKey, lo: number, hi: number];

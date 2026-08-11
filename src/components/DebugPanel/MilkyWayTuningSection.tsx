@@ -1,32 +1,18 @@
 // src/components/DebugPanel/MilkyWayTuningSection.tsx
 /**
  * MilkyWayTuningSection — DebugPanel subsection exposing the Milky-Way star
- * cloud's tuning knobs — its look (starSize / exposure / pxMin / pxMax /
- * softness) and the two perf levers that trade against it (lod / divisor).
+ * cloud's tuning knobs (look + the perf levers that trade against it), rows
+ * driven from `MILKY_WAY_SLIDER_FIELDS` so the field list, ranges, and value
+ * formatting live in one registry rather than re-spelled here. Dev-only; the
+ * explorer-facing SettingsPanel surfaces only the visibility toggle.
  *
- * These decide whether the generated cloud reads as a smooth galaxy or as a
- * field of visible particles, and the answer is only findable by moving them
- * against a live frame — several were previously URL query params, which
- * meant a reload (and a fresh judgement of the previous look from memory) per
- * guess. The explorer-facing SettingsPanel surfaces only the Milky-Way
- * visibility toggle; everything here is dev-only.
- *
- * The rows are driven from `MILKY_WAY_SLIDER_FIELDS`, so the field list,
- * ranges, and value formatting live in one registry rather than re-spelled
- * here. That includes the star COUNT (`starCount`): it feeds generation
- * rather than a uniform, so `runFrame` answers a drag by regenerating the
- * cloud outright — see that registry's docblock for why the row still counts
- * as "changes the next frame" despite the heavier reaction.
- *
- * A copy-to-clipboard button sits under the sliders for promoting a tuned
- * session to code: `formatMilkyWayTuningDefaults` diffs the live values
- * against `MILKY_WAY_TUNING_DEFAULTS` and the button copies the paste-ready
- * lines. Imported straight from `services/gpu/galaxy/` rather than routed
- * through the container — it's a module constant, not store state, and the
- * established precedent here (`AssetLoadingSection`, `GpuTimingsSection`,
- * `RenderTogglesSection`) is that presentational DebugPanel sections import
- * from `services/` directly when the value in question isn't part of the
- * store.
+ * The copy-to-clipboard button promotes a tuned session to code:
+ * `formatMilkyWayTuningDefaults` diffs the live values against
+ * `MILKY_WAY_TUNING_DEFAULTS` for paste-ready lines. Imported straight from
+ * `services/` rather than routed through the container, matching
+ * `AssetLoadingSection` / `GpuTimingsSection` / `RenderTogglesSection`: a
+ * presentational DebugPanel section reads a module constant directly when
+ * it isn't store state.
  */
 
 import type { ReactElement } from 'react';
@@ -36,7 +22,7 @@ import {
   MILKY_WAY_SLIDER_FIELDS,
   milkyWaySliderPatch,
 } from '../../data/milkyWay/milkyWaySliderFields';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { formatMilkyWayTuningDefaults } from '../../utils/format/formatMilkyWayTuningDefaults';
 import CopyButton from '../common/CopyButton/CopyButton';
 import DebugSection from './DebugSection';

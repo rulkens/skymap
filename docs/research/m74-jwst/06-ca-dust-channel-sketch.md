@@ -25,12 +25,19 @@ two channels.
 ## The rule: ignition snowploughs dust outward
 
 In the same Moore-8 loop that already fetches every neighbour for the
-ignition count (zero extra reads):
+ignition count (zero extra reads). Conservation forces the debit ONE STEP
+AFTER ignition, not at ignition: crediting neighbours off the same pre-sweep
+value the debit consumes is what makes swept-away mass equal received mass —
+debiting immediately (as an earlier draft of this rule did) destroys the
+undonated remainder at ignition and then double-counts it a step later, since
+the credit term would read the already-swept value:
 
 ```
-// gather form, material frame — same drifted neighbour lookup as ignition
-receivedDust = Σ over neighbours n: ignitedLastStep(n) ? n.dust / 8.0 : 0.0
-nextDust     = (ignite ? dust * floorFraction : dust) + receivedDust
+// gather form, material frame — same drifted neighbour lookup as ignition.
+// ignitedLastStep(x) reads x's age from the PREVIOUS step's state (age==0).
+ownDust      = ignitedLastStep(self) ? dust * floorFraction : dust
+receivedDust = Σ over neighbours n: ignitedLastStep(n) ? n.dust * (1 - floorFraction) / 8.0 : 0.0
+nextDust     = ownDust + receivedDust
 ```
 
 Because the front advances over multiple generations, one rule yields:

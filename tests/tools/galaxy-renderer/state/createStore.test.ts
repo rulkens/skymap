@@ -12,15 +12,20 @@ describe('createGalaxyStore', () => {
     const a = createGalaxyStore();
     const b = createGalaxyStore();
 
-    a.dispatch(paramsPatched({ armCount: 6 }));
+    a.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 6 } }));
 
-    expect(a.getState().galaxy.armCount).toBe(6);
-    expect(b.getState().galaxy.armCount).toBe(DEFAULT_GALAXY_PARAMS.armCount);
+    expect(a.getState().galaxy.shared.armCount).toBe(6);
+    expect(b.getState().galaxy.shared.armCount).toBe(DEFAULT_GALAXY_PARAMS.shared.armCount);
   });
 
   it('seeds a slice from preloaded state', () => {
-    const store = createGalaxyStore({ galaxy: { ...DEFAULT_GALAXY_PARAMS, armCount: 7 } });
+    const store = createGalaxyStore({
+      galaxy: {
+        ...DEFAULT_GALAXY_PARAMS,
+        shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 7 },
+      },
+    });
 
-    expect(store.getState().galaxy.armCount).toBe(7);
+    expect(store.getState().galaxy.shared.armCount).toBe(7);
   });
 });

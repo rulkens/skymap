@@ -3,107 +3,47 @@
  * aspect, at the galactic centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A*
  * offset from the observer origin, applied via the model matrix).
  *
- * ### What it draws (and what it no longer draws)
- *
- * The cloud is generated on-GPU (`milkyWayCloud` owns the star/dust instance
- * buffers) and drawn by `milkyWayCloudRenderer` in two pipelines that now live
- * in two different layers, because they render into two different targets:
- *
- *   - the ADDITIVE star pass moved to `milkyWayAggregateLayer`, which draws it
- *     into the reduced-resolution `mw-aggregate` offscreen;
- *     `milkyWayUpsampleLayer` composites that back into HDR. It is the
- *     fill-bound half and its summed glow is low-frequency, so it buys the
- *     square of the divisor in fragment cost for a bilinear interpolation
- *     nobody can see. See that layer's header.
- *   - the MULTIPLICATIVE dust pass stays HERE, full-res in HDR: per-channel
- *     transmittance that darkens + reddens the light behind it, which means it
- *     has to land on the real cosmological accumulation.
- *
- * The dust sprites are camera-facing billboards built from the live camera
- * basis each frame; the cloud's world placement (fixed galactic orientation +
- * scale + the Sgr A* centre offset) is `milkyWayModelCached`, built once and
- * shared with the aggregate layer.
- *
- * ### When it draws
+ * The MULTIPLICATIVE dust pass stays here, full-res in HDR, because its
+ * per-channel transmittance has to land on the real cosmological
+ * accumulation; the ADDITIVE star pass lives in `milkyWayAggregateLayer`
+ * instead (see that layer's header for why). Dust sprites are camera-facing
+ * billboards from the live camera basis; the cloud's world placement is
+ * `milkyWayModelCached`, shared with the aggregate layer.
  *
  * `enabled` delegates to `deriveMilkyWayCloudAlpha` — the ONE home of the
  * cloud's visibility question, shared with the aggregate producer and its
- * upsample consumer so the three can never disagree (see
- * `milkyWayCloudLiveness`). The pick program runs this SAME gate against the
- * pick-time camera, so draw and pick can't drift either. It folds three
- * factors:
+ * upsample consumer so the three can never disagree (`milkyWayCloudLiveness`).
+ * The pick program runs the SAME gate against the pick-time camera, so draw
+ * and pick can't drift. A null result skips the whole layer: no
+ * `beginRenderPass`, no tile-RAM round-trip, no idle timestamp slot.
  *
- *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
- *      nonzero toggle fade (`fades.opacityOf`), which keeps the layer
- *      alive through the ~100 ms fade-out tail.
- *   2. `milkyWayFadeAlpha` — the far-side apparent-size fade band defined in
- *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
- *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
- *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
- *   3. `fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDist)` — the
- *      near-side fade: the cloud rides the descent into the disc at full
- *      strength down to 2 kpc, then dissolves against the real Gaia star
- *      catalog (fully faded in inside 8 kpc), gone by 200 pc (the exact band
- *      is the `milkyWayApproach` row in `presentation/scaleFadeBands.ts`).
- *      Orthogonal to factor 2's apparent-size band — it is the
- *      only one that closes at kpc range. Because it rides `enabled` it also
- *      makes a fully approach-faded disc unpickable (invisible →
- *      unpickable) — coherent, but a behaviour the pick program inherits
- *      for free from the shared gate.
+ * `pickEnabled` is the one place draw and pick diverge: `enabled` AND a floor
+ * on the camera's origin distance (`MILKY_WAY_PICK_MIN_DISTANCE_MPC`) — the
+ * only registry gate where the pick set is NARROWER than the draw set (see
+ * `ContentLayer.pickEnabled` on why that direction needs its own
+ * justification).
  *
- * A null result skips the whole layer: no `beginRenderPass`, no tile-RAM
- * round-trip on M1, and no idle timestamp slot in the GPU-timings panel.
+ * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc
+ * (`COSMO_NEAR_MPC`, slabs.ts), but the disc's near edge sits only ~9.5 kpc
+ * from the heliocentric origin, so on the way down that plane would slice
+ * visibly through the clumps while the approach fade (full to 2 kpc) still
+ * shows them — a hard clip mid-crossfade. NEAR0's near/far track the camera's
+ * orbit distance instead, the same fix `starPointsLayer`, `starCatalogLayer`,
+ * `orbitTrailsLayer`, and `foregroundLabelsLayer` each carry. Unlike those
+ * four there is no f64 rebase seam here: the cloud's kpc-scale anchors bound
+ * the f32 large-minus-large cancellation at ~1e-9 Mpc, deeply sub-pixel
+ * against a kpc-sized disc. NEAR0's adaptive far plane is the one hazard it
+ * adds: on a deep descent it can pull inside the disc's far edge, so the
+ * star/dust vertex stages clamp clip-z just inside it — safe because both
+ * passes are depthless (stars.wesl / dust.wesl).
  *
- * ### The one place draw and pick DO diverge: `pickEnabled` closes earlier
- *
- * `pickEnabled` is `enabled` AND a floor on the camera's origin distance — the
- * ONE gate in the registry where the pick set is NARROWER than the draw set
- * (see `MILKY_WAY_PICK_MIN_DISTANCE_MPC`, and `ContentLayer.pickEnabled` on why
- * that direction needs its own justification).
- *
- * ### Why NEAR0, not COSMO (the fifth layer to hit the near-plane trap)
- *
- * COSMO's near plane is FIXED at 10 kpc (`COSMO_NEAR_MPC`, slabs.ts) — but the
- * disc's near edge sits only ~9.5 kpc from the heliocentric origin the camera
- * descends toward (Sgr A* is ~8 kpc out, and the cloud extends back toward the
- * Sun). On the way down that plane slices visibly through the clumps while the
- * approach fade (full to 2 kpc) still shows them at full strength — a hard
- * clip mid-crossfade. NEAR0's near/far track the camera's orbit distance, so
- * the disc clears the near plane for the whole descent — the same fix
- * `starPointsLayer`, `starCatalogLayer`, `orbitTrailsLayer`, and
- * `foregroundLabelsLayer` each landed before this row.
- *
- * Unlike those four there is NO f64 rebase seam here: the cloud's anchors are
- * kpc-scale (~8e-3 Mpc from the origin), so the f32 large-minus-large
- * cancellation that jitters parsec/AU-scale anchors is bounded at ~1e-9 Mpc —
- * deeply sub-pixel against a kpc-sized disc viewed from ≥200 pc. The layer
- * keeps handing the renderer the narrowed `view.vp` and the world-space model
- * matrix. NEAR0's ADAPTIVE far plane is the one new hazard: on a deep descent
- * (or a tight orbit of another local-volume body) it pulls inside the disc's
- * far edge, so the star/dust vertex stages clamp clip-z just inside the far
- * plane — safe because both passes are depthless (see stars.wesl / dust.wesl).
- *
- * ### What it reads
- *
- * - `state.gpu.milkyWayCloudRenderer` (the two-pass star/dust draw)
- * - `state.gpu.milkyWayCloud` (the generated instance buffers)
- * - `ctx.cam` (billboard basis), `view.vp`, `view.viewportPx`, `view.camPos`
- * - `state.settings.milkyWay.enabled` (user toggle, via the gate)
- *
- * ### Why drawn FIRST inside the (hdr, NEAR0) group
- *
- * The (hdr, NEAR0) step runs after the whole (hdr, COSMO) group, so the dust
- * pass's MULTIPLICATIVE transmittance darkens the full cosmological
- * accumulation behind it (points, disks, filaments, volumes) — physically
- * reasonable extinction of background light. Leading the NEAR0 group keeps
- * the local starfield (star-points / star-catalog, drawn after) out of that
- * multiply: during the descent the near-field stars sit between the camera
- * and the dust, so they must never be darkened by it.
- *
- * `milkyWayUpsampleLayer` is the ONE row that must precede this one: it adds
- * the cloud's own starlight into HDR, and the dust has to multiply that too
- * (which is what the single-pass version did when stars and dust shared an
- * encoder). Everything else in the group still draws after.
+ * Drawn FIRST inside the (hdr, NEAR0) group, which runs after the whole (hdr,
+ * COSMO) group: the dust pass's multiplicative transmittance should darken the
+ * full cosmological accumulation behind it, but must NOT darken the near-field
+ * starfield (star-points / star-catalog) that sits between the camera and the
+ * dust during descent — so this layer leads the group and those draw after.
+ * `milkyWayUpsampleLayer` is the one row that must still precede it: it adds
+ * the cloud's own starlight into HDR, which the dust then has to multiply too.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -111,7 +51,7 @@ import { NEAR0 } from '../slabs';
 import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
-import { milkyWayModelCached } from '../../../gpu/galaxy/milkyWayModelCached';
+import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
 /**
  * Camera origin distance (Mpc) below which the impostor stops taking clicks —
@@ -138,7 +78,7 @@ export const milkyWayLayer: ContentLayer = {
   // mid-descent before the approach fade completes — see the module header.
   slab: NEAR0,
   target: 'hdr',
-  blend: 'additive',
+  blend: 'multiply',
 
   // Shared with the aggregate producer and its upsample consumer — see
   // `milkyWayCloudLiveness` on why all three must answer identically.
@@ -203,14 +143,13 @@ export const milkyWayLayer: ContentLayer = {
   // no shared point-sprites prefix (that @group(0) contract is a COSMO-pass
   // fact), so this row cannot inherit a camera from an earlier draw. The Gaia
   // star catalog — the other NEAR0 pickable — self-binds its own camera the same
-  // way, so the two are order-independent within the pass.
-  // The bytes are the SAME complete pick image point-sprites uploads —
-  // `pickUniformBytesOf` against THIS row's slab view — so the billboard's
-  // in-shader sizing reads the identical camera facts, just projected through
-  // NEAR0. Self-binding also deletes the hidden order dependence the old
-  // inherit-slot-0 pattern carried (a registry reshuffle could silently feed
-  // the MW pick a stale camera); the COSMO pickables keep the inherit pattern
-  // because their shared prefix is re-bound by point-sprites every pass.
+  // way, so the two are order-independent within the pass, immune to a registry
+  // reshuffle silently feeding this row a stale camera. The COSMO pickables
+  // instead inherit their camera, since their shared prefix is re-bound by
+  // point-sprites every pass. The bytes here are the SAME complete pick image
+  // point-sprites uploads — `pickUniformBytesOf` against THIS row's slab view —
+  // so the billboard's in-shader sizing reads the identical camera facts, just
+  // projected through NEAR0.
   //
   // Visibility is NOT re-checked here: the pick program filters by this row's
   // `pickEnabled`, evaluated against the pick-time camera. That gate composes

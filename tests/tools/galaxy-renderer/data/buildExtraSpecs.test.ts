@@ -24,7 +24,7 @@ describe('buildExtraSpecs', () => {
   it('star counts are in [40000, 200000] and multiples of 1000', () => {
     const specs = buildExtraSpecs(50, mulberry32(2));
     for (const spec of specs) {
-      const starCount = spec.params.starCount!;
+      const starCount = spec.params.legacy!.starCount!;
       expect(starCount).toBeGreaterThanOrEqual(40000);
       expect(starCount).toBeLessThanOrEqual(200000);
       expect(starCount % 1000).toBe(0);

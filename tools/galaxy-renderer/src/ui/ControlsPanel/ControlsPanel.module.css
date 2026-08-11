@@ -44,33 +44,19 @@
   margin-bottom: 5px;
 }
 
-/* Sole remaining consumer is the gamma-encode toggle — the auto-rotate row
-   these were named for now renders as `AutoRotateToggle`, a HUD pill, in
-   `App`. The ⓘ sits outside `.toggleLabel` rather than inside it: a label's
-   click-forwards-to-control behaviour would fire on the info button too. */
+/* Composes from `shared.module.css`, which also backs `FadeSection`'s
+   checkbox rows — shared vocabulary, local class names so the markup here
+   stays unchanged. */
 .toggleRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  composes: toggleRow from '../shared.module.css';
 }
 
 .toggleLabel {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-xl);
-  color: var(--color-fg-base);
-  cursor: pointer;
+  composes: toggleLabel from '../shared.module.css';
 }
 
 .checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-accent);
-  cursor: pointer;
+  composes: checkbox from '../shared.module.css';
 }
 
 .infoIcon {

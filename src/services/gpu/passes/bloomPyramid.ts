@@ -3,7 +3,7 @@
  * (bright prefilter, downsample, upsample, and the strength-scaled fold back
  * into HDR) plus the linear sampler and the per-level texel-size uniform
  * buffers. Ported from the `galaxy-renderer` dev tool's bloom stack
- * (`createGalaxyEngine.buildTargets` + its post pipelines); the fold is
+ * (`createGalaxyRenderTargets` + its post pipelines); the fold is
  * skymap's addition, carrying the per-frame `settings.bloom.strength` multiply
  * the generic compositor has no slot for.
  *

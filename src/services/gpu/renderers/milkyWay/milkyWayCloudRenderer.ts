@@ -62,11 +62,11 @@
  * behind nearer ones that should still sum/multiply.
  */
 
-import starsCode from '../../shaders/milkyWayCloud/stars.wesl?static';
-import dustCode from '../../shaders/milkyWayCloud/dust.wesl?static';
+import starsCode from '../../shaders/milkyWay/sprites/stars.wesl?static';
+import dustCode from '../../shaders/milkyWay/sprites/dust.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { GEN_RECORD_BYTES } from '../../galaxy/genRecordBytes';
-import { MILKY_WAY_MODEL_SCALE } from '../../galaxy/milkyWayCalibration';
+import { GEN_RECORD_BYTES } from '../../../engine/galaxyGenerator/v1/genRecordBytes';
+import { MILKY_WAY_MODEL_SCALE } from '../../../engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../../../../@types/rendering/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../../../../@types/rendering/MilkyWayCloudDrawArgs';

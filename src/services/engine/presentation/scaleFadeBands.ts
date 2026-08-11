@@ -1,26 +1,17 @@
 /**
- * scaleFadeBands — the descent's crossfade transitions, AS DATA.
+ * scaleFadeBands — the descent's crossfade transitions, AS DATA. Every scale
+ * the camera crosses on its way from the cosmic web to Earth's surface
+ * dissolves one kind of content in and another out; collecting the bands
+ * here (the same declarative-table posture as `captionPriority.ts`) keeps
+ * the whole choreography readable and tweakable, and makes a new transition
+ * a declared row rather than a new hand-rolled smoothstep. Consumed through
+ * `fadeBand`, which reads direction off each row's edge ordering.
  *
- * Every scale the camera crosses on its way from the cosmic web down to
- * Earth's surface dissolves one kind of content in and another out. Each
- * crossing used to grow its own hand-rolled smoothstep; collecting them here
- * — the same declarative-table posture as `captionPriority.ts` — makes the
- * whole descent's fade choreography READABLE and TWEAKABLE in one place, and
- * makes a new transition a declared row rather than a fourth copy of the
- * clamp. The bands are consumed through `fadeBand`, which reads the direction
- * off each row's edge ordering (see that primitive's header).
- *
- * ### One table, mixed keying quantities
- *
- * The rows do NOT all key on the same number, and that is deliberate — the
- * distinction is carried per-row by the comment naming WHICH quantity feeds the
- * band. Six key on a camera distance in Mpc: four on the heliocentric render
- * origin directly, and `starBackdrop` / `bodyGlintBackdrop` on the camera's
- * distance from their content's REGION anchor (`regionRelativeDistanceMpc`,
- * today the same number — that anchor is the Sun). Two key on the SUBJECT's own
- * distance from the camera (`starCaption` in pc, `sgrAStarCaption` in Mpc); one
- * on a body's apparent DIAMETER in px. One table because they are all the
- * descent's fades.
+ * The rows do NOT all key on the same quantity — each row's comment names
+ * which one feeds it: most key on camera distance from the heliocentric
+ * render origin (Mpc) or from a content region's anchor; two key on the
+ * SUBJECT's own distance from the camera (`starCaption` pc, `sgrAStarCaption`
+ * Mpc); one on a body's apparent diameter (px).
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
@@ -30,7 +21,7 @@ import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { regionById } from '../../../utils/scene/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
-import { MILKY_WAY_RADIUS_MPC } from '../../gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../galaxyGenerator/v1/milkyWayCalibration';
 
 // The two extents this table's near-field rows scale off — each read from the
 // region whose content the row gates, so a band cannot end up keyed on a scale
@@ -93,11 +84,11 @@ export const SCALE_FADE_BANDS = {
   // The Milky-Way impostor fades out as the camera dives into the disc toward
   // the Sun: full ≥ 0.002 Mpc (2 kpc, deep inside the disc), gone ≤ 0.0002 Mpc
   // (200 pc, where a flat spiral painting would hang in front of the
-  // solar-system view). Eye-tuning starting point, deepened at user request
-  // from the original { 0.008, 0.002 } so the procedural star/dust clumps hand
-  // off to the REAL Gaia star catalog — whose crossfade is fully faded in
-  // inside 8 kpc (gaia-stars crossfadePc) — instead of vanishing while still
-  // hanging visibly above the starfield that replaces them.
+  // solar-system view). Eye-tuning starting point: deep enough that the
+  // procedural star/dust clumps hand off to the REAL Gaia star catalog — whose
+  // crossfade is fully faded in inside 8 kpc (gaia-stars crossfadePc) —
+  // instead of vanishing while still hanging visibly above the starfield that
+  // replaces them.
   milkyWayApproach: { fullAt: 0.002, goneAt: 0.0002 },
 
   // Keyed on: the STAR's own distance from the camera, pc.
@@ -168,10 +159,10 @@ export const SCALE_FADE_BANDS = {
   // reads it rather than restating the edges.
   //
   // `fullAt` is R₀ itself, the Sun's own distance from the Centre: the name is
-  // at FULL alpha from Earth and stays there all the way in. An earlier
-  // {R₀/2, R₀} pair reached 0 exactly at the Sun, which kept the name out of the
-  // solar-system view — but it also kept it out of every view that frames the
-  // galaxy, which is the one that most needs it.
+  // at FULL alpha from Earth and stays there all the way in. A `fullAt` below
+  // R₀ (e.g. R₀/2) would reach 0 before the galaxy-framing views that most
+  // need the caption, in exchange for keeping it out of the solar-system view
+  // — the wrong trade, since the solar-system view has plenty of other cues.
   //
   // `goneAt` is a disc DIAMETER out, so the name persists while the galaxy is
   // the subject and dissolves as it becomes one object among many. Tied to
