@@ -83,6 +83,10 @@ const CONTINUITY_MULT_MAX: f32 = 1.4;
 @group(0) @binding(2) var nextTex: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(3) var<uniform> stepIdx: IsmMapFluidStepIndex;
 @group(0) @binding(4) var velocityTex: texture_2d<f32>;
+// Stars' own shear+curl-only field (ismMapFluidVelocity.wesl's starsVel) —
+// the stars back-trace below samples this instead of velocityTex, so it
+// never inherits gas's arm-gather/drag.
+@group(0) @binding(5) var starsVelocityTex: texture_2d<f32>;
 
 // Radial gas equilibrium: an exponential H2-like disc on top of a flat
 // gasFloor "HI" pedestal — both the step-0 seed and the regen relaxation
@@ -222,6 +226,17 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let prevRingF = clamp(f32(ring) - velRing, 0.0, f32(ringCount - 1u));
   let advected = sampleBilinear(prevAzF, prevRingF, azCount, ringCount);
 
+  // Stars' own back-trace, independent of where gas/dust advect above —
+  // shear+curl-only starsVelocityTex, so the stars channel never gathers
+  // into gas's arm lines.
+  let starsVelSample = textureLoad(starsVelocityTex, vec2<i32>(i32(az), i32(ring)), 0);
+  var starsPrevAzF = (f32(az) - starsVelSample.x) % azCountF;
+  if (starsPrevAzF < 0.0) {
+    starsPrevAzF += azCountF;
+  }
+  let starsPrevRingF = clamp(f32(ring) - starsVelSample.y, 0.0, f32(ringCount - 1u));
+  let starsAdvected = sampleBilinear(starsPrevAzF, starsPrevRingF, azCount, ringCount).y;
+
   // Compressible-continuity source: pure semi-Lagrangian advection of a
   // uniform field is a fixed point regardless of velocity, so mass piling
   // up where the field converges (divV < 0) and thinning where it diverges
@@ -243,13 +258,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // it relaxes gas toward the profile (the physically-meaningful
   // equilibrium) rather than pushing it toward GAS_CEILING unconditionally.
   let gas = min(GAS_CEILING, max(0.0, diffusedGas + u.gasRegen * (gasProfile(r) - diffusedGas)));
-  // stars is MATERIAL, not Eulerian (this file's header): 'advected.y' is
-  // already the previous stars value sampled at the SAME back-traced source
-  // point gas/dust read above, so a stamped clump shears into a chain along
-  // with the gas that formed it instead of staying a fixed circle. Deposit
-  // is local (this texel's own gas, not the upstream sample) — the impulse's
-  // own multi-step duration is absorbed into starsDeposit's calibration.
-  let stars = advected.y * u.starsDecay + u.starsDeposit * gas * eventStamp;
+  // stars is MATERIAL, not Eulerian (this file's header): 'starsAdvected' is
+  // the previous stars value sampled at stars' OWN back-traced source point
+  // (shear+curl only, above) — a stamped clump shears and swirls along with
+  // the local flow instead of gathering into gas's arm lines or staying a
+  // fixed circle. Deposit is local (this texel's own gas, not the upstream
+  // sample) — the impulse's own multi-step duration is absorbed into
+  // starsDeposit's calibration.
+  let stars = starsAdvected * u.starsDecay + u.starsDeposit * gas * eventStamp;
   let dust = min(diffusedDust, DUST_OVERSHOOT_CEILING);
   let activity = mix(selfActivity, eventStamp, u.emaRate);
 

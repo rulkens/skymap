@@ -94,6 +94,15 @@ export function createIsmMapFluidRunner(
     format: 'rgba16float',
     usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
   });
+  // Stars' own shear+curl-only advection field (ismMapFluidVelocity.wesl's
+  // starsVel) — separate from velocityTex because that texture's '.z' lane
+  // is already eventStamp, not a spare channel for a second velocity.
+  const starsVelocityTex = device.createTexture({
+    label: 'galaxy:ismMapFluidStarsVelocityTex',
+    size: [ISM_MAP_AZ, ISM_MAP_RINGS],
+    format: 'rg16float',
+    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+  });
   // This runner's own copy of the arm-forcing field, uploaded as a texture:
   // the gather velocity term in ismMapFluidVelocity.wesl samples it
   // directly, unlike the events builder below which reads the same CPU
@@ -190,6 +199,7 @@ export function createIsmMapFluidRunner(
               { binding: 2, resource: next.createView() },
               stepIndexEntry,
               { binding: 4, resource: velocityTex.createView() },
+              { binding: 5, resource: starsVelocityTex.createView() },
             ],
           }),
         );
@@ -212,6 +222,7 @@ export function createIsmMapFluidRunner(
                   },
                   { binding: 4, resource: armForcingTex.createView() },
                   { binding: 5, resource: velocityTex.createView() },
+                  { binding: 6, resource: starsVelocityTex.createView() },
                 ],
               }),
         );
@@ -263,6 +274,7 @@ export function createIsmMapFluidRunner(
       stateA.destroy();
       stateB.destroy();
       velocityTex.destroy();
+      starsVelocityTex.destroy();
       constUbo.destroy();
       eventsBuf.destroy();
     },
