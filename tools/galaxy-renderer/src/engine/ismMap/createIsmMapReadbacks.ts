@@ -49,6 +49,16 @@ export type IsmMapReadbacks = {
    * per frame.
    */
   dropIfGridMoved(grid: GalaxyIsmMapGridRadius): void;
+  /**
+   * Debug-only: map `ismMapGenerator.ringMeansBuffer` back to the CPU — the
+   * GPU twin of `ismMapRingMeans.ts`'s CPU loop, off the SAME `queue` chain
+   * (via `bufferStream`, not `stream` — the source is a plain STORAGE buffer,
+   * not a texture). Used by the probe's numeric-readback check
+   * (`probeGpuErrors.ts`) to confirm the two agree within float tolerance —
+   * no production caller, since the fluid path's own consumer of this buffer
+   * (`ismMapPresent.wesl`) never leaves the GPU.
+   */
+  requestRingMeans(onLand: (means: Float32Array) => void): void;
 };
 
 export function createIsmMapReadbacks(deps: {
@@ -88,6 +98,16 @@ export function createIsmMapReadbacks(deps: {
         ISM_MAP_AZ,
         ISM_MAP_RINGS,
       ),
+  });
+
+  const ringMeansStream = queue.bufferStream({
+    label: 'galaxy:ringMeansReadback',
+    sourceBuffer: deps.ismMapGenerator.ringMeansBuffer,
+    buffer: deps.ismMapGenerator.ringMeansReadbackBuffer,
+    size: ISM_MAP_RINGS * 4,
+    // Copy out now — `mapped` is a view into the staging buffer's range,
+    // invalid the instant the queue's own `unmap()` runs after this returns.
+    decode: (mapped) => new Float32Array(mapped.slice(0)),
   });
 
   let ismMapData: GalaxyIsmMap | null = null;
@@ -138,6 +158,10 @@ export function createIsmMapReadbacks(deps: {
     dropIfGridMoved(grid): void {
       if (movedFrom(ismMapData, grid)) ismMapData = null;
       if (movedFrom(orientationData, grid)) orientationData = null;
+    },
+
+    requestRingMeans(onLand): void {
+      ringMeansStream.request(onLand);
     },
   };
 }

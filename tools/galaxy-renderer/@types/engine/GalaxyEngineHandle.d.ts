@@ -38,5 +38,10 @@ export type GalaxyEngineHandle = {
   // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleIsmMapReadback`),
   // live whenever `ismMap.generator !== 'none'`.
   getIsmMapData(): GalaxyIsmMap | null;
+  // Debug-only: the numeric-readback probe's GPU-vs-CPU check
+  // (`probeGpuErrors.ts`) diffs this against `ismMapRingMeans.ts` run over
+  // `getIsmMapData()`. No production caller — see
+  // `createIsmMapReadbacks.ts`'s `requestRingMeans` for the mechanism.
+  requestRingMeansReadback(): Promise<Float32Array>;
   dispose(): void;
 };

@@ -6,7 +6,11 @@
  * eyeballing the canvas catches a bind group built against a destroyed
  * texture, a uniform buffer too small for its struct, or a shader that stops
  * linking. This drives the real UI in real Chromium and reports what the GPU
- * itself complained about. It judges NOTHING about the picture — errors only.
+ * itself complained about. It judges NOTHING about the picture — errors only
+ * — plus one numeric exception: `readback:ringMeans` below, which diffs a
+ * real GPU compute output against its CPU reference (no headless WebGPU
+ * runtime exists in this repo — see the plan's Task 5 for why this one
+ * check rides the error probe instead of its own harness).
  */
 
 import {
@@ -19,6 +23,9 @@ import {
 import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
+import type { GalaxyEngineHandle } from './@types/engine/GalaxyEngineHandle';
+import type { GalaxyIsmMap } from '../../src/@types/galaxy/GalaxyIsmMap';
+import { ismMapRingMeans } from '../../src/utils/galaxy/ismMapRingMeans';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,
@@ -28,6 +35,13 @@ const SETTLE_FRAMES = 6;
 // end is the backstop — a section holds up to six of them.
 const NUDGE_FRAMES = 2;
 const BOOT_TIMEOUT_MS = 60_000;
+// `readback:ringMeans`'s max-|CPU-GPU| budget for one ring's dust mean.
+// Measured 1.19e-7 at boot's default preset (float32 tree-reduction sum
+// order vs. the CPU's sequential one, over the SAME f16-decoded texels) —
+// see task-5-report.md for the run. 1e-3 leaves ~8000x headroom for a
+// different preset's larger sums while still catching a genuinely wrong
+// computation (e.g. a channel swap), not just reduction-order noise.
+const RING_MEANS_TOLERANCE = 1e-3;
 
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
@@ -412,7 +426,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
     {
       name: 'boot',
       run: async (page) => {
-        await page.goto(url, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS });
+        // `?probeReadback` is what makes Viewport.tsx put the engine handle
+        // on `window` for the step below — see its own doc.
+        await page.goto(`${url}/?probeReadback`, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS });
         const fallback = page.getByText('WebGPU is required');
         const loading = page.getByText('Initializing WebGPU');
         await Promise.race([
@@ -421,6 +437,72 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         ]);
         if (await fallback.isVisible()) {
           throw new Error('engine refused to boot — the WebGPU fallback card is showing');
+        }
+      },
+    },
+    {
+      // The boot preset (defaultGalaxyIsmMapParams.ts) is `generator: 'fluid'`
+      // with 144 steps, so `setParams` in Viewport.tsx already dispatched
+      // `ringReduce` and scheduled the CPU `ismMapData` readback before this
+      // step runs — no preset picking needed, just enough settle for both
+      // async landings (see createGalaxyModel.ts's `rebuildIsmMap`).
+      name: 'readback:ringMeans',
+      run: async (page) => {
+        await settleFrames(page, SETTLE_FRAMES);
+        const readback = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            return { ok: false as const, reason: 'no __probeEngine — the probeReadback gate never installed it' };
+          }
+          const map = bridge.getIsmMapData();
+          if (!map) return { ok: false as const, reason: 'getIsmMapData() is still null' };
+          const gpuMeans = await bridge.requestRingMeansReadback();
+          // Typed arrays don't survive page.evaluate's return serialization
+          // as themselves — plain arrays do.
+          return {
+            ok: true as const,
+            az: map.az,
+            rings: map.rings,
+            rMin: map.rMin,
+            rMax: map.rMax,
+            data: Array.from(map.data),
+            gpuMeans: Array.from(gpuMeans),
+          };
+        });
+        if (!readback.ok) throw new Error(`readback:ringMeans — ${readback.reason}`);
+
+        const cpuMap: GalaxyIsmMap = {
+          az: readback.az,
+          rings: readback.rings,
+          rMin: readback.rMin,
+          rMax: readback.rMax,
+          data: Float32Array.from(readback.data),
+        };
+        const cpuMeans = ismMapRingMeans(cpuMap, (texel) => texel.dust);
+        if (cpuMeans.length !== readback.gpuMeans.length) {
+          throw new Error(
+            `readback:ringMeans — length mismatch: CPU ${cpuMeans.length}, GPU ${readback.gpuMeans.length}`,
+          );
+        }
+        let maxDiff = 0;
+        let maxRing = -1;
+        for (let ring = 0; ring < cpuMeans.length; ring++) {
+          const diff = Math.abs(cpuMeans[ring]! - readback.gpuMeans[ring]!);
+          if (diff > maxDiff) {
+            maxDiff = diff;
+            maxRing = ring;
+          }
+        }
+        console.error(
+          `  readback:ringMeans max |CPU-GPU| = ${maxDiff.toExponential(3)} at ring ${maxRing} ` +
+            `(tolerance ${RING_MEANS_TOLERANCE.toExponential(3)})`,
+        );
+        if (maxDiff > RING_MEANS_TOLERANCE) {
+          throw new Error(
+            `readback:ringMeans — ring ${maxRing}: CPU ${cpuMeans[maxRing]} vs GPU ` +
+              `${readback.gpuMeans[maxRing]}, diff ${maxDiff} exceeds tolerance ${RING_MEANS_TOLERANCE}`,
+          );
         }
       },
     },

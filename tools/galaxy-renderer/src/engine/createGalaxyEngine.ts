@@ -1075,6 +1075,12 @@ export async function createGalaxyEngine(
     // whenever `ismMap.generator !== 'none'` today; exposed here for future
     // consumers too.
     getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
+    // Debug-only: mapAsync's `ringMeansBuffer` back to the CPU for the
+    // probe's numeric-readback check (`probeGpuErrors.ts` diffs it against
+    // `ismMapRingMeans.ts`'s CPU computation over `getIsmMapData()`). No
+    // production caller — see `createIsmMapReadbacks.ts`'s own doc.
+    requestRingMeansReadback: (): Promise<Float32Array> =>
+      new Promise((resolve) => model.requestRingMeansReadback(resolve)),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();

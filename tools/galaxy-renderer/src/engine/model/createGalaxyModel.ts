@@ -186,6 +186,13 @@ export type GalaxyModel = {
    */
   readonly ismMapSeedingView: IsmMapSeedingLanes;
   /**
+   * Debug-only pass-through to `readbacks.requestRingMeans` — see that
+   * method's own doc. Exposed on the model, not just `readbacks` (which is
+   * private to this closure), so `createGalaxyEngine.ts`'s handle can wrap
+   * it in a `Promise` the same way every other public entry point does.
+   */
+  requestRingMeansReadback(onLand: (means: Float32Array) => void): void;
+  /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
    * list is a destroyed buffer.
@@ -1053,6 +1060,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         // own inert default, not a value this getter invents.
         cap: currentDust().cloud.dustPlacementCap ?? 0,
       };
+    },
+
+    requestRingMeansReadback(onLand): void {
+      readbacks.requestRingMeans(onLand);
     },
 
     starInstances(): InstanceDraw[] {
