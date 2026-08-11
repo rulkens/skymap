@@ -81,5 +81,18 @@ export type GalaxyEngineHandle = {
     readonly count: number;
     readonly records: Float32Array;
   } | null>;
+  // Debug-only: Task 14's own numeric-validation exception
+  // (`placeArmSpurCloud.wesl` has no non-GPU path to check its output
+  // against) — dispatches fresh and maps the spur-cloud reservation's slot
+  // range straight back, read by `probeGpuErrors.ts`'s
+  // `readback:placeArmSpurCloud` step (determinism, budget count, survival/
+  // liveness). No production caller. `null` when nothing is reserved this
+  // rebuild (central galaxy only — see `createGalaxyModel.ts`'s
+  // `spurCloudReservation`).
+  requestArmSpurCloudPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
   dispose(): void;
 };

@@ -65,8 +65,16 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 /** "SPRC" — distinct from `armSpurGeometry.ts`'s own "SPUR" salt (`buildArmSpurs`) and `armParticleCloud.ts`'s "ARMC", so all three streams stay independent even when seeded off the same `geometry.seed`. */
 const SPUR_CLOUD_SEED_SALT = 0x53505243;
 
-/** This spur's own arc-length x inverse-width integral — the same trapezoid `deriveArmCloudCount` runs over a whole arm, scoped to one spur's short span. Shared by the count derivation and the build's own per-spur pick weights, so the two can never disagree about which spurs get more sprites. */
-function spurFootprintIntegral(
+/**
+ * This spur's own arc-length x inverse-width integral — the same trapezoid
+ * `deriveArmCloudCount` runs over a whole arm, scoped to one spur's short
+ * span. Shared by the count derivation and the build's own per-spur pick
+ * weights, so the two can never disagree about which spurs get more
+ * sprites. Exported for `packArmSpurCloudRecords.ts` (the GPU dispatch
+ * host's CPU-side weight-table packer, per the plan's "port this integral
+ * into the packer, not the shader" contract) — same weights, one function.
+ */
+export function spurFootprintIntegral(
   spur: GalaxyFieldArmRecord,
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,

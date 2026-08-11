@@ -27,6 +27,7 @@ import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGala
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyFieldMixtureResult } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
@@ -82,6 +83,10 @@ import type { IsmMapDustCdfScan } from '../ismMap/createIsmMapDustCdfScan';
 import { computePlaceDustBudget } from '../ismMap/computePlaceDustBudget';
 import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
 import type { IsmMapPlaceDust, PlaceDustDispatchInput } from '../ismMap/createIsmMapPlaceDust';
+import type {
+  IsmMapPlaceArmSpurCloud,
+  PlaceArmSpurCloudDispatchInput,
+} from '../ismMap/createIsmMapPlaceArmSpurCloud';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
@@ -119,6 +124,8 @@ export type GalaxyModelDeps = {
   readonly dustCdfScan: IsmMapDustCdfScan;
   /** GPU replacement for `buildDustParticleCloud`'s map-seeded placement — see `dustPlacementRebuild`. */
   readonly placeDust: IsmMapPlaceDust;
+  /** GPU replacement for `buildArmSpurParticleCloud`'s placement body — see `spurCloudPlacementRebuild`. */
+  readonly placeArmSpurCloud: IsmMapPlaceArmSpurCloud;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   /**
@@ -219,6 +226,19 @@ export type GalaxyModel = {
     readonly records: Float32Array;
   } | null>;
   /**
+   * Debug-only: dispatches `placeArmSpurCloud.wesl` fresh into its own
+   * encoder and maps the reservation's slot range straight back — the
+   * probe's own determinism/budget/liveness numeric exception (no
+   * production caller). `null` when nothing is reserved this rebuild
+   * (`spurCloudReservation` is null — central galaxy only today, see
+   * `centralFieldMixtureAndSpurReservation`'s own doc).
+   */
+  requestArmSpurCloudPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
    * list is a destroyed buffer.
@@ -229,7 +249,16 @@ export type GalaxyModel = {
 };
 
 export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
-  const { device, ismMapGenerator, orientation, ringReduce, dustCdfScan, placeDust, render } = deps;
+  const {
+    device,
+    ismMapGenerator,
+    orientation,
+    ringReduce,
+    dustCdfScan,
+    placeDust,
+    placeArmSpurCloud,
+    render,
+  } = deps;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
   // settings key — what the rebuild gates' `wanted` predicates read.
@@ -340,6 +369,17 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // slot CONTENT on the GPU (`dustPlacementRebuild` below); there is no CPU
   // particle array to cache any more.
   let dustBudget: PlaceDustBudget | null = null;
+  // The arm spur-cloud tier's RESERVATION, CENTRAL galaxy only — same cut
+  // dust took above (extras get it in a follow-up). Captured alongside
+  // `fieldMixture` at every central rebuild site
+  // (`centralFieldMixtureAndSpurReservation`) since the reservation's
+  // `offset` is this galaxy's own local index into THAT mixture, valid as
+  // an absolute `fieldComps` index only because the central galaxy's own
+  // mixture always sits first in `repackFieldComponents`' emission
+  // concatenation. `null` means nothing reserved this rebuild (pill off, or
+  // the ridge chain's own excess debit left this tier nothing to spend —
+  // `GalaxyFieldMixtureResult`'s own doc).
+  let spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'] = null;
   // What `setParams` was last handed — only `seed` still comes off it; dust
   // and starFormation moved onto `fieldTuning` (scene-wide, not per-galaxy).
   let lastParams: GalaxyParams | null = null;
@@ -768,6 +808,49 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * spurCloudPlacementRebuild — encodes `placeArmSpurCloud.wesl` into its
+   * own encoder, off the CURRENT `spurCloudReservation`. Consumed from
+   * `GalaxyModel.ensureFresh()`, the same deferred-dispatch shape
+   * `dustPlacementRebuild` uses (Task 7's landed pattern; the orchestrator
+   * ruling for this tier reuses it rather than giving `setFieldTuning` its
+   * own encoder). Unlike dust, this tier reads no ISM-map/orientation
+   * texture at all — `armRidge.wesl`'s ridge math is self-contained off the
+   * per-spur record table — so there is no ordering dependency on
+   * `orientationTexRebuild`; it is placed after it anyway, for one
+   * discipline rather than two.
+   */
+  const spurCloudPlacementRebuild = createKeyedRebuild({
+    wanted: () => spurCloudReservation !== null,
+    build: () => {
+      const reservation = spurCloudReservation;
+      if (!fieldGeometry || !reservation) return;
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloud' });
+      placeArmSpurCloud.dispatchPlaceArmSpurCloud(
+        enc,
+        spurCloudDispatchInput(fieldGeometry, reservation),
+      );
+      device.queue.submit([enc.finish()]);
+    },
+  });
+
+  /** Shared by `spurCloudPlacementRebuild` and the debug readback below — one input shape, one place that assembles it. */
+  function spurCloudDispatchInput(
+    geometry: GalaxyDescription,
+    reservation: NonNullable<GalaxyFieldMixtureResult['spurCloudReservation']>,
+  ): PlaceArmSpurCloudDispatchInput {
+    return {
+      seed: currentSeed(),
+      offset: reservation.offset,
+      count: reservation.count,
+      flux: reservation.flux,
+      spurArms: reservation.spurArms,
+      geometry,
+      tuning: fieldTuning,
+      fieldCompsBuffer: fieldComps.buffer,
+    };
+  }
+
+  /**
    * repackFieldComponents — central galaxy's emission mixture, then every
    * extra's (already in world space), then the central galaxy's dust
    * RESERVATION last, into one `fieldComps` write. Runs whenever a mixture
@@ -855,7 +938,24 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     geometry: GalaxyDescription,
     transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
   ): readonly GalaxyFieldComponent[] {
-    return place(buildGalaxyFieldMixture(geometry, fieldTuning), transform);
+    return place(buildGalaxyFieldMixture(geometry, fieldTuning).components, transform);
+  }
+
+  /**
+   * Central-galaxy counterpart to `fieldMixtureOf` that also captures the
+   * spur-cloud tier's own reservation (`centralHiiMixtureAndSegments`'s own
+   * precedent for a central-only metadata capture) — extras never take one
+   * (only the central galaxy's own mixture is ever GPU-filled today, see
+   * `spurCloudReservation`'s own doc), so only the central call sites pay
+   * for it; extras still go through the plain `fieldMixtureOf`. No
+   * `transform`: the central galaxy never takes one.
+   */
+  function centralFieldMixtureAndSpurReservation(geometry: GalaxyDescription): {
+    readonly mixture: readonly GalaxyFieldComponent[];
+    readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
+  } {
+    const result = buildGalaxyFieldMixture(geometry, fieldTuning);
+    return { mixture: result.components, spurCloudReservation: result.spurCloudReservation };
   }
 
   /**
@@ -937,7 +1037,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // dust `share`, cloud counts, colours — leave the grid untouched and the
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(ismMapGridRadius(fieldGeometry));
-    fieldMixture = fieldMixtureOf(fieldGeometry);
+    ({ mixture: fieldMixture, spurCloudReservation } =
+      centralFieldMixtureAndSpurReservation(fieldGeometry));
+    spurCloudPlacementRebuild.invalidate();
     ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
       fieldGeometry,
       currentStarFormation(),
@@ -1000,7 +1102,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
     if (fieldMoved || hiiMoved) {
       if (fieldGeometry) {
-        if (fieldMoved) fieldMixture = fieldMixtureOf(fieldGeometry);
+        if (fieldMoved) {
+          ({ mixture: fieldMixture, spurCloudReservation } =
+            centralFieldMixtureAndSpurReservation(fieldGeometry));
+          spurCloudPlacementRebuild.invalidate();
+        }
         if (hiiMoved) {
           ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
             fieldGeometry,
@@ -1157,6 +1263,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // dispatch (if any) to have already run this same call — see
       // `dustPlacementRebuild`'s own doc.
       dustPlacementRebuild.ensureFresh();
+      spurCloudPlacementRebuild.ensureFresh();
       return { bubblesLive };
     },
 
@@ -1228,6 +1335,19 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         dustDispatchInput(fieldGeometry, budget, opts?.forceGeneratorIsFluid),
       );
       return { count: budget.count, records };
+    },
+
+    async requestArmSpurCloudPlacementReadback(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly records: Float32Array;
+    } | null> {
+      const reservation = spurCloudReservation;
+      if (!fieldGeometry || !reservation) return null;
+      const records = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
+        spurCloudDispatchInput(fieldGeometry, reservation),
+      );
+      return { count: reservation.count, offset: reservation.offset, records };
     },
 
     starInstances(): InstanceDraw[] {

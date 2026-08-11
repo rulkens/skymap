@@ -56,6 +56,7 @@ import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
 import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
 import { createIsmMapPlaceDust } from './ismMap/createIsmMapPlaceDust';
+import { createIsmMapPlaceArmSpurCloud } from './ismMap/createIsmMapPlaceArmSpurCloud';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
@@ -376,6 +377,8 @@ export async function createGalaxyEngine(
   });
   // GPU replacement for `buildDustParticleCloud`'s map-seeded placement.
   const placeDust = createIsmMapPlaceDust(device, { makeShader });
+  // GPU replacement for `buildArmSpurParticleCloud`'s placement body.
+  const placeArmSpurCloud = createIsmMapPlaceArmSpurCloud(device, { makeShader });
   // Task 12's own numeric-validation exception (armRidge.wesl vs.
   // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
   const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
@@ -496,6 +499,7 @@ export async function createGalaxyEngine(
     ringReduce,
     dustCdfScan,
     placeDust,
+    placeArmSpurCloud,
     render,
     onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
     onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),
@@ -1127,6 +1131,9 @@ export async function createGalaxyEngine(
     // Debug-only: Task 7's own determinism/survival-floor numeric exception —
     // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
     requestDustPlacementReadback: (opts) => model.requestDustPlacementReadback(opts),
+    // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
+    // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
+    requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1139,6 +1146,7 @@ export async function createGalaxyEngine(
       ismMapOrientation.dispose();
       dustCdfScan.dispose();
       placeDust.dispose();
+      placeArmSpurCloud.dispose();
       armRidgeDebugSample.dispose();
       ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they

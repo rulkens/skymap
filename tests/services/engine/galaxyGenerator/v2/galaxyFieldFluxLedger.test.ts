@@ -19,6 +19,7 @@ import {
 import { REFERENCE_GALAXIES } from '../../../../../tools/galaxy-renderer/src/data/referenceGalaxies';
 import type { ReferenceGalaxy } from '../../../../../tools/galaxy-renderer/@types/data/ReferenceGalaxy';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyFieldMixtureResult } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyArmTuning } from '../../../../../src/@types/galaxy/GalaxyArmTuning';
 
@@ -34,8 +35,18 @@ function componentFlux(component: GalaxyFieldComponent): number {
   return det > 0 ? (component.amplitude * (2 * Math.PI) ** 1.5) / Math.sqrt(det) : 0;
 }
 
-function totalFlux(components: readonly GalaxyFieldComponent[]): number {
-  return components.reduce((sum, component) => sum + componentFlux(component), 0);
+/**
+ * The spur-cloud tier's reservation carries zero-amplitude placeholders in
+ * `result.components` — GPU-side v2 placement fills their real emission
+ * post-submit, off this CPU path entirely (`GalaxyFieldMixtureResult`'s own
+ * doc). `reservation.flux` is exactly the flux `pushArmRidges`' debit
+ * credited to this tier, so folding it back in here keeps this ledger
+ * measuring the SAME quantity it always has — total emitted light, not "total
+ * light this array's own amplitudes happen to sum to".
+ */
+function totalFlux(result: GalaxyFieldMixtureResult): number {
+  const componentsFlux = result.components.reduce((sum, component) => sum + componentFlux(component), 0);
+  return componentsFlux + (result.spurCloudReservation?.flux ?? 0);
 }
 
 function geometryOf(ref: ReferenceGalaxy): GalaxyDescription {
@@ -112,11 +123,11 @@ describe('galaxy field flux ledger', () => {
   // mixture with no arm components conserves flux trivially.
   it.each(['m100', 'mw'])('%s renders arm components for that ledger to be about', (id) => {
     const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === id)!);
-    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).length;
+    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).components.length;
     const without = buildGalaxyFieldMixture(geometry, {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       arms: { ...ARMS, enabled: false },
-    }).length;
+    }).components.length;
     expect(withArms).toBeGreaterThan(without);
   });
 });
