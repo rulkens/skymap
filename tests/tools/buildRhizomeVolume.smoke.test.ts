@@ -70,11 +70,14 @@ describe('isQuickLookOutput', () => {
   // Pure path comparison — no fs I/O, so it's safe to exercise directly
   // against the real 'public/data/...' string without ever touching the
   // filesystem.
-  it('matches only the resolved MCPM large-tier path under public/data', () => {
-    expect(isQuickLookOutput('public/data/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('./public/data/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('public/data/mcpm-medium.scfd')).toBe(false);
+  it('matches only the resolved MCPM large-tier path under the epoch folder', () => {
+    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
+    expect(isQuickLookOutput('./public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
+    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-medium.scfd')).toBe(false);
     expect(isQuickLookOutput('/tmp/somewhere/cube.scfd')).toBe(false);
+    // The pre-v9 root path is dead — guarding it again would re-strand
+    // quick-look on a file the manifest-driven viewer never fetches.
+    expect(isQuickLookOutput('public/data/mcpm-large.scfd')).toBe(false);
   });
 });
 
