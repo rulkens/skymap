@@ -77,6 +77,7 @@ import { generateGalaxy } from '../sprites/generateGalaxy';
 import { createOrientationDiagnostics } from '../ismMap/createOrientationDiagnostics';
 import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
 import type { IsmMapOrientation } from '../ismMap/createIsmMapOrientation';
+import type { IsmMapRingReduce } from '../ismMap/createIsmMapRingReduce';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
@@ -108,6 +109,8 @@ export type GalaxyModelDeps = {
   readonly device: GPUDevice;
   readonly ismMapGenerator: IsmMapGenerator;
   readonly orientation: IsmMapOrientation;
+  /** GPU replacement for `ismMapRingMeans.ts`'s CPU loop — see `recomputeIsmMapSeedingMeans`. */
+  readonly ringReduce: IsmMapRingReduce;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   /**
@@ -176,8 +179,10 @@ export type GalaxyModel = {
    * `rebuildDustMixture` passes to `buildDustParticleCloud`, so a cap-slider
    * drag updates the view without waiting on a rebuild. The per-RING means
    * `globalMean` is itself the mean of are NOT part of this type — they ride
-   * `ismMapGenerator.writeRingMeans`, a separate GPU buffer write at the same
-   * readback-landing cadence (`recomputeIsmMapSeedingMeans`).
+   * `ismMapGenerator.ringMeansBuffer`, written by `ringReduce`'s GPU pass at
+   * rebuild time on the fluid path (see `rebuildIsmMap`), or by the CPU
+   * `writeRingMeans` fallback at readback landing otherwise
+   * (`recomputeIsmMapSeedingMeans`).
    */
   readonly ismMapSeedingView: IsmMapSeedingLanes;
   /**
@@ -191,7 +196,7 @@ export type GalaxyModel = {
 };
 
 export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
-  const { device, ismMapGenerator, orientation, render } = deps;
+  const { device, ismMapGenerator, orientation, ringReduce, render } = deps;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
   // settings key — what the rebuild gates' `wanted` predicates read.
@@ -342,14 +347,22 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * placement actually consumes. No ambient subtraction: the pedestal is
    * seeded `ambient * gasProfile(r)` and advected by the generator, so it is
    * itself structure the CDF places into, not a floor to clear first. The
-   * per-ring array goes straight to the GPU (`writeRingMeans`) — the
-   * shader's own radial-envelope divisor — while only its `arrayMean` is
-   * cached here for the scalar uniform lane.
+   * per-ring array rides the GPU only: on the fluid path `rebuildIsmMap`
+   * already dispatched `ringReduce` straight off `ismMapTex`, so this landing
+   * no longer re-derives or re-uploads it — only the scalar (`arrayMean`) is
+   * cheap enough off the already-necessary CPU readback to keep computing
+   * here (Task 10 may move it onto the GPU too). Non-fluid generators never
+   * get a `ringReduce` dispatch (`rebuildIsmMap`'s own gate), so this keeps
+   * the CPU `writeRingMeans` fallback for THAT path only — otherwise a
+   * disabled-generator's cleared map would leave `ringMeansBuffer` holding a
+   * stale array from whenever the fluid generator last ran.
    */
   function recomputeIsmMapSeedingMeans(map: GalaxyIsmMap): void {
     const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
-    ismMapGenerator.writeRingMeans(ringMeans);
     ismMapGlobalMeanDust = arrayMean(ringMeans);
+    if (fieldTuning.ismMap.generator !== 'fluid') {
+      ismMapGenerator.writeRingMeans(ringMeans);
+    }
   }
 
   /**
@@ -594,6 +607,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * readback runs on BOTH of its exits, the disabled one too, so `ismMapData`
    * reflects the cleared texture it just wrote rather than an earlier
    * galaxy's map.
+   *
+   * Fluid-only, own encoder/submit: `ismMapGenerator.rebuild` above already
+   * finished writing `ismMapTex` by the time it returns, so `ringReduce` runs
+   * straight off that content — no need to wait for the async CPU readback
+   * `scheduleIsmMapReadback` schedules below. Gated the same as the OTHER
+   * `fieldTuning.ismMap.generator` branch points (`recomputeIsmMapSeedingMeans`,
+   * the readback landings' `!== 'none'` checks): a disabled/no-geometry
+   * rebuild has nothing worth reducing.
    */
   function rebuildIsmMap(): void {
     const grid = ismMapGenerator.rebuild({
@@ -601,6 +622,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       tuning: fieldTuning,
       seed: currentSeed(),
     });
+    if (fieldTuning.ismMap.generator === 'fluid') {
+      const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
+      ringReduce.dispatchRingMeans(enc);
+      device.queue.submit([enc.finish()]);
+    }
     scheduleIsmMapReadback(grid);
     orientationTexRebuild.invalidate();
   }

@@ -27,6 +27,8 @@ export type IsmMapGenerator = {
   /** Cartesian re-bake of the packed map (stage 1 of the dust-seeding perf spike) — see IsmMapOutput's own doc. Not yet bound by any consumer (stage 2). */
   readonly cartesianTexture: GPUTexture;
   readonly gridBuffer: GPUBuffer;
+  /** `createIsmMapRingReduce.ts`'s dispatch target — see `IsmMapOutput`'s own doc. */
+  readonly ringMeansBuffer: GPUBuffer;
   readonly mapSampler: GPUSampler;
   /** The "seeding" debug view's radial envelope divisor — see `IsmMapOutput`'s own doc. Not tied to `rebuild()`: the readback landing (`createGalaxyModel.ts`) calls this directly once the CPU-side ring means are computed. */
   writeRingMeans(means: Float32Array): void;
@@ -66,6 +68,7 @@ export function createIsmMapGenerator(
     dustBlurTexture: output.dustBlurTexture,
     cartesianTexture: output.cartesianTexture,
     gridBuffer: output.gridBuffer,
+    ringMeansBuffer: output.ringMeansBuffer,
     mapSampler: output.mapSampler,
     writeRingMeans: output.writeRingMeans,
 

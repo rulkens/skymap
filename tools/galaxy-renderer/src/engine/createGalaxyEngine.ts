@@ -49,6 +49,7 @@ import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
 import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
+import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
@@ -351,6 +352,12 @@ export async function createGalaxyEngine(
     fieldUbo,
     sourceTexture: ismMapGenerator.texture,
   });
+  // GPU replacement for `ismMapRingMeans.ts`'s CPU loop — see its own header.
+  const ringReduce = createIsmMapRingReduce(device, {
+    makeShader,
+    ismMapTexture: ismMapGenerator.texture,
+    ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+  });
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // `createFieldPipelines.ts` — the four splat pipelines, the dust-column-map
@@ -457,6 +464,7 @@ export async function createGalaxyEngine(
     device,
     ismMapGenerator,
     orientation: ismMapOrientation,
+    ringReduce,
     render,
     onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
     onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),

@@ -45,6 +45,8 @@ export type IsmMapOutput = {
   readonly cartesianTexture: GPUTexture;
   /** rMin/rMax — dustPresent.wesl's S4 read needs the same log-polar mapping the present pass uses. */
   readonly gridBuffer: GPUBuffer;
+  /** One f32/ring, `createIsmMapRingReduce.ts`'s dispatch target and `ismMapPresent.wesl`'s own read — see that shader's binding-4 comment. */
+  readonly ringMeansBuffer: GPUBuffer;
   readonly mapSampler: GPUSampler;
   /** Writes `grid`'s rMin/rMax into `gridBuffer` — every dispatcher rebuild does this before running (or clearing) whichever generator is active. */
   writeGrid(grid: GalaxyIsmMapGridRadius): void;
@@ -254,6 +256,7 @@ export function createIsmMapOutput(
     dustBlurTexture: ismMapDustBlurTex,
     cartesianTexture,
     gridBuffer: gridUbo,
+    ringMeansBuffer: ringMeansBuf,
     mapSampler,
 
     writeGrid(grid): void {
