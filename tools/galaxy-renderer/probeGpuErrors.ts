@@ -43,6 +43,9 @@ import {
 import { describeGalaxy } from '../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../src/data/milkyWay/milkyWayGalaxyParams';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+import { buildArmSpurs } from '../../src/services/engine/galaxyGenerator/v2/armSpurGeometry';
+import { deriveArmSpurCloudCount } from '../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
 import { computePlaceDustBudget } from './src/engine/ismMap/computePlaceDustBudget';
 import { FIELD_COMPONENT_FLOATS } from './src/engine/field/packFieldUniforms';
 
@@ -994,6 +997,118 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         console.error(
           `  readback:placeDust (smoothDisc) no records zeroed, matching the CPU's own no-survival-filter behaviour`,
+        );
+      },
+    },
+    {
+      // Task 14's own numeric-validation exception — placeArmSpurCloud.wesl
+      // has no CPU reference to diff against either (a fresh shader, not a
+      // port of a still-live CPU twin's exact bytes). Checked instead: (1)
+      // determinism, same bit-identical bar placeDust's own check sets; (2)
+      // count matches deriveArmSpurCloudCount's own CPU budget math for the
+      // boot preset; (3) liveness — every record's amplitude is finite and
+      // positive, the mirror image of placeDust's survival-floor check: the
+      // CPU original (buildArmSpurParticleCloud) never zeroes an individual
+      // placed sprite, so NONE zeroed here is the matching behaviour, not a
+      // gap.
+      name: 'readback:placeArmSpurCloud',
+      run: async (page) => {
+        await settleFrames(page, SETTLE_FRAMES);
+        const first = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            throw new Error(
+              'readback:placeArmSpurCloud — no __probeEngine — the probeReadback gate never installed it',
+            );
+          }
+          const landed = await bridge.requestArmSpurCloudPlacementReadback();
+          if (!landed) return null;
+          return { count: landed.count, offset: landed.offset, records: Array.from(landed.records) };
+        });
+        if (!first) {
+          throw new Error(
+            'readback:placeArmSpurCloud — requestArmSpurCloudPlacementReadback() returned null at boot (no spur cloud reserved — expected one under the boot preset\'s default arms.spurs.enabled=true)',
+          );
+        }
+
+        const second = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestArmSpurCloudPlacementReadback();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!second) {
+          throw new Error(
+            'readback:placeArmSpurCloud — second requestArmSpurCloudPlacementReadback() returned null',
+          );
+        }
+
+        // (1) Determinism — bit-identical, no tolerance: two dispatches at
+        // the same seed are the SAME pure function of a stateless hash.
+        if (first.records.length !== second.length) {
+          throw new Error(
+            `readback:placeArmSpurCloud — length mismatch across two dispatches: ${first.records.length} vs ${second.length}`,
+          );
+        }
+        let mismatchIndex = -1;
+        for (let i = 0; i < first.records.length; i++) {
+          if (first.records[i] !== second[i]) {
+            mismatchIndex = i;
+            break;
+          }
+        }
+        if (mismatchIndex >= 0) {
+          throw new Error(
+            `readback:placeArmSpurCloud — non-deterministic at float ${mismatchIndex}: ` +
+              `${first.records[mismatchIndex]} vs ${second[mismatchIndex]} (expected bit-identical)`,
+          );
+        }
+        console.error(
+          `  readback:placeArmSpurCloud two dispatches bit-identical (${first.count} records)`,
+        );
+
+        // (2) Count matches deriveArmSpurCloudCount's own CPU budget math
+        // for the boot preset (MILKY_WAY_GALAXY_PARAMS + the tool's own
+        // DEFAULT_GALAXY_FIELD_TUNING — fieldTuningSlice.ts's own initial
+        // state, so this is the SAME tuning the boot page actually runs).
+        const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
+        const spurArms = buildArmSpurs(
+          geometry,
+          DEFAULT_GALAXY_FIELD_TUNING.arms.spurs,
+          geometry.seed,
+        );
+        const expectedCount = deriveArmSpurCloudCount(
+          spurArms,
+          geometry,
+          DEFAULT_GALAXY_FIELD_TUNING,
+        );
+        if (first.count !== expectedCount) {
+          throw new Error(
+            `readback:placeArmSpurCloud — count ${first.count} does not match deriveArmSpurCloudCount's own budget math (${expectedCount})`,
+          );
+        }
+        console.error(`  readback:placeArmSpurCloud count matches budget math (${first.count})`);
+
+        // (3) Liveness — every record's amplitude (lane 3 of every
+        // FIELD_COMPONENT_FLOATS-wide record) is finite and strictly
+        // positive. buildArmSpurParticleCloud never zeroes an individual
+        // placed sprite (no survival filter on this tier, unlike dust's
+        // map-density path) — a zero or non-finite amplitude here means the
+        // weighted pick, the rejection loop, or the flux-weight math is
+        // broken, not a legitimate CPU-matching cavity.
+        let nonPositiveCount = 0;
+        for (let i = 0; i < first.count; i++) {
+          const amplitude = first.records[i * FIELD_COMPONENT_FLOATS + 3]!;
+          if (!(Number.isFinite(amplitude) && amplitude > 0)) nonPositiveCount++;
+        }
+        if (nonPositiveCount > 0) {
+          throw new Error(
+            `readback:placeArmSpurCloud — ${nonPositiveCount}/${first.count} records have a non-finite or non-positive amplitude (expected every reserved slot live, no survival filter on this tier)`,
+          );
+        }
+        console.error(
+          `  readback:placeArmSpurCloud all ${first.count} records live (finite, positive amplitude)`,
         );
       },
     },
