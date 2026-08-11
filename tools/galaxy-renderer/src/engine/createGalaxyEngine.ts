@@ -50,6 +50,7 @@ import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
 import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
+import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
@@ -358,6 +359,9 @@ export async function createGalaxyEngine(
     ismMapTexture: ismMapGenerator.texture,
     ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
   });
+  // Task 12's own numeric-validation exception (armRidge.wesl vs.
+  // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
+  const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // `createFieldPipelines.ts` — the four splat pipelines, the dust-column-map
@@ -1086,6 +1090,10 @@ export async function createGalaxyEngine(
       // a decode throw would leave this Promise (and whoever awaits it,
       // e.g. the probe's `page.evaluate`) pending forever instead of failing.
       new Promise((resolve, reject) => model.requestRingMeansReadback(resolve, reject)),
+    // Debug-only: Task 12's own numeric-validation exception — see
+    // createArmRidgeDebugSample.ts's own header. No production caller.
+    requestArmRidgeSampleReadback: (): Promise<Float32Array> =>
+      armRidgeDebugSample.dispatchAndReadback(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1096,6 +1104,7 @@ export async function createGalaxyEngine(
       aggregateUpsample.destroy();
       ismMapGenerator.dispose();
       ismMapOrientation.dispose();
+      armRidgeDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked

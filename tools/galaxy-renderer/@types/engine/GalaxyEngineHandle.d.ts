@@ -43,5 +43,10 @@ export type GalaxyEngineHandle = {
   // `getIsmMapData()`. No production caller — see
   // `createIsmMapReadbacks.ts`'s `requestRingMeans` for the mechanism.
   requestRingMeansReadback(): Promise<Float32Array>;
+  // Debug-only: Task 12's own numeric-validation exception
+  // (`createArmRidgeDebugSample.ts`) — armRidge.wesl vs. armRidgeGeometry.ts,
+  // read by `probeGpuErrors.ts`'s `readback:armRidgeSample` step. No
+  // production caller.
+  requestArmRidgeSampleReadback(): Promise<Float32Array>;
   dispose(): void;
 };

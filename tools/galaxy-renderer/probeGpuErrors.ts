@@ -25,7 +25,15 @@ import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import type { GalaxyEngineHandle } from './@types/engine/GalaxyEngineHandle';
 import type { GalaxyIsmMap } from '../../src/@types/galaxy/GalaxyIsmMap';
+import type { GalaxyDescription } from '../../src/@types/galaxy/GalaxyDescription';
+import type { GalaxyFieldArmRecord } from '../../src/@types/galaxy/GalaxyFieldArmRecord';
+import type { GalaxyFieldTuning } from '../../src/@types/galaxy/GalaxyFieldTuning';
 import { ismMapRingMeans } from '../../src/utils/galaxy/ismMapRingMeans';
+import {
+  armRidgeAngle,
+  armFadeEnvelope,
+  armCrossSigma,
+} from '../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,
@@ -42,6 +50,13 @@ const BOOT_TIMEOUT_MS = 60_000;
 // different preset's larger sums while still catching a genuinely wrong
 // computation (e.g. a channel swap), not just reduction-order noise.
 const RING_MEANS_TOLERANCE = 1e-3;
+
+// `readback:armRidgeSample`'s max-|CPU-GPU| budget — armRidge.wesl's
+// armRidgeAngle/armFadeEnvelope/armCrossSigma vs. armRidgeGeometry.ts's own
+// CPU output at the SAME literal fixture (armRidgeDebugSample.wesl's own
+// consts, mirrored below). f32 vs. f64 trig/exp over small inputs, so this
+// tolerance is generous next to RING_MEANS_TOLERANCE's summed-value budget.
+const ARM_RIDGE_SAMPLE_TOLERANCE = 1e-4;
 
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
@@ -415,6 +430,76 @@ function sweepSections(rows: SectionRow[]): ExerciseStep {
 }
 
 /**
+ * The exact fixture armRidgeDebugSample.wesl's `fixtureGeom`/`fixtureArmA`/
+ * `fixtureArmB`/`LOG_R` hard-code — hand-mirrored, not read back from the
+ * shader (a WGSL const has no run-time path to this file). Only the fields
+ * `armRidgeAngle`/`armFadeEnvelope`/`armCrossSigma` actually read
+ * (waveAmount, armStartRadius, armInnerRampW, diskScaleLen) need to be
+ * real; the rest of `GalaxyDescription`/`GalaxyFieldTuning` is dead weight
+ * this exercise never reaches, hence the cast rather than a full literal.
+ */
+const ARM_RIDGE_FIXTURE_GEOMETRY = {
+  waveAmount: 0.3,
+  armStartRadius: 2.0,
+  armInnerRampW: 1.5,
+  diskScaleLen: 3.0,
+} as unknown as GalaxyDescription;
+
+const ARM_RIDGE_FIXTURE_TUNING = { arms: { widthScale: 1.2 } } as unknown as GalaxyFieldTuning;
+
+const ARM_RIDGE_FIXTURE_ARM_A: GalaxyFieldArmRecord = {
+  phase: 0.5,
+  pitch: 0.3,
+  weight: 0,
+  fadeRadius: 9.0,
+  spanStartLogR: 0,
+  meanderAmp: 0.12,
+  meanderFreq: 1.4,
+  meanderPhase: 0.7,
+  age: 0,
+  clumpF1: 0,
+  clumpP1: 0,
+  clumpF2: 0,
+  clumpP2: 0,
+  waveF1: 2.1,
+  waveP1: 0.4,
+  waveF2: 3.7,
+  waveP2: 1.1,
+};
+
+const ARM_RIDGE_FIXTURE_ARM_B: GalaxyFieldArmRecord = {
+  ...ARM_RIDGE_FIXTURE_ARM_A,
+  phase: -1.2,
+  pitch: 0.42,
+  fadeRadius: 11.5,
+  meanderAmp: 0.2,
+  meanderFreq: 0.9,
+  meanderPhase: -0.3,
+  waveF1: 1.6,
+  waveP1: -0.5,
+  waveF2: 4.2,
+  waveP2: 2.0,
+};
+
+const ARM_RIDGE_FIXTURE_LOG_R = [-0.5, 0.4, 0.9, 1.6];
+
+/** armRidgeDebugSample.wesl's own (angle, fadeEnvelope, crossSigma) triple per sample, computed the CPU way. */
+function armRidgeSampleCpuReference(): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < ARM_RIDGE_FIXTURE_LOG_R.length; i++) {
+    const arm = i % 2 === 0 ? ARM_RIDGE_FIXTURE_ARM_A : ARM_RIDGE_FIXTURE_ARM_B;
+    const logR = ARM_RIDGE_FIXTURE_LOG_R[i]!;
+    const radius = ARM_RIDGE_FIXTURE_GEOMETRY.armStartRadius * Math.exp(logR);
+    out.push(
+      armRidgeAngle(logR, ARM_RIDGE_FIXTURE_GEOMETRY, arm),
+      armFadeEnvelope(radius, ARM_RIDGE_FIXTURE_GEOMETRY, arm),
+      armCrossSigma(radius, ARM_RIDGE_FIXTURE_GEOMETRY, ARM_RIDGE_FIXTURE_TUNING),
+    );
+  }
+  return out;
+}
+
+/**
  * The exercise. Booting alone would have missed most of what the field
  * refactor touches: the debug views, the reduced-resolution targets and the
  * extras path only encode passes (and only rebuild bind groups) once switched
@@ -513,6 +598,53 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           throw new Error(
             `readback:ringMeans — ring ${maxRing}: CPU ${cpuMeans[maxRing]} vs GPU ` +
               `${readback.gpuMeans[maxRing]}, diff ${maxDiff} exceeds tolerance ${RING_MEANS_TOLERANCE}`,
+          );
+        }
+      },
+    },
+    {
+      // Task 12's own numeric-validation exception (armRidge.wesl has no
+      // non-GPU path to check its output against) — same shape as
+      // `readback:ringMeans` above, minus the ismMap generator dependency:
+      // `requestArmRidgeSampleReadback` dispatches its own fixed compute
+      // kernel and maps its output straight back.
+      name: 'readback:armRidgeSample',
+      run: async (page) => {
+        const gpuSamples = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            throw new Error(
+              'readback:armRidgeSample — no __probeEngine — the probeReadback gate never installed it',
+            );
+          }
+          const data = await bridge.requestArmRidgeSampleReadback();
+          return Array.from(data);
+        });
+
+        const cpuSamples = armRidgeSampleCpuReference();
+        if (cpuSamples.length !== gpuSamples.length) {
+          throw new Error(
+            `readback:armRidgeSample — length mismatch: CPU ${cpuSamples.length}, GPU ${gpuSamples.length}`,
+          );
+        }
+        let maxDiff = 0;
+        let maxIndex = -1;
+        for (let i = 0; i < cpuSamples.length; i++) {
+          const diff = Math.abs(cpuSamples[i]! - gpuSamples[i]!);
+          if (diff > maxDiff) {
+            maxDiff = diff;
+            maxIndex = i;
+          }
+        }
+        console.error(
+          `  readback:armRidgeSample max |CPU-GPU| = ${maxDiff.toExponential(3)} at lane ${maxIndex} ` +
+            `(tolerance ${ARM_RIDGE_SAMPLE_TOLERANCE.toExponential(3)})`,
+        );
+        if (maxDiff > ARM_RIDGE_SAMPLE_TOLERANCE) {
+          throw new Error(
+            `readback:armRidgeSample — lane ${maxIndex}: CPU ${cpuSamples[maxIndex]} vs GPU ` +
+              `${gpuSamples[maxIndex]}, diff ${maxDiff} exceeds tolerance ${ARM_RIDGE_SAMPLE_TOLERANCE}`,
           );
         }
       },
