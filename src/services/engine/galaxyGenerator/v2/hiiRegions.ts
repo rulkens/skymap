@@ -231,8 +231,8 @@ function candidateRegionsFromCatalog(
 
 /**
  * World centre of one fluid-sim event, resolved off its (az, ring) log-polar
- * grid coordinate — the SAME radius/angle -> world formula
- * `sampleIsmMapEventPosition.ts` uses for its CDF-sampled placements
+ * grid coordinate — the SAME radius/angle -> world x/z convention
+ * `placeDigMapComplex` below uses for its CDF-sampled placements
  * (`x = r cos θ, y = warpHeight(r, θ), z = r sin θ`), just fed a texel-exact
  * (radius, angle) instead of a CDF-jittered one: a fluid event's own `az`/
  * `ring` already carries the sub-texel jitter `buildGalaxyIsmMapFluidEvents`
