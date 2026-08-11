@@ -36,7 +36,6 @@ import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCova
 import { memoizeLastByKeys } from '../../../../utils/cache/memoizeLastByKeys';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleIsmMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
-import { sampleIsmMapEventPosition } from '../../../../utils/galaxy/sampleIsmMapEventPosition';
 import { ismMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
@@ -361,78 +360,6 @@ function resolveEventLifecyclePopulation(
   return count;
 }
 
-/** Dedicated rng stream salt for the map-position draws — distinct from "HII " (sprite scatter) and "DUST"/"ARMC". */
-const ISM_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
-
-/**
- * Last-value memo for one of the two per-call `buildIsmMapDustCdf` builds
- * below (`memoizeLastByKeys` — see its own header for the Object.is/miss
- * discipline) — each is an O(rings x az [x arms]) pass that a tuning drag
- * outside that tier's own discriminant (map identity, `armBias`,
- * `arms.widthScale`) leaves byte-identical, since `buildIsmMapDustCdf` is a
- * pure function of exactly those inputs. `createGalaxyModel.ts` keeps
- * `ismMap`/`geometry` reference-stable across a `setFieldTuning` call that
- * doesn't touch them, so a single slot per tier is enough: only the CENTRAL
- * galaxy's call ever hands in a non-null `ismMap` (extras pass `null` and
- * never reach these builders), so nothing else contends for the slot within
- * one rebuild.
- */
-const seedingCdfMemo = memoizeLastByKeys<GalaxyIsmMapDustCdf>();
-
-/**
- * applyIsmMapSeeding — a POST-PASS over `planRegions`' output rather than a
- * resolver threaded into it: admission (which events survive `HII_MAX_COUNT`)
- * depends only on luminosity, never on where an event ends up, so replacing
- * `center` afterward changes nothing about which regions exist — it keeps
- * `planRegions` pure and the `ismMapSeeding === 0` path byte-identical, with
- * no seeding-aware branch inside the admission logic itself.
- *
- * FIXED 4 draws per kept region (1 blend decision + 3 from
- * `sampleIsmMapEventPosition`'s CDF sample) whether or not that region takes
- * the map path — `sampleIsmMapEventPosition` runs unconditionally below — so
- * moving the `ismMapSeeding` slider only ever changes which regions swap
- * centres, never the rng draws (and hence positions) of the ones that don't.
- *
- * Weighted by `activity` alone (the short-memory EMA of event stamps), not
- * the `stars` channel: `stars` is a long-lived advected tracer, so a shell
- * CDF-sampled from it would scatter onto 20-100 Myr drifted material with
- * no ionizing stars left — shells
- * need FRESH sites, which `activity` still gives (ignition zeroes gas in
- * the same cell, so this stays anti-correlated with the dust CDF by
- * construction — knots avoid the dust the generator just cleared, the same
- * decorrelation M74 shows, Chevance+2020).
- *
- * NEVER called for `tuning.ismMap.generator === 'fluid'` regions (see
- * `buildHiiRegions`'s call site) — a fluid region's centre already IS a map
- * position (`candidateRegionsFromFluidEvents`'s own log-polar transform), so
- * re-jittering it onto this CDF would undo the exact placement-sim
- * correlation the fluid path exists to create, not refine it.
- */
-function applyIsmMapSeeding(
-  regions: readonly RegionPlan[],
-  geometry: GalaxyDescription,
-  tuning: GalaxyFieldTuning,
-  ismMap: GalaxyIsmMap | null,
-  seed: number,
-): readonly RegionPlan[] {
-  const weight = tuning.hii.ismMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
-  if (weight <= 0 || !ismMap || regions.length === 0) return regions;
-
-  // `activity` alone, no tuning input at all — this CDF's only discriminant
-  // is the map itself, so the cache key is just `ismMap`.
-  const cdf = seedingCdfMemo.get([ismMap], () =>
-    buildIsmMapDustCdf(ismMap, (texel) => texel.activity),
-  );
-  if (!(cdf.total > 0)) return regions;
-
-  const rng = mulberry32(seed ^ ISM_MAP_POSITION_SALT);
-  return regions.map((region) => {
-    const takeMap = rng() < weight;
-    const mapCenter = sampleIsmMapEventPosition(cdf, geometry, rng);
-    return takeMap ? { ...region, center: mapCenter } : region;
-  });
-}
-
 /**
  * A DIG/association complex's local flow-direction frame — the azimuthal
  * tangent (`warpSurfaceFrame`), the default "flow direction" since both
@@ -613,7 +540,7 @@ function buildDigVeil(
   // Stale-stored-tuning guard: a preset saved before this knob existed
   // carries an `hii` section with no `dig` object at all — missing means
   // DIG OFF, the same "undefined = pre-feature stored tuning" discipline
-  // `applyIsmMapSeeding` uses for `ismMapSeeding` just above.
+  // this tier's own `digBrightness ?? 1` guard uses just below.
   const dig = tuning.hii.dig;
   if (!dig || !ismMap) return [];
   const fraction = Math.min(0.999, Math.max(0, dig.fraction));
@@ -765,15 +692,9 @@ export function buildHiiRegionsWithSegments(
 
   const candidateRegions = planRegions(geometry, tuning, starFormation, seed);
   if (candidateRegions.length === 0) return EMPTY_HII_RESULT;
-  // Fluid-sourced regions skip the map-seeding post-pass entirely — see
-  // `applyIsmMapSeeding`'s own header for why re-jittering them would be a
-  // regression, not a refinement.
-  const regions = isFluid
-    ? candidateRegions
-    : applyIsmMapSeeding(candidateRegions, geometry, tuning, ismMap, seed);
 
   let luminositySum = 0;
-  for (const region of regions) luminositySum += region.luminosity;
+  for (const region of candidateRegions) luminositySum += region.luminosity;
   if (!(luminositySum > 0)) return EMPTY_HII_RESULT;
 
   const totalFlux = tierFlux(geometry, tuning);
@@ -789,7 +710,7 @@ export function buildHiiRegionsWithSegments(
   const rng = mulberry32(seed ^ 0x48494920); // "HII "
   const clusterShare =
     Math.min(1, Math.max(0, tuning.hii.shells.clusterStrength ?? 0.6)) * CLUSTER_FLUX_SHARE_MAX;
-  // Stale-stored-tuning guard, same discipline `ismMapSeeding` uses just
+  // Stale-stored-tuning guard, same discipline `radiusScale ?? 1` uses just
   // above: a preset saved before this knob existed carries no `texture` key.
   const shellTextureWeight = tuning.hii.shells.texture ?? 0;
   // This tier's own gain (board item 19) — applied ONLY to the amplitudes
@@ -812,7 +733,7 @@ export function buildHiiRegionsWithSegments(
   // flux is anchored to this (Hα), not to `totalFlux`.
   let shellFluxSum = 0;
 
-  for (const region of regions) {
+  for (const region of candidateRegions) {
     const regionFlux = (totalFlux * region.luminosity) / luminositySum;
     const clusterFlux = region.clusterCount > 0 ? regionFlux * clusterShare : 0;
     const shellFlux = regionFlux - clusterFlux;
@@ -867,7 +788,7 @@ export function buildHiiRegionsWithSegments(
     }
   }
   // Checkpoint, not a formula: the shell/cluster tier ends exactly here,
-  // whatever `regions`' admission produced.
+  // whatever `candidateRegions`' admission produced.
   const shellsEnd = out.length;
 
   // Recent-event population behind DIG's own complex count (task #10) — one
