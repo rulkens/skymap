@@ -87,6 +87,7 @@ import type {
   IsmMapPlaceArmSpurCloud,
   PlaceArmSpurCloudDispatchInput,
 } from '../ismMap/createIsmMapPlaceArmSpurCloud';
+import { SPUR_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
@@ -228,12 +229,30 @@ export type GalaxyModel = {
   /**
    * Debug-only: dispatches `placeArmSpurCloud.wesl` fresh into its own
    * encoder and maps the reservation's slot range straight back — the
-   * probe's own determinism/budget/liveness numeric exception (no
-   * production caller). `null` when nothing is reserved this rebuild
-   * (`spurCloudReservation` is null — central galaxy only today, see
-   * `centralFieldMixtureAndSpurReservation`'s own doc).
+   * probe's own determinism/budget/liveness/flux-parity numeric exception
+   * (no production caller). `flux` is the SAME `spurFlux` uniform the
+   * dispatch used, returned alongside the records so a caller can check the
+   * placed amplitudes actually encode that much flux (raw, pre-Task-15-
+   * renorm — see `readback:placeArmSpurCloud`'s own probe step). `null`
+   * when nothing is reserved this rebuild (`spurCloudReservation` is null —
+   * central galaxy only today, see `centralFieldMixtureAndSpurReservation`'s
+   * own doc).
    */
   requestArmSpurCloudPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly flux: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
+   * Debug-only: COPIES the reservation's CURRENT slot range out of the LIVE
+   * `fieldComps` buffer, without dispatching anything — see
+   * `spurCloudPeekBuffer`'s own doc for why this is a distinct method from
+   * `requestArmSpurCloudPlacementReadback` rather than a flag on it (that
+   * one's own fresh re-dispatch would mask exactly the bug this one exists
+   * to catch). `null` when nothing is reserved.
+   */
+  requestArmSpurCloudBufferPeek(): Promise<{
     readonly count: number;
     readonly offset: number;
     readonly records: Float32Array;
@@ -851,6 +870,23 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * spurCloudPeekBuffer — a plain COPY_DST|MAP_READ target for
+   * `requestArmSpurCloudBufferPeek` (below): unlike
+   * `requestArmSpurCloudPlacementReadback`, which re-DISPATCHES
+   * `placeArmSpurCloud.wesl` fresh every call (masking whether the
+   * PRODUCTION `ensureFresh()`/`spurCloudPlacementRebuild` path actually
+   * kept the buffer filled), this one only ever COPIES whatever is
+   * currently sitting in `fieldComps` — the probe's own regression check
+   * for the vanish-on-dust-only-change bug needs exactly that: a read that
+   * cannot itself paper over a stale keyed rebuild.
+   */
+  const spurCloudPeekBuffer = device.createBuffer({
+    label: 'galaxy:spurCloudPeek',
+    size: SPUR_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  /**
    * repackFieldComponents — central galaxy's emission mixture, then every
    * extra's (already in world space), then the central galaxy's dust
    * RESERVATION last, into one `fieldComps` write. Runs whenever a mixture
@@ -868,6 +904,20 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * Dust trails every emission component (never interleaved) so
    * `dustOffset == fieldCounts.emission` always holds without a separate
    * bookkeeping pass — see io.wesl's layout comment.
+   *
+   * `fieldMixture`'s own spur-cloud slice is ALSO reserved-but-zero here
+   * (unlike dust's separately-appended tail, it rides inline inside
+   * `emission` — see `GalaxyFieldMixtureResult`'s own doc): every call to
+   * this function overwrites the WHOLE buffer from the CPU-held arrays, so
+   * any caller that reaches this — including one whose own trigger has
+   * nothing to do with the spur tier, e.g. a dust-only `setFieldTuning`
+   * patch — clobbers whatever `spurCloudPlacementRebuild` last GPU-filled
+   * back to zero. Invalidating it HERE, unconditionally, is what makes that
+   * true regardless of which caller reached this function — the alternative
+   * (each caller invalidating for itself) is exactly the gap Task 14's
+   * review caught: `setFieldTuning`'s dust-only branch called this without
+   * ever re-invalidating the spur rebuild, so the vanish stuck until an
+   * unrelated arms/disc change happened to fire it again.
    */
   function repackFieldComponents(): void {
     const emission: GalaxyFieldComponent[] = [...fieldMixture];
@@ -878,6 +928,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       primary: fieldMixture.length,
       dust: dustCount,
     };
+    spurCloudPlacementRebuild.invalidate();
     const packedEmission = packFieldComponents(emission);
     if (dustCount <= 0) {
       fieldComps.write(packedEmission);
@@ -1037,9 +1088,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // dust `share`, cloud counts, colours — leave the grid untouched and the
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(ismMapGridRadius(fieldGeometry));
+    // `spurCloudPlacementRebuild` is invalidated inside `repackFieldComponents`
+    // below, not here — see that function's own doc for why ownership lives
+    // there (whoever zeroes the slots owns the invalidation).
     ({ mixture: fieldMixture, spurCloudReservation } =
       centralFieldMixtureAndSpurReservation(fieldGeometry));
-    spurCloudPlacementRebuild.invalidate();
     ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
       fieldGeometry,
       currentStarFormation(),
@@ -1103,9 +1156,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     if (fieldMoved || hiiMoved) {
       if (fieldGeometry) {
         if (fieldMoved) {
+          // Invalidation lives in `repackFieldComponents` (below, whichever
+          // branch of this function reaches it), not here.
           ({ mixture: fieldMixture, spurCloudReservation } =
             centralFieldMixtureAndSpurReservation(fieldGeometry));
-          spurCloudPlacementRebuild.invalidate();
         }
         if (hiiMoved) {
           ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
@@ -1340,6 +1394,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     async requestArmSpurCloudPlacementReadback(): Promise<{
       readonly count: number;
       readonly offset: number;
+      readonly flux: number;
       readonly records: Float32Array;
     } | null> {
       const reservation = spurCloudReservation;
@@ -1347,7 +1402,35 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       const records = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
         spurCloudDispatchInput(fieldGeometry, reservation),
       );
-      return { count: reservation.count, offset: reservation.offset, records };
+      return {
+        count: reservation.count,
+        offset: reservation.offset,
+        flux: reservation.flux,
+        records,
+      };
+    },
+
+    async requestArmSpurCloudBufferPeek(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly records: Float32Array;
+    } | null> {
+      const reservation = spurCloudReservation;
+      if (!reservation || reservation.count <= 0) return null;
+      const byteSize = reservation.count * FIELD_COMPONENT_FLOATS * 4;
+      const byteOffset = reservation.offset * FIELD_COMPONENT_FLOATS * 4;
+      const enc = device.createCommandEncoder({ label: 'galaxy:spurCloudPeek' });
+      enc.copyBufferToBuffer(fieldComps.buffer, byteOffset, spurCloudPeekBuffer, 0, byteSize);
+      device.queue.submit([enc.finish()]);
+      await spurCloudPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+      try {
+        const records = new Float32Array(
+          spurCloudPeekBuffer.getMappedRange(0, byteSize).slice(0),
+        );
+        return { count: reservation.count, offset: reservation.offset, records };
+      } finally {
+        spurCloudPeekBuffer.unmap();
+      }
     },
 
     starInstances(): InstanceDraw[] {
@@ -1376,6 +1459,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       fieldComps.destroy();
       hiiComps.destroy();
       bubbleComps.destroy();
+      spurCloudPeekBuffer.destroy();
       genUbo.destroy();
     },
   };

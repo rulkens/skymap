@@ -1134,6 +1134,7 @@ export async function createGalaxyEngine(
     // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
     requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),
+    requestArmSpurCloudBufferPeek: () => model.requestArmSpurCloudBufferPeek(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();

@@ -86,10 +86,24 @@ export type GalaxyEngineHandle = {
   // against) — dispatches fresh and maps the spur-cloud reservation's slot
   // range straight back, read by `probeGpuErrors.ts`'s
   // `readback:placeArmSpurCloud` step (determinism, budget count, survival/
-  // liveness). No production caller. `null` when nothing is reserved this
-  // rebuild (central galaxy only — see `createGalaxyModel.ts`'s
+  // liveness, and flux parity against `flux` — the SAME `spurFlux` uniform
+  // the dispatch used). No production caller. `null` when nothing is
+  // reserved this rebuild (central galaxy only — see `createGalaxyModel.ts`'s
   // `spurCloudReservation`).
   requestArmSpurCloudPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly flux: number;
+    readonly records: Float32Array;
+  } | null>;
+  // Debug-only: Task 14 fix round 1's own regression exception — COPIES the
+  // reservation's CURRENT slot range out of the LIVE `fieldComps` buffer,
+  // without dispatching `placeArmSpurCloud.wesl` first (unlike the readback
+  // above, which always re-dispatches fresh and so cannot observe whether
+  // the PRODUCTION `ensureFresh()` path actually kept the buffer filled).
+  // Read by `probeGpuErrors.ts`'s `readback:placeArmSpurCloud` step's own
+  // "survives a dust-only tuning change" assertion. No production caller.
+  requestArmSpurCloudBufferPeek(): Promise<{
     readonly count: number;
     readonly offset: number;
     readonly records: Float32Array;

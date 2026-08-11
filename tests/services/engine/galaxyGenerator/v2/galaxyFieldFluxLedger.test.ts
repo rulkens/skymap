@@ -41,8 +41,15 @@ function componentFlux(component: GalaxyFieldComponent): number {
  * post-submit, off this CPU path entirely (`GalaxyFieldMixtureResult`'s own
  * doc). `reservation.flux` is exactly the flux `pushArmRidges`' debit
  * credited to this tier, so folding it back in here keeps this ledger
- * measuring the SAME quantity it always has — total emitted light, not "total
- * light this array's own amplitudes happen to sum to".
+ * checking what it CAN honestly check from Vitest alone (no WebGPU here):
+ * that `buildGalaxyFieldMixture`'s own debit/credit bookkeeping across
+ * disc/ridge/cloud/spur is self-consistent. It does NOT check that
+ * `placeArmSpurCloud.wesl` actually encodes `reservation.flux` worth of
+ * emission into the amplitudes/covariances it writes — a wrong TAU_ROOT3 or
+ * swapped sigma in the shader is invisible here. That check lives in
+ * `probeGpuErrors.ts`'s `readback:placeArmSpurCloud` step (the only place in
+ * the repo that can execute WGSL), which sums the GPU-placed records' own
+ * reconstructed flux and compares it against this SAME `reservation.flux`.
  */
 function totalFlux(result: GalaxyFieldMixtureResult): number {
   const componentsFlux = result.components.reduce((sum, component) => sum + componentFlux(component), 0);
