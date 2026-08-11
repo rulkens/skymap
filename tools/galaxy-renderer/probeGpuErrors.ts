@@ -30,6 +30,8 @@ import type { GalaxyFieldArmRecord } from '../../src/@types/galaxy/GalaxyFieldAr
 import type { GalaxyFieldTuning } from '../../src/@types/galaxy/GalaxyFieldTuning';
 import { ismMapRingMeans } from '../../src/utils/galaxy/ismMapRingMeans';
 import { buildIsmMapDustCdf } from '../../src/utils/galaxy/buildIsmMapDustCdf';
+import { ismMapRingIndexForRadius } from '../../src/utils/galaxy/ismMapRingIndexForRadius';
+import { arrayMean } from '../../src/utils/math/arrayMean';
 import {
   armRidgeAngle,
   armFadeEnvelope,
@@ -716,6 +718,13 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // alongside the GPU prefix — the CPU reference below runs the real
       // `buildIsmMapDustCdf` over that same data, no hand-duplicated
       // fixture literal to drift out of sync with the shader's own.
+      //
+      // Task 7's fix round: the density callback below is no longer a bare
+      // channel read — it mirrors dustParticleCloud.ts's density() closure
+      // (:208-218) exactly (ring-mean-normalised, capped by the SAME
+      // `ringCap` the GPU fixture dispatched with), so this comparison
+      // proves `dustPlacementCap` is live on the GPU path, not just that a
+      // bare-channel scan still agrees with itself.
       name: 'readback:ismMapDustCdfScan',
       run: async (page) => {
         const readback = await page.evaluate(async () => {
@@ -736,7 +745,17 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           rMax: readback.grid.rMax,
           data: Float32Array.from(readback.data),
         };
-        const cpuCdf = buildIsmMapDustCdf(cpuMap, (texel) => texel.dust);
+        const ringMeans = ismMapRingMeans(cpuMap, (texel) => texel.dust);
+        const globalMean = arrayMean(ringMeans);
+        const cap = readback.ringCap;
+        const cpuCdf = buildIsmMapDustCdf(cpuMap, (texel, radius) => {
+          const ring = ismMapRingIndexForRadius(radius, cpuMap.rings, cpuMap.rMin, cpuMap.rMax);
+          const ringMean = ringMeans[ring]!;
+          if (texel.dust <= 0 || ringMean <= 0 || globalMean <= 0) return 0;
+          const local = texel.dust / ringMean;
+          const capped = cap > 0 ? Math.min(local, cap) : local;
+          return (ringMean / globalMean) * capped;
+        });
         if (cpuCdf.prefix.length !== readback.prefix.length) {
           throw new Error(
             `readback:ismMapDustCdfScan — length mismatch: CPU ${cpuCdf.prefix.length}, GPU ${readback.prefix.length}`,
@@ -883,6 +902,98 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         console.error(
           `  readback:placeDust survival floor zeroed ${zeroAmplitudeCount}/${first.count} records`,
+        );
+
+        // Mode 1 (smoothDisc, the no-map fallback) — placeDust.wesl's OWN
+        // in-shader gate forces this mode whenever generatorIsFluid is
+        // false, so requesting the readback with `forceGeneratorIsFluid:
+        // false` exercises the branch buildClusteredDiscPlacementChild's
+        // mode 1 owns, pinning it before Task 13 adds mode 2 to the same
+        // function. Deliberately NOT `setFieldTuning({ ismMap: { generator:
+        // 'none' } })` — that DOES flip the tuning for real and hits an
+        // unrelated, pre-existing bug in `ismMapGenerator.rebuild`'s own
+        // disabled-generator clear path (its `writeTexture` calls target
+        // `ismMapTex`/`ismMapDustBlurTex`/`ismMapCartesianTex`, none of
+        // which carry `COPY_DST` — out of this task's scope to fix, flagged
+        // in the report instead). `forceGeneratorIsFluid` overrides only
+        // placeDust.wesl's OWN uniform for this one dispatch, leaving the
+        // live tuning (and every other texture) untouched.
+        const smoothFirst = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDustPlacementReadback({
+            forceGeneratorIsFluid: false,
+          });
+          if (!landed) return null;
+          return { count: landed.count, records: Array.from(landed.records) };
+        });
+        if (!smoothFirst) {
+          throw new Error(
+            'readback:placeDust (smoothDisc) — requestDustPlacementReadback() returned null',
+          );
+        }
+        const smoothSecond = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDustPlacementReadback({
+            forceGeneratorIsFluid: false,
+          });
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!smoothSecond) {
+          throw new Error(
+            'readback:placeDust (smoothDisc) — second requestDustPlacementReadback() returned null',
+          );
+        }
+
+        if (smoothFirst.records.length !== smoothSecond.length) {
+          throw new Error(
+            `readback:placeDust (smoothDisc) — length mismatch across two dispatches: ${smoothFirst.records.length} vs ${smoothSecond.length}`,
+          );
+        }
+        let smoothMismatchIndex = -1;
+        for (let i = 0; i < smoothFirst.records.length; i++) {
+          if (smoothFirst.records[i] !== smoothSecond[i]) {
+            smoothMismatchIndex = i;
+            break;
+          }
+        }
+        if (smoothMismatchIndex >= 0) {
+          throw new Error(
+            `readback:placeDust (smoothDisc) — non-deterministic at float ${smoothMismatchIndex}: ` +
+              `${smoothFirst.records[smoothMismatchIndex]} vs ${smoothSecond[smoothMismatchIndex]} (expected bit-identical)`,
+          );
+        }
+        console.error(
+          `  readback:placeDust (smoothDisc) two dispatches bit-identical (${smoothFirst.count} records)`,
+        );
+
+        // computePlaceDustBudget never reads tuning.ismMap.generator — the
+        // reservation count must be UNCHANGED from the mapDensity check above.
+        if (smoothFirst.count !== expectedBudget.count) {
+          throw new Error(
+            `readback:placeDust (smoothDisc) — count ${smoothFirst.count} does not match computePlaceDustBudget's own budget math (${expectedBudget.count})`,
+          );
+        }
+        console.error(
+          `  readback:placeDust (smoothDisc) count matches budget math (${smoothFirst.count})`,
+        );
+
+        // dustParticleCloud.ts's smoothDisc path never runs S3's survival
+        // filter (alive is always true off the map path, dustParticleCloud.ts:264)
+        // — matching the CPU exactly means EVERY record's amplitude is
+        // nonzero here, the mirror image of the mapDensity assertion above.
+        let smoothZeroAmplitudeCount = 0;
+        for (let i = 0; i < smoothFirst.count; i++) {
+          if (smoothFirst.records[i * FIELD_COMPONENT_FLOATS + 3] === 0) smoothZeroAmplitudeCount++;
+        }
+        if (smoothZeroAmplitudeCount > 0) {
+          throw new Error(
+            `readback:placeDust (smoothDisc) — ${smoothZeroAmplitudeCount}/${smoothFirst.count} records have amplitude exactly 0; the CPU smoothDisc path never zeroes (no survival filter off the map path)`,
+          );
+        }
+        console.error(
+          `  readback:placeDust (smoothDisc) no records zeroed, matching the CPU's own no-survival-filter behaviour`,
         );
       },
     },

@@ -208,8 +208,13 @@ export type GalaxyModel = {
    * maps the dust slot range straight back — the probe's own determinism/
    * survival-floor numeric exception (no production caller). `null` when
    * nothing is reserved this rebuild (`dustBudget` is null).
+   * `forceGeneratorIsFluid`, when given, overrides the LIVE
+   * `fieldTuning.ismMap.generator` for this ONE dispatch only — see
+   * `dustDispatchInput`'s own doc for why the probe uses this instead of
+   * actually flipping the tuning to exercise placeDust.wesl's mode-1
+   * (smoothDisc) branch.
    */
-  requestDustPlacementReadback(): Promise<{
+  requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
     readonly count: number;
     readonly records: Float32Array;
   } | null>;
@@ -550,9 +555,46 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
+   * dispatchDustCdfScan — (re)scans the CURRENT `ismMapTex` with the CURRENT
+   * `cloud.dustPlacementCap`, own encoder/submit. Two independent triggers
+   * call this, not one: the map's own CONTENT changes only from
+   * `rebuildIsmMap` (a fluid step/regenerate), but the SCAN's cap input can
+   * also move on its own via a bare dust-tuning drag (`rebuildDustMixture`,
+   * no map regenerate involved) — missing either trigger leaves
+   * `dustPlacementCap` (or a stepped map) stale in `prefixBuf` until some
+   * unrelated later rebuild happens to re-scan it. No-op off the fluid
+   * generator or with no geometry yet — same gate `recomputeIsmMapSeedingMeans`
+   * and the readback landings' `!== 'none'` checks already use.
+   */
+  function dispatchDustCdfScan(): void {
+    if (!fieldGeometry || fieldTuning.ismMap.generator !== 'fluid') return;
+    const grid = ismMapGridRadiusOrDefault(fieldGeometry);
+    const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDustCdfScanRebuild' });
+    // `ringCap` reproduces dustParticleCloud.ts's density() ring-mean-
+    // normalised, capped placement density (ismMapDustCdfScan.wesl's own
+    // doc) — the knob `cloud.dustPlacementCap` controls, live again for GPU
+    // placement.
+    dustCdfScan.dispatchScan(enc, {
+      ismMapTexture: ismMapGenerator.texture,
+      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+      weights: {
+        kind: 'channel',
+        channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 },
+        ringCap: currentDust().cloud.dustPlacementCap ?? 0,
+      },
+      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+    });
+    device.queue.submit([enc.finish()]);
+    dustPlacementRebuild.invalidate();
+  }
+
+  /**
    * rebuildDustMixture — recomputes the central galaxy's dust RESERVATION
    * (`computePlaceDustBudget`'s pure budget math off the CACHED geometry +
-   * dust params) and invalidates `dustPlacementRebuild` below. Gated on
+   * dust params), re-scans the CDF for the CURRENT `cloud.dustPlacementCap`
+   * (`dispatchDustCdfScan` — the map itself may already be fresh from an
+   * earlier `rebuildIsmMap`, but the cap value is this function's own to
+   * apply), and invalidates `dustPlacementRebuild` below. Gated on
    * `fieldTuning.dust.enabled` the same way `disc.enabled`/`arms.enabled`
    * gate their shader loops (an off pill skips the work entirely, not just
    * zeroes tau).
@@ -573,6 +615,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       fieldGeometry && fieldTuning.dust.enabled
         ? computePlaceDustBudget(fieldGeometry, dust)
         : null;
+    dispatchDustCdfScan();
     dustPlacementRebuild.invalidate();
     orientationDiagnostics.noteDelta({ count: 0, sumAbsDeltaDeg: 0, maxAbsDeltaDeg: 0 });
     reportOrientationDiagnostics();
@@ -642,18 +685,17 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     });
     if (fieldTuning.ismMap.generator === 'fluid') {
       const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
+      // ringMeansBuffer written HERE; dispatchDustCdfScan's own LATER submit
+      // reads it — WebGPU's cross-SUBMIT ordering on one queue (not just
+      // cross-pass within one encoder) is what makes that safe with no
+      // barrier of our own (createIsmMapFluidRunner.ts's own doc covers the
+      // cross-pass case this extends to cross-submit).
       ringReduce.dispatchRingMeans(enc);
-      // Dust-weight prefix sum over the FRESH ismMapTex, same encoder as the
-      // ring-means reduction above — placeDust.wesl's binary search needs
-      // this current before `dustPlacementRebuild` next dispatches, and
-      // WebGPU submission order alone guarantees that (see this file's own
-      // "Rebuild-encode seam" doc; no readback in the loop).
-      dustCdfScan.dispatchScan(enc, {
-        ismMapTexture: ismMapGenerator.texture,
-        grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
-        weights: { kind: 'channel', channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 } },
-      });
       device.queue.submit([enc.finish()]);
+      // Dust-weight prefix sum over the FRESH ismMapTex/ringMeansBuffer —
+      // see dispatchDustCdfScan's own doc for why this ALSO has an
+      // independent trigger (a bare cap drag) besides this one.
+      dispatchDustCdfScan();
     }
     scheduleIsmMapReadback(grid);
     orientationTexRebuild.invalidate();
@@ -690,13 +732,26 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   function dustDispatchInput(
     geometry: GalaxyDescription,
     budget: PlaceDustBudget,
+    /**
+     * Debug-only override for `requestDustPlacementReadback`'s own
+     * numeric-validation exception: forcing this to `false` exercises
+     * placeDust.wesl's mode-1 (smoothDisc) branch directly, WITHOUT
+     * actually flipping `fieldTuning.ismMap.generator` through
+     * `setFieldTuning`/`rebuildIsmMap` — the real 'none' transition hits an
+     * unrelated, pre-existing bug in `ismMapGenerator.rebuild`'s own
+     * disabled-generator clear path (its `writeTexture` calls target
+     * textures missing `COPY_DST`, out of this task's scope to fix). The
+     * production path (`dustPlacementRebuild`) never passes this — it
+     * always reads the LIVE tuning.
+     */
+    forceGeneratorIsFluid?: boolean,
   ): PlaceDustDispatchInput {
     const grid = ismMapGridRadiusOrDefault(geometry);
     return {
       seed: currentSeed(),
       budget,
       dustOffset: fieldCounts.emission,
-      generatorIsFluid: fieldTuning.ismMap.generator === 'fluid',
+      generatorIsFluid: forceGeneratorIsFluid ?? fieldTuning.ismMap.generator === 'fluid',
       grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
       warp: {
         warpStrength: geometry.warpStrength,
@@ -1160,14 +1215,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       readbacks.requestRingMeans(onLand, onError);
     },
 
-    async requestDustPlacementReadback(): Promise<{
+    async requestDustPlacementReadback(opts): Promise<{
       readonly count: number;
       readonly records: Float32Array;
     } | null> {
       const budget = dustBudget;
       if (!fieldGeometry || !budget) return null;
       const records = await placeDust.dispatchAndReadbackDust(
-        dustDispatchInput(fieldGeometry, budget),
+        dustDispatchInput(fieldGeometry, budget, opts?.forceGeneratorIsFluid),
       );
       return { count: budget.count, records };
     },

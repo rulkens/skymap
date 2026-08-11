@@ -62,14 +62,22 @@ export type GalaxyEngineHandle = {
     };
     readonly data: readonly number[];
     readonly prefix: readonly number[];
+    // The ring cap this dispatch used (createIsmMapDustCdfScanDebugSample.ts's
+    // DEBUG_RING_CAP) — returned rather than re-imported on the probe's
+    // Node/tsx side, which cannot resolve that module's `?static` shader import.
+    readonly ringCap: number;
   }>;
   // Debug-only: Task 7's own numeric-validation exception
   // (`placeDust.wesl` has no non-GPU path to check its output against) —
   // dispatches fresh and maps the dust slot range straight back, read by
   // `probeGpuErrors.ts`'s `readback:placeDust` step (determinism, budget
   // count, survival-floor zeroing). No production caller. `null` when
-  // nothing is reserved this rebuild.
-  requestDustPlacementReadback(): Promise<{
+  // nothing is reserved this rebuild. `forceGeneratorIsFluid`, when given,
+  // overrides the live tuning for THIS dispatch only — see
+  // createGalaxyModel.ts's `dustDispatchInput` for why the probe uses this
+  // (instead of flipping `ismMap.generator` through `setFieldTuning`) to
+  // exercise placeDust.wesl's mode-1 (smoothDisc) branch.
+  requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
     readonly count: number;
     readonly records: Float32Array;
   } | null>;

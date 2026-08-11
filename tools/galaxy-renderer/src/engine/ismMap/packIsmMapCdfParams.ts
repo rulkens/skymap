@@ -8,7 +8,7 @@
  * `Float32Array` packs the whole struct with no `DataView` needed.
  */
 
-/** Float count of `ismMapDustCdfScan.wesl`'s `IsmMapCdfParams` — 4 (channelWeights) + 6 scalars, rounded up to a whole 16-byte row (2 floats of slack). */
+/** Float count of `ismMapDustCdfScan.wesl`'s `IsmMapCdfParams` — 4 (channelWeights) + 7 scalars, rounded up to a whole 16-byte row (1 float of slack). */
 export const ISM_MAP_CDF_PARAMS_FLOATS = 12;
 
 /** Byte size of the params struct, for `createBuffer`. */
@@ -30,6 +30,8 @@ export type IsmMapCdfParamsInput = {
   /** <=0 (the default) skips the arm-envelope sum entirely — see evalWeight's own doc. */
   readonly armBias?: number;
   readonly armCount?: number;
+  /** dustPlacementCap (GalaxyDustCloudParams) — <=0 (the default) is that field's own "uncapped" convention. Only the armBias<=0 ('channel') path reads it; Task 8's armBias>0 path ignores it by construction. */
+  readonly cap?: number;
 };
 
 export function packIsmMapCdfParams(input: IsmMapCdfParamsInput): Float32Array {
@@ -45,9 +47,9 @@ export function packIsmMapCdfParams(input: IsmMapCdfParamsInput): Float32Array {
   out[7] = input.az;
   out[8] = input.armBias ?? 0;
   out[9] = input.armCount ?? 0;
+  out[10] = input.cap ?? 0;
 
   // Slack past the struct, written rather than left to the allocator.
-  out[10] = 0;
   out[11] = 0;
 
   return out;

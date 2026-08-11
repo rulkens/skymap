@@ -38,6 +38,7 @@ const SENTINEL = {
   az: 5104,
   armBias: 5105,
   armCount: 5106,
+  cap: 5107,
 } as const;
 
 const input: IsmMapCdfParamsInput = {
@@ -47,6 +48,7 @@ const input: IsmMapCdfParamsInput = {
   az: SENTINEL.az,
   armBias: SENTINEL.armBias,
   armCount: SENTINEL.armCount,
+  cap: SENTINEL.cap,
   channelWeights: { gas: 5201, stars: 5202, activity: 5203, dust: 5204 },
 };
 
@@ -82,7 +84,7 @@ describe('packIsmMapCdfParams ↔ milkyWay/ismMap/ismMapDustCdfScan.wesl IsmMapC
     }
   });
 
-  it('defaults armBias/armCount to 0 when omitted (channel-only weight table)', () => {
+  it('defaults armBias/armCount/cap to 0 when omitted (channel-only weight table)', () => {
     const channelOnly = packIsmMapCdfParams({
       rMin: 1,
       rMax: 2,
@@ -92,7 +94,9 @@ describe('packIsmMapCdfParams ↔ milkyWay/ismMap/ismMapDustCdfScan.wesl IsmMapC
     });
     const armBiasOffset = struct.offsets.get('armBias')! / 4;
     const armCountOffset = struct.offsets.get('armCount')! / 4;
+    const capOffset = struct.offsets.get('cap')! / 4;
     expect(channelOnly[armBiasOffset]).toBe(0);
     expect(channelOnly[armCountOffset]).toBe(0);
+    expect(channelOnly[capOffset]).toBe(0);
   });
 });

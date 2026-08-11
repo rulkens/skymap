@@ -6,16 +6,18 @@
 // thread, sequential, the SAME order buildIsmMapDustCdf.ts's outer loop
 // carries its own running sum through); csApplyRingOffsets adds that
 // offset back over the full grid. Per-texel weight is a small uniform
-// table, not a bare channel read — dust density (Task 7) is a channel
-// dot; arm-biased activity (Task 8) reweights by a packed per-(ring,arm)
-// envelope mirroring buildArmProximityEnvelope/armBiasedDensity (hiiRegions.ts:484-539).
+// table, not a bare channel read — dust density (Task 7) is the
+// ring-mean-normalised, optionally capped, channel dot dustParticleCloud.ts's
+// density() closure computes (:208-218); arm-biased activity (Task 8)
+// reweights by a packed per-(ring,arm) envelope mirroring
+// buildArmProximityEnvelope/armBiasedDensity (hiiRegions.ts:484-539).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
 const ISM_MAP_CDF_SCAN_WORKGROUP_SIZE: u32 = 256u;
 const ISM_MAP_CDF_TWO_PI: f32 = 6.28318530717959;
 
-// 6 scalar members past the vec4 (40 raw bytes) — the uniform address
+// 7 scalar members past the vec4 (44 raw bytes) — the uniform address
 // space rounds the struct up to 48 (a multiple of its own 16-byte
 // alignment) with no named pad field needed, same as ismMapFluidStep.wesl's
 // IsmMapFluidConstants.
@@ -27,6 +29,11 @@ struct IsmMapCdfParams {
   az: f32,
   armBias: f32,
   armCount: f32,
+  // dustPlacementCap (GalaxyDustCloudParams) — <=0 is that field's own
+  // "uncapped" convention (evalWeight's local ratio passes through
+  // unclamped). ONLY read in the armBias<=0 branch — Task 8's armBiased
+  // path never touches this field, by construction (see evalWeight).
+  cap: f32,
 }
 
 // Packed per-(ring,arm) envelope entry — buildArmProximityEnvelope's
@@ -43,6 +50,12 @@ struct IsmMapCdfArmEnvelopeEntry {
 @group(0) @binding(2) var<storage, read> armEnvelopeBuf: array<IsmMapCdfArmEnvelopeEntry>;
 @group(0) @binding(3) var<storage, read_write> prefixBuf: array<f32>;
 @group(0) @binding(4) var<storage, read_write> ringTotalsBuf: array<f32>;
+// ringReduce.wesl's own output (dust-channel-only, per that file's own
+// header) — the SAME per-ring divisor dustParticleCloud.ts's density()
+// closure reads. Always bound, whether the armBias<=0 branch reads it or
+// not: evalWeight references this binding statically, so every caller
+// (Task 8's armBiased dispatch included) must bind SOMETHING here.
+@group(0) @binding(5) var<storage, read> ringMeansBuf: array<f32>;
 
 // ismMapDustRingEdges — WGSL mirror of ismMapDustRingEdges.ts: ring's
 // inner/outer radius, bisected against its neighbours at their geometric
@@ -62,20 +75,45 @@ fn ismMapDustRingEdges(ring: u32, rings: u32, rMin: f32, rMax: f32) -> vec2<f32>
   return vec2<f32>(rInner, rOuter);
 }
 
-// evalWeight — base channel weight, optionally reweighted toward the
-// nearest arm ridge (armBiasedDensity, hiiRegions.ts:527-539): armBias<=0
-// is the ONLY short-circuit (a dust-weight caller pays nothing for it).
-// armCount==0u is NOT special-cased — the loop below just runs zero times,
-// leaving envelope at 0, which is buildArmProximityEnvelope's own
-// zero-arms behaviour (a constant-zero envelope, not "reweight disabled"):
-// at armBias>0 this still applies base*(1-armBias), same as the CPU.
-// 'round' ties-to-even vs. JS's Math.round ties-away-from-zero only
-// disagrees exactly on an angle-wrap half-integer boundary — unreachable
-// for real (non-adversarial) angles.
-fn evalWeight(texel: vec4<f32>, ring: u32, radius: f32, angle: f32) -> f32 {
+// evalWeight — base channel weight, ring-mean-normalised and optionally
+// capped (armBias<=0 branch — dustParticleCloud.ts's density() closure,
+// :208-218, ported verbatim including its zero-guards), OR reweighted
+// toward the nearest arm ridge (armBias>0 branch, armBiasedDensity,
+// hiiRegions.ts:527-539) — the two branches are mutually exclusive callers
+// (Task 7's dust CDF vs. Task 8's DIG CDF), never combined.
+//
+// The armBias<=0 branch reads 'base' (the bare channel dot) BEFORE any
+// ring-normalisation — Task 8's armBias>0 branch below is unchanged by
+// this addition and reads the SAME 'base', so its output is byte-for-byte
+// identical to before regardless of what params.cap/ringMeansBuf hold.
+//
+// armCount==0u is NOT special-cased in the armBias>0 branch — the loop
+// below just runs zero times, leaving envelope at 0, which is
+// buildArmProximityEnvelope's own zero-arms behaviour (a constant-zero
+// envelope, not "reweight disabled"): at armBias>0 this still applies
+// base*(1-armBias), same as the CPU. 'round' ties-to-even vs. JS's
+// Math.round ties-away-from-zero only disagrees exactly on an angle-wrap
+// half-integer boundary — unreachable for real (non-adversarial) angles.
+fn evalWeight(texel: vec4<f32>, ring: u32, radius: f32, angle: f32, globalMean: f32) -> f32 {
   let base = dot(params.channelWeights, texel);
   if (params.armBias <= 0.0) {
-    return base;
+    let ringMean = ringMeansBuf[ring];
+    if (base <= 0.0 || ringMean <= 0.0 || globalMean <= 0.0) {
+      return 0.0;
+    }
+    let local = base / ringMean;
+    // dustPlacementCap's own "0 = uncapped" convention — 'local' passes
+    // through unclamped rather than a select() that always evaluates
+    // min(), so a cap of exactly 0 can never accidentally zero every texel.
+    var capped = local;
+    if (params.cap > 0.0) {
+      capped = min(local, params.cap);
+    }
+    // The envelope term (ringMean/globalMean) preserves the map's measured
+    // radial profile exactly at every cap setting — see the CPU original's
+    // own header for why a per-ring divisor, not one map-wide mean, is
+    // load-bearing here.
+    return (ringMean / globalMean) * capped;
   }
   let armCount = u32(params.armCount);
   var acc = 0.0;
@@ -95,6 +133,12 @@ fn evalWeight(texel: vec4<f32>, ring: u32, radius: f32, angle: f32) -> f32 {
 
 var<workgroup> scanBuf: array<f32, ISM_MAP_CDF_SCAN_WORKGROUP_SIZE>;
 var<workgroup> ringCarry: f32;
+// Computed once per workgroup (below), not once per texel: mean(ringMeansBuf)
+// is the SAME scalar for every texel in the whole grid, and this shader
+// already redundantly repeats it once per ring's own workgroup (rings x
+// rings adds total for the real 512x1536 grid — trivial) rather than once
+// per texel (rings x az x rings, which would not be).
+var<workgroup> globalMeanCache: f32;
 
 // csRingScan — one workgroup per ring: an inclusive Hillis-Steele scan over
 // az in WORKGROUP_SIZE-wide tiles, carried tile-to-tile in ringCarry, so
@@ -119,6 +163,11 @@ fn csRingScan(
 
   if (localIndex == 0u) {
     ringCarry = 0.0;
+    var gmSum = 0.0;
+    for (var rr = 0u; rr < rings; rr++) {
+      gmSum += ringMeansBuf[rr];
+    }
+    globalMeanCache = gmSum / f32(rings);
   }
   workgroupBarrier();
 
@@ -137,7 +186,7 @@ fn csRingScan(
     if (col < az) {
       let angle = (f32(col) + 0.5) * dTheta;
       let texel = textureLoad(ismMapTex, vec2<i32>(i32(col), i32(ring)), 0);
-      value = evalWeight(texel, ring, radius, angle) * texelArea;
+      value = evalWeight(texel, ring, radius, angle, globalMeanCache) * texelArea;
     }
     scanBuf[localIndex] = value;
     workgroupBarrier();

@@ -1126,7 +1126,7 @@ export async function createGalaxyEngine(
     requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
     // Debug-only: Task 7's own determinism/survival-floor numeric exception —
     // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
-    requestDustPlacementReadback: () => model.requestDustPlacementReadback(),
+    requestDustPlacementReadback: (opts) => model.requestDustPlacementReadback(opts),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
