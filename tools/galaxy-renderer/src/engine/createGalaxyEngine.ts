@@ -1080,7 +1080,12 @@ export async function createGalaxyEngine(
     // `ismMapRingMeans.ts`'s CPU computation over `getIsmMapData()`). No
     // production caller — see `createIsmMapReadbacks.ts`'s own doc.
     requestRingMeansReadback: (): Promise<Float32Array> =>
-      new Promise((resolve) => model.requestRingMeansReadback(resolve)),
+      // `reject` matters here specifically: this is the queue's first
+      // EXTERNALLY-AWAITED request (every other `request()` caller is a
+      // fire-and-forget cache update) — without it, a mapAsync rejection or
+      // a decode throw would leave this Promise (and whoever awaits it,
+      // e.g. the probe's `page.evaluate`) pending forever instead of failing.
+      new Promise((resolve, reject) => model.requestRingMeansReadback(resolve, reject)),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();

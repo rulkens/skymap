@@ -56,9 +56,13 @@ export type IsmMapReadbacks = {
    * not a texture). Used by the probe's numeric-readback check
    * (`probeGpuErrors.ts`) to confirm the two agree within float tolerance —
    * no production caller, since the fluid path's own consumer of this buffer
-   * (`ismMapPresent.wesl`) never leaves the GPU.
+   * (`ismMapPresent.wesl`) never leaves the GPU. `onError`: this is the one
+   * `request()` caller in this file with an external awaiter (the probe's
+   * Promise-wrapped `GalaxyEngineHandle.requestRingMeansReadback`) — see
+   * `createReadbackQueue.ts`'s own doc for why that needs a reject path the
+   * other two (fire-and-forget cache updates) don't.
    */
-  requestRingMeans(onLand: (means: Float32Array) => void): void;
+  requestRingMeans(onLand: (means: Float32Array) => void, onError?: (err: unknown) => void): void;
 };
 
 export function createIsmMapReadbacks(deps: {
@@ -160,8 +164,8 @@ export function createIsmMapReadbacks(deps: {
       if (movedFrom(orientationData, grid)) orientationData = null;
     },
 
-    requestRingMeans(onLand): void {
-      ringMeansStream.request(onLand);
+    requestRingMeans(onLand, onError): void {
+      ringMeansStream.request(onLand, onError);
     },
   };
 }

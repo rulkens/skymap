@@ -42,8 +42,16 @@ export type ReadbackStream<T> = {
    * Bump this stream's token and chain one copy/submit/map/decode. `onLand`
    * runs only if no later request on this stream superseded it — so a drag
    * coalesces to one landing rather than one per dragged frame.
+   *
+   * `onError` is optional and defaults to the pre-existing log-and-continue
+   * behaviour (correct for every fire-and-forget cache-update caller this
+   * had before — a dropped copy just leaves the cache one rebuild stale).
+   * Pass it only from a caller that AWAITS this specific request (wrapping
+   * it in a `Promise`, e.g. a debug readback) — one request's failure never
+   * poisons the shared chain for the next caller either way, `onError` or
+   * not.
    */
-  request(onLand: (value: T) => void): void;
+  request(onLand: (value: T) => void, onError?: (err: unknown) => void): void;
   /** How many requests this stream has made. Reported as the diagnostics' `generation`. */
   readonly generation: number;
 };
@@ -72,7 +80,7 @@ export function createReadbackQueue(device: GPUDevice): ReadbackQueue {
         return token;
       },
 
-      request(onLand: (value: T) => void): void {
+      request(onLand: (value: T) => void, onError?: (err: unknown) => void): void {
         const mine = ++token;
         chain = chain
           .then(async () => {
@@ -102,7 +110,12 @@ export function createReadbackQueue(device: GPUDevice): ReadbackQueue {
             onLand(value);
           })
           .catch((err) => {
+            // Always logged (pre-existing behaviour for every caller), and
+            // ALSO forwarded to whoever is awaiting `mine`'s own attempt —
+            // `mine` never got superseded away from here, since a superseded
+            // request returns above before doing any work worth failing at.
             console.error(`galaxy: ${label} failed`, err);
+            onError?.(err);
           });
       },
     };

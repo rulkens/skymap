@@ -191,7 +191,10 @@ export type GalaxyModel = {
    * private to this closure), so `createGalaxyEngine.ts`'s handle can wrap
    * it in a `Promise` the same way every other public entry point does.
    */
-  requestRingMeansReadback(onLand: (means: Float32Array) => void): void;
+  requestRingMeansReadback(
+    onLand: (means: Float32Array) => void,
+    onError?: (err: unknown) => void,
+  ): void;
   /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
@@ -1062,8 +1065,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       };
     },
 
-    requestRingMeansReadback(onLand): void {
-      readbacks.requestRingMeans(onLand);
+    requestRingMeansReadback(onLand, onError): void {
+      readbacks.requestRingMeans(onLand, onError);
     },
 
     starInstances(): InstanceDraw[] {

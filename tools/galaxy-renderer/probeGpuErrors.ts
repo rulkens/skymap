@@ -457,7 +457,18 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           }
           const map = bridge.getIsmMapData();
           if (!map) return { ok: false as const, reason: 'getIsmMapData() is still null' };
-          const gpuMeans = await bridge.requestRingMeansReadback();
+          // Now rejects on a mapAsync failure or decode throw (createReadbackQueue.ts's
+          // `onError`) instead of hanging page.evaluate forever — caught here so a
+          // GPU-side failure reports as a normal step FAIL, not a stuck probe run.
+          let gpuMeans: Float32Array;
+          try {
+            gpuMeans = await bridge.requestRingMeansReadback();
+          } catch (err) {
+            return {
+              ok: false as const,
+              reason: `requestRingMeansReadback rejected — ${err instanceof Error ? err.message : String(err)}`,
+            };
+          }
           // Typed arrays don't survive page.evaluate's return serialization
           // as themselves — plain arrays do.
           return {
