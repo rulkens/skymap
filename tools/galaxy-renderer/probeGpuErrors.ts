@@ -33,6 +33,9 @@ import {
   armRidgeAngle,
   armFadeEnvelope,
   armCrossSigma,
+  armRidgeFrameAt,
+  armExcessSurfaceShape,
+  armColor,
 } from '../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
 
 const VIEWPORT = { width: 1400, height: 900 };
@@ -52,10 +55,11 @@ const BOOT_TIMEOUT_MS = 60_000;
 const RING_MEANS_TOLERANCE = 1e-3;
 
 // `readback:armRidgeSample`'s max-|CPU-GPU| budget — armRidge.wesl's
-// armRidgeAngle/armFadeEnvelope/armCrossSigma vs. armRidgeGeometry.ts's own
-// CPU output at the SAME literal fixture (armRidgeDebugSample.wesl's own
-// consts, mirrored below). f32 vs. f64 trig/exp over small inputs, so this
-// tolerance is generous next to RING_MEANS_TOLERANCE's summed-value budget.
+// armRidgeAngle/armFadeEnvelope/armCrossSigma/armRidgeFrameAt/
+// armExcessSurfaceShape/armColor vs. armRidgeGeometry.ts's own CPU output at
+// the SAME literal fixture (armRidgeDebugSample.wesl's own consts, mirrored
+// below). f32 vs. f64 trig/exp over small inputs, so this tolerance is
+// generous next to RING_MEANS_TOLERANCE's summed-value budget.
 const ARM_RIDGE_SAMPLE_TOLERANCE = 1e-4;
 
 /**
@@ -432,17 +436,24 @@ function sweepSections(rows: SectionRow[]): ExerciseStep {
 /**
  * The exact fixture armRidgeDebugSample.wesl's `fixtureGeom`/`fixtureArmA`/
  * `fixtureArmB`/`LOG_R` hard-code — hand-mirrored, not read back from the
- * shader (a WGSL const has no run-time path to this file). Only the fields
- * `armRidgeAngle`/`armFadeEnvelope`/`armCrossSigma` actually read
- * (waveAmount, armStartRadius, armInnerRampW, diskScaleLen) need to be
- * real; the rest of `GalaxyDescription`/`GalaxyFieldTuning` is dead weight
- * this exercise never reaches, hence the cast rather than a full literal.
+ * shader (a WGSL const has no run-time path to this file). Every field the
+ * probed functions read is real, INCLUDING the four warp fields and
+ * `armFullRadius` (fix round 1 — needed once `armRidgeFrameAt`'s
+ * `warpHeight`/`warpSurfaceFrame` calls and `armExcessSurfaceShape` joined
+ * the probe); the rest of `GalaxyDescription`/`GalaxyFieldTuning` is dead
+ * weight this exercise never reaches, hence the cast rather than a full
+ * literal.
  */
 const ARM_RIDGE_FIXTURE_GEOMETRY = {
   waveAmount: 0.3,
   armStartRadius: 2.0,
   armInnerRampW: 1.5,
+  armFullRadius: 6.0,
   diskScaleLen: 3.0,
+  warpStrength: 0.4,
+  warpTwist: 1.2,
+  warpStartRadius: 8.0,
+  outerRadius: 15.0,
 } as unknown as GalaxyDescription;
 
 const ARM_RIDGE_FIXTURE_TUNING = { arms: { widthScale: 1.2 } } as unknown as GalaxyFieldTuning;
@@ -482,18 +493,47 @@ const ARM_RIDGE_FIXTURE_ARM_B: GalaxyFieldArmRecord = {
 };
 
 const ARM_RIDGE_FIXTURE_LOG_R = [-0.5, 0.4, 0.9, 1.6];
+// Fix round 1: armExcessSurfaceShape's own two args (not geometry fields —
+// see armRidgeGeometry.ts's own signature) and armColor's per-sample inputs,
+// mirroring armRidgeDebugSample.wesl's H_LIGHT/EXCESS_SCALE_RATIO/
+// YOUNG_FRACTION/RADIAL_T.
+const ARM_RIDGE_FIXTURE_H_LIGHT = 2.5;
+const ARM_RIDGE_FIXTURE_EXCESS_SCALE_RATIO = 1.4;
+const ARM_RIDGE_FIXTURE_YOUNG_FRACTION = [0.2, 0.4, 0.6, 0.8];
+const ARM_RIDGE_FIXTURE_RADIAL_T = [0.8, 0.6, 0.4, 0.2];
 
-/** armRidgeDebugSample.wesl's own (angle, fadeEnvelope, crossSigma) triple per sample, computed the CPU way. */
+/**
+ * armRidgeDebugSample.wesl's own per-sample lane order, computed the CPU
+ * way: angle, fadeEnvelope, crossSigma, then `armRidgeFrameAt`'s
+ * point/along/across/pole (the fix-round-1 addition — the only probed path
+ * that reaches `armRidgeCurvePoint`/`warpHeight`/`warpSurfaceFrame`, so a
+ * mismatch here is the derivative/Gram-Schmidt/cross-product canary the
+ * original trio couldn't be), then excessSurfaceShape, then color.
+ */
 function armRidgeSampleCpuReference(): number[] {
   const out: number[] = [];
   for (let i = 0; i < ARM_RIDGE_FIXTURE_LOG_R.length; i++) {
     const arm = i % 2 === 0 ? ARM_RIDGE_FIXTURE_ARM_A : ARM_RIDGE_FIXTURE_ARM_B;
     const logR = ARM_RIDGE_FIXTURE_LOG_R[i]!;
     const radius = ARM_RIDGE_FIXTURE_GEOMETRY.armStartRadius * Math.exp(logR);
+    const frame = armRidgeFrameAt(logR, ARM_RIDGE_FIXTURE_GEOMETRY, arm);
+    const excess = armExcessSurfaceShape(
+      radius,
+      ARM_RIDGE_FIXTURE_GEOMETRY,
+      ARM_RIDGE_FIXTURE_H_LIGHT,
+      ARM_RIDGE_FIXTURE_EXCESS_SCALE_RATIO,
+    );
+    const color = armColor(ARM_RIDGE_FIXTURE_YOUNG_FRACTION[i]!, ARM_RIDGE_FIXTURE_RADIAL_T[i]!);
     out.push(
       armRidgeAngle(logR, ARM_RIDGE_FIXTURE_GEOMETRY, arm),
       armFadeEnvelope(radius, ARM_RIDGE_FIXTURE_GEOMETRY, arm),
       armCrossSigma(radius, ARM_RIDGE_FIXTURE_GEOMETRY, ARM_RIDGE_FIXTURE_TUNING),
+      ...frame.point,
+      ...frame.along,
+      ...frame.across,
+      ...frame.pole,
+      excess,
+      ...color,
     );
   }
   return out;

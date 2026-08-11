@@ -13,7 +13,7 @@ import armRidgeDebugSampleWgsl from '../shaders/milkyWay/field/armRidgeDebugSamp
 
 /** Mirrors armRidgeDebugSample.wesl's own SAMPLE_COUNT/FLOATS_PER_SAMPLE — see that file for the fixture values this shape reads back. */
 export const ARM_RIDGE_DEBUG_SAMPLE_COUNT = 4;
-export const ARM_RIDGE_DEBUG_FLOATS_PER_SAMPLE = 3;
+export const ARM_RIDGE_DEBUG_FLOATS_PER_SAMPLE = 19;
 
 export type ArmRidgeDebugSample = {
   /** Dispatch csSample and map its output buffer back to the CPU. Rejects on a mapAsync failure rather than hanging, same contract as `requestRingMeansReadback`. */
