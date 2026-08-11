@@ -98,7 +98,7 @@ const TILE_EVENT_CAP: u32 = 128u;
 // Stars' own advection field — shear+curl only, no armGather/armDrag/event
 // kicks (composedVelocity's starsVel below). Separate texture because
 // velocityTex's free '.z' lane is already eventStamp, not a spare channel.
-@group(0) @binding(6) var starsVelocityTex: texture_storage_2d<rg16float, write>;
+@group(0) @binding(6) var starsVelocityTex: texture_storage_2d<rg32float, write>;
 
 var<workgroup> sharedEventIdx: array<u32, TILE_EVENT_CAP>;
 var<workgroup> sharedEventCount: atomic<u32>;

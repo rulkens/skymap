@@ -100,7 +100,7 @@ export function createIsmMapFluidRunner(
   const starsVelocityTex = device.createTexture({
     label: 'galaxy:ismMapFluidStarsVelocityTex',
     size: [ISM_MAP_AZ, ISM_MAP_RINGS],
-    format: 'rg16float',
+    format: 'rg32float',
     usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
   });
   // This runner's own copy of the arm-forcing field, uploaded as a texture:
