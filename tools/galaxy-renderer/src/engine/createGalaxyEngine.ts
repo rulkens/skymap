@@ -51,6 +51,7 @@ import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
 import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
+import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
@@ -362,6 +363,10 @@ export async function createGalaxyEngine(
   // Task 12's own numeric-validation exception (armRidge.wesl vs.
   // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
   const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
+  // Task 6's own numeric-validation exception (ismMapDustCdfScan.wesl vs.
+  // buildIsmMapDustCdf.ts) — see createIsmMapDustCdfScanDebugSample.ts's
+  // own header.
+  const ismMapDustCdfScanDebugSample = createIsmMapDustCdfScanDebugSample(device, { makeShader });
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // `createFieldPipelines.ts` — the four splat pipelines, the dust-column-map
@@ -1094,6 +1099,9 @@ export async function createGalaxyEngine(
     // createArmRidgeDebugSample.ts's own header. No production caller.
     requestArmRidgeSampleReadback: (): Promise<Float32Array> =>
       armRidgeDebugSample.dispatchAndReadback(),
+    // Debug-only: Task 6's own numeric-validation exception — see
+    // createIsmMapDustCdfScanDebugSample.ts's own header. No production caller.
+    requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1105,6 +1113,7 @@ export async function createGalaxyEngine(
       ismMapGenerator.dispose();
       ismMapOrientation.dispose();
       armRidgeDebugSample.dispose();
+      ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked

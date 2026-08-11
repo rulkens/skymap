@@ -70,6 +70,9 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
     getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
     requestRingMeansReadback: vi.fn<GalaxyEngineHandle['requestRingMeansReadback']>(),
     requestArmRidgeSampleReadback: vi.fn<GalaxyEngineHandle['requestArmRidgeSampleReadback']>(),
+    requestIsmMapDustCdfScanReadback: vi.fn<
+      GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']
+    >(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, mocks };

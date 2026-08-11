@@ -48,5 +48,15 @@ export type GalaxyEngineHandle = {
   // read by `probeGpuErrors.ts`'s `readback:armRidgeSample` step. No
   // production caller.
   requestArmRidgeSampleReadback(): Promise<Float32Array>;
+  // Debug-only: Task 6's own numeric-validation exception
+  // (`createIsmMapDustCdfScanDebugSample.ts`) — ismMapDustCdfScan.wesl's
+  // dust-weight prefix sum vs. buildIsmMapDustCdf.ts, read by
+  // `probeGpuErrors.ts`'s `readback:ismMapDustCdfScan` step. No production
+  // caller yet — Tasks 7/8 wire the real ISM-map texture through it.
+  requestIsmMapDustCdfScanReadback(): Promise<{
+    readonly grid: { readonly rings: number; readonly az: number; readonly rMin: number; readonly rMax: number };
+    readonly data: readonly number[];
+    readonly prefix: readonly number[];
+  }>;
   dispose(): void;
 };

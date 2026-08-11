@@ -107,6 +107,9 @@ function makeFakeEngine(): {
     getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
     requestRingMeansReadback: vi.fn<GalaxyEngineHandle['requestRingMeansReadback']>(),
     requestArmRidgeSampleReadback: vi.fn<GalaxyEngineHandle['requestArmRidgeSampleReadback']>(),
+    requestIsmMapDustCdfScanReadback: vi.fn<
+      GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']
+    >(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
 

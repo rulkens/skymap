@@ -29,6 +29,7 @@ import type { GalaxyDescription } from '../../src/@types/galaxy/GalaxyDescriptio
 import type { GalaxyFieldArmRecord } from '../../src/@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldTuning } from '../../src/@types/galaxy/GalaxyFieldTuning';
 import { ismMapRingMeans } from '../../src/utils/galaxy/ismMapRingMeans';
+import { buildIsmMapDustCdf } from '../../src/utils/galaxy/buildIsmMapDustCdf';
 import {
   armRidgeAngle,
   armFadeEnvelope,
@@ -61,6 +62,16 @@ const RING_MEANS_TOLERANCE = 1e-3;
 // below). f32 vs. f64 trig/exp over small inputs, so this tolerance is
 // generous next to RING_MEANS_TOLERANCE's summed-value budget.
 const ARM_RIDGE_SAMPLE_TOLERANCE = 1e-4;
+
+// `readback:ismMapDustCdfScan`'s max-|CPU-GPU| budget — ismMapDustCdfScan.wesl's
+// dust-weight prefix sum vs. buildIsmMapDustCdf.ts's own CPU loop, over the
+// SAME small (4x8) fixture map (createIsmMapDustCdfScanDebugSample.ts). The
+// two sum in different orders (GPU: Hillis-Steele within a ring, sequential
+// ring-to-ring; CPU: sequential throughout, in f64) — expect float noise,
+// not agreement; this budget is a smaller-map analogue of
+// RING_MEANS_TOLERANCE's summed-value one, not ARM_RIDGE_SAMPLE_TOLERANCE's
+// per-invocation trig/exp one.
+const ISM_MAP_DUST_CDF_SCAN_TOLERANCE = 1e-3;
 
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
@@ -685,6 +696,61 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           throw new Error(
             `readback:armRidgeSample — lane ${maxIndex}: CPU ${cpuSamples[maxIndex]} vs GPU ` +
               `${gpuSamples[maxIndex]}, diff ${maxDiff} exceeds tolerance ${ARM_RIDGE_SAMPLE_TOLERANCE}`,
+          );
+        }
+      },
+    },
+    {
+      // Task 6's own numeric-validation exception (ismMapDustCdfScan.wesl
+      // has no production caller yet — Tasks 7/8 wire the real ISM-map
+      // texture through it). `requestIsmMapDustCdfScanReadback` dispatches
+      // its own small fixture and hands the fixture's raw texel data BACK
+      // alongside the GPU prefix — the CPU reference below runs the real
+      // `buildIsmMapDustCdf` over that same data, no hand-duplicated
+      // fixture literal to drift out of sync with the shader's own.
+      name: 'readback:ismMapDustCdfScan',
+      run: async (page) => {
+        const readback = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            throw new Error(
+              'readback:ismMapDustCdfScan — no __probeEngine — the probeReadback gate never installed it',
+            );
+          }
+          return bridge.requestIsmMapDustCdfScanReadback();
+        });
+
+        const cpuMap: GalaxyIsmMap = {
+          az: readback.grid.az,
+          rings: readback.grid.rings,
+          rMin: readback.grid.rMin,
+          rMax: readback.grid.rMax,
+          data: Float32Array.from(readback.data),
+        };
+        const cpuCdf = buildIsmMapDustCdf(cpuMap, (texel) => texel.dust);
+        if (cpuCdf.prefix.length !== readback.prefix.length) {
+          throw new Error(
+            `readback:ismMapDustCdfScan — length mismatch: CPU ${cpuCdf.prefix.length}, GPU ${readback.prefix.length}`,
+          );
+        }
+        let maxDiff = 0;
+        let maxIndex = -1;
+        for (let i = 0; i < cpuCdf.prefix.length; i++) {
+          const diff = Math.abs(cpuCdf.prefix[i]! - readback.prefix[i]!);
+          if (diff > maxDiff) {
+            maxDiff = diff;
+            maxIndex = i;
+          }
+        }
+        console.error(
+          `  readback:ismMapDustCdfScan max |CPU-GPU| = ${maxDiff.toExponential(3)} at texel ${maxIndex} ` +
+            `(tolerance ${ISM_MAP_DUST_CDF_SCAN_TOLERANCE.toExponential(3)})`,
+        );
+        if (maxDiff > ISM_MAP_DUST_CDF_SCAN_TOLERANCE) {
+          throw new Error(
+            `readback:ismMapDustCdfScan — texel ${maxIndex}: CPU ${cpuCdf.prefix[maxIndex]} vs GPU ` +
+              `${readback.prefix[maxIndex]}, diff ${maxDiff} exceeds tolerance ${ISM_MAP_DUST_CDF_SCAN_TOLERANCE}`,
           );
         }
       },
