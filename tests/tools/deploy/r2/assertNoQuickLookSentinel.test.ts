@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { assertNoQuickLookSentinel } from '../../../../tools/deploy/r2/assertNoQuickLookSentinel';
 import { quickLookSentinelPath } from '../../../../tools/utils/volume/quickLookSentinelPath';
@@ -18,7 +18,9 @@ describe('assertNoQuickLookSentinel', () => {
   });
 
   it('refuses to sync while the quick-look sentinel exists', () => {
-    writeFileSync(quickLookSentinelPath(dir), '');
+    const sentinel = quickLookSentinelPath(dir);
+    mkdirSync(dirname(sentinel), { recursive: true });
+    writeFileSync(sentinel, '');
     expect(() => assertNoQuickLookSentinel(dir)).toThrowError(/npm run build-mcpm/);
   });
 
