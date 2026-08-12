@@ -854,7 +854,12 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           }
           const landed = await bridge.requestDustPlacementReadback();
           if (!landed) return null;
-          return { count: landed.count, records: Array.from(landed.records) };
+          return {
+            count: landed.count,
+            records: Array.from(landed.records),
+            mass: Array.from(landed.mass),
+            renormScale: landed.renormScale,
+          };
         });
         if (!first) {
           throw new Error(
@@ -913,6 +918,30 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           );
         }
         console.error(`  readback:placeDust count matches budget math (${first.count})`);
+
+        // (2.5) Task 9's survivor-sum renorm — ringReduce.wesl's
+        // csSurvivorSum output must match a CPU recomputation of
+        // dustParticleCloud.ts:290-293's own formula (`massPerR2 =
+        // totalMass / sumR2`) over the SAME GPU-placed mass array `first.mass`
+        // came from. `expectedBudget.totalMass` is the SAME pure CPU value
+        // `dispatchSurvivorSum` was packed with, so a mismatch here can only
+        // come from the GPU reduction itself (or its consuming multiply —
+        // this is also the "fails if the uniform stays 1.0" check: an
+        // unwired dustRenorm read in dustMap/fragment.wesl wouldn't move
+        // this scalar off whatever it was left at, and that value would
+        // almost certainly disagree with the CPU recomputation below).
+        const sumR2 = first.mass.reduce((sum, m) => sum + m, 0);
+        const expectedScale = sumR2 > 0 ? expectedBudget.totalMass / sumR2 : 0;
+        const scaleAbsErr = Math.abs(first.renormScale - expectedScale);
+        const scaleRelErr = scaleAbsErr / Math.max(Math.abs(expectedScale), 1e-12);
+        if (scaleRelErr > 1e-4) {
+          throw new Error(
+            `readback:placeDust — survivor-sum renorm scale mismatch: GPU ${first.renormScale} vs CPU recomputation ${expectedScale} (sumR2=${sumR2}, totalMass=${expectedBudget.totalMass}, relErr=${scaleRelErr})`,
+          );
+        }
+        console.error(
+          `  readback:placeDust survivor-sum renorm scale matches CPU recomputation (gpu=${first.renormScale}, cpu=${expectedScale}, sumR2=${sumR2})`,
+        );
 
         // (3) Survival-floor zeroing is OBSERVABLE — amplitude sits at lane 3
         // of every FIELD_COMPONENT_FLOATS-wide record (records.wesl's own
