@@ -68,9 +68,9 @@ Tasks 1–5 are pure-TS/registry plumbing with no GPU surface; Tasks 6–8 are t
 
 **Files:** `docs/BACKLOG.md` (modify, line 132), `docs/backlog/2026-07-21-zone-of-avoidance-visualization.md` (delete)
 
-- [ ] Delete the "**Zone of Avoidance visualization + tour beat**" index line from `docs/BACKLOG.md`.
-- [ ] `rm -f docs/backlog/2026-07-21-zone-of-avoidance-visualization.md` (bare `rm` prompts interactively and hangs).
-- [ ] Commit alongside the spec + this plan if they are not already committed.
+- [x] Delete the "**Zone of Avoidance visualization + tour beat**" index line from `docs/BACKLOG.md`.
+- [x] `rm -f docs/backlog/2026-07-21-zone-of-avoidance-visualization.md` (bare `rm` prompts interactively and hangs).
+- [x] Commit alongside the spec + this plan if they are not already committed.
 
 ### Task 2: Registry entry — `Source.ZoneOfAvoidance` + `SOURCE_REGISTRY` row
 
