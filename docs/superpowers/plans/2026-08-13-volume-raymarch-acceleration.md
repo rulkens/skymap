@@ -168,22 +168,54 @@ mipLevelCount3d(...)` and `GPUTextureUsage.RENDER_ATTACHMENT` set, exactly as
 `@fragment` entry points sharing one `@vertex` big-triangle (mirror
 `shaders/lib/mipBlit.wesl`'s one-file-both-stages layout): `fs_box` does one trilinear
 `textureSampleLevel` tap at the parent-space z position between the two contributing
-slices (the exact 2×2×2 box filter for the display chain); `fs_max` does explicit
-`textureLoad` taps across the 2×2×2 parent footprint and a `max()` reduction (correctness
-over the max-value pyramid depends on this being a true max, not a filtered
-approximation — `textureSample`'s linear interpolation would under-report a cell's peak).
-Because each destination slice needs to know _which_ parent z position(s) it reduces —
-information a fullscreen triangle's UV alone can't carry — the shader needs a small
-per-draw uniform (`MipBlit3dUniforms`: a `boxZ: f32` continuous parent-z for `fs_box`, and
-`srcZLow: u32` / `srcZHigh: u32` integer parent-slice indices for `fs_max`, plus one pad
-u32 — 16 bytes) bound at `@group(0) @binding(2)`, alongside `srcTex: texture_3d<f32>` at
-binding 0 and its sampler at binding 1. `generateMipChain3d`'s internal loop is naturally
-expressed in terms of a single-level "downsample this (texture, mipLevel) pair into that
-(texture, mipLevel) pair" step; **Task 3 needs the identical mechanism against two
-different textures** (see below), so factor that step out as its own function in this
-file rather than re-deriving it — export it if that's the cleaner shape, keep it private
-and re-export only what Task 3 needs otherwise. Either is fine; don't duplicate the
-pass-building code.
+slices (the exact 2×2×2 box filter for the display chain; untouched by the amendment
+below — the display chain stays raw values). `fs_max` does explicit `textureLoad` taps
+across the 2×2×2 parent footprint, **normalises each tap to deviation space before
+reducing** (`dev = abs(sample - u.center) / u.halfRange`), and takes the `max()` of those
+— correctness over the max-value pyramid depends on this being a true max in the units
+the skip test actually compares against (see Task 3 for why raw-value max isn't safe for
+a divergent palette). Because each destination slice needs to know _which_ parent z
+position(s) it reduces — information a fullscreen triangle's UV alone can't carry — the
+shader needs a small per-draw uniform:
+
+```wgsl
+struct MipBlit3dUniforms {
+  boxZ: f32,       // fs_box: continuous parent-space z in [0, parentDepth) for one trilinear tap
+  srcZLow: u32,    // fs_max: lower parent z slice index this dest slice reduces
+  srcZHigh: u32,   // fs_max: upper parent z slice index (== srcZLow at an odd-depth edge)
+  center: f32,     // fs_max: deviation center for THIS reduction (0 = identity, see below)
+  halfRange: f32,  // fs_max: deviation halfRange for THIS reduction (1 = identity, see below)
+};
+```
+
+20 bytes, no padding — WGSL's uniform-address-space alignment only forces a 16-byte
+multiple on structs containing a `vec3`/`vec4`/`mat4x4` member (this file's own
+`VolumeUniforms` is the example: its `mat4x4` fields are why 256/272 land on 16-byte
+boundaries). An all-scalar struct's alignment is just its largest member's own alignment
+— 4 bytes for `f32`/`u32` — so 5 × 4 bytes = 20 is already valid with nothing left to pad;
+the previous 16-byte, 4-field version had one pure-padding `u32` that `center`/`halfRange`
+now replace outright. Bound at `@group(0) @binding(2)`, alongside `srcTex: texture_3d<f32>`
+at binding 0 and its sampler at binding 1.
+
+**The elegance this buys:** `center`/`halfRange` make `fs_max` a single entry point for
+_every_ max-reduction pass, first and subsequent alike. The very first reduction (raw
+volume values → deviation space, Task 3's job) passes the field's real
+`contrastCenter`/`halfRange`. Every reduction after that — the rest of Task 3's chained
+downsamples, and every level `generateMipChain3d` fills for a `'max'`-filter texture —
+is a max-of-already-deviation-space-values pass, so it passes `center = 0, halfRange = 1`:
+`dev = abs(x - 0) / 1 = x`, the identity, because the input is already non-negative
+deviation. No second shader variant, no mode flag — the uniform alone selects "transform
+first" vs. "already transformed."
+
+`generateMipChain3d`'s internal loop is naturally expressed in terms of a single-level
+"downsample this (texture, mipLevel) pair into that (texture, mipLevel) pair" step, always
+called with identity `center`/`halfRange` for `'max'` (it never sees raw values — its
+input is always a texture's own level 0, which for the max pyramid is already
+deviation-space by the time this loop runs). **Task 3 needs the identical mechanism
+against two different textures**, with the real `center`/`halfRange` on its first call
+only, so factor that step out as its own function in this file rather than re-deriving it
+— export it if that's the cleaner shape, keep it private and re-export only what Task 3
+needs otherwise. Either is fine; don't duplicate the pass-building code.
 
 **`uploadCube` changes** (`volumeFieldRenderer.ts:216-230`): texture creation gains
 `mipLevelCount: mipLevelCount3d(cube.dims[0], cube.dims[1], cube.dims[2])` and
@@ -237,22 +269,30 @@ threshold and cause an _unsafe_ over-skip; the max pyramid must be reduced from 
 cube independently. Build it as **three chained 2× max-reductions** through the
 single-level downsample step Task 2 factored out (volume level 0 → scratch A at dims/2 →
 scratch B at dims/4 → `maxPyramidTexture` level 0 at dims/8), not one 8×8×8-tap pass —
-reuse the existing 2× primitive rather than inventing a second reduction shader. The two
-scratch textures are upload-time-only (destroy after use; this runs once per `upload()`
-call, not per frame). Once level 0 is filled, `generateMipChain3d(device,
-maxPyramidTexture, 'max')` fills the rest of its own chain self-referentially, same as
-Task 2's volume-texture call.
+reuse the existing 2× primitive rather than inventing a second reduction shader. **Only
+the first of the three passes** (volume level 0 → scratch A) supplies the field's real
+`contrastCenter` (already on `FieldEntry`) and `halfRange = max(contrastCenter, 1 -
+contrastCenter)` — the same formula `applyContrastWindow` uses at `fragment.wesl:168` —
+as the `MipBlit3dUniforms` `center`/`halfRange`; the remaining two chained passes use the
+identity (`center = 0, halfRange = 1`), per Task 2's design note. The two scratch textures
+are upload-time-only (destroy after use; this runs once per `upload()` call, not per
+frame). Once level 0 is filled, `generateMipChain3d(device, maxPyramidTexture, 'max')`
+fills the rest of its own chain self-referentially (identity params throughout, same as
+Task 2's volume-texture call).
 
-**Open caveat, not solved by this task (flag, don't fix):** a plain `max(rawValue)`
-reduction is a correct conservative bound for _sequential_ palettes (contrastCenter = 0,
-MCPM's shipped default — deviation `dev = rawValue / halfRange` is monotonic in
-`rawValue`, so "cell max is low" ⟺ "cell can't be visible"). It is **not** a correct
-bound for a _divergent_ palette (contrastCenter = 0.5, e.g. a future CF-4 volume field) —
-`dev = abs(value - 0.5)/halfRange` is not monotonic in the raw max, so a cell could hide
-a very negative deviation under a middling max. MCPM is the only field in the registry
-today, so this doesn't block shipping, but it's a landmine for the next divergent-palette
-volume field: the max pyramid would need to reduce `max(|value - center|)` instead, which
-this task does not build.
+**Design note — why deviation space, not raw values.** The pyramid stores normalised
+deviation, `dev = abs(value - contrastCenter) / halfRange` — naturally bounded to `[0, 1]`
+given the cube's own `[0, 1]`-normalised value range, same as `applyContrastWindow`'s own
+`dev` — not the raw voxel value. This is deliberate and is what makes the pyramid
+correct for **both** palette families: `dev` is exactly the quantity
+`applyContrastWindow`'s deadband thresholds against (`fragment.wesl:169`), so the
+pyramid's stored units already match the skip test's units with no back-conversion needed
+(Task 5). And because `dev` is non-negative by construction, `max()` composes correctly
+through the whole reduction chain — there's no way for a large positive deviation on one
+side of the center to cancel or hide a large negative one on the other, the way
+`max(rawValue)` would for a divergent palette (`contrastCenter = 0.5` — shipped today by
+`src/data/sources/cf4-density.ts` and three DEV debug fixtures, all reachable from
+settings, not merely hypothetical).
 
 - [ ] Add `maxPyramidTexture` to `FieldEntry`.
 - [ ] Add binding 5 to `group0Bgl`.
@@ -346,7 +386,7 @@ the consumers.
 - [ ] Widen the test file's `uniformScratch` helper's length filter from `64` to `68`
       (`UNIFORM_BYTES / 4`).
 - [ ] Add the parity test `draw writes voxelSizeLocal and pixelConeTan into the uniform
-    scratch at offsets 64/65`, asserting the fixture cube's hand-computed
+  scratch at offsets 64/65`, asserting the fixture cube's hand-computed
       `voxelSizeLocal` (e.g. `dims: [4,4,4]` → `0.25`) and the `pixelConeTan` value
       passed into `draw()` — a legitimate WGSL/TS byte-layout keep-rule test per
       `testing.md`, not a mirror (the expected values are computed independently of the
@@ -370,16 +410,17 @@ uniforms.
   `:279-381`)
 
 **Design note — cutoff derivation.** Mirror `applyContrastWindow`'s deadband math
-(`fragment.wesl:167-183`) to get a raw-value-space cutoff computed once outside the march
-loop, not per step: `contrastDeadband = clamp(1 - 1/max(contrast, 1e-3), 0, 0.9)`,
-`trimDeadband = clamp(trim, 0, 0.95)`, `deadband = max(contrastDeadband, trimDeadband)`,
-cutoff = `deadband - 0.05` (the smoothstep floor at `:181`, same value the brief
-specifies) — expressed back in raw sample-value space via `contrastCenter`/`halfRange`
-exactly as `applyContrastWindow` does forward. Because the cutoff is derived from the
-same live uniforms every frame, slider changes retune skipping instantly — the pyramid
-stores data (max values), never policy. See Task 3's caveat: this construction is only
-sound for `contrastCenter = 0` fields (MCPM, the only shipped field) — do not generalise
-beyond that without also changing the pyramid's reduction.
+(`fragment.wesl:167-183`) to get the cutoff computed once outside the march loop, not per
+step: `contrastDeadband = clamp(1 - 1/max(contrast, 1e-3), 0, 0.9)`, `trimDeadband =
+clamp(trim, 0, 0.95)`, `deadband = max(contrastDeadband, trimDeadband)`, cutoff =
+`deadband - 0.05` (the smoothstep floor at `:181`, same value the brief specifies). The
+max pyramid (Task 3) already stores this quantity's units — normalised deviation, not raw
+value — so the skip test is the direct comparison `pyramidDev < deadband - 0.05`, no
+conversion back to raw sample-value space and no palette-family caveat: the pyramid is
+correct for both `contrastCenter = 0` (MCPM) and `contrastCenter = 0.5` (CF-4) fields by
+construction (Task 3). Because the cutoff is derived from the same live uniforms every
+frame, slider changes retune skipping instantly — the pyramid stores data (deviation
+values), never policy.
 
 **Design note — skip mechanics.** MERF-style coarse-to-fine: at each step, `textureLoad`
 the max pyramid at a coarse level for the ray's current cell; if the cell's value proves
@@ -410,7 +451,7 @@ correct.
     the cutoff derivation is wired to the wrong uniform or a build-time constant crept
     in).
 - [ ] **Then** measure: `npm run perf -- --url http://localhost:<port> --scenario
-    volume-inside --frames 30` and `--scenario local-group`, compare MERGED medians
+  volume-inside --frames 30` and `--scenario local-group`, compare MERGED medians
       against Task 1's baseline.
 - [ ] `npm run typecheck` → green (no TS surface changed by this task, but confirms
       nothing broke upstream).
@@ -534,16 +575,18 @@ Spec and this plan stay on disk (not moved to `*/completed/`) — that happens a
   `VolumeUniforms`/`UNIFORM_BYTES` are 272 bytes, carrying `voxelSizeLocal` and
   `pixelConeTan`. `fragment.wesl`'s march loop performs TF-adaptive coarse-to-fine
   empty-space skipping and cone-footprint LOD sampling with LOD-proportional step
-  sizing; `STEP_COUNT` is a safety cap, not the density divisor. `perfScenarios.ts` has
-  a `volume-inside` row. `docs/RENDERER.md` has a scalar-volume bullet.
+  sizing; `STEP_COUNT` is a safety cap, not the density divisor. The max pyramid stores
+  normalised deviation (not raw value), so **skip logic is palette-family-correct
+  (sequential and divergent)** — no MCPM-only caveat. `perfScenarios.ts` has a
+  `volume-inside` row. `docs/RENDERER.md` has a scalar-volume bullet.
 - **Named observable behaviours for the manual smoke pass:** MCPM cube visually
   unchanged (or improved — less shimmer/aliasing) at `volume-inside`, `local-group`, and
   `full-survey`; contrast/trim sliders retune the skip cutoff live with no rebuild;
   camera dolly from outside to inside the cube shows no popping at the LOD/skip
-  transition; no visible holes or missing filament structure at any checked pose.
+  transition; no visible holes or missing filament structure at any checked pose;
+  **enabling the CF-4 field (`contrastCenter = 0.5`) shows no holes vs. a pre-change
+  build** — the divergent-palette case the deviation-space pyramid exists to cover.
 - **The deferral boundary:** wire-level gzip/edge-caching (spec's Stage 0, its own PR
   #554) is out of scope. Multi-cube single-march, brick-pool/out-of-core streaming, and
   Gaussian/Gabor representation changes are out of scope (spec Non-goals). Temporal
-  reprojection was rejected outright, not deferred. The divergent-palette max-pyramid
-  caveat flagged in Task 3 is a known landmine for a future field, not something this
-  plan resolves.
+  reprojection was rejected outright, not deferred.
