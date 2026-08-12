@@ -114,6 +114,8 @@ The curved-band lettering reuses `layoutLabel` unchanged and forks only that ver
 
 Atlas coverage is a non-issue: the charset is ASCII-printable, and "ZONE OF AVOIDANCE" is plain uppercase + space. The label content is static (grill Q5's 2–3 repeats), so the glyph-quad buffer is built once at construction and drawn as one instanced draw, not rebuilt per frame. Lettering fades with `labelEnabled` AND the same distance band as the geometry (the lock-step composition `constellationLayerOpacity` already establishes for stick figures + captions).
 
+**Known risk — flat glyphs chording the arc.** A per-glyph quad is planar: it chords the great circle rather than bending with it, deviating by ~w²/8R (glyph width w, arc radius R) — sub-percent of glyph height at the expected proportions, but the lettering size is a feel-call that may grow. The plan must put a visual checkpoint on the lettering early. Escalation rungs if flat glyphs visibly chord: (1) subdivide each glyph quad into vertical strips laid on the arc — same vertex path, more segments; (2) band-space rendering — draw a curved band-segment mesh and map fragments through (arc-angle, height) → pen-space → atlas UV so glyphs bend exactly (static ~17-char string ⇒ the per-fragment glyph lookup is a small uniform array). Neither rung changes the CPU-side `layoutLabel` reuse.
+
 ## Open feel-calls (deferred to the visual pass)
 
 - `intensity` / `radialFalloff` / `edgeSharpness` / `color` defaults — the `ZoneOfAvoidanceTuning` knobs, dialled live in the DebugPanel section (grill Q10) and then frozen as defaults.
