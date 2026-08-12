@@ -117,11 +117,13 @@ export const RAW_DATA = {
   // ─── SDSS — manual SkyServer SQL export ────────────────────────────────
 
   'sdss.skyserver': {
-    path: 'data/raw/sdss/Skyserver_SQL5_3_2026 6_09_20 PM.csv',
+    path: 'data/raw/sdss/Skyserver_SQL_full_2026-08-12.csv',
     kind: 'file',
     source: 'committed',
     description:
-      'Active SDSS SkyServer CSV export. Auto-picked by mtime from data/raw/sdss/Skyserver_*.csv at build time; this entry pins the current file.',
+      'Active SDSS SkyServer CSV export. Auto-picked by mtime from data/raw/sdss/Skyserver_*.csv at build time; this entry pins the current file. ' +
+      'Complete DR17 pull (970,067 rows incl. petroR50_r/petroR90_r), fetched in plate-range batches — a single SqlSearch query silently truncates at ' +
+      "500k rows and carved a fake dec +14..22 hole through the Coma supercluster (the pre-2026-08 file was that truncation; don't re-fetch unbatched).",
   },
   'sdss.dir': {
     path: 'data/raw/sdss',
