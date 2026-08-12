@@ -578,22 +578,22 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const orientationDiagnostics = createOrientationDiagnostics();
 
   /**
-   * The seeding debug view's placement density means — per-ring AND global,
-   * off the SAME extractor (`ismMapRingMeans(map, texel => texel.dust)`)
-   * `buildDustParticleCloud` normalises its own CDF term by — load-bearing:
-   * computing this any other way would let the view drift from what
-   * placement actually consumes. No ambient subtraction: the pedestal is
-   * seeded `ambient * gasProfile(r)` and advected by the generator, so it is
-   * itself structure the CDF places into, not a floor to clear first. The
-   * per-ring array rides the GPU only: on the fluid path `rebuildIsmMap`
-   * already dispatched `ringReduce` straight off `ismMapTex`, so this landing
-   * no longer re-derives or re-uploads it — only the scalar (`arrayMean`) is
+   * The seeding debug view's density means — per-ring AND global, off the
+   * SAME extractor (`ismMapRingMeans(map, texel => texel.dust)`) placement's
+   * own GPU CDF (`placeDust.wesl`) shapes by — diagnostics-only since Task 10,
+   * kept on this extractor so the view can't drift from what the shader
+   * actually reads. No ambient subtraction: the pedestal is seeded
+   * `ambient * gasProfile(r)` and advected by the generator, so it is itself
+   * structure the CDF places into, not a floor to clear first. The per-ring
+   * array rides the GPU only: on the fluid path `rebuildIsmMap` already
+   * dispatched `ringReduce` straight off `ismMapTex`, so this landing no
+   * longer re-derives or re-uploads it — only the scalar (`arrayMean`) is
    * cheap enough off the already-necessary CPU readback to keep computing
-   * here (Task 10 may move it onto the GPU too). Non-fluid generators never
-   * get a `ringReduce` dispatch (`rebuildIsmMap`'s own gate), so this keeps
-   * the CPU `writeRingMeans` fallback for THAT path only — otherwise a
-   * disabled-generator's cleared map would leave `ringMeansBuffer` holding a
-   * stale array from whenever the fluid generator last ran.
+   * here. Non-fluid generators never get a `ringReduce` dispatch
+   * (`rebuildIsmMap`'s own gate), so this keeps the CPU `writeRingMeans`
+   * fallback for THAT path only — otherwise a disabled-generator's cleared
+   * map would leave `ringMeansBuffer` holding a stale array from whenever the
+   * fluid generator last ran.
    */
   function recomputeIsmMapSeedingMeans(map: GalaxyIsmMap): void {
     const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
@@ -629,55 +629,21 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
-   * rebuildHiiIfSeeded — the HII tier's own "map landed late" rebuild,
-   * shared by `scheduleIsmMapReadback` and `scheduleOrientationReadback`:
-   * originally the same "map landed after the synchronous build that asked
-   * for it" determinism problem `rebuildDustMixture` solves for dust. Since
-   * Task 8, neither `buildHiiShellsAndYoungWithSegments` (shells/young —
-   * the fluid-event candidate window recomputes its OWN event list off
-   * `(geometry, tuning, seed)`, never `readbacks.ismMapData`) nor
-   * `rebuildDigVeilBudget` (DIG's budget math, or `placeDigVeil.wesl`'s own
-   * GPU-resident CDF) read the CPU `ismMap` copy at all any more — this
-   * function's own two call sites (below) now recompute BYTE-IDENTICAL
-   * output to what `setParams`/`setFieldTuning` already produced, wasted
-   * but harmless CPU work. Left AS A STANDING CALL rather than removed
-   * (out of this task's minimal-restructure scope — see Task 8's report for
-   * the explicit ruling); a future pass could drop both call sites entirely.
-   * File-local — closes over `fieldGeometry`/`fieldTuning`/`hiiMixture`/
-   * `hiiTierSegments`, none of which are pure inputs, so this isn't a
-   * `utils/` candidate.
-   */
-  function rebuildHiiIfSeeded(): void {
-    if (
-      fieldGeometry &&
-      (fieldTuning.hii.ismMapSeeding > 0 ||
-        (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
-        (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
-    ) {
-      ({ mixture: hiiMixture, segments: hiiTierSegments, shellFluxSum, recentEventCount } =
-        centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
-      rebuildDigVeilBudget();
-      repackHiiComponents();
-    }
-  }
-
-  /**
    * scheduleIsmMapReadback — what happens WHEN the one-per-generation copy of
    * `ismMapTex` lands. Called from `rebuildIsmMap`'s own two exits with the grid
    * it just wrote, so `GalaxyIsmMap.rMin/rMax` always matches the CONTENT being
    * copied.
    *
-   * Dust placement no longer reads this landing at all — `placeDust.wesl`
-   * runs entirely off GPU-resident buffers (`dustPlacementRebuild`,
-   * invalidated directly from `rebuildIsmMap`, not from here). What remains
-   * on this path is diagnostics (`recomputeIsmMapSeedingMeans`'s "seeding"
-   * debug-view means) and the HII tier, which still builds CPU-side
-   * (`rebuildHiiIfSeeded` — Task 8's own move).
+   * Diagnostics-only now (Task 10): neither dust (`placeDust.wesl`, entirely
+   * GPU-resident since Task 7) nor the HII tier (`centralHiiMixtureAndSegments`,
+   * rebuilt straight off `(geometry, tuning, seed)` from every
+   * `setParams`/`setFieldTuning` site, never off this landing — Task 8) reads
+   * this landing to place anything. What remains is the "seeding" debug
+   * view's means (`recomputeIsmMapSeedingMeans`).
    */
   function scheduleIsmMapReadback(grid: GalaxyIsmMapGridRadius): void {
     readbacks.requestIsmMap(grid, (map) => {
       recomputeIsmMapSeedingMeans(map);
-      rebuildHiiIfSeeded();
     });
   }
 
@@ -685,7 +651,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * The same, for the CPU copy of `orientationTex` — diagnostics-only now
    * (`reportOrientationDiagnostics`'s coherence stat); dust placement reads
    * `orientationTex` on the GPU directly (`dustPlacementRebuild`), not this
-   * CPU copy. HII stays CPU-side, so its own re-run still belongs here.
+   * CPU copy. The HII tier doesn't read this landing either — same Task 8
+   * move as `scheduleIsmMapReadback`'s own note above.
    */
   function scheduleOrientationReadback(grid: GalaxyIsmMapGridRadius): void {
     readbacks.requestOrientation(grid, ({ data }) => {
@@ -693,7 +660,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // frame or per dust build.
       orientationDiagnostics.noteCoherence(data);
       reportOrientationDiagnostics();
-      rebuildHiiIfSeeded();
     });
   }
 
@@ -1486,7 +1452,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * central galaxy never takes one (every call site below omits it). No
    * `ismMap` parameter any more either — Task 8 moved DIG (this function's
    * only consumer of the CPU ismMap copy) GPU-side, and shells/young never
-   * read it (see `rebuildHiiIfSeeded`'s own updated doc).
+   * read it (see `scheduleIsmMapReadback`'s own doc — Task 10 dropped the
+   * readback-landing rebuild this function's call sites made redundant).
    */
   function centralHiiMixtureAndSegments(
     geometry: GalaxyDescription,
