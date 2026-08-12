@@ -87,7 +87,12 @@ import type {
   IsmMapPlaceArmSpurCloud,
   PlaceArmSpurCloudDispatchInput,
 } from '../ismMap/createIsmMapPlaceArmSpurCloud';
+import type {
+  IsmMapPlaceArmCloud,
+  PlaceArmCloudDispatchInput,
+} from '../ismMap/createIsmMapPlaceArmCloud';
 import { SPUR_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
+import { ARM_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { MAX_PARTICLE_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
@@ -128,6 +133,8 @@ export type GalaxyModelDeps = {
   readonly placeDust: IsmMapPlaceDust;
   /** GPU replacement for `buildArmSpurParticleCloud`'s placement body — see `spurCloudPlacementRebuild`. */
   readonly placeArmSpurCloud: IsmMapPlaceArmSpurCloud;
+  /** GPU replacement for `buildArmParticleCloud`'s placement body — see `armCloudPlacementRebuild`. */
+  readonly placeArmCloud: IsmMapPlaceArmCloud;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   /**
@@ -273,6 +280,32 @@ export type GalaxyModel = {
     readonly records: Float32Array;
   } | null>;
   /**
+   * Debug-only: Task 13's own numeric-validation exception
+   * (`placeArmCloud.wesl` has no non-GPU path to check its output against)
+   * — dispatches fresh and maps the arm-cloud reservation's slot range
+   * straight back, the arm-cloud twin of `requestArmSpurCloudPlacementReadback`.
+   * `flux` is the SAME `cloudFlux` uniform the dispatch used. No production
+   * caller. `null` when nothing is reserved this rebuild (central galaxy
+   * only today — see `armCloudReservation`).
+   */
+  requestArmCloudPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly flux: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
+   * Debug-only: the arm-cloud twin of `requestArmSpurCloudBufferPeek` — COPIES
+   * the reservation's CURRENT slot range out of the LIVE `fieldComps` buffer,
+   * without dispatching `placeArmCloud.wesl` first. `null` when nothing is
+   * reserved.
+   */
+  requestArmCloudBufferPeek(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
    * list is a destroyed buffer.
@@ -291,6 +324,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     dustCdfScan,
     placeDust,
     placeArmSpurCloud,
+    placeArmCloud,
     render,
   } = deps;
 
@@ -414,6 +448,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // the ridge chain's own excess debit left this tier nothing to spend —
   // `GalaxyFieldMixtureResult`'s own doc).
   let spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'] = null;
+  // The arm-cloud tier's RESERVATION, CENTRAL galaxy only — same cut dust
+  // and the spur reservation above both took (extras get it in a follow-up).
+  // Captured alongside `fieldMixture`/`spurCloudReservation` at every central
+  // rebuild site (`centralFieldMixtureAndReservations`), same asymmetry, same
+  // `null` meaning (pill off, or the ridge chain's own excess debit left
+  // nothing to spend).
+  let armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'] = null;
   // What `setParams` was last handed — only `seed` still comes off it; dust
   // and starFormation moved onto `fieldTuning` (scene-wide, not per-galaxy).
   let lastParams: GalaxyParams | null = null;
@@ -893,6 +934,61 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * armCloudPlacementRebuild — encodes `placeArmCloud.wesl` into its own
+   * encoder, off the CURRENT `armCloudReservation`. Consumed from
+   * `GalaxyModel.ensureFresh()`, the SAME deferred-dispatch shape
+   * `dustPlacementRebuild`/`spurCloudPlacementRebuild` use (Task 13's own
+   * cut of Task 7's landed pattern — the dispatcher ruling this brief itself
+   * flagged as needing an explicit decision: this tier reuses the keyed-
+   * rebuild shape rather than giving `setFieldTuning` its own encoder). Like
+   * the spur tier, this reads no ISM-map/orientation texture meaningfully
+   * (its own `orientationTexture` bind is a dead pass-through — see
+   * `placeArmCloud.wesl`'s own doc) so there is no real ordering dependency
+   * on `orientationTexRebuild` either; placed after it anyway, one
+   * discipline rather than three.
+   */
+  const armCloudPlacementRebuild = createKeyedRebuild({
+    wanted: () => armCloudReservation !== null,
+    build: () => {
+      const reservation = armCloudReservation;
+      if (!fieldGeometry || !reservation) return;
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
+      placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(fieldGeometry, reservation));
+      device.queue.submit([enc.finish()]);
+    },
+  });
+
+  /** Shared by `armCloudPlacementRebuild` and the debug readback below — one input shape, one place that assembles it. */
+  function armCloudDispatchInput(
+    geometry: GalaxyDescription,
+    reservation: NonNullable<GalaxyFieldMixtureResult['armCloudReservation']>,
+  ): PlaceArmCloudDispatchInput {
+    return {
+      seed: currentSeed(),
+      offset: reservation.offset,
+      count: reservation.count,
+      flux: reservation.flux,
+      geometry,
+      tuning: fieldTuning,
+      orientationTexture: orientation.texture,
+      fieldCompsBuffer: fieldComps.buffer,
+    };
+  }
+
+  /**
+   * armCloudPeekBuffer — the arm-cloud twin of `spurCloudPeekBuffer` (own doc
+   * below): `requestArmCloudPlacementReadback` always re-dispatches
+   * `placeArmCloud.wesl` fresh, so it cannot see whether `ensureFresh()`'s own
+   * `armCloudPlacementRebuild` kept the buffer filled — `requestArmCloudBufferPeek`
+   * only ever COPIES the CURRENT `fieldComps` reservation range.
+   */
+  const armCloudPeekBuffer = device.createBuffer({
+    label: 'galaxy:armCloudPeek',
+    size: ARM_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  /**
    * spurCloudPeekBuffer — a plain COPY_DST|MAP_READ target for
    * `requestArmSpurCloudBufferPeek` (below): unlike
    * `requestArmSpurCloudPlacementReadback`, which re-DISPATCHES
@@ -959,6 +1055,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * ever re-invalidating the spur rebuild, so the vanish stuck until an
    * unrelated arms/disc change happened to fire it again.
    *
+   * `armCloudPlacementRebuild` joins both invalidations here too, for the
+   * identical reason — Task 13's own cut of the same fix: its reservation
+   * rides inline inside `emission` exactly like the spur tier's, so any
+   * repack (including one whose own trigger has nothing to do with the arm
+   * cloud) clobbers it back to zero the same way.
+   *
    * `dustPlacementRebuild` gets the SAME unconditional invalidate here, for
    * the same reason and the same shape of bug: the mirror-image gap
    * (`setFieldTuning`'s `fieldMoved`-only branch repacks — and so re-zeroes
@@ -986,6 +1088,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       dust: dustCount,
     };
     spurCloudPlacementRebuild.invalidate();
+    armCloudPlacementRebuild.invalidate();
     dustPlacementRebuild.invalidate();
     const packedEmission = packFieldComponents(emission);
     if (dustCount <= 0) {
@@ -1052,19 +1155,25 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
   /**
    * Central-galaxy counterpart to `fieldMixtureOf` that also captures the
-   * spur-cloud tier's own reservation (`centralHiiMixtureAndSegments`'s own
-   * precedent for a central-only metadata capture) — extras never take one
-   * (only the central galaxy's own mixture is ever GPU-filled today, see
-   * `spurCloudReservation`'s own doc), so only the central call sites pay
-   * for it; extras still go through the plain `fieldMixtureOf`. No
-   * `transform`: the central galaxy never takes one.
+   * spur-cloud AND arm-cloud tiers' own reservations
+   * (`centralHiiMixtureAndSegments`'s own precedent for a central-only
+   * metadata capture) — extras never take either (only the central galaxy's
+   * own mixture is ever GPU-filled today, see `spurCloudReservation`'s own
+   * doc), so only the central call sites pay for it; extras still go through
+   * the plain `fieldMixtureOf`. No `transform`: the central galaxy never
+   * takes one.
    */
-  function centralFieldMixtureAndSpurReservation(geometry: GalaxyDescription): {
+  function centralFieldMixtureAndReservations(geometry: GalaxyDescription): {
     readonly mixture: readonly GalaxyFieldComponent[];
     readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
+    readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
   } {
     const result = buildGalaxyFieldMixture(geometry, fieldTuning);
-    return { mixture: result.components, spurCloudReservation: result.spurCloudReservation };
+    return {
+      mixture: result.components,
+      spurCloudReservation: result.spurCloudReservation,
+      armCloudReservation: result.armCloudReservation,
+    };
   }
 
   /**
@@ -1146,11 +1255,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // dust `share`, cloud counts, colours — leave the grid untouched and the
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(ismMapGridRadius(fieldGeometry));
-    // `spurCloudPlacementRebuild` is invalidated inside `repackFieldComponents`
-    // below, not here — see that function's own doc for why ownership lives
-    // there (whoever zeroes the slots owns the invalidation).
-    ({ mixture: fieldMixture, spurCloudReservation } =
-      centralFieldMixtureAndSpurReservation(fieldGeometry));
+    // `spurCloudPlacementRebuild`/`armCloudPlacementRebuild` are invalidated
+    // inside `repackFieldComponents` below, not here — see that function's
+    // own doc for why ownership lives there (whoever zeroes the slots owns
+    // the invalidation).
+    ({ mixture: fieldMixture, spurCloudReservation, armCloudReservation } =
+      centralFieldMixtureAndReservations(fieldGeometry));
     ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
       fieldGeometry,
       currentStarFormation(),
@@ -1216,8 +1326,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         if (fieldMoved) {
           // Invalidation lives in `repackFieldComponents` (below, whichever
           // branch of this function reaches it), not here.
-          ({ mixture: fieldMixture, spurCloudReservation } =
-            centralFieldMixtureAndSpurReservation(fieldGeometry));
+          ({ mixture: fieldMixture, spurCloudReservation, armCloudReservation } =
+            centralFieldMixtureAndReservations(fieldGeometry));
         }
         if (hiiMoved) {
           ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
@@ -1376,6 +1486,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // `dustPlacementRebuild`'s own doc.
       dustPlacementRebuild.ensureFresh();
       spurCloudPlacementRebuild.ensureFresh();
+      armCloudPlacementRebuild.ensureFresh();
       return { bubblesLive };
     },
 
@@ -1513,6 +1624,46 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       }
     },
 
+    async requestArmCloudPlacementReadback(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly flux: number;
+      readonly records: Float32Array;
+    } | null> {
+      const reservation = armCloudReservation;
+      if (!fieldGeometry || !reservation) return null;
+      const records = await placeArmCloud.dispatchAndReadbackArmCloud(
+        armCloudDispatchInput(fieldGeometry, reservation),
+      );
+      return {
+        count: reservation.count,
+        offset: reservation.offset,
+        flux: reservation.flux,
+        records,
+      };
+    },
+
+    async requestArmCloudBufferPeek(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly records: Float32Array;
+    } | null> {
+      const reservation = armCloudReservation;
+      if (!reservation || reservation.count <= 0) return null;
+      const byteSize = reservation.count * FIELD_COMPONENT_FLOATS * 4;
+      const byteOffset = reservation.offset * FIELD_COMPONENT_FLOATS * 4;
+      const enc = device.createCommandEncoder({ label: 'galaxy:armCloudPeek' });
+      enc.copyBufferToBuffer(fieldComps.buffer, byteOffset, armCloudPeekBuffer, 0, byteSize);
+      device.queue.submit([enc.finish()]);
+      await armCloudPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+      try {
+        const records = new Float32Array(armCloudPeekBuffer.getMappedRange(0, byteSize).slice(0));
+        return { count: reservation.count, offset: reservation.offset, records };
+      } finally {
+        armCloudPeekBuffer.unmap();
+      }
+    },
+
     starInstances(): InstanceDraw[] {
       const list: InstanceDraw[] = [];
       if (starBuf) list.push({ buf: starBuf, count: starCount });
@@ -1540,6 +1691,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       hiiComps.destroy();
       bubbleComps.destroy();
       spurCloudPeekBuffer.destroy();
+      armCloudPeekBuffer.destroy();
       dustPeekBuffer.destroy();
       genUbo.destroy();
     },

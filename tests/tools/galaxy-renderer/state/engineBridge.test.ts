@@ -77,6 +77,9 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
     requestArmSpurCloudPlacementReadback:
       vi.fn<GalaxyEngineHandle['requestArmSpurCloudPlacementReadback']>(),
     requestArmSpurCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmSpurCloudBufferPeek']>(),
+    requestArmCloudPlacementReadback:
+      vi.fn<GalaxyEngineHandle['requestArmCloudPlacementReadback']>(),
+    requestArmCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmCloudBufferPeek']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, mocks };

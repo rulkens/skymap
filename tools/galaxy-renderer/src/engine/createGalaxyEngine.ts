@@ -57,6 +57,7 @@ import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
 import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
 import { createIsmMapPlaceDust } from './ismMap/createIsmMapPlaceDust';
 import { createIsmMapPlaceArmSpurCloud } from './ismMap/createIsmMapPlaceArmSpurCloud';
+import { createIsmMapPlaceArmCloud } from './ismMap/createIsmMapPlaceArmCloud';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
@@ -379,6 +380,8 @@ export async function createGalaxyEngine(
   const placeDust = createIsmMapPlaceDust(device, { makeShader });
   // GPU replacement for `buildArmSpurParticleCloud`'s placement body.
   const placeArmSpurCloud = createIsmMapPlaceArmSpurCloud(device, { makeShader });
+  // GPU replacement for `buildArmParticleCloud`'s placement body.
+  const placeArmCloud = createIsmMapPlaceArmCloud(device, { makeShader });
   // Task 12's own numeric-validation exception (armRidge.wesl vs.
   // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
   const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
@@ -500,6 +503,7 @@ export async function createGalaxyEngine(
     dustCdfScan,
     placeDust,
     placeArmSpurCloud,
+    placeArmCloud,
     render,
     onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
     onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),
@@ -1136,6 +1140,10 @@ export async function createGalaxyEngine(
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
     requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),
     requestArmSpurCloudBufferPeek: () => model.requestArmSpurCloudBufferPeek(),
+    // Debug-only: Task 13's own determinism/budget/liveness numeric exception —
+    // see createGalaxyModel.ts's requestArmCloudPlacementReadback. No production caller.
+    requestArmCloudPlacementReadback: () => model.requestArmCloudPlacementReadback(),
+    requestArmCloudBufferPeek: () => model.requestArmCloudBufferPeek(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1149,6 +1157,7 @@ export async function createGalaxyEngine(
       dustCdfScan.dispose();
       placeDust.dispose();
       placeArmSpurCloud.dispose();
+      placeArmCloud.dispose();
       armRidgeDebugSample.dispose();
       ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they

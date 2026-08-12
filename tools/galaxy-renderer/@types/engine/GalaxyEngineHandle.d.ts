@@ -120,5 +120,28 @@ export type GalaxyEngineHandle = {
     readonly offset: number;
     readonly records: Float32Array;
   } | null>;
+  // Debug-only: Task 13's own numeric-validation exception
+  // (`placeArmCloud.wesl` has no non-GPU path to check its output against)
+  // — dispatches fresh and maps the arm-cloud reservation's slot range
+  // straight back, read by `probeGpuErrors.ts`'s `readback:placeArmCloud`
+  // step (determinism, budget count, flux parity). No production caller.
+  // `null` when nothing is reserved this rebuild (central galaxy only — see
+  // `createGalaxyModel.ts`'s `armCloudReservation`).
+  requestArmCloudPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly flux: number;
+    readonly records: Float32Array;
+  } | null>;
+  // Debug-only: the arm-cloud twin of `requestArmSpurCloudBufferPeek` —
+  // COPIES the reservation's CURRENT slot range out of the LIVE `fieldComps`
+  // buffer, without dispatching `placeArmCloud.wesl` first. Read by
+  // `probeGpuErrors.ts`'s `readback:placeArmCloud` step's own "survives a
+  // dust-only tuning change" assertion. No production caller.
+  requestArmCloudBufferPeek(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
   dispose(): void;
 };

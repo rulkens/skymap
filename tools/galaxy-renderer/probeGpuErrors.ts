@@ -46,6 +46,11 @@ import { DEFAULT_GALAXY_DUST_PARAMS } from '../../src/services/engine/galaxyGene
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { buildArmSpurs } from '../../src/services/engine/galaxyGenerator/v2/armSpurGeometry';
 import { deriveArmSpurCloudCount } from '../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
+import {
+  deriveArmCloudCount,
+  radialTilt,
+  tiltReferenceRadius,
+} from '../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { discLightScaleLength } from '../../src/utils/galaxy/discLightScaleLength';
 import { computePlaceDustBudget } from './src/engine/ismMap/computePlaceDustBudget';
 import { FIELD_COMPONENT_FLOATS } from './src/engine/field/packFieldUniforms';
@@ -93,6 +98,11 @@ const ISM_MAP_DUST_CDF_SCAN_TOLERANCE = 1e-3;
 // derived quantities (spriteRadius recovered from a determinant), so f32
 // rounding compounds more than a single function call's worth.
 const ARM_SPUR_CLOUD_FLUX_TOLERANCE = 1e-2;
+
+// `readback:placeArmCloud`'s own flux-parity budget — same derivation as
+// ARM_SPUR_CLOUD_FLUX_TOLERANCE above, one extra chained division (the
+// radial-tilt cancellation) over the same sqrt/cbrt/exp chain.
+const ARM_CLOUD_FLUX_TOLERANCE = 1e-2;
 
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
@@ -1262,6 +1272,238 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         console.error(
           `  readback:placeArmSpurCloud survives a dust-only tuning change (${beforeLive} live before, ${afterLive} live after)`,
+        );
+      },
+    },
+    {
+      // Task 13's own numeric-validation exception — placeArmCloud.wesl has
+      // no CPU reference to diff against either (a fresh shader, not a port
+      // of a still-live CPU twin's exact bytes — `buildArmParticleCloud`
+      // stopped being called from `buildGalaxyFieldMixture` this task).
+      // Checked instead, the SAME four-part bar `readback:placeArmSpurCloud`
+      // sets: (1) determinism; (2) count matches `deriveArmCloudCount`'s own
+      // CPU budget math for the boot preset; (3) liveness — every record's
+      // amplitude is finite and positive (buildArmParticleCloud, like
+      // buildArmSpurParticleCloud, never zeroes an individual placed
+      // sprite — no survival filter on this tier); (4) flux parity —
+      // independent reconstruction of `cloudFlux * fluxWeight_i`, extended
+      // one step past `readback:placeArmSpurCloud`'s own derivation with the
+      // radial-tilt cancellation (`radialTilt`, armParticleCloud.ts's own
+      // export) `armParticleCloud.ts:220-231` divides back out.
+      name: 'readback:placeArmCloud',
+      run: async (page) => {
+        await settleFrames(page, SETTLE_FRAMES);
+        const first = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            throw new Error(
+              'readback:placeArmCloud — no __probeEngine — the probeReadback gate never installed it',
+            );
+          }
+          const landed = await bridge.requestArmCloudPlacementReadback();
+          if (!landed) return null;
+          return {
+            count: landed.count,
+            offset: landed.offset,
+            flux: landed.flux,
+            records: Array.from(landed.records),
+          };
+        });
+        if (!first) {
+          throw new Error(
+            'readback:placeArmCloud — requestArmCloudPlacementReadback() returned null at boot (no arm cloud reserved — expected one under the boot preset\'s default arms.cloud.enabled=true)',
+          );
+        }
+
+        const second = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestArmCloudPlacementReadback();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!second) {
+          throw new Error(
+            'readback:placeArmCloud — second requestArmCloudPlacementReadback() returned null',
+          );
+        }
+
+        // (1) Determinism — bit-identical, no tolerance: two dispatches at
+        // the same seed are the SAME pure function of a stateless hash.
+        if (first.records.length !== second.length) {
+          throw new Error(
+            `readback:placeArmCloud — length mismatch across two dispatches: ${first.records.length} vs ${second.length}`,
+          );
+        }
+        let mismatchIndex = -1;
+        for (let i = 0; i < first.records.length; i++) {
+          if (first.records[i] !== second[i]) {
+            mismatchIndex = i;
+            break;
+          }
+        }
+        if (mismatchIndex >= 0) {
+          throw new Error(
+            `readback:placeArmCloud — non-deterministic at float ${mismatchIndex}: ` +
+              `${first.records[mismatchIndex]} vs ${second[mismatchIndex]} (expected bit-identical)`,
+          );
+        }
+        console.error(
+          `  readback:placeArmCloud two dispatches bit-identical (${first.count} records)`,
+        );
+
+        // (2) Count matches deriveArmCloudCount's own CPU budget math for
+        // the boot preset (MILKY_WAY_GALAXY_PARAMS + the tool's own
+        // DEFAULT_GALAXY_FIELD_TUNING, same pairing readback:placeArmSpurCloud
+        // uses).
+        const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
+        const expectedCount = deriveArmCloudCount(geometry, DEFAULT_GALAXY_FIELD_TUNING);
+        if (first.count !== expectedCount) {
+          throw new Error(
+            `readback:placeArmCloud — count ${first.count} does not match deriveArmCloudCount's own budget math (${expectedCount})`,
+          );
+        }
+        console.error(`  readback:placeArmCloud count matches budget math (${first.count})`);
+
+        // (3) Liveness — every record's amplitude (lane 3 of every
+        // FIELD_COMPONENT_FLOATS-wide record) is finite and strictly
+        // positive. buildArmParticleCloud never zeroes an individual placed
+        // sprite (no survival filter on this tier, same as the spur cloud) —
+        // a zero or non-finite amplitude here means the weighted arm pick,
+        // the rejection loop, or the flux-weight math is broken.
+        let nonPositiveCount = 0;
+        for (let i = 0; i < first.count; i++) {
+          const amplitude = first.records[i * FIELD_COMPONENT_FLOATS + 3]!;
+          if (!(Number.isFinite(amplitude) && amplitude > 0)) nonPositiveCount++;
+        }
+        if (nonPositiveCount > 0) {
+          throw new Error(
+            `readback:placeArmCloud — ${nonPositiveCount}/${first.count} records have a non-finite or non-positive amplitude (expected every reserved slot live, no survival filter on this tier)`,
+          );
+        }
+        console.error(
+          `  readback:placeArmCloud all ${first.count} records live (finite, positive amplitude)`,
+        );
+
+        // (4) Flux parity — independent reconstruction, not a self-consistency
+        // tautology, extending readback:placeArmSpurCloud's own derivation
+        // (this file's own doc for the base formula and its known gap: a
+        // sigma-factor permutation that preserves their product would slip
+        // through). `elongation`/`radialBias` read the SAME
+        // DEFAULT_GALAXY_FIELD_TUNING.arms.cloud the boot page runs;
+        // `radialBias` is clamped the same way createIsmMapPlaceArmCloud.ts's
+        // own packer clamps it.
+        const geometryForFlux = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
+        const hLight = discLightScaleLength(geometryForFlux);
+        const excessScaleRatio = DEFAULT_GALAXY_FIELD_TUNING.arms.excessScaleRatio;
+        const elongation = DEFAULT_GALAXY_FIELD_TUNING.arms.cloud.elongation;
+        const bias = Math.max(0, DEFAULT_GALAXY_FIELD_TUNING.arms.cloud.radialBias);
+        const tiltRef = tiltReferenceRadius(geometryForFlux);
+        // armParticleCloud.ts's own SPRITE_POLE_RATIO — mirrored, no parity
+        // test (same treatment placeArmSpurCloud.wesl's own copy gets — the
+        // shader has no TS twin to test it against).
+        const SPRITE_POLE_RATIO = 0.6;
+        const TAU_ROOT3_TS = (2 * Math.PI) ** 1.5;
+
+        let measuredRawFlux = 0;
+        let expectedRawFlux = 0;
+        for (let i = 0; i < first.count; i++) {
+          const o = i * FIELD_COMPONENT_FLOATS;
+          const xx = first.records[o + 0]!;
+          const yy = first.records[o + 1]!;
+          const zz = first.records[o + 2]!;
+          const amplitude = first.records[o + 3]!;
+          const xy = first.records[o + 4]!;
+          const xz = first.records[o + 5]!;
+          const yz = first.records[o + 6]!;
+          const cx = first.records[o + 12]!;
+          const cz = first.records[o + 14]!;
+          const det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
+          if (!(det > 0)) {
+            throw new Error(`readback:placeArmCloud — record ${i} has non-positive det(invCov)`);
+          }
+          measuredRawFlux += (amplitude * TAU_ROOT3_TS) / Math.sqrt(det);
+
+          const sigProduct = 1 / Math.sqrt(det);
+          const spriteRadius = Math.cbrt(sigProduct / (elongation * SPRITE_POLE_RATIO));
+          const placedRadius = Math.hypot(cx, cz);
+          const shape = armExcessSurfaceShape(placedRadius, geometryForFlux, hLight, excessScaleRatio);
+          const tilt = radialTilt(placedRadius, tiltRef, bias);
+          expectedRawFlux += (first.flux * spriteRadius * spriteRadius * shape) / tilt;
+        }
+        const fluxRelError = Math.abs(measuredRawFlux / expectedRawFlux - 1);
+        if (!(fluxRelError < ARM_CLOUD_FLUX_TOLERANCE)) {
+          throw new Error(
+            `readback:placeArmCloud — flux parity failed: measured ${measuredRawFlux} vs expected ${expectedRawFlux} (relative error ${fluxRelError}, tolerance ${ARM_CLOUD_FLUX_TOLERANCE})`,
+          );
+        }
+        console.error(
+          `  readback:placeArmCloud flux parity: measured=${measuredRawFlux.toFixed(4)} expected=${expectedRawFlux.toFixed(4)} (relative error ${fluxRelError.toExponential(3)})`,
+        );
+      },
+    },
+    {
+      // Task 13's own regression exception, the arm-cloud twin of
+      // `readback:placeArmSpurCloud (survives dust-only tuning change)` —
+      // `armCloudPlacementRebuild` joined `repackFieldComponents`'s
+      // unconditional invalidation set at the same time this task wired the
+      // reservation up (createGalaxyModel.ts's own doc), so this checks that
+      // fix rather than re-discovering the gap it fixes.
+      name: 'readback:placeArmCloud (survives dust-only tuning change)',
+      run: async (page) => {
+        const before = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestArmCloudBufferPeek();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!before) {
+          throw new Error(
+            'readback:placeArmCloud (survives dust-only tuning change) — requestArmCloudBufferPeek() returned null before the dust patch',
+          );
+        }
+        let beforeLive = 0;
+        for (let i = 0; i < before.length / FIELD_COMPONENT_FLOATS; i++) {
+          if (before[i * FIELD_COMPONENT_FLOATS + 3]! > 0) beforeLive++;
+        }
+        if (beforeLive === 0) {
+          throw new Error(
+            'readback:placeArmCloud (survives dust-only tuning change) — every record already reads amplitude 0 BEFORE the dust-only patch; this step cannot tell a vanish from a pre-existing empty buffer',
+          );
+        }
+
+        // A dust-only patch: touches `fieldTuning.dust` alone, so
+        // `fieldMoved` stays false and `dustMoved` alone drives
+        // `setFieldTuning`'s `repackFieldComponents()` call.
+        await page.evaluate(async (dust) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({ dust: { ...dust, tau: dust.tau * 1.01 } });
+        }, DEFAULT_GALAXY_FIELD_TUNING.dust);
+        await settleFrames(page, SETTLE_FRAMES);
+
+        const after = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestArmCloudBufferPeek();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!after) {
+          throw new Error(
+            'readback:placeArmCloud (survives dust-only tuning change) — requestArmCloudBufferPeek() returned null after the dust patch',
+          );
+        }
+        let afterLive = 0;
+        for (let i = 0; i < after.length / FIELD_COMPONENT_FLOATS; i++) {
+          if (after[i * FIELD_COMPONENT_FLOATS + 3]! > 0) afterLive++;
+        }
+        if (afterLive === 0) {
+          throw new Error(
+            `readback:placeArmCloud (survives dust-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before a dust-only setFieldTuning patch, 0 after — repackFieldComponents() zeroed the arm-cloud range and armCloudPlacementRebuild was never re-invalidated to refill it`,
+          );
+        }
+        console.error(
+          `  readback:placeArmCloud survives a dust-only tuning change (${beforeLive} live before, ${afterLive} live after)`,
         );
       },
     },
