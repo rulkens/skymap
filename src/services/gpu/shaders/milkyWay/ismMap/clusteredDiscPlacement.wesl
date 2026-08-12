@@ -16,18 +16,40 @@
 // keyed on its own SLOT index — two populations so the two draw families can
 // never alias each other even where their index ranges overlap.
 //
-// RNG_SLOT_CONTRACT (mode 2u): the weighted ARM PICK lives in the CALLER
-// (placeArmCloud.wesl owns the arm-records storage buffer; this shared
-// function takes none, so modes 0u/1u never need to bind one) at
-// (CDP_POP_COMPLEX, complexIndex) slots 0 (a dead armRoll draw, kept only
-// for structural parity with placeAnalyticComplex's own unconditional roll —
-// armBias is hardcoded 1 for this tier's only caller, so the roll can never
-// gate anything) and 1 (the pick itself). Mode 2u's OWN branch below never
-// reads slots 0/1 — its arm-lane sub-branch starts at slot 2 (a running
-// counter, the rejection loop's try count varies per invocation) and its
-// smooth-disc fallback sub-branch uses ITS OWN slots 2-8 (mirroring mode
-// 1u's 0-6, shifted by +2) — the two sub-branches are mutually exclusive per
-// complexIndex, so they may share that range without colliding.
+// RNG_SLOT_CONTRACT: within one caller's own (popComplex, complexIndex) or
+// (popChild, i) pair, slots never collide (mode 0u/1u/2u's own layouts
+// below). ACROSS callers, genRand/genNormal are a PURE function of
+// (seed, pop, idx, slot) with no per-dispatch salt — two callers sharing
+// BOTH 'seed' and 'pop' would draw bit-identical values at every coincident
+// (idx, slot), silently correlating two supposedly-independent stochastic
+// populations (the CPU original avoided this with a per-tier 'seed ^ TAG'
+// salt — dustParticleCloud.ts's "DUST" vs. armParticleCloud.ts's "ARMC").
+// 'buildClusteredDiscPlacementChild' therefore takes 'popComplex'/'popChild'
+// as CALLER-SUPPLIED parameters rather than hardcoding 'CDP_POP_COMPLEX'/
+// 'CDP_POP_CHILD' internally: dust's own call site (placeDust.wesl) passes
+// those two constants UNCHANGED (so its own output stays byte-identical —
+// dust's placement is approved/pinned by the probe); arm cloud's call site
+// (placeArmCloud.wesl) passes its OWN distinct pair
+// (ARM_CLOUD_POP_COMPLEX/ARM_CLOUD_POP_CHILD, that file's own constants) so
+// its draws are genuinely independent of dust's even where the two
+// dispatches' 'complexIndex'/'i' ranges overlap — the same decorrelation
+// placeArmSpurCloud.wesl's own 'PLACE_SPUR_CLOUD_POP' already gets by
+// using a single tier-distinct population for its whole (complex-less) draw
+// sequence.
+//
+// RNG_SLOT_CONTRACT (mode 2u, within whichever popComplex the caller
+// passed): the weighted ARM PICK lives in the CALLER (placeArmCloud.wesl
+// owns the arm-records storage buffer; this shared function takes none, so
+// modes 0u/1u never need to bind one) at (popComplex, complexIndex) slots 0
+// (a dead armRoll draw, kept only for structural parity with
+// placeAnalyticComplex's own unconditional roll — armBias is hardcoded 1
+// for this tier's only caller, so the roll can never gate anything) and 1
+// (the pick itself). Mode 2u's OWN branch below never reads slots 0/1 — its
+// arm-lane sub-branch starts at slot 2 (a running counter, the rejection
+// loop's try count varies per invocation) and its smooth-disc fallback
+// sub-branch uses ITS OWN slots 2-8 (mirroring mode 1u's 0-6, shifted by
+// +2) — the two sub-branches are mutually exclusive per complexIndex, so
+// they may share that range without colliding.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -213,7 +235,11 @@ struct PlacedChild {
 }
 
 // Distinct hash "populations" for complex-level vs. child-level draws — see
-// this file's own header for why the two must never share one tag.
+// this file's own header for why the two must never share one tag. These
+// two are dust's OWN concrete values (placeDust.wesl passes them,
+// unchanged, as buildClusteredDiscPlacementChild's popComplex/popChild
+// arguments) — kept exported/importable rather than dust inlining its own
+// copies, so "dust's population" stays this ONE pair, not a duplicate.
 const CDP_POP_COMPLEX: u32 = 0xC0442u;
 const CDP_POP_CHILD: u32 = 0xC41Du;
 
@@ -241,7 +267,9 @@ fn cdpRadialTilt(radius: f32, referenceRadius: f32, bias: f32) -> f32 {
 // rotate it). Own 'slotBase' rather than hardcoded 0: mode 1u calls this at
 // 0, mode 2u's degenerate-arm fallback at 2 (see this file's own
 // RNG_SLOT_CONTRACT) — one function, two non-colliding slot ranges, instead
-// of two copies of the same pick/genNormal sequence.
+// of two copies of the same pick/genNormal sequence. 'popComplex' is the
+// CALLER's own complex-level population (this file's own header) — threaded
+// through rather than hardcoded, so this helper stays tier-agnostic.
 struct SmoothDiscSeed {
   center: vec3<f32>,
   radius: f32,
@@ -249,10 +277,10 @@ struct SmoothDiscSeed {
 }
 
 fn cdpPlaceSmoothDiscSeed(
-  seed: u32, complexIndex: u32, slotBase: u32,
+  seed: u32, popComplex: u32, complexIndex: u32, slotBase: u32,
   discSigmaR: vec4<f32>, discWeightSum: f32, sigmaZComplex: f32,
 ) -> SmoothDiscSeed {
-  let pick = genRand(seed, CDP_POP_COMPLEX, complexIndex, slotBase) * discWeightSum;
+  let pick = genRand(seed, popComplex, complexIndex, slotBase) * discWeightSum;
   var k = 3u;
   var acc = 0.0;
   for (var j = 0u; j < 4u; j++) {
@@ -260,9 +288,9 @@ fn cdpPlaceSmoothDiscSeed(
     if (pick <= acc) { k = j; break; }
   }
   let sigmaR = discSigmaR[k];
-  let x = genNormal(seed, CDP_POP_COMPLEX, complexIndex, slotBase + 1u) * sigmaR;
-  let z = genNormal(seed, CDP_POP_COMPLEX, complexIndex, slotBase + 3u) * sigmaR;
-  let y = genNormal(seed, CDP_POP_COMPLEX, complexIndex, slotBase + 5u) * sigmaZComplex;
+  let x = genNormal(seed, popComplex, complexIndex, slotBase + 1u) * sigmaR;
+  let z = genNormal(seed, popComplex, complexIndex, slotBase + 3u) * sigmaR;
+  let y = genNormal(seed, popComplex, complexIndex, slotBase + 5u) * sigmaZComplex;
   var out: SmoothDiscSeed;
   out.center = vec3<f32>(x, y, z);
   out.radius = length(vec2<f32>(x, z));
@@ -283,6 +311,12 @@ fn cdpPlaceSmoothDiscSeed(
 // roll — Task 13).
 fn buildClusteredDiscPlacementChild(
   seed: u32, i: u32, childrenPerComplex: u32, mode: u32,
+  // Caller-owned hash populations (this file's own RNG_SLOT_CONTRACT) — NOT
+  // hardcoded here, so two callers sharing 'seed' never draw correlated
+  // values: dust's own call site passes CDP_POP_COMPLEX/CDP_POP_CHILD
+  // (unchanged, so its output stays byte-identical); arm cloud's passes its
+  // own distinct pair.
+  popComplex: u32, popChild: u32,
   // mode 0u (mapDensity) inputs — Task 6's CDF prefix buffer.
   prefixBuf: ptr<storage, array<f32>, read>, cdfTotal: f32,
   cdfRings: u32, cdfAz: u32, cdfRMin: f32, cdfRMax: f32,
@@ -312,7 +346,7 @@ fn buildClusteredDiscPlacementChild(
     // placeMapDensityComplex — sampleIsmMapDustCdf.ts:20-46 ported verbatim
     // (upperBound binary search, 3 draws), then the complex's y offset
     // (genNormal, 2 draws) — 5 slots total, SAME order as the CPU.
-    let u = genRand(seed, CDP_POP_COMPLEX, complexIndex, 0u) * cdfTotal;
+    let u = genRand(seed, popComplex, complexIndex, 0u) * cdfTotal;
     var lo = 0u;
     var hi = cdfRings * cdfAz - 1u;
     loop {
@@ -324,20 +358,20 @@ fn buildClusteredDiscPlacementChild(
     let ring = index / cdfAz;
     let azIdx = index % cdfAz;
     let dTheta = 2.0 * CDP_PI / f32(cdfAz);
-    let angle = f32(azIdx) * dTheta + genRand(seed, CDP_POP_COMPLEX, complexIndex, 1u) * dTheta;
+    let angle = f32(azIdx) * dTheta + genRand(seed, popComplex, complexIndex, 1u) * dTheta;
     let edges = ismMapDustRingEdges(ring, cdfRings, cdfRMin, cdfRMax);
     let radius = sqrt(
       edges.x * edges.x
-        + genRand(seed, CDP_POP_COMPLEX, complexIndex, 2u) * (edges.y * edges.y - edges.x * edges.x),
+        + genRand(seed, popComplex, complexIndex, 2u) * (edges.y * edges.y - edges.x * edges.x),
     );
-    let y = genNormal(seed, CDP_POP_COMPLEX, complexIndex, 3u) * sigmaZComplex;
+    let y = genNormal(seed, popComplex, complexIndex, 3u) * sigmaZComplex;
     center = vec3<f32>(cos(angle) * radius, y, sin(angle) * radius);
     frame = rotateFrameToOrientation(
       cloudFrameFromWarpSurface(warpSurfaceFrame(radius, angle, geom)), radius, angle, geom,
       hasOrientation, orientationTex, orientRings, orientAz, orientRMin, orientRMax,
     );
   } else if (mode == 1u) {
-    let seedPt = cdpPlaceSmoothDiscSeed(seed, complexIndex, 0u, discSigmaR, discWeightSum, sigmaZComplex);
+    let seedPt = cdpPlaceSmoothDiscSeed(seed, popComplex, complexIndex, 0u, discSigmaR, discWeightSum, sigmaZComplex);
     center = seedPt.center;
     frame = rotateFrameToOrientation(
       cloudFrameFromWarpSurface(warpSurfaceFrame(seedPt.radius, seedPt.angle, geom)),
@@ -360,19 +394,19 @@ fn buildClusteredDiscPlacementChild(
       var logR = armLogMin;
       var radius = geom.armStartRadius;
       for (var tries = 0u; tries < CDP_ARM_FADE_REJECTION_TRIES; tries++) {
-        logR = armLogMin + genRand(seed, CDP_POP_COMPLEX, complexIndex, slot) * (armLogMax - armLogMin);
+        logR = armLogMin + genRand(seed, popComplex, complexIndex, slot) * (armLogMax - armLogMin);
         slot += 1u;
         radius = geom.armStartRadius * exp(logR);
-        let accept = genRand(seed, CDP_POP_COMPLEX, complexIndex, slot)
+        let accept = genRand(seed, popComplex, complexIndex, slot)
           < armFadeEnvelope(radius, armPicked, geom) * cdpRadialTilt(radius, armTiltRefRadius, armRadialBias);
         slot += 1u;
         if (accept) { break; }
       }
       let laneFrame = armRidgeFrameAt(logR, armPicked, geom);
       let laneSpread = armCrossSigma(radius, armWidthScale, geom);
-      let acrossOffset = genNormal(seed, CDP_POP_COMPLEX, complexIndex, slot) * laneSpread;
+      let acrossOffset = genNormal(seed, popComplex, complexIndex, slot) * laneSpread;
       slot += 2u;
-      let poleOffset = genNormal(seed, CDP_POP_COMPLEX, complexIndex, slot) * sigmaZComplex;
+      let poleOffset = genNormal(seed, popComplex, complexIndex, slot) * sigmaZComplex;
       center = laneFrame.point + laneFrame.across * acrossOffset + laneFrame.pole * poleOffset;
       frame = CloudFrame(laneFrame.along, laneFrame.across, laneFrame.pole);
       warped = true;
@@ -381,7 +415,7 @@ fn buildClusteredDiscPlacementChild(
       // range (2..8, mirroring mode 1u's 0..6 shifted by +2) so it can never
       // collide with the arm-lane sub-branch above even though the two are
       // mutually exclusive per complexIndex.
-      let seedPt = cdpPlaceSmoothDiscSeed(seed, complexIndex, 2u, discSigmaR, discWeightSum, sigmaZComplex);
+      let seedPt = cdpPlaceSmoothDiscSeed(seed, popComplex, complexIndex, 2u, discSigmaR, discWeightSum, sigmaZComplex);
       center = seedPt.center;
       frame = cloudFrameFromWarpSurface(warpSurfaceFrame(seedPt.radius, seedPt.angle, geom));
     }
@@ -393,9 +427,9 @@ fn buildClusteredDiscPlacementChild(
   // (moot for a slot-hash RNG's own determinism, kept for structural parity
   // with the CPU original this is a port of).
   let childSpread = select(0.0, complexSpread, childrenPerComplex > 1u);
-  let along = genNormal(seed, CDP_POP_CHILD, i, 0u) * childSpread * elongation;
-  let across = genNormal(seed, CDP_POP_CHILD, i, 2u) * childSpread;
-  let pole = genNormal(seed, CDP_POP_CHILD, i, 4u) * childSpread * childPoleRatio;
+  let along = genNormal(seed, popChild, i, 0u) * childSpread * elongation;
+  let across = genNormal(seed, popChild, i, 2u) * childSpread;
+  let pole = genNormal(seed, popChild, i, 4u) * childSpread * childPoleRatio;
   let x = center.x + frame.along.x * along + frame.across.x * across + frame.pole.x * pole;
   let z = center.z + frame.along.z * along + frame.across.z * across + frame.pole.z * pole;
   let yFlat = center.y + frame.along.y * along + frame.across.y * across + frame.pole.y * pole;

@@ -23,7 +23,6 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::genRand;
 import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromFrame;
 import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlacementChild;
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRadialTilt;
-import package::milkyWay::ismMap::clusteredDiscPlacement::CDP_POP_COMPLEX;
 
 // armParticleCloud.ts's own non-exported constants, mirrored verbatim (same
 // "mirror, no parity test" treatment armRidge.wesl gives its own
@@ -44,18 +43,32 @@ const CHILD_POLE_RATIO: f32 = 0.4;
 const TAU_ROOT3: f32 = 15.749609945722418;
 
 // RNG_SLOT_CONTRACT (see clusteredDiscPlacement.wesl's own header): this
-// shader owns (CDP_POP_COMPLEX, complexIndex) slots 0 (a dead armRoll draw)
-// and 1 (the weighted arm pick) — buildClusteredDiscPlacementChild's mode 2u
-// branch starts its own draws at slot 2 and never reads 0/1.
+// shader owns (ARM_CLOUD_POP_COMPLEX, complexIndex) slots 0 (a dead armRoll
+// draw) and 1 (the weighted arm pick) — buildClusteredDiscPlacementChild's
+// mode 2u branch starts its own draws at slot 2 and never reads 0/1.
 //
-// PLACE_ARM_CLOUD_POP_CHILD deliberately reuses CDP_POP_CHILD's numeric
-// value (0xC41D, clusteredDiscPlacement.wesl), the same "continue the SAME
-// draw stream, not a new population" reuse placeDust.wesl's own
-// PLACE_DUST_POP_CHILD documents: the shared child-scatter tail draws
-// (CDP_POP_CHILD, i) slots 0-5, so this shader's own per-child size draw
-// below continues that stream at slot 6, exactly mirroring placeDust.wesl's
-// own drawPayload slot.
-const PLACE_ARM_CLOUD_POP_CHILD: u32 = 0xC41Du;
+// ARM_CLOUD_POP_COMPLEX/ARM_CLOUD_POP_CHILD are this tier's OWN population
+// tags, distinct from clusteredDiscPlacement.wesl's CDP_POP_COMPLEX/
+// CDP_POP_CHILD (dust's own values) — genRand/genNormal are a pure function
+// of (seed, pop, idx, slot) with no per-dispatch salt, and this shader
+// shares 'params.seed' ('currentSeed()') with dust's own dispatch, so reusing
+// dust's population tags here would draw bit-identical, CORRELATED values at
+// every coincident (complexIndex, slot)/(i, slot) the two dispatches happen
+// to share (fix-round-1 finding: this is exactly what the CPU original's own
+// per-tier 'seed ^ TAG' salting existed to prevent — armParticleCloud.ts's
+// own 'mulberry32(seed ^ 0x41524d43)', "ARMC"). Mirrors
+// placeArmSpurCloud.wesl's own 'PLACE_SPUR_CLOUD_POP' decorrelation, ported
+// here as TWO tags (complex + child) instead of one, since this tier —
+// unlike spur — goes through the shared complex/child clumping loop.
+//
+// ARM_CLOUD_POP_CHILD is what the shared child-scatter tail
+// (clusteredDiscPlacement.wesl's own popChild parameter) draws slots 0-5
+// against for THIS shader's dispatch; this shader's own per-child size draw
+// below continues that SAME stream at slot 6, exactly mirroring
+// placeDust.wesl's own drawPayload slot (dust continues ITS OWN
+// CDP_POP_CHILD stream the identical way).
+const ARM_CLOUD_POP_COMPLEX: u32 = 0x41524D43u; // "ARMC" — armParticleCloud.ts's own seed-salt bytes, repurposed as a population tag
+const ARM_CLOUD_POP_CHILD: u32 = 0x41524D63u; // "ARMc" — same 4 bytes, lowercase tail byte distinguishes it from ARM_CLOUD_POP_COMPLEX
 
 // ArmCloudArmRecord — packArmCloudArmRecords.ts's own per-arm storage
 // record: armRidge.wesl's ArmRec fields (phase..fadeRadius) plus
@@ -159,13 +172,13 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // for this tier's only caller, so the roll can never gate anything), drawn
   // anyway for structural parity with the CPU original (see this file's own
   // RNG_SLOT_CONTRACT above). '_' is WGSL's phony-assignment discard.
-  _ = genRand(params.seed, CDP_POP_COMPLEX, complexIndex, 0u);
+  _ = genRand(params.seed, ARM_CLOUD_POP_COMPLEX, complexIndex, 0u);
 
   // pickWeighted — armAgeWeight-biased arm pick, ported verbatim (the CPU's
   // own fallback of the last entry on a float-rounding miss is reproduced by
   // seeding armIndex there before the scan, placeArmSpurCloud.wesl's own
   // precedent).
-  let pick = genRand(params.seed, CDP_POP_COMPLEX, complexIndex, 1u) * params.armWeightSum;
+  let pick = genRand(params.seed, ARM_CLOUD_POP_COMPLEX, complexIndex, 1u) * params.armWeightSum;
   var armIndex = params.armCount - 1u;
   var acc = 0.0;
   for (var j = 0u; j < params.armCount; j++) {
@@ -188,6 +201,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // clusteredDiscPlacement.wesl) reads them the same way mode 1u does.
   let placed = buildClusteredDiscPlacementChild(
     params.seed, i, params.childrenPerComplex, 2u,
+    ARM_CLOUD_POP_COMPLEX, ARM_CLOUD_POP_CHILD,
     &passThroughPrefixBuf, 0.0, 0u, 0u, 0.0, 0.0,
     params.discSigmaR, params.discWeightSum,
     params.complexSpread, params.elongation, params.sigmaZComplex, CHILD_POLE_RATIO,
@@ -203,7 +217,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // "deterministic lookup at the child's own position" discipline).
   let particleRadius = length(vec2<f32>(placed.center.x, placed.center.z));
   let sizeFrac = SIZE_MIN_RATIO
-    + genRand(params.seed, PLACE_ARM_CLOUD_POP_CHILD, i, 6u) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
+    + genRand(params.seed, ARM_CLOUD_POP_CHILD, i, 6u) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
   let radius = armCrossSigma(particleRadius, params.widthScale, geom) * sizeFrac * params.sizeScale;
 
   let sigAlong = radius * params.elongation;

@@ -21,6 +21,8 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRingIndexForRadius;
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpAzIndexForAngle;
 import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromFrame;
 import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlacementChild;
+import package::milkyWay::ismMap::clusteredDiscPlacement::CDP_POP_COMPLEX;
+import package::milkyWay::ismMap::clusteredDiscPlacement::CDP_POP_CHILD;
 
 // Mirrors dustParticleCloud.ts's DUST_SURVIVAL_FLOOR_FRAC — parity-tested in
 // constants.parity.test.ts alongside ismMapPresent.wesl's own copy. A THIRD
@@ -112,12 +114,20 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   );
   let hasOrientation = params.generatorIsFluid != 0u;
 
+  // CDP_POP_COMPLEX/CDP_POP_CHILD passed EXPLICITLY (not left to a hardcoded
+  // default inside buildClusteredDiscPlacementChild) — the fix-round-1
+  // finding this call site now documents at the top of its own import list:
+  // dust and arm cloud must draw from genuinely independent (pop, idx, slot)
+  // coordinates even though both share 'params.seed'/'currentSeed()'. These
+  // are dust's OWN unchanged values, so this shader's output is unaffected.
+  //
   // Trailing 6 args are mode 2u's ('analytic', Task 13's arm cloud) own
   // inputs — this shader never reaches that branch (mode is always 0u/1u
   // above), so a zeroed ArmRec + degenerate armLogMax<=armLogMin (0.0, 0.0)
   // is harmless filler, not a real placement.
   let placed = buildClusteredDiscPlacementChild(
     params.seed, i, params.childrenPerComplex, mode,
+    CDP_POP_COMPLEX, CDP_POP_CHILD,
     &prefixBuf, total, params.gridRings, params.gridAz, params.rMin, params.rMax,
     params.discSigmaR, params.discWeightSum,
     params.complexSpread, params.elongation, params.sigmaZComplex, CHILD_POLE_RATIO,
