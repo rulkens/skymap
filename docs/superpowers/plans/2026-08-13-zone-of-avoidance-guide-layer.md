@@ -180,21 +180,21 @@ export type ZoneOfAvoidanceInfo = {
 - `description`: explains that interstellar dust in the Milky Way's disk absorbs and reddens light from anything behind it, so optical and near-infrared surveys (SDSS, 2MRS, GLADE) see essentially nothing in this band — it is an observational artifact of our vantage point inside the Galaxy, not a real gap in the universe.
 - `distanceNote`: notes the band spans the full surveyed volume (a few Mpc out to the survey shell), since it's a line-of-sight effect, not a distance-limited one.
 
-- [ ] Add the type + const (above) with the copy drafted in full.
-- [ ] Add the test `ZONE_OF_AVOIDANCE_INFO carries the 'zoneOfAvoidance' tag`.
-- [ ] Add the test `ZONE_OF_AVOIDANCE_INFO displayName is "Zone of Avoidance"`.
-- [ ] Add `| { readonly type: 'zoneOfAvoidance' }` to `SelectionRef` (`SelectionRef.d.ts`, beside the `milkyWay` arm).
-- [ ] Add `| { readonly type: 'zoneOfAvoidance' }` to `SelectionRow` (`SelectionRow.d.ts`, beside the `milkyWay` arm).
-- [ ] Add `| ZoneOfAvoidanceInfo` to `FocusableTarget` (`FocusableTarget.d.ts`); `FocusableTargetType` widens automatically (it's `FocusableTarget['type']`).
-- [ ] `resolvePickTable.ts` (`RESOLVE_PICK`, `Partial<Record<...>>`): add `zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' }),` mirroring the `milkyWay` row.
-- [ ] `extractSelectionRow.ts` (`EXTRACT_ROW`, total mapped type): add `zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' as const }),`.
-- [ ] `buildFocusable.ts` (`BUILD_FOCUSABLE`, total mapped type): import `ZONE_OF_AVOIDANCE_INFO`, add `zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,`.
-- [ ] `refOf.ts` (`REF_OF`, hand-typed total object): add the field declaration `zoneOfAvoidance: (t: ZoneOfAvoidanceInfo) => SelectionRef;` and the row `zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' }),`.
-- [ ] `targetIdentityKey.ts` (`TARGET_IDENTITY_KEY`, total `Record<FocusableTargetType, ...>`): add `zoneOfAvoidance: () => 'zoneOfAvoidance',`.
-- [ ] `urlHashFor.ts` (`URL_HASH_FOR`): add `zoneOfAvoidance: () => null,` — **diverges from `milkyWay`'s row body** (which returns the fixed `MILKY_WAY_FOCUS_ID` literal); only the row's *existence* mirrors milkyWay, not its contents. No deep link (spec's Non-goals).
-- [ ] `selectionHaloTable.ts`: widen the hand-typed `SELECTION_HALO_TABLE` object's field declarations with `zoneOfAvoidance: (row: { readonly type: 'zoneOfAvoidance' }) => null;` and the row `zoneOfAvoidance: (_row) => null,` — mirrors the `structure` row exactly (no ring; comment why: the band has no point center).
-- [ ] `npm test -- zoneOfAvoidanceInfo` green. `npm run typecheck` clean — this is the load-bearing check for this task: every table above must compile, and a missed row surfaces as a `tsc` error, not a runtime failure.
-- [ ] Commit (one commit for the whole cascade, per the "one task by construction" note above).
+- [x] Add the type + const (above) with the copy drafted in full.
+- [ ] Add the test `ZONE_OF_AVOIDANCE_INFO carries the 'zoneOfAvoidance' tag`. — DROPPED per controller ruling (testing.md: constant restatement)
+- [ ] Add the test `ZONE_OF_AVOIDANCE_INFO displayName is "Zone of Avoidance"`. — DROPPED per controller ruling (testing.md: constant restatement)
+- [x] Add `| { readonly type: 'zoneOfAvoidance' }` to `SelectionRef` (`SelectionRef.d.ts`, beside the `milkyWay` arm).
+- [x] Add `| { readonly type: 'zoneOfAvoidance' }` to `SelectionRow` (`SelectionRow.d.ts`, beside the `milkyWay` arm).
+- [x] Add `| ZoneOfAvoidanceInfo` to `FocusableTarget` (`FocusableTarget.d.ts`); `FocusableTargetType` widens automatically (it's `FocusableTarget['type']`).
+- [x] `resolvePickTable.ts` (`RESOLVE_PICK`, `Partial<Record<...>>`): add `zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' }),` mirroring the `milkyWay` row.
+- [x] `extractSelectionRow.ts` (`EXTRACT_ROW`, total mapped type): add `zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' as const }),`.
+- [x] `buildFocusable.ts` (`BUILD_FOCUSABLE`, total mapped type): import `ZONE_OF_AVOIDANCE_INFO`, add `zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,`.
+- [x] `refOf.ts` (`REF_OF`, hand-typed total object): add the field declaration `zoneOfAvoidance: (t: ZoneOfAvoidanceInfo) => SelectionRef;` and the row `zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' }),`.
+- [x] `targetIdentityKey.ts` (`TARGET_IDENTITY_KEY`, total `Record<FocusableTargetType, ...>`): add `zoneOfAvoidance: () => 'zoneOfAvoidance',`.
+- [x] `urlHashFor.ts` (`URL_HASH_FOR`): add `zoneOfAvoidance: () => null,` — **diverges from `milkyWay`'s row body** (which returns the fixed `MILKY_WAY_FOCUS_ID` literal); only the row's *existence* mirrors milkyWay, not its contents. No deep link (spec's Non-goals).
+- [x] `selectionHaloTable.ts`: widen the hand-typed `SELECTION_HALO_TABLE` object's field declarations with `zoneOfAvoidance: (row: { readonly type: 'zoneOfAvoidance' }) => null;` and the row `zoneOfAvoidance: (_row) => null,` — mirrors the `structure` row exactly (no ring; comment why: the band has no point center).
+- [x] `npm test -- zoneOfAvoidanceInfo` green. `npm run typecheck` clean — this is the load-bearing check for this task: every table above must compile, and a missed row surfaces as a `tsc` error, not a runtime failure. (No dedicated test file per controller ruling; `tsc` is the completeness check, both `tsconfig.json` and `tsconfig.tools.json` clean.)
+- [x] Commit (one commit for the whole cascade, per the "one task by construction" note above).
 
 ### Task 6: InfoCard components + `DETAIL_CARD` row
 

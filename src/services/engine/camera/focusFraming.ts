@@ -107,5 +107,10 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
       return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
     case 'star':
       return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
+    // The band carries no x/y/z (a line-of-sight effect, not a point) and the
+    // InfoCard never wires a Focus button for it, so this arm should never
+    // reach a framing call — throw rather than fabricate a pose at (0,0,0).
+    case 'zoneOfAvoidance':
+      throw new Error('focusFraming: zoneOfAvoidance has no focus target');
   }
 }

@@ -24,6 +24,7 @@ import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
+import type { ZoneOfAvoidanceInfo } from '../../../@types/engine/ZoneOfAvoidanceInfo';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { FieldStarInfo } from '../../../@types/engine/FieldStarInfo';
 
@@ -31,6 +32,7 @@ const REF_OF: {
   galaxyCatalog: (t: GalaxyInfo) => SelectionRef;
   structure: (t: StructureInfo) => SelectionRef;
   milkyWay: (t: MilkyWayInfo) => SelectionRef;
+  zoneOfAvoidance: (t: ZoneOfAvoidanceInfo) => SelectionRef;
   body: (t: BodyInfo) => SelectionRef;
   star: (t: FieldStarInfo) => SelectionRef;
 } = {
@@ -41,6 +43,7 @@ const REF_OF: {
   }),
   structure: (t) => ({ type: 'structure', id: t.id }),
   milkyWay: () => ({ type: 'milkyWay' }),
+  zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' }),
   // A displayed body (BodyInfo) maps to its body ref — the seed id is the
   // durable identity the selection slice stores.
   body: (t) => ({ type: 'body', id: t.id }),

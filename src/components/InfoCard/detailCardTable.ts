@@ -143,4 +143,12 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
     Compact: ({ target }) =>
       target.type === 'star' ? createElement(CompactFieldStarCard, { info: target }) : null,
   },
+  // Placeholder row: the real ZoneOfAvoidanceDetailCard / CompactZoneOfAvoidanceCard
+  // components land in the plan's Task 6. This row exists only so the table stays
+  // total against the widened FocusableTargetType; a click on the band renders
+  // nothing until Task 6 wires it up.
+  zoneOfAvoidance: {
+    Detail: () => null,
+    Compact: () => null,
+  },
 };
