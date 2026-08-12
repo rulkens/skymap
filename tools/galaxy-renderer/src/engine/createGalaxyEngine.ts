@@ -1082,7 +1082,7 @@ export async function createGalaxyEngine(
   // ---- headless readback paths ----
   // Owns its own allocations, so it is absent from the ownership ledger and
   // `dispose` calls its `destroy` alongside the other self-owning modules.
-  const probe = createOffscreenProbe({
+  const offscreenProbe = createOffscreenProbe({
     device,
     format,
     drawFrame,
@@ -1121,7 +1121,7 @@ export async function createGalaxyEngine(
     setInsets: camera.setInsets,
     setExtras: model.setExtras,
     step: (now?: number): void => drawFrame(now ?? performance.now()),
-    sample: probe.sample,
+    sample: offscreenProbe.sample,
     getCamera: camera.getCamera,
     // The ISM-map generator's packed output (ismMapFluidPack.wesl) — a
     // persistent GPU texture, always non-null, whose CONTENT is only meaningful once
@@ -1136,98 +1136,92 @@ export async function createGalaxyEngine(
     // Still feeds the seeding debug view and `youngStars.invMeanNorm`'s
     // contrast normalisation (`createGalaxyModel.ts`'s `invMeanNormFor`).
     getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
-    // Debug-only: mapAsync's `ringMeansBuffer` back to the CPU for the
-    // probe's numeric-readback check (`probeGpuErrors.ts` diffs it against
-    // `ismMapRingMeans.ts`'s CPU computation over `getIsmMapData()`). No
-    // production caller — see `createIsmMapReadbacks.ts`'s own doc.
-    requestRingMeansReadback: (): Promise<Float32Array> =>
+    // Debug-only: composes the model's own probe share (`peekRecords`, the
+    // four placement readbacks, the live counts/reservations their callers
+    // derive offset/count from) with the readbacks that need `device`/
+    // `targets` and so can't live inside the model — see
+    // `GalaxyProbeApi.d.ts` for the full member docs. No production caller
+    // touches this.
+    probe: {
+      ...model.probe,
+      get fieldCounts() {
+        return model.fieldCounts;
+      },
+      get hiiSegments() {
+        return model.hiiSegments;
+      },
+      get armCloudReservation() {
+        return model.armCloudReservation;
+      },
+      get spurCloudReservation() {
+        return model.spurCloudReservation;
+      },
       // `reject` matters here specifically: this is the queue's first
       // EXTERNALLY-AWAITED request (every other `request()` caller is a
       // fire-and-forget cache update) — without it, a mapAsync rejection or
       // a decode throw would leave this Promise (and whoever awaits it,
       // e.g. the probe's `page.evaluate`) pending forever instead of failing.
-      new Promise((resolve, reject) => model.requestRingMeansReadback(resolve, reject)),
-    // Debug-only: Task 12's own numeric-validation exception — see
-    // createArmRidgeDebugSample.ts's own header. No production caller.
-    requestArmRidgeSampleReadback: (): Promise<Float32Array> =>
-      armRidgeDebugSample.dispatchAndReadback(),
-    // Debug-only: Task 6's own numeric-validation exception — see
-    // createIsmMapDustCdfScanDebugSample.ts's own header. No production caller.
-    requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
-    // Debug-only: Task 7's own determinism/survival-floor numeric exception —
-    // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
-    requestDustPlacementReadback: (opts) => model.requestDustPlacementReadback(opts),
-    requestDustBufferPeek: () => model.requestDustBufferPeek(),
-    // Debug-only: Task 9 fix round 1 — observes dustMap/fragment.wesl's
-    // ACTUAL rendered output (not the dustRenormBuffer both the compute
-    // kernel and a buffer readback would read directly), so the probe can
-    // catch a dropped/misrouted consuming multiply that a buffer-only check
-    // cannot. `targets.dustMapTex` is read live (same "re-read after a
-    // divisor/resize" discipline `getDustMapTex` uses above). No production
-    // caller.
-    requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
-    // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
-    // ONLY the arm-cloud reservation's own instance range
-    // (`model.armCloudReservation`'s `[offset, offset+count)`) into
-    // `targets.fieldTex` via `encodeSplatPass`'s `firstInstance`
-    // (`@builtin(instance_index)` includes that offset, WebGPU's own
-    // contract — no shader change needed), through the SAME `fieldSplatPipe`/
-    // `fieldSplatBG` the production draw uses, so this exercises the REAL
-    // fragment shader's REAL `armCloudRenorm[0]` read — not a buffer readback
-    // that would validate the reduction but never the consuming multiply.
-    // Isolated from every other component (disc/bulge/ridge/spur-cloud/
-    // extras never get instanced), so the measured sum is directly
-    // comparable to `armCloudReservation.flux` with no cross-tier confound.
-    // `targets.fieldTex` is safely clobbered: `beginClearPass` re-clears it,
-    // and the next production frame's own `encodeSplatPass` call redraws it
-    // in full on the next `drawFrame`. `null` when nothing is reserved this
-    // rebuild. No production caller.
-    async requestArmCloudRenderedFluxSum(): Promise<number | null> {
-      const reservation = model.armCloudReservation;
-      if (!reservation) return null;
-      const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
-      encodeSplatPass({
-        enc,
-        label: 'galaxy:armCloudRenderedFluxSumPass',
-        targetView: targets.fieldTex.createView(),
-        pipeline: fieldPipelines.fieldSplatPipe,
-        bindGroup: fieldPipelines.fieldSplatBG,
-        instanceCount: reservation.count,
-        firstInstance: reservation.offset,
-      });
-      device.queue.submit([enc.finish()]);
-      return readTextureChannelSum(device, targets.fieldTex);
+      requestRingMeansReadback: (): Promise<Float32Array> =>
+        new Promise((resolve, reject) => model.probe.requestRingMeansReadback(resolve, reject)),
+      requestArmRidgeSampleReadback: (): Promise<Float32Array> =>
+        armRidgeDebugSample.dispatchAndReadback(),
+      requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
+      // Observes dustMap/fragment.wesl's ACTUAL rendered output (not the
+      // dustRenormBuffer both the compute kernel and a buffer readback would
+      // read directly), so this catches a dropped/misrouted consuming
+      // multiply a buffer-only check cannot. `targets.dustMapTex` is read
+      // live (same "re-read after a divisor/resize" discipline
+      // `getDustMapTex` uses above).
+      requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
+      // Draws ONLY the arm-cloud reservation's own instance range
+      // (`model.armCloudReservation`'s `[offset, offset+count)`) into
+      // `targets.fieldTex` via `encodeSplatPass`'s `firstInstance`
+      // (`@builtin(instance_index)` includes that offset, WebGPU's own
+      // contract — no shader change needed), through the SAME
+      // `fieldSplatPipe`/`fieldSplatBG` the production draw uses, so this
+      // exercises the REAL fragment shader's REAL `armCloudRenorm[0]` read —
+      // not a buffer readback that would validate the reduction but never
+      // the consuming multiply. Isolated from every other component (disc/
+      // bulge/ridge/spur-cloud/extras never get instanced), so the measured
+      // sum is directly comparable to `armCloudReservation.flux` with no
+      // cross-tier confound. `targets.fieldTex` is safely clobbered:
+      // `beginClearPass` re-clears it, and the next production frame's own
+      // `encodeSplatPass` call redraws it in full on the next `drawFrame`.
+      async requestArmCloudRenderedFluxSum(): Promise<number | null> {
+        const reservation = model.armCloudReservation;
+        if (!reservation) return null;
+        const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
+        encodeSplatPass({
+          enc,
+          label: 'galaxy:armCloudRenderedFluxSumPass',
+          targetView: targets.fieldTex.createView(),
+          pipeline: fieldPipelines.fieldSplatPipe,
+          bindGroup: fieldPipelines.fieldSplatBG,
+          instanceCount: reservation.count,
+          firstInstance: reservation.offset,
+        });
+        device.queue.submit([enc.finish()]);
+        return readTextureChannelSum(device, targets.fieldTex);
+      },
+      // The spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
+      async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
+        const reservation = model.spurCloudReservation;
+        if (!reservation) return null;
+        const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
+        encodeSplatPass({
+          enc,
+          label: 'galaxy:armSpurCloudRenderedFluxSumPass',
+          targetView: targets.fieldTex.createView(),
+          pipeline: fieldPipelines.fieldSplatPipe,
+          bindGroup: fieldPipelines.fieldSplatBG,
+          instanceCount: reservation.count,
+          firstInstance: reservation.offset,
+        });
+        device.queue.submit([enc.finish()]);
+        return readTextureChannelSum(device, targets.fieldTex);
+      },
     },
-    // Debug-only: the spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
-    async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
-      const reservation = model.spurCloudReservation;
-      if (!reservation) return null;
-      const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
-      encodeSplatPass({
-        enc,
-        label: 'galaxy:armSpurCloudRenderedFluxSumPass',
-        targetView: targets.fieldTex.createView(),
-        pipeline: fieldPipelines.fieldSplatPipe,
-        bindGroup: fieldPipelines.fieldSplatBG,
-        instanceCount: reservation.count,
-        firstInstance: reservation.offset,
-      });
-      device.queue.submit([enc.finish()]);
-      return readTextureChannelSum(device, targets.fieldTex);
-    },
-    // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
-    // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
-    requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),
-    requestArmSpurCloudBufferPeek: () => model.requestArmSpurCloudBufferPeek(),
-    // Debug-only: Task 13's own determinism/budget/liveness numeric exception —
-    // see createGalaxyModel.ts's requestArmCloudPlacementReadback. No production caller.
-    requestArmCloudPlacementReadback: () => model.requestArmCloudPlacementReadback(),
-    requestArmCloudBufferPeek: () => model.requestArmCloudBufferPeek(),
-    // Debug-only: Task 8's own determinism/liveness/flux-parity numeric exception —
-    // see createGalaxyModel.ts's requestDigVeilPlacementReadback. No production caller.
-    requestDigVeilPlacementReadback: () => model.requestDigVeilPlacementReadback(),
-    requestDigVeilBufferPeek: () => model.requestDigVeilBufferPeek(),
-    grab: probe.grab,
+    grab: offscreenProbe.grab,
     dispose(): void {
       rafLoop.stop();
       unsubscribeTiming();
@@ -1251,7 +1245,7 @@ export async function createGalaxyEngine(
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked
       // a full set per remount until this call existed.
       targets.destroy();
-      probe.destroy();
+      offscreenProbe.destroy();
       model.destroy();
       for (let i = owned.length - 1; i >= 0; i--) owned[i]!.destroy();
       ro.disconnect();
