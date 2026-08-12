@@ -126,6 +126,15 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
       clearFocus: true,
     },
   },
+  // Camera embedded in the MCPM cosmic-web cube's own centroid (derived from
+  // the shipped origin/voxel/dims — Earth sits near the cube's x edge, so
+  // orbiting it risks stepping outside the AABB and only partially filling
+  // the frame). `clearFocus` for the same reason as the other non-Earth
+  // targets above.
+  {
+    name: 'volume-inside',
+    pose: { target: [-239.45, -16.5, 201.3], distance: 30, yaw: 0.5, pitch: 0.3, clearFocus: true },
+  },
   {
     name: 'local-group',
     pose: { target: EARTH_TARGET, distance: 21.268361, yaw: 8.2811, pitch: 0.5612 },
