@@ -38,7 +38,8 @@
  * The dispatch alone wakes the render loop: `startCameraTween` is a `camera/*`
  * write, which `watchWakeSaga`/WAKE_ROUTES turns into a render request — so there is
  * no separate requestRender here. A null ref (focus release) resolves to a null
- * row → no tween.
+ * row → no tween; a `zoneOfAvoidance` row (the band has no position) is the
+ * same kind of no-op, filtered right after the null check.
  *
  * getContext is read INSIDE the worker (per-action), like watchSelectionWakeSaga and
  * watchTierSaga, because the engine registers its saga context AFTER the root saga
@@ -81,6 +82,15 @@ export function* watchFocusTweenSaga() {
         row = extractSelectionRow(action.payload, resolveDeps());
       }
       if (row === null) return;
+
+      // The zone-of-avoidance band has no position (a line-of-sight effect,
+      // not a point) — no Focus button reaches it today, but the raw ref can
+      // still arrive here from a double-click on the band (wireInput) once
+      // Task 12 wires its picking. This is the ONE place every
+      // `updateSelectionFocus` dispatch funnels through, so it's the
+      // enforcement site for the invariant `focusFraming` asserts: a
+      // no-op here, not a crash inside the saga worker.
+      if (row.type === 'zoneOfAvoidance') return;
 
       // A body the `followBody` driver WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
