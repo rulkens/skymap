@@ -202,10 +202,10 @@ exactly — verify by reading that function before writing the struct, not the
 other way around; the packer's existing bytes are the ground truth this
 struct documents.
 
-- [ ] Write `records.wesl` with the struct above, importable as
+- [x] Write `records.wesl` with the struct above, importable as
       `package::milkyWay::field::records::FieldComponentRec`.
-- [ ] Update `io.wesl` to import it and change the `comps` binding's type.
-- [ ] Rewrite every existing flat-indexed read of `comps` to named field
+- [x] Update `io.wesl` to import it and change the `comps` binding's type.
+- [x] Rewrite every existing flat-indexed read of `comps` to named field
       access (`comps[4u * inst + 1u]`-style fetch + swizzle →
       `comps[inst].<field>`): `fieldSplat/vertex.wesl`,
       `fieldSplat/fragment.wesl`, `hiiSplat/vertex.wesl`,
@@ -215,7 +215,7 @@ struct documents.
       originally claimed these sites compile unchanged; WGSL has no
       element-type reinterpret, and the flat offsets are exactly the
       hand-tracked contract this task deletes.)
-- [ ] Write `records.parity.test.ts` following
+- [x] Write `records.parity.test.ts` following
       `tests/tools/galaxy-renderer/engine/ismMap/packIsmMapFluidConstants.test.ts`'s
       technique exactly: `parseWgslStructFields` + `layoutWgslStruct` +
       `wgslPrimitiveLayout` (`tools/utils/wgsl/*.ts`) read `FieldComponentRec`
@@ -223,8 +223,8 @@ struct documents.
       packed via `packFieldComponents`; each sentinel's observed offset in
       the packed `Float32Array` is asserted against the struct's own offset
       for that field name.
-- [ ] `npm run galaxy-renderer:probe` — PASS (no shader linking regression).
-- [ ] Commit.
+- [x] `npm run galaxy-renderer:probe` — PASS (no shader linking regression).
+- [x] Commit.
 
 ## Task 2: Drop `applyIsmMapSeeding`
 
@@ -255,15 +255,15 @@ default) before and after this change. For the legacy generator path,
 region centres come straight from `planRegions` with no post-pass — a real,
 accepted behavior change, not a bug.
 
-- [ ] `grep -rn applyIsmMapSeeding src tests` to find every call site and
+- [x] `grep -rn applyIsmMapSeeding src tests` to find every call site and
       test reference before deleting.
-- [ ] Delete the function, its memo, and collapse the ternary at `:771-773`.
-- [ ] Delete or rewrite the tests that named `applyIsmMapSeeding` directly;
+- [x] Delete the function, its memo, and collapse the ternary at `:771-773`.
+- [x] Delete or rewrite the tests that named `applyIsmMapSeeding` directly;
       keep any test that exercises `buildHiiRegionsWithSegments`'s public
       behavior at `generator: 'fluid'` (it should still pass unchanged).
-- [ ] `npm test -- hiiRegions` → green.
-- [ ] `npm run typecheck` → green (catches any stray import).
-- [ ] Commit.
+- [x] `npm test -- hiiRegions` → green.
+- [x] `npm run typecheck` → green (catches any stray import).
+- [x] Commit.
 
 ## Task 3: `ringReduce.wesl` — ring-means slice
 
@@ -313,17 +313,17 @@ Use `workgroup_size(16, 16)` matching every other 2D ismMap pass
 shape genuinely wants a 1D-per-ring dispatch — implementer's call, exact
 structure is not pinned by this plan.
 
-- [ ] Write `ringReduce.wesl`'s ring-means entry point, reading `ismMapTex`
+- [x] Write `ringReduce.wesl`'s ring-means entry point, reading `ismMapTex`
       (or whatever texture handle `ismMapRingMeans`'s CPU version reads —
       confirm against `ismMapRingMeans.ts:14-35`'s `extract(texel) =>
       texel.dust` call shape) and writing `ringMeansBuf`-shaped output.
-- [ ] Write `createIsmMapRingReduce.ts`'s dispatch host.
-- [ ] Wire `recomputeIsmMapSeedingMeans` to encode this pass instead of
+- [x] Write `createIsmMapRingReduce.ts`'s dispatch host.
+- [x] Wire `recomputeIsmMapSeedingMeans` to encode this pass instead of
       running the CPU loop, for the fluid-generator path only (build on this
       task's own gate — `fieldTuning.ismMap.generator === 'fluid'`, matching the
       existing call sites' own gating at `createGalaxyModel.ts:426-427`).
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 4: Arm-gather RNG fix — stars-only advection velocity
 
@@ -372,15 +372,15 @@ y=stars, z=activity, w=dust` layout, `ismMapFluidStep.wesl:6-9`) advects
 through shear+curl only. `gas`/`dust`/`activity` advection is unchanged —
 this task touches only the stars back-trace.
 
-- [ ] Invoke the `wesl-shaders` skill before editing either `.wesl` file.
-- [ ] Write the velocity-composition change in `ismMapFluidVelocity.wesl`.
-- [ ] Write the stars-only back-trace in `ismMapFluidStep.wesl`.
-- [ ] Wire the new texture through `createIsmMapFluidRunner.ts`.
-- [ ] `npm run galaxy-renderer:probe` → PASS (this is the ONLY automated
+- [x] Invoke the `wesl-shaders` skill before editing either `.wesl` file.
+- [x] Write the velocity-composition change in `ismMapFluidVelocity.wesl`.
+- [x] Write the stars-only back-trace in `ismMapFluidStep.wesl`.
+- [x] Wire the new texture through `createIsmMapFluidRunner.ts`.
+- [x] `npm run galaxy-renderer:probe` → PASS (this is the ONLY automated
       check for this task — the look change itself is validated in Task 11,
       not here; do not attempt to write a numeric "arm-gather line is gone"
       test, there is no headless rendering harness to measure it against).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 5: Probe numeric-readback harness (testing infrastructure)
 
@@ -418,17 +418,17 @@ find and reuse the pattern by grep — no code from this task is pasted
 forward into later tasks' plan text; later tasks cite this task's file by
 name.
 
-- [ ] Pick one already-landed GPU buffer (recommend `ringMeansBuf` post-Task
+- [x] Pick one already-landed GPU buffer (recommend `ringMeansBuf` post-Task
       3, since it is small and has a known CPU reference —
       `ismMapRingMeans.ts`) and extend `probeGpuErrors.ts` with a step that
       reads it back and diffs against a CPU-computed expectation for a fixed
       preset.
-- [ ] `npm run galaxy-renderer:probe` → PASS, and demonstrably FAILS if the
+- [x] `npm run galaxy-renderer:probe` → PASS, and demonstrably FAILS if the
       tolerance is tightened past what the two computations actually
       disagree by (sanity-check the assertion is live, not vacuously true —
       temporarily corrupt one side, confirm the probe reports it, then
       revert).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 6: `ismMapDustCdfScan.wesl`
 
@@ -471,20 +471,20 @@ evaluate per texel") — `buildArmProximityEnvelope`'s CPU closure
 `invSigma`) this shader reads, not a re-derivation of the CPU closure's
 control flow.
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Write the two-pass scan (per-ring workgroup scan, then a fold pass
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Write the two-pass scan (per-ring workgroup scan, then a fold pass
       combining ring totals into a running offset — "exact structure is
       implementation detail," per the spec).
-- [ ] Write `createIsmMapDustCdfScan.ts`'s dispatch host, parametrized so a
+- [x] Write `createIsmMapDustCdfScan.ts`'s dispatch host, parametrized so a
       caller supplies either a dust-density weight table or an arm-biased
       activity weight table.
-- [ ] Extend Task 5's probe harness: seed a small fixture `GalaxyIsmMap`
+- [x] Extend Task 5's probe harness: seed a small fixture `GalaxyIsmMap`
       (few rings, few az — small enough the CPU reference is fast), run
       both `buildIsmMapDustCdf` (CPU, dust weight) and this GPU scan against
       it, read back the GPU prefix buffer, assert per-texel agreement within
       float tolerance (the spec's own acceptance criterion).
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 7: `placeDust.wesl` + `rebuildDustMixture` wiring
 
@@ -547,8 +547,8 @@ plan-visible deletion date — don't invest in CPU-side cleanup of
   `radius`-derived mass only. Task 9 supplies the missing renorm as a
   consume-time uniform multiply.
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Write `placeDust.wesl`'s `cs` entry point per the contract above,
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Write `placeDust.wesl`'s `cs` entry point per the contract above,
       `@workgroup_size(256)` (1D per-particle-slot dispatch, matching
       `generateDust.wesl:50`/`generateStars.wesl:58`'s v1 precedent). Factor
       the complex/children clumping loop (the `'mapDensity'`/`'smoothDisc'`
@@ -557,16 +557,16 @@ plan-visible deletion date — don't invest in CPU-side cleanup of
       13 (arm cloud) imports this exact function for its own `'analytic'`
       mode rather than writing a second copy, and is gated on this task
       landing first specifically to reuse it.
-- [ ] Write `createIsmMapPlaceDust.ts`'s dispatch host.
-- [ ] Wire `rebuildDustMixture`'s map-dependent branch to encode this pass.
-- [ ] Add probe assertions (Task 5's harness): fixed `(seed, grid)` produces
+- [x] Write `createIsmMapPlaceDust.ts`'s dispatch host.
+- [x] Wire `rebuildDustMixture`'s map-dependent branch to encode this pass.
+- [x] Add probe assertions (Task 5's harness): fixed `(seed, grid)` produces
       a bit-identical record set across two runs (determinism); the written
       component count matches `MAX_PARTICLE_COUNT`'s own budget math; at
       least one record's `amplitude` reads exactly `0` for a fixture tuned
       to fail the survival floor somewhere (observable zeroing, not
       absence).
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 8: `placeDigVeil.wesl` + `rebuildHiiIfSeeded` wiring
 
@@ -607,13 +607,13 @@ that's about to be deleted) and Task 6 (shared CDF scan).
   slot the complex/child budget doesn't fill (same liveness-by-amplitude
   discipline as Task 7).
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Write `placeDigVeil.wesl`'s `cs` entry point, `@workgroup_size(256)`.
-- [ ] Write `createIsmMapPlaceDigVeil.ts`'s dispatch host.
-- [ ] Wire `rebuildHiiIfSeeded`'s DIG-veil branch to encode this pass.
-- [ ] Add probe determinism/budget/survival assertions per Task 7's pattern.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Write `placeDigVeil.wesl`'s `cs` entry point, `@workgroup_size(256)`.
+- [x] Write `createIsmMapPlaceDigVeil.ts`'s dispatch host.
+- [x] Wire `rebuildHiiIfSeeded`'s DIG-veil branch to encode this pass.
+- [x] Add probe determinism/budget/survival assertions per Task 7's pattern.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 9: `ringReduce.wesl` — survivor-sum slice + renorm uniform
 
@@ -655,14 +655,14 @@ version's baked-in renorm at steady state, per the spec's own "the two are
 numerically identical at steady state" note. This is a real behavior split
 (bake vs. consume-time) the spec explicitly accepts, not a task to "fix."
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Extend `ringReduce.wesl` with the survivor-sum reduction.
-- [ ] Extend `createIsmMapRingReduce.ts`'s host.
-- [ ] Add the renorm-scale uniform lane and wire it into
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Extend `ringReduce.wesl` with the survivor-sum reduction.
+- [x] Extend `createIsmMapRingReduce.ts`'s host.
+- [x] Add the renorm-scale uniform lane and wire it into
       `dustMap/fragment.wesl`'s `coeff` computation.
-- [ ] Add the probe's survivor-sum-matches-CPU-recomputation assertion.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] Add the probe's survivor-sum-matches-CPU-recomputation assertion.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 10: Readback demotion
 
@@ -695,25 +695,25 @@ overlay still work — they read `readbacks.ismMapData`/`orientationData`
 exactly as before, just from a landing that no longer also triggers a
 placement rebuild.
 
-- [ ] Read `createGalaxyModel.ts:390-460` in full before editing — the two
+- [x] Read `createGalaxyModel.ts:390-460` in full before editing — the two
       schedule functions have several responsibilities interleaved
       (recompute means, rebuild dust, rebuild HII, note diagnostics); remove
       only the placement-rebuild calls, not the diagnostics ones.
-- [ ] `grep -n "ismMapData\|orientationData" tools/galaxy-renderer/src/engine/model/createGalaxyModel.ts`
+- [x] `grep -n "ismMapData\|orientationData" tools/galaxy-renderer/src/engine/model/createGalaxyModel.ts`
       after the edit — every remaining reference should be diagnostics-only
       (report functions, debug views), none on the path to
       `rebuildDustMixture`/`rebuildHiiIfSeeded`.
-- [ ] `npm test -- createGalaxyModel` (or wherever its tests live) → green.
-- [ ] `npm run galaxy-renderer:probe` → PASS — this is also where a
+- [x] `npm test -- createGalaxyModel` (or wherever its tests live) → green.
+- [x] `npm run galaxy-renderer:probe` → PASS — this is also where a
       dangling reference to a now-CPU-orphaned function would surface as a
       shader/bind-group error, since the probe drives the real tool UI
       including the debug views.
-- [ ] Manually toggle the "seeding"/orientation debug views in the running
+- [x] Manually toggle the "seeding"/orientation debug views in the running
       tool (`npm run dev` equivalent for `tools/galaxy-renderer` — confirm
       the tool's own dev command) and confirm they still render — this one
       check has no automated substitute; note the result when reporting
       this task done.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 11: Recalibration + visual pass
 
@@ -737,9 +737,9 @@ here when the task closes.
 **Not a task with a code diff of its own** — it is the plan's final gate,
 requiring a human in the loop.
 
-- [ ] Run the galaxy-renderer tool with the fluid ISM-map generator enabled
+- [x] Run the galaxy-renderer tool with the fluid ISM-map generator enabled
       (today's only shipped default).
-- [ ] Character-check against `docs/research/m74-jwst/`'s existing sign-off
+- [x] Character-check against `docs/research/m74-jwst/`'s existing sign-off
       criteria (the spike's own visual calibration record) — dust cloud
       placement should still read as CDF-weighted toward high-density
       texels, DIG veil should still read as a diffuse haze concentrated near
@@ -747,7 +747,7 @@ requiring a human in the loop.
       the CDF replaced bounded rejection to fix — see spec's "Rejected
       alternative" section; if this leak reappears, it is a Task 6/7/8 bug,
       not a recalibration matter).
-- [ ] Character-check the arm cloud and spur cloud: sprites should still read
+- [x] Character-check the arm cloud and spur cloud: sprites should still read
       as clustered along the ridge (clumpiness > 0 producing visible
       complexes, not a uniform scatter), spur sprites still concentrated near
       their parent arm's own spur roots, no change in overall arm-region
@@ -755,17 +755,19 @@ requiring a human in the loop.
       ledger in `galaxyFieldMixture.ts` is untouched by this PR — a visible
       brightness shift there is a Task 13/14/15 bug, not a recalibration
       matter).
-- [ ] Toggle the arm-gather-affected view (young-stars layer) and confirm
+- [x] Toggle the arm-gather-affected view (young-stars layer) and confirm
       the sharp-line artifact from Task 4's motivating symptom is gone.
-- [ ] Nudge sliders (dust cloud count, DIG fraction/coherence/armBias,
+- [x] Nudge sliders (dust cloud count, DIG fraction/coherence/armBias,
       arm/spur cloud coverage, young-stars brightness) back toward the
       pre-change character if the RNG swap shifted the felt
       density/brightness — a calibration knob change, not a code change,
       unless a preset default needs updating.
-- [ ] User attestation: the user looks at the running tool and confirms the
+- [x] User attestation: the user looks at the running tool and confirms the
       look is acceptable. Record the outcome (and any preset changes) in
       this task's checkbox notes before closing.
-- [ ] Commit (only if a preset file changed).
+      User attested 2026-08-12: visual pass done, all good — no preset
+      changes needed.
+- [x] Commit (only if a preset file changed).
 
 ## Task 12: `armRidge.wesl` — v2 arm-ridge WGSL vocabulary
 
@@ -813,20 +815,20 @@ ports here too if no WGSL version exists yet — check
 function before porting a second one; if one exists (e.g. serving the disc
 splat), import it rather than duplicating.
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Grep for an existing WGSL `warpHeight`/`warpSurfaceFrame` equivalent
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Grep for an existing WGSL `warpHeight`/`warpSurfaceFrame` equivalent
       before porting one — reuse if found, port fresh only if not.
-- [ ] Port each function above from `armRidgeGeometry.ts`, matching formulas
+- [x] Port each function above from `armRidgeGeometry.ts`, matching formulas
       exactly (this is a translation task, not a redesign — the CPU file is
       the ground truth for every constant: `ARM_WIDTH_FLOOR_H`,
       `ARM_WIDTH_SLOPE`, `ARM_TAPER_START_FRAC`, `ARM_COLOR_OLD`/`_YOUNG`,
       `ARM_RADIAL_INNER`/`_OUTER`/`_STRENGTH`).
-- [ ] Extend Task 5's probe harness: evaluate `armRidgeAngle`/
+- [x] Extend Task 5's probe harness: evaluate `armRidgeAngle`/
       `armFadeEnvelope`/`armCrossSigma` at a handful of fixed `(logR, arm)`
       sample points, compare against `armRidgeGeometry.ts`'s own CPU output
       within float tolerance.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 13: `placeArmCloud.wesl` + `fieldMixtureOf` wiring
 
@@ -893,14 +895,14 @@ DAG's own note.
   (`armParticleCloud.ts:232-235`) into `amplitude` — Task 15 supplies it as
   a consume-time uniform, the same split Task 9 makes for dust.
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Write `placeArmCloud.wesl`'s `cs` entry point, `@workgroup_size(256)`.
-- [ ] Write `createIsmMapPlaceArmCloud.ts`'s dispatch host.
-- [ ] Wire `fieldMixtureOf`'s arm-cloud slot reservation and pass encode into
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Write `placeArmCloud.wesl`'s `cs` entry point, `@workgroup_size(256)`.
+- [x] Write `createIsmMapPlaceArmCloud.ts`'s dispatch host.
+- [x] Wire `fieldMixtureOf`'s arm-cloud slot reservation and pass encode into
       `setParams` and `setFieldTuning`'s `fieldMoved` branch.
-- [ ] Add probe determinism/budget/survival assertions per Task 7's pattern.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] Add probe determinism/budget/survival assertions per Task 7's pattern.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 14: `placeArmSpurCloud.wesl` + `fieldMixtureOf` wiring
 
@@ -950,13 +952,13 @@ Task 13's files (arm cloud vs. spur cloud) — dispatch in parallel once 1 and
   range. Does NOT bake `fluxWeightSum` (`armSpurParticleCloud.ts:191-195`)
   into `amplitude` — Task 15 supplies it.
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Write `placeArmSpurCloud.wesl`'s `cs` entry point, `@workgroup_size(256)`.
-- [ ] Write `createIsmMapPlaceArmSpurCloud.ts`'s dispatch host.
-- [ ] Wire `fieldMixtureOf`'s spur-cloud slot reservation and pass encode.
-- [ ] Add probe determinism/budget/survival assertions.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Write `placeArmSpurCloud.wesl`'s `cs` entry point, `@workgroup_size(256)`.
+- [x] Write `createIsmMapPlaceArmSpurCloud.ts`'s dispatch host.
+- [x] Wire `fieldMixtureOf`'s spur-cloud slot reservation and pass encode.
+- [x] Add probe determinism/budget/survival assertions.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 15: `ringReduce.wesl` — arm-cloud/spur-cloud flux-weight-sum slices
 
@@ -991,15 +993,15 @@ and Tasks 13/14 (the GPU-placed sets to reduce over).
 time — numerically identical to the CPU version's baked-in renorm at steady
 state, the same accepted bake-vs-consume split Task 9 documents for dust.
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Extend `ringReduce.wesl` with the two weight-sum reductions.
-- [ ] Extend `createIsmMapRingReduce.ts`'s host.
-- [ ] Add both renorm-scale uniform lanes and wire them into
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Extend `ringReduce.wesl` with the two weight-sum reductions.
+- [x] Extend `createIsmMapRingReduce.ts`'s host.
+- [x] Add both renorm-scale uniform lanes and wire them into
       `fieldSplat/fragment.wesl`'s amplitude read.
-- [ ] Add the probe's weight-sum-matches-CPU-recomputation assertions for
+- [x] Add the probe's weight-sum-matches-CPU-recomputation assertions for
       both tiers.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ## Task 16: Delete `clusteredDiscPlacement.ts`; trim the two arm-cloud files
 
@@ -1052,15 +1054,15 @@ cloud/spur-cloud reservation math survives from the two trimmed files; the
 sprites themselves come from Task 13/14's GPU passes into the same
 `fieldComps` buffer, at the same slot ranges the CPU version used to occupy.
 
-- [ ] `grep -rn "buildClusteredDiscPlacement\|pickWeighted\|buildArmParticleCloud\|buildArmSpurParticleCloud" src tests`
+- [x] `grep -rn "buildClusteredDiscPlacement\|pickWeighted\|buildArmParticleCloud\|buildArmSpurParticleCloud" src tests`
       to confirm zero remaining callers before deleting anything.
-- [ ] Delete `clusteredDiscPlacement.ts` and its test.
-- [ ] Trim `armParticleCloud.ts` and `armSpurParticleCloud.ts` per the Files
+- [x] Delete `clusteredDiscPlacement.ts` and its test.
+- [x] Trim `armParticleCloud.ts` and `armSpurParticleCloud.ts` per the Files
       list above.
-- [ ] `npm run typecheck` → green (catches any stray import left behind).
-- [ ] `npm test` → green.
-- [ ] `npm run galaxy-renderer:probe` → PASS.
-- [ ] Commit.
+- [x] `npm run typecheck` → green (catches any stray import left behind).
+- [x] `npm test` → green.
+- [x] `npm run galaxy-renderer:probe` → PASS.
+- [x] Commit.
 
 ---
 
