@@ -1165,14 +1165,69 @@ export async function createGalaxyEngine(
     // divisor/resize" discipline `getDustMapTex` uses above). No production
     // caller.
     requestDustMapChannelSum: () => readDustMapChannelSum(device, targets.dustMapTex),
-    // Debug-only: Task 15's own consuming-multiply exception — the arm-cloud/
-    // spur-cloud twin of `requestDustMapChannelSum` above, same reasoning,
-    // against `targets.fieldTex` (the ONE target fieldSplat/fragment.wesl
-    // draws every emission component — disc/bulge/ridge/arm-cloud/spur-cloud —
-    // into). `readDustMapChannelSum` is texture-agnostic despite its name
-    // (a plain rgba16float channel-sum reader); reused rather than duplicated.
-    // No production caller.
+    // Debug-only: Task 15's own consuming-multiply exception, take 1 — sums
+    // the WHOLE `targets.fieldTex` (every emission component — disc/bulge/
+    // ridge/arm-cloud/spur-cloud — draws additively into this ONE target).
+    // Superseded by `requestArmCloudRenderedFluxSum`/
+    // `requestArmSpurCloudRenderedFluxSum` below for the probe's own
+    // consuming-multiply check (fix-round finding: any tuning knob that
+    // isolates the arm-cloud/spur-cloud tier's OWN flux share also moves the
+    // ridge chain's, whose own rendering at flux-share boundaries turned out
+    // to carry non-negligible residual emission unrelated to Task 15 — a
+    // whole-target sum can't tell the two apart). Kept as a general-purpose
+    // debug method (`readDustMapChannelSum` is texture-agnostic despite its
+    // name — a plain rgba16float channel-sum reader, reused rather than
+    // duplicated). No production caller.
     requestFieldTexChannelSum: () => readDustMapChannelSum(device, targets.fieldTex),
+    // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
+    // ONLY the arm-cloud reservation's own instance range
+    // (`model.armCloudReservation`'s `[offset, offset+count)`) into
+    // `targets.fieldTex` via `encodeSplatPass`'s `firstInstance`
+    // (`@builtin(instance_index)` includes that offset, WebGPU's own
+    // contract — no shader change needed), through the SAME `fieldSplatPipe`/
+    // `fieldSplatBG` the production draw uses, so this exercises the REAL
+    // fragment shader's REAL `armCloudRenorm[0]` read — not a buffer readback
+    // that would validate the reduction but never the consuming multiply.
+    // Isolated from every other component (disc/bulge/ridge/spur-cloud/
+    // extras never get instanced), so the measured sum is directly
+    // comparable to `armCloudReservation.flux` with no cross-tier confound.
+    // `targets.fieldTex` is safely clobbered: `beginClearPass` re-clears it,
+    // and the next production frame's own `encodeSplatPass` call redraws it
+    // in full on the next `drawFrame`. `null` when nothing is reserved this
+    // rebuild. No production caller.
+    async requestArmCloudRenderedFluxSum(): Promise<number | null> {
+      const reservation = model.armCloudReservation;
+      if (!reservation) return null;
+      const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
+      encodeSplatPass({
+        enc,
+        label: 'galaxy:armCloudRenderedFluxSumPass',
+        targetView: targets.fieldTex.createView(),
+        pipeline: fieldPipelines.fieldSplatPipe,
+        bindGroup: fieldPipelines.fieldSplatBG,
+        instanceCount: reservation.count,
+        firstInstance: reservation.offset,
+      });
+      device.queue.submit([enc.finish()]);
+      return readDustMapChannelSum(device, targets.fieldTex);
+    },
+    // Debug-only: the spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
+    async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
+      const reservation = model.spurCloudReservation;
+      if (!reservation) return null;
+      const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
+      encodeSplatPass({
+        enc,
+        label: 'galaxy:armSpurCloudRenderedFluxSumPass',
+        targetView: targets.fieldTex.createView(),
+        pipeline: fieldPipelines.fieldSplatPipe,
+        bindGroup: fieldPipelines.fieldSplatBG,
+        instanceCount: reservation.count,
+        firstInstance: reservation.offset,
+      });
+      device.queue.submit([enc.finish()]);
+      return readDustMapChannelSum(device, targets.fieldTex);
+    },
     // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
     requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),

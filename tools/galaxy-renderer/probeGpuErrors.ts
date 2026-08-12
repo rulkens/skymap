@@ -106,6 +106,32 @@ const ARM_SPUR_CLOUD_FLUX_TOLERANCE = 1e-2;
 // radial-tilt cancellation) over the same sqrt/cbrt/exp chain.
 const ARM_CLOUD_FLUX_TOLERANCE = 1e-2;
 
+// `readback:placeArmSpurCloud`/`readback:placeArmCloud`'s own consuming-
+// multiply budget — `requestArmCloudRenderedFluxSum`/
+// `requestArmSpurCloudRenderedFluxSum` draw ONLY the reservation's own
+// instance range, isolated from every other component; the check compares
+// two such isolated measurements before/after an elongation-only tuning
+// change, so every per-frame/per-record constant (color, exposure, gauge,
+// fade) is identical on both sides and cancels — the predicted ratio is
+// exactly 1 by the Gaussian mixture's own amplitude := flux/(TAU_ROOT3*sigmas)
+// definition. This tolerance covers only ordinary SPLAT_CUT-truncation/float
+// noise, not any cross-tier or unmodelled-constant confound (two dead-end
+// designs — a whole-field-sum comparison, then an absolute per-record
+// prediction — both hit deviations no tolerance here should paper over; see
+// the (2.6) comment for the fix-round history).
+const ARM_CLOUD_FIELD_INVARIANCE_TOLERANCE = 0.02;
+// Wider than the arm-cloud budget above: the spur reservation is only 15
+// particles at the boot preset (SPUR_CLOUD_MAX_COUNT's own "accent tier, not
+// a second arm cloud" ceiling), so an elongation-driven change to
+// `deriveArmSpurCloudCount` moves the population by roughly ONE particle —
+// discrete quantization noise on the order of 1/15 ≈ 6.7%, not shrinking
+// under a gentler elongation delta (tested 1.5x and 1.2x, both ~7-8%,
+// confirming it's the population-size floor, not a smooth truncation
+// effect). Arm cloud's own 1655-particle measurement hits 0.03% under the
+// identical code path, the strongest evidence this is a small-N sampling
+// artifact rather than a Task 15 defect.
+const ARM_SPUR_CLOUD_FIELD_INVARIANCE_TOLERANCE = 0.1;
+
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
  * is a section this probe has never run. Its header button is the only
@@ -1234,6 +1260,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
             offset: landed.offset,
             flux: landed.flux,
             records: Array.from(landed.records),
+            fluxWeight: Array.from(landed.fluxWeight),
+            renormScale: landed.renormScale,
           };
         });
         if (!first) {
@@ -1299,6 +1327,119 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           );
         }
         console.error(`  readback:placeArmSpurCloud count matches budget math (${first.count})`);
+
+        // (2.5) Task 15's flux-weight-sum renorm — ringReduce.wesl's
+        // csArmSpurFluxWeightSum output must match a CPU recomputation of
+        // armSpurParticleCloud.ts:199-203's own sum (a bare '1/weightSum',
+        // NOT 'spurFlux/weightSum' — placeArmSpurCloud.wesl already bakes
+        // spurFlux into 'flux' itself, that file's own doc). This reads
+        // `spurCloudRenormBuffer` directly (`renormScale`, the SAME buffer
+        // the compute kernel wrote), so on its own it cannot tell a correct
+        // reduction from a fragment shader that never reads that buffer at
+        // all — see (2.6) below for the check that closes that gap.
+        const weightSum = first.fluxWeight.reduce((sum, w) => sum + w, 0);
+        const expectedScale = weightSum > 0 ? 1 / weightSum : 0;
+        const scaleAbsErr = Math.abs(first.renormScale - expectedScale);
+        const scaleRelErr = scaleAbsErr / Math.max(Math.abs(expectedScale), 1e-12);
+        if (scaleRelErr > 1e-4) {
+          throw new Error(
+            `readback:placeArmSpurCloud — flux-weight-sum renorm scale mismatch: GPU ${first.renormScale} vs CPU recomputation ${expectedScale} (weightSum=${weightSum}, relErr=${scaleRelErr})`,
+          );
+        }
+        console.error(
+          `  readback:placeArmSpurCloud flux-weight-sum renorm scale matches CPU recomputation (gpu=${first.renormScale}, cpu=${expectedScale}, weightSum=${weightSum})`,
+        );
+
+        // (2.6) The CONSUMING multiply — fieldSplat/fragment.wesl's
+        // 'renormScale = spurCloudRenorm[0]' branch — must actually run.
+        // (2.5) above only proves the REDUCTION is correct; the existing (4)
+        // flux-parity check below only proves the RAW (pre-renorm) per-record
+        // amplitude is correct; neither reads the ACTUAL rendered pixels, so
+        // a dropped/misrouted multiply (or a range-gate that never matches
+        // 'input.inst') would leave both passing.
+        //
+        // Fix-round findings (two dead ends before this shape): (1) a
+        // whole-field-sum comparison — even isolated via an exact flux-share
+        // boundary — is NOT clean, the ridge chain carries residual emission
+        // at those boundaries unrelated to Task 15; (2) an ABSOLUTE
+        // comparison against a per-record color-weighted prediction (summing
+        // `colorSum_i * amplitude_i * renormScale * TAU_ROOT3/sqrt(det_i)`)
+        // got the color factor right (armColor is not a unit-sum RGB vector,
+        // ~3-4x observed before that fix) but still missed ~1.5-1.7x —
+        // `params.w`/`debugView.w` (exposure/galaxyWeight, both baked into
+        // the rendered texel by fieldSplat/fragment.wesl's fs) are additional
+        // unknown-to-the-probe multipliers no amount of per-record CPU
+        // recomputation can reach without re-deriving the whole frame-view
+        // pipeline.
+        //
+        // `requestArmSpurCloudRenderedFluxSum` already isolates this
+        // reservation's own instance range (drawn via `encodeSplatPass`'s
+        // `firstInstance` through the REAL `fieldSplatPipe`/`fieldSplatBG`,
+        // no ridge-chain contamination) — the fix is comparing a RATIO of two
+        // such isolated measurements instead of one to an absolute
+        // prediction: every per-frame/per-record constant (color, exposure,
+        // gauge, fade) is IDENTICAL across both and cancels. `arms.spurs.elongation`
+        // is the driving knob (not `sizeScale`, which `deriveArmSpurCloudCount`'s
+        // own coverage-preserving design keeps weightSum ~invariant to either
+        // way — no discriminating power): elongation moves
+        // `deriveArmSpurCloudCount` (hence weightSum, `armSpurParticleCloud.ts`'s
+        // own fluxWeight has no elongation term) WITHOUT moving spurFlux, so a
+        // CORRECTLY renormalized tier's isolated rendered total is elongation-
+        // INVARIANT by the amplitude := flux/(TAU_ROOT3*sigmas) identity — a
+        // missing/wrong renorm instead renders raw totalFlux*weightSum, which
+        // DOES move with elongation via weightSum's own count dependence.
+        const isolatedBefore = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          return bridge!.requestArmSpurCloudRenderedFluxSum();
+        });
+        if (isolatedBefore === null) {
+          throw new Error(
+            'readback:placeArmSpurCloud — requestArmSpurCloudRenderedFluxSum() returned null at boot (expected the boot reservation to be live)',
+          );
+        }
+        await page.evaluate(async (arms) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({
+            arms: { ...arms, spurs: { ...arms.spurs, elongation: arms.spurs.elongation * 1.2 } },
+          });
+        }, DEFAULT_GALAXY_FIELD_TUNING.arms);
+        await settleFrames(page, SETTLE_FRAMES);
+        const isolatedAfter = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          return bridge!.requestArmSpurCloudRenderedFluxSum();
+        });
+        await page.evaluate(async (arms) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({ arms });
+        }, DEFAULT_GALAXY_FIELD_TUNING.arms);
+        await settleFrames(page, SETTLE_FRAMES);
+
+        if (isolatedAfter === null) {
+          throw new Error(
+            'readback:placeArmSpurCloud — requestArmSpurCloudRenderedFluxSum() returned null after the elongation change',
+          );
+        }
+        if (!(Math.abs(isolatedBefore) > 1e-6)) {
+          throw new Error(
+            `readback:placeArmSpurCloud — isolated rendered flux is ~0 before the elongation change (${isolatedBefore}); cannot observe an invariance response against a near-zero baseline`,
+          );
+        }
+        const isolatedRatio = isolatedAfter / isolatedBefore;
+        const isolatedRatioErr = Math.abs(isolatedRatio - 1);
+        if (isolatedRatioErr > ARM_SPUR_CLOUD_FIELD_INVARIANCE_TOLERANCE) {
+          throw new Error(
+            `readback:placeArmSpurCloud — isolated rendered flux did not stay invariant under a spurs.elongation-only change: before=${isolatedBefore}, after=${isolatedAfter}, ` +
+              `observed ratio=${isolatedRatio} (expected ~1), relErr=${isolatedRatioErr} — ` +
+              'fieldSplat/fragment.wesl may not be reading spurCloudRenorm[0], reading the wrong buffer, or gating the wrong slot range',
+          );
+        }
+        console.error(
+          `  readback:placeArmSpurCloud isolated rendered flux stays invariant under spurs.elongation (before=${isolatedBefore.toFixed(4)}, after=${isolatedAfter.toFixed(4)}, ratio=${isolatedRatio.toFixed(6)})`,
+        );
 
         // (3) Liveness — every record's amplitude (lane 3 of every
         // FIELD_COMPONENT_FLOATS-wide record) is finite and strictly
@@ -1487,6 +1628,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
             offset: landed.offset,
             flux: landed.flux,
             records: Array.from(landed.records),
+            fluxWeight: Array.from(landed.fluxWeight),
+            renormScale: landed.renormScale,
           };
         });
         if (!first) {
@@ -1543,6 +1686,94 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           );
         }
         console.error(`  readback:placeArmCloud count matches budget math (${first.count})`);
+
+        // (2.5) Task 15's flux-weight-sum renorm — ringReduce.wesl's
+        // csArmCloudFluxWeightSum output must match a CPU recomputation of
+        // armParticleCloud.ts:232-235's own sum (a bare '1/weightSum', NOT
+        // 'cloudFlux/weightSum' — placeArmCloud.wesl already bakes cloudFlux
+        // into 'flux' itself, that file's own doc). Reads
+        // `armCloudRenormBuffer` directly, same "validates the kernel, not
+        // the consuming shader" caveat `readback:placeArmSpurCloud`'s own
+        // (2.5) documents — (2.6) below closes that gap.
+        const weightSum = first.fluxWeight.reduce((sum, w) => sum + w, 0);
+        const expectedScale = weightSum > 0 ? 1 / weightSum : 0;
+        const scaleAbsErr = Math.abs(first.renormScale - expectedScale);
+        const scaleRelErr = scaleAbsErr / Math.max(Math.abs(expectedScale), 1e-12);
+        if (scaleRelErr > 1e-4) {
+          throw new Error(
+            `readback:placeArmCloud — flux-weight-sum renorm scale mismatch: GPU ${first.renormScale} vs CPU recomputation ${expectedScale} (weightSum=${weightSum}, relErr=${scaleRelErr})`,
+          );
+        }
+        console.error(
+          `  readback:placeArmCloud flux-weight-sum renorm scale matches CPU recomputation (gpu=${first.renormScale}, cpu=${expectedScale}, weightSum=${weightSum})`,
+        );
+
+        // (2.6) The CONSUMING multiply — fieldSplat/fragment.wesl's
+        // 'renormScale = armCloudRenorm[0]' branch — must actually run.
+        // Same derivation and fix-round findings as
+        // `readback:placeArmSpurCloud`'s own (2.6) — a whole-field-sum
+        // comparison isn't clean (ridge-chain residual emission unrelated to
+        // Task 15), and an ABSOLUTE prediction (even color-weighted) can't
+        // reach `params.w`/`debugView.w` (exposure/galaxyWeight) from the
+        // probe's own vantage point. `requestArmCloudRenderedFluxSum`
+        // isolates this reservation's own instance range through the REAL
+        // `fieldSplatPipe`/`fieldSplatBG`; comparing a RATIO of two such
+        // isolated measurements (driven by `arms.cloud.elongation`, NOT
+        // `sizeScale` — see `readback:placeArmSpurCloud`'s own (2.6) for why
+        // that knob has no discriminating power) cancels every per-frame/
+        // per-record constant instead of trying to reconstruct them all.
+        const isolatedBefore = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          return bridge!.requestArmCloudRenderedFluxSum();
+        });
+        if (isolatedBefore === null) {
+          throw new Error(
+            'readback:placeArmCloud — requestArmCloudRenderedFluxSum() returned null at boot (expected the boot reservation to be live)',
+          );
+        }
+        await page.evaluate(async (arms) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({
+            arms: { ...arms, cloud: { ...arms.cloud, elongation: arms.cloud.elongation * 1.5 } },
+          });
+        }, DEFAULT_GALAXY_FIELD_TUNING.arms);
+        await settleFrames(page, SETTLE_FRAMES);
+        const isolatedAfter = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          return bridge!.requestArmCloudRenderedFluxSum();
+        });
+        await page.evaluate(async (arms) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({ arms });
+        }, DEFAULT_GALAXY_FIELD_TUNING.arms);
+        await settleFrames(page, SETTLE_FRAMES);
+
+        if (isolatedAfter === null) {
+          throw new Error(
+            'readback:placeArmCloud — requestArmCloudRenderedFluxSum() returned null after the elongation change',
+          );
+        }
+        if (!(Math.abs(isolatedBefore) > 1e-6)) {
+          throw new Error(
+            `readback:placeArmCloud — isolated rendered flux is ~0 before the elongation change (${isolatedBefore}); cannot observe an invariance response against a near-zero baseline`,
+          );
+        }
+        const isolatedRatio = isolatedAfter / isolatedBefore;
+        const isolatedRatioErr = Math.abs(isolatedRatio - 1);
+        if (isolatedRatioErr > ARM_CLOUD_FIELD_INVARIANCE_TOLERANCE) {
+          throw new Error(
+            `readback:placeArmCloud — isolated rendered flux did not stay invariant under a cloud.elongation-only change: before=${isolatedBefore}, after=${isolatedAfter}, ` +
+              `observed ratio=${isolatedRatio} (expected ~1), relErr=${isolatedRatioErr} — ` +
+              'fieldSplat/fragment.wesl may not be reading armCloudRenorm[0], reading the wrong buffer, or gating the wrong slot range',
+          );
+        }
+        console.error(
+          `  readback:placeArmCloud isolated rendered flux stays invariant under cloud.elongation (before=${isolatedBefore.toFixed(4)}, after=${isolatedAfter.toFixed(4)}, ratio=${isolatedRatio.toFixed(6)})`,
+        );
 
         // (3) Liveness — every record's amplitude (lane 3 of every
         // FIELD_COMPONENT_FLOATS-wide record) is finite and strictly

@@ -167,7 +167,12 @@ export function createGalaxyRenderTargets(
       label: 'galaxy:fieldTex',
       size: [w, h],
       format: formats.hdr,
-      usage: RA_TB,
+      // COPY_SRC beyond RA_TB's production need: Task 15's own debug-only
+      // readback (requestFieldTexChannelSum, readDustMapChannelSum.ts reused)
+      // copies the whole target back to observe the arm-cloud/spur-cloud
+      // renorm's ACTUAL rendered effect — `dustMapTex`'s own identical
+      // precedent below.
+      usage: RA_TB | GPUTextureUsage.COPY_SRC,
     });
   }
 

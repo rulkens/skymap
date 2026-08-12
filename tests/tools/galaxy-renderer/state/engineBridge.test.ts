@@ -76,6 +76,9 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
     requestDustBufferPeek: vi.fn<GalaxyEngineHandle['requestDustBufferPeek']>(),
     requestDustMapChannelSum: vi.fn<GalaxyEngineHandle['requestDustMapChannelSum']>(),
     requestFieldTexChannelSum: vi.fn<GalaxyEngineHandle['requestFieldTexChannelSum']>(),
+    requestArmCloudRenderedFluxSum: vi.fn<GalaxyEngineHandle['requestArmCloudRenderedFluxSum']>(),
+    requestArmSpurCloudRenderedFluxSum:
+      vi.fn<GalaxyEngineHandle['requestArmSpurCloudRenderedFluxSum']>(),
     requestArmSpurCloudPlacementReadback:
       vi.fn<GalaxyEngineHandle['requestArmSpurCloudPlacementReadback']>(),
     requestArmSpurCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmSpurCloudBufferPeek']>(),

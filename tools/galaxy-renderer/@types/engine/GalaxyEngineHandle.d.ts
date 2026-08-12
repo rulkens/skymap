@@ -111,6 +111,14 @@ export type GalaxyEngineHandle = {
   // `targets.fieldTex` (the shared target every emission component draws
   // into). No production caller.
   requestFieldTexChannelSum(): Promise<number>;
+  // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
+  // ONLY the arm-cloud/spur-cloud reservation's own instance range into
+  // `targets.fieldTex` (via `encodeSplatPass`'s `firstInstance`) through the
+  // REAL production pipeline/bind group, isolated from every other
+  // component. `null` when nothing is reserved this rebuild. No production
+  // caller.
+  requestArmCloudRenderedFluxSum(): Promise<number | null>;
+  requestArmSpurCloudRenderedFluxSum(): Promise<number | null>;
   // Debug-only: Task 14's own numeric-validation exception
   // (`placeArmSpurCloud.wesl` has no non-GPU path to check its output
   // against) — dispatches fresh and maps the spur-cloud reservation's slot
