@@ -321,8 +321,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     label: 'galaxy:hiiComps',
     // COPY_SRC beyond STORAGE|COPY_DST's production need: Task 8's own
     // debug-only readback (`requestDigVeilPlacementReadback`/
-    // `requestDigVeilBufferPeek`) copies the DIG slot range back to the
-    // CPU, same precedent `fieldComps` already establishes for dust.
+    // `probe.peekRecords('hii', ...)`) copies the DIG slot range back to
+    // the CPU, same precedent `fieldComps` already establishes for dust.
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     floatsPerRecord: FIELD_COMPONENT_FLOATS,
     // + DIG_MAX_COUNT: the DIG veil (`hiiRegions.ts`) rides this SAME
@@ -1076,7 +1076,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * fresh and so can't see the former — Task 14's vanish bug). Sized at
    * `MAX_PARTICLE_COUNT` (the dust tail, the largest of the four tiers) —
    * every call copies only `count` records, so a smaller tier's peek just
-   * uses a prefix of this buffer.
+   * uses a prefix of this buffer. ONE peek at a time: the old four-buffer
+   * design made a concurrent pair structurally impossible (different
+   * buffers); this shared one relies on `probeGpuErrors.ts` — the sole
+   * caller — always `await`ing one `peekRecords` before starting the next.
    */
   const peekScratchBuffer = device.createBuffer({
     label: 'galaxy:peekScratch',

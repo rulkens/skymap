@@ -36,17 +36,16 @@ export type GalaxyProbeApi = {
    */
   peekRecords(buffer: 'field' | 'hii', offset: number, count: number): Promise<Float32Array>;
 
-  // Debug-only: diffs `ismMapRingReduce.wesl`'s GPU ring means against
-  // `ismMapRingMeans.ts`'s CPU loop over `getIsmMapData()`. No production
-  // caller.
+  // Debug-only: diffs `ringReduce.wesl`'s GPU ring means (via
+  // `createIsmMapReadbacks.ts`'s `requestRingMeans`) against
+  // `ismMapRingMeans.ts`'s CPU loop over `getIsmMapData()`.
   requestRingMeansReadback(): Promise<Float32Array>;
   // Debug-only: Task 12's own numeric-validation exception
   // (`createArmRidgeDebugSample.ts`) — armRidge.wesl vs. armRidgeGeometry.ts.
-  // No production caller.
   requestArmRidgeSampleReadback(): Promise<Float32Array>;
   // Debug-only: Task 6's own numeric-validation exception
   // (`createIsmMapDustCdfScanDebugSample.ts`) — ismMapDustCdfScan.wesl's
-  // dust-weight prefix sum vs. buildIsmMapDustCdf.ts. No production caller.
+  // dust-weight prefix sum vs. buildIsmMapDustCdf.ts.
   requestIsmMapDustCdfScanReadback(): Promise<{
     readonly grid: {
       readonly rings: number;
@@ -63,11 +62,14 @@ export type GalaxyProbeApi = {
   }>;
   // Debug-only: Task 7's own numeric-validation exception — dispatches
   // `placeDust.wesl` fresh and maps the dust slot range straight back
-  // (determinism, budget count, survival-floor zeroing). `null` when nothing
-  // is reserved this rebuild. `forceGeneratorIsFluid`, when given, overrides
-  // the live tuning for THIS dispatch only — see createGalaxyModel.ts's
-  // `dustDispatchInput` for why (exercises placeDust.wesl's mode-1
-  // (smoothDisc) branch without flipping the live tuning).
+  // (determinism, budget count, survival-floor zeroing). `mass` is
+  // `placeDust.wesl`'s own `massOut`; `renormScale` is `ringReduce.wesl`'s
+  // `csSurvivorSum` output off a dispatch encoded against that SAME `mass`.
+  // `null` when nothing is reserved this rebuild. `forceGeneratorIsFluid`,
+  // when given, overrides the live tuning for THIS dispatch only — see
+  // createGalaxyModel.ts's `dustDispatchInput` for why (exercises
+  // placeDust.wesl's mode-1 (smoothDisc) branch without flipping the live
+  // tuning).
   requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
     readonly count: number;
     readonly records: Float32Array;
@@ -79,24 +81,23 @@ export type GalaxyProbeApi = {
   // ACTUAL rendered output responding to a `dustRenormBuffer` change, not
   // just the buffer both the compute kernel and a direct readback share. See
   // `readTextureChannelSum.ts`'s own doc for why the sum is exactly linear
-  // in the renorm scale. No production caller.
+  // in the renorm scale.
   requestDustMapChannelSum(): Promise<number>;
   // Debug-only: draws ONLY the arm-cloud reservation's own instance range
   // into `targets.fieldTex` (via `encodeSplatPass`'s `firstInstance`)
   // through the REAL production pipeline/bind group, isolated from every
-  // other component. `null` when nothing is reserved this rebuild. No
-  // production caller.
+  // other component. `null` when nothing is reserved this rebuild.
   requestArmCloudRenderedFluxSum(): Promise<number | null>;
   // Debug-only: the spur-cloud twin of `requestArmCloudRenderedFluxSum`.
   requestArmSpurCloudRenderedFluxSum(): Promise<number | null>;
   // Debug-only: Task 14's own numeric-validation exception — dispatches
   // fresh and maps the spur-cloud reservation's slot range straight back
   // (determinism, budget, survival/liveness, flux parity against `flux` —
-  // the SAME `spurFlux` uniform the dispatch used). `fluxWeight`/
-  // `renormScale` (Task 15) are the flux-weight-sum input and the
-  // GPU-computed reciprocal renorm scale off a dispatch encoded against the
-  // SAME `fluxWeight`. `null` when nothing is reserved this rebuild
-  // (central galaxy only). No production caller.
+  // the SAME `spurFlux` uniform the dispatch used). `fluxWeight` is
+  // `placeArmSpurCloud.wesl`'s own `fluxWeightOut`; `renormScale` (Task 15)
+  // is `ringReduce.wesl`'s `csArmSpurFluxWeightSum` output off a dispatch
+  // encoded against that SAME `fluxWeight`. `null` when nothing is reserved
+  // this rebuild (central galaxy only).
   requestArmSpurCloudPlacementReadback(): Promise<{
     readonly count: number;
     readonly offset: number;
@@ -105,7 +106,10 @@ export type GalaxyProbeApi = {
     readonly fluxWeight: Float32Array;
     readonly renormScale: number;
   } | null>;
-  // Debug-only: the arm-cloud twin of `requestArmSpurCloudPlacementReadback`.
+  // Debug-only: the arm-cloud twin of `requestArmSpurCloudPlacementReadback`
+  // — `fluxWeight` is `placeArmCloud.wesl`'s own `fluxWeightOut`;
+  // `renormScale` is `ringReduce.wesl`'s `csArmCloudFluxWeightSum` output
+  // off a dispatch encoded against that SAME `fluxWeight`.
   requestArmCloudPlacementReadback(): Promise<{
     readonly count: number;
     readonly offset: number;
@@ -118,7 +122,7 @@ export type GalaxyProbeApi = {
   // fresh and maps the DIG veil reservation's slot range straight back
   // (determinism, budget, liveness, flux parity). `amplitudeBase` is the
   // SAME uniform the dispatch used. `null` when nothing is reserved this
-  // rebuild (central galaxy only). No production caller.
+  // rebuild (central galaxy only).
   requestDigVeilPlacementReadback(): Promise<{
     readonly count: number;
     readonly offset: number;

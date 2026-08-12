@@ -1082,7 +1082,7 @@ export async function createGalaxyEngine(
   // ---- headless readback paths ----
   // Owns its own allocations, so it is absent from the ownership ledger and
   // `dispose` calls its `destroy` alongside the other self-owning modules.
-  const probe = createOffscreenProbe({
+  const offscreenProbe = createOffscreenProbe({
     device,
     format,
     drawFrame,
@@ -1121,7 +1121,7 @@ export async function createGalaxyEngine(
     setInsets: camera.setInsets,
     setExtras: model.setExtras,
     step: (now?: number): void => drawFrame(now ?? performance.now()),
-    sample: probe.sample,
+    sample: offscreenProbe.sample,
     getCamera: camera.getCamera,
     // The ISM-map generator's packed output (ismMapFluidPack.wesl) — a
     // persistent GPU texture, always non-null, whose CONTENT is only meaningful once
@@ -1221,7 +1221,7 @@ export async function createGalaxyEngine(
         return readTextureChannelSum(device, targets.fieldTex);
       },
     },
-    grab: probe.grab,
+    grab: offscreenProbe.grab,
     dispose(): void {
       rafLoop.stop();
       unsubscribeTiming();
@@ -1245,7 +1245,7 @@ export async function createGalaxyEngine(
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked
       // a full set per remount until this call existed.
       targets.destroy();
-      probe.destroy();
+      offscreenProbe.destroy();
       model.destroy();
       for (let i = owned.length - 1; i >= 0; i--) owned[i]!.destroy();
       ro.disconnect();
