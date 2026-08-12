@@ -57,7 +57,7 @@ import {
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
   buildHiiRegions,
-  buildHiiRegionsWithSegments,
+  buildHiiShellsAndYoungWithSegments,
   DIG_MAX_COUNT,
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
@@ -82,6 +82,9 @@ import type { IsmMapRingReduce } from '../ismMap/createIsmMapRingReduce';
 import type { IsmMapDustCdfScan } from '../ismMap/createIsmMapDustCdfScan';
 import { computePlaceDustBudget } from '../ismMap/computePlaceDustBudget';
 import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
+import { computeDigVeilBudget } from '../ismMap/computeDigVeilBudget';
+import type { DigVeilBudget } from '../ismMap/computeDigVeilBudget';
+import { buildDigArmEnvelopeTable } from '../ismMap/buildDigArmEnvelopeTable';
 import type { IsmMapPlaceDust, PlaceDustDispatchInput } from '../ismMap/createIsmMapPlaceDust';
 import type {
   IsmMapPlaceArmSpurCloud,
@@ -91,6 +94,10 @@ import type {
   IsmMapPlaceArmCloud,
   PlaceArmCloudDispatchInput,
 } from '../ismMap/createIsmMapPlaceArmCloud';
+import type {
+  IsmMapPlaceDigVeil,
+  PlaceDigVeilDispatchInput,
+} from '../ismMap/createIsmMapPlaceDigVeil';
 import { SPUR_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
 import { ARM_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { MAX_PARTICLE_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
@@ -135,6 +142,10 @@ export type GalaxyModelDeps = {
   readonly placeArmSpurCloud: IsmMapPlaceArmSpurCloud;
   /** GPU replacement for `buildArmParticleCloud`'s placement body — see `armCloudPlacementRebuild`. */
   readonly placeArmCloud: IsmMapPlaceArmCloud;
+  /** GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum, the DIG veil's OWN 'armBiased' weight table — a SEPARATE instance/buffer from `dustCdfScan` (see `dispatchDigCdfScan`'s own doc for why sharing one buffer across two tiers' own deferred dispatches would race). */
+  readonly digCdfScan: IsmMapDustCdfScan;
+  /** GPU replacement for `buildDigVeil`'s complex/children placement — see `digPlacementRebuild`. */
+  readonly placeDigVeil: IsmMapPlaceDigVeil;
   /** The engine's live bag, merged in place by `setRender`. Read for exactly two debug-view weights and the orientation chain's two sigmas. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   /**
@@ -306,6 +317,32 @@ export type GalaxyModel = {
     readonly records: Float32Array;
   } | null>;
   /**
+   * Debug-only: Task 8's own numeric-validation exception (`placeDigVeil.wesl`
+   * has no non-GPU path to check its output against) — dispatches fresh and
+   * maps the DIG veil reservation's slot range straight back, the DIG twin
+   * of `requestArmCloudPlacementReadback`. No production caller. `null` when
+   * nothing is reserved this rebuild (central galaxy only — see
+   * `createGalaxyModel.ts`'s `digBudget`).
+   */
+  requestDigVeilPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    /** The SAME `amplitudeBase` uniform the dispatch used — see `requestArmCloudPlacementReadback`'s own `flux` field for the identical "independent expected side" precedent. */
+    readonly amplitudeBase: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
+   * Debug-only: the DIG twin of `requestArmCloudBufferPeek` — COPIES the
+   * reservation's CURRENT slot range out of the LIVE `hiiComps` buffer,
+   * without dispatching `placeDigVeil.wesl` first. `null` when nothing is
+   * reserved.
+   */
+  requestDigVeilBufferPeek(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
+  /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
    * list is a destroyed buffer.
@@ -325,6 +362,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     placeDust,
     placeArmSpurCloud,
     placeArmCloud,
+    digCdfScan,
+    placeDigVeil,
     render,
   } = deps;
 
@@ -370,7 +409,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const hiiComps = createGrowOnlyRecordBuffer({
     device,
     label: 'galaxy:hiiComps',
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    // COPY_SRC beyond STORAGE|COPY_DST's production need: Task 8's own
+    // debug-only readback (`requestDigVeilPlacementReadback`/
+    // `requestDigVeilBufferPeek`) copies the DIG slot range back to the
+    // CPU, same precedent `fieldComps` already establishes for dust.
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     floatsPerRecord: FIELD_COMPONENT_FLOATS,
     // + DIG_MAX_COUNT: the DIG veil (`hiiRegions.ts`) rides this SAME
     // buffer as a bounded group pushed after `HII_MAX_COUNT`'s
@@ -429,6 +472,23 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // trailing extras span, kept in step with `hiiComps.write` since both are
   // written by `repackHiiComponents` alone.
   let hiiSegments: readonly HiiSegment[] = [];
+  // The shell tier's own flux total and the recent-event population —
+  // DIG's own two inputs (`computeDigVeilBudget`), captured alongside
+  // `hiiMixture`/`hiiTierSegments` at every central rebuild site (Task 8's
+  // own cut of the "capture alongside the mixture" pattern
+  // `spurCloudReservation`/`armCloudReservation` already use) since both
+  // are a byproduct of `buildHiiShellsAndYoungWithSegments`, not a value
+  // this file recomputes on its own.
+  let shellFluxSum = 0;
+  let recentEventCount = 0;
+  // The DIG veil's RESERVATION, CENTRAL galaxy only — same cut dust/spur/
+  // arm-cloud reservations already take (extras get it in a follow-up).
+  // `null` means no DIG reserved this rebuild (`computeDigVeilBudget`'s own
+  // early-exit gates). `digOffset` is this reservation's absolute index
+  // into `hiiComps` (set by `repackHiiComponents`, the one place that
+  // decides where the DIG span lands between shells and young).
+  let digBudget: DigVeilBudget | null = null;
+  let digOffset = 0;
   // The analytic dust lane's RESERVATION, CENTRAL galaxy only — extras get
   // dust in a follow-up with zero rework, since the packed layout already
   // carries per-galaxy dustOffset/dustCount. `null` means no dust reserved
@@ -550,12 +610,21 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   /**
    * rebuildHiiIfSeeded — the HII tier's own "map landed late" rebuild,
    * shared by `scheduleIsmMapReadback` and `scheduleOrientationReadback`:
-   * same "map landed after the synchronous build that asked for it"
-   * determinism problem `rebuildDustMixture` solves for dust, for the HII
-   * tier's own map-seeded positions AND its DIG veil (also map-seeded).
+   * originally the same "map landed after the synchronous build that asked
+   * for it" determinism problem `rebuildDustMixture` solves for dust. Since
+   * Task 8, neither `buildHiiShellsAndYoungWithSegments` (shells/young —
+   * the fluid-event candidate window recomputes its OWN event list off
+   * `(geometry, tuning, seed)`, never `readbacks.ismMapData`) nor
+   * `rebuildDigVeilBudget` (DIG's budget math, or `placeDigVeil.wesl`'s own
+   * GPU-resident CDF) read the CPU `ismMap` copy at all any more — this
+   * function's own two call sites (below) now recompute BYTE-IDENTICAL
+   * output to what `setParams`/`setFieldTuning` already produced, wasted
+   * but harmless CPU work. Left AS A STANDING CALL rather than removed
+   * (out of this task's minimal-restructure scope — see Task 8's report for
+   * the explicit ruling); a future pass could drop both call sites entirely.
    * File-local — closes over `fieldGeometry`/`fieldTuning`/`hiiMixture`/
-   * `hiiTierSegments`/`readbacks`, none of which are pure inputs, so this
-   * isn't a `utils/` candidate.
+   * `hiiTierSegments`, none of which are pure inputs, so this isn't a
+   * `utils/` candidate.
    */
   function rebuildHiiIfSeeded(): void {
     if (
@@ -564,11 +633,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         (fieldTuning.hii.dig?.fraction ?? 0) > 0 ||
         (fieldTuning.hii.youngStars?.brightness ?? 0) > 0)
     ) {
-      ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
-        fieldGeometry,
-        currentStarFormation(),
-        readbacks.ismMapData,
-      ));
+      ({ mixture: hiiMixture, segments: hiiTierSegments, shellFluxSum, recentEventCount } =
+        centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
+      rebuildDigVeilBudget();
       repackHiiComponents();
     }
   }
@@ -704,6 +771,53 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * dispatchDigCdfScan — the DIG veil's own arm-biased counterpart to
+   * `dispatchDustCdfScan`, own encoder/submit, own `digCdfScan`
+   * buffer/instance (see `GalaxyModelDeps.digCdfScan`'s own doc for why a
+   * SEPARATE instance from dust's — the two tiers' placement dispatches are
+   * each deferred independently to `ensureFresh()`, so sharing one
+   * `prefixBuffer` would make whichever dispatch runs second silently
+   * clobber the first's input). Two independent triggers, same shape as
+   * dust's: the map's own content (`rebuildIsmMap`) and DIG's own tuning
+   * (`rebuildDigVeilBudget`, whenever `armBias`/`arms.widthScale` or
+   * anything else `buildDigArmEnvelopeTable` reads moves without a map
+   * regenerate). `armBias` is CLAMPED here, at the packing call site — the
+   * parked concern from Task 6's own review (`buildDigVeil`'s CPU original
+   * clamps `dig.armBias` to `[0, 1]` before ever building the envelope;
+   * `evalWeight`'s `armBias > 1` branch has no clamp of its own, since the
+   * scan shader trusts whatever `params.armBias` the caller packed).
+   * No-op off the fluid generator or with no geometry yet — same gate
+   * `dispatchDustCdfScan` uses.
+   */
+  function dispatchDigCdfScan(): void {
+    if (!fieldGeometry || fieldTuning.ismMap.generator !== 'fluid') return;
+    const grid = ismMapGridRadiusOrDefault(fieldGeometry);
+    const armBias = Math.min(1, Math.max(0, fieldTuning.hii.dig?.armBias ?? 0));
+    const armCount = fieldGeometry.arms.length;
+    const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDigCdfScanRebuild' });
+    digCdfScan.dispatchScan(enc, {
+      ismMapTexture: ismMapGenerator.texture,
+      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+      weights: {
+        kind: 'armBiased',
+        // DIG's own CDF weights the map's `activity` channel alone —
+        // hiiRegions.ts's `buildIsmMapDustCdf(ismMap, (texel) => armBiasedDensity(texel.activity, ...))`.
+        channelWeights: { gas: 0, stars: 0, activity: 1, dust: 0 },
+        armBias,
+        armCount,
+        entries: buildDigArmEnvelopeTable(fieldGeometry, fieldTuning, {
+          rings: ISM_MAP_RINGS,
+          rMin: grid.rMin,
+          rMax: grid.rMax,
+        }),
+      },
+      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+    });
+    device.queue.submit([enc.finish()]);
+    digPlacementRebuild.invalidate();
+  }
+
+  /**
    * rebuildDustMixture — recomputes the central galaxy's dust RESERVATION
    * (`computePlaceDustBudget`'s pure budget math off the CACHED geometry +
    * dust params), re-scans the CDF for the CURRENT `cloud.dustPlacementCap`
@@ -742,6 +856,25 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     dispatchDustCdfScan();
     orientationDiagnostics.noteDelta({ count: 0, sumAbsDeltaDeg: 0, maxAbsDeltaDeg: 0 });
     reportOrientationDiagnostics();
+  }
+
+  /**
+   * rebuildDigVeilBudget — the DIG twin of `rebuildDustMixture`: recomputes
+   * `digBudget` (pure function of geometry + `fieldTuning.hii.dig` +
+   * `shellFluxSum`/`recentEventCount`, the two values the shell/young build
+   * this rebuild's own callers ALWAYS run first — see `computeDigVeilBudget`'s
+   * own doc), then re-scans the arm-biased CDF for the CURRENT `armBias`
+   * (`dispatchDigCdfScan`). Does NOT invalidate `digPlacementRebuild` itself
+   * — `repackHiiComponents` owns that (same "whoever zeroes the slots owns
+   * the invalidation" rule `repackFieldComponents` documents for dust/spur/
+   * arm-cloud), and every call site of this function is unconditionally
+   * followed by one in the same synchronous invocation.
+   */
+  function rebuildDigVeilBudget(): void {
+    digBudget = fieldGeometry
+      ? computeDigVeilBudget(fieldGeometry, fieldTuning, shellFluxSum, recentEventCount)
+      : null;
+    dispatchDigCdfScan();
   }
 
   /**
@@ -819,6 +952,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // see dispatchDustCdfScan's own doc for why this ALSO has an
       // independent trigger (a bare cap drag) besides this one.
       dispatchDustCdfScan();
+      // DIG's own arm-biased prefix sum, same "map itself changed" trigger
+      // — see dispatchDigCdfScan's own doc for its independent armBias-drag
+      // trigger besides this one.
+      dispatchDigCdfScan();
     }
     scheduleIsmMapReadback(grid);
     orientationTexRebuild.invalidate();
@@ -826,6 +963,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // re-dispatch even when `dustBudget`'s OWN inputs (geometry/dust params)
     // didn't move, e.g. a bare ismMapFluid tuning drag.
     dustPlacementRebuild.invalidate();
+    // DIG's own twin of the line above — same reasoning, covers the
+    // 'none'-generator branch too (dispatchDigCdfScan's own invalidate only
+    // fires on the fluid path above).
+    digPlacementRebuild.invalidate();
   }
 
   /**
@@ -976,6 +1117,54 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
+   * digPlacementRebuild — encodes `placeDigVeil.wesl` into its own encoder,
+   * off the CURRENT `digBudget` reservation. Consumed from
+   * `GalaxyModel.ensureFresh()`, the SAME deferred-dispatch shape
+   * `dustPlacementRebuild`/`spurCloudPlacementRebuild`/`armCloudPlacementRebuild`
+   * use. Reads no `orientationTex` at all (this tier has no coherence-blend
+   * mode — `scatterAxesForCoherence` rotates toward a random direction, not
+   * a measured one), so there is no real ordering dependency on
+   * `orientationTexRebuild` either; placed after it anyway, one discipline
+   * rather than four.
+   */
+  const digPlacementRebuild = createKeyedRebuild({
+    wanted: () => digBudget !== null,
+    build: () => {
+      const budget = digBudget;
+      if (!fieldGeometry || !budget) return;
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeDigVeil' });
+      placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(fieldGeometry, budget));
+      device.queue.submit([enc.finish()]);
+    },
+  });
+
+  /** Shared by `digPlacementRebuild` and the debug readback below — one input shape, one place that assembles it. */
+  function digDispatchInput(
+    geometry: GalaxyDescription,
+    budget: DigVeilBudget,
+  ): PlaceDigVeilDispatchInput {
+    const grid = ismMapGridRadiusOrDefault(geometry);
+    return {
+      seed: currentSeed(),
+      budget,
+      reservationOffset: digOffset,
+      generatorIsFluid: fieldTuning.ismMap.generator === 'fluid',
+      cdfRings: ISM_MAP_RINGS,
+      cdfAz: ISM_MAP_AZ,
+      cdfRMin: grid.rMin,
+      cdfRMax: grid.rMax,
+      warp: {
+        warpStrength: geometry.warpStrength,
+        warpTwist: geometry.warpTwist,
+        warpStartRadius: geometry.warpStartRadius,
+        outerRadius: geometry.outerRadius,
+      },
+      prefixBuffer: digCdfScan.prefixBuffer,
+      hiiCompsBuffer: hiiComps.buffer,
+    };
+  }
+
+  /**
    * armCloudPeekBuffer — the arm-cloud twin of `spurCloudPeekBuffer` (own doc
    * below): `requestArmCloudPlacementReadback` always re-dispatches
    * `placeArmCloud.wesl` fresh, so it cannot see whether `ensureFresh()`'s own
@@ -985,6 +1174,17 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const armCloudPeekBuffer = device.createBuffer({
     label: 'galaxy:armCloudPeek',
     size: ARM_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+  /**
+   * digVeilPeekBuffer — the DIG twin of `armCloudPeekBuffer`: a plain
+   * COPY_DST|MAP_READ target for `requestDigVeilBufferPeek`, reading
+   * whatever is CURRENTLY sitting in `hiiComps` without dispatching
+   * `placeDigVeil.wesl` first.
+   */
+  const digVeilPeekBuffer = device.createBuffer({
+    label: 'galaxy:digVeilPeek',
+    size: DIG_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
@@ -1108,24 +1308,57 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * attachments, which WebGPU has no way to do. Runs right after
    * `repackFieldComponents`; the readback landings rebuild dust alone and leave
    * this tier untouched.
+   *
+   * `hiiMixture` is shells+young ONLY since Task 8 (`buildHiiShellsAndYoungWithSegments`'s
+   * own shape) — DIG's span is a RESERVATION written zero here, exactly
+   * `repackFieldComponents`'s own dust-tail discipline, except EMBEDDED
+   * between shells and young (matching the tier's original ordering) rather
+   * than appended at the buffer's end: `digPlacementRebuild` fills it in a
+   * LATER, separate GPU pass. `digPlacementRebuild.invalidate()` is
+   * unconditional here for the same "whoever zeroes the slots owns the
+   * invalidation" reason `repackFieldComponents` documents for dust/spur/
+   * arm-cloud — every call to this function overwrites the WHOLE buffer
+   * from CPU-held arrays plus the current `digBudget.count`, including calls
+   * whose own trigger has nothing to do with DIG (e.g. `setExtras`).
    */
   function repackHiiComponents(): void {
-    const combined: GalaxyFieldComponent[] = [...hiiMixture];
-    for (const e of extras) combined.push(...e.hiiMixture);
-    hiiComps.write(packFieldComponents(combined));
-    // `hiiTierSegments` already covers `hiiMixture` (indices 0..hiiMixture.length)
-    // exactly — extras always trail it in `combined` (the loop above), so one
-    // more span for their WHOLE contribution keeps every segment contiguous
-    // without inventing a label per extra (their own shell/DIG/young split
-    // would interleave across extras and stop being contiguous).
-    const extrasCount = combined.length - hiiMixture.length;
-    hiiSegments =
-      extrasCount > 0
-        ? [
-            ...hiiTierSegments,
-            { label: 'hii:extras', first: hiiMixture.length, count: extrasCount },
-          ]
-        : hiiTierSegments;
+    const shellsSegment = hiiTierSegments.find((s) => s.label === 'hii:shells');
+    const shellsCount = shellsSegment?.count ?? 0;
+    const digCount = digBudget?.count ?? 0;
+    const packedShells = packFieldComponents(hiiMixture.slice(0, shellsCount));
+    const packedYoung = packFieldComponents(hiiMixture.slice(shellsCount));
+    const extrasComponents: GalaxyFieldComponent[] = [];
+    for (const e of extras) extrasComponents.push(...e.hiiMixture);
+    const packedExtras = packFieldComponents(extrasComponents);
+
+    digPlacementRebuild.invalidate();
+
+    const total = new Float32Array(
+      packedShells.length +
+        digCount * FIELD_COMPONENT_FLOATS +
+        packedYoung.length +
+        packedExtras.length,
+    );
+    let offset = 0;
+    total.set(packedShells, offset);
+    offset += packedShells.length;
+    digOffset = offset / FIELD_COMPONENT_FLOATS;
+    offset += digCount * FIELD_COMPONENT_FLOATS; // zero block — digPlacementRebuild fills it later
+    total.set(packedYoung, offset);
+    offset += packedYoung.length;
+    total.set(packedExtras, offset);
+    hiiComps.write(total);
+
+    const youngCount = hiiMixture.length - shellsCount;
+    const extrasCount = extrasComponents.length;
+    hiiSegments = [
+      { label: 'hii:shells', first: 0, count: shellsCount },
+      { label: 'hii:dig', first: digOffset, count: digCount },
+      { label: 'hii:young', first: digOffset + digCount, count: youngCount },
+      ...(extrasCount > 0
+        ? [{ label: 'hii:extras', first: digOffset + digCount + youngCount, count: extrasCount }]
+        : []),
+    ];
   }
 
   /**
@@ -1197,28 +1430,40 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
   /**
    * Central-galaxy counterpart to `hiiMixtureOf` that also captures the
-   * tier's own segmentation (`hiiTierSegments`) — extras never need it (see
-   * `hiiSegments`' own declaration), so only the central call sites pay for
-   * `buildHiiRegionsWithSegments`' bookkeeping; extras still go through the
-   * plain `hiiMixtureOf`/`buildHiiRegions`. No `transform`: the central
-   * galaxy never takes one (every call site below omits it).
+   * tier's own segmentation (`hiiTierSegments`) plus the two values DIG's
+   * own budget (`rebuildDigVeilBudget`, called by every one of THIS
+   * function's own call sites right after) needs — `shellFluxSum`/
+   * `recentEventCount` — extras never need any of this (see `hiiSegments`'
+   * own declaration; extras have no DIG at all, `ismMap` is always null for
+   * them), so only the central call sites pay for
+   * `buildHiiShellsAndYoungWithSegments`' bookkeeping; extras still go
+   * through the plain `hiiMixtureOf`/`buildHiiRegions`. No `transform`: the
+   * central galaxy never takes one (every call site below omits it). No
+   * `ismMap` parameter any more either — Task 8 moved DIG (this function's
+   * only consumer of the CPU ismMap copy) GPU-side, and shells/young never
+   * read it (see `rebuildHiiIfSeeded`'s own updated doc).
    */
   function centralHiiMixtureAndSegments(
     geometry: GalaxyDescription,
     starFormation: GalaxyStarFormationParams,
-    ismMap: GalaxyIsmMap | null,
   ): {
     readonly mixture: readonly GalaxyFieldComponent[];
     readonly segments: readonly HiiSegment[];
+    readonly shellFluxSum: number;
+    readonly recentEventCount: number;
   } {
-    const { components, segments } = buildHiiRegionsWithSegments(
-      geometry,
-      fieldTuning,
-      starFormation,
-      geometry.seed,
-      ismMap,
-    );
-    return { mixture: components, segments };
+    const {
+      components,
+      segments,
+      shellFluxSum: shellFluxSumResult,
+      recentEventCount: recentEventCountResult,
+    } = buildHiiShellsAndYoungWithSegments(geometry, fieldTuning, starFormation, geometry.seed);
+    return {
+      mixture: components,
+      segments,
+      shellFluxSum: shellFluxSumResult,
+      recentEventCount: recentEventCountResult,
+    };
   }
 
   /**
@@ -1261,12 +1506,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // the invalidation).
     ({ mixture: fieldMixture, spurCloudReservation, armCloudReservation } =
       centralFieldMixtureAndReservations(fieldGeometry));
-    ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
-      fieldGeometry,
-      currentStarFormation(),
-      readbacks.ismMapData,
-    ));
+    ({ mixture: hiiMixture, segments: hiiTierSegments, shellFluxSum, recentEventCount } =
+      centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
     rebuildDustMixture();
+    rebuildDigVeilBudget();
     bubblePlacements.invalidate();
     repackFieldComponents();
     repackHiiComponents();
@@ -1330,11 +1573,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
             centralFieldMixtureAndReservations(fieldGeometry));
         }
         if (hiiMoved) {
-          ({ mixture: hiiMixture, segments: hiiTierSegments } = centralHiiMixtureAndSegments(
-            fieldGeometry,
-            currentStarFormation(),
-            readbacks.ismMapData,
-          ));
+          ({ mixture: hiiMixture, segments: hiiTierSegments, shellFluxSum, recentEventCount } =
+            centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
+          rebuildDigVeilBudget();
         }
       }
       extras = extras.map((e) => ({
@@ -1487,6 +1728,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       dustPlacementRebuild.ensureFresh();
       spurCloudPlacementRebuild.ensureFresh();
       armCloudPlacementRebuild.ensureFresh();
+      digPlacementRebuild.ensureFresh();
       return { bubblesLive };
     },
 
@@ -1664,6 +1906,41 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       }
     },
 
+    async requestDigVeilPlacementReadback(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly amplitudeBase: number;
+      readonly records: Float32Array;
+    } | null> {
+      const budget = digBudget;
+      if (!fieldGeometry || !budget) return null;
+      const records = await placeDigVeil.dispatchAndReadbackDigVeil(
+        digDispatchInput(fieldGeometry, budget),
+      );
+      return { count: budget.count, offset: digOffset, amplitudeBase: budget.amplitudeBase, records };
+    },
+
+    async requestDigVeilBufferPeek(): Promise<{
+      readonly count: number;
+      readonly offset: number;
+      readonly records: Float32Array;
+    } | null> {
+      const budget = digBudget;
+      if (!budget || budget.count <= 0) return null;
+      const byteSize = budget.count * FIELD_COMPONENT_FLOATS * 4;
+      const byteOffset = digOffset * FIELD_COMPONENT_FLOATS * 4;
+      const enc = device.createCommandEncoder({ label: 'galaxy:digVeilPeek' });
+      enc.copyBufferToBuffer(hiiComps.buffer, byteOffset, digVeilPeekBuffer, 0, byteSize);
+      device.queue.submit([enc.finish()]);
+      await digVeilPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+      try {
+        const records = new Float32Array(digVeilPeekBuffer.getMappedRange(0, byteSize).slice(0));
+        return { count: budget.count, offset: digOffset, records };
+      } finally {
+        digVeilPeekBuffer.unmap();
+      }
+    },
+
     starInstances(): InstanceDraw[] {
       const list: InstanceDraw[] = [];
       if (starBuf) list.push({ buf: starBuf, count: starCount });
@@ -1693,6 +1970,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       spurCloudPeekBuffer.destroy();
       armCloudPeekBuffer.destroy();
       dustPeekBuffer.destroy();
+      digVeilPeekBuffer.destroy();
       genUbo.destroy();
     },
   };

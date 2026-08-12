@@ -143,5 +143,28 @@ export type GalaxyEngineHandle = {
     readonly offset: number;
     readonly records: Float32Array;
   } | null>;
+  // Debug-only: Task 8's own numeric-validation exception
+  // (`placeDigVeil.wesl` has no non-GPU path to check its output against)
+  // — dispatches fresh and maps the DIG veil reservation's slot range
+  // straight back, read by `probeGpuErrors.ts`'s `readback:placeDigVeil`
+  // step (determinism, budget count, liveness, flux parity). No production
+  // caller. `null` when nothing is reserved this rebuild (central galaxy
+  // only — see `createGalaxyModel.ts`'s `digBudget`).
+  requestDigVeilPlacementReadback(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly amplitudeBase: number;
+    readonly records: Float32Array;
+  } | null>;
+  // Debug-only: the DIG twin of `requestArmCloudBufferPeek` — COPIES the
+  // reservation's CURRENT slot range out of the LIVE `hiiComps` buffer,
+  // without dispatching `placeDigVeil.wesl` first. Read by
+  // `probeGpuErrors.ts`'s `readback:placeDigVeil` step's own "survives an
+  // unrelated tuning change" assertion. No production caller.
+  requestDigVeilBufferPeek(): Promise<{
+    readonly count: number;
+    readonly offset: number;
+    readonly records: Float32Array;
+  } | null>;
   dispose(): void;
 };

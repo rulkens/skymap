@@ -114,6 +114,9 @@ function makeFakeEngine(blackOnCall?: number): {
     requestArmCloudPlacementReadback:
       vi.fn<GalaxyEngineHandle['requestArmCloudPlacementReadback']>(),
     requestArmCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmCloudBufferPeek']>(),
+    requestDigVeilPlacementReadback:
+      vi.fn<GalaxyEngineHandle['requestDigVeilPlacementReadback']>(),
+    requestDigVeilBufferPeek: vi.fn<GalaxyEngineHandle['requestDigVeilBufferPeek']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, setParams, grab };

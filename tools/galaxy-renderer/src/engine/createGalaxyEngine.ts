@@ -58,6 +58,7 @@ import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
 import { createIsmMapPlaceDust } from './ismMap/createIsmMapPlaceDust';
 import { createIsmMapPlaceArmSpurCloud } from './ismMap/createIsmMapPlaceArmSpurCloud';
 import { createIsmMapPlaceArmCloud } from './ismMap/createIsmMapPlaceArmCloud';
+import { createIsmMapPlaceDigVeil } from './ismMap/createIsmMapPlaceDigVeil';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
@@ -369,9 +370,19 @@ export async function createGalaxyEngine(
     ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
   });
   // GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum — Task 7's
-  // dust-weight table only; Task 8 adds the DIG veil's arm-biased weights at
-  // the same real ISM_MAP_RINGS x ISM_MAP_AZ ceiling.
+  // dust-weight table.
   const dustCdfScan = createIsmMapDustCdfScan(device, {
+    makeShader,
+    maxRings: ISM_MAP_RINGS,
+    maxAz: ISM_MAP_AZ,
+  });
+  // A SECOND instance of the same factory, at the same real
+  // ISM_MAP_RINGS x ISM_MAP_AZ ceiling — Task 8's DIG veil own arm-biased
+  // weight table. Its OWN buffer, never sharing `dustCdfScan`'s: dust's and
+  // DIG's placement dispatches are each deferred independently to
+  // `ensureFresh()`, so one shared `prefixBuffer` would let whichever
+  // dispatch runs second silently overwrite the first's input.
+  const digCdfScan = createIsmMapDustCdfScan(device, {
     makeShader,
     maxRings: ISM_MAP_RINGS,
     maxAz: ISM_MAP_AZ,
@@ -382,6 +393,8 @@ export async function createGalaxyEngine(
   const placeArmSpurCloud = createIsmMapPlaceArmSpurCloud(device, { makeShader });
   // GPU replacement for `buildArmParticleCloud`'s placement body.
   const placeArmCloud = createIsmMapPlaceArmCloud(device, { makeShader });
+  // GPU replacement for `buildDigVeil`'s complex/children placement.
+  const placeDigVeil = createIsmMapPlaceDigVeil(device, { makeShader });
   // Task 12's own numeric-validation exception (armRidge.wesl vs.
   // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
   const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
@@ -504,6 +517,8 @@ export async function createGalaxyEngine(
     placeDust,
     placeArmSpurCloud,
     placeArmCloud,
+    digCdfScan,
+    placeDigVeil,
     render,
     onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
     onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),
@@ -1144,6 +1159,10 @@ export async function createGalaxyEngine(
     // see createGalaxyModel.ts's requestArmCloudPlacementReadback. No production caller.
     requestArmCloudPlacementReadback: () => model.requestArmCloudPlacementReadback(),
     requestArmCloudBufferPeek: () => model.requestArmCloudBufferPeek(),
+    // Debug-only: Task 8's own determinism/liveness/flux-parity numeric exception —
+    // see createGalaxyModel.ts's requestDigVeilPlacementReadback. No production caller.
+    requestDigVeilPlacementReadback: () => model.requestDigVeilPlacementReadback(),
+    requestDigVeilBufferPeek: () => model.requestDigVeilBufferPeek(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1155,9 +1174,11 @@ export async function createGalaxyEngine(
       ismMapGenerator.dispose();
       ismMapOrientation.dispose();
       dustCdfScan.dispose();
+      digCdfScan.dispose();
       placeDust.dispose();
       placeArmSpurCloud.dispose();
       placeArmCloud.dispose();
+      placeDigVeil.dispose();
       armRidgeDebugSample.dispose();
       ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they

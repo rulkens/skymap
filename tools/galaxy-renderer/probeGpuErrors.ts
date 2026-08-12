@@ -52,7 +52,9 @@ import {
   tiltReferenceRadius,
 } from '../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { discLightScaleLength } from '../../src/utils/galaxy/discLightScaleLength';
+import { buildHiiShellsAndYoungWithSegments } from '../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { computePlaceDustBudget } from './src/engine/ismMap/computePlaceDustBudget';
+import { computeDigVeilBudget } from './src/engine/ismMap/computeDigVeilBudget';
 import { FIELD_COMPONENT_FLOATS } from './src/engine/field/packFieldUniforms';
 
 const VIEWPORT = { width: 1400, height: 900 };
@@ -103,6 +105,12 @@ const ARM_SPUR_CLOUD_FLUX_TOLERANCE = 1e-2;
 // ARM_SPUR_CLOUD_FLUX_TOLERANCE above, one extra chained division (the
 // radial-tilt cancellation) over the same sqrt/cbrt/exp chain.
 const ARM_CLOUD_FLUX_TOLERANCE = 1e-2;
+
+// `readback:placeDigVeil`'s own flux-parity budget — narrower than the
+// spur/arm-cloud tolerances above: DIG's per-record flux recovery chains
+// only a single sqrt (sigma from det(invCov)) and a cube, no exp/cbrt-of-a-
+// shape-function compounding, so less f32 rounding accumulates.
+const DIG_VEIL_FLUX_TOLERANCE = 1e-3;
 
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
@@ -1656,6 +1664,245 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         console.error(
           `  readback:placeDust survives an arms-only tuning change (${beforeLive} live before, ${afterLive} live after)`,
+        );
+      },
+    },
+    {
+      // Task 8's own numeric-validation exception — `placeDigVeil.wesl` has
+      // no non-GPU path to check its output against (the CPU original,
+      // `buildDigVeil`, no longer runs for the central galaxy at all).
+      // Checked instead, the same four-part bar `readback:placeArmSpurCloud`/
+      // `readback:placeArmCloud` set: (1) determinism; (2) count matches
+      // `computeDigVeilBudget`'s own CPU budget math for the boot preset,
+      // fed `shellFluxSum`/`recentEventCount` off a FRESH
+      // `buildHiiShellsAndYoungWithSegments` run (the SAME two values
+      // `createGalaxyModel.ts`'s own `rebuildDigVeilBudget` captures); (3)
+      // liveness — `buildDigVeil`'s own loop never zeroes an individual
+      // child (no survival filter on this tier, matching placeArmSpurCloud/
+      // placeArmCloud's own liveness bar, not placeDust's partial-survival
+      // one); (4) flux parity — `amplitudeBase` is the SAME uniform every
+      // record's amplitude is supposed to reduce to once its OWN sigma
+      // (recovered from `det(invCov)`, independent of the record's own
+      // amplitude) is divided back out — isotropic, so unlike the arm tiers'
+      // sigma-recovery this needs no shape-function re-evaluation, just the
+      // one closed-form integral.
+      name: 'readback:placeDigVeil',
+      run: async (page) => {
+        await settleFrames(page, SETTLE_FRAMES);
+        const first = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          if (!bridge) {
+            throw new Error(
+              'readback:placeDigVeil — no __probeEngine — the probeReadback gate never installed it',
+            );
+          }
+          const landed = await bridge.requestDigVeilPlacementReadback();
+          if (!landed) return null;
+          return {
+            count: landed.count,
+            offset: landed.offset,
+            amplitudeBase: landed.amplitudeBase,
+            records: Array.from(landed.records),
+          };
+        });
+        if (!first) {
+          throw new Error(
+            'readback:placeDigVeil — requestDigVeilPlacementReadback() returned null at boot (no DIG veil reserved — expected one under the boot preset\'s default hii.dig.fraction=0.35)',
+          );
+        }
+
+        const second = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDigVeilPlacementReadback();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!second) {
+          throw new Error('readback:placeDigVeil — second requestDigVeilPlacementReadback() returned null');
+        }
+
+        // (1) Determinism — bit-identical, no tolerance.
+        if (first.records.length !== second.length) {
+          throw new Error(
+            `readback:placeDigVeil — length mismatch across two dispatches: ${first.records.length} vs ${second.length}`,
+          );
+        }
+        let mismatchIndex = -1;
+        for (let i = 0; i < first.records.length; i++) {
+          if (first.records[i] !== second[i]) {
+            mismatchIndex = i;
+            break;
+          }
+        }
+        if (mismatchIndex >= 0) {
+          throw new Error(
+            `readback:placeDigVeil — non-deterministic at float ${mismatchIndex}: ` +
+              `${first.records[mismatchIndex]} vs ${second[mismatchIndex]} (expected bit-identical)`,
+          );
+        }
+        console.error(`  readback:placeDigVeil two dispatches bit-identical (${first.count} records)`);
+
+        // (2) Count matches computeDigVeilBudget's own CPU budget math for
+        // the boot preset, fed the SAME shellFluxSum/recentEventCount the
+        // production model captures off buildHiiShellsAndYoungWithSegments.
+        const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
+        const shellsAndYoung = buildHiiShellsAndYoungWithSegments(
+          geometry,
+          DEFAULT_GALAXY_FIELD_TUNING,
+          DEFAULT_GALAXY_FIELD_TUNING.starFormation,
+          geometry.seed,
+        );
+        const expectedBudget = computeDigVeilBudget(
+          geometry,
+          DEFAULT_GALAXY_FIELD_TUNING,
+          shellsAndYoung.shellFluxSum,
+          shellsAndYoung.recentEventCount,
+        );
+        if (!expectedBudget) {
+          throw new Error(
+            'readback:placeDigVeil — CPU computeDigVeilBudget returned null for the boot preset',
+          );
+        }
+        if (first.count !== expectedBudget.count) {
+          throw new Error(
+            `readback:placeDigVeil — count ${first.count} does not match computeDigVeilBudget's own budget math (${expectedBudget.count})`,
+          );
+        }
+        console.error(`  readback:placeDigVeil count matches budget math (${first.count})`);
+
+        // (3) Liveness — buildDigVeil's own loop never zeroes an individual
+        // child (no survival filter, unlike dust's map-density path); a
+        // zero or non-finite amplitude here means the CDF sample, the
+        // scatter, or the sigma draw is broken, not a legitimate cavity.
+        let nonPositiveCount = 0;
+        for (let i = 0; i < first.count; i++) {
+          const amplitude = first.records[i * FIELD_COMPONENT_FLOATS + 3]!;
+          if (!(Number.isFinite(amplitude) && amplitude > 0)) nonPositiveCount++;
+        }
+        if (nonPositiveCount > 0) {
+          throw new Error(
+            `readback:placeDigVeil — ${nonPositiveCount}/${first.count} records have a non-finite or non-positive amplitude (expected every reserved slot live, no survival filter on this tier)`,
+          );
+        }
+        console.error(`  readback:placeDigVeil all ${first.count} records live (finite, positive amplitude)`);
+
+        // (4) Flux parity — independent reconstruction. Every record's
+        // amplitude should reduce to the SAME `amplitudeBase` once its own
+        // sigma is divided back out; sigma is recovered from `det(invCov)`
+        // (isotropic: xx≈yy≈zz, off-diagonal≈0 — checked directly, a real
+        // bug that only fills the diagonal's x-lane would show up here
+        // BEFORE the flux sum could mask it), never from the record's own
+        // amplitude or `boundRadius`.
+        const TAU_ROOT3_TS = (2 * Math.PI) ** 1.5;
+        let measuredFlux = 0;
+        let isotropyFailures = 0;
+        for (let i = 0; i < first.count; i++) {
+          const o = i * FIELD_COMPONENT_FLOATS;
+          const xx = first.records[o + 0]!;
+          const yy = first.records[o + 1]!;
+          const zz = first.records[o + 2]!;
+          const amplitude = first.records[o + 3]!;
+          const xy = first.records[o + 4]!;
+          const xz = first.records[o + 5]!;
+          const yz = first.records[o + 6]!;
+          if (
+            Math.abs(xx - yy) > 1e-4 * xx ||
+            Math.abs(xx - zz) > 1e-4 * xx ||
+            Math.abs(xy) > 1e-6 ||
+            Math.abs(xz) > 1e-6 ||
+            Math.abs(yz) > 1e-6
+          ) {
+            isotropyFailures++;
+          }
+          const det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
+          if (!(det > 0)) {
+            throw new Error(`readback:placeDigVeil — record ${i} has non-positive det(invCov)`);
+          }
+          measuredFlux += (amplitude * TAU_ROOT3_TS) / Math.sqrt(det);
+        }
+        if (isotropyFailures > 0) {
+          throw new Error(
+            `readback:placeDigVeil — ${isotropyFailures}/${first.count} records are not isotropic (expected invCovDiagonal.x == .y == .z, invCovOffDiagonal == 0 — DIG's blobs are isotropic Gaussians)`,
+          );
+        }
+        const expectedFlux = first.count * first.amplitudeBase;
+        const fluxRelError = Math.abs(measuredFlux / expectedFlux - 1);
+        if (!(fluxRelError < DIG_VEIL_FLUX_TOLERANCE)) {
+          throw new Error(
+            `readback:placeDigVeil — flux parity failed: measured ${measuredFlux} vs expected ${expectedFlux} (relative error ${fluxRelError}, tolerance ${DIG_VEIL_FLUX_TOLERANCE})`,
+          );
+        }
+        console.error(
+          `  readback:placeDigVeil flux parity: measured=${measuredFlux.toFixed(4)} expected=${expectedFlux.toFixed(4)} (relative error ${fluxRelError.toExponential(3)})`,
+        );
+      },
+    },
+    {
+      // The DIG twin of the arm/spur-cloud "survives an unrelated tuning
+      // change" regression — but DIG's own reservation rides `hiiComps`,
+      // which ONLY `repackHiiComponents()` ever writes, and that function
+      // invalidates `digPlacementRebuild` unconditionally on every call (see
+      // its own doc) — there is no OTHER `setFieldTuning` branch that
+      // reaches `repackHiiComponents()` without ALSO having just recomputed
+      // `digBudget` (both live behind the same `if (hiiMoved)` guard). The
+      // one caller that DOES reach it without touching DIG at all is
+      // `setExtras` (`repackFieldComponents(); repackHiiComponents();`
+      // unconditionally, regardless of whether DIG's own inputs moved) —
+      // that is the trigger this step drives, to exercise the invalidation
+      // this task's own `repackHiiComponents` rewrite is responsible for.
+      name: 'readback:placeDigVeil (survives an extras-only change)',
+      run: async (page) => {
+        const before = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDigVeilBufferPeek();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!before) {
+          throw new Error(
+            'readback:placeDigVeil (survives an extras-only change) — requestDigVeilBufferPeek() returned null before the extras patch',
+          );
+        }
+        let beforeLive = 0;
+        for (let i = 0; i < before.length / FIELD_COMPONENT_FLOATS; i++) {
+          if (before[i * FIELD_COMPONENT_FLOATS + 3]! > 0) beforeLive++;
+        }
+        if (beforeLive === 0) {
+          throw new Error(
+            'readback:placeDigVeil (survives an extras-only change) — every record already reads amplitude 0 BEFORE the extras patch; this step cannot tell a vanish from a pre-existing empty buffer',
+          );
+        }
+
+        await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          await bridge!.setExtras([]);
+        });
+        await settleFrames(page, SETTLE_FRAMES);
+
+        const after = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDigVeilBufferPeek();
+          return landed ? Array.from(landed.records) : null;
+        });
+        if (!after) {
+          throw new Error(
+            'readback:placeDigVeil (survives an extras-only change) — requestDigVeilBufferPeek() returned null after the extras patch',
+          );
+        }
+        let afterLive = 0;
+        for (let i = 0; i < after.length / FIELD_COMPONENT_FLOATS; i++) {
+          if (after[i * FIELD_COMPONENT_FLOATS + 3]! > 0) afterLive++;
+        }
+        if (afterLive === 0) {
+          throw new Error(
+            `readback:placeDigVeil (survives an extras-only change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before an extras-only setExtras([]) patch, 0 after — repackHiiComponents() zeroed the DIG range and digPlacementRebuild was never re-invalidated to refill it`,
+          );
+        }
+        console.error(
+          `  readback:placeDigVeil survives an extras-only change (${beforeLive} live before, ${afterLive} live after)`,
         );
       },
     },
