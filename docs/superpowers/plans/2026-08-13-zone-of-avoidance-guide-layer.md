@@ -114,12 +114,12 @@ export function zoneOfAvoidanceBLimitDeg(
 
 **Behaviour:** `anticenterDeg + (bulgeDeg - anticenterDeg) * (0.5 + 0.5 * Math.cos(galacticLonRad))`. At `galacticLonRad = 0` → `bulgeDeg`. At `galacticLonRad = π` → `anticenterDeg`. At `galacticLonRad = π/2` → the midpoint average.
 
-- [ ] Add the test `zoneOfAvoidanceBLimitDeg returns bulgeDeg at galactic longitude 0` — hand-computed: `zoneOfAvoidanceBLimitDeg(0, 15, 5) === 15`.
-- [ ] Add the test `zoneOfAvoidanceBLimitDeg returns anticenterDeg at galactic longitude π` — hand-computed: `zoneOfAvoidanceBLimitDeg(Math.PI, 15, 5)` close to `5` (`toBeCloseTo`, floating-point `cos(π)`).
-- [ ] Add the test `zoneOfAvoidanceBLimitDeg returns the midpoint at galactic longitude π/2` — hand-computed: `zoneOfAvoidanceBLimitDeg(Math.PI / 2, 15, 5)` close to `10`.
-- [ ] Implement.
-- [ ] `npm test -- zoneOfAvoidanceBLimitDeg` green. `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add the test `zoneOfAvoidanceBLimitDeg returns bulgeDeg at galactic longitude 0` — hand-computed: `zoneOfAvoidanceBLimitDeg(0, 15, 5) === 15`.
+- [x] Add the test `zoneOfAvoidanceBLimitDeg returns anticenterDeg at galactic longitude π` — hand-computed: `zoneOfAvoidanceBLimitDeg(Math.PI, 15, 5)` close to `5` (`toBeCloseTo`, floating-point `cos(π)`).
+- [x] Add the test `zoneOfAvoidanceBLimitDeg returns the midpoint at galactic longitude π/2` — hand-computed: `zoneOfAvoidanceBLimitDeg(Math.PI / 2, 15, 5)` close to `10`.
+- [x] Implement.
+- [x] `npm test -- zoneOfAvoidanceBLimitDeg` green. `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 4: Settings cluster — types, defaults, initial state, reducers, selectors
 
