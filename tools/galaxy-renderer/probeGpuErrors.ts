@@ -914,19 +914,98 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
 
         // (3) Survival-floor zeroing is OBSERVABLE — amplitude sits at lane 3
         // of every FIELD_COMPONENT_FLOATS-wide record (records.wesl's own
-        // layout: invCovDiagonal.xyz then amplitude).
-        let zeroAmplitudeCount = 0;
-        for (let i = 0; i < first.count; i++) {
-          if (first.records[i * FIELD_COMPONENT_FLOATS + 3] === 0) zeroAmplitudeCount++;
-        }
-        if (zeroAmplitudeCount === 0) {
+        // layout: invCovDiagonal.xyz then amplitude). Probe-flake fix: this
+        // used to sample `first` (the BOOT preset's own live dust dispatch,
+        // `dustPlacementCap` at its generous default of 2) — under that
+        // tuning the floor only fires for the rare particle whose child
+        // scatter happens to drift into a true gap, observed swinging 0-7
+        // out of 6500 across separate probe runs of IDENTICAL code (GPU
+        // float noise in the fluid ISM map's own reductions, the same class
+        // of noise `RING_MEANS_TOLERANCE`'s own doc documents) — landing on
+        // exactly 0 made this assertion itself flaky, not the shader.
+        //
+        // Fixed by driving a dedicated, DETERMINISTIC fixture through the
+        // SAME production `setFieldTuning` API the "survives a tuning
+        // change" steps below already use, rather than sampling whatever the
+        // boot preset's fluid state happens to hold:
+        // `dust.cloud.dustPlacementCap`, driven well BELOW
+        // `DUST_SURVIVAL_FLOOR_FRAC` itself (0.01, placeDust.wesl's own
+        // mirrored constant), flattens the placement CDF (dustParticleCloud.ts's
+        // own `density()`: `capped = min(local, cap)`) toward ring-AREA-
+        // uniform — almost every texel's true local ratio exceeds this tiny
+        // cap and so clamps to the SAME weight, leaving placement dominated
+        // by ring geometry rather than the map's real structure. Since a
+        // dust filament typically covers a MINORITY of a ring's azimuthal
+        // span, an area-uniform pick lands the MAJORITY of complexes where
+        // the map's TRUE (uncapped) density is well under that ring's mean
+        // — a large, noise-dominating floor-miss population, not a handful.
+        // Calibrated empirically (task-13-report.md's "Probe flake fix"
+        // section records the runs): 0.01 (= the floor fraction itself) only
+        // pushed the miss count to ~106/6500; the effect SATURATES quickly
+        // past that (0.001 -> ~247/6500, 0.0001 -> ~270/6500, diminishing
+        // returns past an order of magnitude below the floor) — this map's
+        // dust structure isn't confined to a small enough azimuthal sliver
+        // for area-uniform placement to miss the floor much more often than
+        // that. 0.001 is picked as the plateau's near-top with a clean,
+        // legible value. The survival check itself
+        // (`dustSample >= DUST_SURVIVAL_FLOOR_FRAC * ringMean`,
+        // placeDust.wesl) reads the RAW map, never the capped CDF, so this
+        // fixture changes WHERE particles land, not what "below the floor"
+        // means.
+        const FLOOR_FIXTURE_CAP = 0.001;
+        await page.evaluate(
+          async ({ dust, cap }) => {
+            const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+              .__probeEngine;
+            bridge!.setFieldTuning({ dust: { ...dust, cloud: { ...dust.cloud, dustPlacementCap: cap } } });
+          },
+          { dust: DEFAULT_GALAXY_DUST_PARAMS, cap: FLOOR_FIXTURE_CAP },
+        );
+        await settleFrames(page, SETTLE_FRAMES);
+
+        const floorFixture = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          const landed = await bridge!.requestDustPlacementReadback();
+          if (!landed) return null;
+          return { count: landed.count, records: Array.from(landed.records) };
+        });
+        if (!floorFixture) {
           throw new Error(
-            'readback:placeDust — no record has amplitude exactly 0; the survival floor never fired for the boot preset (expected at least one cavity-dropped particle at DUST_SURVIVAL_FLOOR_FRAC)',
+            `readback:placeDust — requestDustPlacementReadback() returned null under the survival-floor fixture (dustPlacementCap=${FLOOR_FIXTURE_CAP})`,
+          );
+        }
+        let zeroAmplitudeCount = 0;
+        for (let i = 0; i < floorFixture.count; i++) {
+          if (floorFixture.records[i * FIELD_COMPONENT_FLOATS + 3] === 0) zeroAmplitudeCount++;
+        }
+        // A real margin over the noise this fixture exists to swamp (that
+        // noise swung 0-7/6500 under the UNCAPPED boot tuning, observed
+        // across multiple runs of identical code — see task-13-report.md's
+        // "Probe flake fix" section) — not a bare >0, which would still
+        // flake if the fixture's own effect were ever marginal. 100 sits
+        // comfortably under this fixture's own measured range (~247-270/6500
+        // at cap 0.001/0.0001) while staying an order of magnitude above
+        // anything the baseline float noise alone produced.
+        const MIN_FLOOR_MISSES = 100;
+        if (zeroAmplitudeCount < MIN_FLOOR_MISSES) {
+          throw new Error(
+            `readback:placeDust — only ${zeroAmplitudeCount}/${floorFixture.count} records zeroed under the survival-floor fixture (dustPlacementCap=${FLOOR_FIXTURE_CAP}), expected at least ${MIN_FLOOR_MISSES} — the fixture's own flattened-CDF effect should dominate any float noise; this few suggests the fixture itself isn't taking effect`,
           );
         }
         console.error(
-          `  readback:placeDust survival floor zeroed ${zeroAmplitudeCount}/${first.count} records`,
+          `  readback:placeDust survival floor zeroed ${zeroAmplitudeCount}/${floorFixture.count} records under the fixture (dustPlacementCap=${FLOOR_FIXTURE_CAP})`,
         );
+
+        // Restore the boot tuning — later steps in this same page session
+        // (the "survives a tuning change" steps below, every section/slider
+        // step after this one) assume the DEFAULT dust tuning is live.
+        await page.evaluate(async (dust) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({ dust });
+        }, DEFAULT_GALAXY_DUST_PARAMS);
+        await settleFrames(page, SETTLE_FRAMES);
 
         // Mode 1 (smoothDisc, the no-map fallback) — placeDust.wesl's OWN
         // in-shader gate forces this mode whenever generatorIsFluid is
