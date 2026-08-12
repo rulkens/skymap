@@ -106,6 +106,11 @@ export type GalaxyEngineHandle = {
   // for why the sum is exactly linear in the renorm scale. No production
   // caller.
   requestDustMapChannelSum(): Promise<number>;
+  // Debug-only: Task 15's own consuming-multiply exception — the arm-cloud/
+  // spur-cloud twin of `requestDustMapChannelSum` above, against
+  // `targets.fieldTex` (the shared target every emission component draws
+  // into). No production caller.
+  requestFieldTexChannelSum(): Promise<number>;
   // Debug-only: Task 14's own numeric-validation exception
   // (`placeArmSpurCloud.wesl` has no non-GPU path to check its output
   // against) — dispatches fresh and maps the spur-cloud reservation's slot
@@ -115,11 +120,17 @@ export type GalaxyEngineHandle = {
   // the dispatch used). No production caller. `null` when nothing is
   // reserved this rebuild (central galaxy only — see `createGalaxyModel.ts`'s
   // `spurCloudReservation`).
+  // `fluxWeight`/`renormScale` (Task 15) — the flux-weight-sum input and the
+  // GPU-computed reciprocal renorm scale off a dispatch encoded against the
+  // SAME `fluxWeight`, read by `readback:placeArmSpurCloud`'s own weightSum
+  // GPU-vs-CPU assertion.
   requestArmSpurCloudPlacementReadback(): Promise<{
     readonly count: number;
     readonly offset: number;
     readonly flux: number;
     readonly records: Float32Array;
+    readonly fluxWeight: Float32Array;
+    readonly renormScale: number;
   } | null>;
   // Debug-only: Task 14 fix round 1's own regression exception — COPIES the
   // reservation's CURRENT slot range out of the LIVE `fieldComps` buffer,
@@ -140,11 +151,15 @@ export type GalaxyEngineHandle = {
   // step (determinism, budget count, flux parity). No production caller.
   // `null` when nothing is reserved this rebuild (central galaxy only — see
   // `createGalaxyModel.ts`'s `armCloudReservation`).
+  // `fluxWeight`/`renormScale` (Task 15) — the arm-cloud twin of
+  // `requestArmSpurCloudPlacementReadback`'s own two fields above.
   requestArmCloudPlacementReadback(): Promise<{
     readonly count: number;
     readonly offset: number;
     readonly flux: number;
     readonly records: Float32Array;
+    readonly fluxWeight: Float32Array;
+    readonly renormScale: number;
   } | null>;
   // Debug-only: the arm-cloud twin of `requestArmSpurCloudBufferPeek` —
   // COPIES the reservation's CURRENT slot range out of the LIVE `fieldComps`

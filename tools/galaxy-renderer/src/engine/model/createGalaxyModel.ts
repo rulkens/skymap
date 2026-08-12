@@ -221,6 +221,15 @@ export type GalaxyModel = {
    */
   readonly ismMapSeedingView: IsmMapSeedingLanes;
   /**
+   * Task 15's own consume-time renorm gate — `packFieldHeaderUniforms`'s
+   * caller reads these to fill `FieldHeaderInput.armCloudRange`/
+   * `spurCloudRange`. `null` means nothing reserved this rebuild, the SAME
+   * meaning `armCloudReservation`/`spurCloudReservation` already carry
+   * internally; the caller packs an empty (0,0) range in that case.
+   */
+  readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
+  readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
+  /**
    * Debug-only pass-through to `readbacks.requestRingMeans` — see that
    * method's own doc. Exposed on the model, not just `readbacks` (which is
    * private to this closure), so `createGalaxyEngine.ts`'s handle can wrap
@@ -280,6 +289,10 @@ export type GalaxyModel = {
     readonly offset: number;
     readonly flux: number;
     readonly records: Float32Array;
+    /** Task 15's flux-weight-sum input (`placeArmSpurCloud.wesl`'s fluxWeightOut), read back from the SAME dispatch as `records`. */
+    readonly fluxWeight: Float32Array;
+    /** Task 15's GPU-computed reciprocal renorm scale (`ringReduce.wesl`'s csArmSpurFluxWeightSum output), off a flux-weight-sum dispatch encoded against the SAME `fluxWeight`. */
+    readonly renormScale: number;
   } | null>;
   /**
    * Debug-only: COPIES the reservation's CURRENT slot range out of the LIVE
@@ -308,6 +321,10 @@ export type GalaxyModel = {
     readonly offset: number;
     readonly flux: number;
     readonly records: Float32Array;
+    /** Task 15's flux-weight-sum input (`placeArmCloud.wesl`'s fluxWeightOut), read back from the SAME dispatch as `records`. */
+    readonly fluxWeight: Float32Array;
+    /** Task 15's GPU-computed reciprocal renorm scale (`ringReduce.wesl`'s csArmCloudFluxWeightSum output), off a flux-weight-sum dispatch encoded against the SAME `fluxWeight`. */
+    readonly renormScale: number;
   } | null>;
   /**
    * Debug-only: the arm-cloud twin of `requestArmSpurCloudBufferPeek` — COPIES
@@ -1067,6 +1084,15 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         enc,
         spurCloudDispatchInput(fieldGeometry, reservation),
       );
+      // Task 15 — flux-weight-sum + reciprocal renorm, encoded into the SAME
+      // encoder/submit right after the dispatch above: cross-pass ordering
+      // within one submit is what lets this read
+      // `placeArmSpurCloud.fluxWeightBuffer` fresh with no readback of its
+      // own — `dustPlacementRebuild`'s own Task 9 precedent.
+      ringReduce.dispatchArmSpurFluxWeightSum(enc, {
+        fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
+        count: reservation.count,
+      });
       device.queue.submit([enc.finish()]);
     },
   });
@@ -1109,6 +1135,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       if (!fieldGeometry || !reservation) return;
       const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
       placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(fieldGeometry, reservation));
+      // Task 15 — the same encoder/submit ordering `spurCloudPlacementRebuild` uses.
+      ringReduce.dispatchArmCloudFluxWeightSum(enc, {
+        fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
+        count: reservation.count,
+      });
       device.queue.submit([enc.finish()]);
     },
   });
@@ -1800,6 +1831,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       };
     },
 
+    get armCloudReservation(): GalaxyFieldMixtureResult['armCloudReservation'] {
+      return armCloudReservation;
+    },
+    get spurCloudReservation(): GalaxyFieldMixtureResult['spurCloudReservation'] {
+      return spurCloudReservation;
+    },
+
     requestRingMeansReadback(onLand, onError): void {
       readbacks.requestRingMeans(onLand, onError);
     },
@@ -1858,17 +1896,33 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       readonly offset: number;
       readonly flux: number;
       readonly records: Float32Array;
+      readonly fluxWeight: Float32Array;
+      readonly renormScale: number;
     } | null> {
       const reservation = spurCloudReservation;
       if (!fieldGeometry || !reservation) return null;
-      const records = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
+      const { records, fluxWeight } = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
         spurCloudDispatchInput(fieldGeometry, reservation),
       );
+      // Own encoder/submit, AFTER the placement dispatch above's submit has
+      // already retired — `placeArmSpurCloud.fluxWeightBuffer` holds THIS
+      // dispatch's fresh values with nothing else writing to it in between,
+      // so this reduction is over the same records the caller just read back
+      // (`requestDustPlacementReadback`'s own precedent).
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum' });
+      ringReduce.dispatchArmSpurFluxWeightSum(enc, {
+        fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
+        count: reservation.count,
+      });
+      device.queue.submit([enc.finish()]);
+      const renormScale = await ringReduce.readArmSpurRenormScale();
       return {
         count: reservation.count,
         offset: reservation.offset,
         flux: reservation.flux,
         records,
+        fluxWeight,
+        renormScale,
       };
     },
 
@@ -1900,17 +1954,29 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       readonly offset: number;
       readonly flux: number;
       readonly records: Float32Array;
+      readonly fluxWeight: Float32Array;
+      readonly renormScale: number;
     } | null> {
       const reservation = armCloudReservation;
       if (!fieldGeometry || !reservation) return null;
-      const records = await placeArmCloud.dispatchAndReadbackArmCloud(
+      const { records, fluxWeight } = await placeArmCloud.dispatchAndReadbackArmCloud(
         armCloudDispatchInput(fieldGeometry, reservation),
       );
+      // Own encoder/submit — `requestArmSpurCloudPlacementReadback`'s own precedent.
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloudDebugFluxWeightSum' });
+      ringReduce.dispatchArmCloudFluxWeightSum(enc, {
+        fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
+        count: reservation.count,
+      });
+      device.queue.submit([enc.finish()]);
+      const renormScale = await ringReduce.readArmCloudRenormScale();
       return {
         count: reservation.count,
         offset: reservation.offset,
         flux: reservation.flux,
         records,
+        fluxWeight,
+        renormScale,
       };
     },
 

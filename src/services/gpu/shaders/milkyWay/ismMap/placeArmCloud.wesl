@@ -12,6 +12,13 @@
 // buildArmParticleCloud never drops an individual placed sprite (its own
 // weight-normalisation split just scales flux, never zeroes it) — see
 // placeArmSpurCloud.wesl's identical "no survival filter on this tier" note.
+//
+// fluxWeightOut (binding 5) mirrors placeDust.wesl's massOut: this shader
+// bakes cloudFlux straight into 'flux' below WITHOUT dividing by weightSum
+// (armParticleCloud.ts:232-235's own sum) — Task 15's ringReduce.wesl kernel
+// reduces this array to weightSum and writes 1/weightSum as the consume-time
+// scale fieldSplat/fragment.wesl multiplies in, the arm-cloud twin of Task
+// 9's Larson renorm.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -152,6 +159,8 @@ struct PlaceArmCloudParams {
 // always dispatches mode 2u. Bound to the SAME buffer as 'armRecords'
 // (binding 1) reinterpreted as 'array<f32>' — no dummy buffer of its own.
 @group(0) @binding(4) var<storage, read> passThroughPrefixBuf: array<f32>;
+// Task 15's raw per-slot flux weight — see this file's own header doc above.
+@group(0) @binding(5) var<storage, read_write> fluxWeightOut: array<f32>;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -232,6 +241,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let shape = armExcessSurfaceShape(particleRadius, params.hLight, params.excessScaleRatio, geom);
   let tilt = cdpRadialTilt(particleRadius, params.tiltRefRadius, params.radialBias);
   let fluxWeight = (radius * radius * shape) / tilt;
+  fluxWeightOut[i] = fluxWeight;
   let flux = params.cloudFlux * fluxWeight;
   let amplitude = flux / (TAU_ROOT3 * sigAlong * sigAcross * sigPole);
 

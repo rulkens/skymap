@@ -9,13 +9,16 @@
  * `dustRenormBuffer` is a FRESH bind group per call (its own `massBuffer`
  * input comes from `placeDust`, an external object this module has no
  * constructor-time handle on, unlike `ismMapTexture`/`ringMeansBuffer`
- * above).
+ * above). `dispatchArmCloudFluxWeightSum`/`dispatchArmSpurFluxWeightSum`
+ * (Task 15) are the same shape, one level simpler — no `totalX` input at all
+ * (see `ringReduce.wesl`'s own doc for why the output is a bare reciprocal).
  */
 import { ISM_MAP_RINGS } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
 import ringReduceWgsl from '../shaders/milkyWay/ismMap/ringReduce.wesl?static';
 
 const SURVIVOR_SUM_PARAMS_BUFFER_SIZE = 16; // count: u32, totalMass: f32, 2x pad — ringReduce.wesl's SurvivorSumParams
+const FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE = 16; // count: u32, 3x pad — ringReduce.wesl's FluxWeightSumParams
 
 export type DispatchSurvivorSumInput = {
   /** placeDust.wesl's own massOut buffer (`IsmMapPlaceDust.massBuffer`) — producer-owned, passed in fresh each call since its identity never changes but this module has no constructor-time reference to it. */
@@ -24,6 +27,12 @@ export type DispatchSurvivorSumInput = {
   readonly count: number;
   /** `PlaceDustBudget.totalMass` — dustParticleCloud.ts:287's own totalMass, pure geometry/tau function computed CPU-side. */
   readonly totalMass: number;
+};
+
+/** Shared shape for the two Task 15 flux-weight-sum dispatches below — `fluxWeightBuffer` is the producer's own `fluxWeightOut`, `count` its reservation's live count. */
+export type DispatchFluxWeightSumInput = {
+  readonly fluxWeightBuffer: GPUBuffer;
+  readonly count: number;
 };
 
 export type IsmMapRingReduce = {
@@ -48,6 +57,23 @@ export type IsmMapRingReduce = {
   readonly dustRenormBuffer: GPUBuffer;
   /** Debug-only: maps `dustRenormBuffer[0]` back to the CPU — the probe's own numeric-validation exception (`readback:placeDust`'s survivor-sum assertion), no production caller. */
   readDustRenormScale(): Promise<number>;
+  /**
+   * Task 15's arm-cloud twin of `dispatchSurvivorSum` — encodes
+   * `ringReduce.wesl`'s `csArmCloudFluxWeightSum` into the CALLER's encoder,
+   * same no-submit/must-run-after-the-producer-dispatch contract. Writes
+   * `armCloudRenormBuffer[0]`.
+   */
+  dispatchArmCloudFluxWeightSum(enc: GPUCommandEncoder, input: DispatchFluxWeightSumInput): void;
+  /** `armCloudRenorm` (fieldSplat/fragment.wesl binding 15) — the reciprocal weightSum scale, read_write here, read-only there. */
+  readonly armCloudRenormBuffer: GPUBuffer;
+  /** Debug-only: maps `armCloudRenormBuffer[0]` back to the CPU — the probe's own numeric-validation exception, no production caller. */
+  readArmCloudRenormScale(): Promise<number>;
+  /** Task 15's spur-cloud twin of `dispatchArmCloudFluxWeightSum` — same shape, `csArmSpurFluxWeightSum`. */
+  dispatchArmSpurFluxWeightSum(enc: GPUCommandEncoder, input: DispatchFluxWeightSumInput): void;
+  /** `spurCloudRenorm` (fieldSplat/fragment.wesl binding 16) — the spur-cloud twin of `armCloudRenormBuffer`. */
+  readonly spurCloudRenormBuffer: GPUBuffer;
+  /** Debug-only twin of `readArmCloudRenormScale`. */
+  readArmSpurRenormScale(): Promise<number>;
   dispose(): void;
 };
 
@@ -101,6 +127,51 @@ export function createIsmMapRingReduce(
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
+  // Task 15 — arm-cloud/spur-cloud flux-weight-sum kernels, same shape as
+  // the survivor-sum pipeline above minus a `totalX` factor (ringReduce.wesl's
+  // own doc for why the output is a bare reciprocal).
+  const armCloudFluxWeightSumPipe = device.createComputePipeline({
+    label: 'galaxy:ismMapRingReduceArmCloudFluxWeightSumPipe',
+    layout: 'auto',
+    compute: { module: mod, entryPoint: 'csArmCloudFluxWeightSum' },
+  });
+  const armCloudFluxWeightSumParamsBuffer = device.createBuffer({
+    label: 'galaxy:ismMapRingReduceArmCloudFluxWeightSumParams',
+    size: FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const armCloudRenormBuffer = device.createBuffer({
+    label: 'galaxy:ismMapArmCloudRenorm',
+    size: 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+  const armCloudRenormReadbackBuffer = device.createBuffer({
+    label: 'galaxy:ismMapArmCloudRenormReadback',
+    size: 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  const armSpurFluxWeightSumPipe = device.createComputePipeline({
+    label: 'galaxy:ismMapRingReduceArmSpurFluxWeightSumPipe',
+    layout: 'auto',
+    compute: { module: mod, entryPoint: 'csArmSpurFluxWeightSum' },
+  });
+  const armSpurFluxWeightSumParamsBuffer = device.createBuffer({
+    label: 'galaxy:ismMapRingReduceArmSpurFluxWeightSumParams',
+    size: FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const spurCloudRenormBuffer = device.createBuffer({
+    label: 'galaxy:ismMapSpurCloudRenorm',
+    size: 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+  const spurCloudRenormReadbackBuffer = device.createBuffer({
+    label: 'galaxy:ismMapSpurCloudRenormReadback',
+    size: 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
   return {
     dispatchRingMeans(enc): void {
       const pass = enc.beginComputePass({ label: 'galaxy:ismMapRingMeansPass' });
@@ -145,10 +216,84 @@ export function createIsmMapRingReduce(
       }
     },
 
+    dispatchArmCloudFluxWeightSum(enc, input): void {
+      const buf = new ArrayBuffer(FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE);
+      new Uint32Array(buf)[0] = input.count;
+      device.queue.writeBuffer(armCloudFluxWeightSumParamsBuffer, 0, buf);
+      const bindGroup = device.createBindGroup({
+        label: 'galaxy:ismMapRingReduceArmCloudFluxWeightSumBG',
+        layout: armCloudFluxWeightSumPipe.getBindGroupLayout(0),
+        entries: [
+          { binding: 5, resource: { buffer: armCloudFluxWeightSumParamsBuffer } },
+          { binding: 6, resource: { buffer: input.fluxWeightBuffer } },
+          { binding: 7, resource: { buffer: armCloudRenormBuffer } },
+        ],
+      });
+      const pass = enc.beginComputePass({ label: 'galaxy:ismMapArmCloudFluxWeightSumPass' });
+      pass.setPipeline(armCloudFluxWeightSumPipe);
+      pass.setBindGroup(0, bindGroup);
+      pass.dispatchWorkgroups(1);
+      pass.end();
+    },
+
+    armCloudRenormBuffer,
+
+    async readArmCloudRenormScale(): Promise<number> {
+      const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenormReadback' });
+      enc.copyBufferToBuffer(armCloudRenormBuffer, 0, armCloudRenormReadbackBuffer, 0, 4);
+      device.queue.submit([enc.finish()]);
+      await armCloudRenormReadbackBuffer.mapAsync(GPUMapMode.READ, 0, 4);
+      try {
+        return new Float32Array(armCloudRenormReadbackBuffer.getMappedRange(0, 4).slice(0))[0]!;
+      } finally {
+        armCloudRenormReadbackBuffer.unmap();
+      }
+    },
+
+    dispatchArmSpurFluxWeightSum(enc, input): void {
+      const buf = new ArrayBuffer(FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE);
+      new Uint32Array(buf)[0] = input.count;
+      device.queue.writeBuffer(armSpurFluxWeightSumParamsBuffer, 0, buf);
+      const bindGroup = device.createBindGroup({
+        label: 'galaxy:ismMapRingReduceArmSpurFluxWeightSumBG',
+        layout: armSpurFluxWeightSumPipe.getBindGroupLayout(0),
+        entries: [
+          { binding: 8, resource: { buffer: armSpurFluxWeightSumParamsBuffer } },
+          { binding: 9, resource: { buffer: input.fluxWeightBuffer } },
+          { binding: 10, resource: { buffer: spurCloudRenormBuffer } },
+        ],
+      });
+      const pass = enc.beginComputePass({ label: 'galaxy:ismMapArmSpurFluxWeightSumPass' });
+      pass.setPipeline(armSpurFluxWeightSumPipe);
+      pass.setBindGroup(0, bindGroup);
+      pass.dispatchWorkgroups(1);
+      pass.end();
+    },
+
+    spurCloudRenormBuffer,
+
+    async readArmSpurRenormScale(): Promise<number> {
+      const enc = device.createCommandEncoder({ label: 'galaxy:spurCloudRenormReadback' });
+      enc.copyBufferToBuffer(spurCloudRenormBuffer, 0, spurCloudRenormReadbackBuffer, 0, 4);
+      device.queue.submit([enc.finish()]);
+      await spurCloudRenormReadbackBuffer.mapAsync(GPUMapMode.READ, 0, 4);
+      try {
+        return new Float32Array(spurCloudRenormReadbackBuffer.getMappedRange(0, 4).slice(0))[0]!;
+      } finally {
+        spurCloudRenormReadbackBuffer.unmap();
+      }
+    },
+
     dispose(): void {
       survivorParamsBuffer.destroy();
       dustRenormBuffer.destroy();
       dustRenormReadbackBuffer.destroy();
+      armCloudFluxWeightSumParamsBuffer.destroy();
+      armCloudRenormBuffer.destroy();
+      armCloudRenormReadbackBuffer.destroy();
+      armSpurFluxWeightSumParamsBuffer.destroy();
+      spurCloudRenormBuffer.destroy();
+      spurCloudRenormReadbackBuffer.destroy();
     },
   };
 }

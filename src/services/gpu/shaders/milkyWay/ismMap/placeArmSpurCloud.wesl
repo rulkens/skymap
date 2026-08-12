@@ -19,6 +19,13 @@
 // weight <= 0) is never DISPATCHED at all — the host guards both before
 // calling dispatchPlaceArmSpurCloud, the same 'CPU decides whether this tier
 // runs' discipline computePlaceDustBudget's own null return uses.
+//
+// fluxWeightOut (binding 3) mirrors placeArmCloud.wesl's own binding 5 (in
+// turn placeDust.wesl's massOut): 'flux' below bakes in spurFlux WITHOUT
+// dividing by fluxWeightSum (armSpurParticleCloud.ts:199-203's own sum) —
+// Task 15's ringReduce.wesl kernel reduces this array and writes
+// 1/fluxWeightSum as the consume-time scale fieldSplat/fragment.wesl
+// multiplies in.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -106,6 +113,8 @@ struct PlaceArmSpurCloudParams {
 @group(0) @binding(0) var<uniform> params: PlaceArmSpurCloudParams;
 @group(0) @binding(1) var<storage, read> spurRecords: array<SpurRecord>;
 @group(0) @binding(2) var<storage, read_write> comps: array<FieldComponentRec>;
+// Task 15's raw per-slot flux weight — see this file's own header doc above.
+@group(0) @binding(3) var<storage, read_write> fluxWeightOut: array<f32>;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -189,6 +198,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let particleRadius = length(vec2<f32>(center.x, center.z));
   let shape = armExcessSurfaceShape(particleRadius, params.hLight, params.excessScaleRatio, geom);
   let fluxWeight = spriteRadius * spriteRadius * shape;
+  fluxWeightOut[i] = fluxWeight;
   let flux = params.spurFlux * fluxWeight;
 
   let sigAlong = spriteRadius * params.elongation;

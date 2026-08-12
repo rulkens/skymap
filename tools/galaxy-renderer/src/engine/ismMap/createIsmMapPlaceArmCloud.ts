@@ -58,8 +58,26 @@ export type PlaceArmCloudDispatchInput = {
 export type IsmMapPlaceArmCloud = {
   /** Encode into the CALLER's encoder/pass — no submit here (one-encoder-one-submit discipline). */
   dispatchPlaceArmCloud(enc: GPUCommandEncoder, input: PlaceArmCloudDispatchInput): void;
-  /** Debug-only: dispatch in its own encoder/submit and map the reservation's slot range straight back — the probe's determinism/budget/liveness exception, no production caller. */
-  dispatchAndReadbackArmCloud(input: PlaceArmCloudDispatchInput): Promise<Float32Array>;
+  /**
+   * Debug-only: dispatch in its own encoder/submit and map the reservation's
+   * slot range straight back — the probe's determinism/budget/liveness
+   * exception, no production caller. `fluxWeight` is `fluxWeightBuffer`'s own
+   * `[0, count)` slice (Task 15's flux-weight-sum input), read back alongside
+   * `records` so the probe can independently recompute `weightSum` off the
+   * SAME dispatch rather than a second, potentially different one.
+   */
+  dispatchAndReadbackArmCloud(
+    input: PlaceArmCloudDispatchInput,
+  ): Promise<{ readonly records: Float32Array; readonly fluxWeight: Float32Array }>;
+  /**
+   * `fluxWeightOut` (placeArmCloud.wesl binding 5) — Task 15's own
+   * flux-weight-sum input, ARM_CLOUD_MAX_COUNT floats, one per particle slot.
+   * Exposed so `ringReduce.wesl`'s csArmCloudFluxWeightSum kernel (dispatched
+   * separately, off `createGalaxyModel.ts`'s own `ringReduce` instance) can
+   * bind the SAME buffer this dispatch just filled — `IsmMapPlaceDust.massBuffer`'s
+   * own producer-owns-the-buffer precedent.
+   */
+  readonly fluxWeightBuffer: GPUBuffer;
   dispose(): void;
 };
 
@@ -88,6 +106,18 @@ export function createIsmMapPlaceArmCloud(
   const readbackBuffer = device.createBuffer({
     label: 'galaxy:placeArmCloudReadback',
     size: readbackByteSize,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+  // fluxWeightOut (placeArmCloud.wesl binding 5) — Task 15's own
+  // flux-weight-sum input, `IsmMapPlaceDust.massBuffer`'s own precedent.
+  const fluxWeightBuffer = device.createBuffer({
+    label: 'galaxy:placeArmCloudFluxWeight',
+    size: ARM_CLOUD_MAX_COUNT * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+  const fluxWeightReadbackBuffer = device.createBuffer({
+    label: 'galaxy:placeArmCloudFluxWeightReadback',
+    size: ARM_CLOUD_MAX_COUNT * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
@@ -172,6 +202,7 @@ export function createIsmMapPlaceArmCloud(
         { binding: 2, resource: input.orientationTexture.createView() },
         { binding: 3, resource: { buffer: input.fieldCompsBuffer } },
         { binding: 4, resource: { buffer: buf } },
+        { binding: 5, resource: { buffer: fluxWeightBuffer } },
       ],
     });
     const pass = enc.beginComputePass({ label: 'galaxy:placeArmCloudPass' });
@@ -187,26 +218,45 @@ export function createIsmMapPlaceArmCloud(
       encode(enc, input);
     },
 
-    async dispatchAndReadbackArmCloud(input): Promise<Float32Array> {
+    async dispatchAndReadbackArmCloud(
+      input,
+    ): Promise<{ readonly records: Float32Array; readonly fluxWeight: Float32Array }> {
       const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloudDebugDispatch' });
-      if (!encode(enc, input)) return new Float32Array(0);
+      if (!encode(enc, input)) {
+        return { records: new Float32Array(0), fluxWeight: new Float32Array(0) };
+      }
       const byteSize = input.count * FIELD_COMPONENT_FLOATS * 4;
       const byteOffset = input.offset * FIELD_COMPONENT_FLOATS * 4;
       enc.copyBufferToBuffer(input.fieldCompsBuffer, byteOffset, readbackBuffer, 0, byteSize);
+      const fluxWeightByteSize = input.count * 4;
+      enc.copyBufferToBuffer(fluxWeightBuffer, 0, fluxWeightReadbackBuffer, 0, fluxWeightByteSize);
       device.queue.submit([enc.finish()]);
 
-      await readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+      await Promise.all([
+        readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteSize),
+        fluxWeightReadbackBuffer.mapAsync(GPUMapMode.READ, 0, fluxWeightByteSize),
+      ]);
       try {
-        return new Float32Array(readbackBuffer.getMappedRange(0, byteSize).slice(0));
+        return {
+          records: new Float32Array(readbackBuffer.getMappedRange(0, byteSize).slice(0)),
+          fluxWeight: new Float32Array(
+            fluxWeightReadbackBuffer.getMappedRange(0, fluxWeightByteSize).slice(0),
+          ),
+        };
       } finally {
         readbackBuffer.unmap();
+        fluxWeightReadbackBuffer.unmap();
       }
     },
+
+    fluxWeightBuffer,
 
     dispose(): void {
       paramsBuffer.destroy();
       recordsBuffer?.destroy();
       readbackBuffer.destroy();
+      fluxWeightBuffer.destroy();
+      fluxWeightReadbackBuffer.destroy();
     },
   };
 }

@@ -13,6 +13,16 @@ import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::dustAttenuation::componentEmission;
 
+// armCloudRenorm/spurCloudRenorm (Task 15) — the arm-cloud/spur-cloud
+// weightSum reciprocals ringReduce.wesl's csArmCloudFluxWeightSum/
+// csArmSpurFluxWeightSum write, read here as read-only storage — the SAME
+// "declared where it's used, not io.wesl's shared header" precedent
+// dustMap/fragment.wesl's binding-14 dustRenorm sets (that file's own doc).
+// Bindings 15/16: the next free numbers past io.wesl's own 0-13 and
+// dustMap/fragment.wesl's 14.
+@group(0) @binding(15) var<storage, read> armCloudRenorm: array<f32>;
+@group(0) @binding(16) var<storage, read> spurCloudRenorm: array<f32>;
+
 @fragment
 fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC rather than
@@ -40,13 +50,34 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
 
+  // Task 15's consume-time renorm — gated by which slot RANGE 'input.inst'
+  // falls in, since FieldComponentRec (records.wesl) carries no provenance
+  // lane of its own and this one pass draws disc/bulge/ridge-chain/arm-cloud/
+  // spur-cloud components together. armCloudRange (perf.zw) and
+  // spurCloudRange (counts2.x, dustCarve.w) are the two tiers' own
+  // [start, end) reservations in this galaxy's emission mixture
+  // (galaxyFieldMixture.ts's armCloudReservation/spurCloudReservation,
+  // packFieldHeaderUniforms's own doc for why these four otherwise-spare
+  // lanes carry them) — every OTHER component (disc/bulge/ridge chain,
+  // extras) falls outside both and reads scale 1, a no-op multiply.
+  var renormScale = 1.0;
+  let armStart = u32(u.perf.z);
+  let armEnd = u32(u.perf.w);
+  let spurStart = u32(u.counts2.x);
+  let spurEnd = u32(u.dustCarve.w);
+  if (input.inst >= armStart && input.inst < armEnd) {
+    renormScale = armCloudRenorm[0];
+  } else if (input.inst >= spurStart && input.inst < spurEnd) {
+    renormScale = spurCloudRenorm[0];
+  }
+
   let primaryCount = u32(u.counts.w);
   let emission = componentEmission(
     input.pos.xy,
     input.inst,
     primaryCount,
     coeffs,
-    rec.amplitude,
+    rec.amplitude * renormScale,
     rec.color,
   );
 

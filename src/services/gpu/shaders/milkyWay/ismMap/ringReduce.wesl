@@ -23,6 +23,19 @@
 // output IS the consume-time renorm scale itself (massPerR2 =
 // totalMass/sumR2, dustParticleCloud.ts:293) — folding the divide into this
 // kernel avoids a second dispatch just to do one division.
+//
+// csArmCloudFluxWeightSum/csArmSpurFluxWeightSum (Task 15) are a THIRD pair
+// of reductions, same file for the same "one shared pass family" reason —
+// each sums placeArmCloud.wesl's/placeArmSpurCloud.wesl's own fluxWeightOut
+// array and writes 1/weightSum, NOT totalFlux/weightSum: unlike placeDust.wesl
+// (which bakes in neither factor), placeArmCloud.wesl/placeArmSpurCloud.wesl
+// already multiply cloudFlux/spurFlux into 'flux' themselves (their own
+// header docs) — a second multiply here would double-count it. Two sibling
+// entry points, not a fold onto csSurvivorSum's body: this codebase has no
+// ptr<workgroup> precedent to parameterise the tree-reduce over, and every
+// kernel's own bindings must be distinct names in this module's shared
+// namespace regardless, so a shared body would only save the ~10-line
+// barrier loop at the cost of an unproven pointer pattern.
 
 const RING_REDUCE_WORKGROUP_SIZE: u32 = 256u;
 
@@ -103,5 +116,74 @@ fn csSurvivorSum(@builtin(local_invocation_index) localIndex: u32) {
     // 'coeff' the same way dustParticleCloud.ts's own '!(sumR2 > 0)' early
     // return leaves nothing to draw.
     renormScaleOut[0] = select(0.0, survivorParams.totalMass / sumR2, sumR2 > 0.0);
+  }
+}
+
+// FluxWeightSumParams — Task 15's arm-cloud/spur-cloud reductions. No
+// 'total' field (unlike SurvivorSumParams above): the output is a bare
+// reciprocal, this file's own header doc explains why.
+struct FluxWeightSumParams {
+  count: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
+}
+
+@group(0) @binding(5) var<uniform> armCloudFluxWeightSumParams: FluxWeightSumParams;
+@group(0) @binding(6) var<storage, read> armCloudFluxWeightBuf: array<f32>;
+@group(0) @binding(7) var<storage, read_write> armCloudRenormOut: array<f32>;
+
+var<workgroup> armCloudFluxWeightPartial: array<f32, RING_REDUCE_WORKGROUP_SIZE>;
+
+@compute @workgroup_size(RING_REDUCE_WORKGROUP_SIZE)
+fn csArmCloudFluxWeightSum(@builtin(local_invocation_index) localIndex: u32) {
+  var sum: f32 = 0.0;
+  for (var i = localIndex; i < armCloudFluxWeightSumParams.count; i += RING_REDUCE_WORKGROUP_SIZE) {
+    sum += armCloudFluxWeightBuf[i];
+  }
+  armCloudFluxWeightPartial[localIndex] = sum;
+  workgroupBarrier();
+
+  for (var stride = RING_REDUCE_WORKGROUP_SIZE / 2u; stride > 0u; stride /= 2u) {
+    if (localIndex < stride) {
+      armCloudFluxWeightPartial[localIndex] += armCloudFluxWeightPartial[localIndex + stride];
+    }
+    workgroupBarrier();
+  }
+
+  if (localIndex == 0u) {
+    let weightSum = armCloudFluxWeightPartial[0];
+    // weightSum <= 0 (no particles, or count == 0): 0 zeroes
+    // fieldSplat/fragment.wesl's consuming multiply the same way
+    // csSurvivorSum's own sumR2 <= 0 branch zeroes dustMap/fragment.wesl's.
+    armCloudRenormOut[0] = select(0.0, 1.0 / weightSum, weightSum > 0.0);
+  }
+}
+
+@group(0) @binding(8) var<uniform> armSpurFluxWeightSumParams: FluxWeightSumParams;
+@group(0) @binding(9) var<storage, read> armSpurFluxWeightBuf: array<f32>;
+@group(0) @binding(10) var<storage, read_write> armSpurRenormOut: array<f32>;
+
+var<workgroup> armSpurFluxWeightPartial: array<f32, RING_REDUCE_WORKGROUP_SIZE>;
+
+@compute @workgroup_size(RING_REDUCE_WORKGROUP_SIZE)
+fn csArmSpurFluxWeightSum(@builtin(local_invocation_index) localIndex: u32) {
+  var sum: f32 = 0.0;
+  for (var i = localIndex; i < armSpurFluxWeightSumParams.count; i += RING_REDUCE_WORKGROUP_SIZE) {
+    sum += armSpurFluxWeightBuf[i];
+  }
+  armSpurFluxWeightPartial[localIndex] = sum;
+  workgroupBarrier();
+
+  for (var stride = RING_REDUCE_WORKGROUP_SIZE / 2u; stride > 0u; stride /= 2u) {
+    if (localIndex < stride) {
+      armSpurFluxWeightPartial[localIndex] += armSpurFluxWeightPartial[localIndex + stride];
+    }
+    workgroupBarrier();
+  }
+
+  if (localIndex == 0u) {
+    let weightSum = armSpurFluxWeightPartial[0];
+    armSpurRenormOut[0] = select(0.0, 1.0 / weightSum, weightSum > 0.0);
   }
 }

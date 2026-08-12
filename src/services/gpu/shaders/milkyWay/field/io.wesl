@@ -20,7 +20,7 @@
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
-//   offset 96  : counts2: vec4  (unused, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
+//   offset 96  : counts2: vec4  (spurCloudStart, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
@@ -45,9 +45,16 @@
 // 'instanceIndex < primaryCount'
 // is what keeps an extra's emission from ever reading the primary's dust.
 //
-// counts2.x is unused; it stays a lane rather than shrinking the header so
-// the offsets below it (and packFieldUniforms.ts's FIELD_HEADER_FLOATS) do
-// not move. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
+// counts2.x is spurCloudStart (Task 15) — the spur-cloud tier's own
+// reservation start index into 'comps' (galaxyFieldMixture.ts's
+// spurCloudReservation.offset), paired with dustCarve.w (spurCloudEnd)
+// below; fieldSplat/fragment.wesl's fs gates its spurCloudRenorm multiply on
+// 'input.inst' falling in [spurCloudStart, spurCloudEnd). Both default 0 —
+// an empty range that never matches any real instance index, the same
+// "absent means inert" idiom every other optional lane here uses. Previously
+// unused/held as a placeholder purely so the offsets below it (and
+// packFieldUniforms.ts's FIELD_HEADER_FLOATS) would not move if it were ever
+// claimed — now claimed. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
 // (createGalaxyRenderTargets.ts's rebuildDust sizes it to
 // reducedSize(render.dustDivisor) — see the DUST MAP entry below; dustMapTex's
 // extent is independent of fieldTex's) — read by dustMap.wesl's dust-noise
@@ -197,7 +204,11 @@
 // smoothstep window at 1 (a hard, defined edge) and widens it at 0 (soft).
 // stretch (.z, >=1) elongates the shared noise field along the disc's local
 // azimuthal direction (dustMap.wesl's stretchNoiseCoord) — stage 1 of wisp
-// anisotropy; 1 is isotropic (identity). .w is spare.
+// anisotropy; 1 is isotropic (identity). .w is spurCloudEnd (Task 15) — the
+// spur-cloud reservation's own END index, paired with counts2.x
+// (spurCloudStart) above; unrelated to S5, riding this row's one free lane
+// the same "free lane, not thematically related" precedent youngStars .zw
+// and dustDetail .yz both already set.
 //
 // youngStars (offset 240) is the HII header's shading/misc row: §5's
 // shader-side read of the ISM map's 'stars' tracer for the YOUNG STARS chain
@@ -235,7 +246,12 @@
 // ceiling (~1x tile) the user is expected to stay under. Same "only the HII
 // header" asymmetry as .x — the field header packs 0, harmless since its own
 // components never carry a nonzero textureWeight and starGrainTerm never
-// runs there. .zw are spare.
+// runs there. .zw are armCloudStart/armCloudEnd (Task 15) — the INVERSE
+// asymmetry from .xy: only the FIELD header carries real values here (the
+// arm cloud has no HII counterpart), so the HII header packs both 0, an
+// empty range no HII instance index ever falls in. fieldSplat/fragment.wesl's
+// fs gates its armCloudRenorm multiply on 'input.inst' falling in
+// [armCloudStart, armCloudEnd).
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

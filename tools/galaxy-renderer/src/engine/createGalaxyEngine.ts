@@ -429,6 +429,8 @@ export async function createGalaxyEngine(
     starGrainSampler,
     dustMapSampler,
     dustRenormBuffer: ringReduce.dustRenormBuffer,
+    armRenormBuffer: ringReduce.armCloudRenormBuffer,
+    spurRenormBuffer: ringReduce.spurCloudRenormBuffer,
     getDustMapTex: () => targets.dustMapTex,
   });
 
@@ -784,6 +786,8 @@ export async function createGalaxyEngine(
         hiiCount: model.hiiComps.count,
         hiiTexture: model.hiiTexture,
         youngStars: model.youngStars,
+        armCloudReservation: model.armCloudReservation,
+        spurCloudReservation: model.spurCloudReservation,
       },
       targetSizes: {
         field: targets.reducedSize(render.fieldDivisor),
@@ -1161,6 +1165,14 @@ export async function createGalaxyEngine(
     // divisor/resize" discipline `getDustMapTex` uses above). No production
     // caller.
     requestDustMapChannelSum: () => readDustMapChannelSum(device, targets.dustMapTex),
+    // Debug-only: Task 15's own consuming-multiply exception — the arm-cloud/
+    // spur-cloud twin of `requestDustMapChannelSum` above, same reasoning,
+    // against `targets.fieldTex` (the ONE target fieldSplat/fragment.wesl
+    // draws every emission component — disc/bulge/ridge/arm-cloud/spur-cloud —
+    // into). `readDustMapChannelSum` is texture-agnostic despite its name
+    // (a plain rgba16float channel-sum reader); reused rather than duplicated.
+    // No production caller.
+    requestFieldTexChannelSum: () => readDustMapChannelSum(device, targets.fieldTex),
     // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
     requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),
