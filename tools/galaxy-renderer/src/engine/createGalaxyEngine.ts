@@ -35,7 +35,7 @@ import { createRafLoop } from './createRafLoop';
 import { bakeVolumeTexture } from './gpu/bakeVolumeTexture';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
-import { readDustMapChannelSum } from './gpu/readDustMapChannelSum';
+import { readTextureChannelSum } from './gpu/readTextureChannelSum';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
@@ -1164,7 +1164,7 @@ export async function createGalaxyEngine(
     // cannot. `targets.dustMapTex` is read live (same "re-read after a
     // divisor/resize" discipline `getDustMapTex` uses above). No production
     // caller.
-    requestDustMapChannelSum: () => readDustMapChannelSum(device, targets.dustMapTex),
+    requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
     // Debug-only: Task 15's own consuming-multiply exception, take 1 — sums
     // the WHOLE `targets.fieldTex` (every emission component — disc/bulge/
     // ridge/arm-cloud/spur-cloud — draws additively into this ONE target).
@@ -1175,10 +1175,11 @@ export async function createGalaxyEngine(
     // ridge chain's, whose own rendering at flux-share boundaries turned out
     // to carry non-negligible residual emission unrelated to Task 15 — a
     // whole-target sum can't tell the two apart). Kept as a general-purpose
-    // debug method (`readDustMapChannelSum` is texture-agnostic despite its
-    // name — a plain rgba16float channel-sum reader, reused rather than
-    // duplicated). No production caller.
-    requestFieldTexChannelSum: () => readDustMapChannelSum(device, targets.fieldTex),
+    // debug method (`readTextureChannelSum` is a plain, texture-agnostic
+    // rgba16float channel-sum reader — renamed from `readDustMapChannelSum`
+    // once this fieldTex call became its second consumer, reused rather
+    // than duplicated). No production caller.
+    requestFieldTexChannelSum: () => readTextureChannelSum(device, targets.fieldTex),
     // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
     // ONLY the arm-cloud reservation's own instance range
     // (`model.armCloudReservation`'s `[offset, offset+count)`) into
@@ -1209,7 +1210,7 @@ export async function createGalaxyEngine(
         firstInstance: reservation.offset,
       });
       device.queue.submit([enc.finish()]);
-      return readDustMapChannelSum(device, targets.fieldTex);
+      return readTextureChannelSum(device, targets.fieldTex);
     },
     // Debug-only: the spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
     async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
@@ -1226,7 +1227,7 @@ export async function createGalaxyEngine(
         firstInstance: reservation.offset,
       });
       device.queue.submit([enc.finish()]);
-      return readDustMapChannelSum(device, targets.fieldTex);
+      return readTextureChannelSum(device, targets.fieldTex);
     },
     // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.

@@ -980,13 +980,14 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // feeds nothing else placement-related (not the CDF, not the
         // survival floor, not the RNG seed) — so the SAME particles survive
         // at the SAME positions, only `dustRenorm[0]` moves, by EXACTLY the
-        // tau ratio. `readDustMapChannelSum` sums the WHOLE rendered
-        // `dustMapTex` (every rgba16float channel, every texel) — a value
-        // that only exists because `dustMap/fragment.wesl` actually ran and
-        // actually multiplied by `dustRenorm[0]` (its `coeff`, hence every
-        // `slices` term, is linear in that one uniform even through the
-        // shader's `max(x, 0)` clamps, since a POSITIVE scalar multiply
-        // preserves sign — see `readDustMapChannelSum.ts`'s own doc). A
+        // tau ratio. `requestDustMapChannelSum` (`readTextureChannelSum.ts`
+        // reused, texture-agnostic) sums the WHOLE rendered `dustMapTex`
+        // (every rgba16float channel, every texel) — a value that only
+        // exists because `dustMap/fragment.wesl` actually ran and actually
+        // multiplied by `dustRenorm[0]` (its `coeff`, hence every `slices`
+        // term, is linear in that one uniform even through the shader's
+        // `max(x, 0)` clamps, since a POSITIVE scalar multiply preserves
+        // sign — see `readTextureChannelSum.ts`'s own doc). A
         // dropped multiply, or `dustRenorm` bound to the wrong buffer, or a
         // buffer stuck at 1.0, all leave this sum UNCHANGED by the tau
         // change — this assertion fails in every one of those cases.

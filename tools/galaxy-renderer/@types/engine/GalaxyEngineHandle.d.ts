@@ -102,7 +102,7 @@ export type GalaxyEngineHandle = {
   // WHOLE `dustMapTex` back to one scalar, so the probe can observe
   // `dustMap/fragment.wesl`'s ACTUAL rendered output responding to a
   // `dustRenormBuffer` change, not just the buffer both the compute kernel
-  // and a direct readback share. See `readDustMapChannelSum.ts`'s own doc
+  // and a direct readback share. See `readTextureChannelSum.ts`'s own doc
   // for why the sum is exactly linear in the renorm scale. No production
   // caller.
   requestDustMapChannelSum(): Promise<number>;

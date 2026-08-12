@@ -168,7 +168,7 @@ export function createGalaxyRenderTargets(
       size: [w, h],
       format: formats.hdr,
       // COPY_SRC beyond RA_TB's production need: Task 15's own debug-only
-      // readback (requestFieldTexChannelSum, readDustMapChannelSum.ts reused)
+      // readback (requestFieldTexChannelSum, readTextureChannelSum.ts reused)
       // copies the whole target back to observe the arm-cloud/spur-cloud
       // renorm's ACTUAL rendered effect — `dustMapTex`'s own identical
       // precedent below.
@@ -194,7 +194,7 @@ export function createGalaxyRenderTargets(
       size: [w, h],
       format: formats.dustMap,
       // COPY_SRC beyond RA_TB's production need: Task 9's own debug-only
-      // readback (readDustMapChannelSum.ts) copies the whole map back to
+      // readback (readTextureChannelSum.ts) copies the whole map back to
       // observe the Larson renorm's ACTUAL rendered effect — same "debug
       // readback rides the production texture's own COPY_SRC flag"
       // precedent `fieldComps`/`hiiComps` already establish for buffers.
