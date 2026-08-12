@@ -49,6 +49,7 @@ import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { MilkyWaySettings } from '../../@types/settings/MilkyWaySettings';
+import type { ZoneOfAvoidanceSettings } from '../../@types/settings/ZoneOfAvoidanceSettings';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
@@ -167,6 +168,18 @@ export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
  */
 export const selectMilkyWay = (state: RootState): MilkyWaySettings =>
   selectSettings(state).milkyWay;
+
+// --- zoneOfAvoidance cluster ---------------------------------------------------
+
+export const selectZoneOfAvoidanceEnabled = (state: RootState): boolean =>
+  selectSettings(state).zoneOfAvoidance.enabled;
+
+export const selectZoneOfAvoidanceLabelEnabled = (state: RootState): boolean =>
+  selectSettings(state).zoneOfAvoidance.labelEnabled;
+
+/** The whole Zone-of-Avoidance cluster — mirrors `selectMilkyWay`. */
+export const selectZoneOfAvoidance = (state: RootState): ZoneOfAvoidanceSettings =>
+  selectSettings(state).zoneOfAvoidance;
 
 // --- filaments cluster --------------------------------------------------------
 

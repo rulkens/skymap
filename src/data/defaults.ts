@@ -16,6 +16,7 @@ import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMod
 import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
+import type { ZoneOfAvoidanceTuning } from '../@types/settings/ZoneOfAvoidanceTuning';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import type { GalaxyProvenanceSettings } from '../@types/settings/GalaxyProvenanceSettings';
 import { SOURCE_REGISTRY, Source } from './sources';
@@ -229,6 +230,33 @@ export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
  * literal is the honest single source of truth for this axis.
  */
 export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
+
+/**
+ * Zone-of-Avoidance overlay default — ON.  The galactic-plane dust band is
+ * meant to be visible from first paint, explaining the catalog thin-out near
+ * b=0 rather than leaving it looking like a data gap.  A plain `true` literal
+ * like `DEFAULT_ORBIT_TRAILS_ENABLED`, not registry-derived like
+ * `DEFAULT_MILKY_WAY_ENABLED`: `ZONE_OF_AVOIDANCE_ENTRY.visible` exists for
+ * internal registry consistency but is not itself this default's source (see
+ * Task 2's report).
+ */
+export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
+
+/** Zone-of-Avoidance label default — ON, mirroring `DEFAULT_MILKY_WAY_LABEL_ENABLED`. */
+export const DEFAULT_ZONE_OF_AVOIDANCE_LABEL_ENABLED: boolean = true;
+
+/**
+ * Zone-of-Avoidance look-knob starting values. Placeholders for the Task 9/11
+ * visual checkpoints and the Task 13 DebugPanel section to dial live — a dim
+ * warm-amber veil in the ballpark of real interstellar-dust extinction color,
+ * not a calibrated result.
+ */
+export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
+  intensity: 0.5,
+  radialFalloff: 0.3,
+  edgeSharpness: 0.5,
+  color: [1.0, 0.75, 0.5],
+};
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 

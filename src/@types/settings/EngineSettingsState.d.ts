@@ -50,6 +50,7 @@ import type { FlowSettings } from './FlowSettings';
 import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { MilkyWaySettings } from './MilkyWaySettings';
+import type { ZoneOfAvoidanceSettings } from './ZoneOfAvoidanceSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
@@ -175,6 +176,14 @@ export type EngineSettingsState = {
    * themselves on `MilkyWayTuning`.
    */
   milkyWay: MilkyWaySettings;
+
+  /**
+   * Zone-of-Avoidance singleton overlay controls — the two independent
+   * visibility axes (band / label) plus the band's look knobs. Shape +
+   * per-field docs live on `ZoneOfAvoidanceSettings`; the knobs themselves on
+   * `ZoneOfAvoidanceTuning`.
+   */
+  zoneOfAvoidance: ZoneOfAvoidanceSettings;
 
   /**
    * Filament-skeleton overlay controls.  Master toggle + intensity scale
