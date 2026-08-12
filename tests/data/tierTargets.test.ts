@@ -32,8 +32,10 @@ describe('tierTarget', () => {
     expect(tierTarget(Source.Glade, 'medium')).toBe(400_000);
   });
 
-  it('large tier has no caps for any source', () => {
-    expect(tierTarget(Source.SDSS, 'large')).toBeUndefined();
+  it('large tier caps SDSS at 500k, leaves GLADE and Milliquas uncapped', () => {
+    // The raw SDSS CSV is the complete DR17 pull (~970k rows); the cap keeps
+    // the large tier at the point budget the perf numbers were measured at.
+    expect(tierTarget(Source.SDSS, 'large')).toBe(500_000);
     expect(tierTarget(Source.Glade, 'large')).toBeUndefined();
     expect(tierTarget(Source.Milliquas, 'large')).toBeUndefined();
   });
