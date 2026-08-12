@@ -74,6 +74,7 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
       vi.fn<GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']>(),
     requestDustPlacementReadback: vi.fn<GalaxyEngineHandle['requestDustPlacementReadback']>(),
     requestDustBufferPeek: vi.fn<GalaxyEngineHandle['requestDustBufferPeek']>(),
+    requestDustMapChannelSum: vi.fn<GalaxyEngineHandle['requestDustMapChannelSum']>(),
     requestArmSpurCloudPlacementReadback:
       vi.fn<GalaxyEngineHandle['requestArmSpurCloudPlacementReadback']>(),
     requestArmSpurCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmSpurCloudBufferPeek']>(),

@@ -98,6 +98,14 @@ export type GalaxyEngineHandle = {
     readonly offset: number;
     readonly records: Float32Array;
   } | null>;
+  // Debug-only: Task 9 fix round 1 — sums every rgba16float channel of the
+  // WHOLE `dustMapTex` back to one scalar, so the probe can observe
+  // `dustMap/fragment.wesl`'s ACTUAL rendered output responding to a
+  // `dustRenormBuffer` change, not just the buffer both the compute kernel
+  // and a direct readback share. See `readDustMapChannelSum.ts`'s own doc
+  // for why the sum is exactly linear in the renorm scale. No production
+  // caller.
+  requestDustMapChannelSum(): Promise<number>;
   // Debug-only: Task 14's own numeric-validation exception
   // (`placeArmSpurCloud.wesl` has no non-GPU path to check its output
   // against) — dispatches fresh and maps the spur-cloud reservation's slot

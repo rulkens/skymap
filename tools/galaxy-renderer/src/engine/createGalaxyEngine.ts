@@ -35,6 +35,7 @@ import { createRafLoop } from './createRafLoop';
 import { bakeVolumeTexture } from './gpu/bakeVolumeTexture';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
+import { readDustMapChannelSum } from './gpu/readDustMapChannelSum';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
@@ -1152,6 +1153,14 @@ export async function createGalaxyEngine(
     // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
     requestDustPlacementReadback: (opts) => model.requestDustPlacementReadback(opts),
     requestDustBufferPeek: () => model.requestDustBufferPeek(),
+    // Debug-only: Task 9 fix round 1 — observes dustMap/fragment.wesl's
+    // ACTUAL rendered output (not the dustRenormBuffer both the compute
+    // kernel and a buffer readback would read directly), so the probe can
+    // catch a dropped/misrouted consuming multiply that a buffer-only check
+    // cannot. `targets.dustMapTex` is read live (same "re-read after a
+    // divisor/resize" discipline `getDustMapTex` uses above). No production
+    // caller.
+    requestDustMapChannelSum: () => readDustMapChannelSum(device, targets.dustMapTex),
     // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
     // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
     requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),

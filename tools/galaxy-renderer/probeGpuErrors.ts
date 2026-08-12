@@ -925,11 +925,11 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // totalMass / sumR2`) over the SAME GPU-placed mass array `first.mass`
         // came from. `expectedBudget.totalMass` is the SAME pure CPU value
         // `dispatchSurvivorSum` was packed with, so a mismatch here can only
-        // come from the GPU reduction itself (or its consuming multiply —
-        // this is also the "fails if the uniform stays 1.0" check: an
-        // unwired dustRenorm read in dustMap/fragment.wesl wouldn't move
-        // this scalar off whatever it was left at, and that value would
-        // almost certainly disagree with the CPU recomputation below).
+        // come from the GPU REDUCTION itself. This reads `dustRenormBuffer`
+        // directly (`readDustRenormScale`) — the SAME buffer the compute
+        // kernel wrote — so on its own it cannot tell a correct reduction
+        // from a fragment shader that never reads that buffer at all; see
+        // (2.6) below for the check that closes that gap.
         const sumR2 = first.mass.reduce((sum, m) => sum + m, 0);
         const expectedScale = sumR2 > 0 ? expectedBudget.totalMass / sumR2 : 0;
         const scaleAbsErr = Math.abs(first.renormScale - expectedScale);
@@ -941,6 +941,75 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         console.error(
           `  readback:placeDust survivor-sum renorm scale matches CPU recomputation (gpu=${first.renormScale}, cpu=${expectedScale}, sumR2=${sumR2})`,
+        );
+
+        // (2.6) The CONSUMING multiply — dustMap/fragment.wesl:77's
+        // `coeff = rec.amplitude * dustRenorm[0] * sqrt(...)` — must actually
+        // run. (2.5) above only proves the REDUCTION is correct; it reads
+        // `dustRenormBuffer` the same way the fragment shader does, so a
+        // dropped/misrouted multiply in the shader would leave (2.5) (and
+        // every other step in this file) passing. This drives a `dust.tau`
+        // -ONLY tuning change — `computePlaceDustBudget`'s `totalMass` is
+        // `dust.tau * 2*PI*weightedSigma2` (a pure multiply on tau), and tau
+        // feeds nothing else placement-related (not the CDF, not the
+        // survival floor, not the RNG seed) — so the SAME particles survive
+        // at the SAME positions, only `dustRenorm[0]` moves, by EXACTLY the
+        // tau ratio. `readDustMapChannelSum` sums the WHOLE rendered
+        // `dustMapTex` (every rgba16float channel, every texel) — a value
+        // that only exists because `dustMap/fragment.wesl` actually ran and
+        // actually multiplied by `dustRenorm[0]` (its `coeff`, hence every
+        // `slices` term, is linear in that one uniform even through the
+        // shader's `max(x, 0)` clamps, since a POSITIVE scalar multiply
+        // preserves sign — see `readDustMapChannelSum.ts`'s own doc). A
+        // dropped multiply, or `dustRenorm` bound to the wrong buffer, or a
+        // buffer stuck at 1.0, all leave this sum UNCHANGED by the tau
+        // change — this assertion fails in every one of those cases.
+        const TAU_PROBE_MULTIPLIER = 2;
+        const before = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          return bridge!.requestDustMapChannelSum();
+        });
+        await page.evaluate(
+          async ({ dust, tau }) => {
+            const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+              .__probeEngine;
+            bridge!.setFieldTuning({ dust: { ...dust, tau } });
+          },
+          { dust: DEFAULT_GALAXY_DUST_PARAMS, tau: DEFAULT_GALAXY_DUST_PARAMS.tau * TAU_PROBE_MULTIPLIER },
+        );
+        await settleFrames(page, SETTLE_FRAMES);
+        const after = await page.evaluate(async () => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          return bridge!.requestDustMapChannelSum();
+        });
+        // Restore before any later step (the floor-fixture fixture right
+        // below also resets `dust` wholesale, but this assertion must not
+        // depend on that ordering to leave the tuning clean).
+        await page.evaluate(async (dust) => {
+          const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
+            .__probeEngine;
+          bridge!.setFieldTuning({ dust });
+        }, DEFAULT_GALAXY_DUST_PARAMS);
+        await settleFrames(page, SETTLE_FRAMES);
+
+        if (!(Math.abs(before) > 1e-6)) {
+          throw new Error(
+            `readback:placeDust — dustMapTex channel sum is ~0 before the tau change (${before}); cannot observe a multiplicative response against a near-zero baseline`,
+          );
+        }
+        const observedRatio = after / before;
+        const ratioRelErr = Math.abs(observedRatio - TAU_PROBE_MULTIPLIER) / TAU_PROBE_MULTIPLIER;
+        if (ratioRelErr > 1e-3) {
+          throw new Error(
+            `readback:placeDust — dustMapTex did not respond to the Larson renorm scale: before=${before}, after=${after}, ` +
+              `observed ratio=${observedRatio} (expected ${TAU_PROBE_MULTIPLIER} from a ${TAU_PROBE_MULTIPLIER}x tau change), relErr=${ratioRelErr} — ` +
+              'dustMap/fragment.wesl may not be reading dustRenorm[0], or reading the wrong buffer',
+          );
+        }
+        console.error(
+          `  readback:placeDust dustMapTex responds to the Larson renorm scale (before=${before.toFixed(4)}, after=${after.toFixed(4)}, ratio=${observedRatio.toFixed(6)} vs expected ${TAU_PROBE_MULTIPLIER})`,
         );
 
         // (3) Survival-floor zeroing is OBSERVABLE — amplitude sits at lane 3
