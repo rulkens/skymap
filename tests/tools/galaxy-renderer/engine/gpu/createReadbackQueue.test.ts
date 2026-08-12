@@ -56,6 +56,11 @@ function makeFake(): Fake {
           throw new Error(`${label}: copy into a mapped buffer`);
         }
       },
+      copyBufferToBuffer: (_src: GPUBuffer, _srcOffset: number, dst: GPUBuffer) => {
+        if ((dst as unknown as { isMapped: boolean }).isMapped) {
+          throw new Error(`${label}: copy into a mapped buffer`);
+        }
+      },
       finish: () => label,
     }),
     queue: {
@@ -83,6 +88,14 @@ const spec = (fake: Fake, label: string) => ({
   bytesPerRow: 256,
   width: 4,
   height: 2,
+  decode: () => label,
+});
+
+const bufferSpec = (fake: Fake, label: string) => ({
+  label,
+  sourceBuffer: {} as GPUBuffer,
+  buffer: fake.buffer(label),
+  size: 8,
   decode: () => label,
 });
 
@@ -147,6 +160,29 @@ describe('createReadbackQueue', () => {
     await vi.waitFor(() => expect(landed).toHaveLength(2));
 
     expect(landed).toEqual(['a', 'b']);
+  });
+
+  it('shares the chain between a texture stream and a buffer stream', async () => {
+    // bufferStream (added for the ring-means debug readback) reuses `stream`'s
+    // own promise chain via chainedStream — this is the test that would catch
+    // a refactor that gave it a second, independent one, reintroducing the
+    // 'buffer used in submit while mapped' race the module's header warns about.
+    const fake = makeFake();
+    const queue = createReadbackQueue(fake.device);
+    const a = queue.stream(spec(fake, 'a'));
+    const b = queue.bufferStream(bufferSpec(fake, 'b'));
+
+    a.request(() => {});
+    b.request(() => {});
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // b must not have submitted yet — a is still holding its map.
+    expect(fake.events).toEqual(['submit:a', 'map:a']);
+
+    fake.land('a');
+    await vi.waitFor(() => expect(fake.events).toContain('submit:b'));
+    expect(fake.events).toEqual(['submit:a', 'map:a', 'unmap:a', 'submit:b', 'map:b']);
   });
 
   it('unmaps and keeps the stream alive when decode throws', async () => {

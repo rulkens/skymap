@@ -1,8 +1,7 @@
 /**
- * `ismMapSeeding: 0` must reproduce the pre-feature arm-ridge catalog
- * exactly, whether or not a caller happens to hand in an ISM map — the real
- * bug this pins is a gate that overwrites a region's centre once a map
- * exists without also checking the blend weight.
+ * At the shipped default (`generator: 'fluid'`), region placement never
+ * reads `ismMap` at all — DIG is the only tier that does, so with it zeroed
+ * too, output must be byte-identical whether or not a caller hands in a map.
  */
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';
@@ -18,7 +17,7 @@ import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
-/** Busy on every channel — if `ismMapSeeding: 0` ever consulted this, output would move. */
+/** Busy on every channel — `dig.fraction` tests below rely on this being nonzero everywhere. */
 function makeBusyMap(): GalaxyIsmMap {
   const az = 32;
   const rings = 16;
@@ -31,132 +30,12 @@ function makeBusyMap(): GalaxyIsmMap {
   return { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
 }
 
-/**
- * Busy on exactly ONE channel (the other of `stars`/`activity` left at 0,
- * gas nonzero so admission math elsewhere has something to chew on) — the
- * shell-seeding CDF's disjoint-support probe: `stars` and `activity` never
- * overlap here, so whichever one placement actually reads is the one that
- * moves the output.
- */
-function makeChannelHotMap(channel: 'stars' | 'activity'): GalaxyIsmMap {
-  const az = 32;
-  const rings = 16;
-  const data = new Float32Array(rings * az * 4);
-  for (let i = 0; i < data.length; i += 4) {
-    data[i] = 0.78;
-    if (channel === 'stars') data[i + 1] = 0.7;
-    if (channel === 'activity') data[i + 2] = 0.6;
-  }
-  return { az, rings, rMin: 0.5, rMax: geometry.outerRadius, data };
-}
-
 describe('buildHiiRegions', () => {
-  it('ismMapSeeding 0 is byte-identical whether or not a map is handed in', () => {
-    const tuningOff = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      // dig.fraction pinned to 0 too — it is the DIG veil's own knob,
-      // orthogonal to ismMapSeeding, and (unlike region placement) it reads
-      // the map's mere PRESENCE rather than a blend weight, so leaving it at
-      // its nonzero default would break this test's own premise.
-      hii: {
-        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 0,
-        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
-      },
-    };
-    const withoutMap = buildHiiRegions(
-      geometry,
-      tuningOff,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      null,
-    );
-    const withMap = buildHiiRegions(
-      geometry,
-      tuningOff,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      makeBusyMap(),
-    );
-    expect(withMap.length).toBeGreaterThan(0); // sanity: the tier really runs on the MW preset
-    expect(withMap).toEqual(withoutMap);
-  });
-
-  // The stars channel is a long-lived advected tracer, not the short-memory
-  // signal shell seeding wants — `applyIsmMapSeeding`'s CDF weight is
-  // `activity`, not `stars` (see `hiiRegions.ts`'s own header). These two pin
-  // that weighting against disjoint per-channel maps, since a busy-on-both
-  // map (`makeBusyMap`) can't tell which channel actually drove a reseed.
-  it('shell/cluster seeding ignores the stars channel: a stars-only map (zero activity) leaves placement byte-identical to no map', () => {
-    const tuningOn = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      // Forces the arm-ridge catalog + applyIsmMapSeeding path — the DEFAULT
-      // generator is 'fluid', which never calls applyIsmMapSeeding at all
-      // (candidateRegionsFromFluidEvents derives centres from the sim
-      // itself, ignoring the map object handed in here).
-      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'none' as const },
-      hii: {
-        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 1,
-        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
-      },
-    };
-    const withoutMap = buildHiiRegions(
-      geometry,
-      tuningOn,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      null,
-    );
-    const withStarsOnlyMap = buildHiiRegions(
-      geometry,
-      tuningOn,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      makeChannelHotMap('stars'),
-    );
-    expect(withStarsOnlyMap).toEqual(withoutMap);
-  });
-
-  it('shell/cluster seeding weights by activity: an activity-only map (zero stars) reseeds placement', () => {
-    const tuningOn = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      // Same generator override as the previous test, same reason.
-      ismMap: { ...DEFAULT_GALAXY_FIELD_TUNING.ismMap, generator: 'none' as const },
-      hii: {
-        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 1,
-        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
-      },
-    };
-    const withoutMap = buildHiiRegions(
-      geometry,
-      tuningOn,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      null,
-    );
-    const withActivityOnlyMap = buildHiiRegions(
-      geometry,
-      tuningOn,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      makeChannelHotMap('activity'),
-    );
-    expect(withActivityOnlyMap.length).toBeGreaterThan(0); // sanity: the tier really runs
-    expect(withActivityOnlyMap).not.toEqual(withoutMap);
-  });
-
   it('dig.fraction 0 is byte-identical whether or not a map is handed in', () => {
     const tuningOff = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
-      // ismMapSeeding pinned to 0 too — its own default (1) would already
-      // make region CENTRES differ between the map/no-map cases, which
-      // would fail this test for a reason that has nothing to do with
-      // `dig.fraction`.
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
       },
     };

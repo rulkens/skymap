@@ -68,6 +68,25 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
     getCamera: vi.fn<GalaxyEngineHandle['getCamera']>().mockReturnValue({ az: 0, el: 0, dist: 1 }),
     getIsmMapTexture: vi.fn<GalaxyEngineHandle['getIsmMapTexture']>(),
     getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
+    requestRingMeansReadback: vi.fn<GalaxyEngineHandle['requestRingMeansReadback']>(),
+    requestArmRidgeSampleReadback: vi.fn<GalaxyEngineHandle['requestArmRidgeSampleReadback']>(),
+    requestIsmMapDustCdfScanReadback:
+      vi.fn<GalaxyEngineHandle['requestIsmMapDustCdfScanReadback']>(),
+    requestDustPlacementReadback: vi.fn<GalaxyEngineHandle['requestDustPlacementReadback']>(),
+    requestDustBufferPeek: vi.fn<GalaxyEngineHandle['requestDustBufferPeek']>(),
+    requestDustMapChannelSum: vi.fn<GalaxyEngineHandle['requestDustMapChannelSum']>(),
+    requestArmCloudRenderedFluxSum: vi.fn<GalaxyEngineHandle['requestArmCloudRenderedFluxSum']>(),
+    requestArmSpurCloudRenderedFluxSum:
+      vi.fn<GalaxyEngineHandle['requestArmSpurCloudRenderedFluxSum']>(),
+    requestArmSpurCloudPlacementReadback:
+      vi.fn<GalaxyEngineHandle['requestArmSpurCloudPlacementReadback']>(),
+    requestArmSpurCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmSpurCloudBufferPeek']>(),
+    requestArmCloudPlacementReadback:
+      vi.fn<GalaxyEngineHandle['requestArmCloudPlacementReadback']>(),
+    requestArmCloudBufferPeek: vi.fn<GalaxyEngineHandle['requestArmCloudBufferPeek']>(),
+    requestDigVeilPlacementReadback:
+      vi.fn<GalaxyEngineHandle['requestDigVeilPlacementReadback']>(),
+    requestDigVeilBufferPeek: vi.fn<GalaxyEngineHandle['requestDigVeilBufferPeek']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, mocks };
@@ -298,7 +317,9 @@ describe('connectEngineBridge', () => {
     store.dispatch(renderPatched({ dustCloudEnabled: false }));
 
     expect(mocks.setFieldTuning).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dust: expect.objectContaining({ cloud: expect.objectContaining({ count: 0 }) }) }),
+      expect.objectContaining({
+        dust: expect.objectContaining({ cloud: expect.objectContaining({ count: 0 }) }),
+      }),
     );
     // The pill patches only the OUTGOING copy — the stored slice still shows
     // what the sliders display, so re-enabling the pill restores it exactly.

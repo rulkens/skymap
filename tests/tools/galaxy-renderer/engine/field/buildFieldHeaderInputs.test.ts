@@ -56,6 +56,8 @@ const inputs = buildFieldHeaderInputs({
     hiiCount: 42,
     hiiTexture: { scale: 12, contrast: 13 },
     youngStars: { contrastGamma: 14, invMeanNorm: 15 },
+    armCloudReservation: { offset: 16, count: 17 },
+    spurCloudReservation: { offset: 33, count: 3 },
   },
   targetSizes: {
     field: [400, 500],
@@ -109,5 +111,14 @@ describe('buildFieldHeaderInputs', () => {
   it('shares one camera object across field, hii and every tier', () => {
     expect(inputs.hii.camera).toBe(inputs.field.camera);
     expect(inputs.tiers.dig!.camera).toBe(inputs.field.camera);
+  });
+
+  it('routes the arm-cloud/spur-cloud renorm ranges to the field header only, as [offset, offset+count)', () => {
+    expect(inputs.field.armCloudRange).toEqual({ start: 16, end: 33 });
+    expect(inputs.field.spurCloudRange).toEqual({ start: 33, end: 36 });
+    // Neither the HII header nor its tiers ever draw arm/spur cloud components.
+    expect(inputs.hii.armCloudRange).toBeUndefined();
+    expect(inputs.hii.spurCloudRange).toBeUndefined();
+    expect(inputs.tiers.young!.armCloudRange).toBeUndefined();
   });
 });

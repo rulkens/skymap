@@ -32,6 +32,9 @@ export type FieldHeaderModelLanes = {
   readonly hiiCount: number;
   readonly hiiTexture: HiiTextureLanes;
   readonly youngStars: YoungStarsLanes;
+  /** Task 15's own consume-time renorm gate — `model.armCloudReservation`/`spurCloudReservation`, `null` when nothing reserved this rebuild. */
+  readonly armCloudReservation: { readonly offset: number; readonly count: number } | null;
+  readonly spurCloudReservation: { readonly offset: number; readonly count: number } | null;
 };
 
 /** Each pass's own target resolution — `targets.reducedSize(...)`, resolved by the caller (this module never touches `targets`). */
@@ -100,6 +103,21 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     // presentBindGroup) — the HII header below omits this and packs the
     // seeding lanes inert.
     ismMapSeeding: model.ismMapSeeding,
+    // Task 15 — real only on THIS header (arm/spur cloud components exist
+    // only in fieldComps, never hiiComps); `null` reservation packs the
+    // absent-range default (`FieldHeaderInput`'s own doc).
+    armCloudRange: model.armCloudReservation
+      ? {
+          start: model.armCloudReservation.offset,
+          end: model.armCloudReservation.offset + model.armCloudReservation.count,
+        }
+      : undefined,
+    spurCloudRange: model.spurCloudReservation
+      ? {
+          start: model.spurCloudReservation.offset,
+          end: model.spurCloudReservation.offset + model.spurCloudReservation.count,
+        }
+      : undefined,
   };
 
   // `primaryCount` is packed to THIS pass's own instance count, not the

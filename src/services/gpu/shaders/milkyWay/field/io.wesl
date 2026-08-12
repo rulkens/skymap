@@ -8,7 +8,8 @@
 // dead weight, while the per-fragment RAY this pass needs has no home in
 // that layout at all.
 //
-// ## Byte layout (canonical — the offset authority for the CPU packer)
+// ## Byte layout (canonical — the offset authority for the CPU packer's
+// HEADER uniform only; 'comps' layout authority is records.wesl, see below)
 //
 // HEADER (uniform, binding 0) — camera + params only, unchanged every frame
 // in shape though its bytes are rewritten every frame (the fade/exposure
@@ -20,7 +21,7 @@
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
-//   offset 96  : counts2: vec4  (unused, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
+//   offset 96  : counts2: vec4  (spurCloudStart, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
@@ -45,9 +46,16 @@
 // 'instanceIndex < primaryCount'
 // is what keeps an extra's emission from ever reading the primary's dust.
 //
-// counts2.x is unused; it stays a lane rather than shrinking the header so
-// the offsets below it (and packFieldUniforms.ts's FIELD_HEADER_FLOATS) do
-// not move. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
+// counts2.x is spurCloudStart (Task 15) — the spur-cloud tier's own
+// reservation start index into 'comps' (galaxyFieldMixture.ts's
+// spurCloudReservation.offset), paired with dustCarve.w (spurCloudEnd)
+// below; fieldSplat/fragment.wesl's fs gates its spurCloudRenorm multiply on
+// 'input.inst' falling in [spurCloudStart, spurCloudEnd). Both default 0 —
+// an empty range that never matches any real instance index, the same
+// "absent means inert" idiom every other optional lane here uses. Previously
+// unused/held as a placeholder purely so the offsets below it (and
+// packFieldUniforms.ts's FIELD_HEADER_FLOATS) would not move if it were ever
+// claimed — now claimed. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
 // (createGalaxyRenderTargets.ts's rebuildDust sizes it to
 // reducedSize(render.dustDivisor) — see the DUST MAP entry below; dustMapTex's
 // extent is independent of fieldTex's) — read by dustMap.wesl's dust-noise
@@ -131,12 +139,12 @@
 // ismMapChannels.w would name a bubble weight after an unrelated ismMap
 // channel. Only .x is bubblePresent.wesl's own; .y/.z/.w are ismMapPresent.wesl's
 // "seeding" debug view (dust-seeding spike) — the exact composite density
-// dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
-// .y is the view's own weight (CPU-forced to 0, view dark, when there is no
-// map or the mean below is 0 — createGalaxyModel.ts's ismMapSeedingView), .z
-// is the CDF's ONE tempering knob, dust.cloud.dustPlacementCap ?? 0 (read
-// live off the SAME source dustParticleCloud.ts's buildDustParticleCloud
-// does) — a within-RING ratio cap, 0 = uncapped, .w is
+// ismMapDustCdfScan.wesl's evalWeight consumes (placeDust.wesl's own CDF
+// sampler), not another raw channel: .y is the view's own weight (CPU-forced
+// to 0, view dark, when there is no map or the mean below is 0 —
+// createGalaxyModel.ts's ismMapSeedingView), .z is the CDF's ONE tempering
+// knob, dust.cloud.dustPlacementCap ?? 0 (the same ringCap evalWeight reads)
+// — a within-RING ratio cap, 0 = uncapped, .w is
 // arrayMean(ismMapRingMeans(map, texel => texel.dust)) — the mean of the
 // map's own per-ring means, the SAME global mean the placement CDF's
 // radial-envelope term divides by. No ambient subtraction: the pedestal is
@@ -147,10 +155,10 @@
 // only ismMapPresent.wesl's own bind group references (createIsmMapOutput.ts's
 // ringMeansBuffer/writeRingMeans), written at the same cadence as this
 // header's own .z/.w. Together the three (.y weight, .z cap, .w globalMean)
-// plus the buffer let ismMapPresent.wesl reproduce dustParticleCloud.ts's
+// plus the buffer let ismMapPresent.wesl reproduce ismMapDustCdfScan.wesl's
 // density formula byte-for-formula, so this view cannot drift from what
-// placement actually consumes — see that file's own header for the
-// contract and ismMapPresent.wesl's fs for the mirrored math.
+// placement actually consumes — see that file's own evalWeight and
+// ismMapPresent.wesl's fs for the mirrored math.
 //
 // dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
 // (dustDetail.wesl) multiplies each dust splat's own slices by the ISM map's
@@ -169,7 +177,7 @@
 // (GalaxyHiiTuning.textureScale/textureContrast), read by hiiNoise.wesl's
 // hiiNoiseTerm for EVERY HII draw's fragments regardless of which group
 // (shell/DIG/associations) a component belongs to — only each component's own
-// comps[4i+2].w (textureWeight) varies per group. hiiTextureScale 0 is what
+// textureWeight (records.wesl's FieldComponentRec) varies per group. hiiTextureScale 0 is what
 // lets the shader skip the noise sample entirely via a uniform branch — the
 // primary field pass packs 0 here always, since its own components never
 // carry a nonzero textureWeight, so the far larger disc/arms fragment count
@@ -197,7 +205,11 @@
 // smoothstep window at 1 (a hard, defined edge) and widens it at 0 (soft).
 // stretch (.z, >=1) elongates the shared noise field along the disc's local
 // azimuthal direction (dustMap.wesl's stretchNoiseCoord) — stage 1 of wisp
-// anisotropy; 1 is isotropic (identity). .w is spare.
+// anisotropy; 1 is isotropic (identity). .w is spurCloudEnd (Task 15) — the
+// spur-cloud reservation's own END index, paired with counts2.x
+// (spurCloudStart) above; unrelated to S5, riding this row's one free lane
+// the same "free lane, not thematically related" precedent youngStars .zw
+// and dustDetail .yz both already set.
 //
 // youngStars (offset 240) is the HII header's shading/misc row: §5's
 // shader-side read of the ISM map's 'stars' tracer for the YOUNG STARS chain
@@ -206,7 +218,7 @@
 // just had the free lanes. hiiSplat/youngFragment.wesl's fs (and
 // extrasFragment.wesl's young branch), inside its existing star-grain
 // branch, multiplies a chain component's own term by a shaped sample of
-// comps[4i+3].w (starsWeight, see the comps doc below). contrastGamma (.x) is
+// starsWeight (records.wesl's FieldComponentRec; see the comps doc below). contrastGamma (.x) is
 // tuning.hii.youngStars.contrast, the exponent shaping that read; invMeanNorm
 // (.y) is packFieldUniforms.ts's CPU-computed 1/(texel-area-weighted mean of
 // pow(stars, contrastGamma)) — restructuring the read via gamma would
@@ -235,7 +247,12 @@
 // ceiling (~1x tile) the user is expected to stay under. Same "only the HII
 // header" asymmetry as .x — the field header packs 0, harmless since its own
 // components never carry a nonzero textureWeight and starGrainTerm never
-// runs there. .zw are spare.
+// runs there. .zw are armCloudStart/armCloudEnd (Task 15) — the INVERSE
+// asymmetry from .xy: only the FIELD header carries real values here (the
+// arm cloud has no HII counterpart), so the HII header packs both 0, an
+// empty range no HII instance index ever falls in. fieldSplat/fragment.wesl's
+// fs gates its armCloudRenorm multiply on 'input.inst' falling in
+// [armCloudStart, armCloudEnd).
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -254,12 +271,10 @@
 // off-centre framing the engine writes into proj[8]; without it the
 // analytic field slides against the sprites whenever a side panel is open.
 //
-// Per component, four vec4 carry the WORLD-space inverse covariance M of
-// exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre:
-//   [4i]   = (m00, m11, m22, amplitude)
-//   [4i+1] = (m01, m02, m12, boundRadius)
-//   [4i+2] = (colorR, colorG, colorB, textureWeight)
-//   [4i+3] = (cx, cy, cz, starsWeight)
+// Per component, the WORLD-space inverse covariance M of
+// exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre,
+// are records.wesl's FieldComponentRec — that struct is the layout
+// authority for 'comps', not an offset scheme documented here.
 // Six independent M entries, not three sigmas and a tilt: a component's own
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
@@ -283,19 +298,19 @@
 // unconditionally (extrasFragment.wesl's fs the same, inside its
 // negative-textureWeight branch) — see the youngStars header row above.
 //
-// Dust components (past dustOffset) reuse this exact 4-vec4 record with two
-// re-readings, not two new lanes: [4i].w (amplitude for emission) is the
-// component's central V-band extinction density, per unit length; [4i+2].xyz
-// (color for emission) is the per-channel A_lambda/A_V extinction ratio
+// Dust components (past dustOffset) reuse this exact FieldComponentRec with
+// two re-readings, not two new fields: amplitude (emission) is the
+// component's central V-band extinction density, per unit length; color
+// (emission) is the per-channel A_lambda/A_V extinction ratio
 // (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
 // component for a future per-extra dust loop, but NOT what the primary
 // galaxy's attenuation actually reads: dustMap.wesl sums every dust
 // component down to four depth-sliced tau columns before dustAttenuation.wesl's
 // componentEmission ever sees it, so the per-component colour lane has nowhere left to apply for the
 // primary. The law dustAttenuation.wesl's componentEmission uses instead arrives per-frame, in this
-// header's own dustExtinction lane below. [4i+1].w (boundRadius) and
-// [4i+3].xyz (center) mean the same thing they do for an emission
-// component; [4i+2].w (textureWeight) is left 0, since dust never sets it.
+// header's own dustExtinction lane below. boundRadius and center mean the
+// same thing they do for an emission component; textureWeight is left 0,
+// since dust never sets it.
 // Dust components are consumed by dustMap.wesl's own splat pass now, not
 // looped over inside the emission fragment's fs anymore — see binding 2.
 //
@@ -338,8 +353,12 @@
 // ismMapCartesianBake.wesl's one-shot world-xz re-bake (R=detail ratio,
 // G=stars) through the same affine UV (dustDetail.wesl's ismCartesianUv);
 // the blur pass that produces it runs once, upstream of the bake, not per
-// consumer. The remaining bindings keep their numbers so every pipeline and
-// bind group here stays as written.
+// consumer. Binding 14 belongs to dustMap/fragment.wesl alone (Task 9's
+// dustRenorm storage scale, GPU-written by ringReduce.wesl's csSurvivorSum
+// — see that binding's own doc). The remaining bindings keep their numbers
+// so every pipeline and bind group here stays as written.
+
+import package::milkyWay::field::records::FieldComponentRec;
 
 struct FieldUniforms {
   eye: vec4<f32>,
@@ -362,7 +381,7 @@ struct FieldUniforms {
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
-@group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read> comps: array<FieldComponentRec>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
 // Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) —
 // dustMap.wesl's own erosion term AND hiiNoise.wesl's hiiNoiseTerm both import

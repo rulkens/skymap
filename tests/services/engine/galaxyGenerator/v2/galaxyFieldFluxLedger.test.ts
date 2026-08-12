@@ -19,6 +19,7 @@ import {
 import { REFERENCE_GALAXIES } from '../../../../../tools/galaxy-renderer/src/data/referenceGalaxies';
 import type { ReferenceGalaxy } from '../../../../../tools/galaxy-renderer/@types/data/ReferenceGalaxy';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyFieldMixtureResult } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyArmTuning } from '../../../../../src/@types/galaxy/GalaxyArmTuning';
 
@@ -34,8 +35,30 @@ function componentFlux(component: GalaxyFieldComponent): number {
   return det > 0 ? (component.amplitude * (2 * Math.PI) ** 1.5) / Math.sqrt(det) : 0;
 }
 
-function totalFlux(components: readonly GalaxyFieldComponent[]): number {
-  return components.reduce((sum, component) => sum + componentFlux(component), 0);
+/**
+ * The spur-cloud and arm-cloud tiers' reservations carry zero-amplitude
+ * placeholders in `result.components` — GPU-side v2 placement fills their
+ * real emission post-submit, off this CPU path entirely
+ * (`GalaxyFieldMixtureResult`'s own doc). Each `reservation.flux` is exactly
+ * the flux `pushArmRidges`' debit credited to that tier, so folding both back
+ * in here keeps this ledger checking what it CAN honestly check from Vitest
+ * alone (no WebGPU here): that `buildGalaxyFieldMixture`'s own debit/credit
+ * bookkeeping across disc/ridge/cloud/spur is self-consistent. It does NOT
+ * check that `placeArmSpurCloud.wesl`/`placeArmCloud.wesl` actually encode
+ * that much emission into the amplitudes/covariances they write — a wrong
+ * TAU_ROOT3 or swapped sigma in either shader is invisible here. That check
+ * lives in `probeGpuErrors.ts`'s `readback:placeArmSpurCloud`/
+ * `readback:placeArmCloud` steps (the only place in the repo that can
+ * execute WGSL), which sum the GPU-placed records' own reconstructed flux
+ * and compare it against this SAME `reservation.flux`.
+ */
+function totalFlux(result: GalaxyFieldMixtureResult): number {
+  const componentsFlux = result.components.reduce((sum, component) => sum + componentFlux(component), 0);
+  return (
+    componentsFlux +
+    (result.spurCloudReservation?.flux ?? 0) +
+    (result.armCloudReservation?.flux ?? 0)
+  );
 }
 
 function geometryOf(ref: ReferenceGalaxy): GalaxyDescription {
@@ -112,11 +135,11 @@ describe('galaxy field flux ledger', () => {
   // mixture with no arm components conserves flux trivially.
   it.each(['m100', 'mw'])('%s renders arm components for that ledger to be about', (id) => {
     const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === id)!);
-    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).length;
+    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).components.length;
     const without = buildGalaxyFieldMixture(geometry, {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       arms: { ...ARMS, enabled: false },
-    }).length;
+    }).components.length;
     expect(withArms).toBeGreaterThan(without);
   });
 });

@@ -36,9 +36,10 @@ const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 @group(0) @binding(1) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(2) var ismMapSmp: sampler;
 @group(0) @binding(3) var<uniform> grid: IsmMapGrid;
-// One f32 per ring (createIsmMapOutput.ts's ringMeansBuffer/writeRingMeans,
-// dustParticleCloud.ts's ismMapRingMeans on the CPU twin) — the radial
-// envelope's own divisor, ring-indexed below. 'arrayLength' reads the
+// One f32 per ring (createIsmMapOutput.ts's ringMeansBuffer/writeRingMeans;
+// formerly dustParticleCloud.ts's own ismMapRingMeans call before Task 16
+// deleted its placement body) — the radial envelope's own divisor,
+// ring-indexed below. 'arrayLength' reads the
 // binding's own element count rather than a second mirrored ISM_MAP_RINGS
 // constant, so the two sides can never drift on how many rings there are.
 @group(0) @binding(4) var<storage, read> ringMeans: array<f32>;
@@ -108,36 +109,38 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.ismMapChannels.w;
 
   // The fifth, composite term: NOT another raw-channel isolation like the
-  // four above — this MIRRORS dustParticleCloud.ts's density callback (the
-  // one passed to buildIsmMapDustCdf) exactly, so seeding can be judged
-  // directly instead of inferred from channels an ambient pedestal can glow
-  // in without contributing placement mass. Change both together. No
-  // ambient subtraction: the pedestal is seeded ambient*gasProfile(r) and
-  // advected, not held uniform, so it is itself part of the structure
-  // placement seeds into. Two terms, exactly like the CPU: a STRUCTURAL
-  // radial envelope (ringMean/globalMean) the cap never touches, times a
-  // within-ring ratio the cap DOES clamp — see dustParticleCloud.ts's own
-  // placement comment for why capping the envelope itself would let the
-  // outer disc's sheer texel count win a contrast fight against the inner
-  // disc. Shown BEFORE texel-area weighting: the CDF multiplies by area, so
-  // outer texels weigh more in placement than they glow here.
+  // four above — this MIRRORS ismMapDustCdfScan.wesl's evalWeight (the GPU
+  // placement CDF's own density term, formerly dustParticleCloud.ts's
+  // density callback passed to buildIsmMapDustCdf before Task 16 deleted
+  // that CPU body) exactly, so seeding can be judged directly instead of
+  // inferred from channels an ambient pedestal can glow in without
+  // contributing placement mass. Change both together. No ambient
+  // subtraction: the pedestal is seeded ambient*gasProfile(r) and advected,
+  // not held uniform, so it is itself part of the structure placement seeds
+  // into. Two terms, exactly like evalWeight: a STRUCTURAL radial envelope
+  // (ringMean/globalMean) the cap never touches, times a within-ring ratio
+  // the cap DOES clamp — see that function's own comment for why capping
+  // the envelope itself would let the outer disc's sheer texel count win a
+  // contrast fight against the inner disc. Shown BEFORE texel-area
+  // weighting: the CDF multiplies by area, so outer texels weigh more in
+  // placement than they glow here.
   let globalMean = u.bubbleView.w;
   let cap = u.bubbleView.z;
   let rings = arrayLength(&ringMeans);
   let ringIdx = u32(clamp(round(ringT * f32(rings - 1u)), 0.0, f32(rings - 1u)));
   let ringMean = ringMeans[ringIdx];
-  // Guarded exactly like the CPU's density callback (dust <= 0 or ringMean
-  // <= 0 -> 0, no NaN from a 0/0 divide) AND the SAME survival floor S3
-  // applies post-placement — a texel below it would never keep a particle
-  // dustParticleCloud.ts placed there, so it reads as dark here too rather
-  // than glowing at a density nothing downstream survives at.
+  // Guarded exactly like evalWeight (dust <= 0 or ringMean <= 0 -> 0, no NaN
+  // from a 0/0 divide) AND the SAME survival floor placeDust.wesl applies
+  // post-placement — a texel below it would never keep a particle placed
+  // there, so it reads as dark here too rather than glowing at a density
+  // nothing downstream survives at.
   var seedingDensity = 0.0;
   if (
     globalMean > 0.0 && dust > 0.0 && ringMean > 0.0
       && dust >= DUST_SURVIVAL_FLOOR_FRAC * ringMean
   ) {
     let local = dust / ringMean;
-    // 0 = uncapped, matching dustPlacementCap's own default (dustParticleCloud.ts).
+    // 0 = uncapped, matching dustPlacementCap's own default.
     let capped = select(local, min(local, cap), cap > 0.0);
     seedingDensity = (ringMean / globalMean) * capped;
   }

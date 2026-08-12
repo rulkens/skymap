@@ -167,7 +167,13 @@ export function createGalaxyRenderTargets(
       label: 'galaxy:fieldTex',
       size: [w, h],
       format: formats.hdr,
-      usage: RA_TB,
+      // COPY_SRC beyond RA_TB's production need: `requestArmCloudRenderedFluxSum`/
+      // `requestArmSpurCloudRenderedFluxSum` (createGalaxyEngine.ts) each draw an
+      // isolated instance range into this target through the REAL production
+      // pipeline, then read it back via `readTextureChannelSum` to observe the
+      // arm-cloud/spur-cloud renorm's ACTUAL rendered effect — `dustMapTex`'s own
+      // identical precedent below.
+      usage: RA_TB | GPUTextureUsage.COPY_SRC,
     });
   }
 
@@ -188,7 +194,12 @@ export function createGalaxyRenderTargets(
       label: 'galaxy:dustMapTex',
       size: [w, h],
       format: formats.dustMap,
-      usage: RA_TB,
+      // COPY_SRC beyond RA_TB's production need: Task 9's own debug-only
+      // readback (readTextureChannelSum.ts) copies the whole map back to
+      // observe the Larson renorm's ACTUAL rendered effect — same "debug
+      // readback rides the production texture's own COPY_SRC flag"
+      // precedent `fieldComps`/`hiiComps` already establish for buffers.
+      usage: RA_TB | GPUTextureUsage.COPY_SRC,
     });
     if (dustViewTex) dustViewTex.destroy();
     dustViewTex = device.createTexture({

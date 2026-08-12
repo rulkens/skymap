@@ -95,6 +95,10 @@ const TILE_EVENT_CAP: u32 = 128u;
 @group(0) @binding(3) var<storage, read> events: array<f32>;
 @group(0) @binding(4) var armForcingTex: texture_2d<f32>;
 @group(0) @binding(5) var velocityTex: texture_storage_2d<rgba16float, write>;
+// Stars' own advection field — shear+curl only, no armGather/armDrag/event
+// kicks (composedVelocity's starsVel below). Separate texture because
+// velocityTex's free '.z' lane is already eventStamp, not a spare channel.
+@group(0) @binding(6) var starsVelocityTex: texture_storage_2d<rg32float, write>;
 
 var<workgroup> sharedEventIdx: array<u32, TILE_EVENT_CAP>;
 var<workgroup> sharedEventCount: atomic<u32>;
@@ -185,6 +189,10 @@ struct VelocitySample {
   // Dimensionless [0,1] "how present is an event here" — Pass B's eventAge-
   // reset and activity EMA both key off this, not off speed.
   eventStamp: f32,
+  // Shear + curl, undragged and ungathered — stars are collisionless and
+  // shouldn't inherit gas's arm-gather/drag or event kicks. See starsVel's
+  // own comment below for the term-by-term why.
+  starsVel: vec2<f32>,
 }
 
 // The composed velocity at this invocation's OWN texel, walking only the
@@ -207,6 +215,12 @@ fn composedVelocity(
   let shearVelAz = ismMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
   let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, u.curlScale, f32(genStep));
   let grad = forcingGradient(az, ring, azCountI, ringCountI, azToRingMetric);
+
+  // Stars' own field: shearVelAz UNDRAGGED (armDrag below is a gas-only
+  // stall) plus the full curl vector (both axes — curl is a single
+  // divergence-free field, not something to keep in ring and drop in az).
+  // No gatherGrad, no event loop: those are gas-only mass transport.
+  let starsVel = vec2<f32>(shearVelAz + u.curlStrength * curl.x, u.curlStrength * curl.y);
 
   // armGather's OWN forcing sample, offset from the crest by gatherOffset
   // texels: gas doesn't gather exactly on the ridge, it gathers where the
@@ -277,7 +291,7 @@ fn composedVelocity(
     }
   }
 
-  return VelocitySample(vec2<f32>(velAz, velRing), eventStamp);
+  return VelocitySample(vec2<f32>(velAz, velRing), eventStamp, starsVel);
 }
 
 @compute @workgroup_size(16, 16)
@@ -366,4 +380,5 @@ fn cs(
 
   let sample = composedVelocity(i32(gid.x), i32(gid.y), azCount, ringCount, azToRingMetric, genStep, cullCount);
   textureStore(velocityTex, vec2<i32>(i32(gid.x), i32(gid.y)), vec4<f32>(sample.vel.x, sample.vel.y, sample.eventStamp, 0.0));
+  textureStore(starsVelocityTex, vec2<i32>(i32(gid.x), i32(gid.y)), vec4<f32>(sample.starsVel.x, sample.starsVel.y, 0.0, 0.0));
 }

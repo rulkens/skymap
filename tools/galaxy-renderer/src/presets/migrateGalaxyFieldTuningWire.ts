@@ -39,9 +39,7 @@ const LEGACY_SECTION_KEYS: Readonly<Record<string, (typeof SECTION_KEYS)[number]
 };
 
 /** Same vintage, one level down: fields renamed in place inside a surviving section. */
-const LEGACY_FIELD_RENAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  hii: { sfMapSeeding: 'ismMapSeeding' },
-};
+const LEGACY_FIELD_RENAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
 
 /** v2 flat key -> where it lands, `arms.cloud` spelled as the two hops it is. */
 const V2_FLAT_PATHS: Readonly<Record<string, readonly [string, ...string[]]>> = {

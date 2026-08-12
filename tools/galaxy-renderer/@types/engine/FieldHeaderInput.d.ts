@@ -93,4 +93,19 @@ export type FieldHeaderInput = {
    * value" asymmetry as `starGrainFeatureScale` above.
    */
   readonly starGrainWarpAmp?: number;
+  /**
+   * Task 15's arm-cloud/spur-cloud consume-time renorm gates —
+   * `GalaxyFieldMixtureResult.armCloudReservation`/`spurCloudReservation`'s
+   * own `[offset, offset + count)` slot ranges in THIS pass's `comps`.
+   * `fieldSplat/fragment.wesl`'s fs multiplies `armCloudRenorm[0]`/
+   * `spurCloudRenorm[0]` into a component's amplitude only when its own
+   * `input.inst` falls in the matching range — packs to `io.wesl`'s free
+   * `perf.zw`/`counts2.x`+`dustCarve.w` lanes (that struct's own doc).
+   * Absent packs an EMPTY range (0, 0), the INVERSE asymmetry from
+   * `quadCapNdc`/`starGrainWarpAmp` above: only the FIELD header ever passes
+   * real values here, since arm/spur cloud components exist only in
+   * `fieldComps`, never `hiiComps`.
+   */
+  readonly armCloudRange?: { readonly start: number; readonly end: number };
+  readonly spurCloudRange?: { readonly start: number; readonly end: number };
 };

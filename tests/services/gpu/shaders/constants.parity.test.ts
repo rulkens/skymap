@@ -162,19 +162,28 @@ describe('ISM_MAP_AMBIENT_DUST parity (ismMapAmbientDust.ts ↔ its WESL mirrors
 
 /**
  * DUST_SURVIVAL_FLOOR_FRAC (dustParticleCloud.ts) is mirrored into
- * ismMapPresent.wesl's "seeding" debug view, so a texel that would never
+ * ismMapPresent.wesl's "seeding" debug view (so a texel that would never
  * keep a map-seeded particle past S3's alive gate never glows in the view
- * either — same `readWeslConst` idiom as ISM_MAP_AMBIENT_DUST above.
+ * either) AND into placeDust.wesl's own survival-floor gate (the actual
+ * GPU placement, not just its debug view) — same `readWeslConst` idiom as
+ * ISM_MAP_AMBIENT_DUST above, extended to a `files` loop for the same
+ * reason: two independent hand mirrors, either can drift on its own.
  */
-describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ ismMapPresent.wesl)', () => {
-  it("ismMapPresent.wesl's DUST_SURVIVAL_FLOOR_FRAC equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/milkyWay/ismMap/ismMapPresent.wesl';
-    const weslValue = readWeslConst(file, 'DUST_SURVIVAL_FLOOR_FRAC');
-    expect(weslValue, `DUST_SURVIVAL_FLOOR_FRAC is missing from ${file}`).toBeDefined();
-    expect(
-      weslValue,
-      `${file}: WESL DUST_SURVIVAL_FLOOR_FRAC (${weslValue}) does not match TS DUST_SURVIVAL_FLOOR_FRAC (${DUST_SURVIVAL_FLOOR_FRAC})`,
-    ).toBe(DUST_SURVIVAL_FLOOR_FRAC);
+describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ its WESL mirrors)', () => {
+  const files = [
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapPresent.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/placeDust.wesl',
+  ];
+
+  it("each file's DUST_SURVIVAL_FLOOR_FRAC equals the TS export", () => {
+    for (const file of files) {
+      const weslValue = readWeslConst(file, 'DUST_SURVIVAL_FLOOR_FRAC');
+      expect(weslValue, `DUST_SURVIVAL_FLOOR_FRAC is missing from ${file}`).toBeDefined();
+      expect(
+        weslValue,
+        `${file}: WESL DUST_SURVIVAL_FLOOR_FRAC (${weslValue}) does not match TS DUST_SURVIVAL_FLOOR_FRAC (${DUST_SURVIVAL_FLOOR_FRAC})`,
+      ).toBe(DUST_SURVIVAL_FLOOR_FRAC);
+    }
   });
 });
 

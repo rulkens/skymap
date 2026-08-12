@@ -165,8 +165,10 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[22] = dust.count;
   out[23] = primaryCount;
 
-  // counts2 24..27 = (unused, dustMapHeightPx, targetWidthPx, targetHeightPx).
-  out[24] = 0;
+  // counts2 24..27 = (spurCloudStart, dustMapHeightPx, targetWidthPx, targetHeightPx).
+  // spurCloudStart pairs with dustCarve.w (spurCloudEnd) below — Task 15's
+  // consume-time renorm gate, absent packs an empty (0,0) range.
+  out[24] = input.spurCloudRange?.start ?? 0;
   out[25] = dust.mapHeightPx;
   out[26] = targetSizePx[0];
   out[27] = targetSizePx[1];
@@ -238,13 +240,14 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[54] = hiiTexture.contrast;
   out[55] = input.starGrainFeatureScale ?? 0;
 
-  // dustCarve 56..59 = (carve, sharpness, stretch, spare). S5 (io.wesl's own
-  // doc) — carve <= 0 is dustMap.wesl's mandatory identity branch, so the
-  // other two lanes are inert-but-harmless whenever `dust` is `INERT_DUST`.
+  // dustCarve 56..59 = (carve, sharpness, stretch, spurCloudEnd). S5 (io.wesl's
+  // own doc) — carve <= 0 is dustMap.wesl's mandatory identity branch, so the
+  // other two S5 lanes are inert-but-harmless whenever `dust` is `INERT_DUST`.
+  // .w pairs with counts2.x (spurCloudStart) above — Task 15's own free lane.
   out[56] = dust.carve.carve;
   out[57] = dust.carve.sharpness;
   out[58] = dust.carve.stretch;
-  out[59] = 0;
+  out[59] = input.spurCloudRange?.end ?? 0;
 
   // youngStars 60..63 = (contrastGamma, invMeanNorm, nearFadeStart,
   // nearFadeEnd). Only the HII header ever passes real values (`youngStars`'s
@@ -259,15 +262,17 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[62] = youngStars.nearFadeStart ?? 0;
   out[63] = youngStars.nearFadeEnd ?? 0;
 
-  // perf 64..67 = (quadCapNdc, starGrainWarpAmp, spare, spare). Both .x/.y
-  // follow the same "only the HII header ever passes a real value" idiom
-  // (`FieldHeaderInput`'s own doc) — absent packs 0, each lane's own
+  // perf 64..67 = (quadCapNdc, starGrainWarpAmp, armCloudStart, armCloudEnd).
+  // .x/.y follow the same "only the HII header ever passes a real value"
+  // idiom (`FieldHeaderInput`'s own doc) — absent packs 0, each lane's own
   // consumer guard value (`splatSilhouette.wesl`'s cap disabled, `starGrain.
-  // wesl`'s zero-amplitude no-op).
+  // wesl`'s zero-amplitude no-op). .zw are the INVERSE asymmetry — Task 15's
+  // arm-cloud renorm gate, real only on the FIELD header, absent packs an
+  // empty (0,0) range.
   out[64] = input.quadCapNdc ?? 0;
   out[65] = input.starGrainWarpAmp ?? 0;
-  out[66] = 0;
-  out[67] = 0;
+  out[66] = input.armCloudRange?.start ?? 0;
+  out[67] = input.armCloudRange?.end ?? 0;
 
   return out;
 }
@@ -284,6 +289,10 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
  * same buffer but are drawn by their own separate pass instead
  * (`dustMapPipe`'s `dustMap/vertex.wesl`+`dustMap/fragment.wesl`, instanced
  * over `dust.count`; see `createGalaxyEngine.ts`'s dust-column map pipeline).
+ *
+ * The byte order below is a MIRROR, not the authority: `records.wesl`'s
+ * `FieldComponentRec` is the layout SSoT (`comps: array<FieldComponentRec>`,
+ * `io.wesl`), checked against this function by `records.parity.test.ts`.
  */
 export function packFieldComponents(
   mixture: readonly GalaxyFieldComponent[],

@@ -38,9 +38,10 @@ fn sliceTransmitRatio(x: vec3<f32>) -> vec3<f32> {
 // galaxy's own components (io.wesl's counts.w doc — an extra's emission
 // must never darken under the primary's dust); 'coeffs' is this
 // component's own gaussianRayCoeffs(); 'amplitude'/'emissionColor' are its
-// comps[4i].w/[4i+2].xyz values. Falls back to the plain (no-dust-column)
+// amplitude/color fields. Falls back to the plain (no-dust-column)
 // integral wherever attenuation doesn't apply, sharing the SAME 'a < 1e-12'
-// null-space guard both paths need.
+// null-space guard both paths need. See records.wesl's FieldComponentRec
+// for the fields these are read from.
 fn componentEmission(
   fragPos: vec2<f32>,
   instanceIndex: u32,

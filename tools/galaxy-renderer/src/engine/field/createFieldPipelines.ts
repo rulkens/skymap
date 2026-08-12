@@ -41,6 +41,11 @@ export type FieldPipelineDeps = {
   readonly starGrainTex: GPUTexture;
   readonly starGrainSampler: GPUSampler;
   readonly dustMapSampler: GPUSampler;
+  /** dustMap/fragment.wesl binding 14 — Task 9's Larson renorm scale, GPU-written by `ringReduce.dispatchSurvivorSum`. Fixed-lifetime, never regrows (see `createIsmMapRingReduce.ts`'s own `dustRenormBuffer`), so it rides here like `fieldUbo`/`hiiUbo`, not the `rebuild*` regrow callbacks below. */
+  readonly dustRenormBuffer: GPUBuffer;
+  /** fieldSplat/fragment.wesl bindings 15/16 — Task 15's arm-cloud/spur-cloud reciprocal-weightSum scales, GPU-written by `ringReduce.dispatchArmCloudFluxWeightSum`/`dispatchArmSpurFluxWeightSum`. Same fixed-lifetime shape as `dustRenormBuffer` above. */
+  readonly armRenormBuffer: GPUBuffer;
+  readonly spurRenormBuffer: GPUBuffer;
   /**
    * `targets` doesn't exist yet at construction — its own dust-map-recreated
    * callback IS `rebuildDustMapDependents` below. Read live, per the "reassigned
@@ -97,6 +102,9 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     starGrainTex,
     starGrainSampler,
     dustMapSampler,
+    dustRenormBuffer,
+    armRenormBuffer,
+    spurRenormBuffer,
     getDustMapTex,
   } = deps;
 
@@ -225,6 +233,11 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
         { binding: 7, resource: dustMapSampler },
         { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
+        // Task 9's Larson renorm scale — only dustMap/fragment.wesl imports
+        // it, so 'layout: auto' adds this entry to dustMapPipe's bind group
+        // alone (io.wesl's own doc for the same "only the shader that
+        // imports a binding gains it" contract).
+        { binding: 14, resource: { buffer: dustRenormBuffer } },
       ],
     });
   }
@@ -241,6 +254,12 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
         // (dustPresent.wesl gets away with a 1:1 texel load below).
         { binding: 2, resource: getDustMapTex().createView() },
         { binding: 6, resource: dustMapSampler },
+        // Task 15's own two renorm scales — only fieldSplat/fragment.wesl
+        // imports these, so 'layout: auto' adds these entries to
+        // fieldSplatPipe's bind group alone (dustMapBG's own binding-14
+        // precedent above).
+        { binding: 15, resource: { buffer: armRenormBuffer } },
+        { binding: 16, resource: { buffer: spurRenormBuffer } },
       ],
     });
   }

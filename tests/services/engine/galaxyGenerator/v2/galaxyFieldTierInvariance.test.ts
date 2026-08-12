@@ -53,7 +53,7 @@ function signatureOf(params: Partial<GalaxyParams>, starCount: number): Signatur
     shared: params.shared ?? {},
     legacy: { ...params.legacy, starCount },
   });
-  const mixture = buildGalaxyFieldMixture(description, DEFAULT_GALAXY_FIELD_TUNING);
+  const mixture = buildGalaxyFieldMixture(description, DEFAULT_GALAXY_FIELD_TUNING).components;
   const fluxByPopulation: Record<string, number> = {};
   let amplitudeSum = 0;
   for (const component of mixture) {

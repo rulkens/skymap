@@ -15,10 +15,8 @@ import package::milkyWay::field::hiiSplat::shadeCommon::hiiNearFadeActive;
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> HiiSplatOut {
   let corner = quadCorner(vi);
-  let mOffBoundRadius = comps[4u * inst + 1u];
-  let centerStarsWeight = comps[4u * inst + 3u];
-  let center = centerStarsWeight.xyz;
-  let boundRadius = mOffBoundRadius.w;
+  let center = comps[inst].center;
+  let boundRadius = comps[inst].boundRadius;
 
   let eye = u.eye.xyz;
   let camRight = u.camRight.xyz;

@@ -9,7 +9,7 @@
  * LOD tier or sprite constant can move them.
  */
 
-import { buildArmParticleCloud, deriveArmCloudCount } from './armParticleCloud';
+import { deriveArmCloudCount } from './armParticleCloud';
 import {
   armColor,
   armCrossSigma,
@@ -17,7 +17,7 @@ import {
   armRidgeCurvePoint,
 } from './armRidgeGeometry';
 import { buildArmSpurs } from './armSpurGeometry';
-import { buildArmSpurParticleCloud, deriveArmSpurCloudCount } from './armSpurParticleCloud';
+import { deriveArmSpurCloudCount } from './armSpurParticleCloud';
 import { DEFAULT_GALAXY_DUST_PARAMS } from './defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from './defaultGalaxyIsmMapFluidParams';
 import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from './defaultGalaxyIsmMapParams';
@@ -36,6 +36,7 @@ import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyFieldMixtureResult } from '../../../../@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -329,10 +330,6 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // Whole-field master (board item 19) — multiplies shells/dig/youngStars'
     // own gains below rather than doubling as the shells' implicit one.
     brightness: 1,
-    // Map-seeded by default on this branch — the whole point is seeing dust
-    // and knots driven by the same fluid-generator run. 0 recovers the
-    // arm-ridge catalog byte-identically.
-    ismMapSeeding: 1,
     shells: {
       enabled: true,
       // 1 = the master alone, same neutral-gain role `youngStars.brightness`
@@ -855,7 +852,7 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
 export function buildGalaxyFieldMixture(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING,
-): readonly GalaxyFieldComponent[] {
+): GalaxyFieldMixtureResult {
   const out: GalaxyFieldComponent[] = [];
 
   // `pushArmRidges`' contrast law needs a disc to measure its excess against
@@ -880,9 +877,10 @@ export function buildGalaxyFieldMixture(
   // The particle cloud's own budget is reserved the SAME way: computed
   // before `pushArmRidges` runs so its `perArmBudget` shrinks to leave room,
   // rather than the cloud starving the ridge chain (or vice versa) via a
-  // silent `packFieldUniforms` clamp. `deriveArmCloudCount` is also what
-  // `buildArmParticleCloud` itself calls to size the cloud it actually
-  // builds below, so the reservation and the build can never disagree.
+  // silent `packFieldUniforms` clamp. `deriveArmCloudCount` is also the
+  // slot COUNT `createIsmMapPlaceArmCloud.ts` packs for `placeArmCloud.wesl`'s
+  // GPU dispatch (Task 13), so the reservation and the build can never
+  // disagree.
   const armCloudCount =
     tuning.arms.enabled && tuning.arms.cloud.enabled && clampedArmCloudShare(tuning) > 0
       ? deriveArmCloudCount(geometry, tuning)
@@ -931,18 +929,67 @@ export function buildGalaxyFieldMixture(
   }
   if (tuning.disc.enabled) out.push(...discOut);
 
+  // `armCloudCount` fixed slots, zero-amplitude — GPU-side v2 placement
+  // (createIsmMapPlaceArmCloud.ts) fills them post-submit, the SAME
+  // "CPU decides slot COUNT, shader decides slot CONTENT" split the spur
+  // reservation below takes (Task 13's own cut of Task 7's contract).
+  // `armCloudCount` was already computed above (BEFORE `pushArmRidges` ran,
+  // so its own budget shrank to leave room) — reused here rather than
+  // re-derived, so the reservation and the count that sized it can never
+  // disagree.
   const cloudFlux = armExcessFlux * cloudShare;
+  let armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'] = null;
   if (cloudFlux > 0) {
-    out.push(...buildArmParticleCloud(geometry, tuning, cloudFlux, geometry.seed));
+    armCloudReservation = { offset: out.length, count: armCloudCount, flux: cloudFlux };
+    for (let i = 0; i < armCloudCount; i++) out.push(ARM_CLOUD_RESERVED_COMPONENT);
   }
 
+  // `spurCloudCount` fixed slots, zero-amplitude — GPU-side v2 placement
+  // (createIsmMapPlaceArmSpurCloud.ts) fills them post-submit, the same
+  // "CPU decides slot COUNT, shader decides slot CONTENT" split placeDust.wesl
+  // established. `offset` is this galaxy's OWN local index into `out` at
+  // push time — valid as an absolute `fieldComps` index only for the
+  // CENTRAL galaxy (whose mixture always sits first in the emission
+  // concatenation); an extra's own reservation is never GPU-filled yet
+  // (dust took the identical central-only cut in Task 7; a follow-up widens
+  // both).
   const spurFlux = armExcessFlux * spurShare;
+  let spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'] = null;
   if (spurFlux > 0) {
-    out.push(...buildArmSpurParticleCloud(geometry, spurArms, tuning, spurFlux, geometry.seed));
+    spurCloudReservation = { offset: out.length, count: spurCloudCount, flux: spurFlux, spurArms };
+    for (let i = 0; i < spurCloudCount; i++) out.push(SPUR_CLOUD_RESERVED_COMPONENT);
   }
 
   pushBulge(geometry, out, tuning);
   pushBar(geometry, out, tuning);
   pushHalo(geometry, out, tuning);
-  return out;
+  return { components: out, spurCloudReservation, armCloudReservation };
 }
+
+/**
+ * A reserved-but-unfilled spur-cloud slot: amplitude 0 draws nothing (the
+ * mixture's own "amplitude as liveness" convention — `placeDust.wesl`'s
+ * survival-floor zeroing is the same idiom), and every other lane sits at
+ * its safe identity (zero inverse covariance means the Gaussian's exponent
+ * is always 0, never Inf/NaN, so a reader that ignores `amplitude` still
+ * can't fault). One shared readonly object — every reserved slot packs the
+ * same bytes, so nothing is gained by allocating `count` distinct ones.
+ */
+const SPUR_CLOUD_RESERVED_COMPONENT: GalaxyFieldComponent = {
+  amplitude: 0,
+  invCovDiagonal: [0, 0, 0],
+  invCovOffDiagonal: [0, 0, 0],
+  color: [0, 0, 0],
+  center: [0, 0, 0],
+  boundRadius: 0,
+};
+
+/** The arm-cloud twin of `SPUR_CLOUD_RESERVED_COMPONENT` — same shape, same reasoning. */
+const ARM_CLOUD_RESERVED_COMPONENT: GalaxyFieldComponent = {
+  amplitude: 0,
+  invCovDiagonal: [0, 0, 0],
+  invCovOffDiagonal: [0, 0, 0],
+  color: [0, 0, 0],
+  center: [0, 0, 0],
+  boundRadius: 0,
+};

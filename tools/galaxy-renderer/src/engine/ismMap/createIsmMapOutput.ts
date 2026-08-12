@@ -45,6 +45,10 @@ export type IsmMapOutput = {
   readonly cartesianTexture: GPUTexture;
   /** rMin/rMax — dustPresent.wesl's S4 read needs the same log-polar mapping the present pass uses. */
   readonly gridBuffer: GPUBuffer;
+  /** One f32/ring, `createIsmMapRingReduce.ts`'s dispatch target and `ismMapPresent.wesl`'s own read — see that shader's binding-4 comment. */
+  readonly ringMeansBuffer: GPUBuffer;
+  /** Debug-only staging buffer for `createIsmMapReadbacks.ts`'s `requestRingMeans` — the probe's GPU-vs-CPU numeric check. No production reader. */
+  readonly ringMeansReadbackBuffer: GPUBuffer;
   readonly mapSampler: GPUSampler;
   /** Writes `grid`'s rMin/rMax into `gridBuffer` — every dispatcher rebuild does this before running (or clearing) whichever generator is active. */
   writeGrid(grid: GalaxyIsmMapGridRadius): void;
@@ -184,10 +188,18 @@ export function createIsmMapOutput(
   // than a second mirrored size constant. STORAGE not UNIFORM: a uniform's
   // std140-style array stride would waste 3 of every 4 lanes on padding this
   // shader never reads.
+  // COPY_SRC (beyond STORAGE|COPY_DST) is for the debug readback only —
+  // `ismMapPresent.wesl`'s own read never copies this buffer anywhere.
   const ringMeansBuf = device.createBuffer({
     label: 'galaxy:ismMapRingMeansBuf',
     size: ISM_MAP_RINGS * 4,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+  });
+  // Debug-only staging copy of `ringMeansBuf` — see the type's own doc.
+  const ringMeansReadbackBuffer = device.createBuffer({
+    label: 'galaxy:ismMapRingMeansReadbackBuf',
+    size: ISM_MAP_RINGS * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
   // Built once — `texture`/`gridUbo` are the same GPU objects for this
   // module's whole lifetime, only their CONTENT changes per rebuild, and a
@@ -254,6 +266,8 @@ export function createIsmMapOutput(
     dustBlurTexture: ismMapDustBlurTex,
     cartesianTexture,
     gridBuffer: gridUbo,
+    ringMeansBuffer: ringMeansBuf,
+    ringMeansReadbackBuffer,
     mapSampler,
 
     writeGrid(grid): void {
@@ -304,6 +318,7 @@ export function createIsmMapOutput(
       readbackBuffer.destroy();
       gridUbo.destroy();
       ringMeansBuf.destroy();
+      ringMeansReadbackBuffer.destroy();
     },
   };
 }

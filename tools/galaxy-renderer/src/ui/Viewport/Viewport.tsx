@@ -21,7 +21,11 @@ import { createGalaxyEngine } from '../../engine/createGalaxyEngine';
 import { DEFAULT_GALAXY_PARAMS } from '../../data/defaultGalaxyParams';
 import { DEFAULT_RENDER_SETTINGS } from '../../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../../data/defaultLodSettings';
+import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import styles from './Viewport.module.css';
+
+/** `?probeReadback`-gated bridge so `probeGpuErrors.ts` (a page.evaluate, no React tree) can reach the live engine handle — see `createIsmMapReadbacks.ts`'s `requestRingMeans`. */
+type ProbeReadbackWindow = { __probeEngine?: GalaxyEngineHandle };
 
 export type ViewportProps = {
   readonly onEngine?: (engine: GalaxyEngineHandle | null) => void;
@@ -74,6 +78,11 @@ function Viewport({
         handle = engine;
         setStatus('live');
         onEngine?.(engine);
+        // Debug-only: a normal session never puts engine internals on
+        // `window` — only a run navigated with `?probeReadback` does.
+        if (hasUrlGate('probeReadback')) {
+          (window as unknown as ProbeReadbackWindow).__probeEngine = engine;
+        }
       })
       .catch((err: unknown) => {
         if (disposed) return;
@@ -85,6 +94,7 @@ function Viewport({
       disposed = true;
       handle?.dispose();
       onEngine?.(null);
+      delete (window as unknown as ProbeReadbackWindow).__probeEngine;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot-once effect: onEngine/onPerf/onStats/onFade/onOrientationDiagnostics are read only inside the one-time engine construction above; listing them would re-run the boot on every new inline callback from the parent
   }, []);

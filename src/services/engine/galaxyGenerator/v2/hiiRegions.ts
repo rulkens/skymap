@@ -36,7 +36,6 @@ import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCova
 import { memoizeLastByKeys } from '../../../../utils/cache/memoizeLastByKeys';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleIsmMapDustCdf } from '../../../../utils/galaxy/sampleIsmMapDustCdf';
-import { sampleIsmMapEventPosition } from '../../../../utils/galaxy/sampleIsmMapEventPosition';
 import { ismMapRingRadius } from '../../../../utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
@@ -87,14 +86,20 @@ const CLUSTER_FLUX_SHARE_MAX = 0.2;
  * AFTER the catalog regions, not a per-region add-on: DIG isn't tied to any
  * one HII event, it is a separate haze the arms and knots sit inside.
  */
-/** Per-blob sigma range, parsecs — wide enough that a complex's blobs read as a continuous wash rather than a second population of dots (no blur pass; this range IS the smoothing). */
-const DIG_SIGMA_MIN_PC = 100;
-const DIG_SIGMA_MAX_PC = 300;
+/**
+ * Per-blob sigma range, parsecs — wide enough that a complex's blobs read as
+ * a continuous wash rather than a second population of dots (no blur pass;
+ * this range IS the smoothing). Exported for `computeDigVeilBudget.ts`
+ * (Task 8's GPU-side budget math) — no logic change, same "reservation
+ * survives, placement doesn't" cut Task 7 made for dust's own constants.
+ */
+export const DIG_SIGMA_MIN_PC = 100;
+export const DIG_SIGMA_MAX_PC = 300;
 /** Extraplanar DIG stands well above the disc a razor-thin HII shell sits in (Haffner+2009 review). */
-const DIG_SCALE_HEIGHT_PC = 300;
+export const DIG_SCALE_HEIGHT_PC = 300;
 /** Ceiling on `fraction / (1 - fraction)` so a `dig.fraction` near 1 saturates the veil instead of diverging it. */
-const DIG_FLUX_RATIO_MAX = 4;
-/** Dedicated rng stream salt for the DIG veil draws — distinct from "SFMP"/"HII "/"DUST"/"ARMC". */
+export const DIG_FLUX_RATIO_MAX = 4;
+/** Dedicated rng stream salt for the DIG veil draws — distinct from "SFMP"/"HII "/"DUST"/"ARMC". CPU-only: `placeDigVeil.wesl` uses its own slot-hash population tags instead (see that file's own header). */
 const DIG_SALT = 0x44494720; // "DIG "
 /**
  * Component-budget ceiling for the DIG veil, exported so a caller sizing a
@@ -108,8 +113,8 @@ const DIG_SALT = 0x44494720; // "DIG "
  */
 export const DIG_MAX_COUNT = 1440;
 /** A complex's child scatter before `dig.elongation` stretches/squeezes it — GMC-association scale, mirroring `dustParticleCloud.ts`'s own `COMPLEX_SPREAD_PC`; an eyeballed starting point, not a measurement. */
-const DIG_COMPLEX_SPREAD_PC = 250;
-/** Children flatten relative to their complex's in-plane extent — same ratio `clusteredDiscPlacement.ts`'s (private) `CHILD_POLE_RATIO` uses. */
+export const DIG_COMPLEX_SPREAD_PC = 250;
+/** Children flatten relative to their complex's in-plane extent — same ratio `clusteredDiscPlacement.ts`'s (private) `CHILD_POLE_RATIO` uses. Mirrored (not exported) in `placeDigVeil.wesl` — GPU-side shaders never import a TS constant, see that file's own header. */
 const DIG_CHILD_POLE_RATIO = 0.4;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
@@ -232,8 +237,8 @@ function candidateRegionsFromCatalog(
 
 /**
  * World centre of one fluid-sim event, resolved off its (az, ring) log-polar
- * grid coordinate — the SAME radius/angle -> world formula
- * `sampleIsmMapEventPosition.ts` uses for its CDF-sampled placements
+ * grid coordinate — the SAME radius/angle -> world x/z convention
+ * `placeDigMapComplex` below uses for its CDF-sampled placements
  * (`x = r cos θ, y = warpHeight(r, θ), z = r sin θ`), just fed a texel-exact
  * (radius, angle) instead of a CDF-jittered one: a fluid event's own `az`/
  * `ring` already carries the sub-texel jitter `buildGalaxyIsmMapFluidEvents`
@@ -359,78 +364,6 @@ function resolveEventLifecyclePopulation(
     if (event.age01 <= RECENT_EVENT_AGE_FRAC_CEIL) count++;
   }
   return count;
-}
-
-/** Dedicated rng stream salt for the map-position draws — distinct from "HII " (sprite scatter) and "DUST"/"ARMC". */
-const ISM_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
-
-/**
- * Last-value memo for one of the two per-call `buildIsmMapDustCdf` builds
- * below (`memoizeLastByKeys` — see its own header for the Object.is/miss
- * discipline) — each is an O(rings x az [x arms]) pass that a tuning drag
- * outside that tier's own discriminant (map identity, `armBias`,
- * `arms.widthScale`) leaves byte-identical, since `buildIsmMapDustCdf` is a
- * pure function of exactly those inputs. `createGalaxyModel.ts` keeps
- * `ismMap`/`geometry` reference-stable across a `setFieldTuning` call that
- * doesn't touch them, so a single slot per tier is enough: only the CENTRAL
- * galaxy's call ever hands in a non-null `ismMap` (extras pass `null` and
- * never reach these builders), so nothing else contends for the slot within
- * one rebuild.
- */
-const seedingCdfMemo = memoizeLastByKeys<GalaxyIsmMapDustCdf>();
-
-/**
- * applyIsmMapSeeding — a POST-PASS over `planRegions`' output rather than a
- * resolver threaded into it: admission (which events survive `HII_MAX_COUNT`)
- * depends only on luminosity, never on where an event ends up, so replacing
- * `center` afterward changes nothing about which regions exist — it keeps
- * `planRegions` pure and the `ismMapSeeding === 0` path byte-identical, with
- * no seeding-aware branch inside the admission logic itself.
- *
- * FIXED 4 draws per kept region (1 blend decision + 3 from
- * `sampleIsmMapEventPosition`'s CDF sample) whether or not that region takes
- * the map path — `sampleIsmMapEventPosition` runs unconditionally below — so
- * moving the `ismMapSeeding` slider only ever changes which regions swap
- * centres, never the rng draws (and hence positions) of the ones that don't.
- *
- * Weighted by `activity` alone (the short-memory EMA of event stamps), not
- * the `stars` channel: `stars` is a long-lived advected tracer, so a shell
- * CDF-sampled from it would scatter onto 20-100 Myr drifted material with
- * no ionizing stars left — shells
- * need FRESH sites, which `activity` still gives (ignition zeroes gas in
- * the same cell, so this stays anti-correlated with the dust CDF by
- * construction — knots avoid the dust the generator just cleared, the same
- * decorrelation M74 shows, Chevance+2020).
- *
- * NEVER called for `tuning.ismMap.generator === 'fluid'` regions (see
- * `buildHiiRegions`'s call site) — a fluid region's centre already IS a map
- * position (`candidateRegionsFromFluidEvents`'s own log-polar transform), so
- * re-jittering it onto this CDF would undo the exact placement-sim
- * correlation the fluid path exists to create, not refine it.
- */
-function applyIsmMapSeeding(
-  regions: readonly RegionPlan[],
-  geometry: GalaxyDescription,
-  tuning: GalaxyFieldTuning,
-  ismMap: GalaxyIsmMap | null,
-  seed: number,
-): readonly RegionPlan[] {
-  const weight = tuning.hii.ismMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
-  if (weight <= 0 || !ismMap || regions.length === 0) return regions;
-
-  // `activity` alone, no tuning input at all — this CDF's only discriminant
-  // is the map itself, so the cache key is just `ismMap`.
-  const cdf = seedingCdfMemo.get([ismMap], () =>
-    buildIsmMapDustCdf(ismMap, (texel) => texel.activity),
-  );
-  if (!(cdf.total > 0)) return regions;
-
-  const rng = mulberry32(seed ^ ISM_MAP_POSITION_SALT);
-  return regions.map((region) => {
-    const takeMap = rng() < weight;
-    const mapCenter = sampleIsmMapEventPosition(cdf, geometry, rng);
-    return takeMap ? { ...region, center: mapCenter } : region;
-  });
 }
 
 /**
@@ -598,7 +531,7 @@ function scatterAxesForCoherence(
  * population before `deriveComplexCount`'s scaler/clamp — a starting point
  * for visual calibration, not a measurement.
  */
-const DIG_COMPLEXES_PER_EVENT = 0.12;
+export const DIG_COMPLEXES_PER_EVENT = 0.12;
 
 const digCdfMemo = memoizeLastByKeys<GalaxyIsmMapDustCdf>();
 
@@ -613,7 +546,7 @@ function buildDigVeil(
   // Stale-stored-tuning guard: a preset saved before this knob existed
   // carries an `hii` section with no `dig` object at all — missing means
   // DIG OFF, the same "undefined = pre-feature stored tuning" discipline
-  // `applyIsmMapSeeding` uses for `ismMapSeeding` just above.
+  // this tier's own `digBrightness ?? 1` guard uses just below.
   const dig = tuning.hii.dig;
   if (!dig || !ismMap) return [];
   const fraction = Math.min(0.999, Math.max(0, dig.fraction));
@@ -724,26 +657,47 @@ const EMPTY_HII_RESULT: {
   readonly segments: readonly HiiRegionSegment[];
 } = { components: [], segments: [] };
 
+const EMPTY_SHELLS_AND_YOUNG: HiiShellsAndYoungResult = {
+  components: [],
+  segments: [],
+  shellFluxSum: 0,
+  recentEventCount: 0,
+};
+
 /**
- * buildHiiRegionsWithSegments — `buildHiiRegions`' full computation, plus the
- * concatenation boundary between each of its three tiers (shell/cluster
- * sprites, the DIG veil, the young-stars chain) as a `HiiRegionSegment` —
- * consumed by the timing HUD for per-tier GPU cost rows
- * (`createGalaxyModel.ts`'s `hiiSegments`, `timing/timingSlots.ts`). Boundaries
- * are `out.length` checkpoints taken right after each tier's own push loop,
- * never derived from a count formula, so they can't drift from what actually
- * landed in `components`.
+ * `buildHiiShellsAndYoungWithSegments`'s own return shape — `shellFluxSum`/
+ * `recentEventCount` are DIG's own inputs (`computeDigVeilBudget.ts`'s GPU
+ * budget math, Task 8), exposed here because they're already a byproduct of
+ * this computation and DIG's flux anchor is the SHELL tier's flux, not a
+ * standalone quantity (`buildDigVeil`'s own doc) — recomputing either from
+ * scratch on a separate pass would risk drifting from what this pass
+ * actually built.
  */
-export function buildHiiRegionsWithSegments(
+type HiiShellsAndYoungResult = {
+  readonly components: readonly GalaxyFieldComponent[];
+  readonly segments: readonly HiiRegionSegment[];
+  readonly shellFluxSum: number;
+  readonly recentEventCount: number;
+};
+
+/**
+ * buildHiiShellsAndYoungWithSegments — the shell/cluster and young-stars
+ * tiers' full computation (`buildHiiRegionsWithSegments`'s own body, MINUS
+ * the DIG veil loop) — extracted so `createGalaxyModel.ts`'s central-galaxy
+ * path can run it WITHOUT also running `buildDigVeil`'s CPU placement loop:
+ * DIG moved GPU-side (Task 8, `placeDigVeil.wesl` + `computeDigVeilBudget.ts`),
+ * shells/young did not (the coordinator's own "minimal restructure" ruling —
+ * see that task's report). `buildHiiRegionsWithSegments` below is a THIN
+ * wrapper over this function that re-inserts DIG's own components/segment,
+ * so every EXISTING caller (extras, this file's own test suite) sees
+ * byte-identical behaviour to before this split.
+ */
+export function buildHiiShellsAndYoungWithSegments(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
-  ismMap: GalaxyIsmMap | null,
-): {
-  readonly components: readonly GalaxyFieldComponent[];
-  readonly segments: readonly HiiRegionSegment[];
-} {
+): HiiShellsAndYoungResult {
   // `radiusScale ?? 1`: board 19 moved it onto `hii.shells` — see
   // `candidateRegionsFromCatalog`'s own comment for why a hole defaults to
   // the law exactly rather than gating the whole tier off.
@@ -752,7 +706,7 @@ export function buildHiiRegionsWithSegments(
     tuning.hii.brightness <= 0 ||
     (tuning.hii.shells.radiusScale ?? 1) <= 0
   ) {
-    return EMPTY_HII_RESULT;
+    return EMPTY_SHELLS_AND_YOUNG;
   }
   // `numArms`/`sfActivity` only gate the arm-ridge catalog path — the fluid
   // event window has neither dependency (a fluid run can legitimately place
@@ -760,24 +714,18 @@ export function buildHiiRegionsWithSegments(
   // comes from `ismMapFluid.eventRate`, never `starFormation.sfActivity`).
   const isFluid = tuning.ismMap.generator === 'fluid';
   if (!isFluid && (geometry.numArms <= 0 || starFormation.sfActivity <= 0)) {
-    return EMPTY_HII_RESULT;
+    return EMPTY_SHELLS_AND_YOUNG;
   }
 
   const candidateRegions = planRegions(geometry, tuning, starFormation, seed);
-  if (candidateRegions.length === 0) return EMPTY_HII_RESULT;
-  // Fluid-sourced regions skip the map-seeding post-pass entirely — see
-  // `applyIsmMapSeeding`'s own header for why re-jittering them would be a
-  // regression, not a refinement.
-  const regions = isFluid
-    ? candidateRegions
-    : applyIsmMapSeeding(candidateRegions, geometry, tuning, ismMap, seed);
+  if (candidateRegions.length === 0) return EMPTY_SHELLS_AND_YOUNG;
 
   let luminositySum = 0;
-  for (const region of regions) luminositySum += region.luminosity;
-  if (!(luminositySum > 0)) return EMPTY_HII_RESULT;
+  for (const region of candidateRegions) luminositySum += region.luminosity;
+  if (!(luminositySum > 0)) return EMPTY_SHELLS_AND_YOUNG;
 
   const totalFlux = tierFlux(geometry, tuning);
-  if (!(totalFlux > 0)) return EMPTY_HII_RESULT;
+  if (!(totalFlux > 0)) return EMPTY_SHELLS_AND_YOUNG;
 
   // The shell IS the ionized gas, so it takes the palette's CORE lane —
   // metallicity sets the [OIII]/Ha balance that decides teal vs crimson, and
@@ -789,7 +737,7 @@ export function buildHiiRegionsWithSegments(
   const rng = mulberry32(seed ^ 0x48494920); // "HII "
   const clusterShare =
     Math.min(1, Math.max(0, tuning.hii.shells.clusterStrength ?? 0.6)) * CLUSTER_FLUX_SHARE_MAX;
-  // Stale-stored-tuning guard, same discipline `ismMapSeeding` uses just
+  // Stale-stored-tuning guard, same discipline `radiusScale ?? 1` uses just
   // above: a preset saved before this knob existed carries no `texture` key.
   const shellTextureWeight = tuning.hii.shells.texture ?? 0;
   // This tier's own gain (board item 19) — applied ONLY to the amplitudes
@@ -812,7 +760,7 @@ export function buildHiiRegionsWithSegments(
   // flux is anchored to this (Hα), not to `totalFlux`.
   let shellFluxSum = 0;
 
-  for (const region of regions) {
+  for (const region of candidateRegions) {
     const regionFlux = (totalFlux * region.luminosity) / luminositySum;
     const clusterFlux = region.clusterCount > 0 ? regionFlux * clusterShare : 0;
     const shellFlux = regionFlux - clusterFlux;
@@ -867,34 +815,22 @@ export function buildHiiRegionsWithSegments(
     }
   }
   // Checkpoint, not a formula: the shell/cluster tier ends exactly here,
-  // whatever `regions`' admission produced.
+  // whatever `candidateRegions`' admission produced.
   const shellsEnd = out.length;
 
   // Recent-event population behind DIG's own complex count (task #10) — one
   // pass over the SAME SF-event catalog `planRegions` drew its young regions
   // from, see `resolveEventLifecyclePopulation`'s own header for why
   // recomputing it here (rather than threading `planRegions`' own catalog
-  // through) is sound.
+  // through) is sound. Exposed on this function's own return (not just
+  // consumed locally) — Task 8's `computeDigVeilBudget.ts` is now the ONLY
+  // consumer of this value for the central galaxy's own DIG reservation.
   const recentEventCount = resolveEventLifecyclePopulation(geometry, tuning, starFormation, seed);
 
-  // DIG veil — placed independently of the catalog regions above (its own
-  // complex/children structure, own rng stream), so `dig` never perturbs
-  // which regions were admitted or where they sit. See `buildDigVeil`'s own
-  // header for the gating and flux-anchoring discipline.
-  for (const component of buildDigVeil(
-    geometry,
-    tuning,
-    ismMap,
-    shellFluxSum,
-    recentEventCount,
-    seed,
-  )) {
-    out.push(component);
-  }
-  const digEnd = out.length; // same checkpoint discipline as `shellsEnd`
-
   // Young-stars chain — placed off the arm ridge itself (v2/youngStarChain.ts),
-  // not off the catalog regions above or DIG's own map CDF. See
+  // not off the catalog regions above or DIG's own map CDF (which no longer
+  // runs in THIS function at all — see `buildHiiRegionsWithSegments` below
+  // for where it's re-inserted for the CPU-parity/extras callers). See
   // `buildYoungStarChain`'s own header for the gating discipline.
   for (const component of buildYoungStarChain(geometry, tuning, seed)) {
     out.push(component);
@@ -902,8 +838,65 @@ export function buildHiiRegionsWithSegments(
 
   const segments: readonly HiiRegionSegment[] = [
     { label: 'hii:shells', first: 0, count: shellsEnd },
-    { label: 'hii:dig', first: shellsEnd, count: digEnd - shellsEnd },
-    { label: 'hii:young', first: digEnd, count: out.length - digEnd },
+    { label: 'hii:young', first: shellsEnd, count: out.length - shellsEnd },
+  ];
+  return { components: out, segments, shellFluxSum, recentEventCount };
+}
+
+/**
+ * buildHiiRegionsWithSegments — `buildHiiRegions`' full computation, plus the
+ * concatenation boundary between each of its three tiers (shell/cluster
+ * sprites, the DIG veil, the young-stars chain) as a `HiiRegionSegment` —
+ * consumed by the timing HUD for per-tier GPU cost rows
+ * (`createGalaxyModel.ts`'s `hiiSegments`, `timing/timingSlots.ts`), and by
+ * this file's own test suite / the extras path (`hiiMixtureOf`, `ismMap`
+ * always null there so DIG is always empty regardless) as the CPU
+ * ground-truth reference. A THIN wrapper over
+ * `buildHiiShellsAndYoungWithSegments` since Task 8 moved the CENTRAL
+ * galaxy's own DIG placement GPU-side (`placeDigVeil.wesl` +
+ * `computeDigVeilBudget.ts`, wired through `createGalaxyModel.ts` — that
+ * path no longer calls this function at all). Boundaries are `components`
+ * length checkpoints, never derived from a count formula, so they can't
+ * drift from what actually landed in the array.
+ */
+export function buildHiiRegionsWithSegments(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  starFormation: GalaxyStarFormationParams,
+  seed: number,
+  ismMap: GalaxyIsmMap | null,
+): {
+  readonly components: readonly GalaxyFieldComponent[];
+  readonly segments: readonly HiiRegionSegment[];
+} {
+  const base = buildHiiShellsAndYoungWithSegments(geometry, tuning, starFormation, seed);
+  if (base.segments.length === 0) return EMPTY_HII_RESULT;
+
+  const shellsSegment = base.segments.find((s) => s.label === 'hii:shells')!;
+  const shellsEnd = shellsSegment.count;
+
+  const digComponents = buildDigVeil(
+    geometry,
+    tuning,
+    ismMap,
+    base.shellFluxSum,
+    base.recentEventCount,
+    seed,
+  );
+
+  const out = [
+    ...base.components.slice(0, shellsEnd),
+    ...digComponents,
+    ...base.components.slice(shellsEnd),
+  ];
+  const segments: readonly HiiRegionSegment[] = [
+    { label: 'hii:shells', first: 0, count: shellsEnd },
+    { label: 'hii:dig', first: shellsEnd, count: digComponents.length },
+    {
+      label: 'hii:young',
+      first: shellsEnd + digComponents.length,
+      count: base.components.length - shellsEnd,
+    },
   ];
   return { components: out, segments };
 }

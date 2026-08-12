@@ -19,6 +19,10 @@ import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { HiiTierKind } from '../../@types/engine/HiiTierKind';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import {
+  ISM_MAP_AZ,
+  ISM_MAP_RINGS,
+} from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -31,6 +35,7 @@ import { createRafLoop } from './createRafLoop';
 import { bakeVolumeTexture } from './gpu/bakeVolumeTexture';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
+import { readTextureChannelSum } from './gpu/readTextureChannelSum';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
@@ -49,6 +54,14 @@ import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
 import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
+import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
+import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
+import { createIsmMapPlaceDust } from './ismMap/createIsmMapPlaceDust';
+import { createIsmMapPlaceArmSpurCloud } from './ismMap/createIsmMapPlaceArmSpurCloud';
+import { createIsmMapPlaceArmCloud } from './ismMap/createIsmMapPlaceArmCloud';
+import { createIsmMapPlaceDigVeil } from './ismMap/createIsmMapPlaceDigVeil';
+import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
+import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
@@ -351,6 +364,45 @@ export async function createGalaxyEngine(
     fieldUbo,
     sourceTexture: ismMapGenerator.texture,
   });
+  // GPU replacement for `ismMapRingMeans.ts`'s CPU loop — see its own header.
+  const ringReduce = createIsmMapRingReduce(device, {
+    makeShader,
+    ismMapTexture: ismMapGenerator.texture,
+    ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+  });
+  // GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum — Task 7's
+  // dust-weight table.
+  const dustCdfScan = createIsmMapDustCdfScan(device, {
+    makeShader,
+    maxRings: ISM_MAP_RINGS,
+    maxAz: ISM_MAP_AZ,
+  });
+  // A SECOND instance of the same factory, at the same real
+  // ISM_MAP_RINGS x ISM_MAP_AZ ceiling — Task 8's DIG veil own arm-biased
+  // weight table. Its OWN buffer, never sharing `dustCdfScan`'s: dust's and
+  // DIG's placement dispatches are each deferred independently to
+  // `ensureFresh()`, so one shared `prefixBuffer` would let whichever
+  // dispatch runs second silently overwrite the first's input.
+  const digCdfScan = createIsmMapDustCdfScan(device, {
+    makeShader,
+    maxRings: ISM_MAP_RINGS,
+    maxAz: ISM_MAP_AZ,
+  });
+  // GPU replacement for `buildDustParticleCloud`'s map-seeded placement.
+  const placeDust = createIsmMapPlaceDust(device, { makeShader });
+  // GPU replacement for `buildArmSpurParticleCloud`'s placement body.
+  const placeArmSpurCloud = createIsmMapPlaceArmSpurCloud(device, { makeShader });
+  // GPU replacement for `buildArmParticleCloud`'s placement body.
+  const placeArmCloud = createIsmMapPlaceArmCloud(device, { makeShader });
+  // GPU replacement for `buildDigVeil`'s complex/children placement.
+  const placeDigVeil = createIsmMapPlaceDigVeil(device, { makeShader });
+  // Task 12's own numeric-validation exception (armRidge.wesl vs.
+  // armRidgeGeometry.ts) — see createArmRidgeDebugSample.ts's own header.
+  const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
+  // Task 6's own numeric-validation exception (ismMapDustCdfScan.wesl vs.
+  // buildIsmMapDustCdf.ts) — see createIsmMapDustCdfScanDebugSample.ts's
+  // own header.
+  const ismMapDustCdfScanDebugSample = createIsmMapDustCdfScanDebugSample(device, { makeShader });
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // `createFieldPipelines.ts` — the four splat pipelines, the dust-column-map
@@ -376,6 +428,9 @@ export async function createGalaxyEngine(
     starGrainTex,
     starGrainSampler,
     dustMapSampler,
+    dustRenormBuffer: ringReduce.dustRenormBuffer,
+    armRenormBuffer: ringReduce.armCloudRenormBuffer,
+    spurRenormBuffer: ringReduce.spurCloudRenormBuffer,
     getDustMapTex: () => targets.dustMapTex,
   });
 
@@ -440,7 +495,11 @@ export async function createGalaxyEngine(
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: HDR });
 
   // ---- the one tool-only post pipeline: `createGradePipeline.ts` ----
-  const { gradePipe, gradeSampler } = createGradePipeline({ device, makeShader, swapFormat: format });
+  const { gradePipe, gradeSampler } = createGradePipeline({
+    device,
+    makeShader,
+    swapFormat: format,
+  });
 
   // One internal render bag merged by setRender (the spike's Object.assign).
   // Seeded from the same two constants the UI pushes on its first sync, so this
@@ -457,6 +516,13 @@ export async function createGalaxyEngine(
     device,
     ismMapGenerator,
     orientation: ismMapOrientation,
+    ringReduce,
+    dustCdfScan,
+    placeDust,
+    placeArmSpurCloud,
+    placeArmCloud,
+    digCdfScan,
+    placeDigVeil,
     render,
     onFieldCompsRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(model.fieldComps.buffer),
     onHiiCompsRegrow: () => fieldPipelines.rebuildTierBindGroups(model.hiiComps.buffer),
@@ -720,6 +786,8 @@ export async function createGalaxyEngine(
         hiiCount: model.hiiComps.count,
         hiiTexture: model.hiiTexture,
         youngStars: model.youngStars,
+        armCloudReservation: model.armCloudReservation,
+        spurCloudReservation: model.spurCloudReservation,
       },
       targetSizes: {
         field: targets.reducedSize(render.fieldDivisor),
@@ -1063,10 +1131,102 @@ export async function createGalaxyEngine(
     // staging note (overlay first, consumed by nothing).
     getIsmMapTexture: (): GPUTexture => ismMapGenerator.texture,
     // The CPU-side readback of the same output (`scheduleIsmMapReadback`):
-    // null until the first one lands. Consumed by `buildDustParticleCloud`
-    // whenever `ismMap.generator !== 'none'` today; exposed here for future
-    // consumers too.
+    // null until the first one lands. Off the placement path since Task 10 —
+    // `placeDust.wesl` reads the GPU texture directly, never this readback.
+    // Still feeds the seeding debug view and `youngStars.invMeanNorm`'s
+    // contrast normalisation (`createGalaxyModel.ts`'s `invMeanNormFor`).
     getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
+    // Debug-only: mapAsync's `ringMeansBuffer` back to the CPU for the
+    // probe's numeric-readback check (`probeGpuErrors.ts` diffs it against
+    // `ismMapRingMeans.ts`'s CPU computation over `getIsmMapData()`). No
+    // production caller — see `createIsmMapReadbacks.ts`'s own doc.
+    requestRingMeansReadback: (): Promise<Float32Array> =>
+      // `reject` matters here specifically: this is the queue's first
+      // EXTERNALLY-AWAITED request (every other `request()` caller is a
+      // fire-and-forget cache update) — without it, a mapAsync rejection or
+      // a decode throw would leave this Promise (and whoever awaits it,
+      // e.g. the probe's `page.evaluate`) pending forever instead of failing.
+      new Promise((resolve, reject) => model.requestRingMeansReadback(resolve, reject)),
+    // Debug-only: Task 12's own numeric-validation exception — see
+    // createArmRidgeDebugSample.ts's own header. No production caller.
+    requestArmRidgeSampleReadback: (): Promise<Float32Array> =>
+      armRidgeDebugSample.dispatchAndReadback(),
+    // Debug-only: Task 6's own numeric-validation exception — see
+    // createIsmMapDustCdfScanDebugSample.ts's own header. No production caller.
+    requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
+    // Debug-only: Task 7's own determinism/survival-floor numeric exception —
+    // see createGalaxyModel.ts's requestDustPlacementReadback. No production caller.
+    requestDustPlacementReadback: (opts) => model.requestDustPlacementReadback(opts),
+    requestDustBufferPeek: () => model.requestDustBufferPeek(),
+    // Debug-only: Task 9 fix round 1 — observes dustMap/fragment.wesl's
+    // ACTUAL rendered output (not the dustRenormBuffer both the compute
+    // kernel and a buffer readback would read directly), so the probe can
+    // catch a dropped/misrouted consuming multiply that a buffer-only check
+    // cannot. `targets.dustMapTex` is read live (same "re-read after a
+    // divisor/resize" discipline `getDustMapTex` uses above). No production
+    // caller.
+    requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
+    // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
+    // ONLY the arm-cloud reservation's own instance range
+    // (`model.armCloudReservation`'s `[offset, offset+count)`) into
+    // `targets.fieldTex` via `encodeSplatPass`'s `firstInstance`
+    // (`@builtin(instance_index)` includes that offset, WebGPU's own
+    // contract — no shader change needed), through the SAME `fieldSplatPipe`/
+    // `fieldSplatBG` the production draw uses, so this exercises the REAL
+    // fragment shader's REAL `armCloudRenorm[0]` read — not a buffer readback
+    // that would validate the reduction but never the consuming multiply.
+    // Isolated from every other component (disc/bulge/ridge/spur-cloud/
+    // extras never get instanced), so the measured sum is directly
+    // comparable to `armCloudReservation.flux` with no cross-tier confound.
+    // `targets.fieldTex` is safely clobbered: `beginClearPass` re-clears it,
+    // and the next production frame's own `encodeSplatPass` call redraws it
+    // in full on the next `drawFrame`. `null` when nothing is reserved this
+    // rebuild. No production caller.
+    async requestArmCloudRenderedFluxSum(): Promise<number | null> {
+      const reservation = model.armCloudReservation;
+      if (!reservation) return null;
+      const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
+      encodeSplatPass({
+        enc,
+        label: 'galaxy:armCloudRenderedFluxSumPass',
+        targetView: targets.fieldTex.createView(),
+        pipeline: fieldPipelines.fieldSplatPipe,
+        bindGroup: fieldPipelines.fieldSplatBG,
+        instanceCount: reservation.count,
+        firstInstance: reservation.offset,
+      });
+      device.queue.submit([enc.finish()]);
+      return readTextureChannelSum(device, targets.fieldTex);
+    },
+    // Debug-only: the spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
+    async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
+      const reservation = model.spurCloudReservation;
+      if (!reservation) return null;
+      const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
+      encodeSplatPass({
+        enc,
+        label: 'galaxy:armSpurCloudRenderedFluxSumPass',
+        targetView: targets.fieldTex.createView(),
+        pipeline: fieldPipelines.fieldSplatPipe,
+        bindGroup: fieldPipelines.fieldSplatBG,
+        instanceCount: reservation.count,
+        firstInstance: reservation.offset,
+      });
+      device.queue.submit([enc.finish()]);
+      return readTextureChannelSum(device, targets.fieldTex);
+    },
+    // Debug-only: Task 14's own determinism/budget/liveness numeric exception —
+    // see createGalaxyModel.ts's requestArmSpurCloudPlacementReadback. No production caller.
+    requestArmSpurCloudPlacementReadback: () => model.requestArmSpurCloudPlacementReadback(),
+    requestArmSpurCloudBufferPeek: () => model.requestArmSpurCloudBufferPeek(),
+    // Debug-only: Task 13's own determinism/budget/liveness numeric exception —
+    // see createGalaxyModel.ts's requestArmCloudPlacementReadback. No production caller.
+    requestArmCloudPlacementReadback: () => model.requestArmCloudPlacementReadback(),
+    requestArmCloudBufferPeek: () => model.requestArmCloudBufferPeek(),
+    // Debug-only: Task 8's own determinism/liveness/flux-parity numeric exception —
+    // see createGalaxyModel.ts's requestDigVeilPlacementReadback. No production caller.
+    requestDigVeilPlacementReadback: () => model.requestDigVeilPlacementReadback(),
+    requestDigVeilBufferPeek: () => model.requestDigVeilBufferPeek(),
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1077,6 +1237,15 @@ export async function createGalaxyEngine(
       aggregateUpsample.destroy();
       ismMapGenerator.dispose();
       ismMapOrientation.dispose();
+      ringReduce.dispose();
+      dustCdfScan.dispose();
+      digCdfScan.dispose();
+      placeDust.dispose();
+      placeArmSpurCloud.dispose();
+      placeArmCloud.dispose();
+      placeDigVeil.dispose();
+      armRidgeDebugSample.dispose();
+      ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked

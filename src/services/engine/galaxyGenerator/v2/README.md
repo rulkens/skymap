@@ -11,16 +11,21 @@ Everything here is **pure** `(geometry, tuning, params, seed) → flat data`: no
 `Math.random`, no `Date`, no device handle. That invariant is what keeps a
 Worker or compute-pass port open, and it is worth preserving.
 
-## The four builders
+## The three builders
 
-| entry point                                                              | output                                 | drawn by                               |
-| ------------------------------------------------------------------------ | -------------------------------------- | -------------------------------------- |
-| `buildGalaxyFieldMixture` (emission)                                     | disc, bulge, bar, arm ridges           | `milkyWay/field/splat.wesl`            |
-| `buildHiiRegions`                                                        | Strömgren shells + OB cores            | `splat.wesl`, own target               |
-| `buildDustParticleCloud`                                                 | GMC-scale dust Gaussians               | `milkyWay/field/dustMap.wesl`          |
+Dust, arm-cloud and arm-spur-cloud placement moved GPU-side
+(`placeDust.wesl`, `placeArmCloud.wesl`, `placeArmSpurCloud.wesl` under
+`gpu/shaders/milkyWay/ismMap/`); their `v2/` files survive only as the
+constants/budget-derivation halves the GPU dispatch hosts
+(`tools/galaxy-renderer/src/engine/ismMap/`) still read.
+
+| entry point                                                               | output                                   | drawn by                                     |
+| ------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
+| `buildGalaxyFieldMixture` (emission)                                      | disc, bulge, bar, arm ridges             | `milkyWay/field/splat.wesl`                  |
+| `buildHiiRegions`                                                         | Strömgren shells + OB cores              | `splat.wesl`, own target                     |
 | `buildGalaxyIsmMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | ISM-map forcing grid, SF events, bubbles | `ismMapFluidStep.wesl`, `bubblePresent.wesl` |
 
-All four take the same `GalaxyDescription` that `shared/describeGalaxy` produced
+All three take the same `GalaxyDescription` that `shared/describeGalaxy` produced
 and `v1/packGenerationUniforms` wrote into v1's generation UBO — which is what
 makes the field and the sprites two renderings of one galaxy rather than two
 galaxies. That description names no star count, no sprite size and no budget:
