@@ -111,6 +111,17 @@ A didactic overlay that explains the wedge-shaped hole in the galaxy catalogs �
 
 **Decision:** Option B, additive. For a guide layer, "never hides data" is the right invariant, and the premise is that there's almost nothing behind the band to dim anyway.
 
+## Q10: Runtime tuning knobs? (added 2026-08-13, after the refactor-ground pass)
+
+**The question:** The band's look (intensity, radial falloff, edge sharpness, colour) is a feel-call to be dialled in live — where do the knobs live?
+
+**Considerations:**
+
+- **Option A (DebugPanel tuning section):** A `ZoneOfAvoidanceTuning` cluster on the settings group plus a DebugPanel section — the established pattern (`MilkyWayTuning` + `MilkyWayTuningSection`, flow tuning likewise; `FlowRow.tsx` documents the convention: power-user tunables go in the DebugPanel, not SettingsPanel).
+- **Option B (SettingsPanel sliders):** End-user-facing sliders. Wrong audience — these knobs exist to converge on defaults, not to be a user feature.
+
+**Decision:** Option A. `ZoneOfAvoidanceSettings = { enabled, labelEnabled } & ZoneOfAvoidanceTuning` with `intensity`, `radialFalloff`, `edgeSharpness`, `color`; declarative slider-field table + DebugPanel section/container mirroring milkyWay's. Pure growth — no new joints.
+
 ---
 
 ## Deferred / out of scope
