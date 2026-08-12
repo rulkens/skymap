@@ -11,6 +11,7 @@
 // draws nothing, the same practical effect as v1's alive=false StarRec,
 // without a spare boolean lane FieldComponentRec doesn't have.
 
+import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
 import package::milkyWay::field::records::FieldComponentRec;
 import package::milkyWay::ismMap::clusteredDiscPlacement::genRand;
@@ -111,6 +112,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   );
   let hasOrientation = params.generatorIsFluid != 0u;
 
+  // Trailing 6 args are mode 2u's ('analytic', Task 13's arm cloud) own
+  // inputs — this shader never reaches that branch (mode is always 0u/1u
+  // above), so a zeroed ArmRec + degenerate armLogMax<=armLogMin (0.0, 0.0)
+  // is harmless filler, not a real placement.
   let placed = buildClusteredDiscPlacementChild(
     params.seed, i, params.childrenPerComplex, mode,
     &prefixBuf, total, params.gridRings, params.gridAz, params.rMin, params.rMax,
@@ -118,6 +123,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     params.complexSpread, params.elongation, params.sigmaZComplex, CHILD_POLE_RATIO,
     geom,
     hasOrientation, orientationTex, params.gridRings, params.gridAz, params.rMin, params.rMax,
+    ArmRec(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), 0.0, 0.0,
+    0.0, 0.0, 0.0,
   );
 
   // drawPayload — dustParticleCloud.ts's own per-child radius draw (1 slot)

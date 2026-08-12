@@ -9,7 +9,7 @@
  * LOD tier or sprite constant can move them.
  */
 
-import { buildArmParticleCloud, deriveArmCloudCount } from './armParticleCloud';
+import { deriveArmCloudCount } from './armParticleCloud';
 import {
   armColor,
   armCrossSigma,
@@ -932,9 +932,19 @@ export function buildGalaxyFieldMixture(
   }
   if (tuning.disc.enabled) out.push(...discOut);
 
+  // `armCloudCount` fixed slots, zero-amplitude — GPU-side v2 placement
+  // (createIsmMapPlaceArmCloud.ts) fills them post-submit, the SAME
+  // "CPU decides slot COUNT, shader decides slot CONTENT" split the spur
+  // reservation below takes (Task 13's own cut of Task 7's contract).
+  // `armCloudCount` was already computed above (BEFORE `pushArmRidges` ran,
+  // so its own budget shrank to leave room) — reused here rather than
+  // re-derived, so the reservation and the count that sized it can never
+  // disagree.
   const cloudFlux = armExcessFlux * cloudShare;
+  let armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'] = null;
   if (cloudFlux > 0) {
-    out.push(...buildArmParticleCloud(geometry, tuning, cloudFlux, geometry.seed));
+    armCloudReservation = { offset: out.length, count: armCloudCount, flux: cloudFlux };
+    for (let i = 0; i < armCloudCount; i++) out.push(ARM_CLOUD_RESERVED_COMPONENT);
   }
 
   // `spurCloudCount` fixed slots, zero-amplitude — GPU-side v2 placement
@@ -956,7 +966,7 @@ export function buildGalaxyFieldMixture(
   pushBulge(geometry, out, tuning);
   pushBar(geometry, out, tuning);
   pushHalo(geometry, out, tuning);
-  return { components: out, spurCloudReservation };
+  return { components: out, spurCloudReservation, armCloudReservation };
 }
 
 /**
@@ -969,6 +979,16 @@ export function buildGalaxyFieldMixture(
  * same bytes, so nothing is gained by allocating `count` distinct ones.
  */
 const SPUR_CLOUD_RESERVED_COMPONENT: GalaxyFieldComponent = {
+  amplitude: 0,
+  invCovDiagonal: [0, 0, 0],
+  invCovOffDiagonal: [0, 0, 0],
+  color: [0, 0, 0],
+  center: [0, 0, 0],
+  boundRadius: 0,
+};
+
+/** The arm-cloud twin of `SPUR_CLOUD_RESERVED_COMPONENT` — same shape, same reasoning. */
+const ARM_CLOUD_RESERVED_COMPONENT: GalaxyFieldComponent = {
   amplitude: 0,
   invCovDiagonal: [0, 0, 0],
   invCovOffDiagonal: [0, 0, 0],

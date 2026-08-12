@@ -49,13 +49,13 @@ const MEAN_SIZE_FRAC_SQ =
 const ARM_COVERAGE_SAMPLES = 48;
 
 /** Complex-level vertical scatter, a fraction of the disc's own height — matches `pushArmRidges`' calibrated arm-population thickness (its own `sigmas.pole = diskHeight * 0.8`). */
-const COMPLEX_HEIGHT_RATIO = 0.8;
+export const COMPLEX_HEIGHT_RATIO = 0.8;
 
 /** Each sprite is flattened relative to its OWN in-plane extent — same ratio `dustParticleCloud.ts`'s `CLOUD_POLE_RATIO` uses for the analogous GMC-complex shape. */
 const SPRITE_POLE_RATIO = 0.6;
 
 /** One complex's child scatter, as a fraction of the LOCAL arm width at a representative radius — mirrors the size draw's own reasoning: arm width sets every other length scale here, not an absolute pc span. */
-const COMPLEX_SPREAD_RATIO = 0.6;
+export const COMPLEX_SPREAD_RATIO = 0.6;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
@@ -128,7 +128,7 @@ type CloudParticle = { center: Vec3; readonly frame: CloudFrame; readonly radius
  * One reference across all arms, not each arm's own fadeRadius, so the tilt
  * can't redistribute light between arms of different lengths.
  */
-function tiltReferenceRadius(geometry: GalaxyDescription): number {
+export function tiltReferenceRadius(geometry: GalaxyDescription): number {
   let max = 0;
   for (const arm of geometry.arms) max = Math.max(max, arm.fadeRadius);
   return max > 0 ? max : geometry.armStartRadius;
@@ -146,7 +146,7 @@ function tiltReferenceRadius(geometry: GalaxyDescription): number {
 const TILT_FLOOR = 0.05;
 
 /** The radial tilt at a radius — ONE definition, read by the placement acceptance and the flux weight that cancels it, so the two cannot drift apart. */
-function radialTilt(radius: number, referenceRadius: number, bias: number): number {
+export function radialTilt(radius: number, referenceRadius: number, bias: number): number {
   if (bias <= 0) return 1;
   return Math.max(TILT_FLOOR, (Math.max(radius, 0) / referenceRadius) ** bias);
 }
