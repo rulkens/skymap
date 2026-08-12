@@ -9,7 +9,11 @@
 // A slot that fails the survival floor (DUST_SURVIVAL_FLOOR_FRAC) writes
 // amplitude 0 rather than being skipped: a zero-amplitude Gaussian splat
 // draws nothing, the same practical effect as v1's alive=false StarRec,
-// without a spare boolean lane FieldComponentRec doesn't have.
+// without a spare boolean lane FieldComponentRec doesn't have. It also
+// writes 0 into massOut (binding 6) — Task 9's own survivor-sum input, see
+// that binding's doc below. comps[dustOffset+i] carries RAW, un-renormalized
+// mass; Task 9's ringReduce.wesl survivor-sum + dustMap/fragment.wesl's
+// consume-time multiply supply the missing Larson massPerR2 scale.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -86,6 +90,13 @@ struct PlaceDustParams {
 @group(0) @binding(3) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(4) var orientationTex: texture_2d<f32>;
 @group(0) @binding(5) var<storage, read_write> comps: array<FieldComponentRec>;
+// massOut[i] mirrors comps[dustOffset+i].amplitude's own liveness gate
+// (0 on a survival-floor miss) but carries the RAW radius^2 mass instead of
+// the amplitude the record derives from it — ringReduce.wesl's
+// csSurvivorSum kernel sums this slot-indexed array (not comps, which has
+// no cheap way back to radius^2 once aspect has skewed sigAlong/sigAcross)
+// to reproduce dustParticleCloud.ts's sumR2 loop (:290-291) on the GPU.
+@group(0) @binding(6) var<storage, read_write> massOut: array<f32>;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -190,6 +201,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // amplitude but the record is still written (spec's amplitude-as-liveness).
   let mass = radius * radius;
   let amplitude = select(0.0, mass / (TAU_ROOT3 * sigAlong * sigAcross * sigPole), alive);
+  massOut[i] = select(0.0, mass, alive);
 
   let invCov = inverseCovarianceFromFrame(placed.frame, sigAlong, sigAcross, sigPole);
 

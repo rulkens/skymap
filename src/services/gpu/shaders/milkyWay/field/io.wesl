@@ -338,8 +338,10 @@
 // ismMapCartesianBake.wesl's one-shot world-xz re-bake (R=detail ratio,
 // G=stars) through the same affine UV (dustDetail.wesl's ismCartesianUv);
 // the blur pass that produces it runs once, upstream of the bake, not per
-// consumer. The remaining bindings keep their numbers so every pipeline and
-// bind group here stays as written.
+// consumer. Binding 14 belongs to dustMap/fragment.wesl alone (Task 9's
+// dustRenorm storage scale, GPU-written by ringReduce.wesl's csSurvivorSum
+// — see that binding's own doc). The remaining bindings keep their numbers
+// so every pipeline and bind group here stays as written.
 
 import package::milkyWay::field::records::FieldComponentRec;
 

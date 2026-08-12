@@ -19,6 +19,18 @@ import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
 import package::milkyWay::field::dustDetail::dustDetailMultiplier;
 
+// dustRenorm[0] — Task 9's Larson massPerR2 consume-time scale
+// (dustParticleCloud.ts:293), GPU-written by ringReduce.wesl's
+// csSurvivorSum kernel (a storage read_write binding in THAT pipeline) and
+// read here as read-only storage — no uniform round trip, since the CPU
+// never learns this value (it depends on which particles the GPU's own
+// survival filter kept). Declared HERE rather than io.wesl's shared
+// FieldUniforms: this tier's own scale, not a header row every pipeline
+// pays for (same "declared where it's used" precedent as dustDetail.wesl's
+// 3/7/8 — see io.wesl's own header). Binding 14: the next free number past
+// io.wesl's own 0-13 and dustDetail.wesl's 3/7/8.
+@group(0) @binding(14) var<storage, read> dustRenorm: array<f32>;
+
 // stretchNoiseCoord — S5 wisp anisotropy, stage 1: elongates the shared
 // noise field along the disc's local AZIMUTHAL (tangential) direction at p
 // by compressing the sample coordinate's tangential component by 1/stretch
@@ -237,7 +249,11 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // sqrt(2a) is expHalfErfc's own lower-limit argument (gaussianIntegral.wesl);
   // x0 is x(0), and each further edge just adds a*t_k/sqrtHalfA to it.
   let sqrtHalfA = sqrt(2.0 * a);
-  let coeff = rec.amplitude * sqrt(GAUSS_PI / (2.0 * a));
+  // rec.amplitude is RAW radius^2-derived mass (placeDust.wesl's own doc) —
+  // dustRenorm[0] applies the Larson renorm at splat time instead of baking
+  // it into the record, so every OTHER reader of comps (a future per-extra
+  // dust loop) still sees the un-renormalized value.
+  let coeff = rec.amplitude * dustRenorm[0] * sqrt(GAUSS_PI / (2.0 * a));
   let x0 = dc.y / sqrtHalfA;
   let aOverSqrtHalfA = a / sqrtHalfA;
   let tail0 = coeff * expHalfErfc(dc.z, x0);
