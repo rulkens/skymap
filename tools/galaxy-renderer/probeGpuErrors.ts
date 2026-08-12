@@ -106,12 +106,6 @@ const ARM_SPUR_CLOUD_FLUX_TOLERANCE = 1e-2;
 // radial-tilt cancellation) over the same sqrt/cbrt/exp chain.
 const ARM_CLOUD_FLUX_TOLERANCE = 1e-2;
 
-// `readback:placeDigVeil`'s own flux-parity budget — narrower than the
-// spur/arm-cloud tolerances above: DIG's per-record flux recovery chains
-// only a single sqrt (sigma from det(invCov)) and a cube, no exp/cbrt-of-a-
-// shape-function compounding, so less f32 rounding accumulates.
-const DIG_VEIL_FLUX_TOLERANCE = 1e-3;
-
 /**
  * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
  * is a section this probe has never run. Its header button is the only
@@ -1671,8 +1665,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // Task 8's own numeric-validation exception — `placeDigVeil.wesl` has
       // no non-GPU path to check its output against (the CPU original,
       // `buildDigVeil`, no longer runs for the central galaxy at all).
-      // Checked instead, the same four-part bar `readback:placeArmSpurCloud`/
-      // `readback:placeArmCloud` set: (1) determinism; (2) count matches
+      // Checked instead: (1) determinism; (2) count matches
       // `computeDigVeilBudget`'s own CPU budget math for the boot preset,
       // fed `shellFluxSum`/`recentEventCount` off a FRESH
       // `buildHiiShellsAndYoungWithSegments` run (the SAME two values
@@ -1680,12 +1673,13 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // liveness — `buildDigVeil`'s own loop never zeroes an individual
       // child (no survival filter on this tier, matching placeArmSpurCloud/
       // placeArmCloud's own liveness bar, not placeDust's partial-survival
-      // one); (4) flux parity — `amplitudeBase` is the SAME uniform every
-      // record's amplitude is supposed to reduce to once its OWN sigma
-      // (recovered from `det(invCov)`, independent of the record's own
-      // amplitude) is divided back out — isotropic, so unlike the arm tiers'
-      // sigma-recovery this needs no shape-function re-evaluation, just the
-      // one closed-form integral.
+      // one); (4) sigma-distribution parity, NOT flux parity — DIG's own
+      // CPU brightness law is position-independent (see step (4)'s own
+      // inline doc, fix-round-1: a flux check here would be tautological,
+      // unlike the arm/spur tiers' genuinely radius-dependent one), so the
+      // one thing left to pin independently is the sigma DRAW itself —
+      // recovered from `det(invCov)`, checked against `[sigmaMin, sigmaMax]`
+      // per record plus the draw's own mean/min/max statistics.
       name: 'readback:placeDigVeil',
       run: async (page) => {
         await settleFrames(page, SETTLE_FRAMES);
@@ -1787,22 +1781,48 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         console.error(`  readback:placeDigVeil all ${first.count} records live (finite, positive amplitude)`);
 
-        // (4) Flux parity — independent reconstruction. Every record's
-        // amplitude should reduce to the SAME `amplitudeBase` once its own
-        // sigma is divided back out; sigma is recovered from `det(invCov)`
-        // (isotropic: xx≈yy≈zz, off-diagonal≈0 — checked directly, a real
-        // bug that only fills the diagonal's x-lane would show up here
-        // BEFORE the flux sum could mask it), never from the record's own
-        // amplitude or `boundRadius`.
-        const TAU_ROOT3_TS = (2 * Math.PI) ** 1.5;
-        let measuredFlux = 0;
+        // (4) Sigma-distribution parity — NOT a flux check. DIG's own CPU
+        // brightness law (`amplitude = digAmplitudeBase / (TAU_ROOT3 *
+        // sigma^3)`, hiiRegions.ts:634) is position-INDEPENDENT: unlike the
+        // arm/spur tiers' `armExcessSurfaceShape(placedRadius, ...)`, no
+        // quantity derived from a record's OWN amplitude+invCov can ever be
+        // an independent check of its PLACEMENT — substituting the shader's
+        // own `amplitude`/`invCovDiagonal` definitions (both functions of
+        // the SAME local `sigma`) shows `amplitude * TAU_ROOT3 * sigma^3 ==
+        // amplitudeBase` holds identically for every possible `sigma`, so a
+        // flux-parity check here would be tautological (fix-round-1
+        // finding — a wrong RNG slot or a sigma draw from the wrong range
+        // would pass it silently). What CAN be checked independently is the
+        // SIGMA DRAW ITSELF: `sigma = sigmaMin + (sigmaMax - sigmaMin) *
+        // genRand(...)`, uniform over a KNOWN range this task's own
+        // `computeDigVeilBudget` already derived (`expectedBudget.sigmaMin/
+        // sigmaMax`) — recovered from `det(invCovDiagonal, invCovOffDiagonal)`
+        // (isotropic: xx≈yy≈zz, off-diagonal≈0, checked directly — a bug
+        // that only fills the diagonal's x-lane shows up here), NEVER from
+        // `amplitude` or `boundRadius`. A hard per-record bound catches a
+        // wrong-slot/wrong-scale draw (any OTHER slot in this shader feeds
+        // an angle, an offset scaled by `complexSpread`, or a coherence
+        // rotation — different units, essentially certain to land outside
+        // `[sigmaMin, sigmaMax]` if misread); the mean/min/max statistics
+        // catch a subtler bug that stays in-range but narrows/shifts the
+        // distribution (e.g. a halved range, a min/max swap). This cannot
+        // catch a wrong PLACEMENT radius/angle — DIG's flat brightness law
+        // gives no independent signal for that; see the report's own
+        // "Concerns" for what would.
+        const digSigmaMin = expectedBudget.sigmaMin;
+        const digSigmaMax = expectedBudget.sigmaMax;
+        const digSigmaRange = digSigmaMax - digSigmaMin;
+        const perRecordEps = digSigmaRange * 1e-3;
         let isotropyFailures = 0;
+        let outOfRangeCount = 0;
+        let sigmaSum = 0;
+        let sigmaMinObserved = Infinity;
+        let sigmaMaxObserved = -Infinity;
         for (let i = 0; i < first.count; i++) {
           const o = i * FIELD_COMPONENT_FLOATS;
           const xx = first.records[o + 0]!;
           const yy = first.records[o + 1]!;
           const zz = first.records[o + 2]!;
-          const amplitude = first.records[o + 3]!;
           const xy = first.records[o + 4]!;
           const xz = first.records[o + 5]!;
           const yz = first.records[o + 6]!;
@@ -1819,22 +1839,61 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           if (!(det > 0)) {
             throw new Error(`readback:placeDigVeil — record ${i} has non-positive det(invCov)`);
           }
-          measuredFlux += (amplitude * TAU_ROOT3_TS) / Math.sqrt(det);
+          // det(invCov) = (1/sigma^2)^3 for an isotropic blob, so
+          // sigma = cbrt(1/sqrt(det)) — the SAME reduction
+          // readback:placeArmSpurCloud's own `sigProduct` uses, cubed once
+          // more since all three of DIG's sigmas are equal (no elongation/
+          // pole-ratio division needed).
+          const sigma = Math.cbrt(1 / Math.sqrt(det));
+          if (sigma < digSigmaMin - perRecordEps || sigma > digSigmaMax + perRecordEps) {
+            outOfRangeCount++;
+          }
+          sigmaSum += sigma;
+          if (sigma < sigmaMinObserved) sigmaMinObserved = sigma;
+          if (sigma > sigmaMaxObserved) sigmaMaxObserved = sigma;
         }
         if (isotropyFailures > 0) {
           throw new Error(
             `readback:placeDigVeil — ${isotropyFailures}/${first.count} records are not isotropic (expected invCovDiagonal.x == .y == .z, invCovOffDiagonal == 0 — DIG's blobs are isotropic Gaussians)`,
           );
         }
-        const expectedFlux = first.count * first.amplitudeBase;
-        const fluxRelError = Math.abs(measuredFlux / expectedFlux - 1);
-        if (!(fluxRelError < DIG_VEIL_FLUX_TOLERANCE)) {
+        if (outOfRangeCount > 0) {
           throw new Error(
-            `readback:placeDigVeil — flux parity failed: measured ${measuredFlux} vs expected ${expectedFlux} (relative error ${fluxRelError}, tolerance ${DIG_VEIL_FLUX_TOLERANCE})`,
+            `readback:placeDigVeil — ${outOfRangeCount}/${first.count} records have a sigma (recovered from det(invCov)) outside [${digSigmaMin}, ${digSigmaMax}] (dig.sigmaMin/sigmaMax's own draw range) — wrong RNG slot or a mis-scaled draw`,
           );
         }
         console.error(
-          `  readback:placeDigVeil flux parity: measured=${measuredFlux.toFixed(4)} expected=${expectedFlux.toFixed(4)} (relative error ${fluxRelError.toExponential(3)})`,
+          `  readback:placeDigVeil all ${first.count} records' recovered sigma inside [${digSigmaMin.toFixed(6)}, ${digSigmaMax.toFixed(6)}]`,
+        );
+
+        // Statistical shape of the draw: mean within a few standard errors
+        // of a Uniform(sigmaMin, sigmaMax) mean (stderr = range/sqrt(12n)),
+        // min/max within a generous fraction of the range from the two
+        // bounds (order-statistic distance from a bound is ~range/(n+1),
+        // far tighter than the margin below — this only trips on a real
+        // narrowing/shift, not sampling noise).
+        const sigmaMean = sigmaSum / first.count;
+        const expectedMean = (digSigmaMin + digSigmaMax) / 2;
+        const meanStdErr = digSigmaRange / Math.sqrt(12 * first.count);
+        const meanTolerance = 6 * meanStdErr;
+        if (Math.abs(sigmaMean - expectedMean) > meanTolerance) {
+          throw new Error(
+            `readback:placeDigVeil — sigma mean ${sigmaMean} is ${Math.abs(sigmaMean - expectedMean)} away from the expected Uniform(sigmaMin, sigmaMax) mean ${expectedMean} (tolerance ${meanTolerance}, 6 std errors over ${first.count} samples) — distribution looks narrowed or shifted`,
+          );
+        }
+        const spreadMargin = digSigmaRange * 0.05;
+        if (sigmaMinObserved > digSigmaMin + spreadMargin) {
+          throw new Error(
+            `readback:placeDigVeil — observed sigma min ${sigmaMinObserved} never gets within ${spreadMargin} of sigmaMin ${digSigmaMin} across ${first.count} samples — the draw's own lower end looks unreachable`,
+          );
+        }
+        if (sigmaMaxObserved < digSigmaMax - spreadMargin) {
+          throw new Error(
+            `readback:placeDigVeil — observed sigma max ${sigmaMaxObserved} never gets within ${spreadMargin} of sigmaMax ${digSigmaMax} across ${first.count} samples — the draw's own upper end looks unreachable`,
+          );
+        }
+        console.error(
+          `  readback:placeDigVeil sigma distribution: mean=${sigmaMean.toFixed(6)} (expected ${expectedMean.toFixed(6)}, tolerance ${meanTolerance.toExponential(2)}), observed range=[${sigmaMinObserved.toFixed(6)}, ${sigmaMaxObserved.toFixed(6)}]`,
         );
       },
     },
