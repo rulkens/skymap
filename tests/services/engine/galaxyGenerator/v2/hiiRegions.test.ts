@@ -17,7 +17,7 @@ import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
-/** Busy on every channel — if `ismMapSeeding: 0` ever consulted this, output would move. */
+/** Busy on every channel — `dig.fraction` tests below rely on this being nonzero everywhere. */
 function makeBusyMap(): GalaxyIsmMap {
   const az = 32;
   const rings = 16;
@@ -31,47 +31,11 @@ function makeBusyMap(): GalaxyIsmMap {
 }
 
 describe('buildHiiRegions', () => {
-  it('ismMapSeeding 0 is byte-identical whether or not a map is handed in', () => {
-    const tuningOff = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      // dig.fraction pinned to 0 too — it is the DIG veil's own knob,
-      // orthogonal to ismMapSeeding, and (unlike region placement) it reads
-      // the map's mere PRESENCE rather than a blend weight, so leaving it at
-      // its nonzero default would break this test's own premise.
-      hii: {
-        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 0,
-        dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
-      },
-    };
-    const withoutMap = buildHiiRegions(
-      geometry,
-      tuningOff,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      null,
-    );
-    const withMap = buildHiiRegions(
-      geometry,
-      tuningOff,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      makeBusyMap(),
-    );
-    expect(withMap.length).toBeGreaterThan(0); // sanity: the tier really runs on the MW preset
-    expect(withMap).toEqual(withoutMap);
-  });
-
   it('dig.fraction 0 is byte-identical whether or not a map is handed in', () => {
     const tuningOff = {
       ...DEFAULT_GALAXY_FIELD_TUNING,
-      // ismMapSeeding pinned to 0 too — its own default (1) would already
-      // make region CENTRES differ between the map/no-map cases, which
-      // would fail this test for a reason that has nothing to do with
-      // `dig.fraction`.
       hii: {
         ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        ismMapSeeding: 0,
         dig: { ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig, fraction: 0 },
       },
     };

@@ -301,22 +301,6 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.dust).toEqual({ ...legacyDust, enabled: false, redness: 1 });
   });
 
-  it("lifts a legacy `hii.sfMapSeeding` onto `ismMapSeeding` so the field's value survives the rename", () => {
-    const wire = JSON.stringify({
-      type: 'galaxy-preset',
-      version: 3,
-      p: DEFAULT_GALAXY_PARAMS,
-      f: {
-        hii: { ...DEFAULT_GALAXY_FIELD_TUNING.hii, ismMapSeeding: undefined, sfMapSeeding: 0.85 },
-      },
-    });
-
-    const parsed = parseGalaxyPreset(wire);
-
-    expect(parsed?.f?.hii?.ismMapSeeding).toBe(0.85);
-    expect(parsed?.f?.hii).not.toHaveProperty('sfMapSeeding');
-  });
-
   // The seven shell params (radiusScale, shellThickness, clusterStrength,
   // cavityScale, texture, textureScale, textureContrast) live on `hii.shells`,
   // not flat `hii`. `migrateGalaxyFieldTuningWire`'s `liftHiiShells` carries a

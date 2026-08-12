@@ -11,10 +11,10 @@
  * the outer body: they're shared by all three nested groups.
  *
  * A slider's `bag` isn't always the group it visually sits in — SHELLS mixes
- * in `hii.ismMapSeeding` and `starFormation.sfActivity` alongside its own
- * fields — so each spec carries its own bag rather than the group inheriting
- * one, dispatched through the `bag`-keyed tables below (table dispatch, not
- * a branch per slider).
+ * in `starFormation.sfActivity` alongside its own fields — so each spec
+ * carries its own bag rather than the group inheriting one, dispatched
+ * through the `bag`-keyed tables below (table dispatch, not a branch per
+ * slider).
  */
 import type { ReactNode } from 'react';
 import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
@@ -39,7 +39,7 @@ type SliderFields = {
 };
 
 type HiiSliderSpec =
-  | (SliderFields & { readonly bag: 'hii'; readonly key: 'brightness' | 'ismMapSeeding' })
+  | (SliderFields & { readonly bag: 'hii'; readonly key: 'brightness' })
   | (SliderFields & {
       readonly bag: 'shells';
       readonly key: keyof Omit<GalaxyHiiShellsTuning, 'enabled'>;
@@ -147,16 +147,6 @@ const HII_SHELLS_SLIDERS: readonly HiiSliderSpec[] = [
     step: 0.05,
     format: (v) => v.toFixed(2),
     info: 'Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed.',
-  },
-  {
-    bag: 'hii',
-    key: 'ismMapSeeding',
-    label: 'Map seeding',
-    min: 0,
-    max: 1,
-    step: 0.05,
-    format: (v) => v.toFixed(2),
-    info: "Fraction of HII events placed from the ISM map's activity channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly.",
   },
   {
     bag: 'shells',

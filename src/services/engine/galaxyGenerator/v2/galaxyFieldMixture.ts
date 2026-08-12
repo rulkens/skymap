@@ -330,10 +330,6 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // Whole-field master (board item 19) — multiplies shells/dig/youngStars'
     // own gains below rather than doubling as the shells' implicit one.
     brightness: 1,
-    // Map-seeded by default on this branch — the whole point is seeing dust
-    // and knots driven by the same fluid-generator run. 0 recovers the
-    // arm-ridge catalog byte-identically.
-    ismMapSeeding: 1,
     shells: {
       enabled: true,
       // 1 = the master alone, same neutral-gain role `youngStars.brightness`

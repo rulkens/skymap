@@ -21,18 +21,6 @@ export type GalaxyHiiTuning = {
    */
   readonly brightness: number;
   /**
-   * Fraction of HII events placed from the ISM map's `activity` channel
-   * instead of the arm-ridge catalog (0 = catalog exactly, 1 = fully
-   * map-seeded). `activity`, not the long-lived `stars` tracer: ignition
-   * zeroes gas and age together, so knots avoid the dust the same way M74's
-   * do (Chevance decorrelation), and `activity`'s short memory keeps shells
-   * on FRESH sites rather than 20-100 Myr drifted material `stars` now
-   * carries. Stays cross-tier rather than moving into `shells`: it also
-   * seeds DIG's own lifecycle population (`resolveEventLifecyclePopulation`),
-   * not just the shells' own regions.
-   */
-  readonly ismMapSeeding: number;
-  /**
    * The emission-shell tier's own tuning (radius/thickness/cluster/cavity/
    * texture) — see `GalaxyHiiShellsTuning`.
    */
