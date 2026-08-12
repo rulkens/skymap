@@ -660,7 +660,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           // GPU-side failure reports as a normal step FAIL, not a stuck probe run.
           let gpuMeans: Float32Array;
           try {
-            gpuMeans = await bridge.requestRingMeansReadback();
+            gpuMeans = await bridge.probe.requestRingMeansReadback();
           } catch (err) {
             return {
               ok: false as const,
@@ -731,7 +731,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               'readback:armRidgeSample — no __probeEngine — the probeReadback gate never installed it',
             );
           }
-          const data = await bridge.requestArmRidgeSampleReadback();
+          const data = await bridge.probe.requestArmRidgeSampleReadback();
           return Array.from(data);
         });
 
@@ -787,7 +787,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               'readback:ismMapDustCdfScan — no __probeEngine — the probeReadback gate never installed it',
             );
           }
-          return bridge.requestIsmMapDustCdfScanReadback();
+          return bridge.probe.requestIsmMapDustCdfScanReadback();
         });
 
         const cpuMap: GalaxyIsmMap = {
@@ -878,7 +878,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               'readback:placeDust — no __probeEngine — the probeReadback gate never installed it',
             );
           }
-          const landed = await bridge.requestDustPlacementReadback();
+          const landed = await bridge.probe.requestDustPlacementReadback();
           if (!landed) return null;
           return {
             count: landed.count,
@@ -896,7 +896,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const second = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDustPlacementReadback();
+          const landed = await bridge!.probe.requestDustPlacementReadback();
           return landed ? Array.from(landed.records) : null;
         });
         if (!second) {
@@ -995,7 +995,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const before = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          return bridge!.requestDustMapChannelSum();
+          return bridge!.probe.requestDustMapChannelSum();
         });
         await page.evaluate(
           async ({ dust, tau }) => {
@@ -1012,7 +1012,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const after = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          return bridge!.requestDustMapChannelSum();
+          return bridge!.probe.requestDustMapChannelSum();
         });
         // Restore before any later step (the floor-fixture fixture right
         // below also resets `dust` wholesale, but this assertion must not
@@ -1098,7 +1098,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const floorFixture = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDustPlacementReadback();
+          const landed = await bridge!.probe.requestDustPlacementReadback();
           if (!landed) return null;
           return { count: landed.count, records: Array.from(landed.records) };
         });
@@ -1156,7 +1156,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const smoothFirst = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDustPlacementReadback({
+          const landed = await bridge!.probe.requestDustPlacementReadback({
             forceGeneratorIsFluid: false,
           });
           if (!landed) return null;
@@ -1170,7 +1170,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const smoothSecond = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDustPlacementReadback({
+          const landed = await bridge!.probe.requestDustPlacementReadback({
             forceGeneratorIsFluid: false,
           });
           return landed ? Array.from(landed.records) : null;
@@ -1259,7 +1259,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               'readback:placeArmSpurCloud — no __probeEngine — the probeReadback gate never installed it',
             );
           }
-          const landed = await bridge.requestArmSpurCloudPlacementReadback();
+          const landed = await bridge.probe.requestArmSpurCloudPlacementReadback();
           if (!landed) return null;
           return {
             count: landed.count,
@@ -1279,7 +1279,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const second = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestArmSpurCloudPlacementReadback();
+          const landed = await bridge!.probe.requestArmSpurCloudPlacementReadback();
           return landed ? Array.from(landed.records) : null;
         });
         if (!second) {
@@ -1397,7 +1397,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const isolatedBefore = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          return bridge!.requestArmSpurCloudRenderedFluxSum();
+          return bridge!.probe.requestArmSpurCloudRenderedFluxSum();
         });
         if (isolatedBefore === null) {
           throw new Error(
@@ -1415,7 +1415,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const isolatedAfter = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          return bridge!.requestArmSpurCloudRenderedFluxSum();
+          return bridge!.probe.requestArmSpurCloudRenderedFluxSum();
         });
         await page.evaluate(async (arms) => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
@@ -1547,21 +1547,27 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // rewrite) WITHOUT re-invalidating `spurCloudPlacementRebuild`, so the
       // next `ensureFresh()` never re-filled it. A readback that always
       // re-dispatches fresh (like the step above) cannot see this —
-      // `requestArmSpurCloudBufferPeek` exists specifically to read the
-      // PRODUCTION buffer's own current content, driven through the SAME
-      // `setFieldTuning` -> `ensureFresh()` path a real dust slider drag
-      // takes.
+      // `probe.peekRecords`, driven off `probe.spurCloudReservation`, exists
+      // specifically to read the PRODUCTION buffer's own current content,
+      // through the SAME `setFieldTuning` -> `ensureFresh()` path a real
+      // dust slider drag takes.
       name: 'readback:placeArmSpurCloud (survives dust-only tuning change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestArmSpurCloudBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const reservation = bridge!.probe.spurCloudReservation;
+          if (!reservation || reservation.count <= 0) return null;
+          const records = await bridge!.probe.peekRecords(
+            'field',
+            reservation.offset,
+            reservation.count,
+          );
+          return Array.from(records);
         });
         if (!before) {
           throw new Error(
-            'readback:placeArmSpurCloud (survives dust-only tuning change) — requestArmSpurCloudBufferPeek() returned null before the dust patch',
+            'readback:placeArmSpurCloud (survives dust-only tuning change) — spurCloudReservation is empty before the dust patch (nothing for peekRecords to read)',
           );
         }
         let beforeLive = 0;
@@ -1587,12 +1593,18 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const after = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestArmSpurCloudBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const reservation = bridge!.probe.spurCloudReservation;
+          if (!reservation || reservation.count <= 0) return null;
+          const records = await bridge!.probe.peekRecords(
+            'field',
+            reservation.offset,
+            reservation.count,
+          );
+          return Array.from(records);
         });
         if (!after) {
           throw new Error(
-            'readback:placeArmSpurCloud (survives dust-only tuning change) — requestArmSpurCloudBufferPeek() returned null after the dust patch',
+            'readback:placeArmSpurCloud (survives dust-only tuning change) — spurCloudReservation is empty after the dust patch (nothing for peekRecords to read)',
           );
         }
         let afterLive = 0;
@@ -1635,7 +1647,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               'readback:placeArmCloud — no __probeEngine — the probeReadback gate never installed it',
             );
           }
-          const landed = await bridge.requestArmCloudPlacementReadback();
+          const landed = await bridge.probe.requestArmCloudPlacementReadback();
           if (!landed) return null;
           return {
             count: landed.count,
@@ -1655,7 +1667,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const second = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestArmCloudPlacementReadback();
+          const landed = await bridge!.probe.requestArmCloudPlacementReadback();
           return landed ? Array.from(landed.records) : null;
         });
         if (!second) {
@@ -1739,7 +1751,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const isolatedBefore = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          return bridge!.requestArmCloudRenderedFluxSum();
+          return bridge!.probe.requestArmCloudRenderedFluxSum();
         });
         if (isolatedBefore === null) {
           throw new Error(
@@ -1757,7 +1769,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const isolatedAfter = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          return bridge!.requestArmCloudRenderedFluxSum();
+          return bridge!.probe.requestArmCloudRenderedFluxSum();
         });
         await page.evaluate(async (arms) => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
@@ -1886,12 +1898,18 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const before = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestArmCloudBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const reservation = bridge!.probe.armCloudReservation;
+          if (!reservation || reservation.count <= 0) return null;
+          const records = await bridge!.probe.peekRecords(
+            'field',
+            reservation.offset,
+            reservation.count,
+          );
+          return Array.from(records);
         });
         if (!before) {
           throw new Error(
-            'readback:placeArmCloud (survives dust-only tuning change) — requestArmCloudBufferPeek() returned null before the dust patch',
+            'readback:placeArmCloud (survives dust-only tuning change) — armCloudReservation is empty before the dust patch (nothing for peekRecords to read)',
           );
         }
         let beforeLive = 0;
@@ -1917,12 +1935,18 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const after = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestArmCloudBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const reservation = bridge!.probe.armCloudReservation;
+          if (!reservation || reservation.count <= 0) return null;
+          const records = await bridge!.probe.peekRecords(
+            'field',
+            reservation.offset,
+            reservation.count,
+          );
+          return Array.from(records);
         });
         if (!after) {
           throw new Error(
-            'readback:placeArmCloud (survives dust-only tuning change) — requestArmCloudBufferPeek() returned null after the dust patch',
+            'readback:placeArmCloud (survives dust-only tuning change) — armCloudReservation is empty after the dust patch (nothing for peekRecords to read)',
           );
         }
         let afterLive = 0;
@@ -1949,20 +1973,23 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // used to re-invalidate `dustPlacementRebuild`. Fixed by the SAME
       // change that fixed spur: `repackFieldComponents()` now owns both
       // invalidations unconditionally. This step is the exact mirror of the
-      // one above, `requestDustBufferPeek` in place of
-      // `requestArmSpurCloudBufferPeek`, an arms-only patch in place of a
-      // dust-only one.
+      // one above, `probe.peekRecords` off `probe.fieldCounts.dust` (dust
+      // has no reservation object — its offset is always
+      // `fieldCounts.emission`) in place of `spurCloudReservation`, an
+      // arms-only patch in place of a dust-only one.
       name: 'readback:placeDust (survives arms-only tuning change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDustBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const counts = bridge!.probe.fieldCounts;
+          if (counts.dust <= 0) return null;
+          const records = await bridge!.probe.peekRecords('field', counts.emission, counts.dust);
+          return Array.from(records);
         });
         if (!before) {
           throw new Error(
-            'readback:placeDust (survives arms-only tuning change) — requestDustBufferPeek() returned null before the arms patch',
+            'readback:placeDust (survives arms-only tuning change) — fieldCounts.dust is 0 before the arms patch (nothing for peekRecords to read)',
           );
         }
         let beforeLive = 0;
@@ -1990,12 +2017,14 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const after = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDustBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const counts = bridge!.probe.fieldCounts;
+          if (counts.dust <= 0) return null;
+          const records = await bridge!.probe.peekRecords('field', counts.emission, counts.dust);
+          return Array.from(records);
         });
         if (!after) {
           throw new Error(
-            'readback:placeDust (survives arms-only tuning change) — requestDustBufferPeek() returned null after the arms patch',
+            'readback:placeDust (survives arms-only tuning change) — fieldCounts.dust is 0 after the arms patch (nothing for peekRecords to read)',
           );
         }
         let afterLive = 0;
@@ -2042,7 +2071,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               'readback:placeDigVeil — no __probeEngine — the probeReadback gate never installed it',
             );
           }
-          const landed = await bridge.requestDigVeilPlacementReadback();
+          const landed = await bridge.probe.requestDigVeilPlacementReadback();
           if (!landed) return null;
           return {
             count: landed.count,
@@ -2060,7 +2089,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const second = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDigVeilPlacementReadback();
+          const landed = await bridge!.probe.requestDigVeilPlacementReadback();
           return landed ? Array.from(landed.records) : null;
         });
         if (!second) {
@@ -2273,12 +2302,14 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const before = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDigVeilBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const dig = bridge!.probe.hiiSegments.find((segment) => segment.label === 'hii:dig');
+          if (!dig || dig.count <= 0) return null;
+          const records = await bridge!.probe.peekRecords('hii', dig.first, dig.count);
+          return Array.from(records);
         });
         if (!before) {
           throw new Error(
-            'readback:placeDigVeil (survives an extras-only change) — requestDigVeilBufferPeek() returned null before the extras patch',
+            "readback:placeDigVeil (survives an extras-only change) — hiiSegments' 'hii:dig' entry is empty before the extras patch (nothing for peekRecords to read)",
           );
         }
         let beforeLive = 0;
@@ -2301,12 +2332,14 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const after = await page.evaluate(async () => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
-          const landed = await bridge!.requestDigVeilBufferPeek();
-          return landed ? Array.from(landed.records) : null;
+          const dig = bridge!.probe.hiiSegments.find((segment) => segment.label === 'hii:dig');
+          if (!dig || dig.count <= 0) return null;
+          const records = await bridge!.probe.peekRecords('hii', dig.first, dig.count);
+          return Array.from(records);
         });
         if (!after) {
           throw new Error(
-            'readback:placeDigVeil (survives an extras-only change) — requestDigVeilBufferPeek() returned null after the extras patch',
+            "readback:placeDigVeil (survives an extras-only change) — hiiSegments' 'hii:dig' entry is empty after the extras patch (nothing for peekRecords to read)",
           );
         }
         let afterLive = 0;

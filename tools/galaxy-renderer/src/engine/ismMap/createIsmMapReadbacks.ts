@@ -58,7 +58,7 @@ export type IsmMapReadbacks = {
    * no production caller, since the fluid path's own consumer of this buffer
    * (`ismMapPresent.wesl`) never leaves the GPU. `onError`: this is the one
    * `request()` caller in this file with an external awaiter (the probe's
-   * Promise-wrapped `GalaxyEngineHandle.requestRingMeansReadback`) — see
+   * Promise-wrapped `GalaxyEngineHandle['probe'].requestRingMeansReadback`) — see
    * `createReadbackQueue.ts`'s own doc for why that needs a reject path the
    * other two (fire-and-forget cache updates) don't.
    */
