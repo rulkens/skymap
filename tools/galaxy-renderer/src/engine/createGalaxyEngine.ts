@@ -1166,21 +1166,6 @@ export async function createGalaxyEngine(
     // divisor/resize" discipline `getDustMapTex` uses above). No production
     // caller.
     requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
-    // Debug-only: Task 15's own consuming-multiply exception, take 1 — sums
-    // the WHOLE `targets.fieldTex` (every emission component — disc/bulge/
-    // ridge/arm-cloud/spur-cloud — draws additively into this ONE target).
-    // Superseded by `requestArmCloudRenderedFluxSum`/
-    // `requestArmSpurCloudRenderedFluxSum` below for the probe's own
-    // consuming-multiply check (fix-round finding: any tuning knob that
-    // isolates the arm-cloud/spur-cloud tier's OWN flux share also moves the
-    // ridge chain's, whose own rendering at flux-share boundaries turned out
-    // to carry non-negligible residual emission unrelated to Task 15 — a
-    // whole-target sum can't tell the two apart). Kept as a general-purpose
-    // debug method (`readTextureChannelSum` is a plain, texture-agnostic
-    // rgba16float channel-sum reader — renamed from `readDustMapChannelSum`
-    // once this fieldTex call became its second consumer, reused rather
-    // than duplicated). No production caller.
-    requestFieldTexChannelSum: () => readTextureChannelSum(device, targets.fieldTex),
     // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
     // ONLY the arm-cloud reservation's own instance range
     // (`model.armCloudReservation`'s `[offset, offset+count)`) into

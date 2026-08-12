@@ -107,11 +107,6 @@ export type GalaxyEngineHandle = {
   // for why the sum is exactly linear in the renorm scale. No production
   // caller.
   requestDustMapChannelSum(): Promise<number>;
-  // Debug-only: Task 15's own consuming-multiply exception — the arm-cloud/
-  // spur-cloud twin of `requestDustMapChannelSum` above, against
-  // `targets.fieldTex` (the shared target every emission component draws
-  // into). No production caller.
-  requestFieldTexChannelSum(): Promise<number>;
   // Debug-only: Task 15's own consuming-multiply exception, take 2 — draws
   // ONLY the arm-cloud/spur-cloud reservation's own instance range into
   // `targets.fieldTex` (via `encodeSplatPass`'s `firstInstance`) through the

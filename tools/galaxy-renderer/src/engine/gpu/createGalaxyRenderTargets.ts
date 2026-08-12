@@ -167,11 +167,12 @@ export function createGalaxyRenderTargets(
       label: 'galaxy:fieldTex',
       size: [w, h],
       format: formats.hdr,
-      // COPY_SRC beyond RA_TB's production need: Task 15's own debug-only
-      // readback (requestFieldTexChannelSum, readTextureChannelSum.ts reused)
-      // copies the whole target back to observe the arm-cloud/spur-cloud
-      // renorm's ACTUAL rendered effect — `dustMapTex`'s own identical
-      // precedent below.
+      // COPY_SRC beyond RA_TB's production need: `requestArmCloudRenderedFluxSum`/
+      // `requestArmSpurCloudRenderedFluxSum` (createGalaxyEngine.ts) each draw an
+      // isolated instance range into this target through the REAL production
+      // pipeline, then read it back via `readTextureChannelSum` to observe the
+      // arm-cloud/spur-cloud renorm's ACTUAL rendered effect — `dustMapTex`'s own
+      // identical precedent below.
       usage: RA_TB | GPUTextureUsage.COPY_SRC,
     });
   }
