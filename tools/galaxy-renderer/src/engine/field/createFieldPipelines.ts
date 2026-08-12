@@ -41,6 +41,8 @@ export type FieldPipelineDeps = {
   readonly starGrainTex: GPUTexture;
   readonly starGrainSampler: GPUSampler;
   readonly dustMapSampler: GPUSampler;
+  /** dustMap/fragment.wesl binding 14 — Task 9's Larson renorm scale, GPU-written by `ringReduce.dispatchSurvivorSum`. Fixed-lifetime, never regrows (see `createIsmMapRingReduce.ts`'s own `dustRenormBuffer`), so it rides here like `fieldUbo`/`hiiUbo`, not the `rebuild*` regrow callbacks below. */
+  readonly dustRenormBuffer: GPUBuffer;
   /**
    * `targets` doesn't exist yet at construction — its own dust-map-recreated
    * callback IS `rebuildDustMapDependents` below. Read live, per the "reassigned
@@ -97,6 +99,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     starGrainTex,
     starGrainSampler,
     dustMapSampler,
+    dustRenormBuffer,
     getDustMapTex,
   } = deps;
 
@@ -225,6 +228,11 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
         { binding: 7, resource: dustMapSampler },
         { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
+        // Task 9's Larson renorm scale — only dustMap/fragment.wesl imports
+        // it, so 'layout: auto' adds this entry to dustMapPipe's bind group
+        // alone (io.wesl's own doc for the same "only the shader that
+        // imports a binding gains it" contract).
+        { binding: 14, resource: { buffer: dustRenormBuffer } },
       ],
     });
   }

@@ -22,6 +22,10 @@ import {
   dustDiscShape,
   dustSigmaR,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyDustMixture';
+import {
+  DISC_SIGMA_RATIOS,
+  DISC_SURFACE_WEIGHTS,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/discSurfaceFit';
 import { dustExtinctionRgb } from '../../../../../src/utils/galaxy/dustExtinctionRgb';
 import { stretchExtinctionChroma } from '../../../../../src/utils/galaxy/stretchExtinctionChroma';
 import { pcToUnits } from '../../../../../src/utils/galaxy/pcToUnits';
@@ -40,6 +44,15 @@ export type PlaceDustBudget = {
   readonly sizeMin: number;
   readonly sizeMax: number;
   readonly extinctionRgb: readonly [number, number, number];
+  /**
+   * `dust.tau`'s entire measured column, expressed as a MASS total —
+   * `dustParticleCloud.ts:287`'s `totalMass = dust.tau * 2*PI*weightedSigma2`,
+   * a pure function of geometry/tuning with no placement dependency (unlike
+   * `sumR2`, which only exists after particles land). Task 9's own
+   * `ringReduce.wesl` survivor-sum kernel divides this by the GPU-computed
+   * `sumR2` to get `massPerR2` — see that kernel's own doc.
+   */
+  readonly totalMass: number;
 };
 
 export function computePlaceDustBudget(
@@ -68,6 +81,14 @@ export function computePlaceDustBudget(
     dustSigmaR(3, shape),
   ];
 
+  // Larson's third law weighted mean (dustParticleCloud.ts:282-287) — reuses
+  // `discSigmaR` above rather than re-calling `dustSigmaR`, same values.
+  let weightedSigma2 = 0;
+  for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
+    weightedSigma2 += (DISC_SURFACE_WEIGHTS[i]! / shape.sumW) * discSigmaR[i]! ** 2;
+  }
+  const totalMass = dust.tau * 2 * Math.PI * weightedSigma2;
+
   return {
     count,
     childrenPerComplex: Math.max(1, Math.round(1 + 15 * cloud.clumpiness)),
@@ -79,5 +100,6 @@ export function computePlaceDustBudget(
     sizeMin,
     sizeMax,
     extinctionRgb,
+    totalMass,
   };
 }

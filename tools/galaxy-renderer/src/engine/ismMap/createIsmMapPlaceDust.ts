@@ -58,8 +58,28 @@ export type PlaceDustDispatchInput = {
 export type IsmMapPlaceDust = {
   /** Encode into the CALLER's encoder/pass — no submit here (one-encoder-one-submit discipline). */
   dispatchPlaceDust(enc: GPUCommandEncoder, input: PlaceDustDispatchInput): void;
-  /** Debug-only: dispatch in its own encoder/submit and map the dust slot range straight back — the probe's determinism/survival-floor exception, no production caller. */
-  dispatchAndReadbackDust(input: PlaceDustDispatchInput): Promise<Float32Array>;
+  /**
+   * Debug-only: dispatch in its own encoder/submit and map the dust slot
+   * range straight back — the probe's determinism/survival-floor exception,
+   * no production caller. `mass` is `massBuffer`'s own `[0, count)` slice
+   * (Task 9's survivor-sum input), read back alongside `records` so the
+   * probe can independently recompute `sumR2` off the SAME dispatch rather
+   * than a second, potentially different one.
+   */
+  dispatchAndReadbackDust(
+    input: PlaceDustDispatchInput,
+  ): Promise<{ readonly records: Float32Array; readonly mass: Float32Array }>;
+  /**
+   * `massOut` (placeDust.wesl binding 6) — Task 9's own survivor-sum input,
+   * MAX_PARTICLE_COUNT floats, one per particle slot, zeroed on a
+   * survival-floor miss (mirrors `comps`' amplitude-as-liveness). Exposed so
+   * `ringReduce.wesl`'s csSurvivorSum kernel (dispatched separately, off
+   * `createGalaxyModel.ts`'s own `ringReduce` instance) can bind the SAME
+   * buffer this dispatch just filled — producer-owns-the-buffer, same
+   * ownership shape `ismMapGenerator.ringMeansBuffer` already establishes
+   * for `placeDust.wesl`'s own CONSUMED input.
+   */
+  readonly massBuffer: GPUBuffer;
   dispose(): void;
 };
 
@@ -111,6 +131,21 @@ export function createIsmMapPlaceDust(
     size: readbackByteSize,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
+  // massOut (placeDust.wesl binding 6) — Task 9's survivor-sum input, one
+  // f32 per particle SLOT (not byte-packed like FieldComponentRec). COPY_SRC
+  // beyond the production STORAGE need, same "debug readback rides the
+  // production buffer's own COPY_SRC flag" precedent `fieldComps` establishes
+  // (createGalaxyModel.ts).
+  const massBuffer = device.createBuffer({
+    label: 'galaxy:placeDustMass',
+    size: MAX_PARTICLE_COUNT * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+  const massReadbackBuffer = device.createBuffer({
+    label: 'galaxy:placeDustMassReadback',
+    size: MAX_PARTICLE_COUNT * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
 
   function encode(enc: GPUCommandEncoder, input: PlaceDustDispatchInput): void {
     const { budget } = input;
@@ -125,6 +160,7 @@ export function createIsmMapPlaceDust(
         { binding: 3, resource: input.ismMapTexture.createView() },
         { binding: 4, resource: input.orientationTexture.createView() },
         { binding: 5, resource: { buffer: input.fieldCompsBuffer } },
+        { binding: 6, resource: { buffer: massBuffer } },
       ],
     });
     const pass = enc.beginComputePass({ label: 'galaxy:placeDustPass' });
@@ -140,9 +176,11 @@ export function createIsmMapPlaceDust(
       encode(enc, input);
     },
 
-    async dispatchAndReadbackDust(input): Promise<Float32Array> {
+    async dispatchAndReadbackDust(
+      input,
+    ): Promise<{ readonly records: Float32Array; readonly mass: Float32Array }> {
       const { budget } = input;
-      if (budget.count <= 0) return new Float32Array(0);
+      if (budget.count <= 0) return { records: new Float32Array(0), mass: new Float32Array(0) };
       const enc = device.createCommandEncoder({ label: 'galaxy:placeDustDebugDispatch' });
       encode(enc, input);
       const byteSize = budget.count * FIELD_COMPONENT_FLOATS * 4;
@@ -154,19 +192,32 @@ export function createIsmMapPlaceDust(
       // and indexing `dustOffset` in-shader instead; this copy has no such
       // constraint to work around.
       enc.copyBufferToBuffer(input.fieldCompsBuffer, byteOffset, readbackBuffer, 0, byteSize);
+      const massByteSize = budget.count * 4;
+      enc.copyBufferToBuffer(massBuffer, 0, massReadbackBuffer, 0, massByteSize);
       device.queue.submit([enc.finish()]);
 
-      await readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+      await Promise.all([
+        readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteSize),
+        massReadbackBuffer.mapAsync(GPUMapMode.READ, 0, massByteSize),
+      ]);
       try {
-        return new Float32Array(readbackBuffer.getMappedRange(0, byteSize).slice(0));
+        return {
+          records: new Float32Array(readbackBuffer.getMappedRange(0, byteSize).slice(0)),
+          mass: new Float32Array(massReadbackBuffer.getMappedRange(0, massByteSize).slice(0)),
+        };
       } finally {
         readbackBuffer.unmap();
+        massReadbackBuffer.unmap();
       }
     },
+
+    massBuffer,
 
     dispose(): void {
       paramsBuffer.destroy();
       readbackBuffer.destroy();
+      massBuffer.destroy();
+      massReadbackBuffer.destroy();
     },
   };
 }

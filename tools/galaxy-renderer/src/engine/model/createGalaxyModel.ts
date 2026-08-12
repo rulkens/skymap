@@ -244,6 +244,10 @@ export type GalaxyModel = {
   requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
     readonly count: number;
     readonly records: Float32Array;
+    /** Task 9's survivor-sum input (`placeDust.wesl`'s massOut), read back from the SAME dispatch as `records` — see `IsmMapPlaceDust.dispatchAndReadbackDust`'s own doc. */
+    readonly mass: Float32Array;
+    /** Task 9's GPU-computed Larson renorm scale (`ringReduce.wesl`'s csSurvivorSum output), off a survivor-sum dispatch encoded against the SAME `mass`. */
+    readonly renormScale: number;
   } | null>;
   /**
    * Debug-only: COPIES the dust tail's CURRENT slot range out of the LIVE
@@ -988,6 +992,16 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       if (!fieldGeometry || !budget) return;
       const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
       placeDust.dispatchPlaceDust(enc, dustDispatchInput(fieldGeometry, budget));
+      // Task 9 — survivor-sum + Larson renorm, encoded into the SAME
+      // encoder/submit right after the dispatch above: cross-pass ordering
+      // within one submit is what lets this read `placeDust.massBuffer`
+      // fresh with no readback of its own, tying the renorm's freshness to
+      // THIS placement rebuild rather than a parallel invalidation flag.
+      ringReduce.dispatchSurvivorSum(enc, {
+        massBuffer: placeDust.massBuffer,
+        count: budget.count,
+        totalMass: budget.totalMass,
+      });
       device.queue.submit([enc.finish()]);
     },
   });
@@ -1793,13 +1807,28 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     async requestDustPlacementReadback(opts): Promise<{
       readonly count: number;
       readonly records: Float32Array;
+      readonly mass: Float32Array;
+      readonly renormScale: number;
     } | null> {
       const budget = dustBudget;
       if (!fieldGeometry || !budget) return null;
-      const records = await placeDust.dispatchAndReadbackDust(
+      const { records, mass } = await placeDust.dispatchAndReadbackDust(
         dustDispatchInput(fieldGeometry, budget, opts?.forceGeneratorIsFluid),
       );
-      return { count: budget.count, records };
+      // Own encoder/submit, AFTER the placement dispatch above's submit has
+      // already retired (dispatchAndReadbackDust awaited its own mapAsync) —
+      // placeDust.massBuffer holds THIS dispatch's fresh values with nothing
+      // else writing to it in between, so this reduction is over the same
+      // records the caller just read back.
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeDustDebugSurvivorSum' });
+      ringReduce.dispatchSurvivorSum(enc, {
+        massBuffer: placeDust.massBuffer,
+        count: budget.count,
+        totalMass: budget.totalMass,
+      });
+      device.queue.submit([enc.finish()]);
+      const renormScale = await ringReduce.readDustRenormScale();
+      return { count: budget.count, records, mass, renormScale };
     },
 
     async requestDustBufferPeek(): Promise<{

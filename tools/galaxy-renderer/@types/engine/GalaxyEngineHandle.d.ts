@@ -77,9 +77,14 @@ export type GalaxyEngineHandle = {
   // createGalaxyModel.ts's `dustDispatchInput` for why the probe uses this
   // (instead of flipping `ismMap.generator` through `setFieldTuning`) to
   // exercise placeDust.wesl's mode-1 (smoothDisc) branch.
+  // `mass`/`renormScale` are Task 9's own additions — see
+  // createGalaxyModel.ts's `requestDustPlacementReadback` for what each
+  // reads back.
   requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
     readonly count: number;
     readonly records: Float32Array;
+    readonly mass: Float32Array;
+    readonly renormScale: number;
   } | null>;
   // Debug-only: Task 14 fix round 2's own dust-twin regression exception —
   // COPIES the dust tail's CURRENT slot range out of the LIVE `fieldComps`

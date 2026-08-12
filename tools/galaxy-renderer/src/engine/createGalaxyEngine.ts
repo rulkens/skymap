@@ -427,6 +427,7 @@ export async function createGalaxyEngine(
     starGrainTex,
     starGrainSampler,
     dustMapSampler,
+    dustRenormBuffer: ringReduce.dustRenormBuffer,
     getDustMapTex: () => targets.dustMapTex,
   });
 
@@ -1173,6 +1174,7 @@ export async function createGalaxyEngine(
       aggregateUpsample.destroy();
       ismMapGenerator.dispose();
       ismMapOrientation.dispose();
+      ringReduce.dispose();
       dustCdfScan.dispose();
       digCdfScan.dispose();
       placeDust.dispose();
