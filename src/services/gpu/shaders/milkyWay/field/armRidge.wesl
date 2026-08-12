@@ -6,8 +6,8 @@
 // below). geometry-level scalars a caller's own GalaxyDescription would
 // carry (armStartRadius, armInnerRampW, armFullRadius, waveAmount,
 // diskScaleLen, plus the warp's own four fields) ride ArmRidgeGeometry,
-// threaded as an explicit parameter rather than a bind-group global — no
-// buffer layout exists yet for it; that is Task 13/14's own concern.
+// threaded as an explicit parameter rather than a bind-group global
+// (placeArmCloud.wesl's ArmCloudArmRecord is the buffer-backed form).
 
 struct ArmRec {
   phase: f32,

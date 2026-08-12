@@ -4,14 +4,13 @@
  * `csRingMeans`, `IsmMapOutput.ringMeansBuffer`'s producer). Built once
  * against the fixed-lifetime texture/buffer `createIsmMapOutput.ts` owns —
  * no per-call rebuild of the bind group, since neither object is ever
- * replaced, only its content changes. `dispatchSurvivorSum` (Task 9) is the
- * first of the "future ring-reductions" this header used to promise —
- * `dustRenormBuffer` is a FRESH bind group per call (its own `massBuffer`
- * input comes from `placeDust`, an external object this module has no
- * constructor-time handle on, unlike `ismMapTexture`/`ringMeansBuffer`
- * above). `dispatchArmCloudFluxWeightSum`/`dispatchArmSpurFluxWeightSum`
- * (Task 15) are the same shape, one level simpler — no `totalX` input at all
- * (see `ringReduce.wesl`'s own doc for why the output is a bare reciprocal).
+ * replaced, only its content changes. `dispatchSurvivorSum`'s
+ * `dustRenormBuffer` bind group IS rebuilt fresh per call: its own
+ * `massBuffer` input comes from `placeDust`, an external object this module
+ * has no constructor-time handle on. `dispatchArmCloudFluxWeightSum`/
+ * `dispatchArmSpurFluxWeightSum` are the same shape, one level simpler — no
+ * `totalX` input at all (see `ringReduce.wesl`'s own doc for why the output
+ * is a bare reciprocal).
  */
 import { ISM_MAP_RINGS } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
@@ -29,7 +28,7 @@ export type DispatchSurvivorSumInput = {
   readonly totalMass: number;
 };
 
-/** Shared shape for the two Task 15 flux-weight-sum dispatches below — `fluxWeightBuffer` is the producer's own `fluxWeightOut`, `count` its reservation's live count. */
+/** Shared shape for the two flux-weight-sum dispatches below — `fluxWeightBuffer` is the producer's own `fluxWeightOut`, `count` its reservation's live count. */
 export type DispatchFluxWeightSumInput = {
   readonly fluxWeightBuffer: GPUBuffer;
   readonly count: number;
@@ -58,7 +57,7 @@ export type IsmMapRingReduce = {
   /** Debug-only: maps `dustRenormBuffer[0]` back to the CPU — the probe's own numeric-validation exception (`readback:placeDust`'s survivor-sum assertion), no production caller. */
   readDustRenormScale(): Promise<number>;
   /**
-   * Task 15's arm-cloud twin of `dispatchSurvivorSum` — encodes
+   * The arm-cloud twin of `dispatchSurvivorSum` — encodes
    * `ringReduce.wesl`'s `csArmCloudFluxWeightSum` into the CALLER's encoder,
    * same no-submit/must-run-after-the-producer-dispatch contract. Writes
    * `armCloudRenormBuffer[0]`.
@@ -68,7 +67,7 @@ export type IsmMapRingReduce = {
   readonly armCloudRenormBuffer: GPUBuffer;
   /** Debug-only: maps `armCloudRenormBuffer[0]` back to the CPU — the probe's own numeric-validation exception, no production caller. */
   readArmCloudRenormScale(): Promise<number>;
-  /** Task 15's spur-cloud twin of `dispatchArmCloudFluxWeightSum` — same shape, `csArmSpurFluxWeightSum`. */
+  /** The spur-cloud twin of `dispatchArmCloudFluxWeightSum` — same shape, `csArmSpurFluxWeightSum`. */
   dispatchArmSpurFluxWeightSum(enc: GPUCommandEncoder, input: DispatchFluxWeightSumInput): void;
   /** `spurCloudRenorm` (fieldSplat/fragment.wesl binding 16) — the spur-cloud twin of `armCloudRenormBuffer`. */
   readonly spurCloudRenormBuffer: GPUBuffer;
@@ -127,8 +126,8 @@ export function createIsmMapRingReduce(
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
-  // Task 15 — arm-cloud/spur-cloud flux-weight-sum kernels, same shape as
-  // the survivor-sum pipeline above minus a `totalX` factor (ringReduce.wesl's
+  // Arm-cloud/spur-cloud flux-weight-sum kernels, same shape as the
+  // survivor-sum pipeline above minus a `totalX` factor (ringReduce.wesl's
   // own doc for why the output is a bare reciprocal).
   const armCloudFluxWeightSumPipe = device.createComputePipeline({
     label: 'galaxy:ismMapRingReduceArmCloudFluxWeightSumPipe',

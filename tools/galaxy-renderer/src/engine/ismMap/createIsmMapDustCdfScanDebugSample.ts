@@ -1,24 +1,13 @@
 /**
- * createIsmMapDustCdfScanDebugSample — Task 6's own numeric-validation
- * exception (`ismMapDustCdfScan.wesl` has no production caller yet — Tasks
- * 7/8 wire the real `ISM_MAP_RINGS x ISM_MAP_AZ` texture). Same shape as
- * `createArmRidgeDebugSample.ts`: own fixture, own dispatch, own one-shot
- * readback, no production caller. Differs in ONE way that simplifies the
- * probe: the fixture is real DATA (a small `rgba32float` texture, not baked
- * WGSL consts), so `dispatchAndReadback` hands the fixture's own texel data
- * straight back — `probeGpuErrors.ts` builds its CPU `GalaxyIsmMap`
- * reference from THAT, never a hand-duplicated literal.
- *
- * Task 7's fix round: the fixture also drives the ring-mean-normalised,
- * capped dust density (`dustParticleCloud.ts`'s `density()` closure) that
- * `ismMapDustCdfScan.wesl`'s armBias<=0 branch now always applies — the
- * ring-means buffer is computed CPU-side, ONCE, from the SAME fixture data
- * via `ismMapRingMeans` (the real, unmodified function), uploaded once at
- * construction, so the GPU scan and the probe's own CPU reference can never
- * disagree about what the ring means ARE, only about the scan itself.
- * `DEBUG_RING_CAP` is deliberately non-degenerate: chosen so roughly half
- * this fixture's texels land above their own ring's mean (and so get
- * clamped) and half don't — proving the cap branch fires, not just compiles.
+ * createIsmMapDustCdfScanDebugSample — ismMapDustCdfScan.wesl's own
+ * numeric-validation exception: same shape as createArmRidgeDebugSample.ts
+ * (own fixture, own dispatch, own one-shot readback, no production caller),
+ * but the fixture is real DATA (a small rgba32float texture, not baked WGSL
+ * consts) — dispatchAndReadback hands the texel data straight back, so
+ * probeGpuErrors.ts's CPU GalaxyIsmMap reference never hand-duplicates a
+ * literal. The ring-means buffer is computed CPU-side ONCE from the SAME
+ * fixture via ismMapRingMeans, so the GPU scan and the probe's own CPU
+ * reference can never disagree about what the ring means ARE.
  */
 import { createIsmMapDustCdfScan } from './createIsmMapDustCdfScan';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
@@ -29,7 +18,7 @@ const FIXTURE_AZ = 8;
 const FIXTURE_R_MIN = 1.5;
 const FIXTURE_R_MAX = 9.0;
 
-/** Exported so `probeGpuErrors.ts`'s CPU reference dispatches the SAME cap the GPU fixture does — one literal, not two. */
+/** Exported so `probeGpuErrors.ts`'s CPU reference dispatches the SAME cap the GPU fixture does — one literal, not two. Deliberately non-degenerate: roughly half the fixture's texels land above their own ring's mean (and get clamped), proving the cap branch fires, not just compiles. */
 export const DEBUG_RING_CAP = 1.0;
 
 /** Deterministic, non-uniform per-channel values — varied enough that the dust-channel CDF is a real (non-degenerate) monotonic ramp, not a trivial constant-weight case. */

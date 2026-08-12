@@ -35,8 +35,9 @@ fn fs(input: HiiSplatOut) -> @location(0) vec4<f32> {
     let weight = abs(shading.emissionColorTextureWeight.w);
     var term = starGrainTerm(p, tPeak, u.dustDetail.y, u.dustDetail.z);
 
-    // starsWeight (comps[4i+3].w) layers the ISM 'stars' tracer read on TOP
-    // of the grain term — a young component carries both textures at once.
+    // starsWeight (records.wesl's FieldComponentRec) layers the ISM 'stars'
+    // tracer read on TOP of the grain term — a young component carries both
+    // textures at once.
     let starsWeight = shading.centerStarsWeight.w;
     if (starsWeight > 0.0) {
       let uv = ismCartesianUv(p);

@@ -1,24 +1,13 @@
 /**
  * readTextureChannelSum — debug-only: copies a WHOLE rgba16float texture
  * back to the CPU and sums every channel over every texel. Texture-agnostic
- * (no dust- or field-specific logic) — two callers as of Task 15/its fix
- * round: `dustMapTex` (`requestDustMapChannelSum`, the original caller —
- * `readback:placeDust`'s consuming-multiply assertion observes
- * `dustMap/fragment.wesl`'s ACTUAL rendered output, not a buffer the compute
- * kernel and the probe both read directly, which would validate the
- * reduction but never the fragment shader's own consumption of it) and
- * `fieldTex` (`requestFieldTexChannelSum`/`requestArmCloudRenderedFluxSum`/
- * `requestArmSpurCloudRenderedFluxSum`, `readback:placeArmCloud`'s/
- * `readback:placeArmSpurCloud`'s own consuming-multiply checks, same
- * reasoning against `fieldSplat/fragment.wesl`). One-shot, own encoder/
- * submit/buffer (no persistent readback state, unlike
- * `createIsmMapReadbacks.ts`'s streamed copies). No production caller:
- * nothing in `drawFrame` needs a scalar summary of a target it just wrote.
- *
- * The sum is linear in whatever consume-time scale the calling pass reads
- * (`dustRenorm[0]`, `armCloudRenorm[0]`/`spurCloudRenorm[0]`) by
- * construction — see each caller's own site for the specific tuning knob
- * that isolates its scale and the exact ratio it predicts.
+ * (no dust- or field-specific logic); callers read this against the pass's
+ * ACTUAL rendered output rather than the compute kernel's own buffer, so
+ * the check also validates the fragment shader's consumption of it, not
+ * just the reduction. One-shot, own encoder/submit/buffer (no persistent
+ * readback state, unlike `createIsmMapReadbacks.ts`'s streamed copies). No
+ * production caller: nothing in `drawFrame` needs a scalar summary of a
+ * target it just wrote.
  */
 import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
 

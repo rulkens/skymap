@@ -6,11 +6,10 @@
 // thread, sequential, the SAME order buildIsmMapDustCdf.ts's outer loop
 // carries its own running sum through); csApplyRingOffsets adds that
 // offset back over the full grid. Per-texel weight is a small uniform
-// table, not a bare channel read — dust density (Task 7) is the
-// ring-mean-normalised, optionally capped, channel dot this file's own
-// evalWeight computes below (ported from the CPU's former density()
-// closure, buildDustParticleCloud, deleted Task 16); arm-biased activity
-// (Task 8) reweights by a packed per-(ring,arm) envelope mirroring
+// table, not a bare channel read — dust density is the ring-mean-normalised,
+// optionally capped, channel dot this file's own evalWeight computes below
+// (ported from the CPU's former density() closure); arm-biased activity
+// reweights by a packed per-(ring,arm) envelope mirroring
 // buildArmProximityEnvelope/armBiasedDensity (hiiRegions.ts:484-539).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
@@ -32,8 +31,8 @@ struct IsmMapCdfParams {
   armCount: f32,
   // dustPlacementCap (GalaxyDustCloudParams) — <=0 is that field's own
   // "uncapped" convention (evalWeight's local ratio passes through
-  // unclamped). ONLY read in the armBias<=0 branch — Task 8's armBiased
-  // path never touches this field, by construction (see evalWeight).
+  // unclamped). ONLY read in the armBias<=0 branch — the armBiased path
+  // never touches this field, by construction (see evalWeight).
   cap: f32,
 }
 
@@ -54,8 +53,8 @@ struct IsmMapCdfArmEnvelopeEntry {
 // ringReduce.wesl's own output (dust-channel-only, per that file's own
 // header) — the SAME per-ring divisor evalWeight below reads. Always bound,
 // whether the armBias<=0 branch reads it or not: evalWeight references
-// this binding statically, so every caller (Task 8's armBiased dispatch
-// included) must bind SOMETHING here.
+// this binding statically, so every caller (armBiased dispatches included)
+// must bind SOMETHING here.
 @group(0) @binding(5) var<storage, read> ringMeansBuf: array<f32>;
 
 // ismMapDustRingEdges — WGSL mirror of ismMapDustRingEdges.ts: ring's
@@ -77,17 +76,16 @@ fn ismMapDustRingEdges(ring: u32, rings: u32, rMin: f32, rMax: f32) -> vec2<f32>
 }
 
 // evalWeight — base channel weight, ring-mean-normalised and optionally
-// capped (armBias<=0 branch — the CPU's former density() closure,
-// buildDustParticleCloud, deleted Task 16, ported verbatim including its
-// zero-guards), OR reweighted toward the nearest arm ridge (armBias>0
-// branch, armBiasedDensity,
-// hiiRegions.ts:527-539) — the two branches are mutually exclusive callers
-// (Task 7's dust CDF vs. Task 8's DIG CDF), never combined.
+// capped (armBias<=0 branch — the CPU's former density() closure, ported
+// verbatim including its zero-guards), OR reweighted toward the nearest arm
+// ridge (armBias>0 branch, armBiasedDensity, hiiRegions.ts:527-539) — the
+// two branches are mutually exclusive callers (dust's own CDF vs. DIG's),
+// never combined.
 //
 // The armBias<=0 branch reads 'base' (the bare channel dot) BEFORE any
-// ring-normalisation — Task 8's armBias>0 branch below is unchanged by
-// this addition and reads the SAME 'base', so its output is byte-for-byte
-// identical to before regardless of what params.cap/ringMeansBuf hold.
+// ring-normalisation — the armBias>0 branch below reads the SAME 'base',
+// so its output is byte-for-byte identical regardless of what
+// params.cap/ringMeansBuf hold.
 //
 // armCount==0u is NOT special-cased in the armBias>0 branch — the loop
 // below just runs zero times, leaving envelope at 0, which is

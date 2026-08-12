@@ -1,15 +1,14 @@
 /**
  * createIsmMapPlaceDust — GPU replacement for the CPU's former
- * `buildDustParticleCloud` map-seeded placement (deleted from
- * `dustParticleCloud.ts`, Task 16 — that file survives only as the
- * constants below import). The CPU still decides slot COUNT
- * (`computePlaceDustBudget` below, the same early-exit/clamp math that
+ * `buildDustParticleCloud` map-seeded placement (`dustParticleCloud.ts`
+ * survives only as the constants below import). The CPU still decides slot
+ * COUNT (`computePlaceDustBudget` below, the same early-exit/clamp math that
  * function's own setup ran); `placeDust.wesl` decides slot CONTENT,
  * including the mapDensity/smoothDisc MODE itself, so nothing on this path
  * depends on an async ismMap readback landing.
  *
- * `dispatchPlaceDust` rebuilds its bind group every call (Task 6's own
- * `createIsmMapDustCdfScan.ts` precedent): the CDF prefix buffer, ring-means
+ * `dispatchPlaceDust` rebuilds its bind group every call
+ * (`createIsmMapDustCdfScan.ts`'s own precedent): the CDF prefix buffer, ring-means
  * buffer and `fieldComps` buffer can all change identity (a growable record
  * buffer regrows; the ISM-map generator's own buffers are stable but this
  * keeps one discipline, not two). `dispatchAndReadbackDust` is the probe's
@@ -47,7 +46,7 @@ export type PlaceDustDispatchInput = {
   readonly generatorIsFluid: boolean;
   readonly grid: PlaceDustGrid;
   readonly warp: PlaceDustWarp;
-  /** Task 6's CDF scan output over the dust channel — see createIsmMapDustCdfScan.ts. */
+  /** The CDF scan output over the dust channel — see createIsmMapDustCdfScan.ts. */
   readonly prefixBuffer: GPUBuffer;
   /** ismMapGenerator.ringMeansBuffer — ringReduce.wesl's per-ring dust means. */
   readonly ringMeansBuffer: GPUBuffer;
@@ -63,16 +62,16 @@ export type IsmMapPlaceDust = {
   /**
    * Debug-only: dispatch in its own encoder/submit and map the dust slot
    * range straight back — the probe's determinism/survival-floor exception,
-   * no production caller. `mass` is `massBuffer`'s own `[0, count)` slice
-   * (Task 9's survivor-sum input), read back alongside `records` so the
-   * probe can independently recompute `sumR2` off the SAME dispatch rather
-   * than a second, potentially different one.
+   * no production caller. `mass` is `massBuffer`'s own `[0, count)` slice,
+   * read back alongside `records` so the probe can independently recompute
+   * `sumR2` off the SAME dispatch rather than a second, potentially
+   * different one.
    */
   dispatchAndReadbackDust(
     input: PlaceDustDispatchInput,
   ): Promise<{ readonly records: Float32Array; readonly mass: Float32Array }>;
   /**
-   * `massOut` (placeDust.wesl binding 6) — Task 9's own survivor-sum input,
+   * `massOut` (placeDust.wesl binding 6) — the survivor-sum input,
    * MAX_PARTICLE_COUNT floats, one per particle slot, zeroed on a
    * survival-floor miss (mirrors `comps`' amplitude-as-liveness). Exposed so
    * `ringReduce.wesl`'s csSurvivorSum kernel (dispatched separately, off
@@ -133,10 +132,10 @@ export function createIsmMapPlaceDust(
     size: readbackByteSize,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
-  // massOut (placeDust.wesl binding 6) — Task 9's survivor-sum input, one
-  // f32 per particle SLOT (not byte-packed like FieldComponentRec). COPY_SRC
-  // beyond the production STORAGE need, same "debug readback rides the
-  // production buffer's own COPY_SRC flag" precedent `fieldComps` establishes
+  // massOut — see IsmMapPlaceDust.massBuffer's own doc above. One f32 per
+  // particle SLOT (not byte-packed like FieldComponentRec). COPY_SRC beyond
+  // the production STORAGE need, same "debug readback rides the production
+  // buffer's own COPY_SRC flag" precedent `fieldComps` establishes
   // (createGalaxyModel.ts).
   const massBuffer = device.createBuffer({
     label: 'galaxy:placeDustMass',

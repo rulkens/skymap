@@ -1,55 +1,14 @@
 // milkyWay/ismMap/clusteredDiscPlacement.wesl — GPU port of
-// clusteredDiscPlacement.ts's two-level complex/children sampler, including
-// its 'analytic' (arm-lane) mode (2u below, Task 13's own addition — modes
-// 0u/1u are Task 7's): one shared clumping loop rather than three copies,
-// the plan's own reuse contract for buildClusteredDiscPlacementChild below.
+// clusteredDiscPlacement.ts's two-level complex/children sampler: dust's
+// map-seeded/smooth-disc modes (0u/1u) plus the arm cloud's analytic
+// arm-lane mode (2u), one shared clumping loop instead of three copies.
 //
-// CPU draws from one serial mulberry32 stream where draw ORDER is
-// load-bearing (clusteredDiscPlacement.ts's own header). A compute dispatch
-// has no shared stream: every invocation instead derives its draws from a
-// stateless (seed, population, index, slot) hash — generate.wesl:184-195's
-// pcg4d/genRand/genNormal, ported verbatim below rather than imported: that
-// file also declares v1-only module-scope bindings ('gen'/'outBuf') a v2
-// placement shader has no business dragging in. A complex's own draws are
-// keyed on its COMPLEX index (shared by every child in it, so every child
-// independently recomputes the SAME seed point); a child's own draws are
-// keyed on its own SLOT index — two populations so the two draw families can
-// never alias each other even where their index ranges overlap.
-//
-// RNG_SLOT_CONTRACT: within one caller's own (popComplex, complexIndex) or
-// (popChild, i) pair, slots never collide (mode 0u/1u/2u's own layouts
-// below). ACROSS callers, genRand/genNormal are a PURE function of
-// (seed, pop, idx, slot) with no per-dispatch salt — two callers sharing
-// BOTH 'seed' and 'pop' would draw bit-identical values at every coincident
-// (idx, slot), silently correlating two supposedly-independent stochastic
-// populations (the CPU original avoided this with a per-tier 'seed ^ TAG'
-// salt — dustParticleCloud.ts's "DUST" vs. armParticleCloud.ts's "ARMC").
-// 'buildClusteredDiscPlacementChild' therefore takes 'popComplex'/'popChild'
-// as CALLER-SUPPLIED parameters rather than hardcoding 'CDP_POP_COMPLEX'/
-// 'CDP_POP_CHILD' internally: dust's own call site (placeDust.wesl) passes
-// those two constants UNCHANGED (so its own output stays byte-identical —
-// dust's placement is approved/pinned by the probe); arm cloud's call site
-// (placeArmCloud.wesl) passes its OWN distinct pair
-// (ARM_CLOUD_POP_COMPLEX/ARM_CLOUD_POP_CHILD, that file's own constants) so
-// its draws are genuinely independent of dust's even where the two
-// dispatches' 'complexIndex'/'i' ranges overlap — the same decorrelation
-// placeArmSpurCloud.wesl's own 'PLACE_SPUR_CLOUD_POP' already gets by
-// using a single tier-distinct population for its whole (complex-less) draw
-// sequence.
-//
-// RNG_SLOT_CONTRACT (mode 2u, within whichever popComplex the caller
-// passed): the weighted ARM PICK lives in the CALLER (placeArmCloud.wesl
-// owns the arm-records storage buffer; this shared function takes none, so
-// modes 0u/1u never need to bind one) at (popComplex, complexIndex) slots 0
-// (a dead armRoll draw, kept only for structural parity with
-// placeAnalyticComplex's own unconditional roll — armBias is hardcoded 1
-// for this tier's only caller, so the roll can never gate anything) and 1
-// (the pick itself). Mode 2u's OWN branch below never reads slots 0/1 — its
-// arm-lane sub-branch starts at slot 2 (a running counter, the rejection
-// loop's try count varies per invocation) and its smooth-disc fallback
-// sub-branch uses ITS OWN slots 2-8 (mirroring mode 1u's 0-6, shifted by
-// +2) — the two sub-branches are mutually exclusive per complexIndex, so
-// they may share that range without colliding.
+// The CPU drew from one serial stream where draw ORDER was load-bearing; a
+// dispatch has none, so every draw is a stateless hash of (seed, pop, idx,
+// slot) instead. RNG_SLOT_CONTRACT: within one caller's (pop, idx) pair,
+// slots never collide; across callers, distinct population tags (each
+// tier owns its own pair) keep draws from correlating even where index
+// ranges overlap.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -137,13 +96,10 @@ fn cdpAzIndexForAngle(angle: f32, az: u32) -> u32 {
 }
 
 // cdpRingIndexForRadius — ismMapRingIndexForRadius.ts ported verbatim:
-// ROUND-to-nearest ring index (as opposed to cdpRingIndexForSample's floor
-// bucket above) — dustParticleCloud.ts:228-238's sampleMapTraits uses THIS
-// one, not the floor bucket, for its ringMean divisor lookup. Mirror the
-// CPU's own two-ring-semantics-in-one-ratio oddity exactly, don't fix it:
-// callers pairing a floor-bucket numerator with a round-bucket divisor are
-// porting a real (if odd) CPU behaviour, not a bug this file should paper
-// over. 'round' ties-to-even vs. JS's Math.round ties-away-from-zero only
+// ROUND-to-nearest ring index (vs. cdpRingIndexForSample's floor bucket
+// above) — a caller pairing a floor-bucket numerator with a round-bucket
+// divisor is porting a real (if odd) CPU behaviour, not a bug to fix here.
+// 'round' ties-to-even vs. JS's Math.round ties-away-from-zero only
 // disagrees on an exact half-integer boundary — unreachable for a
 // continuously-scattered placement radius.
 fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
@@ -202,8 +158,8 @@ fn rotateFrameToOrientation(
 
 // inverseCovarianceFromFrame — inverseCovarianceFromFrame.ts ported
 // verbatim: M = sum_i u_i u_i^T / sigma_i^2 over an ARBITRARY orthonormal
-// frame. Shared here (not placeDust.wesl-local) since Task 13's arm-cloud
-// records need the identical along/across/pole -> invCov reduction.
+// frame. Shared here (not placeDust.wesl-local): the arm cloud's records
+// need the identical along/across/pole -> invCov reduction too.
 struct InvCov {
   diag: vec3<f32>,
   offDiag: vec3<f32>,
@@ -234,12 +190,9 @@ struct PlacedChild {
   frame: CloudFrame,
 }
 
-// Distinct hash "populations" for complex-level vs. child-level draws — see
-// this file's own header for why the two must never share one tag. These
-// two are dust's OWN concrete values (placeDust.wesl passes them,
-// unchanged, as buildClusteredDiscPlacementChild's popComplex/popChild
-// arguments) — kept exported/importable rather than dust inlining its own
-// copies, so "dust's population" stays this ONE pair, not a duplicate.
+// Distinct hash populations for complex-level vs. child-level draws (this
+// file's own RNG_SLOT_CONTRACT) — dust's OWN pair, passed unchanged as
+// buildClusteredDiscPlacementChild's popComplex/popChild by placeDust.wesl.
 const CDP_POP_COMPLEX: u32 = 0xC0442u;
 const CDP_POP_CHILD: u32 = 0xC41Du;
 
@@ -308,7 +261,7 @@ fn cdpPlaceSmoothDiscSeed(
 //
 // mode 0u = 'mapDensity' (dust's map-seeded path), 1u = 'smoothDisc' (dust's
 // no-map fallback), 2u = 'analytic' (the arm cloud's arm-lane/smooth-disc
-// roll — Task 13).
+// roll).
 fn buildClusteredDiscPlacementChild(
   seed: u32, i: u32, childrenPerComplex: u32, mode: u32,
   // Caller-owned hash populations (this file's own RNG_SLOT_CONTRACT) — NOT
@@ -317,7 +270,7 @@ fn buildClusteredDiscPlacementChild(
   // (unchanged, so its output stays byte-identical); arm cloud's passes its
   // own distinct pair.
   popComplex: u32, popChild: u32,
-  // mode 0u (mapDensity) inputs — Task 6's CDF prefix buffer.
+  // mode 0u (mapDensity) inputs — the CDF prefix buffer.
   prefixBuf: ptr<storage, array<f32>, read>, cdfTotal: f32,
   cdfRings: u32, cdfAz: u32, cdfRMin: f32, cdfRMax: f32,
   // mode 1u (smoothDisc) inputs.

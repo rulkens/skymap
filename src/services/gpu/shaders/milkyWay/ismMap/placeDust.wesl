@@ -1,22 +1,13 @@
 // milkyWay/ismMap/placeDust.wesl — GPU port of the CPU's former
-// buildDustParticleCloud map-seeded placement body (deleted from
-// dustParticleCloud.ts, Task 16 — that file survives only as the
-// constants/budget math below), one invocation per particle SLOT
-// (MAX_PARTICLE_COUNT = 40000 ceiling, dustParticleCloud.ts's own surviving
-// export). The CPU still decides slot COUNT (createIsmMapPlaceDust.ts's
-// budget math, same shape computePlaceDustBudget.ts mirrors); this shader
-// decides slot CONTENT, including the mapDensity/smoothDisc MODE itself —
-// see 'usesMapDensity' below — so nothing here depends on the async CPU
-// ismMap readback.
-//
-// A slot that fails the survival floor (DUST_SURVIVAL_FLOOR_FRAC) writes
-// amplitude 0 rather than being skipped: a zero-amplitude Gaussian splat
-// draws nothing, the same practical effect as v1's alive=false StarRec,
-// without a spare boolean lane FieldComponentRec doesn't have. It also
-// writes 0 into massOut (binding 6) — Task 9's own survivor-sum input, see
-// that binding's doc below. comps[dustOffset+i] carries RAW, un-renormalized
-// mass; Task 9's ringReduce.wesl survivor-sum + dustMap/fragment.wesl's
-// consume-time multiply supply the missing Larson massPerR2 scale.
+// buildDustParticleCloud map-seeded placement body, one invocation per
+// particle SLOT (MAX_PARTICLE_COUNT ceiling). The CPU still decides slot
+// COUNT; this shader decides slot CONTENT, including the
+// mapDensity/smoothDisc MODE itself (see 'usesMapDensity' below) — nothing
+// here depends on the async CPU ismMap readback. A slot that fails the
+// survival floor writes amplitude 0 rather than being skipped.
+// comps[dustOffset+i] carries RAW mass; ringReduce.wesl's survivor-sum +
+// dustMap/fragment.wesl's consume-time multiply supply the missing Larson
+// massPerR2 scale.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -38,20 +29,16 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::CDP_POP_CHILD;
 // compute shader's bind group must not risk inheriting it.
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
-// Formerly dustParticleCloud.ts's own non-exported constants (deleted with
-// its placement body, Task 16), mirrored verbatim (same "mirror, no parity
-// test" treatment armRidge.wesl gives ARM_WIDTH_FLOOR_H and friends) — this
-// WGSL copy is now the only place they live.
+// dustParticleCloud.ts's own non-exported constants, mirrored verbatim
+// (same "mirror, no parity test" treatment armRidge.wesl gives
+// ARM_WIDTH_FLOOR_H and friends) — this WGSL copy is now the only place
+// they live.
 const GLOBAL_MEAN_EPS: f32 = 1e-6;
 const GMC_SIZE_POWER: f32 = 2.2;
 const CLOUD_POLE_RATIO: f32 = 0.6;
 const CHILD_POLE_RATIO: f32 = 0.4;
-// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant,
-// formerly dustParticleCloud.ts's TAU_ROOT3 (deleted with its placement
-// body, Task 16).
+// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant.
 const TAU_ROOT3: f32 = 15.749609945722418;
-
-const PLACE_DUST_POP_CHILD: u32 = 0xC41Du; // matches clusteredDiscPlacement.wesl's own CDP_POP_CHILD
 
 // PlaceDustParams — SSoT for packPlaceDustParams.ts. u32 fields travel as
 // REAL u32s (not f32-cast, unlike ismMapDustCdfScan.wesl's IsmMapCdfParams):
@@ -99,9 +86,7 @@ struct PlaceDustParams {
 // (0 on a survival-floor miss) but carries the RAW radius^2 mass instead of
 // the amplitude the record derives from it — ringReduce.wesl's
 // csSurvivorSum kernel sums this slot-indexed array (not comps, which has
-// no cheap way back to radius^2 once aspect has skewed sigAlong/sigAcross)
-// to reproduce the CPU's former sumR2 loop (buildDustParticleCloud, deleted
-// from dustParticleCloud.ts, Task 16) on the GPU.
+// no cheap way back to radius^2 once aspect has skewed sigAlong/sigAcross).
 @group(0) @binding(6) var<storage, read_write> massOut: array<f32>;
 
 @compute @workgroup_size(256)
@@ -132,16 +117,15 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let hasOrientation = params.generatorIsFluid != 0u;
 
   // CDP_POP_COMPLEX/CDP_POP_CHILD passed EXPLICITLY (not left to a hardcoded
-  // default inside buildClusteredDiscPlacementChild) — the fix-round-1
-  // finding this call site now documents at the top of its own import list:
-  // dust and arm cloud must draw from genuinely independent (pop, idx, slot)
-  // coordinates even though both share 'params.seed'/'currentSeed()'. These
-  // are dust's OWN unchanged values, so this shader's output is unaffected.
+  // default inside buildClusteredDiscPlacementChild): dust and arm cloud
+  // must draw from genuinely independent (pop, idx, slot) coordinates even
+  // though both share 'params.seed'. These are dust's OWN unchanged values,
+  // so this shader's output is unaffected.
   //
-  // Trailing 6 args are mode 2u's ('analytic', Task 13's arm cloud) own
-  // inputs — this shader never reaches that branch (mode is always 0u/1u
-  // above), so a zeroed ArmRec + degenerate armLogMax<=armLogMin (0.0, 0.0)
-  // is harmless filler, not a real placement.
+  // Trailing 6 args are mode 2u's ('analytic', the arm cloud's own) inputs
+  // — this shader never reaches that branch (mode is always 0u/1u above),
+  // so a zeroed ArmRec + degenerate armLogMax<=armLogMin (0.0, 0.0) is
+  // harmless filler, not a real placement.
   let placed = buildClusteredDiscPlacementChild(
     params.seed, i, params.childrenPerComplex, mode,
     CDP_POP_COMPLEX, CDP_POP_CHILD,
@@ -157,7 +141,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // drawPayload — the CPU's former per-child radius draw (1 slot) plus S3's
   // deterministic (no-draw) aspect/survival lookup at the CHILD's own
   // scattered position, exactly mirroring the CPU's post-scatter timing.
-  let u = genRand(params.seed, PLACE_DUST_POP_CHILD, i, 6u);
+  let u = genRand(params.seed, CDP_POP_CHILD, i, 6u);
   let sizeExp = 1.0 - GMC_SIZE_POWER;
   let sizeMinPow = pow(params.sizeMin, sizeExp);
   let sizeMaxPow = pow(params.sizeMax, sizeExp);
@@ -201,10 +185,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   let sigPole = radius * CLOUD_POLE_RATIO;
 
-  // Raw radius-derived mass, NO Larson massPerR2 renorm baked in (Task 9
-  // supplies it as a consume-time uniform multiply — see the plan's
-  // "Renorm: consume-time scale" design). A survival-floor miss zeroes
-  // amplitude but the record is still written (spec's amplitude-as-liveness).
+  // Raw radius-derived mass, NO Larson massPerR2 renorm baked in
+  // (ringReduce.wesl supplies it as a consume-time uniform multiply). A
+  // survival-floor miss zeroes amplitude but the record is still written
+  // (amplitude-as-liveness).
   let mass = radius * radius;
   let amplitude = select(0.0, mass / (TAU_ROOT3 * sigAlong * sigAcross * sigPole), alive);
   massOut[i] = select(0.0, mass, alive);

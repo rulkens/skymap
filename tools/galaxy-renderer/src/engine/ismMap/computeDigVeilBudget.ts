@@ -1,28 +1,12 @@
 /**
- * computeDigVeilBudget — the DIG veil's own reservation + per-rebuild
- * uniform inputs, the same "budget math survives, placement doesn't" cut
- * Task 7 made for dust (`computePlaceDustBudget.ts`'s own header). Mirrors
- * `buildDigVeil`'s gating/count logic (`hiiRegions.ts:532-...`) up through
+ * computeDigVeilBudget — the DIG veil's reservation + per-rebuild uniform
+ * inputs; mirrors `buildDigVeil`'s gating/count logic through
  * `complexes`/`totalChildren`, but stops there — no rng draws, no per-child
- * loop, and (deliberately) NO `cdf.total > 0` gate: that check needs the CDF
- * itself, which only exists GPU-side (Task 6's scan) for this tier now, so
- * it moves into `placeDigVeil.wesl` as a per-invocation zero-amplitude guard
- * instead (this budget always reserves the full `complexes x
- * childrenPerComplex` count; an unusable map just means every reserved slot
- * writes amplitude 0 — the same liveness discipline dust's survival floor
- * uses, not a gap in this function).
- *
- * `shellFluxSum`/`recentEventCount` are NOT recomputed here — both are
- * already a byproduct of building the shell/young tiers
- * (`buildHiiShellsAndYoungWithSegments`), which the caller always runs
- * first (DIG's own flux anchor IS the shell tier's flux, not a standalone
- * quantity) — see that function's own doc.
- *
- * Its own file, deliberately separate from `createIsmMapPlaceDigVeil.ts`:
- * that file's `?static` shader import only resolves under the Vite/wesl-
- * plugin pipeline, but `probeGpuErrors.ts` imports this pure function
- * directly on the plain Node/tsx side (no Vite) for its own CPU budget-math
- * check — same split `computePlaceDustBudget.ts`'s own header documents.
+ * loop, and deliberately no `cdf.total > 0` gate: that needs the CDF, which
+ * now lives GPU-side only, so it moves into `placeDigVeil.wesl` as a
+ * per-invocation zero-amplitude guard (this always reserves the full
+ * `complexes x childrenPerComplex` count) — kept out of
+ * `createIsmMapPlaceDigVeil.ts` so `probeGpuErrors.ts` can import it plain.
  */
 import {
   DIG_COMPLEX_SPREAD_PC,

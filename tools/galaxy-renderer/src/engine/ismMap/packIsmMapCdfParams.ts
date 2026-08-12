@@ -30,7 +30,7 @@ export type IsmMapCdfParamsInput = {
   /** <=0 (the default) skips the arm-envelope sum entirely — see evalWeight's own doc. */
   readonly armBias?: number;
   readonly armCount?: number;
-  /** dustPlacementCap (GalaxyDustCloudParams) — <=0 (the default) is that field's own "uncapped" convention. Only the armBias<=0 ('channel') path reads it; Task 8's armBias>0 path ignores it by construction. */
+  /** dustPlacementCap (GalaxyDustCloudParams) — <=0 (the default) is that field's own "uncapped" convention. Only the armBias<=0 ('channel') path reads it; the armBias>0 path ignores it by construction. */
   readonly cap?: number;
 };
 

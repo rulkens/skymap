@@ -1,8 +1,7 @@
 /**
  * createIsmMapPlaceArmCloud — GPU replacement for the CPU's former
- * `buildArmParticleCloud` placement body (deleted from `armParticleCloud.ts`,
- * Task 16 — that file survives only as `deriveArmCloudCount`'s budget math).
- * The CPU still decides slot
+ * `buildArmParticleCloud` placement body (`armParticleCloud.ts` survives
+ * only as `deriveArmCloudCount`'s budget math). The CPU still decides slot
  * COUNT (`deriveArmCloudCount`, unchanged — `galaxyFieldMixture.ts`'s
  * `armCloudReservation`) and the per-arm pick-weight table
  * (`packArmCloudArmRecords.ts` ports `armAgeWeight` verbatim);
@@ -67,20 +66,20 @@ export type IsmMapPlaceArmCloud = {
    * Debug-only: dispatch in its own encoder/submit and map the reservation's
    * slot range straight back — the probe's determinism/budget/liveness
    * exception, no production caller. `fluxWeight` is `fluxWeightBuffer`'s own
-   * `[0, count)` slice (Task 15's flux-weight-sum input), read back alongside
-   * `records` so the probe can independently recompute `weightSum` off the
-   * SAME dispatch rather than a second, potentially different one.
+   * `[0, count)` slice, read back alongside `records` so the probe can
+   * independently recompute `weightSum` off the SAME dispatch rather than a
+   * second, potentially different one.
    */
   dispatchAndReadbackArmCloud(
     input: PlaceArmCloudDispatchInput,
   ): Promise<{ readonly records: Float32Array; readonly fluxWeight: Float32Array }>;
   /**
-   * `fluxWeightOut` (placeArmCloud.wesl binding 5) — Task 15's own
-   * flux-weight-sum input, ARM_CLOUD_MAX_COUNT floats, one per particle slot.
-   * Exposed so `ringReduce.wesl`'s csArmCloudFluxWeightSum kernel (dispatched
-   * separately, off `createGalaxyModel.ts`'s own `ringReduce` instance) can
-   * bind the SAME buffer this dispatch just filled — `IsmMapPlaceDust.massBuffer`'s
-   * own producer-owns-the-buffer precedent.
+   * `fluxWeightOut` (placeArmCloud.wesl binding 5) — ARM_CLOUD_MAX_COUNT
+   * floats, one per particle slot. Exposed so `ringReduce.wesl`'s
+   * csArmCloudFluxWeightSum kernel (dispatched separately, off
+   * `createGalaxyModel.ts`'s own `ringReduce` instance) can bind the SAME
+   * buffer this dispatch just filled — `IsmMapPlaceDust.massBuffer`'s own
+   * producer-owns-the-buffer precedent.
    */
   readonly fluxWeightBuffer: GPUBuffer;
   dispose(): void;
@@ -113,8 +112,7 @@ export function createIsmMapPlaceArmCloud(
     size: readbackByteSize,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
-  // fluxWeightOut (placeArmCloud.wesl binding 5) — Task 15's own
-  // flux-weight-sum input, `IsmMapPlaceDust.massBuffer`'s own precedent.
+  // fluxWeightOut — see IsmMapPlaceArmCloud.fluxWeightBuffer's own doc above.
   const fluxWeightBuffer = device.createBuffer({
     label: 'galaxy:placeArmCloudFluxWeight',
     size: ARM_CLOUD_MAX_COUNT * 4,

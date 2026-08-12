@@ -2,8 +2,8 @@
  * buildDigArmEnvelopeTable — `hiiRegions.ts`'s `buildArmProximityEnvelope`
  * (:411-451), re-expressed as a packed per-(ring,arm) table instead of a
  * `(radius, angle) => number` closure — `ismMapDustCdfScan.wesl`'s
- * `armBiased` weight mode (Task 6, built for this consumer) evaluates the
- * envelope per-texel in-shader, so it needs the closure's own per-ring
+ * `armBiased` weight mode evaluates the envelope per-texel in-shader, built
+ * for this consumer, so it needs the closure's own per-ring
  * intermediates (ridgeAngle/weight/invSigma) as DATA, not a callback.
  *
  * Same math as that closure's own `refresh(radius)`: age-weighted

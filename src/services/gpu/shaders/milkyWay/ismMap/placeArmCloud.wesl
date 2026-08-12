@@ -1,24 +1,14 @@
 // milkyWay/ismMap/placeArmCloud.wesl — GPU port of armParticleCloud.ts's
-// buildArmParticleCloud (:154-258), one invocation per particle SLOT
-// (ARM_CLOUD_MAX_COUNT = 2000 ceiling, armParticleCloud.ts:38). The CPU
-// still decides slot COUNT (deriveArmCloudCount, unchanged, still CPU-side —
-// galaxyFieldMixture.ts's own reservation); this shader decides slot
-// CONTENT, including the arm-lane-vs-smooth-disc roll itself
-// (buildClusteredDiscPlacementChild's mode 2u, clusteredDiscPlacement.wesl)
-// — this tier has no map-seeded mode, so nothing here depends on the ISM-map
-// readback dust's own mode-0 branch needs.
+// buildArmParticleCloud, one invocation per particle SLOT
+// (ARM_CLOUD_MAX_COUNT ceiling). The CPU still decides slot COUNT
+// (deriveArmCloudCount, unchanged); this shader decides slot CONTENT,
+// including the arm-lane-vs-smooth-disc roll itself
+// (buildClusteredDiscPlacementChild's mode 2u) — this tier has no
+// map-seeded mode, so nothing here depends on the ISM-map readback.
 //
 // A slot always writes a live record: unlike dust's survival-floor zeroing,
-// buildArmParticleCloud never drops an individual placed sprite (its own
-// weight-normalisation split just scales flux, never zeroes it) — see
-// placeArmSpurCloud.wesl's identical "no survival filter on this tier" note.
-//
-// fluxWeightOut (binding 5) mirrors placeDust.wesl's massOut: this shader
-// bakes cloudFlux straight into 'flux' below WITHOUT dividing by weightSum
-// (armParticleCloud.ts:232-235's own sum) — Task 15's ringReduce.wesl kernel
-// reduces this array to weightSum and writes 1/weightSum as the consume-time
-// scale fieldSplat/fragment.wesl multiplies in, the arm-cloud twin of Task
-// 9's Larson renorm.
+// this tier never drops an individual placed sprite (weight-normalisation
+// only scales flux, never zeroes it).
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -31,65 +21,40 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromF
 import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlacementChild;
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRadialTilt;
 
-// SIZE_MIN_RATIO/SIZE_MAX_RATIO are armParticleCloud.ts's own non-exported
-// constants, still mirrored verbatim (same "mirror, no parity test"
-// treatment armRidge.wesl gives its own non-scalar-const mirrors);
-// SPRITE_POLE_RATIO was armParticleCloud.ts's own placement-body constant —
-// Task 16 deleted that body along with it, so this WGSL copy is now the
-// only place it lives.
+// SIZE_MIN_RATIO/SIZE_MAX_RATIO/SPRITE_POLE_RATIO mirror
+// armParticleCloud.ts's own non-exported constants verbatim (same "mirror,
+// no parity test" treatment armRidge.wesl gives its own non-scalar-const
+// mirrors); this WGSL copy is now the only place they live.
 const SIZE_MIN_RATIO: f32 = 0.35;
 const SIZE_MAX_RATIO: f32 = 1.0;
 const SPRITE_POLE_RATIO: f32 = 0.6;
-// Formerly clusteredDiscPlacement.ts's own CHILD_POLE_RATIO (deleted with
-// that file, Task 16) — a FIXED constant the shared child-scatter tail
+// CHILD_POLE_RATIO — the FIXED constant the shared child-scatter tail
 // applies for every mode/caller, not a per-tier tunable (placeDust.wesl's
-// own local mirror of the SAME value, same "mirror, don't share a
-// binding-adjacent module" treatment).
+// own local mirror of the SAME value).
 const CHILD_POLE_RATIO: f32 = 0.4;
-// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant,
-// formerly armParticleCloud.ts's TAU_ROOT3 (deleted with its placement body,
-// Task 16); placeDust.wesl/placeArmSpurCloud.wesl each mirror the same value
-// independently rather than sharing an import — see placeArmSpurCloud.wesl's
-// own doc for why: a bind group should never inherit an unrelated module's
-// resources.
+// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant.
+// placeDust.wesl/placeArmSpurCloud.wesl each mirror the same value
+// independently rather than sharing an import: a bind group should never
+// inherit an unrelated module's resources.
 const TAU_ROOT3: f32 = 15.749609945722418;
 
-// RNG_SLOT_CONTRACT (see clusteredDiscPlacement.wesl's own header): this
-// shader owns (ARM_CLOUD_POP_COMPLEX, complexIndex) slots 0 (a dead armRoll
-// draw) and 1 (the weighted arm pick) — buildClusteredDiscPlacementChild's
-// mode 2u branch starts its own draws at slot 2 and never reads 0/1.
-//
+// RNG_SLOT_CONTRACT (clusteredDiscPlacement.wesl's own header): this
+// shader owns (ARM_CLOUD_POP_COMPLEX, complexIndex) slots 0 (dead armRoll
+// draw) and 1 (the weighted arm pick); mode 2u's own draws start at slot 2.
 // ARM_CLOUD_POP_COMPLEX/ARM_CLOUD_POP_CHILD are this tier's OWN population
-// tags, distinct from clusteredDiscPlacement.wesl's CDP_POP_COMPLEX/
-// CDP_POP_CHILD (dust's own values) — genRand/genNormal are a pure function
-// of (seed, pop, idx, slot) with no per-dispatch salt, and this shader
-// shares 'params.seed' ('currentSeed()') with dust's own dispatch, so reusing
-// dust's population tags here would draw bit-identical, CORRELATED values at
-// every coincident (complexIndex, slot)/(i, slot) the two dispatches happen
-// to share (fix-round-1 finding: this is exactly what the CPU original's own
-// per-tier 'seed ^ TAG' salting existed to prevent — armParticleCloud.ts's
-// own 'mulberry32(seed ^ 0x41524d43)', "ARMC"). Mirrors
-// placeArmSpurCloud.wesl's own 'PLACE_SPUR_CLOUD_POP' decorrelation, ported
-// here as TWO tags (complex + child) instead of one, since this tier —
-// unlike spur — goes through the shared complex/child clumping loop.
-//
-// ARM_CLOUD_POP_CHILD is what the shared child-scatter tail
-// (clusteredDiscPlacement.wesl's own popChild parameter) draws slots 0-5
-// against for THIS shader's dispatch; this shader's own per-child size draw
-// below continues that SAME stream at slot 6, exactly mirroring
-// placeDust.wesl's own drawPayload slot (dust continues ITS OWN
-// CDP_POP_CHILD stream the identical way).
-const ARM_CLOUD_POP_COMPLEX: u32 = 0x41524D43u; // "ARMC" — armParticleCloud.ts's own seed-salt bytes, repurposed as a population tag
-const ARM_CLOUD_POP_CHILD: u32 = 0x41524D63u; // "ARMc" — same 4 bytes, lowercase tail byte distinguishes it from ARM_CLOUD_POP_COMPLEX
+// tags, distinct from dust's CDP_POP_COMPLEX/CDP_POP_CHILD — this shader
+// shares 'params.seed' with dust's own dispatch, so reusing dust's tags
+// would draw bit-identical, CORRELATED values at every coincident slot.
+// ARM_CLOUD_POP_CHILD is what the shared child-scatter tail draws slots 0-5
+// against; this shader's own per-child size draw below continues that SAME
+// stream at slot 6, mirroring placeDust.wesl's own drawPayload slot.
+const ARM_CLOUD_POP_COMPLEX: u32 = 0x41524D43u; // "ARMC"
+const ARM_CLOUD_POP_CHILD: u32 = 0x41524D63u; // "ARMc"
 
 // ArmCloudArmRecord — packArmCloudArmRecords.ts's own per-arm storage
 // record: armRidge.wesl's ArmRec fields (phase..fadeRadius) plus
-// spanStartLogR (this arm's own rendered-span start, GalaxyFieldArmRecord's
-// own field — placeArmSpurCloud.wesl's SpurRecord carries the identical
-// field for the identical reason) and weight (armAgeWeight(arm),
-// precomputed in the packer — pickWeighted's own normaliser, mirroring
-// packArmSpurCloudRecords.ts's "weight precomputed, not derived in-shader"
-// contract).
+// spanStartLogR (this arm's own rendered-span start) and weight
+// (armAgeWeight(arm), precomputed in the packer, not derived in-shader).
 struct ArmCloudArmRecord {
   phase: f32,
   pitch: f32,
@@ -151,20 +116,19 @@ struct PlaceArmCloudParams {
 @group(0) @binding(1) var<storage, read> armRecords: array<ArmCloudArmRecord>;
 // Dead pass-through: buildClusteredDiscPlacementChild's mode 0u/1u branches
 // sample this, but this shader always dispatches mode 2u with hasOrientation
-// hardcoded false below — armParticleCloud.ts's own buildClusteredDiscPlacement
-// call never passes ismMapOrientation, so mode 2u's own branch never calls
-// rotateFrameToOrientation at all (clusteredDiscPlacement.wesl's own doc).
-// Bound to the engine's EXISTING orientation texture (no texture of its own
-// created) purely to satisfy the shared function's fixed signature.
+// hardcoded false below, so it's never actually read. Bound to the engine's
+// EXISTING orientation texture (no texture of its own) purely to satisfy
+// the shared function's fixed signature.
 @group(0) @binding(2) var passThroughOrientationTex: texture_2d<f32>;
 @group(0) @binding(3) var<storage, read_write> comps: array<FieldComponentRec>;
-// Dead pass-through, same reasoning as passThroughOrientationTex above: mode
-// 0u's ('mapDensity') own CDF prefix-buffer parameter, required by
-// buildClusteredDiscPlacementChild's fixed signature even though this shader
-// always dispatches mode 2u. Bound to the SAME buffer as 'armRecords'
-// (binding 1) reinterpreted as 'array<f32>' — no dummy buffer of its own.
+// Dead pass-through, same reasoning as above: mode 0u's CDF prefix-buffer
+// parameter, required by the fixed signature though never read. Bound to
+// the SAME buffer as 'armRecords' (binding 1) reinterpreted as 'array<f32>'
+// — no dummy buffer of its own.
 @group(0) @binding(4) var<storage, read> passThroughPrefixBuf: array<f32>;
-// Task 15's raw per-slot flux weight — see this file's own header doc above.
+// Raw per-slot flux weight, mirroring placeDust.wesl's massOut:
+// ringReduce.wesl's csArmCloudFluxWeightSum reduces this array into the
+// consume-time renorm scale — see 'flux' below.
 @group(0) @binding(5) var<storage, read_write> fluxWeightOut: array<f32>;
 
 @compute @workgroup_size(256)
@@ -183,15 +147,13 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let complexIndex = i / params.childrenPerComplex;
 
   // placeAnalyticComplex's own armRoll — dead value (armBias is hardcoded 1
-  // for this tier's only caller, so the roll can never gate anything), drawn
-  // anyway for structural parity with the CPU original (see this file's own
-  // RNG_SLOT_CONTRACT above). '_' is WGSL's phony-assignment discard.
+  // for this tier's only caller), drawn anyway for structural parity with
+  // the CPU original. '_' is WGSL's phony-assignment discard.
   _ = genRand(params.seed, ARM_CLOUD_POP_COMPLEX, complexIndex, 0u);
 
   // pickWeighted — armAgeWeight-biased arm pick, ported verbatim (the CPU's
   // own fallback of the last entry on a float-rounding miss is reproduced by
-  // seeding armIndex there before the scan, placeArmSpurCloud.wesl's own
-  // precedent).
+  // seeding armIndex there before the scan).
   let pick = genRand(params.seed, ARM_CLOUD_POP_COMPLEX, complexIndex, 1u) * params.armWeightSum;
   var armIndex = params.armCount - 1u;
   var acc = 0.0;
@@ -210,9 +172,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let armLogMin = armRow.spanStartLogR;
   let armLogMax = log(armRow.fadeRadius / geom.armStartRadius);
 
-  // discSigmaR/discWeightSum are REAL inputs here, not dust-mode-1 filler:
-  // mode 2u's own degenerate-arm-span fallback (cdpPlaceSmoothDiscSeed inside
-  // clusteredDiscPlacement.wesl) reads them the same way mode 1u does.
+  // discSigmaR/discWeightSum are REAL inputs here, not filler: mode 2u's own
+  // degenerate-arm-span fallback reads them the same way mode 1u does.
   let placed = buildClusteredDiscPlacementChild(
     params.seed, i, params.childrenPerComplex, 2u,
     ARM_CLOUD_POP_COMPLEX, ARM_CLOUD_POP_CHILD,
@@ -225,10 +186,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     params.widthScale, params.tiltRefRadius, params.radialBias,
   );
 
-  // drawPayload — armParticleCloud.ts's own per-child size draw (1 slot),
-  // at the CHILD's own scattered position (radiusAtParticle), exactly
-  // mirroring the CPU's post-scatter timing (placeDust.wesl's identical
-  // "deterministic lookup at the child's own position" discipline).
+  // drawPayload — the per-child size draw (1 slot), at the CHILD's own
+  // scattered position, mirroring placeDust.wesl's own post-scatter timing.
   let particleRadius = length(vec2<f32>(placed.center.x, placed.center.z));
   let sizeFrac = SIZE_MIN_RATIO
     + genRand(params.seed, ARM_CLOUD_POP_CHILD, i, 6u) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
@@ -238,11 +197,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let sigAcross = radius;
   let sigPole = radius * SPRITE_POLE_RATIO;
 
-  // Per-particle flux weight — armParticleCloud.ts:220-231, evaluated at the
-  // FINAL scattered radius. Raw, unnormalised: NOT divided by weightSum
-  // (Task 15 supplies that as a consume-time uniform, the same split
-  // placeArmSpurCloud.wesl's own fluxWeight makes) — cloudFlux alone is
-  // baked in here.
+  // Per-particle flux weight, evaluated at the FINAL scattered radius. Raw,
+  // unnormalised: NOT divided by weightSum (ringReduce.wesl supplies that as
+  // a consume-time uniform, the same split placeArmSpurCloud.wesl's own
+  // fluxWeight makes) — cloudFlux alone is baked in here.
   let shape = armExcessSurfaceShape(particleRadius, params.hLight, params.excessScaleRatio, geom);
   let tilt = cdpRadialTilt(particleRadius, params.tiltRefRadius, params.radialBias);
   let fluxWeight = (radius * radius * shape) / tilt;
@@ -252,9 +210,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let invCov = inverseCovarianceFromFrame(placed.frame, sigAlong, sigAcross, sigPole);
 
-  // Per-particle radial cross-fade, matching the ridge chain's own —
-  // armParticleCloud.ts:249's own comment: this tier renders alongside those
-  // blobs and would otherwise sit at one flat hue.
+  // Per-particle radial cross-fade, matching the ridge chain's own: this
+  // tier renders alongside those blobs and would otherwise sit at one flat hue.
   let color = armColor(params.youngFraction, particleRadius / params.outerRadius);
 
   var rec: FieldComponentRec;

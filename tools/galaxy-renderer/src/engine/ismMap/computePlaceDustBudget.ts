@@ -1,10 +1,9 @@
 /**
  * computePlaceDustBudget — the reservation + per-rebuild uniform inputs the
- * CPU's former `buildDustParticleCloud` setup owned before Task 16 deleted
- * that placement body from `dustParticleCloud.ts` (survives there only as
- * the constants this file still imports), pure function of (geometry, dust),
- * no rng/placement work. `null` mirrors that function's own early `return
- * []`s (geometry/tau/count/size gates).
+ * CPU's former `buildDustParticleCloud` setup owned (`dustParticleCloud.ts`
+ * survives only as the constants this file still imports), pure function of
+ * (geometry, dust), no rng/placement work. `null` mirrors that function's
+ * own early `return []`s (geometry/tau/count/size gates).
  *
  * Its own file, deliberately separate from `createIsmMapPlaceDust.ts`: THAT
  * file's `?static` shader import only resolves under the Vite/wesl-plugin
@@ -49,9 +48,9 @@ export type PlaceDustBudget = {
    * `dust.tau`'s entire measured column, expressed as a MASS total —
    * `dustParticleCloud.ts:287`'s `totalMass = dust.tau * 2*PI*weightedSigma2`,
    * a pure function of geometry/tuning with no placement dependency (unlike
-   * `sumR2`, which only exists after particles land). Task 9's own
-   * `ringReduce.wesl` survivor-sum kernel divides this by the GPU-computed
-   * `sumR2` to get `massPerR2` — see that kernel's own doc.
+   * `sumR2`, which only exists after particles land). `ringReduce.wesl`'s
+   * survivor-sum kernel divides this by the GPU-computed `sumR2` to get
+   * `massPerR2` — see that kernel's own doc.
    */
   readonly totalMass: number;
 };

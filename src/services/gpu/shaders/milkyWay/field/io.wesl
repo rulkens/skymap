@@ -8,7 +8,8 @@
 // dead weight, while the per-fragment RAY this pass needs has no home in
 // that layout at all.
 //
-// ## Byte layout (canonical — the offset authority for the CPU packer)
+// ## Byte layout (canonical — the offset authority for the CPU packer's
+// HEADER uniform only; 'comps' layout authority is records.wesl, see below)
 //
 // HEADER (uniform, binding 0) — camera + params only, unchanged every frame
 // in shape though its bytes are rewritten every frame (the fade/exposure
@@ -176,7 +177,7 @@
 // (GalaxyHiiTuning.textureScale/textureContrast), read by hiiNoise.wesl's
 // hiiNoiseTerm for EVERY HII draw's fragments regardless of which group
 // (shell/DIG/associations) a component belongs to — only each component's own
-// comps[4i+2].w (textureWeight) varies per group. hiiTextureScale 0 is what
+// textureWeight (records.wesl's FieldComponentRec) varies per group. hiiTextureScale 0 is what
 // lets the shader skip the noise sample entirely via a uniform branch — the
 // primary field pass packs 0 here always, since its own components never
 // carry a nonzero textureWeight, so the far larger disc/arms fragment count
@@ -217,7 +218,7 @@
 // just had the free lanes. hiiSplat/youngFragment.wesl's fs (and
 // extrasFragment.wesl's young branch), inside its existing star-grain
 // branch, multiplies a chain component's own term by a shaped sample of
-// comps[4i+3].w (starsWeight, see the comps doc below). contrastGamma (.x) is
+// starsWeight (records.wesl's FieldComponentRec; see the comps doc below). contrastGamma (.x) is
 // tuning.hii.youngStars.contrast, the exponent shaping that read; invMeanNorm
 // (.y) is packFieldUniforms.ts's CPU-computed 1/(texel-area-weighted mean of
 // pow(stars, contrastGamma)) — restructuring the read via gamma would
@@ -270,12 +271,10 @@
 // off-centre framing the engine writes into proj[8]; without it the
 // analytic field slides against the sprites whenever a side panel is open.
 //
-// Per component, four vec4 carry the WORLD-space inverse covariance M of
-// exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre:
-//   [4i]   = (m00, m11, m22, amplitude)
-//   [4i+1] = (m01, m02, m12, boundRadius)
-//   [4i+2] = (colorR, colorG, colorB, textureWeight)
-//   [4i+3] = (cx, cy, cz, starsWeight)
+// Per component, the WORLD-space inverse covariance M of
+// exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre,
+// are records.wesl's FieldComponentRec — that struct is the layout
+// authority for 'comps', not an offset scheme documented here.
 // Six independent M entries, not three sigmas and a tilt: a component's own
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
@@ -299,19 +298,19 @@
 // unconditionally (extrasFragment.wesl's fs the same, inside its
 // negative-textureWeight branch) — see the youngStars header row above.
 //
-// Dust components (past dustOffset) reuse this exact 4-vec4 record with two
-// re-readings, not two new lanes: [4i].w (amplitude for emission) is the
-// component's central V-band extinction density, per unit length; [4i+2].xyz
-// (color for emission) is the per-channel A_lambda/A_V extinction ratio
+// Dust components (past dustOffset) reuse this exact FieldComponentRec with
+// two re-readings, not two new fields: amplitude (emission) is the
+// component's central V-band extinction density, per unit length; color
+// (emission) is the per-channel A_lambda/A_V extinction ratio
 // (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
 // component for a future per-extra dust loop, but NOT what the primary
 // galaxy's attenuation actually reads: dustMap.wesl sums every dust
 // component down to four depth-sliced tau columns before dustAttenuation.wesl's
 // componentEmission ever sees it, so the per-component colour lane has nowhere left to apply for the
 // primary. The law dustAttenuation.wesl's componentEmission uses instead arrives per-frame, in this
-// header's own dustExtinction lane below. [4i+1].w (boundRadius) and
-// [4i+3].xyz (center) mean the same thing they do for an emission
-// component; [4i+2].w (textureWeight) is left 0, since dust never sets it.
+// header's own dustExtinction lane below. boundRadius and center mean the
+// same thing they do for an emission component; textureWeight is left 0,
+// since dust never sets it.
 // Dust components are consumed by dustMap.wesl's own splat pass now, not
 // looped over inside the emission fragment's fs anymore — see binding 2.
 //

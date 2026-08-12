@@ -1,6 +1,6 @@
 /**
- * createArmRidgeDebugSample — debug-only GPU dispatch for Task 12's own
- * numeric-validation exception: armRidge.wesl has no non-GPU path to check
+ * createArmRidgeDebugSample — debug-only GPU dispatch, armRidge.wesl's own
+ * numeric-validation exception: it has no non-GPU path to check
  * its output against, so `probeGpuErrors.ts` runs armRidgeDebugSample.wesl's
  * `csSample` over its own hard-coded fixtures and diffs the result against
  * armRidgeGeometry.ts's CPU output at the SAME literal values (mirrored in

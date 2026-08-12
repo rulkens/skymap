@@ -1,11 +1,10 @@
 /**
  * createIsmMapPlaceArmSpurCloud — GPU replacement for the CPU's former
- * `buildArmSpurParticleCloud` placement body (deleted from
- * `armSpurParticleCloud.ts`, Task 16 — that file survives only as
- * `spurFootprintIntegral`/`deriveArmSpurCloudCount`'s budget math). The CPU
- * still decides slot COUNT and the per-spur pick-weight table
- * (`galaxyFieldMixture.ts`'s
- * `spurCloudReservation`, `packArmSpurCloudRecords.ts`);
+ * `buildArmSpurParticleCloud` placement body (`armSpurParticleCloud.ts`
+ * survives only as `spurFootprintIntegral`/`deriveArmSpurCloudCount`'s
+ * budget math). The CPU still decides slot COUNT and the per-spur
+ * pick-weight table (`galaxyFieldMixture.ts`'s `spurCloudReservation`,
+ * `packArmSpurCloudRecords.ts`);
  * `placeArmSpurCloud.wesl` decides slot CONTENT — the weighted spur pick,
  * the rejection-sampled position, the Gaussian cross/pole scatter.
  *
@@ -52,13 +51,13 @@ export type IsmMapPlaceArmSpurCloud = {
    * Debug-only: dispatch in its own encoder/submit and map the reservation's
    * slot range straight back — the probe's determinism/budget/liveness
    * exception, no production caller. `fluxWeight` is `fluxWeightBuffer`'s own
-   * `[0, count)` slice (Task 15's flux-weight-sum input), read back alongside
-   * `records` — `createIsmMapPlaceArmCloud.ts`'s own identical precedent.
+   * `[0, count)` slice, read back alongside `records` —
+   * `createIsmMapPlaceArmCloud.ts`'s own identical precedent.
    */
   dispatchAndReadbackArmSpurCloud(
     input: PlaceArmSpurCloudDispatchInput,
   ): Promise<{ readonly records: Float32Array; readonly fluxWeight: Float32Array }>;
-  /** `fluxWeightOut` (placeArmSpurCloud.wesl binding 3) — Task 15's own flux-weight-sum input, SPUR_CLOUD_MAX_COUNT floats, one per particle slot. */
+  /** `fluxWeightOut` (placeArmSpurCloud.wesl binding 3) — SPUR_CLOUD_MAX_COUNT floats, one per particle slot. */
   readonly fluxWeightBuffer: GPUBuffer;
   dispose(): void;
 };
@@ -88,8 +87,7 @@ export function createIsmMapPlaceArmSpurCloud(
     size: readbackByteSize,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
-  // fluxWeightOut (placeArmSpurCloud.wesl binding 3) — Task 15's own
-  // flux-weight-sum input, `createIsmMapPlaceArmCloud.ts`'s own precedent.
+  // fluxWeightOut — see IsmMapPlaceArmSpurCloud.fluxWeightBuffer's own doc above.
   const fluxWeightBuffer = device.createBuffer({
     label: 'galaxy:placeArmSpurCloudFluxWeight',
     size: SPUR_CLOUD_MAX_COUNT * 4,

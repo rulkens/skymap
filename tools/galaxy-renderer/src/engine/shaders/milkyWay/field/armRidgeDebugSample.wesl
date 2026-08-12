@@ -1,18 +1,17 @@
-// milkyWay/field/armRidgeDebugSample.wesl — debug-only compute kernel for
-// Task 12's own numeric-validation exception (armRidge.wesl has no non-GPU
-// path to check its output against — same shape as ringReduce.wesl's
-// ringMeans check). One invocation per fixed (arm, logR) sample, each
-// writing FLOATS_PER_SAMPLE floats; probeGpuErrors.ts diffs this against
+// milkyWay/field/armRidgeDebugSample.wesl — debug-only compute kernel,
+// armRidge.wesl's own numeric-validation exception (it has no non-GPU path
+// to check its output against — same shape as ringReduce.wesl's ringMeans
+// check). One invocation per fixed (arm, logR) sample, each writing
+// FLOATS_PER_SAMPLE floats; probeGpuErrors.ts diffs this against
 // armRidgeGeometry.ts's own CPU output at the SAME literal geometry/arm/logR
 // values (hand-mirrored there, not read back from here — a WGSL array has
-// no run-time path to a Node test). 'armRidgeFrameAt's output is the
-// coverage-gap fix (fix round 1): it transitively exercises
-// 'armRidgeCurvePoint', 'warpHeight' and 'warpSurfaceFrame' (derivative
-// terms, Gram-Schmidt, both cross products) in one composed check, since
-// the original trio (angle/fadeEnvelope/crossSigma) never touches the warp
-// path. Struct-typed fixtures are function-local, not module consts:
-// WGSL's select() has no struct overload, so the per-sample arm pick below
-// is a plain if/else.
+// no run-time path to a Node test). 'armRidgeFrameAt's output transitively
+// exercises 'armRidgeCurvePoint', 'warpHeight' and 'warpSurfaceFrame'
+// (derivative terms, Gram-Schmidt, both cross products) in one composed
+// check, since the original trio (angle/fadeEnvelope/crossSigma) never
+// touches the warp path. Struct-typed fixtures are function-local, not
+// module consts: WGSL's select() has no struct overload, so the per-sample
+// arm pick below is a plain if/else.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;

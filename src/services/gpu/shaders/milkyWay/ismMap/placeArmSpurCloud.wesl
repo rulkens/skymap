@@ -1,31 +1,14 @@
 // milkyWay/ismMap/placeArmSpurCloud.wesl — GPU port of
-// armSpurParticleCloud.ts's buildArmSpurParticleCloud (:125-219), one
-// invocation per particle SLOT (SPUR_CLOUD_MAX_COUNT = 400 ceiling,
-// armSpurParticleCloud.ts:48). The CPU still decides slot COUNT
-// (galaxyFieldMixture.ts's spurCloudCount reservation) and the per-spur
-// weight table (packArmSpurCloudRecords.ts ports spurFootprintIntegral
-// verbatim, per the plan's 'port the integral into the packer, not the
-// shader' contract); this shader decides slot CONTENT — the weighted spur
-// pick, the rejection-sampled position along it, and the Gaussian
-// cross/pole scatter.
-//
-// NOT a mode of buildClusteredDiscPlacementChild (clusteredDiscPlacement.wesl):
-// a spur has no clumping hierarchy (armSpurParticleCloud.ts's own header —
-// 'Complex-less scatter'), and its span starts at its OWN root
-// (spanStartLogR), breaking that sampler's hardcoded ARM_SPAN_START_FRAC
-// floor. Single-level rejection-sample-then-scatter, its own shader.
-//
-// A slot that never reaches a live spur (params.spurCount == 0, or every
-// weight <= 0) is never DISPATCHED at all — the host guards both before
-// calling dispatchPlaceArmSpurCloud, the same 'CPU decides whether this tier
-// runs' discipline computePlaceDustBudget's own null return uses.
-//
-// fluxWeightOut (binding 3) mirrors placeArmCloud.wesl's own binding 5 (in
-// turn placeDust.wesl's massOut): 'flux' below bakes in spurFlux WITHOUT
-// dividing by fluxWeightSum (armSpurParticleCloud.ts:199-203's own sum) —
-// Task 15's ringReduce.wesl kernel reduces this array and writes
-// 1/fluxWeightSum as the consume-time scale fieldSplat/fragment.wesl
-// multiplies in.
+// armSpurParticleCloud.ts's buildArmSpurParticleCloud, one invocation per
+// particle SLOT (SPUR_CLOUD_MAX_COUNT ceiling). The CPU still decides slot
+// COUNT and the per-spur weight table; this shader decides slot CONTENT —
+// the weighted spur pick, the rejection-sampled position along it, and the
+// Gaussian cross/pole scatter. NOT a mode of
+// buildClusteredDiscPlacementChild (clusteredDiscPlacement.wesl): a spur
+// has no clumping hierarchy, and its span starts at its OWN root
+// (spanStartLogR) rather than that sampler's hardcoded floor — single-level
+// rejection-sample-then-scatter, its own shader. A slot that never reaches
+// a live spur is never DISPATCHED — the host guards that before calling in.
 
 import package::milkyWay::field::armRidge::ArmRec;
 import package::milkyWay::field::armRidge::ArmRidgeGeometry;
@@ -40,31 +23,25 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::genNormal;
 import package::milkyWay::ismMap::clusteredDiscPlacement::CloudFrame;
 import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromFrame;
 
-// SIZE_MIN_RATIO/SIZE_MAX_RATIO are armSpurParticleCloud.ts's own
-// non-exported constants, still mirrored verbatim (same 'mirror, no parity
-// test' treatment armRidge.wesl gives its own non-scalar-const mirrors);
-// SPUR_FADE_REJECTION_TRIES/CROSS_OFFSET_RATIO/POLE_OFFSET_RATIO/
-// SPRITE_POLE_RATIO were armSpurParticleCloud.ts's own placement-body
-// constants — Task 16 deleted that body along with them, so this WGSL copy
-// is now the only place they live.
+// SIZE_MIN_RATIO/SIZE_MAX_RATIO/SPUR_FADE_REJECTION_TRIES/
+// CROSS_OFFSET_RATIO/POLE_OFFSET_RATIO/SPRITE_POLE_RATIO mirror
+// armSpurParticleCloud.ts's own non-exported constants verbatim (same
+// 'mirror, no parity test' treatment armRidge.wesl gives its own
+// non-scalar-const mirrors); this WGSL copy is now the only place they live.
 const SPUR_FADE_REJECTION_TRIES: u32 = 24u;
 const CROSS_OFFSET_RATIO: f32 = 0.6;
 const POLE_OFFSET_RATIO: f32 = 0.8;
 const SIZE_MIN_RATIO: f32 = 0.35;
 const SIZE_MAX_RATIO: f32 = 1.0;
 const SPRITE_POLE_RATIO: f32 = 0.6;
-// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant,
-// formerly armSpurParticleCloud.ts's TAU_ROOT3 (deleted with its placement
-// body, Task 16); placeDust.wesl mirrors the same value independently
-// rather than being imported here — see that file's doc for why: a THIRD
-// hand mirror, not a shared one, keeps this compute shader's own bind group
-// from risking inheriting an unrelated module.
+// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant.
+// placeDust.wesl mirrors the same value independently rather than being
+// imported here: a THIRD hand mirror, not a shared one, keeps this compute
+// shader's own bind group from risking inheriting an unrelated module.
 const TAU_ROOT3: f32 = 15.749609945722418;
 
-// 'SPRC' — formerly armSpurParticleCloud.ts's own CPU rng seed-salt value
-// (SPUR_CLOUD_SEED_SALT, deleted with that file's placement body, Task 16),
-// repurposed here as this shader's distinct population tag: every draw in
-// this file is keyed on the SAME (seed, POP, i) pair with a running SLOT
+// 'SPRC' — this shader's distinct hash population tag: every draw in this
+// file is keyed on the SAME (seed, POP, i) pair with a running SLOT
 // counter, so one population is enough — unlike clusteredDiscPlacement.wesl's
 // complex/child split, a spur has no second index space (no clumping
 // hierarchy) to keep separate.
@@ -119,7 +96,9 @@ struct PlaceArmSpurCloudParams {
 @group(0) @binding(0) var<uniform> params: PlaceArmSpurCloudParams;
 @group(0) @binding(1) var<storage, read> spurRecords: array<SpurRecord>;
 @group(0) @binding(2) var<storage, read_write> comps: array<FieldComponentRec>;
-// Task 15's raw per-slot flux weight — see this file's own header doc above.
+// Raw per-slot flux weight, mirroring placeArmCloud.wesl's own binding 5
+// (in turn placeDust.wesl's massOut): ringReduce.wesl's csArmSpurFluxWeightSum
+// reduces this array into the consume-time renorm scale — see 'flux' below.
 @group(0) @binding(3) var<storage, read_write> fluxWeightOut: array<f32>;
 
 @compute @workgroup_size(256)
@@ -135,12 +114,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     params.outerRadius,
   );
 
-  // pickWeighted — armSpurParticleCloud.ts's own weighted spur pick
-  // (formerly clusteredDiscPlacement.ts's pickWeighted, ported verbatim;
-  // both TS functions are gone, deleted with their CPU callers, Task 16), 1
-  // draw. The CPU's own fallback ('return weights.length - 1' when a
-  // float-rounding pick lands past the last partial sum) is reproduced by
-  // seeding spurIndex at the last valid entry before the scan.
+  // pickWeighted — armSpurParticleCloud.ts's own weighted spur pick, ported
+  // verbatim, 1 draw. The CPU's own fallback ('return weights.length - 1'
+  // when a float-rounding pick lands past the last partial sum) is
+  // reproduced by seeding spurIndex at the last valid entry before the scan.
   var slot = 0u;
   let pick = genRand(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * params.weightSum;
   slot += 1u;
@@ -196,12 +173,11 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   slot += 1u;
   let spriteRadius = crossSigma * sizeFrac * params.sizeScale;
 
-  // R^2-holds-surface-brightness flux weight — armSpurParticleCloud.ts:184-195,
-  // evaluated at the FINAL scattered (post-offset) radius, matching the
-  // CPU's own Math.hypot(p.center[0], p.center[2]). Raw, unnormalised: NOT
-  // divided by fluxWeightSum (Task 15 supplies that as a consume-time
-  // uniform, the same split Task 13 makes for the arm cloud) — spurFlux
-  // alone is baked in here.
+  // R^2-holds-surface-brightness flux weight, evaluated at the FINAL
+  // scattered (post-offset) radius, matching the CPU's own
+  // Math.hypot(p.center[0], p.center[2]). Raw, unnormalised: NOT divided by
+  // fluxWeightSum (ringReduce.wesl supplies that as a consume-time uniform,
+  // the same split the arm cloud uses) — spurFlux alone is baked in here.
   let particleRadius = length(vec2<f32>(center.x, center.z));
   let shape = armExcessSurfaceShape(particleRadius, params.hLight, params.excessScaleRatio, geom);
   let fluxWeight = spriteRadius * spriteRadius * shape;
