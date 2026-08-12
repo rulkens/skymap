@@ -34,9 +34,10 @@ export type GalaxyEngineHandle = {
   // and future consumers.
   getIsmMapTexture(): GPUTexture;
   // The same output read back to the CPU, once per generation — null until
-  // the first readback lands. Feeds the map-seeded placement path in
-  // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleIsmMapReadback`),
-  // live whenever `ismMap.generator !== 'none'`.
+  // the first readback lands (`createGalaxyModel.ts`'s `scheduleIsmMapReadback`).
+  // Off the placement path since Task 10 — `placeDust.wesl` reads the GPU
+  // texture directly; this feeds the seeding debug view and
+  // `youngStars.invMeanNorm` instead.
   getIsmMapData(): GalaxyIsmMap | null;
   // Debug-only: the numeric-readback probe's GPU-vs-CPU check
   // (`probeGpuErrors.ts`) diffs this against `ismMapRingMeans.ts` run over

@@ -1,10 +1,13 @@
-// milkyWay/ismMap/placeDust.wesl — GPU port of dustParticleCloud.ts's
-// map-seeded placement (:156-317), one invocation per particle SLOT
-// (MAX_PARTICLE_COUNT = 40000 ceiling, dustParticleCloud.ts:40). The CPU
-// still decides slot COUNT (createIsmMapPlaceDust.ts's budget math, same
-// shape as dustParticleCloud.ts:130-141); this shader decides slot CONTENT,
-// including the mapDensity/smoothDisc MODE itself — see 'usesMapDensity'
-// below — so nothing here depends on the async CPU ismMap readback.
+// milkyWay/ismMap/placeDust.wesl — GPU port of the CPU's former
+// buildDustParticleCloud map-seeded placement body (deleted from
+// dustParticleCloud.ts, Task 16 — that file survives only as the
+// constants/budget math below), one invocation per particle SLOT
+// (MAX_PARTICLE_COUNT = 40000 ceiling, dustParticleCloud.ts's own surviving
+// export). The CPU still decides slot COUNT (createIsmMapPlaceDust.ts's
+// budget math, same shape computePlaceDustBudget.ts mirrors); this shader
+// decides slot CONTENT, including the mapDensity/smoothDisc MODE itself —
+// see 'usesMapDensity' below — so nothing here depends on the async CPU
+// ismMap readback.
 //
 // A slot that fails the survival floor (DUST_SURVIVAL_FLOOR_FRAC) writes
 // amplitude 0 rather than being skipped: a zero-amplitude Gaussian splat
@@ -35,15 +38,17 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::CDP_POP_CHILD;
 // compute shader's bind group must not risk inheriting it.
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
-// dustParticleCloud.ts's own non-exported constants, mirrored verbatim (same
-// "mirror, no parity test" treatment armRidge.wesl gives ARM_WIDTH_FLOOR_H
-// and friends).
+// Formerly dustParticleCloud.ts's own non-exported constants (deleted with
+// its placement body, Task 16), mirrored verbatim (same "mirror, no parity
+// test" treatment armRidge.wesl gives ARM_WIDTH_FLOOR_H and friends) — this
+// WGSL copy is now the only place they live.
 const GLOBAL_MEAN_EPS: f32 = 1e-6;
 const GMC_SIZE_POWER: f32 = 2.2;
 const CLOUD_POLE_RATIO: f32 = 0.6;
 const CHILD_POLE_RATIO: f32 = 0.4;
-// (2*PI)^1.5 — dustParticleCloud.ts's TAU_ROOT3, the anisotropic Gaussian's
-// own normalisation constant.
+// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant,
+// formerly dustParticleCloud.ts's TAU_ROOT3 (deleted with its placement
+// body, Task 16).
 const TAU_ROOT3: f32 = 15.749609945722418;
 
 const PLACE_DUST_POP_CHILD: u32 = 0xC41Du; // matches clusteredDiscPlacement.wesl's own CDP_POP_CHILD
@@ -95,7 +100,8 @@ struct PlaceDustParams {
 // the amplitude the record derives from it — ringReduce.wesl's
 // csSurvivorSum kernel sums this slot-indexed array (not comps, which has
 // no cheap way back to radius^2 once aspect has skewed sigAlong/sigAcross)
-// to reproduce dustParticleCloud.ts's sumR2 loop (:290-291) on the GPU.
+// to reproduce the CPU's former sumR2 loop (buildDustParticleCloud, deleted
+// from dustParticleCloud.ts, Task 16) on the GPU.
 @group(0) @binding(6) var<storage, read_write> massOut: array<f32>;
 
 @compute @workgroup_size(256)
@@ -105,7 +111,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
 
-  // Mode decision moves INTO the shader (dustParticleCloud.ts:188-236's own
+  // Mode decision moves INTO the shader (the CPU's former mode-selection
   // gate, off GPU-resident buffers instead of the CPU readback that gate
   // used to require) — this is what keeps the placement-critical path off
   // the async mapAsync round trip entirely.
@@ -148,9 +154,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     0.0, 0.0, 0.0,
   );
 
-  // drawPayload — dustParticleCloud.ts's own per-child radius draw (1 slot)
-  // plus S3's deterministic (no-draw) aspect/survival lookup at the CHILD's
-  // own scattered position, exactly mirroring the CPU's post-scatter timing.
+  // drawPayload — the CPU's former per-child radius draw (1 slot) plus S3's
+  // deterministic (no-draw) aspect/survival lookup at the CHILD's own
+  // scattered position, exactly mirroring the CPU's post-scatter timing.
   let u = genRand(params.seed, PLACE_DUST_POP_CHILD, i, 6u);
   let sizeExp = 1.0 - GMC_SIZE_POWER;
   let sizeMinPow = pow(params.sizeMin, sizeExp);
@@ -172,7 +178,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     let sampleRing = cdpRingIndexForSample(childRadius, params.gridRings, params.rMin, params.rMax);
     let dustSample = textureLoad(ismMapTex, vec2<i32>(i32(azIdx), i32(sampleRing)), 0).w;
     // ringMean's own ring index: ROUND-to-nearest (cdpRingIndexForRadius) —
-    // dustParticleCloud.ts:228-238's sampleMapTraits divides by
+    // the CPU's former sampleMapTraits divided by
     // ringMeans[ismMapRingIndexForRadius(radius, ...)], a DIFFERENT ring
     // selection than the sample above. Two ring semantics in one ratio is
     // the CPU's own oddity; ported as such, not "fixed".
@@ -183,7 +189,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
 
   // Area-preserving aspect on the map path (along*across == radius^2 always)
-  // vs. elongation-fixed off it — dustParticleCloud.ts:296-307.
+  // vs. elongation-fixed off it — the CPU's former sigmas branch.
   var sigAlong: f32;
   var sigAcross: f32;
   if (usesMapDensity) {

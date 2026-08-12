@@ -7,9 +7,10 @@
 // carries its own running sum through); csApplyRingOffsets adds that
 // offset back over the full grid. Per-texel weight is a small uniform
 // table, not a bare channel read — dust density (Task 7) is the
-// ring-mean-normalised, optionally capped, channel dot dustParticleCloud.ts's
-// density() closure computes (:208-218); arm-biased activity (Task 8)
-// reweights by a packed per-(ring,arm) envelope mirroring
+// ring-mean-normalised, optionally capped, channel dot this file's own
+// evalWeight computes below (ported from the CPU's former density()
+// closure, buildDustParticleCloud, deleted Task 16); arm-biased activity
+// (Task 8) reweights by a packed per-(ring,arm) envelope mirroring
 // buildArmProximityEnvelope/armBiasedDensity (hiiRegions.ts:484-539).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
@@ -51,10 +52,10 @@ struct IsmMapCdfArmEnvelopeEntry {
 @group(0) @binding(3) var<storage, read_write> prefixBuf: array<f32>;
 @group(0) @binding(4) var<storage, read_write> ringTotalsBuf: array<f32>;
 // ringReduce.wesl's own output (dust-channel-only, per that file's own
-// header) — the SAME per-ring divisor dustParticleCloud.ts's density()
-// closure reads. Always bound, whether the armBias<=0 branch reads it or
-// not: evalWeight references this binding statically, so every caller
-// (Task 8's armBiased dispatch included) must bind SOMETHING here.
+// header) — the SAME per-ring divisor evalWeight below reads. Always bound,
+// whether the armBias<=0 branch reads it or not: evalWeight references
+// this binding statically, so every caller (Task 8's armBiased dispatch
+// included) must bind SOMETHING here.
 @group(0) @binding(5) var<storage, read> ringMeansBuf: array<f32>;
 
 // ismMapDustRingEdges — WGSL mirror of ismMapDustRingEdges.ts: ring's
@@ -76,9 +77,10 @@ fn ismMapDustRingEdges(ring: u32, rings: u32, rMin: f32, rMax: f32) -> vec2<f32>
 }
 
 // evalWeight — base channel weight, ring-mean-normalised and optionally
-// capped (armBias<=0 branch — dustParticleCloud.ts's density() closure,
-// :208-218, ported verbatim including its zero-guards), OR reweighted
-// toward the nearest arm ridge (armBias>0 branch, armBiasedDensity,
+// capped (armBias<=0 branch — the CPU's former density() closure,
+// buildDustParticleCloud, deleted Task 16, ported verbatim including its
+// zero-guards), OR reweighted toward the nearest arm ridge (armBias>0
+// branch, armBiasedDensity,
 // hiiRegions.ts:527-539) — the two branches are mutually exclusive callers
 // (Task 7's dust CDF vs. Task 8's DIG CDF), never combined.
 //

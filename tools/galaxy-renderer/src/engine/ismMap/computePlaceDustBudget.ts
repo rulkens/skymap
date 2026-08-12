@@ -1,9 +1,10 @@
 /**
- * computePlaceDustBudget — the reservation + per-rebuild uniform inputs
- * `buildDustParticleCloud`'s CPU setup (`dustParticleCloud.ts:130-156`)
- * still owns, pure function of (geometry, dust), no rng/placement work.
- * `null` mirrors that function's own early `return []`s (geometry/tau/
- * count/size gates).
+ * computePlaceDustBudget — the reservation + per-rebuild uniform inputs the
+ * CPU's former `buildDustParticleCloud` setup owned before Task 16 deleted
+ * that placement body from `dustParticleCloud.ts` (survives there only as
+ * the constants this file still imports), pure function of (geometry, dust),
+ * no rng/placement work. `null` mirrors that function's own early `return
+ * []`s (geometry/tau/count/size gates).
  *
  * Its own file, deliberately separate from `createIsmMapPlaceDust.ts`: THAT
  * file's `?static` shader import only resolves under the Vite/wesl-plugin

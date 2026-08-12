@@ -40,28 +40,34 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::genNormal;
 import package::milkyWay::ismMap::clusteredDiscPlacement::CloudFrame;
 import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromFrame;
 
-// armSpurParticleCloud.ts's own non-exported constants, mirrored verbatim
-// (same 'mirror, no parity test' treatment armRidge.wesl gives its own
-// non-scalar-const mirrors).
+// SIZE_MIN_RATIO/SIZE_MAX_RATIO are armSpurParticleCloud.ts's own
+// non-exported constants, still mirrored verbatim (same 'mirror, no parity
+// test' treatment armRidge.wesl gives its own non-scalar-const mirrors);
+// SPUR_FADE_REJECTION_TRIES/CROSS_OFFSET_RATIO/POLE_OFFSET_RATIO/
+// SPRITE_POLE_RATIO were armSpurParticleCloud.ts's own placement-body
+// constants — Task 16 deleted that body along with them, so this WGSL copy
+// is now the only place they live.
 const SPUR_FADE_REJECTION_TRIES: u32 = 24u;
 const CROSS_OFFSET_RATIO: f32 = 0.6;
 const POLE_OFFSET_RATIO: f32 = 0.8;
 const SIZE_MIN_RATIO: f32 = 0.35;
 const SIZE_MAX_RATIO: f32 = 1.0;
 const SPRITE_POLE_RATIO: f32 = 0.6;
-// (2*PI)^1.5 — armSpurParticleCloud.ts's TAU_ROOT3, the anisotropic
-// Gaussian's own normalisation constant (placeDust.wesl mirrors the same
-// value independently rather than being imported here — see that file's doc
-// for why: a THIRD hand mirror, not a shared one, keeps this compute
-// shader's own bind group from risking inheriting an unrelated module).
+// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant,
+// formerly armSpurParticleCloud.ts's TAU_ROOT3 (deleted with its placement
+// body, Task 16); placeDust.wesl mirrors the same value independently
+// rather than being imported here — see that file's doc for why: a THIRD
+// hand mirror, not a shared one, keeps this compute shader's own bind group
+// from risking inheriting an unrelated module.
 const TAU_ROOT3: f32 = 15.749609945722418;
 
-// 'SPRC' — armSpurParticleCloud.ts's own CPU rng seed-salt value
-// (SPUR_CLOUD_SEED_SALT), repurposed here as this shader's distinct
-// population tag: every draw in this file is keyed on the SAME (seed, POP,
-// i) pair with a running SLOT counter, so one population is enough — unlike
-// clusteredDiscPlacement.wesl's complex/child split, a spur has no second
-// index space (no clumping hierarchy) to keep separate.
+// 'SPRC' — formerly armSpurParticleCloud.ts's own CPU rng seed-salt value
+// (SPUR_CLOUD_SEED_SALT, deleted with that file's placement body, Task 16),
+// repurposed here as this shader's distinct population tag: every draw in
+// this file is keyed on the SAME (seed, POP, i) pair with a running SLOT
+// counter, so one population is enough — unlike clusteredDiscPlacement.wesl's
+// complex/child split, a spur has no second index space (no clumping
+// hierarchy) to keep separate.
 const PLACE_SPUR_CLOUD_POP: u32 = 0x53505243u;
 
 struct SpurRecord {
@@ -130,10 +136,11 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   );
 
   // pickWeighted — armSpurParticleCloud.ts's own weighted spur pick
-  // (clusteredDiscPlacement.ts's pickWeighted, ported verbatim), 1 draw. The
-  // CPU's own fallback ('return weights.length - 1' when a float-rounding
-  // pick lands past the last partial sum) is reproduced by seeding
-  // spurIndex at the last valid entry before the scan.
+  // (formerly clusteredDiscPlacement.ts's pickWeighted, ported verbatim;
+  // both TS functions are gone, deleted with their CPU callers, Task 16), 1
+  // draw. The CPU's own fallback ('return weights.length - 1' when a
+  // float-rounding pick lands past the last partial sum) is reproduced by
+  // seeding spurIndex at the last valid entry before the scan.
   var slot = 0u;
   let pick = genRand(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * params.weightSum;
   slot += 1u;

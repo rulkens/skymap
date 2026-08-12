@@ -138,12 +138,12 @@
 // ismMapChannels.w would name a bubble weight after an unrelated ismMap
 // channel. Only .x is bubblePresent.wesl's own; .y/.z/.w are ismMapPresent.wesl's
 // "seeding" debug view (dust-seeding spike) — the exact composite density
-// dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
-// .y is the view's own weight (CPU-forced to 0, view dark, when there is no
-// map or the mean below is 0 — createGalaxyModel.ts's ismMapSeedingView), .z
-// is the CDF's ONE tempering knob, dust.cloud.dustPlacementCap ?? 0 (read
-// live off the SAME source dustParticleCloud.ts's buildDustParticleCloud
-// does) — a within-RING ratio cap, 0 = uncapped, .w is
+// ismMapDustCdfScan.wesl's evalWeight consumes (placeDust.wesl's own CDF
+// sampler), not another raw channel: .y is the view's own weight (CPU-forced
+// to 0, view dark, when there is no map or the mean below is 0 —
+// createGalaxyModel.ts's ismMapSeedingView), .z is the CDF's ONE tempering
+// knob, dust.cloud.dustPlacementCap ?? 0 (the same ringCap evalWeight reads)
+// — a within-RING ratio cap, 0 = uncapped, .w is
 // arrayMean(ismMapRingMeans(map, texel => texel.dust)) — the mean of the
 // map's own per-ring means, the SAME global mean the placement CDF's
 // radial-envelope term divides by. No ambient subtraction: the pedestal is
@@ -154,10 +154,10 @@
 // only ismMapPresent.wesl's own bind group references (createIsmMapOutput.ts's
 // ringMeansBuffer/writeRingMeans), written at the same cadence as this
 // header's own .z/.w. Together the three (.y weight, .z cap, .w globalMean)
-// plus the buffer let ismMapPresent.wesl reproduce dustParticleCloud.ts's
+// plus the buffer let ismMapPresent.wesl reproduce ismMapDustCdfScan.wesl's
 // density formula byte-for-formula, so this view cannot drift from what
-// placement actually consumes — see that file's own header for the
-// contract and ismMapPresent.wesl's fs for the mirrored math.
+// placement actually consumes — see that file's own evalWeight and
+// ismMapPresent.wesl's fs for the mirrored math.
 //
 // dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
 // (dustDetail.wesl) multiplies each dust splat's own slices by the ISM map's

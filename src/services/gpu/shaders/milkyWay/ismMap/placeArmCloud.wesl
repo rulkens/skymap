@@ -31,22 +31,27 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromF
 import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlacementChild;
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRadialTilt;
 
-// armParticleCloud.ts's own non-exported constants, mirrored verbatim (same
-// "mirror, no parity test" treatment armRidge.wesl gives its own
-// non-scalar-const mirrors).
+// SIZE_MIN_RATIO/SIZE_MAX_RATIO are armParticleCloud.ts's own non-exported
+// constants, still mirrored verbatim (same "mirror, no parity test"
+// treatment armRidge.wesl gives its own non-scalar-const mirrors);
+// SPRITE_POLE_RATIO was armParticleCloud.ts's own placement-body constant —
+// Task 16 deleted that body along with it, so this WGSL copy is now the
+// only place it lives.
 const SIZE_MIN_RATIO: f32 = 0.35;
 const SIZE_MAX_RATIO: f32 = 1.0;
 const SPRITE_POLE_RATIO: f32 = 0.6;
-// clusteredDiscPlacement.ts's own CHILD_POLE_RATIO (:33) — a FIXED constant
-// the shared child-scatter tail applies for every mode/caller, not a
-// per-tier tunable (placeDust.wesl's own local mirror of the SAME value,
-// same "mirror, don't share a binding-adjacent module" treatment).
+// Formerly clusteredDiscPlacement.ts's own CHILD_POLE_RATIO (deleted with
+// that file, Task 16) — a FIXED constant the shared child-scatter tail
+// applies for every mode/caller, not a per-tier tunable (placeDust.wesl's
+// own local mirror of the SAME value, same "mirror, don't share a
+// binding-adjacent module" treatment).
 const CHILD_POLE_RATIO: f32 = 0.4;
-// (2*PI)^1.5 — armParticleCloud.ts's TAU_ROOT3, the anisotropic Gaussian's
-// own normalisation constant (placeDust.wesl/placeArmSpurCloud.wesl each
-// mirror the same value independently rather than sharing an import — see
-// placeArmSpurCloud.wesl's own doc for why: a bind group should never
-// inherit an unrelated module's resources).
+// (2*PI)^1.5 — the anisotropic Gaussian's own normalisation constant,
+// formerly armParticleCloud.ts's TAU_ROOT3 (deleted with its placement body,
+// Task 16); placeDust.wesl/placeArmSpurCloud.wesl each mirror the same value
+// independently rather than sharing an import — see placeArmSpurCloud.wesl's
+// own doc for why: a bind group should never inherit an unrelated module's
+// resources.
 const TAU_ROOT3: f32 = 15.749609945722418;
 
 // RNG_SLOT_CONTRACT (see clusteredDiscPlacement.wesl's own header): this

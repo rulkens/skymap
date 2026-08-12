@@ -881,9 +881,10 @@ export function buildGalaxyFieldMixture(
   // The particle cloud's own budget is reserved the SAME way: computed
   // before `pushArmRidges` runs so its `perArmBudget` shrinks to leave room,
   // rather than the cloud starving the ridge chain (or vice versa) via a
-  // silent `packFieldUniforms` clamp. `deriveArmCloudCount` is also what
-  // `buildArmParticleCloud` itself calls to size the cloud it actually
-  // builds below, so the reservation and the build can never disagree.
+  // silent `packFieldUniforms` clamp. `deriveArmCloudCount` is also the
+  // slot COUNT `createIsmMapPlaceArmCloud.ts` packs for `placeArmCloud.wesl`'s
+  // GPU dispatch (Task 13), so the reservation and the build can never
+  // disagree.
   const armCloudCount =
     tuning.arms.enabled && tuning.arms.cloud.enabled && clampedArmCloudShare(tuning) > 0
       ? deriveArmCloudCount(geometry, tuning)

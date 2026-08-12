@@ -1003,7 +1003,10 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               .__probeEngine;
             bridge!.setFieldTuning({ dust: { ...dust, tau } });
           },
-          { dust: DEFAULT_GALAXY_DUST_PARAMS, tau: DEFAULT_GALAXY_DUST_PARAMS.tau * TAU_PROBE_MULTIPLIER },
+          {
+            dust: DEFAULT_GALAXY_DUST_PARAMS,
+            tau: DEFAULT_GALAXY_DUST_PARAMS.tau * TAU_PROBE_MULTIPLIER,
+          },
         );
         await settleFrames(page, SETTLE_FRAMES);
         const after = await page.evaluate(async () => {
@@ -1084,7 +1087,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           async ({ dust, cap }) => {
             const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
               .__probeEngine;
-            bridge!.setFieldTuning({ dust: { ...dust, cloud: { ...dust.cloud, dustPlacementCap: cap } } });
+            bridge!.setFieldTuning({
+              dust: { ...dust, cloud: { ...dust.cloud, dustPlacementCap: cap } },
+            });
           },
           { dust: DEFAULT_GALAXY_DUST_PARAMS, cap: FLOOR_FIXTURE_CAP },
         );
@@ -1267,7 +1272,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         });
         if (!first) {
           throw new Error(
-            'readback:placeArmSpurCloud — requestArmSpurCloudPlacementReadback() returned null at boot (no spur cloud reserved — expected one under the boot preset\'s default arms.spurs.enabled=true)',
+            "readback:placeArmSpurCloud — requestArmSpurCloudPlacementReadback() returned null at boot (no spur cloud reserved — expected one under the boot preset's default arms.spurs.enabled=true)",
           );
         }
 
@@ -1504,16 +1509,24 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           const yz = first.records[o + 6]!;
           const cx = first.records[o + 12]!;
           const cz = first.records[o + 14]!;
-          const det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
+          const det =
+            xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
           if (!(det > 0)) {
-            throw new Error(`readback:placeArmSpurCloud — record ${i} has non-positive det(invCov)`);
+            throw new Error(
+              `readback:placeArmSpurCloud — record ${i} has non-positive det(invCov)`,
+            );
           }
           measuredRawFlux += (amplitude * TAU_ROOT3_TS) / Math.sqrt(det);
 
           const sigProduct = 1 / Math.sqrt(det);
           const spriteRadius = Math.cbrt(sigProduct / (elongation * SPRITE_POLE_RATIO));
           const placedRadius = Math.hypot(cx, cz);
-          const shape = armExcessSurfaceShape(placedRadius, geometryForFlux, hLight, excessScaleRatio);
+          const shape = armExcessSurfaceShape(
+            placedRadius,
+            geometryForFlux,
+            hLight,
+            excessScaleRatio,
+          );
           expectedRawFlux += first.flux * spriteRadius * spriteRadius * shape;
         }
         const fluxRelError = Math.abs(measuredRawFlux / expectedRawFlux - 1);
@@ -1635,7 +1648,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         });
         if (!first) {
           throw new Error(
-            'readback:placeArmCloud — requestArmCloudPlacementReadback() returned null at boot (no arm cloud reserved — expected one under the boot preset\'s default arms.cloud.enabled=true)',
+            "readback:placeArmCloud — requestArmCloudPlacementReadback() returned null at boot (no arm cloud reserved — expected one under the boot preset's default arms.cloud.enabled=true)",
           );
         }
 
@@ -1810,9 +1823,11 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         const elongation = DEFAULT_GALAXY_FIELD_TUNING.arms.cloud.elongation;
         const bias = Math.max(0, DEFAULT_GALAXY_FIELD_TUNING.arms.cloud.radialBias);
         const tiltRef = tiltReferenceRadius(geometryForFlux);
-        // armParticleCloud.ts's own SPRITE_POLE_RATIO — mirrored, no parity
+        // placeArmCloud.wesl's own SPRITE_POLE_RATIO — mirrored, no parity
         // test (same treatment placeArmSpurCloud.wesl's own copy gets — the
-        // shader has no TS twin to test it against).
+        // shader has no TS twin to test it against; formerly
+        // armParticleCloud.ts's own copy too, before Task 16 deleted it
+        // along with the CPU placement body that used it).
         const SPRITE_POLE_RATIO = 0.6;
         const TAU_ROOT3_TS = (2 * Math.PI) ** 1.5;
 
@@ -1829,7 +1844,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           const yz = first.records[o + 6]!;
           const cx = first.records[o + 12]!;
           const cz = first.records[o + 14]!;
-          const det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
+          const det =
+            xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
           if (!(det > 0)) {
             throw new Error(`readback:placeArmCloud — record ${i} has non-positive det(invCov)`);
           }
@@ -1838,7 +1854,12 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           const sigProduct = 1 / Math.sqrt(det);
           const spriteRadius = Math.cbrt(sigProduct / (elongation * SPRITE_POLE_RATIO));
           const placedRadius = Math.hypot(cx, cz);
-          const shape = armExcessSurfaceShape(placedRadius, geometryForFlux, hLight, excessScaleRatio);
+          const shape = armExcessSurfaceShape(
+            placedRadius,
+            geometryForFlux,
+            hLight,
+            excessScaleRatio,
+          );
           const tilt = radialTilt(placedRadius, tiltRef, bias);
           expectedRawFlux += (first.flux * spriteRadius * spriteRadius * shape) / tilt;
         }
@@ -2032,7 +2053,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         });
         if (!first) {
           throw new Error(
-            'readback:placeDigVeil — requestDigVeilPlacementReadback() returned null at boot (no DIG veil reserved — expected one under the boot preset\'s default hii.dig.fraction=0.35)',
+            "readback:placeDigVeil — requestDigVeilPlacementReadback() returned null at boot (no DIG veil reserved — expected one under the boot preset's default hii.dig.fraction=0.35)",
           );
         }
 
@@ -2043,7 +2064,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           return landed ? Array.from(landed.records) : null;
         });
         if (!second) {
-          throw new Error('readback:placeDigVeil — second requestDigVeilPlacementReadback() returned null');
+          throw new Error(
+            'readback:placeDigVeil — second requestDigVeilPlacementReadback() returned null',
+          );
         }
 
         // (1) Determinism — bit-identical, no tolerance.
@@ -2065,7 +2088,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
               `${first.records[mismatchIndex]} vs ${second[mismatchIndex]} (expected bit-identical)`,
           );
         }
-        console.error(`  readback:placeDigVeil two dispatches bit-identical (${first.count} records)`);
+        console.error(
+          `  readback:placeDigVeil two dispatches bit-identical (${first.count} records)`,
+        );
 
         // (2) Count matches computeDigVeilBudget's own CPU budget math for
         // the boot preset, fed the SAME shellFluxSum/recentEventCount the
@@ -2109,7 +2134,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
             `readback:placeDigVeil — ${nonPositiveCount}/${first.count} records have a non-finite or non-positive amplitude (expected every reserved slot live, no survival filter on this tier)`,
           );
         }
-        console.error(`  readback:placeDigVeil all ${first.count} records live (finite, positive amplitude)`);
+        console.error(
+          `  readback:placeDigVeil all ${first.count} records live (finite, positive amplitude)`,
+        );
 
         // (4) Sigma-distribution parity — NOT a flux check. DIG's own CPU
         // brightness law (`amplitude = digAmplitudeBase / (TAU_ROOT3 *
@@ -2165,7 +2192,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           ) {
             isotropyFailures++;
           }
-          const det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
+          const det =
+            xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz);
           if (!(det > 0)) {
             throw new Error(`readback:placeDigVeil — record ${i} has non-positive det(invCov)`);
           }

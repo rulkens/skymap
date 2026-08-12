@@ -1,6 +1,8 @@
 /**
- * createIsmMapPlaceArmCloud — GPU replacement for `buildArmParticleCloud`'s
- * placement body (`armParticleCloud.ts:154-258`). The CPU still decides slot
+ * createIsmMapPlaceArmCloud — GPU replacement for the CPU's former
+ * `buildArmParticleCloud` placement body (deleted from `armParticleCloud.ts`,
+ * Task 16 — that file survives only as `deriveArmCloudCount`'s budget math).
+ * The CPU still decides slot
  * COUNT (`deriveArmCloudCount`, unchanged — `galaxyFieldMixture.ts`'s
  * `armCloudReservation`) and the per-arm pick-weight table
  * (`packArmCloudArmRecords.ts` ports `armAgeWeight` verbatim);
@@ -29,7 +31,10 @@ import {
   COMPLEX_SPREAD_RATIO,
   tiltReferenceRadius,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
-import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from '../../../../../src/services/engine/galaxyGenerator/v2/discSurfaceFit';
+import {
+  DISC_SIGMA_RATIOS,
+  DISC_SURFACE_WEIGHTS,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/discSurfaceFit';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';

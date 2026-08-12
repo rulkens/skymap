@@ -1,7 +1,8 @@
 /**
  * Two independent guards: `computePlaceDustBudget`'s early-exit/clamp math
- * against `buildDustParticleCloud`'s own gates (`dustParticleCloud.ts:130-
- * 141`), and `packPlaceDustParams`'s byte layout against `placeDust.wesl`'s
+ * against the CPU's former `buildDustParticleCloud` gates (deleted from
+ * `dustParticleCloud.ts`, Task 16), and `packPlaceDustParams`'s byte layout
+ * against `placeDust.wesl`'s
  * `PlaceDustParams` struct (same read-the-shader-as-text technique
  * `packIsmMapCdfParams.test.ts` uses, extended for mixed u32/f32 fields —
  * this packer's u32 members are NOT float-reinterpretable, so parity is

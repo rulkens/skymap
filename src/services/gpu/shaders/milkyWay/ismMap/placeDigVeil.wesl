@@ -35,7 +35,8 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::genNormal;
 import package::milkyWay::ismMap::ismMapDustCdfScan::ismMapDustRingEdges;
 
 const DIG_PI: f32 = 3.14159265358979323846;
-// clusteredDiscPlacement.ts's own CHILD_POLE_RATIO analogue —
+// The DIG-veil analogue of placeDust.wesl/placeArmCloud.wesl's own
+// CHILD_POLE_RATIO (formerly clusteredDiscPlacement.ts's, deleted Task 16) —
 // hiiRegions.ts's DIG_CHILD_POLE_RATIO (:112), this tier's own fixed
 // constant, mirrored (not shared) like every other placement shader's own
 // pole-ratio constant.
@@ -161,7 +162,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   // Child scatter — hiiRegions.ts:607-632. This tier's OWN elongation
   // convention (sqrt-split, area-preserving on the scatter footprint,
-  // mirroring dustParticleCloud.ts's S3 aspect) — NOT
+  // mirroring placeDust.wesl's own area-preserving aspect, formerly
+  // dustParticleCloud.ts's S3 aspect before Task 16 deleted that body) — NOT
   // clusteredDiscPlacement.wesl's shared child-scatter tail, which applies
   // elongation straight to 'along' alone; ported as its own algorithm, not
   // reconciled with that file's convention.

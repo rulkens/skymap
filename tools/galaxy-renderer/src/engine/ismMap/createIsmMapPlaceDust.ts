@@ -1,10 +1,12 @@
 /**
- * createIsmMapPlaceDust — GPU replacement for `buildDustParticleCloud`'s
- * map-seeded placement (`dustParticleCloud.ts:156-317`). The CPU still
- * decides slot COUNT (`computePlaceDustBudget` below, the same early-exit/
- * clamp math `buildDustParticleCloud:130-156` runs); `placeDust.wesl`
- * decides slot CONTENT, including the mapDensity/smoothDisc MODE itself, so
- * nothing on this path depends on an async ismMap readback landing.
+ * createIsmMapPlaceDust — GPU replacement for the CPU's former
+ * `buildDustParticleCloud` map-seeded placement (deleted from
+ * `dustParticleCloud.ts`, Task 16 — that file survives only as the
+ * constants below import). The CPU still decides slot COUNT
+ * (`computePlaceDustBudget` below, the same early-exit/clamp math that
+ * function's own setup ran); `placeDust.wesl` decides slot CONTENT,
+ * including the mapDensity/smoothDisc MODE itself, so nothing on this path
+ * depends on an async ismMap readback landing.
  *
  * `dispatchPlaceDust` rebuilds its bind group every call (Task 6's own
  * `createIsmMapDustCdfScan.ts` precedent): the CDF prefix buffer, ring-means

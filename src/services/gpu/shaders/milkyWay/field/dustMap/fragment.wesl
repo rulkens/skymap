@@ -19,8 +19,9 @@ import package::milkyWay::field::io::dustNoiseTex;
 import package::milkyWay::field::io::dustNoiseSmp;
 import package::milkyWay::field::dustDetail::dustDetailMultiplier;
 
-// dustRenorm[0] — Task 9's Larson massPerR2 consume-time scale
-// (dustParticleCloud.ts:293), GPU-written by ringReduce.wesl's
+// dustRenorm[0] — Task 9's Larson massPerR2 consume-time scale (formerly
+// dustParticleCloud.ts's own massPerR2, deleted with its placement body,
+// Task 16), GPU-written by ringReduce.wesl's
 // csSurvivorSum kernel (a storage read_write binding in THAT pipeline) and
 // read here as read-only storage — no uniform round trip, since the CPU
 // never learns this value (it depends on which particles the GPU's own

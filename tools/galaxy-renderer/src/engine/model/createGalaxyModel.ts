@@ -210,9 +210,10 @@ export type GalaxyModel = {
    * `render.ismMapSeedingViewWeight` live (forced to 0 while `ismMapData` is
    * null or the mean is 0), `globalMean` is cached at the ismMap readback
    * landing, not recomputed per frame — same cadence as `dustHeaderLanes`.
-   * `cap` reads `currentDust().cloud.dustPlacementCap` live, same source
-   * `rebuildDustMixture` passes to `buildDustParticleCloud`, so a cap-slider
-   * drag updates the view without waiting on a rebuild. The per-RING means
+   * `cap` reads `currentDust().cloud.dustPlacementCap` live, the same value
+   * `rebuildDustMixture`'s CDF rescan (`dispatchDustCdfScan`) and
+   * `dustPlacementRebuild`'s own uniforms apply, so a cap-slider drag
+   * updates the view without waiting on a rebuild. The per-RING means
    * `globalMean` is itself the mean of are NOT part of this type — they ride
    * `ismMapGenerator.ringMeansBuffer`, written by `ringReduce`'s GPU pass at
    * rebuild time on the fluid path (see `rebuildIsmMap`), or by the CPU
@@ -555,8 +556,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // here between a drop and the next landing is simply never read.
   // `ismMapGlobalMeanDust` is `arrayMean` of the per-ring means array — the
   // array itself rides the GPU only (`ismMapGenerator.writeRingMeans`),
-  // nothing on the CPU side needs it back, since `buildDustParticleCloud`
-  // computes its own copy straight off `ismMap` each rebuild.
+  // nothing on the CPU side needs it back, since `dustPlacementRebuild`'s
+  // GPU pass (`placeDust.wesl`) computes its own copy straight off the
+  // ismMap texture each rebuild.
   let ismMapGlobalMeanDust = 0;
   // §5's `invMeanNorm` cache — keyed on (map identity, gamma) rather than
   // recomputed at readback landing like `ismMapGlobalMeanDust` above: gamma
@@ -1516,10 +1518,17 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // inside `repackFieldComponents` below, not here — see that function's
     // own doc for why ownership lives there (whoever zeroes the slots owns
     // the invalidation).
-    ({ mixture: fieldMixture, spurCloudReservation, armCloudReservation } =
-      centralFieldMixtureAndReservations(fieldGeometry));
-    ({ mixture: hiiMixture, segments: hiiTierSegments, shellFluxSum, recentEventCount } =
-      centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
+    ({
+      mixture: fieldMixture,
+      spurCloudReservation,
+      armCloudReservation,
+    } = centralFieldMixtureAndReservations(fieldGeometry));
+    ({
+      mixture: hiiMixture,
+      segments: hiiTierSegments,
+      shellFluxSum,
+      recentEventCount,
+    } = centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
     rebuildDustMixture();
     rebuildDigVeilBudget();
     bubblePlacements.invalidate();
@@ -1570,8 +1579,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // that cannot change its output.
     const armsWidthMoved = prev.arms.widthScale !== fieldTuning.arms.widthScale;
     // `starFormation` feeds `hiiMixtureOf` alone (dust reads no starFormation
-    // at all — `buildDustParticleCloud` takes no such argument), so it joins
-    // `hiiMoved` rather than getting its own flag.
+    // at all — `dustPlacementRebuild`'s params take no such input), so it
+    // joins `hiiMoved` rather than getting its own flag.
     const starFormationMoved = prev.starFormation !== fieldTuning.starFormation;
     const hiiMoved = armsWidthMoved || starFormationMoved || prev.hii !== fieldTuning.hii;
     const dustMoved = prev.dust !== fieldTuning.dust;
@@ -1581,12 +1590,19 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         if (fieldMoved) {
           // Invalidation lives in `repackFieldComponents` (below, whichever
           // branch of this function reaches it), not here.
-          ({ mixture: fieldMixture, spurCloudReservation, armCloudReservation } =
-            centralFieldMixtureAndReservations(fieldGeometry));
+          ({
+            mixture: fieldMixture,
+            spurCloudReservation,
+            armCloudReservation,
+          } = centralFieldMixtureAndReservations(fieldGeometry));
         }
         if (hiiMoved) {
-          ({ mixture: hiiMixture, segments: hiiTierSegments, shellFluxSum, recentEventCount } =
-            centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
+          ({
+            mixture: hiiMixture,
+            segments: hiiTierSegments,
+            shellFluxSum,
+            recentEventCount,
+          } = centralHiiMixtureAndSegments(fieldGeometry, currentStarFormation()));
           rebuildDigVeilBudget();
         }
       }
@@ -1790,10 +1806,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       return {
         weight: render.ismMapSeedingViewWeight,
         globalMean: ismMapGlobalMeanDust,
-        // `?? 0`: same preset-gap guard `buildDustParticleCloud` applies to
-        // this exact field — a preset saved before `dustPlacementCap`
-        // existed loads it `undefined`, and 0 ("uncapped") is that field's
-        // own inert default, not a value this getter invents.
+        // `?? 0`: same preset-gap guard `dispatchDustCdfScan`'s own
+        // `ringCap` read applies to this exact field — a preset saved
+        // before `dustPlacementCap` existed loads it `undefined`, and 0
+        // ("uncapped") is that field's own inert default, not a value this
+        // getter invents.
         cap: currentDust().cloud.dustPlacementCap ?? 0,
       };
     },
@@ -1876,7 +1893,9 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // dispatch's fresh values with nothing else writing to it in between,
       // so this reduction is over the same records the caller just read back
       // (`requestDustPlacementReadback`'s own precedent).
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum' });
+      const enc = device.createCommandEncoder({
+        label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum',
+      });
       ringReduce.dispatchArmSpurFluxWeightSum(enc, {
         fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
         count: reservation.count,
@@ -1907,9 +1926,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       device.queue.submit([enc.finish()]);
       await spurCloudPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
       try {
-        const records = new Float32Array(
-          spurCloudPeekBuffer.getMappedRange(0, byteSize).slice(0),
-        );
+        const records = new Float32Array(spurCloudPeekBuffer.getMappedRange(0, byteSize).slice(0));
         return { count: reservation.count, offset: reservation.offset, records };
       } finally {
         spurCloudPeekBuffer.unmap();
@@ -1979,7 +1996,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       const records = await placeDigVeil.dispatchAndReadbackDigVeil(
         digDispatchInput(fieldGeometry, budget),
       );
-      return { count: budget.count, offset: digOffset, amplitudeBase: budget.amplitudeBase, records };
+      return {
+        count: budget.count,
+        offset: digOffset,
+        amplitudeBase: budget.amplitudeBase,
+        records,
+      };
     },
 
     async requestDigVeilBufferPeek(): Promise<{

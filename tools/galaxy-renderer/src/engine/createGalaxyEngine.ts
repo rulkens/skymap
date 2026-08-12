@@ -1131,9 +1131,10 @@ export async function createGalaxyEngine(
     // staging note (overlay first, consumed by nothing).
     getIsmMapTexture: (): GPUTexture => ismMapGenerator.texture,
     // The CPU-side readback of the same output (`scheduleIsmMapReadback`):
-    // null until the first one lands. Consumed by `buildDustParticleCloud`
-    // whenever `ismMap.generator !== 'none'` today; exposed here for future
-    // consumers too.
+    // null until the first one lands. Off the placement path since Task 10 —
+    // `placeDust.wesl` reads the GPU texture directly, never this readback.
+    // Still feeds the seeding debug view and `youngStars.invMeanNorm`'s
+    // contrast normalisation (`createGalaxyModel.ts`'s `invMeanNormFor`).
     getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
     // Debug-only: mapAsync's `ringMeansBuffer` back to the CPU for the
     // probe's numeric-readback check (`probeGpuErrors.ts` diffs it against

@@ -1,8 +1,10 @@
 /**
- * createIsmMapPlaceArmSpurCloud — GPU replacement for
- * `buildArmSpurParticleCloud`'s placement body
- * (`armSpurParticleCloud.ts:125-219`). The CPU still decides slot COUNT and
- * the per-spur pick-weight table (`galaxyFieldMixture.ts`'s
+ * createIsmMapPlaceArmSpurCloud — GPU replacement for the CPU's former
+ * `buildArmSpurParticleCloud` placement body (deleted from
+ * `armSpurParticleCloud.ts`, Task 16 — that file survives only as
+ * `spurFootprintIntegral`/`deriveArmSpurCloudCount`'s budget math). The CPU
+ * still decides slot COUNT and the per-spur pick-weight table
+ * (`galaxyFieldMixture.ts`'s
  * `spurCloudReservation`, `packArmSpurCloudRecords.ts`);
  * `placeArmSpurCloud.wesl` decides slot CONTENT — the weighted spur pick,
  * the rejection-sampled position, the Gaussian cross/pole scatter.
