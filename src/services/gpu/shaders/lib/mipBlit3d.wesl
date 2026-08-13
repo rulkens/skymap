@@ -4,10 +4,11 @@
 // per-draw MipBlit3dUniforms instead.
 //
 // fs_box: one trilinear tap at u.boxZ (x/y free from the UV, as in
-// mipBlit.wesl) -- the display chain's box filter. fs_max: eight
-// textureLoad taps over the 2x2x2 parent footprint (x/y from the fragment's
-// own position, z from u.srcZLow/srcZHigh), normalised to deviation space
-// before the max reduction -- see the plan for why raw-value max isn't safe.
+// mipBlit.wesl) -- the display chain's box filter. fs_max: dynamic
+// textureLoad taps over the parent footprint per axis (2-wide, 3-wide at a
+// trailing odd-dimension edge -- see tapRange), normalised to deviation
+// space before the max reduction -- see the plan for why raw-value max isn't
+// safe.
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
@@ -16,8 +17,7 @@ struct VSOut {
 
 struct MipBlit3dUniforms {
   boxZ: f32,
-  srcZLow: u32,
-  srcZHigh: u32,
+  dstZ: u32,
   center: f32,
   halfRange: f32,
 };
@@ -50,29 +50,40 @@ fn deviation(x: f32) -> f32 {
   return abs(x - u.center) / u.halfRange;
 }
 
+// Inclusive [low, high] parent-index range dst index 'd' reduces along one
+// axis of size parentDim. Normally 2-wide (2d, 2d+1); at the LAST dst index
+// on an odd-sized axis, floor(parentDim/2) undercounts dst cells by one
+// parent slice, so that final cell widens to 3-wide (2d, 2d+1, parentDim-1)
+// to still cover it -- otherwise the trailing slice/row/column is never read
+// and fs_max under-reports the true max there.
+fn tapRange(d: i32, parentDim: i32) -> vec2<i32> {
+  let dstDim = max(1, parentDim / 2);
+  let low = d * 2;
+  var high = low + 1;
+  if (d == dstDim - 1 && (parentDim % 2) == 1) {
+    high = parentDim - 1;
+  }
+  return vec2<i32>(low, high);
+}
+
 @fragment
 fn fs_max(in: VSOut) -> @location(0) vec4<f32> {
   // x/y come from this fragment's own framebuffer position (no rasteriser UV
   // trick needed here since textureLoad wants integer texel indices anyway);
-  // z is the caller's explicit 2-slice footprint.
-  let dims = vec2<i32>(textureDimensions(srcTex).xy);
-  let dstX = i32(in.clip.x);
-  let dstY = i32(in.clip.y);
-  let xLow = min(dstX * 2, dims.x - 1);
-  let xHigh = min(dstX * 2 + 1, dims.x - 1);
-  let yLow = min(dstY * 2, dims.y - 1);
-  let yHigh = min(dstY * 2 + 1, dims.y - 1);
-  let zLow = i32(u.srcZLow);
-  let zHigh = i32(u.srcZHigh);
+  // z is the caller's dst slice index. Parent dims come straight off the
+  // bound (single-level) source view, same as fs_box's own depth lookup.
+  let dims = vec3<i32>(textureDimensions(srcTex));
+  let xRange = tapRange(i32(in.clip.x), dims.x);
+  let yRange = tapRange(i32(in.clip.y), dims.y);
+  let zRange = tapRange(i32(u.dstZ), dims.z);
 
   var m = 0.0;
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xLow, yLow, zLow), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xHigh, yLow, zLow), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xLow, yHigh, zLow), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xHigh, yHigh, zLow), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xLow, yLow, zHigh), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xHigh, yLow, zHigh), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xLow, yHigh, zHigh), 0).r));
-  m = max(m, deviation(textureLoad(srcTex, vec3<i32>(xHigh, yHigh, zHigh), 0).r));
+  for (var z = zRange.x; z <= zRange.y; z = z + 1) {
+    for (var y = yRange.x; y <= yRange.y; y = y + 1) {
+      for (var x = xRange.x; x <= xRange.y; x = x + 1) {
+        m = max(m, deviation(textureLoad(srcTex, vec3<i32>(x, y, z), 0).r));
+      }
+    }
+  }
   return vec4<f32>(m, 0.0, 0.0, 0.0);
 }

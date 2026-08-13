@@ -128,12 +128,12 @@ export function downsampleLevel3d(
   for (let dz = 0; dz < dst.depth; dz++) {
     // boxZ: continuous parent-space z at dz's centre — the 3D generalisation
     // of the UV mapping the rasteriser already gives fs_box for x/y (see
-    // mipBlit3d.wesl). srcZLow/srcZHigh: the integer 2-slice footprint fs_max
-    // reduces, clamped so an odd `src.depth` collapses to one tap at the
-    // trailing edge (srcZLow === srcZHigh) instead of reading past the texture.
+    // mipBlit3d.wesl). fs_max gets dz itself (as dstZ) rather than a
+    // precomputed 2-slice footprint: the shader derives its own per-axis tap
+    // range (2-wide, 3-wide at a trailing odd-dimension edge) from dstZ plus
+    // the parent's own textureDimensions, so a fixed pair here can't silently
+    // drop the trailing slice of an odd-depth parent.
     const boxZ = (dz + 0.5) * zRatio - 0.5;
-    const srcZLow = Math.min(2 * dz, src.depth - 1);
-    const srcZHigh = Math.min(2 * dz + 1, src.depth - 1);
 
     // A fresh buffer per slice: `writeBuffer` calls made before a shared
     // `submit()` are ordered against each other by JS call order, not by
@@ -142,13 +142,13 @@ export function downsampleLevel3d(
     // written exactly once, so there is nothing to race.
     const uniformBuffer = device.createBuffer({
       label: `mipBlit3d-uniform-${dst.level}-${dz}`,
-      size: 20,
+      size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    const scratch = new ArrayBuffer(20);
+    const scratch = new ArrayBuffer(16);
     new Float32Array(scratch, 0, 1)[0] = boxZ;
-    new Uint32Array(scratch, 4, 2).set([srcZLow, srcZHigh]);
-    new Float32Array(scratch, 12, 2).set([center, halfRange]);
+    new Uint32Array(scratch, 4, 1)[0] = dz;
+    new Float32Array(scratch, 8, 2).set([center, halfRange]);
     device.queue.writeBuffer(uniformBuffer, 0, scratch);
 
     const bindGroup = device.createBindGroup({
