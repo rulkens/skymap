@@ -33,7 +33,7 @@ export const ZONE_OF_AVOIDANCE_SLIDER_FIELDS: readonly ZoneOfAvoidanceSliderFiel
     max: 1,
     step: 0.01,
     format: (v) => v.toFixed(2),
-    title: "Easing width, as a fraction of the shell's radial span, of the inner/outer fade.",
+    title: "E-folding length, as a fraction of the shell's radial span, of the density decay from the inner rim outward.",
   },
   {
     key: 'edgeSharpness',

@@ -196,16 +196,17 @@ export const SCALE_FADE_BANDS = {
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
   // quantity as `constellations`). Consumer: the zone-of-avoidance overlay
-  // (band + label, via `zoneOfAvoidanceLayerOpacity`). The dust-band explainer
-  // reads as a Local-Group-scale guide, not a near-field one: invisible close to
-  // Earth (`goneAt` = 0.3 Mpc, clear of the Milky Way's own rendering, so the
-  // band never competes with the MW impostor/disc) and at full presence by
-  // `fullAt` = 8 Mpc (Local-Group framing, per grill Q6). An APPROACH fade — full
+  // (band + label, via `zoneOfAvoidanceLayerOpacity`). Derived off the Milky
+  // Way's own size (`MILKY_WAY_RADIUS_MPC`, the same posture `sgrAStarCaption`
+  // takes off `SGR_A_STAR_R0_MPC`), not a fixed Local-Group-framing distance:
+  // `goneAt` = 2 radii (one disc diameter out, so the veil is already fading in
+  // by the moment the galaxy has framed up as a whole object) and `fullAt` = 10
+  // radii (full veil well before Local-Group framing). An APPROACH fade — full
   // at the large-distance edge — the opposite direction from `constellations`,
   // since this band explains a COSMIC-scale catalog gap rather than a near-field
-  // sky figure. These edges are an eye-tuning STARTING POINT for the Task 9
-  // visual checkpoint.
-  zoneOfAvoidance: { fullAt: 8, goneAt: 0.3 },
+  // sky figure. The multiples are an eye-tuning STARTING POINT, tuned visually
+  // at the gate-fix checkpoint.
+  zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
 
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at

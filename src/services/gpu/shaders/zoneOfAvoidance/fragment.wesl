@@ -15,6 +15,9 @@ import package::lib::masks::edgeBandMask;
 import package::lib::fadeUniforms::applyFade;
 
 const STEPS: u32 = 32u;
+// Inner-rim feather width, as a fraction of the shell's radial span — fixed
+// so the rim's softness stays constant regardless of the distance-fade knob.
+const INNER_RIM_FRACTION: f32 = 0.05;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
@@ -47,12 +50,23 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
     let p = u.cameraPosMpc + rayDir * t;
     let r = length(p);
 
-    // Radial rim mask: zero inside the cavity and outside the shell, with
-    // 'radialFalloffMpc'-wide feathering at both rims — replaces the old
-    // camera-distance mask, since every SAMPLE now carries its own radial
-    // gradient.
-    let radialMask = smoothstep(u.innerRadiusMpc, u.innerRadiusMpc + u.radialFalloffMpc, r)
-      * (1.0 - smoothstep(u.outerRadiusMpc - u.radialFalloffMpc, u.outerRadiusMpc, r));
+    // Radial density profile: a soft inner rim over a small FIXED width
+    // (decoupled from the knob) x an exponential decay from the inner rim
+    // outward, with 'radialFalloffMpc' as the e-folding length (the knob) x
+    // a hard outer-rim guarantee, since exp() alone never reaches zero. The
+    // veil is strongest just past the cavity and fades toward the survey
+    // edge, replacing the old flat plateau with symmetric rim ramps.
+    let innerRim = smoothstep(
+      u.innerRadiusMpc,
+      u.innerRadiusMpc + INNER_RIM_FRACTION * (u.outerRadiusMpc - u.innerRadiusMpc),
+      r,
+    );
+    // Slider floor: the DebugPanel lets 'radialFalloffMpc' reach 0, which
+    // would divide by zero below.
+    let falloffMpc = max(u.radialFalloffMpc, 1e-3);
+    let distanceFade = exp(-max(r - u.innerRadiusMpc, 0.0) / falloffMpc);
+    let outerRim = 1.0 - smoothstep(0.9 * u.outerRadiusMpc, u.outerRadiusMpc, r);
+    let radialMask = innerRim * distanceFade * outerRim;
     if (radialMask <= 0.0) {
       continue; // skip the trig below; also guards asin(z / r) since r > 0 here
     }

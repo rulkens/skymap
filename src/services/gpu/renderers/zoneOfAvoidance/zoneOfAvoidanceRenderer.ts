@@ -36,9 +36,9 @@
  * `radialFalloffMpc` is the one field that ISN'T a straight tuning-struct
  * copy: `ZoneOfAvoidanceTuning.radialFalloff` is documented (and dialled by
  * the DebugPanel) as a normalised [0, 1] fraction of the shell's radial
- * span, so `draw` converts it to an absolute Mpc width — the one currency
- * the shader's two smoothstep rims actually need — before writing the
- * uniform. See `draw`'s body for the conversion.
+ * span, so `draw` converts it to an absolute Mpc e-folding length — the one
+ * currency the shader's exponential distance-decay term actually needs —
+ * before writing the uniform. See `draw`'s body for the conversion.
  *
  * ### Label uniform buffer ABI (112 bytes) — see `label/io.wesl`
  *
@@ -368,11 +368,11 @@ export function createZoneOfAvoidanceRenderer(
     const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
     const tanHalfFovY = Math.tan(cam.fovYRad / 2);
     // The tuning knob is a normalised [0, 1] fraction of the shell's radial
-    // span (see the type + this file's ABI docblock); the shader's two
-    // rim smoothsteps want an absolute Mpc width, so convert here — the
-    // ONE place this currency change happens, rather than splitting the
-    // multiply across the shader (which would leave the uniform holding a
-    // value with no name of its own).
+    // span (see the type + this file's ABI docblock); the shader's
+    // exponential distance-decay term wants an absolute Mpc e-folding
+    // length, so convert here — the ONE place this currency change happens,
+    // rather than splitting the multiply across the shader (which would
+    // leave the uniform holding a value with no name of its own).
     const radialFalloffMpc = tuning.radialFalloff * (outerRadiusMpc - innerRadiusMpc);
 
     // camForward (floats 0..2) + tanHalfFovY (float 3).

@@ -53,10 +53,10 @@ import { zoneOfAvoidanceLayerOpacity } from '../../presentation/zoneOfAvoidanceL
 const INNER_RADIUS_MPC = 3;
 /** Shell outer radius, Mpc — visual-checkpoint placeholder (Task 9). */
 const OUTER_RADIUS_MPC = 380;
-/** Latitude half-width toward the galactic bulge (l=0), degrees — visual-checkpoint placeholder (Task 9). */
-const BULGE_DEG = 15;
-/** Latitude half-width toward the galactic anticenter (l=π), degrees — visual-checkpoint placeholder (Task 9). */
-const ANTICENTER_DEG = 5;
+/** Latitude half-width toward the galactic bulge (l=0), degrees — visual-checkpoint placeholder, narrowed at the gate-fix pass (was 15). */
+const BULGE_DEG = 10;
+/** Latitude half-width toward the galactic anticenter (l=π), degrees — visual-checkpoint placeholder, narrowed at the gate-fix pass (was 5). */
+const ANTICENTER_DEG = 3;
 /** Radius of the curved-lettering's galactic-plane circle, Mpc — visual-checkpoint placeholder (Task 10). */
 const LABEL_RADIUS_MPC = 40;
 

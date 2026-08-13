@@ -33,10 +33,10 @@
 // alongside the tuning cluster. 'radialFalloffMpc' is the ONE exception —
 // the tuning type's 'radialFalloff' is a normalised [0, 1] fraction of the
 // shell span (a DebugPanel-friendly unit); the CPU side converts it to an
-// absolute Mpc width ('radialFalloff * (outerRadiusMpc - innerRadiusMpc)',
-// see zoneOfAvoidanceRenderer.ts) before writing this field, so the shader
-// only ever sees the one currency it actually needs for its smoothstep
-// widths.
+// absolute Mpc e-folding length ('radialFalloff * (outerRadiusMpc -
+// innerRadiusMpc)', see zoneOfAvoidanceRenderer.ts) before writing this
+// field, so the shader only ever sees the one currency its exponential
+// distance-decay term actually needs.
 
 struct Uniforms {
   camForward: vec3<f32>,

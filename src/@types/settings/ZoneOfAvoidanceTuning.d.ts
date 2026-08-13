@@ -14,7 +14,7 @@ import type { Vec3 } from '../math/Vec3';
 export type ZoneOfAvoidanceTuning = {
   /** Additive brightness of the band at full presence (galactic plane, b=0). */
   intensity: number;
-  /** Easing width, in the band's normalised radial coordinate, of the fade at its inner/outer edges. */
+  /** E-folding length, as a fraction of the band's radial span, of the density decay from the inner rim outward. */
   radialFalloff: number;
   /** Feather width, in degrees of galactic latitude, of `edgeBandMask`'s fade at the band's b-limit. */
   edgeSharpness: number;
