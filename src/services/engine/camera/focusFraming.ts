@@ -112,7 +112,8 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     // `updateSelectionFocus` dispatch — InfoCard, double-click, keyboard
     // shortcut, deep link, tour restore — funnels through the single
     // `takeLatest(updateSelectionFocus, …)` worker in `watchFocusTweenSaga`,
-    // which filters a `zoneOfAvoidance` row before it ever reaches
+    // which filters on `ROW_FOCUSABLE` (`services/engine/helpers/rowFocusable.ts`,
+    // exhaustive over `SelectionRow['type']`) before ever calling
     // `focusTweenDescriptor`/`focusFraming` (that's the ONE enforcement site —
     // do not add a second filter here or elsewhere). The clip-authoring path
     // (`resolveClipFoci`) is separately unreachable: `urlHashFor`/`focusIdOf`

@@ -51,6 +51,7 @@ import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
+import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
@@ -83,14 +84,15 @@ export function* watchFocusTweenSaga() {
       }
       if (row === null) return;
 
-      // The zone-of-avoidance band has no position (a line-of-sight effect,
-      // not a point) — no Focus button reaches it today, but the raw ref can
-      // still arrive here from a double-click on the band (wireInput) once
-      // Task 12 wires its picking. This is the ONE place every
-      // `updateSelectionFocus` dispatch funnels through, so it's the
-      // enforcement site for the invariant `focusFraming` asserts: a
-      // no-op here, not a crash inside the saga worker.
-      if (row.type === 'zoneOfAvoidance') return;
+      // Some rows (the zone-of-avoidance band today) have no focus target —
+      // ROW_FOCUSABLE is exhaustive over SelectionRow['type'], so a future
+      // non-focusable arm fails to compile there until declared, instead of
+      // silently reaching focusFraming's throw. This is the ONE place every
+      // `updateSelectionFocus` dispatch funnels through (InfoCard,
+      // double-click, keyboard shortcut, deep link, tour restore), so it's
+      // the enforcement site for that invariant: a no-op here, not a crash
+      // inside the saga worker.
+      if (!ROW_FOCUSABLE[row.type]) return;
 
       // A body the `followBody` driver WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
