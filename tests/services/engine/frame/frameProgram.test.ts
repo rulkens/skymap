@@ -250,10 +250,10 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, eight hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
+  it('derives the real registry slot list: scalar-volume, nine hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
-    // iterates. scalar-volume leads (the volume render step), then the eight
+    // iterates. scalar-volume leads (the volume render step), then the nine
     // COSMO hdr layers in registry order, then the two aggregate offscreens,
     // each its OWN NEAR0 render step ahead of the hdr NEAR0 step:
     // star-aggregates, then milky-way-aggregate. The (hdr, NEAR0) step follows
@@ -286,6 +286,7 @@ describe('timedSlotsOf', () => {
       'flow',
       'volume-upsample',
       'horizon-shell',
+      'zone-of-avoidance',
       'structure-markers',
       'hdr·COSMO',
       'star-aggregates',

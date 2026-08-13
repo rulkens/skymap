@@ -456,6 +456,11 @@ function makeInput(
           texturedDiskRenderer,
           proceduralDiskRenderer,
           filamentRenderer: null,
+          // zoneOfAvoidanceLayer.draw reads this off state.gpu.* directly, same
+          // === null early-return guard as filamentRenderer above; the key must
+          // EXIST (undefined would slip past `=== null`) — see the
+          // milkyWayAggregateUpsample comment above for the same landmine.
+          zoneOfAvoidanceRenderer: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },

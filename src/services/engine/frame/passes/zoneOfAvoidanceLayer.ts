@@ -24,6 +24,15 @@
  * `horizonShellLayer`'s bespoke camera-distance-only function (which has no
  * settings toggle to fold in).
  *
+ * `enabled` does NOT also check `state.gpu.zoneOfAvoidanceRenderer` — same
+ * choice `filamentsLayer`/`horizonShellLayer` make (`ContentLayer.enabled`
+ * COULD read `state.gpu.*`, but the incumbent convention leaves the
+ * renderer-presence guard solely in `draw`'s own `=== null` early return).
+ * One convention beats a belt-and-suspenders check in `enabled` too: a
+ * null-renderer frame (only possible pre-`initGpu`) still reports
+ * `enabled → true` and `draw` self-corrects into a no-op, exactly the
+ * "self-correcting near-miss" `filamentsLayer` documents.
+ *
  * ### Placeholder shape constants
  *
  * `innerRadiusMpc` / `outerRadiusMpc` / `bulgeDeg` / `anticenterDeg` below
@@ -55,7 +64,6 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
   enabled(state, ctx) {
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return (
-      state.gpu.zoneOfAvoidanceRenderer !== null &&
       zoneOfAvoidanceLayerOpacity(
         camDistMpc,
         resolveLayerOpacity(
