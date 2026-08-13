@@ -208,6 +208,18 @@ export const SCALE_FADE_BANDS = {
   // at the gate-fix checkpoint.
   zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
 
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `zoneOfAvoidance`, above). Consumer: the zone-of-avoidance
+  // overlay, composed with `zoneOfAvoidance` into a visibility WINDOW — the
+  // band is a Milky-Way-context guide, and once the Local Group itself becomes
+  // the subject the guide has done its job and should recede. No
+  // `local-group` row exists yet in `BODY_REGIONS` to derive this from (only
+  // `solar-system`, `solar-neighbourhood`, `galactic-centre` are seeded), so
+  // these are LITERAL Mpc values, an eye-tuning STARTING POINT: full within 2
+  // Mpc, gone by 6 Mpc. A recede band — full at the small-distance edge, the
+  // same shape as `constellations`.
+  zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
+
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at
   // FULL strength at/below 1 px and GONE at/above `BODY_GLINT_MAX_PX` (a recede

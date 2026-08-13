@@ -12,10 +12,11 @@
  *
  * ### When it draws
  *
- * `zoneOfAvoidanceLayerOpacity` (Task 7) composes TWO factors: the
- * Milky-Way-scaled camera-distance approach band (`SCALE_FADE_BANDS.zoneOfAvoidance`
- * — see that row in `scaleFadeBands.ts` for the current edges and their
- * derivation) times the fade-registry toggle opacity
+ * `zoneOfAvoidanceLayerOpacity` (Task 7) composes THREE factors: the
+ * Milky-Way-scaled camera-distance approach band (`SCALE_FADE_BANDS.zoneOfAvoidance`)
+ * times the Local-Group-scaled recede band (`SCALE_FADE_BANDS.zoneOfAvoidanceRecede`
+ * — the visibility WINDOW, gate-fix 7) — see those rows in `scaleFadeBands.ts`
+ * for the current edges and their derivation — times the fade-registry toggle opacity
  * (`state.settings.zoneOfAvoidance.enabled`, seeded via the
  * `{ kind: 'zoneOfAvoidance' }` `FadeId`). Both `enabled` and `draw`
  * recompute this from the frame-frozen camera distance so a fade-out
