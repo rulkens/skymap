@@ -47,6 +47,14 @@ export type FieldEntry = {
   envelopeInner: number;
   envelopeOuter: number;
   /**
+   * Edge length of one voxel in the cube's local [0,1]³ space —
+   * `1 / max(dims)`.  Per-cube static, computed once in `upload()` from
+   * `cube.dims`, same treatment as `contrastCenter`/`envelopeInner`/
+   * `envelopeOuter`.  Task 5's skip march sizes its step against the
+   * data's native resolution using this value; unread until then.
+   */
+  voxelSizeLocal: number;
+  /**
    * GPU-RESIDENCY fact: the palette id currently uploaded into
    * `paletteTexture`.  NOT a user setting (that's
    * `state.settings.volumes.items[id].paletteId`); this just tracks

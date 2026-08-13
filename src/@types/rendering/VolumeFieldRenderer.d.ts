@@ -52,12 +52,18 @@ export type VolumeFieldRenderer = {
    * with no settings row is skipped.  `fadeOpacityOf` supplies the
    * fade-out opacity per id.  The palette is re-uploaded in place
    * when `settingsOf(id).paletteId` diverges from what's resident.
+   *
+   * `pixelConeTan` is a frame-global scalar — the tangent of one pixel's
+   * half-angle at the (downscaled) volume target — computed once by the
+   * caller and forwarded to every field, same rationale as `viewportPx`.
+   * Unread by the shader until Task 6's cone-LOD sampling.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
     cameraPosWorld: Readonly<Vec3>,
+    pixelConeTan: number,
     settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined,
     fadeOpacityOf: (id: VolumeFieldId) => number,
   ): void;

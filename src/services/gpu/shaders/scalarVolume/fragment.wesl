@@ -95,6 +95,16 @@ struct VolumeUniforms {
   // frame instead of staying locked in screen space.  CPU side
   // wraps at 1e6 to keep the f32 mantissa happy.
   frame: f32,
+  // Edge length of one voxel in the cube's LOCAL [0,1]³ space
+  // (distance, not a normalised fraction of anything else) —
+  // 1 / max(dims), per-cube static.  Not yet read; Task 5's skip
+  // march sizes its step against the data's native resolution.
+  voxelSizeLocal: f32,
+  // Tangent (not angle) of one screen pixel's half-angle at the
+  // downscaled volume target, per-frame.  Not yet read; Task 6's
+  // cone-LOD sampling grows its footprint with march distance by
+  // multiplying this by the local-space distance from the camera.
+  pixelConeTan: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;

@@ -61,11 +61,20 @@ export const scalarVolumeLayer: ContentLayer = {
     const scale = ctx.renderTargets.specs.find((s) => s.id === 'volume')!.scale;
     const vw = Math.max(1, Math.floor(ctx.canvasSize.width / scale));
     const vh = Math.max(1, Math.floor(ctx.canvasSize.height / scale));
+    // Tangent of one pixel's half-angle at the volume target, mirroring
+    // `drawPxPerRad`'s shape (frameContext.ts:177) but against the
+    // downscaled `vh` above rather than the canvas height, and inverted
+    // to a per-pixel tangent: half the target's vertical FOV subtends
+    // `tan(fovYRad/2)` over `vh/2` pixels, so one pixel's angular width
+    // is `2 * tan(fovYRad/2) / vh` (small-angle, tan ≈ angle). Task 6's
+    // cone-LOD march uses this to grow its sample footprint with distance.
+    const pixelConeTan = (2 * Math.tan(ctx.fovYRad / 2)) / vh;
     renderer.draw(
       pass,
       view.vp,
       [vw, vh],
       view.camPos,
+      pixelConeTan,
       liveness.settingsOf,
       liveness.fadeOpacityOf,
     );

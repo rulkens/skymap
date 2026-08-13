@@ -109,15 +109,16 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
 }
 
 /**
- * Extract the length-64 uniform scratch from the writeBuffer mock.
+ * Extract the length-68 uniform scratch from the writeBuffer mock
+ * (UNIFORM_BYTES / 4 — see volumeFieldRenderer.ts's byte-offset table).
  * The fade write passes a 16-byte ArrayBuffer — we skip it and find
- * only the Float32Array(64) that packs the full per-field uniform.
+ * only the Float32Array(68) that packs the full per-field uniform.
  */
 function uniformScratch(device: GPUDevice): Float32Array | undefined {
   const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock
     .calls;
   const hit = calls.find(
-    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 64,
+    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 68,
   );
   return hit?.[2] as Float32Array | undefined;
 }
@@ -151,6 +152,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings(),
       () => 1,
     );
@@ -160,6 +162,29 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(s?.[56]).toBeCloseTo(2); // densityScale
     expect(s?.[61]).toBeCloseTo(3); // exposure
     expect(s?.[62]).toBeCloseTo(0.1); // trim
+  });
+
+  it('draw writes voxelSizeLocal and pixelConeTan into the uniform scratch at offsets 64/65', () => {
+    // WGSL/TS byte-layout keep-rule: the fixture cube is [4,4,4], so
+    // voxelSizeLocal = 1 / max(dims) = 0.25 — hand-computed here, not
+    // read back from the renderer's own arithmetic. pixelConeTan is
+    // whatever the caller (scalarVolumeLayer) passes through untouched.
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture({ dims: [4, 4, 4] }));
+    const pass = makeFakePass();
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as Mat4,
+      [320, 180],
+      [0, 0, 5],
+      0.0042,
+      () => fullSettings(),
+      () => 1,
+    );
+    const s = uniformScratch(device);
+    expect(s?.[64]).toBeCloseTo(0.25); // voxelSizeLocal
+    expect(s?.[65]).toBeCloseTo(0.0042); // pixelConeTan
   });
 
   it('draw skips a field with no settings row', () => {
@@ -174,6 +199,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => undefined,
       () => 1,
     );
@@ -193,6 +219,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings(),
       () => 1,
     );
@@ -220,6 +247,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings({ paletteId: getVolumeFieldDefaults('mcpm').paletteId }),
       () => 1,
     );
@@ -232,6 +260,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
     );
@@ -244,6 +273,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
     );
@@ -264,6 +294,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings({ enabled: false }),
       () => 0,
     );
@@ -283,6 +314,7 @@ describe('createVolumeFieldRenderer draw', () => {
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
+      0.001,
       () => fullSettings({ enabled: true }),
       () => 0,
     );

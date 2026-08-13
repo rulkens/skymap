@@ -121,13 +121,18 @@ describe('scalarVolumeLayer.draw', () => {
     scalarVolumeLayer.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
-    // draw(pass, vp, viewportPx, camPos, settingsOf, fadeOpacityOf)
+    // draw(pass, vp, viewportPx, camPos, pixelConeTan, settingsOf, fadeOpacityOf)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(view.vp);
     // Downsampled viewport — matches the actual fragment count so the
     // raymarch's jitter dither frequency stays stable.
     expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), Math.floor(720 / VOLUME_SCALE)]);
     expect(args[3]).toEqual(view.camPos);
+    // pixelConeTan = 2 * tan(fovYRad/2) / vh — hand-computed independently
+    // of the layer's own arithmetic, against the downscaled height (240),
+    // not the canvas height (720).
+    const vh = Math.floor(720 / VOLUME_SCALE);
+    expect(args[4]).toBeCloseTo((2 * Math.tan(ctx.fovYRad / 2)) / vh);
   });
 
   it('clamps the downsampled viewport to a minimum of 1 px', () => {
@@ -140,13 +145,14 @@ describe('scalarVolumeLayer.draw', () => {
 
   it('forwards the liveness settingsOf/fadeOpacityOf closures to draw', () => {
     // The renderer reads per-field knobs + fade opacity through the same
-    // projection the gate was computed from; both reach draw (args 4 and 5).
+    // projection the gate was computed from; both reach draw (args 5 and 6,
+    // after pixelConeTan at arg 4).
     const drawSpy = vi.fn();
     const state = liveState({ draw: drawSpy });
     const ctx = makeCtx();
     scalarVolumeLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
-    expect(typeof drawSpy.mock.calls[0]![4]).toBe('function');
     expect(typeof drawSpy.mock.calls[0]![5]).toBe('function');
+    expect(typeof drawSpy.mock.calls[0]![6]).toBe('function');
   });
 
   it('is a no-op when volumes are not live (defensive — executor gates first)', () => {

@@ -71,12 +71,12 @@ import {
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
-// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) + 4 (frame) = 256
-// exactly.  The WGSL struct contains mat4x4 (alignment 16), so total
-// must be a multiple of 16 — 256 lands cleanly.  Frame occupies the
-// last scratch slot (scratch[63]); the next per-field uniform will
-// have to bump UNIFORM_BYTES to the next 16-byte boundary (272).
-const UNIFORM_BYTES = 256;
+// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) + 4 (frame) + 4 (voxelSizeLocal)
+// + 4 (pixelConeTan) + 8 (_pad2/_pad3) = 272 exactly.  The WGSL struct
+// contains mat4x4 (alignment 16), so total must be a multiple of 16 —
+// 272 lands cleanly (17 x 16).  voxelSizeLocal/pixelConeTan are Task 5/6's
+// skip-march and cone-LOD inputs, plumbed ahead of use.
+const UNIFORM_BYTES = 272;
 
 // Temporal-seed wrap-around for the per-draw frame counter.  f32 has
 // 24 bits of mantissa (~16M integers exact), so wrapping at 1e6
@@ -403,6 +403,11 @@ export function createVolumeFieldRenderer(
       const defaults = getVolumeFieldDefaults(id);
       const modelMatrix = buildCubeModelMatrix(cube);
       const invModelMatrix = mat4.inverse(modelMatrix);
+      // Edge length of one voxel in the cube's local [0,1]³ space — the
+      // coarsest axis dominates (a non-cubic cube's smallest voxel footprint
+      // is 1/max(dims)). Task 5's skip march uses this to size its step
+      // against the data's native resolution.
+      const voxelSizeLocal = 1 / Math.max(cube.dims[0], cube.dims[1], cube.dims[2]);
       const volumeTexture = uploadCube(cube);
       const maxPyramidTexture = buildMaxPyramid(volumeTexture, cube.dims, defaults.contrastCenter);
       const paletteTexture = createPaletteTexture();
@@ -441,6 +446,7 @@ export function createVolumeFieldRenderer(
         contrastCenter: defaults.contrastCenter,
         envelopeInner: defaults.envelope.inner,
         envelopeOuter: defaults.envelope.outer,
+        voxelSizeLocal,
         // GPU-residency fact: the palette id just written into
         // `paletteTexture`.  `draw` re-uploads the LUT when the live
         // setting diverges from this.
@@ -490,11 +496,11 @@ export function createVolumeFieldRenderer(
     listIds() {
       return Array.from(fields.keys());
     },
-    draw(pass, viewProj, viewportPx, cameraPosWorld, settingsOf, fadeOpacityOf) {
+    draw(pass, viewProj, viewportPx, cameraPosWorld, pixelConeTan, settingsOf, fadeOpacityOf) {
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (256 bytes; mat4 alignment):
+      // Per-field uniform buffer layout (272 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)
       //  72..79   _pad0, _pad1
@@ -512,10 +518,19 @@ export function createVolumeFieldRenderer(
       // 252..255  frame            (f32; per-draw temporal seed for
       //                            the shader's jitter hash — wraps
       //                            at FRAME_WRAP, see top of file)
+      // 256..259  voxelSizeLocal   (f32; per-cube static, from the entry —
+      //                            1 / max(dims), edge of one voxel in
+      //                            local [0,1]³ space)
+      // 260..263  pixelConeTan     (f32; per-frame draw() parameter — the
+      //                            tangent of one pixel's half-angle at the
+      //                            downscaled volume target)
+      // 264..267  _pad2
+      // 268..271  _pad3
       // The byte offsets are fixed; intensity/densityScale/contrast/
       // exposure/trim come from `settingsOf` per frame, while
-      // contrastCenter and the envelope edges are per-cube static on
-      // the entry.
+      // contrastCenter, the envelope edges, and voxelSizeLocal are
+      // per-cube static on the entry, and pixelConeTan is a per-frame
+      // draw() parameter shared by every field this frame.
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       frame = (frame + 1) % FRAME_WRAP;
       for (const e of fields.values()) {
@@ -569,6 +584,8 @@ export function createVolumeFieldRenderer(
         scratch[61] = s.exposure;
         scratch[62] = s.trim;
         scratch[63] = frame;
+        scratch[64] = e.voxelSizeLocal;
+        scratch[65] = pixelConeTan;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.
