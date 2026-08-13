@@ -1,16 +1,12 @@
 /**
  * zoneOfAvoidanceLayerOpacity — the ONE home for the zone-of-avoidance
- * overlay's per-frame opacity scalar: a visibility WINDOW (approach band ×
- * recede band) times a layer's fade-registry toggle opacity. The band fades
- * IN as the Milky Way frames up (`zoneOfAvoidance`) and back OUT once the
- * Local Group is the subject (`zoneOfAvoidanceRecede`) — the guide is scoped
- * to the Milky-Way-context shot, not a permanent cosmic-scale fixture.
+ * overlay's per-frame opacity scalar: the composition of approach band ×
+ * recede band × layer fade-registry opacity. The band fades IN as the Milky
+ * Way frames up and back OUT once the Local Group is the subject — the guide
+ * is scoped to the Milky-Way-context shot, not a permanent cosmic-scale fixture.
  *
- * Called TWICE per frame with two different `layerFadeOpacity` inputs — the
- * band's own toggle opacity and the label's — so the dust band and its
- * "Zone of Avoidance" lettering dissolve on the SAME window (one
- * `fadeBand(...) * fadeBand(...)` pair) while still toggling independently,
- * mirroring `constellationLayerOpacity`'s shape.
+ * Called twice per frame with the band's and label's fade opacities separately
+ * so they dissolve on the same visibility window while toggling independently.
  */
 
 import { fadeBand } from '../../../utils/math/fadeBand';
