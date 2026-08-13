@@ -94,8 +94,10 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
 
   // opticalLength is Mpc of obscured material along the ray; the
   // outerRadiusMpc normalization keeps 'intensity' a dimensionless knob of
-  // order 1 (a ray grazing the full shell along the plane gives
-  // opticalLength ≈ 2×outer).
+  // order 1. The old flat-plateau mask made opticalLength ≈ 2×outer for a
+  // ray grazing the full shell along the plane; under the exponential
+  // distance decay that ceiling only holds as radialFalloffMpc → ∞ — at the
+  // default falloff, opticalLength is well under 2×outer.
   let opticalLength = accum * stepLen;
   let alpha = applyFade(u.intensity * opticalLength / u.outerRadiusMpc, u.fadeAlpha);
   if (alpha <= 0.0) {
