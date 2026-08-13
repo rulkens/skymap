@@ -586,6 +586,12 @@ export function createVolumeFieldRenderer(
         scratch[63] = frame;
         scratch[64] = e.voxelSizeLocal;
         scratch[65] = pixelConeTan;
+        // Explicit pad zeroing — same reason as scratch[18]/scratch[19]
+        // above: the scratch is reused across the field loop, so a pad
+        // slot with no writer of its own can't rely on Float32Array
+        // zero-init past the first field.
+        scratch[66] = 0;
+        scratch[67] = 0;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.

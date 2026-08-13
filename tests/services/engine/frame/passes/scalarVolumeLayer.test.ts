@@ -128,11 +128,21 @@ describe('scalarVolumeLayer.draw', () => {
     // raymarch's jitter dither frequency stays stable.
     expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), Math.floor(720 / VOLUME_SCALE)]);
     expect(args[3]).toEqual(view.camPos);
-    // pixelConeTan = 2 * tan(fovYRad/2) / vh — hand-computed independently
-    // of the layer's own arithmetic, against the downscaled height (240),
-    // not the canvas height (720).
-    const vh = Math.floor(720 / VOLUME_SCALE);
-    expect(args[4]).toBeCloseTo((2 * Math.tan(ctx.fovYRad / 2)) / vh);
+  });
+
+  it('computes pixelConeTan from fovYRad and the downsampled viewport height', () => {
+    // Hand-friendly fixture (not the production ctx's 60deg/720px, which
+    // makes an ugly literal): fovYRad = pi/2 so tan(fovYRad/2) = tan(pi/4)
+    // = 1 exactly, and canvasSize.height = 300 so vh = floor(300 / 3) = 100.
+    // pixelConeTan = 2 * tan(fovYRad/2) / vh = 2 * 1 / 100 = 0.02 — a
+    // literal computed on paper, independent of the layer's own formula.
+    const drawSpy = vi.fn();
+    const state = liveState({ draw: drawSpy });
+    const ctx = makeCtx({ fovYRad: Math.PI / 2, canvasSize: { width: 1280, height: 300 } });
+    scalarVolumeLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
+    const args = drawSpy.mock.calls[0]!;
+    expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), 100]);
+    expect(args[4]).toBeCloseTo(0.02);
   });
 
   it('clamps the downsampled viewport to a minimum of 1 px', () => {

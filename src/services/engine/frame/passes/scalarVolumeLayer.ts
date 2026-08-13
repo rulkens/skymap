@@ -66,8 +66,11 @@ export const scalarVolumeLayer: ContentLayer = {
     // downscaled `vh` above rather than the canvas height, and inverted
     // to a per-pixel tangent: half the target's vertical FOV subtends
     // `tan(fovYRad/2)` over `vh/2` pixels, so one pixel's angular width
-    // is `2 * tan(fovYRad/2) / vh` (small-angle, tan ≈ angle). Task 6's
-    // cone-LOD march uses this to grow its sample footprint with distance.
+    // is `2 * tan(fovYRad/2) / vh` — exact, not a small-angle approximation:
+    // perspective projection is linear in tan-space, so dividing the full
+    // tan(fovYRad/2) span evenly by pixel count gives each pixel's tangent
+    // exactly. Task 6's cone-LOD march uses this to grow its sample
+    // footprint with distance.
     const pixelConeTan = (2 * Math.tan(ctx.fovYRad / 2)) / vh;
     renderer.draw(
       pass,
