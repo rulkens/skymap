@@ -1,19 +1,8 @@
 // src/components/DebugPanel/ZoneOfAvoidanceTuningSection.tsx
 /**
- * ZoneOfAvoidanceTuningSection — DebugPanel subsection exposing the galactic-
- * plane guide band's look knobs, rows driven from
- * `ZONE_OF_AVOIDANCE_SLIDER_FIELDS` for the three scalar knobs. `color` and
- * `labelColor` are each a `Vec3`, not a `ZoneOfAvoidanceSliderField`-shaped
- * row, so they each get a native `<input type="color">` row instead: the
- * tuning value stays LINEAR RGB (the shader multiplies it straight into an
- * HDR additive target), and `hexToLinearRgb`/`linearRgbToHex` do the
- * sRGB<->linear conversion the widget's hex value requires. Dev-only; the
- * explorer-facing SettingsPanel surfaces only the visibility toggles.
- *
- * The copy-to-clipboard button promotes a tuned session to code, unlike
- * `MilkyWayTuningSection`'s diff-against-defaults: the formatter it calls
- * emits the WHOLE cluster instead (fewer knobs, and the two Vec3 colours
- * want their own `[r, g, b]` rendering) — see its header for why.
+ * Zone of Avoidance tuning subsection; look knobs from `ZONE_OF_AVOIDANCE_SLIDER_FIELDS`.
+ * Color pickers (LINEAR RGB values) convert via sRGB↔linear for the widget.
+ * Dev-only; SettingsPanel surfaces visibility toggles only.
  */
 
 import type { ReactElement } from 'react';

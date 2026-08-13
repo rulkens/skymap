@@ -1,10 +1,5 @@
 /**
- * linearRgbToHex — encode LINEAR RGB as a `#rrggbb` sRGB hex, for feeding a
- * native `<input type="color">` from a shader-space (linear) tuning value.
  * Inverse of `hexToLinearRgb` — same transfer-function provenance.
- *
- * Clamps out-of-[0,1] channels rather than throwing: the widget can only
- * show a representable sRGB colour, so clamping keeps the round trip total.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
