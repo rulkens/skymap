@@ -1,15 +1,10 @@
 /**
- * hexToLinearRgb — parse a `#RRGGBB` hex colour (as produced by a native
- * `<input type="color">`, which always speaks sRGB) into LINEAR RGB.
+ * hexToLinearRgb — parse a `#RRGGBB` hex colour (native `<input
+ * type="color">` output, always sRGB) into LINEAR RGB, for tuning knobs an
+ * HDR additive shader consumes directly. Pairs with `linearRgbToHex`.
  *
- * Pairs with `linearRgbToHex` for tuning knobs that store LINEAR RGB (fed
- * straight into an HDR additive shader) but are edited through a widget
- * that only understands sRGB hex — see `ZoneOfAvoidanceTuningSection`.
- *
- * Uses the proper piecewise sRGB transfer function (a linear segment near
- * black, then a 2.4 power curve), not a `pow(2.2)` approximation — the
- * difference is visible at low intensities, which is exactly where this
- * layer's tuning lives.
+ * Piecewise sRGB transfer (linear near black, then a 2.4 power curve) —
+ * `pow(2.2)` visibly diverges at the low intensities this layer tunes.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

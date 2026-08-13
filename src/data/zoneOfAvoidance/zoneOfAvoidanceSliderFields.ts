@@ -3,8 +3,9 @@
  * scalar tuning knobs, with the UI metadata each needs. Same shape as
  * `data/milkyWay/milkyWaySliderFields.ts`: label, range, granularity and
  * formatting live in ONE row per knob, and the DebugPanel section iterates
- * this list rather than re-spelling sliders by hand. `color` (a `Vec3`) isn't
- * here — the section wires it as three bespoke rows. A parity test
+ * this list rather than re-spelling sliders by hand. `color` and
+ * `labelColor` (each a `Vec3`) aren't here — the section wires each as a
+ * native `<input type="color">` row instead. A parity test
  * (`tests/data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.test.ts`) fails if
  * a scalar `ZoneOfAvoidanceTuning` leaf is added without a matching row.
  */
@@ -33,7 +34,8 @@ export const ZONE_OF_AVOIDANCE_SLIDER_FIELDS: readonly ZoneOfAvoidanceSliderFiel
     max: 1,
     step: 0.01,
     format: (v) => v.toFixed(2),
-    title: "E-folding length, as a fraction of the shell's radial span, of the density decay from the inner rim outward.",
+    title:
+      "E-folding length, as a fraction of the shell's radial span, of the density decay from the inner rim outward.",
   },
   {
     key: 'edgeSharpness',

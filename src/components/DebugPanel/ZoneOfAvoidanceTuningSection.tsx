@@ -55,14 +55,13 @@ export function ZoneOfAvoidanceTuningSection({
       ))}
       <div className={sliderStyles.root} title="Veil tint, linear RGB (picker speaks sRGB).">
         <span className={sliderStyles.label}>color</span>
+        <span className={sliderStyles.readout}>{linearRgbToHex(zoneOfAvoidance.color)}</span>
         <input
           type="color"
           aria-label="color"
           value={linearRgbToHex(zoneOfAvoidance.color)}
           onChange={(e) => {
-            const color = hexToLinearRgb(
-              e.target.value as HexString,
-            ) as ZoneOfAvoidanceTuning['color'];
+            const color = hexToLinearRgb(e.target.value as HexString);
             onChange({ color });
           }}
         />
@@ -72,14 +71,13 @@ export function ZoneOfAvoidanceTuningSection({
         title="Curved-lettering tint, linear RGB (picker speaks sRGB)."
       >
         <span className={sliderStyles.label}>labelColor</span>
+        <span className={sliderStyles.readout}>{linearRgbToHex(zoneOfAvoidance.labelColor)}</span>
         <input
           type="color"
           aria-label="labelColor"
           value={linearRgbToHex(zoneOfAvoidance.labelColor)}
           onChange={(e) => {
-            const labelColor = hexToLinearRgb(
-              e.target.value as HexString,
-            ) as ZoneOfAvoidanceTuning['labelColor'];
+            const labelColor = hexToLinearRgb(e.target.value as HexString);
             onChange({ labelColor });
           }}
         />
