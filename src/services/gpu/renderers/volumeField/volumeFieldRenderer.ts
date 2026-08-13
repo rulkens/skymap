@@ -61,6 +61,7 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { mipLevelCount3d, generateMipChain3d } from '../../lib/generateMipChain3d';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
@@ -218,7 +219,14 @@ export function createVolumeFieldRenderer(
       size: { width: cube.dims[0], height: cube.dims[1], depthOrArrayLayers: cube.dims[2] },
       format: 'r16float',
       dimension: '3d',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      mipLevelCount: mipLevelCount3d(cube.dims[0], cube.dims[1], cube.dims[2]),
+      // RENDER_ATTACHMENT: generateMipChain3d below fills levels 1..N-1 via
+      // render passes (see its module header — same caller contract as the
+      // 2D generateMipChain).
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.writeTexture(
       { texture: tex },
@@ -226,6 +234,10 @@ export function createVolumeFieldRenderer(
       { bytesPerRow: cube.dims[0] * 2, rowsPerImage: cube.dims[1] },
       { width: cube.dims[0], height: cube.dims[1], depthOrArrayLayers: cube.dims[2] },
     );
+    // 'box' — the display chain's box filter; the raymarch still samples
+    // level 0 only until Task 4 wires LOD sampling, so this is inert for now
+    // beyond costing the upload-time GPU work.
+    generateMipChain3d(device, tex, 'box');
     return tex;
   }
 

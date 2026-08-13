@@ -31,14 +31,35 @@ function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
  * LUT re-uploads it issues when `settingsOf` returns a changed
  * `paletteId`.  Modelled after the mock-device pattern in
  * `tests/services/gpu/renderTargets.test.ts`.
+ *
+ * `createTexture`/`createCommandEncoder` additions below are for
+ * `uploadCube`'s `generateMipChain3d` call (mip level count carried on
+ * the returned texture stub; command encoder/render pass stubbed just
+ * enough to let the box-filter chain run to completion).
  */
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
-  const makeTexture = () => ({
-    createView: vi.fn(() => ({})),
-    destroy: vi.fn(),
-  });
+  const makeTexture = (desc?: GPUTextureDescriptor) => {
+    const size = desc?.size as
+      | { width: number; height: number; depthOrArrayLayers: number }
+      | undefined;
+    return {
+      format: desc?.format ?? 'r16float',
+      mipLevelCount: desc?.mipLevelCount ?? 1,
+      width: size?.width ?? 1,
+      height: size?.height ?? 1,
+      depthOrArrayLayers: size?.depthOrArrayLayers ?? 1,
+      createView: vi.fn(() => ({})),
+      destroy: vi.fn(),
+    };
+  };
+  const beginRenderPass = vi.fn(() => ({
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    draw: vi.fn(),
+    end: vi.fn(),
+  }));
   return {
-    createTexture: vi.fn(() => makeTexture()),
+    createTexture: vi.fn((desc: GPUTextureDescriptor) => makeTexture(desc)),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
     createSampler: vi.fn(() => ({})),
     createShaderModule: vi.fn(() => ({
@@ -54,7 +75,11 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
       return { getBindGroupLayout: vi.fn(() => ({})) };
     }),
     createBindGroup: vi.fn(() => ({})),
-    queue: { writeBuffer: vi.fn(), writeTexture: vi.fn() },
+    createCommandEncoder: vi.fn(() => ({
+      beginRenderPass,
+      finish: vi.fn(() => ({})),
+    })),
+    queue: { writeBuffer: vi.fn(), writeTexture: vi.fn(), submit: vi.fn() },
   } as unknown as GPUDevice;
 }
 
