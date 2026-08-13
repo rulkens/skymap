@@ -20,12 +20,19 @@
  *   offset 32 | vec3<f32> camUp        + f32 innerRadiusMpc
  *   offset 48 | vec3<f32> cameraPosMpc + f32 outerRadiusMpc
  *   offset 64 | vec3<f32> color        + f32 bulgeDeg
- *   offset 80 | f32 anticenterDeg, f32 intensity, f32 radialFalloff, f32 edgeSharpness
+ *   offset 80 | f32 anticenterDeg, f32 intensity, f32 radialFalloffMpc, f32 edgeSharpness
  *   offset 96 | f32 fadeAlpha, f32×3 pad
  *
  * Unlike `horizonShellRenderer`, everything stays in Mpc — the band's radii
  * (a few to a few hundred Mpc) never approach fp32's exact-integer ceiling,
  * so there's no Gpc-unit workaround to carry here.
+ *
+ * `radialFalloffMpc` is the one field that ISN'T a straight tuning-struct
+ * copy: `ZoneOfAvoidanceTuning.radialFalloff` is documented (and dialled by
+ * the DebugPanel) as a normalised [0, 1] fraction of the shell's radial
+ * span, so `draw` converts it to an absolute Mpc width — the one currency
+ * the shader's two smoothstep rims actually need — before writing the
+ * uniform. See `draw`'s body for the conversion.
  */
 
 import { vec3 } from 'wgpu-matrix';
@@ -136,6 +143,13 @@ export function createZoneOfAvoidanceRenderer(
 
     const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
     const tanHalfFovY = Math.tan(cam.fovYRad / 2);
+    // The tuning knob is a normalised [0, 1] fraction of the shell's radial
+    // span (see the type + this file's ABI docblock); the shader's two
+    // rim smoothsteps want an absolute Mpc width, so convert here — the
+    // ONE place this currency change happens, rather than splitting the
+    // multiply across the shader (which would leave the uniform holding a
+    // value with no name of its own).
+    const radialFalloffMpc = tuning.radialFalloff * (outerRadiusMpc - innerRadiusMpc);
 
     // camForward (floats 0..2) + tanHalfFovY (float 3).
     f32[0] = fwd[0];
@@ -162,10 +176,10 @@ export function createZoneOfAvoidanceRenderer(
     f32[17] = tuning.color[1];
     f32[18] = tuning.color[2];
     f32[19] = bulgeDeg;
-    // anticenterDeg, intensity, radialFalloff, edgeSharpness (floats 20..23).
+    // anticenterDeg, intensity, radialFalloffMpc, edgeSharpness (floats 20..23).
     f32[20] = anticenterDeg;
     f32[21] = tuning.intensity;
-    f32[22] = tuning.radialFalloff;
+    f32[22] = radialFalloffMpc;
     f32[23] = tuning.edgeSharpness;
     // fadeAlpha (float 24); floats 25..27 are pad, left at zero.
     f32[24] = fadeAlpha;

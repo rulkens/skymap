@@ -92,9 +92,13 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // keyed on the CAMERA's distance from the origin rather than the hit
   // point's (which sits exactly on one of the two sphere surfaces by
   // construction, so it carries no radial gradient of its own).
+  // 'radialFalloffMpc' already arrived in Mpc — the CPU side converts the
+  // tuning knob's normalised [0, 1] fraction against the shell span before
+  // writing the uniform (see zoneOfAvoidanceRenderer.ts), so this shader has
+  // exactly one currency to work in.
   let camR = length(u.cameraPosMpc);
-  let innerEdge = smoothstep(u.innerRadiusMpc, u.innerRadiusMpc + u.radialFalloff, camR);
-  let outerEdge = 1.0 - smoothstep(u.outerRadiusMpc - u.radialFalloff, u.outerRadiusMpc, camR);
+  let innerEdge = smoothstep(u.innerRadiusMpc, u.innerRadiusMpc + u.radialFalloffMpc, camR);
+  let outerEdge = 1.0 - smoothstep(u.outerRadiusMpc - u.radialFalloffMpc, u.outerRadiusMpc, camR);
   let radialMask = innerEdge * outerEdge;
 
   let alpha = applyFade(latMask * radialMask * u.intensity, u.fadeAlpha);

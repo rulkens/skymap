@@ -21,16 +21,22 @@
 //   offset 32 : camUp         (vec3<f32>) + innerRadiusMpc (f32)
 //   offset 48 : cameraPosMpc  (vec3<f32>) + outerRadiusMpc (f32)
 //   offset 64 : color         (vec3<f32>) + bulgeDeg       (f32)
-//   offset 80 : anticenterDeg (f32), intensity (f32), radialFalloff (f32), edgeSharpness (f32)
+//   offset 80 : anticenterDeg (f32), intensity (f32), radialFalloffMpc (f32), edgeSharpness (f32)
 //   offset 96 : fadeAlpha (f32), _pad0 (f32), _pad1 (f32), _pad2 (f32)
 //
 // Each 'vec3 + f32' pair above packs into one 16-byte slot the same way
 // horizonShell's does — WGSL's uniform-address-space layout gives vec3<f32>
 // 16-byte alignment/12-byte size, so a trailing f32 fills the gap for free.
-// 'color'/'intensity'/'radialFalloff'/'edgeSharpness'/'fadeAlpha' are
-// 'ZoneOfAvoidanceTuning' fields (see that type); 'innerRadiusMpc'/
-// 'outerRadiusMpc'/'bulgeDeg'/'anticenterDeg' are the shape placeholders the
-// layer passes in alongside the tuning cluster.
+// 'color'/'intensity'/'edgeSharpness'/'fadeAlpha' are 'ZoneOfAvoidanceTuning'
+// fields verbatim (see that type); 'innerRadiusMpc'/'outerRadiusMpc'/
+// 'bulgeDeg'/'anticenterDeg' are the shape placeholders the layer passes in
+// alongside the tuning cluster. 'radialFalloffMpc' is the ONE exception —
+// the tuning type's 'radialFalloff' is a normalised [0, 1] fraction of the
+// shell span (a DebugPanel-friendly unit); the CPU side converts it to an
+// absolute Mpc width ('radialFalloff * (outerRadiusMpc - innerRadiusMpc)',
+// see zoneOfAvoidanceRenderer.ts) before writing this field, so the shader
+// only ever sees the one currency it actually needs for its smoothstep
+// widths.
 
 struct Uniforms {
   camForward: vec3<f32>,
@@ -45,7 +51,7 @@ struct Uniforms {
   bulgeDeg: f32,
   anticenterDeg: f32,
   intensity: f32,
-  radialFalloff: f32,
+  radialFalloffMpc: f32,
   edgeSharpness: f32,
   fadeAlpha: f32,
   _pad0: f32,

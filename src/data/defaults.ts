@@ -250,10 +250,19 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_LABEL_ENABLED: boolean = true;
  * visual checkpoints and the Task 13 DebugPanel section to dial live — a dim
  * warm-amber veil in the ballpark of real interstellar-dust extinction color,
  * not a calibrated result.
+ *
+ * `radialFalloff` is a normalised [0, 1] fraction of the shell's radial span
+ * (`outerRadiusMpc - innerRadiusMpc`, currently ~377 Mpc at the Task 8
+ * placeholder radii) — the renderer converts it to an absolute Mpc width
+ * before it reaches the shader. 0.3 (~113 Mpc) reads as barely any rim at
+ * all against that span; 0.1 (~38 Mpc) is a visual-checkpoint placeholder
+ * that reads as a soft-but-present rim instead — the fix is the DEFAULT's
+ * value, not its unit, which stays the normalised fraction the DebugPanel
+ * slider wants.
  */
 export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
   intensity: 0.5,
-  radialFalloff: 0.3,
+  radialFalloff: 0.1,
   edgeSharpness: 0.5,
   color: [1.0, 0.75, 0.5],
 };
