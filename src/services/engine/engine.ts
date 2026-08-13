@@ -341,6 +341,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // milkyWayUpsampleLayer null-checks it in draw, so a null no-ops.
       milkyWayAggregateUpsample: null,
       // null until initGpu; excluded from isEngineReady —
+      // zoneOfAvoidanceUpsampleLayer null-checks it in draw, so a null no-ops.
+      zoneOfAvoidanceUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
       // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
       // null until initGpu; excluded from isEngineReady — every bloom content
@@ -894,6 +897,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.volumeUpsample = null;
     state.gpu.milkyWayAggregateUpsample?.destroy();
     state.gpu.milkyWayAggregateUpsample = null;
+    state.gpu.zoneOfAvoidanceUpsample?.destroy();
+    state.gpu.zoneOfAvoidanceUpsample = null;
     state.gpu.starAggregateUpsample?.destroy();
     state.gpu.starAggregateUpsample = null;
     state.gpu.bloomPyramid?.destroy();

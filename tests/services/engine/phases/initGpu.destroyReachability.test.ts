@@ -390,6 +390,7 @@ function makeState(): EngineState {
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,

@@ -27,8 +27,12 @@
  *   5. flow                — CF4++ peculiar-velocity ribbon overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
- *   7. horizon-shell       — translucent sphere at the observable-universe edge
- *   8. zone-of-avoidance   — galactic-plane dust-band explainer wedge
+ *   7. zone-of-avoidance-upsample — upsamples the 1/5-res zone-of-avoidance
+ *                            band offscreen into HDR, then draws the band's
+ *                            full-res curved lettering (its producer,
+ *                            zone-of-avoidance, targets its own 'zoa' row —
+ *                            see below, same reason scalar-volume isn't here)
+ *   8. horizon-shell       — translucent sphere at the observable-universe edge
  *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
  * Six more near-field rows follow, projected through the near0 slab (COSMO's
@@ -206,6 +210,7 @@ import { milkyWayAggregateLayer } from './milkyWayAggregateLayer';
 import { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 import { horizonShellLayer } from './horizonShellLayer';
 import { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
+import { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
 import { structureMarkersLayer } from './structureMarkersLayer';
 import { selectionRingLayer } from './selectionRingLayer';
 import { near0SelectionRingLayer } from './near0SelectionRingLayer';
@@ -242,14 +247,22 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // (its own target), before the hdr group upsamples it in. Not an hdr-group
   // member: it targets 'volume', so the hdr render step excludes it.
   scalarVolumeLayer,
+  // The zone-of-avoidance band's PRODUCER (gate-fix 6): its own reduced-res
+  // 'zoa' target, listed beside scalar-volume for the same reason — a
+  // different target keeps it out of every other group's filter regardless
+  // of array position.
+  zoneOfAvoidanceLayer,
   pointSpritesLayer,
   proceduralDisksLayer,
   texturedDisksLayer,
   filamentsLayer,
   flowFieldLayer,
   volumeUpsampleLayer,
+  // The zone-of-avoidance band's CONSUMER: composites 'zoa' into hdr, then
+  // draws the full-res lettering — positioned beside volume-upsample, its
+  // closest sibling in shape (a reduced-res-offscreen-into-hdr composite).
+  zoneOfAvoidanceUpsampleLayer,
   horizonShellLayer,
-  zoneOfAvoidanceLayer,
   structureMarkersLayer,
   // The near-field NEAR0 rows: they project through NEAR0 (COSMO's fixed near
   // plane would clip their kpc-to-AU scale anchors), drawn AFTER the eight COSMO
@@ -375,6 +388,7 @@ export { milkyWayAggregateLayer } from './milkyWayAggregateLayer';
 export { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 export { horizonShellLayer } from './horizonShellLayer';
 export { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
+export { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
 export { structureMarkersLayer } from './structureMarkersLayer';
 export { selectionRingLayer } from './selectionRingLayer';
 export { near0SelectionRingLayer } from './near0SelectionRingLayer';
