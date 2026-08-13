@@ -261,7 +261,7 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
 export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
   intensity: 0.5,
   radialFalloff: 0.35,
-  edgeSharpness: 0.5,
+  edgeSharpness: 5.0,
   color: [1.0, 0.75, 0.5],
   // Matches the lettering's pre-tuning-knob literal in
   // zoneOfAvoidanceRenderer.ts (was a bare LABEL_COLOR const) — this default
