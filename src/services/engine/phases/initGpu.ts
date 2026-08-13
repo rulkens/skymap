@@ -24,6 +24,7 @@ import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
+import { createZoneOfAvoidanceRenderer } from '../../gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
 import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
@@ -284,6 +285,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     device,
     targetFormat: 'rgba16float',
   });
+  // Galactic-plane dust-band guide — same lifecycle as horizonShellRenderer
+  // (unconditional, no data-delivery dependency), same HDR target.
+  const zoneOfAvoidanceRenderer = createZoneOfAvoidanceRenderer(device, 'rgba16float');
+  state.gpu.zoneOfAvoidanceRenderer = zoneOfAvoidanceRenderer;
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
   // Built unconditionally (pipeline / quad VBO / uniform buffer are

@@ -62,6 +62,7 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
+import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
@@ -325,6 +326,14 @@ export type EngineGpuHandles = {
    * back out during teardown).
    */
   horizonShellRenderer: HorizonShellRenderer | null;
+  /**
+   * Galactic-plane dust-band guide overlay — translucent shell masked to
+   * the longitude-dependent latitude wedge, drawn by the same ray-marched-
+   * geometry technique as `horizonShellRenderer`.  Same lifecycle as the
+   * other optional renderers (null until `initGpu` constructs it; nulled
+   * back out during teardown).
+   */
+  zoneOfAvoidanceRenderer: ZoneOfAvoidanceRenderer | null;
   /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).

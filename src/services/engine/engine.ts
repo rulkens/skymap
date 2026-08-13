@@ -329,6 +329,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
+      // Galactic-plane dust-band guide. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
+      zoneOfAvoidanceRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
@@ -881,6 +884,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
+    state.gpu.zoneOfAvoidanceRenderer?.destroy();
+    state.gpu.zoneOfAvoidanceRenderer = null;
     state.gpu.volumeFieldRenderer?.destroy();
     state.gpu.volumeFieldRenderer = null;
     state.gpu.flowFieldRenderer?.destroy();

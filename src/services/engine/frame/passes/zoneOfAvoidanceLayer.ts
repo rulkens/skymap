@@ -1,0 +1,99 @@
+/**
+ * zoneOfAvoidanceLayer — galactic-plane dust-band guide overlay.
+ *
+ * ### What it draws
+ *
+ * A translucent additive shell between two placeholder radii, masked to the
+ * longitude-dependent galactic-latitude wedge (`zoneOfAvoidanceBLimitDeg`'s
+ * shape, ported to WGSL in `zoneOfAvoidance/fragment.wesl`) — the visual
+ * explainer for why the real catalogs thin out near the galactic plane
+ * (dust extinction). See `zoneOfAvoidanceRenderer.ts` for the ray-marched-
+ * shell technique (same family as `horizonShellLayer`).
+ *
+ * ### When it draws
+ *
+ * `zoneOfAvoidanceLayerOpacity` (Task 7) composes TWO factors: the
+ * Local-Group-framing camera-distance band (`SCALE_FADE_BANDS.zoneOfAvoidance`
+ * — gone within 0.3 Mpc of Earth, full by 8 Mpc) times the fade-registry
+ * toggle opacity (`state.settings.zoneOfAvoidance.enabled`, seeded via the
+ * `{ kind: 'zoneOfAvoidance' }` `FadeId`). Both `enabled` and `draw`
+ * recompute this from the frame-frozen camera distance so a fade-out
+ * continues drawing after the toggle flips off until opacity hits 0 —
+ * mirroring `filamentsLayer`'s settings-toggle + fade-registry-opacity
+ * shape, composed through the Task 7 helper rather than
+ * `horizonShellLayer`'s bespoke camera-distance-only function (which has no
+ * settings toggle to fold in).
+ *
+ * ### Placeholder shape constants
+ *
+ * `innerRadiusMpc` / `outerRadiusMpc` / `bulgeDeg` / `anticenterDeg` below
+ * are visual-pass placeholders — Task 9's checkpoint tunes them; Task 13's
+ * DebugPanel section is where they eventually become dials, if they need to
+ * (the tuning cluster's other four fields already are).
+ */
+
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
+import { zoneOfAvoidanceLayerOpacity } from '../../presentation/zoneOfAvoidanceLayerOpacity';
+
+/** Shell inner radius, Mpc — visual-checkpoint placeholder (Task 9). */
+const INNER_RADIUS_MPC = 3;
+/** Shell outer radius, Mpc — visual-checkpoint placeholder (Task 9). */
+const OUTER_RADIUS_MPC = 380;
+/** Latitude half-width toward the galactic bulge (l=0), degrees — visual-checkpoint placeholder (Task 9). */
+const BULGE_DEG = 15;
+/** Latitude half-width toward the galactic anticenter (l=π), degrees — visual-checkpoint placeholder (Task 9). */
+const ANTICENTER_DEG = 5;
+
+export const zoneOfAvoidanceLayer: ContentLayer = {
+  name: 'zone-of-avoidance',
+  slab: COSMO,
+  target: 'hdr',
+  blend: 'additive',
+
+  enabled(state, ctx) {
+    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+    return (
+      state.gpu.zoneOfAvoidanceRenderer !== null &&
+      zoneOfAvoidanceLayerOpacity(
+        camDistMpc,
+        resolveLayerOpacity(
+          state.subsystems.fades,
+          { kind: 'zoneOfAvoidance' },
+          ctx.focusBlend,
+          ctx.nowMs,
+          state.subsystems.clipPlayer,
+        ),
+      ) > 0
+    );
+  },
+
+  draw(pass, view, ctx, state) {
+    if (state.gpu.zoneOfAvoidanceRenderer === null) return;
+
+    const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
+    const opacity = zoneOfAvoidanceLayerOpacity(
+      camDistMpc,
+      resolveLayerOpacity(
+        state.subsystems.fades,
+        { kind: 'zoneOfAvoidance' },
+        ctx.focusBlend,
+        ctx.nowMs,
+        state.subsystems.clipPlayer,
+      ),
+    );
+
+    state.gpu.zoneOfAvoidanceRenderer.draw(
+      pass,
+      ctx.cam,
+      view.viewportPx,
+      state.settings.zoneOfAvoidance,
+      INNER_RADIUS_MPC,
+      OUTER_RADIUS_MPC,
+      BULGE_DEG,
+      ANTICENTER_DEG,
+      opacity,
+    );
+  },
+};
