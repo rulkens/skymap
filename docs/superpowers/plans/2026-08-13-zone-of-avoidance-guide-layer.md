@@ -254,14 +254,14 @@ Band and label are **independent** toggles (spec), so they take **two** `FadeId`
 export function zoneOfAvoidanceLayerOpacity(camDistMpc: number, layerFadeOpacity: number): number;
 ```
 
-- [ ] Add the `SCALE_FADE_BANDS.zoneOfAvoidance` row (`scaleFadeBands.ts`, beside `constellations` at line ~192): `{ fullAt: <Mpc, larger — e.g. 8, the Local-Group-scale full-presence edge per grill Q6>, goneAt: <Mpc, smaller — e.g. 0.3, clear of the Milky Way's own rendering> }`. `fullAt > goneAt` is required for the "invisible near Earth, full past the Local Group, no far edge" direction (`fadeBand`'s doc: `fullAt > goneAt` → alpha 1 at/above `fullAt`, 0 at/below `goneAt`). Exact Mpc values are a feel-call for the Task 9 checkpoint.
-- [ ] Add the `FadeId`/`LabelLayerId`/`VisibilityLayerKey` members above.
-- [ ] Add two `fadeLayers.ts` rows mirroring `milkyWayDisk`/`milkyWayLabel` (`fadeLayers.ts:98-105`, `129-135`): `key: 'zoneOfAvoidance', handle: () => ({ kind: 'zoneOfAvoidance' }), seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0), intent: (s) => s.zoneOfAvoidance.enabled` and `key: 'zoneOfAvoidanceLabel', handle: () => ({ kind: 'labelLayer', layer: 'zoneOfAvoidance' }), seed: (s) => (s.zoneOfAvoidance.labelEnabled ? 1 : 0), intent: (s) => s.zoneOfAvoidance.labelEnabled` (both `expand: () => [undefined]`, singleton).
-- [ ] Add `zoneOfAvoidanceLayerOpacity(camDistMpc, layerFadeOpacity)` — one function, `fadeBand(SCALE_FADE_BANDS.zoneOfAvoidance, camDistMpc) * layerFadeOpacity`, mirroring `constellationLayerOpacity.ts` verbatim in shape.
-- [ ] Add the test `zoneOfAvoidanceLayerOpacity is 0 at camDist 0` (hand-computed: any `layerFadeOpacity`, `camDistMpc` at or below `goneAt` → 0).
-- [ ] Add the test `zoneOfAvoidanceLayerOpacity is the product of the distance band and the toggle opacity past fullAt` (hand-computed: at `camDistMpc >= fullAt`, result equals `layerFadeOpacity` exactly).
-- [ ] `npm test -- zoneOfAvoidanceLayerOpacity` green. `npm run typecheck` clean (a `FadeId`/`VisibilityLayerKey` widen is additive — nothing should break).
-- [ ] Commit.
+- [x] Add the `SCALE_FADE_BANDS.zoneOfAvoidance` row (`scaleFadeBands.ts`, beside `constellations` at line ~192): `{ fullAt: <Mpc, larger — e.g. 8, the Local-Group-scale full-presence edge per grill Q6>, goneAt: <Mpc, smaller — e.g. 0.3, clear of the Milky Way's own rendering> }`. `fullAt > goneAt` is required for the "invisible near Earth, full past the Local Group, no far edge" direction (`fadeBand`'s doc: `fullAt > goneAt` → alpha 1 at/above `fullAt`, 0 at/below `goneAt`). Exact Mpc values are a feel-call for the Task 9 checkpoint.
+- [x] Add the `FadeId`/`LabelLayerId`/`VisibilityLayerKey` members above.
+- [x] Add two `fadeLayers.ts` rows mirroring `milkyWayDisk`/`milkyWayLabel` (`fadeLayers.ts:98-105`, `129-135`): `key: 'zoneOfAvoidance', handle: () => ({ kind: 'zoneOfAvoidance' }), seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0), intent: (s) => s.zoneOfAvoidance.enabled` and `key: 'zoneOfAvoidanceLabel', handle: () => ({ kind: 'labelLayer', layer: 'zoneOfAvoidance' }), seed: (s) => (s.zoneOfAvoidance.labelEnabled ? 1 : 0), intent: (s) => s.zoneOfAvoidance.labelEnabled` (both `expand: () => [undefined]`, singleton).
+- [x] Add `zoneOfAvoidanceLayerOpacity(camDistMpc, layerFadeOpacity)` — one function, `fadeBand(SCALE_FADE_BANDS.zoneOfAvoidance, camDistMpc) * layerFadeOpacity`, mirroring `constellationLayerOpacity.ts` verbatim in shape.
+- [x] Add the test `zoneOfAvoidanceLayerOpacity is 0 at camDist 0` (hand-computed: any `layerFadeOpacity`, `camDistMpc` at or below `goneAt` → 0).
+- [x] Add the test `zoneOfAvoidanceLayerOpacity is the product of the distance band and the toggle opacity past fullAt` (hand-computed: at `camDistMpc >= fullAt`, result equals `layerFadeOpacity` exactly).
+- [x] `npm test -- zoneOfAvoidanceLayerOpacity` green. `npm run typecheck` clean (a `FadeId`/`VisibilityLayerKey` widen is additive — nothing should break).
+- [x] Commit.
 
 ### Task 8: Renderer + shader — band geometry (visual only, no lettering, no pick)
 

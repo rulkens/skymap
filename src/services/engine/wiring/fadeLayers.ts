@@ -266,6 +266,24 @@ export const FADE_LAYERS = [
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
   }),
+  // zone-of-avoidance band — settings-derived seed, like milkyWayDisk (a
+  // compile-time overlay with no asset slot, so no demand-loaded guard).
+  layer({
+    key: 'zoneOfAvoidance',
+    expand: () => [undefined],
+    handle: () => ({ kind: 'zoneOfAvoidance' }),
+    seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0),
+    intent: (s) => s.zoneOfAvoidance.enabled,
+  }),
+  // zone-of-avoidance label — independent toggle from the band above,
+  // mirroring milkyWayLabel.
+  layer({
+    key: 'zoneOfAvoidanceLabel',
+    expand: () => [undefined],
+    handle: () => ({ kind: 'labelLayer', layer: 'zoneOfAvoidance' }),
+    seed: (s) => (s.zoneOfAvoidance.labelEnabled ? 1 : 0),
+    intent: (s) => s.zoneOfAvoidance.labelEnabled,
+  }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
     key: 'flow',

@@ -95,6 +95,9 @@ const RECESSION_BY_LABEL_LAYER = {
   // declutters by its own mechanism.
   starCatalog: undefined,
   body: undefined,
+  // The dust-band explainer's own lettering: a guide label, not scenery
+  // crowding the focused subject — same stance as the milkyWay pin.
+  zoneOfAvoidance: undefined,
 } satisfies Record<LabelLayerId, number | undefined>;
 
 /**
@@ -112,6 +115,7 @@ const RECESSION_BY_KIND = {
   constellations: undefined,
   orbitTrails: undefined, // near-field foreground trails never recede on focus
   overlay: undefined,
+  zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
 } satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, number | undefined>;
 
 /**

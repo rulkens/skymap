@@ -395,6 +395,9 @@ function makeState(
       bias: { mode: 'off', absMagLimit: -18 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true, labelEnabled: true },
+      // seedFades registers the zone-of-avoidance band + label handles too;
+      // pulled from the real seed like flow/constellations below.
+      zoneOfAvoidance: seed.zoneOfAvoidance,
       filaments: { enabled: false, intensity: 1.0 },
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).

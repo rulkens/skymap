@@ -194,6 +194,19 @@ export const SCALE_FADE_BANDS = {
     goneAt: CONSTELLATIONS_GONE_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
   },
 
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `constellations`). Consumer: the zone-of-avoidance overlay
+  // (band + label, via `zoneOfAvoidanceLayerOpacity`). The dust-band explainer
+  // reads as a Local-Group-scale guide, not a near-field one: invisible close to
+  // Earth (`goneAt` = 0.3 Mpc, clear of the Milky Way's own rendering, so the
+  // band never competes with the MW impostor/disc) and at full presence by
+  // `fullAt` = 8 Mpc (Local-Group framing, per grill Q6). An APPROACH fade — full
+  // at the large-distance edge — the opposite direction from `constellations`,
+  // since this band explains a COSMIC-scale catalog gap rather than a near-field
+  // sky figure. These edges are an eye-tuning STARTING POINT for the Task 9
+  // visual checkpoint.
+  zoneOfAvoidance: { fullAt: 8, goneAt: 0.3 },
+
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at
   // FULL strength at/below 1 px and GONE at/above `BODY_GLINT_MAX_PX` (a recede

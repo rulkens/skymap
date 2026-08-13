@@ -211,6 +211,7 @@ function makeBridgeState(): {
     bodies: { items: bodyItems },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
+    zoneOfAvoidance: { enabled: true, labelEnabled: true },
     // Empty volume items: the volumeField intent reads items[id]?.enabled (→
     // false here) and its post no-ops because assetSlots.syntheticVolumes is
     // absent — neither throws, which is all this fixture needs.
