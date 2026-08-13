@@ -120,11 +120,29 @@ struct VolumeUniforms {
 // filtering via the sampler.
 @group(0) @binding(3) var palette: texture_2d<f32>;
 @group(0) @binding(4) var paletteSampler: sampler;
+// Max-value pyramid in deviation space (Task 3). No companion sampler --
+// unfilterable-float, textureLoad only -- so the skip march below can
+// address explicit integer mip texels rather than filter across cells.
+@group(0) @binding(5) var maxPyramid: texture_3d<f32>;
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 const STEP_COUNT: i32 = 128;
 const SATURATION_THRESHOLD: f32 = 0.99;
+// Coarse-to-fine skip policy (Task 5): two pyramid levels is enough for a
+// correct first pass. Level 1 (~16-voxel cells) catches large uniform-void
+// regions cheaply; a cell that isn't provably empty there gets one refine
+// to level 0 (~8-voxel cells, the pyramid's own base) before the march
+// falls through to a normal full-res sample. Finer-grained level policy
+// (e.g. an explicit level 2+ tier) is left to a future pass if level 1
+// alone proves too coarse to skip meaningfully sized void regions.
+const PYRAMID_FINE_LEVEL: i32 = 0;
+// Local-space nudge past a skipped cell's exit point, so the next sampled
+// step-grid position falls strictly inside the NEXT cell rather than
+// landing back on the boundary and re-testing the one just skipped.
+// Two orders of magnitude below a typical pyramid cell (level 0 spans
+// ~8 * voxelSizeLocal, e.g. ~0.06 at dims=128) so it never eats a real step.
+const CELL_EXIT_EPS: f32 = 1e-4;
 
 struct FsIn {
   @location(0) localPos: vec3<f32>,
@@ -212,20 +230,46 @@ fn sphericalEnvelope(localPos: vec3<f32>, inner: f32, outer: f32) -> f32 {
   return 1.0 - smoothstep(inner, outer, radius);
 }
 
+// Ray-vs-axis-aligned-local-space-AABB slab test against an arbitrary box,
+// shared by intersectUnitAabb below (the whole cube) and pyramidCellQuery
+// further down (a single skip-march cell) -- same math, different bounds.
+// Returns the (tMin, tMax) range along the ray; if the ray misses the box
+// entirely, tMax < tMin.
+fn intersectLocalAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>, boxMin: vec3<f32>, boxMax: vec3<f32>) -> vec2<f32> {
+  let invDir = 1.0 / rayDir;
+  let t0 = (boxMin - rayOrigin) * invDir;
+  let t1 = (boxMax - rayOrigin) * invDir;
+  let tMinV = min(t0, t1);
+  let tMaxV = max(t0, t1);
+  let tMin = max(max(tMinV.x, tMinV.y), tMinV.z);
+  let tMax = min(min(tMaxV.x, tMaxV.y), tMaxV.z);
+  return vec2<f32>(tMin, tMax);
+}
+
 // Ray-vs-axis-aligned-unit-AABB intersection in the cube's LOCAL space
 // (the cube spans [0, 1]^3 in local coords).  Returns the (tMin, tMax)
 // range along the ray, with tMin clamped to 0 so a ray origin inside
 // the cube starts marching from the origin.  If the ray misses the cube
 // entirely, returns tMax < tMin and the caller discards.
 fn intersectUnitAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
-  let invDir = 1.0 / rayDir;
-  let t0 = -rayOrigin * invDir;
-  let t1 = (vec3<f32>(1.0) - rayOrigin) * invDir;
-  let tMinV = min(t0, t1);
-  let tMaxV = max(t0, t1);
-  let tMin = max(max(tMinV.x, tMinV.y), tMinV.z);
-  let tMax = min(min(tMaxV.x, tMaxV.y), tMaxV.z);
-  return vec2<f32>(max(tMin, 0.0), tMax);
+  let t = intersectLocalAabb(rayOrigin, rayDir, vec3<f32>(0.0), vec3<f32>(1.0));
+  return vec2<f32>(max(t.x, 0.0), t.y);
+}
+
+// Looks up the pyramid cell at mip 'level' containing local-space position
+// 'p'.  Returns (cellMaxDev, exitT): the cell's stored max deviation (see
+// VolumeUniforms/binding-5 doc comments -- deviation space, not raw value),
+// and the ray's exit parameter through THAT CELL's own bounds (a slab test
+// bounded to the cell, not the whole cube, via intersectLocalAabb above).
+fn pyramidCellQuery(p: vec3<f32>, level: i32, rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
+  let dimsU = textureDimensions(maxPyramid, level);
+  let dims = vec3<f32>(dimsU);
+  let cellI = clamp(vec3<i32>(floor(p * dims)), vec3<i32>(0), vec3<i32>(dimsU) - vec3<i32>(1));
+  let maxDev = textureLoad(maxPyramid, cellI, level).r;
+  let cellMin = vec3<f32>(cellI) / dims;
+  let cellMax = cellMin + 1.0 / dims;
+  let exitT = intersectLocalAabb(rayOrigin, rayDir, cellMin, cellMax).y;
+  return vec2<f32>(maxDev, exitT);
 }
 
 @fragment
@@ -284,10 +328,64 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // the hash mixer.
   let jitterSeed = fragCoord.xy + vec2<f32>(u.frame * 7.13, u.frame * 13.71);
   let jitter = hash21Hq(jitterSeed) * stepLength;
+
+  // TF-adaptive empty-space skip cutoff (Task 5), derived once per fragment
+  // from the SAME live contrast/trim uniforms applyContrastWindow uses per
+  // step -- mirrored, not shared, because the pyramid's precomputed max is
+  // compared against this threshold directly (deviation space), while
+  // applyContrastWindow compares a fresh per-voxel dev every step. Slider
+  // changes retune both identically with no rebuild, since neither reads
+  // anything baked at bake time except the pyramid's raw deviation values.
+  let contrastDeadband = clamp(1.0 - 1.0 / max(u.contrast, 1e-3), 0.0, 0.9);
+  let trimDeadband = clamp(u.trim, 0.0, 0.95);
+  let deadband = max(contrastDeadband, trimDeadband);
+  // Same floor applyContrastWindow's smoothstep uses (line ~191): a cell
+  // whose stored MAX dev is still below this is PROVABLY all-zero-
+  // visibility, so skipping it changes nothing about the accumulated
+  // integral -- the omitted samples would have contributed zero opacity.
+  let skipCutoff = deadband - 0.05;
+  let coarseLevel = min(1, i32(textureNumLevels(maxPyramid)) - 1);
+
   var accum = vec4<f32>(0.0);
   var t = tMin + jitter;
-  for (var i = 0; i < STEP_COUNT; i = i + 1) {
+  var i = 0;
+  loop {
+    if (i >= STEP_COUNT) { break; }
     let p = rayOriginLocal + rayDirLocal * t;
+
+    // Coarse-to-fine skip: consult the max pyramid before paying for a
+    // full-res sample. A cell below skipCutoff at EITHER level provably
+    // contributes zero, so we jump straight to that cell's ray-exit point
+    // instead of full-res-sampling through it one step at a time.
+    var skip = false;
+    var skipExitT = t;
+    let coarse = pyramidCellQuery(p, coarseLevel, rayOriginLocal, rayDirLocal);
+    if (coarse.x < skipCutoff) {
+      skip = true;
+      skipExitT = coarse.y;
+    } else if (coarseLevel != PYRAMID_FINE_LEVEL) {
+      let fine = pyramidCellQuery(p, PYRAMID_FINE_LEVEL, rayOriginLocal, rayDirLocal);
+      if (fine.x < skipCutoff) {
+        skip = true;
+        skipExitT = fine.y;
+      }
+    }
+    if (skip) {
+      // Land on the NEXT fixed step-grid position (tMin + jitter +
+      // k*stepLength) at or past the cell's exit, rather than jumping to
+      // skipExitT itself. Every sample that survives this skip is then
+      // bit-identical to a position the un-accelerated march would also
+      // have visited -- the only difference is the omitted samples, which
+      // were already proven zero-opacity above. Landing off-grid would
+      // shift the phase of all LATER samples too, silently changing which
+      // voxels the rest of the ray sees.
+      let resumeT = skipExitT + CELL_EXIT_EPS;
+      let stepsToSkip = max(1, i32(ceil((resumeT - t) / stepLength)));
+      i = i + stepsToSkip;
+      t = t + f32(stepsToSkip) * stepLength;
+      continue;
+    }
+
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
     // local AABB, so 'p' is directly the texture coordinate.
     //
@@ -387,6 +485,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
     if (accum.a > SATURATION_THRESHOLD) { break; }
+    i = i + 1;
     t = t + stepLength;
   }
   // Apply the per-field fade opacity. Multiplying the entire vec4
