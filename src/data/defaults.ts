@@ -259,14 +259,14 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
  * tuned live via the DebugPanel slider.
  */
 export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
-  intensity: 0.5,
-  radialFalloff: 0.35,
-  edgeSharpness: 5.0,
-  color: [1.0, 0.75, 0.5],
+  intensity: 0.37,
+  radialFalloff: 0.46,
+  edgeSharpness: 5,
+  color: [0.5333, 0.5089, 1],
   // Matches the lettering's pre-tuning-knob literal in
   // zoneOfAvoidanceRenderer.ts (was a bare LABEL_COLOR const) — this default
   // alone causes no visual jump.
-  labelColor: [1, 1, 1],
+  labelColor: [0.2307, 0.2502, 0.6795],
 };
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
