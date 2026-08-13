@@ -3,11 +3,12 @@
  * ZoneOfAvoidanceTuningSection — DebugPanel subsection exposing the galactic-
  * plane guide band's look knobs, rows driven from
  * `ZONE_OF_AVOIDANCE_SLIDER_FIELDS` for the three scalar knobs. `color` is a
- * `Vec3`, not a `ZoneOfAvoidanceSliderField`-shaped row, so it gets three
- * bespoke linear-RGB `DebugSlider` rows (0..1 each) instead — the
- * lower-effort alternative to a native colour picker's sRGB<->linear
- * conversion. Dev-only; the explorer-facing SettingsPanel surfaces only the
- * visibility toggles.
+ * `Vec3`, not a `ZoneOfAvoidanceSliderField`-shaped row, so it gets one
+ * native `<input type="color">` row instead: the tuning value stays LINEAR
+ * RGB (the shader multiplies it straight into an HDR additive target), and
+ * `hexToLinearRgb`/`linearRgbToHex` do the sRGB<->linear conversion the
+ * widget's hex value requires. Dev-only; the explorer-facing SettingsPanel
+ * surfaces only the visibility toggles.
  *
  * No copy-to-clipboard diff button (unlike `MilkyWayTuningSection`): the
  * `color` tuple complicates the diff formatter for marginal value at this
@@ -17,23 +18,21 @@
 import type { ReactElement } from 'react';
 import type { ZoneOfAvoidanceSettings } from '../../@types/settings/ZoneOfAvoidanceSettings';
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
+import type { HexString } from '../../@types/math/HexString';
+import { hexToLinearRgb } from '../../utils/color/hexToLinearRgb';
+import { linearRgbToHex } from '../../utils/color/linearRgbToHex';
 import {
   ZONE_OF_AVOIDANCE_SLIDER_FIELDS,
   zoneOfAvoidanceSliderPatch,
 } from '../../data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
 import DebugSection from './DebugSection';
 import DebugSlider from './DebugSlider';
+import sliderStyles from './DebugSlider.module.css';
 
 export type ZoneOfAvoidanceTuningSectionProps = {
   zoneOfAvoidance: ZoneOfAvoidanceSettings;
   onChange: (patch: Partial<ZoneOfAvoidanceTuning>) => void;
 };
-
-const COLOR_CHANNELS: readonly { label: string; index: 0 | 1 | 2 }[] = [
-  { label: 'colorR', index: 0 },
-  { label: 'colorG', index: 1 },
-  { label: 'colorB', index: 2 },
-];
 
 export function ZoneOfAvoidanceTuningSection({
   zoneOfAvoidance,
@@ -54,23 +53,20 @@ export function ZoneOfAvoidanceTuningSection({
           onChange={(v) => onChange(zoneOfAvoidanceSliderPatch(f.key, v))}
         />
       ))}
-      {COLOR_CHANNELS.map(({ label, index }) => (
-        <DebugSlider
-          key={label}
-          label={label}
-          value={zoneOfAvoidance.color[index]}
-          min={0}
-          max={1}
-          step={0.01}
-          readout={zoneOfAvoidance.color[index].toFixed(2)}
-          title="Veil tint channel, linear RGB."
-          onChange={(v) => {
-            const color = [...zoneOfAvoidance.color] as ZoneOfAvoidanceTuning['color'];
-            color[index] = v;
+      <div className={sliderStyles.root} title="Veil tint, linear RGB (picker speaks sRGB).">
+        <span className={sliderStyles.label}>color</span>
+        <input
+          type="color"
+          aria-label="color"
+          value={linearRgbToHex(zoneOfAvoidance.color)}
+          onChange={(e) => {
+            const color = hexToLinearRgb(
+              e.target.value as HexString,
+            ) as ZoneOfAvoidanceTuning['color'];
             onChange({ color });
           }}
         />
-      ))}
+      </div>
     </DebugSection>
   );
 }
