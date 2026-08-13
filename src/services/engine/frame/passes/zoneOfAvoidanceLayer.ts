@@ -38,7 +38,10 @@
  * `innerRadiusMpc` / `outerRadiusMpc` / `bulgeDeg` / `anticenterDeg` below
  * are visual-pass placeholders — Task 9's checkpoint tunes them; Task 13's
  * DebugPanel section is where they eventually become dials, if they need to
- * (the tuning cluster's other four fields already are).
+ * (the tuning cluster's other four fields already are). `LABEL_RADIUS_MPC`
+ * (Task 10) is the same kind of placeholder for the curved lettering's fixed
+ * radius — see `zoneOfAvoidanceRenderer.ts`'s header for how it and
+ * `LABEL_EM_MPC` jointly set the text's on-screen size.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -54,6 +57,8 @@ const OUTER_RADIUS_MPC = 380;
 const BULGE_DEG = 15;
 /** Latitude half-width toward the galactic anticenter (l=π), degrees — visual-checkpoint placeholder (Task 9). */
 const ANTICENTER_DEG = 5;
+/** Radius of the curved-lettering's galactic-plane circle, Mpc — visual-checkpoint placeholder (Task 10). */
+const LABEL_RADIUS_MPC = 40;
 
 export const zoneOfAvoidanceLayer: ContentLayer = {
   name: 'zone-of-avoidance',
@@ -63,18 +68,31 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
 
   enabled(state, ctx) {
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return (
-      zoneOfAvoidanceLayerOpacity(
-        camDistMpc,
-        resolveLayerOpacity(
-          state.subsystems.fades,
-          { kind: 'zoneOfAvoidance' },
-          ctx.focusBlend,
-          ctx.nowMs,
-          state.subsystems.clipPlayer,
-        ),
-      ) > 0
+    const bandOpacity = zoneOfAvoidanceLayerOpacity(
+      camDistMpc,
+      resolveLayerOpacity(
+        state.subsystems.fades,
+        { kind: 'zoneOfAvoidance' },
+        ctx.focusBlend,
+        ctx.nowMs,
+        state.subsystems.clipPlayer,
+      ),
     );
+    const labelOpacity = zoneOfAvoidanceLayerOpacity(
+      camDistMpc,
+      resolveLayerOpacity(
+        state.subsystems.fades,
+        { kind: 'labelLayer', layer: 'zoneOfAvoidance' },
+        ctx.focusBlend,
+        ctx.nowMs,
+        state.subsystems.clipPlayer,
+      ),
+    );
+    // OR, not AND: the band and its lettering toggle independently (see the
+    // module header), so this layer must still run a frame where only ONE
+    // of the two has non-zero opacity — e.g. the band toggled off but its
+    // label toggled on.
+    return bandOpacity > 0 || labelOpacity > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -91,6 +109,16 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
         state.subsystems.clipPlayer,
       ),
     );
+    const labelOpacity = zoneOfAvoidanceLayerOpacity(
+      camDistMpc,
+      resolveLayerOpacity(
+        state.subsystems.fades,
+        { kind: 'labelLayer', layer: 'zoneOfAvoidance' },
+        ctx.focusBlend,
+        ctx.nowMs,
+        state.subsystems.clipPlayer,
+      ),
+    );
 
     state.gpu.zoneOfAvoidanceRenderer.draw(
       pass,
@@ -102,6 +130,17 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
       BULGE_DEG,
       ANTICENTER_DEG,
       opacity,
+    );
+    // Same (target, slab) render step as the band draw above, so the
+    // lettering composites into the SAME hdr accumulation this frame —
+    // order here just decides which glyph pixels sum in first (additive,
+    // so it's a listing choice, not a compositing one).
+    state.gpu.zoneOfAvoidanceRenderer.drawLabels(
+      pass,
+      view.vp,
+      view.viewportPx,
+      LABEL_RADIUS_MPC,
+      labelOpacity,
     );
   },
 };

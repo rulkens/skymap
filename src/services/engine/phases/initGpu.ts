@@ -286,8 +286,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     targetFormat: 'rgba16float',
   });
   // Galactic-plane dust-band guide — same lifecycle as horizonShellRenderer
-  // (unconditional, no data-delivery dependency), same HDR target.
-  const zoneOfAvoidanceRenderer = createZoneOfAvoidanceRenderer(device, 'rgba16float');
+  // (unconditional, no data-delivery dependency), same HDR target. Its
+  // curved-lettering pipeline reuses `state.gpu.fontAtlases` (already loaded
+  // above by `loadFontAtlases()`), not a second atlas fetch.
+  const zoneOfAvoidanceRenderer = createZoneOfAvoidanceRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fontAtlases!,
+  );
   state.gpu.zoneOfAvoidanceRenderer = zoneOfAvoidanceRenderer;
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
