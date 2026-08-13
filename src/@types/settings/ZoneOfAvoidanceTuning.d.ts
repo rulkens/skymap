@@ -1,8 +1,8 @@
 /**
  * ZoneOfAvoidanceTuning — the Zone-of-Avoidance guide band's per-frame LOOK
- * knobs, kept apart from `ZoneOfAvoidanceSettings` (adds `enabled` /
- * `labelEnabled`) so a knob patch can never flip the layer's visibility by
- * accident — the same split `MilkyWayTuning` makes.
+ * knobs, kept apart from `ZoneOfAvoidanceSettings` (adds `enabled`) so a
+ * knob patch can never flip the layer's visibility by accident — the same
+ * split `MilkyWayTuning` makes.
  *
  * Values here are visual-pass placeholders (Task 9/11 checkpoints, Task 13
  * DebugPanel section dial them for real); the shape and the direction of

@@ -112,5 +112,4 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
   });
-
 });
