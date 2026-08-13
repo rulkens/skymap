@@ -9,7 +9,7 @@
  * whose fragment stage intersects each per-pixel view ray with the geometry
  * analytically, rather than rasterising a mesh.
  *
- * `drawLabels` (Task 10) draws the curved on-band "ZONE OF AVOIDANCE"
+ * `drawLabels` (Task 10) draws the curved on-band "Zone of Avoidance"
  * lettering — discrete world-oriented MSDF glyph quads, a separate pipeline
  * from the band's fullscreen ray march (see zoneOfAvoidanceRenderer.ts's
  * header). `drawPick` is added by Task 12 — not stubbed here.
@@ -51,8 +51,9 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
    * camera basis/ray reconstruction and takes the matrix directly rather
    * than an `OrbitCamera`, unlike `draw` above.
    *
-   * `labelRadiusMpc` is the fixed radius (Mpc) of the galactic-plane circle
-   * the lettering sits on; `fadeAlpha` is the caller's per-frame opacity
+   * `tuning.labelColor` is the lettering's tint (linear RGB); `labelRadiusMpc`
+   * is the fixed radius (Mpc) of the galactic-plane circle the lettering
+   * sits on; `fadeAlpha` is the caller's per-frame opacity
    * (`zoneOfAvoidanceLayerOpacity` composed with the `labelLayer`/
    * `zoneOfAvoidance` fade-registry entry — see `zoneOfAvoidanceLayer.ts`).
    * The glyph-instance buffer is built once at construction from
@@ -63,6 +64,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    tuning: ZoneOfAvoidanceTuning,
     labelRadiusMpc: number,
     fadeAlpha: number,
   ): void;

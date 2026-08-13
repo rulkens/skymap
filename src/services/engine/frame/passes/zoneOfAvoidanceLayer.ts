@@ -140,6 +140,7 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
       pass,
       view.vp,
       view.viewportPx,
+      state.settings.zoneOfAvoidance,
       LABEL_RADIUS_MPC,
       labelOpacity,
     );

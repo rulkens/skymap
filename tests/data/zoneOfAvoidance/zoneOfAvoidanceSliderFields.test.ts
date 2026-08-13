@@ -17,7 +17,7 @@ describe('ZONE_OF_AVOIDANCE_SLIDER_FIELDS — parity with the tuning knobs', () 
   it('covers exactly the scalar keys of ZoneOfAvoidanceTuning', () => {
     const registryKeys = ZONE_OF_AVOIDANCE_SLIDER_FIELDS.map((f) => f.key).sort();
     const scalarKeys = (Object.keys(DEFAULT_ZONE_OF_AVOIDANCE_TUNING) as (keyof ZoneOfAvoidanceTuning)[])
-      .filter((k) => k !== 'color')
+      .filter((k) => k !== 'color' && k !== 'labelColor')
       .sort();
     expect(registryKeys).toEqual(scalarKeys);
   });

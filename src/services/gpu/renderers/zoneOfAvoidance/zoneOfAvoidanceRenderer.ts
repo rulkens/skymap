@@ -3,7 +3,7 @@
  * drawn as an analytic ray-marched shell (same family as
  * `horizonShellRenderer`: one fullscreen quad, the fragment stage
  * intersects a per-pixel view ray with geometry analytically) — PLUS a
- * second pipeline (`drawLabels`) for the curved "ZONE OF AVOIDANCE"
+ * second pipeline (`drawLabels`) for the curved "Zone of Avoidance"
  * lettering: discrete, world-oriented MSDF glyph quads fixed to the
  * galactic-plane circle, built once at construction (`layoutLabel` is a
  * CPU call, not a per-frame one) and issued as one instanced draw per
@@ -103,14 +103,6 @@ const LABEL_EM_MPC = 2;
 /** Per-glyph instance stride: localOffset(8) + localSize(8) + uvRect(16) + galacticLonRad(4). */
 const LABEL_GLYPH_INSTANCE_BYTES = 36;
 
-/**
- * Lettering tint, linear RGB — visual-checkpoint placeholder like the
- * band's own `tuning.color`. Not tied to `ZoneOfAvoidanceTuning` because
- * the label has no other per-frame knob to bundle it with (Task 13's
- * DebugPanel section is where this would become a dial, if it needs one).
- */
-const LABEL_COLOR: Vec3 = [1, 1, 1];
-
 export function createZoneOfAvoidanceRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
@@ -166,7 +158,7 @@ export function createZoneOfAvoidanceRenderer(
     // profile as horizonShell / filaments / every other additive overlay.
   });
 
-  // ── Curved-lettering pipeline ("ZONE OF AVOIDANCE" glyphs) ────────────
+  // ── Curved-lettering pipeline ("Zone of Avoidance" glyphs) ────────────
   //
   // A single font (`FONT_IDS[0]`) — unlike `labelRenderer`, this pass has
   // no per-label font choice, so the atlas binds as a plain `texture_2d`
@@ -418,6 +410,7 @@ export function createZoneOfAvoidanceRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    tuning: ZoneOfAvoidanceTuning,
     labelRadiusMpc: number,
     fadeAlpha: number,
   ): void {
@@ -425,9 +418,9 @@ export function createZoneOfAvoidanceRenderer(
 
     writeCameraPrefix(labelUniforms, viewProj, viewportPx);
     // color (floats 20..22) + labelRadiusMpc (float 23).
-    labelUniforms[20] = LABEL_COLOR[0];
-    labelUniforms[21] = LABEL_COLOR[1];
-    labelUniforms[22] = LABEL_COLOR[2];
+    labelUniforms[20] = tuning.labelColor[0];
+    labelUniforms[21] = tuning.labelColor[1];
+    labelUniforms[22] = tuning.labelColor[2];
     labelUniforms[23] = labelRadiusMpc;
     // fadeAlpha (float 24); floats 25..27 are pad, left at zero.
     labelUniforms[24] = fadeAlpha;

@@ -2,13 +2,13 @@
 /**
  * ZoneOfAvoidanceTuningSection — DebugPanel subsection exposing the galactic-
  * plane guide band's look knobs, rows driven from
- * `ZONE_OF_AVOIDANCE_SLIDER_FIELDS` for the three scalar knobs. `color` is a
- * `Vec3`, not a `ZoneOfAvoidanceSliderField`-shaped row, so it gets one
- * native `<input type="color">` row instead: the tuning value stays LINEAR
- * RGB (the shader multiplies it straight into an HDR additive target), and
- * `hexToLinearRgb`/`linearRgbToHex` do the sRGB<->linear conversion the
- * widget's hex value requires. Dev-only; the explorer-facing SettingsPanel
- * surfaces only the visibility toggles.
+ * `ZONE_OF_AVOIDANCE_SLIDER_FIELDS` for the three scalar knobs. `color` and
+ * `labelColor` are each a `Vec3`, not a `ZoneOfAvoidanceSliderField`-shaped
+ * row, so they each get a native `<input type="color">` row instead: the
+ * tuning value stays LINEAR RGB (the shader multiplies it straight into an
+ * HDR additive target), and `hexToLinearRgb`/`linearRgbToHex` do the
+ * sRGB<->linear conversion the widget's hex value requires. Dev-only; the
+ * explorer-facing SettingsPanel surfaces only the visibility toggles.
  *
  * No copy-to-clipboard diff button (unlike `MilkyWayTuningSection`): the
  * `color` tuple complicates the diff formatter for marginal value at this
@@ -64,6 +64,23 @@ export function ZoneOfAvoidanceTuningSection({
               e.target.value as HexString,
             ) as ZoneOfAvoidanceTuning['color'];
             onChange({ color });
+          }}
+        />
+      </div>
+      <div
+        className={sliderStyles.root}
+        title="Curved-lettering tint, linear RGB (picker speaks sRGB)."
+      >
+        <span className={sliderStyles.label}>labelColor</span>
+        <input
+          type="color"
+          aria-label="labelColor"
+          value={linearRgbToHex(zoneOfAvoidance.labelColor)}
+          onChange={(e) => {
+            const labelColor = hexToLinearRgb(
+              e.target.value as HexString,
+            ) as ZoneOfAvoidanceTuning['labelColor'];
+            onChange({ labelColor });
           }}
         />
       </div>

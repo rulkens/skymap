@@ -15,7 +15,7 @@ export const ZONE_OF_AVOIDANCE_ENTRY = {
   // internal consistency with the row it mirrors.
   visible: true,
   bearsLabel: true,
-  // The curved "ZONE OF AVOIDANCE" lettering has no ring/halo marker —
+  // The curved "Zone of Avoidance" lettering has no ring/halo marker —
   // markers are the structure-ring concept, which the band doesn't share.
   bearsMarker: false,
   labelLayer: 'zoneOfAvoidance',
