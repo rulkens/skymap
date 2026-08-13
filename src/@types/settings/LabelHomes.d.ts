@@ -31,4 +31,5 @@ export type LabelHomes = {
   readonly starCatalogs: Record<StarCatalogId, StarCatalogItemSettings>;
   readonly bodies: Record<BodyId, BodyItemSettings>;
   readonly milkyWayLabelEnabled: boolean;
+  readonly zoneOfAvoidanceLabelEnabled: boolean;
 };
