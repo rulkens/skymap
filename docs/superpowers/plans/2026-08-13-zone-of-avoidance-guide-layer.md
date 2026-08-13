@@ -218,14 +218,14 @@ export type ZoneOfAvoidanceDetailCardProps = {
 export type CompactZoneOfAvoidanceCardProps = { target: ZoneOfAvoidanceInfo };
 ```
 
-- [ ] Build `ZoneOfAvoidanceDetailCard` — `CardHeader` (eyebrow e.g. `"Guide Layer"`), `CardRow type="headline"` with `target.displayName`, a glyph in place of a thumbnail, `target.distanceNote`, `DescriptionBlock` with `target.description`.
-- [ ] Build `CompactZoneOfAvoidanceCard` — glyph + `target.displayName` + a short line (mirrors `CompactMilkyWayCard`).
-- [ ] Add `detailCardTable.ts`'s `zoneOfAvoidance` row: `{ Detail: (props) => target.type !== 'zoneOfAvoidance' ? null : createElement(ZoneOfAvoidanceDetailCard, {...}), Compact: (props) => ... }`, mirroring the `milkyWay` rows (`detailCardTable.ts:100-113`) — `DETAIL_CARD`'s `Record<FocusableTargetType, DetailCardEntry>` type makes a missing row a compile error.
-- [ ] Add the test `DETAIL_CARD['zoneOfAvoidance'] resolves to the ZoA detail + compact cards` (table-row assertion).
-- [ ] Add the test `InfoCard renders the Zone of Avoidance card for a zoneOfAvoidance selection` asserting the headline + description text appear.
-- [ ] Add the test `the Zone of Avoidance card renders no Focus/Fly-here affordance` (regression pinning the no-onFocus decision — this is the one behavior worth a targeted assertion, since a future edit re-adding `onFocus` without a real position would silently produce a dead button).
-- [ ] `npm test` (InfoCard suite) green. `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Build `ZoneOfAvoidanceDetailCard` — `CardHeader` (eyebrow e.g. `"Guide Layer"`), `CardRow type="headline"` with `target.displayName`, a glyph in place of a thumbnail, `target.distanceNote`, `DescriptionBlock` with `target.description`.
+- [x] Build `CompactZoneOfAvoidanceCard` — glyph + `target.displayName` + a short line (mirrors `CompactMilkyWayCard`).
+- [x] Add `detailCardTable.ts`'s `zoneOfAvoidance` row: `{ Detail: (props) => target.type !== 'zoneOfAvoidance' ? null : createElement(ZoneOfAvoidanceDetailCard, {...}), Compact: (props) => ... }`, mirroring the `milkyWay` rows (`detailCardTable.ts:100-113`) — `DETAIL_CARD`'s `Record<FocusableTargetType, DetailCardEntry>` type makes a missing row a compile error.
+- [ ] Add the test `DETAIL_CARD['zoneOfAvoidance'] resolves to the ZoA detail + compact cards` (table-row assertion). — DROPPED per controller ruling (testing.md: registry restatement)
+- [x] Add the test `InfoCard renders the Zone of Avoidance card for a zoneOfAvoidance selection` asserting the headline + description text appear.
+- [x] Add the test `the Zone of Avoidance card renders no Focus/Fly-here affordance` (regression pinning the no-onFocus decision — this is the one behavior worth a targeted assertion, since a future edit re-adding `onFocus` without a real position would silently produce a dead button).
+- [x] `npm test` (InfoCard suite) green. `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 7: Fades + wake wiring
 
