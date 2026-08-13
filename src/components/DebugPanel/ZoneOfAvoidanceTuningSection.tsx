@@ -10,9 +10,10 @@
  * sRGB<->linear conversion the widget's hex value requires. Dev-only; the
  * explorer-facing SettingsPanel surfaces only the visibility toggles.
  *
- * No copy-to-clipboard diff button (unlike `MilkyWayTuningSection`): the
- * `color` tuple complicates the diff formatter for marginal value at this
- * scope — a deferred nicety, not a gap.
+ * The copy-to-clipboard button promotes a tuned session to code, unlike
+ * `MilkyWayTuningSection`'s diff-against-defaults: the formatter it calls
+ * emits the WHOLE cluster instead (fewer knobs, and the two Vec3 colours
+ * want their own `[r, g, b]` rendering) — see its header for why.
  */
 
 import type { ReactElement } from 'react';
@@ -21,10 +22,12 @@ import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanc
 import type { HexString } from '../../@types/math/HexString';
 import { hexToLinearRgb } from '../../utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../utils/color/linearRgbToHex';
+import { formatZoneOfAvoidanceTuningDefaults } from '../../utils/format/formatZoneOfAvoidanceTuningDefaults';
 import {
   ZONE_OF_AVOIDANCE_SLIDER_FIELDS,
   zoneOfAvoidanceSliderPatch,
 } from '../../data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
+import CopyButton from '../common/CopyButton/CopyButton';
 import DebugSection from './DebugSection';
 import DebugSlider from './DebugSlider';
 import sliderStyles from './DebugSlider.module.css';
@@ -82,6 +85,11 @@ export function ZoneOfAvoidanceTuningSection({
           }}
         />
       </div>
+      <CopyButton
+        text={formatZoneOfAvoidanceTuningDefaults(zoneOfAvoidance)}
+        label="Copy current defaults"
+        title="Paste into DEFAULT_ZONE_OF_AVOIDANCE_TUNING in data/defaults.ts"
+      />
     </DebugSection>
   );
 }
