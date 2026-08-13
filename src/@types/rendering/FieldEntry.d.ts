@@ -59,6 +59,16 @@ export type FieldEntry = {
   modelMatrix: Mat4;
   invModelMatrix: Mat4;
   volumeTexture: GPUTexture;
+  /**
+   * Max-value pyramid in DEVIATION space (`abs(value - contrastCenter) /
+   * halfRange`, the same quantity `applyContrastWindow` thresholds
+   * against), base = ceil(volume dims / 8). Built once per `upload()`
+   * from the raw cube (not the display chain's box-filtered mips, which
+   * could average a thin bright filament below the skip threshold) — see
+   * `buildMaxPyramid` in `volumeFieldRenderer.ts`. Bound at @group(0)
+   * @binding(5); no shader reads it until Task 5's skip march.
+   */
+  maxPyramidTexture: GPUTexture;
   paletteTexture: GPUTexture;
   uniformBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;

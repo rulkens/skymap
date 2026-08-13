@@ -124,10 +124,18 @@ function uniformScratch(device: GPUDevice): Float32Array | undefined {
 
 describe('createVolumeFieldRenderer colour target', () => {
   it('bakes the given targetFormat into the raymarch pipeline colour target', () => {
+    // Construction now also builds the Task 3 max-pyramid mip-blit pipeline
+    // (its own render pipeline, format 'r16float' — the reduction runs
+    // against the field's own volume texture format, not targetFormat), so
+    // two render pipelines get created here, not one. Locate the raymarch
+    // pipeline by its colour-target format rather than assuming index 0.
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createVolumeFieldRenderer(mockDevice(renderPipelines), 'rgba16float', {} as never);
-    expect(renderPipelines).toHaveLength(1);
-    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
+    expect(renderPipelines).toHaveLength(2);
+    const raymarchPipeline = renderPipelines.find(
+      (p) => Array.from(p.fragment!.targets!)[0]?.format === 'rgba16float',
+    );
+    const target = Array.from(raymarchPipeline!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
   });
 });

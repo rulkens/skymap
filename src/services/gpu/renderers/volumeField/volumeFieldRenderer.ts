@@ -46,6 +46,7 @@
  */
 
 import { mat4 } from 'wgpu-matrix';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/ScalarFieldPaletteId';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
@@ -61,7 +62,12 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { mipLevelCount3d, generateMipChain3d } from '../../lib/generateMipChain3d';
+import {
+  mipLevelCount3d,
+  generateMipChain3d,
+  createMipBlit3dPipeline,
+  downsampleLevel3d,
+} from '../../lib/generateMipChain3d';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
@@ -157,6 +163,17 @@ export function createVolumeFieldRenderer(
         texture: { sampleType: 'float', viewDimension: '2d' },
       },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      // Max-value pyramid (deviation space), Task 3. textureLoad-only — no
+      // companion sampler — so Task 5's skip march can address explicit
+      // integer mip texels. No shader declares this binding yet; a bind
+      // group MAY carry entries the current shader doesn't read as long as
+      // the BGL is the pipeline's explicit (non-'auto') layout, which this
+      // one is.
+      {
+        binding: 5,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'unfilterable-float', viewDimension: '3d' },
+      },
     ],
   });
 
@@ -241,6 +258,100 @@ export function createVolumeFieldRenderer(
     return tex;
   }
 
+  // Shared 'max' mip-blit pipeline for the cross-texture reduction steps in
+  // `buildMaxPyramid` below — hoisted (built once, format is always
+  // 'r16float' regardless of field) rather than rebuilt per `upload()` call,
+  // same reuse rationale as the raymarch `pipeline` above.
+  const maxPyramidMb = createMipBlit3dPipeline(device, 'max', 'r16float');
+
+  function halfCeil(d: number): number {
+    return Math.max(1, Math.ceil(d / 2));
+  }
+
+  /**
+   * Builds this field's max-value pyramid in DEVIATION space (Task 3's plan
+   * note). Three chained 2x max-reductions through two upload-time-only
+   * scratch textures carry the raw cube (level 0) down to the pyramid's own
+   * base (dims/8) — reduced from the RAW cube, not the display chain's
+   * box-filtered mips (`uploadCube` above), which could average a thin
+   * bright filament below the skip threshold and cause an unsafe over-skip.
+   * Only the first reduction reads raw values and needs the field's real
+   * `contrastCenter`/`halfRange`; the other two already see non-negative
+   * deviation-space values, so identity composes correctly through `max()`.
+   * `generateMipChain3d` then fills the pyramid's own chain above that base.
+   */
+  function buildMaxPyramid(
+    volumeTexture: GPUTexture,
+    dims: Readonly<Vec3>,
+    contrastCenter: number,
+  ): GPUTexture {
+    const dims1: Vec3 = [halfCeil(dims[0]), halfCeil(dims[1]), halfCeil(dims[2])];
+    const dims2: Vec3 = [halfCeil(dims1[0]), halfCeil(dims1[1]), halfCeil(dims1[2])];
+    const dims3: Vec3 = [halfCeil(dims2[0]), halfCeil(dims2[1]), halfCeil(dims2[2])];
+
+    const makeScratch = (d: Vec3, label: string) =>
+      device.createTexture({
+        label,
+        size: { width: d[0], height: d[1], depthOrArrayLayers: d[2] },
+        format: 'r16float',
+        dimension: '3d',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+
+    const scratchA = makeScratch(dims1, 'maxPyramid-scratchA');
+    const scratchB = makeScratch(dims2, 'maxPyramid-scratchB');
+    const maxPyramidTexture = device.createTexture({
+      label: 'maxPyramid',
+      size: { width: dims3[0], height: dims3[1], depthOrArrayLayers: dims3[2] },
+      format: 'r16float',
+      dimension: '3d',
+      mipLevelCount: mipLevelCount3d(dims3[0], dims3[1], dims3[2]),
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    // Same formula as `applyContrastWindow` (fragment.wesl:168): the wider
+    // of the two sides of the [0,1]-normalised value range from the center,
+    // so the deviation transform stays bounded to [0, 1].
+    const halfRange = Math.max(contrastCenter, 1 - contrastCenter);
+    const encoder = device.createCommandEncoder({ label: 'maxPyramid-reduce-encoder' });
+    downsampleLevel3d(
+      device,
+      encoder,
+      maxPyramidMb,
+      { texture: volumeTexture, level: 0, width: dims[0], height: dims[1], depth: dims[2] },
+      { texture: scratchA, level: 0, width: dims1[0], height: dims1[1], depth: dims1[2] },
+      contrastCenter,
+      halfRange,
+    );
+    downsampleLevel3d(
+      device,
+      encoder,
+      maxPyramidMb,
+      { texture: scratchA, level: 0, width: dims1[0], height: dims1[1], depth: dims1[2] },
+      { texture: scratchB, level: 0, width: dims2[0], height: dims2[1], depth: dims2[2] },
+      0,
+      1,
+    );
+    downsampleLevel3d(
+      device,
+      encoder,
+      maxPyramidMb,
+      { texture: scratchB, level: 0, width: dims2[0], height: dims2[1], depth: dims2[2] },
+      { texture: maxPyramidTexture, level: 0, width: dims3[0], height: dims3[1], depth: dims3[2] },
+      0,
+      1,
+    );
+    device.queue.submit([encoder.finish()]);
+    scratchA.destroy();
+    scratchB.destroy();
+
+    // Fills the pyramid's own chain (levels 1..N-1) self-referentially from
+    // its own level 0 — identity center/halfRange throughout, same as
+    // `uploadCube`'s box chain above.
+    generateMipChain3d(device, maxPyramidTexture, 'max');
+    return maxPyramidTexture;
+  }
+
   // Per-field palette texture — created in `upload`, re-uploaded in
   // `draw` via the shared `writePaletteLut` helper when the live palette
   // setting diverges from `residentPaletteId`.  A single
@@ -278,6 +389,7 @@ export function createVolumeFieldRenderer(
       const existing = fields.get(id);
       if (existing) {
         existing.volumeTexture.destroy();
+        existing.maxPyramidTexture.destroy();
         existing.paletteTexture.destroy();
         existing.uniformBuffer.destroy();
         existing.fadeBuffer.destroy();
@@ -292,6 +404,7 @@ export function createVolumeFieldRenderer(
       const modelMatrix = buildCubeModelMatrix(cube);
       const invModelMatrix = mat4.inverse(modelMatrix);
       const volumeTexture = uploadCube(cube);
+      const maxPyramidTexture = buildMaxPyramid(volumeTexture, cube.dims, defaults.contrastCenter);
       const paletteTexture = createPaletteTexture();
       // Seed the resident LUT from the registry default so it matches
       // `residentPaletteId`; `draw` re-uploads in place if the live
@@ -309,6 +422,7 @@ export function createVolumeFieldRenderer(
           { binding: 2, resource: volumeSampler },
           { binding: 3, resource: paletteTexture.createView() },
           { binding: 4, resource: paletteSampler },
+          { binding: 5, resource: maxPyramidTexture.createView() },
         ],
       });
       const fadeBuffer = device.createBuffer({
@@ -334,6 +448,7 @@ export function createVolumeFieldRenderer(
         modelMatrix,
         invModelMatrix,
         volumeTexture,
+        maxPyramidTexture,
         paletteTexture,
         uniformBuffer,
         bindGroup,
@@ -350,6 +465,7 @@ export function createVolumeFieldRenderer(
       // handle stays registered across upload/unload — `unload` just releases
       // this field's GPU resources.
       entry.volumeTexture.destroy();
+      entry.maxPyramidTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
       entry.fadeBuffer.destroy();
@@ -466,6 +582,7 @@ export function createVolumeFieldRenderer(
     destroy() {
       for (const e of fields.values()) {
         e.volumeTexture.destroy();
+        e.maxPyramidTexture.destroy();
         e.paletteTexture.destroy();
         e.uniformBuffer.destroy();
         e.fadeBuffer.destroy();
