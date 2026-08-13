@@ -185,12 +185,8 @@ const settingsSlice = createSlice({
     setZoneOfAvoidanceEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.zoneOfAvoidance.enabled = action.payload;
     },
-    setZoneOfAvoidanceLabelEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.zoneOfAvoidance.labelEnabled = action.payload;
-    },
     // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
-    // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled` /
-    // `labelEnabled`.
+    // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
     setZoneOfAvoidanceTuning: (
       settings,
       action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,
@@ -512,7 +508,6 @@ export const {
   setMilkyWayLabelEnabled,
   setMilkyWayTuning,
   setZoneOfAvoidanceEnabled,
-  setZoneOfAvoidanceLabelEnabled,
   setZoneOfAvoidanceTuning,
   setFilamentsEnabled,
   setFilamentIntensity,

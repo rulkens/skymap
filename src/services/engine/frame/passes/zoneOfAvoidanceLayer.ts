@@ -23,7 +23,8 @@
  * mirroring `filamentsLayer`'s settings-toggle + fade-registry-opacity
  * shape, composed through the Task 7 helper rather than
  * `horizonShellLayer`'s bespoke camera-distance-only function (which has no
- * settings toggle to fold in).
+ * settings toggle to fold in). The curved lettering has no toggle or fade
+ * factor of its own — `draw` passes it the SAME band opacity.
  *
  * `enabled` does NOT also check `state.gpu.zoneOfAvoidanceRenderer` — same
  * choice `filamentsLayer`/`horizonShellLayer` make (`ContentLayer.enabled`
@@ -79,21 +80,7 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
         state.subsystems.clipPlayer,
       ),
     );
-    const labelOpacity = zoneOfAvoidanceLayerOpacity(
-      camDistMpc,
-      resolveLayerOpacity(
-        state.subsystems.fades,
-        { kind: 'labelLayer', layer: 'zoneOfAvoidance' },
-        ctx.focusBlend,
-        ctx.nowMs,
-        state.subsystems.clipPlayer,
-      ),
-    );
-    // OR, not AND: the band and its lettering toggle independently (see the
-    // module header), so this layer must still run a frame where only ONE
-    // of the two has non-zero opacity — e.g. the band toggled off but its
-    // label toggled on.
-    return bandOpacity > 0 || labelOpacity > 0;
+    return bandOpacity > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -110,17 +97,6 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
         state.subsystems.clipPlayer,
       ),
     );
-    const labelOpacity = zoneOfAvoidanceLayerOpacity(
-      camDistMpc,
-      resolveLayerOpacity(
-        state.subsystems.fades,
-        { kind: 'labelLayer', layer: 'zoneOfAvoidance' },
-        ctx.focusBlend,
-        ctx.nowMs,
-        state.subsystems.clipPlayer,
-      ),
-    );
-
     state.gpu.zoneOfAvoidanceRenderer.draw(
       pass,
       ctx.cam,
@@ -135,14 +111,15 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
     // Same (target, slab) render step as the band draw above, so the
     // lettering composites into the SAME hdr accumulation this frame —
     // order here just decides which glyph pixels sum in first (additive,
-    // so it's a listing choice, not a compositing one).
+    // so it's a listing choice, not a compositing one). Same band opacity —
+    // the lettering has no independent toggle or fade factor.
     state.gpu.zoneOfAvoidanceRenderer.drawLabels(
       pass,
       view.vp,
       view.viewportPx,
       state.settings.zoneOfAvoidance,
       LABEL_RADIUS_MPC,
-      labelOpacity,
+      opacity,
     );
   },
 };

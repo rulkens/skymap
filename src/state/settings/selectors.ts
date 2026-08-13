@@ -174,9 +174,6 @@ export const selectMilkyWay = (state: RootState): MilkyWaySettings =>
 export const selectZoneOfAvoidanceEnabled = (state: RootState): boolean =>
   selectSettings(state).zoneOfAvoidance.enabled;
 
-export const selectZoneOfAvoidanceLabelEnabled = (state: RootState): boolean =>
-  selectSettings(state).zoneOfAvoidance.labelEnabled;
-
 /** The whole Zone-of-Avoidance cluster — mirrors `selectMilkyWay`. */
 export const selectZoneOfAvoidance = (state: RootState): ZoneOfAvoidanceSettings =>
   selectSettings(state).zoneOfAvoidance;

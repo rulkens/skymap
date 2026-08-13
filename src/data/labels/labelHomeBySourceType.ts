@@ -36,7 +36,6 @@ import {
   setGalaxyCatalogLabelEnabled,
   setStarCatalogLabelEnabled,
   setBodyLabelEnabled,
-  setZoneOfAvoidanceLabelEnabled,
 } from '../../state/settings/settingsSlice';
 
 export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, LabelHome>> = {
@@ -60,9 +59,5 @@ export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, 
   milkyWay: {
     read: (homes) => homes.milkyWayLabelEnabled,
     write: (_id, enabled) => setMilkyWayLabelEnabled(enabled),
-  },
-  zoneOfAvoidance: {
-    read: (homes) => homes.zoneOfAvoidanceLabelEnabled,
-    write: (_id, enabled) => setZoneOfAvoidanceLabelEnabled(enabled),
   },
 };

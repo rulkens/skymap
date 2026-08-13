@@ -7,7 +7,8 @@
  * `docs/superpowers/conventions/singleton-overlay-layers.md`): all of its
  * user-facing state lives in `settings.zoneOfAvoidance`, exactly as
  * `milkyWay` / `filaments` / `flow` do. This is the shape of that slice —
- * two independent visibility axes plus the band's look knobs.
+ * one visibility toggle (band + lettering together) plus the band's look
+ * knobs.
  *
  * Named (rather than inlined into `EngineSettingsState`) for the same reason
  * `MilkyWaySettings` is: the settings bag, the tour's `SettingsSnapshot`
@@ -16,8 +17,6 @@
 import type { ZoneOfAvoidanceTuning } from './ZoneOfAvoidanceTuning';
 
 export type ZoneOfAvoidanceSettings = {
-  /** The galactic-plane dust band itself. */
+  /** The galactic-plane dust band and its "Zone of Avoidance" text label. */
   enabled: boolean;
-  /** The "Zone of Avoidance" text label. */
-  labelEnabled: boolean;
 } & ZoneOfAvoidanceTuning;

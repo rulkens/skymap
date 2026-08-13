@@ -95,9 +95,6 @@ const RECESSION_BY_LABEL_LAYER = {
   // declutters by its own mechanism.
   starCatalog: undefined,
   body: undefined,
-  // The dust-band explainer's own lettering: a guide label, not scenery
-  // crowding the focused subject — same stance as the milkyWay pin.
-  zoneOfAvoidance: undefined,
 } satisfies Record<LabelLayerId, number | undefined>;
 
 /**

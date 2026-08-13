@@ -242,9 +242,6 @@ export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
  */
 export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
 
-/** Zone-of-Avoidance label default — ON, mirroring `DEFAULT_MILKY_WAY_LABEL_ENABLED`. */
-export const DEFAULT_ZONE_OF_AVOIDANCE_LABEL_ENABLED: boolean = true;
-
 /**
  * Zone-of-Avoidance look-knob starting values. Placeholders for the Task 9/11
  * visual checkpoints and the Task 13 DebugPanel section to dial live — a dim

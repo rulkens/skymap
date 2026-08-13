@@ -63,7 +63,6 @@ import {
   selectConstellationsEnabled,
   selectOrbitTrailsEnabled,
   selectZoneOfAvoidanceEnabled,
-  selectZoneOfAvoidanceLabelEnabled,
 } from '../../state/settings/selectors';
 import {
   setConstellationsEnabled,
@@ -89,7 +88,6 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
   const zoneOfAvoidanceEnabled = useAppSelector(selectZoneOfAvoidanceEnabled);
-  const zoneOfAvoidanceLabelEnabled = useAppSelector(selectZoneOfAvoidanceLabelEnabled);
 
   // Bundle the label homes, then project them → flat label-visibility record.
   // Both rebuild only when one of the stable-reference inputs changes.
@@ -100,16 +98,8 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
       starCatalogs: starCatalogItems,
       bodies: bodyItems,
       milkyWayLabelEnabled,
-      zoneOfAvoidanceLabelEnabled,
     }),
-    [
-      structureItems,
-      galaxyCatalogItems,
-      starCatalogItems,
-      bodyItems,
-      milkyWayLabelEnabled,
-      zoneOfAvoidanceLabelEnabled,
-    ],
+    [structureItems, galaxyCatalogItems, starCatalogItems, bodyItems, milkyWayLabelEnabled],
   );
 
   const labelCategoryVisibility = useMemo(
@@ -154,7 +144,8 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   // other way to build a "rows" array — constellations, orbitTrails, and the
   // zone-of-avoidance band gate LINE/overlay geometry, not labels, so they
   // have no registry row's label axis to derive from and stay hand-authored
-  // here (the band's OWN label toggle does derive, via LABEL_CATEGORIES).
+  // here. The band's lettering has no toggle of its own — it rides this same
+  // row (see zoneOfAvoidanceLayer.ts).
   const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
       ...LABEL_CATEGORIES.map((cat) => ({

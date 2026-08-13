@@ -26,8 +26,6 @@
  *                   foreground-labels layer.
  *   - scaleBar    — the on-screen scale-bar HUD. Constructed by React,
  *                   not a GPU layer; reserved for tour integration.
- *   - zoneOfAvoidance — the "Zone of Avoidance" curved lettering on the
- *                   galactic-plane dust band overlay.
  */
 export type LabelLayerId =
   | 'milkyWay'
@@ -35,5 +33,4 @@ export type LabelLayerId =
   | 'galaxy'
   | 'starCatalog'
   | 'body'
-  | 'scaleBar'
-  | 'zoneOfAvoidance';
+  | 'scaleBar';

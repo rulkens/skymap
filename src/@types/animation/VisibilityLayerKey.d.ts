@@ -22,8 +22,6 @@
  *     because a tour may want to fade the label without the disk.
  *   - the `structure` kind splits into `structureRing` (the marker rings)
  *     and `structureLabel` (the category labels), for the same reason.
- *   - `zoneOfAvoidance` (the band) and `zoneOfAvoidanceLabel` (its curved
- *     lettering) split the same way, mirroring the milkyWay disk/label split.
  *
  * The two vocabularies are bridged at exactly one place: a
  * `FadeLayer.handle()` closure maps a layer's `Item` to the concrete
@@ -70,5 +68,4 @@ export type VisibilityLayerKey =
   | 'constellations'
   | 'orbitTrails'
   | 'volumeField'
-  | 'zoneOfAvoidance'
-  | 'zoneOfAvoidanceLabel';
+  | 'zoneOfAvoidance';

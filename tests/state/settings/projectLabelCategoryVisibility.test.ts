@@ -24,7 +24,6 @@ function homesOf(state: EngineSettingsState): LabelHomes {
     starCatalogs: state.starCatalogs.items,
     bodies: state.bodies.items,
     milkyWayLabelEnabled: state.milkyWay.labelEnabled,
-    zoneOfAvoidanceLabelEnabled: state.zoneOfAvoidance.labelEnabled,
   };
 }
 

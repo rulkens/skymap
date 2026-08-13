@@ -63,7 +63,6 @@ const VISIBILITY_KEY_BY_LABEL_LAYER = {
   starCatalog: 'starCatalogLabel',
   // Per-item body captions likewise: one cue for all near-field captions.
   body: 'bodyLabel',
-  zoneOfAvoidance: 'zoneOfAvoidanceLabel',
 } satisfies Record<LabelLayerId, VisibilityLayerKey>;
 
 /**

@@ -25,5 +25,4 @@ export type LabelBearingSourceType =
   | 'galaxyCatalog'
   | 'starCatalog'
   | 'body'
-  | 'milkyWay'
-  | 'zoneOfAvoidance';
+  | 'milkyWay';

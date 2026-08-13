@@ -88,9 +88,9 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
-      // zoneOfAvoidance mirrors milkyWay's shape; no test below exercises its
-      // own axes yet, so both default on like the live scene.
-      zoneOfAvoidance: { enabled: true, labelEnabled: true },
+      // zoneOfAvoidance mirrors milkyWay's `enabled` axis; no test below
+      // exercises it yet, so it defaults on like the live scene.
+      zoneOfAvoidance: { enabled: true },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).

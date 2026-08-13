@@ -16,6 +16,7 @@ import {
   setMilkyWayEnabled,
   writeVolumeField,
   setFlowEnabled,
+  setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 
@@ -86,6 +87,18 @@ describe('watchFadesSaga', () => {
     store.dispatch(setFlowEnabled(true));
 
     expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
+  });
+
+  // ── setZoneOfAvoidanceEnabled — the single band+label toggle ───────────────
+  // Regression coverage for the dead-toggle defect: Task 7 added the fade
+  // rows in fadeLayers.ts but no FADE_ROW entry, so toggling wrote the store
+  // and nothing ever called syncFades. This is the test that would have
+  // caught it.
+
+  it('setZoneOfAvoidanceEnabled(true) → syncFades(["zoneOfAvoidance"]) called', () => {
+    store.dispatch(setZoneOfAvoidanceEnabled(true));
+
+    expect(reconcile.syncFades).toHaveBeenCalledWith(['zoneOfAvoidance']);
   });
 
   // ── mergeSnapshot — bulk restore arm: re-fades every row (full pass) ────────

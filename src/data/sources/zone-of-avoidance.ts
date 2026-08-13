@@ -14,12 +14,11 @@ export const ZONE_OF_AVOIDANCE_ENTRY = {
   // DEFAULT_ZONE_OF_AVOIDANCE_ENABLED, a plain literal); set true here for
   // internal consistency with the row it mirrors.
   visible: true,
-  bearsLabel: true,
+  // The curved "Zone of Avoidance" lettering rides the band's own toggle
+  // and fade layer (zoneOfAvoidanceLayer.ts), not the label subsystem — so
+  // this row does not register as label-bearing.
+  bearsLabel: false,
   // The curved "Zone of Avoidance" lettering has no ring/halo marker —
   // markers are the structure-ring concept, which the band doesn't share.
   bearsMarker: false,
-  labelLayer: 'zoneOfAvoidance',
-  detailLabel: 'Zone of Avoidance',
-  shortLabel: 'Zone of Avoidance',
-  plural: 'Zone of Avoidance',
 } as const satisfies ZoneOfAvoidanceSourceEntry;
