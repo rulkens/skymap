@@ -82,8 +82,16 @@
 
 import { chromium, type Browser, type Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+} from 'node:fs';
+import { dirname, resolve as resolvePath } from 'node:path';
 import type { Writable } from 'node:stream';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
 import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
@@ -97,6 +105,7 @@ import type { RecorderWindow } from '../../src/@types/recorder/RecorderWindow';
 import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
+import { parsePreviewUrl } from '../utils/record/parsePreviewUrl';
 import { buildFfmpegArgs } from '../utils/record/buildFfmpegArgs';
 import { buildCaptureUrl } from '../utils/record/buildCaptureUrl';
 import { defaultOutName } from '../utils/record/defaultOutName';
@@ -118,6 +127,18 @@ const MAX_BOOT_NAVIGATIONS = 2;
 const PROGRESS_EVERY_FRAMES = 60;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
 const FFMPEG_STDERR_TAIL_LINES = 40;
+// vite build's own console noise; same tail-keeping rationale as ffmpeg's.
+const BUILD_LOG_TAIL_LINES = 40;
+
+// --serve: a recorder-owned build directory, never `dist/` (that one belongs
+// to deploys — see the module doc for --serve). Reused across takes unless
+// --rebuild forces a fresh build.
+const SERVE_BUILD_DIR = 'tools/record/.build';
+// Arbitrary and quiet; strictPort is left off (vite's default) so a busy
+// port just bumps instead of failing — see spawnPreviewServer, which reads
+// the actual bound port back off stdout rather than assuming this one held.
+const SERVE_PORT = 4517;
+const PREVIEW_READY_TIMEOUT_MS = 30_000;
 
 type RecordOptions = {
   tourId: string;
@@ -134,6 +155,10 @@ type RecordOptions = {
   url: string;
   /** --sim-time override; absent = resolved at take start (always pinned). */
   simTime: Date | undefined;
+  /** --serve: self-serve a production build instead of hitting --url; see main(). */
+  serve: boolean;
+  /** --rebuild: force a fresh --serve build even if SERVE_BUILD_DIR already has one. */
+  rebuild: boolean;
 };
 
 type Take =
@@ -176,11 +201,24 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     out: undefined,
     url: 'http://localhost:5173',
     simTime: undefined,
+    serve: false,
+    rebuild: false,
   };
+  // Tracked separately from options.url: the default url must not trip the
+  // --serve/--url conflict check below, only an explicit --url may.
+  let urlExplicit = false;
   let positionalSeen = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === undefined) continue;
+    if (arg === '--serve') {
+      options.serve = true;
+      continue;
+    }
+    if (arg === '--rebuild') {
+      options.rebuild = true;
+      continue;
+    }
     if (
       arg === '--beats' ||
       arg === '--clip' ||
@@ -222,12 +260,15 @@ function parseArgs(argv: readonly string[]): RecordOptions {
         options.dpr = Number(value);
       }
       if (arg === '--out') options.out = value;
-      if (arg === '--url') options.url = value.replace(/\/$/, '');
+      if (arg === '--url') {
+        options.url = value.replace(/\/$/, '');
+        urlExplicit = true;
+      }
     } else if (arg.startsWith('--')) {
       throw new Error(
         `unknown flag '${arg}' ` +
-          '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url; ' +
-          'positional: tour id)',
+          '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url, ' +
+          '--serve, --rebuild; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -244,6 +285,12 @@ function parseArgs(argv: readonly string[]): RecordOptions {
   }
   if (options.clipId !== undefined && options.beats !== undefined) {
     throw new Error('--beats windows a tour take; a clip take is played whole');
+  }
+  if (options.serve && urlExplicit) {
+    throw new Error(
+      '--serve builds and serves its own production copy at a URL it picks — pass --url only ' +
+        'when pointing at a server that is already running, not together with --serve',
+    );
   }
   // The viewport is size/dpr in CSS pixels, and Playwright viewports are
   // integral — a 4K output divides cleanly by 2, but an odd custom size
@@ -350,6 +397,155 @@ function writeFrame(stdin: Writable, png: Buffer): Promise<void> {
   return new Promise((resolve, reject) => {
     stdin.write(png, (err) => (err ? reject(err) : resolve()));
   });
+}
+
+/**
+ * --serve support: build a production bundle, serve it with `vite preview`,
+ * and record against THAT instead of the dev server. The dev client's HMR
+ * websocket is the root cause behind two reload-mid-take bugs this branch
+ * fixed (see the addInitScript comment in captureTake) — a production build
+ * ships no HMR client at all, so this mode is immune by construction rather
+ * than patched around a third variant of the same failure. Recommended for
+ * any take long enough to outlast the dev client's patience (module doc:
+ * hours for a full 4K tour).
+ */
+
+/**
+ * Build (or reuse) the --serve bundle. `dataUrl()` reads `VITE_DATA_BASE_URL`
+ * at build time to decide between the R2 host and a relative `/data/` path
+ * (see cloudLoader.ts); blanking it here — in the CHILD's env only, never
+ * process.env — makes the served build fetch the catalog from the symlink
+ * ensureDataSymlink sets up, exactly like `npm run dev` does. Blanking
+ * VITE_COUNTERSCALE_URL likewise skips injecting the analytics tracker into
+ * a take that only ever plays on this machine.
+ */
+async function ensureServeBuild(dir: string, rebuild: boolean): Promise<void> {
+  if (!rebuild && existsSync(`${dir}/index.html`)) {
+    console.log(`  reusing existing --serve build at ${dir} (pass --rebuild to force a fresh one)`);
+    return;
+  }
+  console.log(
+    `  building --serve bundle into ${dir} ` +
+      (rebuild ? '(--rebuild forced) ...' : '(none found yet) ...'),
+  );
+  const proc = spawn('npx', ['vite', 'build', '--outDir', dir], {
+    env: { ...process.env, VITE_DATA_BASE_URL: '', VITE_COUNTERSCALE_URL: '' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const tailLines: string[] = [];
+  const collect = (chunk: Buffer): void => {
+    for (const line of chunk.toString().split('\n')) {
+      if (line.trim() !== '') tailLines.push(line);
+    }
+    if (tailLines.length > BUILD_LOG_TAIL_LINES) {
+      tailLines.splice(0, tailLines.length - BUILD_LOG_TAIL_LINES);
+    }
+  };
+  proc.stdout?.on('data', collect);
+  proc.stderr?.on('data', collect);
+  const code = await new Promise<number | null>((resolve, reject) => {
+    proc.once('error', (err: NodeJS.ErrnoException) => {
+      reject(
+        err.code === 'ENOENT'
+          ? new Error("'npx' not found on PATH — the --serve build shells out to it")
+          : err,
+      );
+    });
+    proc.once('close', resolve);
+  });
+  if (code !== 0) {
+    throw new Error(`vite build exited with code ${String(code)} — tail:\n${tailLines.join('\n')}`);
+  }
+}
+
+/**
+ * Vite's default `copyPublicDir` copies the whole `public/` tree — including
+ * `data/`, ~100 MB of catalog `.bin` files, when this worktree has them on
+ * disk — into the outDir verbatim on every build. --serve replaces that
+ * one-time snapshot with a symlink back at this worktree's public/data/ so
+ * a reused build (no --rebuild) still serves whatever the catalog currently
+ * is, and so a build doesn't silently double disk usage. Repairs whatever it
+ * finds at the link path — a stale symlink (wrong target, or dangling
+ * because public/data/ moved), or vite's own copied directory — rather than
+ * trusting it.
+ */
+function ensureDataSymlink(dir: string): void {
+  const linkPath = resolvePath(dir, 'data');
+  const target = resolvePath('public/data');
+  let stat: ReturnType<typeof lstatSync> | undefined;
+  try {
+    stat = lstatSync(linkPath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+  if (stat !== undefined) {
+    if (stat.isSymbolicLink()) {
+      const resolvedExisting = resolvePath(dirname(linkPath), readlinkSync(linkPath));
+      if (resolvedExisting === target && existsSync(linkPath)) return; // correct and not dangling
+      console.log(`  repairing stale --serve data symlink at ${linkPath}`);
+      unlinkSync(linkPath);
+    } else {
+      console.log(`  replacing vite's copied ${linkPath} with a symlink to keep data current`);
+      rmSync(linkPath, { recursive: true, force: true });
+    }
+  }
+  symlinkSync(target, linkPath, 'dir');
+  console.log(`  linked ${linkPath} -> ${target}`);
+}
+
+type PreviewHandle = {
+  proc: ChildProcess;
+  /** The URL vite actually bound — see parsePreviewUrl for why this can't be assumed. */
+  url: string;
+};
+
+/**
+ * Spawn `vite preview` over the --serve build and read back the URL it
+ * actually bound (strictPort is left off, so a busy SERVE_PORT just bumps —
+ * assuming the requested port held would silently record against nothing).
+ * Mirrors spawnFfmpeg's spawn/error race for the ENOENT case; the ready wait
+ * adds a timeout because there is no bounded "it will definitely print a URL
+ * eventually" guarantee the way ffmpeg's close event gives one.
+ */
+async function spawnPreviewServer(dir: string, port: number): Promise<PreviewHandle> {
+  const proc = spawn('npx', ['vite', 'preview', '--outDir', dir, '--port', String(port)], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  await new Promise<void>((resolve, reject) => {
+    proc.once('spawn', () => resolve());
+    proc.once('error', (err: NodeJS.ErrnoException) => {
+      reject(
+        err.code === 'ENOENT'
+          ? new Error("'npx' not found on PATH — the --serve preview shells out to it")
+          : err,
+      );
+    });
+  });
+  const url = await new Promise<string>((resolve, reject) => {
+    const onData = (chunk: Buffer): void => {
+      const found = parsePreviewUrl(chunk.toString());
+      if (found !== undefined) {
+        clearTimeout(timer);
+        proc.stdout?.off('data', onData);
+        proc.off('close', onClose);
+        resolve(found);
+      }
+    };
+    const onClose = (code: number | null): void => {
+      clearTimeout(timer);
+      reject(
+        new Error(`vite preview exited with code ${String(code)} before printing a 'Local:' URL`),
+      );
+    };
+    const timer = setTimeout(() => {
+      proc.stdout?.off('data', onData);
+      proc.off('close', onClose);
+      reject(new Error(`vite preview gave no 'Local:' URL within ${PREVIEW_READY_TIMEOUT_MS} ms`));
+    }, PREVIEW_READY_TIMEOUT_MS);
+    proc.stdout?.on('data', onData);
+    proc.once('close', onClose);
+  });
+  return { proc, url };
 }
 
 /**
@@ -752,136 +948,154 @@ async function ffprobeReport(
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  // The pin is the SIM clock, resolved once before anything spawns so the URL
-  // and the banner name the same instant (module header: two clocks).
-  const simTime = options.simTime ?? new Date();
-  const captureUrl = buildCaptureUrl({ base: options.url, simTime });
-
-  // Resolve the subject up front so an id typo fails before any process spawns.
-  let take: Take;
-  let frameCap: number;
-  let subjectLine: string;
-  // Set only for a `loop: true` clip; printed after the banner below and
-  // threaded onto `take` so captureTake's frame loop can stop on count
-  // instead of polling the never-resolving clip-end status.
-  let loopNote: string | undefined;
-  if (options.clipId !== undefined) {
-    const clip = (clipRegistry as Record<string, Clip>)[options.clipId];
-    if (clip === undefined) {
-      throw new Error(
-        `unknown clip '${options.clipId}' — known: ${Object.keys(clipRegistry).join(', ')}`,
-      );
-    }
-    // The J2000 snapshot is the right source for the cap: only a clip's START
-    // POSE depends on the instant, its authored durations do not.
-    frameCap = clipFrameCap(clip.data, options.fps);
-    subjectLine = `clip '${clip.id}' — ${clip.label}`;
-
-    let loopFrames: number | undefined;
-    if (clip.data.loop === true) {
-      const durationSec = clipDurationSec(clip.data);
-      loopFrames = loopCycleFrameCount(durationSec, options.fps);
-      loopNote = `looping clip — recording one seamless cycle (${loopFrames} frames)`;
-      // Q4 (grill session): duration × fps need not land on the frame grid —
-      // round rather than error, and say so.
-      const exactFrames = durationSec * options.fps;
-      if (!Number.isInteger(exactFrames)) {
-        const seamOffsetMs = ((loopFrames - exactFrames) / options.fps) * 1000;
-        loopNote +=
-          `\n  note: ${durationSec}s × ${options.fps}fps = ${exactFrames} is not a whole ` +
-          `number of frames — rounded to ${loopFrames}, a ${seamOffsetMs.toFixed(2)} ms seam offset`;
-      }
-    }
-    take = { kind: 'clip', id: clip.id, loopFrames };
-  } else {
-    const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
-    if (tour === undefined) {
-      throw new Error(
-        `unknown tour '${options.tourId}' — known: ${Object.keys(tourRegistry).join(', ')}`,
-      );
-    }
-    const beats: BeatRange = options.beats ?? { from: 0, to: tour.beats.length - 1 };
-    // The cap helper sums whatever slice it is given; slicing to the requested
-    // range here is the caller contract its docstring names. Beat indices are
-    // the 0-based '#' column of `npm run tour-length`.
-    const slicedBeats = tour.beats.slice(beats.from, beats.to + 1);
-    if (slicedBeats.length === 0) {
-      throw new Error(
-        `--beats ${beats.from}..${beats.to} selects no beats — '${tour.id}' has ` +
-          `${tour.beats.length} beats (indices 0..${tour.beats.length - 1}; ` +
-          "see 'npm run tour-length')",
-      );
-    }
-    take = { kind: 'tour', id: tour.id, beats };
-    frameCap = tourFrameCap(slicedBeats, options.fps);
-    subjectLine =
-      `tour '${tour.id}' beats ${beats.from}..${beats.to} ` +
-      `(${slicedBeats.length} of ${tour.beats.length})`;
+  // --serve stands up its own production server and points the rest of main
+  // at it — everything from here down (through the DONE banner) runs inside
+  // a try/finally purely to guarantee this child is killed on every path out
+  // of main, success or failure, without duplicating a kill call at each of
+  // the several places the ffmpeg block below already handles its own child.
+  let preview: PreviewHandle | undefined;
+  if (options.serve) {
+    console.log('record — --serve: self-hosting a production build for this take');
+    await ensureServeBuild(SERVE_BUILD_DIR, options.rebuild);
+    ensureDataSymlink(SERVE_BUILD_DIR);
+    preview = await spawnPreviewServer(SERVE_BUILD_DIR, SERVE_PORT);
+    options.url = preview.url;
+    console.log(`  serving at ${preview.url} (no dev-client HMR — immune to reload-mid-take)`);
   }
-
-  // Default output name = take + size + fps + timestamp, so successive
-  // default-flag takes (or a smoke against a different tour) never silently
-  // overwrite a previous film — ffmpeg runs -y. An explicit --out is exact
-  // and CAN overwrite: a fixed name is then the operator's stated intent.
-  // The banner below prints the resolved path either way.
-  const out =
-    options.out ??
-    defaultOutName({
-      takeId: take.id,
-      width: options.size.width,
-      height: options.size.height,
-      fps: options.fps,
-      now: new Date(),
-    });
-
-  console.log(`record — ${subjectLine}`);
-  console.log(
-    `  ${options.size.width}x${options.size.height} @ ${options.fps} fps ` +
-      `(viewport ${options.size.width / options.dpr}x${options.size.height / options.dpr} ` +
-      `@ dpr ${options.dpr}) → ${out}`,
-  );
-  console.log(
-    `  sim time pinned: ${simTime.toISOString()}  ` +
-      `(re-take with --sim-time ${simTime.toISOString()})`,
-  );
-  if (loopNote !== undefined) console.log(loopNote);
-
-  // ffmpeg first: a missing binary should fail in milliseconds, not after a
-  // browser launch and a full app boot.
-  const ffmpeg = await spawnFfmpeg(options.fps, out);
-  let frames: number;
   try {
-    const browser = await launchChromium();
-    try {
-      frames = await captureTake(browser, options, take, captureUrl, frameCap, (png) =>
-        writeFrame(ffmpeg.stdin, png),
-      );
-    } finally {
-      await browser.close();
-    }
-    // Closing stdin is ffmpeg's end-of-stream signal; it then finalizes the
-    // container and exits. A nonzero code means the file is not trustworthy.
-    ffmpeg.stdin.end();
-    const code = await ffmpeg.exited;
-    if (code !== 0) {
-      throw new Error(`ffmpeg exited with code ${String(code)} — see the stderr tail below`);
-    }
-  } catch (err) {
-    if (ffmpeg.proc.exitCode === null) ffmpeg.proc.kill('SIGKILL');
-    const tail = ffmpeg.stderrTail();
-    if (tail !== '') console.error(`\n--- ffmpeg stderr (tail) ---\n${tail}`);
-    throw err;
-  }
+    // The pin is the SIM clock, resolved once before anything spawns so the URL
+    // and the banner name the same instant (module header: two clocks).
+    const simTime = options.simTime ?? new Date();
+    const captureUrl = buildCaptureUrl({ base: options.url, simTime });
 
-  const probe = await ffprobeReport(out);
-  console.log(`\nDONE — ${out}`);
-  console.log(
-    `  captured frames: ${frames}  ` +
-      (take.kind === 'clip' && take.loopFrames !== undefined
-        ? '(one seamless cycle)'
-        : `(cap was ${frameCap})`),
-  );
-  console.log(`  ffprobe: ${probe.width}x${probe.height}, nb_frames ${probe.nbFrames}`);
+    // Resolve the subject up front so an id typo fails before any process spawns.
+    let take: Take;
+    let frameCap: number;
+    let subjectLine: string;
+    // Set only for a `loop: true` clip; printed after the banner below and
+    // threaded onto `take` so captureTake's frame loop can stop on count
+    // instead of polling the never-resolving clip-end status.
+    let loopNote: string | undefined;
+    if (options.clipId !== undefined) {
+      const clip = (clipRegistry as Record<string, Clip>)[options.clipId];
+      if (clip === undefined) {
+        throw new Error(
+          `unknown clip '${options.clipId}' — known: ${Object.keys(clipRegistry).join(', ')}`,
+        );
+      }
+      // The J2000 snapshot is the right source for the cap: only a clip's START
+      // POSE depends on the instant, its authored durations do not.
+      frameCap = clipFrameCap(clip.data, options.fps);
+      subjectLine = `clip '${clip.id}' — ${clip.label}`;
+
+      let loopFrames: number | undefined;
+      if (clip.data.loop === true) {
+        const durationSec = clipDurationSec(clip.data);
+        loopFrames = loopCycleFrameCount(durationSec, options.fps);
+        loopNote = `looping clip — recording one seamless cycle (${loopFrames} frames)`;
+        // Q4 (grill session): duration × fps need not land on the frame grid —
+        // round rather than error, and say so.
+        const exactFrames = durationSec * options.fps;
+        if (!Number.isInteger(exactFrames)) {
+          const seamOffsetMs = ((loopFrames - exactFrames) / options.fps) * 1000;
+          loopNote +=
+            `\n  note: ${durationSec}s × ${options.fps}fps = ${exactFrames} is not a whole ` +
+            `number of frames — rounded to ${loopFrames}, a ${seamOffsetMs.toFixed(2)} ms seam offset`;
+        }
+      }
+      take = { kind: 'clip', id: clip.id, loopFrames };
+    } else {
+      const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
+      if (tour === undefined) {
+        throw new Error(
+          `unknown tour '${options.tourId}' — known: ${Object.keys(tourRegistry).join(', ')}`,
+        );
+      }
+      const beats: BeatRange = options.beats ?? { from: 0, to: tour.beats.length - 1 };
+      // The cap helper sums whatever slice it is given; slicing to the requested
+      // range here is the caller contract its docstring names. Beat indices are
+      // the 0-based '#' column of `npm run tour-length`.
+      const slicedBeats = tour.beats.slice(beats.from, beats.to + 1);
+      if (slicedBeats.length === 0) {
+        throw new Error(
+          `--beats ${beats.from}..${beats.to} selects no beats — '${tour.id}' has ` +
+            `${tour.beats.length} beats (indices 0..${tour.beats.length - 1}; ` +
+            "see 'npm run tour-length')",
+        );
+      }
+      take = { kind: 'tour', id: tour.id, beats };
+      frameCap = tourFrameCap(slicedBeats, options.fps);
+      subjectLine =
+        `tour '${tour.id}' beats ${beats.from}..${beats.to} ` +
+        `(${slicedBeats.length} of ${tour.beats.length})`;
+    }
+
+    // Default output name = take + size + fps + timestamp, so successive
+    // default-flag takes (or a smoke against a different tour) never silently
+    // overwrite a previous film — ffmpeg runs -y. An explicit --out is exact
+    // and CAN overwrite: a fixed name is then the operator's stated intent.
+    // The banner below prints the resolved path either way.
+    const out =
+      options.out ??
+      defaultOutName({
+        takeId: take.id,
+        width: options.size.width,
+        height: options.size.height,
+        fps: options.fps,
+        now: new Date(),
+      });
+
+    console.log(`record — ${subjectLine}`);
+    console.log(
+      `  ${options.size.width}x${options.size.height} @ ${options.fps} fps ` +
+        `(viewport ${options.size.width / options.dpr}x${options.size.height / options.dpr} ` +
+        `@ dpr ${options.dpr}) → ${out}`,
+    );
+    console.log(
+      `  sim time pinned: ${simTime.toISOString()}  ` +
+        `(re-take with --sim-time ${simTime.toISOString()})`,
+    );
+    if (loopNote !== undefined) console.log(loopNote);
+
+    // ffmpeg first: a missing binary should fail in milliseconds, not after a
+    // browser launch and a full app boot.
+    const ffmpeg = await spawnFfmpeg(options.fps, out);
+    let frames: number;
+    try {
+      const browser = await launchChromium();
+      try {
+        frames = await captureTake(browser, options, take, captureUrl, frameCap, (png) =>
+          writeFrame(ffmpeg.stdin, png),
+        );
+      } finally {
+        await browser.close();
+      }
+      // Closing stdin is ffmpeg's end-of-stream signal; it then finalizes the
+      // container and exits. A nonzero code means the file is not trustworthy.
+      ffmpeg.stdin.end();
+      const code = await ffmpeg.exited;
+      if (code !== 0) {
+        throw new Error(`ffmpeg exited with code ${String(code)} — see the stderr tail below`);
+      }
+    } catch (err) {
+      if (ffmpeg.proc.exitCode === null) ffmpeg.proc.kill('SIGKILL');
+      const tail = ffmpeg.stderrTail();
+      if (tail !== '') console.error(`\n--- ffmpeg stderr (tail) ---\n${tail}`);
+      throw err;
+    }
+
+    const probe = await ffprobeReport(out);
+    console.log(`\nDONE — ${out}`);
+    console.log(
+      `  captured frames: ${frames}  ` +
+        (take.kind === 'clip' && take.loopFrames !== undefined
+          ? '(one seamless cycle)'
+          : `(cap was ${frameCap})`),
+    );
+    console.log(`  ffprobe: ${probe.width}x${probe.height}, nb_frames ${probe.nbFrames}`);
+  } finally {
+    if (preview !== undefined && preview.proc.exitCode === null) preview.proc.kill('SIGTERM');
+  }
 }
 
 main().catch((err) => {
