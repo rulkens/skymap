@@ -140,7 +140,8 @@ deletion — follow-up PRs, each mechanical.
 
 ## Open items
 
-- PR packaging per track: proposed separate PRs; **awaiting user confirmation**.
+- PR packaging per track: **CONFIRMED 2026-08-17 — one PR per track** (A, B,
+  then C; long-tail migrations as follow-up PRs).
 - Tier story: `MILKY_WAY_STARS_PER_TIER` + watchTierSaga bridge deleted with v1,
   no replacement (field cost is tier-independent). Decided, listed here for
   visibility.
