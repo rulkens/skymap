@@ -463,10 +463,16 @@ async function captureTake(
   // forcibly closing that socket mid-take and observing the exact vanish).
   // `location.reload` itself can't be neutered — Location's operations are
   // unforgeable own properties, so `location.reload = fn` silently no-ops.
-  // This targets only the 'close' listener, not the socket's OTHER message
-  // handling: Vite's separate cold-cache dependency-optimization recovery
-  // (`full-reload`) is a message pushed over a socket that's still OPEN, so
-  // it still gets through — only the lost-connection reload path is cut.
+  //
+  // That fix left one seam open on purpose: Vite's MESSAGE-driven
+  // `full-reload` (server → client over the still-open socket) still reached
+  // `location.reload()`, because cold-start dependency-optimization recovery
+  // needs exactly that path during boot. A forced repro (touching
+  // tsconfig.json mid-take pushes `full-reload`) shows the SAME message,
+  // arriving mid-take instead of at boot, produces the exact vanish. Below, a
+  // page-side flag armed only AFTER `awaitCaptureReady` (never during boot)
+  // drops `full-reload` payloads specifically — every other message type,
+  // and the boot-time path before the flag is armed, is untouched.
   await context.addInitScript(() => {
     const NativeWebSocket = window.WebSocket;
     window.WebSocket = new Proxy(NativeWebSocket, {
@@ -474,11 +480,51 @@ async function captureTake(
         const instance = Reflect.construct(target, args, newTarget) as WebSocket;
         // The HMR socket alone carries Vite's connection token; every other
         // websocket the app itself opens (none today, but the guard is
-        // narrow on purpose) keeps its normal 'close' behaviour.
+        // narrow on purpose) keeps its normal behaviour.
         if (!String(args[0]).includes('token=')) return instance;
         const nativeAddEventListener = instance.addEventListener.bind(instance);
+        // Diagnostics, independent of the suppression below: log every HMR
+        // message and every native close, so a future vanish names its
+        // mechanism instead of leaving the harness guessing. These use
+        // the ORIGINAL addEventListener, bypassing the override further
+        // down, so they still fire for a message this take goes on to drop.
+        nativeAddEventListener('message', ((event: MessageEvent) => {
+          try {
+            const payload = JSON.parse(String(event.data)) as { type?: string; path?: string };
+            console.info(
+              `[recorder-diag] hmr message type=${payload.type ?? '?'}` +
+                (payload.path !== undefined ? ` path=${payload.path}` : ''),
+            );
+          } catch {
+            // Not a JSON HMR frame (e.g. the 'vite-ping' subprotocol keepalive) — ignore.
+          }
+        }) as EventListener);
+        nativeAddEventListener('close', ((event: CloseEvent) => {
+          console.info(
+            `[recorder-diag] hmr socket closed code=${event.code} reason=${event.reason}`,
+          );
+        }) as EventListener);
         instance.addEventListener = ((type: string, listener: unknown, opts?: unknown) => {
           if (type === 'close') return;
+          if (type === 'message') {
+            const wrapped = (event: MessageEvent) => {
+              const w = window as unknown as { __recorderSuppressFullReload?: boolean };
+              if (w.__recorderSuppressFullReload === true) {
+                try {
+                  const payload = JSON.parse(String(event.data)) as { type?: string };
+                  if (payload.type === 'full-reload') {
+                    console.info('[recorder-diag] suppressed full-reload message during take');
+                    return;
+                  }
+                } catch {
+                  // Not a JSON HMR frame — fall through to the real listener.
+                }
+              }
+              (listener as (e: MessageEvent) => void).call(instance, event);
+            };
+            nativeAddEventListener('message', wrapped as never, opts as never);
+            return;
+          }
           nativeAddEventListener(type as never, listener as never, opts as never);
         }) as typeof instance.addEventListener;
         return instance;
@@ -486,11 +532,33 @@ async function captureTake(
     });
   });
   const page = await context.newPage();
+  // Persistent mid-take diagnostics (round 2): every navigation or vite-client
+  // console line gets a timestamped, frame-numbered log line, and the most
+  // recent one lands inside the vanish error itself (see the status-poll
+  // loop below) so a future failure names what happened instead of just that
+  // something did.
+  const takeStartedAt = Date.now();
+  let framesSoFar = 0;
+  let lastDiagLine: string | undefined;
+  const logDiag = (label: string, detail: string): void => {
+    const line =
+      `[diag] t+${((Date.now() - takeStartedAt) / 1000).toFixed(1)}s frame ${framesSoFar}: ` +
+      `${label} ${detail}`;
+    console.warn(line);
+    lastDiagLine = line;
+  };
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) logDiag('framenavigated', frame.url());
+  });
+  page.on('crash', () => logDiag('page crash', '(page.on("crash") fired)'));
   // Surface page-side failures immediately — a dead take should explain
   // itself in the harness output, not require reproducing in a headed run.
   page.on('pageerror', (err) => console.warn(`[page] error: ${err.message}`));
   page.on('console', (msg) => {
     if (msg.type() === 'error') console.warn(`[page] console.error: ${msg.text()}`);
+    if (msg.text().startsWith('[vite]') || msg.text().startsWith('[recorder-diag]')) {
+      logDiag('console', msg.text());
+    }
   });
 
   console.log(`loading ${captureUrl} ...`);
@@ -501,6 +569,8 @@ async function captureTake(
   // virtual-time or take state exists yet to lose. Once virtual time is
   // paused (below), a navigation destroys the virtual clock and the running
   // take with it, so the capture loop deliberately has no such tolerance.
+  // The suppression flag below is NOT armed yet during this loop — cold-start
+  // full-reload recovery must keep working here.
   for (let navigations = 0; ; navigations++) {
     try {
       await awaitCaptureReady(page, captureUrl);
@@ -513,6 +583,13 @@ async function captureTake(
       );
     }
   }
+
+  // Arm the mid-take full-reload suppression only now that boot has settled —
+  // see the addInitScript comment above for why this can't be armed earlier.
+  await page.evaluate(() => {
+    (window as unknown as { __recorderSuppressFullReload?: boolean }).__recorderSuppressFullReload =
+      true;
+  });
 
   // Pause BEFORE kicking the take — see the module header's choreography
   // section. From here on, page time advances only by explicit grants.
@@ -576,6 +653,7 @@ async function captureTake(
   );
   let frame = 0;
   while (true) {
+    framesSoFar = frame; // keeps the diagnostics above frame-accurate
     // Poll the bridge at the frame boundary (module header: deterministic
     // stop frame). Checked BEFORE granting so a take that ends inside grant N
     // yields exactly N captured frames, the last one showing the final pose.
@@ -583,7 +661,11 @@ async function captureTake(
       () => (window as unknown as RecorderPageWindow).__recorderTakeStatus,
     );
     if (status === undefined) {
-      throw new Error('__recorderTakeStatus vanished — did the page reload mid-take?');
+      throw new Error(
+        '__recorderTakeStatus vanished — did the page reload mid-take? ' +
+          `page.url() now: ${page.url()} · last diagnostic: ` +
+          (lastDiagLine ?? '(none — no navigation/console signal was observed before this)'),
+      );
     }
     if (status.error !== null) {
       throw new Error(`the take's start promise rejected in-page: ${status.error}`);
