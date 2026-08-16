@@ -29,7 +29,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Source } from '../data/sources';
-import { buildAliasIndex } from './buildAliasIndex';
+import { buildAliasIndex } from '../utils/galaxy/buildAliasIndex';
 import { useAppSelector } from '../store/hooks';
 import { selectSourceCounts } from '../state/engine/selectors';
 import type { AliasIndexEntry } from '../@types/engine/AliasIndexEntry';

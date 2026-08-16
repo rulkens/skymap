@@ -8,10 +8,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildAliasIndex } from '../../src/hooks/buildAliasIndex';
-import { Source } from '../../src/data/sources';
-import type { EngineHandle } from '../../src/@types/engine/EngineHandle';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import { buildAliasIndex } from '../../../src/utils/galaxy/buildAliasIndex';
+import { Source } from '../../../src/data/sources';
+import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
+import type { SourceType } from '../../../src/@types/data/SourceType';
 
 /**
  * Build a minimal `EngineHandle` whose only live method is
