@@ -205,7 +205,7 @@ export const SCALE_FADE_BANDS = {
   // at the large-distance edge — the opposite direction from `constellations`,
   // since this band explains a COSMIC-scale catalog gap rather than a near-field
   // sky figure. The multiples are an eye-tuning STARTING POINT, tuned visually
-  // at the gate-fix checkpoint.
+  // against the rendered band.
   zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same

@@ -90,9 +90,9 @@ describe('watchFadesSaga', () => {
   });
 
   // ── setZoneOfAvoidanceEnabled — the single band+label toggle ───────────────
-  // Regression coverage for the dead-toggle defect: Task 7 added the fade
-  // rows in fadeLayers.ts but no FADE_ROW entry, so toggling wrote the store
-  // and nothing ever called syncFades. This is the test that would have
+  // Regression coverage for the dead-toggle defect: fadeLayers.ts can carry
+  // fade rows with no matching FADE_ROW entry, so toggling writes the store
+  // and nothing ever calls syncFades. This is the test that would have
   // caught it.
 
   it('setZoneOfAvoidanceEnabled(true) → syncFades(["zoneOfAvoidance"]) called', () => {

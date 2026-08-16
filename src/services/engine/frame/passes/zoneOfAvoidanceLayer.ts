@@ -1,7 +1,8 @@
 /**
- * zoneOfAvoidanceLayer — PRODUCER half of the ZoA guide band: ray-marches
- * the shell into the reduced-res `zoa` offscreen (gate-fix 6 — full-res was
- * "pretty horrendous" per the visual gate). The consumer,
+ * zoneOfAvoidanceLayer — the reduced-res producer half of the ZoA guide
+ * band: ray-marches the shell into the reduced-res `zoa` offscreen (a
+ * full-res march is needless cost — the band is smooth low-frequency haze
+ * an upsample reconstructs losslessly). The consumer,
  * `zoneOfAvoidanceUpsampleLayer`, composites this into HDR and draws the
  * full-res lettering. Both gate on `deriveZoneOfAvoidanceLiveness`, which
  * also carries the renderer-null check, so producer/consumer can't disagree
@@ -12,7 +13,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
-// Shell shape — visual-checkpoint placeholders (Task 9), Mpc / degrees.
+// Shell shape — visual-pass placeholders, Mpc / degrees.
 const INNER_RADIUS_MPC = 3;
 const OUTER_RADIUS_MPC = 380;
 const BULGE_DEG = 10;

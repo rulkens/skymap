@@ -1,9 +1,9 @@
 /**
- * zoneOfAvoidanceUpsampleLayer — CONSUMER half of the ZoA guide band:
+ * zoneOfAvoidanceUpsampleLayer — the consumer half of the ZoA guide band:
  * additively composites the reduced-res `zoa` offscreen (`zoneOfAvoidanceLayer`'s
  * raymarch) into HDR, then draws the full-res curved lettering in the same
- * HDR pass — MSDF text at 1/5 res would blur past legibility, so it can't
- * ride the producer's reduced-res target (gate-fix 6). Both halves gate on
+ * HDR pass — MSDF text at reduced res would blur past legibility, so it
+ * can't ride the producer's reduced-res target. Both halves gate on
  * `deriveZoneOfAvoidanceLiveness`, so this layer never composites (or
  * captions) an offscreen the producer skipped this frame, and never opens
  * against a null renderer.
@@ -13,7 +13,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
-/** Curved-lettering circle radius, Mpc — visual-checkpoint placeholder (Task 10). */
+/** Curved-lettering circle radius, Mpc — visual-pass placeholder. */
 const LABEL_RADIUS_MPC = 40;
 
 export const zoneOfAvoidanceUpsampleLayer: ContentLayer = {

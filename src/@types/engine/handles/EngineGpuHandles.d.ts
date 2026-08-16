@@ -381,9 +381,9 @@ export type EngineGpuHandles = {
   /**
    * Reduced-res-to-HDR composite for the zone-of-avoidance guide band. Reads
    * the `zoa` offscreen that `zoneOfAvoidanceLayer` drew the additive band
-   * raymarch into and blends it into HDR (gate-fix 6). A THIRD instance of
-   * the same generic factory, deliberately not the volume's or the Milky
-   * Way's handle, so the three subsystems' gates stay independent. Null
+   * raymarch into and blends it into HDR. Another instance of the same
+   * generic factory, deliberately not the volume's or the Milky Way's
+   * handle, so the three subsystems' gates stay independent. Null
    * until `initGpu` constructs it (same phase as `volumeUpsample`). Excluded
    * from `isEngineReady` — when null, `zoneOfAvoidanceUpsampleLayer` skips
    * its blit (the full-res lettering draw is gated separately, on

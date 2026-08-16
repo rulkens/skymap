@@ -1,6 +1,6 @@
 /**
- * zoneOfAvoidanceUpsampleLayer tests — the CONSUMER half of gate-fix 6: the
- * hdr-target layer that composites the reduced-res `zoa` offscreen into HDR
+ * zoneOfAvoidanceUpsampleLayer tests — the consumer half of the reduced-res
+ * band: the hdr-target layer that composites the reduced-res `zoa` offscreen into HDR
  * (`state.gpu.zoneOfAvoidanceUpsample`) and then draws the band's full-res
  * curved lettering (`state.gpu.zoneOfAvoidanceRenderer.drawLabels`) — the two
  * halves are independently null-guarded, so either GPU handle being absent

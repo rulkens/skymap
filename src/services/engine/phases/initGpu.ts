@@ -401,9 +401,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Reduced-res-to-HDR zone-of-avoidance band composite ────────────
   //
-  // A THIRD instance of the same generic factory (gate-fix 6). Deliberately
-  // not the volume's or the Milky Way's handle — sharing one would braid
-  // three independently-gated subsystems onto a single resource.
+  // Another instance of the same generic factory. Deliberately not the
+  // volume's or the Milky Way's handle — sharing one would braid three
+  // independently-gated subsystems onto a single resource.
   state.gpu.zoneOfAvoidanceUpsample = createAdditiveUpsample(device, 'rgba16float');
 
   // ── Half-res survey-star aggregate upsample composite ─────────────

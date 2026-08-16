@@ -247,7 +247,7 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // (its own target), before the hdr group upsamples it in. Not an hdr-group
   // member: it targets 'volume', so the hdr render step excludes it.
   scalarVolumeLayer,
-  // The zone-of-avoidance band's PRODUCER (gate-fix 6): its own reduced-res
+  // The zone-of-avoidance band's PRODUCER: its own reduced-res
   // 'zoa' target, listed beside scalar-volume for the same reason — a
   // different target keeps it out of every other group's filter regardless
   // of array position.

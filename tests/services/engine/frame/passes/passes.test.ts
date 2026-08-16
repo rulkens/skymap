@@ -388,8 +388,8 @@ describe('CONTENT_LAYERS blend legality', () => {
       ) {
         // These four reduced-resolution offscreens accumulate the same way
         // their contents would have accumulated straight into HDR — the
-        // raymarched volume, the zone-of-avoidance band raymarch (gate-fix
-        // 6), the survey aggregate glow, and the Milky Way cloud's star
+        // raymarched volume, the zone-of-avoidance band raymarch, the
+        // survey aggregate glow, and the Milky Way cloud's star
         // billboards are all additive sums, which is what makes "render
         // small, bilinearly upsample, add" equivalent to drawing them
         // full-res. A non-additive row here would break that equivalence, so

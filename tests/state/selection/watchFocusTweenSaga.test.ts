@@ -217,7 +217,7 @@ describe('watchFocusTweenSaga', () => {
   // ROW_FOCUSABLE filters it out here, the ONE place every updateSelectionFocus
   // dispatch (including a future band double-click) funnels through. If this
   // filter is ever removed, this test fails against that throw instead of the
-  // crash surfacing only once band picking (Task 12) makes the ref reachable.
+  // crash surfacing only once band picking makes the ref reachable.
   it('a zoneOfAvoidance focus is a silent no-op (no tween, no throw)', async () => {
     store.dispatch(updateSelectionFocus({ type: 'zoneOfAvoidance' }));
     await flush();

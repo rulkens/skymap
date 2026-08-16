@@ -4,11 +4,11 @@
  * hdr-composite + full-res lettering) consume to decide whether the band is
  * live this frame, and at what opacity.
  *
- * Pre gate-fix-6 the composition (`zoneOfAvoidanceLayerOpacity(camDist,
- * resolveLayerOpacity(...))`) was inlined directly in the single
- * `zoneOfAvoidanceLayer`; these tests pin the ONE derivation both split
- * layers now share, including the `volumeLiveness.ts`-mirroring gate on
- * `state.gpu.zoneOfAvoidanceRenderer` (no empty pass opens pre-bootstrap).
+ * These tests pin the ONE derivation both layers share — the composed
+ * opacity (`zoneOfAvoidanceLayerOpacity(camDist, resolveLayerOpacity(...))`)
+ * so producer and consumer can't disagree, including the
+ * `volumeLiveness.ts`-mirroring gate on `state.gpu.zoneOfAvoidanceRenderer`
+ * (no empty pass opens pre-bootstrap).
  */
 
 import { describe, it, expect, vi } from 'vitest';

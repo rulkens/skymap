@@ -237,26 +237,23 @@ export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
  * b=0 rather than leaving it looking like a data gap.  A plain `true` literal
  * like `DEFAULT_ORBIT_TRAILS_ENABLED`, not registry-derived like
  * `DEFAULT_MILKY_WAY_ENABLED`: `ZONE_OF_AVOIDANCE_ENTRY.visible` exists for
- * internal registry consistency but is not itself this default's source (see
- * Task 2's report).
+ * internal registry consistency but is not itself this default's source.
  */
 export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
 
 /**
- * Zone-of-Avoidance look-knob starting values. Placeholders for the Task 9/11
- * visual checkpoints and the Task 13 DebugPanel section to dial live — a dim
- * warm-amber veil in the ballpark of real interstellar-dust extinction color,
- * not a calibrated result.
+ * Zone-of-Avoidance look-knob starting values, tuned live via the
+ * DebugPanel's tuning section — a dim warm-amber veil in the ballpark of
+ * real interstellar-dust extinction color, not a calibrated result.
  *
  * `radialFalloff` is a normalised [0, 1] fraction of the shell's radial span
- * (`outerRadiusMpc - innerRadiusMpc`, currently ~377 Mpc at the Task 8
- * placeholder radii) — the renderer converts it to an absolute Mpc
- * e-folding length before it reaches the shader, which decays density from
- * the inner rim outward (`exp(-(r - inner) / radialFalloffMpc)`). 0.1
- * (~38 Mpc) collapses the veil to a puff hugging the inner rim; 0.35
- * (~130 Mpc) keeps haze visible across the catalog volume while still
- * clearly fading toward the outer radius — a gate-fix starting point, still
- * tuned live via the DebugPanel slider.
+ * (`outerRadiusMpc - innerRadiusMpc`, currently ~377 Mpc for the shell's
+ * radii) — the renderer converts it to an absolute Mpc e-folding length
+ * before it reaches the shader, which decays density from the inner rim
+ * outward (`exp(-(r - inner) / radialFalloffMpc)`). 0.1 (~38 Mpc) collapses
+ * the veil to a puff hugging the inner rim; 0.35 (~130 Mpc) keeps haze
+ * visible across the catalog volume while still clearly fading toward the
+ * outer radius.
  */
 export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
   intensity: 0.37,

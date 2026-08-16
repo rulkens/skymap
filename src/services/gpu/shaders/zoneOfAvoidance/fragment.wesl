@@ -71,9 +71,9 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
       continue; // skip the trig below; also guards asin(z / r) since r > 0 here
     }
 
-    // WGSL port of Task 3's 'zoneOfAvoidanceBLimitDeg' TS twin
-    // (utils/math/zoneOfAvoidanceBLimitDeg.ts): half-width is a cosine bump
-    // over galactic longitude, widest toward the bulge (l=0).
+    // WGSL port of the 'zoneOfAvoidanceBLimitDeg' TS twin
+    // (utils/math/zoneOfAvoidanceBLimitDeg.ts) — keep in lockstep: half-width
+    // is a cosine bump over galactic longitude, widest toward the bulge (l=0).
     let galactic = worldToGalactic(p);
     let lon = atan2(galactic.y, galactic.x);
     let lat = asin(galactic.z / r);

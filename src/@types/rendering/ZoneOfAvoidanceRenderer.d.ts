@@ -2,17 +2,17 @@
  * ZoneOfAvoidanceRenderer — public handle for the galactic-plane dust-band
  * guide layer's band pass. Draws a translucent shell between
  * `innerRadiusMpc` and `outerRadiusMpc`, centred at the world origin (the
- * catalog observer), masked to the galactic-latitude wedge Task 3's
+ * catalog observer), masked to the galactic-latitude wedge the
  * `zoneOfAvoidanceBLimitDeg` formula describes.
  *
  * Same family as `HorizonShellRenderer`: a single, world-anchored impostor
  * whose fragment stage intersects each per-pixel view ray with the geometry
  * analytically, rather than rasterising a mesh.
  *
- * `drawLabels` (Task 10) draws the curved on-band "Zone of Avoidance"
- * lettering — discrete world-oriented MSDF glyph quads, a separate pipeline
- * from the band's fullscreen ray march (see zoneOfAvoidanceRenderer.ts's
- * header). `drawPick` is added by Task 12 — not stubbed here.
+ * `drawLabels` draws the curved on-band "Zone of Avoidance" lettering —
+ * discrete world-oriented MSDF glyph quads, a separate pipeline from the
+ * band's fullscreen ray march (see zoneOfAvoidanceRenderer.ts's header).
+ * `drawPick` lands with band picking — not stubbed here.
  */
 
 import type { OrbitCamera } from '../camera/OrbitCamera';

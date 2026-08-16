@@ -4,9 +4,9 @@
  * knob patch can never flip the layer's visibility by accident — the same
  * split `MilkyWayTuning` makes.
  *
- * Values here are visual-pass placeholders (Task 9/11 checkpoints, Task 13
- * DebugPanel section dial them for real); the shape and the direction of
- * each knob are the load-bearing part.
+ * Values here are visual-pass placeholders, tuned live via the DebugPanel
+ * tuning section; the shape and the direction of each knob are the
+ * load-bearing part.
  */
 
 import type { Vec3 } from '../math/Vec3';

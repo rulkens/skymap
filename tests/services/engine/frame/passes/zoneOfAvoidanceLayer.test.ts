@@ -1,7 +1,8 @@
 /**
  * zoneOfAvoidanceLayer tests — the reduced-resolution zone-of-avoidance band
  * raymarch as a ContentLayer (`target: 'zoa'`, `slab: COSMO`, `blend:
- * 'additive'`), gate-fix 6's producer half.
+ * 'additive'`), the reduced-res producer half (the upsample layer is the
+ * consumer).
  *
  * The executor owns the pass + the additive-identity `(0, 0, 0, 0)` clear;
  * this layer only draws. These tests pin the draw-arg contract (the
