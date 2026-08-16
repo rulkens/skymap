@@ -71,7 +71,9 @@ fn fsPick(input: VsOut) -> PickFSOut {
 
     let galactic = worldToGalactic(p);
     let lon = atan2(galactic.y, galactic.x);
-    let lat = asin(galactic.z / r);
+    // z and r round independently, so near the pole their ratio can land
+    // just past ±1 — asin is undefined there and the NaN survives the '<= 0' discards below.
+    let lat = asin(clamp(galactic.z / r, -1.0, 1.0));
     let bLimitDeg = u.anticenterDeg + (u.bulgeDeg - u.anticenterDeg) * (0.5 + 0.5 * cos(lon));
     let latDeg = degrees(lat);
 
