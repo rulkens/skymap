@@ -664,6 +664,11 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // periapsis and node geometrically meaningless — passed as 0, which
     // moonRatesFromPeriods's MIN_PRECESSION_YEARS guard freezes to zero
     // drift, the same degenerate-orbit case as Deimos/Dione/Tethys above.
+    // The page's own legend calls P "sidereal period" — the word that sends
+    // the Moon through moonRatesFromSiderealPeriods instead — but with both
+    // precession rates frozen above, meanAnomalyRate = meanLongitudeRate − 0
+    // − 0: sidereal and mean-anomaly readings of P coincide for THIS row.
+    // Revisit if JPL ever publishes nonzero e/i for Charon.
     id: 'charon',
     focusId: 'pluto',
     semiMajorKm: 19600,
