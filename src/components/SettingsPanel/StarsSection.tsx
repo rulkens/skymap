@@ -49,6 +49,7 @@ import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { SourceEntryBase } from '../../@types/data/SourceEntryBase';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -144,7 +145,14 @@ function StarsSection({
     >
       <CollapsibleSection title="Star catalogs" defaultOpen>
         {STAR_CATALOG_IDS.map((id) => {
-          const label = SOURCE_ENTRIES.find((e) => e.id === id)?.label ?? id;
+          // `plural` (not the singular `label`, which stays reserved for the
+          // InfoCard source badge) — this row is a toggle-header list entry,
+          // the same field the Labels section reads for its rows. Cast to the
+          // shared base: `plural` is optional there, but individual registry
+          // literals omit the key entirely when absent (bearsLabel: false),
+          // which TS won't structurally unify across the SOURCE_ENTRIES union.
+          const entry = SOURCE_ENTRIES.find((e) => e.id === id) as SourceEntryBase | undefined;
+          const label = entry?.plural ?? entry?.label ?? id;
           const count = counts?.[id];
           return (
             <div className={styles.panelRow} key={id}>
