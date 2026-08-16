@@ -99,7 +99,6 @@ export function makeSettingsFixture(
   return {
     orientation: DEFAULT_ORIENTATION,
     galaxyCatalogs: {
-      enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
@@ -198,7 +197,6 @@ export function makeSettingsFixture(
       },
     },
     structures: {
-      enabled: true,
       items: Object.fromEntries(
         STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
       ) as Record<StructureId, StructureItemSettings>,
