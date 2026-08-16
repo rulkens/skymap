@@ -132,6 +132,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Filaments + flow field lack scale fade bands** `ready` — both layers gate on user intent alone, with no zoom-based fade like the survey point clouds. → [details](backlog/2026-07-24-filaments-flow-scale-bands.md)
 - [ ] **NEAR0 distance gates mix two camera distances** `needs-design` — both are derived as camera-to-origin bounds and read against camera-to-target `ctx.cam.distance`. → [details](backlog/2026-07-30-camera-target-vs-origin-distance-gates.md)
 - [ ] **MW approach fade is keyed on the Sun** `needs-design` — alpha stays 1.0 to the black hole, so the impostor is blown out at the Galactic Centre. → [details](backlog/2026-07-31-milky-way-approach-fade-keyed-on-the-sun.md)
+- [ ] **Barycentric orbit pairs** `needs-design` — one-hop `focusId` pins Pluto (and Earth) instead of wobbling around the pair barycentre; needs an invisible focus-graph node. → [details](backlog/2026-08-16-barycentric-orbit-pairs.md)
+- [ ] **Pluto's minor moons (Styx/Nix/Kerberos/Hydra)** `blocked` — they orbit the barycentre, so honest placement waits on barycentric pairs. → [details](backlog/2026-08-16-barycentric-orbit-pairs.md)
 
 ## UI & UX
 
