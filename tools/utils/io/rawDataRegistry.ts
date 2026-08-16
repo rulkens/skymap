@@ -810,7 +810,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Pluto global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/USGS). Only the encounter hemisphere is well-resolved; ~296 MB.',
+      'USGS Astrogeology Pluto global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~296 MB.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -821,7 +821,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/USGS). Only the encounter hemisphere is well-resolved; ~77 MB.',
+      'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~77 MB.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
