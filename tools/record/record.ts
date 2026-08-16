@@ -453,6 +453,38 @@ async function captureTake(
     height: options.size.height / options.dpr,
   };
   const context = await browser.newContext({ viewport, deviceScaleFactor: options.dpr });
+  // Drop Vite's HMR client's 'close' listener on its own websocket, everywhere
+  // in the take, boot included. A long virtual-time-paused capture (module
+  // header: 4K can cost real seconds per frame) can far outlast whatever
+  // keeps that socket alive, and losing it makes the client poll for the
+  // server and then `location.reload()` (node_modules/vite/dist/client/
+  // client.mjs, the `vite:ws:disconnect` handler) — a real navigation that
+  // wipes `__recorderTakeStatus` out from under the frame loop (confirmed by
+  // forcibly closing that socket mid-take and observing the exact vanish).
+  // `location.reload` itself can't be neutered — Location's operations are
+  // unforgeable own properties, so `location.reload = fn` silently no-ops.
+  // This targets only the 'close' listener, not the socket's OTHER message
+  // handling: Vite's separate cold-cache dependency-optimization recovery
+  // (`full-reload`) is a message pushed over a socket that's still OPEN, so
+  // it still gets through — only the lost-connection reload path is cut.
+  await context.addInitScript(() => {
+    const NativeWebSocket = window.WebSocket;
+    window.WebSocket = new Proxy(NativeWebSocket, {
+      construct(target, args, newTarget) {
+        const instance = Reflect.construct(target, args, newTarget) as WebSocket;
+        // The HMR socket alone carries Vite's connection token; every other
+        // websocket the app itself opens (none today, but the guard is
+        // narrow on purpose) keeps its normal 'close' behaviour.
+        if (!String(args[0]).includes('token=')) return instance;
+        const nativeAddEventListener = instance.addEventListener.bind(instance);
+        instance.addEventListener = ((type: string, listener: unknown, opts?: unknown) => {
+          if (type === 'close') return;
+          nativeAddEventListener(type as never, listener as never, opts as never);
+        }) as typeof instance.addEventListener;
+        return instance;
+      },
+    });
+  });
   const page = await context.newPage();
   // Surface page-side failures immediately — a dead take should explain
   // itself in the harness output, not require reproducing in a headed run.
