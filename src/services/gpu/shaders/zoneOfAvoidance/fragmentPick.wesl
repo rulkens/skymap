@@ -27,6 +27,11 @@ const INNER_RIM_FRACTION: f32 = 0.05;
 // (~1.2e-7) to reliably beat the clear, while staying close enough to 1.0
 // that it loses to every real pickable's (much nearer) depth.
 const PICK_FALLBACK_DEPTH: f32 = 0.999999;
+// Below this fraction of the (pre-intensity) density mask, the band has
+// already faded past what the additive HDR target can show — floored here,
+// not on the post-intensity alpha, so the pickable footprint tracks the
+// PERCEPTIBLE band and doesn't shrink/grow with the intensity slider.
+const DENSITY_MASK_FLOOR: f32 = 0.02;
 
 @group(0) @binding(0) var<uniform> cam: CameraUniforms;
 @group(1) @binding(0) var<uniform> u: Uniforms;
@@ -92,7 +97,11 @@ fn fsPick(input: VsOut) -> PickFSOut {
   }
 
   let opticalLength = accum * stepLen;
-  let alpha = applyFade(u.intensity * opticalLength / u.outerRadiusMpc, u.fadeAlpha);
+  let densityMask = opticalLength / u.outerRadiusMpc;
+  if (densityMask <= DENSITY_MASK_FLOOR) {
+    discard;
+  }
+  let alpha = applyFade(u.intensity * densityMask, u.fadeAlpha);
   if (alpha <= 0.0) {
     discard;
   }
