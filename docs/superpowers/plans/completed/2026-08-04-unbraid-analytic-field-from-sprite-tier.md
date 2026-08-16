@@ -239,7 +239,7 @@ light→mass the other way by 0.2 dex — they point opposite ways and must not 
 - `docs/research/milky-way/literature.md` carries the sources above plus a "no halo light fraction
   by Hubble type exists" entry under _What we could not support_.
 
-**Manual smoke pass (owed — nothing here has been seen on a GPU beyond the validation probe):**
+**Manual smoke pass (PASSED — visual confirmation by the user, 2026-08-16):**
 MW before/after step 4 indistinguishable; app tier small→medium→large shows no brightness step;
 `armStrength: 0` still renders arms, SF events and HII; gallery walk after step 5 with M31, the MW
 and the LMC looked at hardest; `analyticExposure` still spans a useful range with 1.0 calibrated.
