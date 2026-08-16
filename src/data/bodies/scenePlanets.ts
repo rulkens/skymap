@@ -65,4 +65,12 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     radiusKm: 1188.3, // WGCCRE 2015 (Archinal+18), from New Horizons (Nimmo+17).
     albedo: [0.55, 0.5, 0.42],
   }),
+  // Appended after Pluto — same append-only pick-index constraint as Pluto's
+  // own comment above.
+  satelliteBody({
+    id: 'charon',
+    label: 'Charon',
+    radiusKm: 606, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
+    albedo: [0.4, 0.39, 0.38],
+  }),
 ];

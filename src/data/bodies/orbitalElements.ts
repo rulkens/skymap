@@ -69,6 +69,9 @@
  *   apsidal / nodal periods P / Papsis / Pnode, plus the Laplace-plane pole
  *   RA/Dec — verbatim in its comment. These describe a precessing mean ellipse,
  *   exactly what a guidance trail needs. https://ssd.jpl.nasa.gov/sats/elem/
+ * - Charon: a dedicated JPL sub-page, sats/elem/sep.html (Brozović & Jacobson
+ *   2024, AJ 167:256), given directly in Pluto's own equatorial plane rather
+ *   than a per-moon Laplace pole — see the row for why.
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
@@ -86,6 +89,7 @@ import {
   URANUS_CYAN,
   NEPTUNE_BLUE,
   PLUTO_TAN,
+  CHARON_GREY,
   MOON_GREY,
   SAT_ROCK,
   SAT_ICE,
@@ -642,6 +646,55 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleDecDeg: 78.9,
     color: SAT_ROCK,
   }),
+
+  // Pluto's moon. Different source page from every satellite() row above:
+  // JPL sats/elem/sep.html "Satellites of Pluto" table ("mean equatorial
+  // orbital elements", epoch 2000-01-01.5 TDB, ephemeris PLU060; M. Brozović,
+  // R. A. Jacobson (2024) "Post-New Horizons orbits and masses for the
+  // satellites of Pluto", AJ 167:256), NOT the general sats/elem/elem.html
+  // page the Mars/Jupiter/Saturn moons above transcribe.
+  satellite({
+    // Charon, plutocentric. Verbatim: a=19600. e=0.000 ω=0.0 M=304.1 i=0.0
+    // node=0.0 P=6.387222 Papsis=- Pnode=-. This table gives elements
+    // DIRECTLY in Pluto's own equatorial plane ("these elements are with
+    // respect to the planet's equatorial plane" — no per-moon Laplace pole
+    // column here, unlike elem.html), so poleRaDeg/poleDecDeg below is
+    // Pluto's OWN IAU pole, not a distinct Charon pole. Papsis/Pnode are
+    // published as "-" (undefined, not 0.000) because e=0.000 and i=0.0 leave
+    // periapsis and node geometrically meaningless — passed as 0, which
+    // moonRatesFromPeriods's MIN_PRECESSION_YEARS guard freezes to zero
+    // drift, the same degenerate-orbit case as Deimos/Dione/Tethys above.
+    id: 'charon',
+    focusId: 'pluto',
+    semiMajorKm: 19600,
+    eccentricity: 0.0,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 304.1,
+    periodDays: 6.387222,
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: 0.0,
+    // Pluto's IAU north pole (WGCCRE 2015 / Archinal et al. 2018): RA
+    // 132.993°, Dec −6.163°. Pluto and Charon are mutually tidally locked —
+    // Charon's P=6.387222 d above equals Pluto's own rotation period — so
+    // their poles coincide exactly; confirmed against NAIF pck00011.tpc,
+    // whose BODY901_POLE_RA/DEC (Charon) equal BODY999's (Pluto) to the last
+    // published digit.
+    poleRaDeg: 132.993,
+    poleDecDeg: -6.163,
+    // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric
+    // position rather than orbiting the Pluto–Charon barycentre, which sits
+    // ~1.8 Pluto radii outside Pluto's surface (Charon is ~12% of Pluto's
+    // mass, and the barycentre sits ~10% of the way along the pair
+    // separation) — visibly off here, though it is the SAME approximation
+    // Earth–Moon already makes (Earth doesn't orbit the Earth–Moon
+    // barycentre either). Deliberate; the real fix — a body orbiting a
+    // barycentre rather than being pinned at a focus — is scoped in
+    // docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
+    color: CHARON_GREY,
+  }),
+
   // The 39 bound S-stars arrive mapped rather than written out: one publication,
   // one uniform row shape, so the per-row facts stay in `sStarElements.ts` beside
   // their verbatim Gillessen lines and the conversions stay in the `sStar` maker.
