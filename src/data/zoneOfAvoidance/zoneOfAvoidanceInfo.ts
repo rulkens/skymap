@@ -13,6 +13,7 @@ import type { ZoneOfAvoidanceInfo } from '../../@types/engine/ZoneOfAvoidanceInf
 export const ZONE_OF_AVOIDANCE_INFO: ZoneOfAvoidanceInfo = {
   type: 'zoneOfAvoidance',
   displayName: 'Zone of Avoidance',
+  wikiTitle: 'Zone_of_Avoidance',
   description:
     "Interstellar dust in the Milky Way's disk absorbs and reddens the light of everything behind it, so optical and near-infrared surveys such as SDSS, 2MRS and GLADE record almost nothing in this band. The gap is a shadow of our vantage point inside the Galaxy rather than a void in the universe: radio and X-ray surveys see through the dust and find galaxies here, including part of the Norma cluster near the Great Attractor.",
 };

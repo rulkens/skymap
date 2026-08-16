@@ -16,6 +16,8 @@ export type ZoneOfAvoidanceInfo = {
   readonly type: 'zoneOfAvoidance';
   /** Headline shown in the InfoCard / palette row. */
   readonly displayName: string;
+  /** Explicit Wikipedia article title, e.g. 'Zone_of_Avoidance'. */
+  readonly wikiTitle: string;
   /** Didactic blurb: dust extinction, why surveys are blind here. */
   readonly description: string;
 };

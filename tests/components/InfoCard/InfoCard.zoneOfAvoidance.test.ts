@@ -18,6 +18,11 @@ describe('InfoCard Zone of Avoidance', () => {
     render(createElement(InfoCard, { hovered: null, selected: ZONE_OF_AVOIDANCE_INFO }));
     expect(screen.getByText(ZONE_OF_AVOIDANCE_INFO.displayName)).toBeInTheDocument();
     expect(screen.getByText(ZONE_OF_AVOIDANCE_INFO.description)).toBeInTheDocument();
+    // "Learn more" Wikipedia link — same WikipediaRow the body/famous-star cards use.
+    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+      'href',
+      'https://en.wikipedia.org/wiki/Zone_of_Avoidance',
+    );
   });
 
   it('the Zone of Avoidance card renders no Focus/Fly-here affordance', () => {
