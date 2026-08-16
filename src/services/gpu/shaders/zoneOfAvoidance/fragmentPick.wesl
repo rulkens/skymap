@@ -3,16 +3,16 @@
 //
 // Reruns fragment.wesl's exact ray-march + wedge discard so a click only
 // registers where the band would actually be visible; on a hit it writes
-// the band's constant singleton id and the depth of the shell's near
-// entry point, projected through the caller-bound CameraUniforms.
-// vertex.wesl's group(0) Uniforms binding is unused by 'vs', freeing
-// group(0) for that caller-bound camera; the wedge/camera-basis Uniforms
-// this march needs moves to group(1) instead.
+// the band's constant singleton id and a fixed fallback depth (see
+// PICK_FALLBACK_DEPTH — the camera sits INSIDE the shell throughout this
+// layer's visibility window, so there is no real entry-point depth to
+// project). vertex.wesl's group(0) Uniforms binding is unused by 'vs',
+// freeing group(0) for the caller-bound camera, declared but unread below;
+// the wedge/camera-basis Uniforms this march needs moves to group(1).
 
 import package::zoneOfAvoidance::io::Uniforms;
 import package::zoneOfAvoidance::io::VsOut;
 import package::lib::camera::CameraUniforms;
-import package::lib::camera::worldToClip;
 import package::lib::util::worldToGalactic;
 import package::lib::util::raySphere;
 import package::lib::masks::edgeBandMask;
@@ -20,6 +20,13 @@ import package::lib::fadeUniforms::applyFade;
 
 const STEPS: u32 = 32u;
 const INNER_RIM_FRACTION: f32 = 0.05;
+// Sentinel depth for a fragment with no real single-point distance (the
+// band is a volume, not a surface): COSMO's pick pass is non-reversed-Z,
+// 'less'-compares against a far-plane clear of 1.0 (zoneOfAvoidanceRenderer.ts's
+// pickPipeline depthStencil), so this must be < 1.0 by more than an f32 ULP
+// (~1.2e-7) to reliably beat the clear, while staying close enough to 1.0
+// that it loses to every real pickable's (much nearer) depth.
+const PICK_FALLBACK_DEPTH: f32 = 0.999999;
 
 @group(0) @binding(0) var<uniform> cam: CameraUniforms;
 @group(1) @binding(0) var<uniform> u: Uniforms;
@@ -92,11 +99,9 @@ fn fsPick(input: VsOut) -> PickFSOut {
 
   var out: PickFSOut;
   out.id = vec4<u32>(u.packedId, 0u, 0u, 0u);
-  // Shell's near entry point along this ray — a defensible single depth
-  // for a fragment that is really an accumulated volume, and the point
-  // most likely to be occluded correctly by whatever drew in front of it.
-  let hitPoint = u.cameraPosMpc + rayDir * tStart;
-  let clip = worldToClip(cam, hitPoint);
-  out.depth = clip.z / clip.w;
+  // Last-resort hit: the band is an enveloping background haze, so it must
+  // always lose to whatever real pickable drew here first (see
+  // PICK_FALLBACK_DEPTH above).
+  out.depth = PICK_FALLBACK_DEPTH;
   return out;
 }
