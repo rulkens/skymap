@@ -128,10 +128,19 @@ earthTiles-style paged (engage/disengage lifecycle, not a single load).
 built the artifact) + `regenerate`; the **staleness-sweep walker** is the
 promoted, named form of `runFrame.ts:247-281` — compares this frame's key
 against the key recorded at last `regenerate`, calls `regenerate` on
-mismatch. Imperative uploads (`handle.addVolumeField`) fold into `generated`
-explicitly: the public API stays, the bundle just declares the artifact so
-the staleness vocabulary covers it. `budget` is for the fly-by target (§8) —
-unused (`undefined`) by every P2 prover.
+mismatch. `budget` is for the fly-by target (§8) — unused (`undefined`) by
+every P2 prover.
+
+**"Imperative upload" is not a fourth-and-a-half kind** — investigated
+2026-08-17: `handle.volumes.add` has zero in-repo callers; every real volume
+load already goes through a slot whose commit calls `renderer.upload`
+directly (`syntheticVolumeSlots.ts:80`), hand-mirroring the handle's
+upload + row-seed + fade + wake bookkeeping (its own comment says so). The
+handle is the legitimate entry point for runtime-supplied cubes the demand
+system cannot express (no URL, not in the registry). The volumes prover
+migration (§6) therefore consolidates ingest into ONE function that slot
+commits and the public handle both call; the bundle declares the artifact
+once, and the duplicated bookkeeping is deleted with the migration.
 
 ### `handles` — shared-handle slab-partition pattern
 
