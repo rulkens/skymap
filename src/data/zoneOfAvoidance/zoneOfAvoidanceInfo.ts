@@ -14,7 +14,7 @@ export const ZONE_OF_AVOIDANCE_INFO: ZoneOfAvoidanceInfo = {
   type: 'zoneOfAvoidance',
   displayName: 'Zone of Avoidance',
   description:
-    "Interstellar dust in the Milky Way's own disk absorbs and reddens the light of everything behind it, so optical and near-infrared surveys — SDSS, 2MRS, GLADE among them — see essentially nothing in this band. It is an observational artifact of our vantage point inside the Galaxy, not a real gap in the universe: radio and X-ray surveys, which see through the dust, find galaxies here too, including part of the Norma cluster near the Great Attractor.",
+    "Interstellar dust in the Milky Way's disk absorbs and reddens the light of everything behind it, so optical and near-infrared surveys such as SDSS, 2MRS and GLADE record almost nothing in this band. The gap is a shadow of our vantage point inside the Galaxy rather than a void in the universe: radio and X-ray surveys see through the dust and find galaxies here, including part of the Norma cluster near the Great Attractor.",
   distanceNote:
-    'A line-of-sight effect, not a distance cutoff — the band obscures the same patch of sky at every distance, from a few Mpc out to the edge of the surveyed volume.',
+    'The band has no distance of its own. It marks blocked sightlines: dust hides whatever lies behind it at any depth, so the gap cuts through the whole surveyed volume, from the nearest galaxies to the survey edge.',
 };
