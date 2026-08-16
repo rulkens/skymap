@@ -56,4 +56,13 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   satelliteBody({ id: 'rhea', label: 'Rhea', radiusKm: 764, albedo: [0.7, 0.71, 0.71] }),
   satelliteBody({ id: 'titan', label: 'Titan', radiusKm: 2575, albedo: [0.8, 0.6, 0.35] }),
   satelliteBody({ id: 'iapetus', label: 'Iapetus', radiusKm: 735, albedo: [0.4, 0.37, 0.32] }),
+  // Appended after Iapetus, not narratively with the other heliocentric
+  // planets — SCENE_PLANETS order is append-only (pick indices are array
+  // position; see the plan's Global constraints).
+  heliocentricPlanet({
+    id: 'pluto',
+    label: 'Pluto',
+    radiusKm: 1188.3, // WGCCRE 2015 (Archinal+18), from New Horizons (Nimmo+17).
+    albedo: [0.55, 0.5, 0.42],
+  }),
 ];

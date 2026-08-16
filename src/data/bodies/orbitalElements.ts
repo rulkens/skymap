@@ -85,6 +85,7 @@ import {
   SATURN_GOLD,
   URANUS_CYAN,
   NEPTUNE_BLUE,
+  PLUTO_TAN,
   MOON_GREY,
   SAT_ROCK,
   SAT_ICE,
@@ -317,6 +318,37 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // dM/dt = dL/dt − dϖ/dt = 218.45945325 − (−0.32241464)
     meanAnomalyRateRadPerCty: degToRad(218.45945325 - -0.32241464),
     color: NEPTUNE_BLUE,
+  },
+  {
+    // Pluto, heliocentric. JPL Table 2a (3000 BC–3000 AD — the only table
+    // still carrying Pluto; the current web page's Table 1 dropped it in
+    // 2006). L = 238.96535011°, ϖ = 224.09702598°, Ω = 110.30167986°. Table 2b
+    // adds a mean-anomaly correction for Jupiter through Pluto (M += bT² +
+    // c·cos(fT) + s·sin(fT); Pluto: b = −0.01262724, c/s/f blank) for
+    // multi-millennial accuracy — dropped here: `propagateElements` only
+    // implements the linear element(T) = element₀ + rate·T map every other row
+    // uses, and the correction is negligible within a few centuries of J2000.
+    id: 'pluto',
+    focusId: 'sun',
+    semiMajorMpc: 39.48686035 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.24885238,
+    inclinationRad: degToRad(17.1410426),
+    ascendingNodeRad: degToRad(110.30167986),
+    // ω = ϖ − Ω = 224.09702598 − 110.30167986
+    argPeriapsisRad: degToRad(224.09702598 - 110.30167986),
+    // M = L − ϖ = 238.96535011 − 224.09702598
+    meanAnomalyRad: degToRad(238.96535011 - 224.09702598),
+    // Rates (JPL, per Julian century): dL/dt = 145.18042903, dϖ/dt = −0.00968827,
+    // dΩ/dt = −0.00809981, da/dt = 0.00449751 au, de/dt = 0.00006016, dI/dt = 0.00000501.
+    semiMajorRateMpcPerCty: 0.00449751 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: 0.00006016,
+    inclinationRateRadPerCty: degToRad(0.00000501),
+    ascendingNodeRateRadPerCty: degToRad(-0.00809981),
+    // dω/dt = dϖ/dt − dΩ/dt = −0.00968827 − (−0.00809981)
+    argPeriapsisRateRadPerCty: degToRad(-0.00968827 - -0.00809981),
+    // dM/dt = dL/dt − dϖ/dt = 145.18042903 − (−0.00968827)
+    meanAnomalyRateRadPerCty: degToRad(145.18042903 - -0.00968827),
+    color: PLUTO_TAN,
   },
   {
     // The Moon, geocentric — its focus is Earth's derived position. JPL sats/elem
