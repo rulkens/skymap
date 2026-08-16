@@ -1,70 +1,12 @@
 /**
  * zoneOfAvoidanceRenderer — translucent galactic-plane dust-band guide,
  * drawn as an analytic ray-marched shell (same family as
- * `horizonShellRenderer`: one fullscreen quad, the fragment stage
- * intersects a per-pixel view ray with geometry analytically) — PLUS a
- * second pipeline (`drawLabels`) for the curved "Zone of Avoidance"
- * lettering: discrete, world-oriented MSDF glyph quads fixed to the
- * galactic-plane circle, built once at construction (`layoutLabel` is a
- * CPU call, not a per-frame one) and issued as one instanced draw per
- * frame thereafter. See `shaders/zoneOfAvoidance/label/vertex.wesl` for
- * the arc-placement derivation.
- *
- * A single-instance world-anchored impostor. The band explains why the
- * catalogs thin out near the galactic plane — see the spec's Grill Q1/Q8 —
- * so it must read correctly from every camera position and distance,
- * which rules out a small proxy mesh in favour of the same camera-basis
- * ray-reconstruction technique the observable-universe shell uses.
- *
- * ### Uniform buffer ABI (112 bytes)
- *
- * See `shaders/zoneOfAvoidance/io.wesl` for the authoritative layout and
- * the byte-offset table; the summary:
- *
- *   offset 0  | vec3<f32> camForward   + f32 tanHalfFovY
- *   offset 16 | vec3<f32> camRight     + f32 aspect
- *   offset 32 | vec3<f32> camUp        + f32 innerRadiusMpc
- *   offset 48 | vec3<f32> cameraPosMpc + f32 outerRadiusMpc
- *   offset 64 | vec3<f32> color        + f32 bulgeDeg
- *   offset 80 | f32 anticenterDeg, f32 intensity, f32 radialFalloffMpc, f32 edgeSharpness
- *   offset 96 | f32 fadeAlpha, u32 packedId, f32×2 pad
- *
- * Unlike `horizonShellRenderer`, everything stays in Mpc — the band's radii
- * (a few to a few hundred Mpc) never approach fp32's exact-integer ceiling,
- * so there's no Gpc-unit workaround to carry here.
- *
- * ### Pick pipeline
- *
- * `drawPick` reuses `vertex.wesl` (its declared `u: Uniforms` at group(0) is
- * dead code in `vs`, so the slot is free) with a new `fragmentPick.wesl`
- * fragment: group(0) becomes the caller-bound `CameraUniforms` (depth only),
- * group(1) is the SAME `bindGroup` `draw` binds at group(0) — reused
- * unchanged, just at a different pipeline-layout slot. `packedId` is this
- * singleton band's constant pick identity, computed once at construction and
- * written into the uniform buffer once, never touched by the per-frame write.
- *
- * `radialFalloffMpc` is the one field that ISN'T a straight tuning-struct
- * copy: `ZoneOfAvoidanceTuning.radialFalloff` is documented (and dialled by
- * the DebugPanel) as a normalised [0, 1] fraction of the shell's radial
- * span, so `draw` converts it to an absolute Mpc e-folding length — the one
- * currency the shader's exponential distance-decay term actually needs —
- * before writing the uniform. See `draw`'s body for the conversion.
- *
- * ### Label uniform buffer ABI (112 bytes) — see `label/io.wesl`
- *
- *   offset  0 | CameraUniforms (viewProj + viewportPx + 8B pad)
- *   offset 80 | vec3<f32> color + f32 labelRadiusMpc
- *   offset 96 | f32 fadeAlpha, f32×3 pad
- *
- * ### Label glyph-instance buffer
- *
- * Built ONCE in this factory from `layoutLabel(ZONE_OF_AVOIDANCE_LABEL_TEXT,
- * ...)`, repeated at `ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT` evenly-spaced
- * galactic longitudes. Each glyph's `localOffset`/`localSize` are baked from
- * atlas px to a fixed WORLD-Mpc em size (`LABEL_EM_MPC` below) — the same
- * `worldEmMpc` idea `labels/io.wesl` documents, just resolved once here
- * instead of per-frame — so the vertex shader's arc-angle division by the
- * live `labelRadiusMpc` uniform is the only per-frame work.
+ * `horizonShellRenderer`): the fragment stage intersects a per-pixel view
+ * ray with geometry analytically, so the band reads correctly from every
+ * camera position/distance without a proxy mesh. A second pipeline
+ * (`drawLabels`) draws the curved "Zone of Avoidance" lettering, built
+ * once at construction. Byte layouts: `shaders/zoneOfAvoidance/io.wesl`
+ * (band) and `label/io.wesl` (lettering) are authoritative.
  */
 
 import { vec3 } from 'wgpu-matrix';
@@ -220,7 +162,7 @@ export function createZoneOfAvoidanceRenderer(
 
   // The band's pick identity never changes across its lifetime — write it
   // once directly into the shared uniform scratch below (see `packedId`'s
-  // offset in the ABI table), rather than every `writeUniforms` call.
+  // offset in io.wesl's byte table), rather than every `writeUniforms` call.
   const packedId = packSelection(Source.ZoneOfAvoidance, 0) + PICK_SENTINEL_OFFSET;
 
   // ── Curved-lettering pipeline ("Zone of Avoidance" glyphs) ────────────
@@ -229,7 +171,7 @@ export function createZoneOfAvoidanceRenderer(
   // no per-label font choice, so the atlas binds as a plain `texture_2d`
   // rather than a `texture_2d_array`. Reuses `atlases` (loaded once by
   // `initGpu.ts`'s `loadFontAtlases()` call) rather than fetching a second
-  // copy — see this file's header.
+  // copy.
   const labelFontId = FONT_IDS[0]!;
   const labelMetrics = atlases.metricsByFont[labelFontId];
   const labelBitmap = atlases.bitmaps[0];
@@ -315,9 +257,12 @@ export function createZoneOfAvoidanceRenderer(
   // Glyph-instance buffer: built ONCE here from layoutLabel, never rebuilt —
   // the text and repeat count are compile-time constants, so there is no
   // per-frame CPU work beyond the small uniform write in `drawLabels`.
-  // 'center'/'center' alignment centres each repeat's pen origin at (0, 0),
-  // so `galacticLonRad` alone (no extra per-glyph shift) is each repeat's
-  // base longitude — see label/vertex.wesl for how the pen offset folds in.
+  // localOffset/localSize are baked from atlas px to world-Mpc via
+  // LABEL_EM_MPC (the same worldEmMpc idea labels/io.wesl documents,
+  // resolved once here instead of per-frame). 'center'/'center' alignment
+  // centres each repeat's pen origin at (0, 0), so `galacticLonRad` alone
+  // (no extra per-glyph shift) is each repeat's base longitude — see
+  // label/vertex.wesl for how the pen offset folds in.
   const mpcPerAtlasPx = LABEL_EM_MPC / ATLAS_FONT_SIZE;
   const glyphQuads = layoutLabel(ZONE_OF_AVOIDANCE_LABEL_TEXT, labelMetrics, 'center', 'center');
   const labelGlyphCount = glyphQuads.length * ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT;
@@ -432,7 +377,7 @@ export function createZoneOfAvoidanceRenderer(
     const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
     const tanHalfFovY = Math.tan(cam.fovYRad / 2);
     // The tuning knob is a normalised [0, 1] fraction of the shell's radial
-    // span (see the type + this file's ABI docblock); the shader's
+    // span (see the type + io.wesl's byte table); the shader's
     // exponential distance-decay term wants an absolute Mpc e-folding
     // length, so convert here — the ONE place this currency change happens,
     // rather than splitting the multiply across the shader (which would

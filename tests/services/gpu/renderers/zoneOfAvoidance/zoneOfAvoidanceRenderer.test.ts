@@ -68,9 +68,9 @@ describe('createZoneOfAvoidanceRenderer', () => {
   });
 
   it('builds a pick pipeline targeting r32uint with no blend and a depth test', () => {
-    // Regression guard for the two gotchas the brief calls out explicitly:
-    // a blend key on an integer target is a validation error, and a missing
-    // depthStencil breaks occlusion against other COSMO pick draws.
+    // Regression guard: a blend key on an integer target is a validation
+    // error, and a missing depthStencil breaks occlusion against other
+    // COSMO pick draws.
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createZoneOfAvoidanceRenderer(mockDevice(renderPipelines), 'rgba16float', FIXTURE_ATLASES);
     const pick = renderPipelines.find((p) => p.label === 'zoneOfAvoidance-pick-pipeline');
