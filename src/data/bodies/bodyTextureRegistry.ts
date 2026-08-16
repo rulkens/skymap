@@ -122,6 +122,14 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'usgs',
     grayscaleTint: [0.62, 0.58, 0.52],
   },
+  // Pluto / Charon: `small` here is a LOOK ceiling for a different reason than
+  // Uranus/Neptune's near-featureless discs — New Horizons only resolved the
+  // encounter hemisphere well; the anti-Charon hemisphere is reconstructed at
+  // much lower fidelity, so more tile resolution would just upsample noise.
+  // `grayscaleTint` is deliberately absent pending Task 6's channel check
+  // (`sharp(...).metadata().channels`) — add it there if the sources are mono.
+  pluto: { bodyId: 'pluto', kinds: { surface: 'small' }, provenance: 'usgs' },
+  charon: { bodyId: 'charon', kinds: { surface: 'small' }, provenance: 'usgs' },
 };
 
 /**

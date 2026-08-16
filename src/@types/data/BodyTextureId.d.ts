@@ -8,10 +8,10 @@
  * body is a single registry row plus its raw-data entries, and a body maker's
  * "is this textured?" test is a registry lookup, not a second parallel list.
  *
- * The thirteen members are the textured set (spec §3): the eight major planets,
- * Earth's Moon, and Jupiter's four Galilean moons. Emissive/flat bodies (the
- * Sun, Titan, the irregular moons) are rotation- and texture-invariant and carry
- * no id here.
+ * The fifteen members are the textured set (spec §3): the eight major planets,
+ * Earth's Moon, Jupiter's four Galilean moons, and Pluto + Charon. Emissive/flat
+ * bodies (the Sun, Titan, the irregular moons) are rotation- and
+ * texture-invariant and carry no id here.
  */
 
 export type BodyTextureId =
@@ -27,4 +27,6 @@ export type BodyTextureId =
   | 'io'
   | 'europa'
   | 'ganymede'
-  | 'callisto';
+  | 'callisto'
+  | 'pluto'
+  | 'charon';

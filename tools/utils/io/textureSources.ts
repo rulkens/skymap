@@ -105,6 +105,8 @@ export const TEXTURE_SOURCES = {
   europa: { surface: { native: 'textures.usgsEuropa' } },
   ganymede: { surface: { native: 'textures.usgsGanymede' } },
   callisto: { surface: { native: 'textures.usgsCallisto' } },
+  pluto: { surface: { native: 'textures.usgsPluto' } },
+  charon: { surface: { native: 'textures.usgsCharon' } },
   'saturn-ring': {
     surface: { native: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
   },

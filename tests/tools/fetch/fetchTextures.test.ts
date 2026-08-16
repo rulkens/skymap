@@ -76,6 +76,8 @@ describe('textureSourcesFor', () => {
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
         'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
         'Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+        'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+        'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
       ].sort(),
     );
   });
