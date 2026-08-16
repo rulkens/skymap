@@ -1,25 +1,12 @@
 /**
- * zoneOfAvoidanceLiveness — the single derivation of "is the zone-of-avoidance
- * guide band live this frame, and at what opacity?", shared by its
- * producer/consumer chain: `zoneOfAvoidanceLayer` (the ray-marched band into
- * the reduced-res `zoa` offscreen) and `zoneOfAvoidanceUpsampleLayer`
- * (composites that into HDR, then draws the full-res curved lettering). If
- * the two disagreed, the upsample could composite an offscreen the producer
- * skipped clearing this frame — the same stale-offscreen trap
- * `volumeLiveness.ts` closes for volumes and `milkyWayCloudLiveness.ts`
- * closes for the Milky Way cloud.
+ * zoneOfAvoidanceLiveness — single derivation of "is the ZoA guide band live
+ * this frame, and at what opacity?", shared by producer
+ * (`zoneOfAvoidanceLayer`) and consumer (`zoneOfAvoidanceUpsampleLayer`) so
+ * their gates can't disagree about which offscreen has live content this
+ * frame — mirrors `volumeLiveness.ts`, including its renderer-null gate.
  *
- * Composes the band's visibility WINDOW (`zoneOfAvoidanceLayerOpacity`: the
- * Milky-Way-scaled approach band × the Local-Group-scaled recede band) with
- * the fade-registry toggle opacity — the exact composition
- * `zoneOfAvoidanceLayer` used to inline directly (pre gate-fix 6). Returns
- * `null` rather than 0 for "not live" so callers can gate on `!== null`
- * without risking `if (opacity)` on a legitimately-zero value.
- *
- * `enabled` does NOT also check `state.gpu.zoneOfAvoidanceRenderer` — same
- * choice `filamentsLayer` / `horizonShellLayer` make: a null-renderer frame
- * (only possible pre-`initGpu`) still reports live, and each layer's `draw`
- * self-corrects into a no-op via its own `=== null` guard.
+ * Returns `null` rather than 0 for "not live" so callers can gate on
+ * `!== null` without risking `if (opacity)` on a legitimate zero.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -31,6 +18,8 @@ export function deriveZoneOfAvoidanceLiveness(
   state: EngineState,
   ctx: ReadyFrameContext,
 ): number | null {
+  if (state.gpu.zoneOfAvoidanceRenderer === null) return null;
+
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const opacity = zoneOfAvoidanceLayerOpacity(
     camDistMpc,

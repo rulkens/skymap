@@ -7,9 +7,8 @@
  * Pre gate-fix-6 the composition (`zoneOfAvoidanceLayerOpacity(camDist,
  * resolveLayerOpacity(...))`) was inlined directly in the single
  * `zoneOfAvoidanceLayer`; these tests pin the ONE derivation both split
- * layers now share, and that it does NOT gate on the renderer handle (the
- * "self-correcting near-miss" convention `filamentsLayer` / `horizonShellLayer`
- * also use — a null-renderer frame still reports live, and `draw` self-corrects).
+ * layers now share, including the `volumeLiveness.ts`-mirroring gate on
+ * `state.gpu.zoneOfAvoidanceRenderer` (no empty pass opens pre-bootstrap).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -32,9 +31,13 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-function makeState(toggleOpacity = 1): EngineState {
+/** Default renderer is a non-null stub so tests exercise the opacity math; pass `renderer: null` to hit the gate. */
+function makeState({
+  toggleOpacity = 1,
+  renderer = {} as unknown,
+}: { toggleOpacity?: number; renderer?: unknown } = {}): EngineState {
   return {
-    gpu: { zoneOfAvoidanceRenderer: null },
+    gpu: { zoneOfAvoidanceRenderer: renderer },
     subsystems: {
       fades: { opacityOf: vi.fn(() => toggleOpacity) },
       // clipPlayer omitted → resolveLayerOpacity's clip factor defaults to 1.
@@ -44,7 +47,7 @@ function makeState(toggleOpacity = 1): EngineState {
 
 describe('deriveZoneOfAvoidanceLiveness', () => {
   it('returns the composed opacity when the camera sits inside the visibility window', () => {
-    const opacity = deriveZoneOfAvoidanceLiveness(makeState(0.6), makeCtx());
+    const opacity = deriveZoneOfAvoidanceLiveness(makeState({ toggleOpacity: 0.6 }), makeCtx());
     expect(opacity).toBeCloseTo(0.6, 6);
   });
 
@@ -52,18 +55,14 @@ describe('deriveZoneOfAvoidanceLiveness', () => {
     // Far past the recede band's goneAt — the Local Group has fully framed up.
     const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    expect(deriveZoneOfAvoidanceLiveness(makeState(1), ctx)).toBeNull();
+    expect(deriveZoneOfAvoidanceLiveness(makeState(), ctx)).toBeNull();
   });
 
   it('returns null when the fade-registry toggle opacity is 0, even inside the window', () => {
-    expect(deriveZoneOfAvoidanceLiveness(makeState(0), makeCtx())).toBeNull();
+    expect(deriveZoneOfAvoidanceLiveness(makeState({ toggleOpacity: 0 }), makeCtx())).toBeNull();
   });
 
-  it('does NOT gate on state.gpu.zoneOfAvoidanceRenderer — a null renderer still reports live', () => {
-    // Self-correcting near-miss: enabled() reports true pre-bootstrap, and
-    // each layer's own draw() null-checks the renderer independently.
-    const state = makeState(1);
-    expect((state.gpu as { zoneOfAvoidanceRenderer: null }).zoneOfAvoidanceRenderer).toBeNull();
-    expect(deriveZoneOfAvoidanceLiveness(state, makeCtx())).not.toBeNull();
+  it('returns null when the renderer is missing (pre-bootstrap), even inside the window with the toggle on', () => {
+    expect(deriveZoneOfAvoidanceLiveness(makeState({ renderer: null }), makeCtx())).toBeNull();
   });
 });

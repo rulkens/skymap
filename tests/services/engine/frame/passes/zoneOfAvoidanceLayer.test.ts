@@ -66,12 +66,12 @@ describe('zoneOfAvoidanceLayer.enabled', () => {
     expect(zoneOfAvoidanceLayer.enabled(liveState(), makeCtx())).toBe(true);
   });
 
-  it('is enabled even when the renderer is null (self-correcting near-miss)', () => {
+  it('is disabled when the renderer is null (pre-bootstrap)', () => {
     const state = {
       gpu: { zoneOfAvoidanceRenderer: null },
       subsystems: { fades: { opacityOf: () => 1 } },
     } as unknown as EngineState;
-    expect(zoneOfAvoidanceLayer.enabled(state, makeCtx())).toBe(true);
+    expect(zoneOfAvoidanceLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('is disabled once the camera is past the recede band (Local Group framed up)', () => {

@@ -49,18 +49,20 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
     nowMs: 0,
     focusBlend: 0,
     renderTargets: {
-      viewOf: (id: string) => (id === 'zoa' ? ZOA_VIEW : ({}) as GPUTextureView),
+      viewOf: (id: string) => (id === 'zoa' ? ZOA_VIEW : ({} as GPUTextureView)),
     } as never,
     ...over,
   } as unknown as ReadyFrameContext;
 }
 
-function makeState(over: {
-  upsampleDraw?: ReturnType<typeof vi.fn>;
-  labelsDraw?: ReturnType<typeof vi.fn>;
-  upsample?: unknown;
-  renderer?: unknown;
-} = {}): EngineState {
+function makeState(
+  over: {
+    upsampleDraw?: ReturnType<typeof vi.fn>;
+    labelsDraw?: ReturnType<typeof vi.fn>;
+    upsample?: unknown;
+    renderer?: unknown;
+  } = {},
+): EngineState {
   return {
     gpu: {
       zoneOfAvoidanceUpsample:
@@ -86,6 +88,12 @@ describe('zoneOfAvoidanceUpsampleLayer.enabled', () => {
     const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
     expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState(), ctx)).toBe(false);
+  });
+
+  it('is disabled when zoneOfAvoidanceRenderer is null (pre-bootstrap)', () => {
+    expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState({ renderer: null }), makeCtx())).toBe(
+      false,
+    );
   });
 });
 

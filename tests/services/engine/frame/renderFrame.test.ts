@@ -126,9 +126,10 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
       { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
       // zoneOfAvoidanceLayer.draw reads this row's `scale` to size the
-      // downscaled viewport it hands the band raymarch — the fixture camera
-      // sits inside the band's visibility window (see MW_ALIVE_DIST_MPC), so
-      // the 'zoa' render step opens for real every frame here.
+      // downscaled viewport it hands the band raymarch. The default fixture
+      // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
+      // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
+      // gate) — the row still has to exist for the spec lookup, though.
       { id: 'zoa', format: 'rgba16float', depth: null, scale: 5 },
       // milkyWayAggregateLayer.draw reads this row's `scale` to size the
       // downscaled viewport it hands the star pass (the sprite clamp is in
@@ -568,22 +569,21 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
-    // No-timing path → 'merged' strategy: the fixture camera sits inside the
-    // zone-of-avoidance band's visibility window, so the (zoa, COSMO) render
-    // step opens FIRST (empty draws — zoneOfAvoidanceRenderer is null here);
-    // the (hdr, COSMO) render step then opens a SECOND
+    // No-timing path → 'merged' strategy: zoneOfAvoidanceRenderer is null in
+    // this fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO)
+    // step off entirely — the (hdr, COSMO) render step opens the FIRST
     // `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr draws,
-    // the (mw-aggregate, NEAR0) step opens a THIRD pass against the cloud's
+    // the (mw-aggregate, NEAR0) step opens a SECOND pass against the cloud's
     // own offscreen for its star billboards, the (hdr, NEAR0) step opens a
-    // FOURTH hdr pass (loadOp: 'load') for the milky-way dust draw, then the
-    // hdr→swap composite opens a FIFTH pass against the swap chain. So five
-    // begins total; the SECOND is the COSMO HDR pass this test pins
+    // THIRD hdr pass (loadOp: 'load') for the milky-way dust draw, then the
+    // hdr→swap composite opens a FOURTH pass against the swap chain. So four
+    // begins total; the FIRST is the COSMO HDR pass this test pins
     // (viewOf('hdr'), clear, a=1).
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
 
-    const desc = calls[1]![0];
+    const desc = calls[0]![0];
     const attachments = Array.from(desc.colorAttachments as any);
     expect(attachments).toHaveLength(1);
     const att = attachments[0] as any;
@@ -715,19 +715,18 @@ describe('renderFrame', () => {
     expect(tone.hdrHeadroom).toBe(0);
   });
 
-  it('records the full frame in canonical order: createEncoder → zoa pass (band) → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
-    // No-timing 'merged' path: the fixture camera sits inside the
-    // zone-of-avoidance band's visibility window, so the (zoa, COSMO) render
-    // step opens FIRST — empty draws, zoneOfAvoidanceRenderer is null here —
-    // closes it; the (hdr, COSMO) render step then opens a pass holding the
-    // enabled COSMO hdr draws (here point-sprites; the impostor subsystems are
-    // nulled out), closes it; the (mw-aggregate, NEAR0) step opens a pass
-    // against the cloud's own offscreen for its additive star billboards,
-    // closes it; the (hdr, NEAR0) step opens an hdr pass for the cloud's
-    // multiplicative dust draw (the cloud's slab, since the fixed COSMO near
-    // plane clipped its disc mid-descent), closes it; then the hdr→swap
-    // composite opens a final pass, draws the tone-map, and closes it — then
-    // finish + submit.
+  it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
+    // No-timing 'merged' path: zoneOfAvoidanceRenderer is null in this
+    // fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO) step
+    // off entirely — no pass opens for it. The (hdr, COSMO) render step
+    // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
+    // the impostor subsystems are nulled out), closes it; the
+    // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
+    // offscreen for its additive star billboards, closes it; the (hdr,
+    // NEAR0) step opens an hdr pass for the cloud's multiplicative dust draw
+    // (the cloud's slab, since the fixed COSMO near plane clipped its disc
+    // mid-descent), closes it; then the hdr→swap composite opens a final
+    // pass, draws the tone-map, and closes it — then finish + submit.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -743,8 +742,6 @@ describe('renderFrame', () => {
     const filtered = fx.callLog.filter((e) => interesting.includes(e));
     expect(filtered).toEqual([
       'device.createCommandEncoder',
-      'encoder.beginRenderPass',
-      'pass.end',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
       'pass.end',
@@ -770,13 +767,13 @@ describe('renderFrame', () => {
     // rows (one extra hdr pass) and the (mw-aggregate, NEAR0) step opens the
     // cloud's own offscreen pass; the foreground:0 render selects nothing, so
     // foreground:0 is never touched and the foreground:0→swap composite is
-    // touched-set-skipped. Net: exactly five passes (zoa + hdr COSMO +
-    // mw-aggregate + hdr NEAR0 + hdr→swap — the fixture camera sits inside the
-    // zone-of-avoidance band's visibility window) and one compositor draw —
-    // no foreground:0 anywhere.
+    // touched-set-skipped. Net: exactly four passes (hdr COSMO + mw-aggregate
+    // + hdr NEAR0 + hdr→swap — zoneOfAvoidanceRenderer is null so the zoa
+    // step stays gated off) and one compositor draw — no foreground:0
+    // anywhere.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
     // No pass targets the foreground:0 offscreen or is labelled a foreground
     // composite.
     for (const [desc] of calls) {
@@ -827,16 +824,15 @@ describe('renderFrame', () => {
     // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
     // BOTH the scalar-volume producer and the volume-upsample consumer gate
     // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
-    // prove the consumer is also hidden. Only the zoa + hdr + composite passes
-    // open — the fixture camera sits inside the zone-of-avoidance band's
-    // visibility window, so that pass still opens (empty draws).
+    // prove the consumer is also hidden. Only the hdr + composite passes open
+    // — zoneOfAvoidanceRenderer is null too, so the zoa step stays gated off.
     const upsampleDraw = vi.fn();
     (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    // zoa (band) + hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud
-    // dust) + composite, no volume pass.
-    expect(calls).toHaveLength(5);
+    // hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud dust) +
+    // composite, no volume pass, no zoa pass.
+    expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();
   });
