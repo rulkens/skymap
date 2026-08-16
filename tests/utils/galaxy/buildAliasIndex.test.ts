@@ -8,19 +8,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildAliasIndex } from '../../src/hooks/buildAliasIndex';
-import { Source } from '../../src/data/sources';
-import type { EngineHandle } from '../../src/@types/engine/EngineHandle';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import { buildAliasIndex } from '../../../src/utils/galaxy/buildAliasIndex';
+import { Source } from '../../../src/data/sources';
+import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
+import type { SourceType } from '../../../src/@types/data/SourceType';
 
 /**
  * Build a minimal `EngineHandle` whose only live method is
  * `sources.getCloudObjIds`.  Cast through `unknown` because the real
  * handle has ~30 methods we don't care about for this test.
  */
-const fakeHandle = (
-  objIdsBySource: Partial<Record<SourceType, BigUint64Array>>,
-): EngineHandle =>
+const fakeHandle = (objIdsBySource: Partial<Record<SourceType, BigUint64Array>>): EngineHandle =>
   ({
     sources: {
       getCloudObjIds: (s: SourceType) => objIdsBySource[s],
@@ -66,9 +64,7 @@ describe('buildAliasIndex', () => {
       [Source.Glade]: new BigUint64Array([100n]),
     });
     const aliasMap = new Map<bigint, readonly string[]>([[100n, []]]);
-    expect(
-      buildAliasIndex({ handle, aliasMap, sources: [Source.Glade] }),
-    ).toEqual([]);
+    expect(buildAliasIndex({ handle, aliasMap, sources: [Source.Glade] })).toEqual([]);
   });
 
   it('returns empty when a source is not loaded', () => {

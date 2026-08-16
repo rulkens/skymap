@@ -20,8 +20,8 @@
  *      cheap defensive skip avoids an empty-string row in the palette).
  */
 
-import type { AliasIndexEntry } from '../@types/engine/AliasIndexEntry';
-import type { BuildAliasIndexInput } from '../@types/engine/BuildAliasIndexInput';
+import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { BuildAliasIndexInput } from '../../@types/engine/BuildAliasIndexInput';
 
 export function buildAliasIndex(input: BuildAliasIndexInput): AliasIndexEntry[] {
   const { handle, aliasMap, sources } = input;

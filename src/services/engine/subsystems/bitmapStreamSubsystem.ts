@@ -115,9 +115,6 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
     slotUv(slot) {
       return atlas.slotUv(slot);
     },
-    lastSeenFrame(key) {
-      return atlas.lastSeenFrame(key);
-    },
     uploadBitmap(key, bitmap) {
       // Re-asked here rather than trusted from allocate time: the caller has
       // been holding this key across a network round trip, and its slot may
