@@ -204,8 +204,8 @@ export const SCALE_FADE_BANDS = {
   // radii (full veil well before Local-Group framing). An APPROACH fade — full
   // at the large-distance edge — the opposite direction from `constellations`,
   // since this band explains a COSMIC-scale catalog gap rather than a near-field
-  // sky figure. The multiples are an eye-tuning STARTING POINT, tuned visually
-  // against the rendered band.
+  // sky figure. The multiples (2 / 10) are chosen for that feel, not derived
+  // from any further physical constant.
   zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
@@ -215,9 +215,9 @@ export const SCALE_FADE_BANDS = {
   // the subject the guide has done its job and should recede. No
   // `local-group` row exists yet in `BODY_REGIONS` to derive this from (only
   // `solar-system`, `solar-neighbourhood`, `galactic-centre` are seeded), so
-  // these are LITERAL Mpc values, an eye-tuning STARTING POINT: full within 2
-  // Mpc, gone by 6 Mpc. A recede band — full at the small-distance edge, the
-  // same shape as `constellations`.
+  // these are LITERAL Mpc values chosen for that feel: full within 2 Mpc,
+  // gone by 6 Mpc. A recede band — full at the small-distance edge, the same
+  // shape as `constellations`.
   zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
 
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
