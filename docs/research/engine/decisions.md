@@ -62,6 +62,15 @@ the deep tuning surface.
      solar-system derivations recomputed per call site migrate to it (long tail).
    - Liveness: both incumbent forms first-class (`deriveXLiveness` file where
      non-trivial; inline gates over shared derivations otherwise).
+   - Fades (added 2026-08-17): bundles declare their `FADE_LAYERS` manifest rows
+     (`fades?: readonly FadeLayer[]`); the wiring manifest becomes a
+     concatenation over bundles. `FadeId` + `VisibilityLayerKey` unions stay
+     type-level; a bundle declares which keys it services. **Invariant for
+     Track C: the field bundle REUSES `{kind:'milkyWay'}` and the
+     `milkyWayDisk`/`milkyWayLabel` visibility keys — minting new ones breaks
+     every tour/clip that scripts hide/show intents against them.** Store stays
+     fade-free (standing decision). Horizon shell's missing fade handle becomes
+     a one-row fix or a documented choice at its migration.
 8. **Engine-core keeps** (never bundle-owned): shared accumulators (`hdr`, `swap`,
    `foreground:0`, bloom mips), step-level gates, ctx ambient state, pickProgram
    infrastructure, tone/bloom post, camera/input.
@@ -80,6 +89,7 @@ type SubsystemBundle = {
   planner?: (state, ctx) => unknown            // hoisted, memoised on ctx
   liveness?: DeriveLiveness | InlineGates
   wake?: (state, ctx) => boolean               // folded into the anim bag
+  fades?: readonly FadeLayer[]                 // FADE_LAYERS manifest derived by concatenation
   labelProducers?: readonly LabelProducer[]
   markerProducers?: readonly MarkerProducer[]
   debug?: { groupTitle: string; sliders?: readonly SliderField[] }
