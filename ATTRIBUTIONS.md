@@ -359,6 +359,17 @@ All public domain; NASA asks that credit go to the named observatory / program.
   <https://planetarymaps.usgs.gov/>.
 - **Licence:** Public domain. Credit: "NASA / USGS".
 
+#### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
+
+- **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px
+  equirectangular, 8-bit stretched from the 32-bit originals.
+- **Source:** USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/>.
+- **Licence:** Public domain (Astropedia access constraints: none; use constraints: cite authors).
+  Credit per the Astropedia record: "New Horizons Team" (primary author), originators "NASA,
+  Johns Hopkins University Applied Physics Laboratory, Southwest Research Institute, Lunar and
+  Planetary Institute", published by USGS Astrogeology Science Center, 2017.
+
 ## Shaders
 
 ### Milky Way impostor — "Spiral galaxy" by mrange
