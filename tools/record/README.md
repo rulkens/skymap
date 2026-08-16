@@ -119,6 +119,23 @@ flag before granting the next frame, so the frame captured on the completing
 grant already shows the reset. This is pre-existing engine behaviour, not
 something the harness can settle around.
 
+### Looping clips (`ClipData.loop: true`, e.g. `earthUniverseLoop`)
+
+A looping clip's clip-end promise never resolves — `clipPlayer.tick()`
+rewinds the clock instead of dispatching `clipEnded()` — so the recorder
+detects `loop: true` on the compiled clip and switches its stop condition
+automatically: no flag, nothing to remember. It records exactly
+`round(durationSec × fps)` frames and stops, logging `looping clip —
+recording one seamless cycle (N frames)`. The artifact is exactly one cycle,
+frames `[0, duration)` — the closing frame is deliberately excluded because a
+looping clip is authored so `pose(duration) ≡ pose(0)` (the seam contract;
+see `src/data/animation/clips/earthUniverseLoop.ts`), and including it would
+duplicate a frame at the mp4's loop splice. If `durationSec × fps` is not a
+whole number the recorder rounds to the nearest frame and logs a notice —
+the resulting sub-frame seam offset is imperceptible at these camera speeds,
+never an error. Full rationale:
+`docs/grill-sessions/record-clip-looping-clips-2026-08-16.md`.
+
 ## Reproducibility
 
 Every take pins the sim clock: the capture URL always carries `#t=<ISO>`

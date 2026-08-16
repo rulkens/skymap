@@ -102,6 +102,8 @@ import { buildCaptureUrl } from '../utils/record/buildCaptureUrl';
 import { defaultOutName } from '../utils/record/defaultOutName';
 import { tourFrameCap } from '../utils/record/tourFrameCap';
 import { clipFrameCap } from '../utils/record/clipFrameCap';
+import { clipDurationSec } from '../utils/animation/clipDurationSec';
+import { loopCycleFrameCount } from '../utils/record/loopCycleFrameCount';
 
 // How long to wait for window.__skymapRecorder to appear after load — it is
 // installed synchronously during app bootstrap, so a miss means the wrong
@@ -134,7 +136,13 @@ type RecordOptions = {
   simTime: Date | undefined;
 };
 
-type Take = { kind: 'tour'; id: TourId; beats: BeatRange } | { kind: 'clip'; id: ClipId };
+type Take =
+  | { kind: 'tour'; id: TourId; beats: BeatRange }
+  // loopFrames set only for a `loop: true` clip — see the frame loop in
+  // captureTake, which then stops on frame COUNT instead of polling
+  // __recorderTakeStatus.done (never true for a loop; see docs/grill-sessions
+  // /record-clip-looping-clips-2026-08-16.md).
+  | { kind: 'clip'; id: ClipId; loopFrames: number | undefined };
 
 /**
  * The in-page flag the kick evaluate writes and the frame loop polls — see
@@ -400,8 +408,11 @@ async function awaitCaptureReady(page: Page, captureUrl: string): Promise<void> 
  * The capture side of the pipeline, decoupled from encoding: boot the cinema
  * page in real time, pause virtual time, kick the take, then step
  * grant → captureScreenshot → writePng until the in-page status flag reports
- * the take ended. Returns the number of frames captured. Encoding enters only
- * through the injected writePng, so this function knows nothing about ffmpeg.
+ * the take ended — or, for a looping clip (`take.loopFrames` set), until
+ * exactly that many frames have been captured, since the status flag never
+ * flips for a loop. Returns the number of frames captured. Encoding enters
+ * only through the injected writePng, so this function knows nothing about
+ * ffmpeg.
  */
 async function captureTake(
   browser: Browser,
@@ -521,9 +532,15 @@ async function captureTake(
     }
   }
 
+  // A looping clip's __recorderTakeStatus.done never flips (clipPlayer.tick
+  // rewinds instead of dispatching clipEnded) — its stop condition is a plain
+  // frame count instead, computed by main() from the compiled duration.
+  const loopFrames = take.kind === 'clip' ? take.loopFrames : undefined;
   console.log(
     `stepping at ${(1000 / options.fps).toFixed(2)} ms per frame ` +
-      `(cap ${frameCap} captured frames) ...`,
+      (loopFrames !== undefined
+        ? `(looping clip — recording exactly ${loopFrames} frames, one cycle) ...`
+        : `(cap ${frameCap} captured frames) ...`),
   );
   let frame = 0;
   while (true) {
@@ -539,13 +556,17 @@ async function captureTake(
     if (status.error !== null) {
       throw new Error(`the take's start promise rejected in-page: ${status.error}`);
     }
-    if (status.done) break;
-    if (frame >= frameCap) {
-      throw new Error(
-        `aborting at frame ${frame}: cap ${frameCap} exceeded and '${take.kind} ${take.id}' ` +
-          'has not ended — likely something stuck on a waitUntil readiness gate (catalog focus ' +
-          'never loaded?). Check the [page] warnings above.',
-      );
+    if (loopFrames !== undefined) {
+      if (frame >= loopFrames) break;
+    } else {
+      if (status.done) break;
+      if (frame >= frameCap) {
+        throw new Error(
+          `aborting at frame ${frame}: cap ${frameCap} exceeded and '${take.kind} ${take.id}' ` +
+            'has not ended — likely something stuck on a waitUntil readiness gate (catalog focus ' +
+            'never loaded?). Check the [page] warnings above.',
+        );
+      }
     }
     await grantAndAwaitExpiry(session, 1000 / options.fps, `frame ${frame}`);
     // Raw CDP capture of the compositor surface (finding 2) — what the
@@ -560,9 +581,14 @@ async function captureTake(
     });
     await writePng(Buffer.from(shot.data, 'base64'));
     frame++;
-    if (frame % PROGRESS_EVERY_FRAMES === 0) console.log(`  frame ${frame} / ${frameCap}`);
+    if (frame % PROGRESS_EVERY_FRAMES === 0) {
+      console.log(`  frame ${frame} / ${loopFrames ?? frameCap}`);
+    }
   }
 
+  // No explicit in-page stop for the loop-frame-count exit: context.close()
+  // below tears down the page (and the still-running clip with it), same as
+  // any other take that leaves virtual time behind after its last frame.
   await context.close();
   return frame;
 }
@@ -621,6 +647,10 @@ async function main(): Promise<void> {
   let take: Take;
   let frameCap: number;
   let subjectLine: string;
+  // Set only for a `loop: true` clip; printed after the banner below and
+  // threaded onto `take` so captureTake's frame loop can stop on count
+  // instead of polling the never-resolving clip-end status.
+  let loopNote: string | undefined;
   if (options.clipId !== undefined) {
     const clip = (clipRegistry as Record<string, Clip>)[options.clipId];
     if (clip === undefined) {
@@ -628,11 +658,27 @@ async function main(): Promise<void> {
         `unknown clip '${options.clipId}' — known: ${Object.keys(clipRegistry).join(', ')}`,
       );
     }
-    take = { kind: 'clip', id: clip.id };
     // The J2000 snapshot is the right source for the cap: only a clip's START
     // POSE depends on the instant, its authored durations do not.
     frameCap = clipFrameCap(clip.data, options.fps);
     subjectLine = `clip '${clip.id}' — ${clip.label}`;
+
+    let loopFrames: number | undefined;
+    if (clip.data.loop === true) {
+      const durationSec = clipDurationSec(clip.data);
+      loopFrames = loopCycleFrameCount(durationSec, options.fps);
+      loopNote = `looping clip — recording one seamless cycle (${loopFrames} frames)`;
+      // Q4 (grill session): duration × fps need not land on the frame grid —
+      // round rather than error, and say so.
+      const exactFrames = durationSec * options.fps;
+      if (!Number.isInteger(exactFrames)) {
+        const seamOffsetMs = ((loopFrames - exactFrames) / options.fps) * 1000;
+        loopNote +=
+          `\n  note: ${durationSec}s × ${options.fps}fps = ${exactFrames} is not a whole ` +
+          `number of frames — rounded to ${loopFrames}, a ${seamOffsetMs.toFixed(2)} ms seam offset`;
+      }
+    }
+    take = { kind: 'clip', id: clip.id, loopFrames };
   } else {
     const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
     if (tour === undefined) {
@@ -684,6 +730,7 @@ async function main(): Promise<void> {
     `  sim time pinned: ${simTime.toISOString()}  ` +
       `(re-take with --sim-time ${simTime.toISOString()})`,
   );
+  if (loopNote !== undefined) console.log(loopNote);
 
   // ffmpeg first: a missing binary should fail in milliseconds, not after a
   // browser launch and a full app boot.
@@ -714,7 +761,12 @@ async function main(): Promise<void> {
 
   const probe = await ffprobeReport(out);
   console.log(`\nDONE — ${out}`);
-  console.log(`  captured frames: ${frames}  (cap was ${frameCap})`);
+  console.log(
+    `  captured frames: ${frames}  ` +
+      (take.kind === 'clip' && take.loopFrames !== undefined
+        ? '(one seamless cycle)'
+        : `(cap was ${frameCap})`),
+  );
   console.log(`  ffprobe: ${probe.width}x${probe.height}, nb_frames ${probe.nbFrames}`);
 }
 
