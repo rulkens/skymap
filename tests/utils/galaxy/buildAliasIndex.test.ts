@@ -18,9 +18,7 @@ import type { SourceType } from '../../../src/@types/data/SourceType';
  * `sources.getCloudObjIds`.  Cast through `unknown` because the real
  * handle has ~30 methods we don't care about for this test.
  */
-const fakeHandle = (
-  objIdsBySource: Partial<Record<SourceType, BigUint64Array>>,
-): EngineHandle =>
+const fakeHandle = (objIdsBySource: Partial<Record<SourceType, BigUint64Array>>): EngineHandle =>
   ({
     sources: {
       getCloudObjIds: (s: SourceType) => objIdsBySource[s],
@@ -66,9 +64,7 @@ describe('buildAliasIndex', () => {
       [Source.Glade]: new BigUint64Array([100n]),
     });
     const aliasMap = new Map<bigint, readonly string[]>([[100n, []]]);
-    expect(
-      buildAliasIndex({ handle, aliasMap, sources: [Source.Glade] }),
-    ).toEqual([]);
+    expect(buildAliasIndex({ handle, aliasMap, sources: [Source.Glade] })).toEqual([]);
   });
 
   it('returns empty when a source is not loaded', () => {
