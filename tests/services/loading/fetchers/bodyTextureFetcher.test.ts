@@ -20,7 +20,9 @@ describe('bodyTextureFetcher', () => {
     globalThis.createImageBitmap = vi
       .fn()
       .mockResolvedValue({} as ImageBitmap) as unknown as typeof globalThis.createImageBitmap;
-    fetch.mock.mockResolvedValue(new Response(new Blob(['x']), { status: 200 }));
+    fetch.mock.mockResolvedValue(
+      new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
+    );
   });
 
   afterEach(() => {
@@ -45,5 +47,18 @@ describe('bodyTextureFetcher', () => {
     );
     const url = String(fetch.mock.mock.calls[0]?.[0]);
     expect(url.endsWith('images/textures/saturn-ring-8192.webp')).toBe(true);
+  });
+
+  it('fails loudly, naming the path, when a missing file comes back as the dev-server SPA fallback', async () => {
+    fetch.mock.mockResolvedValue(
+      new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+    );
+    await expect(
+      bodyTextureFetcher(
+        { bodyId: 'mars', kind: 'surface', tier: 'small' },
+        new AbortController().signal,
+        () => {},
+      ),
+    ).rejects.toThrow('images/textures/mars-2048.jpg');
   });
 });
