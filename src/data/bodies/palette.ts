@@ -33,7 +33,7 @@ export const SATURN_GOLD: Vec3 = [0.5, 0.43, 0.25];
 export const URANUS_CYAN: Vec3 = [0.3, 0.47, 0.5];
 export const NEPTUNE_BLUE: Vec3 = [0.2, 0.3, 0.55];
 export const PLUTO_TAN: Vec3 = [0.38, 0.34, 0.26];
-export const CHARON_GREY: Vec3 = [0.42, 0.43, 0.45];
+export const CHARON_GREY: Vec3 = [0.3, 0.37, 0.49];
 export const MOON_GREY: Vec3 = [0.35, 0.35, 0.4];
 
 // Satellite trail tints — a small shared palette (the guidance moons cluster
