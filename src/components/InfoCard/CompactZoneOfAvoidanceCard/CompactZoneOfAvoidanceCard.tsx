@@ -1,8 +1,7 @@
 /**
  * CompactZoneOfAvoidanceCard — slim hover-preview for the zone-of-avoidance
  * guide band. Band variant of CompactMilkyWayCard: a small haze glyph next to
- * the "Hover" title, the name, and the distance note as the short line (the
- * band has no morphological type line to show).
+ * the "Hover" title, then the name.
  */
 
 import type { ReactNode } from 'react';
@@ -25,7 +24,6 @@ function CompactZoneOfAvoidanceCard({ target }: CompactZoneOfAvoidanceCardProps)
         <span>Hover</span>
       </div>
       <CardRow type="headline">{target.displayName}</CardRow>
-      <div className={styles.cardDistLine}>{target.distanceNote}</div>
     </div>
   );
 }

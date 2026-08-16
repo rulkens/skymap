@@ -1,11 +1,11 @@
 /**
  * ZoneOfAvoidanceDetailCard — rich panel for the zone-of-avoidance guide band.
  *
- * Mirrors MilkyWayDetailCard's layout (headline row, then a glyph + summary in
- * a cardTopRow, then the description), but for a target with no position: the
- * band is a line-of-sight extinction effect, not a "there" to fly to, so this
- * card never wires CardHeader's `onFocus` — the Focus pill simply doesn't
- * render (see ZoneOfAvoidanceInfo's doc comment for why).
+ * Mirrors MilkyWayDetailCard's layout (headline row, then the description),
+ * but for a target with no position: the band is a line-of-sight extinction
+ * effect, not a "there" to fly to, so this card never wires CardHeader's
+ * `onFocus` — the Focus pill simply doesn't render (see ZoneOfAvoidanceInfo's
+ * doc comment for why).
  */
 
 import type { ReactNode } from 'react';
@@ -37,16 +37,6 @@ function ZoneOfAvoidanceDetailCard({
       <CardHeader eyebrow="Guide Layer" onClose={pinned ? onClose : undefined} />
 
       <CardRow type="headline">{target.displayName}</CardRow>
-
-      <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        {/* Haze glyph in place of a thumbnail — the band has no "there" to photograph. */}
-        <div className={zoa.glyph} aria-hidden="true">
-          🌫️
-        </div>
-        <div className={styles.cardSummary}>
-          <div className={styles.cardDistLine}>{target.distanceNote}</div>
-        </div>
-      </div>
 
       <div className={styles.cardSection}>
         <DescriptionBlock text={target.description} />

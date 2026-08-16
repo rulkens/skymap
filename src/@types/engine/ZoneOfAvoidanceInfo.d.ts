@@ -18,6 +18,4 @@ export type ZoneOfAvoidanceInfo = {
   readonly displayName: string;
   /** Didactic blurb: dust extinction, why surveys are blind here. */
   readonly description: string;
-  /** Notes the band is line-of-sight, not distance-limited. */
-  readonly distanceNote: string;
 };

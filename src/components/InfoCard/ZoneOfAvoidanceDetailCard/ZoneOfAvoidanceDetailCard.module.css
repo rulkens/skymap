@@ -1,30 +1,10 @@
 /*
  * ZoneOfAvoidanceDetailCard.module.css — band-specific styling.
  *
- * The card's chrome comes from the shared cardChrome vocabulary, composed into
- * .root; the only piece unique to this card is the haze glyph standing in for
- * the missing thumbnail.
+ * The card's chrome comes entirely from the shared cardChrome vocabulary,
+ * composed into .root.
  */
 
 .root {
   composes: infoCardFull structure from '../cardChrome.module.css';
-}
-
-/*
- * Glyph standing in for the thumbnail — a haze/fog mark rather than
- * MilkyWayDetailCard's spiral, since this card isn't "inside" anything, it's
- * marking an obscured band.  Same slot size as the Milky Way glyph so the
- * cardTopRow layout doesn't jump between the two singleton cards.
- */
-.glyph {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  font-size: 40px;
-  line-height: 1;
-  border-radius: var(--radius-lg);
-  background: var(--surface-badge);
-  border: 1px solid var(--border-control);
 }
