@@ -55,4 +55,26 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
       opacity,
     );
   },
+
+  // No `pickEnabled`: the band's pick set equals its draw set, so the pick
+  // program falls back to `enabled` above. The pick pass renders at full
+  // canvas resolution regardless of the 'zoa' target's downsample, so the
+  // viewport here is the full `canvasSize` — not the divided one `draw` uses.
+  drawPick(pass, _view, ctx, state) {
+    if (state.gpu.zoneOfAvoidanceRenderer === null) return;
+    const opacity = deriveZoneOfAvoidanceLiveness(state, ctx);
+    if (opacity === null) return;
+
+    state.gpu.zoneOfAvoidanceRenderer.drawPick(
+      pass,
+      ctx.cam,
+      [ctx.canvasSize.width, ctx.canvasSize.height],
+      state.settings.zoneOfAvoidance,
+      INNER_RADIUS_MPC,
+      OUTER_RADIUS_MPC,
+      BULGE_DEG,
+      ANTICENTER_DEG,
+      opacity,
+    );
+  },
 };

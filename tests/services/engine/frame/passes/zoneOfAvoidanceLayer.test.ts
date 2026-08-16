@@ -54,9 +54,17 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
 }
 
 /** A live state: renderer present, toggle opacity 1. */
-function liveState(over: { draw?: ReturnType<typeof vi.fn> } = {}): EngineState {
+function liveState(
+  over: { draw?: ReturnType<typeof vi.fn>; drawPick?: ReturnType<typeof vi.fn> } = {},
+): EngineState {
   return {
-    gpu: { zoneOfAvoidanceRenderer: { draw: over.draw ?? vi.fn(), drawLabels: vi.fn() } },
+    gpu: {
+      zoneOfAvoidanceRenderer: {
+        draw: over.draw ?? vi.fn(),
+        drawPick: over.drawPick ?? vi.fn(),
+        drawLabels: vi.fn(),
+      },
+    },
     settings: { zoneOfAvoidance: { color: [1, 1, 1], intensity: 1, edgeSharpness: 1 } },
     subsystems: { fades: { opacityOf: () => 1 } },
   } as unknown as EngineState;
@@ -126,5 +134,47 @@ describe('zoneOfAvoidanceLayer.draw', () => {
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
     zoneOfAvoidanceLayer.draw(PASS_STUB, {} as never, ctx, state);
     expect(drawSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('zoneOfAvoidanceLayer.drawPick', () => {
+  it('has no pickEnabled — the pick program falls back to enabled', () => {
+    expect(zoneOfAvoidanceLayer.pickEnabled).toBeUndefined();
+  });
+
+  it('draws with ctx.cam, the FULL canvas viewport, and the composed opacity', () => {
+    const drawPickSpy = vi.fn();
+    const state = liveState({ drawPick: drawPickSpy });
+    const ctx = makeCtx();
+    zoneOfAvoidanceLayer.drawPick!(PASS_STUB, {} as never, ctx, state);
+    expect(drawPickSpy).toHaveBeenCalledTimes(1);
+    const args = drawPickSpy.mock.calls[0]!;
+    // drawPick(pass, cam, viewport, tuning, inner, outer, bulge, anticenter, opacity)
+    expect(args[0]).toBe(PASS_STUB);
+    expect(args[1]).toBe(ctx.cam);
+    // Full-res viewport — NOT the 'zoa' target's downsampled one `draw` uses,
+    // because the pick pass rasterises at full canvas resolution.
+    expect(args[2]).toEqual([1280, 720]);
+    expect(args[3]).toBe(state.settings.zoneOfAvoidance);
+    expect(args[8]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
+  });
+
+  it('is a no-op when the renderer is null (pre-bootstrap)', () => {
+    const state = {
+      gpu: { zoneOfAvoidanceRenderer: null },
+      subsystems: { fades: { opacityOf: () => 1 } },
+    } as unknown as EngineState;
+    expect(() =>
+      zoneOfAvoidanceLayer.drawPick!(PASS_STUB, {} as never, makeCtx(), state),
+    ).not.toThrow();
+  });
+
+  it('is a no-op when outside the visibility window (band faded, no longer pickable)', () => {
+    const drawPickSpy = vi.fn();
+    const state = liveState({ drawPick: drawPickSpy });
+    const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
+    const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
+    zoneOfAvoidanceLayer.drawPick!(PASS_STUB, {} as never, ctx, state);
+    expect(drawPickSpy).not.toHaveBeenCalled();
   });
 });

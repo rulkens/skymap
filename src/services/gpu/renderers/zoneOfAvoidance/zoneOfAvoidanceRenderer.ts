@@ -27,11 +27,21 @@
  *   offset 48 | vec3<f32> cameraPosMpc + f32 outerRadiusMpc
  *   offset 64 | vec3<f32> color        + f32 bulgeDeg
  *   offset 80 | f32 anticenterDeg, f32 intensity, f32 radialFalloffMpc, f32 edgeSharpness
- *   offset 96 | f32 fadeAlpha, f32×3 pad
+ *   offset 96 | f32 fadeAlpha, u32 packedId, f32×2 pad
  *
  * Unlike `horizonShellRenderer`, everything stays in Mpc — the band's radii
  * (a few to a few hundred Mpc) never approach fp32's exact-integer ceiling,
  * so there's no Gpc-unit workaround to carry here.
+ *
+ * ### Pick pipeline
+ *
+ * `drawPick` reuses `vertex.wesl` (its declared `u: Uniforms` at group(0) is
+ * dead code in `vs`, so the slot is free) with a new `fragmentPick.wesl`
+ * fragment: group(0) becomes the caller-bound `CameraUniforms` (depth only),
+ * group(1) is the SAME `bindGroup` `draw` binds at group(0) — reused
+ * unchanged, just at a different pipeline-layout slot. `packedId` is this
+ * singleton band's constant pick identity, computed once at construction and
+ * written into the uniform buffer once, never touched by the per-frame write.
  *
  * `radialFalloffMpc` is the one field that ISN'T a straight tuning-struct
  * copy: `ZoneOfAvoidanceTuning.radialFalloff` is documented (and dialled by
@@ -64,6 +74,7 @@ import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../utils/camera/frameUp';
 import vsCode from '../../shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../shaders/zoneOfAvoidance/fragment.wesl?static';
+import fsPickCode from '../../shaders/zoneOfAvoidance/fragmentPick.wesl?static';
 import labelVsCode from '../../shaders/zoneOfAvoidance/label/vertex.wesl?static';
 import labelFsCode from '../../shaders/zoneOfAvoidance/label/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -71,7 +82,10 @@ import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { layoutLabel } from '../../labelLayout/labelLayout';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { ATLAS_FONT_SIZE, FONT_IDS } from '../../../../data/fonts';
+import { Source } from '../../../../data/source';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import {
   ZONE_OF_AVOIDANCE_LABEL_TEXT,
   ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
@@ -157,6 +171,57 @@ export function createZoneOfAvoidanceRenderer(
     // No depth test: the band draws into the depthless HDR target, same
     // profile as horizonShell / filaments / every other additive overlay.
   });
+
+  // ── Pick pipeline ───────────────────────────────────────────────────
+  //
+  // group(0) is never bound by this renderer — it's the COSMO pick pass's
+  // shared point-pick camera prefix, already bound by the time `drawPick`
+  // runs (see `ContentLayer.drawPick`'s postcondition). This BGL only
+  // exists so the pipeline layout is structurally compatible with it.
+  const pickCameraBgl = device.createBindGroupLayout({
+    label: 'zoneOfAvoidance-pick-camera-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+  const pickFsModule = createShaderModuleWithDevLog(
+    device,
+    fsPickCode,
+    'zoneOfAvoidance.fragmentPick',
+  );
+  const pickPipeline = device.createRenderPipeline({
+    label: 'zoneOfAvoidance-pick-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'zoneOfAvoidance-pick-pipeline-layout',
+      // Reuses vsModule (its `u: Uniforms` binding is dead code in `vs`,
+      // so group(0) here doesn't collide with it) and `bindGroupLayout` —
+      // the SAME BGL `draw` binds at group(0) — now at group(1).
+      bindGroupLayouts: [pickCameraBgl, bindGroupLayout],
+    }),
+    vertex: { module: vsModule, entryPoint: 'vs' },
+    fragment: {
+      module: pickFsModule,
+      entryPoint: 'fsPick',
+      // Integer target: no blend key (r32uint doesn't support blending).
+      targets: [{ format: 'r32uint' }],
+    },
+    primitive: { topology: 'triangle-list' },
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      // COSMO's convention (slabs.ts) is non-reversed depth.
+      depthCompare: resolveDepthCompare('nearer', false),
+    },
+  });
+
+  // The band's pick identity never changes across its lifetime — write it
+  // once directly into the shared uniform scratch below (see `packedId`'s
+  // offset in the ABI table), rather than every `writeUniforms` call.
+  const packedId = packSelection(Source.ZoneOfAvoidance, 0) + PICK_SENTINEL_OFFSET;
 
   // ── Curved-lettering pipeline ("Zone of Avoidance" glyphs) ────────────
   //
@@ -326,6 +391,9 @@ export function createZoneOfAvoidanceRenderer(
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE);
   const f32 = new Float32Array(uniforms);
+  // packedId (float-index 25, u32) is written ONCE below and never touched
+  // by writeUniforms — the packed identity never changes across frames.
+  new Uint32Array(uniforms)[25] = packedId;
   // Plain Vec3 tuples (not vec3.create's Float32Array) so the per-component
   // reads below index cleanly under noUncheckedIndexedAccess.  wgpu-matrix
   // writes into them in place via the `dst` arg just the same.
@@ -336,8 +404,12 @@ export function createZoneOfAvoidanceRenderer(
   // frame by `imagePlaneBasis` via its `out` argument.
   const basis: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
-  function draw(
-    pass: GPURenderPassEncoder,
+  // Shared by `draw` and `drawPick`: both need the identical camera-basis +
+  // shape uniforms (the pick fragment reruns the same alpha computation to
+  // decide whether a fragment is even hit-testable), so the byte-packing
+  // has one home. Uploads the whole buffer, including the packedId slot
+  // written once above.
+  function writeUniforms(
     cam: OrbitCamera,
     viewport: Vec2,
     tuning: ZoneOfAvoidanceTuning,
@@ -397,12 +469,65 @@ export function createZoneOfAvoidanceRenderer(
     f32[21] = tuning.intensity;
     f32[22] = radialFalloffMpc;
     f32[23] = tuning.edgeSharpness;
-    // fadeAlpha (float 24); floats 25..27 are pad, left at zero.
+    // fadeAlpha (float 24); float 25 is packedId (written once above);
+    // floats 26..27 are pad, left at zero.
     f32[24] = fadeAlpha;
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
+  }
 
+  function draw(
+    pass: GPURenderPassEncoder,
+    cam: OrbitCamera,
+    viewport: Vec2,
+    tuning: ZoneOfAvoidanceTuning,
+    innerRadiusMpc: number,
+    outerRadiusMpc: number,
+    bulgeDeg: number,
+    anticenterDeg: number,
+    fadeAlpha: number,
+  ): void {
+    writeUniforms(
+      cam,
+      viewport,
+      tuning,
+      innerRadiusMpc,
+      outerRadiusMpc,
+      bulgeDeg,
+      anticenterDeg,
+      fadeAlpha,
+    );
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
+    pass.draw(6, 1);
+  }
+
+  // Pick twin of `draw`: same fullscreen-quad draw, same uniforms, against
+  // the r32uint pick pipeline. Never binds group(0) itself — see the pick
+  // pipeline's construction above for why. `bindGroup` is the SAME object
+  // `draw` binds at group(0), just landing at group(1) here.
+  function drawPick(
+    pass: GPURenderPassEncoder,
+    cam: OrbitCamera,
+    viewport: Vec2,
+    tuning: ZoneOfAvoidanceTuning,
+    innerRadiusMpc: number,
+    outerRadiusMpc: number,
+    bulgeDeg: number,
+    anticenterDeg: number,
+    fadeAlpha: number,
+  ): void {
+    writeUniforms(
+      cam,
+      viewport,
+      tuning,
+      innerRadiusMpc,
+      outerRadiusMpc,
+      bulgeDeg,
+      anticenterDeg,
+      fadeAlpha,
+    );
+    pass.setPipeline(pickPipeline);
+    pass.setBindGroup(1, bindGroup);
     pass.draw(6, 1);
   }
 
@@ -444,6 +569,7 @@ export function createZoneOfAvoidanceRenderer(
   const renderer: ZoneOfAvoidanceRenderer = {
     label: 'zoneOfAvoidanceRenderer',
     draw,
+    drawPick,
     drawLabels,
     destroy,
   };

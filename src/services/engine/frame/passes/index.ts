@@ -247,12 +247,15 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // (its own target), before the hdr group upsamples it in. Not an hdr-group
   // member: it targets 'volume', so the hdr render step excludes it.
   scalarVolumeLayer,
-  // The zone-of-avoidance band's PRODUCER: its own reduced-res
-  // 'zoa' target, listed beside scalar-volume for the same reason — a
-  // different target keeps it out of every other group's filter regardless
-  // of array position.
-  zoneOfAvoidanceLayer,
   pointSpritesLayer,
+  // The zone-of-avoidance band's PRODUCER: its own reduced-res 'zoa'
+  // target keeps it out of every VISUAL group's filter regardless of array
+  // position (frameProgram.ts hand-orders render steps independently of
+  // this registry) — but the PICK program groups by slab alone and walks
+  // this array's order within a slab, so this row's `drawPick` DOES care:
+  // it must sit after `pointSpritesLayer`, which establishes the COSMO pick
+  // pass's shared @group(0) camera every other COSMO drawPick relies on.
+  zoneOfAvoidanceLayer,
   proceduralDisksLayer,
   texturedDisksLayer,
   filamentsLayer,

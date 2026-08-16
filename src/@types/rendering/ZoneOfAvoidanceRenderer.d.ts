@@ -12,7 +12,8 @@
  * `drawLabels` draws the curved on-band "Zone of Avoidance" lettering —
  * discrete world-oriented MSDF glyph quads, a separate pipeline from the
  * band's fullscreen ray march (see zoneOfAvoidanceRenderer.ts's header).
- * `drawPick` lands with band picking — not stubbed here.
+ * `drawPick` reruns the SAME ray march against an r32uint pick target so a
+ * click only registers where the band is actually visible.
  */
 
 import type { OrbitCamera } from '../camera/OrbitCamera';
@@ -33,6 +34,24 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
    * `tuning.intensity`.
    */
   draw(
+    pass: GPURenderPassEncoder,
+    cam: OrbitCamera,
+    viewport: Vec2,
+    tuning: ZoneOfAvoidanceTuning,
+    innerRadiusMpc: number,
+    outerRadiusMpc: number,
+    bulgeDeg: number,
+    anticenterDeg: number,
+    fadeAlpha: number,
+  ): void;
+
+  /**
+   * Pick twin of `draw` — same args, same uniforms, issued against the
+   * r32uint pick pipeline instead. Does not bind `@group(0)`: the COSMO
+   * pick pass's shared camera prefix is already bound by the time this
+   * runs (see `ContentLayer.drawPick`'s postcondition).
+   */
+  drawPick(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
     viewport: Vec2,

@@ -22,7 +22,7 @@
 //   offset 48 : cameraPosMpc  (vec3<f32>) + outerRadiusMpc (f32)
 //   offset 64 : color         (vec3<f32>) + bulgeDeg       (f32)
 //   offset 80 : anticenterDeg (f32), intensity (f32), radialFalloffMpc (f32), edgeSharpness (f32)
-//   offset 96 : fadeAlpha (f32), _pad0 (f32), _pad1 (f32), _pad2 (f32)
+//   offset 96 : fadeAlpha (f32), packedId (u32), _pad0 (f32), _pad1 (f32)
 //
 // Each 'vec3 + f32' pair above packs into one 16-byte slot the same way
 // horizonShell's does — WGSL's uniform-address-space layout gives vec3<f32>
@@ -36,7 +36,9 @@
 // absolute Mpc e-folding length ('radialFalloff * (outerRadiusMpc -
 // innerRadiusMpc)', see zoneOfAvoidanceRenderer.ts) before writing this
 // field, so the shader only ever sees the one currency its exponential
-// distance-decay term actually needs.
+// distance-decay term actually needs. 'packedId' is the band's constant
+// pick identity (written once at construction, unread by the visual
+// fragment) — see fragmentPick.wesl.
 
 struct Uniforms {
   camForward: vec3<f32>,
@@ -54,9 +56,9 @@ struct Uniforms {
   radialFalloffMpc: f32,
   edgeSharpness: f32,
   fadeAlpha: f32,
+  packedId: u32,
   _pad0: f32,
   _pad1: f32,
-  _pad2: f32,
 };
 
 // ── Vertex-to-fragment interface ────────────────────────────────────
