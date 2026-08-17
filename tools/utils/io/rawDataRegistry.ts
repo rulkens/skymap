@@ -851,9 +851,11 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JHUAPL/SwRI/Alex Parker "True Colors of Pluto" (P_COLOR_2_TRUE_COLOR) — natural-colour New Horizons MVIC disc view "processed to approximate what the human eye would perceive", single hemisphere, 1980x1980 JPEG, ~0.5 MB. Not a build input: this is the calibration REFERENCE the PIA11707 chroma-inversion fit is derived against, kept here so the fit can be re-derived. Not wired into the fetcher — download manually. Verified live 2026-08-17: HTTP 200, image/jpeg, ~481 KB, at the assets.science.nasa.gov dynamicimage endpoint (the flat "BIG_..." photojournal-style path 404s; science.nasa.gov/resource/true-colors-of-pluto/ links this dynamicimage form).',
+      'NASA/JHUAPL/SwRI/Alex Parker "True Colors of Pluto" (P_COLOR_2_TRUE_COLOR) — natural-colour New Horizons MVIC disc view "processed to approximate what the human eye would perceive", single hemisphere, 1980x1980 JPEG, ~0.5 MB. Not a build input: this is the calibration REFERENCE the PIA11707 chroma-inversion fit is derived against and re-checked against, so it rides the full pull like every other raw rather than being curl-ed by hand. Verified live 2026-08-17: HTTP 200, image/jpeg, ~481 KB, at the assets.science.nasa.gov dynamicimage endpoint (the flat "BIG_..." photojournal-style path 404s; science.nasa.gov/resource/true-colors-of-pluto/ links this dynamicimage form).',
     upstream:
       'https://assets.science.nasa.gov/dynamicimage/assets/science/psd/solar/2023/09/b/BIG_P_COLOR_2_TRUE_COLOR1_1980.jpg?w=1980&h=1980&fit=clip&crop=faces%2Cfocalpoint',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
   },
 
   'textures.dir': {

@@ -74,7 +74,8 @@ const BODY_SOURCES_APPROX_MB = 700;
 /** Approximate size of the eight BMNG quadrants (real on-disk total). */
 const BMNG_QUADRANTS_APPROX_MB = 421;
 
-/** Approximate size of `CHROMA_SOURCES` (PIA11707, real Content-Length). */
+/** Approximate size of `CHROMA_SOURCES` (PIA11707 plus the 0.5 MB calibration
+ *  reference, real Content-Lengths). */
 const CHROMA_SOURCES_APPROX_MB = 30;
 
 /** Approximate size of the full raw pull, printed by the size gate. */
@@ -161,25 +162,26 @@ const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_K
 }));
 
 /**
- * The chroma source for the (not-yet-built) calibrated Pluto colour texture
- * (PIA11707 — see its RAW_DATA comment: published enhanced-colour, used only
- * as an input a fitted calibration inverts). It is NOT a `(body, kind)` row
- * in `TEXTURE_SOURCES`: that table gives every body/kind exactly ONE raw
- * input via `TextureSourceEntry.native`, and Pluto's `surface` build needs a
- * SECOND file alongside `textures.usgsPluto` — a shape `TEXTURE_SOURCES`
- * cannot express without either a fake extra body or a fake extra kind, both
- * worse than a small extra list here. Until that table grows a multi-input
- * shape, this rides the full pull the same way `QUADRANT_SOURCES` does: a
- * source nothing else names would silently never get downloaded. No `--dev`
- * variant — the 2k SSS-style quick-check subset has no calibrated-Pluto
- * counterpart yet. The calibration REFERENCE image
- * (`textures.nasaPlutoTrueColorRef`) is deliberately absent here too — it is
- * not a build input, only re-derivation provenance; see its RAW_DATA comment.
+ * The second (chroma) input of every `panSharpen` body — today just Pluto's
+ * PIA11707, whose published enhancement the build's calibration inverts. These
+ * ride the full pull appended after the natives rather than inline, so the
+ * emitted order is unchanged; there is no `--dev` variant, as the 2k quick-check
+ * subset has no calibrated counterpart.
+ *
+ * The true-colour REFERENCE the chroma calibration is fitted and re-checked
+ * against comes along: nothing reads it at build time, but "a raw the pipeline's
+ * numbers came from that no command can obtain" is the same hole the BMNG
+ * quadrants used to sit in, and it is 0.5 MB.
  */
 const CHROMA_SOURCES: readonly TextureSource[] = [
+  ...TEXTURE_ENTRIES.flatMap((entry) =>
+    'chroma' in entry
+      ? [{ url: RAW_DATA[entry.chroma].upstream, destPath: rawDataPath(entry.chroma) }]
+      : [],
+  ),
   {
-    url: RAW_DATA['textures.nasaPlutoColor'].upstream,
-    destPath: rawDataPath('textures.nasaPlutoColor'),
+    url: RAW_DATA['textures.nasaPlutoTrueColorRef'].upstream,
+    destPath: rawDataPath('textures.nasaPlutoTrueColorRef'),
   },
 ];
 

@@ -22,19 +22,23 @@
  *    2:1 equirectangular RGB JPEGs at 2k/4k/8k.
  *  - **NASA BMNG JPEG** — the Blue Marble Earth equirect (21600×10800 full, or a
  *    5400×2700 dev sibling), same 2:1 RGB shape.
- *  - **USGS GeoTIFF** — the four Galilean moons as plain 8-bit TIFFs. Io and
- *    Ganymede are RGB; Europa and Callisto ship single-channel (mono). sharp
- *    reads TIFF natively (no ISIS toolchain), so a `.tif` flows through the exact
- *    same `sharp(src)` entry as a JPEG — the format is transparent to the build.
+ *  - **USGS / NASA GeoTIFF** — the four Galilean moons plus Pluto and Charon as
+ *    plain 8-bit TIFFs. Io and Ganymede are RGB; Europa, Callisto, Pluto and
+ *    Charon ship single-channel (mono), and Pluto has a separate NASA MVIC colour
+ *    TIFF alongside its mono mosaic. sharp reads TIFF natively (no ISIS
+ *    toolchain), so a `.tif` flows through the exact same `sharp(src)` entry as a
+ *    JPEG — the format is transparent to the build.
  *
  * ## Colour treatment, dispatched on the registry tag
  *
  * How a body's albedo source becomes sRGB is authored per body in
  * `BODY_TEXTURE_REGISTRY` as a tagged `treatment` and switched on here: an
- * already-RGB source passes through, while the single-channel USGS mosaics
- * (Europa, Callisto, Pluto, Charon — none has a global colour mosaic) are
- * band-expanded and multiplied by their `tint`, restoring a plausible hue the map
- * lacks. A further treatment is a variant plus a case, not a new marker field.
+ * already-RGB source passes through; a single-channel USGS mosaic (Europa,
+ * Callisto, Pluto, Charon) is band-expanded and multiplied by its `tint`,
+ * restoring a plausible hue the map lacks; a `panSharpen` body instead takes
+ * luminance from its mono mosaic and hue from the separate `chroma` source its
+ * `TEXTURE_SOURCES` row names. A further treatment is a variant plus a case, not
+ * a new marker field.
  *
  * ## Non-upscaled tier downsample (the source-cap intersection)
  *
@@ -75,10 +79,12 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
+import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
@@ -141,6 +147,17 @@ function sourcePathsFor(id: BodyTextureId, kind: TextureKind): readonly string[]
   return candidatePaths(SOURCE_TABLE[id][kind]!);
 }
 
+/**
+ * The pan-sharpen chroma source for a `(body, kind)`, or `null` where the row
+ * names none. Full-res only — a chroma source has no `--dev` variant, so a
+ * `--dev` build of a `panSharpen` body fails loudly rather than emitting a
+ * differently-coloured texture under the same filename.
+ */
+function chromaPathFor(id: BodyTextureId, kind: TextureKind): string | null {
+  const entry = SOURCE_TABLE[id][kind]!;
+  return 'chroma' in entry ? rawDataPath(entry.chroma) : null;
+}
+
 /** Ordered candidate paths for the Saturn ring strip, best (full) first. */
 function ringSourcePaths(): readonly string[] {
   return candidatePaths(TEXTURE_SOURCES['saturn-ring'].surface);
@@ -162,8 +179,8 @@ async function sourceWidth(srcPath: string): Promise<number> {
 
 /**
  * Multiply a grayscale tint into a single-channel mono source and write the
- * JPEG. Europa and Callisto ship one-channel USGS mosaics with no global colour;
- * the tint restores a plausible per-channel hue the map lacks.
+ * JPEG. Europa, Callisto, Pluto and Charon ship one-channel USGS mosaics with no
+ * global colour; the tint restores a plausible per-channel hue the map lacks.
  *
  * This runs as TWO sharp passes, not one, because libvips fixes its internal
  * operation order: within a single pipeline `linear` executes BEFORE the
@@ -194,14 +211,56 @@ export async function writeTintedMonoTier(
 }
 
 /**
+ * Take luminance from a panchromatic mosaic and hue from a lower-resolution
+ * colour map, undoing that map's published enhancement with `calibration`, and
+ * write the JPEG.
+ *
+ * The chroma source is resized to the LUMINANCE tier's exact grid (`fit: 'fill'`,
+ * so a source whose aspect rounds differently cannot shift the two apart by a
+ * row). A plain resize is all the registration this needs: the two mosaics are
+ * published on the same equirectangular graticule and their cross-correlation
+ * peaks at dx = dy = 0, so no warp or offset is involved — if a future pair does
+ * not co-register, that belongs in a separate resampling step, not smuggled in
+ * here as a fudge offset.
+ */
+export async function writePanSharpenedTier(
+  lumPath: string,
+  chromaPath: string,
+  calibration: ChromaCalibration,
+  widthPx: number,
+  outPath: string,
+): Promise<void> {
+  const lum = await sharp(lumPath, { limitInputPixels: false })
+    .resize({ width: widthPx })
+    .toColourspace('b-w')
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width, height } = lum.info;
+  const chroma = await sharp(chromaPath, { limitInputPixels: false })
+    .resize({ width, height, fit: 'fill' })
+    .toColourspace('srgb')
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const rgb = panSharpenRgb(lum.data, chroma.data, calibration);
+  await sharp(rgb, { raw: { width, height, channels: 3 } })
+    .jpeg({ quality: JPEG_QUALITY })
+    .toFile(outPath);
+}
+
+/**
  * Downsample one body source to a tier and write the JPEG, per the body's colour
  * treatment. Resizes by width only (the sources are exactly 2:1, so height
  * follows): a `colour` source encodes in a single pass at `JPEG_QUALITY`, a
- * `monoTint` one takes the two-pass tint path (`writeTintedMonoTier`).
+ * `monoTint` one takes the two-pass tint path (`writeTintedMonoTier`), and a
+ * `panSharpen` one recombines `srcPath`'s luminance with `chromaPath`'s hue.
  */
 async function writeBodyTier(
   srcPath: string,
   treatment: ColourTreatment,
+  chromaPath: string | null,
   widthPx: number,
   outPath: string,
 ): Promise<void> {
@@ -215,6 +274,16 @@ async function writeBodyTier(
     }
     case 'monoTint': {
       await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath);
+      return;
+    }
+    case 'panSharpen': {
+      // A loud build error, not a silent fallback to the mono source: shipping a
+      // grey Pluto because a source row lost its `chroma` key is exactly the kind
+      // of quiet regression the registry/`TEXTURE_SOURCES` pairing exists to stop.
+      if (chromaPath === null) {
+        throw new Error(`buildTextures: panSharpen treatment with no chroma source (${srcPath})`);
+      }
+      await writePanSharpenedTier(srcPath, chromaPath, treatment.calibration, widthPx, outPath);
       return;
     }
     // TypeScript exhaustiveness guard — the union is closed.
@@ -336,6 +405,7 @@ async function writeNormalTier(
 type KindWriter = {
   readonly write: (
     bodyId: BodyTextureId,
+    kind: TextureKind,
     srcPath: string,
     widthPx: number,
     outPath: string,
@@ -347,6 +417,7 @@ type KindWriter = {
 const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
   colour: '',
   monoTint: '  (tinted)',
+  panSharpen: '  (pan-sharpened)',
 };
 
 /**
@@ -358,8 +429,14 @@ const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
  * — and the note derives from the same tag.
  */
 const SRGB_WRITER: KindWriter = {
-  write: (bodyId, srcPath, widthPx, outPath) =>
-    writeBodyTier(srcPath, BODY_TEXTURE_REGISTRY[bodyId].treatment, widthPx, outPath),
+  write: (bodyId, kind, srcPath, widthPx, outPath) =>
+    writeBodyTier(
+      srcPath,
+      BODY_TEXTURE_REGISTRY[bodyId].treatment,
+      chromaPathFor(bodyId, kind),
+      widthPx,
+      outPath,
+    ),
   note: (bodyId) => TREATMENT_NOTE[BODY_TEXTURE_REGISTRY[bodyId].treatment.kind],
 };
 
@@ -386,16 +463,17 @@ const KIND_WRITERS: Partial<Record<TextureKind, KindWriter>> = {
   surface: SRGB_WRITER,
   night: SRGB_WRITER,
   material: {
-    write: (_bodyId, srcPath, widthPx, outPath) => writeMaterialTier(srcPath, widthPx, outPath),
+    write: (_bodyId, _kind, srcPath, widthPx, outPath) =>
+      writeMaterialTier(srcPath, widthPx, outPath),
     note: () => '  (material)',
   },
   normal: {
-    write: (bodyId, srcPath, widthPx, outPath) =>
+    write: (bodyId, _kind, srcPath, widthPx, outPath) =>
       writeNormalTier(bodyId, srcPath, widthPx, outPath),
     note: () => '  (normal)',
   },
   clouds: {
-    write: (_bodyId, srcPath, widthPx, outPath) => writeCloudTier(srcPath, widthPx, outPath),
+    write: (_bodyId, _kind, srcPath, widthPx, outPath) => writeCloudTier(srcPath, widthPx, outPath),
     note: () => '  (clouds)',
   },
 };
@@ -416,7 +494,7 @@ async function writeBodyKindTier(
   if (writer === undefined) {
     throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
   }
-  await writer.write(bodyId, srcPath, widthPx, outPath);
+  await writer.write(bodyId, kind, srcPath, widthPx, outPath);
   return writer.note(bodyId);
 }
 

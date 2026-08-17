@@ -78,10 +78,11 @@ describe('textureSourcesFor', () => {
         'Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
         'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
         'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
-        // The PIA11707 chroma source for the calibrated Pluto colour build —
-        // not a (body, kind) row in TEXTURE_SOURCES, so it rides the full
-        // pull the same way the BMNG quadrants do (see CHROMA_SOURCES).
+        // Pluto's second (chroma) input and the true-colour reference its
+        // calibration is fitted against: neither is a `native`, so both ride the
+        // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).
         'PIA11707.tif',
+        'BIG_P_COLOR_2_TRUE_COLOR1_1980.jpg',
       ].sort(),
     );
   });
