@@ -260,9 +260,6 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
   radialFalloff: 0.46,
   edgeSharpness: 5,
   color: [0.5333, 0.5089, 1],
-  // Matches the lettering's pre-tuning-knob literal in
-  // zoneOfAvoidanceRenderer.ts (was a bare LABEL_COLOR const) — this default
-  // alone causes no visual jump.
   labelColor: [0.2307, 0.2502, 0.6795],
 };
 

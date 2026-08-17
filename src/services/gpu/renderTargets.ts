@@ -94,8 +94,8 @@
  * ### Why the zone-of-avoidance row renders at 1/5 scale
  *
  * The band is a fullscreen 32-step ray march — the heaviest per-pixel
- * additive overlay after the scalar-volume raymarch, and (per the visual
- * gate) "pretty horrendous" at full res. Same remedy as `volume` /
+ * additive overlay after the scalar-volume raymarch, too costly to run at
+ * full res. Same remedy as `volume` /
  * `star-aggregates` / `mw-aggregate`: the band is smooth low-frequency haze
  * with no high-frequency detail, so a 1/5-res raymarch bilinearly upsampled
  * into HDR is visually free while dropping fragment cost by the square of
@@ -168,7 +168,7 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
   // Zone-of-avoidance band raymarch — same reason as `volume`: the upsample's
-  // additive blend must add nothing for a fragment the half-res march didn't
+  // additive blend must add nothing for a fragment the 1/5-res march didn't
   // reach.
   zoa: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
@@ -200,9 +200,8 @@ const STAR_AGGREGATE_DIVISOR = 2;
 
 /**
  * Downsample divisor for the reduced-res `zoa` row — total fragment
- * reduction is its square (5 → 1/25th the fragments). Visual-gate feedback
- * called for "1/5th or smaller"; named here for the same one-line-change
- * reason as `STAR_AGGREGATE_DIVISOR`.
+ * reduction is its square (5 → 1/25th the fragments). Named here for the
+ * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
  */
 const ZONE_OF_AVOIDANCE_DIVISOR = 5;
 
