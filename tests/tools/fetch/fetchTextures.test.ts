@@ -82,7 +82,7 @@ describe('textureSourcesFor', () => {
         // calibration is fitted against: neither is a `native`, so both ride the
         // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).
         'PIA11707.tif',
-        'BIG_P_COLOR_2_TRUE_COLOR1_1980.jpg',
+        'BIG_P_COLOR_2_TRUE_COLOR1.png',
       ].sort(),
     );
   });

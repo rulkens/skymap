@@ -29,7 +29,7 @@
  *
  * ## Size gate + the --dev subset
  *
- * The full raw pull is ~1.1 GB: ~700 MB of body/ring maps (the USGS mono
+ * The full raw pull is ~1.2 GB: ~700 MB of body/ring maps (the USGS mono
  * GeoTIFFs dominate) plus the ~421 MB BMNG quadrant set the Earth surface
  * tile pyramid is baked from. On a constrained network that is not something
  * to kick off by accident (feedback_announce_big_downloads), so the fetcher
@@ -74,9 +74,9 @@ const BODY_SOURCES_APPROX_MB = 700;
 /** Approximate size of the eight BMNG quadrants (real on-disk total). */
 const BMNG_QUADRANTS_APPROX_MB = 421;
 
-/** Approximate size of `CHROMA_SOURCES` (PIA11707 plus the 0.5 MB calibration
- *  reference, real Content-Lengths). */
-const CHROMA_SOURCES_APPROX_MB = 30;
+/** Approximate size of `CHROMA_SOURCES` (PIA11707 at 30 MB plus the 57 MB
+ *  true-colour calibration reference, real Content-Lengths). */
+const CHROMA_SOURCES_APPROX_MB = 87;
 
 /** Approximate size of the full raw pull, printed by the size gate. */
 export const FULL_FETCH_APPROX_MB =
@@ -168,10 +168,12 @@ const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_K
  * emitted order is unchanged; there is no `--dev` variant, as the 2k quick-check
  * subset has no calibrated counterpart.
  *
- * The true-colour REFERENCE the chroma calibration is fitted and re-checked
- * against comes along: nothing reads it at build time, but "a raw the pipeline's
- * numbers came from that no command can obtain" is the same hole the BMNG
- * quadrants used to sit in, and it is 0.5 MB.
+ * The true-colour REFERENCE the calibration is fitted against is appended by
+ * hand, not folded out of `TEXTURE_ENTRIES`: it is no body's `(body, kind)`
+ * source — nothing is built from it — so it has no `TEXTURE_SOURCES` row to be
+ * derived from, the same reason `QUADRANT_SOURCES` is its own list. It rides the
+ * pull anyway because "a raw the pipeline's numbers came from that no command
+ * can obtain" is the hole the BMNG quadrants used to sit in.
  */
 const CHROMA_SOURCES: readonly TextureSource[] = [
   ...TEXTURE_ENTRIES.flatMap((entry) =>

@@ -829,31 +829,34 @@ export const RAW_DATA = {
   },
   // ─── Pluto derived colour — chroma source + calibration reference ─────
   //
-  // PIA11707 is published as ENHANCED colour (Olkin+ 2017, AJ 154 258:
-  // "enhanced color (not natural color as perceived by the human eye)").
-  // It is registered here ONLY as a chroma source whose enhancement a
-  // fitted calibration inverts against the true-colour reference below —
-  // never wire PIA11707 into a runtime texture unconverted.
+  // PIA11707 carries NO colour-type label of its own. That it is enhanced
+  // rather than natural colour is inferred from its product family (Olkin+
+  // 2017, AJ 154 258, of their own three-broadband-filter renderings: "These
+  // images are enhanced color (not natural color as perceived by the human
+  // eye)" — the paper never mentions PIA11707) and measured directly by the
+  // fit against the true-colour reference below. Registered ONLY as a chroma
+  // source whose stretch that fitted calibration inverts — never wire
+  // PIA11707 into a runtime texture raw.
 
   'textures.nasaPlutoColor': {
     path: 'data/raw/textures/PIA11707.tif',
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JHUAPL/SwRI New Horizons MVIC three-filter (blue/red/near-IR) global colour map of Pluto (PIA11707), 5926x2963, 3-channel 8-bit sRGB, equirectangular 0-360 lon / +-90 lat, ~29 MB. PUBLISHED AS ENHANCED COLOUR (Olkin+ 2017, AJ 154 258) — not the true appearance. Used solely as a chroma source: a fitted calibration against `textures.nasaPlutoTrueColorRef` inverts the enhancement before any of this reaches a runtime texture. Verified live 2026-08-17: HTTP 200, image/tiff, content-length 30,681,324 bytes, at the assets.science.nasa.gov "dam" path (the old photojournal.jpl.nasa.gov path now serves HTML, not a TIFF).',
+      'NASA/JHUAPL/SwRI New Horizons MVIC global colour map of Pluto (PIA11707), 5926x2963, 3-channel 8-bit sRGB, equirectangular 0-360 lon / +-90 lat, ~29 MB. NASA calls it only "based on a series of three color filter images obtained by the Ralph/Multispectral Visual Imaging Camera" — NOT natural colour; see the block comment above for how the enhancement is established. Used solely as a chroma source: a fitted calibration against `textures.nasaPlutoTrueColorRef` inverts the stretch before any of this reaches a runtime texture. Verified live 2026-08-17: HTTP 200, image/tiff, content-length 30,681,324 bytes, at the assets.science.nasa.gov "dam" path (the old photojournal.jpl.nasa.gov path now serves HTML, not a TIFF).',
     upstream:
       'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia11/pia11707/PIA11707.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
   'textures.nasaPlutoTrueColorRef': {
-    path: 'data/raw/textures/BIG_P_COLOR_2_TRUE_COLOR1_1980.jpg',
+    path: 'data/raw/textures/BIG_P_COLOR_2_TRUE_COLOR1.png',
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JHUAPL/SwRI/Alex Parker "True Colors of Pluto" (P_COLOR_2_TRUE_COLOR) — natural-colour New Horizons MVIC disc view "processed to approximate what the human eye would perceive", single hemisphere, 1980x1980 JPEG, ~0.5 MB. Not a build input: this is the calibration REFERENCE the PIA11707 chroma-inversion fit is derived against and re-checked against, so it rides the full pull like every other raw rather than being curl-ed by hand. Verified live 2026-08-17: HTTP 200, image/jpeg, ~481 KB, at the assets.science.nasa.gov dynamicimage endpoint (the flat "BIG_..." photojournal-style path 404s; science.nasa.gov/resource/true-colors-of-pluto/ links this dynamicimage form).',
+      'NASA/JHUAPL/SwRI/Alex Parker "True Colors of Pluto" (P_COLOR_2_TRUE_COLOR) — natural-colour New Horizons MVIC disc view, of which NASA says "The processing creates images that would approximate the colors that the human eye would perceive"; single hemisphere, 8000x8000 PNG, ~57 MB. Not a build input: this is the calibration REFERENCE the PIA11707 chroma-inversion fit is derived against and re-checked against, so it rides the full pull like every other raw rather than being curl-ed by hand. Verified live 2026-08-17: HTTP 200, image/png, content-length 57,098,975 bytes — the "Download Original" target on science.nasa.gov/resource/true-colors-of-pluto/. Pin THIS dam path, not the 1980-px `dynamicimage` transform the page embeds: that endpoint resamples, re-encodes and crops by a content-dependent rule, so its bytes are not a stable reference.',
     upstream:
-      'https://assets.science.nasa.gov/dynamicimage/assets/science/psd/solar/2023/09/b/BIG_P_COLOR_2_TRUE_COLOR1_1980.jpg?w=1980&h=1980&fit=clip&crop=faces%2Cfocalpoint',
+      'https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/b/BIG_P_COLOR_2_TRUE_COLOR1.png',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },

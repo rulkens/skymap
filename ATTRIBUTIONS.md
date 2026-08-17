@@ -376,21 +376,30 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 #### NASA — Pluto derived colour (New Horizons MVIC)
 
-- **PIA11707** — New Horizons MVIC three-filter global colour map of Pluto.
-  Published as **enhanced** colour (Olkin et al. 2017, _AJ_ 154, 258: "enhanced
-  color (not natural color as perceived by the human eye)"), NOT natural
-  colour. skymap uses it only as a chroma source: a fitted calibration
-  against the true-colour image below inverts the enhancement before any
-  pixels reach a runtime texture — PIA11707 itself is never shipped.
+- **PIA11707** — New Horizons global colour map of Pluto, which NASA describes
+  as "based on a series of three color filter images obtained by the
+  Ralph/Multispectral Visual Imaging Camera". NASA attaches no colour-type
+  label to it, so that it is **enhanced** rather than natural colour is an
+  inference, from two independent things. (a) Olkin et al. 2017, _AJ_ 154, 258,
+  say of their own renderings from that same three-broadband-filter set — blue,
+  red and near-IR "displayed in the blue, green, and red color channels,
+  respectively" — that "These images are enhanced color (not natural color as
+  perceived by the human eye)"; the paper never mentions PIA11707, so this
+  carries only as far as the product family. (b) We measured it: fitting
+  PIA11707's chroma against the true-colour image below recovers a ~6.4×
+  anisotropic chroma stretch, so the two renderings of the same data
+  demonstrably disagree on saturation. skymap uses PIA11707 only as a chroma
+  source — that fitted calibration inverts the stretch before any pixels reach
+  a runtime texture, and PIA11707 itself is never shipped.
   **Source:** NASA Photojournal (PIA11707),
   <https://science.nasa.gov/photojournal/pluto-color-map> (the legacy
   `photojournal.jpl.nasa.gov/catalog/PIA11707` URL now redirects here).
   **Licence:** Public domain. **Credit:** NASA/JHUAPL/SwRI.
 - **"True Colors of Pluto"** (P_COLOR_2_TRUE_COLOR) — natural-colour New
-  Horizons MVIC disc view, "processed to approximate what the human eye
-  would perceive". Used only as the calibration reference the PIA11707
-  chroma-inversion fit is derived against (not a build input, kept for
-  reproducibility). **Source:**
+  Horizons MVIC disc view, of which NASA's page says "The processing creates
+  images that would approximate the colors that the human eye would perceive".
+  Used only as the calibration reference the PIA11707 chroma-inversion fit is
+  derived against (not a build input, kept for reproducibility). **Source:**
   <https://science.nasa.gov/resource/true-colors-of-pluto/>. **Licence:**
   Public domain. **Credit:** NASA/JHUAPL/SwRI/Alex Parker.
 

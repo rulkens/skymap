@@ -149,9 +149,9 @@ function sourcePathsFor(id: BodyTextureId, kind: TextureKind): readonly string[]
 
 /**
  * The pan-sharpen chroma source for a `(body, kind)`, or `null` where the row
- * names none. Full-res only — a chroma source has no `--dev` variant, so a
- * `--dev` build of a `panSharpen` body fails loudly rather than emitting a
- * differently-coloured texture under the same filename.
+ * names none. Full-res only — chroma sources carry no `--dev` variant (a `--dev`
+ * fetch pulls no USGS mono mosaic either, so a `panSharpen` body is skipped by
+ * `firstExisting` before this is ever consulted).
  */
 function chromaPathFor(id: BodyTextureId, kind: TextureKind): string | null {
   const entry = SOURCE_TABLE[id][kind]!;
@@ -179,8 +179,11 @@ async function sourceWidth(srcPath: string): Promise<number> {
 
 /**
  * Multiply a grayscale tint into a single-channel mono source and write the
- * JPEG. Europa, Callisto, Pluto and Charon ship one-channel USGS mosaics with no
- * global colour; the tint restores a plausible per-channel hue the map lacks.
+ * JPEG — the path for a body whose only global map is panchromatic AND for
+ * which no colour source exists to recover hue from (Europa, Callisto, Charon).
+ * The tint is a stand-in, not a measurement: it restores a plausible per-channel
+ * hue the map lacks. A mono body that does have a colour source takes
+ * `panSharpen` instead (Pluto) and never reaches here.
  *
  * This runs as TWO sharp passes, not one, because libvips fixes its internal
  * operation order: within a single pipeline `linear` executes BEFORE the
