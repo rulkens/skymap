@@ -1,11 +1,10 @@
 /**
  * zoneOfAvoidanceLayerOpacity — the ONE home for the zone-of-avoidance
- * overlay's per-frame opacity scalar: the composition of approach band ×
- * recede band × layer fade-registry opacity. The band fades IN as the Milky
- * Way frames up and back OUT once the Local Group is the subject — the guide
- * is scoped to the Milky-Way-context shot, not a permanent cosmic-scale fixture.
- * Called once per frame (`zoneOfAvoidanceLiveness.ts`); feeds both the band
- * and label draws, which share one fade toggle.
+ * overlay's opacity scalar: the composition of approach band × recede band ×
+ * layer fade-registry opacity. The band fades IN as the Milky Way frames up
+ * and back OUT once the Local Group is the subject — the guide is scoped to
+ * the Milky-Way-context shot, not a permanent cosmic-scale fixture. Feeds
+ * both the band and label draws, which share one fade toggle.
  */
 
 import { fadeBand } from '../../../utils/math/fadeBand';
