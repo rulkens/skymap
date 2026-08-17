@@ -30,7 +30,7 @@ import type { GpuContext } from '../../@types/rendering/GpuContext';
 export type InitGpuOptions = {
   /** Requested in addition to timestamp-query; silently dropped if the adapter lacks one. */
   readonly requiredFeatures?: readonly GPUFeatureName[];
-  /** Clamped per-key to the adapter's advertised maximum. */
+  /** Clamped per-key to the adapter's advertised maximum; unrecognized keys are dropped. */
   readonly requiredLimits?: Readonly<Record<string, number>>;
 };
 
@@ -95,7 +95,11 @@ export async function initGpu(
   const requiredLimits: Record<string, number> = {};
   for (const [key, value] of Object.entries(options?.requiredLimits ?? {})) {
     const max = adapterLimits[key];
-    requiredLimits[key] = max === undefined ? value : Math.min(value, max);
+    // `requestDevice` rejects with OperationError if `requiredLimits` contains a
+    // key the adapter doesn't recognize, so an unmatched key is dropped, not
+    // forwarded — same drop policy as an unsupported feature above.
+    if (max === undefined) continue;
+    requiredLimits[key] = Math.min(value, max);
   }
 
   const device = await adapter.requestDevice({
