@@ -16,9 +16,8 @@ const STEPS: u32 = 32u;
 const INNER_RIM_FRACTION: f32 = 0.05;
 
 // Optical length (Mpc of obscured material) along the fragment's view ray,
-// normalized by outerRadiusMpc so callers scale a dimensionless mask by the
+// normalized by outerRadiusMpc: a dimensionless mask callers scale by the
 // 'intensity' knob. 0.0 means the ray never crosses the shell.
-// 'fragCoordXY' is the window-space fragment position, hashed for jitter.
 fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
   let rayDir = normalize(
     u.camForward
@@ -47,9 +46,8 @@ fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
     let p = u.cameraPosMpc + rayDir * t;
     let r = length(p);
 
-    // Radial profile: soft inner rim x exponential decay outward
-    // ('radialFalloffMpc' is the e-folding length) x a hard outer rim, which
-    // is what actually zeroes the veil since exp() never reaches zero.
+    // Radial profile: soft inner rim x exponential decay ('radialFalloffMpc'
+    // e-folds it) x a hard outer rim — exp() alone never reaches zero.
     let innerRim = smoothstep(
       u.innerRadiusMpc,
       u.innerRadiusMpc + INNER_RIM_FRACTION * (u.outerRadiusMpc - u.innerRadiusMpc),

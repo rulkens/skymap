@@ -1,11 +1,9 @@
 // zoneOfAvoidance/fragmentPick.wesl — analytic pick for the galactic-plane
-// dust-band guide.
-//
-// Pick tail over the shared march in 'band.wesl', so a click only registers
-// where the band's density is perceptible; on a hit it writes the band's
-// constant singleton id and a fixed fallback depth (see PICK_FALLBACK_DEPTH
-// — the camera sits INSIDE the shell throughout this layer's visibility
-// window, so there is no real entry-point depth to project).
+// dust-band guide. Pick tail over the shared march in 'band.wesl', so a
+// click only registers where the band's density is perceptible; on a hit it
+// writes the band's constant singleton id and the fallback depth below (the
+// camera sits INSIDE the shell all through this layer's visibility window,
+// so there is no real entry-point depth to project).
 
 import package::zoneOfAvoidance::io::Uniforms;
 import package::zoneOfAvoidance::io::VsOut;
@@ -47,8 +45,6 @@ fn fsPick(input: VsOut) -> PickFSOut {
 
   var out: PickFSOut;
   out.id = vec4<u32>(u.packedId, 0u, 0u, 0u);
-  // Last-resort hit: the band is an enveloping background haze, so it must
-  // always lose to whatever real pickable drew here first.
   out.depth = PICK_FALLBACK_DEPTH;
   return out;
 }
