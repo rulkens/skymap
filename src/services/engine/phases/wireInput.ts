@@ -63,6 +63,7 @@ import {
 } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -234,7 +235,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // already a broken URL.
   const rootState = store.getState();
   if (!selectHasSelectionIntent(rootState)) {
-    store.dispatch(updateSelectionSelect(EARTH_REF));
+    // Cinema seeds FOCUS only. `select` is what draws the selection ring
+    // (near0SelectionRingLayer reads selectionRows.select), and it earns its
+    // place by explaining the info card — which cinema mode hides. Seeded in
+    // cinema it would instead sit around Earth in every recorded frame of
+    // every take that opens at home. Focus still has to be seeded, or the
+    // camera loses its home target.
+    if (!isCinemaMode()) store.dispatch(updateSelectionSelect(EARTH_REF));
     store.dispatch(updateSelectionFocus(EARTH_REF));
   }
 
