@@ -12,8 +12,10 @@
  * "Precomputed Atmospheric Scattering" (2008) and Hillaire's "A Scalable and
  * Production Ready Sky and Atmosphere Rendering Technique" (2020) — the
  * reference implementations these constants come from. Scattering is split into
- * Rayleigh (per-channel, molecular), Mie (grey, aerosol), and ozone
- * (per-channel absorption, no scattering). Keeping the units uniform (km, 1/km)
+ * Rayleigh (per-channel, molecular), Mie (per-channel aerosol — grey for every
+ * body so far, but Pluto's sub-micron tholin haze scatters blue preferentially,
+ * a genuinely wavelength-dependent Mie effect a scalar cannot express), and
+ * ozone (per-channel absorption, no scattering). Keeping the units uniform (km, 1/km)
  * lets the renderer march the light path in the same space the body radii live
  * in, with no unit conversion at the integration boundary.
  *
@@ -31,7 +33,7 @@ export type AtmosphereParams = {
   readonly atmosphereTopKm: number; // top-of-atmosphere radius (planetRadiusKm + visible-atmosphere thickness)
   readonly rayleighScatter: Vec3; // per-channel Rayleigh scattering coefficient, 1/km
   readonly rayleighScaleHeightKm: number; // exponential density falloff
-  readonly mieScatter: number; // grey Mie scattering coefficient, 1/km
+  readonly mieScatter: Vec3; // per-channel Mie scattering coefficient, 1/km (grey for most bodies)
   readonly mieAbsorption: number; // grey Mie absorption coefficient, 1/km
   readonly mieScaleHeightKm: number; // exponential aerosol density falloff
   readonly miePhaseG: number; // Henyey-Greenstein asymmetry g (Earth ≈ 0.8)

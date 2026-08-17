@@ -85,19 +85,17 @@ const EXTINCTION_EPS: f32 = 1e-7;
 //   offset 28..31 : mieScaleHeightKm       (f32 — fills the vec3 tail)
 //   offset 32..43 : groundAlbedo          (vec3<f32> — 16-aligned at 32)
 //   offset 44..47 : miePhaseG             (f32 — fills the vec3 tail)
-//   offset 48..51 : mieScatter            (f32)
-//   offset 52..55 : mieAbsorption         (f32)
-//   offset 56..59 : ozoneCenterKm         (f32)
-//   offset 60..63 : ozoneWidthKm          (f32)
-//   offset 64..67 : planetRadiusKm        (f32 — ground / atmosphere bottom)
-//   offset 68..71 : atmosphereTopKm       (f32 — top-of-atmosphere radius)
-//   offset 72..75 : _pad0                 (f32 — rounds struct to 80 / 16-byte)
-//   offset 76..79 : _pad1                 (f32 — rounds struct to 80 / 16-byte)
-//   total: 80 bytes / 20 f32.
+//   offset 48..59 : mieScatter            (vec3<f32> — 16-aligned at 48; per-
+//                                          channel, e.g. Pluto's blue tholin haze)
+//   offset 60..63 : mieAbsorption         (f32 — fills the mieScatter tail)
+//   offset 64..67 : ozoneCenterKm         (f32)
+//   offset 68..71 : ozoneWidthKm          (f32)
+//   offset 72..75 : planetRadiusKm        (f32 — ground / atmosphere bottom)
+//   offset 76..79 : atmosphereTopKm       (f32 — top-of-atmosphere radius)
+//   total: 80 bytes / 20 f32, no trailing pad.
 //
 // The twilight knob rides the per-frame 'SkyViewParams' (skyViewLut.wesl), NOT
-// this construction-written buffer, so it can be tuned live; the two tail slots
-// here are inert pad again.
+// this construction-written buffer, so it can be tuned live.
 //
 // 'planetRadiusKm' and 'atmosphereTopKm' ride here (not only on
 // 'AtmosphereUniforms') because the bakes need the ABSOLUTE km radii to
@@ -111,27 +109,25 @@ struct ScatteringParams {
   mieScaleHeightKm: f32,
   groundAlbedo: vec3<f32>,
   miePhaseG: f32,
-  mieScatter: f32,
+  mieScatter: vec3<f32>,
   mieAbsorption: f32,
   ozoneCenterKm: f32,
   ozoneWidthKm: f32,
   planetRadiusKm: f32,
   atmosphereTopKm: f32,
-  _pad0: f32,
-  _pad1: f32,
 };
 
 // ── MediumSample — the local optical properties at a point ───────────
 //
 // The scattering + extinction coefficients (1/km) at one position in the
 // atmosphere, the per-step quantities every march needs. 'scatterR' is the
-// per-channel Rayleigh scattering; 'scatterM' is the grey Mie scattering (a
-// scalar — Mie is wavelength-neutral); 'extinction' is the total per-channel
-// attenuation (Rayleigh + Mie scatter+absorb + ozone absorb) that drives the
-// 'exp(-extinction*dt)' transmittance across a step.
+// per-channel Rayleigh scattering; 'scatterM' is the per-channel Mie
+// scattering; 'extinction' is the total per-channel attenuation (Rayleigh +
+// Mie scatter+absorb + ozone absorb) that drives the 'exp(-extinction*dt)'
+// transmittance across a step.
 struct MediumSample {
   scatterR: vec3<f32>,
-  scatterM: f32,
+  scatterM: vec3<f32>,
   extinction: vec3<f32>,
 };
 
@@ -197,7 +193,7 @@ fn sampleMedium(params: ScatteringParams, posKm: vec3<f32>) -> MediumSample {
   let scatterM = params.mieScatter * dM;
   let extinction =
     params.rayleighScatter * dR
-    + vec3<f32>((params.mieScatter + params.mieAbsorption) * dM)
+    + (params.mieScatter + vec3<f32>(params.mieAbsorption)) * dM
     + params.ozoneAbsorption * dO;
 
   var m: MediumSample;

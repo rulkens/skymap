@@ -145,8 +145,8 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, r, sunCosZenith);
 
     // Phase-weighted single-scatter source + isotropic multi-scatter source.
-    let scatterPhased = m.scatterR * rp + vec3<f32>(m.scatterM * mp);
-    let scatterTotal = m.scatterR + vec3<f32>(m.scatterM);
+    let scatterPhased = m.scatterR * rp + m.scatterM * mp;
+    let scatterTotal = m.scatterR + m.scatterM;
     // twilightSoftness: fade the WHOLE in-scatter source (single + multi) across the
     // terminator so deep planet shadow goes black instead of clamping to the LUTs'
     // grazing-edge rows. 'muHorizon' is the sun-zenith cosine at which the sun grazes

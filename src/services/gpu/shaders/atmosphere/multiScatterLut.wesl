@@ -95,7 +95,7 @@ fn integrateRay(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayContribu
 
     // Total scattering coefficient at this point (Rayleigh per-channel + grey
     // Mie). Higher orders are treated as isotropic, so no phase weighting.
-    let scattering = m.scatterR + vec3<f32>(m.scatterM);
+    let scattering = m.scatterR + m.scatterM;
 
     // Second-order source: sun light reaching this point, scattered with the
     // isotropic phase. Integrated analytically across the step via the standard
