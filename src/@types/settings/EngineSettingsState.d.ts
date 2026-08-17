@@ -178,10 +178,10 @@ export type EngineSettingsState = {
   milkyWay: MilkyWaySettings;
 
   /**
-   * Zone-of-Avoidance singleton overlay controls — the two independent
-   * visibility axes (band / label) plus the band's look knobs. Shape +
-   * per-field docs live on `ZoneOfAvoidanceSettings`; the knobs themselves on
-   * `ZoneOfAvoidanceTuning`.
+   * Zone-of-Avoidance singleton overlay controls — one visibility toggle
+   * (`enabled` gates the band and its lettering together) plus the band's
+   * look knobs. Shape + per-field docs live on `ZoneOfAvoidanceSettings`; the
+   * knobs themselves on `ZoneOfAvoidanceTuning`.
    */
   zoneOfAvoidance: ZoneOfAvoidanceSettings;
 
