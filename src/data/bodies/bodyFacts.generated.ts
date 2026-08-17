@@ -128,7 +128,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     atmosphere: 'N₂ (thin), trace CH₄, CO',
     wikiTitle: 'Pluto',
     description:
-      "Pluto is a dwarf planet and the largest known world in the Kuiper Belt, the shell of icy debris beyond Neptune's orbit. Its most famous feature is Tombaugh Regio, a heart-shaped plain of nitrogen ice named for the astronomer who discovered Pluto in 1930.",
+      'Counted as the ninth planet until 2006, Pluto is the largest known world in the Kuiper Belt, the field of icy debris beyond Neptune. Its bright heart, Tombaugh Regio, is a plain of frozen nitrogen named for the astronomer who spotted it in 1930.',
   },
   moon: {
     mass: '7.35 × 10²² kg',
@@ -321,6 +321,6 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     atmosphere: 'None',
     wikiTitle: 'Charon_(moon)',
     description:
-      "Charon is Pluto's largest moon and, at roughly half Pluto's diameter, massive enough that the pair are sometimes called a double dwarf planet system rather than a planet and its moon. Its dark red north pole, Neverland Regio (nicknamed Mordor Macula by the New Horizons team), is coated in tholins — methane that escapes Pluto's atmosphere, freezes onto Charon, and is chemically reddened by sunlight.",
+      "At half Pluto's diameter, Charon is the largest moon in the Solar System relative to the world it orbits, and the two are often called a double dwarf planet. Methane escaping Pluto freezes onto Charon's north pole, where sunlight darkens it to the deep red of Neverland Regio, the feature the New Horizons team nicknamed Mordor.",
   },
 };
