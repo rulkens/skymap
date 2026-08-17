@@ -3,9 +3,12 @@
  * for `DEFAULT_ZONE_OF_AVOIDANCE_TUNING` in `defaults.ts`.
  *
  * Emits the WHOLE cluster (unlike `formatMilkyWayTuningDefaults`'s diff) —
- * few enough knobs that a full literal beats a partial diff, and the two
- * Vec3 colours need their own `[r, g, b]` rendering. Rounds to 4 decimals so
- * colour-picker floats' long tails stay readable once pasted.
+ * few enough knobs that a full literal beats a partial diff. Rounds to 4
+ * decimals so colour-picker floats' long tails stay readable once pasted.
+ *
+ * Walks the live object's own keys, like its Milky-Way sibling: a
+ * hand-spelled key list would silently emit an incomplete literal the day a
+ * knob is added, and the paste would drop that knob's tuned value.
  */
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -22,11 +25,10 @@ function formatVec3(v: Readonly<Vec3>): string {
 }
 
 export function formatZoneOfAvoidanceTuningDefaults(tuning: ZoneOfAvoidanceTuning): string {
-  return [
-    `  intensity: ${round(tuning.intensity)},`,
-    `  radialFalloff: ${round(tuning.radialFalloff)},`,
-    `  edgeSharpness: ${round(tuning.edgeSharpness)},`,
-    `  color: ${formatVec3(tuning.color)},`,
-    `  labelColor: ${formatVec3(tuning.labelColor)},`,
-  ].join('\n');
+  const lines: string[] = [];
+  for (const key of Object.keys(tuning) as (keyof ZoneOfAvoidanceTuning)[]) {
+    const value = tuning[key];
+    lines.push(`  ${key}: ${Array.isArray(value) ? formatVec3(value) : String(round(value))},`);
+  }
+  return lines.join('\n');
 }

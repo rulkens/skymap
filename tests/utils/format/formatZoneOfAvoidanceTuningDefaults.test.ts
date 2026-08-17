@@ -34,7 +34,7 @@ describe('formatZoneOfAvoidanceTuningDefaults', () => {
     tuning.labelColor.forEach((c, i) => expect(parsed.labelColor[i]).toBeCloseTo(c, 3));
   });
 
-  it('emits a self-contained literal body — no trailing comma corruption, all five keys present', () => {
+  it('emits a self-contained literal body — no trailing comma corruption, every knob present', () => {
     const tuning: ZoneOfAvoidanceTuning = {
       intensity: 0.5,
       radialFalloff: 0.35,
@@ -45,8 +45,9 @@ describe('formatZoneOfAvoidanceTuningDefaults', () => {
 
     const parsed = parseEmitted(formatZoneOfAvoidanceTuningDefaults(tuning));
 
-    expect(Object.keys(parsed).sort()).toEqual(
-      ['intensity', 'radialFalloff', 'edgeSharpness', 'color', 'labelColor'].sort(),
-    );
+    // Compared against the fixture's own keys, not a hand-written list: a
+    // knob added to `ZoneOfAvoidanceTuning` forces the fixture to grow, and
+    // this assertion then covers it without anyone remembering to.
+    expect(Object.keys(parsed).sort()).toEqual(Object.keys(tuning).sort());
   });
 });
