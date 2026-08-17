@@ -17,7 +17,7 @@ import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../utils/gpu/packAtmosphereU
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import {
   packScatteringParams,
-  SCATTERING_PARAMS_FLOATS,
+  SCATTERING_PARAMS_BYTES,
 } from '../../../../utils/gpu/packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import transmittanceCode from '../../shaders/atmosphere/transmittanceLut.wesl?static';
@@ -374,7 +374,7 @@ export function createAtmosphereShellRenderer(
     // ScatteringParams: written once (the baked constants never change).
     const scatteringBuffer = device.createBuffer({
       label: `atmosphere-scattering-params-${bodyId}`,
-      size: SCATTERING_PARAMS_FLOATS * 4,
+      size: SCATTERING_PARAMS_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(scatteringBuffer, 0, packScatteringParams(params));
