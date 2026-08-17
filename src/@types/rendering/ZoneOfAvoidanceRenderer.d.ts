@@ -2,8 +2,8 @@
  * ZoneOfAvoidanceRenderer — public handle for the galactic-plane dust-band
  * guide layer's band pass. Draws a translucent shell between
  * `innerRadiusMpc` and `outerRadiusMpc`, centred at the world origin (the
- * catalog observer), masked to the galactic-latitude wedge the
- * `zoneOfAvoidanceBLimitDeg` formula describes.
+ * catalog observer), masked to a galactic-latitude wedge whose half-width is
+ * a cosine bump over longitude (`shaders/zoneOfAvoidance/band.wesl`).
  *
  * Same family as `HorizonShellRenderer`: a single, world-anchored impostor
  * whose fragment stage intersects each per-pixel view ray with the geometry

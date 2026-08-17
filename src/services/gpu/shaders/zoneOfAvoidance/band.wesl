@@ -65,9 +65,8 @@ fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
       continue; // skip the trig below; also guards asin(z / r) since r > 0 here
     }
 
-    // WGSL port of the 'zoneOfAvoidanceBLimitDeg' TS twin
-    // (utils/math/zoneOfAvoidanceBLimitDeg.ts) — keep in lockstep: half-width
-    // is a cosine bump over galactic longitude, widest toward the bulge (l=0).
+    // Dust extinction is worst toward the bulge and thinnest toward the
+    // anticenter, so the wedge's half-width is a cosine bump over longitude.
     let galactic = worldToGalactic(p);
     let lon = atan2(galactic.y, galactic.x);
     // z and r round independently, so near the pole their ratio can land just
