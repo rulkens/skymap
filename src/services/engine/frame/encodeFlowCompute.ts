@@ -38,13 +38,18 @@ import { slotReady } from '../../loading/slotReady';
  *
  * Reading the gate off `state` (rather than a caller-assembled arg bag) is what
  * lets the frame executor's COMPUTE table hold a uniform
- * `(encoder, ctx, state) => void` row per compute step: the flow row is just
- * `(encoder, _ctx, state) => encodeFlowCompute(encoder, state)`, with no bespoke
- * plumbing at the call site.
+ * `(encoder, ctx, state) => void` row per compute step, with no bespoke
+ * plumbing at the call site. `nowMs` rides that same row from `ctx`: it is the
+ * renderer's advection clock, which counts seconds rather than rendered frames
+ * (see `flowFieldRenderer.encodeCompute`).
  */
-export function encodeFlowCompute(encoder: GPUCommandEncoder, state: EngineState): void {
+export function encodeFlowCompute(
+  encoder: GPUCommandEncoder,
+  state: EngineState,
+  nowMs: number,
+): void {
   const flowFieldRenderer = state.gpu.flowFieldRenderer;
   const flow = state.settings.flow;
   if (flowFieldRenderer === null || !flow.enabled || !slotReady(state.assetSlots.flow)) return;
-  flowFieldRenderer.encodeCompute(encoder, flow);
+  flowFieldRenderer.encodeCompute(encoder, flow, nowMs);
 }

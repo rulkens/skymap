@@ -6,7 +6,7 @@
  * TRAIL sets the ring length AND the vertex count of every ribbon (draw is
  * 2*TRAIL vertices), LIFE/FADE shape the advect alpha envelope, MAX_PARTICLES
  * sizes the storage buffers AND is the particle-slider ceiling, and
- * HEAD_STEP_SCALE / SPEED_COLOR_MAX / DENS_SCALE map slider values into the
+ * HEAD_SPEED_SCALE / SPEED_COLOR_MAX / DENS_SCALE map slider values into the
  * integrator and the colour ramp.
  *
  * MAX_PARTICLES is one number serving three roles: the storage-buffer capacity,
@@ -22,16 +22,23 @@
  * (`tests/services/gpu/shaders/constants.parity.test.ts`) reads that `.wesl`
  * file and asserts each value matches the export of the same name, so the two
  * cannot drift — `?static` WESL linking is pure build-time linking with NO
- * value injection. DT / MAX_PARTICLES / HEAD_STEP_SCALE are TS-only (buffer
- * sizing + uniform values), so they have no WESL mirror.
+ * value injection. MAX_PARTICLES / HEAD_SPEED_SCALE / MAX_FRAME_DELTA_SEC are
+ * TS-only (buffer sizing + uniform values), so they have no WESL mirror.
  */
 
 export const TRAIL = 32; // ring length per particle — pathline / streamline points
 export const MAX_PARTICLES = 50000; // buffer capacity = slider ceiling = default count
-export const LIFE = 8.0; // advect particle lifetime, frame-time units, then it recycles
-export const FADE = 1.4; // advect alpha fade-in/out window, age units
-export const DT = 0.016; // fixed integration timestep handed to the compute pass
-export const HEAD_STEP_SCALE = 0.012; // flowSpeed -> advect head distance per frame (motion speed)
+export const LIFE = 8.0; // advect particle lifetime in seconds, then it recycles
+export const FADE = 1.4; // advect alpha fade-in/out window, seconds of age
+// Cap on the elapsed time fed to one flow compute dispatch (see
+// `flowFrameDeltaSec`) — guards a backgrounded-then-resumed tab against a
+// giant single-step advance. Matches the flow workbench's own MAX_DT.
+export const MAX_FRAME_DELTA_SEC = 0.05;
+// flowSpeed -> advect head distance per SECOND (motion speed). 0.72 is the old
+// per-FRAME HEAD_STEP_SCALE (0.012) at the 60fps it was tuned against, so the
+// look at 60fps is unchanged; below/above 60fps the head now covers the same
+// grid distance per real second instead of per rendered frame.
+export const HEAD_SPEED_SCALE = 0.72;
 // Floor on the advect trail spacing (prm.trailStep). A spacing of exactly 0
 // makes the integrator's per-iteration step collapse to 0 (or go negative once
 // a particle carries leftover arc-length), so the loop never reaches its

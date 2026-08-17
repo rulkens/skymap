@@ -67,10 +67,13 @@ export type FlowFieldRenderer = {
    * integrator for `flow.mode`. Reads particle count / motion knobs off `flow`.
    * An internal frame counter (self-incremented per call, mirroring
    * `volumeFieldRenderer`) salts the per-particle RNG and advances the
-   * streamline pulse phase. Caller gates on enabled + loaded (see
+   * streamline pulse phase. `nowMs` is the caller's real elapsed-time clock
+   * (`ctx.nowMs`) — the renderer derives real elapsed seconds from it against
+   * its own last-call timestamp, so advection speed and lifetime read in
+   * seconds, not rendered frames. Caller gates on enabled + loaded (see
    * `encodeFlowCompute`).
    */
-  encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void;
+  encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings, nowMs: number): void;
   /**
    * Additive ribbon draw into the open HDR pass. Packs the `Cam` uniform
    * (mvp = `viewProj`, the cube `model`, aspect from `viewportPx`, the pulse

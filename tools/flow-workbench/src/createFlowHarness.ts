@@ -162,11 +162,15 @@ export async function createFlowHarness(
     // gates off an `EngineState`; the workbench has no engine, so it assembles
     // just the slice the gate consumes — the renderer handle, the flow settings,
     // and a ready-when-loaded asset slot (the shape `slotReady` inspects).
-    encodeFlowCompute(encoder, {
-      gpu: { flowFieldRenderer: renderer },
-      settings: { flow: s.flow },
-      assetSlots: { flow: loaded ? { state: () => ({ kind: 'ready' }) } : null },
-    } as unknown as EngineState);
+    encodeFlowCompute(
+      encoder,
+      {
+        gpu: { flowFieldRenderer: renderer },
+        settings: { flow: s.flow },
+        assetSlots: { flow: loaded ? { state: () => ({ kind: 'ready' }) } : null },
+      } as unknown as EngineState,
+      now,
+    );
 
     // HDR accumulation pass — the renderer draws its additive ribbons into it.
     const pass = encoder.beginRenderPass({
