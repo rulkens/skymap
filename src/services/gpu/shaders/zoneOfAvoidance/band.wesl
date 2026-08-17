@@ -80,7 +80,9 @@ fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
     // plane (b=0 -> 0.5, b=±bLimitDeg -> 0/1), so a sample past the limit
     // clamps to a mask of 0. 'edgeSharpness' is in degrees.
     let bAxis = clamp(0.5 + 0.5 * (latDeg / bLimitDeg), 0.0, 1.0);
-    let edgeFadeAxis = clamp(u.edgeSharpness / (2.0 * bLimitDeg), 0.0, 0.5);
+    // Slider floor: 'edgeSharpness' reaches 0, and a zero-width edgeBandMask
+    // smoothstep is 0/0 = NaN exactly where bAxis lands on its 0/1 end stops.
+    let edgeFadeAxis = clamp(u.edgeSharpness / (2.0 * bLimitDeg), 1e-3, 0.5);
     let latMask = edgeBandMask(bAxis, edgeFadeAxis);
 
     accum += radialMask * latMask;
