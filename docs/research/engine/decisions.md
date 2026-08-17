@@ -5,7 +5,7 @@ Companion maps in this directory: [field-seam-map.md](field-seam-map.md) (tool�
 seam), [engine-composition-map.md](engine-composition-map.md) (frame program, layer
 lifecycle, v1 deletion inventory, accretion sites),
 [subsystem-sweep.md](subsystem-sweep.md) (all 14 subsystems vs. the contract +
-shared vocabulary). This file records the *decisions*; the maps carry the evidence.
+shared vocabulary). This file records the _decisions_; the maps carry the evidence.
 
 ## Goal
 
@@ -110,11 +110,17 @@ the deep tuning surface.
 11. **Rung widenings from the renderer/layer sweep** (2026-08-17): the
     exhaustive sweep ([renderer-layer-outliers.md](renderer-layer-outliers.md))
     assigns every outlier to a rung — rung 2 grows the aggregate→upsample
-    shared primitive (copy-paste ×3 confirmed), rung 4 widens from
+    shared primitive (copy-paste ×4 confirmed, post-merge: zone-of-avoidance's
+    `zoneOfAvoidanceUpsampleLayer`, #555, is a 4th verbatim instance, and its
+    bolted-on caption draw means the shared primitive needs an optional
+    post-blit hook to fit it without a per-row exception), rung 4 widens from
     volumes-only to multi-item ingest normalization (`upload`/`unload` verbs),
-    rung 7 widens to full fade-path canonicalization (3 canonical consumers,
-    5 dead handles), and a new **rung 8** (label-mechanism unification —
-    foregroundLabels' private director) sequences after Track C. Hygiene
+    rung 7 widens to full fade-path canonicalization (4 canonical consumers
+    post-merge — zone-of-avoidance's fade row is fully wired through
+    `resolveLayerOpacity`, not a raw copy — 5 dead handles, unchanged), and a
+    new **rung 8** (label-mechanism unification — foregroundLabels' private
+    director, now joined by zone-of-avoidance's private MSDF glyph pipeline as
+    a 3rd private label path, #555) sequences after Track C. Hygiene
     basket (grow-buffer ×7, fade-scratch ×4, fullscreen-tri ×5, hypot ×10) is
     PR-anytime. Bug-suspects to verify early: compositor not swap-rebuilt;
     fieldStarSphere missing the FOREGROUND_MAX gate.
@@ -123,21 +129,21 @@ the deep tuning surface.
 
 ```ts
 type SubsystemBundle = {
-  key: string
-  settings?: SettingsContribution              // settings.<layer>, singleton or .items[id]
-  targets: readonly RenderTargetContribution[] // RenderTargetSpec + scale: n | (s) => n
-  artifacts: readonly ArtifactDecl[]           // baked | generated | fetched | streamed
-  handles: (device, targets) => Record<string, Disposable>
-  layers: readonly ContentLayer[]              // + devOnly?; validated against frameProgram steps
-  computes?: readonly ComputeContribution[]    // rows in the COMPUTE record
-  planner?: (state, ctx) => unknown            // hoisted, memoised on ctx
-  liveness?: DeriveLiveness | InlineGates
-  wake?: (state, ctx) => boolean               // folded into the anim bag
-  fades?: readonly FadeLayer[]                 // FADE_LAYERS manifest derived by concatenation
-  labelProducers?: readonly LabelProducer[]
-  markerProducers?: readonly MarkerProducer[]
-  debug?: { groupTitle: string; sliders?: readonly SliderField[] }
-}
+  key: string;
+  settings?: SettingsContribution; // settings.<layer>, singleton or .items[id]
+  targets: readonly RenderTargetContribution[]; // RenderTargetSpec + scale: n | (s) => n
+  artifacts: readonly ArtifactDecl[]; // baked | generated | fetched | streamed
+  handles: (device, targets) => Record<string, Disposable>;
+  layers: readonly ContentLayer[]; // + devOnly?; validated against frameProgram steps
+  computes?: readonly ComputeContribution[]; // rows in the COMPUTE record
+  planner?: (state, ctx) => unknown; // hoisted, memoised on ctx
+  liveness?: DeriveLiveness | InlineGates;
+  wake?: (state, ctx) => boolean; // folded into the anim bag
+  fades?: readonly FadeLayer[]; // FADE_LAYERS manifest derived by concatenation
+  labelProducers?: readonly LabelProducer[];
+  markerProducers?: readonly MarkerProducer[];
+  debug?: { groupTitle: string; sliders?: readonly SliderField[] };
+};
 ```
 
 ## Ground preparation (verdicts in engine-composition-map §4 + sweep misfits)
@@ -175,6 +181,18 @@ deletion — follow-up PRs, each mechanical.
 - Focusability/selectability consolidation: every focusable kind hand-adds rows to
   ~10 files (FocusableTarget, SelectionRow, selectionHaloTable, pick tables, URL
   hash…) — a surface as large as rendering; bundle contract deliberately excludes.
+  Detail file: [focusable-kind backlog](../../backlog/2026-08-17-focusable-kind-registry.md).
+  A second, related backlog item landed with the merge:
+  [focusability is declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md)
+  (`ROW_FOCUSABLE` vs `focusFraming`'s throw, both hand-encoding "does this row
+  carry a position?"). Zone-of-avoidance (#555) is fresh, first-party evidence
+  for the surface's cost: adding ONE new kind — including declaring it
+  NON-focusable — required 13 hand-touched production files (`SelectionRow.d.ts`,
+  `FocusableTarget.d.ts`, `SelectionRef.d.ts`, `focusFraming.ts`,
+  `buildFocusable.ts`, `extractSelectionRow.ts`, `refOf.ts`,
+  `resolvePickTable.ts`, `rowFocusable.ts`, `selectionHaloTable.ts`,
+  `targetIdentityKey.ts`, `focusIdOf.ts`, `urlHashFor.ts` — commit `e1f3eeace`),
+  the same "selection type-arm cascade" the backlog item names.
 - Tool bloom-mirror deletion (`encodeBloomPyramid` consuming app `runBloom`) —
   natural near P3 but scope-creep risk.
 - HII 3-target consolidation — calibration question, revisit in F2.

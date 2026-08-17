@@ -7,7 +7,7 @@
 teardown + swap-format-rebuild bookkeeping with one declarative row array,
 walked by three small generic functions. Evidence for every claim below is
 cited by `file:line`, verified against this checkout
-(`worktree-land-milky-way-refactor`) on 2026-08-17.
+(`worktree-land-milky-way-refactor`) on 2026-08-18.
 
 **Ground preparation.** None needed — decision #9 states the ladder itself
 _is_ the ground-prep program for the later rungs (target contributions,
@@ -16,36 +16,36 @@ render targets, artifacts, fades, wake, or debug — those are rungs 2–7.
 
 ## What this rung does and does not touch
 
-**In scope:** 42 `state.gpu.*` fields that follow the uniform lifecycle
-documented in `EngineGpuHandles.d.ts:17-36` — null before bootstrap,
-constructed exactly once (40 in `initGpu.ts`, 2 — `pickRenderer` /
+**In scope:** 44 `state.gpu.*` fields that follow the uniform lifecycle
+documented in `EngineGpuHandles.d.ts:1-10` — null before bootstrap,
+constructed exactly once (42 in `initGpu.ts`, 2 — `pickRenderer` /
 `pickProgram` — in the later `wireInput.ts` phase), released + re-nulled by
 `engine.ts`'s single `destroy()` — including the 8-renderer subset rebuilt
 on a swap-chain format change (`buildSwapRenderers.ts`).
 
 **Out of scope, with reasons (verify before assuming these are omissions):**
 
-- `state.gpu.fadeBgl` / `sourceBgl` / `focusBgl` (`EngineGpuHandles.d.ts:117-131`)
+- `state.gpu.fadeBgl` / `sourceBgl` / `focusBgl` (`EngineGpuHandles.d.ts:82-102`)
   — bind-group-layout factories with no `.destroy()` method; confirmed by
   grep, neither factory module exports one, and `engine.ts`'s `destroy()`
-  never touches these three fields (`engine.ts:277-401` seeds them null,
-  `engine.ts:790-939` never re-nulls them). They are **prerequisites**
+  never touches these three fields (`engine.ts:240-366` seeds them null,
+  `engine.ts:747-909` never re-nulls them). They are **prerequisites**
   threaded into every row's `construct` via the shared deps bag, not rows
   themselves.
-- `state.gpu.fontAtlases` / `uiCtx` (`EngineGpuHandles.d.ts:184-203`) — cached
-  data / context refs, not GPU resources; re-nulled at `engine.ts:858-859`
+- `state.gpu.fontAtlases` / `uiCtx` (`EngineGpuHandles.d.ts:154-174`) — cached
+  data / context refs, not GPU resources; re-nulled at `engine.ts:823-824`
   "for lifecycle symmetry, not released" (no `.destroy()` call). Same
   treatment as the BGLs: prerequisites in the deps bag, hand-nulled in
   `destroy()` same as today.
-- `state.gpu.timingService` (`EngineGpuHandles.d.ts:611-625`) — always
+- `state.gpu.timingService` (`EngineGpuHandles.d.ts:588-603`) — always
   non-null (a disabled stub pre-boot), and `destroy()` replaces it with a
-  **fresh stub**, not `null` (`engine.ts:926-927`). This breaks the
+  **fresh stub**, not `null` (`engine.ts:895-896`). This breaks the
   null-based `Disposable` contract every other field follows; stays
   hand-wired.
-- `state.subsystems.*` (impostor chain, `engine.ts:809-827`) — a separate
+- `state.subsystems.*` (impostor chain, `engine.ts:774-792`) — a separate
   lifecycle family per decision #9's rung split; not `state.gpu`.
 - `renderTargets`' `mwAggregateDivisor` construction parameter
-  (`initGpu.ts:158-163`) — untouched. `renderTargets` and `compositor`
+  (`initGpu.ts:153-158`) — untouched. `renderTargets` and `compositor`
   **are** ordinary registry rows in this rung (they already follow the
   null → construct → destroy+null pattern); rung 2 changes what feeds their
   construction, not whether they're rows.
@@ -58,14 +58,14 @@ time (the same cross-handle mechanism the registry already uses for
 static module import, same treatment as `MILKY_WAY_TUNING_DEFAULTS`) —
 verified against `createPickProgram` (`pickProgram.ts:92-98`). They are
 ordinary `GPU_HANDLE_ROWS` rows, but their `construct` runs from
-`wireInput.ts` (`wireInput.ts:85-110`) rather than `initGpu.ts`, because
+`wireInput.ts` (`wireInput.ts:86-111`) rather than `initGpu.ts`, because
 `focusUniform` isn't built until `initGpu` completes; `bootstrap.ts`'s
 phase split is organizational, not a data dependency this plan needs to
 collapse. See Task 7.
 
-This leaves **42 in-scope keys**: every `EngineGpuHandles` field (48 total)
+This leaves **44 in-scope keys**: every `EngineGpuHandles` field (50 total)
 except the 6 excluded above (`fadeBgl`, `sourceBgl`, `focusBgl`,
-`fontAtlases`, `uiCtx`, `timingService`) — 40 constructed by `initGpu.ts`'s
+`fontAtlases`, `uiCtx`, `timingService`) — 42 constructed by `initGpu.ts`'s
 walker call, 2 (`pickRenderer`, `pickProgram`) by `wireInput.ts`'s.
 
 ## Construction-order dependencies found in `initGpu.ts` (risk register)
@@ -74,7 +74,7 @@ Read `initGpu.ts` top to bottom before writing `GPU_HANDLE_ROWS` — these are
 the dependencies a row-order choice must respect:
 
 1. **Real cross-handle dependency:** `starCatalogPickRenderer`
-   (`initGpu.ts:497-501`) is constructed from
+   (`initGpu.ts:509-513`) is constructed from
    `state.gpu.starCatalogRenderer.pickResources()` — it reads an
    already-assigned sibling field. `starCatalogRenderer` must be an earlier
    row. This is the only handle-reads-another-handle dependency in the
@@ -83,14 +83,16 @@ the dependencies a row-order choice must respect:
    the 3 excluded BGLs / `focusUniform`, which are deps-bag prerequisites).
 2. **BGL + `focusUniform` prerequisites:** most constructors take `fadeBgl`
    / `sourceBgl` / `focusBgl` / `focusUniform.bindGroup` as arguments
-   (`initGpu.ts:172-174, 216, 224, 264, 277-278, 294, 308, 367` etc.). These
+   (`initGpu.ts:167-169, 210, 219, 258, 272-273, 299, 313, 372` etc.). These
    come from the deps bag (BGLs) or from a row that must be declared first
    (`focusUniform`) — see the deps-bag design below.
 3. **`uiCtx` + `fontAtlases` prerequisites:** the 8 swap-format-dependent
    renderers (`buildSwapRenderers.ts:31-74`) and `structureMarkerRenderer` /
-   `milkyWayPickRenderer` (`initGpu.ts:212-226`) all read `state.gpu.uiCtx`
-   and (for the label renderers) `state.gpu.fontAtlases` — both
-   deps-bag prerequisites, not rows.
+   `milkyWayPickRenderer` (`initGpu.ts:207-221`) all read `state.gpu.uiCtx`;
+   the label renderers (inside `buildSwapRenderers`) and
+   `zoneOfAvoidanceRenderer` (`initGpu.ts:289`, reusing the already-loaded
+   atlas for its curved-lettering pipeline rather than a second fetch) read
+   `state.gpu.fontAtlases` directly — all deps-bag prerequisites, not rows.
 4. **No other renderer reads another renderer's handle at construction.**
    Every other `createX(device, format, ...)` call takes only `device` /
    `format` / `depth` / `SLAB_REVERSED_Z[...]` / module-level constants
@@ -99,7 +101,7 @@ the dependencies a row-order choice must respect:
    therefore sufficient (no toposort needed) — document this rather than
    engineer for a general case with one instance.
 5. **`starPointRenderer` needs a post-construction seed call**
-   (`initGpu.ts:465-471`, `setStars(...)` fed from `deriveBodyStates` +
+   (`initGpu.ts:476-483`, `setStars(...)` fed from `deriveBodyStates` +
    `state.data.bodies.stars`). Fold the seed call into that row's
    `construct` closure — it's a one-time boot seed with no other handle
    reading it in between, so folding it in changes nothing observable and
@@ -107,7 +109,7 @@ the dependencies a row-order choice must respect:
 
 ## Teardown-order finding (read before writing `destroyGpuHandles`)
 
-**Today's hand-written `engine.ts:842-933` teardown order is _not_ a
+**Today's hand-written `engine.ts:807-902` teardown order is _not_ a
 reverse (or forward) traversal of `initGpu.ts`'s construction order** — it's
 hand-grouped by renderer _kind_ (pick providers, then targets/compositor,
 then overlays, then disks, then MW, then volume/flow, then post-process
@@ -116,7 +118,7 @@ timing/renderer/focus last). Grepped `engine.ts` and
 `EngineGpuHandles.d.ts` for ordering language
 (`order matters|destroyed before|destroyed after|released after|must be
 destroyed`): the **only** hit for a `state.gpu.*` field is
-`engine.ts:930-931` —
+`engine.ts:899-900` —
 
 > "Shared cluster-focus uniform — released after the renderers that bind
 > its group (points/disks/pick already destroyed above)."
@@ -124,7 +126,7 @@ destroyed`): the **only** hit for a `state.gpu.*` field is
 The docblock's own words claim a broad 3-group constraint (points, disks,
 and every pick provider before focus). Verified narrower: only
 `pickRenderer` actually captures `state.gpu.focusUniform!.bindGroup` at
-construction (`wireInput.ts:85-95`). `pickProgram`, `milkyWayPickRenderer`,
+construction (`wireInput.ts:86-96`). `pickProgram`, `milkyWayPickRenderer`,
 `starCatalogPickRenderer`, and `bodyPickRenderer` have zero `focus*`
 references in their sources. `renderer` / `texturedDiskRenderer` /
 `proceduralDiskRenderer` read the focus bind group live, per frame, off
@@ -133,7 +135,7 @@ scheduler before any renderer is torn down, so that coupling is moot at
 teardown regardless of order. The one proven constraint is **`pickRenderer`
 before `focusUniform`**; the docblock's broader claim is a conservative
 superset, not a second requirement this plan needs to satisfy
-independently. (The other ordering-language hit, `engine.ts:809-812`, is
+independently. (The other ordering-language hit, `engine.ts:774-777`, is
 the impostor-chain `state.subsystems.*` constraint — out of scope per the
 section above.)
 
@@ -148,7 +150,7 @@ docblock states "the shared records buffers belong to the visual renderer"
 **Design choice this plan makes:** one array, one declared order, used
 forwards for construction and in reverse for teardown. Declare
 `focusUniform` as the **first** row (true to its real early construction
-position — `initGpu.ts:121`, right after the 3 excluded BGLs) so reversing
+position — `initGpu.ts:116`, right after the 3 excluded BGLs) so reversing
 the array automatically destroys it **last**. `pickRenderer` and
 `pickProgram` are declared **last** in the array (they construct in the
 later `wireInput.ts` phase — see the in-scope note above and Task 7), so
@@ -156,9 +158,9 @@ reverse-order teardown destroys them **first** — before `focusUniform` and
 before every other row — satisfying the one proven constraint
 (`pickRenderer` before `focusUniform`) with no special-casing, and
 incidentally reproducing today's actual teardown order for the pick
-providers (`engine.ts:842-845` destroys them first, by hand, today). The
+providers (`engine.ts:807-810` destroys them first, by hand, today). The
 resulting teardown call _sequence_ will differ from today's hand-grouped
-list for the other 39 rows (42 total, minus `focusUniform`, minus the 2
+list for the other 41 rows (44 total, minus `focusUniform`, minus the 2
 pick rows) — this is accepted as behaviourally inert (no other ordering
 constraint exists, per the narrowed finding above), but is a real, visible
 diff; the executor's first task must independently re-verify by grepping
@@ -214,7 +216,7 @@ export type GpuHandleConstructDeps = {
 ```ts
 // src/@types/engine/handles/GpuHandleRow.d.ts
 // Distributive over GpuHandleKey so `construct`'s return type is pinned to
-// the EXACT field type for that key (not a union of all 42) — a row for
+// the EXACT field type for that key (not a union of all 44) — a row for
 // 'milkyWayCloud' must return MilkyWayCloud, not MilkyWayCloud | RenderTargets | ...
 export type GpuHandleRow = {
   [K in GpuHandleKey]: {
@@ -243,10 +245,9 @@ type _AssertEveryKeyCovered = GpuHandleKey extends (typeof GPU_HANDLE_ROWS)[numb
 const _totalityCheck: true = true as _AssertEveryKeyCovered extends true ? true : never;
 ```
 
-This is the mechanism that turns "when adding a new renderer, add it here"
-(today, `EngineGpuHandles.d.ts:35-36`, enforced by nobody) into a
-`typecheck` failure if a field is added to `EngineGpuHandles` and forgotten
-in the registry. Verify the exact expression compiles as intended during
+This is the mechanism that turns Task 11's "add a row when you add a
+field" pointer — currently enforced by nobody — into a `typecheck` failure
+if a field is added to `EngineGpuHandles` and forgotten in the registry. Verify the exact expression compiles as intended during
 Task 5 (which adds it) — distributive conditional totality checks are fiddly; a simpler
 `type _AssertEveryKeyCovered = Exclude<GpuHandleKey, RowKeys> extends never ? true : RowKeys` shape is an acceptable substitute if the above doesn't typecheck cleanly.
 
@@ -273,7 +274,7 @@ unrelated concepts under one name).
 - [ ] Add the three types shown above. Import `FadeUniformsBgl` /
       `SourceUniformsBgl` / `FocusUniformsBgl` / `GpuContext` /
       `LoadedFontAtlases` / `EngineState` from their existing locations
-      (see `EngineGpuHandles.d.ts:42-86` for the import paths this file
+      (see `EngineGpuHandles.d.ts:51-57` for the import paths this file
       already uses for the same types).
 - [ ] `npm run typecheck`.
 - [ ] Commit.
@@ -330,28 +331,28 @@ construction call at its cited line and moves it into
 `construct: (state, deps) => { ... }` unchanged.
 
 - [ ] Row order: `focusUniform` FIRST (see teardown-order finding above),
-      then `compositor`, `renderTargets`, `renderer` (`initGpu.ts:121,149-150,158-163,169-176`),
+      then `compositor`, `renderTargets`, `renderer` (`initGpu.ts:116,144-145,153-158,164-171`),
       then the 8 swap-format rows in `buildSwapRenderers.ts:31-74`'s order,
       each with `rebuildOnSwapFormat: true`, then the remaining rows in
       `initGpu.ts`'s existing top-to-bottom order (`structureMarkerRenderer`
-      through `atmosphereShellRenderer`, `initGpu.ts:212-599`), with
-      `starCatalogRenderer` (`:488`) declared strictly before
-      `starCatalogPickRenderer` (`:497`), then `pickRenderer` and
-      `pickProgram` LAST (mirrors `wireInput.ts:85-110`'s order) — declaring
+      through `atmosphereShellRenderer`, `initGpu.ts:207-605`), with
+      `starCatalogRenderer` (`:500`) declared strictly before
+      `starCatalogPickRenderer` (`:509`), then `pickRenderer` and
+      `pickProgram` LAST (mirrors `wireInput.ts:86-111`'s order) — declaring
       them last is load-bearing, not incidental: it's what makes
       reverse-order teardown destroy them first (see the teardown-order
       finding's design-choice paragraph).
 - [ ] `starCatalogPickRenderer`'s `construct` reads
       `state.gpu.starCatalogRenderer!.pickResources()` (mirrors
-      `initGpu.ts:499`).
+      `initGpu.ts:511`).
 - [ ] `starPointRenderer`'s `construct` performs the construction AND the
-      `setStars(...)` seed call in one closure (mirrors `initGpu.ts:465-471`,
+      `setStars(...)` seed call in one closure (mirrors `initGpu.ts:476-483`,
       folding in the `deriveBodyStates(CONST_J2000)` + `state.data.bodies.stars`
       read per the risk-register note above).
 - [ ] `pickRenderer`'s `construct` reads `state.gpu.focusUniform!.bindGroup`
       off `state` (same cross-handle mechanism as `starCatalogPickRenderer`)
       and imports `CONTENT_LAYERS` as a static module value (mirrors
-      `wireInput.ts:85-95`).
+      `wireInput.ts:86-96`).
 - [ ] `pickProgram`'s `construct` takes only `device`, `canvas`, `state`,
       and `CONTENT_LAYERS` (mirrors `createPickProgram`, `pickProgram.ts:92-98`).
 - [ ] Add the `_totalityCheck` compile-time assertion from the contract
@@ -366,9 +367,9 @@ construction call at its cited line and moves it into
 **Files:** `src/services/engine/phases/initGpu.ts` (modify)
 
 - [ ] Build the BGL/`uiCtx`/`fontAtlases` prerequisites exactly as today
-      (`initGpu.ts:115-121, 203-205`) — these stay hand-written (excluded
+      (`initGpu.ts:110-116, 198-200`) — these stay hand-written (excluded
       fields).
-- [ ] Replace the 40 initGpu-phase `state.gpu.X = createX(...)` assignments
+- [ ] Replace the 42 initGpu-phase `state.gpu.X = createX(...)` assignments
       (everything the registry owns at this phase — all of `GPU_HANDLE_ROWS`
       except `pickRenderer`/`pickProgram`) with one
       `constructGpuHandles(GPU_HANDLE_ROWS.filter(r => r.key !== 'pickRenderer' && r.key !== 'pickProgram'), state, deps)`
@@ -376,16 +377,16 @@ construction call at its cited line and moves it into
       it's now row 0) through where `atmosphereShellRenderer`'s used to be
       (now the last non-swap, non-pick row). The swap-format 8 are now also
       covered by this single call — the separate
-      `buildSwapRenderers(state, format)` call at `initGpu.ts:206` is
+      `buildSwapRenderers(state, format)` call at `initGpu.ts:201` is
       replaced by this walker call happening in the right position (before
       `structureMarkerRenderer`/`milkyWayPickRenderer`, after
       `uiCtx`/`fontAtlases` are set — matching today's sequencing).
 - [ ] Keep every POST-construction wiring step unchanged, now reading the
       walker's output off `state.gpu.*`: `biasCorrection.attachRenderer(state.gpu.renderer!)`
-      (`initGpu.ts:186`), the `GALAXY_CATALOG_SOURCE_REGISTRY` loop
-      (`:251-253`), `state.subsystems.labelDirector.attachRenderers(...)`
+      (`initGpu.ts:181`), the `GALAXY_CATALOG_SOURCE_REGISTRY` loop
+      (`:246-248`), `state.subsystems.labelDirector.attachRenderers(...)`
       (currently inside `buildSwapRenderers.ts:78-81` — see Task 8), and
-      `wireBodyTextureSlots(state)` (`:611`).
+      `wireBodyTextureSlots(state)` (`:613`).
 - [ ] `npm run typecheck` + `npm test -- initGpu`.
 - [ ] Commit.
 
@@ -397,7 +398,7 @@ Behaviour-neutral: `pickRenderer`/`pickProgram` still construct at the same
 bootstrap point they do today, just via the shared walker instead of two
 hand-written `createX(...)` calls.
 
-- [ ] Replace the two hand-written assignments (`wireInput.ts:85-110`) with
+- [ ] Replace the two hand-written assignments (`wireInput.ts:86-111`) with
       `constructGpuHandles(GPU_HANDLE_ROWS.filter(r => r.key === 'pickRenderer' || r.key === 'pickProgram'), state, deps)`,
       built from the same `device`/`canvas` already available at this call
       site.
@@ -440,11 +441,11 @@ hand-written `createX(...)` calls.
 
 **Files:** `src/services/engine/engine.ts` (modify)
 
-- [ ] Replace all 42 in-scope hand-written destroy+null pairs
-      (`engine.ts:842-933`, everything except the `fontAtlases`/`uiCtx`
+- [ ] Replace all 44 in-scope hand-written destroy+null pairs
+      (`engine.ts:807-902`, everything except the `fontAtlases`/`uiCtx`
       re-null lines and the `timingService.destroy()` + stub-replace lines)
       — including the `pickRenderer`/`pickProgram` pair currently
-      hand-written first at `engine.ts:842-845` — with one
+      hand-written first at `engine.ts:807-810` — with one
       `destroyGpuHandles(GPU_HANDLE_ROWS, state)` call. Passing the full,
       unfiltered array is correct here, unlike Tasks 6/7's construction
       calls: teardown is a single reverse walk over everything the registry
@@ -452,8 +453,8 @@ hand-written `createX(...)` calls.
       array means reverse order destroys them first, automatically — see
       the teardown-order finding.
 - [ ] Keep `state.gpu.fontAtlases = null` / `state.gpu.uiCtx = null`
-      (`:858-859`) and the `timingService` destroy+stub-replace
-      (`:926-927`) as explicit hand-written lines, positioned anywhere
+      (`:823-824`) and the `timingService` destroy+stub-replace
+      (`:895-896`) as explicit hand-written lines, positioned anywhere
       relative to the walker call (they touch different fields, no
       ordering interaction).
 - [ ] `npm run typecheck` + `npm test -- engine`.
@@ -472,7 +473,7 @@ or fold in — see below)
       `GPU_HANDLE_ROWS` array, and assert every stub's `destroy` was called
       exactly once. This is the genuine replacement for
       `initGpu.destroyReachability.test.ts`'s per-renderer reachability
-      assertions — it covers all 42 keys structurally instead of by name,
+      assertions — it covers all 44 keys structurally instead of by name,
       so it does not need updating every time a new renderer is added
       (avoids the "registry restatement" anti-pattern from `testing.md`).
 - [ ] Test `focusUniform is destroyed last across the real GPU_HANDLE_ROWS teardown`
@@ -488,7 +489,7 @@ or fold in — see below)
       equals the mocked stub) still prove _construction_ lands the right
       values — re-verify those construction-side assertions survive Task 6
       unchanged before deleting; (b) keep the file but strip it to only the
-      HDR-capability-dispatch describe block (`initGpu.destroyReachability.test.ts:565-611`),
+      HDR-capability-dispatch describe block (`initGpu.destroyReachability.test.ts:571-617`),
       which is unrelated to this rung and must keep passing regardless.
       Rename the file if (b) is chosen, since "destroyReachability" would
       no longer describe its contents.
@@ -499,18 +500,19 @@ or fold in — see below)
 
 **Files:** `src/@types/engine/handles/EngineGpuHandles.d.ts` (modify)
 
-- [ ] Rewrite the "When adding a new GPU-resource-owning renderer, add it
-      here so the teardown path stays complete" line (`:35-36`) to instead
-      say: add a field here (the type still enumerates every handle, for
-      the ~hundreds of typed `state.gpu.X` read sites) **and** add a row to
-      `GPU_HANDLE_ROWS` (`src/services/engine/gpuHandles/gpuHandleRegistry.ts`)
-      — the compile-time totality check fails until both are done. Name
-      the 6 excluded fields and point at this plan (or its eventual
+- [ ] Add a terse "add a row when you add a field" pointer to the module
+      header (`EngineGpuHandles.d.ts:1-10`). The header is already AT the
+      file's ≤10-line comment budget, with no spare line — trim existing
+      prose to make room rather than appending. Say: add a field here (the
+      type still enumerates every handle, for the ~hundreds of typed
+      `state.gpu.X` read sites) **and** add a row to `GPU_HANDLE_ROWS`
+      (`src/services/engine/gpuHandles/gpuHandleRegistry.ts`) — the
+      compile-time totality check fails until both are done. Name the 6
+      excluded fields and point at this plan (or its eventual
       `docs/superpowers/plans/completed/` home) for the reasoning, and note
       that `pickRenderer`/`pickProgram` ARE rows, just constructed from
       `wireInput.ts` (Task 7) instead of `initGpu.ts` — rather than
-      re-deriving any of this inline (comment-budget discipline — this
-      docblock is already near its line budget).
+      re-deriving any of this inline.
 - [ ] Commit.
 
 ### Task 12 — Full-suite gate + visual smoke
@@ -543,7 +545,7 @@ or fold in — see below)
       `gpuHandleRegistry.ts`, `constructGpuHandles.ts`, `destroyGpuHandles.ts`
       (implementation) — all under the paths named in the tasks above.
 - [ ] `initGpu.ts` no longer contains per-handle `state.gpu.X = createX(...)`
-      assignments for any of the 40 initGpu-phase in-scope keys — only the
+      assignments for any of the 42 initGpu-phase in-scope keys — only the
       6 excluded prerequisites (BGLs, `uiCtx`, `fontAtlases`) plus the
       single filtered `constructGpuHandles(...)` call and the unchanged
       post-construction wiring steps. `wireInput.ts` no longer contains
@@ -555,7 +557,7 @@ or fold in — see below)
 - [ ] `engine.ts`'s `destroy()` contains exactly 3 hand-written GPU-lifecycle
       lines for the excluded fields (`fontAtlases`, `uiCtx`, `timingService`
       — 2 re-nulls, 1 destroy+stub-replace) plus one
-      `destroyGpuHandles(GPU_HANDLE_ROWS, state)` call covering all 42 rows,
+      `destroyGpuHandles(GPU_HANDLE_ROWS, state)` call covering all 44 rows,
       `pickRenderer`/`pickProgram` included; no other
       `state.gpu.X?.destroy(); state.gpu.X = null;` pair remains
       hand-written.

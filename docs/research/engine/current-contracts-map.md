@@ -57,9 +57,9 @@ flowchart TD
 flowchart LR
     RF["runFrame"] --> CTX["deriveFrameContext<br/>ReadyFrameContext + Slab[]"]
     RF --> RD["renderFrame"]
-    FP["frameProgram(tone, bloom)<br/>12–13 ordered FrameSteps"] --> EX["executeFrame"]
-    CL["CONTENT_LAYERS<br/>34 ContentLayer rows"] --> EX
-    RT["RenderTargets<br/>buildSpecs(): 10 spec rows"] --> EX
+    FP["frameProgram(tone, bloom)<br/>13–14 ordered FrameSteps"] --> EX["executeFrame"]
+    CL["CONTENT_LAYERS<br/>36 ContentLayer rows"] --> EX
+    RT["RenderTargets<br/>buildSpecs(): 12 spec rows"] --> EX
     CR["COMPUTE record<br/>flow, atmosphereSkyView"] --> EX
     RD --> EX
     EX -->|"render step: filter layers by (target, slab)"| PASS["one GPU pass per group"]
@@ -77,12 +77,12 @@ flowchart LR
 
 ### The contracts
 
-| contract           | shape                                                                                                                                        | where                                              |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `ContentLayer`     | `{name, slab, target, blend, enabled(), draw(), pickEnabled?, drawPick?}` — the `(target, slab)` pin is **data**; executor selects by filter | `ContentLayer.d.ts:34`, `executeFrame.ts:185-191`  |
-| `FrameStep`        | `compute \| render \| composite \| bloom`; ordered list ⚪ **hand-authored by decision** (#4)                                                | `FrameStep.d.ts:43`, `frameProgram.ts:80-153`      |
-| `RenderTargetSpec` | `{id, format, depth, scale}`; 10 rows; built by a function (swap format + mw divisor are runtime); `swap` row never allocated                | `RenderTargetSpec.d.ts:20`, `renderTargets.ts:191` |
-| `COMPUTE`          | module-private record, 2 rows; new compute = row + program step                                                                              | `executeFrame.ts:82`                               |
+| contract           | shape                                                                                                                                                                                                                                                                    | where                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `ContentLayer`     | `{name, slab, target, blend, enabled(), draw(), pickEnabled?, drawPick?}` — the `(target, slab)` pin is **data**; executor selects by filter                                                                                                                             | `ContentLayer.d.ts:34`, `executeFrame.ts:185-191`      |
+| `FrameStep`        | `compute \| render \| composite \| bloom`; ordered list ⚪ **hand-authored by decision** (#4); 13 steps + optional bloom (zone-of-avoidance added a `render zoa/COSMO` step, merged into `hdr` by a layer, no new `composite`)                                           | `FrameStep.d.ts:43`, `frameProgram.ts:88-165`          |
+| `RenderTargetSpec` | `{id, format, depth, scale}`; 12 rows (zone-of-avoidance's `zoa` row landed post-merge, constant `scale: 5` — the plain-`number` half of the union, no new runtime-rebuild case); built by a function (swap format + mw divisor are runtime); `swap` row never allocated | `RenderTargetSpec.d.ts:20`, `renderTargets.ts:220-243` |
+| `COMPUTE`          | module-private record, 2 rows; new compute = row + program step                                                                                                                                                                                                          | `executeFrame.ts:82`                                   |
 
 ### Loose spots
 
@@ -105,7 +105,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    AW["ASSET_WIRING<br/>26+ AssetWiringRow"] --> BLD["buildSlotsFromRegistry"]
+    AW["ASSET_WIRING<br/>~42 AssetWiringRow"] --> BLD["buildSlotsFromRegistry"]
     BLD --> SLOT["AssetSlot state machine<br/>(race-checked commit)"]
     DEM["reevaluateDemand<br/>(every frame)"] -->|"demand / release / staleTierEvict"| Q["assetQueue (priority)"]
     Q -->|"slot.load(req)"| SLOT
@@ -127,22 +127,22 @@ flowchart LR
 
 ### The contracts
 
-| contract           | shape                                                                                                      | where                                                            |
-| ------------------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `AssetWiringRow`   | `{key, factory, req, demand, priority, release?, built?}` — 🟢 the one genuinely registry-shaped lifecycle | `AssetWiringRow.d.ts:106-139`, `assetWiring.ts:261-444`          |
-| `AssetSlot`        | fetch state machine; commit uploads into a renderer + kicks the fade bridge                                | `AssetSlot.ts:65`                                                |
-| `EngineGpuHandles` | 🔴 flat struct, ~50 nullable fields; lifecycle contract = a doc comment                                    | `EngineGpuHandles.d.ts:88-626`                                   |
-| streamed           | `Destroyable & {plannerParams, update, getTileResources, isAnimating}`; engage rule inside `update()`      | `EarthTileSubsystem.d.ts:17-64`, `earthTileSubsystem.ts:246-266` |
+| contract           | shape                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | where                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `AssetWiringRow`   | `{key, factory, req, demand, priority, release?, built?}` — 🟢 the one genuinely registry-shaped lifecycle. The Pluto/Charon landing (#563) reshaped the body-texture rows further onto this pattern: `bodyTextureRow` is now mapped over `ALL_BODY_TEXTURE_KEYS` (itself derived from `BODY_TEXTURE_REGISTRY` + `SCENE_RINGS`), so a new textured body (Pluto, Charon) added zero hand-written rows here — one registry entry, not a new `AssetWiringRow`. Same shift on the consumer side: `assetSlots.bodyTextures` is now one `Map<BodyTextureSlotKey, AssetSlot>` keyed family (`EngineAssetSlots.d.ts:73`), not per-body named fields. | `AssetWiringRow.d.ts:106-139`, `assetWiring.ts:171-311`          |
+| `AssetSlot`        | fetch state machine; commit uploads into a renderer + kicks the fade bridge                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `AssetSlot.ts:65`                                                |
+| `EngineGpuHandles` | 🔴 flat struct, ~50 nullable fields (50 counted post-merge — unchanged in kind, though Pluto/Charon's consolidation removed several and zone-of-avoidance added `zoneOfAvoidanceRenderer`/`zoneOfAvoidanceUpsample`, netting out); lifecycle contract = a doc comment                                                                                                                                                                                                                                                                                                                                                                        | `EngineGpuHandles.d.ts:59-604`                                   |
+| streamed           | `Destroyable & {plannerParams, update, getTileResources, isAnimating}`; engage rule inside `update()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `EarthTileSubsystem.d.ts:17-64`, `earthTileSubsystem.ts:246-266` |
 
 ### Loose spots
 
-| ⬤   | issue                                                                                                    | evidence                                                                        |
-| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 🔴  | Registry covers **1 of 5 lifecycles** — generated / streamed / baked / imperative are all bespoke        | `runFrame.ts:275-281`, `wireSlots.ts:116-119`, `addVolumeField.ts`              |
-| 🔴  | Staleness idiom hand-copied **~8×** ("compare live setting vs fact on the resource, destroy + recreate") | `runFrame.ts:218-219,254-256` self-describe the copy                            |
-| 🔴  | Volume ingest exists **3×**; `handle.volumes.add` has 0 callers                                          | `mcpmSlot.ts:35-46`, `syntheticVolumeSlots.ts:78-99`, `addVolumeField.ts:25-38` |
-| 🔴  | Teardown = **~44 hand-written pairs**, ordering encoded only by position                                 | `engine.ts:842-933`                                                             |
-| 🟠  | Swap-format rebuild = a **hand-picked list of 8** renderers                                              | `buildSwapRenderers.ts:23`                                                      |
+| ⬤   | issue                                                                                                                                                               | evidence                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 🔴  | Registry covers **1 of 5 lifecycles** — generated / streamed / baked / imperative are all bespoke                                                                   | `runFrame.ts:275-281`, `wireSlots.ts:116-119`, `addVolumeField.ts`              |
+| 🔴  | Staleness idiom hand-copied **~8×** ("compare live setting vs fact on the resource, destroy + recreate")                                                            | `runFrame.ts:218-219,254-256` self-describe the copy                            |
+| 🔴  | Volume ingest exists **3×**; `handle.volumes.add` has 0 callers                                                                                                     | `mcpmSlot.ts:35-46`, `syntheticVolumeSlots.ts:78-99`, `addVolumeField.ts:25-38` |
+| 🔴  | Teardown = **~46 hand-written pairs**, ordering encoded only by position (was ~44; zone-of-avoidance added 2: `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`) | `engine.ts:747-908`                                                             |
+| 🟠  | Swap-format rebuild = a **hand-picked list of 8** renderers                                                                                                         | `buildSwapRenderers.ts:23`                                                      |
 
 ### Cost of one new fetched asset (volume field worked example)
 
@@ -153,9 +153,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    ACT["settingsSlice action"] --> SAGA["watchFadesSaga<br/>(FADE_ROW: 14 action→key rows)"]
+    ACT["settingsSlice action"] --> SAGA["watchFadesSaga<br/>(FADE_ROW: 15 action→key rows)"]
     SAGA -->|"getContext('reconcile')"| SYNC["syncVisibilityFades"]
-    FL["FADE_LAYERS<br/>17 FadeLayer rows"] --> SYNC
+    FL["FADE_LAYERS<br/>18 FadeLayer rows"] --> SYNC
     FL --> SEED["seedFades (once, wireSlots)"]
     SEED --> REG["FadeRegistry<br/>keyed by serializeFadeId"]
     SYNC -->|"guard → intent → fadeTo/setImmediate → post"| REG
@@ -172,37 +172,37 @@ flowchart LR
 
 ### The contracts
 
-| contract                        | shape                                                                             | where                                                          |
-| ------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `FadeLayer`                     | 🟢 `{key, expand, handle, seed, intent?, post?, guard?}` — 17 rows, healthy       | `FadeLayer.d.ts:51-60`, `fadeLayers.ts:97-308`                 |
-| `FadeId` / `VisibilityLayerKey` | 11 kinds vs 17 keys — ⚪ deliberately different grain; both type-level unions     | `FadeId.d.ts:76-91`, `VisibilityLayerKey.d.ts:53-70`           |
-| wake                            | 🟠 9-term disjunction + explicit `anim` bag fed by planners                       | `shouldKeepTicking.ts:112-129`                                 |
-| `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect) | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:441-481` |
-| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers                  | `frameProgram.ts:233-384`                                      |
+| contract                        | shape                                                                                                                                                                                                                                 | where                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `FadeLayer`                     | 🟢 `{key, expand, handle, seed, intent?, post?, guard?}` — 18 rows, healthy (zone-of-avoidance added a row, fully wired: fade handle + FADE_ROW + VISIBILITY_ACTION_ROW + a live `resolveLayerOpacity` consumer — no gap left behind) | `FadeLayer.d.ts:51-60`, `fadeLayers.ts:97-317`                 |
+| `FadeId` / `VisibilityLayerKey` | 12 kinds vs 18 keys — ⚪ deliberately different grain; both type-level unions                                                                                                                                                         | `FadeId.d.ts:80-96`, `VisibilityLayerKey.d.ts:53-71`           |
+| wake                            | 🟠 9-term disjunction + explicit `anim` bag fed by planners                                                                                                                                                                           | `shouldKeepTicking.ts:112-129`                                 |
+| `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:441-481` |
+| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers                                                                                                                                                                      | `frameProgram.ts:233-384`                                      |
 
 ### Loose spots
 
-| ⬤   | issue                                                                                   | evidence                                               |
-| --- | --------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 🟠  | `FADE_ROW` ↔ `VISIBILITY_ACTION_ROW` are **hand-maintained inverses** — a drift pair    | `watchFadesSaga.ts:59-77`, `visibilityActionRow.ts:78` |
-| 🔴  | **2 fade rows have no consumer** (union-totality artifacts)                             | `fadeLayers.ts:150-185`                                |
-| 🔴  | Marker path is a **shadow producer** — driven from runFrame, unregistered, no wake vote | `runFrame.ts:731-734`                                  |
-| 🔴  | Caption layer bypasses the director **and** the fade handles                            | `foregroundLabelsLayer`                                |
-| 🟠  | Producers registered inline in engine.ts                                                | `engine.ts:576-587`                                    |
-| 🟠  | Wake terms accrete by hand (each = a signature edit)                                    | `shouldKeepTicking.ts:19-29`                           |
-| 🟠  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed                   | `DebugPanel.tsx:79-90`, `frameProgram.ts:209-224`      |
+| ⬤   | issue                                                                                                                                                                               | evidence                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 🟠  | `FADE_ROW` ↔ `VISIBILITY_ACTION_ROW` are **hand-maintained inverses** — a drift pair (zone-of-avoidance added a correctly-mirrored row to both, growing the pair, not narrowing it) | `watchFadesSaga.ts:60-78`, `visibilityActionRow.ts:79` |
+| 🔴  | **2 fade rows have no consumer** (union-totality artifacts)                                                                                                                         | `fadeLayers.ts:150-185`                                |
+| 🔴  | Marker path is a **shadow producer** — driven from runFrame, unregistered, no wake vote                                                                                             | `runFrame.ts:731-734`                                  |
+| 🔴  | Caption layer bypasses the director **and** the fade handles                                                                                                                        | `foregroundLabelsLayer`                                |
+| 🟠  | Producers registered inline in engine.ts                                                                                                                                            | `engine.ts:576-587`                                    |
+| 🟠  | Wake terms accrete by hand (each = a signature edit)                                                                                                                                | `shouldKeepTicking.ts:19-29`                           |
+| 🟠  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed                                                                                                               | `DebugPanel.tsx:79-90`, `frameProgram.ts:209-224`      |
 
 ## 5. Pick / selection (⚪ parallel surface, out of scope)
 
 - `pickProgram` is a deliberate **sibling** of the frame executor: demand-driven, own encoder, own lazily-allocated `r32uint` targets (`pickProgram.ts:92`).
 - `frontmostPick` folds **slab-ordered, not depth-ordered** — the slab-partition invariant.
-- Layer-side contract (`drawPick`/`pickEnabled`) is clean; the smear is **per kind**: 10–17 dispatch files per focusable kind → [backlog item](../../backlog/2026-08-17-focusable-kind-registry.md).
+- Layer-side contract (`drawPick`/`pickEnabled`) is clean; the smear is **per kind**: 10–17 dispatch files per focusable kind → [backlog item](../../backlog/2026-08-17-focusable-kind-registry.md). Fresh evidence within range: zone-of-avoidance (#555) touched 13 production files to join the `SelectionRef`/`SelectionRow`/`FocusableTarget` cascade — even though it ends up declared NON-focusable (`focusFraming`'s throw arm), which surfaced a second backlog item, [focusability declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md).
 
 ## 6. Assessment — ranked by cost-per-new-subsystem
 
 | #   | ⬤   | breakdown                                                                                               |
 | --- | --- | ------------------------------------------------------------------------------------------------------- |
-| 1   | 🔴  | **Handle lifecycle** — 4 hand-edits/renderer; 44-pair teardown enforced by a comment                    |
+| 1   | 🔴  | **Handle lifecycle** — 4 hand-edits/renderer; 46-pair teardown enforced by a comment                    |
 | 2   | 🟠  | **Layer ordinal** — draw order within a group = array position + prose                                  |
 | 3   | 🔴  | **Off-registry lifecycles** — generated/streamed/imperative each invent wiring; staleness ×8; ingest ×3 |
 | 4   | 🟠  | **Inverse-map drift pairs** — FADE_ROW↔VISIBILITY_ACTION_ROW; specs↔clear values                        |
