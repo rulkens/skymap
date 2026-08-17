@@ -117,6 +117,19 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     description:
       'The most distant planet, Neptune is a deep blue world lashed by the fastest winds in the Solar System, over 2,000 kilometres per hour. It was found through mathematics first, predicted from the way its gravity tugged on Uranus before anyone saw it.',
   },
+  pluto: {
+    mass: '0.0022 M⊕',
+    gravity: '0.063 g',
+    dayLength: '6.4 Earth days (retrograde)',
+    yearLength: '247.9 Earth years',
+    distance: '39.6 AU',
+    meanTemp: '−232 °C',
+    moons: '5',
+    atmosphere: 'N₂ (thin), trace CH₄, CO',
+    wikiTitle: 'Pluto',
+    description:
+      "Pluto is a dwarf planet and the largest known world in the Kuiper Belt, the shell of icy debris beyond Neptune's orbit. Its most famous feature is Tombaugh Regio, a heart-shaped plain of nitrogen ice named for the astronomer who discovered Pluto in 1930.",
+  },
   moon: {
     mass: '7.35 × 10²² kg',
     gravity: '0.17 g',
@@ -297,5 +310,17 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     wikiTitle: 'Iapetus_(moon)',
     description:
       'One side of Iapetus is dark as coal while the other gleams like fresh snow, a split so sharp it can be seen from Earth through a small telescope. A ridge of mountains runs along its equator, giving this moon of Saturn the outline of a walnut.',
+  },
+  charon: {
+    mass: '1.59 × 10²¹ kg',
+    gravity: '0.029 g',
+    dayLength: 'Tidally locked (mutual)',
+    yearLength: '6.4 Earth days',
+    distance: '19,600 km',
+    parent: 'Pluto',
+    atmosphere: 'None',
+    wikiTitle: 'Charon_(moon)',
+    description:
+      "Charon is Pluto's largest moon and, at roughly half Pluto's diameter, massive enough that the pair are sometimes called a double dwarf planet system rather than a planet and its moon. Its dark red north pole, Mordor Macula, is coated in tholins — methane that escapes Pluto's atmosphere, freezes onto Charon, and is chemically reddened by sunlight.",
   },
 };
