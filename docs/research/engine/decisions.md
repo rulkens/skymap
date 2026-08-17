@@ -107,6 +107,17 @@ the deep tuning surface.
     legitimate only when it names a capability several rows share (e.g.
     `rebuildOnSwapFormat`), never one subsystem's quirk. This applies at every
     rung and at the final umbrella reassessment.
+11. **Rung widenings from the renderer/layer sweep** (2026-08-17): the
+    exhaustive sweep ([renderer-layer-outliers.md](renderer-layer-outliers.md))
+    assigns every outlier to a rung — rung 2 grows the aggregate→upsample
+    shared primitive (copy-paste ×3 confirmed), rung 4 widens from
+    volumes-only to multi-item ingest normalization (`upload`/`unload` verbs),
+    rung 7 widens to full fade-path canonicalization (3 canonical consumers,
+    5 dead handles), and a new **rung 8** (label-mechanism unification —
+    foregroundLabels' private director) sequences after Track C. Hygiene
+    basket (grow-buffer ×7, fade-scratch ×4, fullscreen-tri ×5, hypot ×10) is
+    PR-anytime. Bug-suspects to verify early: compositor not swap-rebuilt;
+    fieldStarSphere missing the FOREGROUND_MAX gate.
 
 ## The contract (settled sketch)
 
