@@ -3,11 +3,12 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` to
 > implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Pluto and Charon appear in the scene as textured (`small`/2k) bodies riding the
-existing `planet` source row — no new source, category, toggle, or settings key. Charon orbits
-Pluto as an ordinary Moon-style satellite (one-hop `focusId`); Pluto does not wobble around the
-real Pluto–Charon barycentre, a documented approximation. Labels, picking, InfoCard, search, and
-URL focus all fall out of the existing seed tables with zero new wiring.
+**Goal:** Pluto and Charon appear in the scene as textured (`medium`/4K — raised from `small`/2k by
+Task 8b) bodies riding the existing `planet` source row — no new source, category, toggle, or
+settings key. Charon orbits Pluto as an ordinary Moon-style satellite (one-hop `focusId`); Pluto
+does not wobble around the real Pluto–Charon barycentre, a documented approximation. Labels,
+picking, InfoCard, search, and URL focus all fall out of the existing seed tables with zero new
+wiring.
 
 **Context — no separate spec.** The design work for this feature is the grill session at
 [`docs/grill-sessions/add-pluto-charon-2026-08-16.md`](../../grill-sessions/add-pluto-charon-2026-08-16.md)
@@ -30,8 +31,7 @@ seam.
 - `type` aliases, never `interface`. Deep relative imports, no barrels.
 - Comment budget: module header ≤ 10 lines, comment lines ≤ half the file's code lines. A comment
   earns its place recording a landmine, a unit, a derivation, or a cross-file contract — never
-  restating what the code does. The Charon barycentre-approximation comment and the Pluto
-  Table-2a-vs-Table-1 comment are exactly this kind.
+  restating what the code does. The Charon barycentre-approximation comment is exactly this kind.
 - No baked physical constants from memory anywhere in this plan or its tasks: every orbital
   element, radius, pole, and rotation rate is sourced live at implementation time from the cited
   JPL/WGCCRE page and transcribed with its provenance in a row comment, following the existing
@@ -61,10 +61,10 @@ Add two `Vec3` linear-RGB constants following the existing `<BODY>_<COLOUR>` nam
 (e.g. `PLUTO_TAN`, `CHARON_GREY`) — dim, max channel ≲ 0.5 like every other trail tint, chosen to
 read apart from Neptune's blue and the satellite palette's greys at a glance.
 
-- [ ] Add the two constants with a one-line comment if the colour choice needs explaining (it
+- [x] Add the two constants with a one-line comment if the colour choice needs explaining (it
       probably doesn't — this file's existing rows mostly don't).
-- [ ] `npm run typecheck` → GREEN (nothing imports these yet).
-- [ ] Commit `src/data/bodies/palette.ts`.
+- [x] `npm run typecheck` → GREEN (nothing imports these yet).
+- [x] Commit `src/data/bodies/palette.ts`.
 
 ---
 
@@ -82,20 +82,28 @@ linear form is within visual accuracy. Record this tradeoff in a row comment (th
 plan's convention calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat
 because they don't need it.
 
-- [ ] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
+**Corrected after Task 13, in the final whole-branch review:** the premise above is false. Table 1
+carries Pluto too (JPL's _web edition_ dropped it in 2006; the original document did not), and
+Table 1 needs no correction terms at all. Table 2a minus its mandatory Table 2b terms is strictly
+worse than Table 1 inside 1800–2050, which is the only span the scene clock uses — so the shipped
+row is the **Table 1** row, and the dropped-corrections rationale above is gone from the code with
+it. The transcription source is the Explanatory Supplement to the Astronomical Almanac, 3rd ed.,
+Table 8.10.2, cited in the module header (the JPL page can no longer supply it).
+
+- [x] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
       `plane` — Table 2a is ecliptic-referenced like Table 1), following the exact derivation idiom
       the Neptune row (`orbitalElements.ts:296-320`) uses: `a`/`e`/`i`/`Ω` transcribed directly,
       `ω = ϖ − Ω` and `M = L − ϖ` shown inline, the six JPL rate columns quoted in a comment and
       converted the same way (`dω/dt = dϖ/dt − dΩ/dt`, `dM/dt = dL/dt − dϖ/dt`). Use the palette
       constant from Task 1.
-- [ ] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
+- [x] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
       the end of the array** (after Iapetus — see Global constraints). `radiusKm` from WGCCRE 2015's
       updated Pluto size (verify at the source, not from memory); `albedo` a plausible flat tan/grey
       (it's the label-tint and pre-texture fallback colour, not load-bearing once textured).
-- [ ] `npm run typecheck` → GREEN.
-- [ ] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
+- [x] `npm run typecheck` → GREEN.
+- [x] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
       neither table is length-pinned).
-- [ ] Commit both files.
+- [x] Commit both files.
 
 ---
 
@@ -114,34 +122,34 @@ ecliptic and Pluto's own equatorial plane; use the **equatorial-plane** variant 
 
 **Landmine comment (mandatory — this is the "looks wrong, don't fix it back" the grill session
 requires):** on Charon's row, record that Pluto is pinned at its heliocentric position rather than
-orbiting the Pluto–Charon barycentre (which sits ~1.8 Pluto radii outside Pluto, ~10% of the pair
-separation) — the same approximation Earth–Moon already makes, just far more visible here because
-Charon is 12% of Pluto's mass. Link
+orbiting the Pluto–Charon barycentre (which sits ~2,130 km from Pluto's centre — 1.8 Pluto radii,
+~11% of the pair separation) — the same approximation Earth–Moon already makes, just far more
+visible here because Charon is 12% of Pluto's mass. Link
 [`docs/backlog/2026-08-16-barycentric-orbit-pairs.md`](../../backlog/2026-08-16-barycentric-orbit-pairs.md)
 as where the real fix lands.
 
-- [ ] Determine whether the source page gives periods (`P`/`Papsis`/`Pnode`, the `elem.html` shape
+- [x] Determine whether the source page gives periods (`P`/`Papsis`/`Pnode`, the `elem.html` shape
       the `satellite()` maker's `moonRatesFromPeriods` expects) or per-century rates directly (the
       `approx_pos.html` Table-1 shape). If periods: build the row via `satellite({ ... })` exactly
       like every other moon. If rates: author the row directly against `OrbitalElements` following
       the planet-row idiom instead, since `satellite()` is periods-only. Either way, transcribe the
       full source line verbatim in a comment, matching every existing row's provenance discipline.
-- [ ] Charon's orbit is very nearly circular (e ≈ 0.0002 per public references — **verify the exact
+- [x] Charon's orbit is very nearly circular (e ≈ 0.0002 per public references — **verify the exact
       published value**, don't assume): if going the `satellite()` route, check whether the
       apsidal-precession period is near-degenerate the way Deimos's/Dione's/Tethys's are
       (`orbitalElements.ts:377-395,538-556`) — if so, `moonRatesFromPeriods`'s `MIN_PRECESSION_YEARS`
       guard already freezes that rate to zero; no special-casing needed, just don't be surprised by
       it.
-- [ ] Add Charon's `PlanetBody` row to `SCENE_PLANETS` via `satelliteBody(...)`, **appended at the
+- [x] Add Charon's `PlanetBody` row to `SCENE_PLANETS` via `satelliteBody(...)`, **appended at the
       very end of the array** (after Pluto's Task 2 row). `radiusKm` from WGCCRE 2015 (the USGS
       Astropedia record for the Charon mosaic cites ~606 km as the adopted radius — cross-check
       against WGCCRE 2015 directly, not this plan). `albedo` a plausible flat icy-grey.
-- [ ] `npm run typecheck` → GREEN.
-- [ ] `npm test -- orbitalElements scenePlanets bodyRegions` → GREEN. `bodyRegions.test.ts` compares
+- [x] `npm run typecheck` → GREEN.
+- [x] `npm test -- orbitalElements scenePlanets bodyRegions` → GREEN. `bodyRegions.test.ts` compares
       region extents by ratio/factor, not a literal AU figure, so the `solar-system` region growing
       from Neptune's ~30 au to Pluto's ~31 au (J2000 snapshot) should NOT require any test edit —
       confirm this rather than pre-emptively touching the test file.
-- [ ] Commit both files.
+- [x] Commit both files.
 
 ---
 
@@ -150,12 +158,12 @@ as where the real fix lands.
 No code change. Pluto and Charon now exist as ordinary (untextured, flat-albedo) scene bodies with
 real J2000 positions, orbit trails, name captions, and picking — the minimum renderable state.
 
-- [ ] Start (or reuse) the dev server. Ask the user to fly to the outer solar system and confirm:
+- [x] Start (or reuse) the dev server. Ask the user to fly to the outer solar system and confirm:
       Pluto appears near ~30–39 au from the Sun as a flat tan/grey sphere with a name caption and
       orbit trail; Charon appears as a small satellite orbiting close beside it, also captioned and
       trailed; both are clickable and open an InfoCard (facts land in Task 11, so the card may show
       only the name + Wikipedia stub for now — that's expected at this checkpoint).
-- [ ] Do not proceed to Task 5 until the user confirms.
+- [x] Do not proceed to Task 5 until the user confirms.
 
 ---
 
@@ -218,18 +226,18 @@ Galilean-moon rows (no cheap dev variant exists).
 `fetcher: 'tools/fetch/fetchTextures.ts'`, `readme: 'textures.readme'`, following the exact shape
 of `textures.usgsIo` etc. (`rawDataRegistry.ts:764-807`).
 
-- [ ] Update `fetchTextures.test.ts`'s full-pull filename array (`~line 50`) to add
+- [x] Update `fetchTextures.test.ts`'s full-pull filename array (`~line 50`) to add
       `'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif'` and
       `'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif'` — RED until the `TEXTURE_SOURCES`
       row lands. The `--dev` subset list (`~line 32`) is **unchanged** (no dev variant for either).
-- [ ] `npm test -- fetchTextures` → RED.
-- [ ] Make the four edits above (type union, registry row, sources row, raw-data rows).
-- [ ] `npm test -- fetchTextures && npm run typecheck` → GREEN. This will also surface every other
+- [x] `npm test -- fetchTextures` → RED.
+- [x] Make the four edits above (type union, registry row, sources row, raw-data rows).
+- [x] `npm test -- fetchTextures && npm run typecheck` → GREEN. This will also surface every other
       closed-union compile error downstream (`BODY_TEXTURE_REGISTRY`, `ROTATION_ELEMENTS` are
       **not** yet updated — `ROTATION_ELEMENTS` stays keyed by `id: string`, not `BodyTextureId`, so
       it won't fail to compile; it's just incomplete until Task 9) — resolve only what's actually
       red.
-- [ ] Commit all five files.
+- [x] Commit all five files.
 
 ---
 
@@ -238,13 +246,13 @@ of `textures.usgsIo` etc. (`rawDataRegistry.ts:764-807`).
 The two files total **~373 MB** (296 MB + 77 MB). This is a real download — announce it and get
 explicit go-ahead before running anything, per the project's big-download convention.
 
-- [ ] Tell the user: "Fetching the Pluto + Charon USGS mosaics will download ~373 MB into
+- [x] Tell the user: "Fetching the Pluto + Charon USGS mosaics will download ~373 MB into
       `data/raw/textures/`. OK to proceed?" and wait for confirmation.
-- [ ] On approval, run `npm run fetch-textures -- --confirm` (the full pull re-fetches only what's
+- [x] On approval, run `npm run fetch-textures -- --confirm` (the full pull re-fetches only what's
       missing — `skipIfAlreadyFetched` skips anything already verified on disk).
-- [ ] Confirm `data/raw/textures/textures.sha256` gained two new lines automatically (the fetcher
+- [x] Confirm `data/raw/textures/textures.sha256` gained two new lines automatically (the fetcher
       upserts them; no hand edit).
-- [ ] No commit of the raw `.tif` files themselves (gitignored); commit only the sha256 sidecar if
+- [x] No commit of the raw `.tif` files themselves (gitignored); commit only the sha256 sidecar if
       git shows it as changed.
 
 ---
@@ -257,11 +265,11 @@ The existing USGS block (`~line 353`) is scoped to "Galilean moon mosaics" (Voya
 — a different mission from New Horizons. Add a **new** subsection rather than folding Pluto/Charon
 into that one.
 
-- [ ] Add a "USGS Astrogeology — Pluto/Charon mosaics (New Horizons)" subsection: use (global
+- [x] Add a "USGS Astrogeology — Pluto/Charon mosaics (New Horizons)" subsection: use (global
       surface mosaics for Pluto and Charon, LORRI + MVIC), source
       (<https://planetarymaps.usgs.gov/>), licence (public domain; verify the exact credit line from
       the Astropedia record — likely "NASA/JHUAPL/SwRI/USGS", don't guess).
-- [ ] Commit `ATTRIBUTIONS.md`.
+- [x] Commit `ATTRIBUTIONS.md`.
 
 ---
 
@@ -270,17 +278,17 @@ into that one.
 **Files:** none (generated output only: `public/data/images/textures/pluto-*.jpg`,
 `charon-*.jpg`, `body-atlas.webp`, `src/data/bodies/bodyAtlas.generated.ts`)
 
-- [ ] Run `npm run build-textures`.
-- [ ] Confirm the log shows `ok pluto-small.jpg` and `ok charon-small.jpg` (the only tier — `small`
+- [x] Run `npm run build-textures`.
+- [x] Confirm the log shows `ok pluto-small.jpg` and `ok charon-small.jpg` (the only tier — `small`
       is the registry ceiling) with the `(tinted)` note iff Task 5's channel check found mono
       sources.
-- [ ] Confirm `bodyAtlas.generated.ts`'s `BODY_ATLAS_LAYOUT` now has 15 entries and the atlas grid
+- [x] Confirm `bodyAtlas.generated.ts`'s `BODY_ATLAS_LAYOUT` now has 15 entries and the atlas grid
       stays 4 columns × 4 rows (15 ≤ 16 cells — no grid growth). Confirm the logged atlas byte size
       stays under the 1 MB boot budget (`writeBodyAtlas.ts`'s `BUDGET_BYTES`).
-- [ ] Commit `src/data/bodies/bodyAtlas.generated.ts` (generated, but committed like every other
+- [x] Commit `src/data/bodies/bodyAtlas.generated.ts` (generated, but committed like every other
       generated codegen file in this tree). The `public/data/images/textures/` output is a build
       artefact — confirm it's gitignored like the rest of that directory before staging anything.
-- [ ] Visual spot-check in the dev server: Pluto now shows Tombaugh Regio (the "heart") on its
+- [x] Visual spot-check in the dev server: Pluto now shows Tombaugh Regio (the "heart") on its
       New-Horizons-facing hemisphere; Charon shows its Mordor Macula polar cap.
 
 ---
@@ -315,7 +323,7 @@ no eye can resolve on a body this small on screen.
       `grayscaleTint` unchanged on both. Row comment rewritten to state the `medium` ceiling as a
       wire-cost/detail balance (look ceiling, not source ceiling) and the far-side coverage gap as a
       fidelity caveat about the data, not a resolution ceiling.
-- [ ] Rebuild textures + atlas; confirm `pluto-4096.jpg` and `charon-4096.jpg` are both emitted WITH
+- [x] Rebuild textures + atlas; confirm `pluto-4096.jpg` and `charon-4096.jpg` are both emitted WITH
       the `(tinted)` note (both stay mono sources — no colour source was adopted).
 
 ---
@@ -335,12 +343,12 @@ tidally locked (each always shows the same face to the other), unlike the Moon w
 one-way locked to Earth. Record this as the "why" the two numbers agree, not a coincidence to
 silently accept.
 
-- [ ] Add Pluto's and Charon's rows to `ROTATION_ELEMENTS` (α₀, δ₀, W₀, spin rate — transcribed with
+- [x] Add Pluto's and Charon's rows to `ROTATION_ELEMENTS` (α₀, δ₀, W₀, spin rate — transcribed with
       provenance, same idiom as the other thirteen rows).
-- [ ] Update the module header: "thirteen rows" → "fifteen rows"; update the "eight major planets,
+- [x] Update the module header: "thirteen rows" → "fifteen rows"; update the "eight major planets,
       the Moon, and Jupiter's four Galilean moons" enumeration to include Pluto and Charon.
-- [ ] `npm run typecheck` → GREEN.
-- [ ] Commit both files.
+- [x] `npm run typecheck` → GREEN.
+- [x] Commit both files.
 
 ---
 
@@ -348,10 +356,10 @@ silently accept.
 
 **Files:** `tests/data/bodies/rotationElements.test.ts` (modify)
 
-- [ ] Change `expect(ROTATION_ELEMENTS).toHaveLength(13)` → `toHaveLength(15)`. The comment above it
+- [x] Change `expect(ROTATION_ELEMENTS).toHaveLength(13)` → `toHaveLength(15)`. The comment above it
       ("The 13 textured bodies (spec §3)") becomes "The 15 textured bodies".
-- [ ] `npm test -- rotationElements` → GREEN.
-- [ ] Commit.
+- [x] `npm test -- rotationElements` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -365,18 +373,18 @@ Pluto and **binary pair** (or equivalent) for the Pluto–Charon relationship on
 two entries — this is the entire mechanism by which "honest about dwarf-planet status" ships (no
 schema field for it; it's prose, per the grill session's Q1 decision).
 
-- [ ] Add Pluto's entry: `id: 'pluto'`, `wikiTitle: 'Pluto'`, `moons` (Pluto has 5 known moons even
+- [x] Add Pluto's entry: `id: 'pluto'`, `wikiTitle: 'Pluto'`, `moons` (Pluto has 5 known moons even
       though only Charon is rendered — say so honestly, don't imply only one exists), `distance` in
       AU, `description` naming it a dwarf planet and Kuiper Belt object, mentioning Tombaugh Regio.
-- [ ] Add Charon's entry: `id: 'charon'`, `parent: 'Pluto'`, `wikiTitle: 'Charon_(moon)'`,
+- [x] Add Charon's entry: `id: 'charon'`, `parent: 'Pluto'`, `wikiTitle: 'Charon_(moon)'`,
       `dayLength: 'Tidally locked (mutual)'` or similar language distinguishing it from the Moon's
       one-way lock, `description` naming the Pluto–Charon binary/double-planet relationship and
       Mordor Macula.
-- [ ] `npm run build-planet-facts` → regenerates `bodyFacts.generated.ts`; confirm it now contains
+- [x] `npm run build-planet-facts` → regenerates `bodyFacts.generated.ts`; confirm it now contains
       `pluto` and `charon` keys.
-- [ ] `npm test -- planetFactsSeed` → GREEN (generic validator test, no per-body assertions to
+- [x] `npm test -- planetFactsSeed` → GREEN (generic validator test, no per-body assertions to
       update).
-- [ ] Commit `data/seeds/planet_facts.seed.json` and the regenerated `bodyFacts.generated.ts`.
+- [x] Commit `data/seeds/planet_facts.seed.json` and the regenerated `bodyFacts.generated.ts`.
 
 ---
 
@@ -384,33 +392,33 @@ schema field for it; it's prose, per the grill session's Q1 decision).
 
 **Files:** none
 
-- [ ] `npm run typecheck` → GREEN (both `src` and `tools` configs).
-- [ ] `npm test` → GREEN. In particular confirm `bodyRegions.test.ts` and
+- [x] `npm run typecheck` → GREEN (both `src` and `tools` configs).
+- [x] `npm test` → GREEN. In particular confirm `bodyRegions.test.ts` and
       `foregroundMaxDistance.test.ts` pass unmodified — both compare region extents by ratio
       against the dominant `solar-neighbourhood` region (~2.3 kpc), which the `solar-system`
       region's ~30→~31 au growth doesn't come close to disturbing (`foregroundMaxDistance.ts` maxes
       over ALL region extents, and `solar-neighbourhood` already dwarfs `solar-system` by six
       orders of magnitude before this change).
-- [ ] `npm run fetch-textures -- --dev` → still succeeds and does not attempt Pluto/Charon (no dev
+- [x] `npm run fetch-textures -- --dev` → still succeeds and does not attempt Pluto/Charon (no dev
       source registered for either, matching the Galilean-moon precedent) — confirms Task 5 didn't
       accidentally add a `devFilename`/`devKey`.
-- [ ] Grep the diff for any leftover `'planet'`/`'body'` id literal that should have been `'pluto'`/
+- [x] Grep the diff for any leftover `'planet'`/`'body'` id literal that should have been `'pluto'`/
       `'charon'` but wasn't — a sanity pass, not a new mechanism.
 
 ---
 
 ### Task 13: FINAL VISUAL PASS — the pair, with time running
 
-- [ ] In the dev server, fly to Pluto/Charon. Confirm: both are textured (Tombaugh Regio, Mordor
+- [x] In the dev server, fly to Pluto/Charon. Confirm: both are textured (Tombaugh Regio, Mordor
       Macula); clicking either opens an InfoCard with the seeded facts and "dwarf planet"/"binary
       pair" copy; command-palette search finds "Pluto" and "Charon"; the URL hash updates to
       `#body-pluto` / `#body-charon` on focus and a fresh load of that URL refocuses correctly.
-- [ ] Advance the sim clock (or let it run) and watch Charon over one orbit (~6.4 days of sim time,
+- [x] Advance the sim clock (or let it run) and watch Charon over one orbit (~6.4 days of sim time,
       sped up): confirm the same hemisphere of Charon stays turned toward Pluto throughout — the
       tidal-lock geometry Task 9's landmine comment promises.
-- [ ] Confirm the single existing "planet" visibility toggle in Settings shows/hides Pluto and
+- [x] Confirm the single existing "planet" visibility toggle in Settings shows/hides Pluto and
       Charon along with every other planet — no new toggle appeared anywhere.
-- [ ] Report the outcome to the user; do not mark the plan done until they've confirmed the visual
+- [x] Report the outcome to the user; do not mark the plan done until they've confirmed the visual
       pass themselves.
 
 ---
@@ -425,7 +433,8 @@ schema field for it; it's prose, per the grill session's Q1 decision).
 - `BodyTextureId` carries `'pluto' | 'charon'`; `TEXTURE_SOURCES` and `RAW_DATA` name the two USGS
   New Horizons mosaics with live-verified upstream URLs; `textures.sha256` and `ATTRIBUTIONS.md`
   cover them.
-- Built artefacts: `public/data/images/textures/pluto-small.jpg`, `charon-small.jpg`,
+- Built artefacts: `public/data/images/textures/pluto-4096.jpg`, `charon-4096.jpg` (plus their
+  2048 variants),
   `body-atlas.webp` (15-tile layout), `bodyAtlas.generated.ts`, `bodyFacts.generated.ts` all
   regenerated and committed where the project's convention commits generated output.
 - The Charon element row carries the barycentre-approximation landmine comment, linked to
