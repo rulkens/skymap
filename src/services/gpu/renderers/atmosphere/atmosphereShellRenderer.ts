@@ -30,8 +30,8 @@
  * and interleaving `writeBuffer` with `submit` in one frame does NOT preserve
  * order. Giving each body its OWN buffers means a later body writes a DIFFERENT
  * buffer — there is no shared per-frame state for the race to corrupt. The cost
- * is a handful of small textures + buffers per body, and today Earth is the sole
- * row, so it is one bundle.
+ * is a handful of small textures + buffers per body — ~300 KiB of LUTs per row, so
+ * the eight rows the table carries today cost ~2.4 MiB.
  *
  * ## On-device startup bake (transmittance → multi-scatter, ONE encoder)
  *
@@ -103,8 +103,9 @@ import shellFsCode from '../../shaders/atmosphere/shell/fragment.wesl?static';
  *  limb band: only the atmosphere-top proxy's far wall rasterises, and its outer
  *  edge is the sphere silhouette, which a coarse UV sphere polygonises INWARD. A
  *  facet's silhouette chord sags to ~cos(π/SEGMENTS) of the atmosphere-top radius,
- *  clipping that fraction off the limb. The atmosphere band is only ~1.4% of the
- *  planet radius to begin with, so at 48×24 the ~0.0021 silhouette sag eats ~15% of
+ *  clipping that fraction off the limb. Sized off the THINNEST band in the table —
+ *  Earth's, ~1.4% of the planet radius (Pluto's 21% is far more forgiving) — so at
+ *  48×24 the ~0.0021 silhouette sag eats ~15% of
  *  the band and scallops its outer edge into a visible polygon. At 128×64 the sag is
  *  ~cos(π/128) ≈ 0.9997 (≈ 0.03% of radius, ~2% of the band) — a smooth limb. The
  *  glow being low-frequency does NOT excuse the coarse mesh: coarseness is invisible
@@ -173,7 +174,7 @@ export function createAtmosphereShellRenderer(
   targetFormat: GPUTextureFormat, // 'rgba16float' (foreground:0)
   depthFormat: GPUTextureFormat, // 'depth32float' (foreground:0)
   reversedZ: boolean,
-  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth + six planets)
+  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth, six planets, Pluto)
 ): AtmosphereShellRenderer {
   // ── Sampler: linear + clamp-to-edge both axes (SHARED across bodies) ────────
   //

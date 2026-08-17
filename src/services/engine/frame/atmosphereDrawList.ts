@@ -33,10 +33,10 @@
  * ### Shape vs. reality
  *
  * The type is a general `readonly AtmosphereDrawEntry[]`, but in practice at most
- * ONE entry passes: seven bodies carry an `ATMOSPHERE_PARAMS` row today (Earth plus
- * the six other planets — the table is the data-gate), yet the near-field cull keeps
- * all-but-one culled at any real camera pose (two atmosphere bodies are never a pixel
- * across at once). The list shape costs nothing and lets the consumers iterate
+ * ONE entry passes: eight bodies carry an `ATMOSPHERE_PARAMS` row today (Earth, the
+ * six other planets and Pluto — the table is the data-gate), yet the near-field cull
+ * keeps all-but-one culled at any real camera pose (two atmosphere bodies are never a
+ * pixel across at once). The list shape costs nothing and lets the consumers iterate
  * without a special case.
  */
 
