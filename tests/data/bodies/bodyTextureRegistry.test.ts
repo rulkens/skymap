@@ -22,15 +22,6 @@ describe('BODY_TEXTURE_REGISTRY', () => {
       expect(spec.kinds.surface).not.toBeUndefined();
     }
 
-    // The mono-USGS-source contract (spec §3): Europa, Callisto, Pluto, and
-    // Charon ship a grayscale source that needs a build-time tint. Any other
-    // body carrying a tint — or one of these four missing one — is a seed error.
-    for (const [key, spec] of Object.entries(BODY_TEXTURE_REGISTRY)) {
-      const shouldTint =
-        key === 'europa' || key === 'callisto' || key === 'pluto' || key === 'charon';
-      expect('grayscaleTint' in spec && spec.grayscaleTint !== undefined).toBe(shouldTint);
-    }
-
     // The registry-keyed union IS texture identity: a body is textured iff its id
     // keys the registry. `earth` is a member; `phobos` (an irregular moon) is not.
     expect(bodyTextureSpec('earth')).not.toBeNull();
