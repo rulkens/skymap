@@ -163,17 +163,14 @@ const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_K
 
 /**
  * The second (chroma) input of every `panSharpen` body — today just Pluto's
- * PIA11707, whose published enhancement the build's calibration inverts. These
- * ride the full pull appended after the natives rather than inline, so the
- * emitted order is unchanged; there is no `--dev` variant, as the 2k quick-check
- * subset has no calibrated counterpart.
+ * PIA11707, whose published enhancement the build's calibration inverts.
+ * Appended after the natives, so the emitted order is unchanged; no `--dev`
+ * variant, as the 2k quick-check subset has no calibrated counterpart.
  *
- * The true-colour REFERENCE the calibration is fitted against is appended by
- * hand, not folded out of `TEXTURE_ENTRIES`: it is no body's `(body, kind)`
- * source — nothing is built from it — so it has no `TEXTURE_SOURCES` row to be
- * derived from, the same reason `QUADRANT_SOURCES` is its own list. It rides the
- * pull anyway because "a raw the pipeline's numbers came from that no command
- * can obtain" is the hole the BMNG quadrants used to sit in.
+ * The true-colour REFERENCE the calibration was fitted against is appended by
+ * hand rather than folded out of `TEXTURE_ENTRIES`: nothing is built from it, so
+ * it has no `TEXTURE_SOURCES` row to derive from. It rides the pull anyway —
+ * a raw the pipeline's numbers came from that no command can otherwise obtain.
  */
 const CHROMA_SOURCES: readonly TextureSource[] = [
   ...TEXTURE_ENTRIES.flatMap((entry) =>

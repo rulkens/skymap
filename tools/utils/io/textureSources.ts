@@ -49,10 +49,7 @@ import type { RawDataKey } from './rawDataRegistry';
  * moons) carries neither.
  *
  * `chroma` is the SECOND input a `panSharpen` body needs: `native` supplies the
- * luminance, `chroma` the hue. It is a named field rather than a general
- * `readonly RawDataKey[]` because the multiplicity is not general — one body has
- * a second input, and it plays a specific role the build dispatches on. An array
- * would make every reader fold over a list whose entries it could not tell apart.
+ * luminance, `chroma` the hue.
  */
 export type TextureSourceEntry = {
   readonly native: RawDataKey;
@@ -112,9 +109,8 @@ export const TEXTURE_SOURCES = {
   europa: { surface: { native: 'textures.usgsEuropa' } },
   ganymede: { surface: { native: 'textures.usgsGanymede' } },
   callisto: { surface: { native: 'textures.usgsCallisto' } },
-  // Pluto's mono mosaic carries the detail; the New Horizons MVIC colour map
-  // carries the hue (published as ENHANCED colour — see its RAW_DATA comment —
-  // which the registry row's `panSharpen` calibration undoes).
+  // Pluto's chroma map is published as ENHANCED colour (see its RAW_DATA
+  // comment); the registry row's `panSharpen` calibration undoes that.
   pluto: { surface: { native: 'textures.usgsPluto', chroma: 'textures.nasaPlutoColor' } },
   charon: { surface: { native: 'textures.usgsCharon' } },
   'saturn-ring': {

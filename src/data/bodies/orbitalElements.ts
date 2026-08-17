@@ -61,10 +61,10 @@
  *
  * - Planets: JPL SSD "Keplerian Elements for Approximate Positions of the Major
  *   Planets", Table 1 (valid 1800–2050 AD, mean ecliptic and equinox of J2000).
- *   https://ssd.jpl.nasa.gov/planets/approx_pos.html — but that web edition
- *   dropped Pluto (and the PDF it replaced now redirects to it), so Pluto's row
- *   is read from the same table as reprinted in the Explanatory Supplement to
- *   the Astronomical Almanac, 3rd ed. (2013), §8.10 Table 8.10.2:
+ *   https://ssd.jpl.nasa.gov/planets/approx_pos.html — that web edition dropped
+ *   Pluto and the PDF it replaced now redirects to it, so Pluto's row comes from
+ *   the same table reprinted in the Explanatory Supplement to the Astronomical
+ *   Almanac, 3rd ed. (2013), §8.10 Table 8.10.2:
  *   https://www.voyagepourproxima.fr/JPL-DE_LE405-Orbital%20Ephemerides%20of%20the%20Sun,%20Moon,%20and%20Planets.pdf
  * - Moon + the 13 planetary satellites: JPL SSD "Planetary Satellite Mean
  *   Orbital Parameters" (epoch 2000-01-01.5 TDB; the Moon in the ecliptic frame,
@@ -328,10 +328,9 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: NEPTUNE_BLUE,
   },
   {
-    // Pluto, heliocentric. Table 1, like every planet row above — see the
-    // header for where Pluto's copy of that table is read from, since JPL's web
-    // edition no longer carries it. L = 238.92903833°, ϖ = 224.06891629°,
-    // Ω = 110.30393684°.
+    // Pluto, heliocentric. Table 1, like every planet row above (header says
+    // where Pluto's copy of it is read from). L = 238.92903833°,
+    // ϖ = 224.06891629°, Ω = 110.30393684°.
     id: 'pluto',
     focusId: 'sun',
     semiMajorMpc: 39.48211675 * SCALE_UNITS.AU_TO_MPC,
@@ -647,28 +646,24 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: SAT_ROCK,
   }),
 
-  // Pluto's moon. Different source page from every satellite() row above:
-  // JPL sats/elem/sep.html "Satellites of Pluto" table ("mean equatorial
-  // orbital elements", epoch 2000-01-01.5 TDB, ephemeris PLU060; M. Brozović,
-  // R. A. Jacobson (2024) "Post-New Horizons orbits and masses for the
-  // satellites of Pluto", AJ 167:256), NOT the general sats/elem/elem.html
-  // page the Mars/Jupiter/Saturn moons above transcribe.
+  // Pluto's moon, from a different source page than every satellite() row
+  // above: JPL sats/elem/sep.html "Satellites of Pluto" ("mean equatorial
+  // orbital elements", epoch 2000-01-01.5 TDB, ephemeris PLU060; Brozović &
+  // Jacobson 2024, AJ 167:256), NOT the general sats/elem/elem.html page.
   satellite({
     // Charon, plutocentric. Verbatim: a=19600. e=0.000 ω=0.0 M=304.1 i=0.0
-    // node=0.0 P=6.387222 Papsis=- Pnode=-. This table gives elements
-    // DIRECTLY in Pluto's own equatorial plane ("these elements are with
-    // respect to the planet's equatorial plane" — no per-moon Laplace pole
-    // column here, unlike elem.html), so poleRaDeg/poleDecDeg below is
-    // Pluto's OWN IAU pole, not a distinct Charon pole. Papsis/Pnode are
-    // published as "-" (undefined, not 0.000) because e=0.000 and i=0.0 leave
-    // periapsis and node geometrically meaningless — passed as 0, which
-    // moonRatesFromPeriods's MIN_PRECESSION_YEARS guard freezes to zero
-    // drift, the same degenerate-orbit case as Deimos/Dione/Tethys above.
-    // The page's own legend calls P "sidereal period" — the word that sends
-    // the Moon through moonRatesFromSiderealPeriods instead — but with both
-    // precession rates frozen above, meanAnomalyRate = meanLongitudeRate − 0
-    // − 0: sidereal and mean-anomaly readings of P coincide for THIS row.
-    // Revisit if JPL ever publishes nonzero e/i for Charon.
+    // node=0.0 P=6.387222 Papsis=- Pnode=-. These elements are given DIRECTLY
+    // in Pluto's own equatorial plane ("with respect to the planet's equatorial
+    // plane" — no per-moon Laplace pole column, unlike elem.html), so
+    // poleRaDeg/poleDecDeg below is Pluto's OWN pole, not a distinct Charon one.
+    // Papsis/Pnode are published "-" (undefined, not 0.000): e=0.000 and i=0.0
+    // leave periapsis and node geometrically meaningless. Passed as 0, which
+    // moonRatesFromPeriods's MIN_PRECESSION_YEARS guard freezes to zero drift,
+    // the same degenerate case as Deimos/Dione/Tethys above. The legend calls P
+    // "sidereal period" — the word that routes the Moon through
+    // moonRatesFromSiderealPeriods instead — but with both precession rates
+    // frozen, meanAnomalyRate = meanLongitudeRate − 0 − 0, so the two readings
+    // of P coincide for THIS row; revisit if JPL ever publishes nonzero e/i.
     id: 'charon',
     focusId: 'pluto',
     semiMajorKm: 19600,
@@ -680,24 +675,17 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     periodDays: 6.387222,
     apsidalPrecessionYears: 0.0,
     nodalPrecessionYears: 0.0,
-    // Pluto's IAU north pole (WGCCRE 2015 / Archinal et al. 2018): RA
-    // 132.993°, Dec −6.163°. Pluto and Charon are mutually tidally locked —
-    // Charon's P=6.387222 d above equals Pluto's own rotation period — so
-    // their poles coincide exactly; confirmed against NAIF pck00011.tpc,
-    // whose BODY901_POLE_RA/DEC (Charon) equal BODY999's (Pluto) to the last
-    // published digit.
+    // Pluto's IAU pole (WGCCRE 2015 / Archinal et al. 2018), not a Charon pole:
+    // the pair is mutually tidally locked, so the poles coincide exactly — see
+    // `rotationElements.ts`, where the same lock explains three shared numbers.
     poleRaDeg: 132.993,
     poleDecDeg: -6.163,
-    // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric
-    // position rather than orbiting the Pluto–Charon barycentre, which sits
-    // ~2130 km from Pluto's CENTRE — 1.8 Pluto radii, so ~940 km above the
-    // surface (JPL GMs 106.1 / 869.3: Charon is ~12% of Pluto's mass, putting
-    // the barycentre ~11% of the way along the 19600 km pair separation) —
-    // visibly off here, though it is the SAME approximation
-    // Earth–Moon already makes (Earth doesn't orbit the Earth–Moon
-    // barycentre either). Deliberate; the real fix — a body orbiting a
-    // barycentre rather than being pinned at a focus — is scoped in
-    // docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
+    // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric position
+    // rather than orbiting the Pluto–Charon barycentre, which sits ~2130 km from
+    // Pluto's CENTRE (JPL GMs 106.1 / 869.3 put it ~11% along the 19600 km
+    // separation) — 1.8 Pluto radii, so ~940 km above the surface and visibly
+    // off, unlike the same approximation Earth–Moon already makes. Deliberate;
+    // the fix is scoped in docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
     color: CHARON_GREY,
   }),
 

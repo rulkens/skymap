@@ -59,10 +59,9 @@ export function rotationById(id: string): RotationElements {
 /**
  * The fifteen textured bodies, in the same outward order as `orbitalElements`:
  * the eight major planets (Mercury → Neptune), Earth's Moon, Jupiter's four
- * Galilean moons, then Pluto and Charon. Each row carries the J2000 pole (α₀,
- * δ₀), the epoch meridian W₀, and its spin rate Ẇ; degrees at the seed site
- * (matching the report's tables), composed into a `Mat3` per instant via
- * `rotationFromIau`.
+ * Galilean moons, then Pluto and Charon. Each row carries the J2000 pole (α₀, δ₀),
+ * the epoch meridian W₀, and its spin rate Ẇ; degrees at the seed site (matching
+ * the report's tables), composed into a `Mat3` per instant via `rotationFromIau`.
  */
 export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // Mercury. WGCCRE-2015 Table 1: α₀ = 281.0103 − 0.0328T, δ₀ = 61.4155 − 0.0049T,
@@ -104,21 +103,14 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // Callisto. α₀ = 268.72 − 0.009T (+ periodic), δ₀ = 64.83 + 0.003T (+ periodic),
   // W = 259.51 + 21.5710715·d − ….
   { id: 'callisto', poleRaDeg: 268.72, poleDecDeg: 64.83, primeMeridianDeg: 259.51, spinRateDegPerDay: 21.5710715 },
-  // Pluto. α₀ = 132.993, δ₀ = −6.163, W = 302.695 + 56.3625225·d. Dwarf-planet
-  // (minor-body) pole convention: the "positive" pole, not necessarily north of
-  // the invariable plane, so Ẇ is positive despite Pluto's retrograde spin —
-  // unlike Uranus/Venus above, which keep the planet convention and go negative.
-  // Cross-checked against NAIF pck00011.tpc BODY999 (its comment: "unchanged in
-  // the 2015 IAU report").
+  // Pluto (NAIF pck00011.tpc BODY999). α₀ = 132.993, δ₀ = −6.163, W = 302.695 + 56.3625225·d.
+  // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
+  // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.
   { id: 'pluto', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 302.695, spinRateDegPerDay: 56.3625225 },
-  // Charon. Same pole as Pluto (132.993, −6.163 — the pair is mutually tidally
-  // locked, one shared spin axis), W = 122.695 + 56.3625225·d. LANDMINE: the
-  // spin rate equals 360°/6.387222 d (Charon's own orbital period, from
-  // `orbitalElements.ts`) to five figures — not a coincidental duplication.
-  // Mutual lock means Charon always shows Pluto the same face (and vice versa),
-  // so its rotation and orbital periods are one physical quantity measured two
-  // ways; 56.3625225 × 6.387222 = 359.99994° (residual 6×10⁻⁵°, from the two
-  // constants' independent rounding). Cross-checked against pck00011.tpc
-  // BODY901 ("unchanged in the 2015 IAU report").
+  // Charon (pck00011.tpc BODY901). W = 122.695 + 56.3625225·d. LANDMINE — what this row shares
+  // with Pluto's is physics, not copy-paste: mutual tidal lock means one spin axis (identical
+  // pole), each prime meridian is the sub-companion one (W₀ exactly 180° apart), and rotation
+  // and orbit are one quantity measured twice (Ẇ = 360°/6.387222 d, Charon's orbital period in
+  // `orbitalElements.ts`; 56.3625225 × 6.387222 = 359.99994°, residual from their rounding).
   { id: 'charon', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 122.695, spinRateDegPerDay: 56.3625225 },
 ];
