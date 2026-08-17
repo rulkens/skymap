@@ -35,6 +35,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Focusable-kind registry** `needs-design` — a focusable/selectable kind is smeared across ~10 per-kind dispatch tables (pick, selection row, framing, halo, URL); consolidate into one descriptor + registry, sibling to the subsystem-bundle work. → [details](backlog/2026-08-17-focusable-kind-registry.md)
 - [ ] **`earthFlyout` stalls the recorder's virtual clock** `needs-debug` — intermittent; the page runs rAF on real time while the granted virtual budget never elapses, with zero requests in flight. → [details](backlog/2026-07-31-earthflyout-virtual-time-stall.md)
 - [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
