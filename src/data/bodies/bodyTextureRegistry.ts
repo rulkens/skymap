@@ -123,10 +123,12 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'usgs',
     grayscaleTint: [0.62, 0.58, 0.52],
   },
-  // Pluto / Charon: `small` here is a LOOK ceiling for a different reason than
-  // Uranus/Neptune's near-featureless discs — New Horizons only resolved the
-  // encounter hemisphere well; the anti-Charon hemisphere is reconstructed at
-  // much lower fidelity, so more tile resolution would just upsample noise.
+  // Pluto / Charon: medium is a LOOK ceiling, not a source ceiling — the USGS
+  // sources measure 24888px and 12693px wide, well past 8k. Medium is a
+  // sensible wire-cost/detail balance for a body this small on screen; 8k
+  // would be pointless. The far-side coverage gap (New Horizons only resolved
+  // the encounter hemisphere well) is a FIDELITY caveat about the data, not a
+  // resolution ceiling.
   // Both USGS sources measured single-channel (`sharp(...).metadata()`:
   // channels=1, space=b-w). Tints encode the disk-averaged hue, not the
   // brightest feature: Pluto's tholin haze is butterscotch-tan overall
@@ -135,13 +137,13 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // ApJL 872 L36), so its tint stays near-grey with a faint warm bias.
   pluto: {
     bodyId: 'pluto',
-    kinds: { surface: 'small' },
+    kinds: { surface: 'medium' },
     provenance: 'usgs',
     grayscaleTint: [0.8, 0.7, 0.56],
   },
   charon: {
     bodyId: 'charon',
-    kinds: { surface: 'small' },
+    kinds: { surface: 'medium' },
     provenance: 'usgs',
     grayscaleTint: [0.6, 0.58, 0.56],
   },

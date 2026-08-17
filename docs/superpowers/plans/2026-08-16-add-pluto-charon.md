@@ -77,25 +77,26 @@ read apart from Neptune's blue and the satellite palette's greys at a glance.
 <https://ssd.jpl.nasa.gov/planets/approx_pos.html>. Table 2a's **b/c/s/f** correction terms
 (Table 2b, applied to Jupiter through Pluto's mean anomaly for multi-millennial accuracy) are
 **deliberately dropped** — `propagateElements.ts` only implements the linear `element(T) = element₀
-+ rate·T` map every other row uses, and within a few centuries of J2000 the linear form is within
-visual accuracy. Record this tradeoff in a row comment (the "why comment" this plan's convention
-calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat because they don't
-need it.
 
-- [ ] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
+- rate·T` map every other row uses, and within a few centuries of J2000 the linear form is within
+  visual accuracy. Record this tradeoff in a row comment (the "why comment" this plan's convention
+  calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat because they don't
+  need it.
+
+* [ ] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
       `plane` — Table 2a is ecliptic-referenced like Table 1), following the exact derivation idiom
       the Neptune row (`orbitalElements.ts:296-320`) uses: `a`/`e`/`i`/`Ω` transcribed directly,
       `ω = ϖ − Ω` and `M = L − ϖ` shown inline, the six JPL rate columns quoted in a comment and
       converted the same way (`dω/dt = dϖ/dt − dΩ/dt`, `dM/dt = dL/dt − dϖ/dt`). Use the palette
       constant from Task 1.
-- [ ] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
+* [ ] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
       the end of the array** (after Iapetus — see Global constraints). `radiusKm` from WGCCRE 2015's
       updated Pluto size (verify at the source, not from memory); `albedo` a plausible flat tan/grey
       (it's the label-tint and pre-texture fallback colour, not load-bearing once textured).
-- [ ] `npm run typecheck` → GREEN.
-- [ ] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
+* [ ] `npm run typecheck` → GREEN.
+* [ ] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
       neither table is length-pinned).
-- [ ] Commit both files.
+* [ ] Commit both files.
 
 ---
 
@@ -106,7 +107,7 @@ need it.
 **Source:** JPL SSD "Planetary Satellite Mean Elements" — the Pluto-system table specifically,
 <https://ssd.jpl.nasa.gov/sats/elem/sep.html> (NOT the general `elem.html` the other moons use;
 Charon's row lives on this dedicated page). Current reference: Brozović & Jacobson 2024,
-*AJ* 167:256. Charon's elements are **plutocentric** (`focusId: 'pluto'`) — confirm this is what
+_AJ_ 167:256. Charon's elements are **plutocentric** (`focusId: 'pluto'`) — confirm this is what
 the page states before authoring the row. The page publishes elements referenced to both the
 ecliptic and Pluto's own equatorial plane; use the **equatorial-plane** variant (matching the
 `satellite()` maker's Laplace-plane convention every other moon row uses) and Charon's own pole for
@@ -183,9 +184,21 @@ the Europa/Callisto precedent — confirm, don't assume.
 
 ```ts
 export type BodyTextureId =
-  | 'mercury' | 'venus' | 'earth' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune'
-  | 'moon' | 'io' | 'europa' | 'ganymede' | 'callisto'
-  | 'pluto' | 'charon';
+  | 'mercury'
+  | 'venus'
+  | 'earth'
+  | 'mars'
+  | 'jupiter'
+  | 'saturn'
+  | 'uranus'
+  | 'neptune'
+  | 'moon'
+  | 'io'
+  | 'europa'
+  | 'ganymede'
+  | 'callisto'
+  | 'pluto'
+  | 'charon';
 ```
 
 Update the module's docblock: "thirteen members" → "fifteen members".
@@ -273,35 +286,38 @@ into that one.
 
 ---
 
-### Task 8b: True-colour Pluto + 4K tier for both — SCOPE CHANGE (user decision 2026-08-17)
+### Task 8b: 4K tier for both bodies — colour source rejected on the honesty gate (2026-08-17)
 
 Added after Tasks 1–8 shipped, when the flat-tint result made the fidelity gap concrete: multiplying
 a panchromatic LORRI mosaic by one `grayscaleTint` renders Pluto a uniform butterscotch and cannot
-express the dark red Cthulhu Macula beside pale Tombaugh Regio.
+express the dark red Cthulhu Macula beside pale Tombaugh Regio. The task originally proposed
+switching Pluto to a NASA/JHUAPL/SwRI colour mosaic; that half failed verification (below) and was
+dropped rather than shipped.
 
-**Decision:** Pluto switches to the NASA/JHUAPL/SwRI Ralph/MVIC global **colour** map and both bodies
-move `small` → `medium` (4K). Charon keeps the greyscale mosaic + `grayscaleTint`, because **no global
-colour mosaic for Charon exists** — only single-hemisphere disc portraits — and that is honest:
-Mordor Macula is ~2.7% of Charon's colour variance (Protopapa+19), so the body really is near-neutral.
+**Gate:** any texture this renderer ships as a body's surface must be approximately true colour —
+the same bar the atmosphere work was held to. The only candidate global Pluto colour product,
+[PIA11707](https://photojournal.jpl.nasa.gov/catalog/PIA11707) ("Pluto Global Color Map"), is built
+from the exact MVIC 3-filter data Olkin et al. 2017 (_AJ_ 154, 258) describes — the mission's own
+paper on that dataset states outright: **"These images are enhanced color (not natural color as
+perceived by the human eye)."** The one genuinely true-colour Pluto product,
+[PIA19857](https://photojournal.jpl.nasa.gov/catalog/PIA19857), is a single hemisphere with a
+coverage gap, not a gap-free global map, so it can't back a `surface` texture either. No gap-free
+true-colour global Pluto mosaic exists — the colour half of this task fails the gate outright.
 
-**Why 4K is free for colour:** the colour mosaic is 5926 px wide, so it feeds a 4096 px tier without
-upsampling. It is too narrow for `large` (8192) — `medium` is its natural ceiling, and the
-`tiersFittingSourceWidth` guard enforces that rather than manufacturing detail.
+**Ruling:** both bodies keep the existing greyscale panchromatic USGS mosaics and their measured
+`grayscaleTint` (Task 5) unchanged. Only the tier ceiling moves: `small` → `medium` (4K) for both —
+the USGS sources measure 24888 px (Pluto) and 12693 px (Charon) wide, far past the 8k `large`
+ceiling, so `medium` is a wire-cost/detail choice, not a source limit; `large` would spend bandwidth
+no eye can resolve on a body this small on screen.
 
-**Hard gate before adopting:** the source must be approximately-true colour. New Horizons' famous
-vivid "rainbow" images are principal-component **enhanced** colour; shipping those in a renderer
-claiming physical realism is the same dishonesty rejected for the atmosphere (see the atmosphere
-assessment in this PR's discussion). Verify the processing wording at the publisher before wiring it.
-
-- [ ] Verify true-vs-enhanced at the primary source; record the verbatim wording in the raw-data row.
-- [ ] Register the colour source (`RAW_DATA` + `TEXTURE_SOURCES`), fetch it, sha256 sidecar.
-- [ ] `bodyTextureRegistry`: Pluto → colour source, drop `grayscaleTint`, `surface: 'medium'`;
-      Charon → keep `grayscaleTint`, `surface: 'medium'`. Keep the far-side-coverage caveat comment on
-      both — it applies to the colour source identically (same encounter-hemisphere gap).
-- [ ] `ATTRIBUTIONS.md`: the colour map is a NASA/JHUAPL/SwRI product, not a USGS Astrogeology one —
-      a separate credit from the mosaic block Task 7 added.
-- [ ] Rebuild textures + atlas; confirm `pluto-4096.jpg` is emitted WITHOUT the `(tinted)` note and
-      `charon-4096.jpg` WITH it.
+- [x] Verify true-vs-enhanced at the primary source — FAILED the gate (Olkin+2017 quote above);
+      colour source dropped, not adopted.
+- [x] `bodyTextureRegistry`: Pluto and Charon both move `surface: 'small'` → `'medium'`;
+      `grayscaleTint` unchanged on both. Row comment rewritten to state the `medium` ceiling as a
+      wire-cost/detail balance (look ceiling, not source ceiling) and the far-side coverage gap as a
+      fidelity caveat about the data, not a resolution ceiling.
+- [ ] Rebuild textures + atlas; confirm `pluto-4096.jpg` and `charon-4096.jpg` are both emitted WITH
+      the `(tinted)` note (both stay mono sources — no colour source was adopted).
 
 ---
 
@@ -315,7 +331,7 @@ rotation rate for Pluto, Charon, and their sizes (confirmed via the report's own
 not a guess). Both bodies get ordinary rows from that report's tables, same as the other thirteen.
 
 **Landmine comment (mandatory):** Charon's `spinRateDegPerDay` must equal `360° / Charon's orbital
-period` (Task 3's row) to the precision WGCCRE publishes — the Pluto–Charon system is *mutually*
+period` (Task 3's row) to the precision WGCCRE publishes — the Pluto–Charon system is _mutually_
 tidally locked (each always shows the same face to the other), unlike the Moon which is only
 one-way locked to Earth. Record this as the "why" the two numbers agree, not a coincidence to
 silently accept.
