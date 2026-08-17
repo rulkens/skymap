@@ -23,6 +23,12 @@ const TOTAL_SEC = FLIGHT_SEC * 2 + HOLD_SEC * 2; // 148 — the spin's exact loo
 const EARTH_RADIUS_MPC = SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 
+// Lift out of the ecliptic. Aiming straight along the sunward direction puts
+// the eye IN the plane every planetary orbit lies in, so the orbits collapse to
+// edge-on lines for the whole first half of the pull-back. 30° reads them as
+// ellipses without tilting far enough to lose the sunlit face.
+const ELEVATION_RAD = (30 * Math.PI) / 180;
+
 /**
  * Build the loop at `simDays` — same instant-dependent factory shape as
  * `earthFlyout` (see its header): Earth's position is a function of the
@@ -48,7 +54,7 @@ export function earthUniverseLoop(simDays: number): Clip {
     id: 'earthUniverseLoop',
     label: 'Earth ⇄ Universe (loop)',
     data: {
-      start: { target, distance: START_DISTANCE_MPC, yaw, pitch },
+      start: { target, distance: START_DISTANCE_MPC, yaw, pitch: pitch + ELEVATION_RAD },
       loop: true,
       timeline: [
         all([

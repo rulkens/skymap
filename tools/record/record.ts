@@ -191,10 +191,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     beats: undefined,
     fps: 60,
     size: parseSize('3840x2160'),
-    // Default 2, not 1: DOM captions are authored in CSS pixels, and a
-    // designer judges them on a 2x display — see the didactic block at the
-    // viewport derivation in captureTake for the full proportion argument.
-    dpr: 2,
+    // 1, because 2 silently halves the rendered resolution — the collapse is
+    // documented at the viewport derivation in captureTake. --dpr 2 survives
+    // only as a way to reproduce the older, softer takes.
+    dpr: 1,
     // No fixed default name: main derives a timestamped one via
     // defaultOutName so successive default-flag takes never overwrite each
     // other (buildFfmpegArgs passes -y). An explicit --out is used verbatim.
@@ -603,11 +603,11 @@ async function awaitCaptureReady(page: Page, captureUrl: string): Promise<void> 
 /**
  * The capture side of the pipeline, decoupled from encoding: boot the cinema
  * page in real time, pause virtual time, kick the take, then step
- * grant → captureScreenshot → writePng until the in-page status flag reports
+ * grant → captureScreenshot → writeFrame until the in-page status flag reports
  * the take ended — or, for a looping clip (`take.loopFrames` set), until
  * exactly that many frames have been captured, since the status flag never
  * flips for a loop. Returns the number of frames captured. Encoding enters
- * only through the injected writePng, so this function knows nothing about
+ * only through the injected writeFrame, so this function knows nothing about
  * ffmpeg.
  */
 async function captureTake(
@@ -617,20 +617,23 @@ async function captureTake(
   /** Composed by main (cinema gate + sim pin) so a bad --url fails before ffmpeg spawns. */
   captureUrl: string,
   frameCap: number,
-  writePng: (png: Buffer) => Promise<void>,
+  writeFrame: (frameJpeg: Buffer) => Promise<void>,
 ): Promise<number> {
   // `--size` is the OUTPUT film resolution; the page runs in a viewport of
-  // size/dpr CSS pixels at deviceScaleFactor dpr (default 2). Two reasons:
+  // size/dpr CSS pixels at deviceScaleFactor dpr. Default dpr 1, i.e. the
+  // viewport IS the film resolution.
   //
-  // - Proportions: DOM captions are typeset in CSS pixels. A 3840x2160
-  //   viewport at dpr 1 sets them against a 4K frame — half the relative size
-  //   a designer sees on a 2x display. A 1920x1080 viewport at dpr 2 yields
-  //   the same 3840x2160 frame with captions at their designed proportions.
-  // - Free fidelity: the app sizes the canvas backing store to
-  //   clientSize x min(devicePixelRatio, 2) (resizeCanvasToDisplay in
-  //   src/services/gpu/device.ts), so both configurations rasterize the very
-  //   same native 4K canvas — dpr 2 costs no extra GPU work. That cap is also
-  //   why --dpr stops at 2.
+  // --dpr 2 LOSES HALF THE RESOLUTION — do not restore it as the default. The
+  // first `captureScreenshot` carrying `clip.scale = 2` drops the page's
+  // devicePixelRatio from 2 to 1, permanently; resizeCanvasToDisplay
+  // (src/services/gpu/device.ts) follows it down, so the canvas backing store
+  // collapses 3840x2160 → 1920x1080 and every frame after the first is a
+  // 1080p render upscaled into a 4K file. Measured directly: read
+  // canvas.width/height before and after one such capture. The visible damage
+  // is soft stars plus doubled UI — labels pinned at their px clamps
+  // (minPixelSize in structureMarkerStyles.ts et al) cover twice the frame
+  // they should, while angular-sized labels are unharmed, which is why the
+  // regression reads as "some labels are too big" rather than as blur alone.
   //
   // Pixel contract — established EMPIRICALLY against headless-new Chromium,
   // not from docs or Playwright source: an UNCLIPPED fromSurface capture
@@ -639,11 +642,9 @@ async function captureTake(
   // Device-pixel output must be bought explicitly: the capture loop passes
   // clip = the full viewport in CSS px with scale = dpr (CDP Viewport;
   // clip.scale multiplies the capture resolution), making every frame
-  // viewport x dpr = --size exactly. At dpr 1 the scale is 1 and the clip is
-  // a no-op — one code path, no branch. (Playwright's crPage.js scale:'css'
-  // handling suggests raw captures are device-px, but that describes its
-  // CLIPPED path — the unclipped surface capture demonstrably scales to CSS
-  // px here.)
+  // viewport x dpr = --size exactly. At the default dpr 1 that scale is 1 and
+  // the clip is a no-op — which is also why the default is the only setting
+  // that escapes the collapse above.
   const viewport = {
     width: options.size.width / options.dpr,
     height: options.size.height / options.dpr,
@@ -885,11 +886,19 @@ async function captureTake(
     // unclipped capture comes back in CSS px — see the pixel-contract note at
     // the viewport derivation above.
     const shot = await session.send('Page.captureScreenshot', {
-      format: 'png',
+      // JPEG, not PNG: in-browser PNG compression of a 4K frame measured
+      // ~1086 ms against ~85 ms for the same capture as JPEG — 98.5% of a
+      // frame's wall clock, dwarfing both the render (~1 ms) and the ffmpeg
+      // hand-off (~11 ms). Quality 100 keeps the one lossy generation this
+      // adds well under x264's own crf 16. Pinned like the codec settings in
+      // buildFfmpegArgs, for the same reason: a knob here would let takes
+      // drift apart. ffmpeg's image2pipe demuxes JPEG unchanged.
+      format: 'jpeg',
+      quality: 100,
       fromSurface: true,
       clip: { x: 0, y: 0, width: viewport.width, height: viewport.height, scale: options.dpr },
     });
-    await writePng(Buffer.from(shot.data, 'base64'));
+    await writeFrame(Buffer.from(shot.data, 'base64'));
     frame++;
     if (frame % PROGRESS_EVERY_FRAMES === 0) {
       console.log(`  frame ${frame} / ${loopFrames ?? frameCap}`);
