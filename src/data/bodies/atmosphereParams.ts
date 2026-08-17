@@ -17,7 +17,7 @@
  * The Earth row is the canonical parameter set from Bruneton & Neyret's
  * "Precomputed Atmospheric Scattering" (2008), as refined in Hillaire's 2020
  * "A Scalable and Production Ready Sky and Atmosphere Rendering Technique":
- * Rayleigh (5.8, 13.6, 33.1)e-3 1/km with an 8 km scale height, grey Mie
+ * Rayleigh (5.8, 13.6, 33.1)e-3 1/km with an 8 km scale height, Mie
  * 3.9e-3 1/km scattering + 4.4e-3 1/km absorption with a 1.2 km scale height and
  * a 0.8 Henyey-Greenstein asymmetry, and an ozone tent centred at 25 km. These
  * are *tunable data* — expected to be nudged for look, so they carry no test

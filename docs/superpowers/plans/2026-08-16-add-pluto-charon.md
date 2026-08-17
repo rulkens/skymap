@@ -445,8 +445,8 @@ schema field for it; it's prose, per the grill session's Q1 decision).
 
 ### Task 13: FINAL VISUAL PASS — the pair, with time running
 
-- [x] In the dev server, fly to Pluto/Charon. Confirm: both are textured (Tombaugh Regio, Mordor
-      Macula); clicking either opens an InfoCard with the seeded facts and "dwarf planet"/"binary
+- [x] In the dev server, fly to Pluto/Charon. Confirm: both are textured (Tombaugh Regio, Neverland
+      Regio); clicking either opens an InfoCard with the seeded facts and "dwarf planet"/"binary
       pair" copy; command-palette search finds "Pluto" and "Charon"; the URL hash updates to
       `#body-pluto` / `#body-charon` on focus and a fresh load of that URL refocuses correctly.
 - [x] Advance the sim clock (or let it run) and watch Charon over one orbit (~6.4 days of sim time,

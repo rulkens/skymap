@@ -93,8 +93,9 @@ fn integrateRay(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayContribu
     let sampleTransmittance = exp(-m.extinction * dt);
     let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, top, r, sunCosZenith);
 
-    // Total scattering coefficient at this point (Rayleigh per-channel + grey
-    // Mie). Higher orders are treated as isotropic, so no phase weighting.
+    // Total scattering coefficient at this point (Rayleigh + Mie, both
+    // per-channel). Higher orders are treated as isotropic, so no phase
+    // weighting.
     let scattering = m.scatterR + m.scatterM;
 
     // Second-order source: sun light reaching this point, scattered with the
