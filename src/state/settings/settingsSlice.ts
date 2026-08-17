@@ -46,6 +46,7 @@ import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
+import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -178,6 +179,19 @@ const settingsSlice = createSlice({
     // flipped by a knob patch — the same split `setFlow` makes.
     setMilkyWayTuning: (settings, action: PayloadAction<Partial<MilkyWayTuning>>) => {
       Object.assign(settings.milkyWay, action.payload);
+    },
+
+    // ── zone of avoidance ──────────────────────────────────────────────────
+    setZoneOfAvoidanceEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.zoneOfAvoidance.enabled = action.payload;
+    },
+    // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
+    // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
+    setZoneOfAvoidanceTuning: (
+      settings,
+      action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,
+    ) => {
+      Object.assign(settings.zoneOfAvoidance, action.payload);
     },
 
     // ── filaments ───────────────────────────────────────────────────────────
@@ -493,6 +507,8 @@ export const {
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
   setMilkyWayTuning,
+  setZoneOfAvoidanceEnabled,
+  setZoneOfAvoidanceTuning,
   setFilamentsEnabled,
   setFilamentIntensity,
   setConstellationsEnabled,

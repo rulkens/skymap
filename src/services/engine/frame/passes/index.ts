@@ -17,7 +17,7 @@
  *
  * ### CONTENT_LAYERS — draw order
  *
- * The first eight entries are additively blended into the HDR `rgba16float`
+ * The first nine entries are additively blended into the HDR `rgba16float`
  * target, projected through the cosmological slab:
  *
  *   1. point-sprites       — instanced billboards (always-on)
@@ -27,8 +27,13 @@
  *   5. flow                — CF4++ peculiar-velocity ribbon overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
- *   7. horizon-shell       — translucent sphere at the observable-universe edge
- *   8. structure-markers   — at-rest halo + ring for cluster / SC / void structures
+ *   7. zone-of-avoidance-upsample — upsamples the 1/5-res zone-of-avoidance
+ *                            band offscreen into HDR, then draws the band's
+ *                            full-res curved lettering (its producer,
+ *                            zone-of-avoidance, targets its own 'zoa' row —
+ *                            see below, same reason scalar-volume isn't here)
+ *   8. horizon-shell       — translucent sphere at the observable-universe edge
+ *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
  * Six more near-field rows follow, projected through the near0 slab (COSMO's
  * fixed near plane would clip their kpc-to-AU-scale anchors). Five accumulate
@@ -37,31 +42,31 @@
  * `star-aggregates`, has its OWN `(star-aggregates, NEAR0)` render step into the
  * half-res offscreen that `star-upsample` then composites back:
  *
- *   9. milky-way           — star/dust point cloud at the galactic centre
+ *  10. milky-way           — star/dust point cloud at the galactic centre
  *                            (the fixed 10 kpc COSMO near plane clipped the
  *                            disc mid-descent; drawn FIRST in the group so
  *                            its multiplicative dust never darkens the local
  *                            starfield below)
- *  10. star-points         — the unresolved partition of the neighbourhood
+ *  11. star-points         — the unresolved partition of the neighbourhood
  *                            stars (partitionStarsByResolution) as additive
  *                            point sprites, riding the same tone-map as the
  *                            galaxies
- *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
+ *  12. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
  *                            Moon) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam)
- *  11b. body-glints        — the sub-pixel bodies (the glints branch of the body
+ *  12b. body-glints        — the sub-pixel bodies (the glints branch of the body
  *                            partition) as brightness-scaled additive points
  *                            (size x albedo x phase, cross-fading with the mesh
  *                            over 1-3 px), sibling of star-points (f64 rebase seam)
- *  12. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
+ *  13. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
  *                            flux-mip glows), drawn LINEAR into the half-res
  *                            `star-aggregates` offscreen by its own render step
  *                            (the fill-bound half of the star pass)
- *  13. star-catalog        — the survey LEAF stream (real point-source stars),
+ *  14. star-catalog        — the survey LEAF stream (real point-source stars),
  *                            drawn full-res into HDR as a per-frame flux-mip
  *                            cut of additive point sprites (f64 rebase seam),
  *                            crossfading to the procedural Milky-Way cloud
- *  14. star-upsample       — composites the half-res `star-aggregates` offscreen
+ *  15. star-upsample       — composites the half-res `star-aggregates` offscreen
  *                            back into HDR, applying the hue-preserving knee to
  *                            the summed aggregate field (the LOD-symmetry fix)
  *
@@ -69,57 +74,57 @@
  * cosmological slab (except near0-selection-ring, which rides near0) and drawn
  * post-tone-map onto the swap chain:
  *
- *  15. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  16. selection-ring      — per-galaxy / Milky-Way / structure selection halo
  *                            (COSMO slab)
- *  16. near0-selection-ring — the same halo for a NEAR0-slab pick (a survey
+ *  17. near0-selection-ring — the same halo for a NEAR0-slab pick (a survey
  *                            star): shared renderer + selectionHalo gate,
  *                            projected through near0 with the f64 rebase seam
- *  17. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  18. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  19. labels              — MSDF text labels
- *  20. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  18. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  19. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  20. labels              — MSDF text labels
+ *  21. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * The final rows leave the cosmological slab entirely — the near-field
  * foreground group, projected through the near0 slab (whose near/far track
  * the camera's orbit distance) so the true-scale bodies are never clipped by
  * the cosmological near plane:
  *
- *  21. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *  22. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  22. cloud-shell         — Earth's translucent cloud deck, drawn right after
+ *  23. cloud-shell         — Earth's translucent cloud deck, drawn right after
  *                            the opaque surface so it depth-tests against it (far
  *                            hemisphere occluded), writing no depth and blending
  *                            straight-alpha OVER (like the ring — a blend
  *                            exception in the otherwise opaque foreground group)
- *  23. star-spheres        — the resolved partition of the stars (the Sun +
+ *  24. star-spheres        — the resolved partition of the stars (the Sun +
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  24. field-star-sphere  — the close-range sphere for the ONE nearest
+ *  25. field-star-sphere  — the close-range sphere for the ONE nearest
  *                            resolvable Gaia field star (presence derived from
  *                            proximity, not selection), reusing the same star
  *                            renderer + f64 compose seam, opaque into the same
  *                            target
- *  25. planets             — the flat branch of the body partition: resolved
+ *  26. planets             — the flat branch of the body partition: resolved
  *                            bodies without a resident surface texture, as
  *                            true-scale flat-lit albedo spheres (f64 compose
  *                            seam), opaque into the same target
- *  26. textured-bodies     — the textured branch of the body partition: resolved
+ *  27. textured-bodies     — the textured branch of the body partition: resolved
  *                            bodies whose surface texture is resident, as lit
  *                            surface-mapped spheres (Saturn's ring casts an
  *                            analytic on-planet shadow); opaque into the same
  *                            target (f64 compose seam)
- *  27. rings               — Saturn's translucent ring overlay, drawn LAST in the
+ *  28. rings               — Saturn's translucent ring overlay, drawn LAST in the
  *                            (foreground:0, NEAR0) group so it depth-tests against
  *                            the opaque spheres already stamped there (far ring
  *                            half occluded), writing no depth and blending
  *                            straight-alpha OVER — like cloud-shell, a blend
  *                            exception in the otherwise opaque foreground group
- *  28. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  29. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
- *  29. atmosphere-shell    — Earth's physically-based in-scatter atmosphere,
+ *  30. atmosphere-shell    — Earth's physically-based in-scatter atmosphere,
  *                            the LAST content-layer row (spec §8.3): a
  *                            translucent proxy sphere at the atmosphere-top
  *                            radius, drawn last in the (foreground:0, NEAR0)
@@ -204,6 +209,8 @@ import { milkyWayLayer } from './milkyWayLayer';
 import { milkyWayAggregateLayer } from './milkyWayAggregateLayer';
 import { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 import { horizonShellLayer } from './horizonShellLayer';
+import { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
+import { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
 import { structureMarkersLayer } from './structureMarkersLayer';
 import { selectionRingLayer } from './selectionRingLayer';
 import { near0SelectionRingLayer } from './near0SelectionRingLayer';
@@ -241,11 +248,23 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // member: it targets 'volume', so the hdr render step excludes it.
   scalarVolumeLayer,
   pointSpritesLayer,
+  // The zone-of-avoidance band's PRODUCER: its own reduced-res 'zoa'
+  // target keeps it out of every VISUAL group's filter regardless of array
+  // position (frameProgram.ts hand-orders render steps independently of
+  // this registry) — but the PICK program groups by slab alone and walks
+  // this array's order within a slab, so this row's `drawPick` DOES care:
+  // it must sit after `pointSpritesLayer`, which establishes the COSMO pick
+  // pass's shared @group(0) camera every other COSMO drawPick relies on.
+  zoneOfAvoidanceLayer,
   proceduralDisksLayer,
   texturedDisksLayer,
   filamentsLayer,
   flowFieldLayer,
   volumeUpsampleLayer,
+  // The zone-of-avoidance band's CONSUMER: composites 'zoa' into hdr, then
+  // draws the full-res lettering — positioned beside volume-upsample, its
+  // closest sibling in shape (a reduced-res-offscreen-into-hdr composite).
+  zoneOfAvoidanceUpsampleLayer,
   horizonShellLayer,
   structureMarkersLayer,
   // The near-field NEAR0 rows: they project through NEAR0 (COSMO's fixed near
@@ -371,6 +390,8 @@ export { milkyWayLayer } from './milkyWayLayer';
 export { milkyWayAggregateLayer } from './milkyWayAggregateLayer';
 export { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 export { horizonShellLayer } from './horizonShellLayer';
+export { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
+export { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
 export { structureMarkersLayer } from './structureMarkersLayer';
 export { selectionRingLayer } from './selectionRingLayer';
 export { near0SelectionRingLayer } from './near0SelectionRingLayer';

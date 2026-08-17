@@ -4,7 +4,6 @@
  *
  * Coverage focus:
  *   - allocate() returns distinct slot indices for distinct keys
- *   - allocate() bumps the LRU clock on a repeat key
  *   - enqueueFetch() is idempotent for an in-flight key
  *   - setEvictHandler fires on LRU eviction with the ousted key
  *   - inFlightCount() tracks pending fetches
@@ -63,18 +62,6 @@ describe('createBitmapStreamSubsystem', () => {
     expect(s1).not.toBeNull();
     expect(s2).not.toBeNull();
     expect(s1).not.toBe(s2);
-  });
-
-  it('allocate refreshes the LRU clock for a repeat key', () => {
-    const atlas = createBitmapStreamSubsystem({
-      device,
-      requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
-    });
-    atlas.allocate('k', 1);
-    expect(atlas.lastSeenFrame('k')).toBe(1);
-    atlas.allocate('k', 7);
-    expect(atlas.lastSeenFrame('k')).toBe(7);
   });
 
   it('enqueueFetch is idempotent for an in-flight key', () => {

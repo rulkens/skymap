@@ -79,6 +79,8 @@ function serializeFadeId(h: FadeId): string {
       return 'constellations';
     case 'orbitTrails':
       return 'orbitTrails';
+    case 'zoneOfAvoidance':
+      return 'zoneOfAvoidance';
     // An item-less layer handle and a per-item one must not collide, and an
     // item-less key (e.g. `labelLayer:milkyWay`) must stay distinct from a
     // per-item one — so the item suffix is appended only when present.

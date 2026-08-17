@@ -1,8 +1,10 @@
 /**
  * earthUniverseLoop tests — two load-bearing invariants a future edit could
- * silently break: (1) the opening bearing actually looks sunward, not just
- * "some direction near Earth", and (2) the loop seam is bit-identical modulo
- * one full yaw turn, so `loop: true` never produces a visible jump.
+ * silently break: (1) the opening bearing looks sunward LIFTED OUT of the
+ * ecliptic by the authored elevation — both halves matter, the sunward half
+ * for the lit face and the elevation for orbits that would otherwise be
+ * edge-on — and (2) the loop seam is bit-identical modulo one full yaw turn,
+ * so `loop: true` never produces a visible jump.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -17,7 +19,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 describe('earthUniverseLoop', () => {
-  it('opens with the camera aimed sunward (toward the render origin) from Earth', () => {
+  it('opens sunward, raised 30° above the ecliptic', () => {
     const start = earthUniverseLoop(CONST_J2000).data.start as CameraPose;
     const earth = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
     const sMag = Math.hypot(earth[0], earth[1], earth[2]);
@@ -35,9 +37,18 @@ describe('earthUniverseLoop', () => {
     ];
     const aim: Vec3 = [-dirWorld[0], -dirWorld[1], -dirWorld[2]];
 
-    expect(aim[0]).toBeCloseTo(sunward[0], 6);
-    expect(aim[1]).toBeCloseTo(sunward[1], 6);
-    expect(aim[2]).toBeCloseTo(sunward[2], 6);
+    // Sunward half: the aim tips away from the sun line by exactly the
+    // elevation, so their dot is cos(30°) — anything else means the lit face
+    // has swung off-centre.
+    const dotSunward = aim[0] * sunward[0] + aim[1] * sunward[1] + aim[2] * sunward[2];
+    expect(dotSunward).toBeCloseTo(Math.cos((30 * Math.PI) / 180), 6);
+
+    // Elevation half: the EYE (target→eye is `dir`, the aim's negation) stands
+    // sin(30°) up the ecliptic pole — the basis's second column, since a
+    // column-major Mat3 stores column c at basis[c*3 + r].
+    const pole: Vec3 = [basis[3], basis[4], basis[5]];
+    const eyeAlongPole = dirWorld[0] * pole[0] + dirWorld[1] * pole[1] + dirWorld[2] * pole[2];
+    expect(eyeAlongPole).toBeCloseTo(Math.sin((30 * Math.PI) / 180), 6);
   });
 
   it('loops seamlessly: pose(durationSec) equals pose(0) with yaw offset by exactly 2π', () => {

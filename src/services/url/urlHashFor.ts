@@ -30,6 +30,9 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   // Milky Way singleton → the fixed deep-link literal; resolveFocusId decodes
   // it back to `{ type: 'milkyWay' }`, closing the `#focus=milkyWay` round-trip.
   milkyWay: () => MILKY_WAY_FOCUS_ID,
+  // No deep link: the band has no position to fly to (spec's Non-goals), so
+  // there is nothing for a `#focus=` hash to name.
+  zoneOfAvoidance: () => null,
   // Scene body (any SCENE_BODIES entry — famous star, planet, or Earth) →
   // its seed id under the shared BODY_FOCUS_PREFIX (`body-sirius`). The same
   // prefix the sibling encoders (focusIdOf, focusIdForRow) emit and

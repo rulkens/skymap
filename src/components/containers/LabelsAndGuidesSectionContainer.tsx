@@ -8,8 +8,9 @@
  * `selectBodyItems` and `selectMilkyWayLabelEnabled`, bundles them into the
  * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
  * `useCallback`. It also owns the overlay guide rows — constellations (the
- * stick figures, whose name captions ride the same gate) and orbit trails —
- * flat singleton settings that route straight to their own setters. All of it
+ * stick figures, whose name captions ride the same gate), orbit trails, and
+ * the zone-of-avoidance band — flat singleton settings that route straight to
+ * their own setters. All of it
  * is assembled into one uniform `SectionRow` array; the presentational
  * `LabelsAndGuidesSection` imports nothing from `store/` or `state/` and has
  * no notion of where any row's bit lives.
@@ -38,7 +39,7 @@
  * order (registry keys are the numeric codes, and JS iterates integer-keyed
  * object properties in ascending order regardless of source-file layout) —
  * there is no separate display-order mechanism, so the panel renders
- * label-bearing categories in registry-code order, then the two hand-authored
+ * label-bearing categories in registry-code order, then the hand-authored
  * guide rows.
  *
  * ### Why `[dispatch]` only in `useCallback`
@@ -61,10 +62,12 @@ import {
   selectMilkyWayLabelEnabled,
   selectConstellationsEnabled,
   selectOrbitTrailsEnabled,
+  selectZoneOfAvoidanceEnabled,
 } from '../../state/settings/selectors';
 import {
   setConstellationsEnabled,
   setOrbitTrailsEnabled,
+  setZoneOfAvoidanceEnabled,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
@@ -84,6 +87,7 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
+  const zoneOfAvoidanceEnabled = useAppSelector(selectZoneOfAvoidanceEnabled);
 
   // Bundle the label homes, then project them → flat label-visibility record.
   // Both rebuild only when one of the stable-reference inputs changes.
@@ -128,11 +132,20 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onToggleZoneOfAvoidance = useCallback(
+    (enabled: boolean) => {
+      dispatch(setZoneOfAvoidanceEnabled(enabled));
+    },
+    [dispatch],
+  );
+
   // Every checkbox the section renders, in one uniform shape: the label rows
-  // derived from the registry, plus the two hand-authored guide rows. There is
-  // no other way to build a "rows" array — constellations and orbitTrails gate
-  // LINE OVERLAYS, not labels, so they have no registry row's label axis to
-  // derive from and stay hand-authored here.
+  // derived from the registry, plus the hand-authored guide rows. There is no
+  // other way to build a "rows" array — constellations, orbitTrails, and the
+  // zone-of-avoidance band gate LINE/overlay geometry, not labels, so they
+  // have no registry row's label axis to derive from and stay hand-authored
+  // here. The band's lettering has no toggle of its own — it rides this same
+  // row (see zoneOfAvoidanceLayer.ts).
   const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
       ...LABEL_CATEGORIES.map((cat) => ({
@@ -153,6 +166,12 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
         enabled: orbitTrailsEnabled,
         onChange: onToggleOrbitTrails,
       },
+      {
+        id: 'toggle-zone-of-avoidance',
+        label: 'Zone of Avoidance',
+        enabled: zoneOfAvoidanceEnabled,
+        onChange: onToggleZoneOfAvoidance,
+      },
     ],
     [
       labelCategoryVisibility,
@@ -161,6 +180,8 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
       onToggleConstellations,
       orbitTrailsEnabled,
       onToggleOrbitTrails,
+      zoneOfAvoidanceEnabled,
+      onToggleZoneOfAvoidance,
     ],
   );
 

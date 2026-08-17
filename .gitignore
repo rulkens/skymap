@@ -152,6 +152,11 @@ docs/screenshots/*.mp4
 # artefacts, never repo content.
 recordings/
 
+# `--serve` mode's self-hosted production build (record.ts), reused across
+# takes until `--rebuild` forces a fresh one. Deliberately its own directory,
+# never `dist/` — that one is the deploy build.
+/tools/record/.build/
+
 # ── Firebase CLI per-developer cache ─────────────────────────────────────────
 # `.firebase/hosting.*.cache` records the previously-deployed file hashes so
 # `firebase deploy` can skip files whose content hasn't changed.  The cache

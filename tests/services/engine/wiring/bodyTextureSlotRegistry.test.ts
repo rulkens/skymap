@@ -56,7 +56,9 @@ describe('wireBodyTextureSlots', () => {
     globalThis.createImageBitmap = vi
       .fn()
       .mockResolvedValue(bitmap) as unknown as typeof globalThis.createImageBitmap;
-    fetch.mock.mockResolvedValue(new Response(new Blob(['x']), { status: 200 }));
+    fetch.mock.mockResolvedValue(
+      new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
+    );
   });
 
   afterEach(() => {

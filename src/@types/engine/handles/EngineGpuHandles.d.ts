@@ -32,6 +32,7 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
+import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
@@ -296,6 +297,14 @@ export type EngineGpuHandles = {
    */
   horizonShellRenderer: HorizonShellRenderer | null;
   /**
+   * Galactic-plane dust-band guide overlay — translucent shell masked to
+   * the longitude-dependent latitude wedge, drawn by the same ray-marched-
+   * geometry technique as `horizonShellRenderer`.  Same lifecycle as the
+   * other optional renderers (null until `initGpu` constructs it; nulled
+   * back out during teardown).
+   */
+  zoneOfAvoidanceRenderer: ZoneOfAvoidanceRenderer | null;
+  /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
@@ -339,6 +348,20 @@ export type EngineGpuHandles = {
    * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
    */
   milkyWayAggregateUpsample: AdditiveUpsample | null;
+  /**
+   * Reduced-res-to-HDR composite for the zone-of-avoidance guide band. Reads
+   * the `zoa` offscreen that `zoneOfAvoidanceLayer` drew the additive band
+   * raymarch into and blends it into HDR. Another instance of the same
+   * generic factory, deliberately not the volume's or the Milky Way's
+   * handle, so the three subsystems' gates stay independent. Null
+   * until `initGpu` constructs it (same phase as `volumeUpsample`). Excluded
+   * from `isEngineReady` — when null, `zoneOfAvoidanceUpsampleLayer` skips
+   * its blit (the full-res lettering draw is gated separately, on
+   * `zoneOfAvoidanceRenderer`), so a null handle is a silent no-op. Stored
+   * here so `destroy()` can release the pipeline + sampler + bind-group-layout
+   * via the pass's no-op destroy method.
+   */
+  zoneOfAvoidanceUpsample: AdditiveUpsample | null;
   /**
    * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
    * `star-aggregates` offscreen the aggregate stream drew LINEAR into,

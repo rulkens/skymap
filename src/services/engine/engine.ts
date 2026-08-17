@@ -24,6 +24,8 @@ import { CONST_J2000 } from '../../data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
+import { SCENE_STARS } from '../../data/bodies/sceneStars';
+import { Source } from '../../data/source';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
@@ -36,7 +38,7 @@ import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
-import { engineStatusChanged } from '../../state/engine/engineSlice';
+import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -182,6 +184,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // directly, with no parallel mirror to drift.
   const store = cb.store;
 
+  // Famous stars are seeded at construction (createEngineData →
+  // SCENE_STARS), not fetched, so there is no async slot commit to carry the
+  // usual `engineSourceCountReported` pulse. Report it here instead — the
+  // same action the survey star/galaxy catalogs' slots dispatch on load — so
+  // the Stars panel's count chip lights up for the curated row too.
+  const engineData = createEngineData();
+  store.dispatch(
+    engineSourceCountReported({ source: Source.FamousStar, count: SCENE_STARS.length }),
+  );
+
   const state: EngineState = {
     // `state.settings` delegates to the injected store. Reads hand back
     // `store.getState().settings`; the write path dispatches through the
@@ -212,8 +224,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get famousGalaxiesMeta() {
       return selectFamousGalaxiesMeta(store.getState());
     },
-    // Per-type data stores. Empty at construction; slot commits fill them.
-    data: createEngineData(),
+    // Per-type data stores. Galaxies/structures are empty at construction and
+    // fill via slot commits; bodies (incl. the famous-star seed) are filled
+    // synchronously inside `createEngineData` itself — see its header.
+    data: engineData,
     picking: {
       // Per-frame pick-throttle state. Hover / select live on the
       // Redux `selection` slice; see `EnginePickingState.d.ts`.
@@ -278,6 +292,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
+      // Galactic-plane dust-band guide. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
+      zoneOfAvoidanceRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
@@ -286,6 +303,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady —
       // milkyWayUpsampleLayer null-checks it in draw, so a null no-ops.
       milkyWayAggregateUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
+      // zoneOfAvoidanceUpsampleLayer null-checks it in draw, so a null no-ops.
+      zoneOfAvoidanceUpsample: null,
       // null until initGpu; excluded from isEngineReady —
       // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
@@ -826,6 +846,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
+    state.gpu.zoneOfAvoidanceRenderer?.destroy();
+    state.gpu.zoneOfAvoidanceRenderer = null;
     state.gpu.volumeFieldRenderer?.destroy();
     state.gpu.volumeFieldRenderer = null;
     state.gpu.flowFieldRenderer?.destroy();
@@ -834,6 +856,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.volumeUpsample = null;
     state.gpu.milkyWayAggregateUpsample?.destroy();
     state.gpu.milkyWayAggregateUpsample = null;
+    state.gpu.zoneOfAvoidanceUpsample?.destroy();
+    state.gpu.zoneOfAvoidanceUpsample = null;
     state.gpu.starAggregateUpsample?.destroy();
     state.gpu.starAggregateUpsample = null;
     state.gpu.bloomPyramid?.destroy();
