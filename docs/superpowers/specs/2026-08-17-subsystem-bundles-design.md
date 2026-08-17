@@ -1,5 +1,13 @@
 # Subsystem bundles — declarative engine-core walkers (Track A) — design
 
+> **STATUS 2026-08-17: REFERENCE, NOT EXECUTABLE.** Execution was restructured
+> into the surface-by-surface ladder (decisions.md #9, evidence in
+> [`current-contracts-map.md`](../../research/engine/current-contracts-map.md)):
+> seven per-family rungs, each its own behaviour-neutral PR; the umbrella
+> `SubsystemBundle` type is deferred and reassessed after the rungs land. This
+> spec remains the north-star target shape each rung is checked against — do
+> not execute it as written.
+>
 > **Status.** Ground preparation for Track C (analytic Milky Way field landing).
 > **Date.** 2026-08-17.
 > **Scope.** Track A only — P1 (contract + walkers + legacy adapter), P2

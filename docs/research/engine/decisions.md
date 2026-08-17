@@ -74,6 +74,29 @@ the deep tuning surface.
 8. **Engine-core keeps** (never bundle-owned): shared accumulators (`hdr`, `swap`,
    `foreground:0`, bloom mips), step-level gates, ctx ambient state, pickProgram
    infrastructure, tone/bloom post, camera/input.
+9. **Ladder sequencing** (2026-08-17, supersedes Track A's one-PR packaging):
+   composition surfaces are normalized **one family at a time** — evidence and
+   per-family shapes in [current-contracts-map.md](current-contracts-map.md) —
+   each rung a behaviour-neutral PR of its own. The umbrella `SubsystemBundle`
+   type is **deferred** until the rungs land, then reassessed: by that point it
+   is a thin grouping over rows that already exist, or possibly unnecessary.
+   Anti-drift discipline: every family's rows are keyed by the same subsystem
+   `key: string` from rung 1, and the contract sketch below stays the north
+   star each rung is checked against. The Track A spec becomes
+   reference-not-executable (target shape, not an execution plan).
+   Rungs, in order: **1** handle registry (`key`, `construct`,
+   `rebuildOnSwapFormat?`; teardown + swap-rebuild derived), **2** target
+   contributions (`clearValue` onto the spec row, `scale` as
+   `number | (state)=>number`, blend/format-parity validation; deletes the
+   `mwAggregateDivisor` param + `runFrame` rebuild branch), **3**
+   generated-artifact staleness helper (`stalenessKey` + `regenerate`; migrate
+   the ~8 hand sites starting with MW `starCount`), **4** volume-ingest
+   consolidation (3 copies → 1 fn; imperative side-door's fate decided here),
+   **5** wake-vote fold, **6** debug derivation, **7** the
+   `FADE_ROW`/`VISIBILITY_ACTION_ROW` derivation decision. Rungs 1 and 3 get
+   mini-plans; the rest are bounded changes. Track B is unchanged and
+   parallel; **Track C gates on B + rungs 1–3 only**, so the MW landing gets
+   earlier, not later.
 
 ## The contract (settled sketch)
 
@@ -117,13 +140,14 @@ deletion — follow-up PRs, each mechanical.
 
 ## Execution tracks (session-splittable)
 
-- **Track A** = P1 + P2 + P4 — own spec + plan ("subsystem bundles").
+- **Ladder (supersedes Track A — decision #9)**: seven per-family rungs, each
+  its own behaviour-neutral PR in a fresh worktree. Rungs 1 & 3 get mini-plans
+  (SDD execution); rungs 2, 4–7 are bounded changes. P4 (MilkyWaySettings
+  split) is folded into Track C prep rather than a rung of its own.
 - **Track B** = P3 — own spec + plan ("galaxy field renderer extraction").
-  Independent of A; parallelizable in its own worktree/session.
-- **Track C** = F1–F3 — spec written against A+B's post-refactor architecture;
-  executes after both merge.
-- Each track: fresh session/worktree, SDD execution, own PR (packaging pending
-  user confirmation).
+  Independent of the ladder; parallelizable in its own worktree/session.
+- **Track C** = F1–F3 — executes after Track B + rungs 1–3 merge (not all
+  seven).
 
 ## Spun off to backlog (not this effort)
 
@@ -140,8 +164,9 @@ deletion — follow-up PRs, each mechanical.
 
 ## Open items
 
-- PR packaging per track: **CONFIRMED 2026-08-17 — one PR per track** (A, B,
-  then C; long-tail migrations as follow-up PRs).
+- PR packaging: one-PR-per-track (confirmed earlier on 2026-08-17) is
+  **superseded by decision #9** — one PR per ladder rung; Track B keeps its own
+  single PR; Track C after B + rungs 1–3.
 - Tier story: `MILKY_WAY_STARS_PER_TIER` + watchTierSaga bridge deleted with v1,
   no replacement (field cost is tier-independent). Decided, listed here for
   visibility.
