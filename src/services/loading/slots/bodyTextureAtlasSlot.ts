@@ -1,6 +1,6 @@
 /**
  * bodyTextureAtlasSlot — factory for the low-resolution all-bodies surface
- * atlas: one fetch, thirteen placeholder seeds.
+ * atlas: one fetch, fifteen placeholder seeds.
  *
  * ### Why this asset exists
  *
@@ -8,7 +8,7 @@
  * loading only once the camera is already close enough to see the body — so a
  * body reached before its multi-megabyte map lands draws as a flat albedo
  * sphere. Rather than predicting where the camera will go, this asset ships ONE
- * 512x256 tile per textured body in a single ~160 KB image, fetched first
+ * 512x256 tile per textured body in a single ~180 KB image, fetched first
  * (`priority: 0` in `ASSET_WIRING`), so every body always has its own surface to
  * show. The hi-res map is then an upgrade, never a prerequisite.
  *
@@ -24,7 +24,7 @@
  *
  * The Earth-vs-other-bodies split is the same routing `commitBodyTexture`
  * performs for the hi-res family: Earth has its own renderer (the planned
- * atmosphere / day-night divergence), the other twelve share
+ * atmosphere / day-night divergence), the other fourteen share
  * `texturedBodyRenderer`. Only `'surface'` is atlased.
  *
  * ### Why arrival order needs no check anywhere

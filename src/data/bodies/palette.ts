@@ -33,6 +33,9 @@ export const SATURN_GOLD: Vec3 = [0.5, 0.43, 0.25];
 export const URANUS_CYAN: Vec3 = [0.3, 0.47, 0.5];
 export const NEPTUNE_BLUE: Vec3 = [0.2, 0.3, 0.55];
 export const PLUTO_TAN: Vec3 = [0.38, 0.34, 0.26];
+// Deliberately mauve (B > R > G) despite the name and despite Charon reading
+// near-neutral everywhere else: a true grey collided with MOON_GREY, and the
+// two obvious escapes collided with SAT_ICE and URANUS_CYAN in turn.
 export const CHARON_GREY: Vec3 = [0.4, 0.34, 0.42];
 export const MOON_GREY: Vec3 = [0.35, 0.35, 0.4];
 

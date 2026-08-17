@@ -25,7 +25,7 @@
  *    cloud bitmap reaches both the surface pipeline (shadow + night occlusion) and
  *    the translucent shell, the same one-asset/two-consumers shape the ring commit
  *    uses.
- *  - every other `BodyTextureId` (the twelve non-Earth textured bodies) routes to
+ *  - every other `BodyTextureId` (the fourteen non-Earth textured bodies) routes to
  *    the shared `texturedBodyRenderer.setMap(bodyId, kind, …)`; its `onRelease`
  *    frees that (body, kind)'s GPU texture via `clearMap(bodyId, kind)` — the slot
  *    family's eviction premise, so a slot leaving its proximity radius actually
@@ -80,7 +80,7 @@ function isTexturedBodyKey(bodyId: BodyTextureId | RingTextureId): bodyId is Bod
 /**
  * Route a committed bitmap to the resident renderer for `entry`, dispatching on
  * the structured `(bodyId, kind)` pair. Earth → `earthRenderer.setMap(kind, …)`;
- * the twelve other bodies → the shared `texturedBodyRenderer`'s `setMap`, routed
+ * the fourteen other bodies → the shared `texturedBodyRenderer`'s `setMap`, routed
  * by `entry.kind`; a ring id → that renderer's `setRingTexture`, keyed on the
  * ring's HOST body (`hostBodyId` resolves `'saturn-ring'` → `'saturn'`), so the
  * ring strip lands on binding 3 of the sphere it rides.

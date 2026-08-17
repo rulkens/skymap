@@ -1,9 +1,9 @@
 /**
  * texturedBodyRenderer — the shared textured-sphere renderer for every textured
- * body except Earth: the seven other major planets, the Moon, and the four
- * Galilean moons. Earth keeps its own renderer (its atmosphere/specular path
- * diverges); the twelve remaining bodies are the same lit, textured unit sphere
- * and share this one pipeline.
+ * body except Earth: the seven other major planets and Pluto, the Moon, the
+ * four Galilean moons, and Charon. Earth keeps its own renderer (its
+ * atmosphere/specular path diverges); the fourteen remaining bodies are the
+ * same lit, textured unit sphere and share this one pipeline.
  *
  * ## The silhouette is analytic; the mesh is only a proxy
  *

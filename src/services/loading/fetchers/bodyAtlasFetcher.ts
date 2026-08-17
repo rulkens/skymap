@@ -1,6 +1,6 @@
 /**
  * bodyAtlasFetcher — `Fetcher<ImageBitmap, void>` for the one low-resolution
- * all-bodies surface atlas (`body-atlas.webp`, 2048x1024, ~160 KB).
+ * all-bodies surface atlas (`body-atlas.webp`, 2048x1024, ~180 KB).
  *
  * The request type is `void`: unlike `bodyTextureFetcher` there is no body, no
  * kind and no tier to vary — the atlas is a single tier-agnostic artefact

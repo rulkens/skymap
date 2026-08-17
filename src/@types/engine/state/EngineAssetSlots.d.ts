@@ -202,7 +202,7 @@ export type EngineAssetSlots = {
   bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
    * The low-resolution all-bodies surface atlas (`body-atlas.webp`) — one
-   * 512×256 tile per textured body in a single ~160 KB image, fetched first at
+   * 512×256 tile per textured body in a single ~180 KB image, fetched first at
    * boot (`priority: 0`) so every body has its own surface to draw before any
    * hi-res map lands.
    *

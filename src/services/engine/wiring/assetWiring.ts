@@ -262,7 +262,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // ── Low-resolution all-bodies surface atlas ──────────────────────
   // Rank 0, the head of the table: its entire purpose is to arrive before any
   // hi-res texture, so a body reached early shows its own surface instead of a
-  // flat albedo sphere. ~160 KB buys a tile for all thirteen textured bodies.
+  // flat albedo sphere. ~180 KB buys a tile for all fifteen textured bodies.
   //
   // `demand: () => true` — unconditional at boot, and deliberately NOT
   // proximity-gated. The per-body rows below gate on the camera because their

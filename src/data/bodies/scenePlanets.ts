@@ -3,10 +3,11 @@
  * DERIVED from `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed
  * literals.
  *
- * The seven non-Earth major planets are heliocentric (`heliocentricPlanet`);
- * the Moon and the planets' major moons are geocentric (`satelliteBody`),
- * riding their parent by construction. Each body sits exactly on the ellipse
- * its trail draws, both reading the one element table.
+ * The eight bodies that orbit the Sun directly — the seven non-Earth major
+ * planets plus Pluto — are heliocentric (`heliocentricPlanet`); the Moon and
+ * the planets' major moons are geocentric (`satelliteBody`), riding their
+ * parent by construction. Each body sits exactly on the ellipse its trail
+ * draws, both reading the one element table.
  *
  * `radiusKm` stays in kilometres — the body's native unit — and is resolved into
  * a draw-space sphere at render time, so the authored number remains the one a
@@ -57,16 +58,14 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   satelliteBody({ id: 'titan', label: 'Titan', radiusKm: 2575, albedo: [0.8, 0.6, 0.35] }),
   satelliteBody({ id: 'iapetus', label: 'Iapetus', radiusKm: 735, albedo: [0.4, 0.37, 0.32] }),
   // Appended after Iapetus, not narratively with the other heliocentric
-  // planets — SCENE_PLANETS order is append-only (pick indices are array
-  // position; see the plan's Global constraints).
+  // bodies — SCENE_PLANETS order is append-only, because a pick decodes to a
+  // body by array position (see the `body` arm of `resolvePickTable.ts`).
   heliocentricPlanet({
     id: 'pluto',
     label: 'Pluto',
     radiusKm: 1188.3, // WGCCRE 2015 (Archinal+18), from New Horizons (Nimmo+17).
     albedo: [0.55, 0.5, 0.42],
   }),
-  // Appended after Pluto — same append-only pick-index constraint as Pluto's
-  // own comment above.
   satelliteBody({
     id: 'charon',
     label: 'Charon',

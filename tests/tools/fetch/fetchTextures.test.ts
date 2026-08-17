@@ -47,7 +47,7 @@ describe('textureSourcesFor', () => {
     );
   });
 
-  it('the full pull selects the native tiers + both BMNG publications + the four USGS moons', () => {
+  it('the full pull selects the native tiers + both BMNG publications + the six USGS mosaics', () => {
     const full = textureSourcesFor(false);
     expect(filenames(full).sort()).toEqual(
       [

@@ -531,15 +531,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     SLAB_REVERSED_Z[NEAR0]!,
   );
 
-  // ── Textured bodies (Plan 02 — the twelve non-Earth textured bodies) ─
+  // ── Textured bodies (Plan 02 — the fourteen non-Earth textured bodies) ─
   //
-  // One shared UV-sphere pipeline draws the seven other major planets, the Moon,
-  // and the four Galilean moons; each body id owns its own uniform buffer + bind
-  // group + surface texture inside the renderer's per-body Map. Same
-  // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
-  // + sphere-body renderers above. The bodyTextures slot family (minted just
-  // below) routes each non-Earth body's committed bitmap to `setMap` and its
-  // per-kind eviction to `clearMap`.
+  // One shared UV-sphere pipeline draws the seven other major planets and Pluto,
+  // the Moon, the four Galilean moons, and Charon; each body id owns its own
+  // uniform buffer + bind group + surface texture inside the renderer's
+  // per-body Map. Same ('rgba16float', 'depth32float') `foreground:0` format
+  // invariant as the Earth + sphere-body renderers above. The bodyTextures
+  // slot family (minted just below) routes each non-Earth body's committed
+  // bitmap to `setMap` and its per-kind eviction to `clearMap`.
   state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
     device,
     'rgba16float',

@@ -54,9 +54,9 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  *
  *   - `'bodyTextureAtlas'` — the low-resolution all-bodies surface atlas
  *     (`body-atlas.webp`), one 512×256 tile per textured body in a single
- *     ~160 KB image. A singleton sidecar with a named `EngineAssetSlots` field,
- *     like the three above, but its commit fans ONE decoded bitmap out to 13
- *     placeholder seeds (Earth's renderer plus the twelve shared bodies) rather
+ *     ~180 KB image. A singleton sidecar with a named `EngineAssetSlots` field,
+ *     like the three above, but its commit fans ONE decoded bitmap out to 15
+ *     placeholder seeds (Earth's renderer plus the fourteen shared bodies) rather
  *     than committing to a single consumer. Distinct from the per-body
  *     `BodyTextureSlotKey` family below in every dimension that matters: one
  *     network request instead of one per body, tier-agnostic instead of
