@@ -2,8 +2,9 @@
 /**
  * fetchTextures — download the raw planet-body texture sources (Solar
  * System Scope albedo maps, the NASA Blue Marble Earth equirect and its eight
- * deep quadrants, and the USGS Galilean-moon GeoTIFFs) to data/raw/textures/. See
- * data/raw/textures/README.md for the per-source provenance table and
+ * deep quadrants, the USGS Galilean-moon GeoTIFFs, and the NASA PIA11707
+ * chroma source for the calibrated Pluto colour build) to data/raw/textures/.
+ * See data/raw/textures/README.md for the per-source provenance table and
  * docs/superpowers/specs/2026-07-17-planet-rendering.md §3 for the URL
  * verification that pins these exact files.
  *
@@ -73,8 +74,12 @@ const BODY_SOURCES_APPROX_MB = 700;
 /** Approximate size of the eight BMNG quadrants (real on-disk total). */
 const BMNG_QUADRANTS_APPROX_MB = 421;
 
+/** Approximate size of `CHROMA_SOURCES` (PIA11707, real Content-Length). */
+const CHROMA_SOURCES_APPROX_MB = 30;
+
 /** Approximate size of the full raw pull, printed by the size gate. */
-export const FULL_FETCH_APPROX_MB = BODY_SOURCES_APPROX_MB + BMNG_QUADRANTS_APPROX_MB;
+export const FULL_FETCH_APPROX_MB =
+  BODY_SOURCES_APPROX_MB + BMNG_QUADRANTS_APPROX_MB + CHROMA_SOURCES_APPROX_MB;
 
 /** Approximate size of the `--dev` subset (2k SSS variants + 5400x2700 BMNG). */
 export const DEV_FETCH_APPROX_MB = 7;
@@ -156,11 +161,35 @@ const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_K
 }));
 
 /**
+ * The chroma source for the (not-yet-built) calibrated Pluto colour texture
+ * (PIA11707 — see its RAW_DATA comment: published enhanced-colour, used only
+ * as an input a fitted calibration inverts). It is NOT a `(body, kind)` row
+ * in `TEXTURE_SOURCES`: that table gives every body/kind exactly ONE raw
+ * input via `TextureSourceEntry.native`, and Pluto's `surface` build needs a
+ * SECOND file alongside `textures.usgsPluto` — a shape `TEXTURE_SOURCES`
+ * cannot express without either a fake extra body or a fake extra kind, both
+ * worse than a small extra list here. Until that table grows a multi-input
+ * shape, this rides the full pull the same way `QUADRANT_SOURCES` does: a
+ * source nothing else names would silently never get downloaded. No `--dev`
+ * variant — the 2k SSS-style quick-check subset has no calibrated-Pluto
+ * counterpart yet. The calibration REFERENCE image
+ * (`textures.nasaPlutoTrueColorRef`) is deliberately absent here too — it is
+ * not a build input, only re-derivation provenance; see its RAW_DATA comment.
+ */
+const CHROMA_SOURCES: readonly TextureSource[] = [
+  {
+    url: RAW_DATA['textures.nasaPlutoColor'].upstream,
+    destPath: rawDataPath('textures.nasaPlutoColor'),
+  },
+];
+
+/**
  * The set of sources to fetch. `dev === false` is the full native pull (every
- * body/ring plus the eight BMNG quadrants); `dev === true` is the small
- * visual-check subset (2k SSS variants + the 5400x2700 BMNG sibling — the
- * USGS moons and the quadrants have no dev source; `--dev` tile bake reads
- * the whole-globe equirect instead).
+ * body/ring plus the eight BMNG quadrants plus the Pluto chroma source);
+ * `dev === true` is the small visual-check subset (2k SSS variants + the
+ * 5400x2700 BMNG sibling — the USGS moons, the quadrants, and the chroma
+ * source have no dev variant; `--dev` tile bake reads the whole-globe
+ * equirect instead).
  *
  * Both derive from `TEXTURE_SOURCES`, so the download set can't drift from
  * the runtime registry. Pure, so the subset choice is unit-testable headlessly.
@@ -169,7 +198,7 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   if (dev) {
     return TEXTURE_ENTRIES.map(devSource).filter((s): s is TextureSource => s !== null);
   }
-  return [...TEXTURE_ENTRIES.map(fullSource), ...QUADRANT_SOURCES];
+  return [...TEXTURE_ENTRIES.map(fullSource), ...QUADRANT_SOURCES, ...CHROMA_SOURCES];
 }
 
 /**

@@ -372,6 +372,26 @@ All public domain; NASA asks that credit go to the named observatory / program.
   Johns Hopkins University Applied Physics Laboratory, Southwest Research Institute, Lunar and
   Planetary Institute", published by USGS Astrogeology Science Center, 2017.
 
+#### NASA — Pluto derived colour (New Horizons MVIC)
+
+- **PIA11707** — New Horizons MVIC three-filter global colour map of Pluto.
+  Published as **enhanced** colour (Olkin et al. 2017, _AJ_ 154, 258: "enhanced
+  color (not natural color as perceived by the human eye)"), NOT natural
+  colour. skymap uses it only as a chroma source: a fitted calibration
+  against the true-colour image below inverts the enhancement before any
+  pixels reach a runtime texture — PIA11707 itself is never shipped.
+  **Source:** NASA Photojournal (PIA11707),
+  <https://science.nasa.gov/photojournal/pluto-color-map> (the legacy
+  `photojournal.jpl.nasa.gov/catalog/PIA11707` URL now redirects here).
+  **Licence:** Public domain. **Credit:** NASA/JHUAPL/SwRI.
+- **"True Colors of Pluto"** (P_COLOR_2_TRUE_COLOR) — natural-colour New
+  Horizons MVIC disc view, "processed to approximate what the human eye
+  would perceive". Used only as the calibration reference the PIA11707
+  chroma-inversion fit is derived against (not a build input, kept for
+  reproducibility). **Source:**
+  <https://science.nasa.gov/resource/true-colors-of-pluto/>. **Licence:**
+  Public domain. **Credit:** NASA/JHUAPL/SwRI/Alex Parker.
+
 ## Shaders
 
 ### Milky Way impostor — "Spiral galaxy" by mrange
