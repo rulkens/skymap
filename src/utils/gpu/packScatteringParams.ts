@@ -14,20 +14,27 @@
  *
  * Each `vec3<f32>` is 16-byte aligned and its trailing 4-byte slot is filled by
  * the following scalar, so the struct is a dense 20-f32 write with no interior
- * gaps rather than a padded 24-f32 one. The slot order below is fixed by the WESL
- * `struct ScatteringParams` field order (its twin — keep the two in lockstep):
+ * gaps rather than a padded 24-f32 one. `mieScatter` is itself a `vec3<f32>`
+ * (Mie is per-channel — see `AtmosphereParams.d.ts`'s header) whose own offset
+ * (slot 12) already lands on a 16-byte boundary, so it needs no padding of its
+ * own; its tail slot (15) is filled by `mieAbsorption`, which stays a scalar
+ * (Mie absorption has no measured spectral dependence for any authored body).
+ * The slot order below is fixed by the WESL `struct ScatteringParams` field
+ * order (its twin — keep the two in lockstep):
  *
- *   f32 0..2  rayleighScatter        3   rayleighScaleHeightKm
- *   f32 4..6  ozoneAbsorption        7   mieScaleHeightKm
- *   f32 8..10 groundAlbedo          11   miePhaseG
- *   f32 12    mieScatter            13   mieAbsorption
- *   f32 14    ozoneCenterKm         15   ozoneWidthKm
- *   f32 16    planetRadiusKm        17   atmosphereTopKm
- *   f32 18    _pad0 (zero)          19   _pad1 (zero, rounds to 80 / 16-byte alignment)
+ *   f32 0..2   rayleighScatter        3   rayleighScaleHeightKm
+ *   f32 4..6   ozoneAbsorption        7   mieScaleHeightKm
+ *   f32 8..10  groundAlbedo          11   miePhaseG
+ *   f32 12..14 mieScatter            15   mieAbsorption
+ *   f32 16     ozoneCenterKm         17   ozoneWidthKm
+ *   f32 18     planetRadiusKm        19   atmosphereTopKm
+ *
+ * That's a dense 80-byte / 20-f32 struct with no trailing pad: the four
+ * scalars after `mieScatter`'s tail (ozone tent + the two radii) need no
+ * further 16-byte alignment, so `SCATTERING_PARAMS_FLOATS` is unchanged.
  *
  * The twilight knob rides the per-frame `SkyViewParams` (`skyViewLut.wesl`), NOT
- * this construction-written buffer, so it stays live-tunable; both tail slots
- * here are inert pad again.
+ * this construction-written buffer, so it stays live-tunable.
  *
  * @param params The body's authored `AtmosphereParams` row (`atmosphereParams.ts`).
  */
@@ -51,14 +58,15 @@ export function packScatteringParams(params: AtmosphereParams): Float32Array {
   out[9] = params.groundAlbedo[1];
   out[10] = params.groundAlbedo[2];
   out[11] = params.miePhaseG;
-  out[12] = params.mieScatter;
-  out[13] = params.mieAbsorption;
-  out[14] = params.ozoneCenterKm;
-  out[15] = params.ozoneWidthKm;
-  out[16] = params.planetRadiusKm;
-  out[17] = params.atmosphereTopKm;
-  // out[18] / out[19] stay zero — the two pads rounding the struct to 80 /
-  // 16-byte alignment. `twilightSoftness` is NOT packed here: it rides the
-  // per-frame `SkyViewParams` so the Earth slider can tune it live.
+  out[12] = params.mieScatter[0];
+  out[13] = params.mieScatter[1];
+  out[14] = params.mieScatter[2];
+  out[15] = params.mieAbsorption;
+  out[16] = params.ozoneCenterKm;
+  out[17] = params.ozoneWidthKm;
+  out[18] = params.planetRadiusKm;
+  out[19] = params.atmosphereTopKm;
+  // `twilightSoftness` is NOT packed here: it rides the per-frame
+  // `SkyViewParams` so the Earth slider can tune it live.
   return out;
 }

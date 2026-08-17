@@ -1,63 +1,12 @@
 /**
- * Engine — the imperative WebGPU core, decoupled from any UI framework.
- *
- * This module is responsible for everything that touches the GPU, the camera,
- * and the raw browser input events. It knows nothing about React — it receives
- * simple callback functions and calls them when state changes.
- *
- * The boundary is deliberate:
- *
- *   Engine (engine.ts)            React (App.tsx, components/)
- *   ─────────────────────         ─────────────────────────────
- *   WebGPU device / buffers   ←→  status bar text
- *   requestAnimationFrame     ←→  info card fields
- *   pointer / keyboard events ←→  scale bar label + width
- *   orbit camera math
- *   GPU pick readback
- *
- * All observable engine state (lifecycle status, scale, source counts, load
- * progress, selection) is dispatched directly to the Redux store; React reads
- * via `useAppSelector` selectors. `EngineCallbacks` carries only the injected
- * `store` and `setSagaContext` — there are no event callback clusters.
- *
- * ### Module layout
- *
- * The pure / leaf concerns and the cohesive subsystems live in sibling
- * modules so this file can stay focused on the imperative orchestration:
- *
- *   Pure helpers:
- *   - `galaxyFocusDistance.ts` / `structureFocusDistance.ts` — framing-distance helpers
- *   - `buildGalaxyInfo.ts`     — buildGalaxyInfo (per-source GalaxyInfo formatter)
- *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
- *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
- *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
- *
- *   Subsystems (closure-returning factories with internal state):
- *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
- *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
- *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
- *
- *   Bootstrap phases (the async IIFE, lifted out of this file):
- *   - `phases/initGpu.ts`      — device + every renderer + point-source slots
- *   - `phases/wireSlots.ts`    — sidecar slots + thumbnails + parallel load
- *   - `phases/wireInput.ts`    — pickRenderer + camera + orbit-controls + click
- *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
- *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
- *
- * Hover/select/focus state lives in the Redux `selection` slice
- * (`state/selection/selectionSlice.ts`).  The public handle and the
- * forward-declared `frameRef` / `detachControlsRef` / `handleRef` boxes
- * stay inline here because the bootstrap phases (sibling modules) write
- * them via the `{current}` ref pattern.
- *
- * ### Usage
- *
- * ```ts
- * const handle = createEngine(canvas, { store, setSagaContext });
- *
- * // later (e.g. React cleanup):
- * handle.destroy();
- * ```
+ * Engine — the imperative WebGPU core. It owns the device, the camera and the raw
+ * browser input, and knows nothing about React: every observable piece of state
+ * (lifecycle, scale, counts, load progress, selection) is dispatched straight to the
+ * Redux store, and `EngineCallbacks` carries only the injected `store` +
+ * `setSagaContext` — no event-callback clusters. Leaf helpers and cohesive
+ * subsystems live in sibling modules; the async bootstrap runs as the `phases/`
+ * sequence. The public handle and the `frameRef` / `detachControlsRef` / `handleRef`
+ * boxes stay inline because those phases write them through the `{current}` pattern.
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
@@ -379,9 +328,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // excluded from isEngineReady, null-checked at use by their layers.
       starRenderer: null,
       planetRenderer: null,
-      // Shared textured-sphere renderer for the twelve non-Earth textured bodies
-      // (planets + Moon + Galilean moons). null until initGpu; excluded from
-      // isEngineReady, null-checked at use by texturedBodiesLayer; the
+      // Shared textured-sphere renderer for every non-Earth textured body; the
       // bodyTextures family's commit/onRelease call its setMap/clearMap.
       texturedBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn
@@ -393,10 +340,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // group. null until initGpu; excluded from isEngineReady, null-checked at
       // use by cloudShellLayer.
       cloudShellRenderer: null,
-      // Earth's in-scatter atmosphere — the outermost translucent shell, drawn
-      // LAST in the (foreground:0, NEAR0) group. null until initGpu; excluded
-      // from isEngineReady, null-checked at use by atmosphereShellLayer and the
-      // atmosphereSkyView compute step.
+      // The in-scatter atmosphere — the outermost translucent shell, drawn LAST in
+      // the (foreground:0, NEAR0) group and also read by the atmosphereSkyView step.
       atmosphereShellRenderer: null,
       starPointRenderer: null,
       // Sub-pixel bodies (the glints branch of the body partition) as
