@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  Powers of Ten — data & visualization map (planning reference)
+
+  A self-contained static page (no build step: serve the folder over any static
+  HTTP server) laying out the full "Powers of Ten" ladder as ~46 rungs, from the
+  observable universe (10^27 m) down to the quark scale (10^-18 m).
+
+  The ladder is CENTERED ON THE VISITOR. At 10^0 m a 3D figure of the person
+  visiting the site stands at their real geolocation on Earth, head tilted back,
+  looking up — the pivot of the whole journey. Zoom OUT and you rise through
+  their city, the planet, the solar system, into the cosmic web skymap already
+  renders. Zoom IN and you enter the eye that was doing the looking: through the
+  retina, into one ganglion cell whose axon carries the sky to the brain, into
+  that cell's nucleus, down to the DNA, one carbon atom, and the quarks within —
+  the classic Eames descent, made personal, and closed into a loop. The organ
+  that looks out is the way in.
+
+  Each rung names the subject at that scale, a way skymap could render it, the
+  real public DATASET behind it, a build-status badge, and a strip of example
+  thumbnails (click for a full-screen gallery with attribution).
+
+  Structure:
+    index.html    — markup + head
+    styles.css    — all styling incl. the gallery
+    data.js       — the curated rungs (RUNGS / ZONES / STATUS)
+    images.js     — generated image manifest (by fetch-images.mjs)
+    app.js        — render + gallery logic
+    images/thumbs — 320px example thumbnails
+    images/full   — 1600px full-size versions
+    fetch-images.mjs — re-gathers imagery from Wikimedia Commons (open-licensed)
+
+  It lives in docs/ (not public/ or src/) because it is a planning artifact, not
+  part of the shipped app.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Powers of Ten — centered on you</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="title">
+        <h1>Powers of Ten</h1>
+        <span class="sub">centered on you — zoom out to the cosmos, in to your atoms</span>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="controls">
+        <div class="legend" id="legend"></div>
+        <div class="filters" id="filters">
+          <span class="label">Show status</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <p class="intro">
+        This ladder is centered on <b>you</b>. At 10⁰&nbsp;m a 3D figure of the
+        visitor stands at their real geolocation on Earth, head tilted back,
+        looking up — the pivot of the whole journey. Zoom
+        <span class="out">out</span> and you rise through your city, the planet,
+        the solar system, into the cosmic web skymap already renders. Zoom
+        <span class="in">in</span> and you enter the eye that was doing the
+        looking: through the retina, into one nerve cell whose axon carries the
+        sky to your brain, into that cell's nucleus, down to the DNA, one carbon
+        atom, and the quarks within. The organ that looks out is the way in —
+        the Eames descent, made personal and closed into a loop. Each rung:
+        what's there, how skymap could draw it, the real public dataset behind
+        it, and example imagery (click a thumbnail for the full-screen gallery).
+      </p>
+      <div id="ladder"></div>
+    </main>
+
+    <footer>
+      Planning reference for skymap. Rung data is illustrative and curated by hand;
+      metric values are order-of-magnitude anchors, not precise measurements.
+      "Built in skymap" links point at the subsystem or spec that already covers the rung.
+      Example imagery is gathered from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>
+      (open-licensed); each image links back to its source page with author + licence.
+      Datasets are public archives — check each one's licence before ingest.
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
