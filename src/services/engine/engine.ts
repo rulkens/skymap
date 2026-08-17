@@ -343,6 +343,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
+      // Galactic-plane dust-band guide. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
+      zoneOfAvoidanceRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
@@ -351,6 +354,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady —
       // milkyWayUpsampleLayer null-checks it in draw, so a null no-ops.
       milkyWayAggregateUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
+      // zoneOfAvoidanceUpsampleLayer null-checks it in draw, so a null no-ops.
+      zoneOfAvoidanceUpsample: null,
       // null until initGpu; excluded from isEngineReady —
       // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
@@ -895,6 +901,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
+    state.gpu.zoneOfAvoidanceRenderer?.destroy();
+    state.gpu.zoneOfAvoidanceRenderer = null;
     state.gpu.volumeFieldRenderer?.destroy();
     state.gpu.volumeFieldRenderer = null;
     state.gpu.flowFieldRenderer?.destroy();
@@ -903,6 +911,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.volumeUpsample = null;
     state.gpu.milkyWayAggregateUpsample?.destroy();
     state.gpu.milkyWayAggregateUpsample = null;
+    state.gpu.zoneOfAvoidanceUpsample?.destroy();
+    state.gpu.zoneOfAvoidanceUpsample = null;
     state.gpu.starAggregateUpsample?.destroy();
     state.gpu.starAggregateUpsample = null;
     state.gpu.bloomPyramid?.destroy();

@@ -1,0 +1,10 @@
+/*
+ * ZoneOfAvoidanceDetailCard.module.css — band-specific styling.
+ *
+ * The card's chrome comes entirely from the shared cardChrome vocabulary,
+ * composed into .root.
+ */
+
+.root {
+  composes: infoCardFull structure from '../cardChrome.module.css';
+}

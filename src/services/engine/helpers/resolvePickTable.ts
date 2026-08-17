@@ -76,6 +76,8 @@ export const RESOLVE_PICK: Partial<
   // The Milky Way is a singleton: the pick resolves to the tag with no
   // per-instance data needed.
   milkyWay: () => ({ type: 'milkyWay' }),
+  // The zone of avoidance is a singleton too — same tag-only resolution.
+  zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' }),
   // The two star-catalog variants carry different notions of a star's identity,
   // so the arm splits on the same `binBaseName` discriminant the entry type
   // does. A SURVEY catalog is positional like the galaxy arm — the pick's

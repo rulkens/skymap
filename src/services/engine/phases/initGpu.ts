@@ -24,6 +24,7 @@ import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
+import { createZoneOfAvoidanceRenderer } from '../../gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
 import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
@@ -284,6 +285,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     device,
     targetFormat: 'rgba16float',
   });
+  // Galactic-plane dust-band guide — same lifecycle as horizonShellRenderer
+  // (unconditional, no data-delivery dependency), same HDR target. Its
+  // curved-lettering pipeline reuses `state.gpu.fontAtlases` (already loaded
+  // above by `loadFontAtlases()`), not a second atlas fetch.
+  const zoneOfAvoidanceRenderer = createZoneOfAvoidanceRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fontAtlases!,
+  );
+  state.gpu.zoneOfAvoidanceRenderer = zoneOfAvoidanceRenderer;
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
   // Built unconditionally (pipeline / quad VBO / uniform buffer are
@@ -387,6 +398,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // handle: sharing one would braid two independently-gated subsystems onto a
   // single resource.
   state.gpu.milkyWayAggregateUpsample = createAdditiveUpsample(device, 'rgba16float');
+
+  // ── Reduced-res-to-HDR zone-of-avoidance band composite ────────────
+  //
+  // Another instance of the same generic factory. Deliberately not the
+  // volume's or the Milky Way's handle — sharing one would braid three
+  // independently-gated subsystems onto a single resource.
+  state.gpu.zoneOfAvoidanceUpsample = createAdditiveUpsample(device, 'rgba16float');
 
   // ── Half-res survey-star aggregate upsample composite ─────────────
   //

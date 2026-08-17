@@ -37,6 +37,8 @@ import {
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_GALAXY_PROVENANCE,
   DEFAULT_ORBIT_TRAILS_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
@@ -153,6 +155,13 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: DEFAULT_MILKY_WAY_ENABLED,
       labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
       ...MILKY_WAY_TUNING_DEFAULTS,
+    },
+    // Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
+    // visibility toggle (band + lettering) plus the band's look knobs, seeded
+    // from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
+    zoneOfAvoidance: {
+      enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+      ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
