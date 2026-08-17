@@ -7,7 +7,7 @@
  * (`(SOURCE_GAIA_STARS << 27) | recordIdx`, see `starCatalog/pickFragment.wesl`).
  * It owns no pass, no texture and no readback — the pick program begins the pass
  * and drives the readback; this renderer is one `drawPick` provider among the
- * pickable rows, the star analogue of the galaxy points `pickRenderer`.
+ * pickable rows, the star analogue of the galaxy points `galaxyPickRenderer`.
  *
  * ### What it shares with the visual renderer, and what it owns
  *

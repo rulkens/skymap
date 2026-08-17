@@ -990,7 +990,7 @@ describe('galaxyPointSpritesLayer.drawPick', () => {
       ...STATE_STUB,
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: { ...STATE_STUB.gpu, pickRenderer: { drawPoints: drawPointsSpy } },
+      gpu: { ...STATE_STUB.gpu, galaxyPickRenderer: { drawPoints: drawPointsSpy } },
     } as unknown as EngineState;
 
     galaxyPointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
@@ -1024,7 +1024,7 @@ describe('galaxyPointSpritesLayer.drawPick', () => {
       ...STATE_STUB,
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: { ...STATE_STUB.gpu, pickRenderer: { drawPoints: drawPointsSpy } },
+      gpu: { ...STATE_STUB.gpu, galaxyPickRenderer: { drawPoints: drawPointsSpy } },
     } as unknown as EngineState;
 
     galaxyPointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);

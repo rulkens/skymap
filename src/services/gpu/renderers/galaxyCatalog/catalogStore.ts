@@ -28,7 +28,7 @@
  *
  *   - `loadedSources()` — the narrow feed the pick program consumes
  *     (vertex buffer + count + the raw SourceUniforms *buffer*, because
- *     `pickRenderer` builds its own bind group around those bytes with
+ *     `galaxyPickRenderer` builds its own bind group around those bytes with
  *     its own pipeline's layout — a bind group is not portable across
  *     pipelines).
  *   - `entries()` — the full draw-time record (fade buffer + both bind
@@ -41,7 +41,7 @@
  *
  *   GalaxyCatalog → upload(id, …) → worker bake → GPU buffers + bind groups
  *                                                      ↓
- *                     galaxyPointRenderer.draw() ← entries() / pickRenderer ← loadedSources()
+ *                     galaxyPointRenderer.draw() ← entries() / galaxyPickRenderer ← loadedSources()
  *
  * @module
  */

@@ -25,7 +25,7 @@
  * ### Factory shape
  *
  * This module exports a factory function `createFilamentRenderer` rather than
- * a class, matching the convention used by `createPickRenderer` and the other
+ * a class, matching the convention used by `createGalaxyPickRenderer` and the other
  * subsystem factories. The distinguishing detail vs stateless drawers is that
  * this renderer holds *stateful* per-cloud data — the segment instance buffer,
  * the segment count, and the lazily-created fade buffer — so the closure

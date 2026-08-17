@@ -68,7 +68,7 @@ export const proceduralDisksLayer: ContentLayer = {
   // `pickDisks` binds the disk camera at `@group(0)`, clobbering the shared
   // point-pick camera prefix that the structure-marker row drawn after this
   // one reads (it binds nothing at slot 0 itself). So this row calls
-  // `pickRenderer.bindCamera(pass)` before returning to put the shared
+  // `galaxyPickRenderer.bindCamera(pass)` before returning to put the shared
   // prefix back — the postcondition every COSMO `drawPick` owes its
   // successors (see `ContentLayer.drawPick`). Null-guarded like the disk
   // renderer.
@@ -82,6 +82,6 @@ export const proceduralDisksLayer: ContentLayer = {
       ctx.drawPxPerRad,
       state.gpu.focusUniform!.bindGroup,
     );
-    state.gpu.pickRenderer?.bindCamera(pass);
+    state.gpu.galaxyPickRenderer?.bindCamera(pass);
   },
 };

@@ -1,8 +1,8 @@
 // points/vertex.wesl — billboard vertex stage for the points pipeline.
 //
-// Shared by both renderers: the visual PointRenderer compiles this
+// Shared by both renderers: the visual GalaxyPointRenderer compiles this
 // alongside 'colorFragment.wesl' for the additive-blended display
-// pass; the offscreen PickRenderer compiles it alongside
+// pass; the offscreen GalaxyPickRenderer compiles it alongside
 // 'pickFragment.wesl' for the r32uint picking pass. Both pipelines
 // build their OWN GPUShaderModule from this same source — never share
 // a module across pipelines, because WebGPU's 'auto' bind-group-layout
@@ -22,7 +22,7 @@
 // pickFragment.wesl declares no bindings of its own — this vertex
 // module references '@group(0)' (Uniforms) and '@group(2)' (per-source
 // SourceUniforms). The colorFragment module additionally declares
-// '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
+// '@group(1)' (FadeUniforms). GalaxyPickRenderer binds a no-op fade buffer
 // at '@group(1)' so its pipeline layout matches the visual pipeline.
 
 import package::galaxyCatalog::points::io::Uniforms;
@@ -42,7 +42,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // buffers carry the layout described in 'points/io.wesl::Uniforms';
 // the visual pass writes the full struct each frame, and the pick pass
 // re-uses the same buffer (with a small in-place mutation to boost the
-// pick floor — see pickRenderer.ts).
+// pick floor — see galaxyPickRenderer.ts).
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // ── @group(1) — FadeUniforms (declared but unused at vertex stage) ─

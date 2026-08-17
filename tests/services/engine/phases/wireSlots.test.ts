@@ -451,7 +451,7 @@ function makeState(
       // filaments slot's commit doesn't bail early; the scalar volume
       // renderer is stubbed so CF-4 and synthetic commits can land.
       galaxyPointRenderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
-      pickRenderer: null,
+      galaxyPickRenderer: null,
       renderTargets: null,
       filamentRenderer: {
         upload: vi.fn(async () => {}),

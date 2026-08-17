@@ -172,7 +172,7 @@ export function createMilkyWayPickRenderer(
     // the shader declares only a prefix of that struct, which WGSL permits,
     // and `pickUniformBytesOf` always packs the complete image. Built once;
     // `pickMilkyWay` re-uploads the bytes per pick and re-binds the same
-    // group — the same own-buffer discipline the points pickRenderer uses.
+    // group — the same own-buffer discipline the points galaxyPickRenderer uses.
     cameraUniformBuffer = device.createBuffer({
       label: 'milky-way-pick-camera',
       size: UNIFORM_BYTES,

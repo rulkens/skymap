@@ -15,7 +15,7 @@
 import type { EngineState } from './state/EngineState';
 import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { GalaxyPointRenderer } from '../rendering/GalaxyPointRenderer';
-import type { PickRenderer } from '../rendering/PickRenderer';
+import type { GalaxyPickRenderer } from '../rendering/GalaxyPickRenderer';
 import type { Compositor } from '../rendering/Compositor';
 import type { RenderTargets } from '../rendering/RenderTargets';
 import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
@@ -24,7 +24,7 @@ export type ReadyEngineState = EngineState & {
   cam: OrbitCamera;
   gpu: EngineState['gpu'] & {
     galaxyPointRenderer: GalaxyPointRenderer;
-    pickRenderer: PickRenderer;
+    galaxyPickRenderer: GalaxyPickRenderer;
     /**
      * Non-null after bootstrap: minted in `initGpu` alongside the render
      * targets. The FRAME program's `hdr→swap` composite calls

@@ -2,7 +2,7 @@
  * galaxyPointVertexLayout — the shared vertex-attribute layout export.
  *
  * `GALAXY_POINT_VERTEX_ATTRIBUTES` + `POINT_STRIDE` are the single source of truth
- * that `galaxyPointRenderer`, `pickRenderer`, and the `points/*.wesl` shaders must
+ * that `galaxyPointRenderer`, `galaxyPickRenderer`, and the `points/*.wesl` shaders must
  * agree on byte-for-byte. This test pins the exact shape so a silent edit to
  * the table can't drift one pipeline's attribute wiring away from the others.
  */
@@ -21,7 +21,7 @@ describe('GALAXY_POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
     // paSin) vec2; everything else is a scalar f32.  Anyone editing
     // galaxyPointRenderer's table must update this expectation deliberately,
     // which is the point — a silent shape change here would break the
-    // shared invariant with pickRenderer.
+    // shared invariant with galaxyPickRenderer.
     expect(GALAXY_POINT_VERTEX_ATTRIBUTES[0]).toEqual({
       shaderLocation: 0,
       offset: 0,

@@ -7,7 +7,7 @@
  * requires a real WebGPU device and lives in the manual visual
  * smoke-test pass at PR review time.
  *
- * Mock pattern follows pickRenderer.test.ts: a stub `GPUDevice` whose
+ * Mock pattern follows galaxyPickRenderer.test.ts: a stub `GPUDevice` whose
  * methods are `vi.fn()` spies, intercepted at construction time so we
  * can assert on the descriptors the factory passed in.
  */

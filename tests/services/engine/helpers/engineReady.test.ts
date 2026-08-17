@@ -10,7 +10,7 @@
  *      being null, true only when all six are populated.
  *   2. Type narrowing — after `if (isEngineReady(state))`, the
  *      compiler treats `state.cam`, `state.gpu.galaxyPointRenderer`,
- *      `state.gpu.renderTargets`, `state.gpu.pickRenderer`,
+ *      `state.gpu.renderTargets`, `state.gpu.galaxyPickRenderer`,
  *      `state.gpu.compositor`, and
  *      `state.subsystems.texturedDisks` as non-null without `!` or
  *      `?.`.  We assert this with `@ts-expect-error` over an
@@ -54,7 +54,7 @@ function makeState(
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     compositor?: unknown;
-    pickRenderer?: unknown;
+    galaxyPickRenderer?: unknown;
     texturedDisks?: unknown;
   } = {},
 ): EngineState {
@@ -64,13 +64,13 @@ function makeState(
   const renderTargets =
     overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
   const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
-  const pickRenderer =
-    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const galaxyPickRenderer =
+    overrides.galaxyPickRenderer === undefined ? ({} as unknown) : overrides.galaxyPickRenderer;
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { galaxyPointRenderer, renderTargets, compositor, pickRenderer },
+    gpu: { galaxyPointRenderer, renderTargets, compositor, galaxyPickRenderer },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
@@ -98,8 +98,8 @@ describe('isEngineReady — false branch', () => {
     expect(isEngineReady(makeState({ compositor: null }))).toBe(false);
   });
 
-  it('returns false when state.gpu.pickRenderer is null', () => {
-    expect(isEngineReady(makeState({ pickRenderer: null }))).toBe(false);
+  it('returns false when state.gpu.galaxyPickRenderer is null', () => {
+    expect(isEngineReady(makeState({ galaxyPickRenderer: null }))).toBe(false);
   });
 
   it('returns false when state.subsystems.texturedDisks is null', () => {
@@ -146,7 +146,7 @@ describe('isEngineReady — type narrowing', () => {
       void state.gpu.galaxyPointRenderer.totalCount;
       void state.gpu.renderTargets.viewOf;
       void state.gpu.compositor.draw;
-      void state.gpu.pickRenderer.drawPoints;
+      void state.gpu.galaxyPickRenderer.drawPoints;
       void state.subsystems.texturedDisks.beginFrame;
 
       // Sanity: the runtime value is the same object, only the type

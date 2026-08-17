@@ -122,7 +122,7 @@ export function createGalaxyPointRenderer(init: {
         ],
       }),
       fadeBgl, // @group(1) FadeUniforms (canonical)
-      sourceBgl, // @group(2) SourceUniforms (canonical, shared with PickRenderer)
+      sourceBgl, // @group(2) SourceUniforms (canonical, shared with GalaxyPickRenderer)
       // @group(3) FocusUniforms — a single shared/global binding (only
       // one POI focused at a time), unlike the per-source @group(1) fade.
       focusBgl,

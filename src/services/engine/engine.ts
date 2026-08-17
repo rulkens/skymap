@@ -40,7 +40,7 @@
  *   Bootstrap phases (the async IIFE, lifted out of this file):
  *   - `phases/initGpu.ts`      — device + every renderer
  *   - `phases/wireSlots.ts`    — every asset slot + thumbnails + parallel load
- *   - `phases/wireInput.ts`    — pickRenderer + camera + orbit-controls + click
+ *   - `phases/wireInput.ts`    — galaxyPickRenderer + camera + orbit-controls + click
  *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
  *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
  *
@@ -293,7 +293,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
       // for the null-until-init lifecycle rationale.
       galaxyPointRenderer: null,
-      pickRenderer: null,
+      galaxyPickRenderer: null,
       pickProgram: null,
       milkyWayPickRenderer: null,
       // Canonical fade + source + focus bind-group layouts. Built once in
@@ -523,7 +523,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
       // The rest land later in the IIFE once their deps (GPU device,
-      // pickRenderer, scheduler) exist.
+      // galaxyPickRenderer, scheduler) exist.
       clickResolver: null,
       inputBindings: null,
       // Download-progress aggregator — built inside the IIFE so the
@@ -858,8 +858,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //    destroy() is mandatory.  The point renderer owns the largest
     //    allocations (per-source vertex buffers, ~14 MB GPU + CPU mirror per
     //    SDSS deck).
-    state.gpu.pickRenderer?.destroy();
-    state.gpu.pickRenderer = null;
+    state.gpu.galaxyPickRenderer?.destroy();
+    state.gpu.galaxyPickRenderer = null;
     state.gpu.pickProgram?.destroy();
     state.gpu.pickProgram = null;
     state.gpu.milkyWayPickRenderer?.destroy();

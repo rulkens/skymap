@@ -23,7 +23,7 @@ const newRenderer = () => {
 
 // Stub device with a tracked writeBuffer — lets the construction test
 // assert exactly what lands in the @group(2) uniform.  Same shape as the
-// pickRenderer.test.ts stubs (GPUBufferUsage / GPUShaderStage globals come
+// galaxyPickRenderer.test.ts stubs (GPUBufferUsage / GPUShaderStage globals come
 // from the shared tests/setup/webgpuGlobals.ts setupFile).
 function makeStubDevice() {
   const writeBufferCalls: Array<{

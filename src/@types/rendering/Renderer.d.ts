@@ -20,7 +20,7 @@
  * ### Why not include `draw()`?
  *
  * Draw signatures vary wildly across renderers — `galaxyPointRenderer.draw`
- * takes a `GalaxyPointDrawSettings` record, `pickRenderer.drawPoints` records
+ * takes a `GalaxyPointDrawSettings` record, `galaxyPickRenderer.drawPoints` records
  * into a caller-owned pick pass, `volumeFieldRenderer.draw` reads from a
  * `FrameContext`.  A common base would either force a
  * lowest-common-denominator signature (hurting type clarity) or use a

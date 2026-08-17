@@ -43,7 +43,7 @@ const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
  * Build an `EngineState`-shaped fixture with the guard fields
- * (`cam`, `gpu.galaxyPointRenderer`, `gpu.renderTargets`, `gpu.pickRenderer`,
+ * (`cam`, `gpu.galaxyPointRenderer`, `gpu.renderTargets`, `gpu.galaxyPickRenderer`,
  * `gpu.compositor`, `subsystems.texturedDisks`) populated by default.
  * Each test can null any one to exercise the not-ready branch.
  *
@@ -57,7 +57,7 @@ function makeState(
     cam?: OrbitCamera | null;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
-    pickRenderer?: unknown;
+    galaxyPickRenderer?: unknown;
     compositor?: unknown;
     texturedDisks?: unknown;
   } = {},
@@ -76,14 +76,14 @@ function makeState(
     overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
     overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
-  const pickRenderer =
-    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const galaxyPickRenderer =
+    overrides.galaxyPickRenderer === undefined ? ({} as unknown) : overrides.galaxyPickRenderer;
   const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { galaxyPointRenderer, renderTargets, pickRenderer, compositor },
+    gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }

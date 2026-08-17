@@ -12,8 +12,8 @@
 //
 // Originally everything lived in a single 'points.wesl' that contained
 // both '@fragment fn fs' (visual) and '@fragment fn fsPick' (picking).
-// The PointRenderer compiled the whole module and selected the 'fs'
-// entry point; the PickRenderer did the same and selected 'fsPick'.
+// The GalaxyPointRenderer compiled the whole module and selected the 'fs'
+// entry point; the GalaxyPickRenderer did the same and selected 'fsPick'.
 // This worked but had two costs we wanted to remove:
 //
 //   1. Each pipeline pulled in the OTHER fragment's code via the same
@@ -52,7 +52,7 @@
 // reads VSOut fields, so the @group(0) / @group(1) bindings only need
 // to appear in the vertex stage that actually reads them. WebGPU's
 // pipeline layout still auto-derives both bind-group layouts because
-// the SHARED vertex stage references them — see pickRenderer.ts for
+// the SHARED vertex stage references them — see galaxyPickRenderer.ts for
 // the matching per-source bind-group construction.
 
 import package::lib::camera::CameraUniforms;
@@ -87,7 +87,7 @@ import package::lib::camera::CameraUniforms;
 //   offset 184..191 : _padU0, _padU1 (two pad words)
 //   total: 192 bytes.
 //
-// 'src/utils/gpu/packPointUniforms.ts' is the CPU mirror of this table —
+// 'src/utils/gpu/packGalaxyPointUniforms.ts' is the CPU mirror of this table —
 // it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180 and sizes
 // the buffer at UNIFORM_BYTES = 192. Any edit here is an edit there.
 //
@@ -108,7 +108,7 @@ struct Uniforms {
   // not read this field — the selection ring is drawn by the dedicated
   // selectionRingLayer — but the picker mutates the slot in place to
   // suppress its own self-hit, so the byte layout must stay. See
-  // 'pickRenderer.ts' SELECTED_PACKED_OFFSET.
+  // 'galaxyPickRenderer.ts' SELECTED_PACKED_OFFSET.
   selectedPacked: u32,
 
   // Slot at offset 84: intentionally unused at the @group(0) level.
@@ -118,7 +118,7 @@ struct Uniforms {
   // Desired radius of each point sprite in pixels. Larger = bigger
   // glowing halos. Typical range 2.0–8.0. The pick pass overwrites
   // this slot in-place to boost hover/click hit-radius (see
-  // 'pickRenderer.ts' POINT_SIZE_OFFSET).
+  // 'galaxyPickRenderer.ts' POINT_SIZE_OFFSET).
   pointSizePx: f32,
 
   // Global brightness multiplier in [0, 1]. Lets the UI dim/brighten
@@ -204,7 +204,7 @@ struct Uniforms {
   // state for the crossfade.
   pxFadeStart: f32,
   pxFadeEnd: f32,
-  // 0 = visual pass, 1 = pick pass.  Set in-place by pickRenderer
+  // 0 = visual pass, 1 = pick pass.  Set in-place by galaxyPickRenderer
   // before each pick draw and reset by the next visual frame's full
   // buffer rewrite.  When 1, the vertex stage skips the procedural-
   // disk crossfade-OUT and the intensity-floor degenerate-clip cull;
@@ -229,7 +229,7 @@ struct Uniforms {
 // These fields are filled from the *instance* vertex buffer — one
 // record per catalog point, not one record per vertex. The numbers
 // here (0, 1, 2 …) must exactly match the @location values in
-// pointRenderer.ts's vertex.buffers[].attributes array. If they
+// galaxyPointRenderer.ts's vertex.buffers[].attributes array. If they
 // disagree the GPU silently reads garbage.
 
 struct PerVertex {

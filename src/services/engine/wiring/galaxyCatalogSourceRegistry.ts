@@ -192,7 +192,7 @@ export function wireGalaxyCatalogSourceSlot(
       //
       // We check `state.gpu.galaxyPointRenderer` directly rather than going
       // through `isEngineReady`: the latter also waits for handles
-      // populated later in bootstrap (pickRenderer, cam), and would
+      // populated later in bootstrap (galaxyPickRenderer, cam), and would
       // reject this upload during the legitimate wireSlots window.
       if (state.gpu.galaxyPointRenderer === null) return;
       const catalogId = galaxyCatalogIdOf(source);

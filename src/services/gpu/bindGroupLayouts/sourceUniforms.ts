@@ -3,7 +3,7 @@
  * @group(2) SourceUniforms binding.
  *
  * Used by both the visual GalaxyPointRenderer pipeline and the offscreen
- * PickRenderer pipeline. Sharing the layout identity means each
+ * GalaxyPickRenderer pipeline. Sharing the layout identity means each
  * per-source SourceUniforms bind group built against this layout is
  * valid for either pipeline. See CLAUDE.md → "WebGPU layout:'auto'
  * bind groups don't cross pipelines" for the underlying rationale.

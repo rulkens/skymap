@@ -214,7 +214,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Invisible Milky-Way pick billboard — writes into the r32uint pick
   // texture (NOT the HDR target), so it takes no format param.  Built
   // here alongside the other pick providers; `wireInput` threads it into
-  // `createPickRenderer` along with the disk-visibility gate.
+  // `createGalaxyPickRenderer` along with the disk-visibility gate.
   state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(
     uiCtx,
     state.gpu.fadeBgl!,

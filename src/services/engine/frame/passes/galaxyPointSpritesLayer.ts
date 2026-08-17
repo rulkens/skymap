@@ -149,7 +149,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
   // Pick aspect — the point half of the pick pass. Re-runs the SAME
   // instanced billboard geometry through the r32uint pick pipeline, which
   // writes a packed hit id `(sourceCode << 27) | localIdx` instead of
-  // colour. Delegates to `pickRenderer.drawPoints`; the pick camera is
+  // colour. Delegates to `galaxyPickRenderer.drawPoints`; the pick camera is
   // rebuilt as a value by `pickUniformBytesOf` (same byte layout as the
   // visual pack, minus the selection identity — the pick fragment writes
   // its own hit id).
@@ -181,7 +181,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
   // @group(0) pick-camera upload/bind it performs is the prefix contract
   // above, and the ring / disk pick pipelines still need it.
   drawPick(pass, view, ctx, state) {
-    if (state.gpu.pickRenderer === null) return;
+    if (state.gpu.galaxyPickRenderer === null) return;
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
     const fades = state.subsystems.fades;
@@ -192,6 +192,6 @@ export const galaxyPointSpritesLayer: ContentLayer = {
         (s.source === Source.FamousGalaxy ? 1 : surveyFade);
       return opacity !== 0;
     });
-    state.gpu.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
+    state.gpu.galaxyPickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
   },
 };

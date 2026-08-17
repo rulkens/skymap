@@ -63,10 +63,10 @@ export type GalaxyPointRenderer = {
     count: number;
     /**
      * The per-source SourceUniforms GPU buffer (16 bytes — sourceCode
-     * u32 + 12 bytes pad). PickRenderer builds its OWN per-source
+     * u32 + 12 bytes pad). GalaxyPickRenderer builds its OWN per-source
      * @group(2) bind group around this buffer using the canonical
      * sourceUniformsBgl layout (shared with the visual pipeline). The
-     * underlying GPUBuffer is shared; PickRenderer's bind group is
+     * underlying GPUBuffer is shared; GalaxyPickRenderer's bind group is
      * just a per-pipeline view of the same bytes.
      *
      * The buffer is written ONCE at upload time (sourceCode never

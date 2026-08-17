@@ -157,7 +157,7 @@ function makeState(): EngineState {
     },
     gpu: {
       galaxyPointRenderer: null,
-      pickRenderer: null,
+      galaxyPickRenderer: null,
       renderTargets: null,
       filamentRenderer: null,
     },
@@ -700,12 +700,12 @@ describe('runFrame — sim clock (Task 8)', () => {
 });
 
 describe('runFrame — hover-pick removed from frame body', () => {
-  it('does not call pickRenderer.pick inside the frame body', () => {
+  it('does not call galaxyPickRenderer.pick inside the frame body', () => {
     // The hover-pick block was removed from runFrame. Hover picking is now
     // fully pointer-driven via hoverPickDriver (wired in wireInput.ts).
-    // This test pins that invariant: even with a non-null pickRenderer and a
+    // This test pins that invariant: even with a non-null galaxyPickRenderer and a
     // non-null latestMouseCss-equivalent, runFrame must NEVER call
-    // pickRenderer.pick itself. If the block is accidentally re-added,
+    // galaxyPickRenderer.pick itself. If the block is accidentally re-added,
     // this assertion catches it.
     //
     // The fixture leaves state.gpu.galaxyPointRenderer=null so the frame bails before
@@ -714,8 +714,8 @@ describe('runFrame — hover-pick removed from frame body', () => {
     const store = makeStore();
     const state = makeState();
     const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    // Seed a non-null pickRenderer so the old guard would have let through.
-    (state.gpu as any).pickRenderer = {
+    // Seed a non-null galaxyPickRenderer so the old guard would have let through.
+    (state.gpu as any).galaxyPickRenderer = {
       pick: pickSpy,
       renderForDebug: vi.fn<() => null>(),
       destroy: vi.fn<() => void>(),
@@ -725,7 +725,7 @@ describe('runFrame — hover-pick removed from frame body', () => {
 
     runFrame(state, deps, 1000);
 
-    // The frame body must never call pickRenderer.pick — hover picks are
+    // The frame body must never call galaxyPickRenderer.pick — hover picks are
     // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
   });

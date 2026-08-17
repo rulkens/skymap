@@ -3,7 +3,7 @@
  *
  * The per-instance vertex record and the pick uniform buffer form a
  * three-way contract: `galaxyPointRenderer`'s vertex-buffer packing, the
- * `pickRenderer` pipeline, and the `points/*.wesl` shaders must all agree
+ * `galaxyPickRenderer` pipeline, and the `points/*.wesl` shaders must all agree
  * on the same stride, byte offsets, and `shaderLocation`s.  A mismatch
  * either validation-errors at pipeline creation or, worse, silently reads
  * garbage bytes into the wrong attribute.
@@ -94,7 +94,7 @@ const SB_AMP_BYTE_OFFSET = 52;
 
 /**
  * Vertex buffer attribute table — single source of truth, imported
- * verbatim by `PickRenderer` so both pipelines stay layout-locked.
+ * verbatim by `GalaxyPickRenderer` so both pipelines stay layout-locked.
  *
  *   0  position (vec3<f32>)
  *   1  magnitude (f32)
@@ -192,7 +192,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * 8 bytes sit between `sourceCode` (offset 84) and `camPosWorld` (offset
  * 96) — filled here by `pointSizePx` + `brightness`.
  *
- * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80) +
+ * The picker (`galaxyPickRenderer.ts`) writes `selectedPacked` (offset 80) +
  * `sourceCode` (offset 84) for every per-source draw — see its `pick()`
  * docblock for the per-source uniform-write pattern that lets the pick
  * pass see the same packed identity space the visual pass does.  It also
