@@ -5,14 +5,11 @@
 // where the band's density is perceptible; on a hit it writes the band's
 // constant singleton id and a fixed fallback depth (see PICK_FALLBACK_DEPTH
 // — the camera sits INSIDE the shell throughout this layer's visibility
-// window, so there is no real entry-point depth to project). group(0) is the
-// caller-bound camera prefix, unread here; the wedge/camera-basis Uniforms
-// this march needs is at group(1).
+// window, so there is no real entry-point depth to project).
 
 import package::zoneOfAvoidance::io::Uniforms;
 import package::zoneOfAvoidance::io::VsOut;
 import package::zoneOfAvoidance::band::bandDensityMask;
-import package::lib::camera::CameraUniforms;
 import package::lib::fadeUniforms::applyFade;
 
 // Sentinel depth for a fragment with no real single-point distance (the
@@ -28,7 +25,8 @@ const PICK_FALLBACK_DEPTH: f32 = 0.999999;
 // PERCEPTIBLE band and doesn't shrink/grow with the intensity slider.
 const DENSITY_MASK_FLOOR: f32 = 0.02;
 
-@group(0) @binding(0) var<uniform> cam: CameraUniforms;
+// group(0) is the pick pass's shared camera prefix, bound by the caller and
+// read by no stage of this pipeline, so it goes undeclared here.
 @group(1) @binding(0) var<uniform> u: Uniforms;
 
 struct PickFSOut {

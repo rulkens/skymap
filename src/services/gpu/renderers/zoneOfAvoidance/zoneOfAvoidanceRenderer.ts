@@ -116,10 +116,11 @@ export function createZoneOfAvoidanceRenderer(
 
   // ── Pick pipeline ───────────────────────────────────────────────────
   //
-  // group(0) is never bound by this renderer — it's the COSMO pick pass's
-  // shared point-pick camera prefix, already bound by the time `drawPick`
-  // runs (see `ContentLayer.drawPick`'s postcondition). This BGL only
-  // exists so the pipeline layout is structurally compatible with it.
+  // group(0) is never bound by this renderer, and no stage of the pick
+  // pipeline reads it — it's the COSMO pick pass's shared point-pick camera
+  // prefix, already bound by the time `drawPick` runs (see
+  // `ContentLayer.drawPick`'s postcondition). This BGL only exists so the
+  // pipeline layout is structurally compatible with it.
   const pickCameraBgl = device.createBindGroupLayout({
     label: 'zoneOfAvoidance-pick-camera-bgl',
     entries: [
@@ -139,9 +140,8 @@ export function createZoneOfAvoidanceRenderer(
     label: 'zoneOfAvoidance-pick-pipeline',
     layout: device.createPipelineLayout({
       label: 'zoneOfAvoidance-pick-pipeline-layout',
-      // Reuses vsModule (its `u: Uniforms` binding is dead code in `vs`,
-      // so group(0) here doesn't collide with it) and `bindGroupLayout` —
-      // the SAME BGL `draw` binds at group(0) — now at group(1).
+      // `bindGroupLayout` is the SAME BGL `draw` binds at group(0), landing
+      // at group(1) here.
       bindGroupLayouts: [pickCameraBgl, bindGroupLayout],
     }),
     vertex: { module: vsModule, entryPoint: 'vs' },

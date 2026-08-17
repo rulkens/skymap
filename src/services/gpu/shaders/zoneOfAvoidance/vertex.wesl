@@ -6,10 +6,7 @@
 // the fragment stage to build its view ray from the camera basis. Verbatim
 // technique from horizonShell/vertex.wesl.
 
-import package::zoneOfAvoidance::io::Uniforms;
 import package::zoneOfAvoidance::io::VsOut;
-
-@group(0) @binding(0) var<uniform> u: Uniforms;
 
 // Fullscreen quad corners in NDC, triangle-list order.
 const CORNERS = array<vec2<f32>, 6>(
