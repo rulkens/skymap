@@ -2,17 +2,12 @@
 // guide layer.
 //
 // Same fullscreen-quad + camera-basis-ray technique as horizonShell/io.wesl:
-// one 6-vertex triangle pair in clip space, the fragment stage builds a
-// per-pixel world-space ray from the camera basis and intersects it with two
-// concentric spheres (radius 'innerRadiusMpc' / 'outerRadiusMpc') centred at
-// the world origin (the catalog observer). Unlike the horizon shell, the
-// band's radii (3..380 Mpc) stay well inside fp32's exact-integer range, so
-// there's no Gpc-unit workaround here — everything is plain Mpc.
+// a per-pixel world ray from the camera basis intersects two concentric
+// spheres ('innerRadiusMpc'/'outerRadiusMpc') at the world origin, in plain
+// Mpc (band radii stay well inside fp32's exact-integer range).
 //
-// worldToGalactic's rotation basis (GAL_X_EQ/GAL_Y_EQ/GAL_Z_EQ) is a
-// compile-time constant in 'lib/util.wesl', not a uniform field — see that
-// module's contract. The spec's first draft rode the basis rows in this
-// struct; dropping them is what keeps this under 128 bytes.
+// worldToGalactic's rotation basis lives in 'lib/util.wesl' as a compile-time
+// constant, not a uniform field here.
 
 // ── Uniforms layout (112 bytes) ─────────────────────────────────────
 //
