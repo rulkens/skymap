@@ -551,12 +551,106 @@ gitignored and which `/feature-done` deleted, so nothing else carries them. Tags
 
 #### Re-homed comment material
 
-Material cut from source comments under the comment budget that was worth keeping. Append here.
+Material cut from source comments under the comment budget that was worth keeping.
 
 Re-homed from `panSharpenRgb`'s header when it was cut to the comment budget: the chroma carrier is
 `RGB/Y - 1` rather than photometric matching **because** that invariance is what lets two
 independently-exposed sources combine with no photometric alignment step — only the geometric
 alignment the caller guarantees by resizing both to one grid.
+
+**Tier ceilings: look vs source** (`bodyTextureRegistry`). A kind's ceiling was authored for one of
+two reasons that must not be conflated. A _look ceiling_ caps detail where more resolution buys
+nothing even given a bigger source: Uranus and Neptune are near-featureless discs (`small`), Venus
+is unresolved cloud (`medium`), and everything unlisted goes to `large` (8 k). A _source ceiling_
+caps detail where the raw image itself tops out below `large` regardless of what the surface would
+reward: Jupiter and Saturn are `medium` because their Solar System Scope files are 4096×2048 despite
+the `8k_` filename prefix. Raising a source ceiling without first sourcing a genuinely
+higher-resolution image is a regression, not an upgrade. The per-row applications survive in the
+registry; the taxonomy itself does not.
+
+**Registry membership IS texture identity** (`bodyTextureRegistry`, spec §4.2/§4.3). Runtime and
+build both derive from the one table — the runtime through `clampTier(userTier, spec.kinds[kind])`,
+the build through the tier set it emits and the `treatment.kind` it dispatches on — so a textured
+body is one row here plus its id in `BodyTextureId` and its raw-data entries, never a coordinated
+edit across parallel lists. That is the whole reason texture identity lives in registry membership
+rather than a baked per-body `textured` flag: `bodyTextureSpec(id)` returning `null` is the "is this
+body textured?" predicate the body makers ask, and a second textured-id list would be one more thing
+to keep in sync.
+
+**Laplace planes** (`orbitalElements`). The planets and Earth's Moon are referenced to the ecliptic,
+which is how JPL publishes them. A planet's own moons are referenced to their local Laplace plane —
+Saturn's regular moons ride ~27° off the ecliptic, which is why they look visibly tilted — so each
+satellite row's `plane` is built by the `satellite` maker from that moon's OWN Laplace-plane pole
+(the `poleRaDeg`/`poleDecDeg` JPL tabulates) rather than from a shared equatorial constant. The
+inner moons' poles sit near the planet's equatorial pole, but a distant moon's Laplace plane tilts
+off the equator (Iapetus ~15°) and only its own pole captures that. The ecliptic→equatorial rotation
+into the scene frame is `ECLIPTIC_FRAME` (`orbitPlaneFrames.ts`), applied downstream where the
+ellipse is built.
+
+**Pluto's element provenance** (`orbitalElements`). The JPL web edition of "Keplerian Elements for
+Approximate Positions of the Major Planets" dropped Pluto, and the PDF it replaced now redirects to
+it, so Pluto's row comes from the same table reprinted in the Explanatory Supplement to the
+Astronomical Almanac, 3rd ed. (2013), §8.10 Table 8.10.2. The copy used:
+`https://www.voyagepourproxima.fr/JPL-DE_LE405-Orbital%20Ephemerides%20of%20the%20Sun,%20Moon,%20and%20Planets.pdf`.
+The row keeps the citation; only the URL was cut.
+
+**Earth's atmosphere row** (`atmosphereParams`). Earth carries the canonical parameter set from
+Bruneton & Neyret's "Precomputed Atmospheric Scattering" (2008) as refined in Hillaire's 2020 "A
+Scalable and Production Ready Sky and Atmosphere Rendering Technique": Rayleigh (5.8, 13.6, 33.1)e-3
+1/km at an 8 km scale height, Mie scattering 3.9e-3 1/km with 4.4e-3 1/km absorption at a 1.2 km
+scale height and a 0.8 Henyey-Greenstein asymmetry, and an ozone tent centred at 25 km.
+
+**Physics vs look — the two radiometric dials** (`atmosphereParams`). Most of a row is the physical
+scattering constants the three LUTs integrate. The two trailing fields are not: `sunIrradiance`
+scales the solar radiance driving the in-scatter integral and `exposure` scales the shell's radiance
+as it lands in the HDR target, both packed into `AtmosphereUniforms` per frame. They are look knobs,
+the same split `earthSurfaceParams` / `pbr.wesl` draws between artistic dials and shading-model
+floors, and they ride the physics row so a new atmosphere body carries its own look in one place
+instead of in a parallel table. Earth's `exposure: 2.35` was eye-tuned against the Meteosat
+full-disc reference so the blue limb and the reddened terminator arc read at a plausible brightness
+against the tonemapped Earth rather than washing to grey — a calibration against a photograph, and
+the reason Pluto's row simply inherits the number.
+
+**Storage-texture bakes are a repo first** (`atmosphereShellRenderer`). All three LUT bakes write a
+`texture_storage_2d<rgba16float, write>`; every earlier compute path in skymap writes storage
+_buffers_. It is core-legal WGSL, but WebKit acceptance is unproven. The modules are shaped so a
+fragment render-to-texture fallback could replace the bakes without touching a consumer, since
+consumers only sample the LUTs. This renderer is the first point such a link/validation error can
+surface, and `createShaderModuleWithDevLog` dumps the real `getCompilationInfo()` line when it does.
+
+**Rejected: per-tile `createImageBitmap`** (`texturedBodyRenderer.setPlaceholderMap`). Cropping one
+sub-bitmap per tile with `createImageBitmap(atlas, x, y, w, h)` sidesteps the `origin`/`flipY`
+interaction entirely, but it is asynchronous — the entry point would have to return a promise, or
+the crop would move out to every caller — and it allocates 13 short-lived bitmaps, all to avoid an
+interaction the WebGPU spec pins normatively.
+
+**Three source formats, one sharp path** (`buildTextures`). The raws arrive in three shapes and all
+read through the same sharp/libvips entry: Solar System Scope 2:1 equirectangular RGB JPEGs at
+2k/4k/8k for the eight planets and the Moon; the NASA Blue Marble Earth equirect (21600×10800, or a
+5400×2700 dev sibling) in the same 2:1 RGB shape; and plain 8-bit USGS/NASA GeoTIFFs for the four
+Galilean moons, Pluto and Charon. Io and Ganymede are RGB, while Europa, Callisto, Pluto and Charon
+are single-channel, and Pluto has a separate NASA MVIC colour TIFF beside its mono mosaic. sharp
+reads TIFF natively, so a `.tif` flows through the same `sharp(src)` call as a JPEG and no ISIS
+toolchain enters the pipeline.
+
+**One table, two derived views** (`TEXTURE_SOURCES`). The offline pipeline has two halves that each
+need to know a body's raw source: `fetchTextures` downloads the raws, `buildTextures` tiers them.
+Each used to author its own list — `SSS_BODIES`/`USGS_KEYS` keyed by raw-data key on the fetch side,
+`BODY_SOURCE_KEYS` keyed by body id on the build side — so adding a textured body could compile
+clean while the fetch list silently omitted it: the raw never downloaded, the build logged a skip,
+and the body rendered untextured with no error. Both halves now derive from the one table, keyed by
+`BodyTextureId | RingTextureId` so a missing key is a compile error. The second-level
+`Partial<Record<TextureKind, …>>` is the room Earth's `night`/`clouds`/`material`/`normal` rows were
+added into, which is the payoff the table exists for.
+
+**Two corrections to the demand table** (`assetWiring`, bug fixes against the original spec).
+`filaments` gates on `settings.filaments.enabled`, the real master toggle, so a disabled filament
+overlay never fetches the skeleton. `structureCatalog` gates on structure-category visibility: it
+loads when ANY of the cluster / supercluster / void categories has its ring OR its label enabled,
+read from the per-category rows (`structures.items[cat].enabled` / `.labelEnabled`), which is the
+single home for both axes. With every category visible by default the catalog still loads at boot,
+so the correction was behaviour-preserving; only a user who hides every category's ring AND label
+skips the fetch.
 
 ---
 
