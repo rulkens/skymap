@@ -76,14 +76,15 @@ import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
  * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
  * today (`'flow'` and `'atmosphereSkyView'`); a new compute pre-pass is a new
  * row, not a new branch. Every row takes the uniform `(encoder, ctx, state)`
- * shape — `flow` ignores `ctx`, while `atmosphereSkyView` reads the rendered
- * pose off it so its baked LUT matches what the shell fragment samples.
+ * shape — `flow` reads `ctx.nowMs` as its real-time advection clock, while
+ * `atmosphereSkyView` reads the rendered pose off it so its baked LUT matches
+ * what the shell fragment samples.
  */
 const COMPUTE: Record<
   string,
   (encoder: GPUCommandEncoder, ctx: ReadyFrameContext, state: EngineState) => void
 > = {
-  flow: (encoder, _ctx, state) => encodeFlowCompute(encoder, state),
+  flow: (encoder, ctx, state) => encodeFlowCompute(encoder, state, ctx.nowMs),
   atmosphereSkyView: (encoder, ctx, state) => encodeAtmosphereSkyView(encoder, ctx, state),
 };
 
