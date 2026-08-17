@@ -176,7 +176,16 @@ fn densityMie(altitudeKm: f32, scaleHeightKm: f32) -> f32 {
 // the standard cheap stand-in for its bell (Hillaire uses it). No scattering,
 // absorption only; it is the reason a clear zenith sky stays blue at twilight
 // rather than washing to grey.
+// A zero width is the table's 'this body has no ozone' idiom — every row but
+// Earth's. Keep this branch: without it the tent divides by zero at EVERY
+// sample (NaN at altitude 0, which 'sampleMedium' floors every ground-level
+// sample to; +Inf above it), and WGSL's Finite Math Assumption then makes the
+// whole expression an INDETERMINATE value, naming 'max' as a function that
+// misbehaves under exactly that optimisation. The outer clamp is not a guard.
 fn densityOzone(altitudeKm: f32, centerKm: f32, widthKm: f32) -> f32 {
+  if (widthKm <= 0.0) {
+    return 0.0;
+  }
   return max(0.0, 1.0 - abs(altitudeKm - centerKm) / widthKm);
 }
 
