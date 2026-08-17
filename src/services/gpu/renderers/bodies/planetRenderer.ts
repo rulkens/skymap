@@ -24,7 +24,7 @@
  * body's record into one Float32Array and `draw` uploads it with a SINGLE
  * `queue.writeBuffer`, then issues ONE `drawIndexed` with `instanceCount = N`.
  *
- * This is the house idiom (`pointRenderer`), chosen over the alternatives:
+ * This is the house idiom (`galaxyPointRenderer`), chosen over the alternatives:
  *
  *   - N per-body draws each rebinding a uniform — multiplies binds and pushes a
  *     "which body am I" frame concern into the wiring.

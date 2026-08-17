@@ -4,7 +4,7 @@
  *
  * ### Why this lives at the type level
  *
- * Pre-Option-A every renderer had its own narrow type (`PointRenderer`,
+ * Pre-Option-A every renderer had its own narrow type (`GalaxyPointRenderer`,
  * `FilamentRenderer`, etc.).  The engine's destroy path had to enumerate
  * each one by name, and there was no compile-time guarantee that a new
  * renderer included a `destroy()` method.  This type makes those two
@@ -15,12 +15,12 @@
  *   - `label` is a human-readable identifier useful for devtools
  *     logging, GPU-profiler attribution, and future debug overlays.
  *     The convention is the renderer's factory name without `create`
- *     (e.g. `createPointRenderer` → `'pointRenderer'`).
+ *     (e.g. `createGalaxyPointRenderer` → `'galaxyPointRenderer'`).
  *
  * ### Why not include `draw()`?
  *
- * Draw signatures vary wildly across renderers — `pointRenderer.draw`
- * takes a `PointDrawSettings` record, `pickRenderer.drawPoints` records
+ * Draw signatures vary wildly across renderers — `galaxyPointRenderer.draw`
+ * takes a `GalaxyPointDrawSettings` record, `pickRenderer.drawPoints` records
  * into a caller-owned pick pass, `volumeFieldRenderer.draw` reads from a
  * `FrameContext`.  A common base would either force a
  * lowest-common-denominator signature (hurting type clarity) or use a
@@ -31,7 +31,7 @@
  * the full per-renderer breakdown that informed this contract.
  */
 export type Renderer = {
-  /** Human-readable identifier (e.g. `'pointRenderer'`). */
+  /** Human-readable identifier (e.g. `'galaxyPointRenderer'`). */
   readonly label: string;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;

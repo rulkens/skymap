@@ -1,5 +1,5 @@
 /**
- * PointDrawSettings — per-call draw parameters for `PointRenderer.draw`.
+ * GalaxyPointDrawSettings — per-call draw parameters for `GalaxyPointRenderer.draw`.
  *
  * A single record rather than positional args: callers fill named fields,
  * new knobs are one type-level edit, and TypeScript's structural matching
@@ -12,7 +12,7 @@ import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyProvenanceSettings } from '../settings/GalaxyProvenanceSettings';
 
-export type PointDrawSettings = {
+export type GalaxyPointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
   pointSizePx: number;
   /** Global brightness multiplier in [0, 1]. */
@@ -56,7 +56,7 @@ export type PointDrawSettings = {
    * once per visible source per frame from the points draw loop;
    * the renderer writes the returned value into the per-source
    * fadeBuffer. The renderer passes the numeric source code;
-   * the `pointSpritesLayer` closure resolves it to the catalog's string
+   * the `galaxyPointSpritesLayer` closure resolves it to the catalog's string
    * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;

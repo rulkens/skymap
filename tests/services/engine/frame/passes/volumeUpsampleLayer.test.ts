@@ -52,7 +52,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    pointRenderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {
       specs: [
         { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },

@@ -20,7 +20,7 @@
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
  * 5-bit `sourceCode`, which the ringPick fragment composes into
  * `(sourceCode << 27) | structureIndex + PICK_SENTINEL_OFFSET` — the same
- * per-source pattern `pointRenderer` uses per galaxy catalog.  Buckets are
+ * per-source pattern `galaxyPointRenderer` uses per galaxy catalog.  Buckets are
  * data-driven from `STRUCTURE_IDS`, so a new structure source
  * needs no change here.
  *

@@ -2,7 +2,7 @@
  * sourceUniforms — canonical bind-group layout for the points-only
  * @group(2) SourceUniforms binding.
  *
- * Used by both the visual PointRenderer pipeline and the offscreen
+ * Used by both the visual GalaxyPointRenderer pipeline and the offscreen
  * PickRenderer pipeline. Sharing the layout identity means each
  * per-source SourceUniforms bind group built against this layout is
  * valid for either pipeline. See CLAUDE.md → "WebGPU layout:'auto'

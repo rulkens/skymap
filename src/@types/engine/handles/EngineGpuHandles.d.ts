@@ -39,7 +39,7 @@
  * bag rather than the whole `EngineState`.
  */
 
-import type { PointRenderer } from '../../rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { PickProgram } from '../frame/PickProgram';
@@ -87,7 +87,7 @@ import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
-  pointRenderer: PointRenderer | null;
+  galaxyPointRenderer: GalaxyPointRenderer | null;
   pickRenderer: PickRenderer | null;
   /**
    * The parallel per-slab pick program over the content-layer registry.
@@ -119,7 +119,7 @@ export type EngineGpuHandles = {
   /**
    * Canonical SourceUniforms bind-group layout (@group(2), points
    * only). Constructed once in `initGpu` and shared between the
-   * visual PointRenderer and the offscreen PickRenderer. Null until
+   * visual GalaxyPointRenderer and the offscreen PickRenderer. Null until
    * `initGpu` resolves.
    */
   sourceBgl: SourceUniformsBgl | null;

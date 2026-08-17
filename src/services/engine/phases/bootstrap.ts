@@ -40,7 +40,7 @@
  * ### Why state writes (not return values) carry data between phases
  *
  * Each phase mutates `state.*` as it runs, and later phases read the
- * freshly-mutated state (`initGpu` writes `state.gpu.pointRenderer`;
+ * freshly-mutated state (`initGpu` writes `state.gpu.galaxyPointRenderer`;
  * `wireSlots` reads it for the slot commit; etc.).  Each phase's
  * signature is `(state, deps) => Promise<void>` with no return value —
  * return-value plumbing would add a second inter-phase data channel

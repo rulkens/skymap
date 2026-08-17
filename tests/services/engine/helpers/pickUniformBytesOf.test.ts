@@ -11,7 +11,7 @@
  * mirrors the old override end-state at the same offsets, the uploaded pick
  * bytes are provably identical before and after the change.
  *
- * Drift-freedom is preserved: the helper still delegates to `packPointUniforms`
+ * Drift-freedom is preserved: the helper still delegates to `packGalaxyPointUniforms`
  * (the single byte-layout truth the visual pass also uses), so every field but
  * the three pick-shaped ones tracks the visual layout automatically.
  */
@@ -19,14 +19,14 @@
 import { describe, it, expect } from 'vitest';
 
 import { pickUniformBytesOf } from '../../../../src/services/engine/helpers/pickUniformBytesOf';
-import { packPointUniforms } from '../../../../src/utils/gpu/packPointUniforms';
+import { packGalaxyPointUniforms } from '../../../../src/utils/gpu/packGalaxyPointUniforms';
 import { SELECTION_NONE_SENTINEL } from '../../../../src/data/selectionEncoding';
 import { PICK_PADDING_PX } from '../../../../src/data/pickPaddingPx';
 import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
   PICK_PASS_BYTE_OFFSET,
-} from '../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
+} from '../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointVertexLayout';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -78,7 +78,7 @@ describe('pickUniformBytesOf', () => {
     // followed by the three post-upload overrides it applied on top — sentinel
     // at byte 80, padded size at byte 88, pickPass=1 at byte 168. This is the
     // pre-change uploaded image; the helper must reproduce it exactly.
-    const expected = packPointUniforms(VP, VIEWPORT_PX, {
+    const expected = packGalaxyPointUniforms(VP, VIEWPORT_PX, {
       pointSizePx: STATE.settings.galaxyCatalogs.sizePx, // UNPADDED — override below
       brightness: STATE.settings.galaxyCatalogs.brightness,
       selectedPacked: 42, // arbitrary — override stamps the sentinel below

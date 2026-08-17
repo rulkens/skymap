@@ -77,7 +77,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // The visual renderer must exist before we wire picking + the camera —
   // `renderer` is the null-guard subject on the next line.
-  const renderer = state.gpu.pointRenderer;
+  const renderer = state.gpu.galaxyPointRenderer;
   if (!renderer) return;
   // The point-pick draw provider: it records the galaxy point billboards
   // into the pick pass the pick program owns. The ring / disk / Milky-Way

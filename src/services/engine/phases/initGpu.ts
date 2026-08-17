@@ -15,7 +15,7 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
-import { createPointRenderer } from '../../gpu/renderers/galaxyCatalog/pointRenderer';
+import { createGalaxyPointRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPointRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
@@ -70,7 +70,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * Bootstrap phase 1: GPU device acquisition + renderer construction.
  *
  * Side effects on `state`:
- *   - writes `state.gpu.pointRenderer`, `state.gpu.renderTargets`,
+ *   - writes `state.gpu.galaxyPointRenderer`, `state.gpu.renderTargets`,
  *     `state.gpu.filamentRenderer`, and every other renderer handle. Mints
  *     no `state.assetSlots.*` — every asset slot (points, body textures,
  *     sidecars) is minted in `wireSlots`.
@@ -158,18 +158,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
   );
 
-  // PointRenderer (and the disk renderers below) target the HDR
+  // GalaxyPointRenderer (and the disk renderers below) target the HDR
   // rgba16float texture, not the swap-chain `format`.  Their pipelines
   // bake this into a fixed colour-target descriptor at construction
   // time, so the format choice has to land here.
-  const renderer = createPointRenderer({
+  const renderer = createGalaxyPointRenderer({
     device,
     targetFormat: 'rgba16float',
     fadeBgl: state.gpu.fadeBgl!,
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
   });
-  state.gpu.pointRenderer = renderer;
+  state.gpu.galaxyPointRenderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
   //
@@ -186,7 +186,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // foreground twins) ────────────────────────────────────────────────────
   //
   // Load the font atlas (BMFont JSON + MSDF PNG) before building anything
-  // that reads it, sequenced after the PointRenderer but before the
+  // that reads it, sequenced after the GalaxyPointRenderer but before the
   // GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas fetch here keeps
   // the loop below from racing ahead of it; in practice the ~120 KB atlas
   // resolves well before the much larger per-galaxy-catalog `.bin` fetches.
@@ -224,7 +224,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // ── Galaxy thumbnail renderers ─────────────────────────────────────
   //
   // TexturedDiskRenderer targets the HDR offscreen texture (same rationale
-  // as PointRenderer above): atlas-bound, 3D-oriented quads sized by
+  // as GalaxyPointRenderer above): atlas-bound, 3D-oriented quads sized by
   // per-galaxy diameter, composited into the same linear-light buffer as
   // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
   const texturedDiskRenderer = createTexturedDiskRenderer(

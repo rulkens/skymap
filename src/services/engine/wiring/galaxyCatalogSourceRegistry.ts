@@ -168,7 +168,7 @@ export function loadCompanionAssets(
  * Must run (from `wireSlots`) before `createSyntheticFallback`,
  * `installLoadProgress`, and `reevaluateDemand`, which subscribe to and
  * enumerate the minted slots. Renderer construction order does NOT matter:
- * `commit` re-reads `state.gpu.pointRenderer` at call time and null-guards it
+ * `commit` re-reads `state.gpu.galaxyPointRenderer` at call time and null-guards it
  * (see the check a few lines into `commit`, below) rather than assuming it
  * is already assigned. Not safe to call twice for the same source.
  */
@@ -190,11 +190,11 @@ export function wireGalaxyCatalogSourceSlot(
       // (StrictMode unmount, hot-reload).  Drop the upload silently
       // — the slot still transitions to `ready`.
       //
-      // We check `state.gpu.pointRenderer` directly rather than going
+      // We check `state.gpu.galaxyPointRenderer` directly rather than going
       // through `isEngineReady`: the latter also waits for handles
       // populated later in bootstrap (pickRenderer, cam), and would
       // reject this upload during the legitimate wireSlots window.
-      if (state.gpu.pointRenderer === null) return;
+      if (state.gpu.galaxyPointRenderer === null) return;
       const catalogId = galaxyCatalogIdOf(source);
 
       // Tier swap: dissolve the currently-drawn buffer before the new one
@@ -209,9 +209,9 @@ export function wireGalaxyCatalogSourceSlot(
 
       const t0 = performance.now();
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
-      // PointRenderer keys its catalogs by the string id; resolve from
+      // GalaxyPointRenderer keys its catalogs by the string id; resolve from
       // the registry (the source code carries the matching id).
-      await state.gpu.pointRenderer.upload(catalogId, cloud);
+      await state.gpu.galaxyPointRenderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
 
       // Signal that this source's cloud is now committed and resolvable, so the
@@ -235,10 +235,10 @@ export function wireGalaxyCatalogSourceSlot(
       const dtMs = Math.round(performance.now() - t0);
       // Dump what the GPU actually holds after upload.  If this
       // disagrees with `cloud.count`, a concurrent upload overwrote.
-      const onGpu = Array.from(state.gpu.pointRenderer.loadedSources())
+      const onGpu = Array.from(state.gpu.galaxyPointRenderer.loadedSources())
         .map((e) => `${SHORT_NAME_BY_SOURCE.get(e.source) ?? e.source}=${e.count}`)
         .join(', ');
-      const total = state.gpu.pointRenderer.totalCount();
+      const total = state.gpu.galaxyPointRenderer.totalCount();
       console.log(
         `[engine] upload done  ${shortName} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );

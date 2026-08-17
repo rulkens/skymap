@@ -1,12 +1,12 @@
 /**
- * PointRenderer — GPU pipeline owner for instanced billboard point sprites.
+ * GalaxyPointRenderer — GPU pipeline owner for instanced billboard point sprites.
  *
  * Each catalog point renders as a single 3-vertex triangle that
  * circumscribes the unit UV circle, via WebGPU's instanced draw
  * (`draw(3, N)`).  The vertex stage reads `@builtin(vertex_index)`
  * (0..2, the corner) and per-instance attributes (position, magnitude,
  * colour index, axis ratio, baked PA cos/sin, padded radius, three bias
- * weights, baked absMag — see `POINT_VERTEX_ATTRIBUTES`).  A triangle
+ * weights, baked absMag — see `GALAXY_POINT_VERTEX_ATTRIBUTES`).  A triangle
  * rather than the usual 6-vertex quad because this pass is vertex/
  * primitive-bound at ~2.5M instances: `draw(3, N)` halves the
  * vertex-shader invocations and the primitive setup, while the fragment
@@ -37,8 +37,8 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { PointDrawSettings } from '../../../../@types/rendering/PointDrawSettings';
-import type { PointRenderer } from '../../../../@types/rendering/PointRenderer';
+import type { GalaxyPointDrawSettings } from '../../../../@types/rendering/GalaxyPointDrawSettings';
+import type { GalaxyPointRenderer } from '../../../../@types/rendering/GalaxyPointRenderer';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 
 // `?static` runs the WESL linker at build time and hands back a plain
@@ -49,9 +49,13 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
-import { packPointUniforms } from '../../../../utils/gpu/packPointUniforms';
+import { packGalaxyPointUniforms } from '../../../../utils/gpu/packGalaxyPointUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
+import {
+  POINT_STRIDE,
+  GALAXY_POINT_VERTEX_ATTRIBUTES,
+  UNIFORM_BYTES,
+} from './galaxyPointVertexLayout';
 import { createCatalogStore, type BuildRunner } from './catalogStore';
 
 // The `schechter*` uniform slots at byte offsets 140..155 are
@@ -86,14 +90,14 @@ import { createCatalogStore, type BuildRunner } from './catalogStore';
  *                           between tests, so an override installed for one
  *                           case silently governs the next.
  */
-export function createPointRenderer(init: {
+export function createGalaxyPointRenderer(init: {
   device: GPUDevice;
   targetFormat: GPUTextureFormat;
   fadeBgl: FadeUniformsBgl;
   sourceBgl: SourceUniformsBgl;
   focusBgl: FocusUniformsBgl;
   buildRunner?: BuildRunner;
-}): PointRenderer {
+}): GalaxyPointRenderer {
   const { device, targetFormat, fadeBgl, sourceBgl, focusBgl } = init;
 
   // Each renderer compiles its own GPUShaderModule from the shared
@@ -138,7 +142,7 @@ export function createPointRenderer(init: {
           stepMode: 'instance',
           // Spread because `@webgpu/types` declares the field mutable
           // while the canonical export is readonly.
-          attributes: [...POINT_VERTEX_ATTRIBUTES],
+          attributes: [...GALAXY_POINT_VERTEX_ATTRIBUTES],
         },
       ],
     },
@@ -203,7 +207,7 @@ export function createPointRenderer(init: {
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
-    settings: PointDrawSettings,
+    settings: GalaxyPointDrawSettings,
   ): void {
     const { visibleSourceMask, focusBindGroup } = settings;
 
@@ -218,7 +222,7 @@ export function createPointRenderer(init: {
     // `points/io.wesl::Uniforms` for the WGSL-side struct.  `pickPass`
     // defaults to 0 (visual pass); the pick path packs its own image via
     // `pickUniformBytesOf`, never this buffer.
-    const buf = packPointUniforms(viewProj, viewportPx, settings);
+    const buf = packGalaxyPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     pass.setPipeline(pipeline);
@@ -274,8 +278,8 @@ export function createPointRenderer(init: {
     uniformBuffer.destroy();
   }
 
-  const renderer: PointRenderer = {
-    label: 'pointRenderer',
+  const renderer: GalaxyPointRenderer = {
+    label: 'galaxyPointRenderer',
     upload: store.upload,
     unload: store.unload,
     setBiasUploadCallback: store.setBiasUploadCallback,

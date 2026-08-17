@@ -10,7 +10,7 @@
  * every one of them outlives the frame that drew them.
  *
  * That storage life-cycle is a different concern from the pipeline
- * life-cycle.  `pointRenderer` owns things that exist once and never
+ * life-cycle.  `galaxyPointRenderer` owns things that exist once and never
  * change — shader modules, the render pipeline, the per-frame `@group(0)`
  * uniform buffer — and things that are recomputed every frame (the fade
  * opacity write, the visibility mask gate).  The store owns things that
@@ -32,7 +32,7 @@
  *     its own pipeline's layout — a bind group is not portable across
  *     pipelines).
  *   - `entries()` — the full draw-time record (fade buffer + both bind
- *     groups) so `pointRenderer.draw()` binds without reaching into
+ *     groups) so `galaxyPointRenderer.draw()` binds without reaching into
  *     store internals.
  *
  * Both iterate in `GALAXY_CATALOG_SOURCES` draw order, not upload order,
@@ -41,7 +41,7 @@
  *
  *   GalaxyCatalog → upload(id, …) → worker bake → GPU buffers + bind groups
  *                                                      ↓
- *                     pointRenderer.draw() ← entries() / pickRenderer ← loadedSources()
+ *                     galaxyPointRenderer.draw() ← entries() / pickRenderer ← loadedSources()
  *
  * @module
  */
@@ -56,7 +56,7 @@ import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUnifo
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
-import { SLOTS_PER_POINT } from './pointVertexLayout';
+import { SLOTS_PER_GALAXY_POINT } from './galaxyPointVertexLayout';
 
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
@@ -158,7 +158,7 @@ type LoadedSource = {
 
 /**
  * One loaded catalog's GPU resources, in `GALAXY_CATALOG_SOURCES` draw
- * order, as `pointRenderer.draw()` binds them.  The CPU mirror stays
+ * order, as `galaxyPointRenderer.draw()` binds them.  The CPU mirror stays
  * private to the store — a draw pass has no business rewriting vertex
  * bytes.
  */
@@ -190,7 +190,7 @@ export type CatalogStore = {
     count: number;
     sourceBuffer: GPUBuffer;
   }>;
-  /** Full per-source draw essentials, in draw order, for `pointRenderer.draw()`. */
+  /** Full per-source draw essentials, in draw order, for `galaxyPointRenderer.draw()`. */
   entries(): IterableIterator<CatalogDrawEntry>;
   destroy(): void;
 };
@@ -410,7 +410,7 @@ export function createCatalogStore(init: {
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
+      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = ratios[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
@@ -426,7 +426,7 @@ export function createCatalogStore(init: {
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
+      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = weights[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
@@ -449,8 +449,8 @@ export function createCatalogStore(init: {
         : Array.from(galaxyCatalogs.values());
     for (const entry of targets) {
       for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
-        entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
+        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = 0;
+        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = 0;
       }
       device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }

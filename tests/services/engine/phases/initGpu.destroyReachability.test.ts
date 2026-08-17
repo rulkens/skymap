@@ -5,7 +5,7 @@
  * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
  * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU resources
  * and expose `.destroy()`. They must live on `state.gpu.*` (alongside
- * `pointRenderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
+ * `galaxyPointRenderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
  * has a reachable reference to each — otherwise every HMR / StrictMode
  * remount leaks their GPU buffers. After `initGpu(state, deps)`, this test
  * checks each renderer field on `state.gpu.*` holds the constructed
@@ -124,8 +124,8 @@ vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () =>
   })),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pointRenderer', () => ({
-  createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointRenderer', () => ({
+  createGalaxyPointRenderer: vi.fn(() => makeStub('galaxyPointRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderTargets', () => ({
@@ -361,7 +361,7 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 function makeState(): EngineState {
   return {
     gpu: {
-      pointRenderer: null,
+      galaxyPointRenderer: null,
       pickRenderer: null,
       milkyWayPickRenderer: null,
       renderTargets: null,

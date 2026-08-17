@@ -226,7 +226,7 @@ function makeBridgeState(): {
     // Demand-loaded renderers report their assets committed so every guarded
     // row (survey / flow / filaments / volumeField) passes and its fade fires.
     gpu: {
-      pointRenderer: { hasCatalog: () => true },
+      galaxyPointRenderer: { hasCatalog: () => true },
       flowFieldRenderer: { fieldLoaded: () => true },
       filamentRenderer: { hasCloud: () => true },
       volumeFieldRenderer: { listIds: () => [] },

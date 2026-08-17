@@ -115,7 +115,7 @@ These are **mandatory pre-reading** for the task areas below, not optional backg
 - **"why is this slow?"** → **measure first** with `npm run perf` (read the `perf` skill); then see [docs/RENDERER.md](docs/RENDERER.md) for the CPU-side mental model (per-frame work scales with ~2.5M on-screen galaxies; hoist constants, gate with squared distances, avoid per-galaxy `Math.tan`).
 - **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree. Any file move/rename goes through `npm run move-files` (next entry), not `git mv` + hand-edited imports.
 - **"move/rename/relocate a file"** (incl. folder reorgs) → `npm run move-files -- <from> <to>`, or `-- --manifest <moves.json>` for a batch. ts-morph rewrites every relative import project-wide and drags the `tests/` mirror along; run `--dry` first. Hand-editing import paths after a move is always the wrong plan. Not covered: `.wesl` `package::` imports + string-literal paths — grep for the old path afterwards. `npm run refactor -- move <from> <to>` is the canonical spelling. Details in `.claude/skills/refactor/SKILL.md`.
-- **"why does the renderer use index Y?"** → check `pointRenderer.ts` SLOTS_PER_POINT and the matching attribute layout in the shader; they must agree byte-for-byte (see [docs/RENDERER.md](docs/RENDERER.md)).
+- **"why does the renderer use index Y?"** → check `galaxyPointRenderer.ts` SLOTS_PER_GALAXY_POINT and the matching attribute layout in the shader; they must agree byte-for-byte (see [docs/RENDERER.md](docs/RENDERER.md)).
 
 ## Memory
 

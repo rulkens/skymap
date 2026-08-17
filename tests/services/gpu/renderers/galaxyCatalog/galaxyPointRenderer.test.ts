@@ -1,5 +1,5 @@
 /**
- * PointRenderer — unit tests for the pipeline half of the point program.
+ * GalaxyPointRenderer — unit tests for the pipeline half of the point program.
  *
  * The renderer owns what exists once per pipeline: the shader modules, the
  * render pipeline (and its colour target), the per-frame `@group(0)` uniform
@@ -11,7 +11,7 @@
  *
  * ### Why a stub `GPUDevice`
  *
- * `createPointRenderer`'s constructor calls real WebGPU APIs
+ * `createGalaxyPointRenderer`'s constructor calls real WebGPU APIs
  * (`createShaderModule`, `createRenderPipeline`, `createBuffer`, …) that
  * only exist on a live device. The stub's `createBuffer` returns a sentinel
  * (no VRAM) and the pipeline factories return just enough shape for
@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createPointRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pointRenderer';
+import { createGalaxyPointRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointRenderer';
 // `BuildRunner` belongs to the store; the renderer only forwards it.
 import type { BuildRunner } from '../../../../../src/services/gpu/renderers/galaxyCatalog/catalogStore';
 import { buildPointInterleavedBuffer } from '../../../../../src/services/engine/bake/buildPointInterleavedBuffer';
@@ -29,7 +29,7 @@ import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatal
 import type { Mat4 } from 'wgpu-matrix';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
-// PointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
+// GalaxyPointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
 // tests still reason in terms of the numeric `Source` codes, so resolve the
 // id at each upload call site through the registry.
 function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
@@ -64,13 +64,13 @@ function makeCloud(count: number): GalaxyCatalog {
 
 /**
  * A skeletal stand-in for `GPUDevice` — just enough surface area for the
- * `PointRenderer` constructor (and the store it composes) to run without
+ * `GalaxyPointRenderer` constructor (and the store it composes) to run without
  * throwing. Returned `GPUBuffer`s carry a `destroy` method and a `size`
  * field, but no real GPU memory backs them.
  */
 function makeStubDevice(): GPUDevice {
   // Each helper mints a sentinel object that satisfies the structural type
-  // expected by `PointRenderer`. `as unknown as T` is the standard way to
+  // expected by `GalaxyPointRenderer`. `as unknown as T` is the standard way to
   // squeeze a stub through TypeScript's strict structural checks.
   const stubBuffer = (): GPUBuffer =>
     ({
@@ -79,7 +79,7 @@ function makeStubDevice(): GPUDevice {
     }) as unknown as GPUBuffer;
 
   return {
-    // PointRenderer routes shader-module creation through
+    // GalaxyPointRenderer routes shader-module creation through
     // `createShaderModuleWithDevLog`, which calls `getCompilationInfo()`
     // when `import.meta.env.DEV` is true (Vitest's default).  The stub
     // therefore must expose a Promise-returning `getCompilationInfo` —
@@ -106,7 +106,7 @@ function makeStubDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-// Stub BGLs — createPointRenderer requires fadeBgl + sourceBgl +
+// Stub BGLs — createGalaxyPointRenderer requires fadeBgl + sourceBgl +
 // focusBgl as canonical shared layouts. These stubs satisfy the branded
 // opaque-newtype shape structurally.
 function makeStubFadeBgl() {
@@ -125,7 +125,7 @@ const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('PointRenderer colour target', () => {
+describe('GalaxyPointRenderer colour target', () => {
   it('bakes the given targetFormat into the pipeline colour target', () => {
     const captured: GPURenderPipelineDescriptor[] = [];
     const device = {
@@ -135,7 +135,7 @@ describe('PointRenderer colour target', () => {
         return { getBindGroupLayout: () => ({}) } as unknown as GPURenderPipeline;
       },
     } as unknown as GPUDevice;
-    createPointRenderer({
+    createGalaxyPointRenderer({
       device,
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -149,13 +149,13 @@ describe('PointRenderer colour target', () => {
   });
 });
 
-// ─── PointRenderer.destroy() ─────────────────────────────────────────────────
+// ─── GalaxyPointRenderer.destroy() ─────────────────────────────────────────────────
 //
-// PointRenderer owns the app's largest GPU allocations (via the store: the
+// GalaxyPointRenderer owns the app's largest GPU allocations (via the store: the
 // per-source vertex buffers ~14 MB each plus per-source fade + source uniform
 // buffers; and directly: its own per-frame uniform buffer).  WebGPU buffers
 // don't release via JS GC alone — `GPUBuffer.destroy()` is mandatory.  These
-// tests assert that `PointRenderer.destroy()` fires destroy on every owned
+// tests assert that `GalaxyPointRenderer.destroy()` fires destroy on every owned
 // buffer across BOTH halves of the composition and clears the store's map, so
 // the engine.ts teardown chain plateaus browser GPU memory across HMR /
 // StrictMode remount cycles instead of climbing.
@@ -199,11 +199,11 @@ function makeDestroyTrackingDevice(createdBuffers: TrackedBuffer[]): GPUDevice {
   return device;
 }
 
-describe('PointRenderer.destroy', () => {
+describe('GalaxyPointRenderer.destroy', () => {
   it("releases the renderer's uniform buffer", () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer({
+    const renderer = createGalaxyPointRenderer({
       device,
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -225,7 +225,7 @@ describe('PointRenderer.destroy', () => {
   it('releases each per-source buffer + fade uniform', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer({
+    const renderer = createGalaxyPointRenderer({
       device,
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -258,7 +258,7 @@ describe('PointRenderer.destroy', () => {
   });
 
   it('clears the galaxyCatalogs map', async () => {
-    const renderer = createPointRenderer({
+    const renderer = createGalaxyPointRenderer({
       device: makeStubDevice(),
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -278,7 +278,7 @@ describe('PointRenderer.destroy', () => {
   it('is idempotent — safe to call twice without throwing', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer({
+    const renderer = createGalaxyPointRenderer({
       device,
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -298,9 +298,9 @@ describe('PointRenderer.destroy', () => {
   });
 });
 
-describe('PointRenderer.draw — PointDrawSettings shape', () => {
-  it('accepts a single PointDrawSettings record', async () => {
-    const renderer = createPointRenderer({
+describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
+  it('accepts a single GalaxyPointDrawSettings record', async () => {
+    const renderer = createGalaxyPointRenderer({
       device: makeStubDevice(),
       targetFormat: 'bgra8unorm',
       fadeBgl: makeStubFadeBgl(),
@@ -354,7 +354,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
     // contribution, so the per-source loop drops the draw call entirely when
     // the fadeOpacityOf callback resolves to exactly 0 (a fade reaches 0
     // continuously before the skip engages, so no pop is possible).
-    const renderer = createPointRenderer({
+    const renderer = createGalaxyPointRenderer({
       device: makeStubDevice(),
       targetFormat: 'bgra8unorm',
       fadeBgl: makeStubFadeBgl(),

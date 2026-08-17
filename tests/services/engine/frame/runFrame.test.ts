@@ -10,7 +10,7 @@
  *
  * Testing only these slices keeps the test cheap: we don't need a GPU device
  * or any of the rendering subsystems.  The frame body is structured so every
- * "do something" GPU path is gated on a state field (`state.gpu.pointRenderer`,
+ * "do something" GPU path is gated on a state field (`state.gpu.galaxyPointRenderer`,
  * …) — leaving them all null short-circuits the body before any of the GPU
  * work runs.  See the early-return at `if (!vp || !rendererRef || …) return`
  * inside runFrame for the bail-out that makes this possible.
@@ -156,7 +156,7 @@ function makeState(): EngineState {
       pointerDown: false,
     },
     gpu: {
-      pointRenderer: null,
+      galaxyPointRenderer: null,
       pickRenderer: null,
       renderTargets: null,
       filamentRenderer: null,
@@ -708,7 +708,7 @@ describe('runFrame — hover-pick removed from frame body', () => {
     // pickRenderer.pick itself. If the block is accidentally re-added,
     // this assertion catches it.
     //
-    // The fixture leaves state.gpu.pointRenderer=null so the frame bails before
+    // The fixture leaves state.gpu.galaxyPointRenderer=null so the frame bails before
     // the GPU-dispatch section — we only need to confirm pick is not called
     // during the camera + demand pre-pass (where the old block lived).
     const store = makeStore();

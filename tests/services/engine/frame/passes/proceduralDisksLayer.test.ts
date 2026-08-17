@@ -44,7 +44,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    pointRenderer: { draw: vi.fn() } as any,
+    galaxyPointRenderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     texturedDisks: {
       lastOutput: { quads: [], disks: [] },

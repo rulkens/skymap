@@ -223,7 +223,7 @@ export const FADE_LAYERS = [
     // .bin download doesn't burn the fade window invisibly. The slot commit's
     // per-item re-sync (syncVisibilityFadeItem) runs after upload, so the
     // guard is already true there.
-    guard: (state, id) => state.gpu.pointRenderer?.hasCatalog(id) ?? false,
+    guard: (state, id) => state.gpu.galaxyPointRenderer?.hasCatalog(id) ?? false,
     // No `post`: the draw/pick bitmasks are derived per-frame in `runFrame`
     // (and fresh at click time), so a toggle needs no eager mask recompute here.
   }),

@@ -1,7 +1,7 @@
 /**
- * PointRenderer — public surface of the point renderer.
+ * GalaxyPointRenderer — public surface of the galaxy-catalog point renderer.
  *
- * Produced by the closure factory `createPointRenderer`.
+ * Produced by the closure factory `createGalaxyPointRenderer`.
  * `loadedSources` returns a fresh generator on each call.
  * Consumers: engine, frame body, bias-correction subsystem.
  * The pick renderer no longer shares the uniform buffer — it owns its
@@ -13,12 +13,12 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
-import type { PointDrawSettings } from './PointDrawSettings';
+import type { GalaxyPointDrawSettings } from './GalaxyPointDrawSettings';
 import type { Vec2 } from '../math/Vec2';
 
-export type PointRenderer = {
+export type GalaxyPointRenderer = {
   /**
-   * Human-readable identifier (`'pointRenderer'`).  Part of the
+   * Human-readable identifier (`'galaxyPointRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
@@ -85,7 +85,7 @@ export type PointRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
-    settings: PointDrawSettings,
+    settings: GalaxyPointDrawSettings,
   ): void;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;

@@ -47,7 +47,7 @@ const LAST_SIM_DAYS = 2460000.0;
 function makeState(
   overrides: {
     cam?: OrbitCamera | null;
-    pointRenderer?: unknown;
+    galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     pickRenderer?: unknown;
     compositor?: unknown;
@@ -65,8 +65,8 @@ function makeState(
           position: new Float32Array(3),
         } as unknown as OrbitCamera)
       : overrides.cam;
-  const pointRenderer =
-    overrides.pointRenderer === undefined ? ({} as unknown) : overrides.pointRenderer;
+  const galaxyPointRenderer =
+    overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
     overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
   const pickRenderer =
@@ -85,7 +85,7 @@ function makeState(
 
   return {
     cam,
-    gpu: { pointRenderer, renderTargets, pickRenderer, compositor },
+    gpu: { galaxyPointRenderer, renderTargets, pickRenderer, compositor },
     subsystems: {
       texturedDisks,
       // Fully faded by default; pick mask is driven by `enabled` alone anyway.
@@ -109,7 +109,7 @@ describe('pickFrameContext', () => {
     // Any missing bootstrap-gate handle → `deriveFrameContext` reports
     // not-ready → `pickFrameContext` returns null (not a not-ready context).
     expect(pickFrameContext(makeState({ cam: null }), makeCanvas())).toBeNull();
-    expect(pickFrameContext(makeState({ pointRenderer: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ galaxyPointRenderer: null }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ pickRenderer: null }), makeCanvas())).toBeNull();
   });
 

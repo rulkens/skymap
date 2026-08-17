@@ -6,7 +6,7 @@ Read this before touching `tools/` parsers, catalog builders, or fetchers, or an
 
 ```
 data/raw/*  ─parsers─▶ ParsedRecord[] ─crossMatch─▶ GalaxyCatalog ─encode─▶ public/data/*.bin
-  ─fetch─▶ decodeGalaxyCatalog ─▶ GPU vertex/index buffers ─pointRenderer─▶ WGSL ─▶ canvas
+  ─fetch─▶ decodeGalaxyCatalog ─▶ GPU vertex/index buffers ─galaxyPointRenderer─▶ WGSL ─▶ canvas
 ```
 
 Binary format is in `src/data/galaxyCatalog/galaxyCatalogFormat.ts` — currently v9, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`; the `magic + version + count` header makes old bins fail loudly. (The PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)

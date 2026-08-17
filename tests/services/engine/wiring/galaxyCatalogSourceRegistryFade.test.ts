@@ -79,7 +79,7 @@ function makeFixture() {
   };
   const state = {
     gpu: {
-      pointRenderer: {
+      galaxyPointRenderer: {
         upload,
         loadedSources: () => [][Symbol.iterator](),
         totalCount: () => 0,

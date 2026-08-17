@@ -14,7 +14,7 @@
 
 import type { EngineState } from './state/EngineState';
 import type { OrbitCamera } from '../camera/OrbitCamera';
-import type { PointRenderer } from '../rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../rendering/GalaxyPointRenderer';
 import type { PickRenderer } from '../rendering/PickRenderer';
 import type { Compositor } from '../rendering/Compositor';
 import type { RenderTargets } from '../rendering/RenderTargets';
@@ -23,7 +23,7 @@ import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
 export type ReadyEngineState = EngineState & {
   cam: OrbitCamera;
   gpu: EngineState['gpu'] & {
-    pointRenderer: PointRenderer;
+    galaxyPointRenderer: GalaxyPointRenderer;
     pickRenderer: PickRenderer;
     /**
      * Non-null after bootstrap: minted in `initGpu` alongside the render

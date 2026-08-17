@@ -87,7 +87,7 @@ function makeState(over: {
   return {
     settings: { flow: { enabled: over.flowEnabled ?? false } },
     gpu: {
-      pointRenderer: null,
+      galaxyPointRenderer: null,
       pickRenderer: null,
       renderTargets: null,
     },
@@ -239,7 +239,7 @@ describe('shouldKeepTicking', () => {
     const isAwake = vi.fn<(nowMs: number) => boolean>(() => false);
     const state = {
       settings: { flow: { enabled: false } },
-      gpu: { pointRenderer: null, pickRenderer: null, renderTargets: null },
+      gpu: { galaxyPointRenderer: null, pickRenderer: null, renderTargets: null },
       cam: null,
       cameraRuntime: {
         prevActiveId: { current: 'resting' },

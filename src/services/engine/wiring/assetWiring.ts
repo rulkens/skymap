@@ -251,7 +251,7 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
  *
  *   - **Famous galaxies (20) outrank the star catalog (50).** The famous catalog
  *     is the only exemption from `surveyDeepZoom` in the codebase
- *     (`pointSpritesLayer.ts`, mirrored on the pick path), so famous objects stay
+ *     (`galaxyPointSpritesLayer.ts`, mirrored on the pick path), so famous objects stay
  *     visible at close-in scales where every bulk survey has faded out. It is the
  *     one galaxy asset that can draw at the boot rung.
  *   - **2MRS (40) outranks the star catalog (50)**, ordering data that is INVISIBLE

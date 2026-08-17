@@ -6,7 +6,7 @@ import type { SchechterTriple } from '../data/galaxyCatalog/SchechterTriple';
  * `draw()` can populate the global uniform without redoing the integral.
  */
 export type BuildPointInterleavedBufferResult = {
-  /** Interleaved per-vertex bytes — see `SLOTS_PER_POINT` in pointRenderer.ts. */
+  /** Interleaved per-vertex bytes — see `SLOTS_PER_GALAXY_POINT` in galaxyPointRenderer.ts. */
   interleaved: Float32Array;
   /**
    * Parallel per-row copy of the cloud's persisted `orientationIsFallback`

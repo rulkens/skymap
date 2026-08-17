@@ -292,7 +292,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // All GPU handles populate during the async IIFE below and
       // release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
       // for the null-until-init lifecycle rationale.
-      pointRenderer: null,
+      galaxyPointRenderer: null,
       pickRenderer: null,
       pickProgram: null,
       milkyWayPickRenderer: null,
@@ -948,8 +948,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
-    state.gpu.pointRenderer?.destroy();
-    state.gpu.pointRenderer = null;
+    state.gpu.galaxyPointRenderer?.destroy();
+    state.gpu.galaxyPointRenderer = null;
     // Shared cluster-focus uniform — released after the renderers that bind
     // its group (points/disks/pick already destroyed above).
     state.gpu.focusUniform?.destroy();

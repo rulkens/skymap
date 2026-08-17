@@ -36,7 +36,11 @@ import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsB
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
-import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
+import {
+  POINT_STRIDE,
+  GALAXY_POINT_VERTEX_ATTRIBUTES,
+  UNIFORM_BYTES,
+} from './galaxyPointVertexLayout';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
@@ -121,7 +125,7 @@ export function createPickRenderer(
         {
           arrayStride: POINT_STRIDE,
           stepMode: 'instance',
-          attributes: [...POINT_VERTEX_ATTRIBUTES],
+          attributes: [...GALAXY_POINT_VERTEX_ATTRIBUTES],
         },
       ],
     },

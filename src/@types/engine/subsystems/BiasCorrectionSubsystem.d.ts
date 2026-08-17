@@ -1,11 +1,11 @@
 import type { BiasMode } from '../../data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
-import type { PointRenderer } from '../../rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 
 export type BiasCorrectionSubsystem = {
   /** Wire the renderer once it exists (during `phases/initGpu`). */
-  attachRenderer(renderer: PointRenderer): void;
+  attachRenderer(renderer: GalaxyPointRenderer): void;
   /** Switch bias mode; fires bakes for every loaded source. */
   setMode(mode: BiasMode): Promise<void>;
   /** Called by the renderer when a source uploads or re-uploads. */

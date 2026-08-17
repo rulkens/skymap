@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPickRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer';
-import { UNIFORM_BYTES } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
+import { UNIFORM_BYTES } from '../../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointVertexLayout';
 import { Source } from '../../../../../src/data/sources';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
@@ -236,7 +236,7 @@ describe('createPickRenderer', () => {
   it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', () => {
     // ── Why this test exists ──────────────────────────────────────────
     //
-    // PointRenderer and PickRenderer use an explicit pipelineLayout with
+    // GalaxyPointRenderer and PickRenderer use an explicit pipelineLayout with
     // shared canonical BGLs for @group(1) (FadeUniforms) and @group(2)
     // (SourceUniforms). Both declare the SAME canonical layout, so bind
     // groups built against it are valid for either pipeline — WebGPU's
