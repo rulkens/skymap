@@ -243,17 +243,17 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
 
 /**
  * Zone-of-Avoidance look-knob starting values, tuned live via the
- * DebugPanel's tuning section — a dim warm-amber veil in the ballpark of
- * real interstellar-dust extinction color, not a calibrated result.
+ * DebugPanel's tuning section — a dim pale lavender-blue veil (blue-heavy
+ * linear RGB below), not a warm interstellar-dust extinction color.
  *
  * `radialFalloff` is a normalised [0, 1] fraction of the shell's radial span
  * (`outerRadiusMpc - innerRadiusMpc`, currently ~377 Mpc for the shell's
  * radii) — the renderer converts it to an absolute Mpc e-folding length
  * before it reaches the shader, which decays density from the inner rim
  * outward (`exp(-(r - inner) / radialFalloffMpc)`). 0.1 (~38 Mpc) collapses
- * the veil to a puff hugging the inner rim; 0.35 (~130 Mpc) keeps haze
- * visible across the catalog volume while still clearly fading toward the
- * outer radius.
+ * the veil to a puff hugging the inner rim; the shipped default, 0.46
+ * (~173 Mpc), keeps haze visible across the catalog volume while still
+ * clearly fading toward the outer radius.
  */
 export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
   intensity: 0.37,
