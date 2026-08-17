@@ -22,8 +22,8 @@ function makeState(gpu: Partial<EngineGpuHandles>): EngineState {
 // One cast at the array level, since `GpuHandleRow['construct']` indexes the
 // union and no single row literal can satisfy every member's signature.
 const rows = [
-  { key: 'renderer', construct: () => {} },
-  { key: 'pickRenderer', construct: () => {} },
+  { key: 'galaxyPointRenderer', construct: () => {} },
+  { key: 'galaxyPickRenderer', construct: () => {} },
   { key: 'compositor', construct: () => {} },
 ] as unknown as GpuHandleRow[];
 
@@ -31,10 +31,10 @@ describe('destroyGpuHandles', () => {
   it('destroys handles in reverse declared order', () => {
     const destroyed: string[] = [];
     const state = makeState({
-      renderer: { destroy: () => destroyed.push('renderer') } as unknown as EngineGpuHandles['renderer'],
-      pickRenderer: {
-        destroy: () => destroyed.push('pickRenderer'),
-      } as unknown as EngineGpuHandles['pickRenderer'],
+      galaxyPointRenderer: { destroy: () => destroyed.push('galaxyPointRenderer') } as unknown as EngineGpuHandles['galaxyPointRenderer'],
+      galaxyPickRenderer: {
+        destroy: () => destroyed.push('galaxyPickRenderer'),
+      } as unknown as EngineGpuHandles['galaxyPickRenderer'],
       compositor: {
         destroy: () => destroyed.push('compositor'),
       } as unknown as EngineGpuHandles['compositor'],
@@ -42,28 +42,28 @@ describe('destroyGpuHandles', () => {
 
     destroyGpuHandles(rows, state);
 
-    expect(destroyed).toEqual(['compositor', 'pickRenderer', 'renderer']);
+    expect(destroyed).toEqual(['compositor', 'galaxyPickRenderer', 'galaxyPointRenderer']);
   });
 
   it('nulls every destroyed field', () => {
     const state = makeState({
-      renderer: { destroy: () => {} } as unknown as EngineGpuHandles['renderer'],
-      pickRenderer: { destroy: () => {} } as unknown as EngineGpuHandles['pickRenderer'],
+      galaxyPointRenderer: { destroy: () => {} } as unknown as EngineGpuHandles['galaxyPointRenderer'],
+      galaxyPickRenderer: { destroy: () => {} } as unknown as EngineGpuHandles['galaxyPickRenderer'],
       compositor: { destroy: () => {} } as unknown as EngineGpuHandles['compositor'],
     });
 
     destroyGpuHandles(rows, state);
 
-    expect(state.gpu.renderer).toBeNull();
-    expect(state.gpu.pickRenderer).toBeNull();
+    expect(state.gpu.galaxyPointRenderer).toBeNull();
+    expect(state.gpu.galaxyPickRenderer).toBeNull();
     expect(state.gpu.compositor).toBeNull();
   });
 
   it('skips an already-null handle without throwing', () => {
     let compositorDestroyCalled = false;
     const state = makeState({
-      renderer: { destroy: () => {} } as unknown as EngineGpuHandles['renderer'],
-      pickRenderer: null,
+      galaxyPointRenderer: { destroy: () => {} } as unknown as EngineGpuHandles['galaxyPointRenderer'],
+      galaxyPickRenderer: null,
       compositor: {
         destroy: () => {
           compositorDestroyCalled = true;
@@ -77,6 +77,6 @@ describe('destroyGpuHandles', () => {
     // (it would throw); this just documents that unrelated handles were
     // unaffected by the skip.
     expect(compositorDestroyCalled).toBe(true);
-    expect(state.gpu.pickRenderer).toBeNull();
+    expect(state.gpu.galaxyPickRenderer).toBeNull();
   });
 });

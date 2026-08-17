@@ -28,17 +28,17 @@ describe('constructGpuHandles', () => {
     const state = makeState();
     const rows: GpuHandleRow[] = [
       {
-        key: 'renderer',
-        construct: (): NonNullable<EngineGpuHandles['renderer']> => {
-          order.push('renderer');
-          return {} as unknown as NonNullable<EngineGpuHandles['renderer']>;
+        key: 'galaxyPointRenderer',
+        construct: (): NonNullable<EngineGpuHandles['galaxyPointRenderer']> => {
+          order.push('galaxyPointRenderer');
+          return {} as unknown as NonNullable<EngineGpuHandles['galaxyPointRenderer']>;
         },
       },
       {
-        key: 'pickRenderer',
-        construct: (): NonNullable<EngineGpuHandles['pickRenderer']> => {
-          order.push('pickRenderer');
-          return {} as unknown as NonNullable<EngineGpuHandles['pickRenderer']>;
+        key: 'galaxyPickRenderer',
+        construct: (): NonNullable<EngineGpuHandles['galaxyPickRenderer']> => {
+          order.push('galaxyPickRenderer');
+          return {} as unknown as NonNullable<EngineGpuHandles['galaxyPickRenderer']>;
         },
       },
       {
@@ -52,7 +52,7 @@ describe('constructGpuHandles', () => {
 
     constructGpuHandles(rows, state, deps);
 
-    expect(order).toEqual(['renderer', 'pickRenderer', 'compositor']);
+    expect(order).toEqual(['galaxyPointRenderer', 'galaxyPickRenderer', 'compositor']);
   });
 
   it("lets a later row read an earlier row's constructed value off state.gpu", () => {
