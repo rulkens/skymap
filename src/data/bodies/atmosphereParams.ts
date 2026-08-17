@@ -1,92 +1,12 @@
 /**
- * atmosphereParams — the authored table of atmosphere-scattering constants the
- * shell renderer integrates (spec §8.1). Data, not code: one row per body with a
- * visible atmosphere — Earth, the six other planets that show a scattering limb,
- * and Pluto. A body absent from the table draws no atmosphere shell (Mercury, the
- * Moon and the other moons) — the same data-gate the ring table uses
- * (`sceneRings.ts`).
- *
- * The RENDERER is body-agnostic — it bakes whichever `AtmosphereParams` row it is
- * handed, so a new row needs no renderer change — and the wiring around it now
- * iterates the table too: `atmosphereDrawList` derives which seeded bodies draw a
- * shell this frame (each paired with its row), and the per-body renderer +
- * `encodeAtmosphereSkyView` bake walk that list. So adding a row here is both
- * necessary AND sufficient to turn a body's atmosphere on.
- *
- * ### Earth = standard Bruneton/Hillaire constants
- *
- * The Earth row is the canonical parameter set from Bruneton & Neyret's
- * "Precomputed Atmospheric Scattering" (2008), as refined in Hillaire's 2020
- * "A Scalable and Production Ready Sky and Atmosphere Rendering Technique":
- * Rayleigh (5.8, 13.6, 33.1)e-3 1/km with an 8 km scale height, Mie
- * 3.9e-3 1/km scattering + 4.4e-3 1/km absorption with a 1.2 km scale height and
- * a 0.8 Henyey-Greenstein asymmetry, and an ozone tent centred at 25 km. These
- * are *tunable data* — expected to be nudged for look, so they carry no test
- * (a numeric restatement would fail on every legitimate tweak; see
- * conventions/testing.md). The other rows are physically-motivated but likewise
- * eye-tuned starting points (spec §7) and carry no numeric test either. Because
- * they ARE eye-tunable, the Pluto row tags each value [M]easured / [D]erived /
- * [L]ook — a tuner needs to know which numbers a tweak would be falsifying.
- *
- * ### Concentricity with the drawn sphere
- *
- * Each row's `planetRadiusKm` MUST equal the radius of the sphere that body draws,
- * so the scattering proxy is concentric with the rendered ground — a mismatch
- * would float the limb off the terminator. Rather than repeat a radius literal,
- * every row derives it from its seed: Earth from `SCENE_EARTH.radiusKm`, the other
- * planets from their `SCENE_PLANETS` row via the `seededPlanet` lookup below.
- * `groundAlbedo` comes from that same seed (each body's authored plausible mean
- * surface colour). If a radius ever moves, its shell tracks it by construction.
- *
- * For the gas giants there is no solid surface: the drawn texture sphere IS the
- * cloud-top ground (`planetRadiusKm` is the cloud-top radius they already draw),
- * and the shell is a thin rim above it.
- *
- * ### No reader accessor, but a seed lookup
- *
- * Readers index this record directly (`ATMOSPHERE_PARAMS['earth']`), a bare read
- * like `SCENE_RINGS.find`; a `getAtmosphereParams` accessor would be pure
- * ergonomics over one reader, so it stays inlined until a second reader appears.
- * The `seededPlanet` helper below is a different thing — a construction-time
- * resolver of each planet's seed (radius + albedo) from `SCENE_PLANETS`, not a
- * reader over this table.
- *
- * ### Physics vs look — the two radiometric dials
- *
- * Most of a row is the PHYSICAL scattering constants the three LUTs integrate —
- * Rayleigh/Mie/ozone coefficients, scale heights, radii. Body physics. The two
- * trailing fields (`sunIrradiance`, `exposure`) are instead the per-frame
- * RADIOMETRIC dials the shell draw packs into `AtmosphereUniforms` every frame:
- * the sun brightness fed into the in-scatter integral and the exposure scale on
- * its HDR output. They are look knobs, not physics — the same split
- * `earthSurfaceParams` / `pbr.wesl` draws between artistic dials and shading-model
- * floors — but they ride this row so a new atmosphere body carries its own look
- * in one place rather than in a parallel table.
- *
- * Both values are starting points calibrated by eye against the lit body via HMR
- * (the spec §12 visual pass), not by a unit test — a physically-based sky has no
- * closed-form "correct" brightness, and a numeric restatement would fail on every
- * legitimate look tweak (see conventions/testing.md). Hence no test on them.
- *
- * - **`sunIrradiance`** scales the solar radiance driving the in-scatter integral.
- *   It is carried through `packAtmosphereUniforms` per the uniform contract but is
- *   currently UNUSED by the shell fragment (the sky-view LUT bakes its own
- *   irradiance normalisation); it is packed so the CPU write never drifts from the
- *   WGSL struct, and it becomes live if the fragment ever routes it. `1.0` is the
- *   neutral starting point — do NOT invent a fragment routing for it here; that is
- *   a shader change, not a data one.
- *
- * - **`exposure`** scales the shell's in-scattered radiance as it lands in the HDR
- *   target, before the shared tone-map compresses it with the rest of the scene.
- *   Earth's `2.35` is the user-calibrated realistic strength — eye-tuned against the
- *   Meteosat full-disc reference so the blue limb and the reddened terminator arc
- *   read at a plausible brightness against the tonemapped Earth rather than washing
- *   to grey. For Earth alone this value is the SEED DEFAULT for
- *   `settings.earth.atmosphereExposure`, tuned live via the Settings → Display →
- *   Earth slider — the same relationship `DEFAULT_EXPOSURE` in `data/defaults.ts`
- *   has to `tonemap.exposure`. The shell draw reads the settings value each frame
- *   for Earth (so a drag still overrides the limb without a reload) and this row's
- *   `exposure` for every other body.
+ * atmosphereParams — authored scattering constants, one row per body with a visible
+ * atmosphere; a body absent from the table draws no shell, and adding a row is necessary AND
+ * sufficient (renderer and `atmosphereDrawList` are body-agnostic). Earth is the
+ * Bruneton/Hillaire reference set; the rest are physically motivated but eye-tuned, hence
+ * untested — so Pluto's row tags each value [M]easured / [D]erived / [L]ook. `planetRadiusKm`
+ * and `groundAlbedo` derive from the body's seed, keeping the shell concentric with the sphere
+ * actually drawn. `sunIrradiance` is packed to match the WGSL struct but UNUSED by the
+ * fragment; Earth's `exposure` seeds `settings.earth.atmosphereExposure` and is read there.
  */
 
 import { SCENE_EARTH } from './sceneEarth';
@@ -94,11 +14,8 @@ import { SCENE_PLANETS } from './scenePlanets';
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 
-// Resolve a seeded planet's physical seed (radius + mean-colour albedo) by id, so
-// each row draws `planetRadiusKm` and `groundAlbedo` from the ONE place they are
-// authored (`SCENE_PLANETS`) rather than restating them — the same single-source
-// discipline the Earth row's `SCENE_EARTH.radiusKm` follows. A typo'd id throws at
-// module load; the row would otherwise silently mis-size or mis-colour its shell.
+// Throws at module load on a typo'd id: an unresolved seed would otherwise silently
+// mis-size or mis-colour the shell rather than fail.
 const seededById = new Map(SCENE_PLANETS.map((body) => [body.id, body]));
 const seededPlanet = (id: string): PlanetBody => {
   const body = seededById.get(id);
@@ -126,9 +43,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 2.35,
   },
   venus: {
-    // Mie-dominated: the thick CO2 + H2SO4 haze gives a large Mie scatter at a low
-    // scale height (dense near the cloud tops), under a warm/whitish-yellow Rayleigh
-    // tint. Tallest visible band of the six (+100 km); ozone has no analogue here.
+    // Mie-dominated: thick CO2 + H2SO4 haze, dense near the cloud tops, under a warm
+    // Rayleigh tint. Ozone has no analogue here, hence the zeroed tent.
     planetRadiusKm: seededPlanet('venus').radiusKm,
     atmosphereTopKm: seededPlanet('venus').radiusKm + 100,
     rayleighScatter: [12e-3, 10e-3, 7e-3],
@@ -147,9 +63,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 3.0,
   },
   mars: {
-    // Butterscotch sky is dust-driven, not molecular: encode it through a red-heavy,
-    // blue-suppressed Rayleigh vec3 (inverted from Earth's blue-heavy tint) plus a
-    // dusty Mie term — the tint + Mie ARE the dust, no separate dust channel.
+    // Butterscotch sky is dust, not molecules: the red-heavy Rayleigh vec3 (inverted from
+    // Earth's) plus the Mie term ARE the dust — there is no separate dust channel.
     planetRadiusKm: seededPlanet('mars').radiusKm,
     atmosphereTopKm: seededPlanet('mars').radiusKm + 60,
     rayleighScatter: [8e-3, 5e-3, 3e-3],
@@ -168,9 +83,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 1.5,
   },
   jupiter: {
-    // Cloud-tops-as-ground: planetRadiusKm is the cloud-top radius already drawn, so
-    // the shell is a thin, near-neutral rim above it. Its dominant close-approach
-    // visual is the limb-darkening term (spec §6), not this faint scattering edge.
+    // Cloud-tops-as-ground: no solid surface, so `planetRadiusKm` is the cloud-top radius
+    // already drawn and the shell is a thin rim. Limb darkening dominates the look, not this.
     planetRadiusKm: seededPlanet('jupiter').radiusKm,
     atmosphereTopKm: seededPlanet('jupiter').radiusKm + 150,
     rayleighScatter: [4e-3, 4e-3, 5e-3],
@@ -189,9 +103,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 1.3,
   },
   saturn: {
-    // Cloud-tops-as-ground like Jupiter, with a pale-gold tint and a taller, thinner
-    // rim (+300 km, tall scale height). Limb darkening (spec §6) dominates the look;
-    // the scattering shell is a faint edge glow.
+    // Cloud-tops-as-ground like Jupiter; pale gold, with a taller and thinner rim.
     planetRadiusKm: seededPlanet('saturn').radiusKm,
     atmosphereTopKm: seededPlanet('saturn').radiusKm + 300,
     rayleighScatter: [4e-3, 4e-3, 4e-3],
@@ -210,9 +122,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 1.3,
   },
   uranus: {
-    // Methane-blue Rayleigh: blue/cyan-heavy, red suppressed, mimicking methane's
-    // red absorption — the cyan-blue limb the ice giant shows. Thin rim above the
-    // cloud-top ground.
+    // Methane-blue Rayleigh: red suppressed to stand in for methane's red absorption.
     planetRadiusKm: seededPlanet('uranus').radiusKm,
     atmosphereTopKm: seededPlanet('uranus').radiusKm + 150,
     rayleighScatter: [4e-3, 10e-3, 20e-3],
@@ -231,8 +141,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 1.8,
   },
   neptune: {
-    // Methane-blue Rayleigh like Uranus but deeper blue (red suppressed harder),
-    // for Neptune's saturated cyan-blue limb. Thin rim above the cloud-top ground.
+    // Methane-blue like Uranus, red suppressed harder for the more saturated limb.
     planetRadiusKm: seededPlanet('neptune').radiusKm,
     atmosphereTopKm: seededPlanet('neptune').radiusKm + 120,
     rayleighScatter: [4e-3, 9e-3, 22e-3],
