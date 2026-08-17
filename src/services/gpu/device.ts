@@ -26,6 +26,14 @@
 
 import type { GpuContext } from '../../@types/rendering/GpuContext';
 
+/** Extra device-request hints beyond the `timestamp-query` mirror — see Step 2 below. */
+export type InitGpuOptions = {
+  /** Requested in addition to timestamp-query; silently dropped if the adapter lacks one. */
+  readonly requiredFeatures?: readonly GPUFeatureName[];
+  /** Clamped per-key to the adapter's advertised maximum. */
+  readonly requiredLimits?: Readonly<Record<string, number>>;
+};
+
 // ─── Initialisation ───────────────────────────────────────────────────────────
 
 /**
@@ -44,10 +52,14 @@ import type { GpuContext } from '../../@types/rendering/GpuContext';
  * @param canvas  The `<canvas>` element to render into. It must be in the DOM
  *                before this function is called so that `getContext('webgpu')`
  *                succeeds.
+ * @param options Drop-and-clamp hints merged into the device request — see Step 2.
  * @throws If WebGPU is unavailable, no adapter is found, or the canvas context
  *         cannot be created. The caller should display a user-facing error.
  */
-export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
+export async function initGpu(
+  canvas: HTMLCanvasElement,
+  options?: InitGpuOptions,
+): Promise<GpuContext> {
   // `navigator.gpu` is undefined in browsers that don't implement WebGPU
   // (Firefox stable, some mobile browsers as of 2024). Checking it first gives
   // a clear error rather than a confusing `TypeError: Cannot read properties
@@ -66,24 +78,30 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('No WebGPU adapter available.');
 
-  // Step 2 — Request a device, opting into `timestamp-query` when the
-  // adapter advertises it.  WebGPU treats features as opt-in: if we
-  // ask for a feature the adapter doesn't have, `requestDevice`
-  // throws; if we don't ask, the feature is unavailable on the
-  // device even when the adapter supports it.  So we mirror the
-  // adapter's advertised set for the one optional feature we care
-  // about and let the device's own `features` map drive every
-  // downstream service.
-  //
-  // The `gpuTimingService` constructor reads `device.features.has(
-  // 'timestamp-query')` to decide between active mode and no-op
-  // mode — so omitting the feature here propagates cleanly.
+  // Step 2 — Request a device. `requestDevice` throws on a feature the
+  // adapter lacks or a limit above its max, so we drop-and-clamp against
+  // `adapter.features`/`adapter.limits` instead of forwarding the caller's
+  // ask verbatim; truth afterwards lives on `device.features`/`device.limits`.
+  // `timestamp-query` is mirrored unconditionally — `gpuTimingService` reads
+  // it to pick active vs. no-op mode.
   // See: https://www.w3.org/TR/webgpu/#dom-gpuadapter-requestdevice
-  const requiredFeatures: GPUFeatureName[] = [];
-  if (adapter.features.has('timestamp-query')) {
-    requiredFeatures.push('timestamp-query');
+  const requiredFeatures = new Set<GPUFeatureName>();
+  if (adapter.features.has('timestamp-query')) requiredFeatures.add('timestamp-query');
+  for (const feature of options?.requiredFeatures ?? []) {
+    if (adapter.features.has(feature)) requiredFeatures.add(feature);
   }
-  const device = await adapter.requestDevice({ requiredFeatures });
+
+  const adapterLimits = adapter.limits as unknown as Record<string, number | undefined>;
+  const requiredLimits: Record<string, number> = {};
+  for (const [key, value] of Object.entries(options?.requiredLimits ?? {})) {
+    const max = adapterLimits[key];
+    requiredLimits[key] = max === undefined ? value : Math.min(value, max);
+  }
+
+  const device = await adapter.requestDevice({
+    requiredFeatures: [...requiredFeatures],
+    requiredLimits,
+  });
 
   // Step 3 — Get the canvas context.
   // `getContext('webgpu')` returns null if the canvas already has a different
