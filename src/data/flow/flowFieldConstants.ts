@@ -34,10 +34,9 @@ export const FADE = 1.4; // advect alpha fade-in/out window, seconds of age
 // `flowFrameDeltaSec`) — guards a backgrounded-then-resumed tab against a
 // giant single-step advance. Matches the flow workbench's own MAX_DT.
 export const MAX_FRAME_DELTA_SEC = 0.05;
-// flowSpeed -> advect head distance per SECOND (motion speed). 0.72 is the old
-// per-FRAME HEAD_STEP_SCALE (0.012) at the 60fps it was tuned against, so the
-// look at 60fps is unchanged; below/above 60fps the head now covers the same
-// grid distance per real second instead of per rendered frame.
+// flowSpeed -> advect head distance per SECOND (motion speed). The look was
+// dialled at 60fps, where 0.72/s is 0.012 per frame; the head covers that grid
+// distance per real second whatever the frame rate delivers.
 export const HEAD_SPEED_SCALE = 0.72;
 // Floor on the advect trail spacing (prm.trailStep). A spacing of exactly 0
 // makes the integrator's per-iteration step collapse to 0 (or go negative once
