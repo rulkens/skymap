@@ -61,7 +61,11 @@
  *
  * - Planets: JPL SSD "Keplerian Elements for Approximate Positions of the Major
  *   Planets", Table 1 (valid 1800–2050 AD, mean ecliptic and equinox of J2000).
- *   https://ssd.jpl.nasa.gov/planets/approx_pos.html
+ *   https://ssd.jpl.nasa.gov/planets/approx_pos.html — but that web edition
+ *   dropped Pluto (and the PDF it replaced now redirects to it), so Pluto's row
+ *   is read from the same table as reprinted in the Explanatory Supplement to
+ *   the Astronomical Almanac, 3rd ed. (2013), §8.10 Table 8.10.2:
+ *   https://www.voyagepourproxima.fr/JPL-DE_LE405-Orbital%20Ephemerides%20of%20the%20Sun,%20Moon,%20and%20Planets.pdf
  * - Moon + the 13 planetary satellites: JPL SSD "Planetary Satellite Mean
  *   Orbital Parameters" (epoch 2000-01-01.5 TDB; the Moon in the ecliptic frame,
  *   the planets' moons each in their local Laplace plane). Each row transcribes
@@ -324,34 +328,30 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: NEPTUNE_BLUE,
   },
   {
-    // Pluto, heliocentric. JPL Table 2a (3000 BC–3000 AD — the only table
-    // still carrying Pluto; the current web page's Table 1 dropped it in
-    // 2006). L = 238.96535011°, ϖ = 224.09702598°, Ω = 110.30167986°. Table 2b
-    // adds a mean-anomaly correction for Jupiter through Pluto (M += bT² +
-    // c·cos(fT) + s·sin(fT); Pluto: b = −0.01262724, c/s/f blank) for
-    // multi-millennial accuracy — dropped here: `propagateElements` only
-    // implements the linear element(T) = element₀ + rate·T map every other row
-    // uses, and the correction is negligible within a few centuries of J2000.
+    // Pluto, heliocentric. Table 1, like every planet row above — see the
+    // header for where Pluto's copy of that table is read from, since JPL's web
+    // edition no longer carries it. L = 238.92903833°, ϖ = 224.06891629°,
+    // Ω = 110.30393684°.
     id: 'pluto',
     focusId: 'sun',
-    semiMajorMpc: 39.48686035 * SCALE_UNITS.AU_TO_MPC,
-    eccentricity: 0.24885238,
-    inclinationRad: degToRad(17.1410426),
-    ascendingNodeRad: degToRad(110.30167986),
-    // ω = ϖ − Ω = 224.09702598 − 110.30167986
-    argPeriapsisRad: degToRad(224.09702598 - 110.30167986),
-    // M = L − ϖ = 238.96535011 − 224.09702598
-    meanAnomalyRad: degToRad(238.96535011 - 224.09702598),
-    // Rates (JPL, per Julian century): dL/dt = 145.18042903, dϖ/dt = −0.00968827,
-    // dΩ/dt = −0.00809981, da/dt = 0.00449751 au, de/dt = 0.00006016, dI/dt = 0.00000501.
-    semiMajorRateMpcPerCty: 0.00449751 * SCALE_UNITS.AU_TO_MPC,
-    eccentricityRatePerCty: 0.00006016,
-    inclinationRateRadPerCty: degToRad(0.00000501),
-    ascendingNodeRateRadPerCty: degToRad(-0.00809981),
-    // dω/dt = dϖ/dt − dΩ/dt = −0.00968827 − (−0.00809981)
-    argPeriapsisRateRadPerCty: degToRad(-0.00968827 - -0.00809981),
-    // dM/dt = dL/dt − dϖ/dt = 145.18042903 − (−0.00968827)
-    meanAnomalyRateRadPerCty: degToRad(145.18042903 - -0.00968827),
+    semiMajorMpc: 39.48211675 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.2488273,
+    inclinationRad: degToRad(17.14001206),
+    ascendingNodeRad: degToRad(110.30393684),
+    // ω = ϖ − Ω = 224.06891629 − 110.30393684
+    argPeriapsisRad: degToRad(224.06891629 - 110.30393684),
+    // M = L − ϖ = 238.92903833 − 224.06891629
+    meanAnomalyRad: degToRad(238.92903833 - 224.06891629),
+    // Rates (JPL, per Julian century): dL/dt = 145.20780515, dϖ/dt = −0.04062942,
+    // dΩ/dt = −0.01183482, da/dt = −0.00031596 au, de/dt = 0.00005170, dI/dt = 0.00004818.
+    semiMajorRateMpcPerCty: -0.00031596 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: 0.0000517,
+    inclinationRateRadPerCty: degToRad(0.00004818),
+    ascendingNodeRateRadPerCty: degToRad(-0.01183482),
+    // dω/dt = dϖ/dt − dΩ/dt = −0.04062942 − (−0.01183482)
+    argPeriapsisRateRadPerCty: degToRad(-0.04062942 - -0.01183482),
+    // dM/dt = dL/dt − dϖ/dt = 145.20780515 − (−0.04062942)
+    meanAnomalyRateRadPerCty: degToRad(145.20780515 - -0.04062942),
     color: PLUTO_TAN,
   },
   {
