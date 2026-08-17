@@ -18,8 +18,8 @@ export const ZONE_OF_AVOIDANCE_SLIDER_FIELDS: readonly ZoneOfAvoidanceSliderFiel
     key: 'intensity',
     label: 'intensity',
     min: 0,
-    // Additive; the 4x ceiling over the 0.5 default reaches "band reads as
-    // opaque" without the slider needing a second pass to get there.
+    // Additive; ~5.4x the 0.37 default reaches "band reads as opaque"
+    // without the slider needing a second pass to get there.
     max: 2,
     step: 0.01,
     format: (v) => v.toFixed(2),

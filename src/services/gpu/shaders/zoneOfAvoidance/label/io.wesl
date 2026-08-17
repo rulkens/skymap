@@ -1,5 +1,5 @@
-// zoneOfAvoidance/label/io.wesl — structs for the curved on-band "ZONE OF
-// AVOIDANCE" lettering. VsIn mirrors labels/io.wesl's shape, but
+// zoneOfAvoidance/label/io.wesl — structs for the curved on-band "Zone of
+// Avoidance" lettering. VsIn mirrors labels/io.wesl's shape, but
 // localOffset/localSize carry world-Mpc units (baked at construction, see
 // zoneOfAvoidanceRenderer.ts) instead of atlas px, and galacticLonRad
 // replaces the labelIndex indirection — each glyph is its own anchor.
