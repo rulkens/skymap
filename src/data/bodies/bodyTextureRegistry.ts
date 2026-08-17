@@ -125,11 +125,12 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   },
   // Pluto / Charon: medium is a LOOK ceiling, not a source ceiling — sources
   // measure 24888px/12693px, well past 8k; the far-side coverage gap (only the
-  // encounter hemisphere is well-resolved) is a fidelity caveat, not why the
-  // tier is capped. Both sources measured single-channel (`sharp(...).metadata()`:
-  // channels=1, space=b-w); `grayscaleTint` is a reasoned calibration against the
-  // Europa/Callisto idiom, not literal RGB extraction — see task-8a-tint-report.md
-  // for the derivation and citations.
+  // encounter hemisphere is well-resolved) is a fidelity caveat, not the tier
+  // driver. Both sources measured single-channel (`sharp(...).metadata()`:
+  // channels=1, space=b-w); `grayscaleTint` is a reasoned calibration against
+  // the Europa/Callisto idiom, not literal RGB extraction — Pluto reads
+  // butterscotch-tan overall (Olkin+17, AJ 154 258), Charon is near-neutral but
+  // for a small reddish polar cap (Grundy+16, Science 351 aad9189).
   pluto: {
     bodyId: 'pluto',
     kinds: { surface: 'medium' },
