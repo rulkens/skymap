@@ -72,7 +72,7 @@ import type { BodyTextureSpec } from '../../@types/scene/BodyTextureSpec';
  */
 export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSpec>> = {
   // Solar System Scope full-colour maps for the eight planets + the Moon; NASA
-  // Blue Marble for Earth; USGS single-channel maps for the four Galilean moons.
+  // Blue Marble for Earth; USGS maps for the four Galilean moons, Pluto, and Charon.
   mercury: { bodyId: 'mercury', kinds: { surface: 'large' }, provenance: 'sss' },
   // Venus tops out at medium — the source is unresolved cloud, no 8 k detail exists.
   venus: { bodyId: 'venus', kinds: { surface: 'medium' }, provenance: 'sss' },
