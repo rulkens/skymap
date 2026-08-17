@@ -6,7 +6,7 @@
  * ### Why a source-string assertion
  *
  * The click flow is hard to unit-test in isolation: it requires a real
- * pickRenderer (GPU device), real orbit controls, and a real mouse
+ * galaxyPickRenderer (GPU device), real orbit controls, and a real mouse
  * device.  This is a crude source-string guard — it regresses loudly if
  * a future refactor drops the structure-click wiring or stops reading the
  * authoritative selection ref for the dblclick focus. End-to-end

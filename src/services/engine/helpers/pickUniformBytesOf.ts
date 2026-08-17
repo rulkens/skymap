@@ -9,8 +9,8 @@
  *
  * This helper avoids both by rebuilding the buffer from plain values — a
  * `SlabView` (camera), the ready frame `ctx` (`drawPxPerRad`), and `state.settings`
- * (the appearance knobs) — and DELEGATING to `packPointUniforms`. Delegating,
- * rather than re-implementing the byte writes, is the whole point: `packPointUniforms`
+ * (the appearance knobs) — and DELEGATING to `packGalaxyPointUniforms`. Delegating,
+ * rather than re-implementing the byte writes, is the whole point: `packGalaxyPointUniforms`
  * stays the single byte-layout truth that the visual pass also calls, so the pick
  * bytes cannot drift from the visual bytes as fields are added or reordered — the
  * drift is structurally impossible, not merely tested-against.
@@ -30,7 +30,7 @@
  * @module
  */
 
-import { packPointUniforms } from '../../../utils/gpu/packPointUniforms';
+import { packGalaxyPointUniforms } from '../../../utils/gpu/packGalaxyPointUniforms';
 import { SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { PICK_PADDING_PX } from '../../../data/pickPaddingPx';
 import {
@@ -56,7 +56,7 @@ export function pickUniformBytesOf(
   const g = state.settings.galaxyCatalogs;
   const bias = state.settings.bias;
 
-  return packPointUniforms(
+  return packGalaxyPointUniforms(
     view.vp,
     view.viewportPx,
     {

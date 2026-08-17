@@ -16,7 +16,7 @@
  * pass simply isn't measured and still draws.
  *
  * The strings match the `name` fields on `ContentLayer` objects (e.g.
- * `pointSpritesLayer.name === 'point-sprites'`).
+ * `galaxyPointSpritesLayer.name === 'point-sprites'`).
  */
 
 export type TimingSlotName = string;

@@ -10,7 +10,7 @@
  *
  * Testing only these slices keeps the test cheap: we don't need a GPU device
  * or any of the rendering subsystems.  The frame body is structured so every
- * "do something" GPU path is gated on a state field (`state.gpu.renderer`,
+ * "do something" GPU path is gated on a state field (`state.gpu.galaxyPointRenderer`,
  * …) — leaving them all null short-circuits the body before any of the GPU
  * work runs.  See the early-return at `if (!vp || !rendererRef || …) return`
  * inside runFrame for the bail-out that makes this possible.
@@ -156,8 +156,8 @@ function makeState(): EngineState {
       pointerDown: false,
     },
     gpu: {
-      renderer: null,
-      pickRenderer: null,
+      galaxyPointRenderer: null,
+      galaxyPickRenderer: null,
       renderTargets: null,
       filamentRenderer: null,
     },
@@ -700,22 +700,22 @@ describe('runFrame — sim clock (Task 8)', () => {
 });
 
 describe('runFrame — hover-pick removed from frame body', () => {
-  it('does not call pickRenderer.pick inside the frame body', () => {
+  it('does not call galaxyPickRenderer.pick inside the frame body', () => {
     // The hover-pick block was removed from runFrame. Hover picking is now
     // fully pointer-driven via hoverPickDriver (wired in wireInput.ts).
-    // This test pins that invariant: even with a non-null pickRenderer and a
+    // This test pins that invariant: even with a non-null galaxyPickRenderer and a
     // non-null latestMouseCss-equivalent, runFrame must NEVER call
-    // pickRenderer.pick itself. If the block is accidentally re-added,
+    // galaxyPickRenderer.pick itself. If the block is accidentally re-added,
     // this assertion catches it.
     //
-    // The fixture leaves state.gpu.renderer=null so the frame bails before
+    // The fixture leaves state.gpu.galaxyPointRenderer=null so the frame bails before
     // the GPU-dispatch section — we only need to confirm pick is not called
     // during the camera + demand pre-pass (where the old block lived).
     const store = makeStore();
     const state = makeState();
     const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    // Seed a non-null pickRenderer so the old guard would have let through.
-    (state.gpu as any).pickRenderer = {
+    // Seed a non-null galaxyPickRenderer so the old guard would have let through.
+    (state.gpu as any).galaxyPickRenderer = {
       pick: pickSpy,
       renderForDebug: vi.fn<() => null>(),
       destroy: vi.fn<() => void>(),
@@ -725,7 +725,7 @@ describe('runFrame — hover-pick removed from frame body', () => {
 
     runFrame(state, deps, 1000);
 
-    // The frame body must never call pickRenderer.pick — hover picks are
+    // The frame body must never call galaxyPickRenderer.pick — hover picks are
     // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
   });

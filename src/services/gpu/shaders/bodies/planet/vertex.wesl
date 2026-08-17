@@ -21,7 +21,7 @@
 // One renderer draws every seeded planet in a SINGLE instanced 'drawIndexed'.
 // The per-body MVP + albedo arrive as instance-step vertex attributes (one
 // record per '@builtin(instance_index)'), not a uniform mutated between draws.
-// That is the house idiom ('pointRenderer'): one 'writeBuffer' + one draw
+// That is the house idiom ('galaxyPointRenderer'): one 'writeBuffer' + one draw
 // beats N per-body binds, and — decisively — it dodges the writeBuffer-vs-
 // submit race by construction, since every instance reads its own baked
 // record rather than a uniform that the last write would have clobbered for

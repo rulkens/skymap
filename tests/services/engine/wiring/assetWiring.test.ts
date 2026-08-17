@@ -115,8 +115,8 @@ describe('ASSET_WIRING membership', () => {
   });
 
   it('marks the point-source rows as externally built', () => {
-    // Point slots are minted in initGpu, not by the registry; rows exist for
-    // demand+req only and must carry the skip marker.
+    // Point slots are minted directly in wireSlots, not by the registry; rows
+    // exist for demand+req only and must carry the skip marker.
     const pointKeys: SourceType[] = [
       Source.SDSS,
       Source.TwoMRS,
@@ -139,7 +139,7 @@ describe('ASSET_WIRING membership', () => {
 
   it('mints one externally-built row per body-texture family key', () => {
     // Every (body, kind) entry + the ring is an externally-built row (minted in
-    // initGpu beside its renderer, like the point slots), keyed by its composite
+    // wireSlots, like the point slots), keyed by its composite
     // slot key, with a tier-clamped BodyTextureReq — not a registry-built sidecar.
     for (const entry of ALL_BODY_TEXTURE_KEYS) {
       const row = rowFor(bodyTextureSlotKey(entry.bodyId, entry.kind));
@@ -155,7 +155,7 @@ describe('ASSET_WIRING membership', () => {
     // factory anyway, this surfaces the wiring bug loudly rather than minting
     // a duplicate point slot.
     const sdss = rowFor(Source.SDSS);
-    expect(() => sdss.factory({} as never)).toThrow(/initGpu/);
+    expect(() => sdss.factory({} as never)).toThrow(/externally-built rows/);
   });
 });
 

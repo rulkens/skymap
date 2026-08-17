@@ -1,14 +1,14 @@
 /**
- * PointVertexLayout — the byte-for-byte contract shared by three homes.
+ * GalaxyPointVertexLayout — the byte-for-byte contract shared by three homes.
  *
  * The per-instance vertex record and the pick uniform buffer form a
- * three-way contract: `pointRenderer`'s vertex-buffer packing, the
- * `pickRenderer` pipeline, and the `points/*.wesl` shaders must all agree
+ * three-way contract: `galaxyPointRenderer`'s vertex-buffer packing, the
+ * `galaxyPickRenderer` pipeline, and the `points/*.wesl` shaders must all agree
  * on the same stride, byte offsets, and `shaderLocation`s.  A mismatch
  * either validation-errors at pipeline creation or, worse, silently reads
  * garbage bytes into the wrong attribute.
  *
- * The layout lives in its own module rather than inside `pointRenderer.ts`
+ * The layout lives in its own module rather than inside `galaxyPointRenderer.ts`
  * so neither renderer "owns" the shared truth: the point and pick pipelines
  * import the same constants from a neutral home, and a layout change is a
  * single edit here instead of a hunt for the authoritative copy.
@@ -35,14 +35,14 @@
  * vertex stage skips a cos+sin and a log10+sqrt per invocation — see the
  * layout docblock in `buildPointInterleavedBuffer.ts` for the trade.
  */
-export const SLOTS_PER_POINT = 14;
+export const SLOTS_PER_GALAXY_POINT = 14;
 
 /**
  * Byte stride between per-instance records — 14 × 4 = 56.  Both
  * pipelines (point + pick) declare this stride; mismatched values
  * either validate-error or silently read garbage.
  */
-export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 56 bytes
+export const POINT_STRIDE = SLOTS_PER_GALAXY_POINT * 4; // 56 bytes
 
 /** Slot 5: galaxy b/a ratio.  `abs(axisRatio)` for the ellipse mask; sign bit flags a fallback orientation. */
 const AXIS_RATIO_BYTE_OFFSET = 20;
@@ -94,7 +94,7 @@ const SB_AMP_BYTE_OFFSET = 52;
 
 /**
  * Vertex buffer attribute table — single source of truth, imported
- * verbatim by `PickRenderer` so both pipelines stay layout-locked.
+ * verbatim by `GalaxyPickRenderer` so both pipelines stay layout-locked.
  *
  *   0  position (vec3<f32>)
  *   1  magnitude (f32)
@@ -112,7 +112,7 @@ const SB_AMP_BYTE_OFFSET = 52;
  * name (bake / shader); position/magnitude/colorIndex use literal
  * offsets.
  */
-export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
+export const GALAXY_POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },
   { shaderLocation: 1, offset: 12, format: 'float32' },
   { shaderLocation: 2, offset: 16, format: 'float32' },
@@ -192,7 +192,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * 8 bytes sit between `sourceCode` (offset 84) and `camPosWorld` (offset
  * 96) — filled here by `pointSizePx` + `brightness`.
  *
- * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80) +
+ * The picker (`galaxyPickRenderer.ts`) writes `selectedPacked` (offset 80) +
  * `sourceCode` (offset 84) for every per-source draw — see its `pick()`
  * docblock for the per-source uniform-write pattern that lets the pick
  * pass see the same packed identity space the visual pass does.  It also
@@ -207,8 +207,8 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
  * stable; the WGSL struct still declares them but no shader reads them.
  *
- * The value (192) is defined in `src/utils/gpu/packPointUniforms.ts` and
+ * The value (192) is defined in `src/utils/gpu/packGalaxyPointUniforms.ts` and
  * re-exported from here so callers that already import the layout don't
  * need a second import path.
  */
-export { UNIFORM_BYTES } from '../../../../utils/gpu/packPointUniforms';
+export { UNIFORM_BYTES } from '../../../../utils/gpu/packGalaxyPointUniforms';

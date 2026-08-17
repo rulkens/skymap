@@ -52,7 +52,7 @@ import { createDummyFadeBindGroup } from '../../lib/dummyFade';
 import { Source } from '../../../../data/sources';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_RADIUS_MPC } from '../../../engine/galaxyGenerator/v1/milkyWayCalibration';
-import { UNIFORM_BYTES } from '../galaxyCatalog/pointVertexLayout';
+import { UNIFORM_BYTES } from '../galaxyCatalog/galaxyPointVertexLayout';
 import vsCode from '../../shaders/milkyWay/pick/vertex.wesl?static';
 import pickFsCode from '../../shaders/milkyWay/pick/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -168,11 +168,11 @@ export function createMilkyWayPickRenderer(
 
     // The renderer's OWN @group(0) pick-camera buffer + bind group — the
     // self-bind seam (module header). Sized to the full points pick uniform
-    // image (UNIFORM_BYTES from pointVertexLayout, the single layout truth):
+    // image (UNIFORM_BYTES from galaxyPointVertexLayout, the single layout truth):
     // the shader declares only a prefix of that struct, which WGSL permits,
     // and `pickUniformBytesOf` always packs the complete image. Built once;
     // `pickMilkyWay` re-uploads the bytes per pick and re-binds the same
-    // group — the same own-buffer discipline the points pickRenderer uses.
+    // group — the same own-buffer discipline the points galaxyPickRenderer uses.
     cameraUniformBuffer = device.createBuffer({
       label: 'milky-way-pick-camera',
       size: UNIFORM_BYTES,

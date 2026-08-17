@@ -2,7 +2,7 @@
  * Unit tests for the pure `buildPointInterleavedBuffer` function.
  *
  * The bake is a near-verbatim lift of the loop that used to live inside
- * `pointRenderer.upload()` — same inputs, same per-vertex bytes out.  We
+ * `galaxyPointRenderer.upload()` — same inputs, same per-vertex bytes out.  We
  * verify the lift is faithful by feeding a hand-rolled 3-galaxy synthetic
  * cloud and asserting the per-row outputs (positions, magnitudes,
  * vMaxWeight, schechterRatio) at known byte offsets.

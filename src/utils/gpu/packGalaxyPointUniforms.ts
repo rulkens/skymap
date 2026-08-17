@@ -1,11 +1,11 @@
 /**
- * packPointUniforms — pure packer for the 192-byte `Uniforms` struct.
+ * packGalaxyPointUniforms — pure packer for the 192-byte `Uniforms` struct.
  *
- * Single source of truth for the visual-pass byte layout.  Both the point
- * renderer's `draw()` and (via the returned buffer) the pick renderer's
+ * Single source of truth for the visual-pass byte layout.  Both the galaxy
+ * point renderer's `draw()` and (via the returned buffer) the pick renderer's
  * per-frame snapshot call this function so their packing never drifts.
  *
- * Why a separate module rather than an inner function in `pointRenderer.ts`?
+ * Why a separate module rather than an inner function in `galaxyPointRenderer.ts`?
  * The pick path needs to pack a fresh buffer *without* touching the visual
  * pass's uploaded copy.  `pickUniformBytesOf` calls this with the pick-shaped
  * inputs directly — the none-selection sentinel, the `+PICK_PADDING_PX` size,
@@ -17,24 +17,24 @@
  * vertex shader skips the visual-only culls (crossfade-out, intensity floor)
  * that would make disk-sized galaxies unpickable.
  *
- * Byte layout: see `UNIFORM_BYTES` docblock in `pointRenderer.ts`.
+ * Byte layout: see `UNIFORM_BYTES` docblock in `galaxyPointRenderer.ts`.
  *
  * @module
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { PointDrawSettings } from '../../@types/rendering/PointDrawSettings';
+import type { GalaxyPointDrawSettings } from '../../@types/rendering/GalaxyPointDrawSettings';
 import { PROVENANCE_FILTER_CODE } from '../../data/provenanceFilter';
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.  The single
- * source of truth for the alloc in `packPointUniforms` and for any consumer
+ * source of truth for the alloc in `packGalaxyPointUniforms` and for any consumer
  * that needs to know the buffer size up front (e.g. the pick renderer).
- * `pointRenderer.ts` re-exports this so existing call-sites that already
- * import from `pointRenderer` don't need a new import path.
+ * `galaxyPointRenderer.ts` re-exports this so existing call-sites that already
+ * import from `galaxyPointRenderer` don't need a new import path.
  *
  * 192 = (16 + 4 + 4 + 4 + 4 + 8 + 4 + 4) × 4 bytes.  See the `UNIFORM_BYTES`
- * docblock in `pointRenderer.ts` for the full slot-by-slot layout.  The final
+ * docblock in `galaxyPointRenderer.ts` for the full slot-by-slot layout.  The final
  * 4-float block carries the galaxy surface-brightness calibration knobs
  * (galaxySbScale / galaxySbMax / galaxyFalloffStrength) + one pad word.
  */
@@ -43,21 +43,21 @@ export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 
 /**
  * Allocate and pack a `Uniforms` buffer for the visual point-sprite pass.
  *
- * `viewProj` and `viewportPx` mirror the positional args `PointRenderer.draw`
+ * `viewProj` and `viewportPx` mirror the positional args `GalaxyPointRenderer.draw`
  * already receives; `settings` carries every per-frame knob.  `pickPass`
  * defaults to 0 (visual pass); `pickUniformBytesOf` passes 1 so the shared
  * vertex shader keeps disk-sized galaxies pickable.
  */
-export function packPointUniforms(
+export function packGalaxyPointUniforms(
   viewProj: Mat4,
   viewportPx: readonly [number, number],
   // Only the packed byte-layout fields are read here — never the draw-only
   // `focusBindGroup` / `fadeOpacityOf` GPU-callback fields or the shader-side
   // `visibleSourceMask`. Narrowing the parameter lets the pick path assemble a
   // pure-value input (`pickUniformBytesOf`) without fabricating GPU objects,
-  // while the visual `draw()` still passes its full `PointDrawSettings` (a
+  // while the visual `draw()` still passes its full `GalaxyPointDrawSettings` (a
   // superset satisfies the `Omit`).
-  settings: Omit<PointDrawSettings, 'focusBindGroup' | 'fadeOpacityOf' | 'visibleSourceMask'>,
+  settings: Omit<GalaxyPointDrawSettings, 'focusBindGroup' | 'fadeOpacityOf' | 'visibleSourceMask'>,
   // 0 = visual pass, 1 = pick pass. A packed field rather than a post-upload
   // override so the buffer this returns is the complete image for either pass.
   pickPass: number = 0,

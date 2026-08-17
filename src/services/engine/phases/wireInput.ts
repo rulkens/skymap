@@ -17,7 +17,7 @@
  * ### State writes
  *
  *   - `state.cam`.
- *   - `state.gpu.pickRenderer`, `state.gpu.pickProgram`.
+ *   - `state.gpu.galaxyPickRenderer`, `state.gpu.pickProgram`.
  *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
  *
  * ### Side effects on `deps`
@@ -31,7 +31,7 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
-import { createPickRenderer } from '../../gpu/renderers/galaxyCatalog/pickRenderer';
+import { createGalaxyPickRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPickRenderer';
 import { createPickProgram } from '../frame/pickProgram';
 import { SLAB_REVERSED_Z, COSMO } from '../frame/slabs';
 import { CONTENT_LAYERS } from '../frame/passes';
@@ -77,13 +77,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // The visual renderer must exist before we wire picking + the camera —
   // `renderer` is the null-guard subject on the next line.
-  const renderer = state.gpu.renderer;
+  const renderer = state.gpu.galaxyPointRenderer;
   if (!renderer) return;
   // The point-pick draw provider: it records the galaxy point billboards
   // into the pick pass the pick program owns. The ring / disk / Milky-Way
   // pick draws are their own registry `drawPick` rows now — the picker no
   // longer folds them in, so it takes no marker / disk / MW arguments.
-  const pickRenderer = createPickRenderer(
+  const galaxyPickRenderer = createGalaxyPickRenderer(
     deps.phaseLocals!.device,
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
@@ -93,7 +93,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.focusUniform!.bindGroup,
     SLAB_REVERSED_Z[COSMO]!,
   );
-  state.gpu.pickRenderer = pickRenderer;
+  state.gpu.galaxyPickRenderer = galaxyPickRenderer;
 
   // The parallel per-slab pick program over the content-layer registry — the
   // single owner of the hover / click / debug-overlay pick path. It filters

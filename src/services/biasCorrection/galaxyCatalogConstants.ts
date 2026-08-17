@@ -10,7 +10,7 @@
  *     `expectedNumberDensity({...schechter, mLim, dMpc: 10})`, the
  *     reference-point density at d = 10 Mpc.
  *
- * Pre-Spec-E these were stored on `LoadedSource` inside `PointRenderer`,
+ * Pre-Spec-E these were stored on `LoadedSource` inside `GalaxyPointRenderer`,
  * recomputed at every `upload()`.  The recompute was ~free for the
  * Schechter triple (a Record-lookup) but non-trivial for `nRef` (a
  * 200-step trapezoidal integral inside `expectedNumberDensity`).  More

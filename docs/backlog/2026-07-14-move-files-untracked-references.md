@@ -16,7 +16,7 @@ to a TS module, so ts-morph leaves it untouched. The family: `?static` (WESL
 shaders), `?worker`, `?url`, `?raw`, `?inline`.
 
 **Class 2 — path-shaped string literals.** `vi.mock('../../src/services/gpu/
-renderers/pointRenderer')` isn't a specifier at all — it's a string argument.
+renderers/galaxyPointRenderer')` isn't a specifier at all — it's a string argument.
 Nothing type-checks it. There are 20 such `vi.mock` literals in the renderer
 tests alone.
 

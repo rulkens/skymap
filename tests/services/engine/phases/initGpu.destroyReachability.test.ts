@@ -5,7 +5,7 @@
  * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
  * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU resources
  * and expose `.destroy()`. They must live on `state.gpu.*` (alongside
- * `renderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
+ * `galaxyPointRenderer`, `galaxyPickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
  * has a reachable reference to each — otherwise every HMR / StrictMode
  * remount leaks their GPU buffers. After `initGpu(state, deps)`, this test
  * checks each renderer field on `state.gpu.*` holds the constructed
@@ -124,8 +124,8 @@ vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () =>
   })),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pointRenderer', () => ({
-  createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointRenderer', () => ({
+  createGalaxyPointRenderer: vi.fn(() => makeStub('galaxyPointRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderTargets', () => ({
@@ -326,15 +326,6 @@ vi.mock('../../../../src/services/gpu/labelLayout/loadFontAtlases', () => ({
   })),
 }));
 
-// `wireGalaxyCatalogSourceSlot` mints AssetSlots that the engine never `.load()`s
-// in this test, so the production helper is fine — but its module also
-// imports several heavy fetcher modules.  Replace with a no-op so the
-// initGpu body's per-source loop is harmless.
-vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', () => ({
-  GALAXY_CATALOG_SOURCE_REGISTRY: [] as Array<unknown>,
-  wireGalaxyCatalogSourceSlot: vi.fn(),
-}));
-
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // The mocked `watchHdrCapability` itself: the HDR-dispatch-wiring tests below
@@ -370,8 +361,8 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 function makeState(): EngineState {
   return {
     gpu: {
-      renderer: null,
-      pickRenderer: null,
+      galaxyPointRenderer: null,
+      galaxyPickRenderer: null,
       milkyWayPickRenderer: null,
       renderTargets: null,
       compositor: null,
@@ -425,10 +416,10 @@ function makeState(): EngineState {
       },
     },
     settings: {},
+    // Both families are minted in wireSlots, not initGpu; declared here (empty,
+    // untouched by this phase) only because EngineState requires them.
     assetSlots: {
       points: new Map(),
-      // initGpu mints the body-texture family into this keyed map (beside the
-      // body renderers) — declared here so the phase can write into it.
       bodyTextures: new Map(),
     },
   } as unknown as EngineState;
@@ -496,11 +487,6 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // Reachability claim for the textured Earth — it owns the position +
     // uv VBOs, index IBO, uniform buffer, and Earth texture.
     expect(state.gpu.earthRenderer).toBe(stubs.earthRenderer);
-    // The body-texture slot family is minted beside the body renderers: one
-    // slot per key, including Earth's (the descent texture now rides this
-    // family, not a bespoke path).
-    expect(state.assetSlots.bodyTextures.has('earth:surface')).toBe(true);
-    expect(state.assetSlots.bodyTextures.has('saturn-ring:surface')).toBe(true);
     // The resolved-star renderer (the Sun sphere) must reach state.gpu.* the
     // same way.
     expect(state.gpu.starRenderer).toBe(stubs.starRenderer);

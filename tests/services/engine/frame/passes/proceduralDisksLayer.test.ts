@@ -44,7 +44,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: { draw: vi.fn() } as any,
+    galaxyPointRenderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     texturedDisks: {
       lastOutput: { quads: [], disks: [] },
@@ -141,21 +141,21 @@ describe('proceduralDisksLayer', () => {
   it('drawPick() restores the @group(0) camera prefix AFTER pickDisks', () => {
     // pickDisks binds the disk camera at slot 0; the Milky-Way + structure
     // rows drawn after this one read the shared point-pick camera prefix, so
-    // drawPick must call pickRenderer.bindCamera(pass) to put it back —
+    // drawPick must call galaxyPickRenderer.bindCamera(pass) to put it back —
     // ordered strictly after the disk pick. (See ContentLayer.drawPick's
     // postcondition.)
     const callLog: string[] = [];
     const proceduralDiskRenderer = {
       pickDisks: vi.fn(() => callLog.push('pickDisks')),
     };
-    const pickRenderer = {
+    const galaxyPickRenderer = {
       bindCamera: vi.fn(() => callLog.push('bindCamera')),
     };
     const state = {
       gpu: {
         focusUniform: { bindGroup: {} as GPUBindGroup },
         proceduralDiskRenderer,
-        pickRenderer,
+        galaxyPickRenderer,
       },
     } as unknown as EngineState;
     const pass = {} as GPURenderPassEncoder;
@@ -163,8 +163,8 @@ describe('proceduralDisksLayer', () => {
     proceduralDisksLayer.drawPick!(pass, makeView(ctx), ctx, state);
 
     expect(proceduralDiskRenderer.pickDisks).toHaveBeenCalledTimes(1);
-    expect(pickRenderer.bindCamera).toHaveBeenCalledTimes(1);
-    expect(pickRenderer.bindCamera).toHaveBeenCalledWith(pass);
+    expect(galaxyPickRenderer.bindCamera).toHaveBeenCalledTimes(1);
+    expect(galaxyPickRenderer.bindCamera).toHaveBeenCalledWith(pass);
     // Restore lands AFTER the disk pick, never before.
     expect(callLog).toEqual(['pickDisks', 'bindCamera']);
   });
@@ -174,7 +174,7 @@ describe('proceduralDisksLayer', () => {
       gpu: {
         focusUniform: { bindGroup: {} as GPUBindGroup },
         proceduralDiskRenderer: null,
-        pickRenderer: { bindCamera: vi.fn() },
+        galaxyPickRenderer: { bindCamera: vi.fn() },
       },
     } as unknown as EngineState;
     const pass = {} as GPURenderPassEncoder;
@@ -182,7 +182,7 @@ describe('proceduralDisksLayer', () => {
     expect(() => proceduralDisksLayer.drawPick!(pass, makeView(ctx), ctx, state)).not.toThrow();
     // Null disk renderer → early return before the restore.
     const bindCamera = (
-      state.gpu.pickRenderer as unknown as { bindCamera: ReturnType<typeof vi.fn> }
+      state.gpu.galaxyPickRenderer as unknown as { bindCamera: ReturnType<typeof vi.fn> }
     ).bindCamera;
     expect(bindCamera).not.toHaveBeenCalled();
   });

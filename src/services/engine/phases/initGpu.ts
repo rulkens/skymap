@@ -9,7 +9,7 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
-import { createPointRenderer } from '../../gpu/renderers/galaxyCatalog/pointRenderer';
+import { createGalaxyPointRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPointRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
@@ -52,11 +52,6 @@ import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
 import { buildSwapRenderers } from './buildSwapRenderers';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
-import {
-  GALAXY_CATALOG_SOURCE_REGISTRY,
-  wireGalaxyCatalogSourceSlot,
-} from '../wiring/galaxyCatalogSourceRegistry';
-import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
@@ -66,13 +61,13 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
- * Bootstrap phase 1: GPU device acquisition + renderer construction +
- * point-source slot wiring.
+ * Bootstrap phase 1: GPU device acquisition + renderer construction.
  *
  * Side effects on `state`:
- *   - writes `state.gpu.renderer`, `state.gpu.renderTargets`,
- *     `state.gpu.filamentRenderer`, and every other renderer handle;
- *   - populates `state.assetSlots.points` via the registry loop.
+ *   - writes `state.gpu.galaxyPointRenderer`, `state.gpu.renderTargets`,
+ *     `state.gpu.filamentRenderer`, and every other renderer handle. Mints
+ *     no `state.assetSlots.*` — every asset slot (points, body textures,
+ *     sidecars) is minted in `wireSlots`.
  *
  * Side effects on `deps`:
  *   - attaches a minimal phase-local carrier (`device`, `context`,
@@ -81,7 +76,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  *     renderers flow via `state.gpu`.
  */
 export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const { canvas, cb } = deps;
+  const { canvas } = deps;
 
   // Sync the backing store to the display size *before* handing the canvas
   // to WebGPU — otherwise `getCurrentTexture()` may return a 300×150 default.
@@ -157,18 +152,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
   );
 
-  // PointRenderer (and the disk renderers below) target the HDR
+  // GalaxyPointRenderer (and the disk renderers below) target the HDR
   // rgba16float texture, not the swap-chain `format`.  Their pipelines
   // bake this into a fixed colour-target descriptor at construction
   // time, so the format choice has to land here.
-  const renderer = createPointRenderer({
+  const renderer = createGalaxyPointRenderer({
     device,
     targetFormat: 'rgba16float',
     fadeBgl: state.gpu.fadeBgl!,
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
   });
-  state.gpu.renderer = renderer;
+  state.gpu.galaxyPointRenderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
   //
@@ -185,7 +180,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // foreground twins) ────────────────────────────────────────────────────
   //
   // Load the font atlas (BMFont JSON + MSDF PNG) before building anything
-  // that reads it, sequenced after the PointRenderer but before the
+  // that reads it, sequenced after the GalaxyPointRenderer but before the
   // GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas fetch here keeps
   // the loop below from racing ahead of it; in practice the ~120 KB atlas
   // resolves well before the much larger per-galaxy-catalog `.bin` fetches.
@@ -213,44 +208,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Invisible Milky-Way pick billboard — writes into the r32uint pick
   // texture (NOT the HDR target), so it takes no format param.  Built
   // here alongside the other pick providers; `wireInput` threads it into
-  // `createPickRenderer` along with the disk-visibility gate.
+  // `createGalaxyPickRenderer` along with the disk-visibility gate.
   state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(
     uiCtx,
     state.gpu.fadeBgl!,
     SLAB_REVERSED_Z[NEAR0]!,
   );
 
-  // ── Per-source asset slots ───────────────────────────────────────────
-  //
-  // Every galaxy catalog flows through `createAssetSlot`: one cell of mutable
-  // LoadState behind a race-checked fetch→commit façade (see
-  // `AssetSlot.ts` for the race-check points that fix the tier-swap
-  // stomping bug).
-  //
-  // Constructed here, after `state.gpu.renderer = renderer`, because the
-  // commit step uploads the decoded GalaxyCatalog to the renderer — so it
-  // must be non-null when commit runs, and the same lexical scope makes
-  // that ordering obvious top-down.
-  //
-  // Commit `await`s `renderer.upload(...)` so a subscriber seeing
-  // `kind === 'ready'` can rely on the GPU buffer being populated.  The
-  // subscriber's `requestRender()` wakes the render-on-demand loop so the
-  // new buffer paints without the user nudging the camera; firing it on
-  // the `ready` transition (not inside commit) keeps commit free of UI
-  // concerns.
-  //
-  // The 7 source slots (6 galaxy catalogs + Synthetic) are built from the
-  // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table; sidecar slots
-  // (filaments, famous-galaxies-meta, pgc-aliases) stay inline below — see
-  // `galaxyCatalogSourceRegistry.ts` for why.
-  for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
-    wireGalaxyCatalogSourceSlot(state, cfg, { cb });
-  }
-
   // ── Galaxy thumbnail renderers ─────────────────────────────────────
   //
   // TexturedDiskRenderer targets the HDR offscreen texture (same rationale
-  // as PointRenderer above): atlas-bound, 3D-oriented quads sized by
+  // as GalaxyPointRenderer above): atlas-bound, 3D-oriented quads sized by
   // per-galaxy diameter, composited into the same linear-light buffer as
   // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
   const texturedDiskRenderer = createTexturedDiskRenderer(
@@ -548,8 +516,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // One shared UV-sphere pipeline for every non-Earth textured body; each body id
   // owns its uniform buffer + bind group + surface texture inside the renderer's
   // per-body Map. Same ('rgba16float', 'depth32float') `foreground:0` format
-  // invariant as the renderers above. The bodyTextures family (minted below) routes
-  // each committed bitmap to `setMap` and its per-kind eviction to `clearMap`.
+  // invariant as the renderers above. The bodyTextures family (minted in
+  // `wireSlots`) routes each committed bitmap to `setMap` and its per-kind
+  // eviction to `clearMap`.
   state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
     device,
     'rgba16float',
@@ -564,7 +533,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // invariant AND the ring-specific profile: straight-alpha OVER, two-sided
   // (`cullMode: 'none'`), depth-tested but no depth write — so it overlays the
   // opaque spheres already in the target. The `saturn-ring` bodyTextures slot
-  // (minted just below) routes the radial strip to `setTexture`.
+  // (minted in `wireSlots`) routes the radial strip to `setTexture`.
   state.gpu.ringRenderer = createRingRenderer(
     device,
     'rgba16float',
@@ -603,12 +572,4 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     SLAB_REVERSED_Z[NEAR0]!,
     ATMOSPHERE_PARAMS,
   );
-
-  // ── Body-surface texture slot family ─────────────────────────────────
-  //
-  // One demand-gated asset slot per textured body + the Saturn ring, minted here
-  // because the commits upload into the body renderers built above. Each surface is
-  // paid on proximity (per-body load radius) and its lifecycle — abort on release,
-  // render wake on ready — belongs to the slot machinery, not a bespoke fetch.
-  wireBodyTextureSlots(state);
 }

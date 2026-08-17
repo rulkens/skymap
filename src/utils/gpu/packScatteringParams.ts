@@ -1,72 +1,70 @@
 /**
- * packScatteringParams — pure packer for the 80-byte `ScatteringParams` uniform
- * struct (`shaders/atmosphere/scattering.wesl`).
+ * packScatteringParams — pure packer for the `ScatteringParams` uniform the
+ * three LUT bakes read. Its twin is `struct ScatteringParams` in
+ * `shaders/atmosphere/scattering.wesl`; keep the field order in lockstep, since
+ * a drift raises no GPU error and iOS answers it with a dropped frame.
  *
- * The atmosphere shell's three LUT bakes (transmittance, multi-scatter, sky-view)
- * all read one `ScatteringParams` uniform carrying the body's authored scattering
- * constants — Rayleigh/Mie/ozone coefficients, scale heights, phase asymmetry,
- * ground albedo, and the ground / atmosphere-top radii. This is the single source
- * of truth for that byte layout: the renderer packs through here so the CPU write
- * can never drift from the WGSL struct (a drift the GPU would not report; on iOS
- * it would drop the frame silently — the same trap every uniform packer guards).
- *
- * ## Dense vec3-tail packing (the `RingUniforms.planetRadiusRatio` trick)
- *
- * Each `vec3<f32>` is 16-byte aligned and its trailing 4-byte slot is filled by
- * the following scalar, so the struct is a dense 20-f32 write with no interior
- * gaps rather than a padded 24-f32 one. `mieScatter` is itself a `vec3<f32>`
- * (Mie is per-channel — see `AtmosphereParams.d.ts`'s header) whose own offset
- * (slot 12) already lands on a 16-byte boundary, so it needs no padding of its
- * own; its tail slot (15) is filled by `mieAbsorption`, which stays a scalar
- * (Mie absorption has no measured spectral dependence for any authored body).
- * The slot order below is fixed by the WESL `struct ScatteringParams` field
- * order (its twin — keep the two in lockstep):
- *
- *   f32 0..2   rayleighScatter        3   rayleighScaleHeightKm
- *   f32 4..6   ozoneAbsorption        7   mieScaleHeightKm
- *   f32 8..10  groundAlbedo          11   miePhaseG
- *   f32 12..14 mieScatter            15   mieAbsorption
- *   f32 16     ozoneCenterKm         17   ozoneWidthKm
- *   f32 18     planetRadiusKm        19   atmosphereTopKm
- *
- * That's a dense 80-byte / 20-f32 struct with no trailing pad: the four
- * scalars after `mieScatter`'s tail (ozone tent + the two radii) need no
- * further 16-byte alignment, so `SCATTERING_PARAMS_FLOATS` is unchanged.
- *
- * The twilight knob rides the per-frame `SkyViewParams` (`skyViewLut.wesl`), NOT
- * this construction-written buffer, so it stays live-tunable.
- *
- * @param params The body's authored `AtmosphereParams` row (`atmosphereParams.ts`).
+ * The kind tags are `u32`, which is why this returns an `ArrayBuffer` with two
+ * views rather than a bare `Float32Array`.
  */
 
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
 
-/** f32 count of `ScatteringParams` — 80 bytes / 20 f32 (see `scattering.wesl`). */
-export const SCATTERING_PARAMS_FLOATS = 20;
+/** Uniform slots for constituents. Earth uses 3, Venus and Titan will use 3-4. */
+export const MAX_CONSTITUENTS = 4;
 
-export function packScatteringParams(params: AtmosphereParams): Float32Array {
-  const out = new Float32Array(SCATTERING_PARAMS_FLOATS);
-  out[0] = params.rayleighScatter[0];
-  out[1] = params.rayleighScatter[1];
-  out[2] = params.rayleighScatter[2];
-  out[3] = params.rayleighScaleHeightKm;
-  out[4] = params.ozoneAbsorption[0];
-  out[5] = params.ozoneAbsorption[1];
-  out[6] = params.ozoneAbsorption[2];
-  out[7] = params.mieScaleHeightKm;
-  out[8] = params.groundAlbedo[0];
-  out[9] = params.groundAlbedo[1];
-  out[10] = params.groundAlbedo[2];
-  out[11] = params.miePhaseG;
-  out[12] = params.mieScatter[0];
-  out[13] = params.mieScatter[1];
-  out[14] = params.mieScatter[2];
-  out[15] = params.mieAbsorption;
-  out[16] = params.ozoneCenterKm;
-  out[17] = params.ozoneWidthKm;
-  out[18] = params.planetRadiusKm;
-  out[19] = params.atmosphereTopKm;
-  // `twilightSoftness` is NOT packed here: it rides the per-frame
-  // `SkyViewParams` so the Earth slider can tune it live.
-  return out;
+/** Byte size of `ScatteringParams` — 32-byte header + 4 × 48-byte constituents. */
+export const SCATTERING_PARAMS_BYTES = 224;
+
+const CONSTITUENT_BASE_F32 = 8; // byte 32
+const CONSTITUENT_STRIDE_F32 = 12; // 48 bytes
+
+/** The subset of a row this buffer carries: geometry plus the constituent list. */
+type ScatteringInput = Pick<
+  AtmosphereParams,
+  'planetRadiusKm' | 'atmosphereTopKm' | 'groundAlbedo' | 'constituents'
+>;
+
+export function packScatteringParams(params: ScatteringInput): ArrayBuffer {
+  const count = params.constituents.length;
+  if (count > MAX_CONSTITUENTS) {
+    throw new Error(
+      `packScatteringParams: ${count} constituents exceeds MAX_CONSTITUENTS (${MAX_CONSTITUENTS})`,
+    );
+  }
+
+  const buf = new ArrayBuffer(SCATTERING_PARAMS_BYTES);
+  const f = new Float32Array(buf);
+  const u = new Uint32Array(buf);
+
+  f[0] = params.groundAlbedo[0];
+  f[1] = params.groundAlbedo[1];
+  f[2] = params.groundAlbedo[2];
+  f[3] = params.planetRadiusKm;
+  f[4] = params.atmosphereTopKm;
+  u[5] = count;
+
+  for (let i = 0; i < count; i++) {
+    const c = params.constituents[i];
+    if (c === undefined) continue;
+    const b = CONSTITUENT_BASE_F32 + i * CONSTITUENT_STRIDE_F32;
+    f[b] = c.scatter[0];
+    f[b + 1] = c.scatter[1];
+    f[b + 2] = c.scatter[2];
+    f[b + 3] = c.phase.kind === 'henyeyGreenstein' ? c.phase.g : 0;
+    f[b + 4] = c.absorb[0];
+    f[b + 5] = c.absorb[1];
+    f[b + 6] = c.absorb[2];
+    // A tent's scale height is never read, but it must be FINITE: a compiler
+    // that flattens the profile branch into a `select` evaluates both sides, and
+    // `exp(-altitude / 0)` is the indeterminate-value trap that `densityTent`'s
+    // own zero-width guard exists for. 1 is the cheapest finite value.
+    f[b + 7] = c.profile.kind === 'exponential' ? c.profile.scaleHeightKm : 1;
+    f[b + 8] = c.profile.kind === 'tent' ? c.profile.centerKm : 0;
+    f[b + 9] = c.profile.kind === 'tent' ? c.profile.widthKm : 0;
+    u[b + 10] = c.profile.kind === 'tent' ? 1 : 0;
+    u[b + 11] = c.phase.kind === 'henyeyGreenstein' ? 1 : 0;
+  }
+
+  return buf;
 }

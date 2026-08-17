@@ -33,7 +33,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.renderTargets`, and
+ * `state.gpu.galaxyPointRenderer`, `state.gpu.renderTargets`, and
  * `state.subsystems.thumbnails` are all part of the 5-way bootstrap
  * gate.  Once the gate passes, downstream code wants to use those
  * handles without re-checking they're non-null — but if we left them
@@ -43,14 +43,14 @@
  *
  * Forwarding the narrowed handles onto `ReadyFrameContext` carries the
  * narrowing across the function boundary.  A pass implementation can
- * read `ctx.renderer.draw(...)` directly, no `!` needed.
+ * read `ctx.galaxyPointRenderer.draw(...)` directly, no `!` needed.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Vec3 } from '../../math/Vec3';
-import type { PointRenderer } from '../../rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
@@ -107,7 +107,7 @@ export type ReadyFrameContext = {
    * `state.subsystems.*` themselves.  See the module header for the
    * "why these ride along" rationale.
    */
-  renderer: PointRenderer;
+  galaxyPointRenderer: GalaxyPointRenderer;
   /**
    * The offscreen render-target table (`hdr`, `volume`, …).  Forwarded
    * here from `state.gpu.renderTargets` — same reference, no allocation —

@@ -3,11 +3,11 @@
  * in the depthless HDR accumulation, fed from an in-file octree of
  * cell-quantized 6-byte records.
  *
- * ### Why a dedicated pipeline (not `starPointRenderer`, not `pointRenderer`)
+ * ### Why a dedicated pipeline (not `starPointRenderer`, not `galaxyPointRenderer`)
  *
  * `starPointRenderer` draws a flat instance buffer of a handful of seeded
  * scene stars; it has no notion of an octree, a per-node origin, or a
- * vertex-pulled record. `pointRenderer` bakes a `GalaxyCatalog` into a
+ * vertex-pulled record. `galaxyPointRenderer` bakes a `GalaxyCatalog` into a
  * 52-byte interleaved instance layout through an off-thread worker and
  * threads three engine bind-group layouts. The survey stars are a third
  * shape: their positions live as 10-bit in-cell offsets inside 6-byte

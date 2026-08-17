@@ -56,8 +56,8 @@ vi.mock('../../../../src/services/camera/orbitControls', () => ({
   attachOrbitControls: (...args: unknown[]) => attachOrbitControlsSpy(...args),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer', () => ({
-  createPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer', () => ({
+  createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 
 // The content-layer registry pulls in every layer module (heavy GPU deps);
@@ -148,12 +148,12 @@ function makeState(): EngineState {
       galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
     } as never,
     gpu: {
-      renderer: {
+      galaxyPointRenderer: {
         totalCount: () => 0,
         loadedSources: () => [],
       } as never,
-      pickRenderer: null,
-      // createPickRenderer binds the shared focus group; the stub only
+      galaxyPickRenderer: null,
+      // createGalaxyPickRenderer binds the shared focus group; the stub only
       // needs an opaque bindGroup handle.
       focusUniform: { bindGroup: {} as GPUBindGroup },
       renderTargets: null,

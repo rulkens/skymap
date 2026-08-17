@@ -190,7 +190,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const env = makeEncoderEnv();
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
-  const pointRenderer = makeLoggingRenderer();
+  const galaxyPointRenderer = makeLoggingRenderer();
   // The cloud renderer's two passes target two different textures, so it has
   // two entry points rather than one `draw`.
   const milkyWayCloudRenderer = { drawStars: vi.fn(), drawDust: vi.fn() };
@@ -235,7 +235,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
-    renderer: pointRenderer,
+    galaxyPointRenderer,
     renderTargets,
     // texturedDisks slot is referenced from frameContext shape;
     // we'll null the matching subsystem on `state` so the pass skips.
