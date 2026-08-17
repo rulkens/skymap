@@ -37,4 +37,14 @@ describe('specializeGridElement', () => {
     );
     expect(enableIndex).toBeLessThan(firstDeclIndex);
   });
+
+  it('f16 specialisation throws when no GridElem alias is present to rewrite', () => {
+    const wgsl = 'struct Foo { x: f32 }\n';
+    expect(() => specializeGridElement(wgsl, 'f16')).toThrow();
+  });
+
+  it('f32 specialisation passes a fragment without the alias through unchanged', () => {
+    const wgsl = 'struct Foo { x: f32 }\n';
+    expect(specializeGridElement(wgsl, 'f32')).toBe(wgsl);
+  });
 });
