@@ -18,7 +18,7 @@ export type CatalogDrawEntry = {
 };
 ```
 
-`pointRenderer.draw()` binds those groups verbatim — it never reaches into the store's private
+`galaxyPointRenderer.draw()` binds those groups verbatim — it never reaches into the store's private
 map, which is the whole point of the projection. The consequence is that the **only** thing
 standing between a mis-wired entry and the screen is the store: if `entriesGen()` yielded
 2MRS's `fadeBindGroup` alongside SDSS's `sourceBindGroup`, every draw would still encode
@@ -27,13 +27,13 @@ uniforms), and the bug would surface only as SDSS points fading on the 2MRS slid
 picking as the wrong source.
 
 Today's tests don't close that. The store's own tests cover draw **order**, the loaded/unloaded
-skip rule, and buffer lifecycle; the `pointRenderer` draw test only smoke-checks the encoded
+skip rule, and buffer lifecycle; the `galaxyPointRenderer` draw test only smoke-checks the encoded
 command list (`expect(commands).toContain('setPipeline')`). Neither ever compares an entry's
 bind groups against the ones that source's buffers were created with.
 
 ## Why this is not a regression
 
-The reorg extracted `catalogStore` out of `pointRenderer`, but the exposure predates it: the
+The reorg extracted `catalogStore` out of `galaxyPointRenderer`, but the exposure predates it: the
 same fade/source bind groups were selected from the same per-source map inside the single-file
 renderer, and the same smoke-level draw test was the only thing exercising the selection. The
 extraction did not widen the gap — it made it visible by giving the projection a name and a

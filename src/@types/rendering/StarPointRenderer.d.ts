@@ -7,7 +7,7 @@
  * magnitude and tinted by its spectral colour — the same visual species as
  * the survey point cloud, but through a thin dedicated pipeline (see the
  * `starPointRenderer.ts` module header for why it does NOT wrap
- * `createPointRenderer`). It draws into the depthless `hdr` target with
+ * `createGalaxyPointRenderer`). It draws into the depthless `hdr` target with
  * one/one additive blending, NOT the opaque foreground pass, so overlapping
  * stars brighten long-exposure style like every other additive layer.
  *

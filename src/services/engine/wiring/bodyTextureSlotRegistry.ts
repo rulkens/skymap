@@ -1,12 +1,12 @@
 /**
  * bodyTextureSlotRegistry — mints the keyed `bodyTextures` slot family and owns its
- * per-key commit/release dispatch. The slots are minted in `initGpu`, beside the
- * body renderers their commit uploads into, not by the `ASSET_WIRING` construction
- * pass — their rows carry `built: 'external'`, and the demand loop triggers and
- * evicts the already-minted slots through them. Dispatch reads the structured
- * `(entry.bodyId, entry.kind)` pair, never a parse of the composite key; every
- * `state.gpu.*` handle is re-read and null-guarded, since it can be null
- * mid-bootstrap or after a StrictMode teardown and the slot must still settle.
+ * per-key commit/release dispatch. The slots are minted in `wireSlots`, not by the
+ * `ASSET_WIRING` construction pass — their rows carry `built: 'external'`, and the
+ * demand loop triggers and evicts the already-minted slots through them. Dispatch
+ * reads the structured `(entry.bodyId, entry.kind)` pair, never a parse of the
+ * composite key; every `state.gpu.*` handle is re-read and null-guarded, since it
+ * can be null mid-bootstrap or after a StrictMode teardown and the slot must still
+ * settle.
  */
 
 import { createAssetSlot } from '../../loading/AssetSlot';
@@ -68,7 +68,9 @@ function releaseBodyTexture(state: EngineState, entry: BodyTextureKey): void {
 
 /**
  * Mint one asset slot per `(bodyId, kind)` family entry into
- * `state.assetSlots.bodyTextures`. Must run AFTER the body renderers exist.
+ * `state.assetSlots.bodyTextures`. Must run before `installLoadProgress`
+ * enumerates the family into `allSlots`; renderer construction order does not
+ * matter.
  */
 export function wireBodyTextureSlots(state: EngineState): void {
   for (const entry of ALL_BODY_TEXTURE_KEYS) {

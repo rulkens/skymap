@@ -1,5 +1,5 @@
 /**
- * PickRenderer — the point-pick draw provider for the pick program.
+ * GalaxyPickRenderer — the point-pick draw provider for the pick program.
  *
  * Records the galaxy point-billboard draw into an already-begun r32uint
  * pick pass, where each fragment encodes `(sourceCode << 27) | localIdx + 1`
@@ -24,26 +24,30 @@
  * @module
  */
 
-// Vertex source is textually shared with PointRenderer but compiled
+// Vertex source is textually shared with GalaxyPointRenderer but compiled
 // into our own GPUShaderModule — never share modules across pipelines
-// (see the `auto` bind-group-layout trap in pointRenderer.ts).
+// (see the `auto` bind-group-layout trap in galaxyPointRenderer.ts).
 import vsCode from '../../shaders/galaxyCatalog/points/vertex.wesl?static';
 import pickFsCode from '../../shaders/galaxyCatalog/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../../@types/rendering/PickSourceDraw';
-import type { PickRenderer } from '../../../../@types/rendering/PickRenderer';
+import type { GalaxyPickRenderer } from '../../../../@types/rendering/GalaxyPickRenderer';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
-import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
+import {
+  POINT_STRIDE,
+  GALAXY_POINT_VERTEX_ATTRIBUTES,
+  UNIFORM_BYTES,
+} from './galaxyPointVertexLayout';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 /**
- * Construct a `PickRenderer` bound to `device`.  The renderer owns its own
+ * Construct a `GalaxyPickRenderer` bound to `device`.  The renderer owns its own
  * `pickUniformBuffer`; `drawPoints` callers pass the pick frame's packed
  * uniform bytes per call rather than sharing the point renderer's live GPU
  * buffer.
@@ -57,14 +61,14 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
  * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
  * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
  */
-export function createPickRenderer(
+export function createGalaxyPickRenderer(
   device: GPUDevice,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
   focusBindGroup: GPUBindGroup,
   reversedZ: boolean,
-): PickRenderer {
+): GalaxyPickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
 
@@ -113,7 +117,7 @@ export function createPickRenderer(
     vertex: {
       module: vsModule,
       entryPoint: 'vs',
-      // Layout imported from PointRenderer as the single source of
+      // Layout imported from GalaxyPointRenderer as the single source of
       // truth — both pipelines bind the same const so drift is
       // structurally impossible.  Spread because @webgpu/types
       // declares `attributes` as mutable.
@@ -121,7 +125,7 @@ export function createPickRenderer(
         {
           arrayStride: POINT_STRIDE,
           stepMode: 'instance',
-          attributes: [...POINT_VERTEX_ATTRIBUTES],
+          attributes: [...GALAXY_POINT_VERTEX_ATTRIBUTES],
         },
       ],
     },
@@ -224,7 +228,7 @@ export function createPickRenderer(
       pass.setBindGroup(2, sourceBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
       // 3 vertices per instance — the circumscribing-triangle billboard.
-      // Must stay in lockstep with pointRenderer's draw(3, N): both
+      // Must stay in lockstep with galaxyPointRenderer's draw(3, N): both
       // pipelines compile the same points vertex shader, whose triCorner
       // lookup only defines corners for vertex_index 0..2.
       pass.draw(3, src.count);
@@ -253,8 +257,8 @@ export function createPickRenderer(
     // engine's destroy() releases it, not the picker.
   }
 
-  const renderer: PickRenderer = {
-    label: 'pickRenderer',
+  const renderer: GalaxyPickRenderer = {
+    label: 'galaxyPickRenderer',
     drawPoints,
     bindCamera,
     destroy,

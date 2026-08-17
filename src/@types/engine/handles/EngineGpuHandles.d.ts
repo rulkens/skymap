@@ -9,9 +9,9 @@
  * never read through this bag; they live here only so `destroy()` can reach them.
  */
 
-import type { PointRenderer } from '../../rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
-import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { GalaxyPickRenderer } from '../../rendering/GalaxyPickRenderer';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
@@ -57,14 +57,14 @@ import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
-  renderer: PointRenderer | null;
-  pickRenderer: PickRenderer | null;
+  galaxyPointRenderer: GalaxyPointRenderer | null;
+  galaxyPickRenderer: GalaxyPickRenderer | null;
   /**
    * The parallel per-slab pick program over the content-layer registry.
    * Owns the hover / click / debug-overlay pick path: it filters the registry
    * by `drawPick` presence + `enabled`, re-rasterises each pickable slab into
    * its own r32uint target, reads back the cursor texel, and folds the results
-   * near→far. Constructed in `wireInput` (alongside `pickRenderer`, from which
+   * near→far. Constructed in `wireInput` (alongside `galaxyPickRenderer`, from which
    * it borrows the point-pick draw provider) once the registry + GPU handles
    * exist; null until then. Destroyed in teardown alongside the other pick
    * providers — it owns per-slab pick + depth textures and staging buffers.
@@ -89,7 +89,7 @@ export type EngineGpuHandles = {
   /**
    * Canonical SourceUniforms bind-group layout (@group(2), points
    * only). Constructed once in `initGpu` and shared between the
-   * visual PointRenderer and the offscreen PickRenderer. Null until
+   * visual GalaxyPointRenderer and the offscreen GalaxyPickRenderer. Null until
    * `initGpu` resolves.
    */
   sourceBgl: SourceUniformsBgl | null;

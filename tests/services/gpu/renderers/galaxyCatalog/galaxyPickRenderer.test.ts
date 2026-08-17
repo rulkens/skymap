@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createPickRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer';
-import { UNIFORM_BYTES } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
+import { createGalaxyPickRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer';
+import { UNIFORM_BYTES } from '../../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointVertexLayout';
 import { Source } from '../../../../../src/data/sources';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
@@ -17,7 +17,7 @@ function makeStubDevice() {
   }> = [];
 
   const device = {
-    // PickRenderer routes shader-module creation through
+    // GalaxyPickRenderer routes shader-module creation through
     // `createShaderModuleWithDevLog`, which calls `getCompilationInfo()`
     // under `import.meta.env.DEV` (true in Vitest).  Stub it out with a
     // Promise-returning empty-messages response.
@@ -54,7 +54,7 @@ function makeStubDevice() {
   };
 }
 
-// Stub BGLs — PickRenderer requires fadeBgl + sourceBgl + focusBgl as
+// Stub BGLs — GalaxyPickRenderer requires fadeBgl + sourceBgl + focusBgl as
 // canonical shared layouts.
 function makeStubFadeBgl() {
   return {} as import('../../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
@@ -81,13 +81,13 @@ function makeStubPass() {
   } as unknown as GPURenderPassEncoder;
 }
 
-describe('createPickRenderer', () => {
+describe('createGalaxyPickRenderer', () => {
   it('constructs from device + BGLs + focus bind group only, exposing the draw surface', () => {
     // The picker owns its own pickUniformBuffer; callers pass the packed
     // bytes per `drawPoints` call.  The public surface is the slimmed
     // point-pick draw provider: `drawPoints`, `bindCamera`, `destroy`.
     const { device } = makeStubDevice();
-    const pickRenderer = createPickRenderer(
+    const galaxyPickRenderer = createGalaxyPickRenderer(
       device,
       makeStubFadeBgl(),
       makeStubSourceBgl(),
@@ -96,10 +96,10 @@ describe('createPickRenderer', () => {
       false,
     );
 
-    expect(pickRenderer).toBeDefined();
-    expect(typeof pickRenderer.drawPoints).toBe('function');
-    expect(typeof pickRenderer.bindCamera).toBe('function');
-    expect(typeof pickRenderer.destroy).toBe('function');
+    expect(galaxyPickRenderer).toBeDefined();
+    expect(typeof galaxyPickRenderer.drawPoints).toBe('function');
+    expect(typeof galaxyPickRenderer.bindCamera).toBe('function');
+    expect(typeof galaxyPickRenderer.destroy).toBe('function');
   });
 
   it('drawPoints uploads the caller bytes VERBATIM to its OWN buffer — no post-upload patching', () => {
@@ -111,7 +111,7 @@ describe('createPickRenderer', () => {
     //   1. a single writeBuffer at offset 0 (verbatim upload, no patch writes);
     //   2. it targets the OWN buffer — the visual pass's buffer is never touched.
     const { device, writeBufferCalls, getOwnPickBuffer } = makeStubDevice();
-    const pickRenderer = createPickRenderer(
+    const galaxyPickRenderer = createGalaxyPickRenderer(
       device,
       makeStubFadeBgl(),
       makeStubSourceBgl(),
@@ -126,7 +126,7 @@ describe('createPickRenderer', () => {
     writeBufferCalls.length = 0; // clear construction calls
 
     const uniformBytes = makeUniformBytes();
-    pickRenderer.drawPoints(
+    galaxyPickRenderer.drawPoints(
       makeStubPass(),
       [
         {
@@ -169,7 +169,7 @@ describe('createPickRenderer', () => {
       }),
     } as unknown as GPUDevice;
 
-    const pickRenderer = createPickRenderer(
+    const galaxyPickRenderer = createGalaxyPickRenderer(
       device,
       makeStubFadeBgl(),
       makeStubSourceBgl(),
@@ -183,7 +183,7 @@ describe('createPickRenderer', () => {
 
     const setBindGroup = vi.fn();
     const pass = { setBindGroup } as unknown as GPURenderPassEncoder;
-    pickRenderer.bindCamera(pass);
+    galaxyPickRenderer.bindCamera(pass);
 
     expect(setBindGroup).toHaveBeenCalledTimes(1);
     expect(setBindGroup).toHaveBeenCalledWith(0, pickUniformBindGroup);
@@ -197,7 +197,7 @@ describe('createPickRenderer', () => {
     // galaxy-empty scene would leave slot 0 unbound (or stale) for the
     // fold-ins that follow.
     const { device, writeBufferCalls, getOwnPickBuffer } = makeStubDevice();
-    const pickRenderer = createPickRenderer(
+    const galaxyPickRenderer = createGalaxyPickRenderer(
       device,
       makeStubFadeBgl(),
       makeStubSourceBgl(),
@@ -219,7 +219,7 @@ describe('createPickRenderer', () => {
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    pickRenderer.drawPoints(pass, [], makeUniformBytes());
+    galaxyPickRenderer.drawPoints(pass, [], makeUniformBytes());
 
     // Camera uniform uploaded at offset 0 to the OWN buffer — no sources needed.
     const fullUpload = writeBufferCalls.find((c) => c.offset === 0);
@@ -236,7 +236,7 @@ describe('createPickRenderer', () => {
   it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', () => {
     // ── Why this test exists ──────────────────────────────────────────
     //
-    // PointRenderer and PickRenderer use an explicit pipelineLayout with
+    // GalaxyPointRenderer and GalaxyPickRenderer use an explicit pipelineLayout with
     // shared canonical BGLs for @group(1) (FadeUniforms) and @group(2)
     // (SourceUniforms). Both declare the SAME canonical layout, so bind
     // groups built against it are valid for either pipeline — WebGPU's
@@ -277,7 +277,7 @@ describe('createPickRenderer', () => {
       ),
     } as unknown as GPUDevice;
 
-    const pickRenderer = createPickRenderer(
+    const galaxyPickRenderer = createGalaxyPickRenderer(
       device,
       canonicalFadeBgl,
       canonicalSourceBgl,
@@ -294,7 +294,7 @@ describe('createPickRenderer', () => {
     // Reset call capture after construction (constructors build their own bind groups).
     createBindGroupCalls.length = 0;
 
-    pickRenderer.drawPoints(
+    galaxyPickRenderer.drawPoints(
       makeStubPass(),
       [
         { source: Source.SDSS, vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },

@@ -241,8 +241,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // All GPU handles populate during the async IIFE below and
       // release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
       // for the null-until-init lifecycle rationale.
-      renderer: null,
-      pickRenderer: null,
+      galaxyPointRenderer: null,
+      galaxyPickRenderer: null,
       pickProgram: null,
       milkyWayPickRenderer: null,
       // Canonical fade + source + focus bind-group layouts. Built once in
@@ -318,9 +318,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickDebugOverlay: null,
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
-      // constructs it + mints its 'earth' texture slot in the bodyTextures
-      // family (proximity-demanded, commits via setMap); excluded from
-      // isEngineReady, null-checked at use by earthLayer.
+      // constructs it; its 'earth' texture slot in the bodyTextures family
+      // (proximity-demanded, commits via setMap) is minted later, in wireSlots.
+      // Excluded from isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
       // (the Sun), one instanced planet renderer drawing every seeded
@@ -468,7 +468,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
       // The rest land later in the IIFE once their deps (GPU device,
-      // pickRenderer, scheduler) exist.
+      // galaxyPickRenderer, scheduler) exist.
       clickResolver: null,
       inputBindings: null,
       // Download-progress aggregator — built inside the IIFE so the
@@ -484,16 +484,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Each slot is a race-checked fetch→commit pipeline (see
     // `services/loading/AssetSlot.ts`).  The Map is declared up-front so
     // consumers can `state.assetSlots.points.get(source)?.load(...)` without
-    // a null check, but the slots are minted inside the GPU init IIFE: they
-    // close over GPU handles (renderer, filamentRenderer,
-    // volumeFieldRenderer) for their commit step, all null until initGpu
-    // resolves.  Minting them all in one IIFE pass keeps the lifecycle
-    // uniform — even the GPU-handle-free slots (famousGalaxiesMeta, pgcAlias) are
-    // born there.
+    // a null check, but the slots are minted in `wireSlots`: their commit
+    // closures re-read GPU handles (renderer, filamentRenderer,
+    // volumeFieldRenderer) at call time and null-guard, rather than assuming
+    // `initGpu` already assigned them — the same destroy-race posture the
+    // keyed `bodyTextures` family below uses.
     assetSlots: {
       points: new Map(),
-      // Per-source star catalogs — registry-built (wireSlots), unlike points'
-      // initGpu minting; the star slot's commit null-guards the renderer.
+      // Per-source star catalogs — registry-built (wireSlots), like points;
+      // the star slot's commit null-guards the renderer the same way.
       starCatalogs: new Map(),
       filaments: null,
       famousGalaxiesMeta: null,
@@ -508,8 +507,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Constellation stick-figure artifact; demand-loaded on its master gate.
       constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
-      // minted in initGpu beside the body renderers. Empty map at construction —
-      // proximity-demanded + released per body (mirrors the `points` map).
+      // minted in wireSlots. Empty map at construction — proximity-demanded +
+      // released per body (mirrors the `points` map).
       bodyTextures: new Map(),
       // The all-bodies low-res atlas: one boot fetch seeding every body's
       // placeholder, so no body ever draws untextured while its own map loads.
@@ -804,8 +803,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //    destroy() is mandatory.  The point renderer owns the largest
     //    allocations (per-source vertex buffers, ~14 MB GPU + CPU mirror per
     //    SDSS deck).
-    state.gpu.pickRenderer?.destroy();
-    state.gpu.pickRenderer = null;
+    state.gpu.galaxyPickRenderer?.destroy();
+    state.gpu.galaxyPickRenderer = null;
     state.gpu.pickProgram?.destroy();
     state.gpu.pickProgram = null;
     state.gpu.milkyWayPickRenderer?.destroy();
@@ -894,8 +893,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
-    state.gpu.renderer?.destroy();
-    state.gpu.renderer = null;
+    state.gpu.galaxyPointRenderer?.destroy();
+    state.gpu.galaxyPointRenderer = null;
     // Shared cluster-focus uniform — released after the renderers that bind
     // its group (points/disks/pick already destroyed above).
     state.gpu.focusUniform?.destroy();

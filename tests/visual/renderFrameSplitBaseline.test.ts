@@ -9,7 +9,7 @@
  * baseline by definition. It captures the per-renderer draw payload instead
  * (renderer name + argument shape).
  *
- * Recorded at the renderer-mock entry point (`pointRenderer.draw`,
+ * Recorded at the renderer-mock entry point (`galaxyPointRenderer.draw`,
  * `milkyWayCloudRenderer.drawStars`/`.drawDust`, etc.), not `pass.draw` on
  * the GPU encoder — the mocks short-circuit before the encoder ever sees
  * `draw`, so "what did the orchestrator dispatch?" is the only granularity
@@ -241,7 +241,7 @@ describe('renderFrame visual baseline', () => {
     const context = makeFakeContext();
 
     // Renderer mocks — each draw lands on the same `records` array.
-    const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
+    const galaxyPointRenderer = makeLoggingRenderer(records, 'point-sprites');
     // The cloud renderer has two entry points because its two passes target two
     // different textures: the additive stars into the reduced-resolution
     // `mw-aggregate` offscreen, the multiplicative dust full-res into HDR. Each
@@ -337,7 +337,7 @@ describe('renderFrame visual baseline', () => {
       drawPxPerRad,
       nowMs: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
-      renderer: pointRenderer,
+      galaxyPointRenderer,
       // The executor resolves hdr/volume attachments — and volumeUpsampleLayer
       // its source texture — via ctx.renderTargets.viewOf(id).
       renderTargets,

@@ -14,17 +14,18 @@
  *
  * ### Externally-built slots (built)
  *
- * Per-source point slots are minted in `initGpu` (via
- * `wireGalaxyCatalogSourceSlot`, right after the renderer they commit into),
- * NOT by the wiring registry. They still need a row here so the demand loop
- * can trigger their already-minted slots with the right `req(tier)`, but the
- * slot-construction pass must skip them — building twice would register a
- * second fade handle and a duplicate commit subscriber. `built: 'external'`
- * is that skip marker. Such rows' `factory` is a guard that throws if the
- * builder ever calls it, since the row exists for demand+req only.
+ * Per-source point slots are minted in `wireSlots` (via
+ * `wireGalaxyCatalogSourceSlot`, alongside the keyed `bodyTextures` family —
+ * the other externally-built family), NOT by the wiring registry. They still
+ * need a row here so the demand loop can trigger their already-minted slots
+ * with the right `req(tier)`, but the slot-construction pass must skip them —
+ * building twice would register a second fade handle and a duplicate commit
+ * subscriber. `built: 'external'` is that skip marker. Such rows' `factory`
+ * is a guard that throws if the builder ever calls it, since the row exists
+ * for demand+req only.
  *
  * The alternative — omitting point rows from the registry and keeping their
- * load policy inline in `initGpu` — would re-scatter the very load logic this
+ * load policy inline in `wireSlots` — would re-scatter the very load logic this
  * table consolidates, and the synthetic-fallback gate (which reads galaxy catalog
  * slot states) would have no single place to express its demand. One table,
  * one marker, wins.
@@ -126,8 +127,9 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
   release?: (ctx: DemandCtx) => boolean;
   /**
    * `'external'` when the slot is minted outside the registry (point sources,
-   * built in `initGpu`). The slot-construction pass skips these; the demand
-   * loop still evaluates their `demand`/`req`. Absent ⇒ registry builds it.
+   * body textures — built directly in `wireSlots`). The slot-construction
+   * pass skips these; the demand loop still evaluates their `demand`/`req`.
+   * Absent ⇒ registry builds it.
    *
    * This is an optional flag rather than a discriminated union over
    * buildable-vs-external rows: the union would let the compiler force external

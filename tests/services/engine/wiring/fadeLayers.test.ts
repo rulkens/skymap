@@ -474,7 +474,7 @@ describe('FADE_LAYERS intent subset', () => {
     // whose .bin is still downloading must not burn its fade window.
     const row = rowFor('survey');
     const state = {
-      gpu: { renderer: { hasCatalog: (id: string) => id === '2mrs' } },
+      gpu: { galaxyPointRenderer: { hasCatalog: (id: string) => id === '2mrs' } },
     } as unknown as EngineState;
     expect(row.guard?.(state, 'sdss')).toBe(false);
     expect(row.guard?.(state, '2mrs')).toBe(true);

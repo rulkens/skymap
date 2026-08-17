@@ -4,9 +4,9 @@
  * table and by `reevaluateDemand` to decide what loads now. Each row's `demand(ctx)`
  * is a pure predicate over `DemandCtx`, re-run whole on any state change, so no edge
  * (tier flip while hidden, toggle mid-flight) can be missed. `built: 'external'` rows
- * are minted in `initGpu` beside the renderer their commit uploads into and appear
- * here only for demand + `req(tier)`; their `factory` throws if the construction pass
- * calls it. The DEV synthetic volumes are absent so Vite tree-shakes the generators.
+ * are minted in `wireSlots` and appear here only for demand + `req(tier)`; their
+ * `factory` throws if the construction pass calls it. The DEV synthetic volumes are
+ * absent so Vite tree-shakes the generators.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -59,7 +59,7 @@ const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].id;
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
   throw new Error(
-    'assetWiring: point-source slots are minted in initGpu (built: "external"); the registry must not build them',
+    'assetWiring: externally-built rows (built: "external" — point sources, body textures) are minted outside this registry; the construction pass must not build them',
   );
 };
 
@@ -93,7 +93,7 @@ const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
 /**
  * One demand+req row for a star catalog. Registry-built, unlike the galaxy
  * `pointRow` family: `createStarCatalogSlot` null-guards the renderer handle at
- * commit time, so the slot needs no `initGpu` co-minting.
+ * commit time, so the slot needs no external co-minting.
  */
 function starCatalogRow(source: SourceType): AssetWiringRow {
   const id = SOURCE_REGISTRY[source].id as StarCatalogId;
@@ -182,7 +182,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     priority: 0,
   },
 
-  // ── Point sources (demand+req only; slots minted in initGpu) ──────
+  // ── Point sources (demand+req only; slots minted in wireSlots) ──────
   pointRow(Source.SDSS, 60),
   pointRow(Source.TwoMRS, 40),
   pointRow(Source.Glade, 62),

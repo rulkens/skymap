@@ -1,7 +1,7 @@
 /**
- * PointRenderer — public surface of the point renderer.
+ * GalaxyPointRenderer — public surface of the galaxy-catalog point renderer.
  *
- * Produced by the closure factory `createPointRenderer`.
+ * Produced by the closure factory `createGalaxyPointRenderer`.
  * `loadedSources` returns a fresh generator on each call.
  * Consumers: engine, frame body, bias-correction subsystem.
  * The pick renderer no longer shares the uniform buffer — it owns its
@@ -13,12 +13,12 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
-import type { PointDrawSettings } from './PointDrawSettings';
+import type { GalaxyPointDrawSettings } from './GalaxyPointDrawSettings';
 import type { Vec2 } from '../math/Vec2';
 
-export type PointRenderer = {
+export type GalaxyPointRenderer = {
   /**
-   * Human-readable identifier (`'pointRenderer'`).  Part of the
+   * Human-readable identifier (`'galaxyPointRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
@@ -63,10 +63,10 @@ export type PointRenderer = {
     count: number;
     /**
      * The per-source SourceUniforms GPU buffer (16 bytes — sourceCode
-     * u32 + 12 bytes pad). PickRenderer builds its OWN per-source
+     * u32 + 12 bytes pad). GalaxyPickRenderer builds its OWN per-source
      * @group(2) bind group around this buffer using the canonical
      * sourceUniformsBgl layout (shared with the visual pipeline). The
-     * underlying GPUBuffer is shared; PickRenderer's bind group is
+     * underlying GPUBuffer is shared; GalaxyPickRenderer's bind group is
      * just a per-pipeline view of the same bytes.
      *
      * The buffer is written ONCE at upload time (sourceCode never
@@ -85,7 +85,7 @@ export type PointRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
-    settings: PointDrawSettings,
+    settings: GalaxyPointDrawSettings,
   ): void;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;

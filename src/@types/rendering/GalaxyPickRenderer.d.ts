@@ -1,7 +1,7 @@
 /**
- * PickRenderer — public surface of the point-pick draw provider.
+ * GalaxyPickRenderer — public surface of the point-pick draw provider.
  *
- * Create one instance at startup with `createPickRenderer(device, ...)` and
+ * Create one instance at startup with `createGalaxyPickRenderer(device, ...)` and
  * keep it alive for the duration of the app.  It records the galaxy
  * point-billboard draw into an r32uint pick pass owned by the pick program
  * (`pickProgram.ts`); it owns no pass, no texture, and no readback.  The pick
@@ -12,9 +12,9 @@
 
 import type { PickSourceDraw } from './PickSourceDraw';
 
-export type PickRenderer = {
+export type GalaxyPickRenderer = {
   /**
-   * Human-readable identifier (`'pickRenderer'`).  Part of the
+   * Human-readable identifier (`'galaxyPickRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;

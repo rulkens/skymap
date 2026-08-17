@@ -29,7 +29,7 @@
 // declares '@group(0)' (per-frame Uniforms) and '@group(2)' (per-
 // source SourceUniforms); the pick pipeline binds those plus a
 // no-op '@group(1)' FadeUniforms (opacity = 1) so its pipeline
-// layout matches the visual pipeline's exactly. See pickRenderer.ts
+// layout matches the visual pipeline's exactly. See galaxyPickRenderer.ts
 // for the shared-fade-buffer wiring.
 
 import package::galaxyCatalog::points::io::VSOut;

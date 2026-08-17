@@ -1,5 +1,5 @@
 /**
- * pointSpritesLayer — instanced point-billboard draw, the headline
+ * galaxyPointSpritesLayer — instanced point-billboard draw, the headline
  * HDR content layer.
  *
  * ### What it draws
@@ -17,12 +17,12 @@
  * `visibleSourceMask` uniform, so disabling SDSS is a 4-byte uniform
  * write, not a CPU-side skip. (The renderer's own per-source loop skips
  * a source whose resolved fade opacity is exactly 0 — see
- * `pointRenderer.draw` — which is what keeps a completed deep-zoom
+ * `galaxyPointRenderer.draw` — which is what keeps a completed deep-zoom
  * survey fade from rasterizing millions of alpha-0 instances.)
  *
  * ### What it reads
  *
- * - `ctx.renderer` — the bootstrap-narrowed `PointRenderer`
+ * - `ctx.galaxyPointRenderer` — the bootstrap-narrowed `GalaxyPointRenderer`
  * - `view.vp` — this layer's resolved view-projection matrix
  * - `view.viewportPx` — backing-store viewport dimensions
  * - `view.camPos` — camera position, fed to the shader's parallax
@@ -65,7 +65,7 @@ import {
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 
-export const pointSpritesLayer: ContentLayer = {
+export const galaxyPointSpritesLayer: ContentLayer = {
   name: 'point-sprites',
   slab: COSMO,
   target: 'hdr',
@@ -78,7 +78,7 @@ export const pointSpritesLayer: ContentLayer = {
   },
 
   draw(pass, view, ctx, state) {
-    const { renderer, drawPxPerRad } = ctx;
+    const { galaxyPointRenderer, drawPxPerRad } = ctx;
 
     // Deep-zoom survey fade: the survey point clouds recede as the camera
     // descends toward the solar system, yielding once the local starfield
@@ -104,7 +104,7 @@ export const pointSpritesLayer: ContentLayer = {
     const nowMs = ctx.nowMs;
     const fades = state.subsystems.fades;
 
-    renderer.draw(pass, view.vp, view.viewportPx, {
+    galaxyPointRenderer.draw(pass, view.vp, view.viewportPx, {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,
@@ -149,7 +149,7 @@ export const pointSpritesLayer: ContentLayer = {
   // Pick aspect — the point half of the pick pass. Re-runs the SAME
   // instanced billboard geometry through the r32uint pick pipeline, which
   // writes a packed hit id `(sourceCode << 27) | localIdx` instead of
-  // colour. Delegates to `pickRenderer.drawPoints`; the pick camera is
+  // colour. Delegates to `galaxyPickRenderer.drawPoints`; the pick camera is
   // rebuilt as a value by `pickUniformBytesOf` (same byte layout as the
   // visual pack, minus the selection identity — the pick fragment writes
   // its own hit id).
@@ -181,17 +181,17 @@ export const pointSpritesLayer: ContentLayer = {
   // @group(0) pick-camera upload/bind it performs is the prefix contract
   // above, and the ring / disk pick pipelines still need it.
   drawPick(pass, view, ctx, state) {
-    if (state.gpu.pickRenderer === null) return;
+    if (state.gpu.galaxyPickRenderer === null) return;
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
     const fades = state.subsystems.fades;
-    const sources = Array.from(ctx.renderer.loadedSources()).filter((s) => {
+    const sources = Array.from(ctx.galaxyPointRenderer.loadedSources()).filter((s) => {
       if (((ctx.visibleSourceMask >> s.source) & 1) === 0) return false;
       const opacity =
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) }, ctx.nowMs) *
         (s.source === Source.FamousGalaxy ? 1 : surveyFade);
       return opacity !== 0;
     });
-    state.gpu.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
+    state.gpu.galaxyPickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
   },
 };

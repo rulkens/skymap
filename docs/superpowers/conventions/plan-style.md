@@ -92,7 +92,7 @@ the spec — don't invent criteria at plan time.
 ## Cite, don't paste
 
 When a task touches existing code, reference it by file path and line range,
-not by pasted excerpt. `pointRenderer.ts:240-280` is unambiguous, survives
+not by pasted excerpt. `galaxyPointRenderer.ts:240-280` is unambiguous, survives
 refactors that move the code, and forces the implementer to read current
 state instead of trusting a stale snippet.
 

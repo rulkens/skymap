@@ -3,7 +3,7 @@
  *
  * The cosmic-web skeleton flows through its own slot — different fetcher
  * (binary format is segments-not-points), different renderer target
- * (`filamentRenderer` rather than the per-source `pointRenderer`), and a
+ * (`filamentRenderer` rather than the per-source `galaxyPointRenderer`), and a
  * one-shot lifecycle: load() at boot, never on tier change.
  *
  * Why one-shot?  Re-downloading the ~30 MB skeleton every tier flip

@@ -14,7 +14,7 @@
  *
  * Single source of truth: this file populates the flags ONCE per test
  * environment.  Vitest's `setupFiles` config runs it before any test
- * file imports user code, so `import { createPointRenderer } from ...`
+ * file imports user code, so `import { createGalaxyPointRenderer } from ...`
  * sees the constants on the first read.
  *
  * Values mirror the WebGPU spec verbatim (https://www.w3.org/TR/webgpu/).

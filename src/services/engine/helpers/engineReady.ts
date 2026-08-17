@@ -7,19 +7,19 @@
  * `wireInput` finish?" in five different shapes:
  *
  *   - `runFrame.ts` had a 5-way `||` chain across `state.cam`,
- *     `state.gpu.renderer`, `state.gpu.postProcess`,
- *     `state.gpu.pickRenderer`, and `state.subsystems.texturedDisks`
+ *     `state.gpu.galaxyPointRenderer`, `state.gpu.postProcess`,
+ *     `state.gpu.galaxyPickRenderer`, and `state.subsystems.texturedDisks`
  *     (later consolidated by D.1's `FrameContext`, but minus
- *     `pickRenderer`).
+ *     `galaxyPickRenderer`).
  *   - `runFrame.ts`'s "still-animating" predicate at the end of the
  *     frame body re-spelled out three of the same fields with
  *     bespoke `!== null && …` clauses.
  *   - `wiring/galaxyCatalogSourceRegistry.ts` had a single-field
- *     `if (!state.gpu.renderer) return;` skip in the slot-commit step
+ *     `if (!state.gpu.galaxyPointRenderer) return;` skip in the slot-commit step
  *     — but that single field was a stand-in for "the engine bag is
  *     ready"; the destroy() path nulls all five together, so any
  *     one of them being null implies the others.
- *   - `runFrame.ts`'s pick branch used a `state.gpu.pickRenderer!`
+ *   - `runFrame.ts`'s pick branch used a `state.gpu.galaxyPickRenderer!`
  *     non-null assertion, gambling on the surrounding `ctx.isReady`
  *     check having already proven it.
  *
@@ -53,16 +53,16 @@
  * That's the right shape: optional resources null-check at the
  * point of use, not at the bootstrap gate.
  *
- * ### Why `pickRenderer` IS included
+ * ### Why `galaxyPickRenderer` IS included
  *
- * Unlike `filamentRenderer`, `pickRenderer`'s lifecycle matches the
+ * Unlike `filamentRenderer`, `galaxyPickRenderer`'s lifecycle matches the
  * other gate-included handles: it's constructed in `phases/wireInput.ts`
  * during the bootstrap IIFE and torn down in `destroy()` alongside
- * `renderer`, `renderTargets`, and `texturedDisks`.
+ * `galaxyPointRenderer`, `renderTargets`, and `texturedDisks`.
  * Either all gate-included handles are present or none are — there is
- * no "engine ran but pickRenderer isn't built" state by design.
+ * no "engine ran but galaxyPickRenderer isn't built" state by design.
  * Including it here lets the per-frame pick branch drop its
- * `state.gpu.pickRenderer!` non-null assertion.
+ * `state.gpu.galaxyPickRenderer!` non-null assertion.
  *
  * ### Why this is named `isEngineReady`
  *
@@ -73,7 +73,7 @@
  * crisply at every call site:
  *
  *   if (!isEngineReady(state)) return;     // narrows `state`
- *   state.gpu.renderer.upload(...);        // type-safe; no `!`
+ *   state.gpu.galaxyPointRenderer.upload(...);   // type-safe; no `!`
  *
  * The verb framing also pairs nicely with the `FrameContext.isReady`
  * boolean from D.1 — both ask the same question at different layers
@@ -109,7 +109,7 @@ import type { ReadyEngineState } from '../../../@types/engine/ReadyEngineState';
  * assertions needed in the guarded block:
  *
  *   if (!isEngineReady(state)) return;
- *   state.gpu.renderer.draw(...);  // tsc proves `renderer` is non-null
+ *   state.gpu.galaxyPointRenderer.draw(...);  // tsc proves `galaxyPointRenderer` is non-null
  *
  * Implementation is a plain conjunction: branch prediction makes the
  * per-frame cost negligible.  The win is at the source-readability
@@ -118,8 +118,8 @@ import type { ReadyEngineState } from '../../../@types/engine/ReadyEngineState';
 export function isEngineReady(state: EngineState): state is ReadyEngineState {
   return (
     state.cam !== null &&
-    state.gpu.renderer !== null &&
-    state.gpu.pickRenderer !== null &&
+    state.gpu.galaxyPointRenderer !== null &&
+    state.gpu.galaxyPickRenderer !== null &&
     // `renderTargets` owns every offscreen row (`hdr`, `volume`) the frame
     // draws into — allocated in `initGpu`, torn down in `destroy()`. The
     // engine is never "ready" without it: every render step's `viewFor`

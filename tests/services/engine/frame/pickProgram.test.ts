@@ -7,7 +7,7 @@
  * a controlled `ReadyFrameContext | null`, the `layers` dep is a set of fake
  * `ContentLayer`s with `drawPick` / `enabled` spies, and the device is a fake
  * that records texture allocations, pass descriptors, and staging readbacks.
- * The per-slab draw work each `drawPick` delegates to (pickRenderer /
+ * The per-slab draw work each `drawPick` delegates to (galaxyPickRenderer /
  * proceduralDiskRenderer / …) is covered by those renderers' own suites — the
  * program is name-blind and only calls `layer.drawPick` in registry order.
  */

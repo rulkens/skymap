@@ -8,8 +8,8 @@
  *     equals the field name exactly);
  *   - galaxy point slots (numeric keys with `type: 'galaxyCatalog'` registry
  *     entries) are never written into a named field — they self-install into
- *     `state.assetSlots.points` in initGpu, so such a key that slips into the
- *     map is skipped, not mis-installed;
+ *     `state.assetSlots.points` directly in `wireSlots`, so such a key that
+ *     slips into the map is skipped, not mis-installed;
  *   - star-catalog slots (numeric keys with `type: 'starCatalog'` entries) are
  *     registry-built and DO install here, into the per-source `starCatalogs`
  *     map — proven end-to-end (build → install → slotFor) so the demand loop's
@@ -108,10 +108,10 @@ describe('installSlots', () => {
   it('routes a star-catalog slot end-to-end: build → install → slotFor resolves it', () => {
     // The full registry-built seam over the REAL gaiaStars wiring row: the
     // construction pass builds the slot, installSlots must land it in the
-    // per-source starCatalogs map (NOT drop it as "numeric ⇒ galaxy ⇒ initGpu's
-    // problem"), and slotFor — the demand loop's resolution path — must find
-    // it. This is the wiring that makes demand-driven star fetch/commit
-    // reachable at all.
+    // per-source starCatalogs map (NOT drop it as "numeric ⇒ galaxy ⇒
+    // wireSlots's problem"), and slotFor — the demand loop's resolution path —
+    // must find it. This is the wiring that makes demand-driven star
+    // fetch/commit reachable at all.
     const state = makeState();
     const row = ASSET_WIRING.filter((r) => r.key === Source.GaiaStars);
     const built = buildSlotsFromRegistry(row, { state, cb: {} as never });
@@ -123,7 +123,7 @@ describe('installSlots', () => {
     // Star slots never leak into the galaxy points map…
     expect(state.assetSlots.points.has(Source.GaiaStars)).toBe(false);
     // …and the galaxy resolution path is unchanged: a numeric galaxy key still
-    // reads the points map that initGpu self-installs into.
+    // reads the points map that wireSlots self-installs into.
     const pointSlot = stubSlot('sdss-points');
     // The points map is typed for the galaxy payload/request pair; the erased
     // stub is fine for this resolution check (slotFor reads only the identity).
