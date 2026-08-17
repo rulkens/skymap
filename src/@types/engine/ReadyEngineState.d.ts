@@ -23,7 +23,7 @@ import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
 export type ReadyEngineState = EngineState & {
   cam: OrbitCamera;
   gpu: EngineState['gpu'] & {
-    renderer: PointRenderer;
+    pointRenderer: PointRenderer;
     pickRenderer: PickRenderer;
     /**
      * Non-null after bootstrap: minted in `initGpu` alongside the render

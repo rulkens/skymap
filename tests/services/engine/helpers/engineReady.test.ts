@@ -9,7 +9,7 @@
  *   1. Boolean correctness — false for any of the six handles
  *      being null, true only when all six are populated.
  *   2. Type narrowing — after `if (isEngineReady(state))`, the
- *      compiler treats `state.cam`, `state.gpu.renderer`,
+ *      compiler treats `state.cam`, `state.gpu.pointRenderer`,
  *      `state.gpu.renderTargets`, `state.gpu.pickRenderer`,
  *      `state.gpu.compositor`, and
  *      `state.subsystems.texturedDisks` as non-null without `!` or
@@ -20,7 +20,7 @@
  * Why test the type narrowing as well as the boolean?  Because the
  * value of D.4 is largely type-system: a boolean predicate with the
  * same runtime behaviour but no `is` clause would let the codebase
- * keep its `state.gpu.renderer!.upload(...)` non-null assertions.
+ * keep its `state.gpu.pointRenderer!.upload(...)` non-null assertions.
  * The `state is ReadyEngineState` clause is what makes the
  * non-null assertions disappear — and tsc is the only test runner
  * that can verify it.
@@ -51,7 +51,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 function makeState(
   overrides: {
     cam?: OrbitCamera | null;
-    renderer?: unknown;
+    pointRenderer?: unknown;
     renderTargets?: unknown;
     compositor?: unknown;
     pickRenderer?: unknown;
@@ -59,7 +59,8 @@ function makeState(
   } = {},
 ): EngineState {
   const cam = overrides.cam === undefined ? ({} as unknown as OrbitCamera) : overrides.cam;
-  const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
+  const pointRenderer =
+    overrides.pointRenderer === undefined ? ({} as unknown) : overrides.pointRenderer;
   const renderTargets =
     overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
   const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
@@ -69,7 +70,7 @@ function makeState(
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { renderer, renderTargets, compositor, pickRenderer },
+    gpu: { pointRenderer, renderTargets, compositor, pickRenderer },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
@@ -79,8 +80,8 @@ describe('isEngineReady — false branch', () => {
     expect(isEngineReady(makeState({ cam: null }))).toBe(false);
   });
 
-  it('returns false when state.gpu.renderer is null', () => {
-    expect(isEngineReady(makeState({ renderer: null }))).toBe(false);
+  it('returns false when state.gpu.pointRenderer is null', () => {
+    expect(isEngineReady(makeState({ pointRenderer: null }))).toBe(false);
   });
 
   it('returns false when state.gpu.renderTargets is null', () => {
@@ -142,7 +143,7 @@ describe('isEngineReady — type narrowing', () => {
       // suppresses the unused-expression lint warning while still
       // forcing tsc to type-check the property access.
       void state.cam.target;
-      void state.gpu.renderer.totalCount;
+      void state.gpu.pointRenderer.totalCount;
       void state.gpu.renderTargets.viewOf;
       void state.gpu.compositor.draw;
       void state.gpu.pickRenderer.drawPoints;

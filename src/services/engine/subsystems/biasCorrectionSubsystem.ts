@@ -31,7 +31,7 @@
  *
  * The subsystem is constructed eagerly in the engine state literal
  * (alongside `selection`, `tweens`, `scheduler`) — at that point the
- * GPU device hasn't been acquired yet, so `state.gpu.renderer` is
+ * GPU device hasn't been acquired yet, so `state.gpu.pointRenderer` is
  * null.  `attachRenderer(renderer)` is called from `phases/initGpu.ts`
  * once the renderer exists.  In the brief pre-attach window:
  *

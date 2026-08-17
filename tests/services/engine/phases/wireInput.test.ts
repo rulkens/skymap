@@ -148,7 +148,7 @@ function makeState(): EngineState {
       galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
     } as never,
     gpu: {
-      renderer: {
+      pointRenderer: {
         totalCount: () => 0,
         loadedSources: () => [],
       } as never,

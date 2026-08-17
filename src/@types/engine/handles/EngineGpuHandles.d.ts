@@ -87,7 +87,7 @@ import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
-  renderer: PointRenderer | null;
+  pointRenderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
   /**
    * The parallel per-slab pick program over the content-layer registry.

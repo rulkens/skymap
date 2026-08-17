@@ -81,7 +81,7 @@ function makeCam(): OrbitCamera {
 function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
-  const renderer = { draw: vi.fn() } as any;
+  const pointRenderer = { draw: vi.fn() } as any;
   const renderTargets = { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any;
   const texturedDisks = {
     runFrame: vi.fn(),
@@ -122,7 +122,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer,
+    pointRenderer,
     renderTargets,
     texturedDisks,
     ...overrides,
@@ -803,7 +803,7 @@ describe('pointSpritesLayer.draw', () => {
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
     pointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithSelection);
-    const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
+    const drawSpy = ctx.pointRenderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the PointDrawSettings
     // record).
@@ -823,7 +823,7 @@ describe('pointSpritesLayer.draw', () => {
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
     pointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
-    const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
+    const drawSpy = ctx.pointRenderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
@@ -843,7 +843,7 @@ describe('pointSpritesLayer.draw', () => {
 
     const farCtx = makeCtx();
     pointSpritesLayer.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, state);
-    const farSettings = (farCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+    const farSettings = (farCtx.pointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
     expect(farFadeOf(Source.SDSS)).toBe(1);
@@ -856,7 +856,7 @@ describe('pointSpritesLayer.draw', () => {
       drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
     });
     pointSpritesLayer.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, state);
-    const midSettings = (midCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+    const midSettings = (midCtx.pointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
     const midFade = midFadeOf(Source.SDSS);
@@ -880,7 +880,7 @@ describe('pointSpritesLayer.draw', () => {
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
     pointSpritesLayer.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
-    const deepSettings = (deepCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+    const deepSettings = (deepCtx.pointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
     expect(deepFadeOf(Source.SDSS)).toBe(0);
@@ -899,7 +899,7 @@ describe('pointSpritesLayer.draw', () => {
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
     pointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
-    const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
+    const drawSpy = ctx.pointRenderer.draw as ReturnType<typeof vi.fn>;
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
     expect(call[1]).toBe(view.vp);
@@ -982,7 +982,7 @@ describe('pointSpritesLayer.drawPick', () => {
       sourceBuffer: {} as GPUBuffer,
     }));
     const ctx = makeCtx({
-      renderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
+      pointRenderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
       visibleSourceMask: (1 << Source.SDSS) | (1 << Source.Glade),
     });
     const view = slabViewOf(ctx, COSMO);
@@ -1015,7 +1015,7 @@ describe('pointSpritesLayer.drawPick', () => {
       sourceBuffer: {} as GPUBuffer,
     }));
     const ctx = makeCtx({
-      renderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
+      pointRenderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
       visibleSourceMask: 0xffffffff,
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });

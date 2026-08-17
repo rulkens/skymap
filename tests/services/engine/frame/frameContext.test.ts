@@ -43,7 +43,7 @@ const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
  * Build an `EngineState`-shaped fixture with the guard fields
- * (`cam`, `gpu.renderer`, `gpu.renderTargets`, `gpu.pickRenderer`,
+ * (`cam`, `gpu.pointRenderer`, `gpu.renderTargets`, `gpu.pickRenderer`,
  * `gpu.compositor`, `subsystems.texturedDisks`) populated by default.
  * Each test can null any one to exercise the not-ready branch.
  *
@@ -55,7 +55,7 @@ const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 function makeState(
   overrides: {
     cam?: OrbitCamera | null;
-    renderer?: unknown;
+    pointRenderer?: unknown;
     renderTargets?: unknown;
     pickRenderer?: unknown;
     compositor?: unknown;
@@ -72,7 +72,8 @@ function makeState(
           position: new Float32Array(3),
         } as unknown as OrbitCamera)
       : overrides.cam;
-  const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
+  const pointRenderer =
+    overrides.pointRenderer === undefined ? ({} as unknown) : overrides.pointRenderer;
   const renderTargets =
     overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
   const pickRenderer =
@@ -82,7 +83,7 @@ function makeState(
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { renderer, renderTargets, pickRenderer, compositor },
+    gpu: { pointRenderer, renderTargets, pickRenderer, compositor },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
@@ -107,9 +108,9 @@ describe('deriveFrameContext — not-ready branch', () => {
     expect(ctx.isReady).toBe(false);
   });
 
-  it('returns isReady:false when gpu.renderer is null', () => {
+  it('returns isReady:false when gpu.pointRenderer is null', () => {
     const ctx = deriveFrameContext(
-      makeState({ renderer: null }),
+      makeState({ pointRenderer: null }),
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
@@ -279,12 +280,12 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.canvasSize).toEqual({ width: 800, height: 600 });
   });
 
-  it('forwards renderer, renderTargets, texturedDisks references onto the ready context', () => {
-    const renderer = { tag: 'renderer' };
+  it('forwards pointRenderer, renderTargets, texturedDisks references onto the ready context', () => {
+    const pointRenderer = { tag: 'pointRenderer' };
     const renderTargets = { tag: 'renderTargets' };
     const texturedDisks = { tag: 'texturedDisks' };
     const ctx = deriveFrameContext(
-      makeState({ renderer, renderTargets, texturedDisks }),
+      makeState({ pointRenderer, renderTargets, texturedDisks }),
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
@@ -296,7 +297,7 @@ describe('deriveFrameContext — ready branch', () => {
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    expect(ctx.renderer).toBe(renderer);
+    expect(ctx.pointRenderer).toBe(pointRenderer);
     expect(ctx.renderTargets).toBe(renderTargets);
     expect(ctx.texturedDisks).toBe(texturedDisks);
   });

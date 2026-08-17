@@ -376,7 +376,7 @@ function makeInput(
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: pointRenderer,
+    pointRenderer,
     renderTargets,
     texturedDisks: thumbnails,
   };

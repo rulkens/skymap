@@ -60,7 +60,7 @@ export type EngineAssetSlots = {
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
   /**
    * Null until the GPU init IIFE constructs the filament renderer and
-   * mints this slot — same lifecycle pattern as `state.gpu.renderer`.
+   * mints this slot — same lifecycle pattern as `state.gpu.pointRenderer`.
    * Consumers null-check before calling `.load()` (in practice only the
    * boot path touches it, and only after the IIFE has populated it).
    */

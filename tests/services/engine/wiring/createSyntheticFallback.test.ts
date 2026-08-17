@@ -169,7 +169,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     tier: 'medium',
     settings: { galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
-    gpu: { renderer: { totalCount: () => 42 } },
+    gpu: { pointRenderer: { totalCount: () => 42 } },
     assetSlots: {
       points: slots as unknown as Map<SourceType, AssetSlot<unknown, unknown>>,
       bodyTextures: new Map(),
@@ -327,7 +327,7 @@ describe('createSyntheticFallback', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(
       engineStatusChanged({
         kind: 'ready',
-        count: 42, // state.gpu.renderer.totalCount()
+        count: 42, // state.gpu.pointRenderer.totalCount()
         source: Source.Glade,
       }),
     );

@@ -450,7 +450,7 @@ function makeState(
       // optional-chain through them.  Filament renderer is set so the
       // filaments slot's commit doesn't bail early; the scalar volume
       // renderer is stubbed so CF-4 and synthetic commits can land.
-      renderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
+      pointRenderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
       pickRenderer: null,
       renderTargets: null,
       filamentRenderer: {
@@ -767,7 +767,7 @@ describe('wireSlots', () => {
 
   it('fires `ready` status with a running total each time a galaxy catalog arrives', async () => {
     // Semantic (b): on each per-source `ready` with count > 0, emit
-    // `kind: 'ready'` with the running total from renderer.totalCount().
+    // `kind: 'ready'` with the running total from pointRenderer.totalCount().
     // The status bar's job here is "the data is appearing" — not "boot
     // is done" — so emissions repeat.
     const sdssSlot = makeFakeSlot('sdss-points');
@@ -778,8 +778,8 @@ describe('wireSlots', () => {
     ]);
     const state = makeState({ points });
     let total = 0;
-    // Drive the renderer.totalCount() through the fake slot ready firings.
-    state.gpu.renderer = {
+    // Drive the pointRenderer.totalCount() through the fake slot ready firings.
+    state.gpu.pointRenderer = {
       totalCount: () => total,
       loadedSources: () => [] as unknown[],
     } as never;

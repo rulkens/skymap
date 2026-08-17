@@ -337,7 +337,7 @@ describe('renderFrame visual baseline', () => {
       drawPxPerRad,
       nowMs: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
-      renderer: pointRenderer,
+      pointRenderer,
       // The executor resolves hdr/volume attachments — and volumeUpsampleLayer
       // its source texture — via ctx.renderTargets.viewOf(id).
       renderTargets,

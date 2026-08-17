@@ -67,7 +67,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads
- * and writes: `gpu.renderer` (the upload target), `sources.catalogs`
+ * and writes: `gpu.pointRenderer` (the upload target), `sources.catalogs`
  * (mutated on commit), `subsystems.scheduler.requestRender` (woken on
  * ready), and the `assetSlots.points` Map (where the helper stores the
  * minted slot).  Casting through `unknown` keeps the test honest — any
@@ -81,7 +81,7 @@ function makeState(opts: {
 }): EngineState {
   return {
     gpu: {
-      renderer: {
+      pointRenderer: {
         upload: opts.rendererUpload,
         loadedSources: () => opts.loadedSources ?? [],
         totalCount: () => 0,
@@ -272,10 +272,10 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(state.data.galaxies.catalogs.get(Source.Glade)).toBe(cloud);
   });
 
-  it('skips the upload silently when state.gpu.renderer is null (post-destroy / pre-init race)', async () => {
+  it('skips the upload silently when state.gpu.pointRenderer is null (post-destroy / pre-init race)', async () => {
     const state = makeState({ rendererUpload: vi.fn() });
     // Simulate the renderer having been torn down before commit fires.
-    (state.gpu as unknown as { renderer: null }).renderer = null;
+    (state.gpu as unknown as { pointRenderer: null }).pointRenderer = null;
 
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.TwoMRS,

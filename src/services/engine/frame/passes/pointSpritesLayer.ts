@@ -22,7 +22,7 @@
  *
  * ### What it reads
  *
- * - `ctx.renderer` — the bootstrap-narrowed `PointRenderer`
+ * - `ctx.pointRenderer` — the bootstrap-narrowed `PointRenderer`
  * - `view.vp` — this layer's resolved view-projection matrix
  * - `view.viewportPx` — backing-store viewport dimensions
  * - `view.camPos` — camera position, fed to the shader's parallax
@@ -78,7 +78,7 @@ export const pointSpritesLayer: ContentLayer = {
   },
 
   draw(pass, view, ctx, state) {
-    const { renderer, drawPxPerRad } = ctx;
+    const { pointRenderer, drawPxPerRad } = ctx;
 
     // Deep-zoom survey fade: the survey point clouds recede as the camera
     // descends toward the solar system, yielding once the local starfield
@@ -104,7 +104,7 @@ export const pointSpritesLayer: ContentLayer = {
     const nowMs = ctx.nowMs;
     const fades = state.subsystems.fades;
 
-    renderer.draw(pass, view.vp, view.viewportPx, {
+    pointRenderer.draw(pass, view.vp, view.viewportPx, {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,
@@ -185,7 +185,7 @@ export const pointSpritesLayer: ContentLayer = {
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
     const fades = state.subsystems.fades;
-    const sources = Array.from(ctx.renderer.loadedSources()).filter((s) => {
+    const sources = Array.from(ctx.pointRenderer.loadedSources()).filter((s) => {
       if (((ctx.visibleSourceMask >> s.source) & 1) === 0) return false;
       const opacity =
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) }, ctx.nowMs) *

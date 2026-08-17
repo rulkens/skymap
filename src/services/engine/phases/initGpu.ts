@@ -70,7 +70,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * Bootstrap phase 1: GPU device acquisition + renderer construction.
  *
  * Side effects on `state`:
- *   - writes `state.gpu.renderer`, `state.gpu.renderTargets`,
+ *   - writes `state.gpu.pointRenderer`, `state.gpu.renderTargets`,
  *     `state.gpu.filamentRenderer`, and every other renderer handle. Mints
  *     no `state.assetSlots.*` — every asset slot (points, body textures,
  *     sidecars) is minted in `wireSlots`.
@@ -169,7 +169,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
   });
-  state.gpu.renderer = renderer;
+  state.gpu.pointRenderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
   //

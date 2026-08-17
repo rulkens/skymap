@@ -5,7 +5,7 @@
  * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
  * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU resources
  * and expose `.destroy()`. They must live on `state.gpu.*` (alongside
- * `renderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
+ * `pointRenderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
  * has a reachable reference to each — otherwise every HMR / StrictMode
  * remount leaks their GPU buffers. After `initGpu(state, deps)`, this test
  * checks each renderer field on `state.gpu.*` holds the constructed
@@ -361,7 +361,7 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 function makeState(): EngineState {
   return {
     gpu: {
-      renderer: null,
+      pointRenderer: null,
       pickRenderer: null,
       milkyWayPickRenderer: null,
       renderTargets: null,

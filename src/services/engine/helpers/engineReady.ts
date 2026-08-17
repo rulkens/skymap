@@ -7,7 +7,7 @@
  * `wireInput` finish?" in five different shapes:
  *
  *   - `runFrame.ts` had a 5-way `||` chain across `state.cam`,
- *     `state.gpu.renderer`, `state.gpu.postProcess`,
+ *     `state.gpu.pointRenderer`, `state.gpu.postProcess`,
  *     `state.gpu.pickRenderer`, and `state.subsystems.texturedDisks`
  *     (later consolidated by D.1's `FrameContext`, but minus
  *     `pickRenderer`).
@@ -15,7 +15,7 @@
  *     frame body re-spelled out three of the same fields with
  *     bespoke `!== null && …` clauses.
  *   - `wiring/galaxyCatalogSourceRegistry.ts` had a single-field
- *     `if (!state.gpu.renderer) return;` skip in the slot-commit step
+ *     `if (!state.gpu.pointRenderer) return;` skip in the slot-commit step
  *     — but that single field was a stand-in for "the engine bag is
  *     ready"; the destroy() path nulls all five together, so any
  *     one of them being null implies the others.
@@ -58,7 +58,7 @@
  * Unlike `filamentRenderer`, `pickRenderer`'s lifecycle matches the
  * other gate-included handles: it's constructed in `phases/wireInput.ts`
  * during the bootstrap IIFE and torn down in `destroy()` alongside
- * `renderer`, `renderTargets`, and `texturedDisks`.
+ * `pointRenderer`, `renderTargets`, and `texturedDisks`.
  * Either all gate-included handles are present or none are — there is
  * no "engine ran but pickRenderer isn't built" state by design.
  * Including it here lets the per-frame pick branch drop its
@@ -73,7 +73,7 @@
  * crisply at every call site:
  *
  *   if (!isEngineReady(state)) return;     // narrows `state`
- *   state.gpu.renderer.upload(...);        // type-safe; no `!`
+ *   state.gpu.pointRenderer.upload(...);   // type-safe; no `!`
  *
  * The verb framing also pairs nicely with the `FrameContext.isReady`
  * boolean from D.1 — both ask the same question at different layers
@@ -109,7 +109,7 @@ import type { ReadyEngineState } from '../../../@types/engine/ReadyEngineState';
  * assertions needed in the guarded block:
  *
  *   if (!isEngineReady(state)) return;
- *   state.gpu.renderer.draw(...);  // tsc proves `renderer` is non-null
+ *   state.gpu.pointRenderer.draw(...);  // tsc proves `pointRenderer` is non-null
  *
  * Implementation is a plain conjunction: branch prediction makes the
  * per-frame cost negligible.  The win is at the source-readability
@@ -118,7 +118,7 @@ import type { ReadyEngineState } from '../../../@types/engine/ReadyEngineState';
 export function isEngineReady(state: EngineState): state is ReadyEngineState {
   return (
     state.cam !== null &&
-    state.gpu.renderer !== null &&
+    state.gpu.pointRenderer !== null &&
     state.gpu.pickRenderer !== null &&
     // `renderTargets` owns every offscreen row (`hdr`, `volume`) the frame
     // draws into — allocated in `initGpu`, torn down in `destroy()`. The

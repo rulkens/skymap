@@ -128,7 +128,7 @@ describe('slabViewOf', () => {
       focusBlend: 0,
       visibleSourceMask: 0xffffffff,
       focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
-      renderer: {} as unknown as ReadyFrameContext['renderer'],
+      pointRenderer: {} as unknown as ReadyFrameContext['pointRenderer'],
       renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
       texturedDisks: {} as unknown as ReadyFrameContext['texturedDisks'],
       slabs,

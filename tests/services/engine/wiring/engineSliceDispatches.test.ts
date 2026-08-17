@@ -116,7 +116,7 @@ import { createSyntheticFallback } from '../../../../src/services/engine/wiring/
 function makeGalaxyState(opts: { rendererUpload: ReturnType<typeof vi.fn> }): EngineState {
   return {
     gpu: {
-      renderer: {
+      pointRenderer: {
         upload: opts.rendererUpload,
         loadedSources: () => [],
         totalCount: () => 0,
@@ -277,7 +277,7 @@ function makeSyntheticFallbackState(): {
     tier: 'medium',
     settings: { galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
-    gpu: { renderer: { totalCount: () => 99 } },
+    gpu: { pointRenderer: { totalCount: () => 99 } },
     assetSlots: { points: assetSlotPoints, bodyTextures: new Map() },
     // `createSyntheticFallback` calls `reevaluateDemand`, which enqueues onto
     // this rather than calling `slot.load()` directly.
