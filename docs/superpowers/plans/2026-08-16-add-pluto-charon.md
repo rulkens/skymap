@@ -273,6 +273,38 @@ into that one.
 
 ---
 
+### Task 8b: True-colour Pluto + 4K tier for both — SCOPE CHANGE (user decision 2026-08-17)
+
+Added after Tasks 1–8 shipped, when the flat-tint result made the fidelity gap concrete: multiplying
+a panchromatic LORRI mosaic by one `grayscaleTint` renders Pluto a uniform butterscotch and cannot
+express the dark red Cthulhu Macula beside pale Tombaugh Regio.
+
+**Decision:** Pluto switches to the NASA/JHUAPL/SwRI Ralph/MVIC global **colour** map and both bodies
+move `small` → `medium` (4K). Charon keeps the greyscale mosaic + `grayscaleTint`, because **no global
+colour mosaic for Charon exists** — only single-hemisphere disc portraits — and that is honest:
+Mordor Macula is ~2.7% of Charon's colour variance (Protopapa+19), so the body really is near-neutral.
+
+**Why 4K is free for colour:** the colour mosaic is 5926 px wide, so it feeds a 4096 px tier without
+upsampling. It is too narrow for `large` (8192) — `medium` is its natural ceiling, and the
+`tiersFittingSourceWidth` guard enforces that rather than manufacturing detail.
+
+**Hard gate before adopting:** the source must be approximately-true colour. New Horizons' famous
+vivid "rainbow" images are principal-component **enhanced** colour; shipping those in a renderer
+claiming physical realism is the same dishonesty rejected for the atmosphere (see the atmosphere
+assessment in this PR's discussion). Verify the processing wording at the publisher before wiring it.
+
+- [ ] Verify true-vs-enhanced at the primary source; record the verbatim wording in the raw-data row.
+- [ ] Register the colour source (`RAW_DATA` + `TEXTURE_SOURCES`), fetch it, sha256 sidecar.
+- [ ] `bodyTextureRegistry`: Pluto → colour source, drop `grayscaleTint`, `surface: 'medium'`;
+      Charon → keep `grayscaleTint`, `surface: 'medium'`. Keep the far-side-coverage caveat comment on
+      both — it applies to the colour source identically (same encounter-hemisphere gap).
+- [ ] `ATTRIBUTIONS.md`: the colour map is a NASA/JHUAPL/SwRI product, not a USGS Astrogeology one —
+      a separate credit from the mosaic block Task 7 added.
+- [ ] Rebuild textures + atlas; confirm `pluto-4096.jpg` is emitted WITHOUT the `(tinted)` note and
+      `charon-4096.jpg` WITH it.
+
+---
+
 ### Task 9: `ROTATION_ELEMENTS` rows for Pluto and Charon
 
 **Files:** `src/data/bodies/rotationElements.ts` (modify), `src/@types/data/BodyTextureId.d.ts`
