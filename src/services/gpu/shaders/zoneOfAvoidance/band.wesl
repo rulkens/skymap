@@ -17,7 +17,9 @@ const INNER_RIM_FRACTION: f32 = 0.05;
 
 // Optical length (Mpc of obscured material) along the fragment's view ray,
 // normalized by outerRadiusMpc: a dimensionless mask callers scale by the
-// 'intensity' knob. 0.0 means the ray never crosses the shell.
+// 'intensity' knob. 0.0 means no obscuring material along this ray — either
+// it never touches the shell, or it crosses the shell entirely outside the
+// latitude wedge (e.g. toward the poles).
 fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
   let rayDir = normalize(
     u.camForward
