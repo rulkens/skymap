@@ -51,15 +51,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'rayleigh' },
       },
     ],
-    rayleighScatter: [5.8e-3, 13.6e-3, 33.1e-3],
-    rayleighScaleHeightKm: 8,
-    mieScatter: [3.9e-3, 3.9e-3, 3.9e-3],
-    mieAbsorption: 4.4e-3,
-    mieScaleHeightKm: 1.2,
-    miePhaseG: 0.8,
-    ozoneAbsorption: [0.65e-3, 1.881e-3, 0.085e-3],
-    ozoneCenterKm: 25,
-    ozoneWidthKm: 15,
     groundAlbedo: [0.3, 0.3, 0.3],
     twilightSoftness: 0.05,
     twilightIntensity: 1.0,
@@ -68,7 +59,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
   },
   venus: {
     // Mie-dominated: thick CO2 + H2SO4 haze, dense near the cloud tops, under a warm
-    // Rayleigh tint. Ozone has no analogue here, hence the zeroed tent.
+    // Rayleigh tint.
     planetRadiusKm: seededPlanet('venus').radiusKm,
     atmosphereTopKm: seededPlanet('venus').radiusKm + 100,
     constituents: [
@@ -85,15 +76,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'henyeyGreenstein', g: 0.7 },
       },
     ],
-    rayleighScatter: [12e-3, 10e-3, 7e-3],
-    rayleighScaleHeightKm: 15.9,
-    mieScatter: [25e-3, 25e-3, 25e-3],
-    mieAbsorption: 2e-3,
-    mieScaleHeightKm: 5,
-    miePhaseG: 0.7,
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     groundAlbedo: seededPlanet('venus').albedo,
     twilightSoftness: 0.05,
     twilightIntensity: 1.0,
@@ -119,15 +101,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'henyeyGreenstein', g: 0.6 },
       },
     ],
-    rayleighScatter: [8e-3, 5e-3, 3e-3],
-    rayleighScaleHeightKm: 11.1,
-    mieScatter: [10e-3, 10e-3, 10e-3],
-    mieAbsorption: 4e-3,
-    mieScaleHeightKm: 8,
-    miePhaseG: 0.6,
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     groundAlbedo: seededPlanet('mars').albedo,
     twilightSoftness: 0.07,
     twilightIntensity: 1.0,
@@ -153,15 +126,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'henyeyGreenstein', g: 0.6 },
       },
     ],
-    rayleighScatter: [4e-3, 4e-3, 5e-3],
-    rayleighScaleHeightKm: 27,
-    mieScatter: [3e-3, 3e-3, 3e-3],
-    mieAbsorption: 1e-3,
-    mieScaleHeightKm: 12,
-    miePhaseG: 0.6,
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     groundAlbedo: seededPlanet('jupiter').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
@@ -186,15 +150,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'henyeyGreenstein', g: 0.6 },
       },
     ],
-    rayleighScatter: [4e-3, 4e-3, 4e-3],
-    rayleighScaleHeightKm: 59.5,
-    mieScatter: [3e-3, 3e-3, 3e-3],
-    mieAbsorption: 1e-3,
-    mieScaleHeightKm: 25,
-    miePhaseG: 0.6,
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     groundAlbedo: seededPlanet('saturn').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
@@ -219,15 +174,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'henyeyGreenstein', g: 0.6 },
       },
     ],
-    rayleighScatter: [4e-3, 10e-3, 20e-3],
-    rayleighScaleHeightKm: 27.7,
-    mieScatter: [2e-3, 2e-3, 2e-3],
-    mieAbsorption: 1e-3,
-    mieScaleHeightKm: 12,
-    miePhaseG: 0.6,
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     groundAlbedo: seededPlanet('uranus').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
@@ -252,15 +198,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'henyeyGreenstein', g: 0.6 },
       },
     ],
-    rayleighScatter: [4e-3, 9e-3, 22e-3],
-    rayleighScaleHeightKm: 20,
-    mieScatter: [2e-3, 2e-3, 2e-3],
-    mieAbsorption: 1e-3,
-    mieScaleHeightKm: 10,
-    miePhaseG: 0.6,
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     groundAlbedo: seededPlanet('neptune').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
@@ -308,32 +245,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
       // [M] No ozone, and no oxygen-bearing species to make any: the Alice occultation's inventory
       // is N2, CH4, C2H2, C2H4, C2H6 and haze (Young+18) — hence no third constituent.
     ],
-    // [D] Earth's Rayleigh scaled by surface number density (11 µbar / 40 K = 7.82e-5 of sea
-    // level). ~300x under the haze: honest, and invisible.
-    rayleighScatter: [4.5e-7, 1.06e-6, 2.59e-6],
-    // [M] Gas and haze share ONE measured falloff (Young+18: haze extinction ∝ N2 density over
-    // 26-100 km). The isothermal 40 K value, 19 km, is the WRONG number for this profile — the
-    // atmosphere climbs past 110 K by 30 km.
-    rayleighScaleHeightKm: 50,
-    // [D] Vertical scattering optical depth 0.013 over a 50 km scale height (Gladstone+16) =
-    // 2.72e-4 /km at LORRI's 607.6 nm pivot, spread over 680/550/440 nm by the measured
-    // blue/red ratio above (λ^-3.44).
-    mieScatter: [1.85e-4, 3.83e-4, 8.25e-4],
-    // [D] Tholin k=0.018 at 607.6 nm through van de Hulst: single-scattering albedo 0.966, so
-    // absorption is 3.5% of scattering — present, never visible.
-    mieAbsorption: 9.6e-6,
-    // [M] "typical brightness scale heights of ~50 km" (Gladstone+16).
-    mieScaleHeightKm: 50,
-    // [D] Henyey-Greenstein solved against the one measured phase-function point, P(165°)~5
-    // (Gladstone+16): g=0.5 gives 4.95. Far below Earth's 0.8 because HG must hit the forward
-    // lobe's HEIGHT, not merely lean forward — raise g without cutting `mieScatter` by the same
-    // factor and the ring triples.
-    miePhaseG: 0.5,
-    // [M] No ozone, and no oxygen-bearing species to make any: the Alice occultation's inventory
-    // is N2, CH4, C2H2, C2H4, C2H6 and haze (Young+18).
-    ozoneAbsorption: [0, 0, 0],
-    ozoneCenterKm: 0,
-    ozoneWidthKm: 0,
     // [M-ish] The seed's mean, 0.49, is darker than the measured Bond albedo 0.72 ± 0.07
     // (Buratti+17); kept, since the bounce it feeds is a ~1% term at τ_vert 0.04, but the SEED
     // is the thing to fix.
