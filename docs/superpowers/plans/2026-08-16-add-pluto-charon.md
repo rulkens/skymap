@@ -76,12 +76,11 @@ read apart from Neptune's blue and the satellite palette's greys at a glance.
 **Table 2a** (valid 3000 BC–3000 AD; the only table that includes Pluto) —
 <https://ssd.jpl.nasa.gov/planets/approx_pos.html>. Table 2a's **b/c/s/f** correction terms
 (Table 2b, applied to Jupiter through Pluto's mean anomaly for multi-millennial accuracy) are
-**deliberately dropped** — `propagateElements.ts` only implements the linear `element(T) = element₀
-
-- rate·T` map every other row uses, and within a few centuries of J2000 the linear form is within
-  visual accuracy. Record this tradeoff in a row comment (the "why comment" this plan's convention
-  calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat because they don't
-  need it.
+**deliberately dropped** — `propagateElements.ts` only implements the linear
+`element(T) = element₀ + rate·T` map every other row uses, and within a few centuries of J2000 the
+linear form is within visual accuracy. Record this tradeoff in a row comment (the "why comment" this
+plan's convention calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat
+because they don't need it.
 
 * [ ] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
       `plane` — Table 2a is ecliptic-referenced like Table 1), following the exact derivation idiom
