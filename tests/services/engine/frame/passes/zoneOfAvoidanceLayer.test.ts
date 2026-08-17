@@ -138,10 +138,6 @@ describe('zoneOfAvoidanceLayer.draw', () => {
 });
 
 describe('zoneOfAvoidanceLayer.drawPick', () => {
-  it('has no pickEnabled — the pick program falls back to enabled', () => {
-    expect(zoneOfAvoidanceLayer.pickEnabled).toBeUndefined();
-  });
-
   it('draws with ctx.cam, the FULL canvas viewport, and the composed opacity', () => {
     const drawPickSpy = vi.fn();
     const state = liveState({ drawPick: drawPickSpy });

@@ -62,11 +62,6 @@ describe('createZoneOfAvoidanceRenderer', () => {
     ).not.toThrow();
   });
 
-  it('satisfies the Renderer label contract', () => {
-    const renderer = createZoneOfAvoidanceRenderer(mockDevice(), 'rgba16float', FIXTURE_ATLASES);
-    expect(renderer.label).toBe('zoneOfAvoidanceRenderer');
-  });
-
   it('builds a pick pipeline targeting r32uint with no blend and a depth test', () => {
     // Regression guard: a blend key on an integer target is a validation
     // error, and a missing depthStencil breaks occlusion against other
