@@ -10,7 +10,7 @@
  *     `state.assetSlots.starCatalogs` map — same numeric key space, different
  *     payload/request types (see `EngineAssetSlots` for why two maps).
  *   - The auxiliary assets named by `AssetKey` (the cluster catalog,
- *     famous-meta, the PGC-alias map, filaments, the scalar-volume cubes) are
+ *     famous-galaxies-meta, the PGC-alias map, filaments, the scalar-volume cubes) are
  *     named fields on `state.assetSlots`.
  *
  * `AssetKey` is the union of the key spaces — a numeric `SourceType` OR one of

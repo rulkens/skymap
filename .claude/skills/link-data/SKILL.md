@@ -9,7 +9,10 @@ description: Symlink the current worktree's `public/data/` to the main checkout'
 
 Every fresh worktree starts with no `public/data/` directory (it's gitignored
 — see CLAUDE.md "The `.bin` files are intentionally not in git"). The
-on-disk binary format also bumps every few weeks (currently v6); .bin files
+on-disk binary format also bumps every few weeks. Main's `public/data/` now
+holds content-hashed filenames behind `manifest.json` (see docs/DATA.md
+"Content hash + manifest") — a linked worktree resolves logical names the
+same way, through main's manifest, since it's the same directory. .bin files
 left over from older sessions trigger
 `unsupported version: N — please regenerate the .bin via "npm run build-tiers"`
 warnings in the browser console, and the engine falls back to the synthetic
@@ -26,8 +29,8 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
 ## What this skill does
 
 1. **Detect environment** — confirm cwd is a linked worktree (`GIT_DIR !=
-   GIT_COMMON`), find the main checkout's root via `git rev-parse
-   --git-common-dir` (its parent is the main checkout).
+GIT_COMMON`), find the main checkout's root via `git rev-parse
+--git-common-dir` (its parent is the main checkout).
 2. **Detect main's data** — confirm `<main>/public/data/` exists, is a real
    directory (not itself a symlink), and contains at least one `.bin` or
    `.scfd` file. Bail with a clear error if main has no built bins.
@@ -45,16 +48,15 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
      `public/data.stale.<timestamp>/` as a one-step-back safety, then symlink.
    - **Symlink to main's `public/data`** → no-op, report "already linked".
    - **Symlink to elsewhere** → ask the user before replacing.
-4. **Remove-then-link, atomically** — the detect and swap MUST happen in a
-   single script run. `ln -s <target> public/data` descends *into*
-   `public/data` when it already exists as a directory, creating a nested
-   `public/data/data` link instead of replacing it — so always remove or
-   rename the existing path first, in the same pass, then
-   `ln -sn <absolute main path> public/data` and verify `readlink` points at
-   main. Use the absolute path (rather than a relative `../../../../public/data`)
+4. **Remove-then-link in one Bash call** — `ln -s <target> public/data`
+   descends _into_ `public/data` when it already exists as a directory,
+   creating a nested `public/data/data` link instead of replacing it — so
+   the remove/rename, the `ln -sn`, and the `readlink` verification chain
+   together in a single call (see the implementation sequence). Use the
+   absolute path (rather than a relative `../../../../public/data`)
    so the symlink survives moving the worktree directory.
 5. **Report** — one line: `Linked public/data → <main>/public/data (N files
-   visible)`.
+visible)`.
 
 ## When NOT to use
 
@@ -67,10 +69,10 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
   (compare mtimes + presence — see step 3) and the action is `ask user`,
   never silent overwrite.
 - **When `data/` is needed read-write.** Symlinks are transparent for
-  *reads* but writes go through to the target. If the user is iterating on
+  _reads_ but writes go through to the target. If the user is iterating on
   the bin-building pipeline in this worktree and expects `public/data/` to
   be sandboxed, this skill is the wrong tool — they should `unlink
-  public/data && mkdir public/data && npm run build-tiers` instead. The
+public/data && mkdir public/data && npm run build-tiers` instead. The
   `project_worktree_data_isolation` memory documents this trade-off.
 
 ## Why a symlink, not a bind-mount or hardlink
@@ -94,109 +96,91 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
   This skill is about reusing the output. The raw catalog files live in
   the main checkout via the raw-data registry already
   (`feedback_raw_data_registry`).
-- **Don't** *silently* auto-run `/link-data` on worktree creation. Some
-  sessions are pure doc / planning work, some are explicitly rebuilding
-  the data pipeline, and some are inspecting stale data on purpose. `/wt`
-  may **offer** to run it (a fresh worktree has no `public/data/` at all),
-  but the user confirms — never link without asking.
+- **Don't** ask the user whether to link on worktree creation. `/wt` decides
+  from the task description and links when the work could touch the render
+  (see its step 5); a fresh worktree has no `public/data/` at all, so the
+  default for anything visual is to link. Announce it, don't prompt for it.
+  The judgement is only about _which_ of the three cases applies — visual
+  work (link), doc/planning (skip), deliberate pipeline rebuild (skip, it
+  wants its own directory). Note that this skill still asks before
+  **clobbering** an existing `public/data/` with unique content — that guard
+  is about data loss and stays.
 - **Don't** kill the dev server before symlinking. Vite watches the
   filesystem and will pick up the new contents at the next HTTP request
   (the browser may need a hard refresh, but the server doesn't).
 
-## Implementation sketch
+## Implementation sequence
 
-```bash
-# Step 1 — detect worktree
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
-if [ "$GIT_DIR" = "$GIT_COMMON" ]; then
-  echo "ERROR: /link-data only runs inside a worktree (you're on the main checkout)."
-  exit 1
-fi
+The session running this skill is usually **worktree-isolated**: the harness
+statically verifies each Bash call stays inside the worktree before running
+it. A monolithic script — `cd` inside command substitutions, `if/else`
+branching, `mv` targets built from `$(date +%s)`, paths held in shell
+variables — cannot be statically verified and gets refused wholesale,
+regardless of what it would actually do. So: **bash is the executor, not
+the decision-maker.** Each call is a short chain of commands with literal
+absolute paths; the assistant reads the output and chooses the next command.
 
-# Step 2 — find main checkout root
-MAIN_ROOT=$(dirname "$GIT_COMMON")
+1. **Probe the repo layout** (read-only):
 
-# Step 3 — verify main has built data
-if [ ! -d "$MAIN_ROOT/public/data" ] || [ -L "$MAIN_ROOT/public/data" ]; then
-  echo "ERROR: $MAIN_ROOT/public/data does not exist or is itself a symlink."
-  exit 1
-fi
-if ! ls "$MAIN_ROOT/public/data"/*.bin >/dev/null 2>&1; then
-  echo "ERROR: $MAIN_ROOT/public/data has no .bin files. Run 'npm run build-tiers' in main first."
-  exit 1
-fi
+   ```bash
+   git rev-parse --git-dir; git rev-parse --git-common-dir
+   ```
 
-# Step 4 — inspect worktree's current state AND swap, in ONE atomic pass.
-#
-# CRITICAL: do detection and the swap in a single script run. Splitting
-# them across two Bash calls is what caused the nested-symlink bug — the
-# second call ran `ln -s` while `public/data` still existed as a real
-# directory, so `ln` created `public/data/data` *inside* it instead of
-# replacing it. `ln -s TARGET NAME` silently descends into NAME when NAME
-# is an existing directory. Never call `ln -s` against a path that might
-# already exist; always remove/rename it first, in the same script.
-if [ -L public/data ]; then
-  TARGET=$(readlink public/data)
-  if [ "$TARGET" = "$MAIN_ROOT/public/data" ]; then
-    echo "Already linked: public/data → $MAIN_ROOT/public/data"
-    exit 0
-  fi
-  # symlink points elsewhere — ASK the user before replacing, then:
-  rm -f public/data
-elif [ -d public/data ]; then
-  # A real directory. Decide unique-vs-stale:
-  #   - famous.bin / famous_meta.json (build-famous outputs) and
-  #     pgc_aliases.json (predev-staged from data/) are NOT unique —
-  #     they exist on main and are safe to drop.
-  #   - Anything else (a freshly built *.bin / *.scfd that is newer than
-  #     or absent from main) is UNIQUE — ASK the user before clobbering.
-  UNIQUE=$(find public/data -maxdepth 1 -type f \
-    ! -name famous.bin ! -name famous_meta.json ! -name pgc_aliases.json \
-    -print -quit 2>/dev/null)
-  if [ -n "$UNIQUE" ]; then
-    echo "ERROR: public/data has unique content (e.g. $UNIQUE). Ask the user before replacing."
-    exit 1
-  fi
-  # only known-stale committed files — rename as a one-step-back safety
-  mv public/data "public/data.stale.$(date +%s)"
-fi
+   If the two outputs are equal, you're on the main checkout — refuse with
+   a clear message. Otherwise derive `<MAIN>` = parent directory of the
+   common dir, and `<WT_GIT_DIR>` = the first output. Substitute both as
+   **literal strings** into every command below — never as shell variables.
 
-# Step 5 — create the link. `-n` is belt-and-suspenders: it stops `ln`
-# from descending if `public/data` somehow still resolves to a directory.
-# By here the path is guaranteed gone, so a plain symlink is created.
-ln -sn "$MAIN_ROOT/public/data" public/data
-# Verify we got a symlink to main, NOT a nested public/data/data.
-if [ "$(readlink public/data)" != "$MAIN_ROOT/public/data" ]; then
-  echo "ERROR: link verification failed — public/data is not a symlink to main."
-  rm -f public/data/data 2>/dev/null
-  exit 1
-fi
+2. **Probe main's data and the worktree's current state** (read-only):
 
-# Step 6 — silence git-status noise (see "Git noise housekeeping" below).
-# No files under public/data are tracked, so this is a defensive guard that
-# normally finds nothing.
-TRACKED=$(git ls-files public/data/ 2>/dev/null)
-if [ -n "$TRACKED" ]; then
-  echo "$TRACKED" | xargs git update-index --skip-worktree
-fi
+   ```bash
+   ls /abs/main/public/data/*.bin >/dev/null 2>&1 && echo "main has bins"; readlink public/data; ls public/data 2>/dev/null
+   ```
 
-# Add the symlink itself to the worktree's exclude file so `??` doesn't
-# show.  Use the per-worktree exclude path if the git version supports
-# it (2.36+); fall back to the shared one otherwise (effect is the
-# same — the shared `.gitignore` already covers the real dir on main).
-WORKTREE_EXCLUDE="$GIT_DIR/info/exclude"
-mkdir -p "$(dirname "$WORKTREE_EXCLUDE")"
-grep -qxF "/public/data" "$WORKTREE_EXCLUDE" 2>/dev/null \
-  || echo "/public/data" >> "$WORKTREE_EXCLUDE"
+   Branch on the output — in the controller, not in bash:
 
-# Step 7 — report
-N=$(ls public/data/ | wc -l | tr -d ' ')
-echo "Linked public/data → $MAIN_ROOT/public/data ($N files visible)"
-```
+   - No bins on main → bail: "run `npm run build-tiers` in main first".
+     (Also bail if `<MAIN>/public/data` is itself a symlink.)
+   - `readlink` prints `<MAIN>/public/data` → report "already linked", stop.
+   - `readlink` prints something else → **ask the user** before replacing.
+   - Real directory whose contents go beyond `famous.bin` /
+     `famous_meta.json` / `pgc_aliases.json` (all reproducible and present
+     on main) → unique content, **ask the user** before clobbering.
+   - Missing, or only those known-stale files → proceed.
 
-The above is a sketch — the controller should adapt it (e.g., the
-ask-user branches need actual user prompts, not exit codes).
+3. **Swap** — remove/rename, link, and verify in ONE call, so nothing can
+   run between detect and swap. The trap this guards: `ln -s TARGET NAME`
+   silently descends into NAME when NAME is an existing directory, creating
+   a nested `public/data/data` instead of replacing it. Pick the variant
+   matching the state found in step 2; write the timestamp yourself:
+
+   ```bash
+   # fresh worktree (public/data missing):
+   ln -sn /abs/main/public/data public/data && readlink public/data
+   # directory with only known-stale files (one-step-back safety):
+   mv public/data public/data.stale.<literal-timestamp> && ln -sn /abs/main/public/data public/data && readlink public/data
+   # wrong symlink (only after the user approved):
+   rm -f public/data && ln -sn /abs/main/public/data public/data && readlink public/data
+   ```
+
+   If the final `readlink` doesn't print `<MAIN>/public/data`, stop and
+   report — don't retry blindly.
+
+4. **Silence git noise** — the symlink shows as `?? public/data` because
+   `.gitignore`'s `/public/data/` rule matches only a directory. A fresh
+   worktree's git dir has no `info/`, so create it first:
+
+   ```bash
+   mkdir -p /abs/main/.git/worktrees/<name>/info
+   grep -qxF "/public/data" /abs/main/.git/worktrees/<name>/info/exclude 2>/dev/null || echo "/public/data" >> /abs/main/.git/worktrees/<name>/info/exclude
+   ```
+
+   (These paths sit outside the worktree directory but are the worktree's
+   own git metadata; the isolation guard accepts them when they're spelled
+   out literally.)
+
+5. **Report** — count via `ls public/data | wc -l`, then one line:
+   `Linked public/data → <MAIN>/public/data (N files visible)`.
 
 ## Git noise housekeeping
 
@@ -207,20 +191,12 @@ public/data` in `git status`. Nothing under `public/data/` is tracked, so
 line is the only cosmetic noise. Vite serves real bytes through the symlink
 regardless.
 
-The skill silences it:
-
-- **`git update-index --skip-worktree`** — a defensive guard that finds no
-  tracked files under `public/data/` in a current worktree; harmless and
-  reversible with `--no-skip-worktree`.
-- **A `/public/data` line in `$GIT_DIR/info/exclude`** silences the
-  symlink itself. For git 2.36+, `$GIT_DIR` for a linked worktree is
-  the per-worktree `<main>/.git/worktrees/<name>/`, so this exclusion
-  is per-worktree. For older git, `git rev-parse --git-path info/exclude`
-  returns the shared exclude file — the entry there is harmless because
-  the main checkout's real `public/data/` directory is already gitignored
-  via the trailing-slash rule.
-
-After both, `git status` in the worktree is clean.
+The skill silences it with **a `/public/data` line in the worktree's own
+`info/exclude`** (`<main>/.git/worktrees/<name>/info/exclude` — the
+per-worktree git dir from step 1, so the exclusion doesn't leak to other
+worktrees). After that, `git status` in the worktree is clean. Nothing
+under `public/data/` is tracked, so no `git update-index --skip-worktree`
+sweep is needed — it would never find a file to flag.
 
 ## What changes when main rebuilds
 

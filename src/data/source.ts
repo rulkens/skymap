@@ -135,16 +135,18 @@ export const Source = {
    */
   DesiSgw: 20,
   /**
-   * Curated, true-scale stellar neighbourhood (the Sun + the hand-picked
-   * nearby-star map) in the near-field descent — the overlay twin of the
-   * survey-wide Gaia star bin, named for the dedup story (famous stars are the
-   * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy.
+   * Curated, true-scale stellar neighbourhood — the hand-picked nearby-star map
+   * of the near-field descent, named for the dedup story (famous stars are the
+   * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy. The
+   * curated star-catalog twin of the survey-wide Gaia bin (code 24). The Sun
+   * shares the map's seed table but not this row: it has its own (code 26), so
+   * muting the neighbourhood leaves the descent's aim point alone.
    * Not persisted to any `.bin` — a body's identity is its stable seed id, not a
-   * record index — but pickable: scene bodies draw into the NEAR0 pick texture
-   * via `drawPick`, tagged with this code. The entry is a body row that renders
-   * through its own content-layer, not the galaxy catalog points pipeline.
-   * Value 21 — the first of the three contiguous body codes. Never renumber the
-   * codes below it.
+   * record index — but pickable: the star layers draw into the NEAR0 pick
+   * texture via `drawPick`, tagged with this code (the Sun's dot included, since
+   * those layers address the one seed table). The entry renders through its own
+   * content-layer, not the galaxy catalog points pipeline. Value 21 — never
+   * renumber the codes below it.
    */
   FamousStar: 21,
   /**
@@ -159,10 +161,9 @@ export const Source = {
    * is the stable seed id) but pickable on the NEAR0 pick pass via `drawPick`;
    * the entry is a body row that renders through its own content-layer, not the
    * galaxy catalog points pipeline.
-   * Value 23, the last of the three contiguous body codes (FamousStar=21, Planet=22,
-   * Earth=23). Codes are append-only by VALUE; the insertion order in this
-   * const is cosmetic, so Earth keeps 23 even though its two siblings are
-   * declared above it. Never renumber the codes below it.
+   * Value 23. Codes are append-only by VALUE; the insertion order in this
+   * const is cosmetic, so Earth keeps 23 even though its siblings are declared
+   * above it. Never renumber the codes below it.
    */
   Earth: 23,
   /**
@@ -174,9 +175,7 @@ export const Source = {
    * stars ARE pickable — but is not persisted to the `.bin` (a star's identity
    * is its record index). The stars render through their own renderer gated by a
    * camera-distance crossfade band, never the galaxy-catalog points pipeline.
-   * Appended at 24,
-   * the first code after the three contiguous body codes (FamousStar=21,
-   * Planet=22, Earth=23). Never renumber the codes below it.
+   * Appended at 24 — never renumber the codes below it.
    */
   GaiaStars: 24,
   /**
@@ -188,4 +187,46 @@ export const Source = {
    * renumber the codes below it.
    */
   Constellations: 25,
+  /**
+   * The Sun — the descent's aim point and the render origin, a body row in its
+   * own right rather than a member of the curated star map. Modelling it as a
+   * row is what lets the star map's gate be a plain membership test instead of
+   * an id exemption threaded through the star layers and the caption pipeline.
+   * Registry-key-only: the Sun's dot is drawn (and picked) by the star layers
+   * over the shared seed table, so its pick carries the FamousStar code (21) —
+   * nothing stamps this one into the pick texture, and nothing persists it.
+   * Appended at 26 — never renumber the codes below it.
+   */
+  Sun: 26,
+  /**
+   * Sagittarius A\* — the Galactic Centre anchor the S-star orbits focus on. A
+   * body row that draws NOTHING: it is positioned, captioned, focusable and
+   * selectable, so nothing ever stamps this code into the pick texture and
+   * nothing persists it. Registry-key-only. Appended at 27 — never renumber the
+   * codes below it.
+   */
+  SgrAStar: 27,
+  /**
+   * The 39 bound S-stars orbiting Sgr A\*. Their own body row rather than
+   * members of the curated star map, so the Galactic Centre toggles apart from
+   * the solar neighbourhood — and their own CODE because the packed pick id is
+   * an index INTO a seed table: sharing FamousStar's code would renumber every
+   * famous star. The star layers draw both sets and stamp whichever code the
+   * star's table dictates (`starPickId`). Not persisted. Appended at 28.
+   *
+   * BUDGET: the pick texture's source field is 5 bits with 31 reserved as the
+   * all-ones sentinel (`selectionEncoding.ts`), so after this row only 29 and
+   * 30 remained. `zoneOfAvoidance` (29, below) spent one; only 30 is left
+   * before the next pickable source needs a wider field.
+   */
+  SStar: 28,
+  /**
+   * Zone-of-avoidance guide band — the additively-blended wedge along the
+   * galactic plane annotating the dust-obscured hole every optical/near-IR
+   * catalog shares. Pickable (clicking the band opens its InfoCard), so it
+   * spends one of the two codes the SStar docblock's budget note reserved.
+   * Appended at 29 — after this row, only 30 remains before the 5-bit pick
+   * field needs a wider layout.
+   */
+  ZoneOfAvoidance: 29,
 } as const;

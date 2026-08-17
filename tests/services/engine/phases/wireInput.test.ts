@@ -11,6 +11,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -49,8 +51,9 @@ vi.mock('../../../../src/utils/camera/createOrbitCamera', () => ({
   })),
 }));
 
+const attachOrbitControlsSpy = vi.fn((..._args: unknown[]) => () => {});
 vi.mock('../../../../src/services/camera/orbitControls', () => ({
-  attachOrbitControls: vi.fn(() => () => {}),
+  attachOrbitControls: (...args: unknown[]) => attachOrbitControlsSpy(...args),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer', () => ({
@@ -83,12 +86,20 @@ vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
 
 // Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
-import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
+import {
+  selectSelectedRef,
+  selectFocusRef,
+  selectPendingFocusId,
+} from '../../../../src/state/selection/selectors';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../../src/state/selection/selectionSlice';
+import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
+import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -100,8 +111,7 @@ function makeState(): EngineState {
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
-        highlightFallback: true,
-        realOnly: false,
+        provenance: DEFAULT_GALAXY_PROVENANCE,
         items: {
           famousGalaxy: { enabled: true, labelEnabled: true },
         },
@@ -135,7 +145,7 @@ function makeState(): EngineState {
     // never invoked — an empty galaxies/structures stub is enough.
     data: {
       structures: { byCategory: () => [] },
-      galaxies: { get: () => undefined, famousMeta: [] },
+      galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
     } as never,
     gpu: {
       renderer: {
@@ -172,7 +182,7 @@ function makeState(): EngineState {
     assetSlots: {
       points: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       pgcAlias: null,
       cf4Density: null,
     },
@@ -193,6 +203,7 @@ function makeDeps(): BootstrapDeps {
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
+      unwatchHdrCapability: () => {},
     },
   };
 }
@@ -207,9 +218,13 @@ describe('wireInput', () => {
     await wireInput(state, deps);
 
     expect(computeInitialCameraSpy).toHaveBeenCalledTimes(1);
+    // The boot store defaults to the ecliptic orientation, so the phase threads
+    // that committed basis into the framing call (first-paint encodes through the
+    // frame the render path decodes with).
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
       fovYRad: (Math.PI / 180) * 60,
       simDays: expect.any(Number),
+      frameBasis: ORIENTATION_FRAMES.ecliptic,
     });
     expect(state.cam).not.toBeNull();
   });
@@ -243,5 +258,63 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toEqual(jupiter);
     expect(selectFocusRef(root)).toEqual(jupiter);
+  });
+
+  it('hands the orbit controls a live read of the focused body’s radius', async () => {
+    // The zoom floor lives in clampDistance, but the pinch / wheel-during-gesture
+    // sites inside orbitControls can only apply it if this phase supplies the
+    // getter. Drop the wiring and the camera silently scrolls through the planet
+    // again with every unit test still green — hence the assertion here.
+    const state = makeState();
+    const deps = makeDeps();
+    // Earlier cases in this file attached against their own stores; take the call
+    // this `wireInput` made, not the first one recorded.
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
+    const read = options?.pivotRadiusMpc;
+    expect(read).toBeTypeOf('function');
+
+    // Nothing resolved yet (the row cache is saga-filled and no saga runs here):
+    // no surface to stand off from, so the absolute floor applies.
+    expect(read!()).toBeNull();
+
+    // With Earth's row resolved, the getter reports its radius in Mpc — read
+    // through on every call, so a focus change needs no re-attach.
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusKm: 6371,
+        },
+      }),
+    );
+    expect(read!()).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 30);
+  });
+
+  it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    // A galaxy/star focus id defers until its catalog pulse lands
+    // (`resolveFocusRefDeferring` parks it), so the resolved `focus` ref
+    // stays null for the whole boot window while `pending.focus` already
+    // holds the id — the extraReducer sets `pending.focus` synchronously,
+    // no saga needed to observe the guard here. A ref-only guard would read
+    // this as "empty" and seed Earth over the still-resolving deep link.
+    deps.cb.store.dispatch(requestFocus('m31'));
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toBeNull();
+    expect(selectPendingFocusId(root)).toBe('m31');
   });
 });

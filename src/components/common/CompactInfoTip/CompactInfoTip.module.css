@@ -17,7 +17,9 @@
   transform: translateX(-50%);
   z-index: 10;
 
-  white-space: nowrap;
+  white-space: normal;
+  width: max-content;
+  max-width: 260px;
   pointer-events: none;
   opacity: 0;
 
@@ -49,6 +51,23 @@
 .tipBottom {
   bottom: auto;
   top: calc(100% + var(--space-2));
+}
+
+/* A scrolling ancestor (e.g. ControlsPanel's `.scroll`) forces its computed
+ * overflow-x to auto alongside overflow-y, so it clips on both axes. A
+ * centre-anchored tip on a trigger near the container's left edge overflows
+ * that clip; start/end anchor the tip off one edge of its trigger instead of
+ * straddling it, so it grows into the panel's content column. */
+.tipStart {
+  left: 0;
+  right: auto;
+  transform: none;
+}
+
+.tipEnd {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

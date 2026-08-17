@@ -84,7 +84,7 @@ import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
 import { startTour, exitTour } from '../../../src/state/tour/tourActions';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
@@ -92,14 +92,15 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 const NARRATION_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };

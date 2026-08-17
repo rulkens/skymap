@@ -27,26 +27,35 @@
  * galaxy catalog ("points") ids simply never get a recession target — the
  * separation is structural, not a defensive runtime guard.
  *
- * ### Recession membership is an exhaustive switch
+ * ### Recession membership is two exhaustive tables
  *
  * Recession is *selective*: structure / galaxy-name labels and the diffuse
  * filament/volume fields recede under focus, but the YOU-ARE-HERE pin and
- * the scale bar must not. `recessionTargetFor` expresses that membership
- * as an exhaustive `switch (h.kind)` with NO `default` arm — every union
- * kind is handled explicitly (non-recessing kinds `return undefined`).
- * Mirroring `serializeFadeId`'s exhaustiveness discipline, a NEW
- * union kind then becomes a compile error until it declares its recession
- * stance, rather than silently falling through a catch-all.
+ * the scale bar must not. Membership is constant per kind, so it lives in
+ * data: one table keyed by `FadeId['kind']`, one by `LabelLayerId` (the
+ * only kind whose sub-discriminator changes the answer), and a single
+ * two-way branch to pick between them.
  *
- * A function beats a flat string-keyed table here because some kinds
- * recede across *all* their discriminator values (`structure` for every
- * source) while others recede for *some* (`labelLayer` for
- * `structure`/`galaxyNames` only). The switch says exactly that without
- * repetition.
+ * `satisfies Record<K, number | undefined>` is what makes membership a
+ * *choice* rather than an inheritance. A `Record` cannot be satisfied by
+ * omission, so a new `FadeId` kind or a new `LabelLayerId` is a compile
+ * error until someone writes its row — including the rows that say
+ * `undefined`. A switch over `FadeId['kind']` could not promise that at
+ * the outer level: this repo's tsconfig has no `noImplicitReturns`, so a
+ * switch with no `default` arm gives no exhaustiveness guarantee at all —
+ * a kind missing an arm falls through and returns `undefined` silently,
+ * indistinguishable from a deliberate "does not recede". The table form
+ * surfaces such a gap at build time instead of leaving it unstated.
+ *
+ * A predicate (`layer === 'structure' || layer === 'galaxy'`) reads more
+ * compactly than the label-layer table but makes "does not recede" the
+ * silent default for every layer added later — the stance a caption layer
+ * would inherit without anyone choosing it. The table forces the choice.
  */
 
 import type { FadeId } from '../../../@types/animation/FadeId';
 import type { FadeRegistry } from '../../../@types/animation/FadeRegistry';
+import type { LabelLayerId } from '../../../@types/animation/LabelLayerId';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import { lerp } from '../../../utils/math/lerp';
 import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
@@ -63,38 +72,59 @@ export const MARKER_RECESSION = 0.25;
 export const LABEL_RECESSION = 0.25;
 
 /**
+ * Recession target per label layer. `undefined` = does not recede.
+ */
+const RECESSION_BY_LABEL_LAYER = {
+  // The COSMO name labels: structure labels (any item) and famous-galaxy
+  // labels, which reuse the 'galaxy' id. These are the labels focus is meant
+  // to quiet — they crowd the same slab as the focused subject.
+  structure: LABEL_RECESSION,
+  galaxy: LABEL_RECESSION,
+  // The YOU-ARE-HERE pin: one label at the world origin, the anchor the focused
+  // subject is read against. Receding it would dim the reference.
+  milkyWay: undefined,
+  // The scale bar is a readout, not scenery — it must stay legible at full focus.
+  scaleBar: undefined,
+  // The near-field caption layers draw on the NEAR0 slab through
+  // `foregroundLabelsLayer`, which owns its OWN declutter (a screen-space
+  // separation cull with priority tiers) and its own temporal envelope, and
+  // never routes through `resolveLayerOpacity`. A recession factor here would
+  // be a second, competing dimming authority over the same captions — and the
+  // focus blend it keys on is driven at Mpc scales, where these pc-band
+  // captions have already faded out. So they do not recede: the near field
+  // declutters by its own mechanism.
+  starCatalog: undefined,
+  body: undefined,
+} satisfies Record<LabelLayerId, number | undefined>;
+
+/**
+ * Recession target per `FadeId` kind, for the kinds with no sub-discriminator
+ * that changes the answer. `undefined` = does not recede.
+ */
+const RECESSION_BY_KIND = {
+  filament: FILAMENT_RECESSION,
+  volumesMaster: VOLUME_RECESSION,
+  structure: MARKER_RECESSION, // all structure sources recede
+  galaxyCatalog: undefined,
+  volumeField: undefined,
+  milkyWay: undefined, // the MW disk does not recede on focus
+  flow: undefined,
+  constellations: undefined,
+  orbitTrails: undefined, // near-field foreground trails never recede on focus
+  overlay: undefined,
+  zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
+} satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, number | undefined>;
+
+/**
  * The opacity this id recedes *to* at full focus, or `undefined` when
  * the id does not recede (factor stays 1.0 at every blend).
  *
- * Exhaustive over `FadeId['kind']` with no `default` arm — a new
- * union kind must add a case here (a compile error otherwise).
+ * Exhaustive over `FadeId['kind']` and over `LabelLayerId` through the two
+ * tables' `satisfies Record<…>` constraints — a new union member is a compile
+ * error until it declares its recession stance.
  */
 export function recessionTargetFor(h: FadeId): number | undefined {
-  switch (h.kind) {
-    case 'filament':
-      return FILAMENT_RECESSION;
-    case 'volumesMaster':
-      return VOLUME_RECESSION;
-    case 'structure':
-      return MARKER_RECESSION; // all structure sources recede
-    case 'labelLayer':
-      // Structure labels (any category) and famous-galaxy labels recede;
-      // famous labels reuse the 'galaxyNames' id. The YOU-ARE-HERE
-      // pin ('milkyWay') and scale bar ('scaleBar') do not.
-      return h.layer === 'structure' || h.layer === 'galaxyNames' ? LABEL_RECESSION : undefined;
-    // Non-recessing kinds — explicit so a new union member can't silently
-    // skip declaring its stance.
-    case 'galaxyCatalog':
-      return undefined;
-    case 'volumeField':
-      return undefined;
-    case 'milkyWay':
-      return undefined; // the MW disk does not recede on focus
-    case 'orbitTrails':
-      return undefined; // near-field foreground trails never recede on focus
-    case 'overlay':
-      return undefined;
-  }
+  return h.kind === 'labelLayer' ? RECESSION_BY_LABEL_LAYER[h.layer] : RECESSION_BY_KIND[h.kind];
 }
 
 /**
@@ -139,7 +169,7 @@ export function resolveLayerOpacity(
   h: FadeId,
   blend: number,
   now: number,
-  clip?: ClipPlayer, // NEW — omitted ⇒ factor 1 (no clip playing)
+  clip?: ClipPlayer,
 ): number {
   const clipFactor = clip === undefined ? 1 : clipFactorFor(clip, h, now);
   return fades.opacityOf(h, now) * focusRecession(h, blend) * clipFactor;

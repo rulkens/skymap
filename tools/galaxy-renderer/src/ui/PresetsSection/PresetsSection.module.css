@@ -5,7 +5,7 @@
   composes: sectionHeader from '../shared.module.css';
   margin: 24px 0 12px;
   padding-top: 16px;
-  border-top: 1px solid var(--panel-line);
+  border-top: 1px solid var(--border-divider);
 }
 
 .row {
@@ -15,7 +15,6 @@
 }
 
 .button {
-  composes: btnGhost from '../shared.module.css';
   flex: 1;
 }
 
@@ -24,7 +23,7 @@
 }
 
 .hint {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--font-size-lg);
+  color: var(--color-fg-faint);
   line-height: 1.55;
 }

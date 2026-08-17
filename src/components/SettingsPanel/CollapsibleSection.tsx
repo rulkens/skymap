@@ -37,9 +37,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import cx from 'classnames';
 import styles from './CollapsibleSection.module.css';
 
-type Props = {
+export type CollapsibleSectionProps = {
   /** Header text, rendered uppercase by the stylesheet. */
-  title: string;
+  readonly title: string;
   /**
    * What to show on first mount.  Defaults to `false` (collapsed) so a
    * fresh visitor sees a tidy panel of section headers rather than an
@@ -47,8 +47,8 @@ type Props = {
    * Override with `defaultOpen={true}` for sections that should be open
    * on first paint (e.g. Galaxy catalogs, the panel's primary affordance).
    */
-  defaultOpen?: boolean;
-  children: ReactNode;
+  readonly defaultOpen?: boolean;
+  readonly children: ReactNode;
   /**
    * Optional master on/off checkbox rendered between the chevron and
    * the title.  Independent of the collapse: clicking the checkbox does
@@ -62,8 +62,8 @@ type Props = {
    * Both the value and the change callback must be provided to render
    * the checkbox; passing only one is a programming error and ignored.
    */
-  headerToggle?: boolean;
-  onHeaderToggleChange?: (value: boolean) => void;
+  readonly headerToggle?: boolean;
+  readonly onHeaderToggleChange?: (value: boolean) => void;
   /**
    * Optional indeterminate visual state for the master checkbox —
    * rendered as a dash/dot rather than empty or checked.  Used by the
@@ -77,17 +77,30 @@ type Props = {
    * via `useEffect` against a `ref` after the input has rendered —
    * standard React pattern for the indeterminate-checkbox case.
    */
-  headerToggleIndeterminate?: boolean;
+  readonly headerToggleIndeterminate?: boolean;
+  /**
+   * Marks the header toggle non-interactive without hiding or greying it —
+   * a sighted user still sees the checkbox (so they know the feature exists),
+   * a screen-reader user gets `aria-disabled` instead of silence, and both
+   * get `disabledHint` as the `title` tooltip. Collapse/expand is unaffected:
+   * the knobs underneath stay inspectable even when the master switch can't
+   * be flipped (e.g. HDR sliders on a display that isn't HDR-capable).
+   */
+  readonly disabled?: boolean;
+  /** Tooltip shown on the header toggle when `disabled`. */
+  readonly disabledHint?: string;
 };
 
-export function CollapsibleSection({
+function CollapsibleSection({
   title,
   defaultOpen = false,
   children,
   headerToggle,
   onHeaderToggleChange,
   headerToggleIndeterminate,
-}: Props): ReactNode {
+  disabled,
+  disabledHint,
+}: CollapsibleSectionProps): ReactNode {
   const [open, setOpen] = useState<boolean>(defaultOpen);
 
   // Render the master checkbox slot only when both halves of the
@@ -110,7 +123,7 @@ export function CollapsibleSection({
   }, [headerToggleIndeterminate, headerToggle]);
 
   return (
-    <div className={styles.section}>
+    <div className={styles.root}>
       <button
         type="button"
         className={styles.header}
@@ -138,8 +151,20 @@ export function CollapsibleSection({
             type="checkbox"
             className={styles.headerToggle}
             checked={headerToggle}
+            aria-disabled={disabled || undefined}
+            title={disabled ? disabledHint : undefined}
             onChange={(e) => {
               e.stopPropagation();
+              if (disabled) {
+                // React fires onChange for a checkbox click's native toggle
+                // even when the click was preventDefault()'d, and the native
+                // `checked` IDL has already flipped by the time either
+                // handler runs — so undo it here rather than upstream. Not
+                // the native `disabled` attribute: that drops the control
+                // out of the tab order, which defeats announcing the hint.
+                e.target.checked = headerToggle ?? false;
+                return;
+              }
               onHeaderToggleChange(e.target.checked);
             }}
             onClick={(e) => e.stopPropagation()}
@@ -158,12 +183,11 @@ export function CollapsibleSection({
         moves between `0fr` and `1fr` interpolates smoothly.  See the
         .bodyWrapper rule in the stylesheet for the animation mechanism.
       */}
-      <div
-        className={cx(styles.bodyWrapper, open && styles.bodyWrapperOpen)}
-        aria-hidden={!open}
-      >
+      <div className={cx(styles.bodyWrapper, open && styles.bodyWrapperOpen)} aria-hidden={!open}>
         <div className={styles.body}>{children}</div>
       </div>
     </div>
   );
 }
+
+export default CollapsibleSection;

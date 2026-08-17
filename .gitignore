@@ -113,6 +113,10 @@ pnpm-debug.log*
 /tools/cosmic-flow/public/cf4pp_vfield.bin
 /tools/cosmic-flow/public/cf4pp_vfield.json
 
+# starCutCpuBench downloads the large-tier star bin here on first run (~75 MB).
+# A per-machine fetch cache, not a source asset.
+/tools/perf/.cache/
+
 # Ephemeral working artefacts the famous-galaxy curator drops next to the
 # committed tiles: `mask.jpg` is the star-removal luminance mask used mid-
 # pipeline, and `.tmp/` holds StarNet scratch.  The committed tile set per
@@ -141,12 +145,17 @@ docs/screenshots/*.mov
 docs/screenshots/*.mp4
 
 # ── Tour recorder output ─────────────────────────────────────────────────────
-# `npm run record-tour` (tools/record/recordTour.ts) encodes takes straight
+# `npm run record-tour` (tools/record/record.ts) encodes takes straight
 # to mp4 here.  A full 4K/60 grand-tour take runs to gigabytes, and every
 # take is regenerable on demand — the tour is authored in code and the
 # recorder is deterministic (CDP virtual time) — so recordings are build
 # artefacts, never repo content.
 recordings/
+
+# `--serve` mode's self-hosted production build (record.ts), reused across
+# takes until `--rebuild` forces a fresh one. Deliberately its own directory,
+# never `dist/` — that one is the deploy build.
+/tools/record/.build/
 
 # ── Firebase CLI per-developer cache ─────────────────────────────────────────
 # `.firebase/hosting.*.cache` records the previously-deployed file hashes so

@@ -44,6 +44,8 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 
 // ── Module mocks needed for wiring helpers ──────────────────────────────────
 
@@ -156,6 +158,7 @@ function makeStructureState(): {
         state: () => ({ kind: 'idle' }),
         current: () => null,
         lastRequest: () => null,
+        startedAtMs: () => null,
         forceReload: vi.fn(),
         cancel: vi.fn(),
         release: vi.fn(),
@@ -178,6 +181,7 @@ function makeProgressState(): EngineState {
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -190,7 +194,7 @@ function makeProgressState(): EngineState {
       // Real (empty) map: installLoadProgress walks it like points.
       starCatalogs: new Map<SourceType, AssetSlot<unknown, unknown>>(),
       filaments: stubSlot('filaments'),
-      famousMeta: stubSlot('famous-meta'),
+      famousGalaxiesMeta: stubSlot('famous-galaxies-meta'),
       structureCatalog: stubSlot('structure-catalog'),
       pgcAlias: stubSlot('pgc-aliases'),
       cf4Density: stubSlot('cf4Density'),
@@ -262,6 +266,7 @@ function makeSyntheticFallbackState(): {
         return () => listeners.delete(fn);
       },
       lastRequest: () => null,
+      startedAtMs: () => null,
       forceReload: () => {},
       cancel: () => {},
       release: () => {},
@@ -274,6 +279,9 @@ function makeSyntheticFallbackState(): {
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 99 } },
     assetSlots: { points: assetSlotPoints, bodyTextures: new Map() },
+    // `createSyntheticFallback` calls `reevaluateDemand`, which enqueues onto
+    // this rather than calling `slot.load()` directly.
+    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { structureMembership } from '../../../src/utils/structure/structureMembership';
 import { Source } from '../../../src/data/sources';
 import { packSelection } from '../../../src/data/selectionEncoding';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
@@ -19,24 +20,7 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
     flat[i * 3 + 1] = positions[i]![1];
     flat[i * 3 + 2] = positions[i]![2];
   }
-  const z = new Float32Array(count);
-  const zb = new Uint8Array(count);
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: flat,
-    magU: z,
-    magG: z,
-    magR: z,
-    magI: z,
-    magZ: z,
-    axisRatio: z,
-    positionAngleDeg: z,
-    diameterKpc: z,
-    classByte: zb,
-    parentSurveyByte: zb,
-    spectroscopicZ: z,
-  };
+  return makeGalaxyCatalog(count, { positions: flat });
 }
 
 describe('structureMembership — pure cone search', () => {

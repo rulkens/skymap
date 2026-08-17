@@ -1,10 +1,9 @@
 /*
- * Flow-field overlay body for the SettingsPanel "Flow" section.  Two stacked
- * regions: a two-button segmented mode switch and a labelled-slider row for
- * intensity.  The section's enable toggle is NOT here — it lives on the
- * `CollapsibleSection` header (the `headerToggle`), like every other section
- * master, so the body holds only the look controls.  Shares the slider idiom
- * with `VolumeFieldRow.module.css`.
+ * Flow-field overlay body for the SettingsPanel "Flow" section.  A single
+ * labelled-slider row for intensity.  The section's enable toggle is NOT
+ * here — it lives on the `CollapsibleSection` header (the `headerToggle`),
+ * like every other section master, so the body holds only the look
+ * controls.  Shares the slider idiom with `VolumeFieldRow.module.css`.
  */
 
 .row {
@@ -15,85 +14,11 @@
 }
 
 /*
- * Mode switch — a two-column segmented control.  Mirrors the cosmic-web
- * Style picker's `.stylePicker` in `SettingsPanel.module.css`; two columns
- * here instead of three.
- */
-.modeToggle {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-}
-
-.modeButton,
-.modeButtonActive {
-  appearance: none;
-  border: 1px solid var(--border-control);
-  background: var(--surface-control);
-  color: var(--color-fg-muted);
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  letter-spacing: var(--letter-spacing-mid);
-  text-transform: uppercase;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.modeButton:hover:not(:disabled) {
-  background: var(--surface-control-hover);
-  color: var(--color-fg);
-}
-
-.modeButtonActive {
-  background: var(--surface-control-active);
-  color: var(--color-fg);
-}
-
-.modeButton:disabled,
-.modeButtonActive:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-/*
- * Labelled-slider row: fixed-width label + value columns so the readout
- * lines up, then the slider stretches to fill.  Tabular numerals keep the
- * value from shimmying as the user drags.  Same grid as VolumeFieldRow.
+ * Slider row wrapper — just enough to host the shared compact `Slider`
+ * (label + value readout folded into its own pill) and the descriptive
+ * hover `title`.  Same idiom as VolumeFieldRow's `.sliderRow`.
  */
 .sliderRow {
   display: flex;
   align-items: center;
-  gap: var(--space-2, 4px);
-  font-size: 0.85em;
-  color: var(--color-fg-muted, #aaa);
-}
-
-.sliderLabel {
-  flex: 0 0 4.5em;
-  text-align: left;
-  letter-spacing: 0.02em;
-}
-
-.sliderValue {
-  flex: 0 0 3em;
-  text-align: right;
-  font-feature-settings: 'tnum';
-  color: var(--color-fg, #ddd);
-}
-
-.slider {
-  flex: 1;
-  min-width: 0;
-  accent-color: var(--color-accent-control, #4a9eff);
-  cursor: pointer;
-}
-
-.slider:disabled {
-  opacity: 0.4;
-  cursor: default;
 }

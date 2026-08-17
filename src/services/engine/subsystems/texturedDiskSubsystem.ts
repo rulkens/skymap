@@ -23,7 +23,7 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
+import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -51,7 +51,7 @@ const LOAD_FADE_MS = 400;
 
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
-  readonly atlas: GalaxyAtlasSubsystem;
+  readonly atlas: BitmapStreamSubsystem;
   /** For tests.  Defaults to fetchGalaxyBitmap. */
   readonly fetcher?: (args: {
     ra: number;
@@ -131,7 +131,7 @@ export function createTexturedDiskSubsystem(
     // walk drives a no-op visitor and returns the last good result.
     if (destroyed) return NOOP_ROW_VISITOR;
 
-    const { famousMeta, nowMs } = input;
+    const { famousGalaxiesMeta, nowMs } = input;
     const camPosition = input.cam.position;
     frameCounter++;
     lastFrameNowMs = nowMs;
@@ -169,7 +169,7 @@ export function createTexturedDiskSubsystem(
         // finite-orientation guard below (the corrupted-bin guard, not the
         // render values).  An absent calibration leaves the placement
         // bit-identical to the catalog path.
-        const cal = source === Source.FamousGalaxy ? famousMeta[i]?.calibration : undefined;
+        const cal = source === Source.FamousGalaxy ? famousGalaxiesMeta[i]?.calibration : undefined;
         const placement = resolveDiskPlacement(sizeWorldMpc, ar, pa, cal);
 
         const [ra, dec] = cartesianToRaDec(x, y, z);
@@ -188,7 +188,9 @@ export function createTexturedDiskSubsystem(
             priority: px,
             fetcher: () => {
               const fId =
-                sourceForFetch === Source.FamousGalaxy ? famousMeta[idxForFetch]?.id : undefined;
+                sourceForFetch === Source.FamousGalaxy
+                  ? famousGalaxiesMeta[idxForFetch]?.id
+                  : undefined;
               return fetcher({ ra, dec, famousId: fId });
             },
             onResult: (bitmap) => {
@@ -197,17 +199,16 @@ export function createTexturedDiskSubsystem(
                 return;
               }
               if (!bitmap) return; // atlas already memoised the failure
-              if (atlas.lastSeenFrame(key) === undefined) {
-                bitmap.close();
-                return;
-              }
-              atlas.uploadBitmap(slot, bitmap);
+              // The walk is decimated, so the slot allocated above may sit
+              // unrevisited long enough for the LRU to hand it to another
+              // galaxy mid-fetch — resolve by the key's CURRENT slot instead.
+              const uploaded = atlas.uploadBitmap(key, bitmap) !== null;
+              bitmap.close();
               // Arrival stamps quantize to the frame clock so crossfade
               // alphas are a pure function of stamped time (deterministic
               // under a stepped recorder clock); sub-frame precision is
               // irrelevant to a 300 ms crossfade.
-              bitmapReadyTime.set(key, lastFrameNowMs);
-              bitmap.close();
+              if (uploaded) bitmapReadyTime.set(key, lastFrameNowMs);
             },
           });
           return;

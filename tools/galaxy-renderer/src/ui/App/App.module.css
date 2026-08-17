@@ -1,6 +1,23 @@
+/* One ambient declaration for the whole tree: `html`/`body` (global.css's
+   page reset) set no color, so without this every un-coloured descendant
+   text — and every `Button`, via `font: inherit` — falls through to the
+   browser's black-on-black default. */
 .root {
   position: fixed;
   inset: 0;
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+}
+
+/* Floating HUD pill, top-center — the same slot the app's own TopBarContainer
+   gives its pill row, rather than a checkbox buried in ControlsPanel's
+   scroll column. */
+.autoRotatePill {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
 }
 
 .compareToggle {
@@ -13,18 +30,18 @@
   padding: 7px 13px;
   border-radius: 9px;
   cursor: pointer;
-  font-family: var(--font);
-  font-size: 12px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  background: rgba(16, 20, 34, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--accent-lite2);
-  backdrop-filter: blur(10px);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-control);
+  color: var(--color-accent-bright);
+  backdrop-filter: blur(var(--blur-panel));
   z-index: 25;
 }
 
 .compareToggleActive {
-  background: var(--accent);
-  border-color: var(--accent-line);
-  color: #fff;
+  background: var(--surface-control-active);
+  border-color: var(--border-hover);
+  color: var(--color-fg);
 }

@@ -20,9 +20,13 @@ import { createSyntheticFallback } from '../../../../src/services/engine/wiring/
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import { Source } from '../../../../src/data/sources';
+import { FormatVersionError } from '../../../../src/data/formatVersionError';
+import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -60,6 +64,7 @@ function stubSlot(): StubSlot {
       return () => listeners.delete(fn as Listener);
     },
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -83,6 +88,28 @@ function ready(count: number): LoadState<GalaxyCatalog> {
 /** A final `error` LoadState. */
 function errored(): LoadState<GalaxyCatalog> {
   return { kind: 'error', req: {}, error: new Error('boom'), finalAttempt: 1 };
+}
+
+/** A final `error` LoadState wrapping an HttpError — an ordinary fetch
+ * failure, distinct from `formatVersionErrored` below. */
+function httpErrored(): LoadState<GalaxyCatalog> {
+  return { kind: 'error', req: {}, error: new HttpError(500, '/data/sdss.bin'), finalAttempt: 1 };
+}
+
+/** A final `error` LoadState wrapping a FormatVersionError — the stale-.bin
+ * case that must suppress the fallback rather than arm it. */
+function formatVersionErrored(): LoadState<GalaxyCatalog> {
+  return {
+    kind: 'error',
+    req: {},
+    error: new FormatVersionError(
+      'galaxy catalog',
+      8,
+      9,
+      'unsupported version: 8 — please regenerate the .bin via "npm run build-tiers"',
+    ),
+    finalAttempt: 1,
+  };
 }
 
 // ── State + callbacks builders ───────────────────────────────────────────────
@@ -147,6 +174,11 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
       points: slots as unknown as Map<SourceType, AssetSlot<unknown, unknown>>,
       bodyTextures: new Map(),
     },
+    // `reevaluateDemand` enqueues onto this instead of calling `slot.load()`.
+    // The Synthetic row is the only one demanded in these cases (every real
+    // catalog has settled in error, so none is idle), so it starts inside the
+    // concurrency bound and its spy fires before the enqueue call returns.
+    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.
@@ -171,15 +203,54 @@ function settleGalaxyCatalogs(
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('createSyntheticFallback', () => {
-  it('arms synthetic fallback (sets the flag) when every real galaxy catalog settles in error', () => {
+  it('arms synthetic fallback (sets the flag) when every real galaxy catalog settles in error', async () => {
     const { state, slots, cb } = makeState();
     createSyntheticFallback(state, cb);
 
     settleGalaxyCatalogs(slots, () => errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
-    // The seam closes: reevaluateDemand saw the flag and loaded the synthetic slot.
+    // The seam closes: reevaluateDemand saw the flag and ENQUEUED the synthetic
+    // slot. The drain is what turns that into a `load()`: the earlier settle
+    // passes ran while the real catalogs were still idle and enabled, so they
+    // filled the queue's two slots with entries that only clear on a microtask
+    // turn. Nothing in a synchronous test body gives them one.
+    await state.subsystems.assetQueue.drain();
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('still arms when every real galaxy catalog fails with an ordinary HttpError', async () => {
+    // Confirms the suppression added for FormatVersionError is type-specific,
+    // not a blanket "any error present" check — an ordinary fetch failure
+    // (HttpError) must still trip the backstop.
+    const { state, slots, cb } = makeState();
+    createSyntheticFallback(state, cb);
+
+    settleGalaxyCatalogs(slots, () => httpErrored());
+
+    expect(state.requests.has('syntheticFallback')).toBe(true);
+    await state.subsystems.assetQueue.drain();
+    expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not arm when a real galaxy catalog settles with a FormatVersionError', async () => {
+    // The regression this task exists to prevent: a stale-.bin version
+    // mismatch must suppress the backstop rather than let the synthetic
+    // cloud paper over "this build cannot read this data".
+    const { state, slots, cb } = makeState();
+    createSyntheticFallback(state, cb);
+
+    slots.get(Source.SDSS)?.emit(formatVersionErrored());
+    slots.get(Source.TwoMRS)?.emit(errored());
+    slots.get(Source.Glade)?.emit(errored());
+    slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
+    slots.get(Source.DesiSgw)?.emit(errored());
+
+    expect(state.requests.has('syntheticFallback')).toBe(false);
+    await state.subsystems.assetQueue.drain();
+    expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
   });
 
   it('does not arm when any real galaxy catalog succeeds (ready count>0)', () => {
@@ -204,7 +275,7 @@ describe('createSyntheticFallback', () => {
     }
   });
 
-  it('arms when a real galaxy catalog is ready but EMPTY (count 0) and the rest error', () => {
+  it('arms when a real galaxy catalog is ready but EMPTY (count 0) and the rest error', async () => {
     // The empty-ready edge: a galaxy catalog ready with count===0 is NOT a success, so
     // the fallback must still arm. This is the case a pure ctx predicate (which
     // sees only the 'ready' discriminant, not the count) could not capture.
@@ -220,10 +291,12 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.DesiSgw)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
+    // Drain for the same reason as the first case.
+    await state.subsystems.assetQueue.drain();
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 
-  it('counts a hidden-at-boot galaxy catalog as already settled', () => {
+  it('counts a hidden-at-boot galaxy catalog as already settled', async () => {
     // Disable SDSS's enabled intent: its slot never transitions, but the gate
     // reads the enabled flag and must not wait on it. Driving the OTHER
     // galaxy catalogs to error then arms.
@@ -239,6 +312,8 @@ describe('createSyntheticFallback', () => {
     // SDSS never emits — it was hidden at boot.
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
+    // Drain for the same reason as the first case.
+    await state.subsystems.assetQueue.drain();
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 

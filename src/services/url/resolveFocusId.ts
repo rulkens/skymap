@@ -157,7 +157,7 @@ const FOCUS_ID_DECODERS: readonly FocusIdDecoder[] = [
   },
   // famous id — the greedy fallback.  MUST stay last: its character class also
   // accepts every structured form above.  The downstream scan is the authority
-  // on whether the id exists in famousMeta; no eager validation here.
+  // on whether the id exists in famousGalaxiesMeta; no eager validation here.
   {
     matches: (id) => SAFE_ID_RE.test(id),
     decode: (id, deps) => resolveFamous(id, deps),
@@ -183,16 +183,16 @@ export function resolveFocusId(focusId: string, deps: ResolveDeps): SelectionRef
 // ─── Branch resolvers ────────────────────────────────────────────────────────
 
 /**
- * Famous branch.  Scan `famousMeta` for the curated seed id, then confirm
- * the FamousGalaxy cloud is actually loaded.  If either check fails, return
- * null — the saga will retry once the cloud arrives.
+ * Famous branch.  Scan `famousGalaxiesMeta` for the curated seed id, then
+ * confirm the FamousGalaxy cloud is actually loaded.  If either check fails,
+ * return null — the saga will retry once the cloud arrives.
  *
- * Walk order: famousMeta is indexed identically to the FamousGalaxy cloud
- * (same order as famous.bin), so the scan index i is the cloud localIdx.
+ * Walk order: famousGalaxiesMeta is indexed identically to the FamousGalaxy
+ * cloud (same order as famous.bin), so the scan index i is the cloud localIdx.
  */
 function resolveFamous(id: string, deps: ResolveDeps): SelectionRef | null {
-  for (let i = 0; i < deps.famousMeta.length; i++) {
-    if (deps.famousMeta[i]!.id === id) {
+  for (let i = 0; i < deps.famousGalaxiesMeta.length; i++) {
+    if (deps.famousGalaxiesMeta[i]!.id === id) {
       // id found in meta — confirm the cloud is loaded.
       if (!deps.catalogs.get(Source.FamousGalaxy)) return null;
       return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: i };

@@ -3,18 +3,25 @@
  *
  * Sections: `AssetLoadingSection` (slot-progress rows),
  * `GpuTimingsSection` (per-pass GPU timing live readout),
- * `RenderTogglesSection` (per-pass on/off checkboxes for visual
- * debugging), `FlowTuningSection` + the pick/disk-ring toggles,
- * `DataQualitySection` (catalog-audit diagnostics such as the
- * orientation-fallback toggles), and two
- * self-contained sections mounted via their own store containers —
- * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
- * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
- * debug camera path) — so their store reach doesn't prop-drill through here.
- * Mount is owned by `App.tsx` (toggled by the `d` keyboard shortcut);
- * when this component renders, all sections always render — section-level
- * visibility (e.g. "GPU timings unavailable") is each section's
+ * `RenderTogglesSectionContainer` (per-pass on/off checkboxes for visual
+ * debugging), `FlowTuningSectionContainer`, `MilkyWayTuningSectionContainer`
+ * (the Milky-Way star cloud's look knobs),
+ * `ZoneOfAvoidanceTuningSectionContainer` (the galactic-plane guide band's
+ * look knobs), `DebugOverlaysSectionContainer`
+ * (pick-buffer / disk-radius-ring toggles), `GalaxyProvenanceSectionContainer`
+ * (a per-axis table of missing / highlight / show controls over measured-vs-
+ * estimated tallies), and `ClipTriggersSectionContainer` (play/stop a registered clip
+ * + launch a guided tour) / `ClipPathInspectorSectionContainer` (precompute +
+ * scrub a clip's debug camera path) — every section that touches the store
+ * owns its own container, so DebugPanel itself receives only the engine-handle
+ * props (`slots`, `timingService`, `frameStats`, `passNames`) that App reads
+ * off `handleRef`. Mount is owned by `App.tsx` (toggled by the `d` keyboard
+ * shortcut); when this component renders, all sections always render —
+ * section-level visibility (e.g. "GPU timings unavailable") is each section's
  * own concern.
+ *
+ * `memo` is load-bearing here: this is App's memo boundary for the panel, so
+ * an unrelated App re-render doesn't cascade into every section's store reads.
  *
  * ### Why collapsible sections
  *
@@ -23,25 +30,29 @@
  * is `ready` — a collapsed `<details>` keeps the panel compact
  * during steady-state runs.  GPU timings is the opposite (always
  * live), but the user might want to focus on one or the other.
- * `RenderTogglesSection` and `DataQualitySection` both default to
- * closed (most sessions won't need to flip a renderer off or audit
- * data quality); the other two default to open because their data
+ * `RenderTogglesSection`, `DebugOverlaysSection`, and
+ * `GalaxyProvenanceSection` all default to closed (most sessions won't
+ * need to flip a renderer off, a raw overlay, or audit orientation/size
+ * provenance); the other two default to open because their data
  * is the primary reason for opening the panel.
  */
 
+import { memo } from 'react';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import { AssetLoadingSection } from './AssetLoadingSection';
+import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
-import { RenderTogglesSection } from './RenderTogglesSection';
-import { FlowTuningSection } from './FlowTuningSection';
-import { DataQualitySection } from './DataQualitySection';
+import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
+import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
+import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
+import ZoneOfAvoidanceTuningSectionContainer from '../containers/ZoneOfAvoidanceTuningSectionContainer';
+import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
+import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
+import styles from './DebugPanel.module.css';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -51,126 +62,38 @@ export type DebugPanelProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
   /**
-   * Live disabled-pass record from the settings store (`DebugPanelContainer`
-   * subscribes via `selectDisabledPasses`).  A toggle calls `onTogglePass`,
-   * the container dispatches `setPassDisabled`, and `watchWakeSaga` wakes the loop.
+   * Authored `ASSET_WIRING` fetch rank per slot name, from the engine handle's
+   * `debug.assetPriorities`. A getter, not a Map, because slots are minted by
+   * the async bootstrap long after the handle is built.
    */
-  disabledPasses: Record<string, boolean>;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  onHighlightFallbackChange: (enabled: boolean) => void;
-  onRealOnlyModeChange: (enabled: boolean) => void;
-  /**
-   * Pick-buffer debug overlay toggle.  When on, the renderer paints a
-   * colour-mapped RGBA layer over the tone-mapped frame so the
-   * developer can see which billboards the picker actually claims.
-   */
-  showPickBuffer: boolean;
-  onShowPickBufferChange: (enabled: boolean) => void;
-  /**
-   * Disk-radius debug ring toggle.  When on, the renderer outlines each
-   * famous-galaxy thumbnail's disk-radius footprint so the developer can
-   * calibrate the placement against the underlying billboard.
-   */
-  showDiskRadiusRing: boolean;
-  onShowDiskRadiusRingChange: (enabled: boolean) => void;
-  /**
-   * Flow overlay slice + its knob-patch callback.  App-owned and optimistic,
-   * like the other DebugPanel toggles: `onFlowChange` applies a
-   * `Partial<FlowFieldDefaults>` to both the React mirror and the engine handle.
-   * The dev-only motion knobs (count / trail / flowSpeed / densityBias / wander
-   * / edgeFade) live in FlowTuningSection, driven from the flow field registry.
-   * The master gate is not here — it rides the SettingsPanel header via
-   * `setFlowEnabled`.
-   */
-  flow: FlowSettings;
-  onFlowChange: (patch: Partial<FlowFieldDefaults>) => void;
-  /**
-   * Called with the pass name when a RenderTogglesSection checkbox is toggled.
-   * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here
-   * from the section so it is no longer a leaf-level store reach.
-   */
-  onTogglePass: (name: string) => void;
+  assetPriorities: () => ReadonlyMap<string, number>;
 };
 
-export function DebugPanel({
+function DebugPanel({
   slots,
   timingService,
   frameStats,
   passNames,
-  disabledPasses,
-  highlightFallback,
-  realOnlyMode,
-  onHighlightFallbackChange,
-  onRealOnlyModeChange,
-  showPickBuffer,
-  onShowPickBufferChange,
-  showDiskRadiusRing,
-  onShowDiskRadiusRingChange,
-  flow,
-  onFlowChange,
-  onTogglePass,
+  assetPriorities,
 }: DebugPanelProps) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 8,
-        right: 8,
-        background: 'rgba(0,0,0,0.85)',
-        color: '#cfc',
-        font: '11px/1.4 ui-monospace, monospace',
-        padding: '8px 10px',
-        borderRadius: 4,
-        zIndex: 99999,
-        maxWidth: 480,
-        pointerEvents: 'auto',
-      }}
-    >
-      <div style={{ fontWeight: 'bold', marginBottom: 6, opacity: 0.8 }}>Skymap Debug</div>
-      <AssetLoadingSection slots={slots} />
-      <div style={{ marginTop: 6 }} />
+    <div className={styles.root}>
+      <div className={styles.title}>Skymap Debug</div>
+      <AssetLoadingSection slots={slots} assetPriorities={assetPriorities} />
       {/* Always shown — its numbers need no GPU query, so it sits above the
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
-      <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />
-      <div style={{ marginTop: 6 }} />
-      <RenderTogglesSection
-        passNames={passNames}
-        disabledPasses={disabledPasses}
-        onTogglePass={onTogglePass}
-      />
-      <div style={{ marginTop: 6 }} />
-      <FlowTuningSection flow={flow} onChange={onFlowChange} />
-      <div style={{ marginTop: 6 }} />
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={showPickBuffer}
-          onChange={(e) => onShowPickBufferChange(e.target.checked)}
-        />
-        <span>Show pick buffer</span>
-      </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={showDiskRadiusRing}
-          onChange={(e) => onShowDiskRadiusRingChange(e.target.checked)}
-        />
-        <span>Show disk radius ring</span>
-      </label>
-      <div style={{ marginTop: 6 }} />
-      <DataQualitySection
-        highlightFallback={highlightFallback}
-        realOnlyMode={realOnlyMode}
-        onHighlightFallbackChange={onHighlightFallbackChange}
-        onRealOnlyModeChange={onRealOnlyModeChange}
-      />
-      <div style={{ marginTop: 6 }} />
+      <RenderTogglesSectionContainer passNames={passNames} />
+      <FlowTuningSectionContainer />
+      <MilkyWayTuningSectionContainer />
+      <ZoneOfAvoidanceTuningSectionContainer />
+      <DebugOverlaysSectionContainer />
+      <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />
-      <div style={{ marginTop: 6 }} />
       <ClipPathInspectorSectionContainer />
     </div>
   );
 }
+
+export default memo(DebugPanel);

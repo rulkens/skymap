@@ -1,0 +1,112 @@
+/*
+ * Slider.module.css — the compact label+value pill.
+ *
+ * The track is the interactive element (`.root`, `role="slider"`). It's a flex
+ * row: label at the start, value at the end, both painted on top of the fill
+ * bar that sits behind them (`.fill`, `inset: 0`, width driven by an inline
+ * `%`); the fill edge is the only progress cue (no separate handle/thumb).
+ *
+ * Tokens mirror the house range slider (SettingsPanel's `.panelRow`): the track
+ * borrows `--surface-control` + `--border-control` and hover raises the border
+ * to `--border-hover`, so this reads as the same control family. The fill stays
+ * a muted `--surface-control-*` wash (not a bright accent) so a board of these
+ * doesn't shout.
+ *
+ * The fill `transition` is what animates a keyboard nudge or a programmatic
+ * change; `.dragging` kills it so a pointer drag tracks the finger frame-for-
+ * frame instead of easing behind it (see the .tsx module header).
+ */
+
+.root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-5);
+  overflow: hidden;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-lg);
+  background: var(--surface-control);
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  transition:
+    border-color var(--duration-color) var(--ease-standard),
+    background var(--duration-color) var(--ease-standard);
+}
+
+.root:hover {
+  border-color: var(--border-hover);
+}
+
+.root:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-control-hover);
+  pointer-events: none;
+  transition:
+    width var(--duration-base) var(--ease-standard),
+    background var(--duration-color) var(--ease-standard);
+}
+
+.root:hover .fill,
+.root:focus-visible .fill {
+  background: var(--surface-control-active);
+}
+
+/*
+ * Label and value ride above the fill. `pointer-events: none` lets a drag that
+ * starts on the text fall through to the track's pointer handlers, so the whole
+ * pill is one continuous drag surface.
+ */
+.label,
+.value {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  font-size: var(--font-size-md);
+  color: var(--color-fg-muted);
+  transition: color var(--duration-color) var(--ease-standard);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+}
+
+.root:hover .label,
+.root:hover .value,
+.root:focus-visible .label,
+.root:focus-visible .value {
+  color: var(--color-fg);
+}
+
+/* During a drag the fill must follow the pointer with no easing lag. */
+.dragging .fill {
+  transition: background var(--duration-color) var(--ease-standard);
+}
+
+.disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.disabled:hover {
+  border-color: var(--border-control);
+}
+
+.disabled:hover .fill {
+  background: var(--surface-control-hover);
+}
+
+.disabled:hover .label,
+.disabled:hover .value {
+  color: var(--color-fg-muted);
+}

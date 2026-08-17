@@ -1,18 +1,71 @@
 # WESL linker configuration for the Galaxy Renderer tool.
 #
-# Unlike the flow-workbench (which links against the runtime's canonical
+# Unlike the flow-workbench (which points 'root' at the runtime's canonical
 # shader tree, because it drives the one real flow renderer shared with the
-# main app), this tool's DRAW shaders are entirely its own — star sprites,
-# dust, and an HDR bloom chain that have no runtime counterpart to share
-# with. So 'root' points at this tool's own shader directory rather than up
-# into src/services/gpu/shaders, and imports inside those shaders resolve
-# as package::lib::name against that local root. The one exception is the
-# shared galaxyGen/ generation shaders, which live in the runtime tree
-# (src/services/gpu/shaders/galaxyGen) and appear inside this root through
-# the symlink at src/engine/shaders/galaxyGen — WESL package binding is
-# root-driven, so the file must appear inside the root to be addressable as
-# package::galaxyGen:: (see vite.config.ts's resolve block for the alias +
-# preserveSymlinks that keep the id inside this root).
+# main app), this tool keeps its own root — but almost nothing local is left
+# in it. The tool exists to tune a look that must transfer to the app, and a
+# hand-matched copy of any part of the app's chain drifts the day after it is
+# written, so DRAW and POST shaders alike are the RUNTIME's, reached through
+# symlinks that make them appear inside this root:
+#
+#   src/engine/shaders/milkyWay/sprites -> src/services/gpu/shaders/milkyWay/sprites
+#   src/engine/shaders/milkyWay/field/  real dir: per-file symlinks for the
+#                                       flat .wesl leaves + dir symlinks for
+#                                       fieldSplat/, hiiSplat/, dustMap/,
+#                                       dustPresent/, and bubblePresent/
+#                                       (see below)
+#   src/engine/shaders/milkyWay/ismMap   -> .../shaders/milkyWay/ismMap
+#   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
+#   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom
+#   src/engine/shaders/compositor       -> src/services/gpu/shaders/compositor
+#   src/engine/shaders/lib/camera.wesl  -> .../shaders/lib/camera.wesl
+#   src/engine/shaders/lib/tonemap.wesl -> src/services/gpu/shaders/lib/tonemap.wesl
+#   src/engine/shaders/lib/cloudSprite.wesl -> .../shaders/lib/cloudSprite.wesl
+#   src/engine/shaders/lib/fullscreenTri.wesl -> .../shaders/lib/fullscreenTri.wesl
+#   src/engine/shaders/lib/billboard.wesl     -> .../shaders/lib/billboard.wesl
+#   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
+#   src/engine/shaders/lib/splatSilhouette.wesl  -> .../lib/splatSilhouette.wesl
+#
+# milkyWay/ is a REAL directory here holding leaf symlinks, not one symlink
+# to the runtime's milkyWay/. The include glob below descends INTO a
+# symlinked directory but not into a real subdirectory of one, so a single
+# parent symlink makes package::milkyWay::field::io unresolvable — 'module not
+# found', at link time, in the tool's build only. Symlink the leaves. The
+# same rule forced field/ itself to become a real dir the day it grew
+# fieldSplat/ and hiiSplat/ subfolders (#78's splat split): behind the old
+# field dir-symlink those were real-subdirs-of-a-symlink and their modules
+# vanished from the root. A NEW flat field/*.wesl now needs its own leaf
+# symlink here, like lib/'s per-file links; a new SUBFOLDER needs a dir link.
+#
+# Each leaf is shared as a WHOLE DIRECTORY rather than file by file, because a
+# tier's passes share one io.wesl: sprites/stars.wesl and sprites/dust.wesl
+# both read the single '@group(0) @binding(0)' uniform declared in
+# sprites/io.wesl, so taking one pass without the other would mean packing the
+# app's 208-byte struct for it and a different struct for its sibling.
+# lib/camera.wesl comes along because that struct embeds CameraUniforms, and
+# additiveUpsample because the reduced-resolution star target has to be
+# composited back into HDR the same way the app composites it.
+#
+# WESL package binding is root-driven, so a shared file must appear inside the
+# root to be addressable as package::milkyWay::sprites:: / package::bloom:: /
+# package::compositor:: / package::lib::camera (see vite.config.ts's resolve
+# block for the aliases + preserveSymlinks that keep those ids inside this
+# root). The symlinked families' own internal imports — bloom's
+# package::bloom::io, the compositor's package::compositor::io and
+# package::lib::tonemap, the sprite tier's package::milkyWay::sprites::io and
+# package::lib::cloudSprite — resolve against this root exactly as they do
+# against the runtime's, which is what makes the sharing work with no per-tool
+# shims.
+#
+# The one post shader that stays local is src/engine/shaders/grade.wesl: a
+# saturation/vignette/gamma trailer the app deliberately has no equivalent
+# for. It is skipped entirely at the tool's default (identity) settings, so
+# the default path is the app's path. See its header.
+#
+# lib/fullscreenTri.wesl lives in the runtime tree and comes back through a
+# symlink like camera.wesl and tonemap.wesl, so grade.wesl's
+# 'package::lib::fullscreenTri' import resolves the same way any other
+# shared lib import does.
 #
 # wesl-plugin locates this file from the explicit 'weslToml' option in
 # vite.config.ts — NOT from the Vite 'root'. By default the plugin reads

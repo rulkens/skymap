@@ -14,28 +14,32 @@
  *    buffers and break every later picker / InfoCard read.
  * 3. The transfer list points to the COPY's buffers, not the original's
  *    — for the same reason: the original catalog must survive the call.
- * 4. The transfer list contains exactly one entry per typed-array field
- *    (10 entries) and they appear in a stable order — so the helper
- *    doesn't accidentally drop a field when GalaxyCatalog grows.
+ * 4. The transfer list contains exactly one entry per typed-array field of
+ *    the copy, in `Object.keys` order — so the helper doesn't accidentally
+ *    drop, duplicate, or misorder a field when GalaxyCatalog grows.
  *
- * ### Why a stable field order matters
+ * ### Why derive the expectation from the copy, not the field-spec table
  *
- * Adding a new typed-array field to GalaxyCatalog must require editing
- * exactly one place (this helper). A test that pins the order catches
- * "added the field to the copy but forgot to add it to the transfer
- * list" — a class of bug that would silently send `undefined` through
- * the worker boundary.
+ * `cloneGalaxyCatalogForTransfer` and `GALAXY_CATALOG_FIELD_SPECS` are
+ * implemented by the same module — asserting the transfer list against the
+ * table would be a mirror test, passing even if both were wrong together.
+ * `copy`'s own completeness isn't compiler-checked here (the helper casts
+ * its loop-built object to `GalaxyCatalog`); that proof lives one file over,
+ * in `GalaxyCatalogColumn`'s `Exclude<keyof GalaxyCatalog, …>` definition
+ * plus `GALAXY_CATALOG_FIELD_SPECS`'s `satisfies` clause. What THIS test
+ * catches is narrower and independent of that proof: a column present in
+ * `copy` that the transfer list drops, duplicates, or misorders.
  */
 
 import { describe, it, expect } from 'vitest';
 import { cloneGalaxyCatalogForTransfer } from '../../../src/data/galaxyCatalog/galaxyCatalogTransfer';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(count: number): GalaxyCatalog {
   // Each field gets a distinct fill value so we can later assert which
   // index in the transfer list corresponds to which source field.
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count).fill(1n),
     positions: new Float32Array(count * 3).fill(0.5),
     magU: new Float32Array(count).fill(2),
@@ -49,7 +53,9 @@ function makeCloud(count: number): GalaxyCatalog {
     classByte: new Uint8Array(count).fill(7),
     parentSurveyByte: new Uint8Array(count).fill(8),
     spectroscopicZ: new Float32Array(count).fill(0.0234),
-  };
+    orientationIsFallback: new Uint8Array(count).fill(1),
+    diameterIsFallback: new Uint8Array(count).fill(1),
+  });
 }
 
 describe('cloneGalaxyCatalogForTransfer', () => {
@@ -86,39 +92,45 @@ describe('cloneGalaxyCatalogForTransfer', () => {
 
     // Every transfer entry must be one of the copy buffers — never the
     // original. Sending an original-buffer entry to postMessage would
-    // detach the engine's authoritative catalog.
-    const copyBuffers = new Set<ArrayBufferLike>([
-      copy.objIDs.buffer,
-      copy.positions.buffer,
-      copy.magU.buffer,
-      copy.magG.buffer,
-      copy.magR.buffer,
-      copy.magI.buffer,
-      copy.magZ.buffer,
-      copy.axisRatio.buffer,
-      copy.positionAngleDeg.buffer,
-      copy.diameterKpc.buffer,
-      copy.classByte.buffer,
-      copy.parentSurveyByte.buffer,
-      copy.spectroscopicZ.buffer,
-    ]);
+    // detach the engine's authoritative catalog. Derived from `copy` itself
+    // (every typed-array view's `.buffer`), not hand-listed: a hand list
+    // silently stops covering new columns as GalaxyCatalog grows, which is
+    // exactly how this test missed `log10StellarMass` the first time round.
+    const copyBuffers = new Set<ArrayBufferLike>(
+      (Object.values(copy) as unknown[])
+        .filter((v): v is ArrayBufferView => ArrayBuffer.isView(v))
+        .map((v) => v.buffer),
+    );
     for (const t of transfer) {
       expect(copyBuffers.has(t as ArrayBufferLike)).toBe(true);
     }
   });
 
-  it('transfer list has one entry per typed-array field (13 total)', () => {
+  it('transfers exactly one buffer per typed-array column of the copy, in field order', () => {
     const cloud = makeCloud(4);
-    const { transfer } = cloneGalaxyCatalogForTransfer(cloud);
-    expect(transfer.length).toBe(13);
+    const { copy, transfer } = cloneGalaxyCatalogForTransfer(cloud);
+
+    // The expected name list — every `copy` key whose value is a typed-array
+    // view, in Object.keys order. `count` and `medianAbsMag` are scalars and
+    // drop out here, not by name but because they aren't typed-array views.
+    const expectedColumns = (Object.keys(copy) as (keyof GalaxyCatalog)[]).filter((key) =>
+      ArrayBuffer.isView(copy[key]),
+    );
+
+    const columnByBuffer = new Map<ArrayBufferLike, string>();
+    for (const key of expectedColumns) {
+      columnByBuffer.set((copy[key] as { buffer: ArrayBufferLike }).buffer, key);
+    }
+    const transferredColumns = transfer.map((buf) => columnByBuffer.get(buf as ArrayBufferLike));
+
+    expect(transferredColumns).toEqual(expectedColumns);
   });
 
   it('handles count = 0 (empty catalog)', () => {
     const cloud = makeCloud(0);
-    const { copy, transfer } = cloneGalaxyCatalogForTransfer(cloud);
+    const { copy } = cloneGalaxyCatalogForTransfer(cloud);
     expect(copy.count).toBe(0);
     expect(copy.objIDs.length).toBe(0);
     expect(copy.positions.length).toBe(0);
-    expect(transfer.length).toBe(13);
   });
 });

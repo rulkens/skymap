@@ -46,20 +46,14 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../../../../@types/rendering/PlanetRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/planet/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/planet/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-
-/** UV-sphere tessellation counts — matches `earthRenderer` /
- *  `starRenderer` so every sphere body shares a mesh shape. */
-const SEGMENTS = 48;
-const RINGS = 24;
-
-/** Upper bound on planet/moon spheres drawn per frame. 21 bodies ship today
- *  (the seven non-Earth major planets + the Moon + Mars/Jupiter/Saturn's major
- *  moons); this caps the instance buffer size with headroom for more. */
-export const MAX_PLANETS = 24;
 
 /**
  * Float32 slots per per-instance record: four `vec4<f32>` MVP columns (16) +
@@ -105,7 +99,7 @@ export function createPlanetRenderer(
   reversedZ: boolean,
 ): PlanetRenderer {
   // ── Geometry upload (positions + indices; the lambert term needs no uvs) ──
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({
@@ -121,20 +115,6 @@ export function createPlanetRenderer(
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
   });
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
-
-  // ── Instance vertex buffer ────────────────────────────────────────────────
-  //
-  // Holds up to MAX_PLANETS 96-byte records (four MVP columns + albedo +
-  // sunDirLocal). `draw`
-  // overwrites the first `count` records each frame with one `writeBuffer`; the
-  // instance step means `@builtin(instance_index)` selects a body's record, so
-  // every planet renders with its OWN matrix — no per-body bind, no per-draw
-  // uniform for a later write to clobber (see the module header).
-  const instanceBuffer = device.createBuffer({
-    label: 'planet-instance-vbo',
-    size: MAX_PLANETS * INSTANCE_STRIDE,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
 
   // ── Shader modules ────────────────────────────────────────────────────────
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'planet.vertex');
@@ -192,24 +172,54 @@ export function createPlanetRenderer(
     },
   });
 
+  // ── Planet instance buffer (grown on demand, never replaced wholesale) ────
+  //
+  // Mirrors `starPointRenderer.setStars`, and `orbitTrailRenderer` alongside
+  // it. A fixed capacity sized to today's roster is the tempting alternative
+  // and the wrong one: the count it guards is an authored-data fact, so the day
+  // the table outgrows it the excess bodies vanish with no error.
+  // There is no fixed cap to size
+  // against up front, so the buffer starts unallocated and grows to fit the
+  // largest `count` any `draw` call has passed; a later smaller frame reuses
+  // the larger buffer and draws the smaller subset. `destroy()` on the
+  // outgoing buffer is safe even if a prior frame referenced it — WebGPU
+  // defers the actual release until in-flight work completes.
+  let instanceBuffer: GPUBuffer | null = null;
+  let capacityPlanets = 0;
+
   // ── draw ──────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, instances: Float32Array, count: number): void {
-    // Clamp to the cap so an over-count caller draws MAX_PLANETS rather than off
-    // the end of the buffer (a silently-dropped tail beats a GPU validation
-    // error). Nothing to do for a zero-length batch.
-    const n = Math.min(Math.max(count, 0), MAX_PLANETS);
-    if (n === 0) return;
+    if (count === 0) return;
+    // `count` must be backed by that many records in the caller's packed
+    // array. Clamping a mismatch to fit would hide the caller's bug in a
+    // dropped body; throwing surfaces it at the call that got the count wrong
+    // instead of a few files away as a mis-rendered scene.
+    if (count < 0 || count * INSTANCE_FLOATS > instances.length) {
+      throw new Error(
+        `planetRenderer.draw: count (${count}) does not fit the packed instances array (${instances.length} floats, needs ${count * INSTANCE_FLOATS})`,
+      );
+    }
 
-    // One upload of exactly the first `n` records. The typed-array overload
-    // takes the data offset + size in ELEMENTS (floats), not bytes.
-    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, n * INSTANCE_FLOATS);
+    if (instanceBuffer === null || count > capacityPlanets) {
+      instanceBuffer?.destroy();
+      capacityPlanets = count;
+      instanceBuffer = device.createBuffer({
+        label: 'planet-instance-vbo',
+        size: capacityPlanets * INSTANCE_STRIDE,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+
+    // One upload of exactly the first `count` records. The typed-array
+    // overload takes the data offset + size in ELEMENTS (floats), not bytes.
+    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, count * INSTANCE_FLOATS);
 
     pass.setPipeline(pipeline);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, instanceBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
-    pass.drawIndexed(indexCount, n);
+    pass.drawIndexed(indexCount, count);
   }
 
   // ── destroy ───────────────────────────────────────────────────────────────
@@ -217,7 +227,9 @@ export function createPlanetRenderer(
   function destroy(): void {
     positionBuffer.destroy();
     indexBuffer.destroy();
-    instanceBuffer.destroy();
+    instanceBuffer?.destroy();
+    instanceBuffer = null;
+    capacityPlanets = 0;
   }
 
   const renderer: PlanetRenderer = {

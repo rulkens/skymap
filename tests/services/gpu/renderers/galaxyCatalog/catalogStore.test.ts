@@ -28,6 +28,7 @@ import { buildPointInterleavedBuffer } from '../../../../../src/services/engine/
 import { Source, SOURCE_REGISTRY } from '../../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 // The store keys its catalogs by the string `GalaxyCatalogId`; these tests
 // still reason in terms of the numeric `Source` codes (the `loadedSources()`
@@ -55,28 +56,12 @@ const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(inp
  * inspects their values, only their lengths.
  */
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    // Orientation fields — the bookkeeping path doesn't read their values,
-    // so zero-filled arrays of the right length suffice.
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
     // Fill with the 30 kpc project default so apparent-size logic never
     // divides by zero.
     diameterKpc: new Float32Array(count).fill(30),
-    // Per-record metadata bytes; zero-filled (the bookkeeping path
-    // doesn't read them).
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /**
@@ -470,10 +455,10 @@ describe('catalogStore.spliceSchechterRatios', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // SLOTS_PER_POINT = 13; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
-    expect(f32[0 * 13 + 10]).toBeCloseTo(0.25);
-    expect(f32[1 * 13 + 10]).toBeCloseTo(0.5);
-    expect(f32[2 * 13 + 10]).toBeCloseTo(0.75);
+    // SLOTS_PER_POINT = 14; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
+    expect(f32[0 * 14 + 10]).toBeCloseTo(0.25);
+    expect(f32[1 * 14 + 10]).toBeCloseTo(0.5);
+    expect(f32[2 * 14 + 10]).toBeCloseTo(0.75);
   });
 
   it('throws when ratios.length !== source count', async () => {
@@ -518,8 +503,8 @@ describe('catalogStore.spliceAngularWeights', () => {
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
     // slot 11 = ANGULAR_WEIGHT_BYTE_OFFSET / 4.
-    expect(f32[0 * 13 + 11]).toBeCloseTo(0.1);
-    expect(f32[1 * 13 + 11]).toBeCloseTo(0.9);
+    expect(f32[0 * 14 + 11]).toBeCloseTo(0.1);
+    expect(f32[1 * 14 + 11]).toBeCloseTo(0.9);
   });
 
   it('throws when weights.length !== source count', async () => {
@@ -556,10 +541,10 @@ describe('catalogStore.clearBiasOverlays', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    expect(f32[0 * 13 + 10]).toBe(0);
-    expect(f32[0 * 13 + 11]).toBe(0);
-    expect(f32[1 * 13 + 10]).toBe(0);
-    expect(f32[1 * 13 + 11]).toBe(0);
+    expect(f32[0 * 14 + 10]).toBe(0);
+    expect(f32[0 * 14 + 11]).toBe(0);
+    expect(f32[1 * 14 + 10]).toBe(0);
+    expect(f32[1 * 14 + 11]).toBe(0);
   });
 
   it('zeroes for every loaded source when called with no argument', async () => {

@@ -1,11 +1,11 @@
 /**
  * projectLabelCategoryVisibility — projection tests.
  *
- * Known structure + galaxy catalog items Records (plus the milkyWay scalar) → a
- * known concrete record, exercising ALL three arms (structure category from
- * `structures.items[cat].labelEnabled`, famousGalaxy from
- * `galaxyCatalogs.items.famousGalaxy.labelEnabled`, milkyWay from the scalar
- * third argument).
+ * A known `LabelHomes` bundle → a known concrete record, exercising every home
+ * (structure category from `structures[cat].labelEnabled`, famousGalaxy from
+ * `galaxyCatalogs.famousGalaxy.labelEnabled`, famousStar from
+ * `starCatalogs.famousStar.labelEnabled`, the near-field bodies from
+ * `bodies[id].labelEnabled`, milkyWay from the scalar).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,7 +13,19 @@ import { describe, it, expect } from 'vitest';
 import { projectLabelCategoryVisibility } from '../../../src/state/settings/projectLabelCategoryVisibility';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import { isStructureId } from '../../../src/data/structure/structureIds';
+import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
+import type { LabelHomes } from '../../../src/@types/settings/LabelHomes';
 import { makeSettingsFixture } from './makeSettingsFixture';
+
+function homesOf(state: EngineSettingsState): LabelHomes {
+  return {
+    structures: state.structures.items,
+    galaxyCatalogs: state.galaxyCatalogs.items,
+    starCatalogs: state.starCatalogs.items,
+    bodies: state.bodies.items,
+    milkyWayLabelEnabled: state.milkyWay.labelEnabled,
+  };
+}
 
 describe('projectLabelCategoryVisibility', () => {
   it('reads structure labels from structures.items and famousGalaxy from galaxy catalogs.items', () => {
@@ -23,11 +35,7 @@ describe('projectLabelCategoryVisibility', () => {
     state.structures.items[firstStructure].labelEnabled = false;
     state.galaxyCatalogs.items.famousGalaxy.labelEnabled = true;
 
-    const record = projectLabelCategoryVisibility(
-      state.structures.items,
-      state.galaxyCatalogs.items,
-      state.milkyWay.labelEnabled,
-    );
+    const record = projectLabelCategoryVisibility(homesOf(state));
 
     // Keyed by exactly the label categories (structures + famousGalaxy + milkyWay).
     expect(Object.keys(record).sort()).toEqual([...LABEL_CATEGORIES].sort());
@@ -46,11 +54,7 @@ describe('projectLabelCategoryVisibility', () => {
     const state = makeSettingsFixture();
     state.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
 
-    const record = projectLabelCategoryVisibility(
-      state.structures.items,
-      state.galaxyCatalogs.items,
-      state.milkyWay.labelEnabled,
-    );
+    const record = projectLabelCategoryVisibility(homesOf(state));
 
     expect(record.famousGalaxy).toBe(false);
     // Structure + milkyWay labels untouched.
@@ -60,15 +64,13 @@ describe('projectLabelCategoryVisibility', () => {
     }
   });
 
-  it('projects the milkyWay label axis from the third argument', () => {
+  it('projects the milkyWay label axis from the bundle scalar', () => {
     const state = makeSettingsFixture();
     expect(
-      projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items, false)
-        .milkyWay,
+      projectLabelCategoryVisibility({ ...homesOf(state), milkyWayLabelEnabled: false }).milkyWay,
     ).toBe(false);
     expect(
-      projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items, true)
-        .milkyWay,
+      projectLabelCategoryVisibility({ ...homesOf(state), milkyWayLabelEnabled: true }).milkyWay,
     ).toBe(true);
   });
 });

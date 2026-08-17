@@ -41,14 +41,16 @@
  *                    singleton demand-loaded layer (like filament): fades in
  *                    once its artifact uploads, fades out on the master toggle.
  *                    No discriminator.
- *   - labelLayer   — one logical label layer (milkyWay, structure,
- *                    galaxy names, scale bar). Discriminator:
- *                    `layer: LabelLayerId`. Structure labels additionally key
- *                    on `category: StructureId` so each structure source's
- *                    labels are a distinct controller; the other layers
- *                    (milkyWay/galaxyNames/scaleBar) carry no category.
- *                    Famous-galaxy labels reuse the `galaxyNames` layer
- *                    rather than minting a value.
+ *   - zoneOfAvoidance — the galactic-plane dust band overlay. Seeded from
+ *                    `settings.zoneOfAvoidance.enabled`, which gates both
+ *                    the band and its curved lettering — a single toggle,
+ *                    not a band/label split. No discriminator.
+ *   - labelLayer   — one logical label layer (milkyWay, structure, galaxy
+ *                    names, star-map captions, scene-body captions, scale
+ *                    bar). Discriminator: `layer: LabelLayerId`. A layer whose
+ *                    source fans out per item additionally keys on
+ *                    `item: LabelCategory` so each source's labels are a
+ *                    distinct controller; singleton layers carry no item.
  *   - overlay      — always-on GPU overlay (procedural disks, textured
  *                    disks). Registered at opacity 1.0 via setImmediate.
  *                    Discriminator: `id: OverlayId`.
@@ -71,6 +73,7 @@
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 
@@ -83,10 +86,11 @@ export type FadeId =
   | { readonly kind: 'flow' }
   | { readonly kind: 'orbitTrails' }
   | { readonly kind: 'constellations' }
+  | { readonly kind: 'zoneOfAvoidance' }
   | {
       readonly kind: 'labelLayer';
       readonly layer: LabelLayerId;
-      readonly category?: StructureId;
+      readonly item?: LabelCategory;
     }
   | { readonly kind: 'overlay'; readonly id: OverlayId }
   | { readonly kind: 'volumesMaster' };

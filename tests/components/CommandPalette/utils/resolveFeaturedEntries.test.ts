@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { resolveFeaturedEntries } from '../../../../src/components/CommandPalette/utils/resolveFeaturedEntries';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 
 // Minimal famous-entry fixture keyed by id — the resolver only reads `id`,
 // the rest are filled to satisfy the type.
-function entry(id: string): FamousMetaEntry {
+function entry(id: string): FamousGalaxyMetaEntry {
   return { id, names: [id], description: '', type: '' };
 }
 

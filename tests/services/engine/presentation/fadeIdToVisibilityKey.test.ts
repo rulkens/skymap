@@ -1,17 +1,20 @@
 /**
  * fadeIdToVisibilityKey — tests for the FadeId → VisibilityLayerKey bridge.
  *
- * Covers the three assertions in the task-12 checklist:
- *   1. Spot-checks that concrete FadeId values map to the expected key.
- *   2. `overlay` returns `undefined` (no clip-layer address).
- *   3. Exhaustiveness — the switch has no `default` arm, so tsc enforces
- *      coverage; this file verifies the mappings at runtime.
+ * The implementation is two `satisfies Record<...>` tables — one keyed by
+ * `FadeId['kind']`, one keyed by `LabelLayerId` — with a single branch on
+ * `h.kind === 'labelLayer'` choosing which table to index. `satisfies Record`
+ * already makes both tables total at compile time: omitting a key is a type
+ * error. What it can't catch is a key mapped to the *wrong* value — a typo'd
+ * or transposed `VisibilityLayerKey` still satisfies the `Record` shape.
+ * These tests are the check against that failure mode: they assert the
+ * actual runtime value for each row, not just that a value exists.
  *
  * We do NOT test every single FadeId discriminator variant (every
  * GalaxyCatalogId, every StructureId, …) — that would be a mechanical
- * mirror of the implementation. Instead we verify one representative from
- * each kind, plus the LabelLayerId sub-switch in full (four members, four
- * results) because that inner switch is a separate exhaustiveness concern.
+ * mirror of the implementation. Instead we verify one representative per
+ * `kind`, plus every row of the `LabelLayerId` table, since that table is a
+ * separate correctness concern from the outer one.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -28,6 +31,10 @@ describe('fadeIdToVisibilityKey', () => {
 
   it("maps an orbitTrails id to 'orbitTrails'", () => {
     expect(fadeIdToVisibilityKey({ kind: 'orbitTrails' })).toBe('orbitTrails');
+  });
+
+  it("maps a constellations id to 'constellations'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'constellations' })).toBe('constellations');
   });
 
   it("maps a structure ring id to 'structureRing'", () => {
@@ -55,28 +62,38 @@ describe('fadeIdToVisibilityKey', () => {
     expect(fadeIdToVisibilityKey({ kind: 'volumeField', id: 'cf4-density' })).toBe('volumeField');
   });
 
-  // labelLayer sub-switch — all four LabelLayerId members.
+  // LabelLayerId table.
   it("maps labelLayer 'milkyWay' to 'milkyWayLabel'", () => {
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'milkyWay' })).toBe('milkyWayLabel');
   });
 
-  it("maps labelLayer 'galaxyNames' to 'surveyLabel'", () => {
-    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe('surveyLabel');
+  it("maps labelLayer 'galaxy' to 'surveyLabel'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'galaxy' })).toBe('surveyLabel');
   });
 
   it("maps labelLayer 'scaleBar' to 'scaleBar'", () => {
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'scaleBar' })).toBe('scaleBar');
   });
 
-  it("maps labelLayer 'structure' to 'structureLabel' regardless of category discriminator", () => {
-    // Without category.
+  it("maps labelLayer 'structure' to 'structureLabel' regardless of item discriminator", () => {
+    // Without item.
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure' })).toBe(
       'structureLabel',
     );
-    // With category — same result (per-category discrimination is deferred).
-    expect(
-      fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }),
-    ).toBe('structureLabel');
+    // With item — same result (per-item discrimination is deferred).
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure', item: 'cluster' })).toBe(
+      'structureLabel',
+    );
+  });
+
+  it("maps labelLayer 'starCatalog' to 'starCatalogLabel'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'starCatalog' })).toBe(
+      'starCatalogLabel',
+    );
+  });
+
+  it("maps labelLayer 'body' to 'bodyLabel'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'body' })).toBe('bodyLabel');
   });
 
   // Non-clip-fadeable kinds.

@@ -12,7 +12,7 @@
  * shares the HDR composite's tone object, so it runs tone-enabled too.
  *
  * Before this primitive, each of those lived in its own bespoke pass
- * (`postProcess.ts`, a foreground compositor, `volumeUpsample.ts`) with
+ * (`postProcess.ts`, a foreground compositor, `additiveUpsample.ts`) with
  * three copies of the covering-triangle vertex stage, three sampler
  * declarations, and three near-identical pipeline builds. The compositor
  * unifies the pipeline plumbing while keeping the parts that genuinely
@@ -71,19 +71,14 @@
 // stays byte-identical.
 import vsCode from '../shaders/compositor/vertex.wesl?static';
 import fsCode from '../shaders/compositor/fragment.wesl?static';
-import { clampExposure } from '../../../utils/clampExposure';
+import { clampExposure } from '../../../utils/tonemap/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
+import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-
-/** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
-export const DEFAULT_WHITEPOINT = 4.0;
-
-/** Default softness for asinh stretch — higher = more aggressive low-end lift. */
-export const DEFAULT_ASINH_SOFTNESS = 10.0;
 
 // ─── JS-mirror tone-map curves ────────────────────────────────────────────
 //
@@ -98,7 +93,7 @@ export function linearClamp(c: number, exposure: number): number {
 export function reinhardExtended(
   c: number,
   exposure: number,
-  whitepoint: number = DEFAULT_WHITEPOINT,
+  whitepoint: number = REINHARD_WHITEPOINT,
 ): number {
   const x = c * exposure;
   const wsq = whitepoint * whitepoint;
@@ -115,7 +110,7 @@ export function reinhardExtended(
 export function asinhStretch(
   c: number,
   exposure: number,
-  softness: number = DEFAULT_ASINH_SOFTNESS,
+  softness: number = ASINH_SOFTNESS,
 ): number {
   const x = c * exposure;
   // The Lupton formula `asinh(k·c) / asinh(k)` reaches 1.0 at c=1; for
@@ -169,7 +164,7 @@ const BLEND_TABLE: Record<
     preserveAlpha: 1,
   },
   // Additive — matches the scalar-volume pipeline's blend byte-for-byte
-  // (see volumeUpsample.ts). Source coverage is carried straight
+  // (see additiveUpsample.ts). Source coverage is carried straight
   // (preserveAlpha 1) so the sum of contributions is order-independent.
   additive: {
     blend: ADDITIVE_BLEND,
@@ -233,9 +228,11 @@ export function createCompositor(init: {
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 uniform — pack via two views over one 32-byte
-  // ArrayBuffer. Bytes 24..31 are padding and
-  // stay zero (a fresh ArrayBuffer is zero-filled and we never write
-  // those lanes), satisfying the uniform 16-byte-stride requirement.
+  // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the extended-range
+  // `hdrKnee` / `hdrHeadroom` — see the `if (tone)` / `else` branches
+  // below. They stay zero in the tone-null / SDR case (a fresh ArrayBuffer
+  // is zero-filled), satisfying the uniform 16-byte-stride requirement with
+  // no unused padding left in the buffer.
   const uniformBytes = new ArrayBuffer(32);
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
@@ -289,10 +286,14 @@ export function createCompositor(init: {
         // Clamp at point of use: the store holds raw intent, this pass
         // owns the HDR-buffer / black-frame limits (see clampExposure).
         uniformF32[0] = clampExposure(tone.exposure);
-        uniformF32[1] = DEFAULT_WHITEPOINT * DEFAULT_WHITEPOINT;
-        uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
+        uniformF32[1] = REINHARD_WHITEPOINT * REINHARD_WHITEPOINT;
+        uniformF32[2] = ASINH_SOFTNESS;
         uniformU32[3] = tone.curve >>> 0;
         uniformU32[4] = 1;
+        // 0 unless the caller opted a swap chain into HDR (`renderFrame` only
+        // sets these non-zero when `hdrActiveOf(ctx.renderTargets)` is true).
+        uniformF32[6] = tone.hdrKnee;
+        uniformF32[7] = tone.hdrHeadroom;
       } else {
         // No tone-map: exposure 1.0, curve params zeroed, toneEnabled 0.
         // The fragment takes the raw pass-through branch.
@@ -301,6 +302,8 @@ export function createCompositor(init: {
         uniformF32[2] = 0;
         uniformU32[3] = 0;
         uniformU32[4] = 0;
+        uniformF32[6] = 0;
+        uniformF32[7] = 0;
       }
       // preserveAlpha comes from the blend table, NOT the caller — alpha
       // handling is a property of the blend mode.
@@ -309,7 +312,7 @@ export function createCompositor(init: {
 
       // Bind group is rebuilt per draw because `src` is recreated on
       // resize — caching across resize would bind a destroyed view (same
-      // rationale as volumeUpsample.ts). One alloc per draw is trivial
+      // rationale as additiveUpsample.ts). One alloc per draw is trivial
       // against the fullscreen blit it carries.
       const bindGroup = device.createBindGroup({
         label: `compositor-bg-${blend}`,

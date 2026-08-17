@@ -35,15 +35,14 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarRenderer } from '../../../../@types/rendering/StarRenderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/star/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/star/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-
-/** UV-sphere tessellation counts — matches `earthRenderer` /
- *  `planetRenderer` so every sphere body shares a mesh shape. */
-const SEGMENTS = 48;
-const RINGS = 24;
 
 /**
  * `TintedSphereUniforms` byte size: mat4x4<f32> (64) + vec3<f32> (12) +
@@ -65,7 +64,7 @@ export function createStarRenderer(
   reversedZ: boolean,
 ): StarRenderer {
   // ── Geometry upload (positions + indices; no uvs — see module header) ────
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({

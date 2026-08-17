@@ -79,11 +79,13 @@ function serializeFadeId(h: FadeId): string {
       return 'orbitTrails';
     case 'constellations':
       return 'constellations';
-    // A category-less structure handle and a per-category one must not collide,
-    // and a category-less key (e.g. `labelLayer:milkyWay`) must stay distinct
-    // from a per-category one — so the category suffix is appended only when present.
+    case 'zoneOfAvoidance':
+      return 'zoneOfAvoidance';
+    // An item-less layer handle and a per-item one must not collide, and an
+    // item-less key (e.g. `labelLayer:milkyWay`) must stay distinct from a
+    // per-item one — so the item suffix is appended only when present.
     case 'labelLayer':
-      return `labelLayer:${h.layer}${h.category ? ':' + h.category : ''}`;
+      return `labelLayer:${h.layer}${h.item ? ':' + h.item : ''}`;
     case 'overlay':
       return `overlay:${h.id}`;
     case 'volumesMaster':

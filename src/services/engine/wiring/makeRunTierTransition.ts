@@ -60,7 +60,7 @@ export function makeRunTierTransition(
       // old tier fade out of. The commit reads this flag instead of guessing "is
       // this a re-commit" from the data store, so re-enable / forceReload / boot
       // never trigger a spurious dissolve.
-      state.assetSlots.points
+      void state.assetSlots.points
         .get(src)
         ?.load({ source: src, tier: nextTier, dissolvePrevious: true });
       // Companion sidecars reload in lockstep so localIdx lookups stay valid.
@@ -69,7 +69,7 @@ export function makeRunTierTransition(
 
     // MCPM volume is tier-aware (unlike CF-4); same per-tier reload via the
     // AssetSlot machinery.
-    state.assetSlots.mcpm?.load({ tier: nextTier });
+    void state.assetSlots.mcpm?.load({ tier: nextTier });
 
     // Star catalogs are tier-aware like MCPM, but per-source and demand-loaded.
     // This runner (not reevaluateDemand, whose idle-guard deliberately leaves
@@ -81,14 +81,19 @@ export function makeRunTierTransition(
     // reevaluateDemand issues the then-current tier's request.
     for (const [source, slot] of state.assetSlots.starCatalogs) {
       if (slot.state().kind === 'idle') continue;
-      slot.load({ source, tier: nextTier });
+      void slot.load({ source, tier: nextTier });
     }
 
-    // The Milky-Way point cloud folds the tier's star budget into its
-    // generation, so a tier swap regenerates it (destroy old star/dust VBs →
-    // carve + dispatch the new budget). The handle is null until initGpu
-    // constructs it, so `?.` IS the pre-bootstrap guard — no device check needed.
-    state.gpu.milkyWayCloud?.regenerate(nextTier);
+    // No direct Milky-Way regenerate call here, deliberately — this runner
+    // used to carry one when the cloud's star count was tier-derived, but
+    // `watchTierSaga` now re-seeds `settings.milkyWay.starCount` from the new
+    // tier's budget as part of the same tier change (see that saga), and
+    // `runFrame`'s per-frame mismatch check (`cloud.starCount()` vs. the live
+    // setting) already regenerates the cloud whenever they disagree — which a
+    // re-seed reliably produces. Calling `regenerate` here too would race
+    // that check: both would try to answer the same tier change, and the
+    // cloud no longer needs to know `Tier` at all (see `MilkyWayCloud`'s
+    // docblock) to do so.
 
     // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
     // WebGPU textures are immutable in shape, so a tier flip destroys + recreates

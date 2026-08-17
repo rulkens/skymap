@@ -75,6 +75,7 @@
 import { isPerfMode } from '../../utils/url/isPerfMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/settingsSlice';
 import { requestTier } from '../tier/requestTier';
 import { selectTier } from '../tier/selectors';
@@ -116,7 +117,15 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
 
 // Hard-cut the camera to `pose` and resolve once the next frame has been
 // scheduled. No tween: a benchmark wants an exact vantage, not choreography.
-function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+async function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+  if (pose.clearFocus === true) {
+    store.dispatch(clearSelection());
+    // Let one frame elapse before committing the pose: the deactivating
+    // follow driver's commit-on-edge bake writes its (stale) last pose into
+    // `camera.base` on the next produce, and must land BEFORE the commit
+    // below or it would overwrite the target this pose exists to set.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
   store.dispatch(cancelCameraTween());
   store.dispatch(
     commitCameraPose({
@@ -169,7 +178,7 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
 // Ask for a tier change (the COMMAND — the saga owns the `setTier` write and
 // the eviction/reload), then resolve once the new tier's bins are loaded and
 // committed. Awaiting a FRESH `whenStablyReady` reuses the boot-ready predicate
-// rather than inventing a per-source wait (recordTour precedent): the same
+// rather than inventing a per-source wait (record.ts precedent): the same
 // engine-ready + loads-settled debounce that gates boot also detects a tier
 // reload completing. A same-tier request no-ops in the saga; the fresh wait then
 // just resolves after the stability window — correct behaviour, no special case.

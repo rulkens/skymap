@@ -25,7 +25,7 @@ describe('splitVisibilityArgs', () => {
 
   it("expands the 'labels' aggregate while splitting", () => {
     expect(splitVisibilityArgs(['labels', 'label:milkyWay'])).toEqual({
-      layers: ['surveyLabel', 'structureLabel', 'milkyWayLabel'],
+      layers: ['surveyLabel', 'structureLabel', 'milkyWayLabel', 'starCatalogLabel', 'bodyLabel'],
       scoped: ['label:milkyWay'],
     });
   });

@@ -9,14 +9,16 @@
  *                            navigator.gpu at all" case is handled in
  *                            main.tsx before React mounts; it never
  *                            reaches the splash.
- * - `catalog-fetch-failed` → an essential galaxy catalog fetch failed.
- *                            Show error + reload button.
- * - `famous-meta-failed`   → the famous-meta sidecar failed.  Splash
- *                            stays usable: Explore live, Tour disabled
- *                            with a tooltip.  This kind is informational,
- *                            not blocking.
+ * - `catalog-fetch-failed`   → an essential galaxy catalog fetch failed.
+ *                              Show error + reload button.
+ * - `data-version-mismatch`  → the served `.bin` predates this build's
+ *                              decoder (a stale deploy or un-rebuilt local
+ *                              data dir). Show error + reload button; a
+ *                              reload alone won't fix it if the server is
+ *                              still serving the old asset, but it's the
+ *                              only actionable affordance from the splash.
  */
 export type SplashError =
   | { kind: 'webgpu-init-failed'; message: string }
   | { kind: 'catalog-fetch-failed'; message: string }
-  | { kind: 'famous-meta-failed' };
+  | { kind: 'data-version-mismatch'; message: string };

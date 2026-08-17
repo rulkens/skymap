@@ -1,0 +1,65 @@
+/*
+ * Grid (not inline-block spans) so every row shares one column layout —
+ * browsers can't align independent inline-blocks across sibling rows.
+ * Columns: rank, dot, name, kind, summary, timing, actions.
+ */
+.root {
+  display: grid;
+  grid-template-columns: 22px auto minmax(120px, 1fr) 78px 120px 66px auto;
+  align-items: center;
+  gap: 0 8px;
+  width: 100%;
+}
+
+/* Right-aligned + tabular so the ranks read as a column of numbers the eye can
+   scan for an out-of-order row, not as ragged text. */
+.rank {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+}
+
+.timing {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.dot {
+  font-size: 9px;
+}
+
+/* `min-width: 0` lets a grid track shrink below its content's intrinsic
+   width so the ellipsis (rather than an overflow) kicks in for long slot
+   names/summaries. */
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.actionButton {
+  font-size: 10px;
+}
+
+.cancelButton {
+  composes: actionButton;
+  margin-left: 4px;
+}
+
+/* `visibility` (not `display: none`) keeps the buttons in the layout so
+   hovering across the row doesn't reflow its width. Mutually exclusive with
+   `.hidden`, so there's no cascade-order dependency between them. */
+.hidden {
+  visibility: hidden;
+}
+
+.shown {
+  visibility: visible;
+}

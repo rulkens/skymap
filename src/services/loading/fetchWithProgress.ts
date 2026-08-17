@@ -14,16 +14,16 @@
  * docblock for the full rationale.
  */
 
+import { dataBaseUrl } from '../../utils/network/dataBaseUrl';
+import { resolveDataPath } from './dataManifest';
+
 /**
- * Build a runtime URL for a `.bin` (or other static-data) asset.
- *
- * In dev, `VITE_DATA_BASE_URL` is empty — Vite serves `public/data/*` at
- * `/data/<file>`.  In production, the env var points at the R2 bucket's
- * custom domain.  See CLAUDE.md "Deploy workflow" for the full pipeline.
+ * Build a runtime URL for a `.bin` (or other static-data) asset. Joins
+ * `dataBaseUrl()` with the manifest-resolved hashed path (the boot-fetched
+ * `DataManifest` — see `dataManifest.ts`); identity when nothing's hashed.
  */
 export function dataUrl(filename: string): string {
-  const base = (import.meta.env.VITE_DATA_BASE_URL ?? '').replace(/\/$/, '');
-  return `${base}/data/${filename}`;
+  return `${dataBaseUrl()}/data/${resolveDataPath(filename)}`;
 }
 
 /**

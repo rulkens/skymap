@@ -8,7 +8,7 @@
  * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Synthetic /
  * Milliquas / DESI Deep) end-to-end
  * so any cross-cut regression in thumbnails, explorer URLs, IAU names,
- * orientation provenance, or the famous-meta block is caught here.
+ * orientation provenance, or the famous-galaxies-meta block is caught here.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -19,33 +19,24 @@ import { DESI_TRACER_CLASS } from '../../../../src/data/galaxyCatalog/sourceClas
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
 
 /**
- * Build a synthetic `GalaxyCatalog` of `count` rows, all zeroed except objIDs
- * (sequential 1..N so catalogUrl is well-defined for SDSS rows).  Mirrors
- * the helper in `tests/services/gpu/computeSchechterRatios.test.ts` so future
- * readers can copy-paste between test files without pattern-matching surprises.
+ * Build a synthetic `GalaxyCatalog` of `count` rows via the shared factory,
+ * with the orientation/diameter fields seeded to non-fallback-shaped values
+ * (0.7 axis ratio, 45° PA, 30 kpc diameter) — every test in this file relies
+ * on that baked-in shape, so it stays a thin local wrapper rather than
+ * repeating the overrides at each call site.
  */
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
-    objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
+  return makeGalaxyCatalog(count, {
     axisRatio: new Float32Array(count).fill(0.7),
     positionAngleDeg: new Float32Array(count).fill(45),
     diameterKpc: new Float32Array(count).fill(30),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /** Convenience: extractGalaxyRow then buildGalaxyInfo in one call. */
@@ -53,9 +44,9 @@ function buildInfo(
   cloud: GalaxyCatalog,
   idx: number,
   source: Parameters<typeof extractGalaxyRow>[2],
-  famousMeta?: readonly FamousMetaEntry[],
+  famousGalaxiesMeta?: readonly FamousGalaxyMetaEntry[],
 ) {
-  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousMeta)!);
+  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousGalaxiesMeta)!);
 }
 
 // ─── buildGalaxyInfo — common helpers ────────────────────────────────────────
@@ -97,6 +88,10 @@ describe('buildGalaxyInfo — SDSS source', () => {
     cloud.spectroscopicZ[0] = czForPosition;
     // axisRatio / pa default to (0.7, 45) which is *not* the deterministic
     // fallback for objID=1, so provenance should resolve to "SDSS exp+deV blend".
+    // diameterKpc defaults to the flat 30-kpc fallback (see makeCloud) — stamp
+    // the matching authoritative flag so diameterProvenance resolves to
+    // "fallback (30 kpc)" below.
+    cloud.diameterIsFallback[0] = 1;
 
     const info = buildInfo(cloud, 0, Source.SDSS);
 
@@ -166,17 +161,13 @@ describe('buildGalaxyInfo — SDSS source', () => {
     expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
   });
 
-  it('flags orientation provenance as "deterministic fallback" when ar/pa match the hash', () => {
-    // Replay the deterministic fallback for this objID / ra / dec, write the
-    // result back into the cloud, and confirm provenance comes back as
-    // "deterministic fallback".  Float32 round-trip via the cloud arrays
-    // matches the source's own Float32Array trick.
+  it('flags orientation provenance as "deterministic fallback" when the persisted flag is set', () => {
+    // Provenance now reads the authoritative persisted `orientationIsFallback`
+    // byte (threaded through the row), NOT a re-hash of position.  Setting the
+    // flag directly is the whole contract.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const [ra, dec] = cartesianToRaDecZ(100, 0, 0);
-    const fb = fallbackOrientation(cloud.objIDs[0]!, ra, dec);
-    cloud.axisRatio[0] = fb.axisRatio;
-    cloud.positionAngleDeg[0] = fb.positionAngleDeg;
+    cloud.orientationIsFallback[0] = 1;
     const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });
@@ -340,7 +331,7 @@ describe('buildGalaxyInfo — Famous source', () => {
     // a `famous` block with id/names/description pulled from the sidecar.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0); // M31-like nearby position
-    const meta: FamousMetaEntry[] = [
+    const meta: FamousGalaxyMetaEntry[] = [
       {
         id: 'm31',
         names: ['M31', 'Andromeda Galaxy'],
@@ -385,18 +376,19 @@ describe('buildGalaxyInfo — Famous source', () => {
 // ─── buildGalaxyInfo — diameter provenance dispatch ──────────────────────────
 
 describe('buildGalaxyInfo — diameter provenance', () => {
-  it('credits the SDSS petroR50_r parser when diameter ≠ default fallback', () => {
-    // Any non-30-kpc diameter for an SDSS row is credited to the SDSS catalog
-    // measurement — there's no per-row provenance flag in the bin format, so
-    // this is the best heuristic the function can offer.
+  it('credits the SDSS petroR50_r parser when diameterIsFallback is unset', () => {
+    // Provenance reads the authoritative persisted `diameterIsFallback` byte
+    // (threaded through the row), not a `diameterKpc === 30` heuristic — a
+    // genuinely measured 30-kpc galaxy would compare equal to the fallback
+    // constant and get mislabeled. makeCloud defaults the flag to 0.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    cloud.diameterKpc[0] = 25; // not the 30 kpc fallback
+    cloud.diameterKpc[0] = 25;
     const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.diameterProvenance).toBe('SDSS petroR50_r');
   });
 
-  it('credits 2MRS Riso for non-default 2MRS diameters', () => {
+  it('credits 2MRS Riso for non-fallback 2MRS diameters', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 22;
@@ -404,12 +396,24 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     expect(info.diameterProvenance).toBe('2MRS Riso');
   });
 
-  it('credits GLADE Tully for non-default GLADE diameters', () => {
+  it('credits GLADE Tully for non-fallback GLADE diameters', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 18;
     const info = buildInfo(cloud, 0, Source.Glade);
     expect(info.diameterProvenance).toBe('GLADE Tully');
+  });
+
+  it('flags diameter provenance as "fallback (30 kpc)" when the persisted flag is set', () => {
+    // Mirrors the orientation-provenance flagged-fallback test above: setting
+    // the authoritative byte directly is the whole contract, independent of
+    // the actual diameterKpc value.
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    cloud.diameterKpc[0] = 25; // not the flat 30-kpc default
+    cloud.diameterIsFallback[0] = 1;
+    const info = buildInfo(cloud, 0, Source.SDSS);
+    expect(info.diameterProvenance).toBe('fallback (30 kpc)');
   });
 });
 

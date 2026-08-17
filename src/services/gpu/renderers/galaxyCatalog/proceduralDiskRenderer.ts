@@ -11,7 +11,7 @@
  *
  *   posSize       vec4   xyz, sizeWorldMpc
  *   orientation   vec4   axisRatio, positionAngleDeg, _, _
- *   extras        vec4   colourIndex, crossfadeAlpha, procFadeOut, _
+ *   extras        vec4   colourIndex, crossfadeAlpha, procFadeOut, sbAmp
  *   hiResSlot     vec4   _, _, _, _   (shared 64-byte stride; the procedural
  *                                       shader ignores slots 12..15 — they
  *                                       belong to texturedDiskRenderer)
@@ -277,7 +277,12 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 8] = ins.colourIndex;
       packed[o + 9] = ins.crossfadeAlpha;
       packed[o + 10] = ins.procFadeOut;
-      packed[o + 11] = 0;
+      // Slot 11 (extras.w) — effective surface-brightness amplitude, already
+      // scaled by the live sliders + per-source sbBoost (see
+      // ProceduralDiskInstance.d.ts). The pick fragment shares this same
+      // 'packed' array but ignores extras.w, so writing it here is harmless
+      // for the pick pass.
+      packed[o + 11] = ins.sbAmp;
       // Slots 12..15 are the shared-factory's hi-res-LOD vec4 (owned by
       // texturedDiskRenderer). Explicit zeros so a future migration to
       // a reused scratch buffer can't leak stale bytes into the GPU

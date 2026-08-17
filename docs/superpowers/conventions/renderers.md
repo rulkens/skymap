@@ -90,12 +90,20 @@ Two rules follow from that:
   `shaders/galaxyCatalog/{points,proceduralDisks,texturedDisks}/` and
   `shaders/bodies/{earth,planet,star,starPoints,orbitTrail}/` qualify, because a bare
   `points/` or `star/` at the top level says nothing about which renderer it belongs to.
-  Dirs that already **name themselves** stay flat: `milkyWayCloud/`, `milkyWayPick/`,
-  `selectionRing/`, `structureMarker/` need no parent folder to be unambiguous, and wrapping
-  them in one would only add a path segment that repeats the prefix. Dirs **shared across
+  `shaders/milkyWay/{sprites,field,sfMap,pick}/` qualifies for a second reason: the child
+  names carry the **tier** — `sprites/` is the star-sprite tier scheduled for deletion,
+  `field/` + `sfMap/` the analytic field replacing it — which no prefixed top-level name
+  said. Trading three repetitions of the prefix for one parent segment is what buys that.
+  Dirs that already **name themselves** stay flat: `selectionRing/`, `structureMarker/`,
+  `horizonShell/` need no parent folder to be unambiguous, and wrapping them in one would
+  only add a path segment that repeats the prefix. Dirs **shared across
   families** cannot nest at all without lying about ownership — `shaders/markerLines/` is
   consumed by both `labels/markerLineRenderer.ts` and `devTools/debugLineRenderer.ts`, so
   filing it under either family would mislead the next reader who greps for its other caller.
+  `milkyWay/sprites/` is not that case despite two callers: its draw pair is
+  `renderers/milkyWay/`'s and its three generation shaders are
+  `engine/galaxyGenerator/v1/`'s, but both are the one point-cloud tier — a renderer and the
+  producer feeding it, not two families.
 
   Two renderer↔shader-dir names are deliberately _not_ the same word: `volumeField/` reads
   `shaders/scalarVolume/`, and `flowField/` reads `shaders/flow/`. Both are known mismatches

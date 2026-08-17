@@ -41,6 +41,8 @@ import {
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
+import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { RunTierTransition } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -53,8 +55,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
   const objIDs = new BigUint64Array(count);
   objIDs[index] = objId;
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     positions: new Float32Array(count * 3).fill(1),
     spectroscopicZ: new Float32Array(count).fill(0.01),
     magU: new Float32Array(count).fill(18),
@@ -65,10 +66,7 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
     objIDs,
     diameterKpc: new Float32Array(count).fill(30),
     axisRatio: new Float32Array(count).fill(1),
-    positionAngleDeg: new Float32Array(count).fill(0),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-  } as unknown as GalaxyCatalog;
+  });
 }
 
 // ─── Store builder ─────────────────────────────────────────────────────────────
@@ -105,6 +103,20 @@ describe('watchTierSaga', () => {
     expect(runner).toHaveBeenCalledWith('medium', 'large');
   });
 
+  it('re-seeds the Milky-Way star count from the new tier budget', async () => {
+    // settings.milkyWay.starCount is an absolute count with no built-in tie to
+    // the tier — this saga's re-seed is what keeps it meaningful across a
+    // tier change. Assert the END state only, after `flush()`: redux-saga
+    // queues nested `put`s, so this saga's own setTier/setMilkyWayTuning pair
+    // is not guaranteed to land in source order relative to other watchers
+    // reacting to `setTier` — but both are guaranteed to have landed by the
+    // time the dispatched worker has run to completion.
+    store.dispatch(requestTier('large'));
+    await flush();
+
+    expect(store.getState().settings.milkyWay.starCount).toBe(MILKY_WAY_STARS_PER_TIER.large);
+  });
+
   it('is a no-op for a same-tier request', async () => {
     store.dispatch(requestTier('large'));
     await flush();
@@ -128,7 +140,7 @@ describe('watchTierSaga', () => {
 
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     });
@@ -164,7 +176,7 @@ describe('watchTierSaga', () => {
 
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     });
@@ -194,8 +206,7 @@ describe('watchTierSaga', () => {
 
     function buildCloud(objIDs: BigUint64Array): GalaxyCatalog {
       const count = objIDs.length;
-      return {
-        count,
+      return makeGalaxyCatalog(count, {
         positions: new Float32Array(count * 3).fill(1),
         spectroscopicZ: new Float32Array(count).fill(0.01),
         magU: new Float32Array(count).fill(18),
@@ -206,16 +217,13 @@ describe('watchTierSaga', () => {
         objIDs,
         diameterKpc: new Float32Array(count).fill(30),
         axisRatio: new Float32Array(count).fill(1),
-        positionAngleDeg: new Float32Array(count).fill(0),
-        classByte: new Uint8Array(count),
-        parentSurveyByte: new Uint8Array(count),
-      } as unknown as GalaxyCatalog;
+      });
     }
 
     let currentCloud = buildCloud(objIDsOld);
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     });

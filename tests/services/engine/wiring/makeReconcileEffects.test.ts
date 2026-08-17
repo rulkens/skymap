@@ -18,7 +18,15 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
     vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
 }));
 
+// Mock the applySwapFormat phase so the forwarding test doesn't need a real
+// gpu.renderTargets/uiCtx pair — see applySwapFormat.test.ts for that unit's
+// own coverage.
+vi.mock('../../../../src/services/engine/phases/applySwapFormat', () => ({
+  applySwapFormat: vi.fn<(state: unknown, desired: GPUTextureFormat) => void>(),
+}));
+
 import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { applySwapFormat } from '../../../../src/services/engine/phases/applySwapFormat';
 
 // ── Fake EngineState builder ──────────────────────────────────────────────────
 //
@@ -99,5 +107,13 @@ describe('makeReconcileEffects', () => {
     effects.bakeBias(1);
     expect(setMode).toHaveBeenCalledTimes(1);
     expect(setMode).toHaveBeenCalledWith(1);
+  });
+
+  it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {
+    const { state } = makeState();
+    const effects = makeReconcileEffects(state);
+    effects.applySwapFormat('rgba16float');
+    expect(applySwapFormat).toHaveBeenCalledTimes(1);
+    expect(applySwapFormat).toHaveBeenCalledWith(state, 'rgba16float');
   });
 });

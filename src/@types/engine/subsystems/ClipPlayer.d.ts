@@ -56,8 +56,8 @@ export type ClipPlayer = {
    * second call to `registerEndResolver` can register for the NEXT clip.
    *
    * Used by `createPlayClip` to resolve the Promise it returns: when the
-   * callback fires the Promise settles, and `yield* call(playClip, clip)` in
-   * a saga resumes. Registering BEFORE dispatching `startClip` avoids the
+   * callback fires the Promise settles, and `yield* call(playClip, clip, frame)`
+   * in a saga resumes. Registering BEFORE dispatching `startClip` avoids the
    * narrow race where the clip completes on the same JS microtask.
    */
   registerEndResolver(onEnd: () => void): void;

@@ -6,7 +6,7 @@
  * and the `ClipData` shape. All assertions are deterministic; no wall-clock.
  *
  * The final section ('focus tween = one-segment clip') verifies that a
- * one-segment clip with `ease:'out'` and `space:'lin'` on distance is
+ * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance is
  * reproduces the focus-tween motion exactly — `evaluateClip` via `tweenToClip`
  * is the single camera-evaluation path for both scripted clips and focus tweens.
  */
@@ -332,7 +332,7 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 // Test 9 — focus tween = one-segment clip
 //
 // A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
-// with `ease:'out'` (= easeOutCubic) and `space:'lin'` for `distance` (focus
+// with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
 // tweens use linear distance interpolation, not log-space). These four cases
 // These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
 // focus-tween motion exactly — the single camera-evaluation path for scripted
@@ -349,10 +349,15 @@ function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: num
     start: opts.from,
     timeline: [
       all([
-        tween('distance', { to: opts.to.distance, over: durationSec, ease: 'out', space: 'lin' }),
-        tween('yaw', { to: opts.to.yaw, over: durationSec, ease: 'out' }),
-        tween('pitch', { to: opts.to.pitch, over: durationSec, ease: 'out' }),
-        moveTarget(opts.to.target, durationSec, 'out'),
+        tween('distance', {
+          to: opts.to.distance,
+          over: durationSec,
+          ease: 'easeOutCubic',
+          space: 'lin',
+        }),
+        tween('yaw', { to: opts.to.yaw, over: durationSec, ease: 'easeOutCubic' }),
+        tween('pitch', { to: opts.to.pitch, over: durationSec, ease: 'easeOutCubic' }),
+        moveTarget(opts.to.target, durationSec, 'easeOutCubic'),
       ]),
     ],
   };

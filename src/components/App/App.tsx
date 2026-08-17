@@ -1,10 +1,13 @@
 /**
  * App — the root React component for Skymap.
  *
- * Layout and container-mounting: renders the engine canvas, mounts the HUD
- * chrome (StatusBar, InfoCard, ScaleBar, NavigationPanel, SettingsPanel,
- * CommandPaletteContainer, AutoRotateToggleContainer, DebugPanelContainer, Splash),
- * and wires keyboard shortcuts + URL sync.
+ * Layout and container-mounting: renders the engine canvas and mounts the HUD
+ * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
+ * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
+ * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
+ * SplashContainer, and `DebugPanel` (memo-boundary, its sections mount their
+ * own containers).
+ * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
  * putting the handle in state would re-render every consumer at startup.
@@ -17,50 +20,35 @@
  * the canvas + the tour overlay; every other piece of HUD chrome is absent
  * from the DOM, not merely CSS-hidden — see the branch above the main return.
  *
- * Store reach: `selectHoveredFocusable` / `selectSelectedFocusable` drive the
- * InfoCard; `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen` gate
- * App's own JSX; `selectVisibleSourceMask` + `selectTier` feed
- * `useStructureMemberCount`; and `selectEngineStatus`, `selectScale`,
- * `selectLoadProgress` from the engine slice drive the HUD chrome (StatusBar,
- * ScaleBar, LoadingBar, Splash). The engine count selectors
- * (`selectSourceCounts`, `selectStructureCounts`) are read inside the section
- * containers + hooks, not App. All settings reach lives in the section
- * containers under SettingsPanel.
+ * Store reach: App itself keeps only shell-level reach. `selectSelectedFocusable`
+ * drives the `uiStack` "has a pinned mobile selection" className;
+ * `selectPaletteOpen`, `selectUiHidden`,
+ * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX; and
+ * `selectTourActive` picks the tour-overlay/beat-rail branch. Everything
+ * else — hover/selection detail, engine status/scale/load-progress, settings,
+ * navigation, the top-pill row's dispatches — is owned by the container it
+ * feeds, not App.
  */
 
-import { useCallback, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useStructureMemberCount } from '../../hooks/useStructureMemberCount';
-import { StatusBar } from '../StatusBar/StatusBar';
-import { LoadingBar } from '../LoadingBar/LoadingBar';
-import InfoCard from '../InfoCard/InfoCard';
-import { ScaleBar } from '../ScaleBar/ScaleBar';
-import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
-import NavigationPanel from '../NavigationPanel/NavigationPanel';
+import LoadingBarContainer from '../containers/LoadingBarContainer';
+import StatusBarContainer from '../containers/StatusBarContainer';
+import InfoCardContainer from '../containers/InfoCardContainer';
+import ScaleBarContainer from '../containers/ScaleBarContainer';
+import NavigationPanelContainer from '../containers/NavigationPanelContainer';
+import SettingsPanelContainer from '../containers/SettingsPanelContainer';
+import TopBarContainer from '../containers/TopBarContainer';
 import CommandPaletteContainer from '../containers/CommandPaletteContainer';
-import SearchTrigger from '../SearchTrigger/SearchTrigger';
-import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
-import HomeButton from '../HomeButton/HomeButton';
 import SplashContainer from '../containers/SplashContainer';
-import AboutPill from '../Splash/AboutPill';
 import appStyles from './App.module.css';
-import { useUrlSync } from '../../hooks/useUrlSync';
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectVisibleSourceMask } from '../../state/settings/selectors';
-import { selectTier } from '../../state/tier/selectors';
-import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
-import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
-import { goHome } from '../../state/selection/goHome';
-import { refOf } from '../../services/engine/helpers/refOf';
-import DebugPanelContainer from '../containers/DebugPanelContainer';
+import { useAppSelector } from '../../store/hooks';
+import { selectSelectedFocusable } from '../../state/selection/selectors';
+import DebugPanel from '../DebugPanel/DebugPanel';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
-import TourDebugPillContainer from '../containers/TourDebugPillContainer';
-import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
 import {
@@ -69,84 +57,23 @@ import {
   selectDebugPanelOpen,
   selectSplashVisible,
 } from '../../state/ui/selectors';
-import {
-  setPaletteOpen,
-  toggleUiHidden,
-  toggleDebugPanelOpen,
-  reopenSplash,
-} from '../../state/ui/uiSlice';
-import { selectEngineStatus, selectScale, selectLoadProgress } from '../../state/engine/selectors';
-
-// Temporary `?tour` debug gate for the grand-tour pill. Read once at module
-// scope — the search string can't change without a full page reload.
-const TOUR_DEBUG_GATE = hasUrlGate('tour');
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
 
-  // Dispatch drives selection commands (InfoCard / CommandPalette) plus the
-  // palette/ui/debug toggle actions fired from the keyboard hook and the
-  // inline chrome callbacks below.
-  const dispatch = useAppDispatch();
-
-  // Selection slots — read from the Redux store. The engine dispatches
-  // `updateSelectionHover/Select/Focus` directly; these selectors build
-  // the rich `FocusableTarget` display models from the resolved row cache.
-  const hovered = useAppSelector(selectHoveredFocusable);
+  // The only selection-slice read App keeps: it drives the `uiStack`
+  // "pinned selection on mobile" className. All other selection reach (hover,
+  // InfoCard detail, member count) lives in InfoCardContainer.
   const selected = useAppSelector(selectSelectedFocusable);
 
-  // `visibleSourceMask` and `currentTier` are the only settings/tier-slice
-  // reads App keeps: both feed `useStructureMemberCount` for the InfoCard
-  // member-count. All other settings reach lives in the section containers
-  // under SettingsPanel.
-  const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
-  const currentTier = useAppSelector(selectTier);
-
-  // Engine runtime state from the Redux engine slice.  The engine dispatches
-  // these on each lifecycle / scale / progress event; the HUD chrome
-  // (StatusBar, ScaleBar, LoadingBar, Splash) reads them here.  Count fields
-  // (`sourceCounts`, `structureCounts`) are read directly in their respective
-  // containers and hooks — App no longer needs them.
-  const status = useAppSelector(selectEngineStatus);
-  const scale = useAppSelector(selectScale);
-  const loadProgress = useAppSelector(selectLoadProgress);
-
-  // "Home" flies to Earth — the viewer's literal starting point, not just our
-  // galaxy. The Home pill dispatches the one `goHome` intent (shared with the
-  // `h`/`e` keys); watchGoHomeSaga pins Earth and tweens to the sunlit home
-  // pose. (The palette's Earth row reaches Earth via requestFocus, the
-  // deep-link path.) One stable identity keeps the memo'd HomeButton from
-  // re-rendering.
-  const goHomeCb = useCallback(() => dispatch(goHome()), [dispatch]);
-
-  // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
-  // on selection / tier swap / catalog landing (`sourceCounts` from engine slice)
-  // / galaxy catalog toggle — null for galaxy selections and famous-galaxy
-  // structures.
-  const selectedMemberCount = useStructureMemberCount({
-    selected,
-    engineHandleRef: handleRef,
-    tier: currentTier,
-    visibleSourceMask,
-  });
-
-  // Mobile gets the left-stack panels collapsed on first paint.  Lazy
-  // initializer reads `window.innerWidth` exactly once at mount and the
-  // setter is intentionally dropped — re-orienting mid-session shouldn't
-  // yank the user's expanded panels back closed under them.  SSR-safe
-  // fallback: desktop default when `window` is undefined.
-  const [initialMobile] = useState<boolean>(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
-  );
-  const initialPanelsOpen = !initialMobile;
-
-  // Reactive companion to `initialMobile`: the scale-bar lift must update live
-  // when the viewport crosses the breakpoint (rotation), so it reads the
-  // `matchMedia`-backed hook rather than the non-reactive one-shot above.
+  // Reactive companion to the containers' one-shot `useInitialMobile`: the
+  // `hasSelection` className must update live when the viewport crosses the
+  // breakpoint (rotation), so it reads the `matchMedia`-backed hook.
   const isMobile = useIsMobile();
 
-  // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice;
-  // keyboard shortcuts dispatch slice actions, not React setters.
+  // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice; App
+  // reads them only to gate its own render (TimeBar visibility, HUD fade,
+  // DebugPanel mount).
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const uiHidden = useAppSelector(selectUiHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
@@ -156,43 +83,10 @@ export function App(): React.ReactElement {
   // separate `setUiHidden` write — see guidedTourSaga's "no setUiHidden" note.
   const tourActive = useAppSelector(selectTourActive);
 
-  // Stable handler for the `React.memo`'d SearchTrigger — a fresh
-  // inline arrow each render would defeat the memo.
-  const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
-
-  // Stable dispatching callbacks for the keyboard hook — wrapped in
-  // `useCallback([dispatch])` so the arrow identity is stable for the
-  // component lifetime and the effect's dep array stays stable.
-  // `useAppDispatch()` returns the invariant `store.dispatch`, so these
-  // never trigger re-binds.
-  const dispatchSetPaletteOpen = useCallback(
-    (open: boolean) => dispatch(setPaletteOpen(open)),
-    [dispatch],
-  );
-  const dispatchToggleUiHidden = useCallback(() => dispatch(toggleUiHidden()), [dispatch]);
-  const dispatchToggleDebugPanelOpen = useCallback(
-    () => dispatch(toggleDebugPanelOpen()),
-    [dispatch],
-  );
-
   // The full splash state surface lives in `SplashContainer` so its churn
-  // re-renders only that subtree. App needs just two facts: whether the splash
-  // is up (to hide the HUD stack) and how to reopen it from the About pill.
+  // re-renders only that subtree. App needs just one fact: whether the splash
+  // is up (to hide the HUD stack / gate TimeBar / mark the canvas inert).
   const splashVisible = useAppSelector(selectSplashVisible);
-  const reopenSplashScreen = useCallback(() => dispatch(reopenSplash()), [dispatch]);
-
-  // Deep-link hash read + URL write. Reads focus from the store directly;
-  // dispatches `requestFocus` / `clearSelection` for hash changes.
-  useUrlSync();
-
-  useKeyboardShortcuts({
-    selected,
-    paletteOpen,
-    engineHandleRef: handleRef,
-    setPaletteOpen: dispatchSetPaletteOpen,
-    toggleUiHidden: dispatchToggleUiHidden,
-    toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
-  });
 
   // Shared between BOTH return branches (cinema + normal) so the `id="c"`
   // contract and the mount-only-while-touring rule each live in one place.
@@ -211,16 +105,9 @@ export function App(): React.ReactElement {
   // the tour overlay (captions + nav), nothing else. The recorder harness
   // screenshots this page, so the HUD chrome must not EXIST in the DOM;
   // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
-  // and able to bleed into captures. Every hook above still runs — the
-  // engine, URL sync and keyboard wiring are what make the page playable —
-  // only the JSX diverges, which also keeps the hook order unconditional.
-  //
-  // Read per render, unlike the module-scope TOUR_DEBUG_GATE: a module-scope
-  // const is frozen at first import, so tests couldn't flip a mocked
-  // `isCinemaMode` between cinema and normal renders without module-cache
-  // resets. The search string can't change without a full reload, so the two
-  // read styles are behaviourally identical at runtime — and App renders on
-  // user action, not per frame, so the re-read costs nothing.
+  // and able to bleed into captures. Every hook above still runs — `useEngine`
+  // is what makes the page playable — only the JSX diverges, which also keeps
+  // the hook order unconditional.
   if (isCinemaMode()) {
     return (
       <>
@@ -244,47 +131,29 @@ export function App(): React.ReactElement {
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >
-        {/* Mounted unconditionally; fades itself out when `loadProgress`
-            goes null.  Keeps tier-swap first paints from flashing a
-            visible mount frame. */}
-        <LoadingBar progress={loadProgress} />
-
-        <StatusBar status={status} />
-        <InfoCard
-          hovered={hovered}
-          selected={selected}
-          selectedMemberCount={selectedMemberCount}
-          onFocus={(target) => dispatch(updateSelectionFocus(refOf(target)))}
-          onClose={() => dispatch(clearSelection())}
-        />
-        <ScaleBar scale={scale} />
-        {/* Self-positioning (fixed, bottom-center), so it rides the HUD stack
-            as a direct child rather than joining a flex row. */}
+        <LoadingBarContainer />
+        <StatusBarContainer />
+        <InfoCardContainer engineHandleRef={handleRef} />
+        <ScaleBarContainer />
+        {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
+            direct child rather than joining a flex row. */}
         <TimeBarContainer hidden={paletteOpen || splashVisible} />
-        {/* Flex column anchored bottom-left.  Children stack upward as
-            they're added, so we don't need per-panel `bottom:` math. */}
+        {/* Flex column anchored bottom-left. */}
         <div className={appStyles.leftStack}>
-          <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
-          <SettingsPanel defaultOpen={initialPanelsOpen} />
+          <NavigationPanelContainer />
+          <SettingsPanelContainer />
         </div>
-        {/* Top-center pill row.  SearchTrigger + the pills share a flex
-            wrapper so they fade together when the palette opens. */}
-        <div className={appStyles.topBar}>
-          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splashVisible} />
-          <HomeButton onClick={goHomeCb} hidden={paletteOpen || splashVisible} />
-          <AutoRotateToggleContainer hidden={paletteOpen || splashVisible} />
-          <AboutPill onClick={reopenSplashScreen} hidden={paletteOpen || splashVisible} />
-          {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={paletteOpen || splashVisible} />}
-        </div>
+        <TopBarContainer />
         <CommandPaletteContainer engineHandleRef={handleRef} />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
-          <DebugPanelContainer
+          <DebugPanel
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             frameStats={handleRef.current.debug.frameStats}
             passNames={handleRef.current.debug.passOverrides.allNames}
+            assetPriorities={handleRef.current.debug.assetPriorities}
           />
         )}
       </div>

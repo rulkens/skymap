@@ -2,29 +2,19 @@
  * initGpu.destroyReachability — guards that GPU-owning renderers are
  * reachable from the teardown chain.
  *
- * ### What this protects
- *
  * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
- * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU
- * resources and expose
- * `.destroy()`. They must live on `state.gpu.*` (alongside `renderer`,
- * `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()` has a
- * reachable reference to each — otherwise every HMR / StrictMode remount
- * leaks their GPU buffers.
- *
- * ### What this test asserts
- *
- *   After `initGpu(state, deps)`, each renderer field on `state.gpu.*`
- *   holds the constructed renderer (not null/undefined) — so the
- *   `engine.ts.destroy()` chain has a reachable reference to release.
- *
- * ### Why mock the heavy modules
+ * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU resources
+ * and expose `.destroy()`. They must live on `state.gpu.*` (alongside
+ * `renderer`, `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
+ * has a reachable reference to each — otherwise every HMR / StrictMode
+ * remount leaks their GPU buffers. After `initGpu(state, deps)`, this test
+ * checks each renderer field on `state.gpu.*` holds the constructed
+ * renderer, not null/undefined.
  *
  * `initGpu` calls `gpuInitGpu(canvas)` (real WebGPU device acquisition),
- * `loadFontAtlases()` (network fetch), and the renderer constructors —
- * none of which work in JSDOM. Mocking them lets the phase body run to
- * completion so we can observe its writes to `state.gpu.*`. Each mock
- * returns a spy-bearing stub whose `destroy` we can assert was called.
+ * `loadFontAtlases()` (network fetch), and the renderer constructors — none
+ * of which work in JSDOM, so each is mocked with a spy-bearing stub whose
+ * `destroy` calls can be asserted.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -101,8 +91,12 @@ vi.mock('../../../../src/services/gpu/device', () => ({
     } as unknown as GPUDevice,
     context: { __mockContext: true } as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
+    hdrCapable: false,
   })),
   resizeCanvasToDisplay: vi.fn(),
+  // Returns a no-op cleanup — this test asserts renderer reachability, not
+  // the HDR-capability listener wiring (see device.hdrCapability.test.ts).
+  watchHdrCapability: vi.fn(() => () => {}),
 }));
 
 // The canonical BGLs are constructed in initGpu by calling
@@ -158,6 +152,10 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRendere
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer', () => ({
+  createZoneOfAvoidanceRenderer: vi.fn(() => makeStub('zoneOfAvoidanceRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
@@ -165,7 +163,7 @@ vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRend
   createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
+vi.mock('../../../../src/services/engine/galaxyGenerator/v1/milkyWayCloud', () => ({
   createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
 }));
 
@@ -205,8 +203,8 @@ vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', ()
   createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
-  createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
+vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
+  createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/starAggregateUpsample', () => ({
@@ -260,9 +258,10 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () =
 vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
-// Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
-// constants at module scope to size its staging buffer, so only the factory
-// is stubbed — passing those constants through keeps that sizing real.
+// Partial mock: planetsLayer.ts imports the real INSTANCE_FLOATS constant at
+// module scope to size its staging buffer (against SCENE_PLANETS.length —
+// no fixed cap), so only the factory is stubbed — passing INSTANCE_FLOATS
+// through keeps that sizing real.
 vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('../../../../src/services/gpu/renderers/bodies/planetRenderer')
@@ -307,8 +306,9 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => 
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
-// real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
-// staging buffer, so only the factory is stubbed.
+// real INSTANCE_FLOATS constant at module scope to size its staging buffer
+// (against ORBITAL_ELEMENTS.length — no fixed cap), so only the factory is
+// stubbed.
 vi.mock(
   '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer',
   async (importOriginal) => ({
@@ -337,6 +337,16 @@ vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', ()
 
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
+// The mocked `watchHdrCapability` itself: the HDR-dispatch-wiring tests below
+// read `.mock.calls` to recover the callback `initGpu` actually registered,
+// so they can invoke it directly rather than trusting the mock's own no-op
+// return value.
+import { watchHdrCapability } from '../../../../src/services/gpu/device';
+import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineSlice';
+// The mocked `loadFontAtlases` itself: overridden to reject in one test below
+// to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
+// happens AFTER the listener is registered but before `initGpu` returns.
+import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
 // The mocked label-renderer factory itself: the main `labelRenderer` and the
 // foreground caption renderer are both built through it, so tests index its
 // `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
@@ -350,7 +360,6 @@ import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/bod
 // partition for setStars; the seeded planet list drives planetsLayer), so the
 // state fixture carries the real construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -377,9 +386,11 @@ function makeState(): EngineState {
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
+      zoneOfAvoidanceRenderer: null,
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
@@ -531,8 +542,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;
     }>;
-    expect(uploaded).toHaveLength(SCENE_STARS.length);
-    expect(uploaded.map((star) => star.id)).toContain('sun');
+    // Compared against the SEEDED list rather than one seed table, so the claim
+    // stays "the whole star set" as more tables land in the store.
+    const seededIds = state.data.bodies.stars.map((star) => star.id);
+    expect(uploaded.map((star) => star.id)).toEqual(seededIds);
+    expect(seededIds).toContain('sun');
     // Both label renderers come from the same createLabelRenderer factory,
     // so index its call results ordinally: call 0 built the main
     // `labelRenderer`, call 1 the foreground caption renderer.  Asserting
@@ -551,5 +565,53 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // first real draw instead.
     expect(state.gpu.foregroundLabelRenderer!.setLabels).not.toHaveBeenCalled();
     expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();
+  });
+});
+
+describe('initGpu — HDR capability dispatch wiring', () => {
+  beforeEach(() => {
+    // `watchHdrCapability` is a module-level mock shared across every test in
+    // this file; clear its call history so `.mock.calls[0]` below indexes
+    // THIS test's registration, not a previous test's leftover.
+    vi.mocked(watchHdrCapability).mockClear();
+  });
+
+  it('dispatches the boot HDR-capability snapshot', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // The mocked `gpuInitGpu` returns `hdrCapable: false` — see the
+    // `services/gpu/device` mock factory above.
+    expect(deps.cb.store.dispatch).toHaveBeenCalledWith(engineHdrCapabilityChanged(false));
+  });
+
+  it("invoking watchHdrCapability's registered callback re-dispatches with the new value", async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // Recover the real callback `initGpu` handed to `watchHdrCapability` —
+    // the mock's own `() => () => {}` body ignores it, but `.mock.calls`
+    // still records what was actually passed.
+    const onChange = vi.mocked(watchHdrCapability).mock.calls[0]![0];
+    onChange(true);
+
+    expect(deps.cb.store.dispatch).toHaveBeenCalledWith(engineHdrCapabilityChanged(true));
+  });
+
+  it('publishes phaseLocals.unwatchHdrCapability even when a later step throws', async () => {
+    // Guards against phaseLocals being assigned only at the very end of
+    // initGpu: a throw between the listener registration and any later step
+    // (here, the font-atlas fetch) would then leave `bootstrapDeps.phaseLocals`
+    // undefined and `engine.ts`'s destroy() a no-op — the matchMedia listener
+    // (and its closure over the store) leaks for the page's lifetime.
+    vi.mocked(loadFontAtlases).mockRejectedValueOnce(new Error('font atlas fetch failed'));
+    const state = makeState();
+    const deps = makeDeps();
+
+    await expect(initGpu(state, deps)).rejects.toThrow('font atlas fetch failed');
+
+    expect(deps.phaseLocals?.unwatchHdrCapability).toBeTypeOf('function');
   });
 });

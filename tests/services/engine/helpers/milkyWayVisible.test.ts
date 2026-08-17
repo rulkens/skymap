@@ -17,7 +17,7 @@ import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 // Project-default vertical fov + a 720-px-tall backing store, matching the
 // stub cameras the frame/pass tests use.

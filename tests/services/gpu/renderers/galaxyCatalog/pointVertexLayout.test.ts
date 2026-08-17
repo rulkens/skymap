@@ -10,12 +10,12 @@
 import { describe, it, expect } from 'vitest';
 
 describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
-  it('has 10 attributes with the expected shader locations and formats', async () => {
+  it('has 11 attributes with the expected shader locations and formats', async () => {
     const { POINT_VERTEX_ATTRIBUTES, POINT_STRIDE } =
       await import('../../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout');
 
-    expect(POINT_STRIDE).toBe(52);
-    expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(10);
+    expect(POINT_STRIDE).toBe(56);
+    expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(11);
 
     // Location 0 is the position vec3, location 4 is the baked (paCos,
     // paSin) vec2; everything else is a scalar f32.  Anyone editing
@@ -42,6 +42,7 @@ describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
       { location: 7, offset: 40 }, // schechterRatio
       { location: 8, offset: 44 }, // angularDensityWeight
       { location: 9, offset: 48 }, // absMag
+      { location: 10, offset: 52 }, // sbAmp
     ];
     for (const { location, offset } of scalarExpectations) {
       expect(POINT_VERTEX_ATTRIBUTES[location]).toEqual({

@@ -10,6 +10,7 @@ const newRenderer = (initialCapacity?: number) => {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return createStructureMarkerRenderer(
     ctx,
@@ -120,6 +121,7 @@ describe('StructureMarkerRenderer colour target', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'bgra8unorm' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createStructureMarkerRenderer(ctx, 'rgba16float', {} as unknown as FadeUniformsBgl, false);
 

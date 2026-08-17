@@ -1,0 +1,248 @@
+/**
+ * migrateGalaxyFieldTuningWire — lifts a v2 preset's FLAT `f` keys into their
+ * v3 nested homes; retires the two dead boolean gates the generator dropdown
+ * replaced (`sfMap.enabled`, `dust.sfMapSeeding`); renames the pre-ISM
+ * `sfMap*` wire spellings onto their `ismMap*` homes; and lifts
+ * `dust`/`starFormation` off an even older preset's `p` (`GalaxyParams`
+ * dropped both fields — see `GalaxyFieldTuning`'s header).
+ *
+ * Total, per this parser's no-validation contract (see `parseGalaxyPreset`'s
+ * header). A section is emitted only when the payload actually named one of
+ * its keys, so an absent section stays absent — loading a partial preset
+ * leaves the rest of the tuning alone.
+ */
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+
+const SECTION_KEYS = [
+  'disc',
+  'arms',
+  'dust',
+  'starFormation',
+  'hii',
+  'ismMap',
+  'ismMapFluid',
+] as const;
+
+/**
+ * Pre-ISM-rename presets carry these spellings forever; the sf* strings here
+ * are deliberate legacy wire keys, not a missed rename sweep. A section's old
+ * key only applies when the new one is absent, so a hand-merged preset naming
+ * both keeps the new spelling. `sfMapAutomaton`/`ismMapAutomaton` are NOT
+ * here: the automaton generator was removed outright, so an old preset's
+ * automaton bag has nowhere to land and is simply dropped (`SECTION_KEYS`
+ * no longer names it, so the copy loop below never picks it up).
+ */
+const LEGACY_SECTION_KEYS: Readonly<Record<string, (typeof SECTION_KEYS)[number]>> = {
+  sfMap: 'ismMap',
+  sfMapFluid: 'ismMapFluid',
+};
+
+/** Same vintage, one level down: fields renamed in place inside a surviving section. */
+const LEGACY_FIELD_RENAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
+
+/** v2 flat key -> where it lands, `arms.cloud` spelled as the two hops it is. */
+const V2_FLAT_PATHS: Readonly<Record<string, readonly [string, ...string[]]>> = {
+  discEnabled: ['disc', 'enabled'],
+  armsEnabled: ['arms', 'enabled'],
+  armWidthScale: ['arms', 'widthScale'],
+  armContrast: ['arms', 'contrast'],
+  armExcessScaleRatio: ['arms', 'excessScaleRatio'],
+  armBlobSharpness: ['arms', 'blobSharpness'],
+  armCloudEnabled: ['arms', 'cloud', 'enabled'],
+  armCloudShare: ['arms', 'cloud', 'share'],
+  armCloudCoverage: ['arms', 'cloud', 'coverage'],
+  armCloudRadialBias: ['arms', 'cloud', 'radialBias'],
+  armCloudClumpiness: ['arms', 'cloud', 'clumpiness'],
+  armCloudSizeScale: ['arms', 'cloud', 'sizeScale'],
+  armCloudElongation: ['arms', 'cloud', 'elongation'],
+  dustEnabled: ['dust', 'enabled'],
+  hiiEnabled: ['hii', 'enabled'],
+  hiiBrightness: ['hii', 'brightness'],
+  hiiRadiusScale: ['hii', 'radiusScale'],
+  hiiShellThickness: ['hii', 'shellThickness'],
+  hiiClusterStrength: ['hii', 'clusterStrength'],
+  hiiCavityScale: ['hii', 'cavityScale'],
+};
+
+/**
+ * `ismMap.enabled === false` becomes `generator: 'none'`; otherwise the
+ * preset's own generator survives (defaulted if the section never named one —
+ * a bare `{ enabled: true }` section, say). Either way `enabled` itself is
+ * dropped: a stale `enabled: false` sitting beside a real `generator` would
+ * silently look meaningful to the next reader.
+ *
+ * `generator: 'automaton'` forward-migrates to `'fluid'` (the automaton
+ * generator was removed outright) — a preset saved before the removal keeps
+ * loading, just against the surviving generator.
+ */
+function migrateIsmMap(ismMap: Record<string, unknown>): Record<string, unknown> {
+  const { enabled, ...rest } = ismMap;
+  if (enabled === false) return { ...rest, generator: 'none' };
+  if (rest.generator === 'automaton') return { ...rest, generator: 'fluid' };
+  return 'generator' in rest
+    ? rest
+    : { ...rest, generator: DEFAULT_GALAXY_FIELD_TUNING.ismMap.generator };
+}
+
+/**
+ * Drops the retired `dust.sfMapSeeding` gate (its legacy wire spelling —
+ * retired before the ISM rename, so no preset ever wrote an ism variant) —
+ * seeding is now implied by `ismMap.generator !== 'none'`.
+ */
+function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
+  const { sfMapSeeding: _sfMapSeeding, ...rest } = dust;
+  return rest;
+}
+
+/**
+ * These seven fields sat flat on `hii` before `GalaxyHiiShellsTuning`
+ * existed — same "old key wins only when the new one is absent" discipline
+ * `LEGACY_SECTION_KEYS` uses, one level deeper. Runs before the generic
+ * defaults-fill pass below, which copies `shells` WHOLESALE (like `dig`/
+ * `youngStars` already do) rather than deep-merging it — a preset naming
+ * only some of the seven re-enters with a partial `shells` bag, which is why
+ * every read of these fields in `hiiRegions.ts`/`dustBubblePlacements.ts`
+ * carries its own `?? default` guard rather than assuming presence.
+ */
+const HII_SHELLS_LIFT_KEYS = [
+  'radiusScale',
+  'shellThickness',
+  'clusterStrength',
+  'cavityScale',
+  'texture',
+  'textureScale',
+  'textureContrast',
+] as const;
+
+function liftHiiShells(hii: Record<string, unknown>): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...hii };
+  const existingShells = rest.shells as Record<string, unknown> | undefined;
+  const shells: Record<string, unknown> = { ...existingShells };
+  let touched = existingShells !== undefined;
+  for (const key of HII_SHELLS_LIFT_KEYS) {
+    if (key in rest) {
+      if (!(key in shells)) shells[key] = rest[key];
+      delete rest[key];
+      touched = true;
+    }
+  }
+  if (touched) rest.shells = shells;
+  return rest;
+}
+
+/**
+ * `hii.associations` (`GalaxyHiiAssociationsTuning`) renamed to
+ * `hii.youngStars` (`GalaxyYoungStarsTuning`, spec 2026-08-09 §4): the chain
+ * producer that replaced the scattered-splat tier keeps only the fields
+ * that still mean something (`enabled`, `brightness`, `texture`) and drops
+ * the rest (`complexes`, `coherence`, `armBias`, `sizeScale`, `elongation`)
+ * outright — same "old key wins only when the new one is absent" discipline
+ * `LEGACY_SECTION_KEYS` uses, one level deeper. `enabled` defaults true when
+ * absent: the retired type never carried it, so every real preset that named
+ * `associations` predates it.
+ */
+const YOUNG_STARS_LIFT_KEYS = ['brightness', 'texture'] as const;
+
+function liftHiiYoungStars(hii: Record<string, unknown>): Record<string, unknown> {
+  if (!('associations' in hii)) return hii;
+  const { associations, ...rest } = hii;
+  if ('youngStars' in rest) return rest;
+  const assn = (associations ?? {}) as Record<string, unknown>;
+  const youngStars: Record<string, unknown> = {
+    enabled: 'enabled' in assn ? assn.enabled : true,
+  };
+  for (const key of YOUNG_STARS_LIFT_KEYS) {
+    if (key in assn) youngStars[key] = assn[key];
+  }
+  return { ...rest, youngStars };
+}
+
+function migrateHii(hii: Record<string, unknown>): Record<string, unknown> {
+  return liftHiiYoungStars(liftHiiShells(hii));
+}
+
+/**
+ * `dust`/`starFormation` used to live on `p` (`GalaxyParams`), with `dust`
+ * additionally split against this section's own `enabled`-only bag (the old
+ * `GalaxyDustTuning`) — a REAL preset from that era names both at once. The
+ * lifted `p` shape is the base and `raw`'s own `f.dust`/`f.starFormation`
+ * (whatever it named, historically just `enabled`) wins per-key over it, so
+ * an old preset's tuned tau/scaleLenRatio/etc. survive rather than being
+ * discarded in favour of a generic default. Runs before the defaults-fill
+ * pass below, same ordering requirement as `migrateIsmMap`.
+ */
+const LIFT_FROM_PARAMS_KEYS = ['dust', 'starFormation'] as const;
+
+function liftLegacyParamSections(
+  out: Record<string, unknown>,
+  legacyParams: Record<string, unknown> | undefined,
+): void {
+  if (!legacyParams) return;
+  for (const key of LIFT_FROM_PARAMS_KEYS) {
+    const fromParams = legacyParams[key];
+    if (typeof fromParams !== 'object' || fromParams === null) continue;
+    const fromRaw = out[key] as Record<string, unknown> | undefined;
+    out[key] = { ...(fromParams as Record<string, unknown>), ...fromRaw };
+  }
+}
+
+export function migrateGalaxyFieldTuningWire(
+  raw: Record<string, unknown>,
+  legacyParams?: Record<string, unknown>,
+): Partial<GalaxyFieldTuning> {
+  const out: Record<string, unknown> = {};
+  for (const key of SECTION_KEYS) {
+    if (key in raw) out[key] = raw[key];
+  }
+  for (const [legacy, key] of Object.entries(LEGACY_SECTION_KEYS)) {
+    if (legacy in raw && !(key in out)) out[key] = raw[legacy];
+  }
+
+  for (const [flatKey, path] of Object.entries(V2_FLAT_PATHS)) {
+    if (!(flatKey in raw)) continue;
+    let node = out;
+    for (const step of path.slice(0, -1)) {
+      // Copy rather than mutate: `raw`'s own nested objects are the caller's.
+      node[step] = { ...(node[step] as Record<string, unknown> | undefined) };
+      node = node[step] as Record<string, unknown>;
+    }
+    node[path[path.length - 1]!] = raw[flatKey];
+  }
+
+  liftLegacyParamSections(out, legacyParams);
+
+  if (out.ismMap) out.ismMap = migrateIsmMap(out.ismMap as Record<string, unknown>);
+  if (out.dust) out.dust = migrateDust(out.dust as Record<string, unknown>);
+  if (out.hii) out.hii = migrateHii(out.hii as Record<string, unknown>);
+
+  for (const [section, renames] of Object.entries(LEGACY_FIELD_RENAMES)) {
+    if (!out[section]) continue;
+    const node = { ...(out[section] as Record<string, unknown>) };
+    for (const [legacy, field] of Object.entries(renames)) {
+      if (legacy in node) {
+        if (!(field in node)) node[field] = node[legacy];
+        delete node[legacy];
+      }
+    }
+    out[section] = node;
+  }
+
+  // `fieldTuningPatched` Object.assigns a whole section over the store's
+  // tuning (cheap, live-slider path too — no deep merge there). A preset
+  // saved before a field existed would upload it `undefined`, and
+  // `packIsmMapFluidConstants` writes that straight into a Float32Array slot
+  // as NaN. Fill every hole from defaults; drop stale/retired keys.
+  for (const key of SECTION_KEYS) {
+    if (!(key in out)) continue;
+    const defaults = DEFAULT_GALAXY_FIELD_TUNING[key] as Record<string, unknown>;
+    const migrated = out[key] as Record<string, unknown>;
+    const known: Record<string, unknown> = {};
+    for (const field of Object.keys(migrated)) {
+      if (field in defaults) known[field] = migrated[field];
+    }
+    out[key] = { ...defaults, ...known };
+  }
+
+  return out as Partial<GalaxyFieldTuning>;
+}

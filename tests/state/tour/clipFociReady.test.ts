@@ -14,13 +14,14 @@ import { describe, it, expect } from 'vitest';
 import { clipFociReady } from '../../../src/state/tour/clipFociReady';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FamousMetaEntry } from '../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import {
   moveTargetId,
   dollyToId,
   focus,
   lookAtId,
   strafeId,
+  spinToId,
   hold,
   seq,
   all,
@@ -36,32 +37,32 @@ import type { FocusId } from '../../../src/@types/animation/FocusId';
 // Brand a string as FocusId for authoring use in tests.
 const id = (s: string): FocusId => s as FocusId;
 
-// Deps where no catalog is loaded and famousMeta is empty — any famous or
-// galaxy id resolves to null.
+// Deps where no catalog is loaded and famousGalaxiesMeta is empty — any
+// famous or galaxy id resolves to null.
 const emptyDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
 
-// FamousMetaEntry stub for 'm87'. The famous branch of resolveFocusId scans
-// famousMeta for .id === 'm87'; if found AND the FamousGalaxy cloud is loaded,
-// it returns a ref. With no cloud loaded, it returns null.
+// FamousGalaxyMetaEntry stub for 'm87'. The famous branch of resolveFocusId
+// scans famousGalaxiesMeta for .id === 'm87'; if found AND the FamousGalaxy
+// cloud is loaded, it returns a ref. With no cloud loaded, it returns null.
 // Only the `id` field is consulted by resolveFocusId; the other required fields
 // are stubbed with minimal values so the type cast is safe.
-const m87Meta: FamousMetaEntry = {
+const m87Meta: FamousGalaxyMetaEntry = {
   id: 'm87',
   names: ['M87'],
   description: '',
   type: 'elliptical',
 };
 
-// Deps with m87 in famousMeta but NO FamousGalaxy cloud loaded.
+// Deps with m87 in famousGalaxiesMeta but NO FamousGalaxy cloud loaded.
 // resolveFocusId returns null for 'm87' — the catalog is absent.
 const depsM87NotLoaded: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [m87Meta],
+  famousGalaxiesMeta: [m87Meta],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
@@ -74,7 +75,10 @@ const depsM87NotLoaded: ResolveDeps = {
 const m87FlyClip: ClipData = {
   start: 'live',
   timeline: [
-    all([moveTargetId(id('m87'), 5, 'inOut'), dollyToId(id('m87'), 5, { ease: 'inOut' })]),
+    all([
+      moveTargetId(id('m87'), 5, 'easeInOutCubic'),
+      dollyToId(id('m87'), 5, { ease: 'easeInOutCubic' }),
+    ]),
   ],
 };
 
@@ -82,7 +86,7 @@ const m87FlyClip: ClipData = {
 
 describe('clipFociReady', () => {
   it('clipFociReady is false when a famous id is not yet loaded', () => {
-    // m87 appears in famousMeta but the FamousGalaxy cloud is absent.
+    // m87 appears in famousGalaxiesMeta but the FamousGalaxy cloud is absent.
     // resolveFocusId returns null for 'm87', so the predicate must return false.
     expect(clipFociReady(m87FlyClip, depsM87NotLoaded)).toBe(false);
   });
@@ -103,21 +107,37 @@ describe('clipFociReady', () => {
     expect(clipFociReady(virgoLookClip, emptyDeps)).toBe(true);
   });
 
+  it('clipFociReady gates spinToId like the other id-bearing arms', () => {
+    // Same shape as lookAtId/strafeId above — an unloaded famous id blocks
+    // readiness, a structure id never does. Without this case the walk falls
+    // through to the pass-through default and reports ready prematurely,
+    // which would make resolveClipFoci's throw the caller's first signal
+    // instead of the saga polling until the catalog loads.
+    const m87SpinClip: ClipData = { start: 'live', timeline: [spinToId(id('m87'), { over: 3 })] };
+    expect(clipFociReady(m87SpinClip, depsM87NotLoaded)).toBe(false);
+
+    const virgoSpinClip: ClipData = {
+      start: 'live',
+      timeline: [spinToId(id('cluster-virgo-m87'), { over: 3 })],
+    };
+    expect(clipFociReady(virgoSpinClip, emptyDeps)).toBe(true);
+  });
+
   it('clipFociReady is true for a structure id', () => {
     // Structure ids resolve by format alone — resolveFocusId returns a
-    // SelectionRef without consulting catalogs or famousMeta. The readiness gate
-    // must return true regardless of what deps contains.
+    // SelectionRef without consulting catalogs or famousGalaxiesMeta. The
+    // readiness gate must return true regardless of what deps contains.
     const structureClip: ClipData = {
       start: 'live',
       timeline: [
         all([
-          moveTargetId(id('cluster-virgo-m87'), 5, 'inOut'),
-          dollyToId(id('cluster-virgo-m87'), 5, { ease: 'inOut' }),
+          moveTargetId(id('cluster-virgo-m87'), 5, 'easeInOutCubic'),
+          dollyToId(id('cluster-virgo-m87'), 5, { ease: 'easeInOutCubic' }),
           focus(id('cluster-virgo-m87')),
         ]),
       ],
     };
-    // emptyDeps has no catalogs or famousMeta, but structure ids bypass both.
+    // emptyDeps has no catalogs or famousGalaxiesMeta, but structure ids bypass both.
     expect(clipFociReady(structureClip, emptyDeps)).toBe(true);
   });
 

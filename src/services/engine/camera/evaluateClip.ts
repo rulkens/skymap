@@ -66,16 +66,18 @@
  * ### Memoised compile cache
  *
  * `evaluateClip` compiles `ClipData` to a `CompiledClip` on first call and
- * caches the result on `data` reference identity via a module-level
- * `WeakMap<ClipData, CompiledClip>`. Plan B's `playClip` driver will reuse
- * this same cache: calling `compileClip` once at registration time avoids
- * re-flattening the effect tree every frame.
+ * caches the result on `data` reference identity via a module-level `WeakMap`.
+ * The cache also remembers the orientation `frameBasis` the clip was compiled
+ * under: a `flyPath`'s aim is encoded through the steady basis, so the same
+ * `ClipData` under a different frame recompiles (a reference compare against the
+ * stable `ORIENTATION_FRAMES[frame]` object). Steady frames — the common case —
+ * hit the cache and avoid re-flattening the effect tree every frame.
  *
  * ### Purity
  *
  * - `data` and the cached `CompiledClip` are never mutated.
  * - The returned `CameraPose` allocates a fresh `target` triple each call.
- * - Same `(data, elapsedSec)` twice ⇒ deep-equal output.
+ * - Same `(data, elapsedSec, frameBasis)` triple ⇒ deep-equal output.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
@@ -89,6 +91,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import { compileClip } from '../animation/compileClip';
 import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
@@ -100,13 +103,22 @@ import { lerp } from '../../../utils/math/lerp';
 // Plan B's playClip will reuse this same WeakMap.
 // ---------------------------------------------------------------------------
 
-const compileCache = new WeakMap<ClipData, CompiledClip>();
+// The cache stores the basis a clip was last compiled under alongside its
+// compiled form. A `flyPath`'s aim is encoded through the STEADY orientation
+// basis (see `buildPathTrack`), so the same `ClipData` under a different frame
+// must recompile. Registry basis objects (`ORIENTATION_FRAMES[frame]`) are
+// stable per frame, so a reference compare is exact and cheap: steady frames
+// hit the cache, an orientation switch (rare) recompiles once. A basis-free clip
+// (no `flyPath`) recompiles to a byte-identical result, so this never affects a
+// tween / static clip.
+type Cached = { readonly frameBasis: Mat3 | undefined; readonly compiled: CompiledClip };
+const compileCache = new WeakMap<ClipData, Cached>();
 
-function getCompiled(data: ClipData): CompiledClip {
+function getCompiled(data: ClipData, frameBasis: Mat3 | undefined): CompiledClip {
   const cached = compileCache.get(data);
-  if (cached !== undefined) return cached;
-  const compiled = compileClip(data);
-  compileCache.set(data, compiled);
+  if (cached !== undefined && cached.frameBasis === frameBasis) return cached.compiled;
+  const compiled = compileClip(data, frameBasis);
+  compileCache.set(data, { frameBasis, compiled });
   return compiled;
 }
 
@@ -436,10 +448,14 @@ function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
  *
  * @param data        The authored clip description.
  * @param elapsedSec  Seconds since the clip started (≥ 0).
+ * @param frameBasis  The STEADY orientation-frame basis a `flyPath` encodes its
+ *                    aim through (see `buildPathTrack`). Absent ⇒ identity
+ *                    (world-frame aim) — the pre-feature behaviour, so a clip
+ *                    with no `flyPath` is unaffected.
  * @returns           The camera pose at that instant.
  */
-export function evaluateClip(data: ClipData, elapsedSec: number): CameraPose {
-  const compiled = getCompiled(data);
+export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Mat3): CameraPose {
+  const compiled = getCompiled(data, frameBasis);
   const { start, baseTracks } = compiled;
   const t = elapsedSec;
 

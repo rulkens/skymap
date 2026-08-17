@@ -41,9 +41,19 @@
  * it never transitions to ready/error. Treat it as already settled so the gate
  * doesn't wait indefinitely. When the user later toggles it on the load fires,
  * but by then the fallback decision is long made.
+ *
+ * ### Format-version mismatch suppresses the fallback
+ *
+ * A `FormatVersionError` means this build cannot read the served `.bin` at
+ * all — falling back to the synthetic cloud would hide exactly the failure
+ * `installFormatVersionAlert` (wired alongside this gate in `wireSlots`) is
+ * surfacing to the splash. Real catalogs still settle normally (so
+ * `realSettled` still counts them and subscribers still unsubscribe once),
+ * but `maybeArmSyntheticFallback` bails before setting the request flag.
  */
 
 import { Source } from '../../../data/sources';
+import { FormatVersionError } from '../../../data/formatVersionError';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import {
   GALAXY_CATALOG_POINT_SOURCES,
@@ -75,6 +85,7 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
 
   let realSettled = 0;
   let anyRealReady = false;
+  let formatVersionMismatch = false;
 
   for (const source of TIER_FETCHED_POINT_SOURCES) {
     const slot = state.assetSlots.points.get(source);
@@ -102,6 +113,9 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
         cb.store.dispatch(engineStatusChanged(readyStatus));
         if (realSet.has(source)) anyRealReady = true;
       }
+      if (s.kind === 'error' && s.error instanceof FormatVersionError) {
+        formatVersionMismatch = true;
+      }
       if (counted) return;
       if (s.kind === 'ready' || s.kind === 'error') {
         counted = true;
@@ -115,6 +129,9 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
   }
 
   function maybeArmSyntheticFallback(): void {
+    // A version mismatch is "this build cannot read this data", not "no data
+    // available" — never arm the backstop that would paper over it.
+    if (formatVersionMismatch) return;
     // Not yet: still waiting on a real galaxy catalog, or at least one produced data.
     if (realSettled < realSet.size || anyRealReady) return;
 

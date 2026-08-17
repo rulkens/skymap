@@ -5,9 +5,9 @@
  * Layout (four visual lines):
  *
  *   [✓] CF-4 DM density                            [palette ▾]
- *       Intensity   0.50  [━━━━━━━●━━━━━━━━━━━━━]
- *       Contrast    1.00  [━━━●━━━━━━━━━━━━━━━━━]
- *       Density     5.0   [━━━━━●━━━━━━━━━━━━━━━]
+ *       [Intensity ━━━━━━━●━━━━━━━━━━━━━ 0.50]
+ *       [Contrast  ━━━●━━━━━━━━━━━━━━━━━ 1.00]
+ *       [Density   ━━━━━●━━━━━━━━━━━━━━━  5.0]
  *
  * Why three separate sliders (intensity / contrast / density):
  *   - intensity is overall opacity (multiplicative).  Cranking it just
@@ -24,14 +24,15 @@
  * Bundling any two into one slider collapses an axis users actually
  * need.  The orthogonal trio gives a clean exploration surface.
  *
- * Why a `LabelledSlider` helper rather than three inline `<input>`s:
- *   - DRY: the label + value-readout + slider markup is identical for
- *     the three controls; repeating it three times invites drift.
- *   - Adding a fourth control (e.g. envelope edge) becomes a one-line
- *     change.
+ * Why a `LabelledSlider` helper rather than five inline `<Slider>`s:
+ *   - DRY: the row wrapper + descriptive hover `title` is identical for
+ *     every control; repeating it five times invites drift.
+ *   - Adding another control becomes a one-line change.
  *   - Keeps the row component readable — the layout intent shows
- *     through the three `LabelledSlider` calls instead of being
- *     hidden inside three near-identical 12-line blocks.
+ *     through the `LabelledSlider` calls instead of being hidden
+ *     inside near-identical blocks. Each `<Slider>` itself folds its
+ *     own label + value readout into one pill (see
+ *     `common/Slider/Slider.tsx`).
  *
  * Why two lines on top instead of one:
  *   - With four controls on one line (checkbox, label, slider,
@@ -51,6 +52,7 @@ import type { ReactNode } from 'react';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import { PaletteSelect } from '../common/PaletteSelect/PaletteSelect';
+import Slider from '../common/Slider/Slider';
 import styles from './VolumeFieldRow.module.css';
 
 /**
@@ -131,9 +133,10 @@ export type VolumeFieldRowProps = {
 };
 
 /**
- * Internal helper: a slider with a left-aligned label and a current-
- * value readout.  The three columns (label / value / slider) line up
- * across rows thanks to fixed-width label + value via CSS.
+ * Internal helper: one labelled row wrapping the shared compact `Slider`
+ * (label + value folded into the pill — see `common/Slider/Slider.tsx`).
+ * `title` keeps the descriptive hover tooltip on the row even though
+ * `Slider` itself has no `title` prop.
  *
  * `formatValue` lets each caller pick its own precision (intensity to
  * two decimals, density to one) without leaking number-formatting
@@ -147,7 +150,6 @@ type LabelledSliderProps = {
   step: number;
   disabled: boolean;
   formatValue: (value: number) => string;
-  ariaLabel: string;
   title: string;
   onChange: (value: number) => void;
 };
@@ -160,25 +162,20 @@ function LabelledSlider({
   step,
   disabled,
   formatValue,
-  ariaLabel,
   title,
   onChange,
 }: LabelledSliderProps): ReactNode {
   return (
-    <div className={styles.sliderRow}>
-      <span className={styles.sliderLabel}>{label}</span>
-      <span className={styles.sliderValue}>{formatValue(value)}</span>
-      <input
-        className={styles.slider}
-        type="range"
+    <div className={styles.sliderRow} title={title}>
+      <Slider
+        label={label}
+        value={value}
         min={min}
         max={max}
         step={step}
-        value={value}
         disabled={disabled}
-        aria-label={ariaLabel}
-        title={title}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={onChange}
+        format={formatValue}
       />
     </div>
   );
@@ -208,6 +205,7 @@ export function VolumeFieldRow({
         <label className={styles.label}>
           <input
             type="checkbox"
+            className={styles.toggle}
             checked={enabled}
             onChange={(e) => onEnabledChange(id, e.target.checked)}
           />
@@ -231,7 +229,6 @@ export function VolumeFieldRow({
         step={0.01}
         disabled={!enabled}
         formatValue={(v) => v.toFixed(2)}
-        ariaLabel={`${label} intensity`}
         title="Intensity — overall opacity multiplier."
         onChange={(v) => onIntensityChange(id, v)}
       />
@@ -243,7 +240,6 @@ export function VolumeFieldRow({
         step={CONTRAST_STEP}
         disabled={!enabled}
         formatValue={(v) => v.toFixed(2)}
-        ariaLabel={`${label} contrast`}
         title="Contrast — widens a deadband around the midpoint and stretches the surviving range across the palette."
         onChange={(v) => onContrastChange(id, v)}
       />
@@ -255,7 +251,6 @@ export function VolumeFieldRow({
         step={TRIM_STEP}
         disabled={!enabled}
         formatValue={(v) => v.toFixed(2)}
-        ariaLabel={`${label} trim`}
         title="Trim — low-end cutoff that hard-suppresses voxels below the threshold (Polyphorm-style trim_density in normalised LUT space)."
         onChange={(v) => onTrimChange?.(id, v)}
       />
@@ -267,7 +262,6 @@ export function VolumeFieldRow({
         step={EXPOSURE_STEP}
         disabled={!enabled}
         formatValue={(v) => v.toFixed(1)}
-        ariaLabel={`${label} exposure`}
         title="Exposure — HDR multiplier on the rgb contribution per ray-march step; weighted to brighten only peaks so mid-tones stay LDR-bounded."
         onChange={(v) => onExposureChange?.(id, v)}
       />
@@ -279,7 +273,6 @@ export function VolumeFieldRow({
         step={DENSITY_STEP}
         disabled={!enabled}
         formatValue={(v) => v.toFixed(1)}
-        ariaLabel={`${label} density`}
         title="Density — per-cube alpha multiplier inside the optical-depth integral."
         onChange={(v) => onDensityScaleChange?.(id, v)}
       />

@@ -36,13 +36,18 @@ vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', async (import
 });
 
 import { applySceneEffect } from '../../../src/services/animation/applySceneEffect';
+import { frameTo } from '../../../src/services/engine/animation/effectHelpers';
 import { VISIBILITY_ACTION_ROW } from '../../../src/services/animation/visibilityActionRow';
 import { syncVisibilityFades } from '../../../src/services/engine/wiring/syncVisibilityFades';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { startFrameTween } from '../../../src/state/camera/cameraSlice';
+import { matrixToQuaternion } from '../../../src/utils/math/matrixToQuaternion';
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   setFilamentsEnabled,
   setFlowEnabled,
@@ -55,6 +60,7 @@ import {
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/data/defaults';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -91,8 +97,7 @@ function makeSettings(opts?: {
       sizePx: 2,
       brightness: 1,
       depthFade: false,
-      highlightFallback: false,
-      realOnly: false,
+      provenance: DEFAULT_GALAXY_PROVENANCE,
     },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
@@ -102,7 +107,12 @@ function makeSettings(opts?: {
     tonemap: { exposure: 1, curve: 0 } as EngineSettingsState['tonemap'],
     bias: { mode: 0, absMagLimit: -20 } as EngineSettingsState['bias'],
     thumbnails: { enabled: true },
-    debug: { showPickBuffer: false, showDiskRadiusRing: false, disabledPasses: {}, renderStrategy: 'auto' },
+    debug: {
+      showPickBuffer: false,
+      showDiskRadiusRing: false,
+      disabledPasses: {},
+      renderStrategy: 'auto',
+    },
   } as unknown as EngineSettingsState;
 }
 
@@ -190,6 +200,37 @@ describe('applySceneEffect — focus', () => {
 
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(updateSelectionFocus(null));
+  });
+});
+
+// ── frameTo ─────────────────────────────────────────────────────────────────
+
+describe('applySceneEffect — frameTo', () => {
+  it('firing a frameTo cue dispatches setOrientation + startFrameTween with the live basis fromQuat', () => {
+    // A known, non-identity live basis: a 90° rotation about X (column-major).
+    // Seeding the roll from THIS matrix — not the destination frame's steady
+    // pole — is the crux: a frameTo firing mid-roll must compose from wherever
+    // the pole is now, so the fromQuat is matrixToQuaternion(the live basis).
+    const liveBasis: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
+    const state = {
+      ...makeEngineState(),
+      cameraRuntime: { upBasis: { current: liveBasis } },
+    } as unknown as EngineState;
+    const { store, dispatch } = makeSpyStore();
+
+    applySceneEffect(frameTo('galactic', { over: 1 }), { state, store });
+
+    // Order matters (setOrientation first, then the roll), matching the saga.
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch.mock.calls[0]![0]).toEqual(setOrientation('galactic'));
+    expect(dispatch.mock.calls[1]![0]).toEqual(
+      startFrameTween({
+        fromQuat: matrixToQuaternion(liveBasis),
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'easeInOutCubic',
+      }),
+    );
   });
 });
 

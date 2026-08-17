@@ -31,9 +31,19 @@
  * completes or is cancelled by the engine. `SagaContext` is the bag the
  * running root saga reads them back out of via `getContext`; `SetSagaContext` is
  * the setter the factory hands back so the engine can inject them
- * post-construction (a `Partial`, so each registration site supplies only what it
- * knows). They live here, beside the store types, because the sagas and the
- * factory both depend on them and neither owns the other.
+ * post-construction. They live here, beside the store types, because the sagas
+ * and the factory both depend on them and neither owns the other.
+ *
+ * `SetSagaContext` takes the WHOLE bag, not a `Partial`. Registration is also the
+ * signal `watchHashSaga` waits on before it lets either half of the URL bridge
+ * touch the address bar (see `sagaContextRegistered`), and a partial setter makes
+ * that signal a lie it cannot detect: a caller registering only `reconcile` still
+ * announces "the capabilities are here", and the first `#focus=` arrival then
+ * calls an undefined `resolveDeps`, throws, and takes the whole root saga down
+ * with it. Production has one registration site and it already passes all of them
+ * in one call (`engine.ts`), so requiring the whole bag costs nothing there and
+ * turns a convention into a compiler check. Callers with nothing behind a
+ * capability pass an inert one (`NOOP_SAGA_CONTEXT` in `tests/support`).
  *
  * The imports are type-only, so there is no runtime cycle even though
  * `createAppStore` imports `rootReducer` and this file imports both — `import type`
@@ -46,8 +56,11 @@ import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
 import type { CameraPose } from '../@types/camera/CameraPose';
+import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
+import type { Mat3 } from '../@types/math/Mat3';
+import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -55,11 +68,16 @@ export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
 /**
- * The live camera Resources `watchFocusTweenSaga` reads to seed a tween: the visible
- * `from` pose (what the user sees this frame, so a re-focus hands off smoothly)
- * and the projection FOV (the structure arm frames a cluster to screen-fill).
+ * The live camera Resources the focus and orientation sagas read off the frame
+ * loop. `watchFocusTweenSaga` seeds a camera tween from the visible `from` pose
+ * (what the user sees this frame, so a re-focus hands off smoothly) and the
+ * projection FOV (the structure arm frames a cluster to screen-fill).
+ * `watchOrientationChangeSaga` seeds a frame roll from `upBasisQuat`: the
+ * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
+ * continuously instead of snapping the pole back to the committed frame. The
+ * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
  */
-export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
+export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; upBasisQuat: Vec4 };
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the
  * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the
@@ -78,12 +96,32 @@ export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
  * `compute` produced (null before the first / after `clear`). It is the replay
  * source: `watchReplayInspectedPathSaga` plays it verbatim so the flown route is
  * the inspected overlay exactly, with no fresh `start: 'live'` resolution.
+ *
+ * `frameBasis` is the STEADY orientation-frame basis the watch saga already
+ * resolved for `resolveClipFoci` (`ORIENTATION_FRAMES[settings.orientation]`) —
+ * threaded through so the sampled eye decodes through the same basis the
+ * renderer's `evaluateClip` call does (see `sampleClipPath`). `frame` is that
+ * same basis's id, stored (not re-derived) so `pinnedFrame` can hand it back —
+ * `watchReplayInspectedPathSaga` MUST replay under the frame Calculate baked
+ * the route's bearings under, not whatever orientation is live at Play time;
+ * nothing gates the setting between the two clicks.
  */
 export type ClipPathInspectSeam = {
-  compute: (clipId: ClipId, resolved: ClipData) => void;
-  recompute: (clipId: ClipId, resolved: ClipData) => void;
+  compute: (
+    clipId: ClipId,
+    resolved: ClipData,
+    frameBasis?: Mat3,
+    frame?: OrientationFrameId,
+  ) => void;
+  recompute: (
+    clipId: ClipId,
+    resolved: ClipData,
+    frameBasis?: Mat3,
+    frame?: OrientationFrameId,
+  ) => void;
   clear: () => void;
   pinnedClip: () => ClipData | null;
+  pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
@@ -91,24 +129,28 @@ export type SagaContext = {
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
   /**
-   * The live camera resources `watchFocusTweenSaga` reads to build the tween, or
-   * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
-   * tween then no-ops.
+   * The live camera resources `watchFocusTweenSaga` and `watchOrientationChangeSaga`
+   * read to seed their tweens, or null when the camera is not ready
+   * (pre-bootstrap / post-destroy) — both sagas then no-op.
    */
-  cameraRuntime: () => FocusCameraRuntime | null;
+  cameraRuntime: () => LiveCameraRuntime | null;
   /**
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
+   * `frame` is the orientation frame the CALLER is under right now — pinned
+   * onto `camera.clip` so a later orientation switch re-expresses the clip's
+   * pose instead of reinterpreting it (see the clip row in cameraDrivers.ts).
    * The engine registers this at construction via `createPlayClip` +
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.
    */
-  playClip: (clip: ClipData) => Promise<void>;
+  playClip: (clip: ClipData, frame: OrientationFrameId) => Promise<void>;
   /**
    * The debug clip-path inspector seam — `watchClipPathInspectSaga` calls
    * `compute` on `inspectClipPath` and `clear` on `clearClipPath`. Engine-
-   * registered at construction; null-safe to omit in non-debug saga setups.
+   * registered at construction; a setup with no inspector registers an inert one
+   * rather than omitting it.
    */
   clipPathInspect: ClipPathInspectSeam;
 };
-export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
+export type SetSagaContext = (ctx: SagaContext) => void;

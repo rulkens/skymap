@@ -14,9 +14,13 @@
  * the WESL struct field order:
  *
  *   0..2 rayleighScatter  3 rayleighScaleHeightKm  4..6 ozoneAbsorption
- *   7 mieScaleHeightKm  8..10 groundAlbedo  11 miePhaseG  12 mieScatter
- *   13 mieAbsorption  14 ozoneCenterKm  15 ozoneWidthKm  16 planetRadiusKm
- *   17 atmosphereTopKm  18 pad  19 pad
+ *   7 mieScaleHeightKm  8..10 groundAlbedo  11 miePhaseG  12..14 mieScatter
+ *   15 mieAbsorption  16 ozoneCenterKm  17 ozoneWidthKm  18 planetRadiusKm
+ *   19 atmosphereTopKm
+ *
+ * `mieScatter` is a `vec3<f32>` (per-channel — see `AtmosphereParams.d.ts`'s
+ * header) whose offset (slot 12) already lands on a 16-byte boundary, so the
+ * struct stays a dense 80 bytes / 20 f32 with no trailing pad.
  *
  * `twilightSoftness` is NOT packed here — it rides the per-frame `SkyViewParams`
  * so the Earth slider tunes it live — so it is grouped with the other row fields
@@ -40,20 +44,20 @@ const PARAMS: AtmosphereParams = {
   mieScaleHeightKm: 8 / 16, //                   slot 7
   groundAlbedo: [9 / 16, 10 / 16, 11 / 16], //   slots 8..10
   miePhaseG: 12 / 16, //                         slot 11
-  mieScatter: 13 / 16, //                        slot 12
-  mieAbsorption: 14 / 16, //                     slot 13
-  ozoneCenterKm: 15 / 16, //                     slot 14
-  ozoneWidthKm: 16 / 16, //                      slot 15
-  planetRadiusKm: 17 / 16, //                    slot 16
-  atmosphereTopKm: 18 / 16, //                   slot 17
+  mieScatter: [13 / 16, 14 / 16, 15 / 16], //    slots 12..14
+  mieAbsorption: 16 / 16, //                     slot 15
+  ozoneCenterKm: 17 / 16, //                     slot 16
+  ozoneWidthKm: 18 / 16, //                      slot 17
+  planetRadiusKm: 19 / 16, //                    slot 18
+  atmosphereTopKm: 20 / 16, //                   slot 19
   // Row fields NOT part of ScatteringParams — this physics packer ignores them,
   // so they occupy no slot and any value serves. `twilightSoftness` +
   // `twilightIntensity` ride the per-frame SkyViewParams; the two look dials ride
   // AtmosphereUniforms.
-  twilightSoftness: 19 / 16,
-  twilightIntensity: 20 / 16,
-  sunIrradiance: 21 / 16,
-  exposure: 22 / 16,
+  twilightSoftness: 21 / 16,
+  twilightIntensity: 22 / 16,
+  sunIrradiance: 23 / 16,
+  exposure: 24 / 16,
 };
 
 describe('ScatteringParams byte offsets', () => {
@@ -78,17 +82,15 @@ describe('ScatteringParams byte offsets', () => {
     expect(rec[9]).toBe(PARAMS.groundAlbedo[1]);
     expect(rec[10]).toBe(PARAMS.groundAlbedo[2]);
     expect(rec[11]).toBe(PARAMS.miePhaseG);
-    // Scalar tail: the two Mie scatter/absorb, the ozone tent, the two radii.
-    expect(rec[12]).toBe(PARAMS.mieScatter);
-    expect(rec[13]).toBe(PARAMS.mieAbsorption);
-    expect(rec[14]).toBe(PARAMS.ozoneCenterKm);
-    expect(rec[15]).toBe(PARAMS.ozoneWidthKm);
-    expect(rec[16]).toBe(PARAMS.planetRadiusKm);
-    expect(rec[17]).toBe(PARAMS.atmosphereTopKm);
-
-    // Trailing pads zeroed — round the struct to 80 / 16-byte alignment.
-    // `twilightSoftness` is deliberately NOT here (it rides SkyViewParams).
-    expect(rec[18]).toBe(0);
-    expect(rec[19]).toBe(0);
+    // mieScatter vec3 @ 12 (16-byte aligned already; its tail slot 15 holds
+    // mieAbsorption), then the ozone tent and the two radii.
+    expect(rec[12]).toBe(PARAMS.mieScatter[0]);
+    expect(rec[13]).toBe(PARAMS.mieScatter[1]);
+    expect(rec[14]).toBe(PARAMS.mieScatter[2]);
+    expect(rec[15]).toBe(PARAMS.mieAbsorption);
+    expect(rec[16]).toBe(PARAMS.ozoneCenterKm);
+    expect(rec[17]).toBe(PARAMS.ozoneWidthKm);
+    expect(rec[18]).toBe(PARAMS.planetRadiusKm);
+    expect(rec[19]).toBe(PARAMS.atmosphereTopKm);
   });
 });

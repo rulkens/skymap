@@ -4,18 +4,42 @@
 // apparent edge) and shades a two-component galaxy brightness
 // profile:
 //
-//   - Gaussian bulge (σ = 0.4): bright inner core.
+//   - Gaussian bulge (sigma = 0.18): bright, tight inner core.
 //   - Exponential disk (scale = 0.5): softer halo.
 //
-// Hue comes entirely from the per-galaxy colour-index ramp — the
-// same ramp the points pass uses, so a galaxy's procedural-disk
-// colour matches its companion point exactly. Earlier versions
-// added warm-bulge / cool-disk tint shifts on top of the ramp
-// colour; that made the procedural disk visibly diverge from the
-// points pass (warmer at the centre, cooler at the rim) so it's
-// been removed. Only the brightness profile remains.
+// The bulge/disk weights (0.85 / 0.15) sum to 1.0, so the CENTRE peak
+// stays at 1.0 x sbAmp — the value that already matches the companion
+// point sprite at the crossfade, so retuning contrast here does not
+// reintroduce a brightness pop at the handoff. Contrast is boosted by
+// draining weight OUT of the halo and tightening the bulge, which drops
+// the mid/outer-disk floor while leaving the peak fixed: the bright core
+// clears the bloom threshold while the dim halo stays below it, so the
+// nucleus blooms and the disk does not.
 //
-// Final alpha is the combined brightness × crossfadeAlpha so the
+// The profile's output is scaled by 'in.sbAmp', the physical
+// surface-brightness amplitude computed once per row in
+// 'proceduralDiskSubsystem.ts' via the SAME 'galaxySbAmp' helper the
+// point-sprite bake uses (see 'buildPointInterleavedBuffer.ts'). Sharing
+// the helper and the per-catalog 'medianAbsMag' zero-point means an
+// intrinsically bright or compact galaxy pushes this pass's HDR core
+// above the bloom threshold exactly the way its companion point sprite
+// does, and the two passes agree on brightness at the 8-14 px crossfade
+// instead of only agreeing on hue.
+//
+// Hue is a warm-core / cool-rim gradient from the SHARED 'rampRadial'
+// function in 'lib/colorIndex.wesl' — the same function the points
+// pass calls in 'colorFragment.wesl'. Sharing the function is
+// load-bearing, not incidental: if this pass computed its own radial
+// tint independently of the points pass, the two would disagree across
+// the 8-14 px crossfade and the galaxy would visibly shift hue (warmer
+// at centre / cooler at rim on one pass but not the other) as the
+// impostor faded in. Deriving both passes' per-radius colour from the
+// same call over the same 't' and 'r' makes that class of divergence
+// structurally impossible, rather than merely avoided by convention.
+// Only the brightness profile is pass-local; the colour math is fully
+// shared.
+//
+// Final alpha is the combined brightness x crossfadeAlpha so the
 // impostor fades in cleanly across the 8-14 px transition band.
 //
 // ## Why no uniform binding declared here
@@ -29,7 +53,7 @@
 // actually references end up emitted.
 
 import package::galaxyCatalog::proceduralDisks::io::VsOut;
-import package::lib::colorIndex::ramp;
+import package::lib::colorIndex::rampRadial;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,
 // naming the shapes makes the intent visible at the call site). The
@@ -40,16 +64,16 @@ import package::lib::colorIndex::ramp;
 // explicit.
 import package::lib::masks::circularMask;
 
-const BULGE_SIGMA = 0.4;
+const BULGE_SIGMA = 0.18;
 const DISK_SCALE = 0.5;
-const BULGE_WEIGHT = 0.6;
-const DISK_WEIGHT = 0.4;
+const BULGE_WEIGHT = 0.85;
+const DISK_WEIGHT = 0.15;
 
-// 'ramp(t)' lives in 'lib/colorIndex.wesl' — imported above. Sharing
-// the function with the points pass guarantees procedural-disk
-// colour matches points colour exactly at any colour-index value, so
-// the disk impostor fade-in doesn't introduce a visible cross-LOD
-// hue shift.
+// 'rampRadial(t, r)' lives in 'lib/colorIndex.wesl' — imported above.
+// Sharing it with the points pass guarantees the procedural-disk
+// gradient matches the points pass's gradient exactly at any given
+// colour index and radius, so the disk impostor fade-in doesn't
+// introduce a visible cross-LOD hue shift.
 
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {
@@ -58,14 +82,13 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
 
   let bulge = exp(-(r * r) / (2.0 * BULGE_SIGMA * BULGE_SIGMA));
   let disk  = exp(-r / DISK_SCALE);
-  let intensity = bulge * BULGE_WEIGHT + disk * DISK_WEIGHT;
+  let intensity = (bulge * BULGE_WEIGHT + disk * DISK_WEIGHT) * in.sbAmp;
 
-  // Colour: ramp hue only, no per-component tint shifts.  See the
-  // fragment-stage header comment above for why the warm-bulge / cool-
-  // disk tints were removed (they made this pass visibly diverge from
-  // the points pass at the crossfade boundary).
-  let base = ramp(in.colourIndex);
-  let tinted = base;
+  // Colour: warm-core / cool-rim gradient in colour-index space, shifted
+  // by normalised radius 'r' (0 at centre, 1 at the disk edge). See the
+  // fragment-stage header comment above for why this reads from the
+  // shared 'rampRadial' function rather than an ad-hoc per-pass tint.
+  let tinted = rampRadial(in.colourIndex, r);
 
   // Soft edge fade.  We're outputting LINEAR colour into an rgba16float
   // HDR target; the compositor's tone-map curve converts to sRGB later

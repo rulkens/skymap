@@ -28,10 +28,12 @@
  * ### Type guard, not a cast
  *
  * `SOURCE_REGISTRY[req.source]` is the full `SourceEntry` union; the runtime
- * `type !== 'starCatalog'` check both narrows it to `StarCatalogSourceEntry`
- * (giving `binBaseName` / `tiered`) AND fails loudly if a caller wires this
- * fetcher to a non-star source — a config bug the type system can't catch
- * once the request's `source` is a broad `SourceType`.
+ * check both narrows it to `SurveyStarCatalogSourceEntry` (giving
+ * `binBaseName` / `tiered`) AND fails loudly if a caller wires this fetcher to
+ * a source that ships no bin — a config bug the type system can't catch once
+ * the request's `source` is a broad `SourceType`. The `binBaseName !== null`
+ * half of the guard is what excludes a SEEDED star catalog: it is built in
+ * code, so there is no filename to assemble and nothing to fetch.
  *
  * On 404 the slot machinery's error path leaves the catalog unregistered;
  * the star layer simply doesn't draw. Mirrors the mcpmFetcher fallback.
@@ -39,9 +41,12 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogSourceEntry } from '../../../@types/data/starCatalog/StarCatalogSourceEntry';
+import type { SurveyStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { decodeStarCatalog } from '../../../data/starCatalog/starCatalogFormat';
+import {
+  decodeStarCatalog,
+  STAR_CATALOG_DATA_PREFIX,
+} from '../../../data/starCatalog/starCatalogFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
@@ -50,22 +55,26 @@ export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
   onProgress,
 ) => {
   const entry = SOURCE_REGISTRY[req.source];
-  if (entry.type !== 'starCatalog') {
-    throw new Error(`starCatalogFetcher: source ${req.source} is not a star catalog`);
+  if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
+    throw new Error(`starCatalogFetcher: source ${req.source} is not a streamed star catalog`);
   }
-  // Re-bind to the general StarCatalogSourceEntry contract before branching
-  // on 'tiered'. Several registry rows (the volume entries) also carry a
-  // literal 'tiered' field, which makes 'tiered' a discriminant of the
+  // Re-bind to the general SurveyStarCatalogSourceEntry contract before
+  // branching on 'tiered'. Several registry rows (the volume entries) also
+  // carry a literal 'tiered' field, which makes 'tiered' a discriminant of the
   // registry union — so a ternary on the guard-narrowed entry's literal
   // 'tiered: true' narrows the entry itself to 'never' in the untiered
   // branch and 'entry.binBaseName' fails to typecheck there. Widening to
   // 'tiered: boolean' keeps both branches live; the untiered `${base}.bin`
   // path mirrors the galaxy side's famous.bin and serves the next,
   // untiered star catalog.
-  const starEntry: StarCatalogSourceEntry = entry;
+  const starEntry: SurveyStarCatalogSourceEntry = entry;
   const name = starEntry.tiered
     ? `${starEntry.binBaseName}-${req.tier}.bin`
     : `${starEntry.binBaseName}.bin`;
-  const buf = await fetchWithProgress(dataUrl(name), signal, onProgress);
+  const buf = await fetchWithProgress(
+    dataUrl(`${STAR_CATALOG_DATA_PREFIX}/${name}`),
+    signal,
+    onProgress,
+  );
   return decodeStarCatalog(buf);
 };

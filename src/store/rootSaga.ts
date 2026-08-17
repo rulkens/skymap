@@ -1,38 +1,11 @@
 /**
- * rootSaga — the store's single saga entry point, COMPOSING the feature sagas.
+ * rootSaga — composes every feature watcher saga, forked in the `all([...])`
+ * array below; that array IS the watcher list, so this comment doesn't restate it.
  *
- * The store wires the saga middleware and runs this root saga at construction.
- * The root only composes; it forks every feature watcher:
- *   watchTierSaga          — runs the tier transition (per-source reload + famous rebuild)
- *   watchWakeSaga          — requests a render frame on every settings write
- *   watchFlowReseedSaga    — reseeds the flow particle field when mode or count changes
- *   watchBiasBakeSaga      — rebakes the brightness bias LUT when BiasMode changes
- *   watchFadesSaga         — syncs visibility-layer fades via the FADE_ROW table
- *   watchSelectionRowsSaga — keeps the selectionRows derived cache in sync with selection refs
- *   watchSelectionWakeSaga — wakes the render loop on select/focus writes (hover excluded)
- *   watchRequestFocusSaga  — resolves a durable focus id to a ref, deferring on catalogLoaded
- *   watchRequestSelectSaga — resolves a durable focus id to a ref and PINS it in the select slot
- *   watchFocusTweenSaga    — builds + dispatches the camera tween on every focus ref change
- *   watchTourSaga          — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
- *   watchTourKeyboardSaga  — binds the tour nav keys (→/←/Space) only while a tour runs
- *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
- *   watchClipPathInspectSaga — samples a clip's camera route into the debug inspector on inspectClipPath/clearClipPath
- *   watchReplayInspectedPathSaga — replays the inspector's pinned route verbatim on replayInspectedPath
- *   watchGoHomeSaga        — pins Earth and tweens to the sunlit home pose on each goHome intent
- *
- * Each watcher is one saga per file, named after the saga, authored beside its
- * concern (the tier watcher in `state/tier/watchTierSaga`, the reconcile watchers
- * in `effects/watch*Saga`) and their worker bodies reach the engine via
- * `getContext` lazily. Composing the
- * watchers before the engine registers the saga context is safe: no worker body
- * runs until an action arrives, and the engine registers the context at
- * construction before any settings dispatch can occur. Later phases add watchers
- * the same way — by appending forks to this `all` array, never by re-threading
- * `createSagaMiddleware`/`run` through the factory.
- *
- * `all([...])` runs the forked watchers concurrently; typed-redux-saga's
- * `all<T>(effects: T[])` yields once every effect has been started, so the
- * running root saga stays alive forking its children.
+ * Composing before the engine registers the saga context is safe because every
+ * watcher here is reactive except `watchHashSaga`'s read half, which waits on
+ * `sagaContextRegistered` for exactly that reason — see that module's header
+ * for the full argument.
  */
 
 import { all } from 'typed-redux-saga';
@@ -40,6 +13,7 @@ import { all } from 'typed-redux-saga';
 import { watchTierSaga } from '../state/tier/watchTierSaga';
 import { watchWakeSaga } from './effects/watchWakeSaga';
 import { watchFlowReseedSaga } from './effects/watchFlowReseedSaga';
+import { watchSwapFormatSaga } from './effects/watchSwapFormatSaga';
 import { watchBiasBakeSaga } from './effects/watchBiasBakeSaga';
 import { watchFadesSaga } from './effects/watchFadesSaga';
 import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRowsSaga';
@@ -47,18 +21,22 @@ import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSag
 import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga';
 import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
+import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
 import { watchTourSaga } from '../state/tour/watchTourSaga';
-import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
+import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
+import { watchLogCameraStateSaga } from '../state/camera/watchLogCameraStateSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
+import { watchHashSaga } from '../state/url/watchHashSaga';
 
 export function* mainSaga() {
   yield* all([
     watchTierSaga(),
     watchWakeSaga(),
     watchFlowReseedSaga(),
+    watchSwapFormatSaga(),
     watchBiasBakeSaga(),
     watchFadesSaga(),
     watchSelectionRowsSaga(),
@@ -66,11 +44,14 @@ export function* mainSaga() {
     watchRequestFocusSaga(),
     watchRequestSelectSaga(),
     watchFocusTweenSaga(),
+    watchOrientationChangeSaga(),
     watchTourSaga(),
-    watchTourKeyboardSaga(),
+    watchKeyboardEventsSaga(),
+    watchLogCameraStateSaga(),
     watchClipSaga(),
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),
     watchGoHomeSaga(),
+    watchHashSaga(),
   ]);
 }

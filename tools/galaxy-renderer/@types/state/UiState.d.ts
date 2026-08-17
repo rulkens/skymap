@@ -8,8 +8,37 @@
 
 export type UiState = {
   readonly openSections: Readonly<
-    Record<'shape' | 'arms' | 'pop' | 'dust' | 'glob' | 'render' | 'perf' | 'multi', boolean>
-  >; // all true — html:470
+    Record<
+      | 'analyticModel'
+      | 'legacyModel'
+      | 'morphology'
+      | 'shape'
+      | 'starBudget'
+      | 'arms'
+      | 'armField'
+      | 'armCloud'
+      | 'armSpurs'
+      | 'hii'
+      | 'hiiShells'
+      | 'hiiDig'
+      | 'hiiYoungStars'
+      | 'ismMap'
+      | 'ismMapFluid'
+      | 'debugViews'
+      | 'pop'
+      | 'dust'
+      | 'analyticDust'
+      | 'dustCloud'
+      | 'glob'
+      | 'render'
+      | 'field'
+      | 'fade'
+      | 'grade'
+      | 'perf'
+      | 'multi',
+      boolean
+    >
+  >; // all true, as in the spike
   readonly copyFeedback: string; // '' | 'copied ✓' | 'failed' | 'loaded ✓' | 'invalid'
   readonly autoRotate: boolean; // default true; engine toggle intent (not pose) so it lives in the store
 };

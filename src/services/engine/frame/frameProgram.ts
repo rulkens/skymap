@@ -2,10 +2,13 @@
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
  * A frame is an ordered sequence of steps: the compute prelude (the flow
- * integrate + the atmosphere sky-view LUT bake), a volume render, an HDR
- * render, a half-res survey-star-aggregate render into its own offscreen, a
- * near-field star-point render into that same HDR accumulation (which also
- * composites the aggregate offscreen back in), a near-field foreground-body
+ * integrate + the atmosphere sky-view LUT bake), a volume render, a
+ * zone-of-avoidance band render (its own reduced-res offscreen, same family
+ * as the volume render), an HDR render, two reduced-resolution aggregate
+ * renders into their own offscreens
+ * (survey stars, then the Milky-Way cloud), a near-field star-point render into
+ * that same HDR accumulation (which also composites both aggregate offscreens
+ * back in), a near-field foreground-body
  * render, that body composite OVER the HDR accumulator in linear space, the
  * single tone-mapping composite, then the swap-chain overlay renders (the
  * cosmological overlays, then the near-field captions). Pre-unification that
@@ -40,10 +43,21 @@
  *
  * There is no `volume→hdr` composite — the volume offscreen is merged into
  * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
- * separate whole-texture composite (plan-time decision 3). The
- * `star-aggregates` offscreen is merged the same way — by the `star-upsample`
- * layer inside the hdr NEAR0 render step, adjacent to the `star-catalog` leaf
- * draw — so there is no `star-aggregates→hdr` composite step either.
+ * separate whole-texture composite (plan-time decision 3). The `zoa`
+ * offscreen (the zone-of-avoidance band raymarch) is merged the same way, by
+ * `zoneOfAvoidanceUpsampleLayer` inside the same hdr COSMO step — so there is
+ * no `zoa→hdr` composite step either; that layer also draws the band's
+ * full-res curved lettering straight into HDR, since MSDF text can't ride a
+ * reduced-res offscreen without blurring. The `star-aggregates` offscreen is
+ * merged the same way — by the `star-upsample` layer inside the hdr NEAR0
+ * render step, adjacent to the `star-catalog` leaf draw — so there is no
+ * `star-aggregates→hdr` composite step either. The `mw-aggregate` offscreen
+ * is the fourth of that family: merged by the `milky-way-upsample` layer
+ * inside the same hdr NEAR0 step, so there is no `mw-aggregate→hdr` composite
+ * step. Every offscreen-into-HDR merge in this program is a layer, never a
+ * `'composite'` step; the two `'composite'` steps that DO exist
+ * (`foreground:0→hdr`, `hdr→swap`) merge whole textures that no layer could,
+ * because they carry depth or the tone curve.
  */
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
@@ -82,6 +96,12 @@ export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly Fra
     // is unaffected.
     { kind: 'compute', name: 'atmosphereSkyView' },
     { kind: 'render', target: 'volume', slab: COSMO },
+    // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
+    // the twin of the volume render immediately above. Precedes the hdr
+    // COSMO step so `zoneOfAvoidanceUpsampleLayer` inside it can composite
+    // this offscreen back in; merged by a LAYER, never a `'composite'` step,
+    // so there is no `zoa→hdr` step either (same reasoning as `volume`).
+    { kind: 'render', target: 'zoa', slab: COSMO },
     { kind: 'render', target: 'hdr', slab: COSMO },
     // Survey-star AGGREGATE stream into its own half-res offscreen, projected
     // through NEAR0 (the same parsec-scale anchors as the star catalog). Drawn
@@ -90,6 +110,19 @@ export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly Fra
     // its `volume-upsample` layer. The aggregate glow field is the fill-bound
     // half of the star pass; half-res quarters its fragment cost.
     { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
+    // The Milky-Way twin of the star-aggregate offscreen: the procedural
+    // cloud's additive star billboards into their own reduced-resolution
+    // `mw-aggregate` target, projected through the same NEAR0 slab as the dust
+    // pass that follows them in HDR. Same reason as its sibling — a summed
+    // additive glow field is low-frequency, so rendering it at 1/scale drops
+    // fragment cost by the square of the divisor and costs only bilinear
+    // interpolation of something already smooth. Like `star-aggregates` it is
+    // merged into HDR by a *layer* (`milky-way-upsample`, inside the hdr NEAR0
+    // step below), not by a whole-texture `'composite'` step, so no
+    // `mw-aggregate→hdr` step exists. It must precede that hdr NEAR0 step: the
+    // consumer lives there, and it in turn must precede `milky-way`'s
+    // multiplicative dust draw so the dust extincts the cloud's own starlight.
+    { kind: 'render', target: 'mw-aggregate', slab: NEAR0 },
     // Near-field star points into the SAME hdr accumulation, but projected
     // through NEAR0: COSMO's near plane (0.01 Mpc — slabs.ts) would clip the
     // parsec-scale star anchors, so the points ride their own slab while
@@ -176,8 +209,9 @@ export type TimedSlotGroup = { readonly title: string; readonly rows: readonly T
 /**
  * groupKey → human group title, in the order the DebugPanel renders the
  * groups. Several producing steps deliberately share one title — the
- * cosmological scalar-volume raymarch and the near-field star aggregates are
- * both "volumes & aggregates"; the two whole-texture composites and the pick
+ * cosmological scalar-volume raymarch and the two reduced-resolution aggregate
+ * offscreens (survey stars, Milky-Way cloud) are all "volumes & aggregates";
+ * the two whole-texture composites and the pick
  * pass are all infra "composites & pick"; the COSMO and NEAR0 swap overlays
  * are both "overlays" — so grouping-by-title merges those (non-adjacent in
  * execution order) into one scannable seam. A groupKey with no entry here
@@ -187,7 +221,9 @@ export type TimedSlotGroup = { readonly title: string; readonly rows: readonly T
  */
 export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'volume·COSMO': 'Volumes & aggregates',
+  'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
+  'mw-aggregate·NEAR0': 'Volumes & aggregates',
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   'foreground:0·NEAR0': 'Foreground bodies · depth',
@@ -315,7 +351,7 @@ export function timedSlotGroupsOf(
  *
  * The tone values are placeholders: `timedSlotsOf` only reads step kinds and
  * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a
- * fixed `{ exposure: 1, curve: 0 }` yields the same list every real frame's
+ * fixed `PLACEHOLDER_TONE` yields the same list every real frame's
  * `frameProgram(tone)` would.
  *
  * `bloomEnabled = true` so the query-set allocation always includes the `'bloom'`
@@ -323,8 +359,10 @@ export function timedSlotGroupsOf(
  * the `'bloom'` step, and `runBloom` also no-ops on a null `bloomPyramid`, so the
  * pre-allocated slot simply goes unused, like any empty group's slot.
  */
+const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 };
+
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram({ exposure: 1, curve: 0 }, true),
+  frameProgram(PLACEHOLDER_TONE, true),
   CONTENT_LAYERS,
 );
 
@@ -334,7 +372,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram({ exposure: 1, curve: 0 }, true),
+  frameProgram(PLACEHOLDER_TONE, true),
   CONTENT_LAYERS,
 );
 
@@ -345,7 +383,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * walk, so the two lists stay positionally aligned.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
-  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }, true), CONTENT_LAYERS).map((row) => [
+  timedSlotRowsOf(frameProgram(PLACEHOLDER_TONE, true), CONTENT_LAYERS).map((row) => [
     row.name,
     row.groupKey,
   ]),

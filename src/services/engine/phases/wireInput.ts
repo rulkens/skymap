@@ -29,6 +29,7 @@
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
+import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/galaxyCatalog/pickRenderer';
 import { createPickProgram } from '../frame/pickProgram';
@@ -55,7 +56,14 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
+import {
+  selectSelectedRef,
+  selectFocusRow,
+  selectHasSelectionIntent,
+} from '../../../state/selection/selectors';
+import { selectOrientation } from '../../../state/settings/selectors';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -144,7 +152,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // is no jump on the first follow frame.
   const fovYRad = DEFAULT_FOV_Y_RAD;
   const simDays = unixMsToJulianDays(Date.now());
-  const initialCam = computeInitialCamera({ fovYRad, simDays });
+  // The committed orientation basis the boot pose encodes through, so first-paint
+  // yaw/pitch round-trip under the same frame the render path decodes with. A
+  // `#orientation=<frame>` deep link is already committed by this async phase (see
+  // the boot-ordering note below), so this reads the URL frame when present.
+  const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+  const initialCam = computeInitialCamera({ fovYRad, simDays, frameBasis });
 
   // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
   // live canvas ratio, not a captured one), so the camera is the framing
@@ -158,6 +171,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // OrbitCamera exists. Without this seed the first resting frame would return
   // the placeholder `base` (yaw 0, distance 0.43) rather than the computed
   // framing pose, causing a visible camera jump on the first frame.
+  //
+  // Boot ordering vs the URL orientation frame: `watchHashSaga` holds both halves
+  // of the hash bridge on `sagaContextRegistered`, and `createEngine` dispatches
+  // that (via `setSagaContext`) SYNCHRONOUSLY, before it kicks off the async
+  // bootstrap IIFE this phase runs inside. So the read's `#orientation=<frame>`
+  // `setOrientation` is committed before this `commitCameraPose` and before the
+  // first produced frame — `runFrame` resolves B(t) from `settings.orientation`,
+  // so the first paint is framed in the URL's frame with no roll (the read snaps
+  // via `setOrientation`, never `requestOrientationChange`, so the frame-roll
+  // saga never fires on arrival). The load-bearing gap is registration-before-
+  // bootstrap, not construction-before-bootstrap: moving `setSagaContext` into a
+  // bootstrap phase, or making bootstrap synchronous with engine construction,
+  // would silently regress the boot frame to the default orientation.
   //
   // Three writes, in dependency order:
   //   1. `projection` — read off the assembled camera via `projectionOf`.
@@ -182,16 +208,40 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
   // so this focus write never competes with a camera animation.
   //
-  // The seed only fills EMPTY slots. This phase runs asynchronously after React
-  // mounts, and a URL-hash focus with a statically-resolvable id (`body-*`,
-  // milkyWay, structures) lands in the store at mount — before this line runs.
-  // An unconditional seed would clobber that deep link (and useUrlSync would
-  // then rewrite the hash to Earth). Deferred ids (galaxies/stars waiting on a
-  // catalog pulse) resolve after this phase and overwrite the seed — exactly as
-  // they already overwrite the boot pose above.
+  // The seed only fires when there is no selection INTENT at all — resolved or
+  // still in flight. This phase runs asynchronously after the store is built, and
+  // a URL-hash focus with a statically-resolvable id (`body-*`, milkyWay,
+  // structures) lands in the store during `watchHashReadSaga`'s arrival read —
+  // before this line runs. An unconditional seed would clobber that deep link,
+  // and `watchHashWriteSaga` would then publish the seeded state — which composes
+  // no `focus` param at all, Earth being the omitted home target — stripping the
+  // link off the address bar.
+  //
+  // A ref-only guard (`selectSelectedRef`/`selectFocusRef` both null) is not
+  // enough: a galaxy/star id defers until its catalog pulse lands
+  // (`resolveFocusRefDeferring` parks it), so the resolved ref slot reads null
+  // for the whole boot window while `selection.pending.focus` already holds
+  // the requested id. That window is exactly where this phase runs, so a
+  // ref-only guard sees "empty" and seeds Earth over a deep link that is
+  // simply still resolving — `resolveRef` then clears the pending id
+  // unconditionally, destroying the in-flight request along with the seed.
+  // `selectHasSelectionIntent` reads the pending slots too, so a parked
+  // request counts as non-empty and the seed defers to it.
+  //
+  // Accepted consequence: a junk `#focus=zzz` that never resolves parks
+  // forever, which permanently suppresses the Earth seed for that session.
+  // That is inherent to honouring intent over resolved state — the seed
+  // cannot tell "still resolving" from "never will" — and a junk deep link is
+  // already a broken URL.
   const rootState = store.getState();
-  if (selectSelectedRef(rootState) === null && selectFocusRef(rootState) === null) {
-    store.dispatch(updateSelectionSelect(EARTH_REF));
+  if (!selectHasSelectionIntent(rootState)) {
+    // Cinema seeds FOCUS only. `select` is what draws the selection ring
+    // (near0SelectionRingLayer reads selectionRows.select), and it earns its
+    // place by explaining the info card — which cinema mode hides. Seeded in
+    // cinema it would instead sit around Earth in every recorded frame of
+    // every take that opens at home. Focus still has to be seeded, or the
+    // camera loses its home target.
+    if (!isCinemaMode()) store.dispatch(updateSelectionSelect(EARTH_REF));
     store.dispatch(updateSelectionFocus(EARTH_REF));
   }
 
@@ -286,6 +336,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       state.subsystems.scheduler.requestRender();
     },
 
+    // The zoom floor's input, read live off the resolved focus row — same
+    // derivation the `onZoom` path below uses.
+    pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
+
     // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
     // driver owns the distance this frame: while a body is followed the
     // followBody driver owns it (scale its distance target in place, so the
@@ -298,7 +352,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // `autoRotate` + `performance.now()` feed the auto-rotate branch's spin
     // fold. See `applyWheelZoom` for the ownership split.
     onZoom: (factor) => {
-      const cam = store.getState().camera;
+      const root = store.getState();
+      const cam = root.camera;
       const zoomed = applyWheelZoom(
         state.cameraRuntime.clock,
         state.cameraRuntime.prevActiveId.current,
@@ -306,6 +361,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         factor,
         cam.autoRotate,
         performance.now(),
+        // Floors the zoom just off a focused body's surface for every arm of
+        // applyWheelZoom, not only the follow driver.
+        pivotRadiusMpc(selectFocusRow(root)),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
       state.subsystems.scheduler.requestRender();
@@ -342,9 +400,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       // Single-click dispatches the identity ref (null clears). The
       // reconciler saga watches the slot and fills `selectionRows`.
-      pick.then((ref) => {
-        store.dispatch(updateSelectionSelect(ref));
-      });
+      pick
+        .then((ref) => {
+          store.dispatch(updateSelectionSelect(ref));
+        })
+        .catch(() => {
+          // A failed pick readback should not crash input handling; the
+          // click is simply dropped and the prior selection stands.
+        });
     },
     onDoubleClick: () => {
       // Upgrade the current select ref to focus. The preceding single-click

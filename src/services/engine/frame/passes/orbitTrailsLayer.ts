@@ -48,10 +48,11 @@
  * orbit is culled or faded PER-ORBIT by its apparent on-screen diameter: below
  * `CULL_PX` it is skipped from the draw entirely (deep sub-pixel aliasing, not
  * a legible path), and from there up to `FULL_PX` its brightness ramps in so it
- * does not pop. The degenerate case (camera on/inside an orbit, so the
- * projected conic fills the viewport) is handled in the fragment, which
- * discards every off-stroke, horizon, and non-finite pixel, so a degenerate
- * orbit paints only its (possibly huge) arc, never a filled blob.
+ * does not pop. The degenerate case (camera on/inside an orbit) is handled
+ * on the CPU: `composeOrbitConic` clips every orbit to its in-front-of-
+ * camera arc in closed form, so the vertex stage samples only inside it and
+ * needs no fallback; the fragment's off-stroke/horizon/non-finite discards
+ * still guard against a filled blob at a non-finite `Ginv`.
  *
  * ### Conics re-derive at the frame instant
  *
@@ -71,14 +72,20 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { ORBITAL_ELEMENTS, elementsById } from '../../../../data/bodies/orbitalElements';
+import { ORBITAL_ELEMENTS } from '../../../../data/bodies/orbitalElements';
+import { SCENE_ANCHORS } from '../../../../data/bodies/sceneAnchors';
+import { focusResolveOrder } from '../../../../utils/scene/focusResolveOrder';
+import { regionOfBody } from '../../../../utils/scene/regionOfBody';
+import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
+import type { AnchorBody } from '../../../../@types/scene/AnchorBody';
+import type { BodyRegion } from '../../../../@types/scene/BodyRegion';
 import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
+import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
@@ -91,35 +98,68 @@ const CULL_PX = 10;
 const FULL_PX = 20;
 
 // Reused across frames — the engine hot path allocates nothing here. Sized
-// for the renderer's cap; each conic's 28-float record (three Ginv columns +
-// colour/eccentricity + mean anomaly + the two gradient-minor triples) is
-// rewritten in place before the single instanced draw.
-const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
+// for the live orbital-elements table (a compile-time constant, so this is a
+// fixed size, not a cap — the renderer itself carries no upper bound, and
+// growing the table just grows this array); each conic's 34-float record
+// (three Ginv columns + colour/eccentricity + mean anomaly/fade/viewport +
+// the three clip-basis vec4s + the visible-arc eStart/eSpan) is rewritten in
+// place before the single packed draw. One slot per table row is enough
+// since at most `ORBITAL_ELEMENTS.length` records are ever packed.
+const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
 
-// The system's reach from the heliocentric origin: the farthest any orbit
-// point can lie from the origin, over ALL clock times — a TIME-INVARIANT outer
-// envelope. A bound orbit's farthest point from its focus is its apoapsis
-// a·(1+e); a heliocentric orbit's focus IS the origin, so its reach is a·(1+e).
-// A moon's focus rides its parent, whose world position never exceeds the
-// parent's own heliocentric apoapsis, so the moon's reach is bounded by
-// (parent apoapsis + moon apoapsis) — a value the moon orbit stays inside for
-// every t (worst case: both bodies at apoapsis, aligned through the origin).
-// Sourced from the static ORBITAL_ELEMENTS a/e, NOT the conic CENTRES: once a
-// clock animates the trails a moon centre rides its moving parent, so a
-// centre-derived bound would go stale, whereas this element-derived envelope
-// holds for every t. Precomputed once so `enabled` bounds EVERY orbit's
-// apparent size with one comparison instead of walking the table per frame.
-// The bound is conservative (never drops a visible orbit) and only ever ≥ the
-// old centre-based value — the intended slight extra slack for moving centres.
+// A bound orbit's farthest point from its focus is its apoapsis a·(1+e); its
+// focus in turn sits within its OWN focus's reach, so summing apoapsis along the
+// focus chain bounds every point on the orbit for every t (worst case: every body
+// in the chain at apoapsis, aligned outward). Sourced from the static
+// ORBITAL_ELEMENTS a/e, NOT the conic CENTRES: once a clock animates the trails a
+// moon centre rides its moving parent, so a centre-derived bound would go stale,
+// whereas this element-derived envelope holds for every t.
 function apoapsisMpc(elements: OrbitalElements): number {
   return elements.semiMajorMpc * (1 + elements.eccentricity);
 }
-function maxHeliocentricReachMpc(elements: OrbitalElements): number {
-  const own = apoapsisMpc(elements);
-  // Every moon parent is itself heliocentric, so one hop resolves the focus.
-  return elements.parentId === null ? own : apoapsisMpc(elementsById(elements.parentId)) + own;
+
+/**
+ * Each region's orbital reach FROM ITS OWN ANCHOR: the farthest any of that
+ * region's orbit points can lie from the anchor, over ALL clock times — a
+ * TIME-INVARIANT outer envelope. Regions with no orbits are absent from the map,
+ * so nothing here ever resolves an anchor that carries no trails.
+ *
+ * Per region, not one scene-wide maximum, because a reach is only ever subtracted
+ * from a camera distance measured against the SAME anchor. The two collapse into
+ * one number only while every orbit hangs off the origin-anchored Sun; fold a
+ * Galactic Centre orbit into a single maximum and the solar-system trails inherit
+ * ITS envelope, so `enabled`'s cull stops firing for cameras nowhere near it.
+ *
+ * The tables are parameters, not this module's own imports, so the far-anchored
+ * case is testable before such an orbit is seeded. `focusResolveOrder` is the
+ * dependency order `deriveBodyStates` resolves anchors through, so a focus chain
+ * of any depth is covered, not just satellite → planet.
+ */
+export function orbitReachByRegion(
+  anchors: readonly AnchorBody[],
+  elements: readonly OrbitalElements[],
+  regionOf: (bodyId: string) => BodyRegion | null,
+): ReadonlyMap<BodyRegion, number> {
+  const reachMpc = new Map<string, number>();
+  // An anchor has no orbit of its own to extend the envelope.
+  for (const anchor of anchors) reachMpc.set(anchor.id, 0);
+  for (const el of focusResolveOrder(anchors, elements)) {
+    reachMpc.set(el.id, apoapsisMpc(el) + reachMpc.get(el.focusId)!);
+  }
+  const byRegion = new Map<BodyRegion, number>();
+  for (const el of elements) {
+    const region = regionOf(el.id);
+    if (region === null) continue;
+    byRegion.set(region, Math.max(byRegion.get(region) ?? 0, reachMpc.get(el.id)!));
+  }
+  return byRegion;
 }
-const MAX_ORBIT_EXTENT_MPC = Math.max(...ORBITAL_ELEMENTS.map(maxHeliocentricReachMpc));
+
+// Precomputed once so `enabled` bounds every orbit's apparent size with one
+// comparison per region instead of walking the table per frame. The bound is
+// conservative (never drops a visible orbit) and only ever ≥ a centre-based
+// value — the intended slight extra slack for moving centres.
+const ORBIT_REACH_BY_REGION = orbitReachByRegion(SCENE_ANCHORS, ORBITAL_ELEMENTS, regionOfBody);
 
 export const orbitTrailsLayer: ContentLayer = {
   name: 'orbit-trails',
@@ -131,8 +171,8 @@ export const orbitTrailsLayer: ContentLayer = {
     // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
     // near-field distance gate. `ORBITAL_ELEMENTS` is a compile-time table
     // (always present), so there is no data condition — and the apoapsis-derived
-    // MAX_ORBIT_EXTENT_MPC bound below is TIME-INVARIANT, so this gate needs no
-    // per-frame derivation even though the drawn conics do.
+    // reaches below are TIME-INVARIANT, so this gate needs no per-frame
+    // derivation even though the drawn conics do.
     if (state.gpu.orbitTrailRenderer === null) return false;
     // Layer-visibility intent, mirroring filamentsLayer: the toggle is the user's
     // intent, opacityOf > 0 is the visual tail. Render whenever EITHER holds so a
@@ -147,27 +187,31 @@ export const orbitTrailsLayer: ContentLayer = {
     }
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Whole-layer sub-pixel cull, the conservative bound of the per-orbit
-    // CULL_PX loop in `draw`: at the camera's NEAREST possible distance to
-    // any orbit point (origin distance minus the system's reach — clamped to
-    // 0 when the camera is at/inside the reach, which always stays enabled),
-    // even the LARGEST orbit's apparent diameter is an upper bound for every
-    // orbit. Below CULL_PX for that bound, the draw loop would cull every
-    // conic anyway — gating here lets the executor drop the layer instead of
-    // packing zero records.
-    const nearestMpc = Math.max(
-      Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) - MAX_ORBIT_EXTENT_MPC,
-      0,
-    );
-    if (nearestMpc > 0) {
+    // CULL_PX loop in `draw`, asked once PER REGION: at the camera's NEAREST
+    // possible distance to any of that region's orbit points (its distance from
+    // the region's OWN anchor minus that region's reach — clamped to 0 when the
+    // camera is at/inside the reach, which always stays enabled), even the
+    // LARGEST of its orbits is an upper bound for all of them. Keyed on the eye
+    // position (`drawCamPos`), NOT `cam.distance`, which measures to the orbit
+    // TARGET. No region above CULL_PX means the draw loop would cull every conic
+    // anyway — dropping the layer here lets the executor skip the whole
+    // (hdr, NEAR0) step instead of packing zero records.
+    const states = sceneBodyStates(state, ctx);
+    for (const [region, reachMpc] of ORBIT_REACH_BY_REGION) {
+      const nearestMpc = Math.max(
+        regionRelativeDistanceMpc(ctx.drawCamPos, region, states) - reachMpc,
+        0,
+      );
+      if (nearestMpc === 0) return true;
       const maxDiameterPx = apparentSizePx({
-        diameterKpc: 2 * MAX_ORBIT_EXTENT_MPC * 1000,
+        diameterKpc: 2 * reachMpc * 1000,
         distanceMpc: nearestMpc,
         viewportHeightPx: ctx.canvasSize.height,
         fovYRad: ctx.fovYRad,
       });
-      if (maxDiameterPx < CULL_PX) return false;
+      if (maxDiameterPx >= CULL_PX) return true;
     }
-    return true;
+    return false;
   },
 
   draw(pass, view, ctx, state) {
@@ -178,7 +222,7 @@ export const orbitTrailsLayer: ContentLayer = {
     // every trail's mean-anomaly falloff anchor. Reading it — never re-deriving —
     // is what welds each trail to the exact instant its body is drawn at.
     const states = sceneBodyStates(state, ctx);
-    const limit = Math.min(ORBITAL_ELEMENTS.length, MAX_ORBITS);
+    const limit = ORBITAL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 
@@ -194,22 +238,27 @@ export const orbitTrailsLayer: ContentLayer = {
       state.subsystems.clipPlayer,
     );
 
-    // Pack one 28-float instance record per VISIBLE conic (byte offsets mirror
+    // Pack one 34-float instance record per VISIBLE conic (byte offsets mirror
     // the renderer's INSTANCE_ATTRIBUTES):
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32),
     //                    composed from the slab's f64 vp (the hard invariant
     //                    in the module header),
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48),
-    //   floats 16..19 — mean anomaly + fade alpha + pad×2 (loc5 at byte 64),
-    //   floats 20..23 — gradient minors M1/M2/M3 + pad (loc6 at byte 80),
-    //   floats 24..27 — gradient minors M4/M5/M6 + pad (loc7 at byte 96).
-    // The minors are the CPU-f64 hoist that keeps the fragment's Sampson
-    // gradient affine (no f32 difference-of-products cancellation).
+    //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64,
+    //                    the ribbon vertex stage's divisor — see composeOrbitConic),
+    //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112),
+    //                    the ribbon vertex stage's screen-space bound,
+    //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128), the
+    //                    CPU closed-form clip composeOrbitConic returns.
     // Orbits below the apparent-size cull threshold are skipped entirely (not
-    // drawn), so `n` counts only the packed records; the rest fade in via the
-    // alpha the fragment multiplies through. The fragment's Newton horizon
-    // rejection is what keeps a near-edge-on orbit a thin line, not a blob.
-    let n = 0;
+    // drawn); the rest fade in via the alpha the fragment multiplies through.
+    // The fragment's Newton horizon rejection is what keeps a near-edge-on
+    // orbit a thin line, not a blob.
+    //
+    // Every visible record packs front-to-back into `staging` behind one
+    // counter — each orbit is independently clipped to its own visible arc
+    // (composeOrbitConic), so there is no second partition to keep separate.
+    let count = 0;
     for (let i = 0; i < limit; i++) {
       const elements = ORBITAL_ELEMENTS[i]!;
       // Re-derive the conic AT the frame instant: propagate the elements to
@@ -220,13 +269,10 @@ export const orbitTrailsLayer: ContentLayer = {
       const propagated = propagateElements(elements, ctx.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
       // Fold the focus into an absolute-world centre, in place on the fresh
-      // offset array (no extra allocation): a heliocentric orbit's focus is the
-      // render origin (the Sun); a moon's focus is its parent's LIVE snapshot
-      // position, so its trail rides the moving parent.
-      const focus =
-        elements.parentId === null
-          ? RENDER_ORIGIN_MPC
-          : states.get(elements.parentId)!.positionMpc;
+      // offset array (no extra allocation). The snapshot seeds anchors (the
+      // Sun) alongside every element row, so every focus — heliocentric or a
+      // moving parent — is the same uniform lookup; no per-orbit special case.
+      const focus = states.get(elements.focusId)!.positionMpc;
       const centerMpc = centerOffsetMpc;
       centerMpc[0] += focus[0];
       centerMpc[1] += focus[1];
@@ -249,7 +295,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // Per-orbit apparent-size fade × the whole-layer opacity (hide/show fade).
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
 
-      const { ginv, minorS, minorT } = composeOrbitConic(
+      const { ginv, clipBasis, arc } = composeOrbitConic(
         view.slab.vp,
         centerMpc,
         semiMajorMpc,
@@ -257,7 +303,8 @@ export const orbitTrailsLayer: ContentLayer = {
         view.viewportPx,
         RENDER_ORIGIN_MPC,
       );
-      const base = n * INSTANCE_FLOATS;
+      if (arc[1] <= 0) continue; // whole orbit behind the camera — no geometry
+      const base = count++ * INSTANCE_FLOATS;
       staging.set(ginv, base); // Ginv columns → floats 0..11
       staging[base + 12] = elements.color[0];
       staging[base + 13] = elements.color[1];
@@ -267,12 +314,16 @@ export const orbitTrailsLayer: ContentLayer = {
       // where the body actually is at `t`, so the trail fades behind IT.
       staging[base + 16] = states.get(elements.id)!.meanAnomalyRad;
       staging[base + 17] = alpha;
-      staging[base + 18] = 0; // trailing pad — kept zeroed across frames
-      staging[base + 19] = 0;
-      staging.set(minorS, base + 20); // gradient minors M1/M2/M3 + pad → floats 20..23
-      staging.set(minorT, base + 24); // gradient minors M4/M5/M6 + pad → floats 24..27
-      n++;
+      staging[base + 18] = view.viewportPx[0]; // ribbon vertex stage's divisor
+      staging[base + 19] = view.viewportPx[1];
+      staging.set(clipBasis[0], base + 20); // clip basis Cc → floats 20..23
+      staging.set(clipBasis[1], base + 24); // clip basis Ac → floats 24..27
+      staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
+      staging[base + 32] = arc[0]; // visible arc eStart → float 32
+      staging[base + 33] = arc[1]; // visible arc eSpan → float 33
     }
-    if (n > 0) renderer.draw(pass, staging, n);
+    if (count > 0) {
+      renderer.draw(pass, staging, count, state.settings.debug.showOrbitTrailImpostor);
+    }
   },
 };

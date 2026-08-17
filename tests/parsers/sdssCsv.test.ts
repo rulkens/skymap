@@ -22,16 +22,19 @@ const SAMPLE_CSV = [
   '1237648720693788794,180.5,12.34,0.0512,19.21,18.05,17.40,17.10,16.92,0.5,30,0.7,30,0.5',
   // Invalid row: empty modelMag_u — should be skipped, not throw.
   '1237648720693788795,200.0,-5.0,0.10,,18.50,17.80,17.50,17.30,0.5,30,0.7,30,0.5',
+  // Invalid row: SDSS' `-9999` "no photometry" sentinel in modelMag_g. It
+  // parses as a finite number, so only the plausibility gate catches it.
+  '1237648720693788796,210.0,-6.0,0.10,19.10,-9999,17.80,17.50,17.30,0.5,30,0.7,30,0.5',
 ].join('\n');
 
 describe('parseSdssCsv', () => {
-  it('parses the valid row, skips the invalid one, ignores comments', () => {
+  it('parses the valid row, skips the invalid ones, ignores comments', () => {
     const { records, skipped } = parseSdssCsv(SAMPLE_CSV);
 
-    // One row in (the second valid by header but missing magU), one row out
-    // (the first), one row skipped.
+    // Three data rows: one fully valid, one missing magU, one carrying the
+    // -9999 sentinel. Only the first survives.
     expect(records.length).toBe(1);
-    expect(skipped).toBe(1);
+    expect(skipped).toBe(2);
 
     const r = records[0]!;
     // Source tag must be SDSS — this is what lets the merger and the GPU
@@ -51,6 +54,19 @@ describe('parseSdssCsv', () => {
     expect(r.magR).toBeCloseTo(17.4, 6);
     expect(r.magI).toBeCloseTo(17.1, 6);
     expect(r.magZ).toBeCloseTo(16.92, 6);
+  });
+
+  it('never emits the -9999 "no photometry" sentinel as a magnitude', () => {
+    // The sentinel is finite, so every downstream `Number.isFinite` guard
+    // accepts it: `absoluteFromApparent(-9999, d)` is about -10040, which
+    // poisons the catalog's surface-brightness zero-point and sorts to the
+    // very front of the brightness-ranked tier sub-sample.
+    const { records } = parseSdssCsv(SAMPLE_CSV);
+    for (const r of records) {
+      for (const mag of [r.magU, r.magG, r.magR, r.magI, r.magZ]) {
+        expect(mag).toBeGreaterThan(-30);
+      }
+    }
   });
 
   it('parses orientation columns and blends exp+deV via fracDeV_r', () => {

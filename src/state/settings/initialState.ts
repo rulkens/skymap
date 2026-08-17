@@ -1,19 +1,15 @@
 /**
  * buildInitialSettings — assemble the engine's boot-time settings literal.
  *
- * Every settings field lives under a named cluster (galaxy-catalog billboard
- * knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.). This
- * function is the *assembly* step that composes the per-field defaults from
- * `data/defaults.ts` (mirroring how those constants are defined one place) plus
- * the registry-derived item rows into the single `EngineSettingsState` that the
- * settings slice seeds. The data tier is NOT a settings field — it lives in its
- * own root slice and is seeded separately via the store's `preloadedState`.
+ * Composes the per-field defaults from `data/defaults.ts` plus the
+ * registry-derived item rows into the single `EngineSettingsState` the
+ * settings slice seeds. The data tier is NOT a settings field — it lives in
+ * its own root slice, seeded separately via the store's `preloadedState`.
  *
- * It lives apart from `createEngine` for two reasons: the boot-defaults shape
- * becomes independently testable (assert every cluster + every derived item row
- * is seeded) without standing up the whole engine, and `createEngine` sheds ~70
- * lines of construction noise. The function is pure and total — it takes no
- * arguments, so there's no ambient default to drift.
+ * Lives apart from `createEngine` so the boot-defaults shape is independently
+ * testable (assert every cluster + derived item row is seeded) without
+ * standing up the whole engine. Pure and total — no arguments, so there's no
+ * ambient default to drift.
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
@@ -25,18 +21,25 @@ import {
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
+  DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
   DEFAULT_EXPOSURE,
+  DEFAULT_HDR_ENABLED,
+  DEFAULT_HDR_KNEE,
+  DEFAULT_HDR_HEADROOM,
   DEFAULT_BLOOM_ENABLED,
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_FAMOUS_STARS_ENABLED,
+  DEFAULT_GALAXY_SB_SCALE,
+  DEFAULT_GALAXY_SB_MAX,
+  DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
+  DEFAULT_GALAXY_PROVENANCE,
   DEFAULT_ORBIT_TRAILS_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_EXPOSURE_NEAR_X,
@@ -47,10 +50,15 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
+  DEFAULT_ORIENTATION,
 } from '../../data/defaults';
 // The "Detail" knob's default is owned by the walk it feeds (single source of
 // truth), so seed the setting straight from it rather than restating 0.05.
 import { DEFAULT_REFINE_THRESHOLD } from '../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
+// Same relationship: the Milky-Way star-cloud look knobs are owned by the
+// renderer's calibration module, so seed them from there rather than restating
+// six numbers here.
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
@@ -73,12 +81,19 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
-    // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
-    // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
-    // registry entries so the seed can't drift from the galaxy catalog set — and,
+    // Camera orientation frame — the bare scalar "which pole is up" view
+    // preference (spec §3.2). Seeded from `DEFAULT_ORIENTATION` so that file
+    // stays the default's single source of truth (mirroring `tonemap.curve` ←
+    // `DEFAULT_TONE_MAP_CURVE`).
+    orientation: DEFAULT_ORIENTATION,
+    // Galaxy catalog layer: shared billboard appearance knobs + one item row
+    // per galaxy catalog. Rows are DERIVED from the galaxy-catalog registry
+    // entries so the seed can't drift from the galaxy catalog set — and,
     // critically, each row's `enabled` is seeded from that entry's `visible`
     // field, making SOURCE_REGISTRY the single source of truth for default
     // visibility. The alternative — hardcoding `enabled: true` — silently
@@ -88,12 +103,13 @@ export function buildInitialSettings(): EngineSettingsState {
     // catalog except famousGalaxy (the only one that renders a name label) —
     // seeded uniformly true.
     galaxyCatalogs: {
-      enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnly: DEFAULT_REAL_ONLY_MODE,
+      provenance: DEFAULT_GALAXY_PROVENANCE,
+      sbScale: DEFAULT_GALAXY_SB_SCALE,
+      sbMax: DEFAULT_GALAXY_SB_MAX,
+      falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
@@ -104,6 +120,11 @@ export function buildInitialSettings(): EngineSettingsState {
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
+    },
+    hdr: {
+      enabled: DEFAULT_HDR_ENABLED,
+      knee: DEFAULT_HDR_KNEE,
+      headroom: DEFAULT_HDR_HEADROOM,
     },
     // Screen-space bloom: master gate + the two look knobs, each seeded from its
     // `data/defaults.ts` constant so that file stays the default's single source
@@ -126,9 +147,21 @@ export function buildInitialSettings(): EngineSettingsState {
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
     },
+    // Milky Way is a singleton overlay layer: the two visibility axes plus the
+    // star-cloud look knobs all live here. The knobs spread in from
+    // `MILKY_WAY_TUNING_DEFAULTS`, which stays their single source of truth for
+    // where they start (the DebugPanel sliders own them from then on).
     milkyWay: {
       enabled: DEFAULT_MILKY_WAY_ENABLED,
       labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
+      ...MILKY_WAY_TUNING_DEFAULTS,
+    },
+    // Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
+    // visibility toggle (band + lettering) plus the band's look knobs, seeded
+    // from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
+    zoneOfAvoidance: {
+      enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+      ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
@@ -167,10 +200,10 @@ export function buildInitialSettings(): EngineSettingsState {
     // `galaxyCatalogs`), so the seed can't drift from the star-catalog set, and
     // each row's `enabled` is seeded from that entry's `visible` field —
     // SOURCE_REGISTRY stays the single source of truth for default visibility.
-    // `labelEnabled` is inert for the survey-wide Gaia bin (the star renderer
-    // draws no per-star names); seeded uniformly true for a future label-bearing
-    // famous-star catalog. Per-row "loaded" is the asset slot's own readiness —
-    // no data-layer store.
+    // `labelEnabled` seeds true for every row: it gates the famous-star map's
+    // captions on the final descent, and rides inertly on the survey-wide Gaia
+    // bin (the star renderer draws no per-star names). Per-row "loaded" is the
+    // asset slot's own readiness — no data-layer store.
     starCatalogs: {
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
@@ -188,12 +221,18 @@ export function buildInitialSettings(): EngineSettingsState {
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
-    // Famous-stars singleton overlay: the master gate on the seeded near-field
-    // star map. A flat `enabled` field like `milkyWay` / `filaments`, seeded
-    // from the SOURCE_REGISTRY famousStar row's `visible` gate. Gates the seeded
-    // map only — the star layers still draw the Sun alone when it's off.
-    famousStars: {
-      enabled: DEFAULT_FAMOUS_STARS_ENABLED,
+    // Body rows are DERIVED from the registry's body entries, so the seed can't
+    // drift from the body set, and each row's `enabled` comes from that entry's
+    // `visible` field — SOURCE_REGISTRY stays the single source of truth for
+    // default visibility. `labelEnabled` seeds true: the captions are the
+    // descent's navigation aids and show until the user mutes them.
+    bodies: {
+      items: Object.fromEntries(
+        SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
+      ) as Record<BodyId, BodyItemSettings>,
     },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
@@ -206,13 +245,11 @@ export function buildInitialSettings(): EngineSettingsState {
     flow: { ...DEFAULT_FLOW },
     // Cross-cutting label presentation: focusedOnly default OFF — all enabled
     // labels draw (the guided tour flips it on and its snapshot restores it).
-    // starLabelsEnabled default ON — the local-star captions show on the final
-    // descent until the user mutes them. planetLabelsEnabled default ON — the
-    // Earth + planet captions show on that same descent until muted.
-    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
+      showOrbitTrailImpostor: DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
@@ -245,12 +282,11 @@ export function buildInitialSettings(): EngineSettingsState {
         },
       },
     },
-    // Structure overlay: master gate on + one item row per category, each
-    // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`
-    // so the seed can't drift from the structure-id set (famous galaxies bear no
-    // ring and so have no row here).
+    // Structure overlay: one item row per category, each ring + label
+    // default-on. Keys are DERIVED from `STRUCTURE_IDS` so the seed can't
+    // drift from the structure-id set (famous galaxies bear no ring and so
+    // have no row here).
     structures: {
-      enabled: true,
       items: Object.fromEntries(
         STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
       ) as Record<StructureId, StructureItemSettings>,

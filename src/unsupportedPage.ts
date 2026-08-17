@@ -5,7 +5,7 @@
  * ### Why a string-returning function rather than a JSX component
  *
  * On unsupported browsers we never want to mount React.  Doing so would
- * instantiate `useEngine` / `useFamousMeta` / the entire splash machinery
+ * instantiate `useEngine` / the Redux store / the entire splash machinery
  * for a session that can't render a single frame — wasted code, wasted
  * error surfaces, and one more place where "did we forget to early-return?"
  * could bite us.  Instead, `main.tsx` checks `typeof navigator.gpu === 'undefined'`

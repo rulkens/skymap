@@ -48,6 +48,8 @@ import { EARTH_REF } from '../../data/selection/earthRef';
 import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { earthHomePose } from '../../services/engine/camera/earthHomePose';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import type { RootState, SagaContext } from '../../store/types';
@@ -66,14 +68,22 @@ export function* watchGoHomeSaga() {
     const time = yield* select((state: RootState) => state.time);
     const simDays = deriveSimDays(time, performance.now());
 
+    // The steady committed orientation basis, so the home pose encodes its aim
+    // through the same frame the render path decodes with (see `earthHomePose`).
+    // The bare id is also stamped onto the descriptor (`frame`) so the tween
+    // driver can re-express the pose if the setting changes mid-flight.
+    const frame = yield* select(selectOrientation);
+    const frameBasis = ORIENTATION_FRAMES[frame];
+
     yield* put(updateSelectionSelect(EARTH_REF));
     yield* put(updateSelectionFocus(EARTH_REF));
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: earthHomePose(simDays, runtime.fovYRad),
+        to: earthHomePose(simDays, runtime.fovYRad, frameBasis),
         durationMs: FOCUS_TWEEN_MS,
         easing: 'easeOutCubic',
+        frame,
       }),
     );
   }

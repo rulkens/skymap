@@ -106,6 +106,7 @@ function makeDeps(): BootstrapDeps {
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
+      unwatchHdrCapability: () => {},
     },
   };
 }

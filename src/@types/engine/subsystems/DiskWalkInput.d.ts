@@ -10,7 +10,7 @@
  * `px` twice. The unified walk computes that geometry ONCE, which means its
  * input can only carry what the geometry pass itself reads: the camera, the
  * visible catalogs, the source-visibility mask, and the hoisted
- * pixels-per-radian. Body-specific extras (the textured planner's `famousMeta`
+ * pixels-per-radian. Body-specific extras (the textured planner's `famousGalaxiesMeta`
  * / `nowMs`) are NOT here — each body intersects this type with its own frame
  * input so the walk never sees fields it doesn't use.
  *

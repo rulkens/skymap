@@ -1,6 +1,6 @@
 /**
  * End-to-end round-trip: recipe.json written to a real tmpdir, read back
- * through `readCuratedRecipe`, assembled by `assembleFamousMeta`, and
+ * through `readCuratedRecipe`, assembled by `assembleFamousGalaxiesMeta`, and
  * compared against `deriveFamousCalibration` computed from the original inputs.
  *
  * The per-stage unit tests in buildFamous.calibration.test.ts inject a fake
@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { assembleFamousMeta, readCuratedRecipe } from '../../../tools/famous/buildFamous';
+import { assembleFamousGalaxiesMeta, readCuratedRecipe } from '../../../tools/famous/buildFamous';
 import {
   serialiseRecipe,
   type Recipe,
@@ -35,7 +35,7 @@ import type { FamousEntry } from '../../../tools/parsers/famousSeed';
 
 const GALAXY_ID = 'ngc-roundtrip';
 
-/** Minimal valid FamousEntry — only the fields assembleFamousMeta reads. */
+/** Minimal valid FamousEntry — only the fields assembleFamousGalaxiesMeta reads. */
 function makeEntry(overrides: Partial<FamousEntry> = {}): FamousEntry {
   return {
     id: GALAXY_ID,
@@ -105,7 +105,9 @@ describe('calibration round-trip (real filesystem)', () => {
     // Plain number[] so JSON → JS equality is exact (no Float32 rounding).
     const axisRatios = [0.6];
 
-    const result = assembleFamousMeta([entry], axisRatios, (id) => readCuratedRecipe(repoRoot, id));
+    const result = assembleFamousGalaxiesMeta([entry], axisRatios, (id) =>
+      readCuratedRecipe(repoRoot, id),
+    );
 
     // Replicate the assembler's deprojection logic:
     //   effectiveAxisRatio = disk.axisRatio (0.5), not catalog value.
@@ -137,7 +139,9 @@ describe('calibration round-trip (real filesystem)', () => {
     const entry = makeEntry();
     const axisRatios = [0.6];
 
-    const result = assembleFamousMeta([entry], axisRatios, (id) => readCuratedRecipe(repoRoot, id));
+    const result = assembleFamousGalaxiesMeta([entry], axisRatios, (id) =>
+      readCuratedRecipe(repoRoot, id),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]!.calibration).toBeUndefined();

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { mat4 } from 'wgpu-matrix';
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../../tools/stars/buildStarOctree';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { mortonEncode3 } from '../../../../../src/utils/math/mortonEncode3';
+import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
 import {
   walkStarOctreeCut,
+  type StarCutFrustum,
   type StarCutSnapshot,
   type StarNodeDraw,
 } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
@@ -133,7 +136,10 @@ describe('walkStarOctreeCut', () => {
     const a = (parent << 3) | 0;
     const b = (parent << 3) | 1;
     const catalog = buildStarOctree(
-      sortedStars([...cellStars(a, STAR_LEAF_CAPACITY + 1), ...cellStars(b, STAR_LEAF_CAPACITY + 1)]),
+      sortedStars([
+        ...cellStars(a, STAR_LEAF_CAPACITY + 1),
+        ...cellStars(b, STAR_LEAF_CAPACITY + 1),
+      ]),
       GRID,
     );
     expect(catalog.starCount).toBe(2 * (STAR_LEAF_CAPACITY + 1));
@@ -173,6 +179,107 @@ describe('walkStarOctreeCut', () => {
     expect(nearDraws.some((d) => far.nodes[d.nodeIndex]!.mortonIndex === 0)).toBe(true);
     // The far cluster collapses to one or more aggregates (childMask != 0).
     expect(farDraws.length).toBeGreaterThan(0);
+  });
+
+  // ── Frustum cull (the off-screen prune) ──────────────────────────────────
+  //
+  // A camera at grid (256.5, 256.5, 256.5) with a FRONT dense cell 10 pc in −z
+  // and a BACK dense cell 10 pc in +z. Planes are built eye-at-origin looking
+  // down −z (the walk's camera-relative parsec frame: box centre − camPos), so
+  // FRONT sits deep inside the near/far bracket and BACK is unambiguously past
+  // the near clip. Verdicts are hand-reasoned from that geometry.
+  const FRONT_MORTON = mortonEncode3(256, 256, 246);
+  const BACK_MORTON = mortonEncode3(256, 256, 266);
+  const CULL_CAM: Vec3 = [256.5, 256.5, 256.5];
+
+  function frontBackCatalog(): StarCatalog {
+    return buildStarOctree(
+      sortedStars([
+        ...cellStars(FRONT_MORTON, STAR_LEAF_CAPACITY + 1),
+        ...cellStars(BACK_MORTON, STAR_LEAF_CAPACITY + 1),
+      ]),
+      GRID,
+    );
+  }
+
+  // Six unit planes in the CAMERA-RELATIVE parsec frame (eye at origin, since the
+  // walk subtracts camPos before testing), looking down −z. near 1 / far 100 pc
+  // bracket both 10-pc cells; tiny slack so the prune is tight for the assertion.
+  function forwardFrustumPc(): StarCutFrustum {
+    const proj = mat4.perspective(Math.PI / 3, 1, 1, 100);
+    const view = mat4.lookAt([0, 0, 0], [0, 0, -1], [0, 1, 0]);
+    const vp = mat4.multiply(proj, view) as Float32Array;
+    return {
+      planesPc: Float64Array.from(frustumPlanesFromViewProj(vp)),
+      angularMarginRad: 0.0001,
+      worldSpread: 1,
+    };
+  }
+
+  function leafIndexForMorton(catalog: StarCatalog, morton: number): number {
+    return catalog.nodes.findIndex((n) => n.childMask === 0 && n.mortonIndex === morton);
+  }
+
+  it('prunes the off-screen subtree and keeps the on-screen one', () => {
+    const catalog = frontBackCatalog();
+    const frontLeaf = leafIndexForMorton(catalog, FRONT_MORTON);
+    const backLeaf = leafIndexForMorton(catalog, BACK_MORTON);
+    expect(frontLeaf).toBeGreaterThanOrEqual(0);
+    expect(backLeaf).toBeGreaterThanOrEqual(0);
+
+    // Control: no frustum → the walk covers BOTH cells (byte-identical to before).
+    const uncut = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG));
+    expect(uncut.some((d) => d.nodeIndex === frontLeaf)).toBe(true);
+    expect(uncut.some((d) => d.nodeIndex === backLeaf)).toBe(true);
+
+    // With the forward frustum: FRONT survives, BACK (behind the near clip) is
+    // pruned along with its whole subtree.
+    const culled = toDraws(
+      walkStarOctreeCut(catalog, CULL_CAM, BIG, undefined, forwardFrustumPc()),
+    );
+    expect(culled.some((d) => d.nodeIndex === frontLeaf)).toBe(true);
+    expect(culled.some((d) => d.nodeIndex === backLeaf)).toBe(false);
+  });
+
+  it('a cull keeps a covering partition of the VISIBLE leaves (no double-draw)', () => {
+    const catalog = frontBackCatalog();
+    const keys = indexByKey(catalog);
+    const draws = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, undefined, forwardFrustumPc()));
+
+    // Every committed node's terminal leaves, unioned, are still unique — a
+    // frustum removes leaves from the cut but must never double-cover a survivor.
+    const covered = new Map<number, number>();
+    for (const draw of draws) {
+      for (const leafIndex of leavesUnder(catalog, draw.nodeIndex, keys)) {
+        covered.set(leafIndex, (covered.get(leafIndex) ?? 0) + 1);
+      }
+    }
+    for (const [, seen] of covered) expect(seen).toBe(1);
+    // The pruned BACK leaf is genuinely absent from the visible cover.
+    const backLeaf = leafIndexForMorton(catalog, BACK_MORTON);
+    expect(covered.has(backLeaf)).toBe(false);
+  });
+
+  it('an all-excluding frustum yields an empty cut', () => {
+    // Both dense cells sit ~15 pc in −z of the camera; looking down +z puts BOTH
+    // behind the eye, so every populated subtree is pruned and nothing commits.
+    const catalog = buildStarOctree(
+      sortedStars([
+        ...cellStars(mortonEncode3(256, 256, 242), STAR_LEAF_CAPACITY + 1),
+        ...cellStars(mortonEncode3(256, 256, 240), STAR_LEAF_CAPACITY + 1),
+      ]),
+      GRID,
+    );
+    const proj = mat4.perspective(Math.PI / 3, 1, 1, 100);
+    const view = mat4.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
+    const vp = mat4.multiply(proj, view) as Float32Array;
+    const backward: StarCutFrustum = {
+      planesPc: Float64Array.from(frustumPlanesFromViewProj(vp)),
+      angularMarginRad: 0.0001,
+      worldSpread: 1,
+    };
+    const draws = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, undefined, backward));
+    expect(draws.length).toBe(0);
   });
 
   it('refines strictly more at a lower threshold (the Detail knob)', () => {

@@ -3,7 +3,7 @@
  * curated physical properties of a famous star that the InfoCard shows but the
  * renderer never needs.
  *
- * This mirrors `FamousMetaEntry` for galaxies. The split is deliberate: the
+ * This mirrors `FamousGalaxyMetaEntry` for galaxies. The split is deliberate: the
  * render-critical primitives (position, temperature, radius) travel with the
  * generated `FamousStarRow` so a star is drawable and selectable the instant
  * the table loads, while these narrative/physical fields — spectral type, mass,
@@ -14,7 +14,7 @@
  *
  * Fields are mutable and non-`readonly` because this is the decoded JSON shape
  * (parsed once, not a domain value carried through the store), matching the
- * `FamousMetaEntry` convention. `radiusSolar`/`temperatureK` are required — they
+ * `FamousGalaxyMetaEntry` convention. `radiusSolar`/`temperatureK` are required — they
  * duplicate the row's render values so the card can present them without a
  * cross-lookup — while `massSolar`/`luminositySolar`/`ageGyr`/`oblateness` and
  * `variable` are optional: the card omits the corresponding line when a value is

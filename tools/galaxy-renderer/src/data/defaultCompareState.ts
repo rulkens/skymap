@@ -1,6 +1,6 @@
 /**
  * DEFAULT_COMPARE_STATE — the spike's boot compare-panel session
- * (`Galaxy Renderer.dc.html:464-469`): panel closed, reference `'m100'`, no
+ * (`Galaxy Renderer.dc.html`): panel closed, reference `'m100'`, no
  * pending view-sync request, and no fit run in progress.
  */
 

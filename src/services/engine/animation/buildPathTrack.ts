@@ -64,6 +64,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 import type { PassByDir } from '../../../@types/animation/PassByDir';
@@ -71,6 +72,10 @@ import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
@@ -120,6 +125,15 @@ type BuildParams = {
    * (lateral offset + direction). Omit for through-centre. See `PassByConfig`.
    */
   readonly passBy?: PassByConfig;
+  /**
+   * The STEADY orientation-frame basis this clip was compiled under
+   * (`ORIENTATION_FRAMES[settings.orientation]`). The path's world-space forward
+   * tangents are ENCODED to (yaw, pitch) through it (`orbitAnglesLookingAlong`)
+   * so the render-path decode through the same basis aims the camera down the
+   * world path. Absent ⇒ identity (world-frame aim), so the pre-feature callers
+   * and every direct test are byte-identical.
+   */
+  readonly frameBasis?: Mat3;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -146,14 +160,8 @@ function chord(a: Vec3, b: Vec3): number {
 }
 
 // --- Small Vec3 helpers for the pass-by offset geometry ---
-const WORLD_UP: Vec3 = [0, 1, 0];
 const sub3 = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross3 = (a: Vec3, b: Vec3): Vec3 => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
-];
 function norm3(a: Vec3): Vec3 {
   const m = Math.hypot(a[0], a[1], a[2]);
   return m > CHORD_EPS ? [a[0] / m, a[1] / m, a[2] / m] : [0, 0, 0];
@@ -169,18 +177,31 @@ const isZero3 = (a: Vec3): boolean => a[0] === 0 && a[1] === 0 && a[2] === 0;
  * passByDirVec — the UNIT lateral direction to offset an interior eye knot so it
  * flies past the subject at knot `cK` rather than through it. `cPrev`/`cNext` are
  * the neighbouring centres (the travel tangent is their chord). See `PassByDir`.
+ * `frameBasis` supplies the reference up (the frame pole via `frameUp`; world +Y
+ * absent a basis) so the lateral axes track the active orientation frame.
  */
-function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3 {
+function passByDirVec(
+  cPrev: Vec3,
+  cK: Vec3,
+  cNext: Vec3,
+  mode: PassByDir,
+  frameBasis?: Mat3,
+): Vec3 {
   const t = norm3(sub3(cNext, cPrev)); // travel tangent
+  const up0 = frameUp(frameBasis);
+  // The lateral axes come from the shared image-plane basis about the travel
+  // tangent: `above` is its screen-up axis, `screenSide` its screen-right axis.
   const above = (): Vec3 => {
-    const n = norm3(perp3(WORLD_UP, t));
+    const { up } = imagePlaneBasis(t, 0, up0);
+    const n: Vec3 = [up[0], up[1], up[2]];
     return isZero3(n) ? [1, 0, 0] : n; // travel is vertical → arbitrary lateral
   };
   switch (mode) {
     case 'above':
       return above();
     case 'screenSide': {
-      const r = norm3(cross3(t, WORLD_UP));
+      const { right } = imagePlaneBasis(t, 0, up0);
+      const r: Vec3 = [right[0], right[1], right[2]];
       return isZero3(r) ? [1, 0, 0] : r;
     }
     case 'outsideBend': {
@@ -197,7 +218,7 @@ function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3
 }
 
 export function buildPathTrack(params: BuildParams): PathTrack {
-  const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
+  const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
   // arm fills each from the knob or its builder default.
@@ -233,12 +254,14 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // The CAMERA flies this spline (not a target it orbits). Knot 0 is where the
   // camera actually is right now — derived from the start pose via the orbit
   // convention eye = target + distance · dir(yaw, pitch) — so t=0 is pinned to
-  // the live camera with no positional pop.
-  const cp0 = Math.cos(start.pitch);
+  // the live camera with no positional pop. `dir` decodes frame-LOCAL; rotate
+  // into world by `frameBasis` (tight column-major product, mirroring
+  // `updatePosition.ts`) so this knot lands where the renderer's eye actually is.
+  const liveDir = rotateVec3ByTightMat3(yawPitchToDir(start.yaw, start.pitch), frameBasis);
   const liveEye: Vec3 = [
-    start.target[0] + start.distance * (cp0 * Math.sin(start.yaw)),
-    start.target[1] + start.distance * Math.sin(start.pitch),
-    start.target[2] + start.distance * (cp0 * Math.cos(start.yaw)),
+    start.target[0] + start.distance * liveDir[0],
+    start.target[1] + start.distance * liveDir[1],
+    start.target[2] + start.distance * liveDir[2],
   ];
   const knotPos: Vec3[] = [liveEye, ...waypoints.map((w) => [w.at[0], w.at[1], w.at[2]] as Vec3)];
 
@@ -255,7 +278,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     for (let k = 1; k < nKnots - 1; k++) {
       const r = waypoints[k - 1]!.radius;
       if (r === undefined || r <= 0) continue;
-      const n = passByDirVec(centres[k - 1]!, centres[k]!, centres[k + 1]!, passDir);
+      const n = passByDirVec(centres[k - 1]!, centres[k]!, centres[k + 1]!, passDir, frameBasis);
       const d = passOffset * r;
       knotPos[k] = [
         centres[k]![0] + d * n[0],
@@ -330,7 +353,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
       next = k === nKnots - 1 ? knotPos[k]! : knotPos[k + 1]!;
     }
     const fwd: Vec3 = [next[0] - prev[0], next[1] - prev[1], next[2] - prev[2]];
-    return orbitAnglesLookingAlong(fwd);
+    return orbitAnglesLookingAlong(fwd, frameBasis);
   };
   const yaw: number[] = [];
   const pitch: number[] = [];
@@ -575,7 +598,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     if (Math.hypot(fwd[0], fwd[1], fwd[2]) < CHORD_EPS) {
       return { yaw: splinedYaw, pitch: splinedPitch };
     }
-    const a = orbitAnglesLookingAlong(fwd);
+    const a = orbitAnglesLookingAlong(fwd, frameBasis);
     return {
       yaw: blendYaw(splinedYaw, a.yaw, lead),
       pitch: splinedPitch + (a.pitch - splinedPitch) * lead,
@@ -589,16 +612,16 @@ export function buildPathTrack(params: BuildParams): PathTrack {
 
     // Align-in: 0 → live orientation, 1 → the path aim (splined forward, or the
     // look-ahead direction when `lookAhead` > 0).
-    const w = EASE['inOut'](clamp01(localSec / alignSec));
+    const w = EASE['easeInOutCubic'](clamp01(localSec / alignSec));
     const yawV = blendYaw(liveYaw, aim.yaw, w);
     const pitchV = livePitch + (aim.pitch - livePitch) * w;
 
     // The spline IS the eye path. Derive the look-at target the renderer needs:
-    // updatePosition sets eye = target + distance · dir(yaw, pitch), so to land
-    // the eye on (tx,ty,tz) we set target = eye − distance · dir.
+    // updatePosition sets eye = target + distance · dir(yaw, pitch) — rotated
+    // into world by `frameBasis` — so to land the eye on (tx,ty,tz) we set
+    // target = eye − distance · dir, through the same rotation.
     const dist = Math.exp(pose.ld);
-    const cp = Math.cos(pitchV);
-    const dir: Vec3 = [cp * Math.sin(yawV), Math.sin(pitchV), cp * Math.cos(yawV)];
+    const dir = rotateVec3ByTightMat3(yawPitchToDir(yawV, pitchV), frameBasis);
     return {
       target: [pose.tx - dist * dir[0], pose.ty - dist * dir[1], pose.tz - dist * dir[2]],
       distance: dist,

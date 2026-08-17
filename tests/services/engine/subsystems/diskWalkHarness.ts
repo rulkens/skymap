@@ -13,8 +13,8 @@
 
 import type { DiskPlannerWalk } from '../../../../src/@types/engine/subsystems/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../../../../src/@types/engine/subsystems/DiskRowVisitor';
-import type { DiskWalkInput } from '../../../../src/@types/engine/subsystems/DiskWalkInput';
 import type {
+  ProceduralDiskFrameInput,
   ProceduralDiskFrameOutput,
   ProceduralDiskSubsystem,
 } from '../../../../src/@types/engine/subsystems/ProceduralDiskSubsystem';
@@ -44,7 +44,7 @@ export function noopDiskRowVisitor(): DiskRowVisitor {
 export function runProceduralSolo(
   walk: DiskPlannerWalk,
   sys: ProceduralDiskSubsystem,
-  input: DiskWalkInput,
+  input: ProceduralDiskFrameInput,
 ): ProceduralDiskFrameOutput {
   walk.runFrame(input, sys.beginFrame(input), noopDiskRowVisitor());
   return sys.lastOutput;

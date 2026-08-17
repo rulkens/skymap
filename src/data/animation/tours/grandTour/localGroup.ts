@@ -23,18 +23,25 @@
  *
  * The dwell orbits the family — the only subject we are INSIDE, so the
  * sweep shows the dwarfs strung between the two big spirals from every
- * side. One full backward revolution spans this dwell AND the
- * neighbourhood-reveal beat after it (whose pull-back keeps drifting),
- * landing exactly on the M81 Group's bearing — the flythrough's first
- * knot. Same seed-geometry procedure as the Andromeda dwell: exit yaw
- * looks along LG barycentre → M81 Group centre, and the wrap is chosen
- * backward — the short way is a +6° sliver, so a whole negative revolution
- * keeps the earlier dwells' spin direction and makes the orbit the beat's
- * actual content. The reveal beat owns its gentle share of the turn
- * (imported below); this dwell takes exactly the remainder, so re-tuning
- * the reveal rebalances this beat automatically — the landing bearing is
- * the invariant, the split is not. Constants, not runtime lookups (static
- * catalog seeds); re-derive if the enter gains an aim.
+ * side. It does NOT land on the M81 Group's bearing itself — that would put
+ * the exact landing two beats before the flythrough that needs it, and a
+ * yaw change that far out also swings the flyPath's launch EYE (target +
+ * distance·dir) around a wide orbit, reintroducing an opening whip-pan the
+ * flythrough was built not to have. `neighbourhoodReveal`'s dwell, right
+ * before the flythrough and with a STATIONARY target across its own window,
+ * owns that exact landing instead (see its header). This dwell is a plain
+ * `cruiseRate` — a RATE, not a bearing, so its MAGNITUDE (radians covered)
+ * needs no resolution against any subject. Its AXIS is not frame-invariant,
+ * though: `spin('yaw', …)` still turns about whichever orientation frame is
+ * live when the clip plays (there is no clip-local orbit axis — a deferred
+ * item, see the spec), so the same authored rate sweeps a physically
+ * different arc in world space under a different committed pole. This beat's
+ * frame is pinned supergalactic for the whole outward stretch (see
+ * `approachM31`'s `frameTo`), so today the rate is tuned once against that
+ * one axis — tuned to cover most of the shared backward revolution the two
+ * dwells' pacing was originally split across, leaving `neighbourhoodReveal`'s
+ * `spinToId` to close whatever arc remains onto M81, exactly, regardless of
+ * where this dwell happens to stop.
  *
  * The first real survey reveal rides this beat's opening: 2MRS fades in
  * with the group ring, so the family shot reads as a populated region and
@@ -54,7 +61,6 @@ import {
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
-import { REVEAL_NET_YAW_RAD } from './neighbourhoodReveal';
 
 const LOCAL_GROUP = focusId('group-local-group');
 
@@ -79,12 +85,16 @@ export const localGroup: ClipData = {
 };
 
 const DWELL_SEC = 14;
-const ARRIVAL_YAW_RAD = 2.602475; // inherited: the Andromeda dwell's landing bearing
-const EXIT_YAW_RAD = 2.706202; // M81 Group centre-frame from the LG barycentre
-// The full backward revolution both dwells share (see module header for why
-// not the +6° sliver), minus the reveal beat's own share of the turn.
-const TOTAL_NET_YAW_RAD = EXIT_YAW_RAD - ARRIVAL_YAW_RAD - Math.PI * 2;
-const NET_YAW_RAD = TOTAL_NET_YAW_RAD - REVEAL_NET_YAW_RAD;
+// Orbit speed, not a bearing — the MAGNITUDE (radians covered) is frame-
+// invariant, needing no resolution against a subject. The axis it turns
+// about is still the live orientation frame's pole (see the header) — not
+// pinned to this clip, so this number is tuned against whichever frame is
+// committed while this beat plays (supergalactic — see `approachM31`).
+// Preserves the pacing this dwell has always had: most of the shared
+// backward revolution toward the M81 Group, leaving `neighbourhoodReveal`'s
+// `spinToId` to land on it exactly (see this file's header and that file's
+// for the split).
+const NET_YAW_RAD = -4.733715;
 
 export const localGroupDwell: ClipData = dwellDrift(DWELL_SEC, {
   cruiseRate: NET_YAW_RAD / DWELL_SEC,

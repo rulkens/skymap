@@ -2,31 +2,21 @@
 //
 // BodyDetailCard — rendering tests for the rich focused-body panel.
 //
-// The card resolves its narrative/physical rows from the async
-// `useFamousStarsMeta` sidecar by looking up `target.id`.  We mock the hook so
-// each test controls exactly what the sidecar returns: a resolved entry, an
-// empty (pre-fetch / no-sidecar) state, and an entry missing its optional
-// fields.  Asserting on rendered text keeps the contract stable against
-// CSS-modules class mangling.
+// The card resolves its narrative/physical rows by looking `target.id` up in the
+// `famousStarsMeta` prop its container supplies.  Each test passes that array
+// directly, so the cases under test are just values: a resolved entry, an empty
+// array (sidecar not settled, or a deployment without one), and an entry missing
+// its optional fields.  Asserting on rendered text keeps the contract stable
+// against CSS-modules class mangling.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
+import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
+import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
-import type { UseFamousStarsMetaReturn } from '../../../src/@types/engine/UseFamousStarsMetaReturn';
-import { useFamousStarsMeta } from '../../../src/hooks/useFamousStarsMeta';
-
-vi.mock('../../../src/hooks/useFamousStarsMeta', () => ({
-  useFamousStarsMeta: vi.fn(),
-}));
-
-const mockedHook = vi.mocked(useFamousStarsMeta);
-
-function stubMeta(ret: UseFamousStarsMetaReturn): void {
-  mockedHook.mockReturnValue(ret);
-}
 
 const rigelTarget: BodyInfo = {
   type: 'body',
@@ -63,13 +53,8 @@ const rigelMeta: FamousStarMetaEntry = {
 };
 
 describe('BodyDetailCard', () => {
-  beforeEach(() => {
-    mockedHook.mockReset();
-  });
-
   it('renders headline + also-known-as + description + Wikipedia link from resolved meta', () => {
-    stubMeta({ famousStarsMeta: [rigelMeta], ready: true });
-    render(createElement(BodyDetailCard, { target: rigelTarget }));
+    render(createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [rigelMeta] }));
 
     expect(screen.getByText('Rigel')).toBeInTheDocument();
     // Aliases come from names.slice(1) — the primary name heads the card.
@@ -83,8 +68,9 @@ describe('BodyDetailCard', () => {
   });
 
   it('renders headline only before meta resolves', () => {
-    stubMeta({ famousStarsMeta: [], ready: false });
-    const { container } = render(createElement(BodyDetailCard, { target: rigelTarget }));
+    const { container } = render(
+      createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [] }),
+    );
 
     // Headline still shows from BodyInfo.label — a body is always selectable.
     expect(screen.getByText('Rigel')).toBeInTheDocument();
@@ -94,12 +80,12 @@ describe('BodyDetailCard', () => {
   });
 
   it("shows a planet's fact sheet + Wikipedia link and omits the stellar rows", () => {
-    // The hook still runs (rules-of-hooks forbid a conditional call), but a
-    // non-star body must not consume it — even when the sidecar returns a
-    // stellar entry, no meta rows leak onto a planet card.  Jupiter's rows come
+    // A non-star body must not consume the sidecar — even when a stellar entry
+    // is present, no meta rows leak onto a planet card.  Jupiter's rows come
     // from the compiled-in BODY_FACTS table, not the star sidecar.
-    stubMeta({ famousStarsMeta: [rigelMeta], ready: true });
-    const { container } = render(createElement(BodyDetailCard, { target: jupiterTarget }));
+    const { container } = render(
+      createElement(BodyDetailCard, { target: jupiterTarget, famousStarsMeta: [rigelMeta] }),
+    );
 
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
     // Radius stays first (straight off BodyInfo).
@@ -120,13 +106,49 @@ describe('BodyDetailCard', () => {
     expect(container.textContent).not.toMatch(/R☉|L☉/);
   });
 
+  it('renders no orbital rows for a body that carries no elements', () => {
+    // The optional field's absent path — every pre-existing body. A block that
+    // rendered unconditionally would print empty or NaN rows on every planet.
+    const { container } = render(
+      createElement(BodyDetailCard, { target: jupiterTarget, famousStarsMeta: [] }),
+    );
+
+    expect(container.textContent).not.toMatch(/Eccentricity|Pericentre|Orbits/);
+  });
+
+  it("renders an S-star's period, eccentricity, pericentre and pericentre speed", () => {
+    // End to end through the real seam: a stored body row for S2 goes through
+    // buildFocusable's static seed lookup and out as rendered rows, so a missing
+    // lookup or an unwired card block fails here rather than only in the browser.
+    const target = buildFocusable({
+      type: 'body',
+      id: 's2',
+      label: 'S2',
+      positionMpc: [0, 0, 0],
+      radiusKm: 1e6,
+    }) as BodyInfo;
+
+    const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));
+
+    // The focus the elements are fitted against, named rather than implied — as
+    // the reader sees it named everywhere else, off the registry row.
+    expect(screen.getByText(SGR_A_STAR_ENTRY.label)).toBeInTheDocument();
+    // Straight off the Gillessen row — wrong star ⇒ wrong period and eccentricity.
+    expect(screen.getByText('16.0 yr')).toBeInTheDocument();
+    expect(screen.getByText('0.884')).toBeInTheDocument();
+    // Derived rows: the AU/Schwarzschild pair and the speed the block exists for.
+    expect(container.textContent).toMatch(/119 AU \(1,40\d Schwarzschild radii\)/);
+    expect(container.textContent).toMatch(/7,69\d km\/s/);
+  });
+
   it('omits absent optional properties', () => {
     const { massSolar, luminositySolar, ageGyr, ...lean } = rigelMeta;
     void massSolar;
     void luminositySolar;
     void ageGyr;
-    stubMeta({ famousStarsMeta: [lean], ready: true });
-    const { container } = render(createElement(BodyDetailCard, { target: rigelTarget }));
+    const { container } = render(
+      createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [lean] }),
+    );
 
     // Required rows still render… ('Spectral type' is both the row label and
     // its InfoTip title, so it appears more than once.)

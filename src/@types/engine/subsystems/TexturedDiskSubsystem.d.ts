@@ -2,7 +2,7 @@
  * TexturedDiskSubsystem — LOD-2 per-frame planner.
  *
  * Walks the catalog, applies the px ≥ 24 fetch gate, allocates atlas
- * slots through the injected `GalaxyAtlasSubsystem`, schedules fetches,
+ * slots through the injected `BitmapStreamSubsystem`, schedules fetches,
  * computes load-fade + distance-fade multipliers, sorts back-to-front,
  * emits the disk array. Every encoded galaxy has finite (axisRatio, PA)
  * — `tools/catalog/buildAllBins.ts` supplies a deterministic hash-based
@@ -16,20 +16,20 @@
 
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { DiskInstance } from '../../rendering/DiskInstance';
-import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 import type { DiskRowVisitor } from './DiskRowVisitor';
 import type { DiskWalkInput } from './DiskWalkInput';
 import type { HiResFamousSubsystem } from './HiResFamousSubsystem';
 
 /**
  * The textured body IS the one with extras beyond the geometry-bearing walk
- * input: the per-row famous calibration lookup (`famousMeta`) and the stamped
+ * input: the per-row famous calibration lookup (`famousGalaxiesMeta`) and the stamped
  * frame clock (`nowMs`). Everything the shared walk actually reads lives in
  * `DiskWalkInput`; this type intersects those extras onto it so the walk never
  * sees fields it doesn't use.
  */
 export type TexturedDiskFrameInput = DiskWalkInput & {
-  readonly famousMeta: readonly FamousMetaEntry[];
+  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
   /**
    * The frame's stamped clock (`ctx.nowMs`). Drives the load-fade ramp and
    * the arrival timestamps, so crossfade alphas are a pure function of
@@ -48,7 +48,7 @@ export type TexturedDiskSubsystem = Destroyable & {
   /**
    * Start a frame: returns the `DiskRowVisitor` the shared walk drives for
    * this frame.  The visitor closes over this subsystem's sticky maps, a
-   * fresh per-frame disk accumulator, and the frame's `famousMeta` / `nowMs`
+   * fresh per-frame disk accumulator, and the frame's `famousGalaxiesMeta` / `nowMs`
    * extras; its `endFrame` sorts back-to-front and stashes the result on
    * `lastOutput` so the pass file can read it without re-running.
    */

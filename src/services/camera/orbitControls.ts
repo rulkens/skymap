@@ -63,9 +63,13 @@
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
 import { updatePosition } from '../../utils/camera/updatePosition';
-import { clampDistance } from '../../utils/camera/clampDistance';
+import { zoomedDistance } from '../../utils/camera/zoomedDistance';
+import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
+import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../utils/camera/frameUp';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -188,6 +192,12 @@ export function attachOrbitControls(
 
   /** Squared pixel distance between pointerdown and pointerup. */
   const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
+
+  // Both zoom paths below (pinch, and a wheel tick during a held gesture) need
+  // the focused body's radius to taper/floor `zoomedDistance` against — read
+  // live through the caller's getter rather than cached, since this module
+  // never sees the scene and focus can change while controls stay attached.
+  const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
 
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
@@ -316,14 +326,14 @@ export function attachOrbitControls(
   // ── Reusable scratch vectors for the pan path ────────────────────────────
   //
   // Allocated once at attach time and reused on every pointermove so the
-  // hot-path doesn't allocate.  vec3.cross / vec3.normalize / vec3.scale all
+  // hot-path doesn't allocate.  vec3.subtract / vec3.normalize / vec3.scale all
   // accept the `dst` as an optional LAST arg; we pass these scratches in as
   // that destination to keep GC pressure at zero during a continuous drag.
-  const forwardScratch = vec3.create();
-  const rightScratch = vec3.create();
-  const upScratch = vec3.create();
+  // `imagePlaneBasis` writes its result into `basisScratch` for the same reason.
+  const forwardScratch: Vec3 = [0, 0, 0];
+  const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
   const panDeltaScratch = vec3.create();
-  const WORLD_UP: Vec3 = [0, 1, 0];
+  const upRefScratch: Vec3 = [0, 0, 0];
 
   const onMove = (e: PointerEvent) => {
     // Update the live position of whichever pointer this move belongs to.
@@ -344,14 +354,14 @@ export function attachOrbitControls(
       // zoom IN.  Pinch IN does the inverse.  This matches the "grab
       // the world and stretch" mental model that mobile users expect.
       //
-      // Symmetric with the wheel zoom's exponential model — both
-      // produce a constant proportional step regardless of how zoomed
-      // we already are.  No need for a separate sensitivity tuning;
-      // raw pixel ratio is naturally calibrated to the user's hand.
+      // Symmetric with the wheel zoom's exponential model — both feed the same
+      // ratio into `zoomedDistance` (see its module header). No need for a
+      // separate sensitivity tuning; raw pixel ratio is naturally calibrated
+      // to the user's hand.
       if (activePointers.size < 2 || lastPinchDist === 0) return;
       const newDist = currentPinchDistance();
       if (newDist > 0) {
-        cam.distance = clampDistance(cam.distance * (lastPinchDist / newDist));
+        cam.distance = zoomedDistance(cam.distance, lastPinchDist / newDist, pivotRadius());
         lastPinchDist = newDist;
         updatePosition(cam);
         options?.onChange?.();
@@ -390,20 +400,21 @@ export function attachOrbitControls(
       //
       // Step 1: derive camera basis vectors.  `forward` is the unit vector
       // from camera position toward the target — that's the negative of
-      // (position − target).  `right = forward × world_up` (the side-axis
-      // of the camera's screen plane).  `cam_up = right × forward` (the
-      // screen-up axis, recomputed orthogonal to forward + right rather
-      // than blindly using world_up; this is what handles tilt cases
-      // correctly when pitch is non-zero).
+      // (position − target).  `imagePlaneBasis` turns it into the screen
+      // `right` axis (`forward × up`, the side-axis of the screen plane) and
+      // the orthonormal `up` axis (`right × forward`, recomputed orthogonal
+      // to forward + right rather than blindly using world-up, so it handles
+      // tilt cases correctly when pitch is non-zero). Roll is 0 here; the
+      // reference up is the frame pole (`frameUp(cam.upBasis)`; world +Y
+      // absent a basis), so the drag pan tracks whichever frame is active.
       vec3.subtract(cam.target, cam.position, forwardScratch);
       vec3.normalize(forwardScratch, forwardScratch);
-      vec3.cross(forwardScratch, WORLD_UP, rightScratch);
-      vec3.normalize(rightScratch, rightScratch);
-      vec3.cross(rightScratch, forwardScratch, upScratch);
-      // upScratch is already unit length (cross of two perpendicular unit
-      // vectors), but normalising defensively guards against floating-point
-      // drift on long drags.
-      vec3.normalize(upScratch, upScratch);
+      const basis = imagePlaneBasis(
+        forwardScratch,
+        0,
+        frameUp(cam.upBasis, upRefScratch),
+        basisScratch,
+      );
 
       // Step 2: convert pixel delta → world delta at the camera's focal
       // distance.  At the target depth, one CSS pixel maps to
@@ -423,8 +434,8 @@ export function attachOrbitControls(
       // (CSS y grows downward; cam_up points toward +screen-up, which is
       // the OPPOSITE of CSS y, so the +dy → +cam_up sign falls out
       // naturally without an extra flip.)
-      vec3.scale(rightScratch, -dx * pxToWorld, panDeltaScratch);
-      vec3.addScaled(panDeltaScratch, upScratch, dy * pxToWorld, panDeltaScratch);
+      vec3.scale(basis.right, -dx * pxToWorld, panDeltaScratch);
+      vec3.addScaled(panDeltaScratch, basis.up, dy * pxToWorld, panDeltaScratch);
 
       // Step 4: shift the target.  Camera.position is recomputed from
       // target + dir(yaw, pitch) · distance inside updatePosition, so we
@@ -446,19 +457,20 @@ export function attachOrbitControls(
     // If we added dx instead, drag-right would swing the camera rightward,
     // which feels like an FPS look — counter-intuitive for an orbiting view.
     //
-    // Sensitivity: 0.005 rad/px means a 100 px drag sweeps ~28.6°, which
-    // covers roughly 1/12 of a full orbit. This feels natural on a typical
-    // laptop trackpad — fast enough to reorient in a few gestures, slow
-    // enough for precise positioning. Exposing this as a tunable constant
-    // (rather than deriving it from fov or canvas size) keeps the feel
-    // consistent regardless of resolution or zoom level.
-    cam.yaw -= dx * 0.005;
+    // Sensitivity: `orbitRadPerPixel` damps the flat rate by altitude above a
+    // focused body's surface so the ground under the cursor tracks the drag
+    // (see the util's module header for the derivation and its limits).
+    const cssHeight = canvas.clientHeight || 1;
+    const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivotRadius());
+
+    cam.yaw -= dx * radPerPixel;
 
     // Pitch (up / down): dragging down (positive dy, because CSS Y grows
     // downward) should tilt the camera upward toward the +Y pole — so we
     // *add* dy to pitch.  Clamp to ±PITCH_LIMIT to prevent the gimbal-lock
-    // singularity at ±π/2 (see PITCH_LIMIT comment above).
-    cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * 0.005));
+    // singularity at ±π/2 (see PITCH_LIMIT comment above). Same altitude-damped
+    // rate as yaw.
+    cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * radPerPixel));
 
     // Recalculate cam.position from the updated yaw/pitch/distance.
     // The render loop reads cam.position (via computeViewProj) on the next
@@ -475,7 +487,7 @@ export function attachOrbitControls(
     // passive listeners cannot call `preventDefault()`.
     e.preventDefault();
 
-    // Exponential zoom: multiply distance by e^(δ · k).
+    // Exponential zoom: scale by e^(δ · k) per notch.
     //
     // Why exponential (multiplicative) rather than linear (additive)?
     //
@@ -494,17 +506,18 @@ export function attachOrbitControls(
     //   • Scroll down (positive deltaY) → factor > 1 → distance grows (zoom out).
     //   • Scroll up   (negative deltaY) → factor < 1 → distance shrinks (zoom in).
     //
-    // `clampDistance` enforces the global zoom envelope (see orbitCamera.ts):
-    // a hard floor prevents the camera from flipping through the target into
-    // an inverted scene; a hard ceiling prevents drifting off into the void
-    // beyond the deepest galaxy catalog, where the cloud collapses to a dot.
+    // `zoomedDistance` applies that per-notch factor to altitude above a
+    // pivot's surface rather than raw distance (see its module header); the
+    // ceiling it still enforces via `clampDistance` prevents drifting off into
+    // the void beyond the deepest galaxy catalog, where the cloud collapses to
+    // a dot.
     const factor = Math.exp(e.deltaY * 0.001);
 
     if (activePointers.size > 0) {
       // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
       // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
       // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = clampDistance(cam.distance * factor);
+      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius());
       updatePosition(cam);
       options?.onChange?.();
       return;

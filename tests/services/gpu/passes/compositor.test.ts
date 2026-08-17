@@ -26,7 +26,7 @@ import { createCompositor } from '../../../../src/services/gpu/passes/compositor
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 
 // A basic tone-map for draws where the exact bytes don't matter.
-const TONE: ToneMap = { exposure: 1, curve: 1 };
+const TONE: ToneMap = { exposure: 1, curve: 1, hdrKnee: 0, hdrHeadroom: 0 };
 
 // Dst formats threaded per draw (the caller resolves these from the dest
 // target). SWAP mirrors the swap chain on macOS; HDR the rgba16float buffer.
@@ -176,7 +176,7 @@ describe('createCompositor', () => {
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
 
-    c.draw(pass, SRC, 'replace', { exposure: 1e9, curve: 2 }, SWAP);
+    c.draw(pass, SRC, 'replace', { exposure: 1e9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 }, SWAP);
     const b1 = packedBytes(device, 0);
     const f1 = new Float32Array(b1);
     const u1 = new Uint32Array(b1);
@@ -186,7 +186,7 @@ describe('createCompositor', () => {
     expect(u1[3]).toBe(2); // curve
     expect(u1[4]).toBe(1); // toneEnabled
 
-    c.draw(pass, SRC, 'replace', { exposure: 1e-9, curve: 2 }, SWAP);
+    c.draw(pass, SRC, 'replace', { exposure: 1e-9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 }, SWAP);
     const f2 = new Float32Array(packedBytes(device, 1));
     expect(f2[0]).toBeCloseTo(0.05, 6); // exposure clamped to the lower bound
   });

@@ -9,8 +9,7 @@
  * The Stars master differs from the Galaxies master: it reflects the real
  * `starCatalogs.enabled` gate (a boolean prop), and derives an `indeterminate`
  * visual only when the gate is on while not every catalog row is enabled
- * ("mixed"). With today's single `gaiaStars` catalog, "mixed" is reachable as
- * gate-on + catalog-off.
+ * ("mixed") — reached here as gate-on with `gaiaStars` off.
  *
  * Tests cover:
  *  - Per-catalog checkbox reflects `items[id].enabled`.
@@ -18,22 +17,26 @@
  *  - Master reflects allOn (checked, not indeterminate) / mixed (checked +
  *    indeterminate) / noneOn (unchecked), and clicking it fires `onToggleMaster`
  *    with the flipped gate value.
- *  - The Advanced star-size slider echoes the `sizePx` prop and fires
- *    `onSizeChange` with the parsed float when moved.
- *  - The Advanced star-brightness slider echoes the `brightness` prop and fires
- *    `onBrightnessChange` with the parsed float when moved.
+ *  - Each Advanced Slider (star size, brightness, detail, glow overlap,
+ *    exposure near/mid/far, fog cap) echoes its prop via `aria-valuenow` /
+ *    `aria-valuetext`, and a keyboard nudge fires the matching `onChange`
+ *    handler with the stepped value — the Slider component has no native
+ *    range input, so these are queried by `[role="slider"]` +
+ *    `aria-label`, per the pattern in GalaxiesSection.test.ts.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import StarsSection from '../../../src/components/SettingsPanel/StarsSection';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 
 function items(gaiaEnabled: boolean): Record<StarCatalogId, StarCatalogItemSettings> {
-  return { gaiaStars: { enabled: gaiaEnabled, labelEnabled: true } };
+  return {
+    famousStar: { enabled: true, labelEnabled: true },
+    gaiaStars: { enabled: gaiaEnabled, labelEnabled: true },
+  };
 }
 
 function baseProps() {
@@ -48,7 +51,6 @@ function baseProps() {
     exposureMidX: 57,
     exposureFarX: 70,
     aggregateIntensityCap: 0.06,
-    famousStarsEnabled: true,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
@@ -59,7 +61,6 @@ function baseProps() {
     onExposureMidXChange: vi.fn<(v: number) => void>(),
     onExposureFarXChange: vi.fn<(v: number) => void>(),
     onAggregateIntensityCapChange: vi.fn<(v: number) => void>(),
-    onToggleFamousStars: vi.fn<(enabled: boolean) => void>(),
   };
 }
 
@@ -86,49 +87,6 @@ describe('StarsSection', () => {
       fireEvent.click(gaia);
       expect(onToggleCatalog).toHaveBeenCalledOnce();
       expect(onToggleCatalog).toHaveBeenCalledWith('gaiaStars', false);
-    });
-  });
-
-  describe('famous-stars row', () => {
-    it('reflects the famousStarsEnabled prop and shows the seeded roster count chip', () => {
-      const { container } = render(
-        createElement(StarsSection, { ...baseProps(), famousStarsEnabled: false }),
-      );
-      const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars');
-      expect(toggle).not.toBeNull();
-      expect(toggle!.checked).toBe(false);
-      const label = container.querySelector('label[for="toggle-famous-stars"]')!;
-      expect(label.textContent).toContain('Famous stars');
-      // The chip is the SEEDED roster size (a compile-time constant off the seed
-      // table), styled like the mapped rows' loaded-count chip — derived here so
-      // a reseed can't strand the assertion.
-      const chip = label.querySelector('span');
-      expect(chip).not.toBeNull();
-      expect(chip!.textContent).toBe(SCENE_STARS.length.toLocaleString());
-    });
-
-    it('renders as the FIRST row in the Star catalogs list, ahead of the mapped catalogs', () => {
-      const { container } = render(createElement(StarsSection, baseProps()));
-      // The row toggles carry stable ids; the famous-stars toggle must precede
-      // every mapped `#toggle-star-catalog-*` row in document order.
-      const rowToggles = Array.from(
-        container.querySelectorAll<HTMLInputElement>(
-          '#toggle-famous-stars, [id^="toggle-star-catalog-"]',
-        ),
-      ).map((el) => el.id);
-      expect(rowToggles[0]).toBe('toggle-famous-stars');
-      expect(rowToggles).toContain('toggle-star-catalog-gaiaStars');
-    });
-
-    it('fires onToggleFamousStars(false) when the checked row is clicked', () => {
-      const onToggleFamousStars = vi.fn<(enabled: boolean) => void>();
-      const { container } = render(
-        createElement(StarsSection, { ...baseProps(), famousStarsEnabled: true, onToggleFamousStars }),
-      );
-      const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars')!;
-      fireEvent.click(toggle);
-      expect(onToggleFamousStars).toHaveBeenCalledOnce();
-      expect(onToggleFamousStars).toHaveBeenCalledWith(false);
     });
   });
 
@@ -167,9 +125,7 @@ describe('StarsSection', () => {
     });
 
     it('is unchecked when the gate is off (noneOn)', () => {
-      const { container } = render(
-        createElement(StarsSection, { ...baseProps(), enabled: false }),
-      );
+      const { container } = render(createElement(StarsSection, { ...baseProps(), enabled: false }));
       const header = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       expect(header.checked).toBe(false);
       expect(header.indeterminate).toBe(false);
@@ -198,19 +154,30 @@ describe('StarsSection', () => {
     });
   });
 
+  // The Advanced sliders have no native range input; each is queried from the
+  // (default-collapsed, aria-hidden) Advanced section by role + aria-label,
+  // per the pattern in GalaxiesSection.test.ts. ArrowRight nudges by one step.
+  function sliderByLabel(container: HTMLElement, label: string): HTMLElement {
+    const sliders = Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]'));
+    const match = sliders.find((el) => el.getAttribute('aria-label') === label);
+    expect(match).not.toBeUndefined();
+    return match!;
+  }
+
   describe('star-size slider', () => {
     it('has value matching the sizePx prop', () => {
       const { container } = render(createElement(StarsSection, { ...baseProps(), sizePx: 4.5 }));
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-size');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('4.5');
+      const slider = sliderByLabel(container, 'Star size');
+      expect(slider.getAttribute('aria-valuenow')).toBe('4.5');
+      expect(slider.getAttribute('aria-valuetext')).toBe('4.5 px');
     });
 
-    it('fires onSizeChange with the parsed float when the slider moves', () => {
+    it('fires onSizeChange with the stepped value on a keyboard nudge', () => {
       const onSizeChange = vi.fn<(v: number) => void>();
-      const { container } = render(createElement(StarsSection, { ...baseProps(), onSizeChange }));
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-size')!;
-      fireEvent.change(slider, { target: { value: '3.7' } });
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), sizePx: 3.6, onSizeChange }),
+      );
+      fireEvent.keyDown(sliderByLabel(container, 'Star size'), { key: 'ArrowRight' });
       expect(onSizeChange).toHaveBeenCalledOnce();
       expect(onSizeChange).toHaveBeenCalledWith(3.7);
     });
@@ -221,20 +188,19 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), brightness: 2.2 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-brightness');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('2.2');
+      const slider = sliderByLabel(container, 'Star brightness');
+      expect(slider.getAttribute('aria-valuenow')).toBe('2.2');
+      expect(slider.getAttribute('aria-valuetext')).toBe('2.2×');
     });
 
-    it('fires onBrightnessChange with the parsed float when the slider moves', () => {
+    it('fires onBrightnessChange with the stepped value on a keyboard nudge', () => {
       const onBrightnessChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onBrightnessChange }),
+        createElement(StarsSection, { ...baseProps(), brightness: 0.56, onBrightnessChange }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-brightness')!;
-      fireEvent.change(slider, { target: { value: '0.6' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Star brightness'), { key: 'ArrowRight' });
       expect(onBrightnessChange).toHaveBeenCalledOnce();
-      expect(onBrightnessChange).toHaveBeenCalledWith(0.6);
+      expect(onBrightnessChange).toHaveBeenCalledWith(0.61);
     });
   });
 
@@ -243,18 +209,21 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), refineThreshold: 0.12 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-detail');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('0.12');
+      const slider = sliderByLabel(container, 'Detail');
+      expect(slider.getAttribute('aria-valuenow')).toBe('0.12');
+      expect(slider.getAttribute('aria-valuetext')).toBe('0.12');
     });
 
-    it('fires onRefineThresholdChange with the parsed float when the slider moves', () => {
+    it('fires onRefineThresholdChange with the stepped value on a keyboard nudge', () => {
       const onRefineThresholdChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onRefineThresholdChange }),
+        createElement(StarsSection, {
+          ...baseProps(),
+          refineThreshold: 0.02,
+          onRefineThresholdChange,
+        }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-detail')!;
-      fireEvent.change(slider, { target: { value: '0.03' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Detail'), { key: 'ArrowRight' });
       expect(onRefineThresholdChange).toHaveBeenCalledOnce();
       expect(onRefineThresholdChange).toHaveBeenCalledWith(0.03);
     });
@@ -265,18 +234,17 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), glowOverlap: 1.8 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-glow-overlap');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('1.8');
+      const slider = sliderByLabel(container, 'Glow overlap');
+      expect(slider.getAttribute('aria-valuenow')).toBe('1.8');
+      expect(slider.getAttribute('aria-valuetext')).toBe('1.8×');
     });
 
-    it('fires onGlowOverlapChange with the parsed float when the slider moves', () => {
+    it('fires onGlowOverlapChange with the stepped value on a keyboard nudge', () => {
       const onGlowOverlapChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onGlowOverlapChange }),
+        createElement(StarsSection, { ...baseProps(), glowOverlap: 2.1, onGlowOverlapChange }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-glow-overlap')!;
-      fireEvent.change(slider, { target: { value: '2.2' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Glow overlap'), { key: 'ArrowRight' });
       expect(onGlowOverlapChange).toHaveBeenCalledOnce();
       expect(onGlowOverlapChange).toHaveBeenCalledWith(2.2);
     });
@@ -287,18 +255,21 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), exposureNearX: 30 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-near');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('30');
+      const slider = sliderByLabel(container, 'Exposure (near)');
+      expect(slider.getAttribute('aria-valuenow')).toBe('30');
+      expect(slider.getAttribute('aria-valuetext')).toBe('30.0×');
     });
 
-    it('fires onExposureNearXChange with the parsed float when the slider moves', () => {
+    it('fires onExposureNearXChange with the stepped value on a keyboard nudge', () => {
       const onExposureNearXChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onExposureNearXChange }),
+        createElement(StarsSection, {
+          ...baseProps(),
+          exposureNearX: 22,
+          onExposureNearXChange,
+        }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-near')!;
-      fireEvent.change(slider, { target: { value: '22.5' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Exposure (near)'), { key: 'ArrowRight' });
       expect(onExposureNearXChange).toHaveBeenCalledOnce();
       expect(onExposureNearXChange).toHaveBeenCalledWith(22.5);
     });
@@ -309,18 +280,17 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), exposureMidX: 40 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-mid');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('40');
+      const slider = sliderByLabel(container, 'Exposure (mid)');
+      expect(slider.getAttribute('aria-valuenow')).toBe('40');
+      expect(slider.getAttribute('aria-valuetext')).toBe('40×');
     });
 
-    it('fires onExposureMidXChange with the parsed float when the slider moves', () => {
+    it('fires onExposureMidXChange with the stepped value on a keyboard nudge', () => {
       const onExposureMidXChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onExposureMidXChange }),
+        createElement(StarsSection, { ...baseProps(), exposureMidX: 32, onExposureMidXChange }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-mid')!;
-      fireEvent.change(slider, { target: { value: '33' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Exposure (mid)'), { key: 'ArrowRight' });
       expect(onExposureMidXChange).toHaveBeenCalledOnce();
       expect(onExposureMidXChange).toHaveBeenCalledWith(33);
     });
@@ -331,18 +301,17 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), exposureFarX: 120 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-far');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('120');
+      const slider = sliderByLabel(container, 'Exposure (far)');
+      expect(slider.getAttribute('aria-valuenow')).toBe('120');
+      expect(slider.getAttribute('aria-valuetext')).toBe('120×');
     });
 
-    it('fires onExposureFarXChange with the parsed float when the slider moves', () => {
+    it('fires onExposureFarXChange with the stepped value on a keyboard nudge', () => {
       const onExposureFarXChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onExposureFarXChange }),
+        createElement(StarsSection, { ...baseProps(), exposureFarX: 139, onExposureFarXChange }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-far')!;
-      fireEvent.change(slider, { target: { value: '140' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Exposure (far)'), { key: 'ArrowRight' });
       expect(onExposureFarXChange).toHaveBeenCalledOnce();
       expect(onExposureFarXChange).toHaveBeenCalledWith(140);
     });
@@ -353,18 +322,21 @@ describe('StarsSection', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), aggregateIntensityCap: 0.2 }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-fog-cap');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('0.2');
+      const slider = sliderByLabel(container, 'Fog cap');
+      expect(slider.getAttribute('aria-valuenow')).toBe('0.2');
+      expect(slider.getAttribute('aria-valuetext')).toBe('0.20');
     });
 
-    it('fires onAggregateIntensityCapChange with the parsed float when the slider moves', () => {
+    it('fires onAggregateIntensityCapChange with the stepped value on a keyboard nudge', () => {
       const onAggregateIntensityCapChange = vi.fn<(v: number) => void>();
       const { container } = render(
-        createElement(StarsSection, { ...baseProps(), onAggregateIntensityCapChange }),
+        createElement(StarsSection, {
+          ...baseProps(),
+          aggregateIntensityCap: 0.29,
+          onAggregateIntensityCapChange,
+        }),
       );
-      const slider = container.querySelector<HTMLInputElement>('#slider-star-fog-cap')!;
-      fireEvent.change(slider, { target: { value: '0.3' } });
+      fireEvent.keyDown(sliderByLabel(container, 'Fog cap'), { key: 'ArrowRight' });
       expect(onAggregateIntensityCapChange).toHaveBeenCalledOnce();
       expect(onAggregateIntensityCapChange).toHaveBeenCalledWith(0.3);
     });

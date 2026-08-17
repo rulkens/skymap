@@ -15,6 +15,7 @@ import { computeDescriptor } from '../../../../tools/galaxy-renderer/src/matcher
 import { loadImageDescriptor } from '../../../../tools/galaxy-renderer/src/matcher/loadImageDescriptor';
 import { createGalaxyStore } from '../../../../tools/galaxy-renderer/src/state/createStore';
 import { fitStopRequested } from '../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
+import { autoRotateSet } from '../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
 import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../../../tools/galaxy-renderer/@types/matcher/GalaxyDescriptor';
@@ -60,7 +61,7 @@ const REFERENCE: ReferenceGalaxy = {
   notable: '',
   credit: '',
   img: 'https://example.test/ref.png',
-  params: { type: 'E1', bulgeSize: 1, starCount: 5000 },
+  params: { type: 'E1', shared: { bulgeSize: 1 }, legacy: { starCount: 5000 } },
   view: { az: 0.4, el: 0.5, dist: 20 },
 };
 
@@ -88,6 +89,7 @@ function makeFakeEngine(): {
   const engine: GalaxyEngineHandle = {
     setParams,
     setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setFieldTuning: vi.fn<GalaxyEngineHandle['setFieldTuning']>(),
     setView,
     setAutoRotate,
     setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),
@@ -101,6 +103,11 @@ function makeFakeEngine(): {
     })),
     grab,
     getCamera: vi.fn<GalaxyEngineHandle['getCamera']>(() => ({ az: 0, el: 0, dist: 1 })),
+    getIsmMapTexture: vi.fn<GalaxyEngineHandle['getIsmMapTexture']>(),
+    getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
+    // Nothing under test here ever reaches `handle.probe` (debug-only, sole
+    // consumer is probeGpuErrors.ts) — an empty stand-in satisfies the type.
+    probe: {} as GalaxyEngineHandle['probe'],
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
 
@@ -149,7 +156,8 @@ describe('runCompareFit', () => {
 
   it('disables auto-rotate for the run and restores the store setting after', async () => {
     const { engine, mocks } = makeFakeEngine();
-    const store = createGalaxyStore(); // ui.autoRotate defaults true
+    const store = createGalaxyStore();
+    store.dispatch(autoRotateSet(true)); // seed a non-default value to prove restore, not just disable
     const loadDescriptor = makeLoadDescriptor();
 
     expect(store.getState().ui.autoRotate).toBe(true);

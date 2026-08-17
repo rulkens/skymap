@@ -27,6 +27,7 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { setGalaxyCatalogVisible } from '../../../src/state/settings/settingsSlice';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -34,8 +35,7 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
 
 /** Minimal GalaxyCatalog with a single row identified by objId. */
 function makeCloud(objId: bigint): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array([100, 0, 0]),
     spectroscopicZ: new Float32Array([0.02]),
     magU: new Float32Array([18]),
@@ -46,10 +46,7 @@ function makeCloud(objId: bigint): GalaxyCatalog {
     objIDs: new BigUint64Array([objId]),
     diameterKpc: new Float32Array([30]),
     axisRatio: new Float32Array([1]),
-    positionAngleDeg: new Float32Array([0]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-  } as unknown as GalaxyCatalog;
+  });
 }
 
 /** ResolveDeps that exposes an SDSS cloud with a known objId. */
@@ -59,7 +56,7 @@ function makeSdssResolveDeps(objId: bigint): ResolveDeps {
     catalogs: {
       get: (src) => (src === Source.SDSS ? cloud : undefined),
     },
-    famousMeta: [],
+    famousGalaxiesMeta: [],
     structures: { byId: () => null },
     stars: { current: () => null },
   };
@@ -136,7 +133,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const resolveDeps: ResolveDeps = {
       catalogs: { get: () => undefined },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     };
@@ -182,7 +179,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const emptyDeps: ResolveDeps = {
       catalogs: { get: () => undefined }, // SDSS cloud absent
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     };

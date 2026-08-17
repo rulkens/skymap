@@ -37,7 +37,7 @@
  *      Used for two patterns described in ADR 0005 §3:
  *
  *        - *Companion join*: an asset that should only start loading after
- *          its companion is `ready` (e.g. the famous-meta JSON waits until
+ *          its companion is `ready` (e.g. the famous-galaxies-meta JSON waits until
  *          the famous `.bin` is committed to avoid a race where the InfoCard
  *          renders with metadata but no galaxy positions).
  *
@@ -96,8 +96,8 @@ export type DemandCtx = {
    * predicates gate on `distanceMpc(cameraPosMpc, bodyPos)` against a per-body
    * load radius, loading a texture as the camera closes on its body and evicting
    * it as the camera leaves the neighbourhood. Derived from the same
-   * `assembleOrbitCamera(pose, projection)` the frame uses for `drawCamPos`, so
-   * demand-time proximity and draw-time position agree.
+   * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` the frame uses
+   * for `drawCamPos`, so demand-time proximity and draw-time position agree.
    */
   cameraPosMpc: Readonly<Vec3>;
   /**

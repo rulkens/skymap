@@ -32,6 +32,8 @@ import {
   focus,
   lookAtId,
   strafeId,
+  spinToId,
+  aimAlong,
   seq,
   all,
   fork,
@@ -43,10 +45,16 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
+import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { GALACTIC_DISC_FORWARD } from '../../../../src/services/engine/camera/cameraFraming';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -83,7 +91,7 @@ const VIRGO: StructureInfo = {
  */
 const DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: (id) => (id === 'cluster-virgo' ? VIRGO : null) },
   stars: { current: () => null },
 };
@@ -100,7 +108,9 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   it('all([moveTargetId, dollyToId]) resolves to all([setVec ch:target, set ch:distance])', () => {
     const id = focusId('cluster-virgo');
     const clip: ClipData = {
-      timeline: [all([moveTargetId(id, 3, 'inOut'), dollyToId(id, 3, { ease: 'inOut' })])],
+      timeline: [
+        all([moveTargetId(id, 3, 'easeInOutCubic'), dollyToId(id, 3, { ease: 'easeInOutCubic' })]),
+      ],
     };
 
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
@@ -118,7 +128,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       ch: 'target',
       to: EXPECTED_TARGET,
       over: 3,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
     });
 
     // dollyToId → set ch:'distance'
@@ -127,7 +137,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       ch: 'distance',
       to: EXPECTED_DISTANCE,
       over: 3,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
     });
   });
 
@@ -148,14 +158,14 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   it('ease and over are preserved on the resolved action', () => {
     const id = focusId('cluster-virgo');
     const clip: ClipData = {
-      timeline: [moveTargetId(id, 7, 'in')],
+      timeline: [moveTargetId(id, 7, 'easeInCubic')],
     };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
     expect(resolved.timeline[0]).toMatchObject({
       kind: 'setVec',
       ch: 'target',
       over: 7,
-      ease: 'in',
+      ease: 'easeInCubic',
     });
   });
 });
@@ -252,7 +262,7 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
   it('resolves to concurrent yaw/pitch tweens aiming from the orbit target at the subject', () => {
     // Virgo frames at [10,0,0]. Looking from the origin, the camera must aim
     // along +X: orbitAnglesLookingAlong([1,0,0]) → yaw −π/2, pitch 0.
-    const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 3, 'out')] };
+    const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 3, 'easeOutCubic')] };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
 
     const outer = resolved.timeline[0]!;
@@ -261,10 +271,15 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
       kind: 'set',
       ch: 'yaw',
       over: 3,
-      ease: 'out',
+      ease: 'easeOutCubic',
     });
     expect((outer.children[0] as { to: number }).to).toBeCloseTo(-Math.PI / 2, 10);
-    expect(outer.children[1]).toMatchObject({ kind: 'set', ch: 'pitch', over: 3, ease: 'out' });
+    expect(outer.children[1]).toMatchObject({
+      kind: 'set',
+      ch: 'pitch',
+      over: 3,
+      ease: 'easeOutCubic',
+    });
     expect((outer.children[1] as { to: number }).to).toBeCloseTo(0, 10);
   });
 
@@ -290,11 +305,13 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
     // Virgo frames at [10,0,0]; from the origin the bearing forward is +X, so
     // bearing-right (forward × worldUp) is +Z. byDeg 45 at pose distance 5 →
     // tan(45°) × 5 = 5 Mpc: the target strafes to [0,0,5].
-    const clip: ClipData = { timeline: [strafeId(focusId('cluster-virgo'), 45, 3, 'out')] };
+    const clip: ClipData = {
+      timeline: [strafeId(focusId('cluster-virgo'), 45, 3, 'easeOutCubic')],
+    };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
 
     const eff = resolved.timeline[0]!;
-    expect(eff).toMatchObject({ kind: 'setVec', ch: 'target', over: 3, ease: 'out' });
+    expect(eff).toMatchObject({ kind: 'setVec', ch: 'target', over: 3, ease: 'easeOutCubic' });
     const to = (eff as { to: [number, number, number] }).to;
     expect(to[0]).toBeCloseTo(0, 10);
     expect(to[1]).toBeCloseTo(0, 10);
@@ -318,7 +335,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
 describe('resolveClipFoci throws on unresolvable id', () => {
   it('throws when a non-null focusId does not resolve', () => {
     // 'no-such-object' passes the [a-z0-9_-]+ char-class gate and routes to
-    // resolveFamous, which scans famousMeta (empty in DEPS) and returns null —
+    // resolveFamous, which scans famousGalaxiesMeta (empty in DEPS) and returns null —
     // the only id format for which resolveFocusId itself returns null against
     // this fixture. Structure-prefixed ids (cluster-*, etc.) return a non-null
     // phantom ref without any existence check, so they would not trigger the throw.
@@ -359,7 +376,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       timeline: [
         flyPath(
           [atFocus(focusId('cluster-virgo'), { over: 2 }), atPoint([5, 5, 5], 3, { pitch: 0.2 })],
-          { over: 5, ease: 'inOut' },
+          { over: 5, ease: 'easeInOutCubic' },
         ),
       ],
     };
@@ -384,7 +401,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
 
     // The path-level over/ease pass through.
     expect(fp.over).toBe(5);
-    expect(fp.ease).toBe('inOut');
+    expect(fp.ease).toBe('easeInOutCubic');
   });
 
   it('carries path-level align/rampSec/linger/spline/turnDelay and per-waypoint linger through the rewrite', () => {
@@ -400,7 +417,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
           ],
           {
             over: 5,
-            ease: 'inOut',
+            ease: 'easeInOutCubic',
             align: 1.1,
             rampSec: 0.9,
             linger: 0.4,
@@ -430,5 +447,203 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     if (!('at' in w0)) throw new Error('waypoint 0 should be resolved to at-form');
     expect(w0.linger).toBe(0.8);
     expect(w0.radius).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 8 — spinToId resolves to a bearing-aware yaw spin
+// ---------------------------------------------------------------------------
+
+describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => {
+  it('the landing yaw (liveYaw + by) faces the focus', () => {
+    // Virgo sits at [10,0,0]; from the origin that is world +X. A nonzero live
+    // yaw makes this a real test of `by`, not a coincidence of yaw already
+    // being 0.
+    const id = focusId('cluster-virgo');
+    const livePose: CameraPose = { ...POSE, yaw: 0.5 };
+    const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
+
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose);
+    const eff = resolved.timeline[0]!;
+    if (eff.kind !== 'spin') throw new Error('expected a spin effect');
+    expect(eff.ch).toBe('yaw');
+    expect(eff.over).toBe(3);
+    expect(eff.ease).toBe('easeInOutCubic');
+
+    const landingYaw = livePose.yaw + eff.by;
+    const dir = yawPitchToDir(landingYaw, livePose.pitch); // target→eye
+    const aim: Vec3 = [-dir[0], -dir[1], -dir[2]];
+    expect(aim[0]).toBeCloseTo(1, 10);
+    expect(aim[1]).toBeCloseTo(0, 10);
+    expect(aim[2]).toBeCloseTo(0, 10);
+  });
+
+  it('honours turns: turns:-1 yields a by exactly 2π less than turns:0', () => {
+    const id = focusId('cluster-virgo');
+    const livePose: CameraPose = { ...POSE, yaw: 0.5 };
+
+    const byDefault = resolveSpinBy(spinToId(id, { over: 3 }), livePose);
+    const byLongWay = resolveSpinBy(spinToId(id, { over: 3, turns: -1 }), livePose);
+
+    expect(byLongWay).toBeCloseTo(byDefault - Math.PI * 2, 10);
+  });
+
+  it('lands the same world bearing under two different bases — the basis drops out', () => {
+    // The cross product of two frames' poles is orthogonal to BOTH poles.
+    // Placing the focus along it makes the bearing's pitch exactly 0 under
+    // EITHER basis, so decoding the landing yaw at pitch 0 recovers the aim
+    // exactly regardless of which basis resolved it — a ground-truth
+    // expectation built from the poles, not from calling the resolver twice
+    // and comparing its own output to itself.
+    const poleOf = (basis: Mat3): Vec3 => [basis[3]!, basis[4]!, basis[5]!];
+    const cross = (a: Vec3, b: Vec3): Vec3 => [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0],
+    ];
+    const poleEcliptic = poleOf(ORIENTATION_FRAMES.ecliptic);
+    const poleGalactic = poleOf(ORIENTATION_FRAMES.galactic);
+    const raw = cross(poleEcliptic, poleGalactic);
+    const m = Math.hypot(raw[0], raw[1], raw[2]);
+    const forward: Vec3 = [raw[0] / m, raw[1] / m, raw[2] / m];
+
+    const northStar: StructureInfo = {
+      type: 'structure',
+      category: 'cluster',
+      id: 'cluster-northstar',
+      name: 'North Star',
+      worldPos: [forward[0] * 10, forward[1] * 10, forward[2] * 10],
+      featured: true,
+      physicalRadiusMpc: 3,
+    } as StructureInfo;
+    const deps: ResolveDeps = {
+      ...DEPS,
+      structures: { byId: (sid) => (sid === 'cluster-northstar' ? northStar : null) },
+    };
+
+    const id = focusId('cluster-northstar');
+    const livePose: CameraPose = { target: [0, 0, 0], yaw: 1.0, pitch: 0, distance: 5 };
+    const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
+
+    const resolvedEcliptic = resolveClipFoci(
+      clip,
+      deps,
+      FOV_Y,
+      livePose,
+      ORIENTATION_FRAMES.ecliptic,
+    );
+    const resolvedGalactic = resolveClipFoci(
+      clip,
+      deps,
+      FOV_Y,
+      livePose,
+      ORIENTATION_FRAMES.galactic,
+    );
+    const effE = resolvedEcliptic.timeline[0]!;
+    const effG = resolvedGalactic.timeline[0]!;
+    if (effE.kind !== 'spin' || effG.kind !== 'spin') throw new Error('expected spin effects');
+
+    const decodeWorld = (yaw: number, pitch: number, basis: Mat3): Vec3 =>
+      rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+
+    const dirE = decodeWorld(livePose.yaw + effE.by, livePose.pitch, ORIENTATION_FRAMES.ecliptic);
+    const dirG = decodeWorld(livePose.yaw + effG.by, livePose.pitch, ORIENTATION_FRAMES.galactic);
+
+    // Both landings decode to the SAME world direction — the basis dropped out.
+    expect(dirG[0]).toBeCloseTo(dirE[0], 6);
+    expect(dirG[1]).toBeCloseTo(dirE[1], 6);
+    expect(dirG[2]).toBeCloseTo(dirE[2], 6);
+
+    // And that shared direction is the true world sightline to the focus
+    // (aim = -dir), computed independently from the poles above.
+    expect(-dirE[0]).toBeCloseTo(forward[0], 6);
+    expect(-dirE[1]).toBeCloseTo(forward[1], 6);
+    expect(-dirE[2]).toBeCloseTo(forward[2], 6);
+  });
+});
+
+/** Resolve a single spinToId effect and return its `by` delta. */
+function resolveSpinBy(effect: ReturnType<typeof spinToId>, livePose: CameraPose): number {
+  const clip: ClipData = { timeline: [effect] };
+  const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose);
+  const eff = resolved.timeline[0]!;
+  if (eff.kind !== 'spin') throw new Error('expected a spin effect');
+  return eff.by;
+}
+
+// ---------------------------------------------------------------------------
+// Test 4d — aimAlong resolves to an aimAt bearing along a FIXED world
+// direction, independent of the live pose (unlike lookAtId).
+// ---------------------------------------------------------------------------
+
+describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
+  it('resolves to concurrent yaw/pitch tweens aiming along the given world direction', () => {
+    // Forward [1,0,0] under identity: dir = -forward, yaw = atan2(-1,0) = -π/2.
+    const clip: ClipData = { timeline: [aimAlong([1, 0, 0], 3, 'easeOutCubic')] };
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+
+    const outer = resolved.timeline[0]!;
+    if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
+    expect(outer.children[0]).toMatchObject({
+      kind: 'set',
+      ch: 'yaw',
+      over: 3,
+      ease: 'easeOutCubic',
+    });
+    expect((outer.children[0] as { to: number }).to).toBeCloseTo(-Math.PI / 2, 10);
+    expect(outer.children[1]).toMatchObject({
+      kind: 'set',
+      ch: 'pitch',
+      over: 3,
+      ease: 'easeOutCubic',
+    });
+    expect((outer.children[1] as { to: number }).to).toBeCloseTo(0, 10);
+  });
+
+  it('the bearing does NOT depend on the live pose target — unlike lookAtId', () => {
+    // Two wildly different `from` poses (target AND yaw both differ) must
+    // resolve to the identical bearing: aimAlong carries no target lookup, so
+    // it is safe for a cold-open snap where the pre-clip pose is arbitrary.
+    const clip: ClipData = { timeline: [aimAlong([1, 0, 0], 3)] };
+    const nearby = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const farAway = resolveClipFoci(clip, DEPS, FOV_Y, {
+      target: [500, -300, 900],
+      yaw: 2.7,
+      pitch: -0.4,
+      distance: 4000,
+    });
+
+    const yawOf = (r: ClipData): number => {
+      const outer = r.timeline[0]!;
+      if (outer.kind !== 'all') throw new Error('expected an all block');
+      return (outer.children[0] as { to: number }).to;
+    };
+    expect(yawOf(farAway)).toBeCloseTo(yawOf(nearby), 12);
+  });
+
+  it('lands the same world bearing under two different bases — the basis drops out', () => {
+    // Uses the real production constant (not an arbitrary literal) so this
+    // test also exercises the exact value both `openingTitle` and
+    // `homeAgain` depend on — precision itself is pinned separately in
+    // cameraFraming.test.ts (the derivation-guard test).
+    const clip: ClipData = { timeline: [aimAlong(GALACTIC_DISC_FORWARD, 3)] };
+
+    const resolvedEcliptic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.ecliptic);
+    const resolvedGalactic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.galactic);
+    const effE = resolvedEcliptic.timeline[0]!;
+    const effG = resolvedGalactic.timeline[0]!;
+    if (effE.kind !== 'all' || effG.kind !== 'all') throw new Error('expected all blocks');
+
+    const bearingOf = (outer: typeof effE, basis: Mat3) => {
+      const yaw = (outer.children[0] as { to: number }).to;
+      const pitch = (outer.children[1] as { to: number }).to;
+      return rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+    };
+    const dirE = bearingOf(effE, ORIENTATION_FRAMES.ecliptic);
+    const dirG = bearingOf(effG, ORIENTATION_FRAMES.galactic);
+
+    expect(dirG[0]).toBeCloseTo(dirE[0], 6);
+    expect(dirG[1]).toBeCloseTo(dirE[1], 6);
+    expect(dirG[2]).toBeCloseTo(dirE[2], 6);
   });
 });

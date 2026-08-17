@@ -18,7 +18,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import TimeBarContainer from '../../../src/components/containers/TimeBarContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { setRate, setSimDays } from '../../../src/state/time/timeSlice';
 import { RATE_LADDER } from '../../../src/data/time/rateLadder';

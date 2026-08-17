@@ -42,9 +42,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
+import { buildInitialSettings } from '../../../../src/state/settings/initialState';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import {
   engineStatusChanged,
   engineStructureCountsChanged,
@@ -60,7 +65,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 //
 // Replace every fetcher with a no-op resolved Promise.  None of our
 // tests trigger an actual network request — the slots whose `.load()`
-// fires inside wireSlots (famousMeta, filaments, cf4Density) need a
+// fires inside wireSlots (famousGalaxiesMeta, filaments, cf4Density) need a
 // fetcher that resolves quickly so the slot transitions to `ready`
 // without timing out the test.  We don't care about the value because
 // no commit step (here) reads it; the slots that have a commit are
@@ -85,8 +90,15 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
-  famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
+vi.mock('../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher', () => ({
+  famousGalaxiesMetaFetcher: vi.fn(async () => ({ meta: [] })),
+}));
+
+// famousStarsMeta demands unconditionally at boot (like bodyTextureAtlas
+// below), so its fetcher fires inside every wireSlots run; mock it so the
+// test doesn't network.
+vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () => ({
+  famousStarsMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
@@ -111,6 +123,17 @@ vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
   pgcAliasFetcher: vi.fn(async () => new Map()),
 }));
 
+// The body-texture atlas row demands unconditionally at boot (`demand: () => true`),
+// so its fetcher fires inside every wireSlots run. The real fetcher hits node's
+// `fetch` with the RELATIVE dataUrl `/data/images/textures/body-atlas.webp`,
+// which undici rejects ("Failed to parse URL" — no base). Mock it to a hollow
+// bitmap: the slot's commit fans out to `earthRenderer`/`texturedBodyRenderer`
+// (both absent in this fixture, so optional-chained to no-ops), so the value is
+// never read here — it just needs to resolve so the slot reaches `ready`.
+vi.mock('../../../../src/services/loading/fetchers/bodyAtlasFetcher', () => ({
+  bodyAtlasFetcher: vi.fn(async () => ({}) as unknown as ImageBitmap),
+}));
+
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
 // fetcher so the slot resolves without networking.
 vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
@@ -122,6 +145,14 @@ vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
     frame: 'supergalactic',
     boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
   })),
+}));
+
+// Task 12: wireSlots awaits loadDataManifest() before reevaluateDemand.
+// Default resolves immediately (a resolved microtask) so every other test in
+// this file sees the same "returns synchronously" shape as before; the
+// deferred-manifest test below overrides this once with mockReturnValueOnce.
+vi.mock('../../../../src/services/loading/dataManifest', () => ({
+  loadDataManifest: vi.fn(async () => {}),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
@@ -205,12 +236,13 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { famousMetaFetcher } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+import { famousGalaxiesMetaFetcher } from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
+import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -245,6 +277,7 @@ function makeFakeSlot(name: string): FakeSlot {
       };
     },
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: vi.fn(),
     cancel: vi.fn(),
     release: vi.fn(),
@@ -260,7 +293,7 @@ function makeFakeSlot(name: string): FakeSlot {
 /**
  * Build a boot-shaped points map: SDSS/2MRS/GLADE galaxy catalog fakes left idle
  * (still "loading" — they never fire), plus a Famous fake pre-fired to
- * `loading` so the famous-meta demand predicate (`slotState(Famous) !== 'idle'`)
+ * `loading` so the famous-galaxies-meta demand predicate (`slotState(Famous) !== 'idle'`)
  * reads true.  Idle galaxy catalog fakes keep the synthetic-fallback gate waiting
  * rather than arming + re-running demand — the live-boot shape.
  */
@@ -329,6 +362,14 @@ function makeState(
     structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
   }
   const data = createEngineData();
+  // Pull the singleton-overlay + star-catalog slices from the real seed so the
+  // demand loop's `settings.flow.enabled` / `settings.constellations.enabled` /
+  // `settings.starCatalogs.enabled` reads resolve instead of throwing on an
+  // undefined slice (which reevaluateDemand would swallow as a per-row warn).
+  // Flow + constellations default OFF, so no overlay load fires. starCatalogs is
+  // forced OFF here (its Gaia row is registry-visible, so leaving the master gate
+  // on would demand a real star-bin fetch this fixture provides no slot for).
+  const seed = buildInitialSettings();
   return {
     // Top-level data tier — its own root field on EngineState; the source
     // expression `req(state.tier)` reads it, and the synthetic-fallback
@@ -340,8 +381,7 @@ function makeState(
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
-        highlightFallback: true,
-        realOnly: false,
+        provenance: DEFAULT_GALAXY_PROVENANCE,
         // All galaxy catalogs enabled (a uniform test scenario; the real boot
         // seed derives `enabled` from each registry entry's `visible`, so
         // desiDeep boots off) — galaxy catalog demand reads these `enabled`
@@ -355,14 +395,28 @@ function makeState(
       bias: { mode: 'off', absMagLimit: -18 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true, labelEnabled: true },
+      // seedFades registers the zone-of-avoidance band handle too; pulled
+      // from the real seed like flow/constellations below.
+      zoneOfAvoidance: seed.zoneOfAvoidance,
       filaments: { enabled: false, intensity: 1.0 },
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
       volumes: { enabled: true, items: seedVolumeFields() },
+      // seedFades registers a caption handle per body row, so these must exist.
+      bodies: {
+        items: Object.fromEntries(
+          BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ),
+      },
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
       structures: { enabled: true, items: structureItems },
+      // Singleton overlays (default-off) + star catalogs (master gate forced off
+      // — see the `seed` note above) so every demand row's settings read resolves.
+      flow: seed.flow,
+      constellations: seed.constellations,
+      starCatalogs: { ...seed.starCatalogs, enabled: false },
     },
     bias: {} as never,
     // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`
@@ -392,6 +446,9 @@ function makeState(
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() } as never,
+      // `wireSlots` ends with `reevaluateDemand`, which enqueues onto this
+      // rather than calling `slot.load()` directly.
+      assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
@@ -431,7 +488,7 @@ function makeState(
       // slots here, so the fixture must carry the destination.
       starCatalogs: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
@@ -459,6 +516,7 @@ function makeDeps(): BootstrapDeps {
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
+      unwatchHdrCapability: () => {},
     },
   };
 }
@@ -492,6 +550,11 @@ describe('wireSlots', () => {
     await wireSlots(state, deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith(engineStatusChanged({ kind: 'loading' }));
+    // The boot demand pass ENQUEUES rather than loading, and the queue starts
+    // only `ASSET_QUEUE_CONCURRENCY` of them before returning. Drain so every
+    // demanded row actually reaches its slot — the question here is which rows
+    // were demanded, not how many the queue runs at once.
+    await state.subsystems.assetQueue.drain();
     expect(sdssSlot.load).toHaveBeenCalled();
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
@@ -505,6 +568,66 @@ describe('wireSlots', () => {
       return action.type === engineStatusChanged.type && action.payload.kind === 'loading';
     });
     expect(loadingDispatches.length).toBe(1);
+  });
+
+  it('starts no load until the data manifest has resolved', async () => {
+    // Point-slot setup copied from "returns synchronously ... and fires
+    // `loading` status" above — plain, unfired point slots, same drain, same
+    // four `.load()` assertions. Also pins two sidecar fetchers from the
+    // default boot set (mcpm + structureCatalog — see the sibling
+    // "demand loop loads the default boot sidecar set" test) so a future
+    // refactor that split sidecar dispatch onto a second, differently-awaited
+    // path would fail here, not just on the point-slot half. Famous-galaxies
+    // -meta is left out: its demand predicate reads Famous's slot state,
+    // which needing an extra pre-fire here would collide with the point-slot
+    // assertions above (a fired slot is no longer "about to load").
+    let resolveManifest!: () => void;
+    const deferred = new Promise<void>((resolve) => {
+      resolveManifest = resolve;
+    });
+    vi.mocked(loadDataManifest).mockReturnValueOnce(deferred);
+    vi.mocked(mcpmFetcher).mockClear();
+    vi.mocked(structureCatalogFetcher).mockClear();
+
+    const sdssSlot = makeFakeSlot('sdss-points');
+    const twoMrsSlot = makeFakeSlot('2mrs-points');
+    const gladeSlot = makeFakeSlot('glade-points');
+    const famousSlot = makeFakeSlot('famous-points');
+    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+      [Source.SDSS, sdssSlot],
+      [Source.TwoMRS, twoMrsSlot],
+      [Source.Glade, gladeSlot],
+      [Source.FamousGalaxy, famousSlot],
+    ]);
+    const state = makeState({ points });
+    const deps = makeDeps();
+
+    const pending = wireSlots(state, deps);
+    // Flush pending microtasks without resolving the manifest deferred —
+    // reevaluateDemand sits behind the await, so nothing should fire yet.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sdssSlot.load).not.toHaveBeenCalled();
+    expect(twoMrsSlot.load).not.toHaveBeenCalled();
+    expect(gladeSlot.load).not.toHaveBeenCalled();
+    expect(famousSlot.load).not.toHaveBeenCalled();
+    expect(mcpmFetcher).not.toHaveBeenCalled();
+    expect(structureCatalogFetcher).not.toHaveBeenCalled();
+
+    resolveManifest();
+    await pending;
+    // Same drain as the sibling test: the boot demand pass enqueues rather
+    // than loading, so every demanded row needs the queue drained before
+    // its slot's `.load()` is observable.
+    await state.subsystems.assetQueue.drain();
+
+    expect(sdssSlot.load).toHaveBeenCalled();
+    expect(twoMrsSlot.load).toHaveBeenCalled();
+    expect(gladeSlot.load).toHaveBeenCalled();
+    expect(famousSlot.load).toHaveBeenCalled();
+    expect(mcpmFetcher).toHaveBeenCalled();
+    expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
   it('assigns all five impostor subsystems onto state.subsystems', async () => {
@@ -548,9 +671,9 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
     expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(true);
-    // No category-less structure handle: structure labels use per-category
-    // handles, and produceStructureLabels fires each category's load-in.
-    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
+    // No item-less structure handle: structure labels use per-item handles,
+    // and produceStructureLabels fires each category's load-in.
+    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxy' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
 
     // Opacities are deterministic under the default fixture (milkyWay disk +
@@ -567,9 +690,9 @@ describe('wireSlots', () => {
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
-  it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousMeta) and not the off-by-default ones', async () => {
+  it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
     // Boot parity: the old imperative boot loop loaded MCPM (default-on volume)
-    // + the cluster catalog (structures visible) + famous-meta but left
+    // + the cluster catalog (structures visible) + famous-galaxies-meta but left
     // filaments (off), CF-4 density (off) and the lazy PGC alias idle.  After
     // the refactor those loads come from reevaluateDemand reading the
     // construction-seeded state — same outcome.  Each sidecar's load is
@@ -577,7 +700,7 @@ describe('wireSlots', () => {
     // module-scoped mocks persist across tests.
     vi.mocked(mcpmFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
-    vi.mocked(famousMetaFetcher).mockClear();
+    vi.mocked(famousGalaxiesMetaFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
     vi.mocked(cf4DensityFetcher).mockClear();
     vi.mocked(pgcAliasFetcher).mockClear();
@@ -586,11 +709,13 @@ describe('wireSlots', () => {
     const deps = makeDeps();
 
     await wireSlots(state, deps);
+    // Drain the asset queue for the same reason as the case above.
+    await state.subsystems.assetQueue.drain();
 
     // Default-on / structures-visible / famous-loading ⇒ fetched.
     expect(mcpmFetcher).toHaveBeenCalled();
     expect(structureCatalogFetcher).toHaveBeenCalled();
-    expect(famousMetaFetcher).toHaveBeenCalled();
+    expect(famousGalaxiesMetaFetcher).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
     expect(cf4DensityFetcher).not.toHaveBeenCalled();
@@ -684,6 +809,10 @@ describe('wireSlots', () => {
     gladeSlot.fire(errorValue('glade boom'));
     famousSlot.fire(errorValue('famous boom'));
 
+    // Drain the asset queue for the same reason as the boot cases above: the
+    // fallback's re-evaluation enqueues the synthetic row behind whatever the
+    // boot pass already put in flight.
+    await state.subsystems.assetQueue.drain();
     expect(synthSlot.load).toHaveBeenCalledTimes(1);
     expect(synthSlot.load).toHaveBeenCalledWith({
       source: Source.Synthetic,
@@ -721,7 +850,7 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // Registry includes the per-source point slots (by `.name`) plus
-    // the sidecar slots wireSlots itself mints (filaments, famous-meta,
+    // the sidecar slots wireSlots itself mints (filaments, famous-galaxies-meta,
     // pgc-aliases, CF-4, MCPM) plus synthetic fixtures (DEV-only —
     // vitest runs as DEV). Asserted as a superset so additive changes
     // don't break the test for the wrong reason.
@@ -731,7 +860,7 @@ describe('wireSlots', () => {
     expect(names.has('glade-points')).toBe(true);
     expect(names.has('famous-points')).toBe(true);
     expect(names.has('filaments')).toBe(true);
-    expect(names.has('famous-meta')).toBe(true);
+    expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
   });

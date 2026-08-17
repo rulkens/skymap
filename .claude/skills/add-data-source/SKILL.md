@@ -63,9 +63,25 @@ work (memory `feedback_seed_data_early`). Order: type union → parser/seed →
 3. Add a `Source` enum member + `SOURCE_REGISTRY` row (see Path B step 3 — the
    rule is identical). A survey source persists to `.bin`, so its code is
    **append-only and load-bearing forever**.
-4. Wire it into `crossMatch` / `buildAllBins`, bump the `.bin` format only if the
-   per-galaxy layout changes (`galaxyCatalogFormat.ts`), regenerate via
-   `npm run build-tiers`.
+4. Wire it into `crossMatch` / `buildAllBins`. If the per-galaxy layout changes,
+   that's a format bump (`galaxyCatalogFormat.ts`), and a bump needs the full
+   checklist, not just a version constant:
+   - regenerate every tier's bins via `npm run build-tiers`,
+   - the bins land under the family's new `v<N>` epoch folder
+     (`public/data/galaxy-catalog/v<N>/`) — the folder name tracks the format
+     module's own `VERSION` export, never hand-typed at a call site (see
+     docs/DATA.md → "Data layout: family/epoch folders"),
+   - re-sync R2 (`npm run sync-r2-secure`) and purge the CDN so old clients
+     stop being served the previous epoch's now-stale bins.
+
+   A **new** binary family (not a bump to an existing one, e.g. a source that
+   doesn't fit `galaxyCatalogFormat.ts` at all) gets its own `<family>/v<N>/`
+   folder and its own epoch-prefix constant, the same pattern as
+   `galaxy-catalog/v9/`. Either way, every runtime-fetched file must be added
+   to `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`), or it is never
+   hashed, never manifested, and never uploaded — see docs/DATA.md's
+   "Content hash + manifest" section.
+
 5. Surveys carry photometry/orientation — mind the per-catalog gotchas in
    CLAUDE.md (2MRS negative cz, GLADE PGC cross-match, SDSS column variance).
 
@@ -81,21 +97,21 @@ binary format family. Treat it as a sibling precedent, not a Path A instance:
   on-disk resume cache, not a single-file download. Consumers reach the paged
   directory via `rawDataPath('gaia.dir')` plus per-artifact keys for the
   fixed files (`gaia.gcns`, `gaia.hipparcos`, …).
-- **Binary format** — `src/data/starCatalog/` is a *separate* format module
+- **Binary format** — `src/data/starCatalog/` is a _separate_ format module
   from `galaxyCatalogFormat.ts`: cell-quantized + compressed, sized for tens
   of millions of stars rather than millions of galaxies. Don't reuse
   `galaxyCatalogFormat.ts` machinery for star data — the encodings diverge.
-- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run
-  build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
-- **R2 sync** — a new binary family needs its own `ALLOW` entries in
-  `tools/deploy/syncR2.ts`, same step as adding a new galaxy-catalog tier.
+- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
+- **R2 sync** — a new binary family needs its own entries in
+  `tools/deploy/r2/allowDataFile.ts`, same step as adding a new galaxy-catalog
+  tier.
 - **Attribution** — add an `ATTRIBUTIONS.md` checklist item for the new
   upstream catalog (Gaia DR3 / GCNS / Hipparcos-2); the entries themselves are
   a data-acquisition concern, not this skill's.
 
 ### Runtime surface: the `starCatalog` source-type family
 
-The star bin has a full runtime edit surface that runs *parallel* to the
+The star bin has a full runtime edit surface that runs _parallel_ to the
 galaxy-catalog one — a distinct `starCatalog` source-type family, not a
 special-case of the survey path. A future star-like source (curated famous
 stars, say — Decision A) mirrors these seams rather than inventing new ones.
@@ -110,12 +126,11 @@ renderer/layer order the galaxy catalogs use:
   the star-only analogue of the galaxy-catalog id domain. Add the row and both
   widen with no further edit.
 - **Settings cluster** — `settings.starCatalogs` mirrors `settings.galaxyCatalogs`
-  exactly: an `enabled` master plus `items: Record<StarCatalogId,
-  StarCatalogItemSettings>`, driven from `StarsSection` the way `galaxyCatalogs`
+  exactly: an `enabled` master plus `items: Record<StarCatalogId, StarCatalogItemSettings>`, driven from `StarsSection` the way `galaxyCatalogs`
   drives its survey rows. The two clusters share shape — no divergent per-item
   accessor.
 - **Fetcher + slot + wiring** — one source-parameterized `starCatalogFetcher`
-  and one `starCatalogSlot` factory serve *every* `starCatalog` row
+  and one `starCatalogSlot` factory serve _every_ `starCatalog` row
   (parameterized by `source`), the same reuse seam the galaxy catalogs use.
   `assetWiring` mints the per-source rows and keys them into
   `state.assetSlots.starCatalogs` — a separate slot map from the galaxy slots in
@@ -139,28 +154,28 @@ errors guide you to the totality sites.
 
 ### The edit-surface checklist
 
-| # | Site | File | Caught by compiler? |
-|---|------|------|---------------------|
-| 1 | Category union | `src/@types/engine/data/StructureCategory.d.ts` | — (the source of truth) |
-| 2 | Record arm | `src/@types/engine/data/StructureRecord.d.ts` (`XRecord` + union) | ✅ downstream |
-| 3 | `Source` enum + registry | `src/data/sources.ts` (append code, registry row) | partial |
-| 3b | Non-survey guard | `src/utils/math/galaxyType.ts` (`case Source.X`) | ✅ |
-| 4 | Pick decode | `src/data/selectionEncoding.ts` (`PickResult` kind + `unpackPick`) | ⚠️ **silent** inverse map |
-| 4b | WESL pick parity | `src/services/gpu/shaders/lib/selectionEncoding.wesl` (`SOURCE_CODE_X`) | ⚠️ parity test only |
-| 5 | Click guard | `src/services/engine/interaction/clickHandler.ts` (`\|\| kind === 'X'`) | ⚠️ **silent** |
-| 6 | Seed parser | `tools/parsers/parseStructureSeed.ts` (`VALID_CATEGORIES`) | ⚠️ **silent** |
-| 7 | Marker style row | `src/services/engine/presentation/structurePoiStyles.ts` | ✅ totality Record |
-| 8 | Build records | `src/data/buildStaticAnchorStructures.ts` (`SeedEntry.category` + switch) | ✅ switch exhaustiveness |
-| 9 | Marker renderer | `src/services/gpu/renderers/structureMarkerRenderer.ts` (**~11 sites**, below) | mixed |
-| 10 | UI naming | `src/data/poiCategoryInfo.ts` (`label` / `shortLabel` / `plural`) | ✅ totality Record |
-| 11 | Settings lists | `src/components/SettingsPanel/SettingsPanel.tsx` (`STRUCTURE_CATEGORIES`, `LABEL_CATEGORIES`) | ⚠️ **silent** arrays |
-| 12 | Bulk-fetch gate | `src/services/engine/wiring/assetWiring.ts` (`BULK_CATALOG_CATEGORIES`) | ⚠️ include **only if** it has a `.ccat` |
-| 13 | Focus predicate | `src/services/engine/subsystems/structureFocusSubsystem.ts` (`\|\| category === 'X'`) | ⚠️ **silent** |
-| 14 | Settings count | `src/services/engine/wiring/wireStructureProjection.ts` (`emitCounts`) | ⚠️ **silent** — no count shown if missed |
-| 15 | Visibility defaults | `useEngineSettings.ts` ×2, `engine.ts` ×2, **+ test fixtures** | ⚠️ **copy-paste ×8** |
-| 16 | Debug panel | `src/components/DebugPanel/LabelEffectsSection.tsx` (`CATEGORIES`) | ⚠️ **silent** |
-| 17 | Seed data | `data/seeds/structure_anchors.seed.json` (re-included by `!/data/seeds/*.json`; plain `git add`) | — |
-| 18 | Runtime enumeration tests | `tests/data/poiCategories.test.ts` (key counts, "N-category" titles) | ⚠️ **silent** — assert the new total |
+| #   | Site                      | File                                                                                             | Caught by compiler?                      |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| 1   | Category union            | `src/@types/engine/data/StructureCategory.d.ts`                                                  | — (the source of truth)                  |
+| 2   | Record arm                | `src/@types/engine/data/StructureRecord.d.ts` (`XRecord` + union)                                | ✅ downstream                            |
+| 3   | `Source` enum + registry  | `src/data/sources.ts` (append code, registry row)                                                | partial                                  |
+| 3b  | Non-survey guard          | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                 | ✅                                       |
+| 4   | Pick decode               | `src/data/selectionEncoding.ts` (`PickResult` kind + `unpackPick`)                               | ⚠️ **silent** inverse map                |
+| 4b  | WESL pick parity          | `src/services/gpu/shaders/lib/selectionEncoding.wesl` (`SOURCE_CODE_X`)                          | ⚠️ parity test only                      |
+| 5   | Click guard               | `src/services/engine/interaction/clickHandler.ts` (`\|\| kind === 'X'`)                          | ⚠️ **silent**                            |
+| 6   | Seed parser               | `tools/parsers/parseStructureSeed.ts` (`VALID_CATEGORIES`)                                       | ⚠️ **silent**                            |
+| 7   | Marker style row          | `src/services/engine/presentation/structurePoiStyles.ts`                                         | ✅ totality Record                       |
+| 8   | Build records             | `src/data/buildStaticAnchorStructures.ts` (`SeedEntry.category` + switch)                        | ✅ switch exhaustiveness                 |
+| 9   | Marker renderer           | `src/services/gpu/renderers/structureMarkerRenderer.ts` (**~11 sites**, below)                   | mixed                                    |
+| 10  | UI naming                 | `src/data/poiCategoryInfo.ts` (`label` / `shortLabel` / `plural`)                                | ✅ totality Record                       |
+| 11  | Settings lists            | `src/components/SettingsPanel/SettingsPanel.tsx` (`STRUCTURE_CATEGORIES`, `LABEL_CATEGORIES`)    | ⚠️ **silent** arrays                     |
+| 12  | Bulk-fetch gate           | `src/services/engine/wiring/assetWiring.ts` (`BULK_CATALOG_CATEGORIES`)                          | ⚠️ include **only if** it has a `.ccat`  |
+| 13  | Focus predicate           | `src/services/engine/subsystems/structureFocusSubsystem.ts` (`\|\| category === 'X'`)            | ⚠️ **silent**                            |
+| 14  | Settings count            | `src/services/engine/wiring/wireStructureProjection.ts` (`emitCounts`)                           | ⚠️ **silent** — no count shown if missed |
+| 15  | Visibility defaults       | `useEngineSettings.ts` ×2, `engine.ts` ×2, **+ test fixtures**                                   | ⚠️ **copy-paste ×8**                     |
+| 16  | Debug panel               | `src/components/DebugPanel/LabelEffectsSection.tsx` (`CATEGORIES`)                               | ⚠️ **silent**                            |
+| 17  | Seed data                 | `data/seeds/structure_anchors.seed.json` (re-included by `!/data/seeds/*.json`; plain `git add`) | —                                        |
+| 18  | Runtime enumeration tests | `tests/data/poiCategories.test.ts` (key counts, "N-category" titles)                             | ⚠️ **silent** — assert the new total     |
 
 `structureMarkerRenderer.ts` is the densest — the ~11 sites: `SOURCE_CODE_BY_CATEGORY`,
 `POI_CATEGORIES_WITH_MARKERS`, the per-category `Record` literals
@@ -187,9 +202,9 @@ fade-out (`markerMaxApparentRadiusPx` + band), and the far-distance fade-out
 (`markerMinApparentRadiusPx` + band). Tuning notes from the group work:
 
 - **Far-distance fade** (`markerMinApparentRadiusPx`): higher = fades out at a
-  *nearer* distance. Groups use a high floor (Local Volume feature, read up
+  _nearer_ distance. Groups use a high floor (Local Volume feature, read up
   close); clusters a low one (visible far out).
-- **Focus framing** auto-frames the structure so its *apparent* radius lands just
+- **Focus framing** auto-frames the structure so its _apparent_ radius lands just
   past the close-approach fade — handled uniformly in `poiFocusDistance.ts`
   (`FOCUS_FILL`), no per-category edit needed.
 - Colour: keep a deliberate ramp; alpha < 1 + lower luminance to recede a busy
@@ -218,8 +233,8 @@ fade-out (`markerMaxApparentRadiusPx` + band), and the far-distance fade-out
 ## Known debt this skill should eventually lean on
 
 The parallel-sites problem is tracked in `docs/BACKLOG.md`: a single
-`STRUCTURE_CATEGORY_META` registry would *derive* the source-code maps, the
+`STRUCTURE_CATEGORY_META` registry would _derive_ the source-code maps, the
 category lists, and the marker buckets, turning many silent sites into one
 table — and the `cluster*` → `structure*` naming holdovers (seed file, parser,
-renderer) are the matching rename. If you're adding the *third* category, promote
+renderer) are the matching rename. If you're adding the _third_ category, promote
 those before paying the duplication tax a third time.

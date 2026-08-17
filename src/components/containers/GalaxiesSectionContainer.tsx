@@ -34,6 +34,9 @@ import {
   selectDepthFade,
   selectBiasMode,
   selectAbsMagLimit,
+  selectGalaxySbScale,
+  selectGalaxySbMax,
+  selectGalaxyFalloffStrength,
 } from '../../state/settings/selectors';
 import { selectSourceCounts } from '../../state/engine/selectors';
 import {
@@ -42,6 +45,9 @@ import {
   setDepthFade,
   setBiasMode,
   setAbsMagLimit,
+  setGalaxySbScale,
+  setGalaxySbMax,
+  setGalaxyFalloffStrength,
 } from '../../state/settings/settingsSlice';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -60,6 +66,9 @@ function GalaxiesSectionContainer(): React.ReactElement {
   const depthFadeEnabled = useAppSelector(selectDepthFade);
   const biasMode = useAppSelector(selectBiasMode);
   const absMagLimit = useAppSelector(selectAbsMagLimit);
+  const sbScale = useAppSelector(selectGalaxySbScale);
+  const sbMax = useAppSelector(selectGalaxySbMax);
+  const falloffStrength = useAppSelector(selectGalaxyFalloffStrength);
 
   const onToggleSource = useCallback(
     (source: SourceType, enabled: boolean) =>
@@ -87,6 +96,15 @@ function GalaxiesSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onSbScaleChange = useCallback((v: number) => dispatch(setGalaxySbScale(v)), [dispatch]);
+
+  const onSbMaxChange = useCallback((v: number) => dispatch(setGalaxySbMax(v)), [dispatch]);
+
+  const onFalloffStrengthChange = useCallback(
+    (v: number) => dispatch(setGalaxyFalloffStrength(v)),
+    [dispatch],
+  );
+
   return (
     <GalaxiesSection
       visibleSourceMask={visibleSourceMask}
@@ -100,6 +118,12 @@ function GalaxiesSectionContainer(): React.ReactElement {
       onBiasModeChange={onBiasModeChange}
       absMagLimit={absMagLimit}
       onAbsMagLimitChange={onAbsMagLimitChange}
+      sbScale={sbScale}
+      onSbScaleChange={onSbScaleChange}
+      sbMax={sbMax}
+      onSbMaxChange={onSbMaxChange}
+      falloffStrength={falloffStrength}
+      onFalloffStrengthChange={onFalloffStrengthChange}
     />
   );
 }

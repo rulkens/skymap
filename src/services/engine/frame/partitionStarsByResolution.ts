@@ -22,7 +22,7 @@
  * unit-tests headlessly, with no GPU device or engine state to stand up.
  */
 
-import type { StarBody } from '../../../@types/scene/StarBody';
+import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { resolvesToSphere } from '../../../utils/scene/resolvesToSphere';
@@ -46,7 +46,8 @@ export const STAR_RESOLVE_PX = 4;
  * Split `stars` into the resolved (`spheres`) and unresolved (`points`)
  * partitions for the current camera. Seed order is preserved within each
  * branch, and the returned arrays reference the input records (no copies) —
- * the sphere layer composes MVPs straight off `positionMpc`.
+ * the sphere layer composes MVPs straight off `positionMpc`, which
+ * `positionedVisibleStars` resolved for this frame.
  *
  * EVERY star — the Sun included — rides the same apparent-size predicate: a
  * star whose sphere is sub-pixel demotes to an additive point, so it stays
@@ -60,15 +61,15 @@ export const STAR_RESOLVE_PX = 4;
  * `alwaysResolved` stays false here — no per-star special case.
  */
 export function partitionStarsByResolution(input: {
-  stars: readonly StarBody[];
+  stars: readonly PositionedStar[];
   camPosMpc: Readonly<Vec3>;
   thresholdPx: number;
   viewportHeightPx: number;
   fovYRad: number;
-}): { spheres: readonly StarBody[]; points: readonly StarBody[] } {
+}): { spheres: readonly PositionedStar[]; points: readonly PositionedStar[] } {
   const { stars, camPosMpc, thresholdPx, viewportHeightPx, fovYRad } = input;
-  const spheres: StarBody[] = [];
-  const points: StarBody[] = [];
+  const spheres: PositionedStar[] = [];
+  const points: PositionedStar[] = [];
   for (const star of stars) {
     // Shared projection: apparent diameter in px, Infinity when the camera sits
     // inside the star. That degenerate case (the star the camera is inside must

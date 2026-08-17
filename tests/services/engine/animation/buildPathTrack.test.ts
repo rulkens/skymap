@@ -26,8 +26,10 @@ import { buildPathTrack } from '../../../../src/services/engine/animation/buildP
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { PathSample } from '../../../../src/@types/animation/CompiledClip';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';
 import { DEFAULT_LOOK_AHEAD } from '../../../../src/services/engine/animation/pathDefaults';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 
@@ -39,6 +41,26 @@ function eyeOf(p: PathSample): Vec3 {
     p.target[0] + p.distance * dir[0],
     p.target[1] + p.distance * dir[1],
     p.target[2] + p.distance * dir[2],
+  ];
+}
+
+/**
+ * Reconstruct the eye the renderer does under a non-identity orientation frame:
+ * `target + distance · (frameBasis · yawPitchToDir(yaw, pitch))`, mirroring
+ * `updatePosition`'s tight column-major product over the 9-float registry `Mat3`.
+ */
+function eyeUnderFrame(p: PathSample, frameBasis: Mat3): Vec3 {
+  const cp = Math.cos(p.pitch);
+  const x = cp * Math.sin(p.yaw);
+  const y = Math.sin(p.pitch);
+  const z = cp * Math.cos(p.yaw);
+  const wx = frameBasis[0] * x + frameBasis[3] * y + frameBasis[6] * z;
+  const wy = frameBasis[1] * x + frameBasis[4] * y + frameBasis[7] * z;
+  const wz = frameBasis[2] * x + frameBasis[5] * y + frameBasis[8] * z;
+  return [
+    p.target[0] + p.distance * wx,
+    p.target[1] + p.distance * wy,
+    p.target[2] + p.distance * wz,
   ];
 }
 
@@ -272,14 +294,20 @@ describe('buildPathTrack', () => {
       { at: [10, 0, 0] as Vec3, distance: 10 },
       { at: [20, 0, 0] as Vec3, distance: 10 },
     ];
-    // Default cubic inOut is still accelerating at quarter-time; a short ramp
+    // Default easeInOutCubic is still accelerating at quarter-time; a short ramp
     // (0.4s of a 4s take = 10% each end) is already cruising → further along.
-    const inOut = buildPathTrack({ start: START, startSec: 0, over: 4, ease: 'inOut', waypoints });
+    const inOut = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 4,
+      ease: 'easeInOutCubic',
+      waypoints,
+    });
     const trap = buildPathTrack({
       start: START,
       startSec: 0,
       over: 4,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
       waypoints,
       rampSec: 0.4,
     });
@@ -291,7 +319,7 @@ describe('buildPathTrack', () => {
       start: START,
       startSec: 0,
       over: 4,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
       waypoints,
       rampSec: 0,
     });
@@ -756,5 +784,60 @@ describe('buildPathTrack', () => {
     }
     // Waypoint max x is 100; allow a small honest overshoot, not a slingshot.
     expect(maxX).toBeLessThanOrEqual(103);
+  });
+
+  // ── Frame-basis aim decode: the live eye and the derived look-at target must
+  // decode through the SAME frameBasis the aim was encoded through
+  // (orbitAnglesLookingAlong). The settle-distance test below is where a
+  // missing rotation is actually visible; the t=0 test below it is a
+  // symmetry guard, not a placement guard — see its own comment.
+  describe('frame-basis aim decode', () => {
+    const frameBasis = ORIENTATION_FRAMES.ecliptic;
+    const start: CameraPose = { target: [0, 0, 0], distance: 10, yaw: 0.3, pitch: 0.1 };
+    const waypoints = [
+      { at: [100, 20, 0] as Vec3, distance: 5 },
+      { at: [200, -40, 60] as Vec3, distance: 8 },
+    ];
+    const build = (): ReturnType<typeof buildPathTrack> =>
+      buildPathTrack({
+        start,
+        startSec: 0,
+        over: 10,
+        ease: 'linear',
+        waypoints,
+        frameBasis,
+      });
+
+    // At localSec=0 the align-in weight is exactly 0, so the reported aim IS
+    // the live pose and the spline sits exactly on knot 0 — the knot-0
+    // rotation and the derived-target rotation cancel algebraically no matter
+    // which convention they share, so this assertion is INVARIANT to the
+    // original both-sites-bare bug (it passes whether both sites rotate or
+    // neither does). What it actually guards is the two decode sites staying
+    // in sync: rotate only one of them and the cancellation breaks, so this
+    // still catches a future asymmetric regression — the same shape as the
+    // bug this task fixes. The settle-distance test below is the real
+    // differentiator for the bug itself.
+    it('keeps the knot-0 eye and the derived-target decode sites symmetric under a non-identity frame', () => {
+      const track = build();
+      const eye = eyeUnderFrame(track.sample(0), frameBasis);
+      const liveEye = eyeUnderFrame(start, frameBasis);
+      expect(eye[0]).toBeCloseTo(liveEye[0], 5);
+      expect(eye[1]).toBeCloseTo(liveEye[1], 5);
+      expect(eye[2]).toBeCloseTo(liveEye[2], 5);
+    });
+
+    it('settles at the framing distance from its destination under a non-identity frame', () => {
+      const track = build();
+      const end = track.sample(track.endSec);
+      const eye = eyeUnderFrame(end, frameBasis);
+      const destination: Vec3 = [200, -40, 60];
+      const d = Math.hypot(
+        eye[0] - destination[0],
+        eye[1] - destination[1],
+        eye[2] - destination[2],
+      );
+      expect(d).toBeCloseTo(8.0, 3);
+    });
   });
 });

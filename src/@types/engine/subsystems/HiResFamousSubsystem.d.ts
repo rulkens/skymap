@@ -25,7 +25,7 @@
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 import type { SourceType } from '../../data/SourceType';
 
 export type HiResFamousFrameInput = {
@@ -33,7 +33,7 @@ export type HiResFamousFrameInput = {
   readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
-  readonly famousMeta: readonly FamousMetaEntry[];
+  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
 };
 
 export type HiResFamousPerGalaxyState = {

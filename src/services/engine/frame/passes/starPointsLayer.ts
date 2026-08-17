@@ -51,9 +51,10 @@
  * every frame the camera does — a membership fingerprint can no longer gate the
  * upload. `draw` therefore re-partitions and `setStars` the point subset every
  * frame. That rebuilds the GPU instance buffer per frame, but the point set is
- * ≤25 seeded stars (anything close enough to resolve becomes a sphere via
- * `starSpheresLayer`), so the create/destroy is trivially cheap — the churn the
- * old fingerprint cache guarded against does not exist at this scale.
+ * the seeded roster (119 famous stars incl. the Sun, plus 39 S-stars) minus whichever few
+ * resolve to a sphere via `starSpheresLayer`, so the create/destroy is
+ * trivially cheap — the churn the old fingerprint cache guarded against does
+ * not exist at this scale.
  *
  * ### When it draws
  *
@@ -79,21 +80,59 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
-import { visibleStars } from '../visibleStars';
-import { seedIndexOfBody } from './seedIndexOfBody';
+import { positionedVisibleStars } from '../positionedVisibleStars';
+import { sceneBodyStates } from '../sceneBodyStates';
+import { starPickId } from './starPickId';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
-import { Source } from '../../../../data/sources';
-import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { sgrAStarCaptionTarget } from '../../presentation/sgrAStarCaptionTarget';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
+import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
+import { Source } from '../../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../data/famousStarPickRadiusPx';
+import { regionById } from '../../../../utils/scene/regionById';
+import { regionOfBody } from '../../../../utils/scene/regionOfBody';
+import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
+
+// The scale regime the star backdrop belongs to. Its anchor — not the render
+// origin — is what the dissolve band measures the camera against, so the band
+// keeps meaning the moment a star map is seeded somewhere other than the Sun.
+const STAR_BACKDROP_REGION = regionById('solar-neighbourhood');
+
+/** The anchor's own regime — the satellites its pick footprint may claim. */
+const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
+
+/**
+ * The one fact "the Galactic Centre's caption invites a click" — the whole of
+ * what makes the anchor clickable, since it draws NOTHING at any zoom.
+ * `pickEnabled` (admit this layer on a frame with no star points) and `drawPick`
+ * (emit the stamp) must AGREE on it, so it is spelled once here — the same
+ * discipline `bodyGlintsLayer`'s `earthCaptionPickable` keeps for Earth.
+ *
+ * `sgrAStarCaptionTarget` IS the caption's own fade target, off the same rules
+ * row `foregroundLabelsLayer` indexes, so pick follows the visible AFFORDANCE by
+ * construction rather than by two gates kept in step. With the label off there
+ * is no mark at all, and an invisible 18 px target in empty sky would be a trap.
+ * The shared foreground gate rides alongside it: past that the whole NEAR0 group
+ * is skipped, so a stamp there could never be rasterised anyway.
+ */
+function sgrAStarCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+  return sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0;
+}
 
 export const starPointsLayer: ContentLayer = {
   name: 'star-points',
@@ -109,13 +148,18 @@ export const starPointsLayer: ContentLayer = {
     // Once the dissolve band has zeroed the backdrop, DISABLE the layer rather
     // than draw black sprites — the "opacity 0 ⇒ no render" house rule, which
     // also empties the (hdr, NEAR0) step so the executor skips it. Keyed on the
-    // camera's distance from the heliocentric origin, the quantity the band
-    // reads (drawCamPos is the absolute-frame eye; the origin is [0,0,0]).
-    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    if (fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc) <= 0) return false;
+    // camera's distance from the star map's own region anchor — the Sun, at
+    // [0,0,0], so this is today the same number as the raw origin distance
+    // (drawCamPos is the absolute-frame eye).
+    const regionDistMpc = regionRelativeDistanceMpc(
+      ctx.drawCamPos,
+      STAR_BACKDROP_REGION,
+      sceneBodyStates(state, ctx),
+    );
+    if (fadeBand(SCALE_FADE_BANDS.starBackdrop, regionDistMpc) <= 0) return false;
     return (
       partitionStarsByResolution({
-        stars: visibleStars(state),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -124,12 +168,26 @@ export const starPointsLayer: ContentLayer = {
     );
   },
 
+  // Pick gate — WIDER than `enabled`: this layer also carries Sgr A*'s pick
+  // stamp (see `drawPick`), which hangs off the caption rather than the star
+  // partition. Deep in the Galactic Centre with the famous-star map muted the
+  // partition can be empty while the name is still on screen, and `enabled`
+  // stays partition-only so no zero-star row enters the VISUAL pass plan.
+  // Composed over `enabled` rather than restating its gates. The handle guard
+  // is `drawPick`'s, checked first so a pre-bootstrap frame never reaches the
+  // body-state snapshot. See `ContentLayer.pickEnabled`.
+  pickEnabled(state, ctx) {
+    if (state.gpu.bodyPickRenderer === null) return false;
+    if (starPointsLayer.enabled(state, ctx)) return true;
+    return sgrAStarCaptionPickable(state, ctx);
+  },
+
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.starPointRenderer;
     if (renderer === null) return;
 
     const { points } = partitionStarsByResolution({
-      stars: visibleStars(state),
+      stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
@@ -144,12 +202,12 @@ export const starPointsLayer: ContentLayer = {
     const camPos = view.camPos;
 
     // The backdrop-dissolve alpha for THIS frame, keyed on the camera's distance
-    // from the heliocentric origin — the same quantity `enabled` gates on, read
-    // here from `view.camPos` (the frames coincide; see the module header). It
-    // scales each star's uploaded colour below.
+    // from the star map's region anchor — the same quantity `enabled` gates on,
+    // read here from `view.camPos` (the frames coincide; see the module header).
+    // It scales each star's uploaded colour below.
     const backdropFade = fadeBand(
       SCALE_FADE_BANDS.starBackdrop,
-      Math.hypot(camPos[0], camPos[1], camPos[2]),
+      regionRelativeDistanceMpc(camPos, STAR_BACKDROP_REGION, sceneBodyStates(state, ctx)),
     );
 
     // Re-express each anchor as a small camera-relative vector, and premultiply
@@ -188,9 +246,10 @@ export const starPointsLayer: ContentLayer = {
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
 
     // The same shared star appearance the survey (Gaia bin) leaf stage reads, so
-    // a famous star obeys the identical sizePx slider and exposure model. NOT
-    // gated on `starCatalogs.enabled` — that flag is the Gaia survey's master
-    // toggle, and the famous layer has its own visibility gate. `brightness`
+    // a famous star obeys the identical sizePx slider and exposure model. These
+    // are the cluster's APPEARANCE knobs, read unconditionally — the cluster's
+    // visibility gate is applied upstream, where `visibleStars` composes
+    // `starCatalogs.enabled` with the famous-star row's own bit. `brightness`
     // folds the SAME scale-dependent `starExposureRamp` `starCatalogLayer`
     // applies: the user trim times the camera-distance ramp, keyed on the
     // camera's heliocentric Mpc distance (the ramp's own input unit).
@@ -212,8 +271,8 @@ export const starPointsLayer: ContentLayer = {
   // clickable 18 px footprint by `bodyPickRenderer` — these labelled scene stars
   // are click-invited targets), so a sub-pixel star stays easily pickable at its
   // true screen position. The point set is the SAME
-  // `partitionStarsByResolution` call `draw` runs — `visibleStars(state)` split
-  // at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
+  // `partitionStarsByResolution` call `draw` runs — `positionedVisibleStars`
+  // split at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
   // is pickable-as-a-point exactly when it draws as one (its complement rides
   // `starSpheresLayer`'s sphere pick).
   //
@@ -223,10 +282,10 @@ export const starPointsLayer: ContentLayer = {
   // neither races `writeBuffer` against submit. This layer calls it exactly once
   // per `drawPick`.
   //
-  // Each point's packed id carries its STABLE `SCENE_STARS` index, NOT its slot
-  // in the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
-  // see `seedIndexOfBody`); a star id absent from the seed table returns −1 and
-  // is dropped (a packed id from −1 would alias body 0). Anchors are rebased
+  // Each point's packed id carries its STABLE seed-table index, NOT its slot in
+  // the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` — see
+  // `seedIndexOfBody`); `starPickId` picks the table and drops an id in neither
+  // (a packed id from −1 would alias body 0). Anchors are rebased
   // into the camera-relative frame in f64 before narrowing, the SAME seam
   // `draw` uses — the backdrop-dissolve colour scale is a visual-only concern
   // the pick omits (pick has no opacity; the `enabled` gate already drops the
@@ -236,7 +295,7 @@ export const starPointsLayer: ContentLayer = {
     if (pickRenderer === null) return;
 
     const { points } = partitionStarsByResolution({
-      stars: visibleStars(state),
+      stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
@@ -245,22 +304,65 @@ export const starPointsLayer: ContentLayer = {
 
     const camPos = view.camPos;
     const pickPoints: BodyPointPick[] = [];
-    for (const star of points) {
-      const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
-      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
-      pickPoints.push({
-        posRelCamMpc: [
-          star.positionMpc[0] - camPos[0],
-          star.positionMpc[1] - camPos[1],
-          star.positionMpc[2] - camPos[2],
-        ] as Vec3,
-        packedId: packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
-      });
-    }
+    const relToCam = (positionMpc: Readonly<Vec3>): Vec3 => [
+      positionMpc[0] - camPos[0],
+      positionMpc[1] - camPos[1],
+      positionMpc[2] - camPos[2],
+    ];
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // anchors — narrowed at the GPU-upload boundary, exactly as `draw` does.
+    // Hoisted above the pack loop because the satellite test below projects
+    // through it.
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+
+    // The Galactic Centre's stamp — the ONLY thing that makes the anchor
+    // clickable. It draws nothing at any zoom (invisible by design), so unlike
+    // every other id in this list there is no sprite whose footprint the pick
+    // widens; the caption IS the target, and `sgrAStarCaptionPickable` above is
+    // the whole gate. Emitted here rather than in a row of its own because this
+    // is the layer already live at the Galactic Centre, stamping the S-stars
+    // that orbit it, and `bodyPickRenderer.drawPoints` takes one array per
+    // caller per pass — so the anchor rides its satellites' single draw.
+    let anchorScreenPx: Vec2 | null = null;
+    if (sgrAStarCaptionPickable(state, ctx)) {
+      const anchorPos = sceneBodyStates(state, ctx).get(SGR_A_STAR.id)!.positionMpc;
+      const anchorRel = relToCam(anchorPos);
+      anchorScreenPx = projectToScreenPx(anchorRel, rebasedVp, view.viewportPx);
+      pickPoints.push({
+        posRelCamMpc: anchorRel,
+        packedId: packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET),
+      });
+    }
+
+    for (const star of points) {
+      const packedId = starPickId(star.id);
+      if (packedId === null) continue; // in neither seed table — see starPickId.
+      const posRelCamMpc = relToCam(star.positionMpc);
+      // A satellite inside its own anchor's click target is not separately
+      // aimable, so it must not take the anchor's click. Zoomed out, all 39
+      // S-star orbits collapse well inside the anchor's 18 px footprint and one
+      // of them would win the centre pixel on true depth — the black hole is
+      // unclickable exactly where it is the only thing you could mean. Zoomed
+      // in, each orbit clears the footprint and its star becomes aimable again,
+      // outermost first, so the handoff needs no threshold of its own.
+      //
+      // Scoped to the anchor's OWN region rather than to every overlapping
+      // point: a famous star that merely lines up with Sagittarius from Earth is
+      // a different object at a different distance and keeps its click.
+      if (anchorScreenPx !== null && regionOfBody(star.id)?.id === GALACTIC_CENTRE_REGION_ID) {
+        const screenPx = projectToScreenPx(posRelCamMpc, rebasedVp, view.viewportPx);
+        if (
+          screenPx !== null &&
+          Math.hypot(screenPx[0] - anchorScreenPx[0], screenPx[1] - anchorScreenPx[1]) <
+            FAMOUS_STAR_PICK_RADIUS_PX
+        ) {
+          continue;
+        }
+      }
+      pickPoints.push({ posRelCamMpc, packedId });
+    }
+
     pickRenderer.drawPoints(pass, {
       vp: rebasedVp,
       viewportPx: view.viewportPx,

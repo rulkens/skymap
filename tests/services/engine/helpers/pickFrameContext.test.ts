@@ -20,6 +20,7 @@ import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFr
 import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
@@ -89,7 +90,7 @@ function makeState(
       // Fully faded by default; pick mask is driven by `enabled` alone anyway.
       fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
     },
-    settings: { galaxyCatalogs: { items } },
+    settings: { galaxyCatalogs: { items }, orientation: 'equatorial' },
     cameraRuntime: {
       lastPose: { current: LAST_POSE },
       projection: PROJECTION,
@@ -125,6 +126,11 @@ describe('pickFrameContext', () => {
       canvas,
       state.cameraRuntime.lastPose.current,
       state.cameraRuntime.projection,
+      // Same steady basis `pickFrameContext` resolves internally for BOTH
+      // halves, so the two cameras decode position and screen-up through the
+      // same pole and their vp matches.
+      ORIENTATION_FRAMES[state.settings.orientation],
+      ORIENTATION_FRAMES[state.settings.orientation],
       deriveSourceMasks(state).pick,
       0,
       // simDays does not affect the view-projection this test compares; any

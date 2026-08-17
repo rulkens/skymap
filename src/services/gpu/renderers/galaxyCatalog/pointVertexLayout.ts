@@ -24,8 +24,8 @@
  *
  *   [x, y, z, magnitude, colorIndex,
  *    axisRatio (sign bit = isFallback flag),
- *    paCos, paSin, radiusMpc,
- *    vMaxWeight, schechterRatio, angularDensityWeight, absMag]
+ *    paCos, paSin, radiusMpc (sign bit = diameterIsFallback),
+ *    vMaxWeight, schechterRatio, angularDensityWeight, absMag, sbAmp]
  *
  * Every slot is f32; the fallback-orientation bit rides on the sign of
  * axisRatio.  Identity comes from `(sourceCode << 27) | instance_index`
@@ -35,29 +35,30 @@
  * vertex stage skips a cos+sin and a log10+sqrt per invocation — see the
  * layout docblock in `buildPointInterleavedBuffer.ts` for the trade.
  */
-export const SLOTS_PER_POINT = 13;
+export const SLOTS_PER_POINT = 14;
 
 /**
- * Byte stride between per-instance records — 13 × 4 = 52.  Both
+ * Byte stride between per-instance records — 14 × 4 = 56.  Both
  * pipelines (point + pick) declare this stride; mismatched values
  * either validate-error or silently read garbage.
  */
-export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 52 bytes
+export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 56 bytes
 
 /** Slot 5: galaxy b/a ratio.  `abs(axisRatio)` for the ellipse mask; sign bit flags a fallback orientation. */
 const AXIS_RATIO_BYTE_OFFSET = 20;
 
 /**
  * Slots 6/7: cos/sin of the negated east-of-north position angle —
- * the exact pair the shader forwards as `paRotation`, pre-baked.
+ * the exact pair the shader forwards as `ellipse.xy`, pre-baked.
  */
 const PA_COS_SIN_BYTE_OFFSET = 24;
 
 /**
  * Slot 8: padded billboard radius in Mpc.  Baked at upload as
  * `max(diameterKpc, 30) * 2 / 1000` — folds in 4× thumbnail-footprint
- * padding and the synthetic-fallback floor.  Vertex shader divides by
- * distance_Mpc for angular radius.
+ * padding and the synthetic-fallback floor.  Vertex shader takes
+ * `abs()` then divides by distance_Mpc for angular radius; the sign bit
+ * flags a fallback-diameter estimate (mirrors axisRatio's sign bit).
  */
 const RADIUS_MPC_BYTE_OFFSET = 32;
 
@@ -88,6 +89,9 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
  */
 const ABS_MAG_BYTE_OFFSET = 48;
 
+/** Slot 13: physical surface-brightness amplitude (see buildPointInterleavedBuffer slot 13). */
+const SB_AMP_BYTE_OFFSET = 52;
+
 /**
  * Vertex buffer attribute table — single source of truth, imported
  * verbatim by `PickRenderer` so both pipelines stay layout-locked.
@@ -97,11 +101,12 @@ const ABS_MAG_BYTE_OFFSET = 48;
  *   2  colorIndex (f32)
  *   3  axisRatio (sign bit = isFallback)
  *   4  paCosSin (vec2<f32>)
- *   5  radiusMpc
+ *   5  radiusMpc (sign bit = diameterIsFallback)
  *   6  vMaxWeight
  *   7  schechterRatio
  *   8  angularDensityWeight
  *   9  absMag
+ *   10 sbAmp
  *
  * Named offset constants only exist for slots that other code reads by
  * name (bake / shader); position/magnitude/colorIndex use literal
@@ -118,6 +123,7 @@ export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 7, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 8, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 9, offset: ABS_MAG_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 10, offset: SB_AMP_BYTE_OFFSET, format: 'float32' },
 ];
 
 // ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
@@ -155,10 +161,10 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 92..95  : brightness        f32
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
- *   bytes 112..115: highlightFallback u32                            }
- *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
- *   bytes 120..123: depthFadeEnabled  u32          (UI toggle)
- *   bytes 124..127: _pad4             u32          (written as 0)
+ *   bytes 112..115: orientationHighlight u32       (audit tint on/off)   }
+ *   bytes 116..119: orientationFilter u32          (0 all/1 measured/2 estimated) } 16 bytes
+ *   bytes 120..123: sizeHighlight     u32          (audit tint on/off)   } (one vec4 slot)
+ *   bytes 124..127: sizeFilter        u32          (0 all/1 measured/2 estimated) }
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
  *   bytes 136..139: apparentMagLimit  f32          (reserved, unwritten) } 32 bytes
@@ -166,13 +172,20 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 144..147: schechterAlpha    f32          (reserved, unwritten) }
  *   bytes 148..151: schechterMLim     f32          (reserved, unwritten) }
  *   bytes 152..155: schechterNRef     f32          (reserved, unwritten) }
- *   bytes 156..159: _pad5             u32          (written as 0)        }
+ *   bytes 156..159: depthFadeEnabled  u32          (UI toggle)           }
  *   bytes 160..163: pxFadeStart       f32          (procedural-disk band low)  }
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
- *   bytes 172..175: _padFade1         f32          (written as 0)              }
+ *   bytes 172..175: galaxySbScale         f32      (overall SB → HDR gain)         }
+ *   bytes 176..179: galaxySbMax           f32      (bloom-ceiling clamp on sbAmp)  } 16 bytes
+ *   bytes 180..183: galaxyFalloffStrength f32      (resolved-fraction exponent)    }
+ *   bytes 184..191: _padU0 / _padU1       f32×2    (written as 0)                  }
  *
- * Total: 176 bytes — a multiple of 16 ✓
+ * Byte 172 was the former `_padFade1` pad word, repurposed to `galaxySbScale`
+ * when the three galaxy surface-brightness calibration knobs became live
+ * uniforms; the two trailing pad words round the struct out to 192.
+ *
+ * Total: 192 bytes — a multiple of 16 ✓
  *
  * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
  * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
@@ -194,7 +207,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
  * stable; the WGSL struct still declares them but no shader reads them.
  *
- * The value (176) is defined in `src/utils/gpu/packPointUniforms.ts` and
+ * The value (192) is defined in `src/utils/gpu/packPointUniforms.ts` and
  * re-exported from here so callers that already import the layout don't
  * need a second import path.
  */

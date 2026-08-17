@@ -6,11 +6,12 @@ import type { LoadState } from '../../../src/@types/loading/LoadState';
 function fakeSlot<T>(name: string, state: LoadState<T>): AssetSlot<T, unknown> {
   return {
     name,
-    load: () => {},
+    load: () => Promise.resolve(),
     current: () => (state.kind === 'ready' ? state.value : null),
     state: () => state,
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},

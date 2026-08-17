@@ -1,41 +1,18 @@
 /**
  * runCompareFit — the "compare against a reference photo" auto-fit run,
- * ported from the spike's `autoFit` handler (`Galaxy Renderer.dc.html:681-725`)
- * as a store-driven procedure instead of a component method. Kept out of
- * `engineBridge` because the bridge is a plain diff table (state → engine
- * calls), not an async orchestrator; kept out of the component because the
- * sequence — camera setup, a progress estimate, a coordinate-descent fit, a
- * post-fit render — is exactly the kind of multi-step control flow that's
+ * ported from the spike's `autoFit` handler (`Galaxy Renderer.dc.html`) as a
+ * store-driven procedure: camera setup, a progress estimate, a
+ * coordinate-descent fit, and a post-fit render is control flow that's
  * miserable to unit-test through a React tree and trivial to test as a
- * function.
+ * plain function.
  *
- * The sequence, each step cited to the ported line:
- *   1. Dispatch `fitStarted` (resets the compare slice's fit-run fields,
- *      including the 'reading photo…' note that covers the reference-photo
- *      fetch below) BEFORE that fetch starts, not after (:685-686).
- *   2. Load (or reuse) the reference photo's descriptor at 116px (:689).
- *   3. Point the camera at an inclination inferred from the descriptor's
- *      axis ratio, and stop auto-rotate so the fit's own renders are stable
- *      (:690-693).
- *   4. Warm up 40 frames so that new view is actually on screen before the
- *      fit starts scoring against it (:694).
- *   5. Estimate the total candidate count `autoFit` will evaluate, so
- *      progress can be reported as a fraction rather than a raw counter
- *      (:696-697) — the per-category `nParams` table and the "+6 for the
- *      discrete arm-count sweep" term both mirror `autoFit`'s own candidate
- *      generation (arm sweep, then `passes` rounds of ±1D descent).
- *   6. Run `autoFit`, mirroring each step into the store so the panel can
- *      show live params/progress/score, and mirroring `compare.stopRequested`
- *      into `autoFit`'s stop signal so the panel's "stop" button works.
- *   7. On completion, commit the best params to both the engine and the
- *      store, settle 20 frames, grab a render, and diff its descriptor
- *      against the reference for the match report (:709-718).
- *   8. Any failure (bad photo, dead render, …) is reported as an error note
- *      rather than thrown — the panel has no other channel to show it.
- *   9. Always end the run: clear `fitting` and restore auto-rotate to
- *      whatever the store's `ui.autoRotate` currently says (not necessarily
- *      what it was when the run started — the user may have toggled it mid
- *      fit) (:722-724).
+ * `fitStarted` dispatches BEFORE the reference-photo fetch starts, so its
+ * 'reading photo…' note covers the fetch, and `compare.stopRequested`
+ * mirrors into `autoFit`'s stop signal for the whole run, not just the fit
+ * itself. Auto-rotate is restored on completion or failure to whatever
+ * `ui.autoRotate` currently says, not what it was at the start — the user
+ * may have toggled it mid-fit. Failure is reported as an error note rather
+ * than thrown; the panel has no other channel to show it.
  */
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
@@ -44,7 +21,7 @@ import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyDescriptor } from '../../@types/matcher/GalaxyDescriptor';
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { AppStore } from './createStore';
-import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import { elevationFromQ } from '../matcher/elevationFromQ';
 import { autoFit } from '../matcher/autoFit';
 import { computeDescriptor } from '../matcher/computeDescriptor';
@@ -53,13 +30,13 @@ import { loadImageDescriptor } from '../matcher/loadImageDescriptor';
 import { fitFinished, fitProgressed, fitReportSet, fitStarted } from './slices/compareSlice';
 import { paramsPatched } from './slices/galaxySlice';
 
-const DESCRIPTOR_SIZE = 116; // :689, :713 — same size for the reference load and the post-fit grab
-const WARMUP_STEPS = 40; // :694
-const SETTLE_STEPS = 20; // :712
-const FRAME_MS = 33; // :694, :712 — ~30fps stride between synthetic step() timestamps
-const ARM_SWEEP_ESTIMATE = 6; // :696 — spiral/barred only, mirrors autoFit's discrete arm-count sweep
+const DESCRIPTOR_SIZE = 116; // same size for the reference load and the post-fit grab
+const WARMUP_STEPS = 40;
+const SETTLE_STEPS = 20;
+const FRAME_MS = 33; // ~30fps stride between synthetic step() timestamps
+const ARM_SWEEP_ESTIMATE = 6; // spiral/barred only, mirrors autoFit's discrete arm-count sweep
 
-// nParams per category (:696) — one dimension autoFit descends per pass, ×2
+// nParams per category — one dimension autoFit descends per pass, ×2
 // directions, ×`passes` rounds, is the bulk of the progress estimate.
 const N_PARAMS: Readonly<Record<GalaxyCategory, number>> = {
   spiral: 8,
@@ -69,7 +46,7 @@ const N_PARAMS: Readonly<Record<GalaxyCategory, number>> = {
   lenticular: 4,
 };
 
-// :700 — loss → a 1..100 "match score" for display; floors at 1 rather than 0
+// loss → a 1..100 "match score" for display; floors at 1 rather than 0
 // so a bad fit still reads as "some" match, not "the panel is broken".
 function scoreFromLoss(loss: number): number {
   return Math.max(1, Math.round(100 / (1 + 7 * loss)));
@@ -78,9 +55,9 @@ function scoreFromLoss(loss: number): number {
 export async function runCompareFit(args: {
   readonly engine: GalaxyEngineHandle;
   readonly reference: ReferenceGalaxy; // must have img !== null (UI disables the button otherwise)
-  readonly seedParams: GalaxyParams; // current galaxy state merged with reference.params (:699)
+  readonly seedParams: GalaxyParams; // current galaxy state merged with reference.params
   readonly store: AppStore;
-  readonly descriptorCache: Map<string, GalaxyDescriptor>; // per-session ref-descriptor memo (:688-689)
+  readonly descriptorCache: Map<string, GalaxyDescriptor>; // per-session ref-descriptor memo
   readonly loadDescriptor?: typeof loadImageDescriptor; // injectable for tests
 }): Promise<void> {
   const { engine, reference, seedParams, store, descriptorCache } = args;
@@ -152,7 +129,7 @@ export async function runCompareFit(args: {
 
     const { S, data } = await engine.grab(DESCRIPTOR_SIZE);
     const renderedDescriptor = computeDescriptor(data, S);
-    // The spike threw into the catch on a null descriptor here (html:714-717).
+    // The spike threw into the catch on a null descriptor here.
     // Skipping the report while still finishing cleanly is the deliberate,
     // more graceful choice.
     if (renderedDescriptor) {
@@ -171,7 +148,7 @@ export async function runCompareFit(args: {
     const message = err instanceof Error ? err.message : String(err);
     // Only the note changes on error — `fitProgressed` bundles all three
     // fields, so the current progress/score are re-sent unchanged rather
-    // than reset, matching the spike's partial-setState behaviour (:719-721).
+    // than reset, matching the spike's partial-setState behaviour.
     // `fitScore` may still be its `fitStarted`-reset `null` (a failure before
     // `autoFit` ever reports a step) — no `??` coercion, so null stays null
     // rather than being papered over with a fake score.

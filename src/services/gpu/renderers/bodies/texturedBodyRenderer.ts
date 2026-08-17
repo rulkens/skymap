@@ -1,85 +1,29 @@
 /**
- * texturedBodyRenderer — the shared textured-sphere renderer for every textured
- * body except Earth: the seven other major planets, the Moon, and the four
- * Galilean moons. Earth keeps its own renderer (its atmosphere/specular path
- * diverges); the twelve remaining bodies are the same lit, textured unit sphere
- * and share this one pipeline.
- *
- * ## Per-body resources = the single-uniform-clobber fix, by construction
- *
- * The bodies differ only in surface texture and per-frame MVP + lighting
- * uniforms, so a naive design would bind ONE uniform buffer and rewrite it
- * before each body's draw. That is exactly the `starRenderer` gap and the
- * documented WebGPU hazard: interleaving `queue.writeBuffer` with `queue.submit`
- * in one frame does NOT preserve order, so two bodies drawn from one mutated
- * buffer can both render with whichever matrix won the race. Instead each body
- * id owns its OWN uniform buffer + bind group in a `Map`; `draw` writes a body's
- * buffer immediately before that body's own indexed draw. A later body writes a
- * DIFFERENT buffer — no shared state for the race to corrupt. The cost is one
- * 112-byte buffer + one bind group per body (~12 of each), trivially cheap.
- *
- * ## Placeholder posture (visible-but-plain before the bitmap lands)
- *
- * A body's surface bitmap is fetched asynchronously by the proximity-gated
- * `bodyTextures` slot family. Rather than branch the fragment on a "has-texture"
- * flag, every body binds a real texture at all times: a per-kind 1×1 placeholder
- * until `setMap` swaps in the real map. So the geometry is a plain lit sphere
- * before the asset arrives, never black or absent.
- *
- * ## Per-kind sphere maps = the extension point (KIND_CFG)
- *
- * The sphere-map bindings are not hardcoded — they are derived from a `KIND_CFG`
- * table keyed by `TextureKind`. It holds a `surface` row (binding 2, sRGB) and a
- * `normal` row (binding 4, LINEAR tangent-space relief for airless bodies); the
- * layout, placeholders, and every body's bind group are all derived by iterating
- * those rows. Adding a further map role is ONE more row — the whole path picks it
- * up automatically, no second hardcoded branch. `setMap(id, kind, bmp)` is the
- * single per-kind upload entry.
- *
- * ## The ring binding is a real texture on every body (branch on data, not code)
- *
- * Binding 3 is the ring-alpha strip for Saturn's ring-on-planet shadow. Only
- * Saturn ships a real strip (via `setRingTexture`); every other body keeps a
- * shared 1×1 TRANSPARENT placeholder. Binding a real texture on all bodies keeps
- * ONE pipeline + ONE layout for the whole set — the fragment short-circuits on
- * `ringOuterRatio == 0` and never samples the placeholder. The alternative (two
- * pipelines, or a nullable binding) would fork the whole draw path on Saturn.
- *
- * ## Per-body mip generation
- *
- * `setMap` sizes the body texture with a full mip chain
- * (`mipLevelCount(w,h)` levels + `RENDER_ATTACHMENT` usage), uploads level 0,
- * and runs `generateMipChain` so the surface doesn't shimmer as the body shrinks
- * toward the sub-pixel glint handoff. The sampler is the first in the repo to
- * set `mipmapFilter: 'linear'`, consuming that chain.
- *
- * ## Pipeline state
- *
- * Matches `earthRenderer` / the `foreground:0` row: `rgba16float` colour +
- * `depth32float` depth (`depthWriteEnabled`, `depthCompare: 'greater'` — the NEAR0
- * slab's reversed-Z convention, clear `0.0`, greater-z-wins), opaque
- * replace, CCW front face + back-cull (matches `uvSphereMesh`'s outward
- * winding). Explicit bind-group layout (not `'auto'`) so texture swaps rebuild
- * bind groups against a stable layout — the `feedback_webgpu_auto_layout_trap`.
- *
- * @module
+ * texturedBodyRenderer — one lit, textured unit sphere shared by every textured body
+ * except Earth, whose atmosphere/specular path diverges into its own renderer. The
+ * uploaded `uvSphereMesh` is NOT the surface: the vertex stage inflates it into a
+ * shell that CIRCUMSCRIBES the body and the fragment recovers the analytic sphere per
+ * pixel, so the silhouette is a pixel-exact circle at the radius the atmosphere shell
+ * rays against, not a polygon inscribed 0.2–0.4% inside it whose sliver the background
+ * shows through (maths in `shaders/lib/analyticSphere.wesl`). Each body owns its own
+ * uniform buffer + bind group, so no per-frame write can race another body's draw.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { TexturedBodyRenderer } from '../../../../@types/rendering/TexturedBodyRenderer';
+import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
-
-/** UV-sphere tessellation — 48×24, shared with every sphere body renderer for a
- *  smooth silhouette at close range without overwhelming vertex throughput. */
-const SEGMENTS = 48;
-const RINGS = 24;
 
 /** `TexturedBodyUniforms` is 112 bytes (28 f32): the 80-byte lit prefix + two
  *  ring ratios + two Minnaert limb params + camPosLocal vec3 + one pad float.
@@ -105,7 +49,11 @@ const KIND_CFG = {
 } as const satisfies Partial<
   Record<
     TextureKind,
-    { binding: number; format: GPUTextureFormat; placeholder: readonly [number, number, number, number] }
+    {
+      binding: number;
+      format: GPUTextureFormat;
+      placeholder: readonly [number, number, number, number];
+    }
   >
 >;
 
@@ -115,12 +63,18 @@ type SphereMapKind = keyof typeof KIND_CFG;
 const SPHERE_MAP_KINDS = Object.keys(KIND_CFG) as SphereMapKind[];
 
 /** Per-body GPU resources. Each body owns its uniform buffer + bind group so no
- *  shared uniform can be clobbered mid-frame. `maps` holds only the sphere maps a
- *  body has committed (a missing kind falls back to the shared placeholder);
+ *  shared uniform can be clobbered mid-frame.
+ *
+ *  Two independent texture layers per sphere-map kind, never one:
+ *  - `maps` — the COMMITTED layer, a full-resolution map this body owns.
+ *  - `placeholders` — this body's stand-in for a kind it has not committed,
+ *    overriding the shared 1×1. Seeded by `setPlaceholderMap` from an atlas tile.
+ *
  *  `ringTexture` is `null` while the body uses the shared ring placeholder. */
 type BodyResources = {
   uniformBuffer: GPUBuffer;
   maps: Map<TextureKind, GPUTexture>;
+  placeholders: Map<TextureKind, GPUTexture>;
   ringTexture: GPUTexture | null;
   bindGroup: GPUBindGroup;
 };
@@ -137,7 +91,7 @@ export function createTexturedBodyRenderer(
   reversedZ: boolean,
 ): TexturedBodyRenderer {
   // ── Geometry upload (positions + uvs, like earthRenderer) ─────────────────
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({
@@ -178,12 +132,11 @@ export function createTexturedBodyRenderer(
 
   // ── Shared placeholders ───────────────────────────────────────────────────
   //
-  // One 1×1 placeholder texture PER sphere-map kind (mid-grey for `surface`),
-  // each in that kind's own format + texel — derived by iterating KIND_CFG so a
-  // new kind gets its placeholder for free. A transparent 1×1 ring texture stands
-  // in for every non-ringed body. Binding real textures at all times keeps the
-  // fragment branch-free and the layout identical across the whole body set.
-  const placeholderMaps = new Map<SphereMapKind, GPUTexture>();
+  // One 1×1 texture per sphere-map kind (mid-grey for `surface`), in that kind's own
+  // format, plus a TRANSPARENT one for the ring binding. Every body binds a real
+  // texture at all times, which is what keeps the fragment branch-free and the layout
+  // identical across the whole set; these are the resolver's default layer.
+  const sharedPlaceholders = new Map<SphereMapKind, GPUTexture>();
   for (const kind of SPHERE_MAP_KINDS) {
     const cfg = KIND_CFG[kind];
     const placeholder = device.createTexture({
@@ -198,7 +151,7 @@ export function createTexturedBodyRenderer(
       { bytesPerRow: 4, rowsPerImage: 1 },
       [1, 1, 1],
     );
-    placeholderMaps.set(kind, placeholder);
+    sharedPlaceholders.set(kind, placeholder);
   }
 
   const placeholderRing = device.createTexture({
@@ -273,7 +226,12 @@ export function createTexturedBodyRenderer(
     primitive: {
       topology: 'triangle-list',
       frontFace: 'ccw', // outward-facing (matches uvSphereMesh winding)
-      cullMode: 'back',
+      // The proxy is invisible scaffolding, so its FAR hemisphere is the one to
+      // keep. Front faces would vanish the moment the camera crossed inside the
+      // 5% shell — a legal close approach — and take the body with them; the far
+      // hemisphere still covers the whole disc from in there, because the near
+      // hemisphere is behind the eye.
+      cullMode: 'front',
     },
     depthStencil: {
       format: depthFormat,
@@ -285,10 +243,21 @@ export function createTexturedBodyRenderer(
   // ── Per-body resources ────────────────────────────────────────────────────
   const bodies = new Map<BodyTextureId, BodyResources>();
 
+  // What a body shows for a kind it has NOT committed: its own override if it has
+  // one, else the shared 1×1. Keeping the two layers separate keeps the chain in
+  // `buildBindGroup` TWO-term — a third `?? shared` term would move the precedence
+  // rule into every rebuild site and force `clearMap` to know what to fall back TO.
+  // The lookup goes through `bodies`, never a passed-in map, so no caller can resolve
+  // against a stale copy.
+  function placeholderFor(bodyId: BodyTextureId, kind: SphereMapKind): GPUTexture {
+    return bodies.get(bodyId)?.placeholders.get(kind) ?? sharedPlaceholders.get(kind)!;
+  }
+
   // Build a bind group from a body's current resources, falling back to the
-  // shared placeholders while a body texture / ring texture is unset. Called at
+  // resolved placeholder while a body texture / ring texture is unset. Called at
   // first reference and rebuilt on every texture swap against the stable layout.
   function buildBindGroup(
+    bodyId: BodyTextureId,
     res: Pick<BodyResources, 'uniformBuffer' | 'maps' | 'ringTexture'>,
   ): GPUBindGroup {
     return device.createBindGroup({
@@ -298,11 +267,11 @@ export function createTexturedBodyRenderer(
         { binding: 0, resource: { buffer: res.uniformBuffer } },
         { binding: 1, resource: sampler },
         // One sphere-map entry per KIND_CFG row: the body's committed texture, or
-        // that kind's shared placeholder while it is unset. Derived, not
+        // its resolved placeholder while that kind is unset. Derived, not
         // hardcoded — a new kind binds here automatically.
         ...SPHERE_MAP_KINDS.map((kind) => ({
           binding: KIND_CFG[kind].binding,
-          resource: (res.maps.get(kind) ?? placeholderMaps.get(kind)!).createView(),
+          resource: (res.maps.get(kind) ?? placeholderFor(bodyId, kind)).createView(),
         })),
         { binding: 3, resource: (res.ringTexture ?? placeholderRing).createView() },
       ],
@@ -324,8 +293,9 @@ export function createTexturedBodyRenderer(
     const res: BodyResources = {
       uniformBuffer,
       maps: new Map(),
+      placeholders: new Map(),
       ringTexture: null,
-      bindGroup: buildBindGroup({ uniformBuffer, maps: new Map(), ringTexture: null }),
+      bindGroup: buildBindGroup(bodyId, { uniformBuffer, maps: new Map(), ringTexture: null }),
     };
     bodies.set(bodyId, res);
     return res;
@@ -333,11 +303,9 @@ export function createTexturedBodyRenderer(
 
   // ── setMap ────────────────────────────────────────────────────────────────
   //
-  // Upload a body's map for one `TextureKind`, keyed by KIND_CFG for its binding
-  // + format. The old single-map `setTexture` parameterised by kind: create the
-  // sized texture, upload level 0 flipped, generate the mip chain, store into the
-  // body's `maps`, rebuild the bind group. Only kinds with a KIND_CFG row are
-  // valid; the slot machinery upstream only routes those.
+  // Upload a body's map for one `TextureKind`, taking binding + format from that
+  // kind's KIND_CFG row. The full mip chain is what stops the surface shimmering as
+  // the body shrinks toward the sub-pixel glint handoff.
 
   function setMap(bodyId: BodyTextureId, kind: TextureKind, bitmap: ImageBitmap): void {
     const cfg = KIND_CFG[kind as SphereMapKind];
@@ -365,27 +333,79 @@ export function createTexturedBodyRenderer(
     ]);
     generateMipChain(device, texture);
     res.maps.set(kind, texture);
-    res.bindGroup = buildBindGroup(res);
+    res.bindGroup = buildBindGroup(bodyId, res);
+  }
+
+  // ── setPlaceholderMap ─────────────────────────────────────────────────────
+  //
+  // Seed ONE body's placeholder override for one kind from a tile of the shared
+  // low-resolution body atlas. Structurally `setMap`, bar two differences that carry
+  // the design: the texture lands in `res.placeholders`, not `res.maps`, so a
+  // committed hi-res map shadows it whichever order the two arrive in and `clearMap`
+  // falls back onto it; and only `rect` of the source bitmap is copied. Cropping at
+  // upload keeps the atlas a TRANSPORT format — no shader change, no UV remap, no
+  // seam gutters, and no atlas texture bound anywhere.
+
+  function setPlaceholderMap(
+    bodyId: BodyTextureId,
+    kind: TextureKind,
+    atlas: ImageBitmap,
+    rect: AtlasTileRect,
+  ): void {
+    const cfg = KIND_CFG[kind as SphereMapKind];
+    const res = resourcesFor(bodyId);
+    res.placeholders.get(kind)?.destroy();
+    const levels = mipLevelCount(rect.w, rect.h);
+    const texture = device.createTexture({
+      label: `texturedBody-placeholder-${kind}-${bodyId}`,
+      size: [rect.w, rect.h, 1],
+      format: cfg.format,
+      mipLevelCount: levels,
+      // Same as `setMap`: generateMipChain renders each level below 0.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    // COORDINATE CONVENTION — `origin` and `flipY` INTERACT, and this is the one
+    // place a wrong assumption survives every test: the mock device rasterises
+    // nothing, so a mirrored or wrong-row crop is green in CI and visibly wrong
+    // on screen.
+    //
+    // `origin` is the minimum corner of the source sub-region in UNFLIPPED source
+    // coordinates — top-left origin, y increasing DOWNWARD, unaffected by `flipY`
+    // (WebGPU §GPUCopyExternalImageSourceInfo: "The origin option is still relative
+    // to the top-left corner of the source image, increasing downward"), which is
+    // the space `atlasTileRect` computes in. `flipY: true` then applies to the
+    // SELECTED REGION alone, so texture v=0 is the tile's south row — `setMap`'s
+    // convention, shared with earthRenderer.
+    device.queue.copyExternalImageToTexture(
+      { source: atlas, origin: { x: rect.x, y: rect.y }, flipY: true },
+      { texture },
+      [rect.w, rect.h, 1],
+    );
+    generateMipChain(device, texture);
+    // Store BEFORE the rebuild: `buildBindGroup` resolves the placeholder through
+    // `bodies`, so the override has to be visible there for the new bind group to
+    // pick it up.
+    res.placeholders.set(kind, texture);
+    res.bindGroup = buildBindGroup(bodyId, res);
   }
 
   // ── clearMap ──────────────────────────────────────────────────────────────
   //
-  // The eviction inverse of `setMap`: free ONE kind's sphere map and rebind that
-  // kind's shared placeholder. Per-KIND, not per-body, because the `bodyTextures`
-  // slots are per-(body,kind) and each releases independently: `surface` and
-  // `normal` have INDEPENDENT clamped tiers (e.g. the Moon's surface ceiling is
-  // `large` but its normal ceiling is `medium`), so a tier switch can evict the
-  // surface slot alone. A per-body clear would then destroy the sibling `normal`
-  // texture too — and because its clamped tier is unchanged the demand loop never
-  // re-fetches it, so the normal map vanishes until an unrelated tier change. Only
-  // freeing the named kind keeps every sibling's resident texture bound.
+  // The eviction inverse of `setMap`: free ONE kind's sphere map and rebind whatever
+  // the resolver gives for that (body, kind), so a cleared kind never has to be told
+  // what to fall back TO.
   //
-  // The ring texture and the per-body uniform buffer are left intact: the ring
-  // rides its OWN slot key (freed by that slot's onRelease), and keeping the
-  // uniform buffer keeps the body drawable-but-plain without a realloc on
-  // re-approach. A proximity loss still frees every kind — each kind's slot
-  // releases and clears its own map, reaching the same end state with no sibling
-  // collateral on an independent per-kind eviction.
+  // Per-KIND, not per-body: `surface` and `normal` clamp to INDEPENDENT tiers (the
+  // Moon's surface ceiling is `large`, its normal ceiling `medium`), so a tier switch
+  // can evict one slot alone. A per-body clear would destroy the sibling texture too,
+  // and since its clamped tier is unchanged the demand loop would never re-fetch it —
+  // the map would stay gone until an unrelated tier change.
+  //
+  // The ring texture and uniform buffer survive: the ring rides its OWN slot key, and
+  // keeping the buffer keeps the body drawable-but-plain without a realloc.
 
   function clearMap(bodyId: BodyTextureId, kind: TextureKind): void {
     const res = bodies.get(bodyId);
@@ -396,7 +416,22 @@ export function createTexturedBodyRenderer(
     if (texture === undefined) return;
     texture.destroy();
     res.maps.delete(kind);
-    res.bindGroup = buildBindGroup(res);
+    res.bindGroup = buildBindGroup(bodyId, res);
+  }
+
+  // ── hasMap ────────────────────────────────────────────────────────────────
+  //
+  // Residency answered by the thing that draws it: does this (body, kind) binding
+  // hold a real texture rather than the shared 1×1? The frame's flat-vs-textured
+  // split asks HERE and not the loading system, because a committed slot is only a
+  // proxy for the fact — when the two diverge, both layers take opposite branches
+  // and draw the body twice into `foreground:0`. Either texture layer counts: a body
+  // whose only map is its placeholder override still draws as textured.
+
+  function hasMap(bodyId: BodyTextureId, kind: TextureKind): boolean {
+    const res = bodies.get(bodyId);
+    if (res === undefined) return false;
+    return res.maps.has(kind) || res.placeholders.has(kind);
   }
 
   // ── setRingTexture ────────────────────────────────────────────────────────
@@ -421,15 +456,16 @@ export function createTexturedBodyRenderer(
       1,
     ]);
     res.ringTexture = texture;
-    res.bindGroup = buildBindGroup(res);
+    res.bindGroup = buildBindGroup(bodyId, res);
   }
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void {
     const res = resourcesFor(bodyId);
-    // Write THIS body's own uniform buffer immediately before its draw — no
-    // shared buffer for a later body's write to race (see the module header).
+    // Write THIS body's own uniform buffer immediately before its draw: interleaving
+    // `writeBuffer` with `submit` does not preserve order, so a shared buffer would
+    // let a later body's write decide this body's matrix.
     device.queue.writeBuffer(res.uniformBuffer, 0, uniforms);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, res.bindGroup);
@@ -445,11 +481,14 @@ export function createTexturedBodyRenderer(
     positionBuffer.destroy();
     uvBuffer.destroy();
     indexBuffer.destroy();
-    for (const placeholder of placeholderMaps.values()) placeholder.destroy();
+    for (const placeholder of sharedPlaceholders.values()) placeholder.destroy();
     placeholderRing.destroy();
     for (const res of bodies.values()) {
       res.uniformBuffer.destroy();
+      // Both texture layers: the per-body placeholder overrides are textures this
+      // renderer owns as much as the committed maps, so teardown frees them too.
       for (const texture of res.maps.values()) texture.destroy();
+      for (const placeholder of res.placeholders.values()) placeholder.destroy();
       res.ringTexture?.destroy();
     }
     bodies.clear();
@@ -458,7 +497,9 @@ export function createTexturedBodyRenderer(
   const renderer: TexturedBodyRenderer = {
     label: 'texturedBodyRenderer',
     setMap,
+    setPlaceholderMap,
     clearMap,
+    hasMap,
     setRingTexture,
     draw,
     destroy,

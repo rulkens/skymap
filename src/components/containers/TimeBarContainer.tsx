@@ -5,8 +5,8 @@
  * Owns every store reach the presentational `TimeBar` refuses to do itself: it
  * subscribes the time *intent* slice (mode / paused / rateIndex → ladder label /
  * anchor) and maps each control to the matching re-anchoring intent action,
- * mirroring the keyboard shortcuts in `useKeyboardShortcuts`. `memo` localizes an
- * intent change's re-render to this leaf instead of cascading from App.
+ * mirroring the `[`/`]`/`\` entries in `KEYBOARD_SHORTCUTS`. `memo` localizes
+ * an intent change's re-render to this leaf instead of cascading from App.
  *
  * ### The readout ticks locally, not off an engine pub
  *
@@ -31,13 +31,13 @@ import DateEntryPopover from '../TimeBar/DateEntryPopover/DateEntryPopover';
 import RateSelectorPopover from '../TimeBar/RateSelectorPopover/RateSelectorPopover';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectRateStep, selectTimeState } from '../../state/time/selectors';
-import { goLive, pause, resume, setRate } from '../../state/time/timeSlice';
+import { pause, resume, setRate } from '../../state/time/timeSlice';
 import { enterManualPausedAt } from '../../state/time/enterManualPausedAt';
+import { goLiveNowAction } from '../../state/time/goLiveNowAction';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { formatSimClock } from '../../utils/time/formatSimClock';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
-import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { TimeState } from '../../@types/time/TimeState';
 
 export type TimeBarContainerProps = {
@@ -122,10 +122,7 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
     [dispatch, paused],
   );
 
-  const onNow = useCallback(
-    () => dispatch(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() })),
-    [dispatch],
-  );
+  const onNow = useCallback(() => dispatch(goLiveNowAction()), [dispatch]);
 
   // The container owns each popover's open/close and placement; the popovers
   // themselves are pure. Each trigger toggles its own popover, which (via the

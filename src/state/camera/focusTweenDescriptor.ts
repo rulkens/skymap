@@ -32,6 +32,7 @@ import { focusFraming } from '../../services/engine/camera/focusFraming';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
 /**
  * Build the focus tween's `from → to` descriptor.
@@ -40,16 +41,21 @@ import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescr
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
  * `fovYRad` is the projection FOV the structure and body arms need to frame
  * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
+ * `frame` is the orientation live at the caller's dispatch time — stamped
+ * onto the descriptor so the tween driver can re-express the pose if the
+ * setting changes mid-flight (same contract as `clipStarted`'s `frame`).
  */
 export function focusTweenDescriptor(
   row: SelectionRow,
   from: CameraPose,
   fovYRad: number,
+  frame: OrientationFrameId,
 ): CameraTweenDescriptor {
   return {
     from,
     to: { yaw: from.yaw, pitch: from.pitch, ...focusFraming(row, fovYRad) },
     durationMs: FOCUS_TWEEN_MS,
     easing: 'easeOutCubic',
+    frame,
   };
 }

@@ -84,6 +84,7 @@ import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
+import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -108,6 +109,12 @@ export type EngineState = {
    * focus readers read this.
    */
   selectionRows: SelectionRowsState;
+  /**
+   * The famous-galaxy metadata sidecar. A getter delegating to
+   * `store.getState().engine.meta.famousGalaxies`; the asset slot is the sole
+   * writer, the engine reads here.
+   */
+  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
   /**
    * Per-type data stores — the authoritative app-side home for each
    * data type (galaxies, structures, volumes, filaments). Slot commits

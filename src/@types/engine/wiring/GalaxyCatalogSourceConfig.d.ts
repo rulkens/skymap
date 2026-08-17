@@ -10,10 +10,10 @@ import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
  * `ASSET_WIRING` demand row; on tier change `loadCompanionAssets`
  * reloads it in lockstep with the new-tier bin.
  *
- *   - `famousMeta` — Famous-galaxy meta JSON sidecar
+ *   - `famousGalaxiesMeta` — Famous-galaxy meta JSON sidecar
  *                    (tier-agnostic; one load per session).
  */
-export type GalaxyCatalogCompanionRef = 'famousMeta';
+export type GalaxyCatalogCompanionRef = 'famousGalaxiesMeta';
 
 /**
  * Categorisation of a registry row.  Drives behaviour in the two places

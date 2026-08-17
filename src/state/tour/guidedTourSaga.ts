@@ -42,8 +42,8 @@
  *
  * The snapshot is a pure store read — `yield* select(captureScene)` — so capture
  * needs no engine context here. The matching restore DISPATCHES (settings merge +
- * focus revert), so it lives in `restoreSceneSaga`, which reads its own engine
- * context for the fade pass. This saga therefore reaches no `getContext` itself.
+ * orientation restore + focus revert), so it lives in `restoreSceneSaga`. This
+ * saga therefore reaches no `getContext` itself.
  */
 
 import { call, put, select, take, race, cancelled, delay } from 'typed-redux-saga';
@@ -82,7 +82,7 @@ import type { BeatRange } from '../../@types/animation/tour/BeatRange';
  * the tour on any background orbit-controls event.
  */
 export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
-  // Snapshot the six settings clusters + selection.focus BEFORE any beat plays
+  // Snapshot the ten settings clusters + selection.focus BEFORE any beat plays
   // so restore winds back to the user's pre-tour state including the first
   // beat's establishing strip. A pure store read — no engine context needed.
   const snapshot = yield* select(captureScene);
@@ -144,7 +144,7 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
           // recorder-driven runs pass a range, so the UI never waits here.
           //
           // POSITION MATTERS: the recorder discards exactly this much virtual
-          // time from the START of a take (tools/record/recordTour.ts settle
+          // time from the START of a take (tools/record/record.ts settle
           // loop), so this delay must stay a windowed run's FIRST virtual-time
           // consumer — after any other timer/waitUntil, the film's head desyncs.
           if (firstEntry && range !== undefined && from > 0) {

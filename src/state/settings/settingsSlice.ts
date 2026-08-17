@@ -32,12 +32,11 @@ import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
-import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
-import { isStructureId } from '../../data/structure/structureIds';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
@@ -46,8 +45,13 @@ import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKno
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
+import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
+import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
 // tier is NOT a settings field — it lives in its own root slice (seeded via the
@@ -58,6 +62,13 @@ const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    // ── camera orientation frame ────────────────────────────────────────────
+    // Bare scalar view preference: which astronomical pole is "up". A string
+    // union (OrientationFrameId), not a numeric enum — no parse on the payload.
+    setOrientation: (settings, action: PayloadAction<OrientationFrameId>) => {
+      settings.orientation = action.payload;
+    },
+
     // ── galaxy-catalog billboard knobs ──────────────────────────────────────
     setGalaxyCatalogSize: (settings, action: PayloadAction<number>) => {
       settings.galaxyCatalogs.sizePx = action.payload;
@@ -68,11 +79,38 @@ const settingsSlice = createSlice({
     setDepthFade: (settings, action: PayloadAction<boolean>) => {
       settings.galaxyCatalogs.depthFade = action.payload;
     },
-    setHighlightFallback: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.highlightFallback = action.payload;
+    // Data-quality provenance axes (orientation / size): each axis's highlight
+    // overlay and tri-state filter are independent writers, mirroring how
+    // `setGalaxyCatalogVisible` / `setGalaxyCatalogLabelEnabled` each own one
+    // axis of a per-item row.
+    setProvenanceHighlight: (
+      settings,
+      action: PayloadAction<{ axis: ProvenanceAxisId; highlight: boolean }>,
+    ) => {
+      settings.galaxyCatalogs.provenance[action.payload.axis].highlight = action.payload.highlight;
     },
-    setRealOnly: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.realOnly = action.payload;
+    setProvenanceFilter: (
+      settings,
+      action: PayloadAction<{ axis: ProvenanceAxisId; filter: ProvenanceFilter }>,
+    ) => {
+      settings.galaxyCatalogs.provenance[action.payload.axis].filter = action.payload.filter;
+    },
+    // Overall physical-SB → HDR gain, twin of setGalaxyCatalogSize. Rides the
+    // points uniform as `galaxySbScale`; the live successor to the old
+    // hardcoded `GALAXY_SB_SCALE` shader const.
+    setGalaxySbScale: (settings, action: PayloadAction<number>) => {
+      settings.galaxyCatalogs.sbScale = action.payload;
+    },
+    // Bloom ceiling — the max baked surface-brightness amplitude a compact
+    // galaxy can emit. The vertex stage clamps `sbAmp` to it live
+    // (`galaxySbMax` uniform), replacing the old bake-time clamp.
+    setGalaxySbMax: (settings, action: PayloadAction<number>) => {
+      settings.galaxyCatalogs.sbMax = action.payload;
+    },
+    // Readability-falloff exponent on the resolved-fraction falloff, gated by
+    // the depth-fade toggle. Rides the points uniform as `galaxyFalloffStrength`.
+    setGalaxyFalloffStrength: (settings, action: PayloadAction<number>) => {
+      settings.galaxyCatalogs.falloffStrength = action.payload;
     },
     setGalaxyCatalogVisible: (
       settings,
@@ -93,6 +131,15 @@ const settingsSlice = createSlice({
     },
     setToneMapCurve: (settings, action: PayloadAction<ToneMapCurve>) => {
       settings.tonemap.curve = action.payload;
+    },
+    setHdrEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.hdr.enabled = action.payload;
+    },
+    setHdrKnee: (settings, action: PayloadAction<number>) => {
+      settings.hdr.knee = action.payload;
+    },
+    setHdrHeadroom: (settings, action: PayloadAction<number>) => {
+      settings.hdr.headroom = action.payload;
     },
 
     // ── bloom ───────────────────────────────────────────────────────────────
@@ -126,14 +173,25 @@ const settingsSlice = createSlice({
     setMilkyWayLabelEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.milkyWay.labelEnabled = action.payload;
     },
+    // Star-cloud look knobs, patched leaf-by-leaf from the DebugPanel sliders.
+    // The payload is `MilkyWayTuning`, not `MilkyWaySettings`, so the two
+    // visibility axes keep their own single writers above and can never be
+    // flipped by a knob patch — the same split `setFlow` makes.
+    setMilkyWayTuning: (settings, action: PayloadAction<Partial<MilkyWayTuning>>) => {
+      Object.assign(settings.milkyWay, action.payload);
+    },
 
-    // ── famous stars ────────────────────────────────────────────────────────
-    // Singleton-overlay master gate on the seeded near-field star map (its own
-    // single writer, like setMilkyWayEnabled). Distinct from
-    // setStarCatalogEnabled (the Gaia survey gate); when off the star layers
-    // fall back to the Sun alone.
-    setFamousStarsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.famousStars.enabled = action.payload;
+    // ── zone of avoidance ──────────────────────────────────────────────────
+    setZoneOfAvoidanceEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.zoneOfAvoidance.enabled = action.payload;
+    },
+    // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
+    // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
+    setZoneOfAvoidanceTuning: (
+      settings,
+      action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,
+    ) => {
+      Object.assign(settings.zoneOfAvoidance, action.payload);
     },
 
     // ── filaments ───────────────────────────────────────────────────────────
@@ -236,6 +294,17 @@ const settingsSlice = createSlice({
       settings.starCatalogs.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
+    // ── bodies (fifth source-type cluster) ──────────────────────────────────
+    // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
+    // seeded from the registry row and read by `visibleStars` (the Sun's dot)
+    // and `foregroundLabelsLayer` (the Sun's caption), but no product decision
+    // has been made to expose a "hide this body" control, so no setter exists
+    // to turn it into a knob nothing turns. There is no cluster-level gate
+    // either, for the same reason (see EngineSettingsState).
+    setBodyLabelEnabled: (settings, action: PayloadAction<{ id: BodyId; enabled: boolean }>) => {
+      settings.bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
+    },
+
     // ── volumes ─────────────────────────────────────────────────────────────
     setVolumesEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.volumes.enabled = action.payload;
@@ -278,12 +347,6 @@ const settingsSlice = createSlice({
     setLabelsFocusedOnly: (settings, action: PayloadAction<boolean>) => {
       settings.labels.focusedOnly = action.payload;
     },
-    setStarLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.labels.starLabelsEnabled = action.payload;
-    },
-    setPlanetLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.labels.planetLabelsEnabled = action.payload;
-    },
 
     // ── debug ───────────────────────────────────────────────────────────────
     setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
@@ -291,6 +354,9 @@ const settingsSlice = createSlice({
     },
     setShowDiskRadiusRing: (settings, action: PayloadAction<boolean>) => {
       settings.debug.showDiskRadiusRing = action.payload;
+    },
+    setShowOrbitTrailImpostor: (settings, action: PayloadAction<boolean>) => {
+      settings.debug.showOrbitTrailImpostor = action.payload;
     },
     setPassDisabled: (settings, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
@@ -402,22 +468,6 @@ const settingsSlice = createSlice({
       settings.structures.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
-    // ── labels (master fan-out) ───────────────────────────────────────────────
-    // Set the text-label axis for EVERY label-bearing category at once. Label
-    // visibility has three authoritative homes (structure items, the famous-
-    // galaxy catalog item, the milkyWay scalar); this routes each LABEL_CATEGORY
-    // to its home, mirroring LabelsSectionContainer's dispatch guard. One
-    // dispatchable action for the panel's tri-state master and for tour setup,
-    // so callers don't hand-roll the per-category loop.
-    setLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      const enabled = action.payload;
-      for (const cat of LABEL_CATEGORIES) {
-        if (isStructureId(cat)) settings.structures.items[cat].labelEnabled = enabled;
-        else if (cat === 'milkyWay') settings.milkyWay.labelEnabled = enabled;
-        else settings.galaxyCatalogs.items[cat].labelEnabled = enabled;
-      }
-    },
-
     // ── snapshot merge (tour restore / mid-playback effect) ─────────────────
     // The ONE return-new-state reducer. `mergeSettingsSnapshot` does
     // `{ ...state, ...structuredClone(patch) }`; inside a case reducer `settings`
@@ -432,15 +482,22 @@ const settingsSlice = createSlice({
 });
 
 export const {
+  setOrientation,
   setGalaxyCatalogSize,
   setBrightness,
   setDepthFade,
-  setHighlightFallback,
-  setRealOnly,
+  setGalaxySbScale,
+  setGalaxySbMax,
+  setGalaxyFalloffStrength,
+  setProvenanceHighlight,
+  setProvenanceFilter,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setExposure,
   setToneMapCurve,
+  setHdrEnabled,
+  setHdrKnee,
+  setHdrHeadroom,
   setBloomEnabled,
   setBloomStrength,
   setBloomThreshold,
@@ -449,7 +506,9 @@ export const {
   setThumbnailsEnabled,
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
-  setFamousStarsEnabled,
+  setMilkyWayTuning,
+  setZoneOfAvoidanceEnabled,
+  setZoneOfAvoidanceTuning,
   setFilamentsEnabled,
   setFilamentIntensity,
   setOrbitTrailsEnabled,
@@ -469,6 +528,7 @@ export const {
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
+  setBodyLabelEnabled,
   setVolumesEnabled,
   addVolumeField,
   removeVolumeField,
@@ -477,6 +537,7 @@ export const {
   setFlow,
   setShowPickBuffer,
   setShowDiskRadiusRing,
+  setShowOrbitTrailImpostor,
   setPassDisabled,
   setRenderStrategy,
   inspectClipPath,
@@ -495,10 +556,7 @@ export const {
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  setLabelsEnabled,
   setLabelsFocusedOnly,
-  setStarLabelsEnabled,
-  setPlanetLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 

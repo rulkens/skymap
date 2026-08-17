@@ -78,10 +78,6 @@ function makeFixture(opts?: {
   };
   const starCatalogs = new Map<number, typeof gaiaStars>([[Source.GaiaStars, gaiaStars]]);
 
-  // The Milky-Way cloud handle records its `regenerate` calls so the tier-swap
-  // regeneration can be asserted without a real GPU generation.
-  const milkyWayCloud = { regenerate: vi.fn<(tier: string) => void>() };
-
   const state = {
     get settings() {
       return store.getState().settings;
@@ -91,11 +87,15 @@ function makeFixture(opts?: {
       starCatalogs,
       mcpm,
       // famous companion sidecar — loadCompanionAssets fires `.load` on it.
-      famousMeta: { load: vi.fn() } as SlotStub,
+      famousGalaxiesMeta: { load: vi.fn() } as SlotStub,
     },
     gpu: {
       texturedDiskRenderer: opts?.texturedDiskRenderer ?? null,
-      milkyWayCloud,
+      // No milkyWayCloud stub: this runner no longer calls `.regenerate`
+      // itself (see makeRunTierTransition.ts's comment) — the Milky-Way
+      // star count reaches the tier swap via `watchTierSaga`'s re-seed +
+      // `runFrame`'s mismatch check, neither of which this runner touches.
+      milkyWayCloud: null,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
@@ -106,7 +106,7 @@ function makeFixture(opts?: {
     phaseLocals: opts?.device ? { device: opts.device } : undefined,
   } as unknown as BootstrapDeps;
 
-  return { state, store, pointSlots, mcpm, gaiaStars, milkyWayCloud, bootstrapDeps };
+  return { state, store, pointSlots, mcpm, gaiaStars, bootstrapDeps };
 }
 
 describe('makeRunTierTransition', () => {
@@ -182,18 +182,6 @@ describe('makeRunTierTransition', () => {
     run('small', 'medium');
 
     expect(fx.gaiaStars.load).not.toHaveBeenCalled();
-  });
-
-  it('regenerates the Milky Way cloud for the new tier', () => {
-    const fx = makeFixture();
-    const run = makeRunTierTransition(fx.state, fx.bootstrapDeps);
-    run('small', 'medium');
-
-    // The cloud folds the tier's star budget into its generation, so a swap
-    // regenerates it at the next tier — the null-safe `?.regenerate` fires
-    // because the handle is present post-bootstrap.
-    expect(fx.milkyWayCloud.regenerate).toHaveBeenCalledTimes(1);
-    expect(fx.milkyWayCloud.regenerate).toHaveBeenCalledWith('medium');
   });
 
   it('skips the hi-res famous rebuild when device is undefined', () => {

@@ -188,6 +188,7 @@ import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 import package::lib::starPhotometry::D_REF_MPC;
 import package::lib::starPhotometry::MIN_D2_MPC2;
 import package::lib::starPhotometry::starPeakIntensity;
+import package::lib::starPhotometry::toRefPx;
 import package::lib::pickDepthBands::PICK_BAND_SURVEY_STAR_EPS;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
@@ -347,26 +348,27 @@ fn vs(
   let rPxRaw = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
   let rPx = min(STAR_GLOW_MAX_PX, rPxRaw);
 
-  // Peak from the UNCAPPED radius: I_peak * K_GAUSS * rPxRaw^2 == EXPOSURE *
-  // fluxApp. Wherever the ceiling is not biting (rPx == rPxRaw -- every leaf
-  // and every far aggregate) this is exactly the luminance conservation of
-  // header fact 2: refining an aggregate or not deposits identical total
-  // light. Once a NEAR aggregate's footprint outgrows STAR_GLOW_MAX_PX,
-  // dividing by the still-growing rPxRaw^2 rather than the pinned rPx^2
-  // FREEZES its surface brightness at the value it held when it hit the cap,
-  // instead of letting the peak climb as 1/d^2 into a saturated blob (the
-  // over-bright star bins around the Sun at ~0.5-1.3 kpc camera distance,
-  // where near bins are radius-capped but not yet refined to leaves). That is
-  // how a real extended source behaves -- approaching makes it BIGGER, not
-  // brighter per solid angle -- applied consistently to a radius we truncate.
-  // Deposited light becomes EXPOSURE * fluxApp * (rPx/rPxRaw)^2: a deliberate
-  // under-deposit for radius-capped aggregates only (header 'Radius' note).
-  // 'u.brightness' is the user's exposure trim ON TOP of the calibrated
-  // STAR_FLUX_EXPOSURE baseline (1.0 = identity -- see the header). 'fluxApp' is
-  // the inverse-square-dimmed apparent flux (header 'Apparent flux'). The
-  // peak-from-flux relation is shared with the famous / scene star stage
-  // (lib/starPhotometry.wesl).
-  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, rPxRaw);
+  // Peak from the UNCAPPED radius, converted to reference px (toRefPx) so the
+  // formula conserves light per unit SOLID ANGLE across canvas sizes rather
+  // than per device pixel: I_peak * K_GAUSS * rRefPx^2 == EXPOSURE * fluxApp.
+  // Wherever the ceiling is not biting (rPx == rPxRaw -- every leaf and every
+  // far aggregate) refining an aggregate or not deposits identical light per
+  // unit solid angle. Once a NEAR aggregate's footprint outgrows
+  // STAR_GLOW_MAX_PX, dividing by the still-growing rPxRaw^2 (in reference px)
+  // rather than the pinned rPx^2 FREEZES its surface brightness at the value
+  // it held when it hit the cap, instead of letting the peak climb as 1/d^2
+  // into a saturated blob (the over-bright star bins around the Sun at
+  // ~0.5-1.3 kpc camera distance, where near bins are radius-capped but not
+  // yet refined to leaves). That is how a real extended source behaves --
+  // approaching makes it BIGGER, not brighter per solid angle -- applied
+  // consistently to a radius we truncate. Deposited light becomes EXPOSURE *
+  // fluxApp * (rPx/rPxRaw)^2: a deliberate under-deposit for radius-capped
+  // aggregates only (header 'Radius' note). 'u.brightness' is the user's
+  // exposure trim ON TOP of the calibrated STAR_FLUX_EXPOSURE baseline (1.0 =
+  // identity -- see the header). 'fluxApp' is the inverse-square-dimmed
+  // apparent flux (header 'Apparent flux'). The peak-from-flux relation is
+  // shared with the famous / scene star stage (lib/starPhotometry.wesl).
+  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.cam.viewportPx.y));
 
   // Aggregate surface-brightness cap -- the user's live 'Fog cap' setting
   // ('u.aggregateIntensityCap', settings.starCatalogs.aggregateIntensityCap). A

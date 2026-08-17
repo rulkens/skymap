@@ -2,8 +2,8 @@
  * parseHashParams — decode a URL hash *body* into an ordered key→value map.
  *
  * The "body" is the hash with its leading `#` already stripped by the caller
- * (this is how `useUrlSync` and `hasDeepLink` treat it today). A body is a
- * run of `&`-separated `key=value` pairs:
+ * (`readHashBody` for `watchHashReadSaga`, an inline strip for `hasDeepLink`).
+ * A body is a run of `&`-separated `key=value` pairs:
  *
  *   'focus=body-jupiter'          → { focus: 'body-jupiter' }
  *   'focus=body-jupiter&t=2026…'  → { focus: 'body-jupiter', t: '2026…' }

@@ -1,0 +1,26 @@
+/*
+ * DebugSlider — one labelled slider row in a DebugPanel tuning section.
+ * Fixed label/readout widths keep the range input's left edge aligned across
+ * rows regardless of label or value length.
+ */
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.label {
+  flex: 0 0 90px;
+}
+
+.readout {
+  flex: 0 0 52px;
+  text-align: right;
+  opacity: 0.8;
+}
+
+.range {
+  flex: 1 1 auto;
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { classifyHubbleType } from '../../../src/services/gpu/galaxy/classifyHubbleType';
+import { classifyHubbleType } from '../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../src/data/milkyWay/milkyWayGalaxyParams';
 
 describe('MILKY_WAY_GALAXY_PARAMS', () => {

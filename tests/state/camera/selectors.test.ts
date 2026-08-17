@@ -27,10 +27,13 @@ import {
   commitCameraPose,
   clipStarted,
   clipEnded,
+  startFrameTween,
 } from '../../../src/state/camera/cameraSlice';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import type { FrameTween } from '../../../src/@types/camera/FrameTween';
 
 // Build a fresh store for each test so dispatch side-effects don't cross cases.
 const makeStore = () => configureStore({ reducer: rootReducer });
@@ -38,12 +41,21 @@ const makeStore = () => configureStore({ reducer: rootReducer });
 const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.3, distance: 10 };
 
 const clipData: ClipData = { timeline: [] };
+const clip = { data: clipData, frame: DEFAULT_ORIENTATION } as const;
 
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
   to: pose,
   durationMs: 1200,
   easing: 'easeOutCubic',
+  frame: DEFAULT_ORIENTATION,
+};
+
+const frameTween: FrameTween = {
+  fromQuat: [0, 0, 0, 1],
+  to: 'galactic',
+  durationMs: 800,
+  easing: 'easeInOutCubic',
 };
 
 describe('selectCameraBase', () => {
@@ -105,7 +117,15 @@ describe('selectCameraActive', () => {
   it('is true while a clip is active', () => {
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
-    store.dispatch(clipStarted(clipData));
+    store.dispatch(clipStarted(clip));
+
+    expect(selectCameraActive(store.getState())).toBe(true);
+  });
+
+  it('is true while a frameTween is in flight', () => {
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
+    store.dispatch(startFrameTween(frameTween));
 
     expect(selectCameraActive(store.getState())).toBe(true);
   });
@@ -119,7 +139,7 @@ describe('selectClipActive', () => {
 
   it('is true after clipStarted and false after clipEnded', () => {
     const store = makeStore();
-    store.dispatch(clipStarted(clipData));
+    store.dispatch(clipStarted(clip));
     expect(selectClipActive(store.getState())).toBe(true);
     store.dispatch(clipEnded());
     expect(selectClipActive(store.getState())).toBe(false);

@@ -1,47 +1,62 @@
 /**
- * scaleFadeBands — the descent's crossfade transitions, AS DATA.
+ * scaleFadeBands — the descent's crossfade transitions, AS DATA. Every scale
+ * the camera crosses on its way from the cosmic web to Earth's surface
+ * dissolves one kind of content in and another out; collecting the bands
+ * here (the same declarative-table posture as `captionPriority.ts`) keeps
+ * the whole choreography readable and tweakable, and makes a new transition
+ * a declared row rather than a new hand-rolled smoothstep. Consumed through
+ * `fadeBand`, which reads direction off each row's edge ordering.
  *
- * Every scale the camera crosses on its way from the cosmic web down to
- * Earth's surface dissolves one kind of content in and another out. Each
- * crossing used to grow its own hand-rolled smoothstep; collecting them here
- * — the same declarative-table posture as `captionPriority.ts` — makes the
- * whole descent's fade choreography READABLE and TWEAKABLE in one place, and
- * makes a new transition a declared row rather than a fourth copy of the
- * clamp. The bands are consumed through `fadeBand`, which reads the direction
- * off each row's edge ordering (see that primitive's header).
- *
- * ### One table, mixed keying quantities
- *
- * The rows do NOT all key on the same number, and that is deliberate — the
- * distinction is carried per-row by the comment naming WHICH quantity feeds
- * the band, not by splitting the table. Three rows key on the camera's distance
- * from the heliocentric render origin (`hypot(view.camPos)`, Mpc); one keys on
- * a star's OWN distance from the camera (pc); one keys on a scene body's
- * apparent DIAMETER in pixels. Keeping them one table is the point: they are all
- * "the descent's fades", and a reader tuning the descent wants them in one view.
+ * The rows do NOT all key on the same quantity — each row's comment names
+ * which one feeds it: most key on camera distance from the heliocentric
+ * render origin (Mpc) or from a content region's anchor; two key on the
+ * SUBJECT's own distance from the camera (`starCaption` pc, `sgrAStarCaption`
+ * Mpc); one on a body's apparent diameter (px).
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import {
-  FARTHEST_BODY_MPC,
-  FARTHEST_PLANET_MPC,
-  FOREGROUND_MAX_DISTANCE_MPC,
-} from '../frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
 import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
+import { regionById } from '../../../utils/scene/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
+import { MILKY_WAY_RADIUS_MPC } from '../galaxyGenerator/v1/milkyWayCalibration';
 
-// The roster's farthest seed expressed in parsecs — the derivation source for
-// the star-caption band, which keys on a star's own distance from the camera in
-// pc. Eta Carinae at ~2300 pc is the current extent; growing the roster carries
-// this and the band edges below with it.
-const FARTHEST_STAR_PC = FARTHEST_BODY_MPC / SCALE_UNITS.PC_TO_MPC;
+// The two extents this table's near-field rows scale off — each read from the
+// region whose content the row gates, so a band cannot end up keyed on a scale
+// that belongs to a different regime.
+const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
+const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
+
+// The solar neighbourhood's extent in parsecs — the derivation source for the
+// star-caption band, which keys on a star's own distance from the camera in pc.
+// Eta Carinae at ~2300 pc sets it today; growing the roster carries this and the
+// band edges below with it.
+const FARTHEST_STAR_PC = NEIGHBOURHOOD_EXTENT_MPC / SCALE_UNITS.PC_TO_MPC;
 
 // The constellation figures' eye-tuned recede edges, in kpc — the scale the
 // tuning conversation happens at (a 1 kpc solar neighbourhood, a 10 kpc
 // galactic-disc framing), converted to Mpc for the band table below.
 const CONSTELLATIONS_FULL_AT_KPC = 1;
 const CONSTELLATIONS_GONE_AT_KPC = 10;
+
+// The shape `starBackdrop` and `bodyGlintBackdrop` share: full at twice a
+// region's own extent (still composing that region's shot a couple of extents
+// out), gone by ten times it (well before the next scale frames up). One home
+// so the two backdrops' identical shape cannot drift apart independently.
+// R₀ — the Galactic Centre's distance from the render origin, off the same seed
+// the S-star orbits are scaled by, so the caption band below cannot drift from
+// the position it labels.
+const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
+
+const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
+const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
+
+export const backdropBand = (regionExtentMpc: number): FadeBand => ({
+  fullAt: regionExtentMpc * BACKDROP_FULL_AT_EXTENT_MULTIPLE,
+  goneAt: regionExtentMpc * BACKDROP_GONE_AT_EXTENT_MULTIPLE,
+});
 
 export const SCALE_FADE_BANDS = {
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
@@ -69,11 +84,11 @@ export const SCALE_FADE_BANDS = {
   // The Milky-Way impostor fades out as the camera dives into the disc toward
   // the Sun: full ≥ 0.002 Mpc (2 kpc, deep inside the disc), gone ≤ 0.0002 Mpc
   // (200 pc, where a flat spiral painting would hang in front of the
-  // solar-system view). Eye-tuning starting point, deepened at user request
-  // from the original { 0.008, 0.002 } so the procedural star/dust clumps hand
-  // off to the REAL Gaia star catalog — whose crossfade is fully faded in
-  // inside 8 kpc (gaia-stars crossfadePc) — instead of vanishing while still
-  // hanging visibly above the starfield that replaces them.
+  // solar-system view). Eye-tuning starting point: deep enough that the
+  // procedural star/dust clumps hand off to the REAL Gaia star catalog — whose
+  // crossfade is fully faded in inside 8 kpc (gaia-stars crossfadePc) —
+  // instead of vanishing while still hanging visibly above the starfield that
+  // replaces them.
   milkyWayApproach: { fullAt: 0.002, goneAt: 0.0002 },
 
   // Keyed on: the STAR's own distance from the camera, pc.
@@ -85,43 +100,43 @@ export const SCALE_FADE_BANDS = {
   // `FARTHEST_STAR_PC * 2` (≈ 4600 pc, so names don't clobber into one pile
   // viewed from far outside the neighbourhood). `goneAt` is tied to the caption
   // gate by the pop-free inequality
-  // `goneAt·PC_TO_MPC + 2·FARTHEST_BODY_MPC ≤ SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`
-  // (with goneAt = 2·FARTHEST it holds with equality) — so a star's caption
+  // `goneAt·PC_TO_MPC + 2·EXTENT ≤ SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` over the
+  // same region extent (with goneAt = 2·EXTENT it holds with equality) — so a star's caption
   // always reaches 0 before the layer's gate cuts it, and the cut cannot pop.
   starCaption: { fullAt: FARTHEST_STAR_PC * 1.1, goneAt: FARTHEST_STAR_PC * 2 },
 
-  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (same
-  // quantity as `surveyDeepZoom`). Consumer: `starPointsLayer`. The point
+  // Keyed on: CAMERA distance from the `solar-neighbourhood` region's anchor,
+  // Mpc — the Sun, so this is today the same number `surveyDeepZoom` reads off
+  // the render origin. Consumer: `starPointsLayer`. The point
   // backdrop is a minimum-size additive sprite field, so at galaxy framing the
   // whole roster collapses into one bright blob — this band dissolves it
   // smoothly instead of letting the hard `FOREGROUND_MAX_DISTANCE_MPC` gate pop
-  // it off. Full while composing the deep-neighbourhood shot a couple of seed
-  // extents out (`FARTHEST_BODY_MPC * 2` ≈ 4.6e-3 Mpc), fully dissolved by
-  // `FARTHEST_BODY_MPC * 10` ≈ 0.023 Mpc (~23 kpc), well before Milky-Way
-  // framing. The band completing STRICTLY inside the gate (goneAt ≪
-  // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100) is what makes the
-  // gate cut invisible.
-  starBackdrop: { fullAt: FARTHEST_BODY_MPC * 2, goneAt: FARTHEST_BODY_MPC * 10 },
+  // it off. `backdropBand` (above) is the shared shape: full ≈ 4.6e-3 Mpc while
+  // composing the deep-neighbourhood shot a couple of seed extents out, gone
+  // ≈ 0.023 Mpc (~23 kpc), well before Milky-Way framing. The band completing
+  // STRICTLY inside the gate (goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC, that same
+  // extent × 100) is what makes the gate cut invisible.
+  starBackdrop: backdropBand(NEIGHBOURHOOD_EXTENT_MPC),
 
-  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
-  // quantity as `starBackdrop`, but scaled off the SOLAR-SYSTEM extent, not the
-  // star roster). Consumer: `bodyGlintsLayer`. The planet/moon glints are
-  // minimum-size additive sprites exactly like the star points, so as the camera
-  // pulls back from the solar system all ~22 of them collapse onto a couple of
-  // pixels into one bright dot — this band dissolves them smoothly instead of
-  // letting them ride full-brightness to the coarse `FOREGROUND_MAX_DISTANCE_MPC`
-  // gate, which sits deep in Milky-Way framing. Full while the camera still frames
-  // the outer planets a couple of Neptune-orbits out (`FARTHEST_PLANET_MPC * 2`),
-  // fully dissolved by `FARTHEST_PLANET_MPC * 10` (~1.5e-9 Mpc, ~10 Neptune
-  // orbits) — well before the neighbourhood, let alone the galaxy, frames up. Its
-  // sibling `starBackdrop` does the same for the star points one scale-decade out.
-  // The band completing STRICTLY inside the shared gate (`goneAt ≪
-  // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100`) is what makes the hard
-  // gate cut invisible; like `starPointsLayer`, `bodyGlintsLayer` DISABLES outright
-  // once this reads 0 (the "opacity 0 ⇒ no render" house rule), so the far-dissolve
-  // is the binding, smooth gate for the glints. These x2 / x10 edges are an
-  // eye-tuning STARTING POINT — the user tunes them visually.
-  bodyGlintBackdrop: { fullAt: FARTHEST_PLANET_MPC * 2, goneAt: FARTHEST_PLANET_MPC * 10 },
+  // Keyed on: CAMERA distance from the `solar-system` region's anchor, Mpc (the
+  // same `backdropBand` shape as `starBackdrop`, but applied to the SOLAR
+  // SYSTEM's own extent, not the star roster's). Consumer: `bodyGlintsLayer`.
+  // The planet/moon glints are minimum-size additive sprites exactly like the
+  // star points, so as the camera pulls back from the solar system all ~22 of
+  // them collapse onto a couple of pixels into one bright dot — this band
+  // dissolves them smoothly instead of letting them ride full-brightness to the
+  // coarse `FOREGROUND_MAX_DISTANCE_MPC` gate, which sits deep in Milky-Way
+  // framing. Full ≈ 2.9e-10 Mpc (a couple of Neptune-orbits out), gone
+  // ≈ 1.5e-9 Mpc (~10 Neptune orbits) — well before the neighbourhood, let
+  // alone the galaxy, frames up. Its sibling `starBackdrop` does the same for
+  // the star points one scale-decade out. The band completing STRICTLY inside
+  // the shared gate (`goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC`, which scales off
+  // the WIDEST region extent) is what makes the hard gate cut invisible; like `starPointsLayer`,
+  // `bodyGlintsLayer` DISABLES outright once this reads 0 (the "opacity 0 ⇒ no
+  // render" house rule), so the far-dissolve is the binding, smooth gate for
+  // the glints. `backdropBand`'s x2 / x10 multipliers are an eye-tuning
+  // STARTING POINT — the user tunes them visually.
+  bodyGlintBackdrop: backdropBand(SOLAR_SYSTEM_EXTENT_MPC),
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the Sun
   // sits at the origin, so the Sun caption's own distance-from-camera IS that
@@ -136,8 +151,34 @@ export const SCALE_FADE_BANDS = {
     goneAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
   },
 
+  // Keyed on: the CAPTION's own distance from the camera, Mpc — the Galactic
+  // Centre's approach band, and the ONLY reach the caption has (its row carries
+  // no layer-gate term; see `captionFadeRules`). Consumers:
+  // `captionFadeRules.sgrAStar` and `starPointsLayer`'s pick stamp — the anchor
+  // draws nothing, so this band is the whole of what invites the click, and pick
+  // reads it rather than restating the edges.
+  //
+  // `fullAt` is R₀ itself, the Sun's own distance from the Centre: the name is
+  // at FULL alpha from Earth and stays there all the way in. A `fullAt` below
+  // R₀ (e.g. R₀/2) would reach 0 before the galaxy-framing views that most
+  // need the caption, in exchange for keeping it out of the solar-system view
+  // — the wrong trade, since the solar-system view has plenty of other cues.
+  //
+  // `goneAt` is a disc DIAMETER out, so the name persists while the galaxy is
+  // the subject and dissolves as it becomes one object among many. Tied to
+  // `MILKY_WAY_RADIUS_MPC` rather than to another R₀ multiple because what the
+  // far edge tracks is the galaxy's own size.
+  //
+  // NOT derived from `galactic-centre.extentMpc`: that measures the S-star
+  // orbits, five orders of magnitude tighter, and would put the name's onset
+  // inside the cluster it labels.
+  sgrAStarCaption: {
+    fullAt: SGR_A_STAR_R0_MPC,
+    goneAt: MILKY_WAY_RADIUS_MPC * 2,
+  },
+
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
-  // quantity as `surveyDeepZoom` / `starBackdrop`). Consumer: `constellationsLayer`.
+  // quantity as `surveyDeepZoom`). Consumer: `constellationsLayer`.
   // The true-3D stick figures read as Earth's familiar sky from within the solar
   // neighbourhood and shear apart as the camera pulls away; this recede band holds
   // them at full presence through the neighbourhood and dissolves them before the
@@ -152,6 +193,32 @@ export const SCALE_FADE_BANDS = {
     fullAt: CONSTELLATIONS_FULL_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
     goneAt: CONSTELLATIONS_GONE_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
   },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `constellations`). Consumer: the zone-of-avoidance overlay
+  // (band + label, via `zoneOfAvoidanceLayerOpacity`). Derived off the Milky
+  // Way's own size (`MILKY_WAY_RADIUS_MPC`, the same posture `sgrAStarCaption`
+  // takes off `SGR_A_STAR_R0_MPC`), not a fixed Local-Group-framing distance:
+  // `goneAt` = 2 radii (one disc diameter out, so the veil is already fading in
+  // by the moment the galaxy has framed up as a whole object) and `fullAt` = 10
+  // radii (full veil well before Local-Group framing). An APPROACH fade — full
+  // at the large-distance edge — the opposite direction from `constellations`,
+  // since this band explains a COSMIC-scale catalog gap rather than a near-field
+  // sky figure. The multiples (2 / 10) are chosen for that feel, not derived
+  // from any further physical constant.
+  zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `zoneOfAvoidance`, above). Consumer: the zone-of-avoidance
+  // overlay, composed with `zoneOfAvoidance` into a visibility WINDOW — the
+  // band is a Milky-Way-context guide, and once the Local Group itself becomes
+  // the subject the guide has done its job and should recede. No
+  // `local-group` row exists yet in `BODY_REGIONS` to derive this from (only
+  // `solar-system`, `solar-neighbourhood`, `galactic-centre` are seeded), so
+  // these are LITERAL Mpc values chosen for that feel: full within 2 Mpc,
+  // gone by 6 Mpc. A recede band — full at the small-distance edge, the same
+  // shape as `constellations`.
+  zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
 
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at

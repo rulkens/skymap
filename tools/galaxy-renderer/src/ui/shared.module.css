@@ -1,164 +1,76 @@
 /*
- * shared.module.css — the Galaxy Renderer's design vocabulary: custom-property
- * tokens (ported from the spike's `galaxy.css`) plus the composable classes
- * every HUD primitive draws from. Components pull pieces in via `composes:
- * … from './shared.module.css'` — never `:global` (see the create-component
- * skill's rule 5b). This file owns no component of its own.
+ * shared.module.css — the Galaxy Renderer's composable HUD classes (form
+ * controls, section headers, the block-width button modifier). Buttons and
+ * sliders render through the app's own `Button`/`Slider` primitives; this
+ * file no longer owns their chrome. Design tokens live in the main app's
+ * `src/styles/global.css`, imported once from the tool's `main.tsx`, so a
+ * look tuned here transfers directly to the app's own UI. This file owns
+ * only the three tool-local status colours with no app equivalent.
  *
- * The `:root` block is CSS custom properties, not class names — CSS Modules
- * only renames class/id selectors, so these tokens stay as-written and are
- * available via `var(--token)` from any module in the tool once this file is
- * pulled into the bundle (which happens as soon as any component composes
- * from it).
+ * The `:root` block below is CSS custom properties, not class names — CSS
+ * Modules only renames class/id selectors, so these tokens stay as-written.
  */
 
 :root {
-  /* base + surfaces */
-  --bg: #000000;
-  --panel: rgba(9, 12, 22, 0.8);
-  --panel-line: rgba(255, 255, 255, 0.08);
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface-line: rgba(255, 255, 255, 0.1);
-  /* text */
-  --text-strong: #e8ecf6;
-  --text: #c4ccdd;
-  --muted: #8791a8;
-  --label: #7d88a0;
-  --faint: #5f6a82;
-  /* accents */
-  --accent: #3f6fd6;
-  --accent-line: #5b86e8;
-  --accent-lite: #8fb8ff;
-  --accent-lite2: #cfe0ff;
-  --good: #5fe0a8;
-  --warn: #e6c766;
-  /* type */
-  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Status colours for the perf badge and the auto-fit score/stop affordance.
+     No app equivalent — the app has no good/warn/bad semantic, so these stay
+     tool-local rather than being forced onto a palette token that means
+     something else. */
+  --tool-status-good: #5fe0a8;
+  --tool-status-warn: #e6c766;
+  --tool-status-bad: #e08a6a;
 }
 
-/* ── Buttons — compact, themed (galaxy.css:46-55) ────────────────────────── */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 11px;
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  line-height: 1;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease,
-    filter 0.12s ease,
-    transform 0.04s ease;
-  white-space: nowrap;
-}
-
-.btn:hover {
-  filter: brightness(1.1);
-}
-
-.btn:active {
-  transform: translateY(1px);
-}
-
-.btnPrimary {
-  composes: btn;
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent-line);
-}
-
-.btnGood {
-  composes: btn;
-  background: #2f8f5f;
-  color: #fff;
-  border-color: #3aa86f;
-}
-
-.btnGhost {
-  composes: btn;
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--surface-line);
-}
-
-.btnGhost:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.18);
-  filter: none;
-}
-
-/* Modifier — combine with a color variant via `cx(shared.btnGhost,
-   shared.btnBlock)`, mirroring the spike's `class="btn btn-ghost block"`. */
-.btnBlock {
+/* Full width is layout, not chrome — composed alongside the app's `Button`
+   (which owns the chrome) rather than folded into a color variant. */
+.blockButton {
   width: 100%;
 }
 
-/* Form controls — the surface/border/text treatment selects and inputs share.
-   Also the token anchor: composing it guarantees the ':root' custom-property
-   block above ships with any component that uses it. */
+/* Form controls — the surface/border/text treatment selects and inputs share. */
 .control {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--surface-line);
-  font-family: var(--font);
+  background: var(--surface-control);
+  color: var(--color-fg-base);
+  border: 1px solid var(--border-control);
+  font-family: var(--font-family-mono);
   cursor: pointer;
 }
 
-/* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
+/* ── Checkbox rows — a label that fills the row with its control right-aligned.
+   The ⓘ affordance sits OUTSIDE `.toggleLabel` at every call site: a label
+   forwards clicks to its control, which would fire on the info button too. ── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.toggleLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-base);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* ── Section headers — uppercase, letter-spaced ──────────────────────────── */
 
 .sectionHeader {
-  font-size: 11px;
-  letter-spacing: 2.5px;
-  color: var(--label);
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-widest);
+  color: var(--color-fg-dim);
   font-weight: 600;
   text-transform: uppercase;
-}
-
-/* ── Mono value badge — slider readouts (html:203) ────────────────────────── */
-
-.monoBadge {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--accent-lite);
-}
-
-/* ── Range slider — thumb styling (galaxy.css:34-37) ─────────────────────── */
-
-.rangeInput {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.14);
-  outline: none;
-  cursor: pointer;
-}
-
-.rangeInput::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--accent-lite2);
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(140, 180, 255, 0.7);
-}
-
-.rangeInput::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
-  border: none;
-  border-radius: 50%;
-  background: var(--accent-lite2);
-  cursor: pointer;
 }

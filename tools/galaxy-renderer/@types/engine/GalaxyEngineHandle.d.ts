@@ -9,21 +9,40 @@
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';
 import type { ViewPose } from './ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
+import type { GalaxyProbeApi } from './GalaxyProbeApi';
 
 export type GalaxyEngineHandle = {
   setParams(params: GalaxyParams): Promise<void>; // pack UBO, dispatch generation compute
   setRender(patch: Partial<RenderSettings & LodSettings>): void; // live, no regen
+  setFieldTuning(patch: Partial<GalaxyFieldTuning>): void; // live, rebuilds fieldMixture from cached geometry
   setView(pose: Partial<ViewPose>): void;
   setAutoRotate(on: boolean): void;
   setInsets(left: number, right: number): void; // CSS px of overlaid panels
   setExtras(specs: readonly ExtraGalaxySpec[]): Promise<void>; // replace all background galaxies
   step(now?: number): void; // one frame (headless / fit loop)
   sample(): Promise<{ mean: number; max: number; litPct: number; stars: number }>;
-  grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // default 480 — :366
+  grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // see createOffscreenProbe
   getCamera(): ViewPose;
+  // The ISM-map generator's packed output (gas / stars / activity / dust,
+  // log-polar) — see createGalaxyModel.ts's rebuildIsmMap.
+  // Consumed by nothing but its own overlay yet; exposed for the sibling UI
+  // and future consumers.
+  getIsmMapTexture(): GPUTexture;
+  // The same output read back to the CPU, once per generation — null until
+  // the first readback lands (`createGalaxyModel.ts`'s `scheduleIsmMapReadback`).
+  // Off the placement path since Task 10 — `placeDust.wesl` reads the GPU
+  // texture directly; this feeds the seeding debug view and
+  // `youngStars.invMeanNorm` instead.
+  getIsmMapData(): GalaxyIsmMap | null;
+  // Debug-only: probeGpuErrors.ts's sole entry point into every numeric-
+  // validation exception this engine exposes — see GalaxyProbeApi.d.ts. No
+  // production caller.
+  readonly probe: GalaxyProbeApi;
   dispose(): void;
 };

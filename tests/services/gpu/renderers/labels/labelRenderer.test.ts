@@ -68,6 +68,7 @@ const newRenderer = () => {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
 };
@@ -83,6 +84,7 @@ describe('LabelRenderer colour target', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'bgra8unorm' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createLabelRenderer(ctx, 'rgba16float', FIXTURE_ATLASES);
     expect(renderPipelines).toHaveLength(1);
@@ -126,6 +128,7 @@ describe('LabelRenderer occlusion variant', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 64, 64, {
       occludeAgainstDepth: 'coverage',
@@ -192,6 +195,7 @@ describe('LabelRenderer fontIndex resolution', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
     expect(() =>

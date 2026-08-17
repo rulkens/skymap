@@ -146,73 +146,14 @@
 }
 
 /*
- * iOS-style toggle — appearance:none + a pill-shaped track with a round
- * thumb that slides between the two ends.  Visually heavier than a flat
- * checkbox but reads as on/off at a glance, which matches the binary
- * nature of every toggle in this panel (no tri-state per-row).  Built
- * from a single <input type=checkbox> + the `::before` pseudo as the
- * thumb so it stays a native form control (keyboard / a11y / Space-to-
- * toggle all still work for free).
- *
- * Sizing: 28×16 track, 12×12 thumb, 12px of travel.  Sits comfortably
- * next to 10px body text without dominating the row.
+ * Per-row on/off toggle — the shared iOS-style pill (see
+ * `pillToggle.module.css`).  Applied per-<input> via `className={styles.toggle}`
+ * rather than an ancestor `.panelRow input[type=checkbox]` selector so the look
+ * is a real composed class the build resolves, not a copy of the pill CSS.
  */
-.panelRow input[type='checkbox'] {
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  width: 28px;
-  height: 16px;
+.toggle {
+  composes: pillToggle from './pillToggle.module.css';
   margin: 0;
-  border: 1px solid var(--border-control);
-  border-radius: 999px;
-  background: var(--surface-control);
-  accent-color: var(--color-accent-control);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease;
-}
-
-.panelRow input[type='checkbox']::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-fg-muted);
-  transition:
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-.panelRow input[type='checkbox']:hover {
-  border-color: var(--border-hover);
-}
-
-.panelRow input[type='checkbox']:checked {
-  /* `--color-accent-link` (rgba(160,200,255,0.65)) rather than the
-   * brighter `--color-accent-control` (0.85 alpha) — the on-state pill
-   * sits on a dark panel and the 0.85 accent reads as visually
-   * shouting next to the muted body text.  Dropping to 0.65 keeps the
-   * blue tint recognisable without dominating the row. */
-  background: var(--color-accent-link);
-  border-color: var(--color-accent-link);
-}
-
-.panelRow input[type='checkbox']:checked::before {
-  /* Thumb keeps its off-state colour — only the track changes between
-   * on and off.  A black thumb on the accent-link track read as a hole
-   * cut out of the pill rather than a moving knob. */
-  transform: translateX(12px);
-}
-
-.panelRow input[type='checkbox']:focus-visible {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
 }
 
 /*

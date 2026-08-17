@@ -33,6 +33,7 @@ import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 type SpliceCall =
   | { kind: 'schechter'; source: SourceType; data: Float32Array }
@@ -83,19 +84,7 @@ function makeStubRenderer(): StubRenderer {
 }
 
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
-    diameterKpc: new Float32Array(count),
-  } as unknown as GalaxyCatalog;
+  return makeGalaxyCatalog(count, { objIDs: new BigUint64Array(count) });
 }
 
 /**

@@ -52,6 +52,7 @@ import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { CONTENT_LAYERS } from './passes';
+import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -81,6 +82,15 @@ export function renderFrame(input: RenderFrameInput): void {
     state.settings.debug.renderStrategy,
     timingService.enabled,
   );
+  // Zeroed unless BOTH conjuncts hold. `hdrActive` mirrors the swap chain's
+  // live format (`hdrActiveOf`); `hdr.enabled` is the visitor's toggle. The
+  // saga that reconfigures the swap format and the settings write it's
+  // reacting to land in separate frames, so a frame can be caught with the
+  // surface already `rgba16float` while `enabled` is still false, or vice
+  // versa. Headroom 0 is exactly the SDR result, so gating on both conjuncts
+  // makes that in-between frame correct, not just a safe fallback.
+  const hdrActive = hdrActiveOf(ctx.renderTargets);
+  const hdrOn = hdrActive && state.settings.hdr.enabled;
   executeFrame({
     encoder,
     ctx,
@@ -89,6 +99,8 @@ export function renderFrame(input: RenderFrameInput): void {
       {
         exposure: state.settings.tonemap.exposure,
         curve: state.settings.tonemap.curve,
+        hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
+        hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
       },
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.

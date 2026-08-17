@@ -44,10 +44,17 @@ export const selectAutoRotateRate = (state: RootState): number =>
 // Camera term of the loop-continuation predicate (spec §4): true while any
 // non-resting driver would win. `shouldKeepTicking` ORs this with the other
 // movers to decide whether to reschedule the next frame. The clip term keeps
-// the loop alive for the full duration of an animation clip.
+// the loop alive for the full duration of an animation clip; the frameTween
+// term keeps it alive through an orientation-frame roll's up-basis slerp.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
-  return c.clip !== null || c.dragging || c.tween !== null || c.autoRotate.active;
+  return (
+    c.clip !== null ||
+    c.dragging ||
+    c.tween !== null ||
+    c.autoRotate.active ||
+    c.frameTween !== null
+  );
 };
 
 // True while an animation clip is playing. Plan B/C's `suspendDuringClip`

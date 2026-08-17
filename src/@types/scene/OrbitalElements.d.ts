@@ -20,10 +20,11 @@
  * the seed site rather than as buried literals — the same discipline
  * `sceneBodies.ts` observes.
  *
- * `parentId` resolves the orbit's focus: `null` is heliocentric (the Sun at
- * the render origin); a body id (e.g. `'earth'`) makes the focus that parent's
- * already-derived world position — the Moon's elements are geocentric, so its
- * trail follows Earth by construction.
+ * `focusId` resolves the orbit's focus: `'sun'` is heliocentric (the Sun at
+ * the render origin); any other body id (e.g. `'earth'`) makes the focus that
+ * body's already-derived world position — the Moon's elements are geocentric,
+ * so its trail follows Earth by construction. Every row names a focus; there
+ * is no null case.
  */
 
 import type { Vec3 } from '../math/Vec3';
@@ -32,8 +33,8 @@ import type { OrbitPlaneFrame } from './OrbitPlaneFrame';
 export type OrbitalElements = {
   /** Stable identifier (e.g. `'earth'`, `'jupiter'`, `'moon'`). */
   readonly id: string;
-  /** Parent body id, or `null` for heliocentric (Sun at the render origin). */
-  readonly parentId: string | null;
+  /** Focus body id; `'sun'` for heliocentric (Sun at the render origin). */
+  readonly focusId: string;
   /** Semi-major axis a, in Mpc (authored via `SCALE_UNITS`). */
   readonly semiMajorMpc: number;
   /** Eccentricity e, in [0, 1). Circular at e = 0. */

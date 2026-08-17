@@ -10,7 +10,7 @@
  * where every entry is `(simDays) => Clip`. Most clips open on fixed cosmic
  * structures or "from here" and ignore the argument (`() => staticClip`) — the
  * uniform shape keeps the play site a single table lookup with no per-clip
- * branch, and the one instant-dependent clip is not a special case. Typed over
+ * branch, and an instant-dependent clip is not a special case. Typed over
  * `ClipId`, so the table must cover every id and may use no key outside the
  * union; the compiler enforces both directions.
  *
@@ -34,6 +34,7 @@ import { CONST_J2000 } from '../../time/constJ2000';
 import { cosmicFlows } from './cosmicFlows';
 import { flyout } from './flyout';
 import { earthFlyout } from './earthFlyout';
+import { earthUniverseLoop } from './earthUniverseLoop';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
@@ -60,8 +61,9 @@ import {
 export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   cosmicFlows: () => cosmicFlows,
   flyout: () => flyout,
-  // The only instant-dependent clip: it reads Earth's position at `simDays`.
+  // The only instant-dependent clips: they read Earth's position at `simDays`.
   earthFlyout,
+  earthUniverseLoop,
   flowOrbit: () => flowOrbit,
   flyPathDemo: () => flyPathDemo,
   famousFlythrough: () => famousFlythrough,

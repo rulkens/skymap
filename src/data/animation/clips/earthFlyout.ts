@@ -75,13 +75,17 @@ export function earthFlyout(simDays: number): Clip {
       start: {
         target,
         distance: START_DISTANCE_MPC,
+        // Authored in the ecliptic frame: pitch 0 puts the camera on the
+        // ecliptic plane looking at Earth. These are frame-relative angles,
+        // not a world-equatorial direction — the same literals read a
+        // different world-space direction if the active frame changes.
         yaw: 0,
         pitch: 0,
       },
       timeline: [
         all([
-          dollyTo(29_500, FLIGHT_SEC, 'inOut'), // log-dolly Earth → Hubble radius
-          spin('yaw', { by: 1.1, over: FLIGHT_SEC, ease: 'inOut' }), // gentle turn, as flyout
+          dollyTo(29_500, FLIGHT_SEC, 'easeInOutCubic'), // log-dolly Earth → Hubble radius
+          spin('yaw', { by: 1.1, over: FLIGHT_SEC, ease: 'easeInOutCubic' }), // gentle turn, as flyout
         ]),
       ],
     },

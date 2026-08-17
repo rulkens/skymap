@@ -31,6 +31,7 @@ export const GLADE_ENTRY = {
   // the apparently-bright nearby galaxies back, restoring the local volume
   // shell-free. ~+3,500 local at medium; see selectTierRecords.
   fluxSupplementMagLimit: 15,
-  intensityFloor: 0.02,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   falloffHalfMpc: 1000,
 } as const satisfies GalaxyCatalogSourceEntry;

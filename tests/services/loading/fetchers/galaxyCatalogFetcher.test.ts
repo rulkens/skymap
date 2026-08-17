@@ -10,11 +10,15 @@
  *
  * Decode-correctness is exercised exhaustively in
  * `tests/galaxyCatalogFormat.test.ts`; here we only assert that fetch is
- * actually invoked and that a header-only v6 .bin round-trips to a
+ * actually invoked and that a header-only .bin round-trips to a
  * count=0 catalog.
  */
 import { describe, expect, it } from 'vitest';
 import { galaxyCatalogFetcher } from '../../../../src/services/loading/fetchers/galaxyCatalogFetcher';
+import {
+  encodeGalaxyCatalog,
+  emptyGalaxyCatalog,
+} from '../../../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { Source } from '../../../../src/data/sources';
 import { useFetchMock } from '../../../setup/fetchMock';
 
@@ -41,22 +45,16 @@ describe('galaxyCatalogFetcher', () => {
   });
 
   it('fetches and decodes when target is non-zero', async () => {
-    // Build a minimal valid v6 .bin: header only, count=0.
-    // Header layout (see src/data/galaxyCatalogFormat.ts):
-    //   0..3  magic    = "SKMP" little-endian uint32 (0x504d4b53)
-    //   4..7  version  = 6
-    //   8..11 count    = 0
-    //   12..15 reserved
-    const header = new ArrayBuffer(16);
-    const dv = new DataView(header);
-    dv.setUint32(0, 0x504d4b53, true);
-    dv.setUint32(4, 6, true);
-    dv.setUint32(8, 0, true);
+    // Build a minimal valid .bin (header only, count=0) via the format's own
+    // encoder rather than hand-rolling the header — that way the fixture
+    // tracks the current format version automatically instead of pinning a
+    // literal that breaks on every version bump.
+    const header = encodeGalaxyCatalog(emptyGalaxyCatalog());
 
     fetch.mock.mockResolvedValue(
       new Response(header, {
         status: 200,
-        headers: { 'Content-Length': '16' },
+        headers: { 'Content-Length': String(header.byteLength) },
       }),
     );
 

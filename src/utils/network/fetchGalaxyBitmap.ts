@@ -1,7 +1,7 @@
 /**
- * Fetch a galaxy thumbnail for the given RA/Dec, returning an
- * SLOT_SIDE-square ImageBitmap suitable for atlas upload, or null if both
- * SDSS and DSS fail.
+ * Fetch a galaxy thumbnail for the given RA/Dec, returning a
+ * GALAXY_ATLAS_SLOT_SIDE-square ImageBitmap suitable for atlas upload, or
+ * null if both SDSS and DSS fail.
  *
  * Strategy:
  *   1. Request SDSS DR18 cutout.  About a third of the sky is in the SDSS
@@ -10,7 +10,7 @@
  *   2. On 404 / non-2xx / non-image response, fall back to DSS POSS-II
  *      red plate (full-sky, lower quality, monochrome).
  *   3. Decode whichever we got into an ImageBitmap, resizing to
- *      SLOT_SIDE × SLOT_SIDE in one step.
+ *      GALAXY_ATLAS_SLOT_SIDE × GALAXY_ATLAS_SLOT_SIDE in one step.
  *
  * Why resize at decode time?  `createImageBitmap` accepts `resizeWidth` /
  * `resizeHeight` options — the browser resizes during decode, saving us a
@@ -24,7 +24,7 @@
  */
 
 import { sdssThumbnailUrl, dssThumbnailUrl } from '../math';
-import { SLOT_SIDE } from '../../services/gpu/resources/textureAtlas';
+import { GALAXY_ATLAS_SLOT_SIDE } from '../../services/engine/subsystems/galaxyAtlasSubsystem';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 import type { FetchGalaxyBitmapInput } from '../../@types/loading/FetchGalaxyBitmapInput';
 
@@ -69,7 +69,7 @@ export async function fetchGalaxyBitmap(
     const url = dataUrl(`images/famous-hires/${famousId}.webp`);
     const blob = await tryFetch(url, signal);
     if (!blob) return null;
-    const dim = hiResTargetDim ?? SLOT_SIDE;
+    const dim = hiResTargetDim ?? GALAXY_ATLAS_SLOT_SIDE;
     try {
       return await createImageBitmap(blob, {
         resizeWidth: dim,
@@ -93,8 +93,8 @@ export async function fetchGalaxyBitmap(
     if (!blob) return null;
     try {
       return await createImageBitmap(blob, {
-        resizeWidth: SLOT_SIDE,
-        resizeHeight: SLOT_SIDE,
+        resizeWidth: GALAXY_ATLAS_SLOT_SIDE,
+        resizeHeight: GALAXY_ATLAS_SLOT_SIDE,
       });
     } catch {
       return null;
@@ -105,12 +105,12 @@ export async function fetchGalaxyBitmap(
   // SDSS footprint when SDSS is the loaded source; for non-SDSS galaxy catalogs
   // (2MRS, GLADE) the SDSS attempt will fail more often, but it's cheap
   // and worth trying because SDSS images are sharper than DSS.
-  const sdssBlob = await tryFetch(sdssThumbnailUrl(ra, dec, SLOT_SIDE), signal);
+  const sdssBlob = await tryFetch(sdssThumbnailUrl(ra, dec, GALAXY_ATLAS_SLOT_SIDE), signal);
   if (sdssBlob) {
     try {
       return await createImageBitmap(sdssBlob, {
-        resizeWidth: SLOT_SIDE,
-        resizeHeight: SLOT_SIDE,
+        resizeWidth: GALAXY_ATLAS_SLOT_SIDE,
+        resizeHeight: GALAXY_ATLAS_SLOT_SIDE,
       });
     } catch {
       // fallthrough to DSS
@@ -123,8 +123,8 @@ export async function fetchGalaxyBitmap(
   if (dssBlob) {
     try {
       return await createImageBitmap(dssBlob, {
-        resizeWidth: SLOT_SIDE,
-        resizeHeight: SLOT_SIDE,
+        resizeWidth: GALAXY_ATLAS_SLOT_SIDE,
+        resizeHeight: GALAXY_ATLAS_SLOT_SIDE,
       });
     } catch {
       return null;

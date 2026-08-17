@@ -41,6 +41,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
+import type { TextureKind } from '../../../../../src/@types/data/TextureKind';
 
 // Mock composeBodyMvp so the test can assert which vp it consumed by identity
 // and hand the renderer a recognisable Float32Array. The real composition math
@@ -136,51 +137,50 @@ function makeNear0View(): SlabView {
 }
 
 /**
- * State with a `texturedBodyRenderer` handle, a seeded body list, and a
- * `bodyTextures` slot Map reporting the given ids resident (each slot's
- * `current()` returns a non-null bitmap stand-in).
+ * State with a `texturedBodyRenderer` handle and a seeded body list.
+ * Residency now lives on the renderer's `hasMap` (see `makeRendererSpy`), not
+ * on an asset slot — this fixture no longer seeds `assetSlots.bodyTextures`.
  */
-function makeState(
-  renderer: unknown,
-  bodies: readonly PlanetBody[],
-  residentIds: readonly string[],
-): EngineState {
-  // The residency lookup keys on the composite `${id}:surface` slot key.
-  const bodyTextures = new Map(
-    residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
-  );
+function makeState(renderer: unknown, bodies: readonly PlanetBody[]): EngineState {
   return {
     gpu: { texturedBodyRenderer: renderer },
     data: { bodies: { planets: bodies } },
-    assetSlots: { bodyTextures },
   } as unknown as EngineState;
 }
 
-function makeRendererSpy() {
+/**
+ * A `texturedBodyRenderer` spy whose `hasMap('surface')` reports resident for
+ * exactly the given ids — the fake's stand-in for "a real surface texture is
+ * bound", now a rendering fact asked of the renderer instead of inferred from
+ * a loading-system slot.
+ */
+function makeRendererSpy(residentIds: readonly string[] = []) {
   return {
     draw: vi.fn<(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array) => void>(),
+    hasMap: vi.fn((id: string, kind: TextureKind) => kind === 'surface' && residentIds.includes(id)),
   };
 }
 
 describe('texturedBodiesLayer.enabled', () => {
   it('is false while the texturedBodyRenderer handle is null (bare ctx short-circuits)', () => {
-    expect(texturedBodiesLayer.enabled(makeState(null, [], []), CTX_STUB)).toBe(false);
+    expect(texturedBodiesLayer.enabled(makeState(null, []), CTX_STUB)).toBe(false);
   });
 
   it('is false beyond the foreground gate even with a resident resolved body', () => {
-    const state = makeState(makeRendererSpy(), [bodyAt('mars', 3390)], ['mars']);
+    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390)]);
     expect(texturedBodiesLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
   });
 
   it('is false when a resolved registry body is NOT resident (it is flat, drawn by planetsLayer)', () => {
-    // Body present + resolved but its texture has not committed → the partition
-    // routes it to `flat`, so this layer draws nothing.
-    const state = makeState(makeRendererSpy(), [bodyAt('mars', 3390)], []);
+    // Body present + resolved but its texture has not committed → hasMap says
+    // not resident → the partition routes it to `flat`, so this layer draws
+    // nothing.
+    const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390)]);
     expect(texturedBodiesLayer.enabled(state, NEAR_CTX)).toBe(false);
   });
 
   it('is true when a resolved registry body is resident', () => {
-    const state = makeState(makeRendererSpy(), [bodyAt('mars', 3390)], ['mars']);
+    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390)]);
     expect(texturedBodiesLayer.enabled(state, NEAR_CTX)).toBe(true);
   });
 });
@@ -188,12 +188,12 @@ describe('texturedBodiesLayer.enabled', () => {
 describe('texturedBodiesLayer.draw', () => {
   it('composes each textured body from the slab f64 vp with its orientation and draws length-28 uniforms', () => {
     composeMock.mockClear();
-    const renderer = makeRendererSpy();
+    const renderer = makeRendererSpy(['mars', 'jupiter']);
     const view = makeNear0View();
     const marsOrient: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
     const mars = bodyAt('mars', 3390, marsOrient);
     const jupiter = bodyAt('jupiter', 69911);
-    const state = makeState(renderer, [mars, jupiter], ['mars', 'jupiter']);
+    const state = makeState(renderer, [mars, jupiter]);
 
     texturedBodiesLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
@@ -256,11 +256,11 @@ describe('texturedBodiesLayer.draw', () => {
 
   it('packs Saturn`s SCENE_RINGS radii as ring ratios and zeros for a ringless body', () => {
     composeMock.mockClear();
-    const renderer = makeRendererSpy();
+    const renderer = makeRendererSpy(['saturn', 'mars']);
     const view = makeNear0View();
     const saturn = bodyAt('saturn', 58232);
     const mars = bodyAt('mars', 3390);
-    const state = makeState(renderer, [saturn, mars], ['saturn', 'mars']);
+    const state = makeState(renderer, [saturn, mars]);
 
     texturedBodiesLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
@@ -278,7 +278,7 @@ describe('texturedBodiesLayer.draw', () => {
 
   it('is a no-op when the texturedBodyRenderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View();
-    const state = makeState(null, [bodyAt('mars', 3390)], ['mars']);
+    const state = makeState(null, [bodyAt('mars', 3390)]);
     expect(() => texturedBodiesLayer.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
   });
 });

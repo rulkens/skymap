@@ -7,7 +7,7 @@
  * No `commit` step: there is nothing to upload GPU-side here. The payload is
  * CPU-resident structure data — `wireStructureProjection` subscribes to this
  * same slot and converts the ready value into `StructureInfo`s, writing them
- * to `structureStore`. Mirrors `famousMetaSlot` in shape.
+ * to `structureStore`. Mirrors `createFamousGalaxiesMetaSlot` in shape.
  *
  * This subscriber's only job is to warn on failure (the render wake is
  * `installSlotReadyWake`'s job). It owns no state — the data flows through

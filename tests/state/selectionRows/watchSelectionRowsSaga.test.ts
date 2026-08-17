@@ -28,6 +28,7 @@ import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { selectionRowsRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import {
   buildStarOctree,
   type OctreeLeafStar,
@@ -44,8 +45,7 @@ import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatal
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 function makeCloud(): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array([10, 20, 30]),
     spectroscopicZ: new Float32Array([0.0123]),
     magU: new Float32Array([18.1]),
@@ -58,9 +58,7 @@ function makeCloud(): GalaxyCatalog {
     diameterKpc: new Float32Array([42]),
     axisRatio: new Float32Array([0.7]),
     positionAngleDeg: new Float32Array([35]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-  } as unknown as GalaxyCatalog;
+  });
 }
 
 // A one-leaf star octree round-tripped through the real encode/decode path, so
@@ -91,7 +89,7 @@ describe('watchSelectionRowsSaga', () => {
     });
     const deps: ResolveDeps = {
       catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => starCatalog },
     };

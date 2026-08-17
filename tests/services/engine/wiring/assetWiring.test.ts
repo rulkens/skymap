@@ -89,7 +89,8 @@ describe('ASSET_WIRING membership', () => {
       Source.DesiWedge,
       Source.DesiSgw,
       Source.Synthetic,
-      'famousMeta',
+      'famousGalaxiesMeta',
+      'famousStarsMeta',
       'filaments',
       'mcpm',
       'cf4Density',
@@ -97,6 +98,7 @@ describe('ASSET_WIRING membership', () => {
       'constellations',
       'structureCatalog',
       'pgcAlias',
+      'bodyTextureAtlas',
       ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
       Source.GaiaStars,
     ];
@@ -131,7 +133,8 @@ describe('ASSET_WIRING membership', () => {
     }
     // The sidecar rows are registry-built (no marker).
     expect(rowFor('filaments').built).toBeUndefined();
-    expect(rowFor('famousMeta').built).toBeUndefined();
+    expect(rowFor('famousGalaxiesMeta').built).toBeUndefined();
+    expect(rowFor('famousStarsMeta').built).toBeUndefined();
   });
 
   it('mints one externally-built row per body-texture family key', () => {
@@ -168,14 +171,14 @@ describe('ASSET_WIRING demand predicates', () => {
     expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
   });
 
-  it('famousMeta demands when the Famous slot is not idle', () => {
-    const famousMeta = rowFor('famousMeta');
-    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } }))).toBe(
-      true,
-    );
-    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } }))).toBe(
-      false,
-    );
+  it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {
+    const famousGalaxiesMeta = rowFor('famousGalaxiesMeta');
+    expect(
+      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } })),
+    ).toBe(true);
+    expect(
+      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } })),
+    ).toBe(false);
   });
 
   it('filaments demand follows settings.filaments.enabled (bug-fix pin)', () => {
@@ -368,7 +371,8 @@ describe('ASSET_WIRING req builders', () => {
   });
 
   it('tier-aware sidecars carry { tier }', () => {
-    expect(rowFor('famousMeta').req('small')).toEqual({ tier: 'small' });
+    expect(rowFor('famousGalaxiesMeta').req('small')).toEqual({ tier: 'small' });
+    expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
     expect(rowFor('filaments').req('medium')).toEqual({ tier: 'medium' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
   });

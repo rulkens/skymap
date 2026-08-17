@@ -19,6 +19,8 @@ import {
 } from '../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
 import type { Mat4 } from 'wgpu-matrix';
 import type { PointDrawSettings } from '../../../src/@types/rendering/PointDrawSettings';
+import type { ProvenanceFilter } from '../../../src/@types/settings/ProvenanceFilter';
+import { PROVENANCE_FILTER_CODE } from '../../../src/data/provenanceFilter';
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────
 
@@ -51,13 +53,20 @@ const SETTINGS: PointDrawSettings = {
   visibleSourceMask: 0b11111,
   camPosWorld: [100, 200, 300],
   pxPerRad: 600,
-  highlightFallback: true,
-  realOnlyMode: false,
+  // Deliberately asymmetric across the four slots so a mis-ordered write
+  // (highlight/filter swapped, or the two axes transposed) changes a byte.
+  provenance: {
+    orientation: { highlight: true, filter: 'estimated' },
+    size: { highlight: false, filter: 'measured' },
+  },
   biasMode: 2,
   absMagLimit: -19.5,
   depthFadeEnabled: true,
   pxFadeStart: 4,
   pxFadeEnd: 8,
+  sbScale: 8,
+  sbMax: 30,
+  falloffStrength: 0.8,
   focusBindGroup: FOCUS_BIND_GROUP,
   // packPointUniforms does not call this; fadeOpacityOf is a per-draw-loop
   // concern owned by the renderer.  The pure packer receives the settings
@@ -68,12 +77,12 @@ const SETTINGS: PointDrawSettings = {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('packPointUniforms — byteLength', () => {
-  it('returns a buffer of exactly UNIFORM_BYTES (176)', () => {
+  it('returns a buffer of exactly UNIFORM_BYTES (192)', () => {
     // The size is the single source of truth (exported UNIFORM_BYTES); a
     // mismatch here means the alloc and the layout constant are out of sync.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     expect(buf.byteLength).toBe(UNIFORM_BYTES);
-    expect(buf.byteLength).toBe(176);
+    expect(buf.byteLength).toBe(192);
   });
 });
 
@@ -165,29 +174,69 @@ describe('packPointUniforms — camPosWorld + pxPerRad (bytes 96..111)', () => {
   });
 });
 
-describe('packPointUniforms — flags (bytes 112..127)', () => {
-  it('writes highlightFallback as 1 at byte 112 (u32 index 28)', () => {
-    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
-    const u32 = new Uint32Array(buf);
-    expect(u32[28]).toBe(1); // highlightFallback: true
+describe('packPointUniforms — provenance block (bytes 112..127)', () => {
+  // This block is the contract with `points/io.wesl`'s Uniforms struct
+  // (orientationHighlight / orientationFilter / sizeHighlight / sizeFilter)
+  // — nothing but these assertions keeps the two sides from drifting, so
+  // every slot is pinned to its byte explicitly.
+
+  it('writes orientation highlight + filter at bytes 112 / 116 (u32 indices 28 / 29)', () => {
+    const u32 = new Uint32Array(packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS));
+    expect(u32[28]).toBe(1); // orientation.highlight: true
+    expect(u32[29]).toBe(PROVENANCE_FILTER_CODE.estimated);
   });
 
-  it('writes realOnlyMode as 0 at byte 116 (u32 index 29)', () => {
-    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
-    const u32 = new Uint32Array(buf);
-    expect(u32[29]).toBe(0); // realOnlyMode: false
+  it('writes size highlight + filter at bytes 120 / 124 (u32 indices 30 / 31)', () => {
+    const u32 = new Uint32Array(packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS));
+    expect(u32[30]).toBe(0); // size.highlight: false
+    expect(u32[31]).toBe(PROVENANCE_FILTER_CODE.measured);
   });
 
-  it('writes depthFadeEnabled as 1 at byte 120 (u32 index 30)', () => {
-    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
-    const u32 = new Uint32Array(buf);
-    expect(u32[30]).toBe(1); // depthFadeEnabled: true
+  it('packs every filter value as its GPU code, per axis', () => {
+    // The tri-state cull is the reason the slot is a code and not a boolean:
+    // a wrong code silently renders the complement of what the UI asked for.
+    const filters: readonly ProvenanceFilter[] = ['all', 'measured', 'estimated'];
+    for (const filter of filters) {
+      const orient = new Uint32Array(
+        packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+          ...SETTINGS,
+          provenance: { ...SETTINGS.provenance, orientation: { highlight: false, filter } },
+        }),
+      );
+      expect(orient[29]).toBe(PROVENANCE_FILTER_CODE[filter]);
+
+      const size = new Uint32Array(
+        packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+          ...SETTINGS,
+          provenance: { ...SETTINGS.provenance, size: { highlight: false, filter } },
+        }),
+      );
+      expect(size[31]).toBe(PROVENANCE_FILTER_CODE[filter]);
+    }
   });
 
-  it('leaves _pad4 at byte 124 (u32 index 31) as zero', () => {
-    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
-    const u32 = new Uint32Array(buf);
-    expect(u32[31]).toBe(0);
+  it('packs the highlight booleans as 0 / 1 u32s in their own slots', () => {
+    const on = new Uint32Array(
+      packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+        ...SETTINGS,
+        provenance: {
+          orientation: { highlight: true, filter: 'all' },
+          size: { highlight: true, filter: 'all' },
+        },
+      }),
+    );
+    expect([on[28], on[30]]).toEqual([1, 1]);
+
+    const off = new Uint32Array(
+      packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+        ...SETTINGS,
+        provenance: {
+          orientation: { highlight: false, filter: 'all' },
+          size: { highlight: false, filter: 'all' },
+        },
+      }),
+    );
+    expect([off[28], off[30]]).toEqual([0, 0]);
   });
 });
 
@@ -204,15 +253,32 @@ describe('packPointUniforms — Malmquist-bias state (bytes 128..159)', () => {
     expect(f32[33]).toBeCloseTo(SETTINGS.absMagLimit);
   });
 
-  it('leaves reserved Schechter floats + _pad5 (bytes 136..159, indices 34..39) as zero', () => {
+  it('leaves the reserved Schechter floats (bytes 136..155, indices 34..38) as zero', () => {
     // These slots (apparentMagLimit, schechterMStar, schechterAlpha,
-    // schechterMLim, schechterNRef, _pad5) are reserved-but-unwritten: the
-    // WGSL struct declares them to keep pickPass at a stable offset.
+    // schechterMLim, schechterNRef) are reserved-but-unwritten: the WGSL
+    // struct declares them to keep pickPass at a stable offset.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const f32 = new Float32Array(buf);
-    for (let i = 34; i <= 39; i++) {
+    for (let i = 34; i <= 38; i++) {
       expect(f32[i]).toBe(0);
     }
+  });
+
+  it('writes depthFadeEnabled as a u32 at byte 156 (u32 index 39)', () => {
+    // Byte 156 is the trailing slot of the Malmquist group — depthFadeEnabled
+    // lodges there so the provenance block keeps a contiguous 112..127 run.
+    // The shader reads it at this offset, so a drift would leave the depth
+    // fade stuck at whatever the neighbouring slot happens to hold.
+    const on = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+      ...SETTINGS,
+      depthFadeEnabled: true,
+    });
+    expect(new Uint32Array(on)[39]).toBe(1);
+    const off = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+      ...SETTINGS,
+      depthFadeEnabled: false,
+    });
+    expect(new Uint32Array(off)[39]).toBe(0);
   });
 });
 
@@ -245,10 +311,31 @@ describe('packPointUniforms — procedural-disk crossfade + pickPass (bytes 160.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS, 1);
     expect(new Uint32Array(buf)[42]).toBe(1);
   });
+});
 
-  it('leaves _padFade1 at byte 172 (float index 43) as zero', () => {
+describe('packPointUniforms — galaxy SB calibration knobs (bytes 172..191)', () => {
+  it('writes galaxySbScale at byte 172 (float index 43, the old _padFade1 slot)', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const f32 = new Float32Array(buf);
-    expect(f32[43]).toBe(0);
+    expect(f32[43]).toBeCloseTo(SETTINGS.sbScale);
+  });
+
+  it('writes galaxySbMax at byte 176 (float index 44)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[44]).toBeCloseTo(SETTINGS.sbMax);
+  });
+
+  it('writes galaxyFalloffStrength at byte 180 (float index 45)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[45]).toBeCloseTo(SETTINGS.falloffStrength);
+  });
+
+  it('leaves the two trailing pad words (bytes 184..191, indices 46/47) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[46]).toBe(0);
+    expect(f32[47]).toBe(0);
   });
 });

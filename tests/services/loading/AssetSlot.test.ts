@@ -79,6 +79,31 @@ describe('AssetSlot — ready-after-commit ordering', () => {
     // And the commit ran exactly once.
     expect(commit).toHaveBeenCalledTimes(1);
   });
+
+  it('load() resolves after commit, not after fetch', async () => {
+    // Pins the P2 contract: a caller bounding concurrency by awaiting load()
+    // must not see the promise settle while a GPU upload (commit) is still
+    // running, or the queue would free a slot mid-upload and the concurrency
+    // bound would be a lie under load.
+    const commitGate = deferred<void>();
+    const fetch: Fetcher<string, void> = vi.fn().mockResolvedValue('payload');
+    const commit = vi.fn(() => commitGate.promise);
+    const slot = createAssetSlot<string, void>({ name: 'test', fetch, commit, retry: noRetry });
+
+    let settled = false;
+    const loadPromise = slot.load().then(() => {
+      settled = true;
+    });
+
+    // Flush microtasks so the fetch resolves and commit is entered.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+
+    commitGate.resolve();
+    await loadPromise;
+    expect(settled).toBe(true);
+  });
 });
 
 describe('AssetSlot — race-fix (the structural bug from the existing cloudLoader)', () => {

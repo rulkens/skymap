@@ -30,15 +30,19 @@ import { installRecorderHook } from '../../../src/state/recorder/installRecorder
 import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { tourStarted, tourEnded } from '../../../src/state/tour/tourSlice';
+import { startClip } from '../../../src/state/camera/clipActions';
+import { clipStarted, clipEnded } from '../../../src/state/camera/cameraSlice';
 import {
   engineStatusChanged,
   engineLoadProgressChanged,
 } from '../../../src/state/engine/engineSlice';
 import { Source } from '../../../src/data/sources';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { SkymapRecorderHook } from '../../../src/@types/recorder/SkymapRecorderHook';
 import type { RecorderWindow } from '../../../src/@types/recorder/RecorderWindow';
 import type { BeatRange } from '../../../src/@types/animation/tour/BeatRange';
+import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 vi.mock('../../../src/utils/url/isCinemaMode', () => ({
   isCinemaMode: vi.fn<() => boolean>(() => false),
@@ -177,6 +181,101 @@ describe('installRecorderHook', () => {
 
     // The refused call must not have dispatched a superseding tour/start.
     const dispatchedAfter = actions.filter((action) => action.type === startTour.type).length;
+    expect(dispatchedAfter).toBe(dispatchedBefore);
+  });
+
+  it('startClip dispatches clip/start and resolves when the clip ends', async () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const { store, actions } = buildStore();
+    installRecorderHook(store);
+    const hook = getHook();
+    if (!hook) throw new Error('hook not installed');
+
+    const clipData: ClipData = { timeline: [] };
+    const done = hook.startClip('flyout');
+    let settled = false;
+    void done.then(() => {
+      settled = true;
+    });
+
+    // `startClip` is `createAction('clip/start', (id) => ({ payload: id }))` —
+    // the payload is the bare id, not an object wrapping it.
+    const dispatched = actions.find((action) => action.type === startClip.type) as
+      | ReturnType<typeof startClip>
+      | undefined;
+    expect(dispatched).toBeDefined();
+    expect(dispatched?.payload).toBe('flyout');
+
+    // Activation must not resolve it...
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    // ...the clip-ended signal must.
+    store.dispatch(clipEnded());
+    await expect(done).resolves.toBeUndefined();
+  });
+
+  it('startClip does not resolve on store updates before the clip becomes active', async () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const { store } = buildStore();
+    installRecorderHook(store);
+    const hook = getHook();
+    if (!hook) throw new Error('hook not installed');
+
+    const done = hook.startClip('flyout');
+    let settled = false;
+    void done.then(() => {
+      settled = true;
+    });
+
+    // See `runClip`'s comment in installRecorderHook.ts for why this window exists.
+    store.dispatch(engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 10, inFlightCount: 1 }));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+  });
+
+  it('startClip rejects a second start before the first clip activates', async () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const { store, actions } = buildStore();
+    installRecorderHook(store);
+    const hook = getHook();
+    if (!hook) throw new Error('hook not installed');
+
+    // Clip A is dispatched but never activates — `clipStarted` is never
+    // driven, mirroring the unbounded pre-activation window. A guard reading
+    // `selectClipActive` would see `false` here and wave a second call
+    // through; the fix is an in-flight flag set at dispatch time instead.
+    const first = hook.startClip('flyout');
+    void first.catch(() => {});
+    const dispatchedBefore = actions.filter((action) => action.type === startClip.type).length;
+
+    await expect(hook.startClip('earthFlyout')).rejects.toThrow(
+      'startClip called while a clip is already active',
+    );
+
+    const dispatchedAfter = actions.filter((action) => action.type === startClip.type).length;
+    expect(dispatchedAfter).toBe(dispatchedBefore);
+  });
+
+  it('startClip rejects when a clip is already active', async () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const { store, actions } = buildStore();
+    installRecorderHook(store);
+    const hook = getHook();
+    if (!hook) throw new Error('hook not installed');
+
+    const clipData: ClipData = { timeline: [] };
+    // Clip A is running (the player's activation write, driven directly).
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
+    const dispatchedBefore = actions.filter((action) => action.type === startClip.type).length;
+
+    await expect(hook.startClip('earthFlyout')).rejects.toThrow(
+      'startClip called while a clip is already active',
+    );
+
+    // The refused call must not have dispatched a superseding clip/start.
+    const dispatchedAfter = actions.filter((action) => action.type === startClip.type).length;
     expect(dispatchedAfter).toBe(dispatchedBefore);
   });
 });

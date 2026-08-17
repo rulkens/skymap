@@ -48,8 +48,8 @@ const TARGET_ARMS = 3;
 
 /** Deviation from the known optimum — 0 at the target, growing with distance. */
 function deviation(p: GalaxyParams): number {
-  const bulge = p.bulgeSize ?? 1;
-  const arms = p.armCount ?? 2;
+  const bulge = p.shared.bulgeSize ?? 1;
+  const arms = p.shared.armCount ?? 2;
   return Math.abs(bulge - TARGET_BULGE) + 0.15 * Math.abs(arms - TARGET_ARMS);
 }
 
@@ -57,16 +57,8 @@ const REFERENCE = computeDescriptor(blobForDeviation(SIZE, 0), SIZE)!;
 
 const SEED: GalaxyParams = {
   type: 'Sc',
-  starCount: 50000,
-  bulgeSize: 0.2,
-  armCount: 6,
-  armWinding: 0.5,
-  armWidth: 1,
-  armStrength: 1,
-  dust: 1,
-  hii: 1,
-  youngStars: 0.5,
-  diskThickness: 1,
+  shared: { bulgeSize: 0.2, armCount: 6, armWinding: 0.5, youngStars: 0.5, diskThickness: 1 },
+  legacy: { starCount: 50000, armWidth: 1, armStrength: 1, spriteDust: 1, hii: 1 },
 };
 
 /** A scripted fake engine: `grab()` paints the blob for whatever params
@@ -94,6 +86,7 @@ function makeFakeEngine(blackOnCall?: number): {
   const engine: GalaxyEngineHandle = {
     setParams,
     setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setFieldTuning: vi.fn<GalaxyEngineHandle['setFieldTuning']>(),
     setView: vi.fn<GalaxyEngineHandle['setView']>(),
     setAutoRotate: vi.fn<GalaxyEngineHandle['setAutoRotate']>(),
     setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),
@@ -107,6 +100,11 @@ function makeFakeEngine(blackOnCall?: number): {
     })),
     grab,
     getCamera: vi.fn<GalaxyEngineHandle['getCamera']>(() => ({ az: 0, el: 0, dist: 1 })),
+    getIsmMapTexture: vi.fn<GalaxyEngineHandle['getIsmMapTexture']>(),
+    getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
+    // Nothing under test here ever reaches `handle.probe` (debug-only, sole
+    // consumer is probeGpuErrors.ts) — an empty stand-in satisfies the type.
+    probe: {} as GalaxyEngineHandle['probe'],
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, setParams, grab };
@@ -172,9 +170,9 @@ describe('autoFit', () => {
 
     expect(setParams.mock.calls.length).toBeGreaterThan(0);
     for (const [p] of setParams.mock.calls) {
-      expect(p.starCount).toBe(220000);
+      expect(p.legacy?.starCount).toBe(220000);
     }
-    expect(result.params.starCount).toBe(SEED.starCount);
+    expect(result.params.legacy?.starCount).toBe(SEED.legacy?.starCount);
   });
 
   it('a null-descriptor frame is never accepted', async () => {

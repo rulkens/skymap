@@ -1,8 +1,8 @@
-import type { EarthSourceEntry } from '../../@types/data/body/EarthSourceEntry';
+import type { BodySourceEntry } from '../../@types/data/body/BodySourceEntry';
 import { Source } from '../source';
 
 export const EARTH_ENTRY = {
-  type: 'earth',
+  type: 'body',
   code: Source.Earth,
   id: 'earth',
   label: 'Earth',
@@ -15,8 +15,15 @@ export const EARTH_ENTRY = {
   // ALL_VISIBLE_MASK (galaxy-catalog rows only), so it's a scene-intent marker,
   // not a bitmask contributor.
   visible: true,
-  // Bodies bypass the COSMO label/marker systems — Earth's caption ships
-  // through the foreground-labels layer — so neither capability flag is set.
-  bearsLabel: false,
+  // Earth captions itself on the final descent, so it bears labels like any
+  // other named source — the foreground-labels layer draws the caption on the
+  // NEAR0 slab rather than the COSMO one, which is a routing detail.
+  bearsLabel: true,
+  labelLayer: 'body',
   bearsMarker: false,
-} as const satisfies EarthSourceEntry;
+  detailLabel: 'Earth',
+  shortLabel: 'Earth',
+  // `plural` is the list/toggle header string, and the panel row for the one
+  // Earth reads "Earth" — the singular spelling is deliberate.
+  plural: 'Earth',
+} as const satisfies BodySourceEntry;

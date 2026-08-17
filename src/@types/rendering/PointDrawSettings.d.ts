@@ -10,6 +10,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
+import type { GalaxyProvenanceSettings } from '../settings/GalaxyProvenanceSettings';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -24,16 +25,20 @@ export type PointDrawSettings = {
   camPosWorld: Readonly<Vec3>;
   /** Pixels-per-radian for the current viewport + FOV: `viewportPx[1] / (2 * tan(fovYRad / 2))`. */
   pxPerRad: number;
-  /** When true, fallback-orientation fragments are tinted magenta in the visual shader.  Selection / pick paths unaffected. */
-  highlightFallback: boolean;
-  /** When true, fallback-orientation fragments are `discard`ed entirely. */
-  realOnlyMode: boolean;
+  /** Per-axis provenance audit state: highlight overlay + tri-state cull. Applies to the visual AND pick passes (a culled galaxy is not pickable either). */
+  provenance: GalaxyProvenanceSettings;
   /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; `absMagLimit` ignored.  The Schechter / 1-over-Vmax modes read per-vertex weights (`schechterRatio`, angular-density) the bias-correction subsystem splices into the vertex buffer — not uniforms. */
   biasMode: number;
   /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */
   absMagLimit: number;
   /** Whether the points pass applies depth-based alpha fade. */
   depthFadeEnabled: boolean;
+  /** Overall physical-SB → HDR gain — multiplies each galaxy's baked `sbAmp` into the additive HDR field (the `galaxySbScale` uniform). */
+  sbScale: number;
+  /** Bloom ceiling — the max baked surface-brightness amplitude a compact galaxy can emit; the vertex stage clamps `sbAmp` to it (the `galaxySbMax` uniform). */
+  sbMax: number;
+  /** Readability-falloff exponent on the resolved-fraction falloff, gated by `depthFadeEnabled` (the `galaxyFalloffStrength` uniform). */
+  falloffStrength: number;
   /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */
   pxFadeStart: number;
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */

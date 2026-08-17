@@ -24,7 +24,7 @@
 import { memo } from 'react';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 
@@ -104,6 +104,7 @@ function StructuresSection({
             <input
               id={`toggle-marker-${cat}`}
               type="checkbox"
+              className={styles.toggle}
               checked={markerCategoryVisibility[cat]}
               onChange={(e) => onSetMarkerCategoryVisibility(cat, e.target.checked)}
             />

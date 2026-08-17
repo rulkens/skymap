@@ -5,11 +5,12 @@
  * fetchable asset — that `wireSlots` iterates to construct the engine's full
  * slot table. Each row fully describes one asset's lifecycle contract:
  *
- *   - `key`     — stable identity (which asset is this?).
- *   - `factory` — how to build the slot (construction-purity contract, see below).
- *   - `req`     — how to derive the current request from the active tier.
- *   - `demand`  — whether the slot should be loading right now.
- *   - `built`   — `'external'` marks a slot the registry does NOT build (see below).
+ *   - `key`      — stable identity (which asset is this?).
+ *   - `factory`  — how to build the slot (construction-purity contract, see below).
+ *   - `req`      — how to derive the current request from the active tier.
+ *   - `demand`   — whether the slot should be loading right now.
+ *   - `priority` — where it sits in the fetch queue once demanded (see below).
+ *   - `built`    — `'external'` marks a slot the registry does NOT build (see below).
  *
  * ### Externally-built slots (built)
  *
@@ -54,6 +55,31 @@
  * conditional `slot.load()` calls across dozens of engine-handle setters —
  * every policy lives here, next to the row it concerns. See `DemandCtx` for
  * the read surfaces available to predicates.
+ *
+ * ### Fetch rank (priority)
+ *
+ * `demand` says WHETHER; `priority` says IN WHAT ORDER. Demanded rows are
+ * enqueued onto one bounded-concurrency queue rather than all fired at once,
+ * so a cold boot's ~100 MB stops splitting a single HTTP/2 pipe N ways and
+ * instead lands most-useful-first. LOWER is fetched first.
+ *
+ * The ranking axis is relevance to the scale rung the camera is actually
+ * looking at, with payload size folded in BY HAND as a tiebreak between rows
+ * of equal relevance (small before large, so more assets land per second).
+ * Size is authored into the integer rather than declared as a separate
+ * `expectedBytes` field: the bytes depend on the active tier and the current
+ * build's catalog cuts, so a declared number goes stale the moment either
+ * shifts, and a stale number would silently mis-order the queue. An authored
+ * integer is at least honestly a judgement call.
+ *
+ * Required, not optional. A new asset must state where it belongs; inheriting
+ * a default rank would let a large payload quietly jump ahead of the first
+ * frame's needs, and the compiler catching the omission is the point.
+ *
+ * NOTE the sign flip at the enqueue site: `PriorityQueue.popHighestPriority`
+ * pops the LARGEST value (it also serves thumbnails, where larger-on-screen
+ * -first is the natural reading), so `reevaluateDemand` enqueues
+ * `-row.priority`. The negation lives there, not in the queue.
  */
 
 import type { AssetKey } from './AssetKey';
@@ -87,6 +113,12 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
   /** Build the request from the current tier (void/empty for tier-agnostic). */
   req: (tier: Tier) => R;
   demand: (ctx: DemandCtx) => boolean;
+  /**
+   * Fetch rank. LOWER is fetched first. Payload size is folded in by the
+   * author; required so a new row states a rank rather than inheriting one.
+   * See the "Fetch rank" section above, including the enqueue-site negation.
+   */
+  priority: number;
   /**
    * The evict edge, checked while the slot is `ready`. Omitted ⇒ never evict.
    * Separate from `demand` to encode hysteresis — see the docblock above.

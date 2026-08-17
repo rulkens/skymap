@@ -1,49 +1,45 @@
 /**
  * renderFrame — verify timing service is consulted per pass.
  *
- * Stubs renderFrame's dependencies, attaches a mock timingService,
- * runs one frame, then asserts:
+ * Stubs renderFrame's dependencies, attaches a mock timingService, runs one
+ * frame, then asserts:
  *
  *   1. `beginFrame` was called once.
- *   2. `descriptorFor(pass.name)` was called once per enabled HDR
- *      pass.  In this fixture only point-sprites + milky-way fire
- *      (the other six pass slots are gated off via null subsystems /
- *      null optional renderers), so we expect `descriptorFor` to be
- *      called with 'point-sprites' and 'milky-way'.
- *   3. The descriptor returned by the mock landed on the
- *      `timestampWrites` field of the corresponding `beginRenderPass`
- *      call — the orchestrator's `...(timestampWrites ? { ... } : {})`
- *      spread must materialise the field when the service is active.
+ *   2. `descriptorFor(pass.name)` was called once per enabled layer — in
+ *      this fixture point-sprites and the Milky-Way cloud's three rows
+ *      (milky-way-aggregate, milky-way-upsample, milky-way); the rest are
+ *      gated off via null subsystems / null optional renderers.
+ *   3. The descriptor lands on `timestampWrites` of the corresponding
+ *      `beginRenderPass` call — the orchestrator's
+ *      `...(timestampWrites ? { ... } : {})` spread must materialise the
+ *      field when the service is active.
  *   4. `endFrame` was called once with the encoder.
- *   5. When `state.gpu.timingService` is null (the common case), none
- *      of `beginFrame` / `descriptorFor` / `endFrame` fire and the
- *      encoder commands stay byte-identical to the pre-timing path.
- *      The visual-baseline test in `tests/visual/renderFrameSplitBaseline.test.ts`
- *      backs up the byte-identical claim with a snapshot; this test
- *      asserts the structural "no-call" invariant.
+ *   5. With `state.gpu.timingService` null (the common case), none of
+ *      `beginFrame`/`descriptorFor`/`endFrame` fire and the encoder
+ *      commands stay byte-identical to the pre-timing path — the
+ *      byte-identical claim itself is a snapshot in
+ *      `renderFrameSplitBaseline.test.ts`; this test asserts the
+ *      structural "no-call" invariant.
  *
- * ### Why a local helper instead of importing renderFrame.test.ts's
- *
- * Per the Task-9 plan note: keep the fixture local to this test
- * (no shared module extraction in this task).  The shape mirrors
- * `tests/visual/renderFrameSplitBaseline.test.ts`'s `makeMinimalInput`
- * — encoder + pass stubs that record what they were called with,
- * renderers that no-op, and a `state` that gates every optional
- * pass off so the trace stays focused on the two always-on passes
- * (point-sprites + milky-way).
+ * The fixture stays local rather than importing `renderFrame.test.ts`'s
+ * helper; its shape mirrors `renderFrameSplitBaseline.test.ts`'s
+ * `makeMinimalInput` — encoder + pass stubs that record their call args,
+ * renderers that no-op, and a `state` that gates every optional pass off so
+ * the trace stays focused on the always-on passes.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
@@ -135,6 +131,10 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
     specs: [
       { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
       { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+      // downscaled viewport it hands the star pass, so the row must exist here
+      // and not only in the views record.
+      { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2 },
       { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
     ],
     viewOf: (id: string) => {
@@ -176,9 +176,9 @@ function makeCam(): OrbitCamera {
 }
 
 /**
- * Build a minimal RenderFrameInput where only point-sprites and
- * milky-way passes are enabled.  Every other optional renderer / slot
- * is null so its pass's `enabled()` gate reports false.
+ * Build a minimal RenderFrameInput where only point-sprites and the
+ * Milky-Way cloud's three rows are enabled.  Every other optional
+ * renderer / slot is null so its pass's `enabled()` gate reports false.
  */
 function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   input: RenderFrameInput;
@@ -191,13 +191,16 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
   const pointRenderer = makeLoggingRenderer();
-  const milkyWayCloudRenderer = makeLoggingRenderer();
+  // The cloud renderer's two passes target two different textures, so it has
+  // two entry points rather than one `draw`.
+  const milkyWayCloudRenderer = { drawStars: vi.fn(), drawDust: vi.fn() };
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const renderTargetViews: Record<string, GPUTextureView> = {
     hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
     volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+    'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   const renderTargets = makeRenderTargets(renderTargetViews);
 
@@ -244,8 +247,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     brightness: 1.0,
     selected: null as { source: SourceType; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -274,9 +275,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // Near-field handles null → the (hdr, NEAR0) star-point render, the
         // foreground:0 render, and the NEAR0 caption render all select
         // nothing, and the foreground:0→swap composite is
-        // touched-set-skipped, so the near-field steps bill no timing slot.
-        // This fixture stays a pure cosmological-frame timing trace
-        // (point-sprites, milky-way, hdr→swap).
+        // touched-set-skipped, so those near-field steps bill no timing slot.
+        // The only near-field rows left are the Milky-Way cloud's three, whose
+        // handles ARE wired below (point-sprites, the three cloud rows,
+        // hdr→swap).
         earthRenderer: null,
         starRenderer: null,
         planetRenderer: null,
@@ -291,6 +293,11 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         milkyWayCloud: {
           buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
         },
+        // milkyWayUpsampleLayer shares the cloud's liveness gate, so it is
+        // enabled here and bills its own timed pass; the null handle makes its
+        // `draw` self-guard and issue no blit. The key must EXIST — the guard
+        // is `=== null`, which `undefined` would slip past.
+        milkyWayAggregateUpsample: null,
         // Every `ContentLayer.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication).
@@ -311,8 +318,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         galaxyCatalogs: {
           sizePx: settings.pointSizePx,
           brightness: settings.brightness,
-          highlightFallback: settings.highlightFallback,
-          realOnly: settings.realOnlyMode,
+          provenance: DEFAULT_GALAXY_PROVENANCE,
           depthFade: settings.depthFadeEnabled,
         },
         tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
@@ -338,11 +344,14 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       subsystems: {
         proceduralDisks: null,
         texturedDisks: null,
-        // filamentsLayer.enabled consults the FadeRegistry to keep the
-        // layer alive through fade-out tails. This fixture wants the
-        // layer GATED OFF (the test asserts only point-sprites +
-        // milky-way fire), so opacityOf returns 0 — no fade-out tail.
-        fades: { opacityOf: () => 0 },
+        // filamentsLayer.enabled consults the FadeRegistry to keep the layer
+        // alive through fade-out tails; this fixture wants it GATED OFF, so
+        // every other id fades to 0. The Milky-Way cloud is the exception: its
+        // liveness projection MULTIPLIES this opacity into its alpha, so a
+        // blanket 0 would disable the three cloud rows the test is about
+        // (opacity 0 ⇒ no render). Production seeds that fade from
+        // `settings.milkyWay.enabled`, which is true here, hence 1.
+        fades: { opacityOf: (id: { kind: string }) => (id.kind === 'milkyWay' ? 1 : 0) },
       },
     } as never,
     device,
@@ -371,27 +380,31 @@ describe('renderFrame — timing service hookup', () => {
 
     // 'perLayerTimed' strategy: descriptorFor fires once per enabled layer
     // (its own timed pass) PLUS once for the hdr→swap composite. In this
-    // fixture the enabled HDR layers are point-sprites + milky-way (the others
-    // are gated off via null subsystems / null optional renderers; the horizon
-    // shell's fade-in band starts at cosmological distances, and
-    // MW_ALIVE_DIST_MPC is the close framing that lights the Milky-Way
-    // impostor). There is NO 'tone-map' or 'ui-overlay' slot anymore — the
-    // tone-map is the 'hdr→swap' composite, and with no swap layer enabled no
-    // swap pass opens.
+    // fixture the enabled layers are point-sprites plus the Milky-Way cloud's
+    // three rows — milky-way-aggregate (its own reduced-res offscreen),
+    // milky-way-upsample and milky-way (both in HDR) — since all three share
+    // one liveness gate (the others are gated off via null subsystems / null
+    // optional renderers; the horizon shell's fade-in band starts at
+    // cosmological distances, and MW_ALIVE_DIST_MPC is the close framing that
+    // lights the cloud). There is NO 'tone-map' or 'ui-overlay' slot anymore —
+    // the tone-map is the 'hdr→swap' composite, and with no swap layer enabled
+    // no swap pass opens.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
+    expect(slotsCalled).toContain('milky-way-aggregate');
+    expect(slotsCalled).toContain('milky-way-upsample');
     expect(slotsCalled).toContain('milky-way');
     expect(slotsCalled).toContain('hdr→swap');
     expect(slotsCalled).not.toContain('ui-overlay');
     expect(slotsCalled).not.toContain('tone-map');
-    expect(descriptorFor).toHaveBeenCalledTimes(3);
+    expect(descriptorFor).toHaveBeenCalledTimes(5);
 
     // Every opened pass carries its slot's timestampWrites — the first HDR
     // layer's pass carries the clear AND its own descriptor (no dedicated
-    // clear pass in the unified path), so all three begins are tagged. The
+    // clear pass in the unified path), so all five begins are tagged. The
     // composite's beginRenderPass is opened by the executor (against the swap
-    // view), so — unlike the old inline tone-map blit — it DOES appear here.
-    expect(beginCalls).toHaveLength(3);
+    // view), so it counts among the five begins.
+    expect(beginCalls).toHaveLength(5);
     const stubSlots = beginCalls.map((b) => {
       const tw = (
         b.desc as GPURenderPassDescriptor & {
@@ -401,7 +414,17 @@ describe('renderFrame — timing service hookup', () => {
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });
-    expect(stubSlots).toEqual(['point-sprites', 'milky-way', 'hdr→swap']);
+    // The cloud's aggregate row draws into its own offscreen between the COSMO
+    // hdr layer and the two hdr NEAR0 rows it feeds; within the hdr NEAR0 step
+    // the upsample precedes the dust so the dust extincts the cloud's own
+    // starlight.
+    expect(stubSlots).toEqual([
+      'point-sprites',
+      'milky-way-aggregate',
+      'milky-way-upsample',
+      'milky-way',
+      'hdr→swap',
+    ]);
 
     // endFrame fires once with the live encoder so the resolve + copy
     // commands ride the same submit as the HDR draws.

@@ -68,11 +68,13 @@ import { call, race, take, takeLatest, getContext, put, select } from 'typed-red
 import { startClip, stopClip } from './clipActions';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { selectOrientation } from '../settings/selectors';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
-import { pause, resume, goLive } from '../time/timeSlice';
+import { pause, resume } from '../time/timeSlice';
+import { goLiveNowAction } from '../time/goLiveNowAction';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchClipSaga() {
@@ -107,8 +109,20 @@ export function* watchClipSaga() {
             () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
           );
           const rt = cameraRuntime()!;
-          const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
-          yield* call(playClipSeam, resolved);
+          // The STEADY orientation basis so a lookAtId bearing encodes through
+          // the same frame the render path decodes with (world-invariant aim).
+          // The same id pins the clip's frame for its whole run (see playClip's
+          // `frame` arg).
+          const orientation = yield* select(selectOrientation);
+          const frameBasis = ORIENTATION_FRAMES[orientation];
+          const resolved = resolveClipFoci(
+            clip.data,
+            resolveDeps(),
+            rt.fovYRad,
+            rt.from,
+            frameBasis,
+          );
+          yield* call(playClipSeam, resolved, orientation);
         }),
         stop: take(stopClip),
       });
@@ -123,7 +137,7 @@ export function* watchClipSaga() {
       //                     The clip's own `pause` merely re-anchored an already-
       //                     paused clock, which is a no-op on sim time.
       if (priorMode === 'live') {
-        yield* put(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
+        yield* put(goLiveNowAction());
       } else if (!priorPaused) {
         yield* put(resume({ nowMs: performance.now() }));
       }

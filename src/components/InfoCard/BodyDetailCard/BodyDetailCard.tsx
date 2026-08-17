@@ -1,32 +1,35 @@
 /**
- * BodyDetailCard — rich panel for a focused scene body (a famous star, Earth, or
- * a planet/moon).
+ * BodyDetailCard — rich panel for a focused scene body (a famous star, Earth, a
+ * planet/moon, an S-star).
  *
  * The engine hands React a lean `BodyInfo` (id + label + position + radius) so a
  * body is always immediately selectable.  The card then branches on the body's
  * kind, keyed by `FAMOUS_STAR_IDS.has(target.id)`:
  *
  *   - A famous star gets the rich stellar panel: its narrative/physical rows live
- *     in the async `famous_stars_meta.json` sidecar, looked up by `id` in
- *     `useFamousStarsMeta()` and filled in once the fetch settles.  A star with no
- *     meta entry (before the fetch settles, or a dev clone with no sidecar)
- *     renders the headline alone — the fail-soft path the hook's `ready` contract
- *     guarantees.  Its physical rows follow the shared star-card order (distance →
+ *     in the async `famous_stars_meta.json` sidecar, handed in as the
+ *     `famousStarsMeta` prop and looked up by `id`.  A star with no meta entry
+ *     (before the sidecar's slot settles, or a dev clone with no sidecar)
+ *     renders the headline alone — one fail-soft path covering both cases, which
+ *     is why the card needs no separate "loaded yet?" flag to branch on.
+ *     Its physical rows follow the shared star-card order (distance →
  *     magnitudes → class → temperature → luminosity → radius → famous extras) so
  *     the famous and field-star cards read as one family.
  *   - Any other body (Earth, a planet, a moon) reads its facts from the
  *     compiled-in `BODY_FACTS` table (a tiny fixed set — no fetch, unlike the
  *     star sidecar), keyed by the same `id`.  With an entry it shows the full
  *     planetary fact sheet (radius first, then mass, gravity, day, year, …);
- *     without one it falls back to the lean panel (radius alone).
+ *     without one it falls back to the lean panel (radius alone).  A body
+ *     carrying orbital elements (an S-star) adds `BodyInfo.orbit`'s block after
+ *     that panel — synchronous, so it needs no loading branch of its own.
  *
  * The non-star body's **camera distance** is time-dependent (it swings as the
  * body orbits), so it is NOT baked into the identity `BodyInfo`; it arrives as
  * the `distanceMpc` prop, which `BodyDetailCardContainer` reads live off the
- * throttled `engineBodyDistanceReported` pub. This card stays presentational:
- * it renders whatever distance it is handed and never derives the value
- * itself (the store-boundary rule forbids a card reaching into the engine
- * snapshot).
+ * throttled `engineBodyDistanceReported` pub — as it also reads the star
+ * sidecar. This card stays presentational: it renders whatever distance and
+ * metadata it is handed and never derives or fetches either (the store-boundary
+ * rule forbids a card reaching into the engine snapshot).
  *
  * Both branches end with a "Learn more" Wikipedia link: the body's explicit
  * `wikiTitle`, or a famous star's primary name (via `starWikipediaTitle`, which
@@ -42,12 +45,13 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatScalar } from '../../../utils/format/formatScalar';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
-import { useFamousStarsMeta } from '../../../hooks/useFamousStarsMeta';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
@@ -66,6 +70,15 @@ export type BodyDetailCardProps = {
    * distance is published. Rendered as a row on the non-star body branch only.
    */
   distanceMpc?: number | null;
+  /**
+   * Parsed `famous_stars_meta.json` entries, empty until the sidecar's asset slot
+   * settles (and after a failed fetch). Consulted only on the famous-star branch.
+   *
+   * Required rather than defaulted: `BodyDetailCardContainer` is the only render
+   * site and always supplies it, so a default would exist purely to let a future
+   * call site omit it and silently render every star's headline alone.
+   */
+  famousStarsMeta: readonly FamousStarMetaEntry[];
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -75,15 +88,14 @@ function BodyDetailCard({
   pinned = false,
   chrome = true,
   distanceMpc = null,
+  famousStarsMeta,
   onFocus,
   onClose,
 }: BodyDetailCardProps): ReactNode {
-  // Rules-of-hooks forbid a conditional hook call, so `useFamousStarsMeta`
-  // always runs; we gate its *consumption* on the star branch — a non-star body
-  // never reads the stellar sidecar.
-  const { famousStarsMeta } = useFamousStarsMeta();
   const isFamousStar = FAMOUS_STAR_IDS.has(target.id);
-  const entry = isFamousStar ? famousStarsMeta.find((m) => m.id === target.id) : undefined;
+  const entry = isFamousStar
+    ? famousStarsMeta.find((m: FamousStarMetaEntry) => m.id === target.id)
+    : undefined;
   // A planet/moon's curated fact sheet — compiled in, no fetch. Absent ⇒ the
   // lean panel (radius alone). Never consulted on the famous-star branch.
   const facts = isFamousStar ? undefined : BODY_FACTS[target.id];
@@ -179,6 +191,30 @@ function BodyDetailCard({
               />
             )}
           </div>
+          {/*
+            Orbital block — present only for a body carrying elements (the
+            S-stars today), absent for Earth, the planets and the moons, whose
+            orbits are the fact sheet's business.  The pericentre prints both
+            units on one row because the Schwarzschild figure is legible only
+            beside the AU it restates.
+          */}
+          {target.orbit && (
+            <div className={styles.cardSection}>
+              <CardRow label="Orbits" value={target.orbit.focusLabel} />
+              <CardRow label="Orbital period" value={`${formatScalar(target.orbit.periodYr)} yr`} />
+              <CardRow label="Eccentricity" value={target.orbit.eccentricity.toFixed(3)} />
+              <CardRow
+                label="Pericentre"
+                value={`${formatScalar(target.orbit.pericentreAu)} AU (${formatScalar(
+                  target.orbit.pericentreSchwarzschildRadii,
+                )} Schwarzschild radii)`}
+              />
+              <CardRow
+                label="Pericentre speed"
+                value={`${formatScalar(target.orbit.pericentreSpeedKmS)} km/s`}
+              />
+            </div>
+          )}
           {facts && (
             <div className={styles.cardSection}>
               <WikipediaRow title={facts.wikiTitle} />

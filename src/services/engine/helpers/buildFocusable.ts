@@ -4,11 +4,12 @@
  * runs buildGalaxyInfo (the pure formatter); the structure arm IS already a
  * StructureInfo (a FocusableTarget arm) so it passes through; the Milky Way arm
  * is the singleton const; the body arm builds a `BodyInfo` for EVERY body row —
- * a famous star, Earth, or a planet — so any clicked/deep-linked scene body
- * drives the InfoCard and the `#focus=body-<id>` hash. (The card rows fill in
- * from the async famous-star meta only for the famous ids; a planet or Earth
+ * a famous star, Earth, a planet, an S-star — so any clicked/deep-linked scene
+ * body drives the InfoCard and the `#focus=body-<id>` hash. (The card rows fill
+ * in from the async famous-star meta only for the famous ids; a planet or Earth
  * renders BodyDetailCard's name + radius rows from the BodyInfo fields alone,
- * with no async lookup.) The star arm builds a
+ * with no async lookup, and an S-star adds its orbital block from the
+ * compiled-in seed table.) The star arm builds a
  * `FieldStarInfo` view-model for a picked survey star.
  *
  * This imports only pure builders + a static const/set, so React can call it
@@ -18,6 +19,8 @@
  */
 import { buildGalaxyInfo } from './buildGalaxyInfo';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
+import { ZONE_OF_AVOIDANCE_INFO } from '../../../data/zoneOfAvoidance/zoneOfAvoidanceInfo';
+import { sStarOrbitInfo } from '../../../data/bodies/sStarOrbitInfo';
 import { apparentMagnitudeFromAbs } from '../../../utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../utils/star/spectralClassFromBpRp';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -32,12 +35,17 @@ const BUILD_FOCUSABLE: {
   galaxyCatalog: (row) => buildGalaxyInfo(row),
   structure: (row) => row,
   milkyWay: () => MILKY_WAY_INFO,
+  zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,
   body: (row): BodyInfo => ({
     type: 'body',
     id: row.id,
     label: row.label,
     positionMpc: row.positionMpc,
     radiusKm: row.radiusKm,
+    // Undefined for every body with no elements. Looked up here rather than
+    // carried on the stored row: five derived numbers off a compiled-in table
+    // would be re-serialized into RTK state on every selection for no gain.
+    orbit: sStarOrbitInfo(row.id),
   }),
   // A picked star has no per-star identity on the bin (SKST v1 quantises
   // position + Gaia photometry only), so the card is a small self-derived

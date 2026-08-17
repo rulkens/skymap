@@ -66,4 +66,13 @@ export type EngineDebugHandle = {
    * exist; checkbox writes go to the store via `setPassDisabled`.
    */
   readonly passOverrides: PassOverridesHandle;
+  /**
+   * Authored fetch rank per slot name (lower fetches first), derived from
+   * `ASSET_WIRING` — the panel's ordering key and rank column.
+   *
+   * A function, not a snapshot Map, for the same reason `timingService` is a
+   * getter: slots are minted by the async bootstrap IIFE well after this handle
+   * is built, so a Map captured at construction would be permanently empty.
+   */
+  readonly assetPriorities: () => ReadonlyMap<string, number>;
 };

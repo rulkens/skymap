@@ -8,12 +8,18 @@
  * current frame ONCE so the layers that consume opposite
  * branches (`planetsLayer` the `flat` branch, `texturedBodiesLayer` the
  * `textured` branch, and eventually the glints layer) cannot drift apart on how
- * they build them. In particular the residency predicate — "is this body's
- * surface texture live on the renderer?" — has ONE definition here rather than a
- * copy in each layer: a body is resident iff its keyed `bodyTextures` slot holds
- * a committed bitmap (`current() != null`). If two layers spelled that lookup
- * separately, a resident body could be counted `textured` by one and `flat` by
- * the other and get double-drawn (both opaque into `foreground:0`, z-fighting).
+ * they build them. If two layers spelled the residency lookup separately, a
+ * resident body could be counted `textured` by one and `flat` by the other and
+ * get double-drawn (both opaque into `foreground:0`, z-fighting).
+ *
+ * Residency is a RENDERING fact, so it is asked of the renderer: "is a real
+ * surface texture bound for this body?" (`texturedBodyRenderer.hasMap`). The
+ * loading system is not consulted. A committed `bodyTextures` slot used to stand
+ * in for the fact, and that proxy holds only while every bound texture has a slot
+ * behind it — which stops being true the moment the renderer can hold a texture
+ * from another source (a shared body atlas tile). Asking the drawer what it has
+ * bound cannot go stale that way. Residency tracks the surface (day) map — the
+ * base drawn body — not the feature kinds.
  *
  * The apparent-size inputs are read off the frame context the same way in
  * `enabled` and `draw`: `ctx.drawCamPos` for the camera, `ctx.canvasSize.height`
@@ -27,7 +33,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
-import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { sceneBodyStates } from './sceneBodyStates';
 
@@ -41,14 +46,12 @@ export function sceneBodyPartition(
     camPosMpc: ctx.drawCamPos,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,
-    // Resident iff the body's SURFACE texture slot holds a committed bitmap. The
-    // id is a plain string on the body record; the slot Map is keyed by the
-    // composite `bodyId:kind`, and a non-registry body simply misses the Map (→
-    // not resident → flat), so the cast is safe. Residency tracks the surface
-    // (day) map — the base drawn body — not the feature kinds.
+    // Resident iff the renderer has a real SURFACE map bound for the body. The
+    // id is a plain string on the body record while the renderer is keyed by
+    // `BodyTextureId`; a non-registry body simply misses that Map (→ not
+    // resident → flat), so the cast is safe. Before the GPU is up there is no
+    // renderer and nothing is drawn textured, hence the `?? false`.
     isTextureResident: (id) =>
-      state.assetSlots.bodyTextures
-        .get(bodyTextureSlotKey(id as BodyTextureId, 'surface'))
-        ?.current() != null,
+      state.gpu.texturedBodyRenderer?.hasMap(id as BodyTextureId, 'surface') ?? false,
   });
 }

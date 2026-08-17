@@ -23,6 +23,20 @@
  * angle is what actually controls the visible terminator: the shadowed fraction
  * of the disc is `(1 − cos(offset)) / 2`.
  *
+ * ### Why the `frameBasis` argument
+ *
+ * The aim is a WORLD-space vector, but the returned yaw/pitch are read back by
+ * the orbit camera's decode (`updatePosition`), which now runs through the
+ * ACTIVE orientation basis (`ORIENTATION_FRAMES[settings.orientation]`, default
+ * `ecliptic` — NOT identity). Encoding an angle pair is only the inverse of that
+ * decode when both use the SAME basis: `orbitAnglesLookingAlong` rotates the aim
+ * back through `frameBasisᵀ` before extracting the angles, exactly undoing the
+ * decode's `frameBasis ·`. Omit the basis here and the ecliptic decode
+ * reinterprets a legacy-identity encoding, swinging the eye off the sunlit axis —
+ * boot first-paint and every home entry mis-aim. Callers thread the steady
+ * committed basis so the round-trip is exact. Absent a basis the encode falls
+ * back to identity (world-frame angles), matching an identity decode.
+ *
  * ### Why the distance is `bodyLikeFraming`'s, not a bespoke home distance
  *
  * This is forced by the follow mechanics, not taste. When home focus lands on
@@ -40,6 +54,7 @@
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { bodyLikeFraming } from './bodyLikeFraming';
@@ -51,7 +66,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
  */
 export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 60;
 
-export function earthHomePose(simDays: number, fovYRad: number): CameraPose {
+export function earthHomePose(simDays: number, fovYRad: number, frameBasis?: Mat3): CameraPose {
   const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
   const { target, distance } = bodyLikeFraming(earthPos, SCENE_EARTH.radiusKm, fovYRad);
 
@@ -76,6 +91,8 @@ export function earthHomePose(simDays: number, fovYRad: number): CameraPose {
     c * sVec[2] + s * tVec[2],
   ];
 
-  const { yaw, pitch } = orbitAnglesLookingAlong(aim);
+  // Encode the world-space aim through the SAME steady basis the decode reads,
+  // so the returned yaw/pitch round-trip back to `aim` (see the frame section).
+  const { yaw, pitch } = orbitAnglesLookingAlong(aim, frameBasis);
   return { target, yaw, pitch, distance };
 }

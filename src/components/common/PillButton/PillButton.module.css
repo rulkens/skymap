@@ -5,8 +5,8 @@
  * inherited `color` (used by child icons via currentColor) jumps to
  * the cosmic-blue accent.
  *
- * Placement in the row is owned by the parent (.topBar in
- * App.module.css); this rule has no `top` / `left`. The hover label is
+ * Placement in the row is owned by the parent (.root in
+ * TopBarContainer.module.css); this rule has no `top` / `left`. The hover label is
  * a CompactInfoTip, which supplies its own `position: relative`
  * wrapper, so the pill needs no positioning context of its own.
  */
@@ -29,9 +29,12 @@
   color: var(--color-fg-dim);
   cursor: pointer;
 
-  transition: background 0.15s ease-out, border-color 0.15s ease-out,
-              color 0.15s ease-out, opacity 0.18s ease-out,
-              transform 0.22s ease-out;
+  transition:
+    background 0.15s ease-out,
+    border-color 0.15s ease-out,
+    color 0.15s ease-out,
+    opacity 0.18s ease-out,
+    transform 0.22s ease-out;
 }
 
 .root:hover,

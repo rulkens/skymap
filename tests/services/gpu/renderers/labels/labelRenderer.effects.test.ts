@@ -34,6 +34,7 @@ const newRenderer = () =>
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     },
     'rgba16float',
     FIXTURE_ATLASES,

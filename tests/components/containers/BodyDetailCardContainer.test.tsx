@@ -10,9 +10,9 @@
 // (Radius, label) stay put. Asserting on rendered text keeps the contract stable
 // against CSS-modules class mangling.
 //
-// The famous-stars hook is mocked so the non-star (planet) branch is exercised
-// without a sidecar fetch — Jupiter's id misses FAMOUS_STAR_IDS regardless, but
-// the mock keeps the hook deterministic.
+// No sidecar stubbing is needed: the container selects `famousStarsMeta` off the
+// engine slice, which a fresh store initialises empty, and Jupiter's id misses
+// FAMOUS_STAR_IDS anyway. The card takes the planet branch either way.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
@@ -24,10 +24,6 @@ import { engineBodyDistanceReported } from '../../../src/state/engine/engineSlic
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { formatDistance } from '../../../src/utils/format/formatDistance';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
-
-vi.mock('../../../src/hooks/useFamousStarsMeta', () => ({
-  useFamousStarsMeta: () => ({ famousStarsMeta: [], ready: true }),
-}));
 
 // Render probe: wrap the real BodyDetailCard so we can count how many times the
 // container actually renders it. The wrapper renders the genuine component (so the

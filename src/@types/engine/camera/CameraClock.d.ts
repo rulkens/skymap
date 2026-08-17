@@ -19,8 +19,9 @@
 
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../camera/CameraPose';
-import type { ClipData } from '../../animation/ClipData';
+import type { CameraState } from '../../camera/CameraState';
 import type { SelectionRow } from '../SelectionRow';
+import type { FrameTween } from '../../camera/FrameTween';
 import type { Vec3 } from '../../math/Vec3';
 
 export type CameraClock = {
@@ -28,6 +29,12 @@ export type CameraClock = {
   autoRotateStartMs: number | null;
   lastTweenRef: CameraTweenDescriptor | null;
   lastAutoRotateActive: boolean;
+  // The frame-roll clock keys on the `FrameTween` REFERENCE, not its contents.
+  // An orientation-frame switch installs a NEW `FrameTween` object, so `!==`
+  // against `lastFrameTweenRef` fires the zero exactly once on the switch frame
+  // — the same identity-reset pattern `lastTweenRef` uses for camera tweens.
+  frameTweenStartMs: number | null;
+  lastFrameTweenRef: FrameTween | null;
   // ── follow-body approach ease ──────────────────────────────────────────────
   // The `followBody` driver eases the camera from wherever it was into a framing
   // pose on the focused body, then translate-follows the body as the sim clock
@@ -95,9 +102,9 @@ export type CameraClock = {
   // the stale accumulated time (which would jump the camera on resume).
   lastBaseRef: CameraPose | null;
   // The clip clock keys on the `camera.clip` REFERENCE, not its contents.
-  // A `startClip` dispatch installs a NEW `{ data: ClipData }` object each time,
+  // A `startClip` dispatch installs a NEW `{ data, frame }` object each time,
   // so `!==` fires the zero exactly once on the transition frame — the same
   // identity-reset pattern used by `lastTweenRef` for tweens.
   clipStartMs: number | null;
-  lastClipRef: { data: ClipData } | null;
+  lastClipRef: CameraState['clip'];
 };

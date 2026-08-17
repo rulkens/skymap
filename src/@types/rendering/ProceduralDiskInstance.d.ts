@@ -76,4 +76,15 @@ export type ProceduralDiskInstance = {
   sourceCode: SourceType;
   /** Per-source catalog row index — the localIdx half of the packed pick id. */
   localIdx: number;
+  /**
+   * The EFFECTIVE per-instance surface-brightness amplitude the fragment
+   * multiplies its profile by:
+   * `min(rawSbAmp, sbMax) * sbScale * sbBoost * brightness`. Pre-scaled on
+   * the CPU each frame (rather than uploading the raw amplitude + the
+   * three slider scalars separately) so the live sliders stay responsive
+   * with no disk-uniform change needed. Packed into `extras.w` (float slot
+   * 11) — it rides an existing padding float, so the 48-byte stride is
+   * unchanged.
+   */
+  sbAmp: number;
 };

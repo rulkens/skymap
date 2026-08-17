@@ -38,6 +38,20 @@ describe('parseMilliquas', () => {
     expect(skipped.zNonPositive).toBeGreaterThanOrEqual(2);
   });
 
+  it('treats a literal 0 magnitude as missing, not as a real measurement', () => {
+    // Milliquas marks an absent magnitude with `0`, not a blank. The real
+    // Circinus row (appended to the fixture verbatim) reads Rmag=10.93 with
+    // Bmag=0 — R measured, B absent. Letting the 0 through is not merely
+    // imprecise: at Circinus' 4 Mpc an m=0 back-solves to M=-28, which the
+    // surface-brightness model reads as ~240x a typical galaxy and renders
+    // as a blown-out white blob. Guard the sentinel, keep the real R.
+    const { records } = parseMilliquas(raw);
+    const circinus = records.find((r) => Math.abs(r.ra - 213.2915) < 1e-3);
+    expect(circinus).toBeDefined();
+    expect(circinus!.magR).toBeCloseTo(10.93, 2);
+    expect(circinus!.magG).toBeNaN();
+  });
+
   it('rejects 0.1-rounded photo-z candidate rows', () => {
     const { skipped } = parseMilliquas(raw);
     expect(skipped.photoZRounded).toBeGreaterThan(0);

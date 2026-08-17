@@ -20,11 +20,14 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { SCENE_ORBIT_CONICS } from '../../../src/data/bodies/sceneOrbitConics';
+import { SCENE_ORBIT_CONICS, deriveOrbitConics } from '../../../src/data/bodies/sceneOrbitConics';
 import { ORBITAL_ELEMENTS } from '../../../src/data/bodies/orbitalElements';
 import { RENDER_ORIGIN_MPC } from '../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { keplerianEllipse } from '../../../src/utils/orbit/keplerianEllipse';
+import type { AnchorBody } from '../../../src/@types/scene/AnchorBody';
+import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 // Body positions live in the derived BodyState snapshot (frozen at J2000 here),
@@ -41,6 +44,10 @@ function length(a: Readonly<Vec3>): number {
 
 function sub(a: Readonly<Vec3>, b: Readonly<Vec3>): Vec3 {
   return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function add(a: Readonly<Vec3>, b: Readonly<Vec3>): Vec3 {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 }
 
 function bodyPositionOf(id: string): Readonly<Vec3> {
@@ -80,5 +87,33 @@ describe('SCENE_ORBIT_CONICS', () => {
 
     expect(distToEarth).toBeCloseTo(aE, 20); // centre offset is exactly a·e
     expect(distToEarth).toBeLessThan(earthSunDist * 1e-3); // Earth, not the Sun
+  });
+
+  it('an orbit focused on an anchor resolves its conic centre', () => {
+    // The real table has exactly one anchor ('sun'), so the pre-Task-5 code
+    // could get away with special-casing that literal string and throwing
+    // (via `elementsById`) on anything else. Naming the synthetic anchor
+    // something other than 'sun' exercises the general seam: a hardcoded
+    // fallback would throw here instead of resolving.
+    const anchors: readonly AnchorBody[] = [{ id: 'anchor', positionMpc: [10, 20, 30] }];
+    const el: OrbitalElements = {
+      id: 'child',
+      focusId: 'anchor',
+      semiMajorMpc: 1,
+      eccentricity: 0,
+      inclinationRad: 0,
+      ascendingNodeRad: 0,
+      argPeriapsisRad: 0,
+      meanAnomalyRad: 0,
+      color: [1, 1, 1],
+    };
+
+    const [conic] = deriveOrbitConics(anchors, [el]);
+    const { centerOffsetMpc } = keplerianEllipse(el);
+    const expected = add(anchors[0]!.positionMpc, centerOffsetMpc);
+
+    expect(conic!.centerMpc[0]).toBeCloseTo(expected[0], 20);
+    expect(conic!.centerMpc[1]).toBeCloseTo(expected[1], 20);
+    expect(conic!.centerMpc[2]).toBeCloseTo(expected[2], 20);
   });
 });

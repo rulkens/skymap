@@ -3,7 +3,6 @@ import { near0SelectionRingLayer } from '../../../../../src/services/engine/fram
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../../../../src/data/sources';
@@ -11,6 +10,7 @@ import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/ne
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
 // The enable gate never touches ctx — a bare cast stands in for the frame ctx.
 const CTX = {} as unknown as ReadyFrameContext;
@@ -32,26 +32,12 @@ const STAR_ROW: SelectionRow = {
 
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
 // distinction between "no halo" and "halo for the other slab".
-const GALAXY_ROW: SelectionRow = {
-  type: 'galaxyCatalog',
+const GALAXY_ROW: SelectionRow = makeGalaxyRow({
   source: Source.Glade,
-  index: 0,
-  objId: '1',
-  x: 0,
-  y: 0,
   z: 100,
-  redshift: 0,
-  magU: 0,
-  magG: 0,
-  magR: 0,
-  magI: 0,
-  magZ: 0,
   diameterKpc: 60,
   axisRatio: 1,
-  positionAngleDeg: 0,
-  classByte: 0,
-  parentSurveyByte: 0,
-} as GalaxyRow;
+});
 
 // A structure row — drives the cluster marker pass, never this halo.
 const STRUCTURE_ROW: StructureInfo = {

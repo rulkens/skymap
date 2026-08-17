@@ -27,7 +27,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
@@ -55,14 +55,15 @@ function blockingSeam(onCancel: () => void): PlayClipStub {
 // Default deps resolve nothing — fine for focus-free clips like flyout.
 const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
 
-const RUNTIME: FocusCameraRuntime = {
+const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS) {
@@ -154,7 +155,7 @@ describe('watchClipSaga', () => {
     };
     const deps: ResolveDeps = {
       catalogs: { get: () => undefined },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: (id) => groups[id] ?? null },
       stars: { current: () => null },
     };

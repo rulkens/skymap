@@ -1,57 +1,33 @@
 /**
- * watchTierSaga — the watcher that turns a tier COMMAND into the tier WRITE, with the
- * engine's data-transition runner fired in between, and a galaxy-selection re-anchor
- * after the new clouds land.
+ * watchTierSaga — the watcher that turns a tier COMMAND into the tier WRITE,
+ * with the engine's data-transition runner fired in between, and a
+ * galaxy-selection re-anchor after the new clouds land.
  *
- * The command/write split is the whole point. 'requestTier' is the command: a
- * reducer-less action a UI control or a tour step dispatches to express intent
- * ('I want the large tier'). 'setTier' is the write the saga issues once it has
- * decided the change is real. Keeping them separate means the store's tier only
- * flips on the saga's own terms, never optimistically and never as a side effect
- * of an unrelated settings merge.
+ * `requestTier` is the command a UI control or tour step dispatches to
+ * express intent; `setTier` is the write this saga issues once it decides
+ * the change is real — keeping them separate means the store's tier only
+ * flips on the saga's own terms, never optimistically. `prev` is read
+ * BEFORE the write so the engine runner's per-source tier-target diff stays
+ * honest (it needs the tier the data was loaded AT); the `prev === payload`
+ * guard makes re-selecting the current tier a no-op instead of re-running
+ * the runner's unconditional famous-atlas rebuild for nothing.
  *
- * 'prev' is read BEFORE the write so the per-source tier-target diff the engine
- * runner computes stays honest — the runner needs the tier the data was loaded
- * AT to know which sources actually changed budget. Reading after the 'setTier'
- * write would hand it the new tier on both sides and the diff would always be
- * empty.
+ * `settings.milkyWay.starCount` is an absolute count with nothing tying it
+ * to the tier automatically, so it's re-seeded here from
+ * `MILKY_WAY_STARS_PER_TIER[tier]` on every confirmed tier change — otherwise
+ * a device dropping to the small tier would keep whatever count a previous
+ * DebugPanel session left dialled in. `runFrame`'s per-frame mismatch check
+ * is what actually regenerates the cloud; this saga only owns the seed.
  *
- * The 'prev === payload' early-return is the same-tier no-op. Re-selecting the
- * tier that is already current is a real UI event (a dropdown re-pick); without
- * the guard it would re-issue the write and fire the runner, which today
- * unconditionally rebuilds the famous-galaxy texture atlas for nothing. The
- * guard makes the steady state idle.
- *
- * 'run?.' is defensive against the window before the engine has registered its
- * runner via 'setSagaContext'. In practice that window is closed — boot finishes
- * wiring the context long before the tier dropdown is interactive — but a guarded
- * no-op is cheaper than a throw on a path that must never crash the store.
- *
- * The transition is synchronous today: the runner's loads and famous rebuild are
- * fire-and-forget, so the saga issues the write and calls 'run' in one tick.
- * Only the 'run(...)' line would become 'yield* call(run, ...)' if a step ever
- * needed to be cancellable under 'takeLatest' (e.g. a long load the next request
- * should abort).
- *
- * ### Galaxy selection re-anchor
- *
- * A galaxy SelectionRef is POSITIONAL (source + index). When a tier swap evicts
- * and reloads a source's cloud, the same index points at a different galaxy (or
- * none). To preserve the user's intent:
- *
- *   1. BEFORE the write, capture the durable focus id of each galaxy select/focus
- *      ref whose source actually reloads on this swap (old cloud still present;
- *      focusIdOf can read the objID).
- *   2. Hover is cleared unconditionally — a stale hover over an evicted cloud is
- *      meaningless, and re-anchoring it would fight the clear.
- *   3. AFTER catalogLoaded for each captured source, re-resolve the id to the
- *      new index and write it back (hit → re-anchor, miss → clear the slot).
- *
- * Only sources whose tierTarget changes across prev→next are captured; tier-
- * agnostic sources never reload so they emit no catalogLoaded and their refs
- * never drift. 'takeLatest' aborts the re-anchor loop if a newer 'requestTier'
- * arrives mid-reanchor, preventing a stale re-anchor from clobbering a fresh
- * intent.
+ * A galaxy `SelectionRef` is POSITIONAL (source + index), so when a tier swap
+ * evicts and reloads a source's cloud the same index points at a different
+ * galaxy (or none). To preserve intent: capture each affected ref's durable
+ * focus id BEFORE the write (old cloud still present), clear hover
+ * unconditionally (a stale hover is meaningless), then after each source's
+ * `catalogLoaded` re-resolve the id to its new index and write it back (hit
+ * → re-anchor, miss → clear). Only sources whose tier target actually
+ * changes are captured; `takeLatest` aborts the re-anchor loop if a newer
+ * `requestTier` arrives mid-reanchor.
  */
 
 import { takeLatest, select, put, take, getContext } from 'typed-redux-saga';
@@ -63,8 +39,10 @@ import { selectTier } from './selectors';
 import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
+import { setMilkyWayTuning } from '../settings/settingsSlice';
 import { resolveFocusId } from '../../services/url/resolveFocusId';
 import { catalogLoaded } from '../catalog/catalogLoaded';
+import { MILKY_WAY_STARS_PER_TIER } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RootState, RunTierTransition, SagaContext } from '../../store/types';
 
 export function* watchTierSaga() {
@@ -89,6 +67,11 @@ export function* watchTierSaga() {
 
     const run = yield* getContext<RunTierTransition>('runTierTransition');
     yield* put(setTier(action.payload));
+    // Re-seed the Milky-Way star count from the new tier's budget — see the
+    // module header for why an absolute count needs this. `runFrame` picks up
+    // the write on its own next-frame mismatch check, so nothing here talks
+    // to the GPU cloud directly.
+    yield* put(setMilkyWayTuning({ starCount: MILKY_WAY_STARS_PER_TIER[action.payload] }));
     run?.(prev, action.payload); // eviction + reload starts (fire-and-forget)
 
     // Re-anchor each captured galaxy slot once its source's new cloud lands.

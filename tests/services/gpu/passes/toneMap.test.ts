@@ -21,6 +21,12 @@ import {
   acesFilmic,
 } from '../../../../src/services/gpu/passes/compositor';
 
+import {
+  ToneMapCurve,
+  ALL_TONE_MAP_CURVES,
+  toneMapCurveSaturation,
+} from '../../../../src/data/toneMapCurve';
+
 const ALL_CURVES = [linearClamp, reinhardExtended, asinhStretch, gamma2, acesFilmic];
 
 describe('tone-map curves — common invariants', () => {
@@ -117,5 +123,33 @@ describe('acesFilmic', () => {
 
   it('asymptotes toward 1 for large input', () => {
     expect(acesFilmic(100, 1)).toBeGreaterThan(0.9);
+  });
+});
+
+describe('toneMapCurveSaturation', () => {
+  // The saturation table is a set of claims ABOUT the curves — "this is where the
+  // curve stops separating values". Nothing in the type system ties the two
+  // together, so retuning REINHARD_WHITEPOINT or the Narkowicz coefficients would
+  // silently leave the table pointing at the wrong place, and the HDR headroom
+  // knee (which derives its default from it) would spill in the wrong regime.
+  const CURVE_FN: Record<number, (c: number, exposure: number) => number> = {
+    [ToneMapCurve.Linear]: linearClamp,
+    [ToneMapCurve.Reinhard]: reinhardExtended,
+    [ToneMapCurve.Asinh]: asinhStretch,
+    [ToneMapCurve.Gamma2]: gamma2,
+    [ToneMapCurve.Aces]: acesFilmic,
+  };
+
+  it('names the input where each curve actually reaches 1.0', () => {
+    for (const curve of ALL_TONE_MAP_CURVES) {
+      const saturation = toneMapCurveSaturation(curve);
+      const f = CURVE_FN[curve]!;
+      expect(f(saturation, 1)).toBeCloseTo(1.0, 2);
+      // Every curve clamps, so "reaches 1.0 here" alone would also pass for a
+      // value well ABOVE the true point — the flat shoulder swallows the error.
+      // Pinning the SMALLEST such input needs the other side: 10% back the curve
+      // must still be meaningfully separating, not already flat.
+      expect(f(saturation * 0.9, 1)).toBeLessThan(0.999);
+    }
   });
 });

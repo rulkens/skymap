@@ -2,38 +2,40 @@
  * Viewport — owns the <canvas>, boots the galaxy engine, and reports the
  * live handle to its parent.
  *
- * On mount it creates the engine against the canvas, seeds it with the
- * spike's boot defaults (`DEFAULT_RENDER_SETTINGS` + `DEFAULT_LOD_SETTINGS`
- * merged into one `setRender` patch, then `setParams(DEFAULT_GALAXY_PARAMS)`
- * to trigger the first generation), and only then reports the handle via
- * `onEngine` — a caller that reaches for the handle before that point would
- * find an engine with nothing drawn on it yet. `createGalaxyEngine` is
- * async and can still be in flight when this component unmounts (fast
- * route change, StrictMode double-invoke); the `disposed` flag guards that
- * race by disposing the just-resolved handle instead of handing it to a
- * parent that already stopped listening.
+ * On mount it creates the engine, seeds it with the tool's boot defaults,
+ * and only then reports the handle via `onEngine` — a caller that reaches
+ * for it earlier would find nothing drawn yet. `createGalaxyEngine` is
+ * async and can still be in flight when this component unmounts; the
+ * `disposed` flag guards that race by disposing the just-resolved handle
+ * rather than handing it to a parent that already stopped listening.
  *
- * Camera input (orbit drag, pan, wheel zoom) is engine-internal — see
- * `createGalaxyEngine`'s pointer listeners — so this component adds none of
- * its own, unlike flow-workbench's Viewport which bridges input into an
- * external store.
+ * Camera input is engine-internal, so this component adds none of its own.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
+import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
+import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
+import type { PerfReport } from '../../../@types/engine/PerfReport';
 import { createGalaxyEngine } from '../../engine/createGalaxyEngine';
 import { DEFAULT_GALAXY_PARAMS } from '../../data/defaultGalaxyParams';
 import { DEFAULT_RENDER_SETTINGS } from '../../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../../data/defaultLodSettings';
+import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import styles from './Viewport.module.css';
+
+/** `?probeReadback`-gated bridge so `probeGpuErrors.ts` (a page.evaluate, no React tree) can reach the live engine handle — see `createIsmMapReadbacks.ts`'s `requestRingMeans`. */
+type ProbeReadbackWindow = { __probeEngine?: GalaxyEngineHandle };
 
 export type ViewportProps = {
   readonly onEngine?: (engine: GalaxyEngineHandle | null) => void;
-  readonly onFps?: (fps: number) => void;
+  readonly onPerf?: (report: PerfReport) => void;
   readonly onStats?: (stats: EngineStats) => void;
+  readonly onFade?: (readout: MilkyWayFadeReadout) => void;
+  readonly onOrientationDiagnostics?: (diagnostics: OrientationDiagnostics) => void;
 };
 
-// `createGalaxyEngine` throws these two bare messages (galaxy-engine.ts:107,109);
+// `createGalaxyEngine` throws these two bare messages;
 // anything else is an unexpected failure and gets shown verbatim.
 type BootStatus = 'loading' | 'live' | 'no-webgpu' | 'no-adapter' | 'error';
 
@@ -43,7 +45,13 @@ function statusFromError(err: unknown): BootStatus {
   return 'error';
 }
 
-function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
+function Viewport({
+  onEngine,
+  onPerf,
+  onStats,
+  onFade,
+  onOrientationDiagnostics,
+}: ViewportProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<BootStatus>('loading');
   const [errorDetail, setErrorDetail] = useState('');
@@ -55,7 +63,7 @@ function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
     let disposed = false;
     let handle: GalaxyEngineHandle | null = null;
 
-    createGalaxyEngine(canvas, { autoRotate: true, onFps, onStats })
+    createGalaxyEngine(canvas, { autoRotate: true, onPerf, onStats, onFade, onOrientationDiagnostics })
       .then(async (engine) => {
         if (disposed) {
           engine.dispose();
@@ -70,6 +78,11 @@ function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
         handle = engine;
         setStatus('live');
         onEngine?.(engine);
+        // Debug-only: a normal session never puts engine internals on
+        // `window` — only a run navigated with `?probeReadback` does.
+        if (hasUrlGate('probeReadback')) {
+          (window as unknown as ProbeReadbackWindow).__probeEngine = engine;
+        }
       })
       .catch((err: unknown) => {
         if (disposed) return;
@@ -81,8 +94,9 @@ function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
       disposed = true;
       handle?.dispose();
       onEngine?.(null);
+      delete (window as unknown as ProbeReadbackWindow).__probeEngine;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot-once effect: onEngine/onPerf/onStats/onFade/onOrientationDiagnostics are read only inside the one-time engine construction above; listing them would re-run the boot on every new inline callback from the parent
   }, []);
 
   const showFallback = status === 'no-webgpu' || status === 'no-adapter' || status === 'error';

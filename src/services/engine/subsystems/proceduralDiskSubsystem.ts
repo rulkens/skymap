@@ -18,9 +18,10 @@
  * this planner imports both.
  */
 
-import { Source } from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
-import { cartesianToRaDec, smoothstep } from '../../../utils/math';
+import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../utils/math';
+import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
 import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
 import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
@@ -34,7 +35,7 @@ import {
 } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
+import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -49,7 +50,7 @@ export type ProceduralDiskDeps = {
    * curated WebP is loaded in the atlas, that instance's `procFadeOut` ramps
    * down. Omit it (e.g. in tests) and `procFadeOut` stays 1.0 throughout.
    */
-  readonly atlas?: GalaxyAtlasSubsystem;
+  readonly atlas?: BitmapStreamSubsystem;
 };
 
 export function createProceduralDiskSubsystem(
@@ -74,6 +75,7 @@ export function createProceduralDiskSubsystem(
 
   function beginFrame(input: ProceduralDiskFrameInput): DiskRowVisitor {
     const camPosition = input.cam.position;
+    const { sbScale, sbMax, brightness } = input;
     const proceduralDisks: ProceduralDiskInstance[] = [];
 
     // Hoisted per source by beginSource so onRow does no map lookup — the
@@ -117,6 +119,18 @@ export function createProceduralDiskSubsystem(
           dMpcFromOrigin,
         );
 
+        // The disk recomputes the SAME physical surface brightness the
+        // point bake baked (shared `galaxySbAmp` helper + the same
+        // per-catalog `medianAbsMag`), pre-scaled by the live sliders, so
+        // the point -> disk crossfade holds constant brightness and
+        // intrinsically bright galaxies bloom in the disk view too.
+        const medianAbsMag = catalog.medianAbsMag ?? -20.5;
+        const absMag = absoluteFromApparent(catalog.magG[i]!, dMpcFromOrigin);
+        const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
+        const regEntry = SOURCE_REGISTRY[source];
+        const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
+        const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness;
+
         const emitted = maybeEmitProceduralDisk(
           px,
           ar,
@@ -126,6 +140,7 @@ export function createProceduralDiskSubsystem(
           z,
           sizeWorldMpc,
           colourIndex,
+          sbAmp,
           PROCEDURAL_DISK_FADE_START_PX,
           PROCEDURAL_DISK_FADE_END_PX,
           source,

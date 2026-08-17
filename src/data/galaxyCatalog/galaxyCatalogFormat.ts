@@ -1,100 +1,158 @@
 /**
- * Binary on-disk format for a `GalaxyCatalog` — version 6.
+ * Binary on-disk format for a `GalaxyCatalog` — version 9.
  *
- * v6 consumes 4 of v5's 10 trailing padding bytes for a new per-record
- * float field:
- *
- *   - `spectroscopicZ` (offset 54, float32): the *catalogued*
- *     spectroscopic redshift, stored independently of the cartesian
- *     position so the InfoCard can display the real catalog value
- *     instead of the value implied by |position| / Hubble-distance.
- *
- *     Needed because v5's `positions` field is computed at build time
- *     from either cz (the default) or a redshift-independent catalog
- *     distance (CF4 / HyperLEDA for galaxies inside ~30 Mpc).
- *     Inverting the cartesian distance back to a z works for the
- *     cz-derived rows but produces nonsense for the catalog-overridden
- *     rows (e.g. M31 at |pos|=0.78 Mpc inverts to z=+0.00018, not the
- *     published −0.001).
- *
- *     NaN is the "no spectroscopic z available" sentinel. Consumers
- *     that need a fallback fall back to the position-derived value.
- *
- * Other than the new field, the per-record layout is identical to v5
- * (which itself reuses the v4 64-byte stride). The remaining 6 bytes
- * of tail padding stay reserved for future per-record metadata that
- * fits in the existing stride.
- *
- * v5 (and earlier) files are rejected with the documented "regenerate
- * via `npm run build-tiers`" error — the magic + version header is
- * the single source of truth for "do I understand this file?".
- *
- * Layout (little-endian):
- *
- *     ── HEADER (16 bytes) ──────────────────────────────────────────────────
- *     0       4     magic    = "SKMP" (0x504d4b53)
- *     4       4     version  = 6 (uint32)
- *     8       4     count    = number of galaxies (uint32)
- *     12      4     reserved = 0
- *
- *     ── PER-GALAXY RECORD (64 bytes) ───────────────────────────────────────
- *     0       8     objID            (uint64)
- *     8       4     x                (float32, Mpc)
- *     12      4     y                (float32)
- *     16      4     z                (float32)
- *     20      4     magU             (float32)
- *     24      4     magG             (float32)
- *     28      4     magR             (float32)
- *     32      4     magI             (float32)
- *     36      4     magZ             (float32)
- *     40      4     axisRatio        (float32) — b/a in [0,1] or NaN
- *     44      4     positionAngleDeg (float32) — PA in [0,180) or NaN
- *     48      4     diameterKpc      (float32) — physical diameter in kpc
- *     52      1     classByte        (uint8)  — per-source enum
- *     53      1     parentSurveyByte (uint8)  — Milliquas-only
- *     54      4     spectroscopicZ   (float32) — NEW in v6
- *     58      6     padding          (zeroed)
- *
- * Total file size: 16 + count × 64.
+ * 16-byte header (magic/version/count/reserved) + one `BYTES_PER_GALAXY`
+ * (64-byte) record per galaxy. `GALAXY_CATALOG_FIELD_SPECS` below is the
+ * single declaration of the per-field element type and on-disk offset —
+ * see `GalaxyCatalogFieldSpec`. v8-and-earlier files are rejected via the
+ * version header; the fix is "regenerate via `npm run build-tiers`".
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogColumn } from '../../@types/data/galaxyCatalog/GalaxyCatalogColumn';
+import type { GalaxyCatalogFieldSpec } from '../../@types/data/galaxyCatalog/GalaxyCatalogFieldSpec';
+import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
+import { FormatVersionError } from '../formatVersionError';
 
 const MAGIC = 0x504d4b53;
-const VERSION = 6;
+const VERSION = 9;
 const HEADER_BYTES = 16;
 const BYTES_PER_GALAXY = 64;
+// Bit 2 of the flags byte ("mass is estimated") has no backing column: every
+// v9 mass is a photometric estimate, so the encoder derives it from
+// `Number.isFinite(log10StellarMass[i])` instead. When measured masses land
+// this becomes a real `flagBit` column and this constant goes away.
+const MASS_ESTIMATED_BIT = 1 << 2;
+// Byte 54 is a property of the 64-byte record layout (the flagBit column
+// above), not derived from which flagBit specs happen to be in the table —
+// it must stay correct even if every flagBit entry were removed, since it
+// also positions the column-less MASS_ESTIMATED_BIT write below.
+const FLAGS_BYTE_OFFSET = 54;
+
+// Version-stamped folder: max-age=86400 lets a CDN serve an old .bin
+// alongside new code for up to a day, so the epoch has to live in the
+// path itself to make that pairing impossible (images/earth-tiles/'s
+// TILE_PREFIX precedent).
+export const GALAXY_CATALOG_DATA_PREFIX = `galaxy-catalog/v${VERSION}`;
+
+export const GALAXY_CATALOG_FIELD_SPECS = {
+  /** SDSS object id — full 64-bit precision (exceeds Number.MAX_SAFE_INTEGER). */
+  objIDs: { column: 'u64', components: 1, disk: { kind: 'field', offset: 0 } },
+  /** Interleaved xyz, Mpc. */
+  positions: { column: 'f32', components: 3, disk: { kind: 'field', offset: 8 } },
+  /** SDSS u-band model magnitude. */
+  magU: { column: 'f32', components: 1, disk: { kind: 'field', offset: 20 } },
+  /** SDSS g-band model magnitude — the renderer's primary brightness input. */
+  magG: { column: 'f32', components: 1, disk: { kind: 'field', offset: 24 } },
+  /** SDSS r-band model magnitude. */
+  magR: { column: 'f32', components: 1, disk: { kind: 'field', offset: 28 } },
+  /** SDSS i-band model magnitude. */
+  magI: { column: 'f32', components: 1, disk: { kind: 'field', offset: 32 } },
+  /** SDSS z-band model magnitude. */
+  magZ: { column: 'f32', components: 1, disk: { kind: 'field', offset: 36 } },
+  /** Minor/major axis ratio b/a in [0,1]; NaN = no measurement. */
+  axisRatio: { column: 'f32', components: 1, disk: { kind: 'field', offset: 40 } },
+  /** Position angle, degrees east of north, [0,180); NaN = no measurement. */
+  positionAngleDeg: { column: 'f32', components: 1, disk: { kind: 'field', offset: 44 } },
+  /** Physical diameter, kpc; DEFAULT_GALAXY_DIAMETER_KPC=30 when unmeasured. */
+  diameterKpc: { column: 'f32', components: 1, disk: { kind: 'field', offset: 48 } },
+  /** Source-interpreted classification byte (e.g. Milliquas AGN class letter). */
+  classByte: { column: 'u8', components: 1, disk: { kind: 'field', offset: 52 } },
+  /** Milliquas parent-survey enum byte; 0 ("no prefix") for every other source. */
+  parentSurveyByte: { column: 'u8', components: 1, disk: { kind: 'field', offset: 53 } },
+  /**
+   * 1 = (axisRatio, positionAngleDeg) is `fallbackOrientation`'s deterministic
+   * hash, stamped by `recordsToCloud` at build time — persisted rather than
+   * reconstructed because re-hashing from the f32-rounded position on load
+   * misclassified ~10% of rows (see git history for the derivation).
+   */
+  orientationIsFallback: {
+    column: 'u8',
+    components: 1,
+    disk: { kind: 'flagBit', offset: 54, bit: 0 },
+  },
+  /**
+   * 1 = `diameterKpc` is the flat 30-kpc fallback (no measured or angular
+   * size), stamped by `recordsToCloud` at build time — persisted because
+   * `diameterKpc === 30` can't tell a fallback from a real 30-kpc galaxy.
+   */
+  diameterIsFallback: {
+    column: 'u8',
+    components: 1,
+    disk: { kind: 'flagBit', offset: 54, bit: 1 },
+  },
+  // Byte 55 is reserved/zeroed padding — no column claims it.
+  /** Catalogued spectroscopic z; may be negative (peculiar-velocity blueshift). */
+  spectroscopicZ: { column: 'f32', components: 1, disk: { kind: 'field', offset: 56 } },
+  /**
+   * log₁₀(M★/M☉) photometric estimate; NaN = no estimate. Bit 2 of the flags
+   * byte ("mass is estimated") is derived from this field's finiteness at
+   * encode time rather than stored as its own column — see
+   * `MASS_ESTIMATED_BIT` — because every v9 mass is photometric. A future
+   * measured-mass source turns bit 2 into a real `flagBit` column here.
+   */
+  log10StellarMass: { column: 'f32', components: 1, disk: { kind: 'field', offset: 60 } },
+} as const satisfies Readonly<Record<GalaxyCatalogColumn, GalaxyCatalogFieldSpec>>;
+
+type AlignedFloatSlot = {
+  column: GalaxyCatalogColumn;
+  floatSlot: number;
+  stride: number;
+  componentOffset: number;
+};
+type OffsetField = { column: GalaxyCatalogColumn; offset: number };
+type FlagBitField = { column: GalaxyCatalogColumn; bit: number };
+
+// Partitioned once at module load (not per call, and never per record) from
+// the static table above. A record's byte base is always 4-aligned (both
+// HEADER_BYTES and BYTES_PER_GALAXY are multiples of 4), so every f32 field
+// is reachable through the shared Float32Array overlay — v9 has no field
+// left at a non-4-aligned offset, so UNALIGNED_FLOATS is always empty; kept
+// so a future unaligned field doesn't need this partitioning rebuilt.
+const ALIGNED_FLOAT_SLOTS: AlignedFloatSlot[] = [];
+const UNALIGNED_FLOATS: OffsetField[] = [];
+const BYTE_FIELDS: OffsetField[] = [];
+const U64_FIELDS: OffsetField[] = [];
+const FLAG_FIELDS: FlagBitField[] = [];
+
+for (const column of Object.keys(GALAXY_CATALOG_FIELD_SPECS) as GalaxyCatalogColumn[]) {
+  const spec = GALAXY_CATALOG_FIELD_SPECS[column];
+  if (spec.disk.kind === 'flagBit') {
+    if (spec.disk.offset !== FLAGS_BYTE_OFFSET) {
+      throw new Error(`${column}: flagBit offset must be FLAGS_BYTE_OFFSET (${FLAGS_BYTE_OFFSET})`);
+    }
+    FLAG_FIELDS.push({ column, bit: spec.disk.bit });
+    continue;
+  }
+  const { offset } = spec.disk;
+  if (spec.column === 'u64') {
+    U64_FIELDS.push({ column, offset });
+  } else if (spec.column === 'u8') {
+    BYTE_FIELDS.push({ column, offset });
+  } else if (offset % 4 === 0) {
+    for (let c = 0; c < spec.components; c++) {
+      ALIGNED_FLOAT_SLOTS.push({
+        column,
+        floatSlot: offset / 4 + c,
+        stride: spec.components,
+        componentOffset: c,
+      });
+    }
+  } else {
+    UNALIGNED_FLOATS.push({ column, offset });
+  }
+}
 
 export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
-  const {
-    count,
-    objIDs,
-    positions,
-    magU,
-    magG,
-    magR,
-    magI,
-    magZ,
-    axisRatio,
-    positionAngleDeg,
-    diameterKpc,
-    classByte,
-    parentSurveyByte,
-    spectroscopicZ,
-  } = catalog;
-  if (objIDs.length !== count) throw new Error('objIDs length mismatch');
-  if (positions.length !== count * 3) throw new Error('positions length mismatch');
-  if (magU.length !== count) throw new Error('magU length mismatch');
-  if (magG.length !== count) throw new Error('magG length mismatch');
-  if (magR.length !== count) throw new Error('magR length mismatch');
-  if (magI.length !== count) throw new Error('magI length mismatch');
-  if (magZ.length !== count) throw new Error('magZ length mismatch');
-  if (axisRatio.length !== count) throw new Error('axisRatio length mismatch');
-  if (positionAngleDeg.length !== count) throw new Error('positionAngleDeg length mismatch');
-  if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
-  if (classByte.length !== count) throw new Error('classByte length mismatch');
-  if (parentSurveyByte.length !== count) throw new Error('parentSurveyByte length mismatch');
-  if (spectroscopicZ.length !== count) throw new Error('spectroscopicZ length mismatch');
+  const { count } = catalog;
+
+  for (const column of Object.keys(GALAXY_CATALOG_FIELD_SPECS) as GalaxyCatalogColumn[]) {
+    const spec = GALAXY_CATALOG_FIELD_SPECS[column];
+    const values = catalog[column] as { length: number };
+    if (values.length !== count * spec.components) {
+      throw new Error(`${column} length mismatch`);
+    }
+  }
 
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_GALAXY);
   const dv = new DataView(buf);
@@ -106,131 +164,172 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
   const floatView = new Float32Array(buf);
   const byteView = new Uint8Array(buf);
 
+  // Bound once per call (one entry per column, not per record) — the hot
+  // loop below only ever indexes these prepared lists, never the spec table.
+  const u64Fields = U64_FIELDS.map((f) => ({
+    offset: f.offset,
+    array: catalog[f.column] as BigUint64Array,
+  }));
+  const alignedFloats = ALIGNED_FLOAT_SLOTS.map((f) => ({
+    ...f,
+    array: catalog[f.column] as Float32Array,
+  }));
+  const unalignedFloats = UNALIGNED_FLOATS.map((f) => ({
+    offset: f.offset,
+    array: catalog[f.column] as Float32Array,
+  }));
+  const byteFields = BYTE_FIELDS.map((f) => ({
+    offset: f.offset,
+    array: catalog[f.column] as Uint8Array,
+  }));
+  const flagFields = FLAG_FIELDS.map((f) => ({
+    bit: f.bit,
+    array: catalog[f.column] as Uint8Array,
+  }));
+  const massValues = catalog.log10StellarMass;
+
   for (let i = 0; i < count; i++) {
     const byteBase = HEADER_BYTES + i * BYTES_PER_GALAXY;
+    const floatBase = byteBase / 4;
 
-    dv.setBigUint64(byteBase + 0, objIDs[i]!, true);
-
-    const f = (byteBase + 8) / 4;
-    floatView[f + 0] = positions[i * 3 + 0]!;
-    floatView[f + 1] = positions[i * 3 + 1]!;
-    floatView[f + 2] = positions[i * 3 + 2]!;
-    floatView[f + 3] = magU[i]!;
-    floatView[f + 4] = magG[i]!;
-    floatView[f + 5] = magR[i]!;
-    floatView[f + 6] = magI[i]!;
-    floatView[f + 7] = magZ[i]!;
-    floatView[f + 8] = axisRatio[i]!;
-    floatView[f + 9] = positionAngleDeg[i]!;
-    floatView[f + 10] = diameterKpc[i]!;
-
-    // Two new uint8 slots at byteBase + 52 / + 53.  We index the
-    // shared Uint8Array view directly rather than going through
-    // DataView.setUint8 — one fewer call per byte and the alignment
-    // is trivially 1.
-    byteView[byteBase + 52] = classByte[i]!;
-    byteView[byteBase + 53] = parentSurveyByte[i]!;
-    // spectroscopicZ sits at offset 54, which is NOT 4-aligned within
-    // the 8-byte-aligned `f` shortcut (54 = 13*4 + 2), so we take the
-    // DataView setFloat32 path instead. It has no alignment requirement.
-    dv.setFloat32(byteBase + 54, spectroscopicZ[i]!, true);
-    // Tail padding (byteBase+58 … byteBase+63) stays zero because
-    // `new ArrayBuffer` zero-inits.  No write needed.
+    for (let k = 0; k < u64Fields.length; k++) {
+      const f = u64Fields[k]!;
+      dv.setBigUint64(byteBase + f.offset, f.array[i]!, true);
+    }
+    for (let k = 0; k < alignedFloats.length; k++) {
+      const f = alignedFloats[k]!;
+      floatView[floatBase + f.floatSlot] = f.array[i * f.stride + f.componentOffset]!;
+    }
+    for (let k = 0; k < unalignedFloats.length; k++) {
+      const f = unalignedFloats[k]!;
+      dv.setFloat32(byteBase + f.offset, f.array[i]!, true);
+    }
+    for (let k = 0; k < byteFields.length; k++) {
+      const f = byteFields[k]!;
+      byteView[byteBase + f.offset] = f.array[i]!;
+    }
+    // One byte write per record: OR every provenance bit together, plus the
+    // derived (not column-backed) mass-is-estimated bit.
+    let flagsByte = Number.isFinite(massValues[i]) ? MASS_ESTIMATED_BIT : 0;
+    for (let k = 0; k < flagFields.length; k++) {
+      const f = flagFields[k]!;
+      if (f.array[i]) flagsByte |= 1 << f.bit;
+    }
+    byteView[byteBase + FLAGS_BYTE_OFFSET] = flagsByte;
+    // Byte 55 (reserved) and the tail beyond BYTES_PER_GALAXY stay zero —
+    // ArrayBuffer zero-inits and no spec claims those bytes.
   }
   return buf;
+}
+
+function allocateColumn(
+  spec: GalaxyCatalogFieldSpec,
+  count: number,
+): BigUint64Array | Float32Array | Uint8Array {
+  const length = count * spec.components;
+  if (spec.column === 'u64') return new BigUint64Array(length);
+  if (spec.column === 'u8') return new Uint8Array(length);
+  return new Float32Array(length);
 }
 
 export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const dv = new DataView(buf);
   if (dv.getUint32(0, true) !== MAGIC) throw new Error('bad magic — not a SKMP file');
 
-  // Mismatch surfaces as the documented "regenerate" error. Stale .bin
-  // files (last built before this format version landed) trigger this on
-  // every reload until `npm run build-tiers` is re-run. The error
-  // message itself is the cure — keep it instructive.
+  // Mismatch surfaces as the documented "regenerate" error. Stale .bin files
+  // (last built before this format version landed) trigger this on every
+  // reload until `npm run build-tiers` is re-run.
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
-    throw new Error(
+    throw new FormatVersionError(
+      'galaxy catalog',
+      version,
+      VERSION,
       `unsupported version: ${version} — please regenerate the .bin via "npm run build-tiers"`,
     );
   }
 
   const count = dv.getUint32(8, true);
 
-  const objIDs = new BigUint64Array(count);
-  const positions = new Float32Array(count * 3);
-  const magU = new Float32Array(count);
-  const magG = new Float32Array(count);
-  const magR = new Float32Array(count);
-  const magI = new Float32Array(count);
-  const magZ = new Float32Array(count);
-  const axisRatio = new Float32Array(count);
-  const positionAngleDeg = new Float32Array(count);
-  const diameterKpc = new Float32Array(count);
-  const classByte = new Uint8Array(count);
-  const parentSurveyByte = new Uint8Array(count);
-  const spectroscopicZ = new Float32Array(count);
+  const columns: Partial<Record<GalaxyCatalogColumn, BigUint64Array | Float32Array | Uint8Array>> =
+    {};
+  for (const column of Object.keys(GALAXY_CATALOG_FIELD_SPECS) as GalaxyCatalogColumn[]) {
+    columns[column] = allocateColumn(GALAXY_CATALOG_FIELD_SPECS[column], count);
+  }
 
   const floatView = new Float32Array(buf);
   const byteView = new Uint8Array(buf);
 
+  const u64Fields = U64_FIELDS.map((f) => ({
+    offset: f.offset,
+    array: columns[f.column] as BigUint64Array,
+  }));
+  const alignedFloats = ALIGNED_FLOAT_SLOTS.map((f) => ({
+    ...f,
+    array: columns[f.column] as Float32Array,
+  }));
+  const unalignedFloats = UNALIGNED_FLOATS.map((f) => ({
+    offset: f.offset,
+    array: columns[f.column] as Float32Array,
+  }));
+  const byteFields = BYTE_FIELDS.map((f) => ({
+    offset: f.offset,
+    array: columns[f.column] as Uint8Array,
+  }));
+  const flagFields = FLAG_FIELDS.map((f) => ({
+    bit: f.bit,
+    array: columns[f.column] as Uint8Array,
+  }));
+
   for (let i = 0; i < count; i++) {
     const byteBase = HEADER_BYTES + i * BYTES_PER_GALAXY;
+    const floatBase = byteBase / 4;
 
-    objIDs[i] = dv.getBigUint64(byteBase + 0, true);
-
-    const f = (byteBase + 8) / 4;
-    positions[i * 3 + 0] = floatView[f + 0]!;
-    positions[i * 3 + 1] = floatView[f + 1]!;
-    positions[i * 3 + 2] = floatView[f + 2]!;
-    magU[i] = floatView[f + 3]!;
-    magG[i] = floatView[f + 4]!;
-    magR[i] = floatView[f + 5]!;
-    magI[i] = floatView[f + 6]!;
-    magZ[i] = floatView[f + 7]!;
-    axisRatio[i] = floatView[f + 8]!;
-    positionAngleDeg[i] = floatView[f + 9]!;
-    diameterKpc[i] = floatView[f + 10]!;
-
-    classByte[i] = byteView[byteBase + 52]!;
-    parentSurveyByte[i] = byteView[byteBase + 53]!;
-    spectroscopicZ[i] = dv.getFloat32(byteBase + 54, true);
-    // The remaining 6 padding bytes are ignored on decode.
+    for (let k = 0; k < u64Fields.length; k++) {
+      const f = u64Fields[k]!;
+      f.array[i] = dv.getBigUint64(byteBase + f.offset, true);
+    }
+    for (let k = 0; k < alignedFloats.length; k++) {
+      const f = alignedFloats[k]!;
+      f.array[i * f.stride + f.componentOffset] = floatView[floatBase + f.floatSlot]!;
+    }
+    for (let k = 0; k < unalignedFloats.length; k++) {
+      const f = unalignedFloats[k]!;
+      f.array[i] = dv.getFloat32(byteBase + f.offset, true);
+    }
+    for (let k = 0; k < byteFields.length; k++) {
+      const f = byteFields[k]!;
+      f.array[i] = byteView[byteBase + f.offset]!;
+    }
+    // Bit 2 (mass-is-estimated) is intentionally not read back here — mass
+    // presence already round-trips via the NaN sentinel on log10StellarMass.
+    const flagsByte = byteView[byteBase + FLAGS_BYTE_OFFSET]!;
+    for (let k = 0; k < flagFields.length; k++) {
+      const f = flagFields[k]!;
+      f.array[i] = (flagsByte >> f.bit) & 1;
+    }
   }
 
-  return {
-    count,
-    objIDs,
-    positions,
-    magU,
-    magG,
-    magR,
-    magI,
-    magZ,
-    axisRatio,
-    positionAngleDeg,
-    diameterKpc,
-    classByte,
-    parentSurveyByte,
-    spectroscopicZ,
-  };
+  // Every key of `columns` was populated above from the same column list
+  // GALAXY_CATALOG_FIELD_SPECS is `satisfies`-checked against, so the shape
+  // matches GalaxyCatalog exactly; TS can't see that through the loop above.
+  const catalog = { count, ...columns } as unknown as GalaxyCatalog;
+  // Derived, not stored on disk — recomputed here (rather than encoded) so
+  // adding this field never bumps the binary format version. Computed AFTER
+  // the object above so the helper sees the finished typed arrays.
+  catalog.medianAbsMag = galaxyMedianAbsMag(catalog);
+  return catalog;
 }
 
 export function emptyGalaxyCatalog(): GalaxyCatalog {
+  const columns: Partial<Record<GalaxyCatalogColumn, BigUint64Array | Float32Array | Uint8Array>> =
+    {};
+  for (const column of Object.keys(GALAXY_CATALOG_FIELD_SPECS) as GalaxyCatalogColumn[]) {
+    columns[column] = allocateColumn(GALAXY_CATALOG_FIELD_SPECS[column], 0);
+  }
   return {
     count: 0,
-    objIDs: new BigUint64Array(0),
-    positions: new Float32Array(0),
-    magU: new Float32Array(0),
-    magG: new Float32Array(0),
-    magR: new Float32Array(0),
-    magI: new Float32Array(0),
-    magZ: new Float32Array(0),
-    axisRatio: new Float32Array(0),
-    positionAngleDeg: new Float32Array(0),
-    diameterKpc: new Float32Array(0),
-    classByte: new Uint8Array(0),
-    parentSurveyByte: new Uint8Array(0),
-    spectroscopicZ: new Float32Array(0),
-  };
+    ...columns,
+    medianAbsMag: -20.5, // count-0 fallback — same sentinel galaxyMedianAbsMag returns for count===0.
+  } as unknown as GalaxyCatalog;
 }

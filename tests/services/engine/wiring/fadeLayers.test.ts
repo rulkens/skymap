@@ -9,7 +9,7 @@
  *      not flash the Milky Way on frame 1.
  *   2. The volumesMaster handle seeds at `settings.volumes.enabled`.
  *   3. The label-layer handles seed correctly: milkyWay from
- *      `settings.milkyWay.labelEnabled`, galaxyNames + scaleBar at 1.
+ *      `settings.milkyWay.labelEnabled`, galaxy + scaleBar at 1.
  *   4. Each structure ring + label seeds from its per-category settings row.
  *   5. The demand-loaded sets (galaxy catalogs, filament, flow, volume fields)
  *      seed at 0 so their first-load `fadeTo(1)` still fades them in.
@@ -24,7 +24,11 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
+import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { SOURCE_ENTRIES } from '../../../../src/data/sourceEntries';
+import { expandVisibilityLayers } from '../../../../src/utils/animation/expandVisibilityLayers';
 import type { VisibilityLayerKey } from '../../../../src/@types/animation/VisibilityLayerKey';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
@@ -48,6 +52,18 @@ expectTypeOf<RowKeys>().toEqualTypeOf<VisibilityLayerKey>();
  * StructureId is populated (driven off STRUCTURE_IDS) so the structure rows'
  * `items[id]` reads never go undefined.
  */
+/** Every star-catalog row, both axes on — the shape both builders below need. */
+function starCatalogItems(): Record<string, { enabled: boolean; labelEnabled: boolean }> {
+  return Object.fromEntries(
+    STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+  );
+}
+
+/** Every body row, both axes on — the near-field twin of `starCatalogItems`. */
+function bodyItems(): Record<string, { enabled: boolean; labelEnabled: boolean }> {
+  return Object.fromEntries(BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]));
+}
+
 function makeState(
   opts: {
     milkyWayEnabled?: boolean;
@@ -72,15 +88,25 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
+      // zoneOfAvoidance mirrors milkyWay's `enabled` axis; no test below
+      // exercises it yet, so it defaults on like the live scene.
+      zoneOfAvoidance: { enabled: true },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
       // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
-      // labels reuse the galaxyNames layer), so seedFades indexes this leaf.
+      // labels reuse the galaxy layer), so seedFades indexes this leaf.
       galaxyCatalogs: {
         items: { famousGalaxy: { enabled: true, labelEnabled: opts.surveyLabelEnabled ?? true } },
       },
+      // The starCatalogLabel fade row seeds per label-bearing star catalog, so
+      // every star-catalog row is populated for the same reason the structure
+      // items are.
+      starCatalogs: { enabled: true, items: starCatalogItems() },
+      // The bodyLabel fade row seeds per CAPTION-BEARING BodyId; every body row
+      // is populated anyway, for the same reason the structure items are.
+      bodies: { items: bodyItems() },
       structures: { enabled: true, items },
     },
     subsystems: {
@@ -120,6 +146,8 @@ function makeSettings(
   for (const id of STRUCTURE_IDS) structureItems[id] = { enabled: true, labelEnabled: true };
   return {
     galaxyCatalogs: { items: galaxyItems },
+    starCatalogs: { enabled: true, items: starCatalogItems() },
+    bodies: { items: bodyItems() },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
     volumes: { enabled: true, items: {} },
@@ -184,30 +212,53 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
   });
 
-  it('seeds galaxyNames (surveyLabel) and scaleBar at 1', () => {
-    // Famous-galaxy labels reuse galaxyNames and consume its opacity directly,
-    // so a 0 would hide them. scaleBar is React-side / tour-addressable, never
-    // auto-faded by the engine, so it starts at 1.
+  it('seeds galaxy (surveyLabel) and scaleBar at 1', () => {
+    // Famous-galaxy labels reuse the galaxy layer and consume its opacity
+    // directly, so a 0 would hide them. scaleBar is React-side / tour-addressable,
+    // never auto-faded by the engine, so it starts at 1.
     const state = makeState();
     seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(1);
+    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(1);
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
-  it('seeds the surveyLabel (galaxyNames) handle from famousGalaxy.labelEnabled', () => {
-    // Wired THROUGH seedFades (not just the row.seed unit call): the galaxyNames
+  it('seeds the surveyLabel (galaxy) handle from famousGalaxy.labelEnabled', () => {
+    // Wired THROUGH seedFades (not just the row.seed unit call): the galaxy
     // layer's frame-1 opacity must honour the persisted famous-label toggle so a
     // labels-off session doesn't flash them on.
     const off = makeState({ surveyLabelEnabled: false });
     seedFades(off);
-    expect(off.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(0);
+    expect(off.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(0);
 
     const on = makeState();
     seedFades(on);
-    expect(on.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(1);
+    expect(on.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(1);
   });
 
   // ── per-structure ring + label handles ───────────────────────────
+
+  // ── the body caption domain ──────────────────────────────────────
+
+  it("`hide(['labels'])` reaches every caption-bearing body and no other", () => {
+    // Two totalities in one assertion, both of which fail SILENTLY. Under-reach:
+    // a body that captions itself but has no handle survives a cue that claims to
+    // have hidden every label — the gap `LAYER_GROUPS.labels` exists to close.
+    // Over-reach: the S-stars draw 39 dots and no names, so a handle for them
+    // would be a controller with no caption to move, and its `item` is not even a
+    // `LabelCategory`. The expected set is derived from the registry's
+    // `bearsLabel` capability, never hand-listed.
+    expect(expandVisibilityLayers(['labels'])).toContain('bodyLabel');
+
+    const captionBearingBodyIds = SOURCE_ENTRIES.filter(
+      (entry) => entry.type === 'body' && entry.bearsLabel,
+    ).map((entry) => entry.id);
+    const state = makeState();
+    seedFades(state);
+    const reached = rowFor('bodyLabel').expand(state);
+
+    expect([...reached].sort()).toEqual([...captionBearingBodyIds].sort());
+    expect(reached).not.toContain('s-star');
+  });
 
   it('seeds a ring + label handle per structure source, defaulting to 1', () => {
     const state = makeState();
@@ -218,7 +269,7 @@ describe('seedFades', () => {
         `structure{${id}} ring should seed at 1`,
       ).toBe(1);
       expect(
-        state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', category: id }),
+        state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', item: id }),
         `labelLayer{structure,${id}} should seed at 1`,
       ).toBe(1);
     }
@@ -236,7 +287,7 @@ describe('seedFades', () => {
     seedFades(state);
     expect(state.subsystems.fades.opacityOf({ kind: 'structure', id: ring })).toBe(0);
     expect(
-      state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', category: label }),
+      state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', item: label }),
     ).toBe(0);
   });
 

@@ -22,6 +22,11 @@ import {
   DENS_SCALE,
   SPEED_COLOR_MAX,
 } from '../../../../src/data/flow/flowFieldConstants';
+import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
+import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
+import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
+import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidEvents';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -67,5 +72,154 @@ describe('flow/constants.wesl ↔ flowFieldConstants.ts parity', () => {
         true,
       );
     }
+  });
+});
+
+/**
+ * ismMap's grid dims (AZ/RINGS) size the texture and every pass reads them
+ * back via `textureDimensions` — no WGSL mirror, so no parity test for them.
+ * `@workgroup_size(16, 16)` is different: WGSL requires it as a compile-time
+ * literal, so it genuinely stays duplicated across every ismMap compute entry
+ * point rather than a single named const. This guards THAT duplication
+ * against `ISM_MAP_WORKGROUP_SIZE` (`galaxyIsmMapArmForcing.ts`, which
+ * `createGalaxyEngine.ts` also uses for dispatch-count math).
+ */
+describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () => {
+  const files = [
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidPack.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapOrientationField.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapOrientationTensor.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapOrientationTensorBlur.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapOrientationCoherence.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapCartesianBake.wesl',
+  ];
+
+  it('every ismMap compute entry point declares a square workgroup matching ISM_MAP_WORKGROUP_SIZE', () => {
+    const re = /@workgroup_size\((\d+),\s*(\d+)\)/g;
+    let matchCount = 0;
+    for (const file of files) {
+      const text = readFileSync(join(process.cwd(), file), 'utf-8');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(text)) !== null) {
+        matchCount += 1;
+        expect(m[1], `${file}: workgroup_size(${m[1]}, ${m[2]}) is not square`).toBe(m[2]);
+        expect(
+          parseInt(m[1]!, 10),
+          `${file}: workgroup_size ${m[1]} does not match ISM_MAP_WORKGROUP_SIZE (${ISM_MAP_WORKGROUP_SIZE})`,
+        ).toBe(ISM_MAP_WORKGROUP_SIZE);
+      }
+    }
+    expect(matchCount, 'no @workgroup_size(N, N) found in the ismMap shader chain').toBeGreaterThan(
+      0,
+    );
+  });
+});
+
+/**
+ * ISM_MAP_AMBIENT_DUST (ismMapAmbientDust.ts) is mirrored into three WESL
+ * files that are not dedicated constant-mirror files, so — same idiom as
+ * bloomSeedingConstants.parity.test.ts's readWeslConst — this reads one
+ * named const per file rather than sweeping each for orphans.
+ * ismMapFluidStep.wesl seeds every texel to this pedestal, scaled by its own
+ * radial gasProfile(r), at step 0; ismMapDustBlur.wesl and
+ * ismMapCartesianBake.wesl must both subtract the SAME pedestal, or S4's
+ * detail ratio (computed once by the bake, shared by every consumer) drifts
+ * against its own blur divisor. ismMapPresent.wesl does not subtract it: its
+ * "seeding" debug view reads the map's raw dust channel directly — the
+ * pedestal is seeded `ambient * gasProfile(r)` and advected, so it's
+ * structure, not a floor to clear (see dustParticleCloud.ts's
+ * DUST_SURVIVAL_FLOOR_FRAC doc).
+ */
+function readWeslConst(relPath: string, name: string): number | undefined {
+  const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
+  const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m[1] === name) return parseFloat(m[2]!);
+  }
+  return undefined;
+}
+
+describe('ISM_MAP_AMBIENT_DUST parity (ismMapAmbientDust.ts ↔ its WESL mirrors)', () => {
+  const files = [
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapDustBlur.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapCartesianBake.wesl',
+  ];
+
+  it("each file's ISM_MAP_AMBIENT_DUST equals the TS export", () => {
+    for (const file of files) {
+      const weslValue = readWeslConst(file, 'ISM_MAP_AMBIENT_DUST');
+      expect(weslValue, `ISM_MAP_AMBIENT_DUST is missing from ${file}`).toBeDefined();
+      expect(
+        weslValue,
+        `${file}: WESL ISM_MAP_AMBIENT_DUST (${weslValue}) does not match TS ISM_MAP_AMBIENT_DUST (${ISM_MAP_AMBIENT_DUST})`,
+      ).toBe(ISM_MAP_AMBIENT_DUST);
+    }
+  });
+});
+
+/**
+ * DUST_SURVIVAL_FLOOR_FRAC (dustParticleCloud.ts) is mirrored into
+ * ismMapPresent.wesl's "seeding" debug view (so a texel that would never
+ * keep a map-seeded particle past S3's alive gate never glows in the view
+ * either) AND into placeDust.wesl's own survival-floor gate (the actual
+ * GPU placement, not just its debug view) — same `readWeslConst` idiom as
+ * ISM_MAP_AMBIENT_DUST above, extended to a `files` loop for the same
+ * reason: two independent hand mirrors, either can drift on its own.
+ */
+describe('DUST_SURVIVAL_FLOOR_FRAC parity (dustParticleCloud.ts ↔ its WESL mirrors)', () => {
+  const files = [
+    'src/services/gpu/shaders/milkyWay/ismMap/ismMapPresent.wesl',
+    'src/services/gpu/shaders/milkyWay/ismMap/placeDust.wesl',
+  ];
+
+  it("each file's DUST_SURVIVAL_FLOOR_FRAC equals the TS export", () => {
+    for (const file of files) {
+      const weslValue = readWeslConst(file, 'DUST_SURVIVAL_FLOOR_FRAC');
+      expect(weslValue, `DUST_SURVIVAL_FLOOR_FRAC is missing from ${file}`).toBeDefined();
+      expect(
+        weslValue,
+        `${file}: WESL DUST_SURVIVAL_FLOOR_FRAC (${weslValue}) does not match TS DUST_SURVIVAL_FLOOR_FRAC (${DUST_SURVIVAL_FLOOR_FRAC})`,
+      ).toBe(DUST_SURVIVAL_FLOOR_FRAC);
+    }
+  });
+});
+
+/**
+ * SPLAT_CUT_SIGMA (youngStarChain.ts) mirrors splatSilhouette.wesl's own
+ * SPLAT_CUT — the young-stars chain under-bounds its quad to
+ * YOUNG_BOUND_SIGMA/SPLAT_CUT_SIGMA of the shader's cut, so a drift here
+ * would silently change which sigma the truncation actually lands at.
+ */
+describe('SPLAT_CUT_SIGMA parity (youngStarChain.ts ↔ splatSilhouette.wesl)', () => {
+  it("youngStarChain.ts's SPLAT_CUT_SIGMA equals splatSilhouette.wesl's SPLAT_CUT", () => {
+    const file = 'src/services/gpu/shaders/lib/splatSilhouette.wesl';
+    const weslValue = readWeslConst(file, 'SPLAT_CUT');
+    expect(weslValue, `SPLAT_CUT is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL SPLAT_CUT (${weslValue}) does not match TS SPLAT_CUT_SIGMA (${SPLAT_CUT_SIGMA})`,
+    ).toBe(SPLAT_CUT_SIGMA);
+  });
+});
+
+/**
+ * ISM_MAP_FLUID_EVENT_STRIDE (packIsmMapFluidEvents.ts) mirrors
+ * ismMapFluidVelocity.wesl's own EVENT_STRIDE — the packer flattens each
+ * event into that many floats and ismMapFluidStep.wesl's storage-buffer read
+ * (`events[base + N]`) trusts the same stride, so a drift ships silently
+ * misaligned event records to the GPU.
+ */
+describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMapFluidVelocity.wesl)', () => {
+  it("ismMapFluidVelocity.wesl's EVENT_STRIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/milkyWay/ismMap/ismMapFluidVelocity.wesl';
+    const weslValue = readWeslConst(file, 'EVENT_STRIDE');
+    expect(weslValue, `EVENT_STRIDE is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL EVENT_STRIDE (${weslValue}) does not match TS ISM_MAP_FLUID_EVENT_STRIDE (${ISM_MAP_FLUID_EVENT_STRIDE})`,
+    ).toBe(ISM_MAP_FLUID_EVENT_STRIDE);
   });
 });

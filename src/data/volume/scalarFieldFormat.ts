@@ -78,6 +78,12 @@ const MAGIC = 0x44464353; // "SCFD" little-endian
 const VERSION = 3;
 export const SCFD_HEADER_BYTES = 96;
 
+// Version-stamped folder: max-age=86400 lets a CDN serve an old .scfd
+// alongside new code for up to a day, so the epoch has to live in the
+// path itself to make that pairing impossible (images/earth-tiles/'s
+// TILE_PREFIX precedent).
+export const SCALAR_FIELD_DATA_PREFIX = `scalar-field/v${VERSION}`;
+
 const FRAME_KIND_TO_ID: Record<ScalarFieldFrameKind, number> = {
   'supergalactic-cartesian': 0,
   'equatorial-cartesian': 1,

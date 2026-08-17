@@ -40,7 +40,9 @@ import {
   selectClipPathPassByOffset,
   selectClipPathPassByDir,
   selectClipPathTuningActive,
+  selectOrientation,
 } from '../settings/selectors';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import type { PathTuning } from '../../services/engine/animation/applyPathTuning';
 import type { SplineConfig } from '../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../@types/animation/PassByConfig';
@@ -68,7 +70,9 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
   yield* call(waitUntil, () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null);
   const rt = cameraRuntime()!;
-  const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
+  const orientation = yield* select(selectOrientation);
+  const frameBasis = ORIENTATION_FRAMES[orientation];
+  const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from, frameBasis);
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
   // overrides — while inactive knobs let the clip's own authored value through.
@@ -99,8 +103,8 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
     ...(active.passBy ? { passBy: passByCfg } : {}),
   };
   const tuned = applyPathTuning(resolved, tuning);
-  if (keepStart) seam.recompute(clipId, tuned);
-  else seam.compute(clipId, tuned);
+  if (keepStart) seam.recompute(clipId, tuned, frameBasis, orientation);
+  else seam.compute(clipId, tuned, frameBasis, orientation);
 }
 
 export function* watchClipPathInspectSaga() {

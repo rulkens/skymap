@@ -63,6 +63,32 @@ These produce plan bloat and rot. Cut them.
 - **Boilerplate scaffolding** (commit-message templates, test-file skeletons
   the framework already generates, import lines).
 
+## Definition of Done
+
+Every plan ends with a `## Definition of Done` checklist, authored at
+plan-writing time from the spec's success criteria — not backfilled once
+execution wraps.
+
+Feature-specific only:
+
+- **Deliverable inventory** — the public artifacts that must exist (new
+  files, exported symbols, UI surfaces).
+- **Named observable behaviours** for the manual smoke pass — concrete and
+  checkable, e.g. "hover preview, select ring, focus tween, Esc clear," not
+  "works correctly."
+- **The deferral boundary** — what is explicitly out of scope, so a reviewer
+  doesn't chase it.
+
+**Prohibited:** restating the standing gates — `npm test`, `npm run
+typecheck`, TODO scans. `/feature-done` runs those against every plan
+regardless; a DoD line that mirrors the audit is noise, not a checklist.
+
+If you cannot write the DoD, the spec lacks success criteria. Stop and fix
+the spec — don't invent criteria at plan time.
+
+`/feature-done` audits this section at completion time; see
+`.claude/skills/feature-done/SKILL.md`.
+
 ## Cite, don't paste
 
 When a task touches existing code, reference it by file path and line range,

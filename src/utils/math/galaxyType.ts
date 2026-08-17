@@ -93,11 +93,15 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.FamousStar:
     case Source.Planet:
     case Source.Earth:
+    case Source.Sun:
+    case Source.SgrAStar:
+    case Source.SStar:
     case Source.GaiaStars:
     case Source.Constellations:
+    case Source.ZoneOfAvoidance:
       // Non-galaxy catalog sources have no galaxy type. Most (structure
       // markers, filaments, volumes, the Milky-Way + flow overlays, and body
-      // sources like famous star/planet/Earth) carry no per-record photometry
+      // sources like the planets, Earth and the Sun) carry no per-record photometry
       // at all. The Gaia star catalog is the exception that proves the rule:
       // it's a point-source star survey whose records DO carry photometry,
       // but stellar photometry is not galaxy photometry, so it has no galaxy

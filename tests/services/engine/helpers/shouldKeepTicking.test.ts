@@ -12,9 +12,10 @@
  *
  * The camera term is `selectCameraActive(s)` over the store `RootState`; each
  * test seeds an at-rest or active camera slice rather than a driver array. The
- * final `anim` parameter is the in-frame-animation vote bag runFrame derives
- * from the planners it just ran (today only the star LOD fade); every case here
- * defaults it to at-rest (`NO_ANIM`) and the dedicated case flips it on.
+ * final `anim` parameter is the in-frame-animation vote bag runFrame collects
+ * from the planners it just ran (the star LOD fade, the Earth tile subsystem);
+ * every case here defaults it to at-rest (`NO_ANIM`) and one dedicated case per
+ * vote flips it on.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -44,6 +45,7 @@ function rootWithCamera(
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
+      frameTween: null,
     },
     time: {
       mode: over.timeMode ?? 'live',
@@ -55,8 +57,8 @@ function rootWithCamera(
 /** At-rest camera — the default for tests exercising the EngineState terms. */
 const restingRoot = rootWithCamera();
 
-/** No in-frame animation vote — the default for every case but the star-fade one. */
-const NO_ANIM = { starFadeAnimating: false };
+/** No in-frame animation vote — the default for every case but the vote ones. */
+const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false };
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
@@ -216,7 +218,20 @@ describe('shouldKeepTicking', () => {
     // is still, no thumbnails are loading, and nothing else animates. This is the
     // vote the star pass used to fire as its own requestRender — now decided here.
     const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, { starFadeAnimating: true })).toBe(true);
+    expect(
+      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, starFadeAnimating: true }),
+    ).toBe(true);
+  });
+
+  it('Earth tile work in flight → true even with everything else at rest', () => {
+    // The vote runFrame reads outside its engage gate: a manifest or a tile
+    // still fetching, or a landed tile mid-fade. Without it a camera that
+    // stops moving during the manifest fetch sleeps the loop, and the virtual
+    // texture never engages at all.
+    const state = makeState({});
+    expect(
+      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, earthTilesAnimating: true }),
+    ).toBe(true);
   });
 
   it('passes nowMs through to the time-dependent fade/focus terms', () => {

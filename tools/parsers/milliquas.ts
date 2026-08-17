@@ -36,6 +36,7 @@ import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
 } from '../../src/data/galaxyCatalog/sourceClass';
+import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { nonCommentLines, type ParsedRecord } from './common';
 
 // ─── Byte ranges (1-based inclusive, as published in the upstream ReadMe) ──
@@ -119,6 +120,35 @@ function parentSurveyByteFromName(nameTrimmed: string): number {
   return 0;
 }
 
+/**
+ * Read one Milliquas magnitude cell, returning NaN for "no measurement".
+ *
+ * Two rules compose here, and they are deliberately kept apart.
+ *
+ * The general one is `isPlausibleMagnitude`, shared with every other
+ * parser: it rejects blanks and the numeric sentinels catalogs inherit from
+ * their upstream sources.
+ *
+ * The Milliquas-specific one is the literal `0`. This catalog marks a
+ * missing magnitude with `0`, NOT a blank — the Circinus row reads
+ * `Rmag="10.93" Bmag=" 0 "`, meaning "R measured, B absent". Zero is
+ * catastrophic downstream rather than merely wrong: a 4 Mpc galaxy at m=0
+ * back-solves to M=-28, which the surface-brightness model reads as ~240x a
+ * typical galaxy's luminosity. That is what made Circinus and the Milliquas
+ * copy of Centaurus A render as blown-out white blobs (2169 rows carried
+ * magG=0).
+ *
+ * The zero rule stays local because it is false in general — zero is a
+ * perfectly good magnitude for a bright star (Vega is 0.03) — and true only
+ * for THIS catalog: the brightest known AGN (3C 273) sits at ~12.9, so no
+ * Milliquas row has a legitimate magnitude anywhere near zero.
+ */
+function milliquasMagOrNaN(cell: string): number {
+  const v = parseFloat(cell);
+  if (v === 0) return NaN;
+  return isPlausibleMagnitude(v) ? v : NaN;
+}
+
 export type MilliquasParseResult = {
   records: ParsedRecord[];
   skipped: {
@@ -175,8 +205,8 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
       continue;
     }
 
-    const magR = rmagStr === '' ? NaN : parseFloat(rmagStr);
-    const magG = bmagStr === '' ? NaN : parseFloat(bmagStr);
+    const magR = milliquasMagOrNaN(rmagStr);
+    const magG = milliquasMagOrNaN(bmagStr);
 
     const nameTrimmed = nameRaw.trimEnd().trimStart();
     const classByte = classByteFromType(typeRaw);

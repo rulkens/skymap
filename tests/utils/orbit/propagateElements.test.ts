@@ -29,7 +29,7 @@ describe('propagateElements', () => {
     // propagate to itself at any epoch — the optional-rate contract.
     const staticBody: OrbitalElements = {
       id: 'x',
-      parentId: null,
+      focusId: 'sun',
       semiMajorMpc: 3,
       eccentricity: 0.1,
       inclinationRad: 0.2,
@@ -94,11 +94,7 @@ describe('propagateElements', () => {
     // rounded 23.44° obliquity adds ~2 arcsec. A frame swap, unit slip, or sign
     // error in a rate would miss by ≥0.05 au and fail loudly.
     const simDays = 2_460_676.5;
-    const horizonsAu: Vec3 = [
-      -1.786710910310161e-1,
-      8.871846912692936e-1,
-      3.845832338744293e-1,
-    ];
+    const horizonsAu: Vec3 = [-1.786710910310161e-1, 8.871846912692936e-1, 3.845832338744293e-1];
     const expectedMpc = horizonsAu.map((au) => au * SCALE_UNITS.AU_TO_MPC) as Vec3;
 
     const posMpc = keplerianPositionMpc(propagateElements(earth, simDays));

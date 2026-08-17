@@ -49,6 +49,19 @@
  *                    can never poison the pick epoch (the value-and-place braid the
  *                    old module-level memo accessor carried).
  *
+ *   `upBasis`      — this frame's resolved UP basis B(t): the steady registry
+ *                    basis at rest, or the mid-slerp basis while an
+ *                    orientation-frame switch is in flight. (Named for what it
+ *                    IS, not the generic `frameBasis` clip-authoring parameter
+ *                    used elsewhere for "which basis a clip's world-space
+ *                    content decodes through" — a different, wider concept;
+ *                    do not conflate the two.) Boxed for the same
+ *                    in-place-update reason as `lastPose`, so the saga context and
+ *                    `applySceneEffect` (which read it to seed a switch's `fromQuat`)
+ *                    share the live reference. `runFrame` resolves it ONCE per frame
+ *                    and is its SINGLE writer — the one place that answers 'which
+ *                    way is up this frame' for every reader.
+ *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
  * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
  * focus handlers all read from `state.cameraRuntime`, so there is no duplication
@@ -58,6 +71,7 @@
 import type { CameraClock } from '../camera/CameraClock';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { CameraPose } from '../../camera/CameraPose';
+import type { Mat3 } from '../../math/Mat3';
 
 export type CameraRuntime = {
   /** The animation clock — mutated by tweenElapsed / autoRotateElapsed once per frame. */
@@ -73,4 +87,10 @@ export type CameraRuntime = {
    * pick path reads the live value. Single-writer: only `runFrame` writes it.
    */
   lastRenderedSimDays: { current: number };
+  /**
+   * This frame's resolved orientation basis B(t); boxed so both switch surfaces
+   * (saga context + `applySceneEffect`) read the live value. Single-writer: only
+   * `runFrame` writes it, once per frame from `resolveFrameBasis`.
+   */
+  upBasis: { current: Mat3 };
 };

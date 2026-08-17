@@ -45,7 +45,19 @@ async function dispatch(req: FakeReq): Promise<FakeRes> {
   await (cfg as (server: unknown) => unknown)(server);
   const res = fakeRes();
   for (const mw of mws) {
-    await mw(req, res, () => {});
+    let nextCalled = false;
+    // The plugin's middleware is a void-returning Connect handler (real
+    // Vite never awaits it either — it internally fires-and-forgets an
+    // async request handler). So its return value here isn't awaitable;
+    // wait for the response to actually finish instead of racing ahead.
+    mw(req, res, () => {
+      nextCalled = true;
+    });
+    if (!res.ended && !nextCalled) {
+      await vi.waitFor(() => {
+        expect(res.ended).toBe(true);
+      });
+    }
     if (res.ended) break;
   }
   return res;

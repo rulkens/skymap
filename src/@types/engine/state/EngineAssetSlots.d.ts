@@ -1,23 +1,12 @@
 /**
- * EngineAssetSlots — the asset-slot bag owned by the engine and populated
- * alongside the GPU renderer.
+ * EngineAssetSlots — the engine's asset-slot bag, populated alongside the GPU
+ * renderer. Each slot's race-checked `commit` is the structural fix for tier-swap
+ * stomping: a stale load can no longer overwrite a newer one.
  *
- * The asset-loading rework migrates each per-source fetch+upload path from
- * the old imperative `cloudLoader.reloadSource` to a `createAssetSlot`
- * whose race-checked `commit` step is the structural fix for tier-swap
- * stomping bugs.  Task 8 introduced the SDSS slot; Task 9 extends the bag
- * with the other galaxy catalogs (2MRS, GLADE, Famous) plus the filament layer.
- *
- * `points` is keyed by Source so any future per-source consumer can look
- * up the active slot for a galaxy catalog without iterating.  `filaments` is a
- * single slot rather than a map because filaments are a global derived
- * asset, not a per-galaxy-catalog one — the request type carries `tier` alone,
- * no `source`.
- *
- * Filaments load exactly once at boot and are NOT swapped on tier change.
- * See `services/loading/fetchers/filamentFetcher.ts` for the rationale
- * (re-downloading tens of MB for what is mostly the same skeleton
- * topology isn't worth it).
+ * `| null` fields are minted later — in `wireSlots`, or in `initGpu` beside the
+ * renderer their commit closes over — and must be null-checked; the Maps are
+ * declared empty and need no check. A 404 or decode failure surfaces as a commit
+ * that never fires, never as an error path.
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
@@ -25,7 +14,8 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
-import type { FamousPayload } from '../../loading/FamousPayload';
+import type { FamousGalaxiesPayload } from '../../loading/FamousGalaxiesPayload';
+import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
@@ -43,164 +33,56 @@ import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   /**
-   * Per-source survey star catalogs (the Gaia bin today) — the star twin of
-   * `points`, keyed by the numeric `Source` code so any consumer can look up
-   * a star row's slot without iterating. A SEPARATE map rather than a widened
-   * `points` because the payload/request types differ (`StarCatalog` /
-   * `StarCatalogReq` vs the galaxy pair) — one shared map would erase both to
-   * a union every consumer re-narrows. Unlike `points` (minted and
-   * self-installed in initGpu, next to the renderer the commit closes over),
-   * these slots are registry-built: `installSlots` routes numeric keys whose
-   * registry entry is `type: 'starCatalog'` into this map, and the slot's
-   * commit null-guards `state.gpu.starCatalogRenderer` instead of closing
-   * over it. Declared up-front as an empty Map (like `points`) so consumers
-   * need no null check.
+   * Star twin of `points`, separate because one shared map erases both payload
+   * pairs to a union every consumer re-narrows. Registry-built: `installSlots`
+   * routes numeric keys whose entry is `type: 'starCatalog'` here, so the commit
+   * null-guards `state.gpu.starCatalogRenderer` instead of closing over it.
    */
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
-  /**
-   * Null until the GPU init IIFE constructs the filament renderer and
-   * mints this slot — same lifecycle pattern as `state.gpu.renderer`.
-   * Consumers null-check before calling `.load()` (in practice only the
-   * boot path touches it, and only after the IIFE has populated it).
-   */
+  /** Loaded once at boot and NOT swapped on tier change — see `filamentFetcher.ts`. */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
-  /**
-   * Famous-galaxy `famous_meta.json` sidecar routed through a slot for
-   * parity with point loads.  Loaded eagerly at engine boot — the JSON
-   * is tiny so the cost is negligible, and the InfoCard depends on
-   * `meta` being present whenever a famous galaxy is hovered.  The
-   * subscriber writes the parsed array straight into the galaxy store
-   * (`state.data.galaxies.famousMeta`).
-   *
-   * No `commit` step — there is nothing GPU-side to upload, just CPU
-   * state mutation done by the subscriber.  Null until the IIFE mints it
-   * (matches `filaments` for the same lifecycle reason).
-   */
-  famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
-  /**
-   * Cluster/supercluster coverage layer (`structures.ccat` + `structures_meta.json`)
-   * routed through a slot for parity with the other CPU-side sidecars.  Loaded
-   * eagerly at engine boot; the payload is small.
-   *
-   * No `commit` step — there is nothing GPU-side to upload.  `wireStructureProjection`
-   * subscribes to this slot and converts the ready value into structure records
-   * written into the structure store.  Null until the IIFE mints it
-   * (matches `famousMeta` for the same lifecycle reason).
-   */
+  /** Eager at boot; no `commit` — the subscriber dispatches the parsed array into the `engine` slice. */
+  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, CompanionAssetReq> | null;
+  /** Eager because famous stars are a seeded catalog — no sibling `.bin` fetch to key demand off. */
+  famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;
+  /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
-  /**
-   * PGC → human-name alias map (`pgc_aliases.json`, ~1.7 MB).  Lazy:
-   * the engine never auto-loads it; the public-handle's
-   * `loadPgcAliases()` shim calls `slot.load()` on first palette open.
-   * Same null-then-set lifecycle as the filament slot.
-   *
-   * Routed through a slot (rather than a direct fetch) so progress events
-   * flow through the same `aggregateRegistry` reporter as every other
-   * load, and so retry/cancel semantics match.
-   */
+  /** ~1.7 MB and lazy: only the public handle's `loadPgcAliases()` calls `.load()`, on first palette open. */
   pgcAlias: AssetSlot<PgcAliasMap, void> | null;
-  /**
-   * CF-4 dark-matter density volume — Valade 2024 256³ HAMLET cube.
-   *
-   * Default-off, so demand-loaded: the slot stays idle until the user
-   * enables the field in the Volumes panel, at which point the per-frame
-   * `reevaluateDemand` fires `cf4DensityFetcher` and the commit registers
-   * the cube as the `'cf4-density'` field on the scalar-volume renderer.
-   * The ~32 MB of decoded voxel data is therefore paid only on opt-in,
-   * not on every page load.
-   *
-   * Null until `wireSlots` mints it (matches `filaments` for the same
-   * lifecycle reason — the renderer must exist before the slot can
-   * commit). Missing/404 .scfd surfaces as a never-fires commit; the
-   * field simply won't appear in the Volumes panel.
-   */
+  /** Valade 2024 256³ HAMLET cube, ~32 MB decoded — default-off, so that cost is opt-in only. */
   cf4Density: AssetSlot<ScalarCube, void> | null;
   /**
-   * MCPM Cosmic Web density volume — SDSS DR17 Cosmic Slime VAC
-   * `SDSS_z_44-476mpc` cube (Wilde et al. 2023), 712×1200×728 voxels at
-   * native resolution, downsampled into three tiers.
-   *
-   * Tier-aware (unlike cf4Density above). Default-on (the headline
-   * cosmic-web overlay), so demand loads it at boot with the `tier` root
-   * slice (`state.tier`); `engine.setTier` reloads it on tier change.
-   *
-   * Null until `wireSlots` mints it (matches cf4Density for the same
-   * lifecycle reason — the renderer must exist before commit).
+   * SDSS DR17 Cosmic Slime VAC `SDSS_z_44-476mpc` (Wilde et al. 2023), 712×1200×728
+   * voxels native in three tiers. Tier-aware and default-on, so `setTier` reloads it.
    */
   mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
-  /**
-   * CF4++ velocity flow field — single tier-agnostic `flowfield.scfd`
-   * (SCFD v3, `channels = 4`: rgb = velocity, a = overdensity δ).
-   *
-   * Default-off, so demand-loaded (mirrors `cf4Density`): the slot stays
-   * idle until the user enables flow (Phase D UI), at which point the
-   * per-frame `reevaluateDemand` fires `flowFieldFetcher` and the commit
-   * marks the layer loaded.  The decoded cube is paid only on opt-in, not
-   * on every page load.
-   *
-   * Null until `wireSlots` mints it (matches `cf4Density` for the same
-   * lifecycle reason).  The commit's GPU upload + flow-renderer handoff
-   * arrive in Phase C — the receiving renderer lands then; Phase B's
-   * commit only proves the fetch → decode → commit path.
-   */
+  /** CF4++ `flowfield.scfd`, SCFD v3 `channels = 4`: rgb = velocity, a = overdensity δ. Tier-agnostic, default-off. */
   flow: AssetSlot<ScalarCube, void> | null;
   /**
-   * True-3D constellation stick-figure artifact (`constellations.json`) routed
-   * through a slot for parity with the other CPU-side sidecars. Opt-in (defaults
-   * off), demand-loaded on the layer's master gate (`settings.constellations.enabled`),
-   * mirroring `flow`.
-   *
-   * The `commit` runs once on artifact-ready: it uploads the segment set to
-   * `constellationRenderer` (a static, tier-agnostic buffer) and kicks
-   * `syncVisibilityFades` for the `constellations` row, ramping the seeded-0
-   * demand-loaded fade up to the master toggle's intent. The pass only draws.
-   * The label producer reads the artifact straight off the slot's ready value.
-   * Null until `wireSlots` mints it (matches `structureCatalog` / `flow` for the
-   * same lifecycle reason). A missing/404 artifact surfaces as a never-fires
-   * commit; the overlay simply stays empty.
+   * Opt-in on `settings.constellations.enabled`. The commit uploads the static
+   * segment buffer and kicks `syncVisibilityFades`, ramping the seeded-0
+   * demand-loaded fade up to the toggle's intent; the pass itself only draws.
    */
   constellations: AssetSlot<ConstellationsArtifact, void> | null;
   /**
-   * The keyed body-texture family — one slot per `(bodyId, kind)` map, keyed by
-   * the composite `BodyTextureSlotKey` (`'earth:surface'`, `'mars:surface'`, the
-   * Saturn ring strip `'saturn-ring:surface'`, and — with the feature PRs —
-   * Earth's `'earth:night'` / `'earth:clouds'`).
-   *
-   * A keyed Map that mirrors `points`: any consumer looks up a body's texture
-   * slot by its composite key without iterating, and the family shares one
-   * fetcher + demand/release rail rather than a per-body field. Each slot is
-   * proximity-gated (demanded inside the body's own load radius, released
-   * outside twice it — hysteresis) and re-fetched at the clamped current tier on
-   * a data-volume tier change. Earth's former bespoke single-texture path folds
-   * into this family as key `'earth:surface'`.
-   *
-   * Unlike `flow` / `cf4Density` (null-then-set named fields minted in
-   * `wireSlots`), these are minted in `initGpu` beside the body renderers their
-   * commit uploads into — the same posture as the `points` slots — so the Map is
-   * declared non-null (empty at construction, filled during `initGpu`) and
-   * consumers need no null check. A 404 / decode failure surfaces as a
-   * never-fires commit; the renderer keeps its flat-albedo placeholder.
+   * One slot per `(bodyId, kind)` map, keyed by the composite `BodyTextureSlotKey`
+   * (`'earth:surface'`, the ring strip `'saturn-ring:surface'`, …). Proximity-gated
+   * with hysteresis — demanded inside the body's load radius, released outside twice
+   * it — and re-fetched at the clamped tier on a data-volume tier change.
    */
   bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
-   * Dev-only slots for the synthetic test cubes (Gaussian blob,
-   * Cartesian grid, spherical grid).  `undefined` (not the slots being
-   * null) in production builds — the `wireSlots` phase only mints
-   * them when `import.meta.env.DEV` is true, so tree-shaking removes
-   * the fetcher module + procedural generators entirely from
-   * production bundles.
-   *
-   * Keyed by the in-engine handle the slot's commit registers, so
-   * iterating the record is the same set of names that show up in
-   * the SettingsPanel's Volumes section.  Engine bootstrap triggers
-   * each slot's `.load()` independently with its own request.
-   *
-   * The `?` (optional) rather than `| null` mirrors how TypeScript
-   * expresses "this property may not exist on the object at all",
-   * which is more accurate here than null-then-set: in production
-   * the field is never assigned, so accessing it returns `undefined`
-   * rather than null.  Consumers should guard with `?.` at the call
-   * site.
+   * All-bodies atlas (`body-atlas.webp`): one 512×256 tile per textured body in a
+   * single ~180 KB image, fetched first (`priority: 0`). One asset for the whole set —
+   * no tier, no proximity gate — and its commit fans the decoded bitmap out to every
+   * renderer's PLACEHOLDER layer, which is what lets it and the per-body maps arrive
+   * in either order with no check.
+   */
+  bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
+  /**
+   * Dev-only synthetic test cubes, keyed by the in-engine handle the commit
+   * registers. `undefined` rather than null in production: `wireSlots` mints them
+   * only under `import.meta.env.DEV`, so the generators tree-shake out entirely.
    */
   syntheticVolumes?: Record<string, AssetSlot<ScalarCube, SyntheticVolumeReq>>;
 };

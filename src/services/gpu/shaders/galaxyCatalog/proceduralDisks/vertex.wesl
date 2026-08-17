@@ -151,5 +151,9 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // the TS side in slot 6 = orientation.z. The visual fragment ignores this
   // varying; the pick fragment reads it to write the r32uint pick texture.
   out.pickId = bitcast<u32>(instance.orientation.z);
+  // Effective surface-brightness amplitude, pre-scaled on the CPU by the
+  // live sliders; forwarded unchanged so the fragment stage can multiply
+  // its brightness profile by it.
+  out.sbAmp = instance.extras.w;
   return out;
 }

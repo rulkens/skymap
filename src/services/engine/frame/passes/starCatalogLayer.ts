@@ -87,6 +87,26 @@
  * same gate-at-one-place discipline this pass already follows for the DRAW
  * decision via `starCatalogVisible`: the vote is computed here, decided there.
  *
+ * ### The walk off-screen prune — and its one fade interaction (REVIEW THIS)
+ *
+ * `computeStarCut` builds a NEAR0 frustum (`buildCutFrustum`) and hands it to
+ * `walkStarOctreeCut`, which prunes off-screen subtrees at their common ancestor
+ * — the dominant CPU win (a ~44k-node star-field walk drops to ~12k with the
+ * pick-safe slack this ships, roughly halving the walk's wall time; see the
+ * walk's header). The prune is COARSE (pick-covering slack) and the renderer's
+ * exact per-node cull stays the precise filter, so nothing visible is wrong-
+ * dropped. But it CHANGES ONE BEHAVIOUR worth a reviewer's eye: a node that
+ * rotates back into the frustum now re-enters the cut as a NEWCOMER (opacity 0)
+ * and fades in over `NODE_FADE_MS`, where before the prune it was already in the
+ * cut (drawn at opacity 1, merely dropped by the renderer's exact cull) and
+ * popped in instantly at the screen edge. So during a pan/rotate the leading edge
+ * now shows a ~250 ms fade-in band instead of an instant edge. This is subtle at
+ * the near-static perf poses but visible in fast interactive rotation. If it
+ * reads as a lag, the fix is to seed frustum-driven newcomers at opacity 1
+ * (distinguishing them from LOD-split newcomers, which must still start at 0) —
+ * deliberately left out of this change so the prune lands as a pure, measurable
+ * optimisation first.
+ *
  * ### When it draws (house rule: gate at `enabled`, opacity 0 ⇒ no render)
  *
  * `starCatalogVisible` gates on the `starCatalogRenderer` handle (null
@@ -118,20 +138,23 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogSourceEntry } from '../../../../@types/data/starCatalog/StarCatalogSourceEntry';
+import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
-import { NEAR0 } from '../slabs';
+import { NEAR0, slabViewOf } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { DEFAULT_FOV_Y_RAD } from '../../camera/cameraFraming';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
-import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
+import {
+  walkStarOctreeCut,
+  type StarCutFrustum,
+} from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import { starOctreeIndex } from '../../../gpu/renderers/starCatalog/starOctreeIndex';
 import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLeafDraws';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
@@ -151,6 +174,27 @@ const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
  * would allocate on every draw of the hot path this cull exists to make cheaper.
  */
 const frustumScratch = new Float32Array(24);
+
+/**
+ * Scratch for the WALK's off-screen prune (distinct from `frustumScratch`, which
+ * the draw/pick passes reuse later in the same frame). `computeStarCut` derives
+ * the NEAR0 rebased vp once per frame, extracts its six clip planes into
+ * `cutPlanesMpcScratch` (scene-Mpc units), then rescales the distance term into
+ * parsecs in `cutPlanesPcScratch` — the frame the walk's box math already lives
+ * in. Reused across frames and per-source within a frame (the frustum is
+ * source-independent); the walk reads it synchronously, the same non-reentrant
+ * discipline the rest of this pass follows.
+ */
+const cutPlanesMpcScratch = new Float32Array(24);
+const cutPlanesPcScratch = new Float64Array(24);
+// Inferred-mutable (no `StarCutFrustum` annotation) so the two margins can be
+// rewritten each frame; a mutable object is still assignable to the readonly
+// `StarCutFrustum` parameter.
+const cutFrustumScratch = {
+  planesPc: cutPlanesPcScratch,
+  angularMarginRad: 0,
+  worldSpread: 1,
+};
 
 /**
  * A leaf star's minimum on-screen glow radius, in pixels. It has no shared TS
@@ -205,6 +249,49 @@ function starCullMargins(sizePx: number, viewportHeightPx: number): typeof margi
   marginScratch.leaf = leafPxRadius * radiansPerPx;
   marginScratch.pick = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
   return marginScratch;
+}
+
+/**
+ * Build this frame's WALK off-screen-prune frustum from the NEAR0 rebased vp —
+ * the exact matrix the star draws clip against, so the coarse prune agrees with
+ * what the GPU would keep. Returns the reused `cutFrustumScratch`; its planes are
+ * rescaled from scene-Mpc into the parsec frame the walk's box math lives in, and
+ * its slack is sized to the WIDEST downstream footprint so the prune can never
+ * wrong-drop a node the exact per-node renderer cull would still paint:
+ *   - leaves spill an angular amount (fixed-pixel dot), sized to the PICK 3.5px
+ *     clickable floor (≥ the visual glow) because the pick pass recomputes the
+ *     SAME cut and a clickable edge star must survive — mirrors `starCullMargins`;
+ *   - aggregates spread their glow by the dot-size/overlap scale (world slack).
+ */
+function buildCutFrustum(
+  ctx: ReadyFrameContext,
+  sizePx: number,
+  glowOverlap: number,
+): StarCutFrustum | null {
+  // No NEAR0 slab resolvable ⇒ no frustum to prune against: fall back to the
+  // full (un-pruned) walk. In a real frame `deriveSlabs` always yields NEAR0, so
+  // this only trips for hand-built test contexts — the walk stays correct either
+  // way, just cheaper when a frustum is available.
+  if (ctx.slabs?.[NEAR0] === undefined) return null;
+  const near0 = slabViewOf(ctx, NEAR0);
+  const rebasedVp = narrowMat4(rebaseViewProj(near0.slab.vp, near0.camPos));
+  const planesMpc = frustumPlanesFromViewProj(rebasedVp, cutPlanesMpcScratch);
+  // A plane test `n·p_mpc + d ≥ 0` with `p_mpc = p_pc · PC_TO_MPC` divides
+  // through by `PC_TO_MPC` to `n·p_pc + d·MPC_TO_PC ≥ 0`: unit normals carry
+  // over, only the distance term rescales into parsecs.
+  for (let b = 0; b < 24; b += 4) {
+    cutPlanesPcScratch[b] = planesMpc[b]!;
+    cutPlanesPcScratch[b + 1] = planesMpc[b + 1]!;
+    cutPlanesPcScratch[b + 2] = planesMpc[b + 2]!;
+    cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
+  }
+  const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
+  const radiansPerPx = DEFAULT_FOV_Y_RAD / ctx.canvasSize.height;
+  const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
+  cutFrustumScratch.angularMarginRad =
+    Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
+  cutFrustumScratch.worldSpread = Math.max(1, sizeScale * glowOverlap);
+  return cutFrustumScratch;
 }
 
 /**
@@ -328,7 +415,7 @@ function fadeStateFor(catalog: StarCatalog): StarFadeState {
  * reads the direction from the edge ordering — `inner < outer` is a recede
  * fade (full at the low edge).
  */
-function crossfadeOpacity(entry: StarCatalogSourceEntry, camDistPc: number): number {
+function crossfadeOpacity(entry: SurveyStarCatalogSourceEntry, camDistPc: number): number {
   return fadeBand({ fullAt: entry.crossfadePc.inner, goneAt: entry.crossfadePc.outer }, camDistPc);
 }
 
@@ -349,7 +436,10 @@ export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): 
 
   for (const { source } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    if (entry.type !== 'starCatalog') continue;
+    // Only a SURVEY catalog can be in `loadedCatalogs` (a seeded one ships no
+    // bin), so the `binBaseName` half of the guard is a narrowing device rather
+    // than a live filter — it buys the crossfade band this layer draws by.
+    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
     if (crossfadeOpacity(entry, camDistPc) > 0) return true;
   }
@@ -605,6 +695,12 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
   const glowOverlap = state.settings.starCatalogs.glowOverlap;
   const aggregateIntensityCap = state.settings.starCatalogs.aggregateIntensityCap;
 
+  // This frame's off-screen prune frustum — source-independent, built once from
+  // the NEAR0 rebased vp and handed to every source's walk. See `buildCutFrustum`
+  // and `walkStarOctreeCut`'s header for why pruning off-screen subtrees at their
+  // common ancestor is the dominant CPU win.
+  const cutFrustum = buildCutFrustum(ctx, sizePx, glowOverlap);
+
   const sources: PreparedStarSource[] = [];
   // Tracks whether ANY node is mid-fade across ALL sources this frame. Surfaced
   // on the returned `PreparedStarCut` as the render-on-demand wake vote — the
@@ -614,13 +710,15 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
 
   for (const { source, catalog } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    if (entry.type !== 'starCatalog') continue;
+    // See `starCatalogVisible`: a loaded catalog is always a SURVEY row; the
+    // null check narrows to the variant carrying `drawBudget` / `crossfadePc`.
+    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
 
     const sourceCrossfade = crossfadeOpacity(entry, camDistPc);
     if (sourceCrossfade <= 0) continue; // faded out — additive draw of nothing
 
-    const cut = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold);
+    const cut = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold, cutFrustum);
 
     // The load-time index: the walk's box geometry + scalar node fields, plus
     // the `childMask` leaf-vs-aggregate discriminant and the flux-glow subtree

@@ -23,6 +23,7 @@
 
 import { slotFor } from './slotFor';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -41,15 +42,27 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // The previous frame's produced world eye position — the one proximity read
     // surface (see DemandCtx surface 4). `lastPose` is constructed +
     // placeholder-seeded in `engine.ts`, so it is never null. Derived with the
-    // SAME `assembleOrbitCamera(pose, projection)` the frame runs for `drawCamPos`
-    // (see frameContext.ts), so a proximity demand/release predicate's
-    // demand-time read agrees byte-for-byte with the draw-time camera — deriving
-    // it a second way here would risk the two silently diverging. `.position` is
-    // a fresh writable tuple per call; widening it to `Readonly<Vec3>` hands
-    // predicates a read-only view without a copy.
+    // SAME `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` the frame
+    // runs for `drawCamPos` (see frameContext.ts), so a proximity demand/release
+    // predicate's demand-time read agrees byte-for-byte with the draw-time camera
+    // — deriving it a second way here would risk the two silently diverging.
+    // `.position` only ever decodes through `poseBasis`, so `upBasis` is a
+    // don't-care here — passed the same steady value for symmetry with the draw
+    // path's call shape, not because this read depends on it.
+    // `.position` is a fresh writable tuple per call; widening it to
+    // `Readonly<Vec3>` hands predicates a read-only view without a copy.
+    //
+    // Demand reevaluation runs between frames (and at the head of `runFrame`,
+    // before this frame's produce step), reading the PREVIOUS frame's pose — a
+    // read at rest. So the steady `ORIENTATION_FRAMES[orientation]` is the correct
+    // basis: at rest the resolved per-frame basis equals the steady frame basis,
+    // and an orientation tween is a transient the proximity gate is insensitive
+    // to. (Task 9 owns the per-frame resolved basis on the draw path.)
     cameraPosMpc: assembleOrbitCamera(
       state.cameraRuntime.lastPose.current,
       state.cameraRuntime.projection,
+      ORIENTATION_FRAMES[state.settings.orientation],
+      ORIENTATION_FRAMES[state.settings.orientation],
     ).position,
     // The instant the last frame derived its bodies at — the single-writer live
     // clock position (`runFrame` writes it just before produce). The body-texture

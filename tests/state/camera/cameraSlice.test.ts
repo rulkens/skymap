@@ -25,6 +25,7 @@ import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { EngineSubsystemHandles } from '../../../src/@types/engine/handles/EngineSubsystemHandles';
+import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
 
 // ── Compile-time freeze guards ──────────────────────────────────────────────
 // These never run; they fail at `tsc` time if the camera surface regrows a
@@ -48,11 +49,14 @@ const base = () => reducer(undefined, { type: '@@init' });
 
 const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.3, distance: 10 };
 
+const tweenFrame: OrientationFrameId = 'ecliptic';
+
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
   to: pose,
   durationMs: 1200,
   easing: 'easeOutCubic',
+  frame: tweenFrame,
 };
 
 describe('cameraSlice — commitCameraPose', () => {
@@ -119,25 +123,26 @@ describe('cameraSlice — initial state is serialisable', () => {
     expect(json).not.toContain('"position"');
     expect(json).not.toContain('"fovYRad"');
   });
-
 });
 
 // ── Shared clip fixture ───────────────────────────────────────────────────────
 // Minimal ClipData — `timeline` can be empty for slice-level tests; the
 // compiler and evaluator (Tasks 4/8) test richer descriptors separately.
 const clipData: ClipData = { start: 'live', timeline: [] };
+const clipFrame: OrientationFrameId = 'galactic';
 
 const livePose: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: -0.5, distance: 50 };
 
 describe('cameraSlice — clip lifecycle', () => {
-  it('clipStarted stores the clip data', () => {
-    const next = reducer(base(), clipStarted(clipData));
+  it('clipStarted stores the clip data and the pinned frame', () => {
+    const next = reducer(base(), clipStarted({ data: clipData, frame: clipFrame }));
     // Reference equality: the reducer stores the exact payload object.
     expect(next.clip!.data).toBe(clipData);
+    expect(next.clip!.frame).toBe(clipFrame);
   });
 
   it('clipEnded clears clip to null', () => {
-    const withClip = reducer(base(), clipStarted(clipData));
+    const withClip = reducer(base(), clipStarted({ data: clipData, frame: clipFrame }));
     const cleared = reducer(withClip, clipEnded());
     expect(cleared.clip).toBeNull();
   });
@@ -145,7 +150,10 @@ describe('cameraSlice — clip lifecycle', () => {
   it('clipEnded also clears a dormant tween', () => {
     // A focus saga may plant a tween before/during a clip; once the clip@95
     // driver deactivates, an un-cleared @60 tween would outrank resting@0.
-    const withBoth = reducer(reducer(base(), startCameraTween(tween)), clipStarted(clipData));
+    const withBoth = reducer(
+      reducer(base(), startCameraTween(tween)),
+      clipStarted({ data: clipData, frame: clipFrame }),
+    );
     const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();
     expect(cleared.tween).toBeNull();

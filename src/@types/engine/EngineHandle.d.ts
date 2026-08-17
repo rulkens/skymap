@@ -52,7 +52,7 @@ export type EngineHandle = {
   /**
    * Flat read-only registry of every asset slot the engine owns, keyed by
    * the slot's `name` (e.g. `'sdss-points'`, `'2mrs-points'`,
-   * `'glade-points'`, `'famous-points'`, `'filaments'`, `'famous-meta'`,
+   * `'glade-points'`, `'famous-points'`, `'filaments'`, `'famous-galaxies-meta'`,
    * `'pgc-aliases'`).  Type-erased to `AssetSlot<unknown, unknown>` because
    * the four point-cloud slots, the filament slot, and the two sidecar
    * slots all carry different payload + request shapes — the dev panel

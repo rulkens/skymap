@@ -55,23 +55,38 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
-import { liveBodyPosition } from '../camera/liveBodyPosition';
-import { tweenElapsed, accumulateFollowPan } from '../camera/cameraClock';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
+import { resolveFrameBasis } from '../camera/resolveFrameBasis';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
+import { createRenderTargets } from '../../gpu/renderTargets';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
+import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
+import { earthLayer } from './passes/earthLayer';
+import { NEAR0, slabViewOf } from './slabs';
+import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
+import { camPosLocal } from '../../../utils/camera/camPosLocal';
+import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import {
+  commitCameraPose,
+  cancelCameraTween,
+  clearFrameTween,
+} from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
 import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
@@ -104,15 +119,21 @@ const publishBodyDistanceGate = throttleByTime(250);
 
 /**
  * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
- * at the real-time rate (one sim day per real day), so the Sun barely moves —
- * the Earth terminator creeps by a fraction of a pixel per second. Pinning the
- * render loop at 60 fps to redraw that would burn the GPU for no visible gain,
- * so live mode is deliberately kept OUT of `shouldKeepTicking`. Instead we ask
- * the scheduler for ONE frame every few seconds: a coarse heartbeat that keeps
- * the terminator honest while letting the loop sleep in between. A few seconds
- * is well below the threshold where terminator drift becomes noticeable, and
- * far above the per-frame cost we are avoiding. The React TimeBar readout runs
- * its own timer, so this heartbeat serves only the 3D scene.
+ * one sim day per real day, so the terminator sweeps `0.00417° * T` of ground
+ * per tick of length T — on screen that maps to pixels via `2 * h * tan(fovY /
+ * 2)` (h = camera altitude) over the canvas's pixel height.
+ *
+ * The altitude term is what makes the cadence tight: at the 127 km standoff
+ * over streamed surface tiles the viewport spans only ~147 km vertically, so a
+ * 3 s tick is a visible ~8 px jump on a ~900 px-tall canvas. 500 ms holds that
+ * drift under 1.5 px at every reachable altitude — ground drift scales
+ * linearly with tick length, screen-space drift inversely with altitude.
+ *
+ * Kept OUT of `shouldKeepTicking` regardless: pinning the loop at 60 fps for a
+ * rotation this slow would burn the GPU for no visible gain, so instead we ask
+ * the scheduler for ONE frame per tick — a heartbeat that keeps the terminator
+ * honest while the loop sleeps in between. The React TimeBar readout runs its
+ * own timer, so this heartbeat serves only the 3D scene.
  *
  * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
  * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
@@ -120,7 +141,7 @@ const publishBodyDistanceGate = throttleByTime(250);
  * single one-shot that self-cancels once fired and is ignored while a rAF frame
  * is already queued — so it only ever supplies the frames the busy loop didn't.
  */
-const LIVE_IDLE_TICK_MS = 3_000;
+const LIVE_IDLE_TICK_MS = 500;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -187,6 +208,78 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.gpu.renderTargets?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
 
+  // ── Milky-Way aggregate divisor → offscreen table rebuild ────────────────
+  //
+  // The `mw-aggregate` row's downsample divisor is a live tuning knob (the
+  // strongest perf lever the star cloud has — its fragment cost falls as the
+  // square — and it trades against the `starPxMin` / `starPxMax` clamps, which
+  // are already sliders). A texture's dimensions are fixed at creation, so a
+  // change is answered by rebuilding the table, not by resizing it; this sits
+  // beside the resize branch because it is the same "the targets no longer
+  // match what the frame wants" question, asked about a different input.
+  //
+  // The divisor in force is read back off the spec row, and the swap format off
+  // the old table's `swap` row. Both are already carried there, so the targets
+  // themselves ARE the record of what was applied — a 'last applied' mirror
+  // beside them could only ever drift from the textures it describes.
+  //
+  // Destroying textures an in-flight command buffer may still reference is the
+  // hazard `resize` already takes every time it reallocates, so this needs no
+  // synchronisation the resize path doesn't. Nothing caches a view across
+  // frames either: every consumer resolves through `viewOf` at draw time, and
+  // the upsample passes rebuild their bind group per draw.
+  const targets = state.gpu.renderTargets;
+  if (targets) {
+    const applied = targets.specs.find((s) => s.id === 'mw-aggregate')!.scale;
+    const wanted = state.settings.milkyWay.aggregateDivisor;
+    if (applied !== wanted) {
+      const swapFormat = targets.specs.find((s) => s.id === 'swap')!.format;
+      targets.destroy();
+      state.gpu.renderTargets = createRenderTargets(
+        deps.device,
+        swapFormat,
+        { width: deps.canvas.width, height: deps.canvas.height },
+        wanted,
+      );
+    }
+  }
+
+  // ── Milky-Way star count → cloud regeneration ───────────────────────────
+  //
+  // starCount is a DebugPanel slider like every other `settings.milkyWay`
+  // knob, but unlike them it doesn't ride a uniform or a render target — it
+  // feeds GENERATION directly (`milkyWayCloud.generate` carves the star/dust
+  // layouts from it), so the only way a drag reaches the screen is this
+  // branch noticing the live setting has outrun the buffers currently on
+  // screen and regenerating. Same shape as the mw-aggregate branch just
+  // above — "the targets/buffers no longer match what the frame wants" —
+  // asked about generated data instead of a texture. It also picks up a tier
+  // change: `watchTierSaga` re-seeds `starCount` from the new tier's budget
+  // on every explicit tier switch, so a tier flip surfaces here as an
+  // ordinary mismatch too — `makeRunTierTransition` does not call
+  // `regenerate` itself, to avoid two paths racing to regenerate the same
+  // cloud.
+  //
+  // The comparison is against `cloud.starCount()`, the count the CURRENT
+  // buffers were actually generated with, not a runFrame-side shadow copy:
+  // the generator is the one place that fact is produced, and a second copy
+  // here could only ever drift from the buffers it describes.
+  //
+  // Cost note: `DebugSlider` fires on every input event, so dragging this
+  // knob regenerates the cloud once per tick — a full destroy + allocate +
+  // compute dispatch, far heavier than a uniform write. That is accepted
+  // deliberately for a dev-only knob; if it ever needs production-grade
+  // smoothness, the fix is coalescing to the drag's trailing edge (e.g. a
+  // debounce on the DebugPanel side), not gating the knob back out of the
+  // panel.
+  const cloud = state.gpu.milkyWayCloud;
+  if (cloud) {
+    const wantedCount = state.settings.milkyWay.starCount;
+    if (cloud.starCount() !== wantedCount) {
+      cloud.regenerate(wantedCount);
+    }
+  }
+
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
   //
   // Single camera-write site per frame. The produce step calls `runCameraDrivers`
@@ -243,6 +336,56 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
   );
   const activeId = activeDriverId(deps.drivers, rootState);
+
+  // ── Orientation basis: two readers, two different values ─────────────────
+  //
+  // `poseBasis` is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`).
+  // `watchOrientationChangeSaga` writes the DESTINATION into `settings.orientation`
+  // the instant a switch starts, so this never moves during a roll — the eye,
+  // decoded through it via `updatePosition`, holds still; only up rotates.
+  //
+  // `upBasis` is `resolveFrameBasis`'s live B(t), resolved exactly once here.
+  //
+  // `state.cameraRuntime.upBasis.current` gets `upBasis`, NOT `poseBasis`: it
+  // seeds the NEXT switch's `fromQuat` (`watchOrientationChangeSaga`), and a
+  // re-switch mid-roll must compose from the live pole, not the committed one.
+  //
+  // `state.cam` and `deriveFrameContext` below both take the same split —
+  // committed basis for position decode, live basis for up — see
+  // `OrbitCameraInit.d.ts` for why the two camera fields exist.
+  const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
+  const upBasis = resolveFrameBasis(
+    rootState.settings.orientation,
+    rootState.camera.frameTween,
+    state.cameraRuntime.clock,
+    nowMs,
+  );
+  state.cameraRuntime.upBasis.current = upBasis;
+  if (state.cam) {
+    // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
+    // controls, so there is no decode to keep in sync until then.
+    state.cam.poseBasis = poseBasis;
+    state.cam.upBasis = upBasis;
+  }
+
+  // Clear a finished frame roll exactly once, mirroring the camera-tween
+  // completion block below: when the roll's elapsed saturates its duration, the
+  // slerp has landed on the destination basis, so drop the descriptor and let the
+  // steady branch take over next frame. Re-calling `frameTweenElapsed` is safe —
+  // the descriptor reference is unchanged, so the clock-reset branch does not fire
+  // and no double-tick occurs. `EASE` clamps the slerp parameter, so THIS frame's
+  // already-resolved basis is the destination exactly; clearing only affects the
+  // next frame's getState.
+  if (rootState.camera.frameTween !== null) {
+    const rollElapsed = frameTweenElapsed(
+      state.cameraRuntime.clock,
+      rootState.camera.frameTween,
+      nowMs,
+    );
+    if (rollElapsed >= rootState.camera.frameTween.durationMs) {
+      deps.cb.store.dispatch(clearFrameTween());
+    }
+  }
 
   // ── (2) TWEEN COMPLETION: cancel a finished tween exactly once ────────────
   //
@@ -328,7 +471,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // mirror for the structure-focus / time-report sections.
   const pivotFocus = rootState.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
-  const followingBody = liveBodyPosition(pivotFocus, simDays) !== null;
+  const followingBody = bodyMovesThisFrame(pivotFocus);
   if (state.cam) {
     accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
   } else {
@@ -384,6 +527,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.canvas,
     renderPose,
     state.cameraRuntime.projection,
+    // The committed pose basis (holds still through a roll) and the live up
+    // basis (rolls) — the same split fed to the drag register above, so the
+    // draw decode shares both poles with the switch surfaces.
+    poseBasis,
+    upBasis,
     masks.draw,
     nowMs,
     simDays,
@@ -461,7 +609,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.data.galaxies.famousMeta,
+      famousGalaxiesMeta: state.famousGalaxiesMeta,
     });
   }
   // ONE shared catalog walk drives both disk-planner bodies. It computes each
@@ -479,14 +627,74 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     };
     diskPlannerWalk.runFrame(
       sharedInput,
-      proceduralDisks.beginFrame(sharedInput),
+      proceduralDisks.beginFrame({
+        ...sharedInput,
+        sbScale: state.settings.galaxyCatalogs.sbScale,
+        sbMax: state.settings.galaxyCatalogs.sbMax,
+        brightness: state.settings.galaxyCatalogs.brightness,
+      }),
       texturedDisks.beginFrame({
         ...sharedInput,
-        famousMeta: state.data.galaxies.famousMeta,
+        famousGalaxiesMeta: state.famousGalaxiesMeta,
         nowMs: ctx.nowMs,
       }),
     );
   }
+
+  // ── Earth surface virtual texture — the tile planner ──────────────────────
+  // A CPU-side planner, sited with the disk planners above. The gate is
+  // `earthLayer.enabled` itself, not a hand-copied predicate, so the tiles and
+  // the layer they refine can never disagree about whether Earth is on screen.
+  const earthTiles = state.subsystems.earthTiles;
+  const earth = state.data.bodies.earth;
+  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
+    // `earthSurfaceTier` reads the tier off the committed texture slot, not the
+    // app-wide request, so a tier swap in flight can't make the planner believe
+    // in detail that isn't on the GPU yet. Null until the manifest lands.
+    const params = earthTiles.plannerParams(earthSurfaceTier(state));
+    if (params !== null) {
+      // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
+      // module header), so the tiles the planner asks for never drift from the
+      // pixels the fragment samples them into.
+      const view = slabViewOf(ctx, NEAR0);
+      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+      const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const plan = planEarthTiles({
+        ...params,
+        camPosLocal: camPosLocal(
+          view.camPos,
+          earthState.positionMpc,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewProjLocal: composeBodyMvp(
+          view.slab.vp,
+          earthState.positionMpc,
+          RENDER_ORIGIN_MPC,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewportPx: view.viewportPx,
+      });
+      // Unconditional: engaging/disengaging is the subsystem's own decision
+      // from this plan. `getTileResources()` either side of `update` IS the
+      // null-to-non-null transition, so the renderer's bind group rebuilds
+      // exactly once, at that moment.
+      const engagedBefore = earthTiles.getTileResources() !== null;
+      earthTiles.update({ plan, nowMs: ctx.nowMs });
+      if (!engagedBefore) {
+        const tiles = earthTiles.getTileResources();
+        if (tiles !== null) {
+          state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
+        }
+      }
+    }
+  }
+
+  // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is
+  // in flight, a state entered BEFORE the subsystem can ever engage — voting
+  // only on engaged frames would let a stopped camera sleep the loop mid-fetch.
+  const earthTilesAnimating = earthTiles?.isAnimating() ?? false;
 
   // ── Label director per-frame update ──────────────────────────────────────
   //
@@ -567,6 +775,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
+    earthTilesAnimating,
   });
 
   if (keepTicking) {

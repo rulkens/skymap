@@ -20,19 +20,34 @@
  * equatorial frame means. Earth's 23.4° tilt relative to the ecliptic is then
  * the frame relationship itself, not a rotation this mesh has to apply.
  *
- * A static Earth (the renderer applies no diurnal spin) models no rotation, so
- * WHICH meridian faces which RA is an arbitrary construction choice, not a
- * physical fact to reproduce: the prime meridian (lon 0) is fixed along +x, the
- * vernal equinox direction. Longitude winds x→y (eastward, CCW seen from above
- * the north pole) — matching both increasing RA and Earth's real eastward spin.
+ * The mesh's own longitude origin (lon 0) sits along +x; each body's IAU
+ * rotation (`rotationFromIau`) then swings that meridian to where the body's
+ * prime meridian actually points, so lon 0 IS the body's prime meridian.
+ * Longitude winds x→y (eastward, CCW seen from above the north pole) — matching
+ * both increasing RA and a prograde body's real eastward spin.
  *
  *   x = cos(lat)·cos(lon)   (lat = Dec, lon = RA)
  *   y = cos(lat)·sin(lon)
  *   z = sin(lat)            (north pole = +z)
  *
  * UV mapping is equirectangular:
- *   u = longitude / (2π)   → [0, 1] west-to-east
- *   v = latitude  / π + 0.5 → [0, 1] south-to-north
+ *   u = longitude / (2π) + TEXTURE_PRIME_MERIDIAN_U → [0.5, 1.5] west-to-east
+ *   v = latitude  / π + 0.5                          → [0, 1] south-to-north
+ *
+ * ## Registering the map on the prime meridian
+ *
+ * `TEXTURE_PRIME_MERIDIAN_U` is what makes lon 0 sample the map's CENTRE column,
+ * where every standard planetary map paints longitude 0. Without it the map's
+ * antimeridian lands on the prime meridian and the whole surface reads 180° round
+ * — the Moon, tidally locked with its prime meridian aimed at Earth, showing its
+ * FAR side. `cubeSphereMesh` (Earth's) bakes the same offset from the same
+ * constant, so both meshes register identically.
+ *
+ * The offset is NOT wrapped back into [0, 1]: u runs 0.5 → 1.5 monotonically and
+ * the samplers address u as `repeat`, so the hardware does the wrap. Wrapping
+ * here instead would jump u by a whole turn mid-sphere, and that discontinuity
+ * breaks the fragment quad's derivatives at the seam — forcing the coarsest mip
+ * along a ~1 px antimeridian line.
  *
  * ## Winding
  *
@@ -45,6 +60,7 @@
  * a→c→b restores the outward normal. See the per-quad comment for the layout.
  */
 
+import { TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/texturePrimeMeridianU';
 import type { UvSphereMesh } from '../../@types/math/UvSphereMesh';
 
 export function uvSphereMesh(segments: number, rings: number): UvSphereMesh {
@@ -69,7 +85,10 @@ export function uvSphereMesh(segments: number, rings: number): UvSphereMesh {
       const lon = (2 * Math.PI * s) / segments;
       const cosLon = Math.cos(lon);
       const sinLon = Math.sin(lon);
-      const u = s / segments; // [0,1] west-to-east
+      // [0.5, 1.5] west-to-east: the map's centre column registers on lon 0 (the
+      // body's prime meridian), and the turn is left unwrapped for the sampler's
+      // `repeat` addressing to close — see the module header.
+      const u = s / segments + TEXTURE_PRIME_MERIDIAN_U;
 
       // Unit-sphere position in the equatorial J2000 frame (see module header):
       //   x = cos(lat)*cos(lon),  y = cos(lat)*sin(lon),  z = sin(lat)

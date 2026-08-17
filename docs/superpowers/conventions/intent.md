@@ -196,7 +196,7 @@ export function selectSelectedRef(state: RootState): SelectionRef | null {
 export function resolveSelectionRef(
   ref: SelectionRef | null,
   catalogs: ReadonlyMap<SourceType, GalaxyCatalog>,
-  famousMeta: readonly FamousMetaEntry[],
+  famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[],
 ): FocusableTarget | null {
   if (ref === null) return null;
   // ...dereference the cloud HERE, at the edge, and build the derived value.
@@ -227,7 +227,7 @@ const ref = useStore(selectSelectedRef);
 const gen = useStore((s) => selectCatalogGeneration(s, ref?.source));
 // `gen` participates so a late-arriving cloud forces a re-resolve:
 const target = useMemo(
-  () => resolveSelectionRef(ref, engine.catalogs(), engine.famousMeta()),
+  () => resolveSelectionRef(ref, engine.catalogs(), engine.famousGalaxiesMeta()),
   [ref, gen], // ref from Intent, gen from the descriptor
 );
 ```

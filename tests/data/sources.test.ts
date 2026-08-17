@@ -132,7 +132,7 @@ describe('Registry capability flags — bearsLabel / bearsMarker', () => {
     const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
     expect(entry.bearsLabel).toBe(true);
     expect(entry.bearsMarker).toBe(false);
-    expect(entry.labelLayer).toBe('galaxyNames');
+    expect(entry.labelLayer).toBe('galaxy');
   });
 
   it('structure rows bear both a label and a marker', () => {
@@ -230,20 +230,21 @@ describe('Source enum — body codes (famousStar/planet/earth)', () => {
     expect(Source.Earth).toBe(23);
   });
 
-  it('famousStar/planet/earth rows are non-label, non-marker body sources', () => {
-    // Bodies are near-field scene objects, not galaxy catalogs or structure
-    // rings. Their captions ship through the foreground-labels layer, bypassing
-    // the COSMO label/marker systems — so both capability flags are false.
+  it('planet/earth are label-bearing, marker-free body rows', () => {
+    // Bodies caption themselves on the final descent, so `bearsLabel` — a
+    // CAPABILITY flag — is true and `labelLayer` routes those captions to the
+    // NEAR0 foreground layer instead of the COSMO label director. They carry no
+    // ring, so the marker flag stays false.
     const bodyRows = [
-      [Source.FamousStar, 'famousStar'],
       [Source.Planet, 'planet'],
       [Source.Earth, 'earth'],
     ] as const;
-    for (const [code, type] of bodyRows) {
+    for (const [code, id] of bodyRows) {
       const entry = SOURCE_REGISTRY[code];
-      expect(entry.type).toBe(type);
-      expect(entry.id).toBe(type);
-      expect(entry.bearsLabel).toBe(false);
+      expect(entry.type).toBe('body');
+      expect(entry.id).toBe(id);
+      expect(entry.bearsLabel).toBe(true);
+      expect(entry.labelLayer).toBe('body');
       expect(entry.bearsMarker).toBe(false);
     }
   });

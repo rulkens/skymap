@@ -3,10 +3,18 @@
  *
  * The cloud is drawn as two instanced-billboard passes over the generated
  * star/dust records: an ADDITIVE star pass (soft radial glows that sum their
- * light) followed by a MULTIPLICATIVE dust pass (per-channel transmittance
- * that darkens + reddens the light behind it). Both passes run inside the
- * app's HDR pass and share one uniform buffer; see `milkyWayCloudRenderer.ts`
- * for why they still need two separate pipelines + bind groups.
+ * light) and a MULTIPLICATIVE dust pass (per-channel transmittance that
+ * darkens + reddens the light behind it).
+ *
+ * ### Why two entry points rather than one `draw`
+ *
+ * The two passes render into DIFFERENT TARGETS, so they cannot share a render
+ * pass encoder. Stars draw into the reduced-resolution `mw-aggregate`
+ * offscreen (their summed glow is a low-frequency field, and they are the
+ * fill-bound half — see the `mw-aggregate` row in `renderTargets.ts`); dust
+ * draws full-res into HDR, where its transmittance multiplies the real
+ * cosmological accumulation. Each entry point writes its OWN uniform buffer,
+ * so neither depends on the other having run first.
  *
  * Satisfies the shared `Renderer` contract (`label` + `destroy`).
  */
@@ -17,11 +25,18 @@ export type MilkyWayCloudRenderer = {
   /** Human-readable identifier (`'milkyWayCloudRenderer'`). Part of the `Renderer` contract. */
   readonly label: string;
   /**
-   * Pack the shared uniform buffer once, then issue the star draw followed by
-   * the dust draw (stars first so dust multiplies over the summed starlight).
-   * The dust pass is skipped when `args.buffers.dustBuf` is null.
+   * Pack the star uniform buffer and issue the additive star billboard draw.
+   * Called against the `mw-aggregate` offscreen, so `args.viewportPx` must be
+   * that target's texture size, not the canvas size — the vertex stage's
+   * pixel-space sprite clamp is expressed in the target's own pixels.
    */
-  readonly draw: (pass: GPURenderPassEncoder, args: MilkyWayCloudDrawArgs) => void;
-  /** Release the shared uniform + corner-quad buffers. */
+  readonly drawStars: (pass: GPURenderPassEncoder, args: MilkyWayCloudDrawArgs) => void;
+  /**
+   * Pack the dust uniform buffer and issue the multiplicative-transmittance
+   * dust draw into HDR. A no-op when the generation carved no dust layout
+   * (`args.buffers.dustBuf` null).
+   */
+  readonly drawDust: (pass: GPURenderPassEncoder, args: MilkyWayCloudDrawArgs) => void;
+  /** Release both uniform buffers and the shared corner-quad buffer. */
   readonly destroy: () => void;
 };

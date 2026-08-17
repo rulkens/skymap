@@ -35,6 +35,7 @@
 import { Source } from '../../src/data/sources';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { nonCommentLines, type ParsedRecord } from './common';
 
 /**
@@ -107,9 +108,10 @@ function blendSdssShape(
  *   - `z <= 0` — a star, a QSO at z = 0, or a catalogue error. Galaxies
  *     have strictly positive cosmological redshifts; a non-positive z
  *     means the row isn't usefully placeable in 3D space.
- *   - Any of the five magnitude columns is empty or fails to parse as a
- *     finite number. Without all five bands we can't compute K-corrected
- *     rest-frame colours in the shader.
+ *   - Any of the five magnitude columns is empty, fails to parse as a
+ *     finite number, or carries SDSS' `-9999` "no photometry" sentinel
+ *     (see `isPlausibleMagnitude`). Without all five bands we can't
+ *     compute K-corrected rest-frame colours in the shader.
  *   - `objID` is empty, non-numeric, or zero. SDSS uses 0 as a sentinel
  *     for "no object", so a 0 ID is by definition not a real galaxy.
  *
@@ -201,16 +203,21 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
     const magI = parseFloat(cells[COL_MAG_I] ?? '');
     const magZ = parseFloat(cells[COL_MAG_Z] ?? '');
 
+    // Magnitudes are validated with `isPlausibleMagnitude`, not `isNaN`:
+    // SDSS marks missing photometry with the in-band sentinel `-9999`,
+    // which parses as a finite number and survives every NaN check the
+    // pipeline applies afterwards. See the predicate's docstring for why
+    // it is a range test rather than an equality check on the sentinel.
     if (
       z <= 0 ||
       isNaN(ra) ||
       isNaN(dec) ||
       isNaN(z) ||
-      isNaN(magU) ||
-      isNaN(magG) ||
-      isNaN(magR) ||
-      isNaN(magI) ||
-      isNaN(magZ)
+      !isPlausibleMagnitude(magU) ||
+      !isPlausibleMagnitude(magG) ||
+      !isPlausibleMagnitude(magR) ||
+      !isPlausibleMagnitude(magI) ||
+      !isPlausibleMagnitude(magZ)
     ) {
       skipped++;
       continue;

@@ -17,6 +17,7 @@ import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
 import { focusIdOf } from '../../../src/services/url/focusIdOf';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -26,8 +27,7 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
  * objIDs is BigUint64Array (unsigned 64-bit).
  */
 function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array(pos),
     spectroscopicZ: new Float32Array([0.01]),
     magU: new Float32Array([18]),
@@ -38,15 +38,12 @@ function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): Ga
     objIDs: new BigUint64Array([objId]),
     diameterKpc: new Float32Array([30]),
     axisRatio: new Float32Array([1]),
-    positionAngleDeg: new Float32Array([0]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-  } as GalaxyCatalog;
+  });
 }
 
 // Standard deps: SDSS cloud has one row with objId 1237668393006604288n at
 // position (1, 0, 0) → RA=0°, Dec=0°; GLADE has PGC 99 at the same pos;
-// Famous cloud has row 0 indexed to famousMeta[0] ("m31").
+// Famous cloud has row 0 indexed to famousGalaxiesMeta[0] ("m31").
 const deps: ResolveDeps = {
   catalogs: {
     get: (s) => {
@@ -57,7 +54,7 @@ const deps: ResolveDeps = {
       return undefined;
     },
   },
-  famousMeta: [
+  famousGalaxiesMeta: [
     {
       id: 'm31',
       names: ['M31', 'Andromeda'],

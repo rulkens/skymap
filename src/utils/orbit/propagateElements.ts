@@ -23,7 +23,7 @@
  * propagate from the original epoch elements. (The returned object keeps its
  * rate fields so it can be re-propagated from the epoch, not stepped.)
  *
- * Non-classical fields (`id`, `parentId`, `plane`, `color`) carry over
+ * Non-classical fields (`id`, `focusId`, `plane`, `color`) carry over
  * unchanged — they describe the orbit's identity and frame, not its state.
  *
  * @param elements  The body's J2000 classical elements plus optional rates.

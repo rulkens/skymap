@@ -1,37 +1,44 @@
 /**
- * AssetLoadingSection — the body of the legacy LoadingDevPanel,
- * lifted into a section of the new DebugPanel umbrella.
+ * AssetLoadingSection — one row per asset slot, ordered the way the boot fetch
+ * queue orders them.
  *
- * Identical behaviour to the legacy panel:
+ * ### Why rank order rather than registry order
  *
- *   - Subscribes to every slot's state-change channel once on mount.
- *   - Re-renders the whole section on any slot transition (debug
- *     scaffolding; the cost is negligible at the project's slot
- *     count).
- *   - Renders one row per slot with state, summary, and reload /
- *     cancel buttons.
+ * The engine's slot Map is insertion-ordered by which bootstrap phase minted
+ * each slot, so reading fetch order off the panel meant knowing the wiring
+ * table by heart. Sorting by the authored `ASSET_WIRING` rank — and showing
+ * that rank in its own column — makes the intended order the panel's default
+ * reading, and any row whose start time disagrees with its rank stands out.
  *
- * What changed vs. LoadingDevPanel:
+ * `sortSlotsByFetchRank` owns the tiebreak (whole families share a rank), and
+ * the rank map is derived from `ASSET_WIRING` by
+ * `assetPriorityBySlotName` — this component never restates a rank.
  *
- *   - No outer fixed-position wrapper.  DebugPanel owns the panel
- *     chrome (`<details>` collapsible) so this section just renders
- *     its rows.
+ * ### Subscription
  *
- * The slot subscription pattern is taken verbatim from the legacy
- * file's "one big useState + force re-render" approach — see that
- * file's module header for the rationale.
+ * Subscribes to every slot once on mount and re-renders the whole section on
+ * any transition. Debug scaffolding; the cost is negligible at the project's
+ * slot count.
  */
 
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
-import type { LoadState } from '../../@types/loading/LoadState';
+import type { LoadStateFilter } from '../../@types/loading/LoadStateFilter';
 import { aggregateRegistry } from '../../services/loading/aggregateRegistry';
+import { matchesLoadStateFilter } from '../../utils/loading/matchesLoadStateFilter';
+import { sortSlotsByFetchRank } from '../../utils/loading/sortSlotsByFetchRank';
+import AssetLoadingTitle from './AssetLoadingTitle';
+import DebugSection from './DebugSection';
+import SlotRow from './SlotRow';
 
 export type AssetLoadingSectionProps = {
-  slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
+  readonly slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
+  /** Authored fetch rank per slot name, from the engine's `debug.assetPriorities()`. */
+  readonly assetPriorities: () => ReadonlyMap<string, number>;
 };
 
-export function AssetLoadingSection({ slots }: AssetLoadingSectionProps) {
+function AssetLoadingSection({ slots, assetPriorities }: AssetLoadingSectionProps): ReactNode {
   // The setState value itself is unused — only the setter matters as a
   // re-render trigger.  Naming the value `_tick` (and using the
   // `_`-prefix lint convention) would also work; destructuring out
@@ -45,82 +52,56 @@ export function AssetLoadingSection({ slots }: AssetLoadingSectionProps) {
     return () => unsubs.forEach((u) => u());
   }, [slots]);
 
+  const [filter, setFilter] = useState<LoadStateFilter>(null);
+  const toggleFilter = (kind: LoadStateFilter) =>
+    setFilter((current) => (current === kind ? null : kind));
+
   const snap = aggregateRegistry(slots);
+  const ranks = assetPriorities();
+  // The timeline origin is the EARLIEST start across every slot, filtered rows
+  // included: a filter narrows what you read, it must not move the zero the
+  // remaining rows are measured against.
+  const originMs = earliestStartMs(slots);
+  const visible = sortSlotsByFetchRank(snap.slots, ranks).filter(({ state }) =>
+    matchesLoadStateFilter(filter, state.kind),
+  );
 
   return (
-    <details>
-      <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
-        Asset Loading ({snap.inFlightCount} in flight)
-      </summary>
-      <div style={{ marginTop: 4 }}>
-        {snap.slots.map(({ name, state }) => {
-          // `slots.get(name)` cannot return undefined here because `snap.slots`
-          // is built directly from the same Map's iteration order, but the
-          // `noUncheckedIndexedAccess`-aware compiler can't prove that.
-          // Skipping the row when the slot is missing is the safe degradation.
-          const slot = slots.get(name);
-          if (!slot) return null;
-          return <SlotRow key={name} name={name} state={state} slot={slot} />;
-        })}
-      </div>
-    </details>
+    <DebugSection
+      title={<AssetLoadingTitle slots={snap.slots} filter={filter} onToggleFilter={toggleFilter} />}
+    >
+      {visible.map(({ name, state }) => {
+        // `slots.get(name)` cannot return undefined here because `snap.slots`
+        // is built directly from the same Map's iteration order, but the
+        // `noUncheckedIndexedAccess`-aware compiler can't prove that.
+        // Skipping the row when the slot is missing is the safe degradation.
+        const slot = slots.get(name);
+        if (!slot) return null;
+        return (
+          <SlotRow
+            key={name}
+            name={name}
+            state={state}
+            slot={slot}
+            rank={ranks.get(name) ?? null}
+            timelineOriginMs={originMs}
+          />
+        );
+      })}
+    </DebugSection>
   );
 }
 
-type SlotRowProps = {
-  name: string;
-  state: LoadState<unknown>;
-  slot: AssetSlot<unknown, unknown>;
-};
-
-function SlotRow({ name, state, slot }: SlotRowProps) {
-  const summary = describe(state);
-  // The request payload (`req`) is `unknown` on every non-idle state; we
-  // stringify defensively and truncate so a fat request object can't blow
-  // out the panel width.
-  const reqJson =
-    state.kind === 'idle'
-      ? '—'
-      : (() => {
-          try {
-            return JSON.stringify(state.req).slice(0, 80);
-          } catch {
-            return '<unserialisable>';
-          }
-        })();
-  return (
-    <div style={{ marginTop: 4 }}>
-      <div>
-        <span style={{ display: 'inline-block', width: 130 }}>{name}</span>
-        <span style={{ display: 'inline-block', width: 80 }}>{state.kind}</span>
-        <span style={{ display: 'inline-block', width: 130 }}>{summary}</span>
-        <button onClick={() => slot.forceReload()} style={{ fontSize: 10 }}>
-          Reload
-        </button>
-        {state.kind === 'loading' && (
-          <button onClick={() => slot.cancel()} style={{ fontSize: 10, marginLeft: 4 }}>
-            Cancel
-          </button>
-        )}
-      </div>
-      <div style={{ marginLeft: 8, opacity: 0.6 }}>req: {reqJson}</div>
-    </div>
-  );
-}
-
-function describe(state: LoadState<unknown>): string {
-  switch (state.kind) {
-    case 'idle':
-      return '—';
-    case 'loading': {
-      const pct = state.total > 0 ? Math.round((state.loaded / state.total) * 100) : 0;
-      return `${pct}% (${(state.loaded / 1e6).toFixed(1)}/${(state.total / 1e6).toFixed(1)} MB)`;
+/** Wall clock of the first `load()` any slot saw, or `null` before the first one. */
+function earliestStartMs(slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>): number | null {
+  let earliest: number | null = null;
+  for (const [, slot] of slots) {
+    const startedAtMs = slot.startedAtMs();
+    if (startedAtMs !== null && (earliest === null || startedAtMs < earliest)) {
+      earliest = startedAtMs;
     }
-    case 'committing':
-      return 'committing…';
-    case 'ready':
-      return 'ready';
-    case 'error':
-      return `error: ${state.error.message.slice(0, 40)}`;
   }
+  return earliest;
 }
+
+export default AssetLoadingSection;

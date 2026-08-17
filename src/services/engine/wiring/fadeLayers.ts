@@ -1,46 +1,25 @@
 /**
  * fadeLayers — the fade-ownership manifest + the generic construction seed.
+ * Every fadeable layer in the engine is declared here as one `FadeLayer` row;
+ * `seedFades(state)` walks the whole manifest once at bootstrap to register
+ * and seed each layer's controller. This is the ONE registration site — no
+ * other module calls `fades.register` — so the "every fadeable layer" list
+ * can never scatter across files and frame-1 coherence stays assertable in
+ * one place. Registration is idempotent, so a stray duplicate call would be
+ * a harmless no-op regardless.
  *
- * Every fadeable layer in the engine is declared here as one `FadeLayer` row,
- * and `seedFades(state)` walks the whole manifest once at bootstrap to register
- * and seed each layer's controller. This is the relocation of what used to be
- * the hand-written `registerOverlayFades` body plus the four out-of-band
- * `register` calls that lived in the demand-loaded slots — now a single
- * declarative table.
+ * Initial opacities are settings-derived, not a blanket 1.0: registering a
+ * disabled layer at 1 draws it on frame 1 before its fade-out fires, and
+ * registering an enabled layer at 0 leaves it invisible until `fadeTo(1)`
+ * completes. Each row's `seed(settings, item)` returns the value matching the
+ * session's persisted settings.
  *
- * ### Why initial opacities are settings-derived (not a blanket 1.0)
- *
- * The fade registry is the single source of truth for every layer's opacity.
- * Registering at the wrong initial value produces a one-frame flash: a disabled
- * layer registered at 1 draws on frame 1 before a `setImmediate(0)` fires; an
- * enabled layer registered at 0 is invisible until a `fadeTo(1)` completes. Each
- * row's `seed(settings, item)` returns the value that matches the session's
- * persisted settings so frame 1 is always coherent — milkyWay/volumesMaster/the
- * label and structure rows seed from their toggles, the always-on disk overlays
- * seed at 1.
- *
- * ### Registration now has exactly one home
- *
- * Before this manifest, four demand-loaded sets registered their fade
- * controllers out-of-band — the galaxy-catalog slot, the filament slot, the flow
- * slot, and the volume renderer's `onFieldAdded` callback each called
- * `register` at their own commit time. That scattered the "every fadeable layer"
- * list across five files and made it impossible to assert frame-1 coherence in
- * one place. `seedFades` absorbs all of them: the slot factories and `initGpu`
- * no longer call `register` at all. Registration is idempotent, so even if a
- * stray duplicate `register` survived it would be a harmless no-op — but the
- * intent is that this manifest is the sole registration site.
- *
- * ### Why the demand-loaded sets seed at 0 — the seed is DATA, not a rule
- *
- * The galaxy catalogs, filament, flow, and volume fields are demand-loaded: they
- * have no payload at construction and fade *in* (`fadeTo(1)`) when their data
- * arrives. They must therefore seed at 0 so that first-load fade-in is visible.
- * A single uniform `settings ? 1 : 0` rule across all rows would erase that
- * fade-in — a demand-loaded layer whose setting is on would pop to full opacity
- * on frame 1 instead of dissolving in. So the seed asymmetry is carried per row
- * as a `seed()` closure (settings-derived for the overlay/structure rows, a
- * constant 0 for the demand-loaded rows), not as one branch over a shared flag.
+ * Demand-loaded rows (galaxy catalogs, filaments, flow, volume fields) seed
+ * at a constant 0 instead, even when their setting is on: they have no
+ * payload at construction and fade IN when their data arrives, so a
+ * settings-derived seed would pop them to full opacity on frame 1 instead of
+ * dissolving in. The seed asymmetry is carried per row as a `seed()` closure
+ * rather than one branch over a shared flag.
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
@@ -50,6 +29,8 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
+import { BODY_IDS } from '../../../data/bodies/bodyIds';
+import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
 
@@ -86,6 +67,24 @@ function volumeFieldIds(): readonly VolumeFieldId[] {
   return ids;
 }
 
+// The star catalogs that actually caption their members. `STAR_CATALOG_IDS`
+// spans the whole cluster, but the survey-wide Gaia bin draws no per-star
+// names, so a caption fade handle for it would be a controller nothing can
+// ever move. Filtering on the registry's `bearsLabel` capability is also what
+// keeps the handle's `item` inside `LabelCategory` — the label-bearing ids ARE
+// the label categories.
+const LABEL_BEARING_STAR_CATALOG_IDS = SOURCE_ENTRIES.filter(
+  (e) => e.type === 'starCatalog' && e.bearsLabel,
+).map((e) => e.id);
+
+// The same narrowing for bodies, and here the COMPILER insists: the handle's
+// `item` must be a `LabelCategory`, which derives from `bearsLabel`. The
+// S-stars are the first body row that captions nothing, so `BODY_IDS` — the
+// settings key domain — is wider than the caption key domain.
+const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' && e.bearsLabel).map(
+  (e) => e.id,
+);
+
 // The DEV-only runtime-generated fixtures (`binBaseName: null`) — exempt from
 // the volumeField row's demand-loaded guard because their lazy-load is
 // triggered by that row's own `post`, which a false guard would skip.
@@ -96,7 +95,7 @@ const DEBUG_VOLUME_FIELD_IDS: ReadonlySet<VolumeFieldId> = new Set(
 );
 
 export const FADE_LAYERS = [
-  // milkyWay disk — absorbs registerOverlayFades.ts:64-67
+  // milkyWay disk
   layer({
     key: 'milkyWayDisk',
     expand: () => [undefined],
@@ -104,21 +103,21 @@ export const FADE_LAYERS = [
     seed: (s) => (s.milkyWay.enabled ? 1 : 0),
     intent: (s) => s.milkyWay.enabled,
   }),
-  // procedural disks — registerOverlayFades.ts:70 (always-on)
+  // procedural disks (always-on)
   layer({
     key: 'proceduralDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'proceduralDisks' }),
     seed: () => 1,
   }),
-  // textured disks — registerOverlayFades.ts:71 (always-on)
+  // textured disks (always-on)
   layer({
     key: 'texturedDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'texturedDisks' }),
     seed: () => 1,
   }),
-  // volumes master gate — registerOverlayFades.ts:80-83
+  // volumes master gate
   layer({
     key: 'volumesMaster',
     expand: () => [undefined],
@@ -126,7 +125,7 @@ export const FADE_LAYERS = [
     seed: (s) => (s.volumes.enabled ? 1 : 0),
     intent: (s) => s.volumes.enabled,
   }),
-  // milkyWay label — registerOverlayFades.ts:95-98
+  // milkyWay label
   layer({
     key: 'milkyWayLabel',
     expand: () => [undefined],
@@ -134,25 +133,69 @@ export const FADE_LAYERS = [
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
     intent: (s) => s.milkyWay.labelEnabled,
   }),
-  // survey/galaxy names label — registerOverlayFades.ts:99. The famous-galaxy
-  // label fade reuses the galaxyNames handle and is driven by the famous-galaxy
+  // survey/galaxy names label. The famous-galaxy
+  // label fade reuses the galaxy handle and is driven by the famous-galaxy
   // "Labels" toggle, so this row is settings-derived (intent + seed both read
   // famousGalaxy.labelEnabled) — matching milkyWayLabel/structureLabel.
   layer({
     key: 'surveyLabel',
     expand: () => [undefined],
-    handle: () => ({ kind: 'labelLayer', layer: 'galaxyNames' }),
+    handle: () => ({ kind: 'labelLayer', layer: 'galaxy' }),
     seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
     intent: (s) => s.galaxyCatalogs.items.famousGalaxy.labelEnabled,
   }),
-  // scale bar — registerOverlayFades.ts:100 (React-side, tour-addressable)
+  // curated star-map captions — per label-bearing StarCatalogId,
+  // settings-derived seed (the seed is in code, not demand-loaded, so there is
+  // no guard and the seed follows the toggle).
+  //
+  // This handle's opacity has NO CONSUMER. The layer that actually draws these
+  // captions, `foregroundLabelsLayer`, reads `starCatalogs.items[id].labelEnabled`
+  // straight off settings and runs its own declutter + temporal envelope; it
+  // never calls `resolveLayerOpacity` (the only production reader of a fade
+  // registry opacity via `fadeIdToVisibilityKey`) for this key. The row is
+  // registered anyway because `starCatalogLabel` must be a real
+  // `VisibilityLayerKey` — the type-level test over FADE_LAYERS' keys, the
+  // `VISIBILITY_ACTION_ROW` factory, and `LAYER_GROUPS.labels`'s clip address
+  // space all need the key to exist independent of whether anything reads its
+  // fade. So `hide(['starCatalogLabel'])` still works end to end — its settings
+  // write (`setStarCatalogLabelEnabled`, via `VISIBILITY_ACTION_ROW`) is what
+  // the caption layer reads — but `fade(['starCatalogLabel'], …)` type-checks,
+  // registers, and animates a controller nothing multiplies into a drawn pixel.
+  // Finishing that wire (multiplying this handle's opacity into the caption's
+  // fade target) is a separate piece of work, not attempted here.
+  layer({
+    key: 'starCatalogLabel',
+    expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
+    handle: (id) => ({ kind: 'labelLayer', layer: 'starCatalog', item: id }),
+    seed: (s, id) => (s.starCatalogs.items[id].labelEnabled ? 1 : 0),
+    intent: (s, id) => s.starCatalogs.items[id].labelEnabled,
+  }),
+  // scene-body captions — per LABEL-BEARING BodyId, settings-derived seed
+  // (bodies are seeded in code, so no demand-loaded guard). Not every body row
+  // captions itself: the S-stars draw 39 dots and no names, and a handle for a
+  // caption that cannot exist would be worse than the unread ones below.
+  //
+  // Same no-consumer gap as `starCatalogLabel` above: `foregroundLabelsLayer`
+  // reads `bodies.items[id].labelEnabled` directly for Earth/planet/Sun
+  // captions and never resolves this handle's opacity. Registered for the same
+  // reason — the key set that `FADE_LAYERS`, `VISIBILITY_ACTION_ROW`, and the
+  // clip address space share must stay total — not because anything reads the
+  // fade it drives.
+  layer({
+    key: 'bodyLabel',
+    expand: () => LABEL_BEARING_BODY_IDS,
+    handle: (id) => ({ kind: 'labelLayer', layer: 'body', item: id }),
+    seed: (s, id) => (s.bodies.items[id].labelEnabled ? 1 : 0),
+    intent: (s, id) => s.bodies.items[id].labelEnabled,
+  }),
+  // scale bar (React-side, tour-addressable)
   layer({
     key: 'scaleBar',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'scaleBar' }),
     seed: () => 1,
   }),
-  // structure rings — registerOverlayFades.ts:109-113 (per StructureId)
+  // structure rings (per StructureId)
   layer({
     key: 'structureRing',
     expand: () => STRUCTURE_IDS,
@@ -160,11 +203,11 @@ export const FADE_LAYERS = [
     seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].enabled,
   }),
-  // structure labels — registerOverlayFades.ts:114-117 (per StructureId)
+  // structure labels (per StructureId)
   layer({
     key: 'structureLabel',
     expand: () => STRUCTURE_IDS,
-    handle: (id) => ({ kind: 'labelLayer', layer: 'structure', category: id }),
+    handle: (id) => ({ kind: 'labelLayer', layer: 'structure', item: id }),
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].labelEnabled,
   }),
@@ -222,6 +265,16 @@ export const FADE_LAYERS = [
     // racing the constellations.json download doesn't burn the fade window over
     // an empty renderer.
     guard: (state) => state.gpu.constellationRenderer?.hasData() ?? false,
+  }),
+  // zone-of-avoidance band — settings-derived seed, like milkyWayDisk (a
+  // compile-time overlay with no asset slot, so no demand-loaded guard). One
+  // toggle drives both the band and its lettering — see zoneOfAvoidanceLayer.ts.
+  layer({
+    key: 'zoneOfAvoidance',
+    expand: () => [undefined],
+    handle: () => ({ kind: 'zoneOfAvoidance' }),
+    seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0),
+    intent: (s) => s.zoneOfAvoidance.enabled,
   }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({

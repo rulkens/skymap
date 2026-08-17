@@ -1,8 +1,8 @@
-import type { PlanetSourceEntry } from '../../@types/data/body/PlanetSourceEntry';
+import type { BodySourceEntry } from '../../@types/data/body/BodySourceEntry';
 import { Source } from '../source';
 
 export const PLANET_ENTRY = {
-  type: 'planet',
+  type: 'body',
   code: Source.Planet,
   id: 'planet',
   label: 'Planet',
@@ -15,8 +15,15 @@ export const PLANET_ENTRY = {
   // reaches ALL_VISIBLE_MASK (galaxy-catalog rows only), so it's a scene-intent
   // marker, not a bitmask contributor.
   visible: true,
-  // Bodies bypass the COSMO label/marker systems — planet captions ship through
-  // the foreground-labels layer — so neither capability flag is set.
-  bearsLabel: false,
+  // The planets caption themselves on the final descent, so this row bears
+  // labels like any other named source — the foreground-labels layer draws the
+  // captions on the NEAR0 slab rather than the COSMO one, which is a routing
+  // detail. The Moon rides this row's 'planet' caption kind, so it follows the
+  // same gate.
+  bearsLabel: true,
+  labelLayer: 'body',
   bearsMarker: false,
-} as const satisfies PlanetSourceEntry;
+  detailLabel: 'Planet',
+  shortLabel: 'Planet',
+  plural: 'Planets',
+} as const satisfies BodySourceEntry;

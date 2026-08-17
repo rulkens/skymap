@@ -1,59 +1,24 @@
 /**
- * Renderer / engine default settings — single source of truth.
+ * Renderer / engine default settings — the single source of truth for every
+ * user-controllable setting's INITIAL value (sliders, toggles, mode
+ * selectors, the visible-source bitmask).
  *
- * ### Why this module exists
- *
- * The engine (in `services/engine/engine.ts`) and the React shell (in
- * `App.tsx`) each carry their own copy of every user-controllable
- * setting: the engine as a closure variable that flows into per-frame
- * uniforms, React as a `useState` initial value that drives the
- * SettingsPanel.  Both copies must agree on the *initial* value so the
- * first paint isn't visibly out of sync with the panel's controls.
- *
- * A single shared module keeps them in agreement: duplicating the
- * values by hand at both sites means every default change needs
- * parallel edits, or the panel briefly flashes a stale value before
- * the engine's first echo callback syncs React state.
- *
- * ### What's in scope
- *
- * Only user-facing initial values that ship in both files:
- *   - sliders (point size, brightness, exposure, abs-mag limit, ...)
- *   - toggles (auto-rotate, galaxy textures, highlight fallback, depth
- *     fade, etc.)
- *   - mode selectors (bias mode, tone-map curve, LOD mode)
- *   - the visible-source bitmask
- *
- * ### What's deliberately NOT in scope
- *
- * - Per-source astrophysics constants (Schechter triples, flux limits,
- *   colour ramps).  Those live in `data/sources.ts`,
- *   `data/galaxyCatalogFluxLimits.ts`, `data/colourIndex.ts` — domain-specific
- *   data, not user-configurable settings.
- * - Bake-derived per-galaxy weights (Schechter ratio, angular-density
- *   weight).  `biasCorrectionSubsystem` splices these straight into the
- *   per-vertex buffer after each upload bake — they're never settings and
- *   never pass through engine state.
- * - GPU-pipeline constants (uniform layout offsets, vertex stride,
- *   texture atlas dimensions).  Those live with their consumers in
- *   `services/gpu/`.
- *
- * ### Consumers
- *
- * - `services/engine/engine.ts` — closure variables seeded from these.
- * - `src/App.tsx` — `useState` initial values seeded from these.
- *
- * Both consumers import this module's constants by name; nothing here
- * is mutable.  If a consumer needs to derive a value (e.g., compute a
- * point-size range from `DEFAULT_POINT_SIZE_PX`), do that at the call
- * site — keep this file flat.
+ * `buildInitialSettings` (`state/settings/initialState.ts`) assembles these
+ * into the Redux `EngineSettingsState` the settings slice seeds; a handful of
+ * other sites import a constant directly when they need the same default
+ * outside the store. Out of scope: per-source astrophysics constants
+ * (`data/sources.ts` et al. — domain data, not settings) and GPU-pipeline
+ * constants, which live with their consumers in `services/gpu/`.
  */
 
 import { BiasMode } from './galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMode';
-import { ToneMapCurve } from './toneMapCurve';
+import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
+import type { ZoneOfAvoidanceTuning } from '../@types/settings/ZoneOfAvoidanceTuning';
+import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../@types/settings/GalaxyProvenanceSettings';
 import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -68,12 +33,12 @@ export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
  * Default star-billboard pixel radius — the star-catalog twin of
- * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. Same 2.5 px
- * sweet spot and same 1–8 px user range as the galaxy point size; kept a
- * separate constant so the two layers can diverge without one silently
- * dragging the other.
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. 4.7 px within
+ * the shared 1–8 px user range, diverged larger than the 2.5 px galaxy point
+ * size; kept a separate constant so the two layers can diverge without one
+ * silently dragging the other.
  */
-export const DEFAULT_STAR_SIZE_PX = 2.5;
+export const DEFAULT_STAR_SIZE_PX = 4.7;
 
 /**
  * Default star-brightness trim — the star-catalog twin of `DEFAULT_BRIGHTNESS`.
@@ -93,26 +58,26 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
  * conserved (only the spread changes). User range 1.0–2.5. Leaves (point
  * sources) are untouched.
  *
- * 4.7 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
+ * 3.0 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
  * shows the octree's box lattice as faceted seams between aggregates (see
  * `walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD` header for why a proxy
  * threshold alone can't fully hide it). Spreading each aggregate's glow to
- * 4.7x its box radius overlaps neighbours enough to dissolve the lattice into
+ * 3.0x its box radius overlaps neighbours enough to dissolve the lattice into
  * a continuous far field. Tuned together with `DEFAULT_REFINE_THRESHOLD` — see
  * that constant's comment for how the two compensate.
  */
-export const DEFAULT_STAR_GLOW_OVERLAP = 4.7;
+export const DEFAULT_STAR_GLOW_OVERLAP = 3.0;
 
 /**
  * Default near-anchor star display exposure — seeds
  * `settings.starCatalogs.exposureNearX`. The ABSOLUTE exposure multiplier the
- * scale-dependent `starExposureRamp` targets at solar-system scale (1 pc). 15 is
+ * scale-dependent `starExposureRamp` targets at solar-system scale (1 pc). 6 is
  * the shipped near anchor that the shader already bakes into STAR_FLUX_EXPOSURE
- * (6000 = 400 × 15), so at this default the CPU ramp returns exactly 1.0 there.
+ * (2400 = 400 × 6), so at this default the CPU ramp returns exactly 1.0 there.
  * Live-tunable (UI range 1–60) so the near end can be re-eye-tuned against the
  * current star bins' local flux without a rebuild.
  */
-export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
+export const DEFAULT_STAR_EXPOSURE_NEAR_X = 6;
 
 /**
  * Default middle-anchor star display exposure — seeds
@@ -121,25 +86,24 @@ export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
  * (3 kpc), the knot that splits the ramp so the dense central clump can be
  * darkened without touching either end.
  *
- * 57 is the OLD two-point (near→far) curve's own value at 3 kpc:
- * 15·(70/15)^(log₁₀(3000)/4) = 57.23 (the 3 kpc anchor sits at log-fraction
- * log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). Seeding the mid anchor
- * ON that continuation makes the three-anchor ramp reproduce today's look at the
- * defaults — a knot on a straight line doesn't bend it. 57 vs the exact 57.23 is
- * visually indistinguishable. Live-tunable (UI range 5–150) so the middle can be
- * pulled down against the running renderer.
+ * 23 sits on the log-interpolated line between the near (6) and far (28)
+ * anchors at 3 kpc: 6·(28/6)^(log₁₀(3000)/4) = 22.9 (3 kpc sits at
+ * log-fraction log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). A knot
+ * on that line doesn't bend the three-anchor ramp at the defaults; 23 vs the
+ * exact 22.9 is visually indistinguishable. Live-tunable (UI range 5–150) so
+ * the middle can be pulled down against the running renderer.
  */
-export const DEFAULT_STAR_EXPOSURE_MID_X = 57;
+export const DEFAULT_STAR_EXPOSURE_MID_X = 23;
 
 /**
  * Default far-anchor star display exposure — seeds
  * `settings.starCatalogs.exposureFarX`. The ABSOLUTE exposure multiplier
  * `starExposureRamp` targets at whole-galaxy scale (10 kpc), where the star bin
  * reads as the Milky Way's diffuse surface brightness and the un-adapting
- * monitor needs the field lifted. 70 is the shipped far anchor; live-tunable (UI
+ * monitor needs the field lifted. 28 is the shipped far anchor; live-tunable (UI
  * range 5–300) alongside the near anchor.
  */
-export const DEFAULT_STAR_EXPOSURE_FAR_X = 70;
+export const DEFAULT_STAR_EXPOSURE_FAR_X = 28;
 
 /**
  * Default aggregate surface-brightness cap — seeds
@@ -172,6 +136,35 @@ export const DEFAULT_BRIGHTNESS = 1.0;
 /** Auto-rotate (yaw drift) defaults OFF — most users want a static frame to explore. */
 export const DEFAULT_AUTO_ROTATE = false;
 
+/**
+ * Default overall physical-SB → HDR gain for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.sbScale`. Multiplies each galaxy's baked
+ * surface-brightness amplitude (`sbAmp`) into the additive HDR field; 5.0
+ * places the per-catalog mean galaxy's resolved core relative to the 2.0
+ * bloom threshold. Live-tunable (UI range 0.5–30) so the galaxy look can be
+ * re-eye-tuned without a rebuild.
+ */
+export const DEFAULT_GALAXY_SB_SCALE = 5.0;
+
+/**
+ * Default bloom ceiling for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.sbMax`. The maximum baked surface-brightness
+ * amplitude a compact galaxy can emit; the vertex stage clamps `sbAmp` to it
+ * live, so this ceiling is a live knob rather than a bake-time clamp. UI
+ * range 1–100.
+ */
+export const DEFAULT_GALAXY_SB_MAX = 30.0;
+
+/**
+ * Default readability-falloff exponent for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.falloffStrength`. The exponent `k` on the
+ * resolved-fraction falloff `pow(resolvedFrac, k)`: k = 2 is the full physical
+ * inverse-square (unresolved galaxies dim as (angular / floor)²), lower k keeps
+ * the deep field visible. 0.7 is eye-tuned; UI range 0–2. Gated by the
+ * depth-fade toggle (off holds flat constant surface brightness).
+ */
+export const DEFAULT_GALAXY_FALLOFF_STRENGTH = 0.7;
+
 // ── Galaxy thumbnails / orientation toggles ─────────────────────────────────
 
 /**
@@ -181,11 +174,17 @@ export const DEFAULT_AUTO_ROTATE = false;
  */
 export const DEFAULT_GALAXY_TEXTURES_ENABLED = true;
 
-/** "Highlight fallback orientation" magenta tint defaults OFF (debug-tinged). */
-export const DEFAULT_HIGHLIGHT_FALLBACK = false;
-
-/** "Show only galaxies with real (b/a, PA) photometry" defaults OFF. */
-export const DEFAULT_REAL_ONLY_MODE = false;
+/**
+ * Default provenance-axis settings — one row per `PROVENANCE_AXES` entry.
+ * Every axis starts at the no-op state (no highlight tint, filter `'all'`):
+ * these are debug-panel data-quality diagnostics for auditing which galaxies
+ * have measured vs. estimated orientation/size, not a default look, so the
+ * unaudited scene renders exactly as the catalogs describe it.
+ */
+export const DEFAULT_GALAXY_PROVENANCE: GalaxyProvenanceSettings = {
+  orientation: { highlight: false, filter: 'all' },
+  size: { highlight: false, filter: 'all' },
+};
 
 /**
  * Camera-distance depth fade defaults ON.  Without it, additive billboards
@@ -206,7 +205,7 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
  * cosmic-web view. Derived from the SOURCE_REGISTRY milkyWay row's `visible`
  * gate, so the registry is the single source of truth; see
  * `services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts` +
- * `services/gpu/galaxy/milkyWayFadeAlpha.ts` for the apparent-size fade band.
+ * `services/engine/galaxyGenerator/v1/milkyWayFadeAlpha.ts` for the apparent-size fade band.
  */
 export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visible;
 
@@ -233,19 +232,47 @@ export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
 export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
 
 /**
- * Famous-stars overlay default — the seeded near-field star map (the Sun and its
- * ~130 named neighbours) is part of the baseline descent scene, resolving on
- * close approach through the star point/sphere layers, so it defaults ON.
- *
- * Derived from the SOURCE_REGISTRY famousStar row's `visible` gate, mirroring
- * `DEFAULT_MILKY_WAY_ENABLED` — the registry stays the single source of truth
- * for a singleton overlay's default visibility. This gates the seeded map only;
- * the Sun renders regardless (it anchors the descent), so the toggle never
- * hides the solar system — see the star layers' `visibleStars` derivation.
+ * Zone-of-Avoidance overlay default — ON.  The galactic-plane dust band is
+ * meant to be visible from first paint, explaining the catalog thin-out near
+ * b=0 rather than leaving it looking like a data gap.  A plain `true` literal
+ * like `DEFAULT_ORBIT_TRAILS_ENABLED`, not registry-derived like
+ * `DEFAULT_MILKY_WAY_ENABLED`: `ZONE_OF_AVOIDANCE_ENTRY.visible` exists for
+ * internal registry consistency but is not itself this default's source.
  */
-export const DEFAULT_FAMOUS_STARS_ENABLED = SOURCE_REGISTRY[Source.FamousStar].visible;
+export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
+
+/**
+ * Zone-of-Avoidance look-knob starting values, tuned live via the
+ * DebugPanel's tuning section — a dim pale lavender-blue veil (blue-heavy
+ * linear RGB below), not a warm interstellar-dust extinction color.
+ *
+ * `radialFalloff` is a normalised [0, 1] fraction of the shell's radial span
+ * (`outerRadiusMpc - innerRadiusMpc`, currently ~377 Mpc for the shell's
+ * radii) — the renderer converts it to an absolute Mpc e-folding length
+ * before it reaches the shader, which decays density from the inner rim
+ * outward (`exp(-(r - inner) / radialFalloffMpc)`). 0.1 (~38 Mpc) collapses
+ * the veil to a puff hugging the inner rim; the shipped default, 0.46
+ * (~173 Mpc), keeps haze visible across the catalog volume while still
+ * clearly fading toward the outer radius.
+ */
+export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
+  intensity: 0.37,
+  radialFalloff: 0.46,
+  edgeSharpness: 5,
+  color: [0.5333, 0.5089, 1],
+  labelColor: [0.2307, 0.2502, 0.6795],
+};
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
+
+/**
+ * Default state of the viewer's HDR display opt-in — seeds
+ * `settings.hdr.enabled`. `false` even when `GpuContext.hdrCapable` is true:
+ * extended-range output is a choice the viewer makes about how they want the
+ * scene rendered, not a consequence of what their monitor happens to permit,
+ * so boot never turns it on for them.
+ */
+export const DEFAULT_HDR_ENABLED = false;
 
 /**
  * Default tone-map curve — Reinhard-extended.  Smooth highlight roll-off,
@@ -257,11 +284,42 @@ export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
 /**
  * Default exposure multiplier applied before the tone-map curve.  3.0 is
  * a visual judgment: the depth fade dims overall brightness, and lower
- * values read flat at typical zoom levels with the fade on.  Range
- * exposed to the user is 0.1–4.0; bump the slider's `max` if a future
- * default exceeds it.
+ * values read flat at typical zoom levels with the fade on.  Stored as the
+ * linear gain the shader applies, but presented as ±4 EV (0.0625×–16×) — a
+ * range chosen to sit inside `clampExposure`'s GPU-safety window, so the UI
+ * cannot reach a value the clamp would have to rescue.
  */
 export const DEFAULT_EXPOSURE = 3.0;
+
+/**
+ * Default HDR headroom knee — the brightness above which a pixel's over-white
+ * energy spills past paper-white into an extended-range swap chain. Seeds
+ * `settings.hdr.knee`.
+ *
+ * Measured in the SAME post-exposure units the tone curve works in, and derived
+ * from the default curve's saturation point, because the knee's job is to pick up
+ * exactly where the curve runs out of range: a pixel at the knee is precisely one
+ * the curve can no longer separate from a brighter one. Sharing the curve's units
+ * keeps the two aligned as the exposure slider moves — raising exposure makes a
+ * dimmer pixel saturate, and the knee follows without re-tuning. (Bloom's threshold
+ * is pre-exposure instead, because bloom reads the raw buffer before the tone map;
+ * the spill runs after it.)
+ *
+ * The five curves saturate anywhere from 1.0 to 7.24, so this default only holds
+ * while the curve does — switching curve wants a nudge on the slider. Inert unless
+ * the swap chain is the extended-range surface (`hdrActiveOf`).
+ */
+export const DEFAULT_HDR_KNEE = toneMapCurveSaturation(DEFAULT_TONE_MAP_CURVE);
+
+/**
+ * Default multiplier on the over-knee energy spilled into display headroom.
+ * Seeds `settings.hdr.headroom`. 0 is exactly the SDR result — the tone
+ * curve's compressed output, nothing added — so the knob spans "no headroom" to
+ * "aggressive headroom" with no discontinuity at either end. 0.25 is deliberately
+ * conservative: available headroom varies per display and with screen brightness,
+ * so the honest default under-uses it rather than clipping on a modest panel.
+ */
+export const DEFAULT_HDR_HEADROOM = 0.25;
 
 // ── Screen-space bloom ───────────────────────────────────────────────────────
 
@@ -275,22 +333,23 @@ export const DEFAULT_BLOOM_ENABLED = true;
 
 /**
  * Default bloom strength — the scale on the blurred mip pyramid composited back
- * over the HDR frame. Seeds `settings.bloom.strength`. 0.85 is an eye-tuned
+ * over the HDR frame. Seeds `settings.bloom.strength`. 0.8 is an eye-tuned
  * starting point: strong enough to read as a soft halo around saturated cores,
  * shy of a full 1.0 that would smear the whole highlight field. A post-build
  * tuning target (spec §4/§6).
  */
-export const DEFAULT_BLOOM_STRENGTH = 0.85;
+export const DEFAULT_BLOOM_STRENGTH = 0.8;
 
 /**
  * Default bloom threshold — the HDR luminance above which a pixel contributes to
- * the bloom pyramid. Seeds `settings.bloom.threshold`. 7.0 is the low end of the
- * bloom-seeding ordering invariant `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <=
- * STAR_EMISSIVE` (see `starRenderConstants.ts` for the single statement of it):
- * sitting under `STAR_KNEE` means only near-saturated cores bleed into the glow
- * rather than the whole bright field. A post-build tuning target (spec §4/§6).
+ * the bloom pyramid. Seeds `settings.bloom.threshold`. 2.0 sits well under
+ * `STAR_KNEE`, holding the bloom-seeding ordering invariant
+ * `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <= STAR_EMISSIVE` (see
+ * `starRenderConstants.ts` for the single statement of it) with margin to spare:
+ * a broad swath of the bright field, not only near-saturated cores, now seeds
+ * the glow. A post-build tuning target (spec §4/§6).
  */
-export const DEFAULT_BLOOM_THRESHOLD = 7.0;
+export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
 // ── Malmquist-bias correction ────────────────────────────────────────────────
 
@@ -423,3 +482,20 @@ export const DEFAULT_SHOW_PICK_BUFFER = false;
 
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
+
+/** Orbit-trail impostor overlay starts off.  See `EngineSettingsState.debug.showOrbitTrailImpostor`. */
+export const DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR = false;
+
+// ── Camera orientation frame ─────────────────────────────────────────────────
+
+/**
+ * Default orientation frame — which astronomical pole the camera treats as "up".
+ *
+ * Ecliptic, not equatorial: the descent lands in the solar system, and the
+ * ecliptic frame puts Earth's orbital plane flat so the planets read as a disk
+ * and Earth's 23.44° obliquity is *desired* — the tilt between the equatorial
+ * and ecliptic poles is exactly what makes the seasons legible in that view.
+ * Booting equatorial would instead flatten Earth's equator and rake the orbital
+ * plane at that same 23.44°, which is the wrong "up" for the arrival scene.
+ */
+export const DEFAULT_ORIENTATION: OrientationFrameId = 'ecliptic';

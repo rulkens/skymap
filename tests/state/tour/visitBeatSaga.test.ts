@@ -42,12 +42,13 @@ import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.
@@ -76,15 +77,16 @@ function collectTimelineNodes<T>(
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 // Structure resolved by id immediately — no catalog needed.
 const STRUCTURE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   stars: { current: () => null },
   structures: {
     byId: (id) =>
@@ -130,7 +132,7 @@ type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 function buildStore(opts: {
   playClip?: PlayClipStub;
   resolveDeps?: ResolveDeps;
-  cameraRuntime?: FocusCameraRuntime | null;
+  cameraRuntime?: LiveCameraRuntime | null;
 }) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -183,8 +185,7 @@ describe('visitBeatSaga', () => {
     let cloudLoaded = false;
 
     const FAMOUS_ID = 'm87';
-    const CLOUD: GalaxyCatalog = {
-      count: 1,
+    const CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
       positions: new Float32Array([1, 0, 0]),
       spectroscopicZ: new Float32Array([0.01]),
       magU: new Float32Array([18]),
@@ -195,14 +196,11 @@ describe('visitBeatSaga', () => {
       objIDs: new BigUint64Array([1n]),
       diameterKpc: new Float32Array([30]),
       axisRatio: new Float32Array([1]),
-      positionAngleDeg: new Float32Array([0]),
-      classByte: new Uint8Array([0]),
-      parentSurveyByte: new Uint8Array([0]),
-    } as unknown as GalaxyCatalog;
+    });
 
     const lazyDeps: ResolveDeps = {
       catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },
-      famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
+      famousGalaxiesMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
       structures: { byId: () => null },
       stars: { current: () => null },
     };
@@ -217,7 +215,7 @@ describe('visitBeatSaga', () => {
     const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: lazyDeps });
 
     // Camera runtime is dynamic; override the context with a closure read.
-    let currentRuntime: FocusCameraRuntime | null = null;
+    let currentRuntime: LiveCameraRuntime | null = null;
     sagaMiddleware.setContext({
       resolveDeps: () => lazyDeps,
       cameraRuntime: () => currentRuntime,

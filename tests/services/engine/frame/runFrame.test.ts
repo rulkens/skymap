@@ -63,7 +63,8 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 // writes to, so one array captures the derive→produce order.
 const timeOrder = vi.hoisted(() => ({ log: [] as string[] }));
 vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/services/engine/frame/deriveBodyStates')>();
+  const actual =
+    await importOriginal<typeof import('../../../../src/services/engine/frame/deriveBodyStates')>();
   return {
     ...actual,
     deriveBodyStates: vi.fn((simDays: number) => {
@@ -78,12 +79,22 @@ import { buildCameraDrivers } from '../../../../src/services/engine/camera/camer
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { createRenderTargets } from '../../../../src/services/gpu/renderTargets';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import {
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
+  startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../../src/state/settings/settingsSlice';
+import {
+  ORIENTATION_FRAMES,
+  ORIENTATION_FRAME_QUATERNIONS,
+} from '../../../../src/data/orientation/orientationFrames';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -93,6 +104,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -115,8 +127,7 @@ function makeState(): EngineState {
         sizePx: 2,
         brightness: 0.5,
         depthFade: false,
-        highlightFallback: false,
-        realOnly: false,
+        provenance: DEFAULT_GALAXY_PROVENANCE,
         // deriveSourceMasks (called at the top of runFrame, before the
         // renderer-null bail-out) iterates EVERY GALAXY_CATALOG_SOURCES code and reads
         // items[id].enabled, so a partial record would throw on the first
@@ -131,7 +142,12 @@ function makeState(): EngineState {
       tonemap: { exposure: 1, curve: 'linear' },
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
-      milkyWay: { enabled: false },
+      // aggregateDivisor is read every frame by the offscreen-rebuild branch
+      // (whenever renderTargets is non-null), and starCount likewise by the
+      // cloud-regenerate branch (whenever milkyWayCloud is non-null), so the
+      // fixture carries both boot values rather than leaving either branch to
+      // compare against undefined.
+      milkyWay: { enabled: false, aggregateDivisor: 2, starCount: 150000 },
       filaments: { enabled: false, intensity: 1 },
       volumes: { enabled: false },
     },
@@ -186,7 +202,7 @@ function makeState(): EngineState {
     assetSlots: {
       points: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       pgcAlias: null,
     },
     // cameraRuntime Resource bag — required for the camera-driver block
@@ -199,6 +215,9 @@ function makeState(): EngineState {
       // runFrame writes this once per frame (single writer) beside the body
       // snapshot prime — the box must exist for that assignment.
       lastRenderedSimDays: { current: 0 },
+      // runFrame resolves B(t) once per frame and writes it here — the box must
+      // exist for that assignment. Seeded with the ecliptic (default) basis.
+      upBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
     },
   } as unknown as EngineState;
 }
@@ -305,6 +324,7 @@ describe('runFrame — camera drivers (regression)', () => {
         to: { target: [0, 0, 0], yaw: 1.5, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
 
@@ -360,6 +380,214 @@ describe('runFrame — camera drivers (regression)', () => {
     // After 1000 ms the yaw must have advanced from the base (0).
     const yaw = state.cameraRuntime.lastPose.current.yaw;
     expect(yaw).toBeGreaterThan(0);
+  });
+});
+
+describe('runFrame — orientation-frame roll', () => {
+  // Vector helpers local to this suite. The assembled camera exposes world
+  // `position`; the frame pole is `frameUp(B(t))` (middle column of the basis).
+  const sub = (a: readonly number[], b: readonly number[]): number[] => [
+    a[0]! - b[0]!,
+    a[1]! - b[1]!,
+    a[2]! - b[2]!,
+  ];
+  const norm = (v: readonly number[]): number => Math.hypot(v[0]!, v[1]!, v[2]!);
+  const dot = (a: readonly number[], b: readonly number[]): number =>
+    a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
+  // Angle (rad) between two unit-ish vectors, clamped so acos never sees >1.
+  const angleBetween = (a: readonly number[], b: readonly number[]): number => {
+    const c = dot(a, b) / (norm(a) * norm(b));
+    return Math.acos(Math.min(1, Math.max(-1, c)));
+  };
+
+  it('a full orientation-frame roll: B(t) reaches the destination pole monotonically and the descriptor clears on completion', () => {
+    // NOT a produce-path test — see 'during a frame roll the assembled camera
+    // position is unchanged...' below for what `runFrame` actually feeds
+    // `state.cam.poseBasis` / `.upBasis`, and the position-holds-still
+    // invariant that follows. This test instead drives a real frameTween
+    // through `runFrame` end to end and reads a SYNTHETIC probe camera —
+    // `assembleOrbitCamera(pose, projection, B, B)` with the SAME live B(t)
+    // fed to both slots — purely to turn the resolved basis into a vector
+    // (frameUp) and confirm two things nothing else pins: (1) B(t) rotates
+    // MONOTONICALLY from the old pole to the new one across a full 0→1000ms
+    // sweep of real ticks (`resolveFrameBasis.test.ts` checks orthonormality
+    // and endpoints at isolated samples, not that the interpolation never
+    // backtracks — a slerp-direction bug could pass that and fail this); and
+    // (2) `runFrame`'s completion branch dispatches `clearFrameTween` exactly
+    // once when elapsed saturates. The target-fixed / distance-preserved
+    // assertions below are incidental byproducts of B(t) being a rotation
+    // matrix (already implied by orthonormality), not a separate claim about
+    // the produce path.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    // A base pose whose view direction is well away from either pole, so the roll
+    // is visible and the eye clearly orbits (yaw/pitch both non-trivial).
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    // Switch ecliptic → galactic over 1 s, linear so the slerp parameter is the
+    // raw time fraction (monotonic pole rotation).
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+    const samples: { t: number; target: number[]; position: number[]; up: number[] }[] = [];
+    for (const t of [0, 250, 500, 750, 1000]) {
+      runFrame(state, deps, t);
+      const B = state.cameraRuntime.upBasis.current;
+      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B, B);
+      samples.push({
+        t,
+        target: [...cam.target],
+        position: [...cam.position],
+        up: frameUp(B),
+      });
+    }
+
+    const first = samples[0]!;
+    for (const s of samples) {
+      // Target is fixed across the whole transition.
+      expect(norm(sub(s.target, first.target))).toBeLessThan(1e-6);
+      // Distance (|position − target|) is preserved — B(t) is a rotation matrix
+      // at every sample, so the synthetic probe's eye orbits at constant radius.
+      // Relative tolerance: the basis slerp runs in float32, so absolute error
+      // scales with `distance` (~1e-5 at 100); the invariant is that the *ratio*
+      // holds to float32 precision.
+      const rel = Math.abs(norm(sub(s.position, s.target)) - BASE.distance) / BASE.distance;
+      expect(rel).toBeLessThan(1e-6);
+    }
+
+    // Endpoints: the up-vector starts on the ecliptic pole and lands on the
+    // galactic pole (the slerp saturates by elapsed ≥ durationMs).
+    expect(angleBetween(first.up, frameUp(ORIENTATION_FRAMES.ecliptic))).toBeLessThan(1e-6);
+    expect(
+      angleBetween(samples[samples.length - 1]!.up, frameUp(ORIENTATION_FRAMES.galactic)),
+    ).toBeLessThan(1e-6);
+
+    // The up-vector rotates MONOTONICALLY old → new: its angle from the start
+    // pole strictly increases across the transition. This is the roll.
+    const anglesFromStart = samples.map((s) => angleBetween(s.up, first.up));
+    for (let i = 1; i < anglesFromStart.length; i++) {
+      expect(anglesFromStart[i]!).toBeGreaterThan(anglesFromStart[i - 1]!);
+    }
+    // And the synthetic probe's eye genuinely moved (orbited) — proving the
+    // up-roll is a real world-space change, not a no-op.
+    expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
+
+    // Completion clears the descriptor exactly once: after the saturating frame
+    // the store's frameTween is null, so the steady branch takes over next frame.
+    expect(store.getState().camera.frameTween).toBeNull();
+  });
+
+  it('during a frame roll the assembled camera position is unchanged while its up rotates', () => {
+    // The branch's rule: a frame switch changes only which way is up. `poseBasis`
+    // is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`), which
+    // `watchOrientationChangeSaga` sets to the destination the instant a switch
+    // starts — so it does not move for the roll's whole duration — while
+    // `upBasis` is the live, mid-slerp `B(t)`. This test drives the drag
+    // register's two fields (what `runFrame` actually writes) through
+    // `assembleOrbitCamera` and asserts the split: position holds, up rotates.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    // Mirrors watchOrientationChangeSaga: setOrientation commits the
+    // destination immediately, startFrameTween rolls the up-basis toward it.
+    store.dispatch(setOrientation('galactic'));
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+
+    runFrame(state, deps, 250);
+    const cam1 = assembleOrbitCamera(
+      state.cameraRuntime.lastPose.current,
+      projection,
+      state.cam!.poseBasis!,
+      state.cam!.upBasis!,
+    );
+
+    runFrame(state, deps, 500);
+    const cam2 = assembleOrbitCamera(
+      state.cameraRuntime.lastPose.current,
+      projection,
+      state.cam!.poseBasis!,
+      state.cam!.upBasis!,
+    );
+
+    // The eye holds still: poseBasis is the committed 'galactic' frame at both
+    // samples (it never moved), and the pose (target/yaw/pitch/distance) is
+    // unchanged too (resting driver), so position is bit-for-bit identical.
+    expect(cam2.position).toEqual(cam1.position);
+    // The horizon rotates: upBasis is still mid-slerp between t=250 and t=500.
+    expect(frameUp(cam2.upBasis)).not.toEqual(frameUp(cam1.upBasis));
+  });
+
+  it('a switch into a near-pole-aligned view resolves to a finite pose at the clamp, not NaN', () => {
+    // PITCH_LIMIT edge (spec §10). With the view direction a hair off the frame
+    // pole — pitch pinned at the orbitControls clamp `π/2 − 0.01` — forward and
+    // the lookAt up-vector stay 0.01 rad apart through the ENTIRE slerp (B(t) is a
+    // rotation, so it rotates forward and up together, preserving their angle). We
+    // pin that every produced pose and its view-projection are finite: at exactly
+    // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
+    // switch well-defined.
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors orbitControls.ts:91
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: PITCH_LIMIT, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+    for (const t of [0, 250, 500, 750, 1000]) {
+      runFrame(state, deps, t);
+      const pose = state.cameraRuntime.lastPose.current;
+      expect(Number.isFinite(pose.yaw)).toBe(true);
+      expect(Number.isFinite(pose.pitch)).toBe(true);
+      expect(Math.abs(pose.pitch)).toBeLessThanOrEqual(PITCH_LIMIT + 1e-9);
+
+      const cam = assembleOrbitCamera(
+        pose,
+        projection,
+        state.cameraRuntime.upBasis.current,
+        state.cameraRuntime.upBasis.current,
+      );
+      for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
+      // The view-projection is where a degenerate near-pole lookAt would surface
+      // NaN; assert every entry is finite.
+      const vp = computeViewProj(cam);
+      for (const m of vp) expect(Number.isFinite(m)).toBe(true);
+    }
   });
 });
 
@@ -500,6 +728,85 @@ describe('runFrame — hover-pick removed from frame body', () => {
     // The frame body must never call pickRenderer.pick — hover picks are
     // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFrame — mw-aggregate divisor', () => {
+  it('rebuilds the offscreen table when the divisor setting moves, and leaves it alone when it does not', () => {
+    // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
+    // at creation — so the only way a drag reaches the screen is the frame
+    // loop noticing the mismatch and rebuilding the table. Without that branch
+    // the slider would move a number nothing ever reads. The second half
+    // matters just as much: comparing against the spec row (rather than a
+    // 'last applied' field) has to settle, or every steady-state frame would
+    // throw away and re-allocate every offscreen target.
+    const store = makeStore();
+    const state = makeState();
+    // A device whose createTexture returns the minimum renderTargets touches.
+    const device = {
+      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
+    } as unknown as GPUDevice;
+    const deps: RunFrameDeps = { ...makeDeps(store), device };
+
+    state.gpu.renderTargets = createRenderTargets(
+      device,
+      'bgra8unorm',
+      { width: 800, height: 600 },
+      2,
+    );
+    const built = state.gpu.renderTargets;
+
+    state.settings.milkyWay.aggregateDivisor = 4;
+    runFrame(state, deps, 0);
+
+    const rebuilt = state.gpu.renderTargets!;
+    expect(rebuilt).not.toBe(built);
+    expect(rebuilt.specs.find((s) => s.id === 'mw-aggregate')!.scale).toBe(4);
+    // The rebuild carried the swap format over from the table it replaced.
+    expect(rebuilt.specs.find((s) => s.id === 'swap')!.format).toBe('bgra8unorm');
+
+    // A frame with the setting unchanged must not rebuild again.
+    runFrame(state, deps, 16);
+    expect(state.gpu.renderTargets).toBe(rebuilt);
+  });
+});
+
+describe('runFrame — milky-way star count', () => {
+  it('regenerates the cloud when starCount moves, and leaves it alone when it does not', () => {
+    // starCount feeds generation, not a uniform or a render target — a
+    // texture-rebuild-shaped fix doesn't apply here, so the only way a drag
+    // reaches the screen is the frame loop noticing the setting has outrun
+    // the buffers on screen and calling regenerate. A knob with no branch
+    // wired to it would silently do nothing, which is the failure this test
+    // exists to catch. The steady-state half matters just as much as the
+    // mw-aggregate divisor test's: comparing against `cloud.starCount()`
+    // (what the CURRENT buffers were generated with) has to settle once the
+    // regenerate lands, or every frame after a drag would regenerate again.
+    const store = makeStore();
+    const state = makeState();
+    const deps = makeDeps(store);
+
+    let currentCount = 150000;
+    const regenerate = vi.fn((count: number) => {
+      currentCount = count;
+    });
+    state.gpu.milkyWayCloud = {
+      buffers: vi.fn(),
+      starCount: () => currentCount,
+      regenerate,
+      destroy: vi.fn(),
+    } as unknown as EngineState['gpu']['milkyWayCloud'];
+
+    state.settings.milkyWay.starCount = 40000;
+    runFrame(state, deps, 0);
+
+    expect(regenerate).toHaveBeenCalledTimes(1);
+    expect(regenerate).toHaveBeenCalledWith(40000);
+    expect(currentCount).toBe(40000);
+
+    // A frame with the setting unchanged must not regenerate again.
+    runFrame(state, deps, 16);
+    expect(regenerate).toHaveBeenCalledTimes(1);
   });
 });
 

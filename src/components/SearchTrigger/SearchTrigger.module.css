@@ -10,8 +10,8 @@
 
 .trigger {
   /*
-   * Positioning is owned by the parent `.topBar` wrapper in
-   * App.module.css — this rule only describes the pill's intrinsic
+   * Positioning is owned by the parent `.root` wrapper in
+   * TopBarContainer.module.css — this rule only describes the pill's intrinsic
    * appearance + sizing.
    */
 

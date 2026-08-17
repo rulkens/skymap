@@ -2,14 +2,11 @@
  * renderTargets — the single owner of every offscreen render target's
  * lifecycle, driven by the `RenderTargetSpec` table.
  *
- * Pre-unification the HDR target lived in `postProcess.ts` and the half-res
- * volume target in `volumeOffscreen.ts` — two modules with identical
- * construct / resize / destroy shapes, two `state.gpu.*` fields that always
- * flipped together, and a frame resize handler that enumerated the pair by
- * hand. The target table collapses that: an offscreen target is a ROW
- * (`id`, `format`, `depth`, `scale`), and this module allocates, resizes,
- * and releases every row uniformly. A new offscreen (a pick target, a
- * foreground slab) is a new row, not a new module + handle + resize call.
+ * An offscreen target is a ROW (`id`, `format`, `depth`, `scale`), and this
+ * module allocates, resizes, and releases every row uniformly — a new
+ * offscreen (a pick target, a foreground slab) is a new row, not a new
+ * module + handle + resize call, and the resize path never has to enumerate
+ * targets by hand.
  *
  * ### Why the HDR offscreen exists at all
  *
@@ -66,6 +63,48 @@
  * carries the pre-knee scalar), fixing the LOD compression asymmetry between
  * a concentrated bright leaf and a stack of sub-knee aggregate quads.
  *
+ * ### Why the mw-aggregate row renders at reduced resolution
+ *
+ * The Milky Way cloud stands in for ~1e11 stars with a budget in the hundreds
+ * of thousands, so at any framing where the disc covers real screen area the
+ * sprites are sub-pixel and the field reads as discrete particles rather than
+ * as a galaxy. The only cure is more overlap per pixel — bigger, softer, fewer
+ * sprites — and measurement says that wall is FILL, not vertex count: at ~5x
+ * the baseline sprite area the frame rate collapses while the instance count is
+ * going DOWN.
+ *
+ * That is the same shape the `star-aggregates` row exists for, and the same
+ * remedy applies: a smooth summed-glow field is low-frequency, so rendering it
+ * at 1/scale and bilinearly upsampling is visually free while the fragment cost
+ * drops by the square of the divisor. The DUST pass stays full-res in HDR — its
+ * multiplicative transmittance has to land on the real cosmological
+ * accumulation, and it is not the fill-bound half.
+ *
+ * This is the one row whose divisor is NOT a constant here: it arrives as the
+ * `mwAggregateDivisor` argument, carrying `settings.milkyWay.aggregateDivisor`.
+ * The divisor trades directly against the star shader's `starPxMin` /
+ * `starPxMax` clamps, which are stated in TARGET pixels and are already live
+ * sliders, so the three have to be findable together against a moving frame.
+ * A target's dimensions are fixed at creation, so the frame loop answers a
+ * change by rebuilding this table (see `runFrame`) — the divisor currently in
+ * force is readable straight off this row's `scale`, which is why no separate
+ * 'last applied' record exists anywhere. `MILKY_WAY_TUNING_DEFAULTS` is the
+ * home of its boot value.
+ *
+ * ### Why the zone-of-avoidance row renders at 1/5 scale
+ *
+ * The band is a fullscreen 32-step ray march — the heaviest per-pixel
+ * additive overlay after the scalar-volume raymarch, too costly to run at
+ * full res. Same remedy as `volume` /
+ * `star-aggregates` / `mw-aggregate`: the band is smooth low-frequency haze
+ * with no high-frequency detail, so a 1/5-res raymarch bilinearly upsampled
+ * into HDR is visually free while dropping fragment cost by the square of
+ * the divisor (5 → 1/25th). The curved "Zone of Avoidance" lettering does
+ * NOT ride this row — MSDF text needs crisp edges at any zoom, so it draws
+ * straight into full-res HDR from the upsample layer, after the band
+ * composites in. Clears to a=0 for the same additive-identity reason as its
+ * three siblings.
+ *
  * ### Why the foreground row carries a depth texture
  *
  * `foreground:0` is the first row to declare `depth`. The foreground pass
@@ -103,7 +142,7 @@
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
-import { BLOOM_LEVELS } from '../../data/bloomConstants';
+import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 
 /**
  * Per-target first-touch clear values, consumed by the executor: the first
@@ -128,7 +167,15 @@ import { BLOOM_LEVELS } from '../../data/bloomConstants';
 export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
+  // Zone-of-avoidance band raymarch — same reason as `volume`: the upsample's
+  // additive blend must add nothing for a fragment the 1/5-res march didn't
+  // reach.
+  zoa: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
+  // Same reason as `volume` and `star-aggregates`: the Milky Way's star
+  // billboards draw additively into this row, so an untouched texel must
+  // contribute nothing when the upsample composites it back into HDR.
+  'mw-aggregate': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
   // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
   // additively (the upsample fold uses one/one blend), so an untouched texel
@@ -152,32 +199,44 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
 const STAR_AGGREGATE_DIVISOR = 2;
 
 /**
- * Build the concrete target table for this frame configuration. A function
- * (not a module constant) because the swap row's format is the runtime
- * swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
- * Rows per the renderer-unification design's concrete target table; the
- * pick rows arrive in a later plan phase.
+ * Downsample divisor for the reduced-res `zoa` row — total fragment
+ * reduction is its square (5 → 1/25th the fragments). Named here for the
+ * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
  */
-function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
+const ZONE_OF_AVOIDANCE_DIVISOR = 5;
+
+/**
+ * Build the concrete target table for this frame configuration. A function
+ * (not a module constant) because two rows are runtime-decided: the swap row's
+ * format is the runtime swap-chain format (`bgra8unorm` on macOS, `rgba8unorm`
+ * elsewhere), and the `mw-aggregate` row's divisor is a live tuning knob (see
+ * the module header). Rows per the renderer-unification design's concrete
+ * target table; the pick rows arrive in a later plan phase.
+ */
+function buildSpecs(
+  swapFormat: GPUTextureFormat,
+  mwAggregateDivisor: number,
+): readonly RenderTargetSpec[] {
   return [
     { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+    { id: 'zoa', format: 'rgba16float', depth: null, scale: ZONE_OF_AVOIDANCE_DIVISOR },
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
+    { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: mwAggregateDivisor },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
-    // Bloom mip pyramid: level 0 at half-res, each further level halving again
-    // (scale 2/4/8/16/32 — that is 2**(n+1)) — an ever-wider glow. rgba16float
-    // mirrors the HDR precision so the additive fold keeps its dynamic range. No
-    // depth: these are fullscreen post passes, not depth-tested geometry. The
-    // rows are generated from BLOOM_LEVELS (the shared pyramid-depth home) so
-    // adding a level is a one-line edit that stays consistent with the uniform
-    // arrays and pass loops that derive from the same number.
+    // Bloom mip pyramid: an ever-wider glow. rgba16float mirrors the HDR
+    // precision so the additive fold keeps its dynamic range. No depth: these
+    // are fullscreen post passes, not depth-tested geometry. Both the depth and
+    // the per-level divisor come from `bloomConstants` (the shared pyramid-shape
+    // home) so adding a level or respacing the pyramid is a one-line edit that
+    // stays consistent with the uniform arrays and pass loops deriving from it.
     ...Array.from(
       { length: BLOOM_LEVELS },
       (_unused, n): RenderTargetSpec => ({
         id: `bloom${n}`,
         format: 'rgba16float',
         depth: null,
-        scale: 2 ** (n + 1),
+        scale: bloomScale(n),
       }),
     ),
     { id: 'swap', format: swapFormat, depth: null, scale: 1 },
@@ -188,10 +247,14 @@ export function createRenderTargets(
   device: GPUDevice,
   swapFormat: GPUTextureFormat,
   size: Size,
+  mwAggregateDivisor: number,
 ): RenderTargets {
-  const specs = buildSpecs(swapFormat);
+  // `let`, not `const`: setSwapFormat below replaces this array wholesale
+  // rather than mutating a row in place (house preference for immutability).
+  let specs = buildSpecs(swapFormat, mwAggregateDivisor);
   // Only offscreen rows get textures — the swap row is executor-resolved
-  // from the acquired frame view (see the module header).
+  // from the acquired frame view (see the module header). Computed once:
+  // setSwapFormat never touches an offscreen row, so this stays valid.
   const offscreenSpecs = specs.filter((s) => s.id !== 'swap');
 
   // Per-row allocation state, keyed by spec id. `destroy()` clears every map
@@ -248,7 +311,11 @@ export function createRenderTargets(
   for (const spec of offscreenSpecs) allocate(spec, size);
 
   return {
-    specs,
+    // A getter, not a captured value: setSwapFormat reassigns `specs`, and
+    // callers must observe the replacement through the same handle.
+    get specs() {
+      return specs;
+    },
     viewOf(id: string): GPUTextureView {
       const view = views.get(id);
       if (!view) {
@@ -270,6 +337,9 @@ export function createRenderTargets(
     },
     resize(s: Size): void {
       for (const spec of offscreenSpecs) allocate(spec, s);
+    },
+    setSwapFormat(next: GPUTextureFormat): void {
+      specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
     },
     destroy(): void {
       for (const texture of textures.values()) texture.destroy();

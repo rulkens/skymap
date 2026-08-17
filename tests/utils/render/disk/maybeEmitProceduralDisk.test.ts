@@ -45,6 +45,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -66,6 +67,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -84,6 +86,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -102,6 +105,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -120,6 +124,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -139,6 +144,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -156,6 +162,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -177,6 +184,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -195,6 +203,7 @@ describe('maybeEmitProceduralDisk', () => {
       33,
       0.05,
       1.7,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,
@@ -208,6 +217,7 @@ describe('maybeEmitProceduralDisk', () => {
     expect(r!.axisRatio).toBe(0.42);
     expect(r!.positionAngleDeg).toBe(137);
     expect(r!.colourIndex).toBe(1.7);
+    expect(r!.sbAmp).toBe(1.0);
   });
 
   it('defaults procFadeOut to 1.0 — no fade-out against the textured-disk pass', () => {
@@ -225,6 +235,7 @@ describe('maybeEmitProceduralDisk', () => {
       base.z,
       base.sizeWorldMpc,
       base.colourIndex,
+      1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
       0,

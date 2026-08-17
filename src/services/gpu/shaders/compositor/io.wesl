@@ -24,8 +24,7 @@
 
 // ── Compositor uniform layout ───────────────────────────────────────
 //
-// 32-byte buffer (24 bytes of scalars, rounded up to the uniform
-// 16-byte-stride requirement). exposure scales the HDR input,
+// 32-byte buffer, every lane in use. exposure scales the HDR input,
 // whitepoint² is pre-squared CPU-side for Reinhard-extended,
 // asinhSoftness controls the asinh stretch's linear→log knee, curve
 // selects between Linear / Reinhard / Asinh / Gamma2 / ACES,
@@ -35,6 +34,8 @@
 // two alpha-related flags are separate u32s because they answer two
 // independent questions — 'do we tone-map at all' and 'is this a
 // coverage-bearing layer' — and folding them would re-braid them.
+// hdrKnee / hdrHeadroom are the extended-range headroom knobs (see their
+// doc comments below); both are 0 in every SDR draw.
 //
 // | offset | field         | type |
 // | ------ | ------------- | ---- |
@@ -44,7 +45,8 @@
 // | 12     | curve         | u32  |
 // | 16     | toneEnabled   | u32  |
 // | 20     | preserveAlpha | u32  |
-// (bytes 24..31 are implicit uniform-stride padding, zero-filled CPU-side)
+// | 24     | hdrKnee       | f32  |
+// | 28     | hdrHeadroom   | f32  |
 
 struct CompositorUniforms {
   exposure: f32,
@@ -60,6 +62,11 @@ struct CompositorUniforms {
   toneEnabled: u32,
   // 1 = emit the source's straight-alpha coverage; 0 = force opaque 1.0.
   preserveAlpha: u32,
+  // Bytes 24, 28: the post-exposure knee above which over-white energy spills
+  // into an extended-range swap chain, and the multiplier on that spill. Both 0
+  // in SDR, where the output is exactly the tone curve's clamped result.
+  hdrKnee: f32,
+  hdrHeadroom: f32,
 }
 
 // ── vertex-to-fragment interface ────────────────────────────────────

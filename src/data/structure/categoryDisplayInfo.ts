@@ -1,13 +1,14 @@
 /**
  * Per-category display metadata for label-bearing sources (cluster,
- * supercluster, void, famousGalaxy, group, milkyWay).  Keyed by `LabelCategory`.
+ * supercluster, void, group, famousGalaxy, famousStar, earth, planet, sun,
+ * milkyWay).  Keyed by `LabelCategory`.
  *
- * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true`,
- * which are the canonical home of per-category copy since A1.  Consumers
- * read from `SOURCE_REGISTRY` rows via this accessor so the copy
- * module replaces that table with a registry-derived accessor so the copy
- * lives in exactly one place and new label-bearing sources gain display info
- * automatically from their registry row.
+ * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true` — the
+ * canonical home of per-category copy.  A hand-maintained table beside the
+ * registry would be a second place to edit and a second place to forget; this
+ * accessor keeps the copy in exactly one place, so a new label-bearing source
+ * gains display info from its own registry row and cannot be added without it
+ * (`buildDisplayInfo` throws on a row missing the three copy fields).
  *
  * Distinct from the presentation style tables (`structureMarkerStyles.ts` +
  * `famousLabelStyle.ts`) — those own *rendering* config (halo/ring colors,

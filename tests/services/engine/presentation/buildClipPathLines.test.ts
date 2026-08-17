@@ -26,7 +26,7 @@ const DATA: ClipData = {
     // linger:0 opts out of the default dwell so the route is a flat 4s take.
     flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], {
       over: 4,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
       linger: 0,
     }),
   ],

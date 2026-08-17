@@ -150,6 +150,11 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   return {
     gpu: { earthRenderer },
     data: { bodies: { earth } },
+    // The tile subsystem is absent until `wireSlots` builds it, and a session
+    // that never approaches Earth never engages it — so `null` here is the
+    // shipped identity case, in which the packed page-table window is all-zero
+    // and the fragment reads the whole-globe base texture alone.
+    subsystems: { earthTiles: null },
     // earthLayer.draw reads the live night-side floor + ocean-glint roughness
     // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
     // packed tail slots equal the authored defaults (a no-op override, exactly
@@ -259,7 +264,11 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+    // NEAR_CTX, not the bare CTX_STUB: draw now also reads ctx.drawCamPos (the
+    // cloud-shadow descent fade), and NEAR_CTX's camera sits ~1e-13 Mpc from
+    // Earth's centre — hundreds of body radii up, well above the fade band — so
+    // the fade multiplier is 1 and every assertion below is unaffected by it.
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     // Exactly one MVP composed for the single Earth body.
     expect(composeMock).toHaveBeenCalledTimes(1);
@@ -296,7 +305,9 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
+    // note on the previous test).
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms).toHaveLength(32);
@@ -323,7 +334,9 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
+    // note on the first draw test).
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms).toHaveLength(32);
@@ -358,6 +371,37 @@ describe('earthLayer.draw', () => {
     // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
     expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
     expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
+  });
+
+  it('scales cloudShadowStrength by the descent fade as the camera nears the surface', () => {
+    // A future refactor could drop the fade multiply at the pack call and no
+    // OTHER test here would notice — the three tests above all sit far above
+    // the fade band, where the multiplier is 1 and indistinguishable from its
+    // absence. This one plants the camera INSIDE the band (the fade's own
+    // edges from CLOUD_SHELL_PARAMS, not restated literals), so the packed
+    // slot 25 must land strictly between 0 and the authored dial.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
+    const radiusMpc = SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const midAltitudeRadii =
+      (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
+    const closeCtx = {
+      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+      drawCamPos: [
+        SEEDED_EARTH.positionMpc[0] + radiusMpc * (1 + midAltitudeRadii),
+        SEEDED_EARTH.positionMpc[1],
+        SEEDED_EARTH.positionMpc[2],
+      ],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+
+    earthLayer.draw(PASS_STUB, view, closeCtx, state);
+
+    const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniforms[25]).toBeGreaterThan(0);
+    expect(uniforms[25]).toBeLessThan(EARTH_SURFACE_PARAMS.cloudShadowStrength);
   });
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {

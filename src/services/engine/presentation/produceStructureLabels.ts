@@ -15,7 +15,7 @@
  *
  * Each label's final `fadeAlpha` is the distance fade multiplied by two
  * composed strands (see `focusRecession.ts`): the per-category toggle's
- * opacity (`opacityOf({labelLayer, structure, category})`, read from the
+ * opacity (`opacityOf({labelLayer, structure, item})`, read from the
  * FadeRegistry) and the focus recession factor. The authoritative gate is the
  * `structures.items[cat].labelEnabled` boolean: a category that is both
  * DISABLED and fully faded (opacity 0) is skipped wholesale — the only
@@ -27,7 +27,7 @@
  *
  * ### Pure reader of the per-category opacity
  *
- * The producer only READS `fades.opacityOf({labelLayer, structure, category})`
+ * The producer only READS `fades.opacityOf({labelLayer, structure, item})`
  * — the visibility bridge (`syncVisibilityFades`) is the sole writer of each
  * category's intent opacity, seeding and ramping it from the category's
  * `labelEnabled` setting. The producer never drives a fade of its own.
@@ -85,7 +85,7 @@ export function produceStructureLabels(
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
   // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
-  // category: any }`) collapse to the same `'structureLabel'` key. Returns 1 when
+  // item: any }`) collapse to the same `'structureLabel'` key. Returns 1 when
   // no clip is playing. We address the key directly since `fadeIdToVisibilityKey`
   // maps every structure-label FadeId to this value without discrimination.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
@@ -103,7 +103,7 @@ export function produceStructureLabels(
     // category's label is enabled OR still fading out. Skip only when it's both
     // disabled AND fully faded (the all-or-nothing case).
     const catOpacity = fades.opacityOf(
-      { kind: 'labelLayer', layer: 'structure', category: p.category },
+      { kind: 'labelLayer', layer: 'structure', item: p.category },
       now,
     );
     const labelEnabled = state.settings.structures.items[p.category].labelEnabled;
@@ -187,7 +187,7 @@ export function produceStructureLabels(
       p.id === focusedStructureId
         ? 1
         : focusRecession(
-            { kind: 'labelLayer', layer: 'structure', category: p.category },
+            { kind: 'labelLayer', layer: 'structure', item: p.category },
             ctx.focusBlend,
           );
     fadeAlpha *= catOpacity * recession * clipFactor * surveyFade;

@@ -200,4 +200,78 @@ export type GalaxyCatalog = {
    * `milliquasParentSurveyPrefix(byte)` returns `null`.
    */
   parentSurveyByte: Uint8Array;
+
+  /**
+   * Per-catalog MEDIAN absolute magnitude — the surface-brightness
+   * zero-point `galaxySbAmp` normalises against (see
+   * `utils/galaxy/galaxySbAmp.ts` and `utils/galaxy/galaxyMedianAbsMag.ts`).
+   *
+   * Populated by every runtime construction path: `decodeGalaxyCatalog`,
+   * `generateSyntheticCloud`, `emptyGalaxyCatalog`, and
+   * `cloneGalaxyCatalogForTransfer`. Optional ONLY so lightweight test
+   * fixtures may omit it — consumers that need a value fall back
+   * themselves (the point bake recomputes via `galaxyMedianAbsMag`; the
+   * disk planner falls back to -20.5).
+   *
+   * Derived, NOT stored in the `.bin` — `decodeGalaxyCatalog` recomputes
+   * it from the decoded `magG` + `positions` on every load, so the field
+   * costs no binary format version.
+   */
+  medianAbsMag?: number;
+
+  /**
+   * Per-galaxy "orientation is a deterministic fallback" flag — length ===
+   * count. 1 means the (axisRatio, positionAngleDeg) pair was synthesised by
+   * `fallbackOrientation(objID, ra, dec)` because the source catalog had no
+   * measured axis-ratio / position-angle; 0 means the pair is a real
+   * measurement (or a sentinel like NaN for synthetic clouds).
+   *
+   * This is the AUTHORITATIVE provenance signal, stamped at build time in
+   * `recordsToCloud` where the real-vs-fallback decision is actually made,
+   * and persisted verbatim through the .bin. Consumers (the sign-bit pack in
+   * `buildPointInterleavedBuffer`, the InfoCard's "measured vs estimated"
+   * chip via `extractGalaxyRow`) read it directly.
+   *
+   * Why a persisted byte rather than recomputing? The old load side inferred
+   * the flag by re-hashing `fallbackOrientation` from the baked f32 cartesian
+   * position and comparing floats for exact equality. That round-trip is lossy
+   * — the position is stored as f32, `cartesianToRaDec` re-derives (ra, dec),
+   * and the hash buckets `ra` at `Math.round(ra * 1e5)` — so ~10% of true
+   * fallback rows failed the equality check and were misclassified as real.
+   * One byte per row makes the build-side truth survive to the load side
+   * exactly, no reconstruction.
+   */
+  orientationIsFallback: Uint8Array;
+
+  /**
+   * Per-galaxy "diameter is the flat fallback" flag — length === count. 1
+   * means `diameterKpc[i]` is the project-wide DEFAULT_GALAXY_DIAMETER_KPC =
+   * 30 default, applied because the parser had NO real measured size AND no
+   * angular size to re-derive a physical diameter from; 0 means the row's
+   * diameter is a real catalog measurement, an angular-derived value, or a
+   * synthetic / famous-curated size.
+   *
+   * This is the AUTHORITATIVE persisted provenance signal, stamped at build
+   * time in `recordsToCloud` on the exact `diameterKpc === null` distinction
+   * that decides the fallback, and carried verbatim through the .bin. It
+   * replaces the old lossy `diameterKpc === 30` compare the InfoCard used to
+   * guess provenance — a real 30-kpc measurement is indistinguishable from
+   * the fallback under that comparison, so the persisted byte is the only
+   * exact signal.
+   */
+  diameterIsFallback: Uint8Array;
+
+  /**
+   * log₁₀(M★/M☉), photometric stellar-mass estimate — length === count.
+   * NaN means no estimate. Every v9 mass is photometric (build-time,
+   * `estimateLog10StellarMass`); the on-disk "mass-is-estimated" flag bit is
+   * derived from `Number.isFinite` rather than a stored column, so this
+   * field alone carries presence.
+   *
+   * Do NOT confuse with `StructureCatalog.significance`: that field is a
+   * LINEAR mass proxy (M500 in solar masses, ~10¹⁴) for MCXC clusters —
+   * MSCC superclusters carry an N_m member count there instead — never a
+   * log stellar mass, and never comparable to this field either way.
+   */
+  log10StellarMass: Float32Array;
 };

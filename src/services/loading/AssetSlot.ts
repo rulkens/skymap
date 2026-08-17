@@ -71,6 +71,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
   let controller: AbortController | null = null;
   const subscribers = new Set<(s: LoadState<T>) => void>();
   let lastRequest: Req | null = null;
+  let startedAtMs: number | null = null; // wall clock of the last load() call
   let lastReady: LoadState<T> | null = null; // for cancel() rollback
   // ── Commit serialization chain ────────────────────────────────────────
   // Holds the in-flight commit's resolve-promise, or null when no commit
@@ -214,14 +215,24 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
 
   return {
     name,
-    load(req: Req): void {
+    load(req: Req): Promise<void> {
       lastRequest = req;
+      // Stamped HERE, not inside runLoad, so it marks the moment the caller
+      // (the bounded asset queue) actually let this fetch off the leash — the
+      // whole point of the stamp is to separate queue-start order from
+      // completion order.
+      startedAtMs = Date.now();
       generation += 1;
       const myGen = generation;
       controller?.abort();
       controller = new AbortController();
-      // Fire-and-forget — runLoad never throws (errors become 'gave-up' events).
-      void runLoad(req, myGen, controller);
+      // runLoad never throws (errors become 'gave-up' events); every one of
+      // its `return`s is a plain return inside this async function, so the
+      // promise below resolves on every terminal path — see the docblock on
+      // the `load` type for the enumerated list. Returning it (rather than
+      // firing-and-forgetting) is what lets a bounded queue await "this
+      // slot's work is done" instead of guessing from state transitions.
+      return runLoad(req, myGen, controller);
     },
     current(): T | null {
       return state.kind === 'ready' ? state.value : null;
@@ -236,8 +247,14 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     lastRequest(): Req | null {
       return lastRequest;
     },
+    startedAtMs(): number | null {
+      return startedAtMs;
+    },
     forceReload(): void {
-      if (lastRequest !== null) this.load(lastRequest);
+      // load() now returns a promise; forceReload() has no caller that wants
+      // to await it, so mark the discard explicit rather than leaving an
+      // implicit floating promise for the linter to flag.
+      if (lastRequest !== null) void this.load(lastRequest);
     },
     cancel(): void {
       generation += 1; // invalidates any in-flight runLoad
@@ -275,8 +292,10 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       lastReady = null;
       // Clear the committed request too: a released slot holds nothing, so the
       // stale-tier check reads `null` and `forceReload()` is a no-op until the
-      // demand loop re-loads it at the current tier.
+      // demand loop re-loads it at the current tier. The start stamp goes with
+      // it: a released slot has no live load attempt to have started.
       lastRequest = null;
+      startedAtMs = null;
       state = { kind: 'idle' };
       if (releasing && onRelease) onRelease(releasing.value);
       for (const sub of subscribers) sub(state);

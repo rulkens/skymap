@@ -45,8 +45,8 @@ export const flyout: Clip = {
     start: 'live', // dolly from wherever the user is framed
     timeline: [
       all([
-        dollyTo(29_500, 22, 'inOut'), // log-dolly to the horizon shell
-        spin('yaw', { by: 1.1, over: 22, ease: 'inOut' }), // gentle quarter-turn
+        dollyTo(29_500, 22, 'easeInOutCubic'), // log-dolly to the horizon shell
+        spin('yaw', { by: 1.1, over: 22, ease: 'easeInOutCubic' }), // gentle quarter-turn
       ]),
     ],
   },

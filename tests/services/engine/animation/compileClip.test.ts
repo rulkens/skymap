@@ -12,12 +12,15 @@ import { compileClip } from '../../../../src/services/engine/animation/compileCl
 import {
   dollyTo,
   moveTargetId,
+  spinToId,
+  aimAlong,
   spin,
   rate,
   oscillate,
   hold,
   hide,
   fade,
+  frameTo,
   seq,
   all,
   fork,
@@ -276,6 +279,41 @@ describe('compileClip throws on an unresolved focus-bound effect', () => {
         timeline: [moveTargetId(focusId('m87'), 5)],
       }),
     ).toThrow('resolveClipFoci');
+  });
+
+  it('compileClip throws on an unresolved spinToId', () => {
+    expect(() =>
+      compileClip({
+        timeline: [spinToId(focusId('m87'), { over: 5 })],
+      }),
+    ).toThrow('resolveClipFoci');
+  });
+
+  it('compileClip throws on an unresolved aimAlong', () => {
+    expect(() =>
+      compileClip({
+        timeline: [aimAlong([1, 0, 0], 5)],
+      }),
+    ).toThrow('resolveClipFoci');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 8b — frameTo compiles to one cue and awaits no time
+// ---------------------------------------------------------------------------
+
+describe('compileClip frameTo', () => {
+  it('compiling a clip with frameTo emits one cue at the beat and 0 awaited duration', () => {
+    // A 2s wait then a frameTo: the reorientation fires at t=2 as a point-in-
+    // time cue and adds no awaited time, so durationSec is just the wait's 2s.
+    const clip = compileClip({
+      timeline: [wait(2), frameTo('galactic', { over: 1 })],
+    });
+
+    expect(clip.cues).toHaveLength(1);
+    expect(clip.cues[0]!.atSec).toBe(2);
+    expect(clip.cues[0]!.effect.kind).toBe('frameTo');
+    expect(clip.durationSec).toBe(2);
   });
 });
 

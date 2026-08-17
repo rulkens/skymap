@@ -31,6 +31,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
@@ -73,7 +74,7 @@ function makeStore() {
 /** Install a clip into the store at the given start time. */
 function installClip(store: TestStore, data: ClipData): ClipData {
   const resolved = resolveClipStart(data, LIVE_POSE);
-  store.dispatch(clipStarted(resolved));
+  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION }));
   return resolved;
 }
 
@@ -248,6 +249,60 @@ describe('clipPlayer', () => {
     // clipOpacity reset → factor back to 1.
     expect(player.clipOpacityOf('survey', 0)).toBe(1);
     // Clip cleared from the store.
+    expect(store.getState().camera.clip).toBeNull();
+  });
+
+  it('loop: true rewinds the clock + cue cursor instead of ending; a top-of-timeline cue re-fires each lap; stop still terminates it', () => {
+    const store = makeStore();
+    const clock = createCameraClock();
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
+    const player = createClipPlayer({
+      store,
+      requestRender: () => {},
+      clock,
+      getEngineState: makeEngineStateStub,
+    });
+
+    // A 2-second looping clip with a scene cue at atSec=0. `hide` routes
+    // through applySceneEffect (mocked), so its call count proves whether the
+    // cue actually re-fires on a second lap, not just whether elapsed wraps.
+    const data: ClipData = { timeline: [hide(['flow']), hold(2)], loop: true };
+    installClip(store, data);
+    mockedApplySceneEffect.mockClear();
+
+    const endClipType = clipEnded().type;
+
+    // Lap 1, t=0: elapsed=0, cue fires once.
+    player.tick(0);
+    expect(mockedApplySceneEffect).toHaveBeenCalledTimes(1);
+
+    // t=2000: elapsed=2=durationSec. A non-looping clip would set pendingEnd
+    // here; a looping one rewinds instead — no clipEnded, clip stays active.
+    dispatchSpy.mockClear();
+    player.tick(2000);
+    const typesAtWrap = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
+    expect(typesAtWrap).not.toContain(endClipType);
+    expect(store.getState().camera.clip).not.toBeNull();
+
+    // Lap 2, t=2100 (100ms into the rewound clock ⇒ wrapped elapsed ≈ 0.1s):
+    // the atSec=0 cue is back in (prevElapsed, elapsed] and fires again —
+    // proof the cue cursor rewound alongside the clock, not just one of them.
+    player.tick(2100);
+    expect(mockedApplySceneEffect).toHaveBeenCalledTimes(2);
+
+    // Many more laps still never end the clip on their own.
+    dispatchSpy.mockClear();
+    player.tick(4000);
+    player.tick(4100);
+    const typesAfterMoreLaps = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
+    expect(typesAfterMoreLaps).not.toContain(endClipType);
+    expect(store.getState().camera.clip).not.toBeNull();
+
+    // Only stop() ends a looping clip.
+    dispatchSpy.mockClear();
+    player.stop();
+    const typesAfterStop = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
+    expect(typesAfterStop).toContain(endClipType);
     expect(store.getState().camera.clip).toBeNull();
   });
 

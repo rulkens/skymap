@@ -7,13 +7,14 @@
  * JS's Number.MAX_SAFE_INTEGER.
  *
  * The cloud fixture is intentionally minimal: focusIdOf reads exactly
- * objIDs[index], positions[index*3…], and the famousMeta array.
+ * objIDs[index], positions[index*3…], and the famousGalaxiesMeta array.
  */
 
 import { describe, it, expect } from 'vitest';
 import { focusIdOf } from '../../../src/services/url/focusIdOf';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -23,8 +24,7 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
  * The brief correction: objIDs is BigUint64Array (unsigned), not BigInt64Array.
  */
 function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array(pos),
     spectroscopicZ: new Float32Array([0.01]),
     magU: new Float32Array([18]),
@@ -35,10 +35,7 @@ function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): Ga
     objIDs: new BigUint64Array([objId]),
     diameterKpc: new Float32Array([30]),
     axisRatio: new Float32Array([1]),
-    positionAngleDeg: new Float32Array([0]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-  } as GalaxyCatalog;
+  });
 }
 
 const deps: ResolveDeps = {
@@ -51,7 +48,7 @@ const deps: ResolveDeps = {
       return undefined;
     },
   },
-  famousMeta: [
+  famousGalaxiesMeta: [
     { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
   ],
   structures: { byId: () => null },

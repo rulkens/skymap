@@ -1,3 +1,6 @@
+/* Glass chrome matches `src/components/common/Panel` (background, blur
+   strength, edge colour) — see ComparePanel.module.css's `.root` for why
+   this reproduces the look rather than adopting `Panel` itself. */
 .root {
   position: absolute;
   top: 0;
@@ -5,9 +8,9 @@
   bottom: 0;
   width: 340px;
   max-width: 90vw;
-  background: var(--panel);
-  backdrop-filter: blur(16px);
-  border-left: 1px solid var(--panel-line);
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  border-left: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
   z-index: 15;
@@ -20,17 +23,12 @@
 }
 
 .randomizeButton {
-  composes: btnPrimary btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
   margin-bottom: 16px;
 }
 
-.morphologyHeader {
-  composes: sectionHeader from '../shared.module.css';
-  margin-bottom: 12px;
-}
-
 .newSeedButton {
-  composes: btnGhost btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
   margin-top: 4px;
 }
 
@@ -40,33 +38,40 @@
 }
 
 .toneLabel {
-  font-family: var(--font);
-  font-size: 12.5px;
-  color: var(--text);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-base);
   margin-bottom: 5px;
 }
 
-.autoRotateRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 6px;
-  font-family: var(--font);
-  font-size: 12.5px;
-  color: var(--text);
-  cursor: pointer;
+/* Composes from `shared.module.css`, which also backs `FadeSection`'s
+   checkbox rows — shared vocabulary, local class names so the markup here
+   stays unchanged. */
+.toggleRow {
+  composes: toggleRow from '../shared.module.css';
 }
 
-.autoRotateCheckbox {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent);
-  cursor: pointer;
+.toggleLabel {
+  composes: toggleLabel from '../shared.module.css';
 }
 
-.lodExplainer {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--faint);
-  line-height: 1.5;
+.checkbox {
+  composes: checkbox from '../shared.module.css';
+}
+
+.infoIcon {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  opacity: 0.55;
+  color: var(--color-fg-faint);
+  flex: none;
+}
+
+.infoIcon:hover,
+.infoIcon:focus-visible {
+  opacity: 0.85;
 }

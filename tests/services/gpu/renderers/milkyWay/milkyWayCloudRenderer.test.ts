@@ -1,14 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMilkyWayCloudRenderer } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
-import { GEN_RECORD_BYTES } from '../../../../../src/services/gpu/galaxy/genRecordBytes';
-import {
-  MILKY_WAY_EXPOSURE,
-  MILKY_WAY_LOD_APPARENT,
-  MILKY_WAY_MODEL_SCALE,
-  MILKY_WAY_STAR_PX_MIN,
-  MILKY_WAY_STAR_PX_MAX,
-  MILKY_WAY_STAR_SIZE_SCALE,
-} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { MilkyWayCloudBuffers } from '../../../../../src/@types/galaxy/MilkyWayCloudBuffers';
 import type { MilkyWayCloudDrawArgs } from '../../../../../src/@types/rendering/MilkyWayCloudDrawArgs';
 
@@ -81,6 +74,27 @@ function buffers(withDust: boolean): MilkyWayCloudBuffers {
   return { starBuf, starCount: 5, dustBuf: withDust ? dustBuf : null, dustCount: withDust ? 3 : 0 };
 }
 
+/**
+ * Mutually-distinct tuning values, none equal to any calibration default, so
+ * the uniform-packing test below can tell each lane apart — a knob written into
+ * the wrong slot would silently change a different aspect of the look.
+ * `aggregateDivisor` sizes the offscreen rather than riding the uniform buffer,
+ * so it is here only to satisfy the type.
+ */
+const TUNING = {
+  starSizeScale: 3.25,
+  exposure: 0.017,
+  starPxMin: 2.5,
+  starPxMax: 96,
+  softness: 0.75,
+  lodApparent: 0.005,
+  aggregateDivisor: 3,
+  // Never read by the renderer (it feeds generation, not the uniform pack
+  // this draw-args fixture exercises) — present only because `tuning` is
+  // typed as the full `MilkyWayTuning` shape.
+  starCount: 150000,
+};
+
 function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {
   return {
     vp: new Float32Array(16).fill(7),
@@ -89,6 +103,7 @@ function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {
     camUp: [0, 1, 0],
     model: Float32Array.from({ length: 16 }, (_, i) => i + 100),
     fadeAlpha: 0.5,
+    tuning: TUNING,
     buffers: buffers(withDust),
   };
 }
@@ -152,26 +167,57 @@ describe('createMilkyWayCloudRenderer — vertex layout & depth', () => {
   });
 });
 
-describe('createMilkyWayCloudRenderer — draw ordering', () => {
-  it('records stars before dust, and skips dust when dustBuf is null', () => {
+describe('createMilkyWayCloudRenderer — the two entry points', () => {
+  // Stars and dust render into DIFFERENT targets (mw-aggregate vs hdr), so each
+  // entry point must issue only its own pipeline — a star draw leaking into the
+  // dust pass would put multiplicative-transmittance quads in the additive
+  // offscreen, and vice versa. Their relative ORDER is CONTENT_LAYERS row
+  // order (see passes/index.ts), not this module's concern.
+  it('drawStars records only the star pipeline', () => {
+    const { device } = mockDevice();
+    const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
+
+    const stars = mockPass();
+    renderer.drawStars(stars.pass, drawArgs(true));
+    expect(stars.events).toEqual([
+      { kind: 'pipeline', label: 'milkyWayCloud-star-pipeline' },
+      { kind: 'draw', instances: 5 },
+    ]);
+  });
+
+  it('drawDust records only the dust pipeline, and is a no-op when dustBuf is null', () => {
     const { device } = mockDevice();
     const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
 
     const withDust = mockPass();
-    renderer.draw(withDust.pass, drawArgs(true));
+    renderer.drawDust(withDust.pass, drawArgs(true));
     expect(withDust.events).toEqual([
-      { kind: 'pipeline', label: 'milkyWayCloud-star-pipeline' },
-      { kind: 'draw', instances: 5 },
       { kind: 'pipeline', label: 'milkyWayCloud-dust-pipeline' },
       { kind: 'draw', instances: 3 },
     ]);
 
+    // A generation that carved no dust layout must record nothing at all — not
+    // even a pipeline bind, or the executor would open a pass for an empty draw.
     const noDust = mockPass();
-    renderer.draw(noDust.pass, drawArgs(false));
-    expect(noDust.events).toEqual([
-      { kind: 'pipeline', label: 'milkyWayCloud-star-pipeline' },
-      { kind: 'draw', instances: 5 },
-    ]);
+    renderer.drawDust(noDust.pass, drawArgs(false));
+    expect(noDust.events).toEqual([]);
+  });
+
+  // The two passes cannot share a uniform buffer: queue writes are ordered
+  // against submit, not against the passes encoded between them, so a shared
+  // buffer would give both passes whichever write landed last — silently
+  // feeding the star pass the dust pass's (full-res) viewport.
+  it('writes each pass its own uniform buffer', () => {
+    const { device, writeBuffer } = mockDevice();
+    const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
+    const { pass } = mockPass();
+
+    renderer.drawStars(pass, drawArgs(true));
+    renderer.drawDust(pass, drawArgs(true));
+
+    const starTarget = writeBuffer.mock.calls[0]![0];
+    const dustTarget = writeBuffer.mock.calls[1]![0];
+    expect(starTarget).not.toBe(dustTarget);
   });
 });
 
@@ -181,7 +227,7 @@ describe('createMilkyWayCloudRenderer — uniform packing', () => {
     const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
     const { pass } = mockPass();
     const args = drawArgs(true);
-    renderer.draw(pass, args);
+    renderer.drawStars(pass, args);
 
     const payload = writeBuffer.mock.calls[0]![2] as Float32Array;
     const f32 =
@@ -193,14 +239,17 @@ describe('createMilkyWayCloudRenderer — uniform packing', () => {
     expect(Array.from(f32.slice(20, 36))).toEqual(Array.from(args.model));
     // camRight.xyz at 36..38 (39 is the vec4 pad).
     expect(Array.from(f32.slice(36, 39))).toEqual([1, 0, 0]);
-    // params0 = (fadeAlpha, exposure, modelScale, 0).
+    // params0 = (fadeAlpha, exposure, modelScale, softness). The four tuning
+    // lanes carry the caller's LIVE settings values, not calibration
+    // constants — that is what makes a DebugPanel slider take effect.
     expect(f32[44]).toBeCloseTo(0.5);
-    expect(f32[45]).toBeCloseTo(MILKY_WAY_EXPOSURE);
+    expect(f32[45]).toBeCloseTo(TUNING.exposure);
     expect(f32[46]).toBeCloseTo(MILKY_WAY_MODEL_SCALE);
+    expect(f32[47]).toBeCloseTo(TUNING.softness);
     // params1 = (starPxMin, starPxMax, starSizeScale, lodApparent).
-    expect(f32[48]).toBeCloseTo(MILKY_WAY_STAR_PX_MIN);
-    expect(f32[49]).toBeCloseTo(MILKY_WAY_STAR_PX_MAX);
-    expect(f32[50]).toBeCloseTo(MILKY_WAY_STAR_SIZE_SCALE);
-    expect(f32[51]).toBeCloseTo(MILKY_WAY_LOD_APPARENT);
+    expect(f32[48]).toBeCloseTo(TUNING.starPxMin);
+    expect(f32[49]).toBeCloseTo(TUNING.starPxMax);
+    expect(f32[50]).toBeCloseTo(TUNING.starSizeScale);
+    expect(f32[51]).toBeCloseTo(TUNING.lodApparent);
   });
 });

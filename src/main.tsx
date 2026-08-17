@@ -8,7 +8,7 @@
  * either fails immediately (createEngine throws) or runs a no-op render
  * loop and shows the user a black canvas with no explanation.  We want a
  * deliberate "your browser can't do this, here's why" surface, and we want
- * it WITHOUT the cost of instantiating React + useEngine + useFamousMeta
+ * it WITHOUT the cost of instantiating React + useEngine + the whole store
  * just to render one error.  A synchronous `typeof navigator.gpu` check at
  * the top of main.tsx accomplishes that: on unsupported browsers we swap
  * the body's innerHTML to the static page (`renderUnsupportedPageHtml()`)

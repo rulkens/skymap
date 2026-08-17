@@ -30,6 +30,7 @@ const newRenderer = (maxLines?: number) => {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return createDebugLineRenderer(ctx, ctx.format, maxLines);
 };
@@ -47,6 +48,7 @@ describe('DebugLineRenderer colour target', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'bgra8unorm' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createDebugLineRenderer(ctx, 'rgba16float');
     expect(renderPipelines).toHaveLength(1);

@@ -21,13 +21,13 @@
  * All other `EngineState` fields are irrelevant to the demand loop; they
  * are `as unknown as` cast so tests don't need a fully-constructed engine.
  *
- * ### famousMeta boot-case modelling
+ * ### famousGalaxiesMeta boot-case modelling
  *
- * `famousMeta.demand(ctx)` is true when `slotState(Famous) !== 'idle'`. At boot
+ * `famousGalaxiesMeta.demand(ctx)` is true when `slotState(Famous) !== 'idle'`. At boot
  * the Famous POINT row evaluates first (Famous is enabled), finds the
  * slot idle, and loads it; the loop's idle-guard then leaves it alone, but the
  * stub's `load()` flips its reported kind idle → 'loading'. The later
- * famousMeta row sees `slotState(Famous) === 'loading'` and demands. The stub
+ * famousGalaxiesMeta row sees `slotState(Famous) === 'loading'` and demands. The stub
  * auto-transition (see `stubSlot`) reproduces this two-phase truth in a single
  * `reevaluateDemand` pass — a stub frozen at one kind could only satisfy one of
  * the two rows under the idle-guard.
@@ -60,6 +60,8 @@ import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevalu
 import { Source } from '../../../../src/data/sources';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
@@ -80,10 +82,10 @@ type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> }
  * Calling `load()` flips the reported kind from 'idle' to 'loading' — the same
  * transition the real slot makes. This is what lets a single `reevaluateDemand`
  * pass model the two-phase boot truth: the Famous point row sees an idle slot
- * and loads it (under the loop's idle-guard), then the later famousMeta row
+ * and loads it (under the loop's idle-guard), then the later famousGalaxiesMeta row
  * sees the now-'loading' Famous slot and demands. A stub frozen at 'loading'
  * would suppress the point row's load under the idle-guard; a stub frozen at
- * 'idle' would suppress famousMeta. The transition models reality and resolves
+ * 'idle' would suppress famousGalaxiesMeta. The transition models reality and resolves
  * both.
  *
  * Pass a non-idle `kind` (e.g. 'error') to pin a slot that was NOT freshly
@@ -101,6 +103,7 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
     state: () => ({ kind: current }) as LoadState<unknown>,
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -192,7 +195,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
 
 type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
 type NamedSlotOverrides = Partial<{
-  famousMeta: StubSlot;
+  famousGalaxiesMeta: StubSlot;
   filaments: StubSlot;
   structureCatalog: StubSlot;
   pgcAlias: StubSlot;
@@ -271,7 +274,10 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     assetSlots: {
       points,
       filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
-      famousMeta: (namedSlots.famousMeta ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
+      famousGalaxiesMeta: (namedSlots.famousGalaxiesMeta ?? stubSlot()) as AssetSlot<
+        unknown,
+        unknown
+      > as never,
       structureCatalog: (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<
         unknown,
         unknown
@@ -283,21 +289,21 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       // (far resting pose ⇒ none demanded anyway), so none fires.
       bodyTextures: new Map(),
     },
+    // `evaluateRows` enqueues onto this rather than calling `slot.load()`
+    // directly. Per state so no pending entry survives into the next case, and
+    // at the production concurrency so `firedKeys` exercises the real bound.
+    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
   } as unknown as EngineState;
 }
 
 // ── Key → spy collector ──────────────────────────────────────────────────────
 
 /**
- * Run `reevaluateDemand(state)`, then collect the set of `AssetKey`s whose
- * `load` spy fired at least once.
- *
- * The mapping from spy to key is built from the same stub objects inserted
- * into `state.assetSlots` — we inspect `load.mock.calls.length > 0` for each.
+ * The set of `AssetKey`s whose `load` spy has fired at least once. The mapping
+ * from spy to key is built from the same stub objects inserted into
+ * `state.assetSlots` — we inspect `load.mock.calls.length > 0` for each.
  */
-function firedKeys(state: EngineState): Set<AssetKey> {
-  reevaluateDemand(state);
-
+function collectFired(state: EngineState): Set<AssetKey> {
   const fired = new Set<AssetKey>();
 
   // Point slots — check each source we put in the map.
@@ -308,7 +314,7 @@ function firedKeys(state: EngineState): Set<AssetKey> {
 
   // Named slots — check the ones that might have fired.
   const namedKeys = [
-    'famousMeta',
+    'famousGalaxiesMeta',
     'filaments',
     'structureCatalog',
     'pgcAlias',
@@ -321,6 +327,39 @@ function firedKeys(state: EngineState): Set<AssetKey> {
   }
 
   return fired;
+}
+
+/**
+ * Drive `reevaluateDemand(state)` to a fixpoint and report which rows fired.
+ *
+ * Two things this has to do that a single synchronous call no longer does.
+ *
+ * **Drain.** `reevaluateDemand` doesn't call `slot.load()` itself any more; it
+ * enqueues, and the queue starts at most `ASSET_QUEUE_CONCURRENCY` fetchers
+ * before the call returns. Reading the spies straight after one call would
+ * report only the first two rows and turn this demand table into a concurrency
+ * table. The drain settles in microtasks because the stub `load` is synchronous.
+ *
+ * **Re-run.** `famousGalaxiesMeta`'s demand reads "the Famous slot is no longer idle",
+ * so it is satisfied only after the Famous row has actually STARTED. The queue
+ * defers that start past the pass that enqueued it whenever Famous is outranked
+ * by two other demanded rows, which is the case at full boot. In production the
+ * frame loop re-runs the whole evaluation every frame and picks it up on the
+ * next one; here we re-run until nothing new fires, so the table keeps stating
+ * the settled demand set rather than a one-pass snapshot.
+ *
+ * The loop terminates because spies never un-fire: the set only grows, and it
+ * is bounded by the number of rows.
+ */
+async function firedKeys(state: EngineState): Promise<Set<AssetKey>> {
+  let fired = new Set<AssetKey>();
+  for (;;) {
+    reevaluateDemand(state);
+    await state.subsystems.assetQueue.drain();
+    const next = collectFired(state);
+    if (next.size === fired.size) return next;
+    fired = next;
+  }
 }
 
 // ── Test cases ───────────────────────────────────────────────────────────────
@@ -337,20 +376,20 @@ describe('reevaluateDemand demand-table regression', () => {
    * NOT demanded at boot — symmetric with cf4-density among the volume fields.
    * Famous slot is modelled
    * as 'loading' (it was just triggered by its own demand row before
-   * famousMeta's row evaluates), so famousMeta is also demanded. structureCatalog
+   * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
    * loads because every structure category is visible by default. mcpm IS
    * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
    * which the construction seed lands as true (registry visible:true). cf4Density
    * is NOT (seeded enabled:false). filaments: off. pgcAlias: no request.
    * Synthetic: galaxy catalogs not errored.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
-    // the stub to 'loading', so the later famousMeta row sees Famous non-idle
+    // the stub to 'loading', so the later famousGalaxiesMeta row sees Famous non-idle
     // and demands. This is the honest two-phase boot model.
     const state = makeState();
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
     expect(fired).toEqual(
       new Set<AssetKey>([
@@ -359,7 +398,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
-        'famousMeta',
+        'famousGalaxiesMeta',
         'structureCatalog',
         'mcpm',
       ]),
@@ -370,14 +409,14 @@ describe('reevaluateDemand demand-table regression', () => {
    * Filaments enabled: boot defaults + filaments.enabled = true.
    * Adds 'filaments' to the expected set.
    */
-  it('filaments enabled: boot set + filaments', () => {
+  it('filaments enabled: boot set + filaments', async () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
       filaments: { enabled: true },
     };
     const state = makeState({ settings });
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
     expect(fired).toEqual(
       new Set<AssetKey>([
@@ -386,7 +425,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
-        'famousMeta',
+        'famousGalaxiesMeta',
         'structureCatalog',
         'mcpm',
         'filaments',
@@ -400,10 +439,10 @@ describe('reevaluateDemand demand-table regression', () => {
    * verifies the consolidated predicate reading the per-category item rows.
    *
    * Famous starts idle and is enabled, so its point row loads it and
-   * famousMeta follows (the two-phase boot). The pin under test is the cluster
+   * famousGalaxiesMeta follows (the two-phase boot). The pin under test is the cluster
    * predicate, asserted independently below.
    */
-  it('structures all hidden: no structureCatalog (bug-fix pin)', () => {
+  it('structures all hidden: no structureCatalog (bug-fix pin)', async () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
       structures: {
@@ -418,7 +457,7 @@ describe('reevaluateDemand demand-table regression', () => {
     };
     const state = makeState({ settings });
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
     // structureCatalog must be absent.
     expect(fired.has('structureCatalog')).toBe(false);
@@ -431,14 +470,14 @@ describe('reevaluateDemand demand-table regression', () => {
 
   /**
    * Palette opened: adds the 'paletteOpened' request flag, which triggers
-   * pgcAlias on top of the boot set. Famous slot 'loading' for famousMeta.
+   * pgcAlias on top of the boot set. Famous slot 'loading' for famousGalaxiesMeta.
    */
-  it('palette opened: boot set + pgcAlias', () => {
+  it('palette opened: boot set + pgcAlias', async () => {
     const state = makeState({
       requests: new Set(['paletteOpened']),
     });
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
     expect(fired).toEqual(
       new Set<AssetKey>([
@@ -447,7 +486,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
-        'famousMeta',
+        'famousGalaxiesMeta',
         'structureCatalog',
         'mcpm',
         'pgcAlias',
@@ -465,28 +504,28 @@ describe('reevaluateDemand demand-table regression', () => {
    * when armed — exactly the recovery path. The errored galaxy catalog rows, by
    * contrast, are NOT re-loaded: the idle-guard skips non-idle slots, which is
    * the desired no-retry-storm behaviour (a re-eval must not abort + re-fetch
-   * failed galaxy catalogs). famousMeta still demands because Famous slot !== 'idle';
+   * failed galaxy catalogs). famousGalaxiesMeta still demands because Famous slot !== 'idle';
    * structureCatalog is still demanded (categories visible).
    */
-  it('synthetic fallback armed: Synthetic loads, errored galaxy catalogs are not retried', () => {
+  it('synthetic fallback armed: Synthetic loads, errored galaxy catalogs are not retried', async () => {
     const pointSlots: PointSlotOverrides = {
       [Source.SDSS]: stubSlot('error'),
       [Source.TwoMRS]: stubSlot('error'),
       [Source.Glade]: stubSlot('error'),
       [Source.Milliquas]: stubSlot('error'),
       // Famous errored too — but it's curated, not a GALAXY_CATALOG_POINT_SOURCE.
-      // famousMeta demands because Famous slot !== 'idle'.
+      // famousGalaxiesMeta demands because Famous slot !== 'idle'.
       [Source.FamousGalaxy]: stubSlot('error'),
     };
     const namedSlots: NamedSlotOverrides = {};
     const state = makeState({ requests: new Set(['syntheticFallback']), pointSlots, namedSlots });
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
     // Synthetic fallback is demanded AND idle → it loads (the recovery path).
     expect(fired.has(Source.Synthetic)).toBe(true);
-    // famousMeta is demanded (Famous slot !== 'idle').
-    expect(fired.has('famousMeta')).toBe(true);
+    // famousGalaxiesMeta is demanded (Famous slot !== 'idle').
+    expect(fired.has('famousGalaxiesMeta')).toBe(true);
     // structureCatalog still demanded (structure visibility unchanged).
     expect(fired.has('structureCatalog')).toBe(true);
     // The errored galaxy catalog point rows are demanded (still visible) but NOT idle,
@@ -505,16 +544,16 @@ describe('reevaluateDemand demand-table regression', () => {
    * cf4Density field enabled: user toggled cf4-density on, so it joins the
    * boot set (which already includes mcpm). Spreads the seeded fields and
    * flips cf4-density's enabled bit rather than replacing the record, so
-   * mcpm's default-on bit survives. Famous slot 'loading' for famousMeta.
+   * mcpm's default-on bit survives. Famous slot 'loading' for famousGalaxiesMeta.
    */
-  it('cf4Density field enabled: boot set + cf4Density', () => {
+  it('cf4Density field enabled: boot set + cf4Density', async () => {
     const volumeFields: VolumeFieldLeaves = {
       ...BOOT_VOLUME_FIELDS,
       'cf4-density': { enabled: true },
     };
     const state = makeState({ volumeFields });
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
     expect(fired).toEqual(
       new Set<AssetKey>([
@@ -523,7 +562,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
-        'famousMeta',
+        'famousGalaxiesMeta',
         'structureCatalog',
         'mcpm',
         'cf4Density',
@@ -534,15 +573,15 @@ describe('reevaluateDemand demand-table regression', () => {
   /**
    * Companion join in a single pass: when ONLY Famous is enabled (its
    * galaxy catalog items row set, all other galaxy catalogs + categories off), one
-   * `reevaluateDemand` loads BOTH the Famous point slot AND famousMeta.
+   * `reevaluateDemand` loads BOTH the Famous point slot AND famousGalaxiesMeta.
    * The Famous point row
    * evaluates first, finds the slot idle, and loads it — which synchronously
    * flips the stub to 'loading' (mirroring the real slot's load-started
-   * dispatch). The later famousMeta row then reads `slotState(Famous) ===
+   * dispatch). The later famousGalaxiesMeta row then reads `slotState(Famous) ===
    * 'loading'` and demands. This pins the ordering fact `setSourceVisible`
    * relies on: toggling Famous visible fetches both in the same pass.
    */
-  it('famous-only visible: one pass loads Famous + famousMeta together', () => {
+  it('famous-only visible: one pass loads Famous + famousGalaxiesMeta together', async () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
       // Hide every structure category so structureCatalog stays out of the set
@@ -567,8 +606,8 @@ describe('reevaluateDemand demand-table regression', () => {
       galaxyCatalogItems: { famousGalaxy: { enabled: true } },
     });
 
-    const fired = firedKeys(state);
+    const fired = await firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([Source.FamousGalaxy, 'famousMeta']));
+    expect(fired).toEqual(new Set<AssetKey>([Source.FamousGalaxy, 'famousGalaxiesMeta']));
   });
 });

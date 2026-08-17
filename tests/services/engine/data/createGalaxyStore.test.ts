@@ -9,7 +9,6 @@ describe('createGalaxyStore', () => {
   it('starts empty', () => {
     const s = createGalaxyStore();
     expect(s.catalogs.size).toBe(0);
-    expect(s.famousMeta).toEqual([]);
     expect(s.get(Source.Glade)).toBeUndefined();
   });
 
@@ -21,11 +20,5 @@ describe('createGalaxyStore', () => {
     expect(s.catalogs.get(Source.Glade)).toBe(c);
     s.removeCatalog(Source.Glade);
     expect(s.get(Source.Glade)).toBeUndefined();
-  });
-
-  it('setFamousMeta replaces and exposes a readonly view', () => {
-    const s = createGalaxyStore();
-    s.setFamousMeta([{ id: 'm31' } as never]);
-    expect(s.famousMeta.map((e) => e.id)).toEqual(['m31']);
   });
 });

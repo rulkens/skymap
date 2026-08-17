@@ -1,0 +1,27 @@
+/*
+ * RenderTogglesSection — checkbox list grouped by the frame program's
+ * (target, slab) step structure. `.rowDisabled` reuses the shared `.muted`
+ * dimming so a disabled row visually matches the rest of the panel's
+ * disabled-state convention rather than re-declaring its own opacity.
+ */
+
+.group {
+  margin-top: 4px;
+}
+
+.groupTitle {
+  font-weight: bold;
+  opacity: 0.6;
+  margin-bottom: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.rowDisabled {
+  composes: muted from './debugSection.module.css';
+}

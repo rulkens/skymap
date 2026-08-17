@@ -9,7 +9,8 @@
  *      superclusters / voids / groups, by name + Abell number).
  *
  * UX:
- *   - Triggered by a keyboard shortcut (handled in App.tsx).
+ *   - Triggered by Cmd+K / Ctrl+K / `/`, routed through `watchKeyboardEventsSaga`
+ *     via the `KEYBOARD_SHORTCUTS` map.
  *   - Famous matches always rank above alias matches at equal score.
  *   - Alias matches are capped at 50 per query so a query that hits
  *     "MCG" (which matches thousands of rows) doesn't drown the famous
@@ -42,14 +43,14 @@ import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
 import FeaturedGrid from './FeaturedGrid';
 import ResultsList from './ResultsList';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
-  /** All famous entries to search across.  Loaded from `famous_meta.json`. */
-  readonly entries: readonly FamousMetaEntry[];
+  /** All famous entries to search across.  Loaded from `famous_galaxies_meta.json`. */
+  readonly entries: readonly FamousGalaxyMetaEntry[];
   /**
    * The PGC alias index built by joining `pgc_aliases.json` against
    * the runtime GLADE+2MRS clouds.  Optional — the palette degrades

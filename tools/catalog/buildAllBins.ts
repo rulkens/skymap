@@ -9,7 +9,9 @@
  *     --glade   path/to/glade2.3.dat \
  *     --out-dir public/data
  *
- * Output files: sdss.bin, 2mrs.bin, glade.bin (one per source).
+ * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
+ * written under `public/data/galaxy-catalog/v9/` — the epoch-prefixed
+ * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
  *
  * Cross-match dedup:
  *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
@@ -37,12 +39,13 @@
 import {
   createReadStream,
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
@@ -87,6 +90,7 @@ import {
 import type { Tier } from '../../src/@types/data/Tier';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { estimateLog10StellarMass } from './estimateLog10StellarMass';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -151,6 +155,9 @@ export function recordsToCloud(
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
+    diameterIsFallback: new Uint8Array(count),
+    log10StellarMass: new Float32Array(count),
   };
   let overridesApplied = 0;
   for (let i = 0; i < count; i++) {
@@ -192,6 +199,10 @@ export function recordsToCloud(
     cloud.positions[i * 3 + 0] = x;
     cloud.positions[i * 3 + 1] = y;
     cloud.positions[i * 3 + 2] = z;
+    // Adopted distance — the one the position above just used (override,
+    // blueshift-safety, or Hubble flow) — feeds both the angular-diameter
+    // re-derivation below and the stellar-mass estimator.
+    const adoptedDistMpc = Math.hypot(x, y, z);
     cloud.magU[i] = r.magU;
     cloud.magG[i] = r.magG;
     cloud.magR[i] = r.magR;
@@ -204,13 +215,21 @@ export function recordsToCloud(
     // hash-based orientation so every encoded point has a finite (axisRatio,
     // PA) pair. The hash uses (objID, ra, dec) so reload yields the same
     // tilt every time.
+    //
+    // This branch is the ONE place that knows real-vs-fallback for certain,
+    // so it stamps `orientationIsFallback` here (the single source of truth).
+    // Persisting the byte spares the load side from re-deriving the flag by
+    // re-hashing the baked f32 position and comparing floats — a lossy
+    // round-trip that misclassified ~10 % of fallback rows.
     if (r.axisRatio !== null && r.positionAngleDeg !== null) {
       cloud.axisRatio[i] = r.axisRatio;
       cloud.positionAngleDeg[i] = r.positionAngleDeg;
+      cloud.orientationIsFallback[i] = 0;
     } else {
       const fb = fallbackOrientation(r.objID, r.ra, r.dec);
       cloud.axisRatio[i] = fb.axisRatio;
       cloud.positionAngleDeg[i] = fb.positionAngleDeg;
+      cloud.orientationIsFallback[i] = 1;
     }
     // Diameter: prefer the parser-supplied real measurement (2MRS Riso,
     // GLADE Tully(Bmag), SDSS petroR50_r).  When the parser couldn't
@@ -233,10 +252,16 @@ export function recordsToCloud(
     //   3. else the flat DEFAULT_GALAXY_DIAMETER_KPC = 30.
     let diameterKpc = r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : null;
     if (diameterKpc === null && r.angularMajorAxisArcsec !== undefined) {
-      const adoptedDistMpc = Math.hypot(x, y, z);
       const fromAngular = arcsecToKpc(r.angularMajorAxisArcsec, adoptedDistMpc);
       if (Number.isFinite(fromAngular) && fromAngular > 0) diameterKpc = fromAngular;
     }
+    // `diameterKpc === null` here means both attempts failed — no measured
+    // size and no angular size to re-derive one — so the row falls through to
+    // the flat DEFAULT_GALAXY_DIAMETER_KPC = 30. Stamp the authoritative
+    // fallback signal on that exact distinction (single source of truth,
+    // mirroring the orientationIsFallback stamp above) so the load side never
+    // has to guess via a lossy `diameterKpc === 30` compare.
+    cloud.diameterIsFallback[i] = diameterKpc === null ? 1 : 0;
     cloud.diameterKpc[i] = diameterKpc ?? DEFAULT_GALAXY_DIAMETER_KPC;
     // Per-source classification byte (e.g. Milliquas AGN class
     // letter → 1..6).  Every parser that doesn't carry a class
@@ -254,6 +279,15 @@ export function recordsToCloud(
     // peculiar-velocity correction) doesn't accidentally leak into the
     // InfoCard's display channel.
     cloud.spectroscopicZ[i] = r.spectroscopicZ;
+    cloud.log10StellarMass[i] = estimateLog10StellarMass({
+      source: r.source,
+      magU: r.magU,
+      magG: r.magG,
+      magR: r.magR,
+      magI: r.magI,
+      magZ: r.magZ,
+      distMpc: adoptedDistMpc,
+    });
   }
   if (overrides !== null && overridesApplied > 0) {
     process.stderr.write(
@@ -767,10 +801,33 @@ async function runCli(): Promise<void> {
   //    survey it draws from (SDSS, Veron, NED, …), so a second dedup
   //    pass would just spend CPU re-discovering the empty intersection.
   //
-  // Add the records straight into the per-source bucket so the per-tier
-  // write loop below treats them like any other survey.
+  // The crossMatch bypass above does NOT extend to the famous-seed dedup.
+  // Milliquas used to be added straight to the bucket here, which meant it
+  // silently skipped `dropFamousMatches` (that runs on the crossMatch output,
+  // which Milliquas is deliberately absent from) — so a famous galaxy with an
+  // active nucleus rendered twice: once as its curated entry, once as a
+  // Milliquas point on top. Centaurus A was the visible case.
+  //
+  // Measured cost of closing the gap: 20 of ~943k Milliquas rows sit within
+  // 30" of a famous-seed position, and only ONE is genuinely a different
+  // object — a ~1 Gpc background quasar shining through the Antennae. The
+  // rest are the host's own nucleus, scattered in distance only by Milliquas'
+  // coarse 3-decimal redshift (z=0.001 quantises to 4.28 Mpc, 0.002 to 8.56,
+  // …). Losing one background AGN to de-duplicate 19 is the accepted trade;
+  // a redshift-agreement test like `crossMatch` uses would save it, at the
+  // cost of a second matching pass for 19 rows.
   if (milliquasResult.records.length > 0) {
-    bySource.set(Source.Milliquas, milliquasResult.records);
+    const { kept: milliquasKept, dropped: milliquasFamousDropped } = dropFamousMatches(
+      milliquasResult.records,
+      famousPositions,
+      30,
+    );
+    if (milliquasFamousDropped > 0) {
+      process.stderr.write(
+        `  famous-seed dedup: dropped ${milliquasFamousDropped.toLocaleString()} Milliquas rows that match a famous-seed position\n`,
+      );
+    }
+    bySource.set(Source.Milliquas, milliquasKept);
   }
 
   // Per-source dedup report. Subtracting kept from input gives the number
@@ -829,6 +886,10 @@ async function runCli(): Promise<void> {
       const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
+      // `filename` carries the family's epoch prefix (`galaxy-catalog/v9/…`,
+      // see `tierFilenameForSource`), so the subfolder doesn't exist on a
+      // fresh checkout — recursive mkdir is a no-op once it does.
+      mkdirSync(dirname(outPath), { recursive: true });
       writeFileSync(outPath, Buffer.from(buf));
       process.stderr.write(
         `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,

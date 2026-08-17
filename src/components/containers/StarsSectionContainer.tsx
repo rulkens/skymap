@@ -10,7 +10,8 @@
  *
  * The master toggle maps to `setStarCatalogEnabled` (a real gate on
  * `starCatalogs.enabled`), NOT a per-source fan-out like the Galaxies master —
- * the star-catalogs cluster owns that gate field (Task 5). The per-catalog rows
+ * the star-catalogs cluster owns that gate field, and it governs every row in
+ * the cluster, the curated famous-star map included. The per-catalog rows
  * map to `setStarCatalogVisible`, the Advanced star-size slider to
  * `setStarCatalogSize`, and the star-brightness slider to
  * `setStarCatalogBrightness` (the twins of the Galaxies point-size + brightness
@@ -24,17 +25,14 @@
  * live in the separate Labels section, mirroring how the Galaxies section
  * exposes no per-catalog label toggle.
  *
- * The "Famous stars" row is a SIBLING of the per-catalog rows but reads/writes a
- * separate singleton overlay flag (`selectFamousStarsEnabled` /
- * `setFamousStarsEnabled`), independent of the star-catalogs master gate — it
- * hides the seeded near-field star map, not the Gaia survey.
- *
  * Per-catalog loaded counts ride the same engine slice the Galaxies section
  * reads: the star-catalog slot dispatches `engineSourceCountReported` as each
  * bin lands, keyed by the catalog's numeric `SourceType`. Because the section
  * iterates string `StarCatalogId`s, this container re-keys `selectSourceCounts`
  * (a `SourceType` map) into a `StarCatalogId` map via the registry, memoized on
- * the raw counts so the child's `memo` still bails on unrelated re-renders.
+ * the raw counts so the child's `memo` still bails on unrelated re-renders. A
+ * seeded catalog reports no count and simply renders without a chip — the same
+ * contract a not-yet-loaded survey row keeps.
  *
  * Why both handlers use `[dispatch]` only: `dispatch` from `useAppDispatch()` is
  * the invariant `store.dispatch`, so a `[dispatch]`-only dep array gives each
@@ -45,7 +43,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import StarsSection from '../SettingsPanel/StarsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectStarCatalogs, selectFamousStarsEnabled } from '../../state/settings/selectors';
+import { selectStarCatalogs } from '../../state/settings/selectors';
 import { selectSourceCounts } from '../../state/engine/selectors';
 import {
   setStarCatalogEnabled,
@@ -58,7 +56,6 @@ import {
   setStarCatalogExposureFarX,
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
-  setFamousStarsEnabled,
 } from '../../state/settings/settingsSlice';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
@@ -80,10 +77,6 @@ function StarsSectionContainer(): React.ReactElement {
     aggregateIntensityCap,
     items,
   } = useAppSelector(selectStarCatalogs);
-
-  // The famous-star map's own visibility gate — a singleton overlay flag
-  // (`settings.famousStars`), independent of the star-catalogs master above.
-  const famousStarsEnabled = useAppSelector(selectFamousStarsEnabled);
 
   // Per-catalog loaded counts from the engine slice, keyed by numeric
   // `SourceType`. Re-key into the string `StarCatalogId` domain the section
@@ -150,11 +143,6 @@ function StarsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  const onToggleFamousStars = useCallback(
-    (next: boolean) => dispatch(setFamousStarsEnabled(next)),
-    [dispatch],
-  );
-
   return (
     <StarsSection
       enabled={enabled}
@@ -168,7 +156,6 @@ function StarsSectionContainer(): React.ReactElement {
       exposureMidX={exposureMidX}
       exposureFarX={exposureFarX}
       aggregateIntensityCap={aggregateIntensityCap}
-      famousStarsEnabled={famousStarsEnabled}
       onToggleMaster={onToggleMaster}
       onToggleCatalog={onToggleCatalog}
       onSizeChange={onSizeChange}
@@ -179,7 +166,6 @@ function StarsSectionContainer(): React.ReactElement {
       onExposureMidXChange={onExposureMidXChange}
       onExposureFarXChange={onExposureFarXChange}
       onAggregateIntensityCapChange={onAggregateIntensityCapChange}
-      onToggleFamousStars={onToggleFamousStars}
     />
   );
 }

@@ -21,7 +21,7 @@
 
 import type { Renderer } from './Renderer';
 import type { Vec2 } from '../math/Vec2';
-import type { StarBody } from '../scene/StarBody';
+import type { PositionedStar } from '../scene/PositionedStar';
 
 export type StarPointRenderer = Renderer & {
   /**
@@ -31,7 +31,7 @@ export type StarPointRenderer = Renderer & {
    * previous upload; an empty array clears the renderer back to drawing
    * nothing.
    */
-  setStars(stars: readonly StarBody[]): void;
+  setStars(stars: readonly PositionedStar[]): void;
   /**
    * Draw every uploaded star as an instanced billboard into the current
    * (depthless, additive) pass. `viewProj` is the length-16 view-projection

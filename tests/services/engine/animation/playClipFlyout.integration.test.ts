@@ -68,10 +68,12 @@ import { createCameraClock } from '../../../../src/services/engine/camera/camera
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import { flyout } from '../../../../src/data/animation/clips/flyout';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers — mirror the commitOnEdge.test.ts harness shape
@@ -115,6 +117,7 @@ function makeEngineState(startDistance: number): {
       },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   };
 
@@ -243,7 +246,7 @@ describe('playClip — flyout seam', () => {
     // registers the end-resolver, attaches the [CANCEL] hook, and dispatches
     // clipStarted. The Promise resolves on the deferred clipEnded frame.
     let settled = false;
-    const p = playClip(flyout.data);
+    const p = playClip(flyout.data, DEFAULT_ORIENTATION);
     void p.then(() => {
       settled = true;
     });

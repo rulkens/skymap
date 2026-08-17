@@ -40,17 +40,16 @@ export type ContentLayer = {
   readonly target: string;
   /**
    * How this layer's fragments combine with what's already in its target.
-   * Declared now as part of the locked row shape: today every layer sharing
-   * a `target` also shares a `blend` (additive across the nine HDR layers,
-   * OVER across the five swap-chain overlays), so nothing groups or checks
-   * by blend at runtime — it's consumed only as a human-readable contract,
-   * with the renderer pipeline baking the actual blend state. This value
-   * must match the profile baked into the renderer pipeline its `draw`
-   * calls, but nothing enforces that today; a layer↔pipeline parity check
-   * is the intended guardrail once a target's layers stop agreeing on
-   * blend — no target mixes blends today (the near-field fold kept its
-   * opaque bodies on `foreground:0` and its OVER captions on `swap`), so
-   * the check stays a future guardrail.
+   * Declared now as part of the locked row shape: most layers sharing a
+   * `target` also share a `blend` (OVER across the five swap-chain
+   * overlays; the near-field fold kept its opaque bodies on
+   * `foreground:0` and its OVER captions on `swap`), but `hdr` already
+   * mixes two — additive emission across most HDR layers, and
+   * `milkyWayLayer`'s genuinely multiplicative dust pass, order-dependent
+   * against the emission it darkens (see `Blend.d.ts`). This value must
+   * match the profile baked into the renderer pipeline its `draw` calls,
+   * but nothing enforces that today; a layer↔pipeline parity check across
+   * a target's mixed blends is the intended guardrail, not yet built.
    */
   readonly blend: Blend;
   /** Whether this layer should record draw commands this frame. Pure: no side effects. */
@@ -73,9 +72,8 @@ export type ContentLayer = {
    *
    * Optional because for MOST layers the pick set equals the draw set: what
    * you can click is exactly what you can see, so a single `enabled` gate
-   * serves both and the layer omits this. A layer declares `pickEnabled`
-   * only when its pick set is WIDER than its draw set — then the two gates
-   * must diverge:
+   * serves both and the layer omits this. A layer declares `pickEnabled` only
+   * where the two genuinely differ — usually because the pick set is WIDER:
    *
    *  - `planetsLayer` draws only the partition's `flat` branch but is the
    *    SOLE pick site for `flat ∪ textured` (`texturedBodiesLayer` carries no
@@ -84,13 +82,25 @@ export type ContentLayer = {
    *    visual row leaves the pass plan;
    *  - `bodyGlintsLayer` draws only the `glints` branch but also stamps
    *    Earth's caption-range pick footprint, so it must be admitted even with
-   *    an empty `glints` branch when the Earth caption is on.
+   *    an empty `glints` branch when the Earth caption is on;
+   *  - `starPointsLayer` draws the star roster but also stamps Sgr A*, which
+   *    draws nothing anywhere and is invited by its caption alone.
    *
    * Keeping `enabled` narrow (draw set) preserves the executor's "a row that
    * would draw zero bodies must leave the VISUAL pass plan" invariant; the
    * wider pick gate lives here so picking is not forced to inject a no-op row
-   * into the visual program. When absent the pick program falls back to
-   * `enabled`. Pure: no side effects.
+   * into the visual program.
+   *
+   * `milkyWayLayer` is the one row where it runs the other way — its
+   * impostor keeps drawing while the camera flies through the disc but stops
+   * taking clicks, because a screen-filling hit target starves everything
+   * behind it. A narrower pick gate is only ever right when the content is
+   * still visible but is scenery rather than a target; "invisible ⇒
+   * unpickable" stays the rule and needs no gate of its own, since `enabled`
+   * already carries it.
+   *
+   * When absent the pick program falls back to `enabled`. Pure: no side
+   * effects.
    */
   pickEnabled?(state: EngineState, ctx: ReadyFrameContext): boolean;
   /**

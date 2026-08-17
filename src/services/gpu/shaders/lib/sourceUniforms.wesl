@@ -36,15 +36,9 @@ struct SourceUniforms {
   // anyway.
   sourceCode: u32,
 
-  // Per-source floor of the points intensity formula
-  // 'clamp((22 - mag) / 8, intensityFloor, 1)'. Replaces the prior
-  // hardcoded 0.05. A lower floor (e.g. 0.02 for GLADE) reduces the
-  // per-galaxy contribution that floored-faint galaxies make to the
-  // additive HDR target, which tames center saturation in dense
-  // regions. A higher floor (e.g. 0.15 for Milliquas) keeps faint
-  // quasars visible since quasar apparent mags often sit past 22 and
-  // would otherwise pin to the same floor as faint galaxies.
-  intensityFloor: f32,
+  // Per-source multiplier on the physical surface-brightness intensity
+  // (1.0 = no boost); >1 lifts faint sources.
+  sbBoost: f32,
 
   // Per-source half-distance of the depth-fade curve
   // '1 / (1 + (d / falloffHalfMpc)^2)'. Replaces the prior hardcoded

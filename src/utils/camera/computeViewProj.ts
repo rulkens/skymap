@@ -13,6 +13,17 @@ import { mat4 } from 'wgpu-matrix';
 import type { Mat4 } from 'wgpu-matrix';
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
+import { imagePlaneBasis } from './imagePlaneBasis';
+import { frameUp } from './frameUp';
+
+// Module-scope scratch reused every frame: the forward view direction, the
+// frame-pole reference up, and the roll-adjusted basis. computeViewProj runs
+// once per frame on the render hot path, so all three are hoisted out of the
+// function to avoid per-call allocation.
+const forwardScratch: Vec3 = [0, 0, 0];
+const upRefScratch: Vec3 = [0, 0, 0];
+const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
 /**
  * Compute the combined view-projection matrix for the given camera state.
@@ -61,52 +72,34 @@ import type { Vec3 } from '../../@types/math/Vec3';
 export function computeViewProj(cam: OrbitCamera): Mat4 {
   // ── View matrix ──────────────────────────────────────────────────────────
   //
-  // We need an "up" vector for `lookAt`.  By default this is world +Y, which
-  // works for any camera position that isn't exactly on the +Y or −Y pole
-  // (hence the pitch-clamp in the controls module).
+  // `lookAt` needs an "up" vector.  By default this is world +Y, which works
+  // for any camera position that isn't exactly on the +Y or −Y pole (hence
+  // the pitch-clamp in the controls module).  When `cam.roll` is non-zero the
+  // up-vector is rotated about the view direction; `imagePlaneBasis` owns that
+  // roll convention (Rodrigues' formula), and we hand its `rolledUp` result to
+  // `lookAt`. The base up is the frame pole (`frameUp` reads `cam.upBasis` —
+  // draw-time, so it may be a transient mid-slerp basis, unlike the decode's
+  // `poseBasis`); absent a basis that is world +Y, so the pre-frame camera is
+  // unchanged.
   //
-  // When `cam.roll` is non-zero we rotate that up-vector around the view
-  // direction (target − position) using Rodrigues' rotation formula:
-  //
-  //   v_rot = v·cosθ  +  (k×v)·sinθ  +  k·(k·v)·(1−cosθ)
-  //
-  // where k is the *unit* view-direction axis and θ is the roll angle.
-  //
-  // For roll = 0 the formula collapses to v_rot = v (cosθ = 1, sinθ = 0,
-  // last term = 0), so the no-roll path is algebraically identical — we use
-  // an early-exit for performance and clarity.
-  //
-  // With v = (0, 1, 0):
-  //   k · v = ky           (dot product)
-  //   k × v = (kz, 0, −kx) (cross product — note the zero middle component)
-  //
-  // This expansion is inlined to stay dependency-free (no additional
-  // gl-matrix imports beyond what was already present).
-  const roll = cam.roll ?? 0;
-  let upX = 0;
-  let upY = 1;
-  let upZ = 0;
-  if (Number.isFinite(roll) && roll !== 0) {
-    // k = unit vector from position toward target (the view direction axis)
-    const tgt = cam.target as Vec3;
-    let kx = tgt[0] - cam.position[0];
-    let ky = tgt[1] - cam.position[1];
-    let kz = tgt[2] - cam.position[2];
-    const klen = Math.hypot(kx, ky, kz) || 1;
-    kx /= klen;
-    ky /= klen;
-    kz /= klen;
-    const c = Math.cos(roll);
-    const s = Math.sin(roll);
-    // v = (0, 1, 0); k · v = ky; k × v = (kz, 0, −kx)
-    const dot = ky;
-    const crossX = kz;
-    const crossY = 0;
-    const crossZ = -kx;
-    upX = 0 * c + crossX * s + kx * dot * (1 - c);
-    upY = 1 * c + crossY * s + ky * dot * (1 - c);
-    upZ = 0 * c + crossZ * s + kz * dot * (1 - c);
-  }
+  // `forward` is the unit view direction (target − position). `imagePlaneBasis`
+  // needs it as a required argument even when roll is zero (it also determines
+  // the frame-pole projection for the base up-vector), so we always build it
+  // here — a subtract + normalize into module scratch, no allocation.
+  const tgt = cam.target as Vec3;
+  const fx = tgt[0] - cam.position[0];
+  const fy = tgt[1] - cam.position[1];
+  const fz = tgt[2] - cam.position[2];
+  const flen = Math.hypot(fx, fy, fz) || 1;
+  forwardScratch[0] = fx / flen;
+  forwardScratch[1] = fy / flen;
+  forwardScratch[2] = fz / flen;
+  const basis = imagePlaneBasis(
+    forwardScratch,
+    cam.roll ?? 0,
+    frameUp(cam.upBasis, upRefScratch),
+    basisScratch,
+  );
 
   // wgpu-matrix ops take the destination as an optional LAST argument and
   // return it.  Omitting it allocates a fresh Mat4 (Float32Array) — same
@@ -114,7 +107,7 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   const view = mat4.lookAt(
     cam.position, // eye: where the camera is
     cam.target, // center: what the camera looks at
-    [upX, upY, upZ], // up: world +Y by default; rotated by roll when non-zero
+    basis.rolledUp, // up: world +Y by default; rotated by roll when non-zero
     // ⚠ If pitch = ±π/2, `position` is directly above/below `target` and
     // the default up vector is parallel to the view direction.  lookAt
     // produces a degenerate matrix in that case.  The controls module

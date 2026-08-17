@@ -15,7 +15,7 @@
  *    `onFilamentsChange(true)`.
  *  - A `VolumeFieldRow` intensity change calls `onVolumeFieldIntensityChange`
  *    with the correct id and parsed value.
- *  - Filament intensity slider renders when `filamentsEnabled` is true and is
+ *  - Filament intensity Slider renders when `filamentsEnabled` is true and is
  *    absent when false.
  *  - Empty-state hint renders when `volumeFields` is empty.
  *
@@ -25,7 +25,10 @@
  * the wrong value.
  *
  * Style picker buttons: fireEvent.click.
- * Sliders / range inputs: fireEvent.change.
+ * Both the filament-intensity control and the VolumeFieldRow sliders are the
+ * compact Slider (no native range input) — queried via `[role="slider"]` +
+ * `aria-label` and nudged with `fireEvent.keyDown`, per the pattern in
+ * GalaxiesSection.test.ts.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -203,7 +206,7 @@ describe('CosmicWebSection', () => {
   });
 
   describe('VolumeFieldRow intensity callback', () => {
-    it('calls onVolumeFieldIntensityChange with the field id and parsed value when the intensity slider moves', () => {
+    it('calls onVolumeFieldIntensityChange with the field id and stepped value on a keyboard nudge', () => {
       const onVolumeFieldIntensityChange = vi.fn<(id: VolumeFieldId, intensity: number) => void>();
       const { container } = render(
         createElement(
@@ -211,17 +214,20 @@ describe('CosmicWebSection', () => {
           baseProps({ volumeFields: [MOCK_FIELD], onVolumeFieldIntensityChange }),
         ),
       );
-      // The VolumeFieldRow intensity slider has aria-label "{label} intensity"
-      const intensitySlider = container.querySelector<HTMLInputElement>(
-        'input[type=range][aria-label="CF-4 DM density intensity"]',
-      );
-      expect(intensitySlider).not.toBeNull();
-      fireEvent.change(intensitySlider!, { target: { value: '0.75' } });
+      // The VolumeFieldRow intensity Slider has no native range input; found
+      // by role + aria-label ("Intensity"), per the pattern in
+      // GalaxiesSection.test.ts. ArrowRight advances by one step (0.01) from
+      // MOCK_FIELD's intensity (0.5).
+      const intensitySlider = Array.from(container.querySelectorAll('[role="slider"]')).find(
+        (el) => el.getAttribute('aria-label') === 'Intensity',
+      )!;
+      expect(intensitySlider).not.toBeUndefined();
+      fireEvent.keyDown(intensitySlider, { key: 'ArrowRight' });
 
       expect(onVolumeFieldIntensityChange).toHaveBeenCalledOnce();
       expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith(
         'cf4-density' as VolumeFieldId,
-        0.75,
+        0.51,
       );
     });
   });
@@ -234,9 +240,35 @@ describe('CosmicWebSection', () => {
           baseProps({ volumesEnabled: false, filamentsEnabled: true, filamentIntensity: 0.6 }),
         ),
       );
-      const slider = container.querySelector<HTMLInputElement>('#filament-intensity');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('0.6');
+      // The Slider has no native range input; found by role + aria-label,
+      // per the pattern in GalaxiesSection.test.ts.
+      const slider = Array.from(container.querySelectorAll('[role="slider"]')).find(
+        (el) => el.getAttribute('aria-label') === 'Filament intensity',
+      );
+      expect(slider).not.toBeUndefined();
+      expect(slider!.getAttribute('aria-valuenow')).toBe('0.6');
+      expect(slider!.getAttribute('aria-valuetext')).toBe('0.60');
+    });
+
+    it('fires onFilamentIntensityChange with the stepped value on a keyboard nudge', () => {
+      const onFilamentIntensityChange = vi.fn<(value: number) => void>();
+      const { container } = render(
+        createElement(
+          CosmicWebSection,
+          baseProps({
+            volumesEnabled: false,
+            filamentsEnabled: true,
+            filamentIntensity: 0.55,
+            onFilamentIntensityChange,
+          }),
+        ),
+      );
+      const slider = Array.from(container.querySelectorAll('[role="slider"]')).find(
+        (el) => el.getAttribute('aria-label') === 'Filament intensity',
+      )!;
+      fireEvent.keyDown(slider, { key: 'ArrowRight' });
+      expect(onFilamentIntensityChange).toHaveBeenCalledOnce();
+      expect(onFilamentIntensityChange).toHaveBeenCalledWith(0.6);
     });
 
     it('does not render the filament intensity slider when filamentsEnabled is false', () => {
@@ -246,8 +278,10 @@ describe('CosmicWebSection', () => {
           baseProps({ volumesEnabled: true, filamentsEnabled: false }),
         ),
       );
-      const slider = container.querySelector<HTMLInputElement>('#filament-intensity');
-      expect(slider).toBeNull();
+      const slider = Array.from(container.querySelectorAll('[role="slider"]')).find(
+        (el) => el.getAttribute('aria-label') === 'Filament intensity',
+      );
+      expect(slider).toBeUndefined();
     });
   });
 

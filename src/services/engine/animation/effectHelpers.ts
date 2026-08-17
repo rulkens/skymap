@@ -13,7 +13,7 @@
  * require hunting down every literal across every clip; with constructors,
  * there is exactly one place to update.
  *
- * Additionally, constructors encode the defaults — `ease: 'inOut'` and
+ * Additionally, constructors encode the defaults — `ease: 'easeInOutCubic'` and
  * `space` from `CHANNEL_SPACE[ch]` — in one place. A clip author calls
  * `dollyTo(300, 4)` and gets the right `space: 'log'` automatically;
  * they never need to remember which channels are logarithmic.
@@ -40,6 +40,7 @@
 import type { CameraAction } from '../../../@types/animation/CameraAction';
 import type { FocusBoundEffect } from '../../../@types/animation/FocusBoundEffect';
 import type { FocusId } from '../../../@types/animation/FocusId';
+import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
@@ -79,7 +80,7 @@ import {
  * `'add'` for angles). Pass an explicit `space` to override — e.g.
  * `tween('distance', { to:5, over:1, space:'lin' })` for a linear zoom.
  *
- * `ease` defaults to `'inOut'` (the natural choice for A→B camera moves).
+ * `ease` defaults to `'easeInOutCubic'` (the natural choice for A→B camera moves).
  */
 export function tween(
   ch: 'distance' | 'yaw' | 'pitch',
@@ -90,7 +91,7 @@ export function tween(
     ch,
     to: opts.to,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     space: opts.space ?? CHANNEL_SPACE[ch],
   };
 }
@@ -120,7 +121,7 @@ export function moveTarget(to: Vec3, over: number, ease?: Ease): CameraAction & 
     ch: 'target',
     to,
     over,
-    ease: ease ?? 'inOut',
+    ease: ease ?? 'easeInOutCubic',
     space: 'lin',
   };
 }
@@ -139,7 +140,7 @@ export function moveTargetId(
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'moveTargetId' } {
-  return { kind: 'moveTargetId', id, over, ease: ease ?? 'inOut' };
+  return { kind: 'moveTargetId', id, over, ease: ease ?? 'easeInOutCubic' };
 }
 
 /**
@@ -168,7 +169,7 @@ export function dollyToId(
     kind: 'dollyToId',
     id,
     over,
-    ease: opts?.ease ?? 'inOut',
+    ease: opts?.ease ?? 'easeInOutCubic',
     ...(opts?.scale !== undefined ? { scale: opts.scale } : {}),
   };
 }
@@ -209,7 +210,7 @@ export function spin(
     ch,
     by: opts.by,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     ...(opts.loop !== undefined ? { loop: opts.loop } : {}),
   };
   return action;
@@ -231,7 +232,7 @@ export function rate(
     ch,
     to: opts.to,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
   };
 }
 
@@ -258,7 +259,7 @@ export function oscillate(
     ch,
     amp: opts.amp,
     period: opts.period,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     ...(opts.over !== undefined ? { over: opts.over } : {}),
     ...(opts.fade !== undefined ? { fade: opts.fade } : {}),
   };
@@ -335,7 +336,7 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  * `syncVisibilityFades` handles the translation to per-layer fade controllers.
  *
  * `layers` accepts three vocabularies in one list: atomic keys, authoring
- * aggregates (`'labels'` → the three label layers), and `'family:scope'`
+ * aggregates (`'labels'` → every label layer), and `'family:scope'`
  * scoped entries (`'survey:milliquas'`, `'structureRing:group'`,
  * `'label:milkyWay'`) that address ONE item where the bare key would fan over
  * all. `splitVisibilityArgs` resolves the mix at construction: aggregates
@@ -403,6 +404,24 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
 }
 
 /**
+ * frameTo — reorient the camera's "up" pole to `frame` over `opts.over` seconds.
+ *
+ * A cue-style effect (like `scene` / `focus`): it fires at its beat and awaits
+ * ZERO duration. At fire time `applySceneEffect` dispatches `setOrientation` +
+ * `startFrameTween`, seeding the roll from the LIVE basis `B(t)` — the same two
+ * writes (and the same live-basis capture) the interactive
+ * `watchOrientationChangeSaga` performs. A beat that should dwell through the
+ * reorientation sequences a `wait(opts.over)` after it; the cue itself adds no
+ * awaited time. `ease` defaults to `'easeInOutCubic'`, the natural S-curve for an A→B roll.
+ */
+export function frameTo(
+  frame: OrientationFrameId,
+  opts: { over: number; ease?: Ease },
+): SceneEffect & { kind: 'frameTo' } {
+  return { kind: 'frameTo', frame, over: opts.over, ease: opts.ease ?? 'easeInOutCubic' };
+}
+
+/**
  * focus — build a `focusId` cue addressed by a durable `FocusId` handle, or
  * `null` to clear the selection focus.
  *
@@ -432,7 +451,7 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
  * Plain `focus(id)` remains the camera-free half — use it when the clip's own
  * choreography (a flyPath, a spin) already owns the camera.
  */
-export function focusOnId(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
+export function focusOnId(id: FocusId, over: number, ease: Ease = 'easeInOutCubic'): Effect {
   return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, { ease })])]);
 }
 
@@ -462,7 +481,25 @@ export function lookAtId(
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'lookAtId' } {
-  return { kind: 'lookAtId', id, over, ease: ease ?? 'inOut' };
+  return { kind: 'lookAtId', id, over, ease: ease ?? 'easeInOutCubic' };
+}
+
+/**
+ * aimAlong — swing the view to face a FIXED WORLD-space direction, resolved
+ * through whichever orientation frame is live at clip start
+ * (`orbitAnglesLookingAlong`, same mechanism `lookAtId` uses).
+ *
+ * Unlike `lookAtId`, the bearing is NOT measured from the live orbit
+ * target — there is no subject to look up, so `forward` alone determines the
+ * aim. That makes it the right primitive for a pose that must be
+ * reproducible regardless of where the camera happened to be before the clip
+ * started (a cold-open snap, or a return-to-opening-framing beat): `lookAtId`
+ * would silently depend on that unknown prior pose, `aimAlong` does not.
+ *
+ * `over: 0` is a legal snap, same as `aimAt`.
+ */
+export function aimAlong(forward: Vec3, over: number, ease?: Ease): Effect & { kind: 'aimAlong' } {
+  return { kind: 'aimAlong', forward, over, ease: ease ?? 'easeInOutCubic' };
 }
 
 /**
@@ -492,7 +529,36 @@ export function strafeId(
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'strafeId' } {
-  return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'inOut' };
+  return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'easeInOutCubic' };
+}
+
+/**
+ * spinToId — orbit the yaw channel until it faces the structure or galaxy
+ * identified by `id`, touching only yaw (pitch/target/distance untouched).
+ *
+ * The bearing-aware counterpart to a raw `spin('yaw', { by, ... })`: instead
+ * of an author-supplied radian delta pinned to one orientation frame,
+ * `resolveClipFoci` derives `by` from the LIVE yaw to the subject's world
+ * sightline at resolve time, through whichever frame basis is steady at that
+ * clip boundary. The same authored effect therefore lands on the same
+ * subject regardless of which frame is active — a bearing is a sightline,
+ * not a frame-local number.
+ *
+ * `opts.turns` (default 0) adds extra full revolutions on top of the
+ * shortest-arc delta: negative takes the long way round, the idiom
+ * `approachM31.ts`'s `NET_YAW_RAD` established with a literal `- Math.PI * 2`.
+ */
+export function spinToId(
+  id: FocusId,
+  opts: { over: number; turns?: number; ease?: Ease },
+): FocusBoundEffect & { kind: 'spinToId' } {
+  return {
+    kind: 'spinToId',
+    id,
+    over: opts.over,
+    ease: opts.ease ?? 'easeInOutCubic',
+    ...(opts.turns !== undefined ? { turns: opts.turns } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -560,7 +626,7 @@ export function flyPath(
     kind: 'flyPath',
     waypoints,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
     linger: opts.linger ?? DEFAULT_LINGER,

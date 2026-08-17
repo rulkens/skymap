@@ -20,6 +20,10 @@ import type { SourceType } from '../data/SourceType';
  * `source` is the `Source` enum value of the catalog that just became
  * ready — the only consumer (the StatusBar) compares it against
  * `Source.Synthetic` to flag the no-real-data fallback path.
+ *
+ * `cause` on the error variant is optional and machine-readable: `useSplash`
+ * discriminates on it (rather than sniffing `message`) to route a stale-`.bin`
+ * version mismatch to its own splash copy. Absent for every other error path.
  */
 export type EngineStatus =
   | { kind: 'initializing' }
@@ -29,4 +33,4 @@ export type EngineStatus =
       count: number;
       source: SourceType;
     }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; cause?: 'format-version' };

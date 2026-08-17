@@ -22,12 +22,18 @@
  * Until it lands the renderer draws a plain mid-blue sphere sampled from a 1×1
  * placeholder texture created at construction — the geometry is visible-but-plain
  * rather than absent, which keeps the descent legible even before the asset
- * arrives. `setMap('surface', bitmap)` replaces the placeholder with the real
- * equirectangular texture (via `copyExternalImageToTexture`) and rebuilds the
- * fragment bind group.
+ * arrives. `setMap('surface', bitmap)` uploads the real equirectangular texture
+ * (via `copyExternalImageToTexture`) into a SECOND layer that shadows the
+ * placeholder, and rebuilds the fragment bind group.
+ *
+ * `setPlaceholderMap` upgrades the stand-in itself, from a tile of the shared
+ * low-resolution body atlas that loads first at boot — so the pre-Blue-Marble
+ * Earth is a recognisable low-res Earth rather than a blue ball. The two setters
+ * write two different layers, which is what makes their arrival order irrelevant.
  */
 
 import type { Renderer } from './Renderer';
+import type { AtlasTileRect } from '../data/AtlasTileRect';
 import type { TextureKind } from '../data/TextureKind';
 
 export type EarthRenderer = Renderer & {
@@ -51,6 +57,38 @@ export type EarthRenderer = Renderer & {
    * wired — one `(bodyId, kind)` family feeds one setter, no inert kind remains.
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
+  /**
+   * Seed a kind's PLACEHOLDER — what Earth shows for a kind `setMap` has not
+   * supplied yet — from one tile of the shared low-resolution body atlas, in place
+   * of the 1×1 created at construction.
+   *
+   * `rect` names the tile inside `atlas` in UNFLIPPED source coordinates (top-left
+   * origin, y increasing downward — what `atlasTileRect` returns). Only that rect
+   * is copied, into a fresh texture of the tile's own size in the kind's format
+   * (`isLinearTextureKind`, the same predicate `setMap` uses, so a placeholder can
+   * never disagree with the map that later shadows it) with a full mip chain. The
+   * atlas is therefore a TRANSPORT container and never a bound texture: no shader,
+   * layout, sampler or UV change follows from it.
+   *
+   * Writes the OTHER texture layer from `setMap`, which is the whole point:
+   * whichever of the two arrives second, the committed hi-res map wins, with no
+   * ordering check anywhere. Replacing a kind's placeholder frees the one it
+   * replaces (the 1×1, or an earlier tile) and never touches the committed map.
+   * In practice only `'surface'` has an atlas tile.
+   */
+  setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void;
+  /**
+   * Bind the surface virtual texture's page table and tile atlas — the views
+   * `earthTileSubsystem.getTileResources()` publishes once engaged — in place
+   * of the 1x1 stand-ins bound from construction, and rebuild the fragment
+   * bind group. A zero page-table weight means "sample the base", so an
+   * un-called renderer draws exactly the no-feature picture.
+   *
+   * Call on the null-to-non-null transition, NOT every frame: the two views
+   * are identity-stable once created. Views stay owned by the subsystem —
+   * this renderer's teardown releases only its own stand-ins.
+   */
+  setTileResources(pageTable: GPUTextureView, atlas: GPUTextureView): void;
   /**
    * Draw the Earth into the current pass. `uniforms` is a length-32 Float32Array
    * (the 128-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):

@@ -4,29 +4,32 @@
  * inside the SettingsPanel.
  *
  * Owns the star-catalogs group UI: a master gate toggle on the section header
- * and per-catalog visibility checkboxes (just `gaiaStars` today; the
- * `STAR_CATALOG_IDS.map(...)` row loop is the extension point for a future
- * second catalog), led by a "Famous stars" row — a singleton overlay gate
- * (`settings.famousStars`), not a `starCatalog` row, carrying a count chip of
- * its SEEDED roster size (a compile-time constant, not a fetched count) — plus a
- * default-closed "Advanced" sub-section carrying the
- * shared star-size and star-brightness sliders — the star-catalog twins of the
- * Galaxies section's point-size and brightness controls — plus two lattice
- * controls unique to the octree-cut star renderer: "Detail" (the CPU refine
- * threshold) and "Glow overlap" (the aggregate glow spread). It renders NO
- * per-catalog label toggle — mirroring the
+ * and per-catalog visibility checkboxes, one per `STAR_CATALOG_IDS` entry (the
+ * curated famous-star map and the survey-wide Gaia bin), plus a default-closed
+ * "Advanced" sub-section carrying the shared star-size and star-brightness
+ * sliders — the star-catalog twins of the Galaxies section's point-size and
+ * brightness controls — plus two lattice controls unique to the octree-cut star
+ * renderer: "Detail" (the CPU refine threshold) and "Glow overlap" (the
+ * aggregate glow spread). It renders NO per-catalog label toggle — mirroring the
  * Galaxies section, star-label visibility lives in the separate Labels section.
  *
  * ### Master: a real gate, not a per-source fan-out
  *
  * Unlike `GalaxiesSection`/`StructuresSection` — whose masters derive purely
  * from the per-item flags and fan a click out to every row — the star-catalogs
- * cluster owns a real `enabled` gate (`starCatalogs.enabled`, Task 5). So the
+ * cluster owns a real `enabled` gate (`starCatalogs.enabled`). So the
  * master checkbox reflects that gate directly and flips it on click. The
  * `indeterminate` visual is still derived from the per-item flags: gate-on while
  * some-but-not-all catalogs are individually enabled reads as "mixed", the same
  * affordance the sibling sections show. Deriving it here keeps the summary
  * section-local rather than storing a redundant tri-state field.
+ *
+ * The tri-state is derived over EVERY star-catalog id, which is only honest
+ * because the gate is total: engine-side, every consumer of a star catalog's
+ * visibility requires the master before the row's own bit, so the header
+ * checkbox really can hide each row it summarises. Turning it off leaves the
+ * Sun drawn: the descent's aim point is its own `bodies` row, so it was never
+ * in the set this gate governs.
  *
  * Imports nothing from `store/` or `state/`: a pure function of props and the
  * transient CollapsibleSection open/closed state. Tests supply plain props with
@@ -41,20 +44,12 @@
 import { memo } from 'react';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
-import { SCENE_STARS } from '../../data/bodies/sceneStars';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
-
-/**
- * The famous-star map's roster size — a compile-time constant off the seed
- * table (never a hand-typed number), shown in the row's count chip the same way
- * the Gaia rows show their loaded count. Seeded, not fetched, so it needs no
- * store: importing the static seed here matches the module's existing use of
- * `STAR_CATALOG_IDS` / `SOURCE_ENTRIES` registry data.
- */
-const FAMOUS_STARS_COUNT = SCENE_STARS.length;
+import type { SourceEntryBase } from '../../@types/data/SourceEntryBase';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -85,13 +80,6 @@ type StarsSectionProps = {
   exposureFarX: number;
   /** Current aggregate surface-brightness cap — the "Fog cap" tuning knob. */
   aggregateIntensityCap: number;
-  /**
-   * Whether the seeded famous-star map is shown. Leads the mapped per-catalog
-   * rows, but is a singleton overlay gate (`settings.famousStars`), NOT a
-   * `starCatalog` row. Its count chip shows the SEEDED roster size (a
-   * compile-time constant), so it needs no `counts` entry.
-   */
-  famousStarsEnabled: boolean;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -112,8 +100,6 @@ type StarsSectionProps = {
   onExposureFarXChange: (v: number) => void;
   /** Called when the user moves the Fog cap slider. */
   onAggregateIntensityCapChange: (v: number) => void;
-  /** Called when the user toggles the famous-star map on or off. */
-  onToggleFamousStars: (enabled: boolean) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -134,7 +120,6 @@ function StarsSection({
   exposureMidX,
   exposureFarX,
   aggregateIntensityCap,
-  famousStarsEnabled,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
@@ -145,7 +130,6 @@ function StarsSection({
   onExposureMidXChange,
   onExposureFarXChange,
   onAggregateIntensityCapChange,
-  onToggleFamousStars,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -160,27 +144,15 @@ function StarsSection({
       onHeaderToggleChange={onToggleMaster}
     >
       <CollapsibleSection title="Star catalogs" defaultOpen>
-        {/* Famous stars — the FIRST row, ahead of the mapped catalogs. A
-            singleton overlay gate (`settings.famousStars`) rather than a
-            `starCatalog` row, so it toggles the seeded near-field star map (the
-            Sun keeps rendering to anchor the descent). Its count chip is the
-            SEEDED roster size — a compile-time constant off the seed table, not
-            a fetched loaded-count — styled identically to the Gaia rows'. */}
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-famous-stars">
-            Famous stars
-            <span className={styles.sourceCount}>{FAMOUS_STARS_COUNT.toLocaleString()}</span>
-          </label>
-          <input
-            id="toggle-famous-stars"
-            type="checkbox"
-            checked={famousStarsEnabled}
-            onChange={(e) => onToggleFamousStars(e.target.checked)}
-          />
-        </div>
-
         {STAR_CATALOG_IDS.map((id) => {
-          const label = SOURCE_ENTRIES.find((e) => e.id === id)?.label ?? id;
+          // `plural` (not the singular `label`, which stays reserved for the
+          // InfoCard source badge) — this row is a toggle-header list entry,
+          // the same field the Labels section reads for its rows. Cast to the
+          // shared base: `plural` is optional there, but individual registry
+          // literals omit the key entirely when absent (bearsLabel: false),
+          // which TS won't structurally unify across the SOURCE_ENTRIES union.
+          const entry = SOURCE_ENTRIES.find((e) => e.id === id) as SourceEntryBase | undefined;
+          const label = entry?.plural ?? entry?.label ?? id;
           const count = counts?.[id];
           return (
             <div className={styles.panelRow} key={id}>
@@ -193,6 +165,7 @@ function StarsSection({
               <input
                 id={`toggle-star-catalog-${id}`}
                 type="checkbox"
+                className={styles.toggle}
                 checked={items[id].enabled}
                 onChange={(e) => onToggleCatalog(id, e.target.checked)}
               />
@@ -205,18 +178,14 @@ function StarsSection({
         {/* Star size — shared star-billboard knob, twin of the Galaxies
             section's point-size slider (same 1–8 px range). */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-size">Star size</label>
-          <span className={styles.panelValue}>{sizePx.toFixed(1)} px</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-size"
-            type="range"
+          <Slider
+            label="Star size"
+            value={sizePx}
             min={1.0}
             max={8.0}
             step={0.1}
-            value={sizePx}
-            onChange={(e) => onSizeChange(parseFloat(e.target.value))}
+            onChange={onSizeChange}
+            format={(v) => `${v.toFixed(1)} px`}
           />
         </div>
 
@@ -226,18 +195,14 @@ function StarsSection({
             A scale-dependent exposure ramp handles the big cross-scale swing,
             so this stays a trim rather than a wide-range knob. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-brightness">Star brightness</label>
-          <span className={styles.panelValue}>{brightness.toFixed(1)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-brightness"
-            type="range"
+          <Slider
+            label="Star brightness"
+            value={brightness}
             min={0.01}
             max={4}
             step={0.05}
-            value={brightness}
-            onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+            onChange={onBrightnessChange}
+            format={(v) => `${v.toFixed(1)}×`}
           />
         </div>
 
@@ -245,18 +210,14 @@ function StarsSection({
             earlier = fewer visible lattice cells (more detail), at the cost of
             more drawn nodes. Range 0.01–0.30; NOT a GPU uniform. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-detail">Detail</label>
-          <span className={styles.panelValue}>{refineThreshold.toFixed(2)}</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-detail"
-            type="range"
+          <Slider
+            label="Detail"
+            value={refineThreshold}
             min={0.01}
             max={0.3}
             step={0.01}
-            value={refineThreshold}
-            onChange={(e) => onRefineThresholdChange(parseFloat(e.target.value))}
+            onChange={onRefineThresholdChange}
+            format={(v) => v.toFixed(2)}
           />
         </div>
 
@@ -264,18 +225,14 @@ function StarsSection({
             footprint so the box lattice dissolves. 1.0 = identity (flux-
             conserving; the shader divides the peak by the square). Range 1.0–6.0. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-glow-overlap">Glow overlap</label>
-          <span className={styles.panelValue}>{glowOverlap.toFixed(1)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-glow-overlap"
-            type="range"
+          <Slider
+            label="Glow overlap"
+            value={glowOverlap}
             min={1.0}
             max={6.0}
             step={0.1}
-            value={glowOverlap}
-            onChange={(e) => onGlowOverlapChange(parseFloat(e.target.value))}
+            onChange={onGlowOverlapChange}
+            format={(v) => `${v.toFixed(1)}×`}
           />
         </div>
 
@@ -283,18 +240,14 @@ function StarsSection({
             starExposureRamp targets at its near (solar-system) anchor. A live
             tuning knob; the value gets frozen once re-eye-tuned. Range 1–60. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-exposure-near">Exposure (near)</label>
-          <span className={styles.panelValue}>{exposureNearX.toFixed(1)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-exposure-near"
-            type="range"
+          <Slider
+            label="Exposure (near)"
+            value={exposureNearX}
             min={1}
             max={60}
             step={0.5}
-            value={exposureNearX}
-            onChange={(e) => onExposureNearXChange(parseFloat(e.target.value))}
+            onChange={onExposureNearXChange}
+            format={(v) => `${v.toFixed(1)}×`}
           />
         </div>
 
@@ -302,18 +255,14 @@ function StarsSection({
             middle (few-kpc) anchor. Pull it down to darken the over-exposed
             central clump without touching either end. Range 5–150. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-exposure-mid">Exposure (mid)</label>
-          <span className={styles.panelValue}>{exposureMidX.toFixed(0)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-exposure-mid"
-            type="range"
+          <Slider
+            label="Exposure (mid)"
+            value={exposureMidX}
             min={5}
             max={150}
             step={1}
-            value={exposureMidX}
-            onChange={(e) => onExposureMidXChange(parseFloat(e.target.value))}
+            onChange={onExposureMidXChange}
+            format={(v) => `${v.toFixed(0)}×`}
           />
         </div>
 
@@ -321,18 +270,14 @@ function StarsSection({
             far (whole-galaxy) anchor, where the field reads as diffuse surface
             brightness. Live tuning knob; range 5–300. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-exposure-far">Exposure (far)</label>
-          <span className={styles.panelValue}>{exposureFarX.toFixed(0)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-exposure-far"
-            type="range"
+          <Slider
+            label="Exposure (far)"
+            value={exposureFarX}
             min={5}
             max={300}
             step={1}
-            value={exposureFarX}
-            onChange={(e) => onExposureFarXChange(parseFloat(e.target.value))}
+            onChange={onExposureFarXChange}
+            format={(v) => `${v.toFixed(0)}×`}
           />
         </div>
 
@@ -341,18 +286,14 @@ function StarsSection({
             aggregate deposits as luminous fog around the Sun. Deliberately
             non-physical: light above the cap is discarded. Range 0.01–0.5. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-fog-cap">Fog cap</label>
-          <span className={styles.panelValue}>{aggregateIntensityCap.toFixed(2)}</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-fog-cap"
-            type="range"
+          <Slider
+            label="Fog cap"
+            value={aggregateIntensityCap}
             min={0.01}
             max={0.5}
             step={0.01}
-            value={aggregateIntensityCap}
-            onChange={(e) => onAggregateIntensityCapChange(parseFloat(e.target.value))}
+            onChange={onAggregateIntensityCapChange}
+            format={(v) => v.toFixed(2)}
           />
         </div>
       </CollapsibleSection>

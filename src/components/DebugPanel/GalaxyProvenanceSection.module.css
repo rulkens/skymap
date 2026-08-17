@@ -1,0 +1,74 @@
+/*
+ * GalaxyProvenanceSection — the provenance audit table.
+ *
+ * A grid rather than a `<table>`: the cells are direct children, so a row is
+ * just five siblings and the columns stay aligned no matter how many axes the
+ * registry grows. The numbers use `tabular-nums` so digits don't jitter as the
+ * counts land per catalog.
+ */
+
+.root {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 3px;
+}
+
+.head {
+  opacity: 0.5;
+  text-align: center;
+  cursor: help;
+}
+
+.spanTwo {
+  grid-column: span 2;
+}
+
+.axis {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: help;
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: var(--swatch);
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+
+.percent {
+  opacity: 0.7;
+}
+
+.check {
+  margin: 0;
+  justify-self: center;
+  cursor: pointer;
+}
+
+.select {
+  font: inherit;
+  color: #cfc;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+
+.footer {
+  composes: muted from './debugSection.module.css';
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  cursor: help;
+}

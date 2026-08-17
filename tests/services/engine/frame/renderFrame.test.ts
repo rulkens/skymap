@@ -25,7 +25,7 @@ import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
@@ -125,6 +125,16 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
     specs: [
       { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
       { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      // zoneOfAvoidanceLayer.draw reads this row's `scale` to size the
+      // downscaled viewport it hands the band raymarch. The default fixture
+      // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
+      // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
+      // gate) — the row still has to exist for the spec lookup, though.
+      { id: 'zoa', format: 'rgba16float', depth: null, scale: 5 },
+      // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+      // downscaled viewport it hands the star pass (the sprite clamp is in
+      // TARGET pixels), so the row has to be here, not just a view.
+      { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2 },
       { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
     ],
     viewOf: (id: string) => {
@@ -160,10 +170,19 @@ function makeMockPointRenderer(callLog: CallLog) {
   } as any;
 }
 
+/**
+ * The cloud renderer has TWO entry points because its two passes render into
+ * two different targets: `drawStars` into the reduced-resolution `mw-aggregate`
+ * offscreen, `drawDust` full-res into HDR. Each logs separately so the frame
+ * traces below can pin which pass each landed in.
+ */
 function makeMockMilkyWayCloudRenderer(callLog: CallLog) {
   return {
-    draw: vi.fn(() => {
-      callLog.push('milkyWayCloudRenderer.draw');
+    drawStars: vi.fn(() => {
+      callLog.push('milkyWayCloudRenderer.drawStars');
+    }),
+    drawDust: vi.fn(() => {
+      callLog.push('milkyWayCloudRenderer.drawDust');
     }),
     destroy: vi.fn(),
   } as any;
@@ -269,10 +288,14 @@ function makeInput(
   // The render-target table backing views. The volume row's default view is
   // an inert stub — renderFrame's baseline tests don't exercise the volume
   // pass (volumesEnabled is false by default); the volume-ordering test
-  // swaps in its own half-res view via this record.
+  // swaps in its own half-res view via this record. The mw-aggregate row DOES
+  // get touched every frame here: the fixture camera keeps the Milky-Way cloud
+  // alive, so its star pass opens a real pass against this view.
   const renderTargetViews: Record<string, GPUTextureView> = {
     hdr: hdrTargetView,
     volume: {} as GPUTextureView,
+    zoa: { __id: 'zoa-view' } as unknown as GPUTextureView,
+    'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   const renderTargets = makeMockRenderTargets(renderTargetViews);
   const thumbnails = makeMockThumbnails(callLog);
@@ -286,8 +309,10 @@ function makeInput(
     brightness: 1.0,
     selected: null as SelectionRef | null,
     visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
+    provenance: {
+      orientation: { highlight: true, filter: 'all' },
+      size: { highlight: false, filter: 'all' },
+    },
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -299,6 +324,9 @@ function makeInput(
     focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
+    hdrEnabled: true,
+    hdrKnee: 4.0,
+    hdrHeadroom: 0.25,
     galaxyTexturesEnabled: true,
     milkyWayEnabled: true,
     filamentsEnabled: false,
@@ -378,8 +406,8 @@ function makeInput(
     canvasHeight,
     viewProj,
     // Expose the local settings bag so tests can assert against it
-    // (e.g. exposure, toneMapCurve) without reaching into input.settings,
-    // which no longer exists on RenderFrameInput.
+    // (e.g. exposure, toneMapCurve) — RenderFrameInput carries no settings
+    // field of its own.
     settings,
     input: {
       ctx,
@@ -420,6 +448,12 @@ function makeInput(
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,
+          // milkyWayUpsampleLayer shares the cloud's liveness gate, so it is
+          // enabled here; a null handle makes its `draw` self-guard and issue
+          // nothing, keeping these fixtures free of an upsample blit they
+          // don't assert on. The key must EXIST — the layer's guard is
+          // `=== null`, which `undefined` would slip past.
+          milkyWayAggregateUpsample: null,
           // Every `ContentLayer.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see
@@ -429,6 +463,17 @@ function makeInput(
           texturedDiskRenderer,
           proceduralDiskRenderer,
           filamentRenderer: null,
+          // zoneOfAvoidanceLayer.draw (the band) and zoneOfAvoidanceUpsampleLayer.draw
+          // (the lettering) both read this off state.gpu.* directly, same === null
+          // early-return guard as filamentRenderer above; the key must EXIST
+          // (undefined would slip past `=== null`) — see the
+          // milkyWayAggregateUpsample comment above for the same landmine.
+          zoneOfAvoidanceRenderer: null,
+          // zoneOfAvoidanceUpsampleLayer's offscreen blit shares the same
+          // key-must-exist landmine as milkyWayAggregateUpsample above — the
+          // fixture camera sits inside the band's visibility window, so this
+          // layer's `enabled` is true and `draw` runs every frame here.
+          zoneOfAvoidanceUpsample: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
@@ -443,11 +488,18 @@ function makeInput(
           galaxyCatalogs: {
             sizePx: settings.pointSizePx,
             brightness: settings.brightness,
-            highlightFallback: settings.highlightFallback,
-            realOnly: settings.realOnlyMode,
+            provenance: settings.provenance,
             depthFade: settings.depthFadeEnabled,
           },
-          tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          tonemap: {
+            exposure: settings.exposure,
+            curve: settings.toneMapCurve,
+          },
+          hdr: {
+            enabled: settings.hdrEnabled,
+            knee: settings.hdrKnee,
+            headroom: settings.hdrHeadroom,
+          },
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
@@ -517,15 +569,19 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
-    // No-timing path → 'merged' strategy: the (hdr, COSMO) render step opens
-    // ONE `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr
-    // draws, the (hdr, NEAR0) step opens a SECOND hdr pass (loadOp: 'load')
-    // for the milky-way draw, then the hdr→swap composite opens a THIRD pass
-    // against the swap chain. So three begins total; the FIRST is the COSMO
-    // HDR pass this test pins (viewOf('hdr'), clear, a=1).
+    // No-timing path → 'merged' strategy: zoneOfAvoidanceRenderer is null in
+    // this fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO)
+    // step off entirely — the (hdr, COSMO) render step opens the FIRST
+    // `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr draws,
+    // the (mw-aggregate, NEAR0) step opens a SECOND pass against the cloud's
+    // own offscreen for its star billboards, the (hdr, NEAR0) step opens a
+    // THIRD hdr pass (loadOp: 'load') for the milky-way dust draw, then the
+    // hdr→swap composite opens a FOURTH pass against the swap chain. So four
+    // begins total; the FIRST is the COSMO HDR pass this test pins
+    // (viewOf('hdr'), clear, a=1).
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
 
     const desc = calls[0]![0];
     const attachments = Array.from(desc.colorAttachments as any);
@@ -567,8 +623,7 @@ describe('renderFrame', () => {
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
-    expect(drawSettings.highlightFallback).toBe(fx.settings.highlightFallback);
-    expect(drawSettings.realOnlyMode).toBe(fx.settings.realOnlyMode);
+    expect(drawSettings.provenance).toEqual(fx.settings.provenance);
     expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
     expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
     expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);
@@ -617,23 +672,68 @@ describe('renderFrame', () => {
     const args = draw.mock.calls[0]!;
     expect(args[1]).toBe(fx.hdrTargetView);
     expect(args[2]).toBe('replace');
-    expect(args[3]).toEqual({ exposure: fx.settings.exposure, curve: fx.settings.toneMapCurve });
+    expect(args[3]).toEqual({
+      exposure: fx.settings.exposure,
+      curve: fx.settings.toneMapCurve,
+      hdrKnee: 0,
+      hdrHeadroom: 0,
+    });
   });
 
-  it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → hdr NEAR0 pass (milky-way) → composite pass → compositor.draw → finish → submit', () => {
-    // No-timing 'merged' path: the (hdr, COSMO) render step opens one pass
-    // holding the enabled COSMO hdr draws (here point-sprites; the impostor
-    // subsystems are nulled out), closes it, the (hdr, NEAR0) step opens a
-    // second hdr pass for the milky-way draw (the impostor's slab since the
-    // fixed COSMO near plane clipped its disc mid-descent), closes it, then
-    // the hdr→swap composite opens a third pass, draws the tone-map, and
-    // closes it — then finish + submit.
+  it('forwards the settings headroom knobs only when the swap chain is extended-range', () => {
+    // The two knobs are live settings but must reach the shader as 0 on an SDR
+    // swap chain, where spilled energy would just be clamped back to white. The
+    // gate lives in renderFrame via `hdrActiveOf`, which reads the `swap` row's
+    // format straight off `renderTargets.specs` — flipping it to the extended-range
+    // format is the whole difference between the settings values and zeros.
+    // Non-null assertion: the mock's `specs` always seeds a 'swap' row (see
+    // `makeMockRenderTargets`) — if that ever stops being true this should
+    // fail loudly here, not as an opaque "set properties of undefined" below.
+    const swapSpec = fx.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx.input);
+
+    const draw = fx.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(fx.settings.hdrKnee);
+    expect(tone.hdrHeadroom).toBe(fx.settings.hdrHeadroom);
+  });
+
+  it('the tone-map gets zero headroom when the HDR toggle is off even on a float swap chain', () => {
+    // A float swap chain alone isn't sufficient: the format switch and the
+    // `hdr.enabled` write land in separate frames, so a frame can carry an
+    // extended-range swap chain with the viewer's toggle still off. Gating
+    // on `hdrActive` alone would leak the settings knobs into that frame.
+    const fx2 = makeInput({ settings: { hdrEnabled: false } });
+    const swapSpec = fx2.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx2.input);
+
+    const draw = fx2.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(0);
+    expect(tone.hdrHeadroom).toBe(0);
+  });
+
+  it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
+    // No-timing 'merged' path: zoneOfAvoidanceRenderer is null in this
+    // fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO) step
+    // off entirely — no pass opens for it. The (hdr, COSMO) render step
+    // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
+    // the impostor subsystems are nulled out), closes it; the
+    // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
+    // offscreen for its additive star billboards, closes it; the (hdr,
+    // NEAR0) step opens an hdr pass for the cloud's multiplicative dust draw
+    // (the cloud's slab, since the fixed COSMO near plane clipped its disc
+    // mid-descent), closes it; then the hdr→swap composite opens a final
+    // pass, draws the tone-map, and closes it — then finish + submit.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
-      'milkyWayCloudRenderer.draw',
+      'milkyWayCloudRenderer.drawStars',
+      'milkyWayCloudRenderer.drawDust',
       'pass.end',
       'compositor.draw',
       'encoder.finish',
@@ -646,7 +746,10 @@ describe('renderFrame', () => {
       'pointRenderer.draw',
       'pass.end',
       'encoder.beginRenderPass',
-      'milkyWayCloudRenderer.draw',
+      'milkyWayCloudRenderer.drawStars',
+      'pass.end',
+      'encoder.beginRenderPass',
+      'milkyWayCloudRenderer.drawDust',
       'pass.end',
       'encoder.beginRenderPass',
       'compositor.draw',
@@ -660,14 +763,17 @@ describe('renderFrame', () => {
     // The program carries the near-field steps ((hdr, NEAR0), then the tail:
     // foreground:0 render → foreground:0→swap composite → NEAR0 swap render).
     // With the fixture's body/star renderers and foregroundLabelRenderer all
-    // null, the (hdr, NEAR0) group selects only milky-way (one extra hdr
-    // pass); the foreground:0 render selects nothing, so foreground:0 is
-    // never touched and the foreground:0→swap composite is
-    // touched-set-skipped. Net: exactly three passes (hdr COSMO + hdr NEAR0
-    // + hdr→swap) and one compositor draw — no foreground:0 anywhere.
+    // null, the (hdr, NEAR0) group selects only the cloud's dust + upsample
+    // rows (one extra hdr pass) and the (mw-aggregate, NEAR0) step opens the
+    // cloud's own offscreen pass; the foreground:0 render selects nothing, so
+    // foreground:0 is never touched and the foreground:0→swap composite is
+    // touched-set-skipped. Net: exactly four passes (hdr COSMO + mw-aggregate
+    // + hdr NEAR0 + hdr→swap — zoneOfAvoidanceRenderer is null so the zoa
+    // step stays gated off) and one compositor draw — no foreground:0
+    // anywhere.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
     // No pass targets the foreground:0 offscreen or is labelled a foreground
     // composite.
     for (const [desc] of calls) {
@@ -704,7 +810,7 @@ describe('renderFrame', () => {
 
     // First beginRenderPass = the volume pass (clear a=0), before the hdr pass.
     const calls = (fx2.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls.length).toBeGreaterThanOrEqual(3); // volume + hdr + composite
+    expect(calls.length).toBeGreaterThanOrEqual(4); // volume + hdr + mw-aggregate + composite
     const firstAtt = Array.from(calls[0]![0].colorAttachments as any)[0] as any;
     expect(firstAtt.view).toBe(halfResView);
     expect(firstAtt.loadOp).toBe('clear');
@@ -718,12 +824,15 @@ describe('renderFrame', () => {
     // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
     // BOTH the scalar-volume producer and the volume-upsample consumer gate
     // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
-    // prove the consumer is also hidden. Only the hdr + composite passes open.
+    // prove the consumer is also hidden. Only the hdr + composite passes open
+    // — zoneOfAvoidanceRenderer is null too, so the zoa step stays gated off.
     const upsampleDraw = vi.fn();
     (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(3); // hdr COSMO + hdr NEAR0 (milky-way) + composite, no volume pass
+    // hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud dust) +
+    // composite, no volume pass, no zoa pass.
+    expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();
   });
@@ -736,8 +845,10 @@ describe('renderFrame', () => {
     const fx2 = makeInput({ disabledPasses: { 'point-sprites': true } });
     renderFrame(fx2.input);
     expect(fx2.pointRenderer.draw).not.toHaveBeenCalled();
-    // Milky-way still draws — the override is per-pass, not global.
-    expect(fx2.milkyWayCloudRenderer.draw).toHaveBeenCalledTimes(1);
+    // Milky-way still draws — the override is per-pass, not global — and both
+    // halves of the cloud (its own aggregate pass, its dust pass in HDR) run.
+    expect(fx2.milkyWayCloudRenderer.drawStars).toHaveBeenCalledTimes(1);
+    expect(fx2.milkyWayCloudRenderer.drawDust).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip a pass whose name maps to false in disabledPasses', () => {

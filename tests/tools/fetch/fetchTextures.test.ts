@@ -10,6 +10,8 @@ import {
   type FetchTransport,
   type TextureSource,
 } from '../../../tools/fetch/fetchTextures';
+import { BMNG_QUADRANT_KEYS } from '../../../tools/utils/io/bmngQuadrantKeys';
+import { BMNG_VINTAGE } from '../../../tools/utils/io/bmngVintage';
 import { rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES } from '../../../tools/utils/io/textureSources';
 
@@ -18,6 +20,13 @@ import { TEXTURE_SOURCES } from '../../../tools/utils/io/textureSources';
 function filenames(sources: readonly TextureSource[]): string[] {
   return sources.map((s) => basename(s.destPath));
 }
+
+/** The BMNG filenames carry the vintage stamp, and the vintage is a one-constant
+ *  decision (`BMNG_VINTAGE`) — so these expectations interpolate it rather than
+ *  restating a month, which would turn switching vintage into a test edit. What
+ *  is asserted stays the SHAPE of the two subsets: which BMNG publications each
+ *  mode pulls. */
+const bmng = (variant: string): string => `world.topo.bathy.${BMNG_VINTAGE.stamp}.${variant}.jpg`;
 
 describe('textureSourcesFor', () => {
   it('--dev selects exactly the 2k SSS variants + the NASA 5400x2700 sibling', () => {
@@ -33,25 +42,31 @@ describe('textureSourcesFor', () => {
         '2k_uranus.jpg',
         '2k_neptune.jpg',
         '2k_moon.jpg',
-        'world.topo.bathy.200412.3x5400x2700.jpg',
+        bmng('3x5400x2700'),
       ].sort(),
     );
   });
 
-  it('the full pull selects the native tiers + full BMNG + the four USGS moons', () => {
+  it('the full pull selects the native tiers + both BMNG publications + the six USGS mosaics', () => {
     const full = textureSourcesFor(false);
     expect(filenames(full).sort()).toEqual(
       [
         '8k_mercury.jpg',
         '4k_venus_atmosphere.jpg',
         '8k_mars.jpg',
-        '8k_jupiter.jpg',
-        '8k_saturn.jpg',
+        // Jupiter and Saturn are 4096×2048 despite upstream's `8k_` filename;
+        // the ring beside them genuinely is 8k.
+        '4k_jupiter.jpg',
+        '4k_saturn.jpg',
         '8k_saturn_ring_alpha.png',
         '2k_uranus.jpg',
         '2k_neptune.jpg',
         '8k_moon.jpg',
-        'world.topo.bathy.200412.3x21600x10800.jpg',
+        bmng('3x21600x10800'),
+        // The eight deep quadrants: read only by `build-earth-tiles`, but part of
+        // the full pull, because a raw nothing can download is a raw that gets
+        // curl'd by hand.
+        ...Object.keys(BMNG_QUADRANT_KEYS).map((quadrant) => bmng(`3x21600x21600.${quadrant}`)),
         'world.watermask.21600x10800.png',
         'gebco_08_rev_elev_21600x10800.png',
         'ldem_16_uint.tif',
@@ -61,6 +76,13 @@ describe('textureSourcesFor', () => {
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
         'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
         'Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+        'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+        'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+        // Pluto's second (chroma) input and the true-colour reference its
+        // calibration is fitted against: neither is a `native`, so both ride the
+        // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).
+        'PIA11707.tif',
+        'BIG_P_COLOR_2_TRUE_COLOR1.png',
       ].sort(),
     );
   });

@@ -30,6 +30,7 @@ const newRenderer = () => {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return createMarkerLineRenderer(ctx, ctx.format);
 };
@@ -45,6 +46,7 @@ describe('MarkerLineRenderer colour target', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'bgra8unorm' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createMarkerLineRenderer(ctx, 'rgba16float');
     expect(renderPipelines).toHaveLength(1);
@@ -86,6 +88,7 @@ describe('MarkerLineRenderer occlusion variant', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstDepth: 'coverage' });
 
@@ -133,6 +136,7 @@ describe('MarkerLineRenderer (CPU state)', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     const r = createMarkerLineRenderer(ctx, ctx.format, 2);
     r.setLines([

@@ -16,7 +16,7 @@
  *
  * ### Why throw on 404
  *
- * Same policy as `famousMetaFetcher`: the fetcher stays honest about HTTP
+ * Same policy as `famousGalaxiesMetaFetcher`: the fetcher stays honest about HTTP
  * status so the slot's retry policy can distinguish "really gone" (404, give
  * up — feature off) from "transient flake" (5xx, retry). The decision to
  * degrade gracefully to an empty layer belongs to the slot subscriber, not
@@ -35,7 +35,10 @@ import type {
   StructureCatalogPayload,
   StructureMetaEntry,
 } from '../../../@types/loading/StructureCatalogPayload';
-import { decodeStructureCatalog } from '../../../data/structure/structureCatalogFormat';
+import {
+  decodeStructureCatalog,
+  STRUCTURE_CATALOG_DATA_PREFIX,
+} from '../../../data/structure/structureCatalogFormat';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
@@ -50,8 +53,8 @@ export function parseStructureMeta(rawJson: string): StructureMetaEntry[] {
   return parsed as StructureMetaEntry[];
 }
 
-const CCAT_FILE = 'structures.ccat';
-const META_FILE = 'structures_meta.json';
+const CCAT_FILE = `${STRUCTURE_CATALOG_DATA_PREFIX}/structures.ccat`;
+const META_FILE = `${STRUCTURE_CATALOG_DATA_PREFIX}/structures_meta.json`;
 
 export const structureCatalogFetcher: Fetcher<
   StructureCatalogPayload,

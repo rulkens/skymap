@@ -4,6 +4,6 @@
   composes: control from '../shared.module.css';
   width: 100%;
   padding: 6px 8px;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-lg);
 }

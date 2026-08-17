@@ -61,8 +61,7 @@
 
 import { runFrame } from '../frame/runFrame';
 import { buildCameraDrivers } from '../camera/cameraDrivers';
-import { goLive } from '../../../state/time/timeSlice';
-import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
+import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -140,9 +139,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // single dispatch is what makes a bare load show the sky as it is RIGHT NOW.
   // No re-fire guard is needed — `startLoop` is the terminal bootstrap phase and
   // runs exactly once per engine, so this can never re-dispatch every frame.
-  deps.cb.store.dispatch(
-    goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }),
-  );
+  deps.cb.store.dispatch(goLiveNowAction());
 
   // Kick off the first render.  The scheduler was already created
   // synchronously in the state literal — this just tells it to queue

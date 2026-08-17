@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 //
 // CompactBodyCard — the body hover-preview.  It resolves the constellation
-// synchronously from the compile-time FAMOUS_STAR_SEARCH index (no meta fetch),
-// so the branch worth pinning is: an indexed star shows its constellation, an
-// unindexed body renders name-only rather than crashing.
+// synchronously via constellationOfBody (no meta fetch), so the branches worth
+// pinning are: an indexed star shows its constellation, while an unindexed body
+// and a star in no constellation both render name-only rather than crashing or
+// printing the seed table's 'None' sentinel.
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -11,7 +12,7 @@ import { createElement } from 'react';
 import CompactBodyCard from '../../../src/components/InfoCard/CompactBodyCard/CompactBodyCard';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 
-// Proxima Centauri is in the generated seed table → FAMOUS_STAR_SEARCH.
+// Proxima Centauri is in the generated seed table, with a real constellation.
 const proxima: BodyInfo = {
   type: 'body',
   id: 'proxima-centauri',
@@ -32,5 +33,14 @@ describe('CompactBodyCard', () => {
     const { container } = render(createElement(CompactBodyCard, { target: unindexed }));
     expect(screen.getByText('Nowhere')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/Centaurus/);
+  });
+
+  it("drops the chip for the Sun rather than printing the 'None' sentinel", () => {
+    // The Sun IS in the seed table, so the miss path never runs — its row spells
+    // "in no constellation" as the string 'None', which used to render verbatim.
+    const sun: BodyInfo = { ...proxima, id: 'sun', label: 'Sun' };
+    const { container } = render(createElement(CompactBodyCard, { target: sun }));
+    expect(screen.getByText('Sun')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/None/);
   });
 });

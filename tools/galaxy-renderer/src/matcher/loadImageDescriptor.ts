@@ -1,7 +1,7 @@
 /**
  * loadImageDescriptor — load a same-origin (or CORS-enabled) image and
  * compute its `GalaxyDescriptor`, so `autoFit` can target a real reference
- * photo. Ported from galaxy-matcher.js:230-242: a centre-square "cover" crop
+ * photo. Ported from the spike's `galaxy-matcher.js`: a centre-square "cover" crop
  * (matches the shorter image dimension so a non-square source isn't
  * stretched) scaled down to `size`, then handed to `computeDescriptor`.
  *

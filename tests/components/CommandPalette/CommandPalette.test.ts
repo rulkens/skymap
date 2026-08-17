@@ -5,11 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import CommandPalette from '../../../src/components/CommandPalette/CommandPalette';
 import { Source } from '../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 
-const M31: FamousMetaEntry = {
+const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
   names: ['M31', 'NGC 224', 'Andromeda Galaxy'],
   description: 'The nearest large spiral galaxy.',
@@ -20,7 +20,7 @@ const M31: FamousMetaEntry = {
 // state renders only the results list (no featured grid).  Avoids
 // duplicate clickable nodes when we want to assert a single click
 // dispatches selection exactly once.
-const NGC1300: FamousMetaEntry = {
+const NGC1300: FamousGalaxyMetaEntry = {
   id: 'ngc1300',
   names: ['NGC 1300'],
   description: 'A barred spiral.',

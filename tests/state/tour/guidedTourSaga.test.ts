@@ -36,29 +36,34 @@ import { exitTour, advanceTour, prevBeat } from '../../../src/state/tour/tourAct
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
-import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
+import {
+  setVolumesEnabled,
+  setOrientation,
+  mergeSnapshot,
+} from '../../../src/state/settings/settingsSlice';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 // ─── Stubs ──────────────────────────────────────────────────────────────────
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 // Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
 // true and waitUntil exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
@@ -75,7 +80,7 @@ type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 function buildStore(opts: {
   playClip?: PlayClipStub;
   resolveDeps?: ResolveDeps;
-  cameraRuntime?: FocusCameraRuntime | null;
+  cameraRuntime?: LiveCameraRuntime | null;
 }) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -585,5 +590,76 @@ describe('guidedTourSaga', () => {
     // The tour is still running: not restored (volumes still off), still active.
     expect(store.getState().settings.volumes.enabled).toBe(false);
     expect(store.getState().tour.active).toBe(true);
+  });
+
+  // ── (6) beat-boundary reconstruction never raw-writes orientation ────────
+
+  it('does not carry orientation in a beat-boundary mergeSnapshot payload, and does not revert a live-set frame', async () => {
+    // Two beats so entering beat 1 fires the reconstruction fold guidedTourSaga
+    // dispatches at the top of every loop iteration
+    // (`mergeSnapshot(computeSceneEntering(...))`) — the exact site of the
+    // Critical this test guards: a raw write there used to sweep
+    // `orientation` back to its pre-tour value every time a beat started.
+    const beat1: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'First' },
+      dwellClip: dwellDrift(9999),
+    };
+    const beat2: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'Second' },
+      dwellClip: dwellDrift(9999),
+    };
+
+    const seenMergePayloads: unknown[] = [];
+    const sagaMiddleware = createSagaMiddleware();
+    const recorder = () => (next: (a: unknown) => unknown) => (action: unknown) => {
+      const a = action as { type: string; payload?: unknown };
+      if (a.type === mergeSnapshot({}).type) seenMergePayloads.push(a.payload);
+      return next(action);
+    };
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(recorder, sagaMiddleware),
+    });
+    sagaMiddleware.setContext({
+      resolveDeps: () => immediateDeps,
+      cameraRuntime: () => CAMERA_RUNTIME,
+      playClip: makeAutoFlyStub(),
+    });
+
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat1, beat2]));
+
+    // Advance to beat 0's dwell (fly resolved, drift blocking).
+    await flush();
+    await flush();
+
+    // Stand in for beat 0's `frameTo` cue firing mid-dwell — same stand-in
+    // idiom the rest of this file uses for an in-clip scene() cue (see the
+    // module docstring): dispatch the settings action directly rather than
+    // authoring a real clip cue.
+    store.dispatch(setOrientation('galactic'));
+    await flush();
+    expect(store.getState().settings.orientation).toBe('galactic');
+
+    // Cross the beat boundary.
+    store.dispatch(advanceTour());
+    await flush();
+    await flush();
+    expect(store.getState().tour.beatIndex).toBe(1);
+
+    // The beat-boundary merge must never carry `orientation` — it lives on
+    // SceneSnapshot now, not SettingsSnapshot, so computeSceneEntering's
+    // return type cannot produce one (see SceneSnapshot's header).
+    for (const payload of seenMergePayloads) {
+      expect(payload).not.toHaveProperty('orientation');
+    }
+    // And the pole a beat actually set must survive the beat boundary — this
+    // is the visible symptom: beats 02-09 authoring supergalactic must not
+    // have it reverted the instant the next beat starts.
+    expect(store.getState().settings.orientation).toBe('galactic');
+
+    store.dispatch(exitTour());
+    await flush();
   });
 });

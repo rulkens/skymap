@@ -57,11 +57,8 @@ export const DESI_SGW_ENTRY = {
   // bounded volume, not a bulk all-sky catalog), so there's no need to
   // subsample per tier.
   tierTargets: {},
-  // Seeded from the other DESI patches: a curated far-field catalog whose rows
-  // can sit at faint apparent magnitudes needs a higher floor than the bulk
-  // galaxy catalogs' 0.02 default, or the whole source pins to invisible.
-  // Visual tuning knob, not a measured value.
-  intensityFloor: 0.15,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   // Disable distance fade (an effectively-infinite half-distance): the wall
   // spans ~165 Mpc of depth, and the default ~1000 Mpc fade half-distance would
   // dim its far edge relative to its near edge — the whole structure should

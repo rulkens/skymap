@@ -10,15 +10,17 @@ import { describe, it, expect } from 'vitest';
 import {
   createCameraClock,
   tweenElapsed,
+  frameTweenElapsed,
   autoRotateElapsed,
   clipElapsed,
   followElapsed,
   accumulateFollowPan,
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
-import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
 
 function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTweenDescriptor {
   return {
@@ -26,6 +28,7 @@ function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTween
     to: { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distance: 50 },
     durationMs: 600,
     easing: 'easeOutCubic',
+    frame: 'equatorial',
     ...overrides,
   };
 }
@@ -103,6 +106,32 @@ describe('tweenElapsed', () => {
     expect(x1).toBe(y1);
     expect(x2).toBe(y2);
     expect(x3).toBe(y3);
+  });
+});
+
+describe('frameTweenElapsed', () => {
+  function makeFrameTween(overrides?: Partial<FrameTween>): FrameTween {
+    return {
+      fromQuat: [0, 0, 0, 1],
+      to: 'ecliptic',
+      durationMs: 800,
+      easing: 'easeOutCubic',
+      ...overrides,
+    };
+  }
+
+  it('frameTweenElapsed resets on descriptor identity change', () => {
+    const clock = createCameraClock();
+    const descA = makeFrameTween();
+    // Fresh descriptor on the switch frame → 0.
+    expect(frameTweenElapsed(clock, descA, 1000)).toBe(0);
+    // Same reference later → grows.
+    expect(frameTweenElapsed(clock, descA, 1250)).toBe(250);
+    // A NEW descriptor object (a fresh frame switch) → reset to 0.
+    const descB = makeFrameTween();
+    expect(frameTweenElapsed(clock, descB, 1400)).toBe(0);
+    // Null frame tween → always 0.
+    expect(frameTweenElapsed(clock, null, 1500)).toBe(0);
   });
 });
 
@@ -201,8 +230,8 @@ describe('autoRotateElapsed', () => {
 
 describe('clipElapsed', () => {
   // Minimal clip ref fixture — ClipData requires only `timeline`.
-  function makeClipRef(): { data: ClipData } {
-    return { data: { timeline: [] } };
+  function makeClipRef(): NonNullable<CameraState['clip']> {
+    return { data: { timeline: [] }, frame: 'equatorial' };
   }
 
   it('returns 0 for null clip', () => {

@@ -1,4 +1,5 @@
-// atmosphere/transmittanceLut.wesl — the transmittance LUT bake (compute).
+// atmosphere/transmittanceLut.wesl — shader-math derivation file (exceeds
+// the usual header budget on that basis): the transmittance LUT bake (compute).
 //
 // Writes the 256x64 view-INDEPENDENT transmittance table: each texel stores the
 // rgb fraction of sunlight that survives the trip from a point (radius r,
@@ -11,7 +12,7 @@
 // ## Why a compute storage-texture write (and the fallback)
 //
 // This is the first 'texture_storage_2d<rgba16float, write>' in the repo — the
-// existing compute precedents ('galaxyGen', 'flow') write storage BUFFERS. The
+// existing compute precedents ('milkyWay/sprites', 'flow') write storage BUFFERS. The
 // WGSL is legal (rgba16float is a core write-only storage format), but WebKit
 // acceptance is unproven. The whole module is deliberately shaped so a
 // render-to-texture fallback (a fullscreen fragment writing the same rgb) could

@@ -21,6 +21,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { mat4 } from 'wgpu-matrix';
 
 import { starPointsLayer } from '../../../../../src/services/engine/frame/passes/starPointsLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
@@ -31,6 +32,18 @@ import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';
+import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
+import { starPickId } from '../../../../../src/services/engine/frame/passes/starPickId';
+import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
+import { projectToScreenPx } from '../../../../../src/utils/camera/projectToScreenPx';
+import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/data/famousStarPickRadiusPx';
+import { SGR_A_STAR_ENTRY } from '../../../../../src/data/sources/sgr-a-star';
+import { Source } from '../../../../../src/data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -38,12 +51,22 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarBody } from '../../../../../src/@types/scene/StarBody';
+import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-const SUN = SCENE_STARS.find((star) => star.id === 'sun')!;
-const PROXIMA = SCENE_STARS.find((star) => star.id === 'proxima-centauri')!;
-const SIRIUS = SCENE_STARS.find((star) => star.id === 'sirius')!;
+// The record + the position this frame resolves for it — the pairing
+// `positionedVisibleStars` builds. A star is an anchor, so the resolved
+// position IS the anchor's array, by reference.
+const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
+const positioned = (id: string): PositionedStar => {
+  const star = SCENE_STARS.find((s) => s.id === id)!;
+  return { ...star, positionMpc: ANCHOR_POS.get(id)! };
+};
+
+const SUN = positioned('sun');
+const PROXIMA = positioned('proxima-centauri');
+const SIRIUS = positioned('sirius');
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -70,6 +93,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
+    // The instant the star layers resolve their positions at; a star anchor is
+    // static, so any instant gives the same roster.
+    simDays: CONST_J2000,
   } as unknown as ReadyFrameContext;
 }
 
@@ -126,7 +152,7 @@ function makeNear0View(camPos: Vec3): SlabView {
 /** A fresh spy renderer with the StarPointRenderer draw surface. */
 function makeRenderer() {
   return {
-    setStars: vi.fn<(stars: readonly StarBody[]) => void>(),
+    setStars: vi.fn<(stars: readonly PositionedStar[]) => void>(),
     draw: vi.fn<
       (
         pass: GPURenderPassEncoder,
@@ -155,12 +181,25 @@ const STAR_CATALOG_SETTINGS = {
 function makeState(
   starPointRenderer: unknown,
   stars: readonly StarBody[],
-  famousStarsEnabled = true,
+  famousStarMapEnabled = true,
+  bodyItems: Record<string, unknown> = makeBodyItems(),
 ): EngineState {
   return {
-    gpu: { starPointRenderer },
+    gpu: { starPointRenderer, bodyPickRenderer: { drawPoints: vi.fn() } },
     data: { bodies: { stars } },
-    settings: { starCatalogs: STAR_CATALOG_SETTINGS, famousStars: { enabled: famousStarsEnabled } },
+    settings: {
+      starCatalogs: {
+        ...STAR_CATALOG_SETTINGS,
+        // The cluster master is on: `visibleStars` requires it AND the row's own
+        // bit, so omitting it would silently drive the Sun-alone path.
+        enabled: true,
+        items: { famousStar: { enabled: famousStarMapEnabled } },
+      },
+      // The Sun and the S-stars each answer to their own body row, so
+      // `visibleStars` reads them here rather than exempting ids from the map's
+      // gate. Derived from BODY_IDS: a missing row throws inside the gate.
+      bodies: { items: bodyItems },
+    },
   } as unknown as EngineState;
 }
 
@@ -179,9 +218,7 @@ describe('starPointsLayer.enabled', () => {
     // Renderer + the Sun alone with the camera half an AU off it: the Sun
     // resolves to a sphere, so the points branch is empty.
     const sunOnly = SCENE_STARS.filter((star) => star.id === 'sun');
-    const onSunCtx = makeCtx(
-      halfAuFrom(SCENE_STARS.find((star) => star.id === 'sun')!.positionMpc),
-    );
+    const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
     expect(starPointsLayer.enabled(makeState(renderer, sunOnly), onSunCtx)).toBe(false);
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.
@@ -238,17 +275,18 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // NEAR0), but its visibility window is far WIDER than the foreground
       // gate — at galaxy scale it legitimately draws while the star rows
       // skip. Toggle it off (and zero its fade tail) so this test keeps
-      // pinning the STAR rows' wholesale-skip property.
-      // orbit-trails rides this same (hdr, NEAR0) group; its enabled() gate reads
-      // the visibility intent, so the fixture carries the toggle on (matching the
-      // live default) — below the gate it draws alongside star-points. The
-      // constellation overlay likewise rides this group; toggle it off for the
-      // same reason.
+      // pinning the STAR rows' wholesale-skip property. The constellation
+      // overlay likewise rides this group; toggle it off for the same reason.
+      // orbit-trails rides this same (hdr, NEAR0) group too; its enabled() gate
+      // reads the visibility intent, so the fixture carries the toggle on
+      // (matching the live default) — below the gate it draws alongside
+      // star-points.
       settings: {
         milkyWay: { enabled: false },
-        famousStars: { enabled: true },
-        orbitTrails: { enabled: true },
+        starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+        bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
+        orbitTrails: { enabled: true },
       },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
@@ -423,9 +461,9 @@ describe('starPointsLayer.draw', () => {
     expect(opts.brightness).not.toBeCloseTo(STAR_CATALOG_SETTINGS.brightness, 6);
   });
 
-  it('uploads ONLY the Sun when the famous-stars gate is off', () => {
+  it('uploads ONLY the Sun when the famous-star map gate is off', () => {
     // Mid-band camera so the layer draws; the seed is the full roster but the
-    // famousStars master gate is OFF — the star layers fall back to the Sun
+    // famous-star catalog row is OFF — the star layers fall back to the Sun
     // alone (its map is muted, the descent's aim point kept). The Sun is
     // parsecs-sub-pixel here, so it rides the point branch.
     const camDistMpc =
@@ -444,5 +482,169 @@ describe('starPointsLayer.draw', () => {
     const view = makeNear0View([0, 0, 5]);
     const state = { gpu: { starPointRenderer: null } } as unknown as EngineState;
     expect(() => starPointsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+/**
+ * The Galactic Centre draws NOTHING at any zoom, so this stamp is the entire
+ * mechanism that makes it clickable — delete it and the anchor silently becomes
+ * selectable only from the command palette, with no visual symptom to catch it.
+ * Its gate is the caption's, because the caption is the only mark on screen
+ * inviting the click.
+ */
+describe('the Galactic Centre pick stamp', () => {
+  const ANCHOR_ID = packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET);
+
+  // A camera sitting on the anchor: the caption's own distance is ~0, so the
+  // approach band reads full.
+  const AT_GALACTIC_CENTRE = SGR_A_STAR_ANCHOR.positionMpc as Vec3;
+  // Displaced far enough that the whole S-star cluster still collapses inside
+  // one pick footprint, but the anchor's caption is at full alpha.
+  const NEAR_GALACTIC_CENTRE: Vec3 = [
+    AT_GALACTIC_CENTRE[0] + 1e-5,
+    AT_GALACTIC_CENTRE[1],
+    AT_GALACTIC_CENTRE[2],
+  ];
+  // Close enough that S2's ~1000 AU orbit spans far more than the footprint.
+  const INSIDE_THE_CLUSTER: Vec3 = [
+    AT_GALACTIC_CENTRE[0] + 1e-7,
+    AT_GALACTIC_CENTRE[1],
+    AT_GALACTIC_CENTRE[2],
+  ];
+
+  const ALL_SEEDED_STARS = [...SCENE_STARS, ...SCENE_S_STARS];
+
+  /**
+   * A NEAR0 view whose `slab.vp` is a REAL perspective·lookAt aimed at the
+   * anchor, unlike the synthetic counting matrix the rebase-seam tests use. The
+   * separation rule below is a screen-space fact, so under the synthetic vp
+   * every point lands on the same pixel and the whole cluster suppresses
+   * regardless of zoom — the test would pass for the wrong reason. Near/far
+   * bracket the anchor's distance so nothing clips.
+   */
+  const makeProjectedView = (camPos: Vec3): SlabView => {
+    const eyeToAnchor = distanceMpc(camPos, AT_GALACTIC_CENTRE);
+    const view = mat4.lookAt(camPos, AT_GALACTIC_CENTRE, [0, 1, 0]);
+    const proj = mat4.perspective(Math.PI / 3, 1280 / 720, eyeToAnchor / 100, eyeToAnchor * 100);
+    const vp = Float64Array.from(mat4.multiply(proj, view));
+    return { ...makeNear0View(camPos), slab: { ...makeNear0View(camPos).slab, vp } };
+  };
+
+  const stampedIds = (state: EngineState, camPos: Vec3, view = makeNear0View(camPos)): number[] => {
+    starPointsLayer.drawPick!(PASS_STUB, view, makeCtx(camPos), state);
+    const renderer = state.gpu.bodyPickRenderer as unknown as {
+      drawPoints: ReturnType<typeof vi.fn>;
+    };
+    const { points } = renderer.drawPoints.mock.calls[0]![1] as { points: { packedId: number }[] };
+    return points.map((point) => point.packedId);
+  };
+
+  const sStarIdsIn = (stamped: readonly number[]): string[] =>
+    SCENE_S_STARS.filter((star) => stamped.includes(starPickId(star.id)!)).map((star) => star.id);
+
+  it('stamps the anchor from the solar system, where its name is already readable', () => {
+    // The caption is at full alpha from Earth (`SCALE_FADE_BANDS.sgrAStarCaption`
+    // opens at R₀), and pick follows the affordance — so the click target is
+    // there for the whole approach, not only on arrival.
+    expect(stampedIds(makeState(makeRenderer(), SCENE_STARS), [0, 0, 5e-3] as Vec3)).toContain(
+      ANCHOR_ID,
+    );
+    expect(stampedIds(makeState(makeRenderer(), SCENE_STARS), AT_GALACTIC_CENTRE)).toContain(
+      ANCHOR_ID,
+    );
+  });
+
+  it('drops the stamp once the galaxy is one object among many', () => {
+    // Past the band's far edge nothing names the spot, and an 18 px target in
+    // empty sky would be a trap. Derived from the band so a retune carries.
+    const farMpc = SCALE_FADE_BANDS.sgrAStarCaption.goneAt * 2;
+    expect(
+      stampedIds(makeState(makeRenderer(), SCENE_STARS), [0, 0, farMpc] as Vec3),
+    ).not.toContain(ANCHOR_ID);
+  });
+
+  it('follows the label toggle — pick tracks the affordance, not the anchor', () => {
+    const labelsOff = makeState(
+      makeRenderer(),
+      SCENE_STARS,
+      true,
+      makeBodyItems((id) => (id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {})),
+    );
+    expect(stampedIds(labelsOff, AT_GALACTIC_CENTRE)).not.toContain(ANCHOR_ID);
+  });
+
+  it('claims its own footprint from S-stars that collapse inside it', () => {
+    // Zoomed out, all 39 orbits fall well within the anchor's 18 px target and
+    // one of them wins the centre pixel on true depth — the black hole becomes
+    // unclickable exactly where it is the only thing you could mean. Suppressing
+    // them there is what makes the anchor's stamp reachable at all.
+    const zoomedOut = stampedIds(
+      makeState(makeRenderer(), ALL_SEEDED_STARS),
+      NEAR_GALACTIC_CENTRE,
+      makeProjectedView(NEAR_GALACTIC_CENTRE),
+    );
+    expect(zoomedOut).toContain(ANCHOR_ID);
+    expect(sStarIdsIn(zoomedOut)).toEqual([]);
+
+    // Zoomed in, the orbits clear the footprint and their stars are aimable
+    // again — the suppression is a screen-separation fact, not a blanket ban.
+    const zoomedIn = stampedIds(
+      makeState(makeRenderer(), ALL_SEEDED_STARS),
+      INSIDE_THE_CLUSTER,
+      makeProjectedView(INSIDE_THE_CLUSTER),
+    );
+    expect(zoomedIn).toContain(ANCHOR_ID);
+    expect(sStarIdsIn(zoomedIn).length).toBeGreaterThan(0);
+  });
+
+  it('leaves a famous star that merely lines up with the anchor clickable', () => {
+    // A vantage BEHIND Sirius on the line through the anchor, so the two project
+    // onto the same pixel — the exact overlap the footprint rule reacts to.
+    // Sirius is a different object at a different distance, in another region,
+    // and must keep its click; a rule scoped to the footprint alone rather than
+    // to the anchor's own satellites would silently eat it. Nothing in the seed
+    // roster lines up by accident, so the case has to be constructed.
+    const behindSirius: Vec3 = [
+      SIRIUS.positionMpc[0] + 0.5 * (SIRIUS.positionMpc[0] - AT_GALACTIC_CENTRE[0]),
+      SIRIUS.positionMpc[1] + 0.5 * (SIRIUS.positionMpc[1] - AT_GALACTIC_CENTRE[1]),
+      SIRIUS.positionMpc[2] + 0.5 * (SIRIUS.positionMpc[2] - AT_GALACTIC_CENTRE[2]),
+    ];
+    const view = makeProjectedView(behindSirius);
+    const stamped = stampedIds(makeState(makeRenderer(), ALL_SEEDED_STARS), behindSirius, view);
+
+    // The overlap is real: both project inside one footprint of each other.
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    const screenOf = (posMpc: Readonly<Vec3>) =>
+      projectToScreenPx(
+        [
+          posMpc[0] - view.camPos[0],
+          posMpc[1] - view.camPos[1],
+          posMpc[2] - view.camPos[2],
+        ] as Vec3,
+        rebasedVp,
+        view.viewportPx,
+      )!;
+    const [ax, ay] = screenOf(AT_GALACTIC_CENTRE);
+    const [sx, sy] = screenOf(SIRIUS.positionMpc);
+    expect(Math.hypot(sx - ax, sy - ay)).toBeLessThan(FAMOUS_STAR_PICK_RADIUS_PX);
+
+    expect(stamped).toContain(ANCHOR_ID);
+    expect(stamped).toContain(starPickId(SIRIUS.id)!);
+  });
+
+  it('keeps the row in the pick pass when the star partition is empty', () => {
+    // Every star row muted: `enabled` goes false (nothing to draw, and the
+    // visual step must not carry a zero-star row), but the caption is still on
+    // screen — so `pickEnabled` must admit the layer anyway or the stamp never
+    // reaches the pick texture.
+    const allStarsMuted = makeState(
+      makeRenderer(),
+      SCENE_STARS,
+      false,
+      makeBodyItems((id) => (id === 'sun' || id === 's-star' ? { enabled: false } : {})),
+    );
+    const ctx = makeCtx(AT_GALACTIC_CENTRE);
+    expect(starPointsLayer.enabled(allStarsMuted, ctx)).toBe(false);
+    expect(starPointsLayer.pickEnabled!(allStarsMuted, ctx)).toBe(true);
   });
 });

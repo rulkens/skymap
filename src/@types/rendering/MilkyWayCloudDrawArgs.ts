@@ -6,11 +6,18 @@
  * Every field the renderer needs to pack its shared uniform buffer, plus the
  * generated instance buffers to draw. The camera-derived values
  * (`vp`/`viewportPx`/`camRight`/`camUp`) and the per-cloud `model` matrix are
- * threaded in by the HDR-pass caller; the fixed calibration scalars
- * (exposure, model scale, star px clamp) are read by the renderer straight
- * from `milkyWayCalibration.ts`, so they are deliberately NOT part of this
- * payload — a visual-gate tuning pass touches the calibration module, not
- * every call site.
+ * threaded in by the caller each frame, as is `tuning` — the live look knobs
+ * off `settings.milkyWay`.
+ *
+ * `tuning` rides the payload rather than being read straight off the
+ * calibration module because the DebugPanel's sliders write it live: a
+ * module-level read would pin the boot values for the process's lifetime. The
+ * layers already hold `state`, so threading it down the existing args struct
+ * keeps the renderer a pure function of its arguments — no engine handle, no
+ * imperative setter.
+ *
+ * `MILKY_WAY_MODEL_SCALE` stays out: it is derived from the generation preset's
+ * radius, not a knob, so nothing can move it at runtime.
  *
  * `fadeAlpha` is the already-composed apparent-size-fade × toggle-opacity
  * scalar (`milkyWayLayer` composes it per frame). At `fadeAlpha === 0`
@@ -23,6 +30,7 @@
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { MilkyWayCloudBuffers } from '../galaxy/MilkyWayCloudBuffers';
+import type { MilkyWayTuning } from '../settings/MilkyWayTuning';
 
 export type MilkyWayCloudDrawArgs = {
   /** Combined view-projection matrix (16 floats) — `ctx.vp`. */
@@ -37,6 +45,8 @@ export type MilkyWayCloudDrawArgs = {
   readonly model: Float32Array;
   /** Distance-fade × toggle-opacity, already composed, in [0, 1]. */
   readonly fadeAlpha: number;
+  /** Live star-cloud look knobs — `state.settings.milkyWay`. */
+  readonly tuning: MilkyWayTuning;
   /** The generation pass's current instance buffers + counts. */
   readonly buffers: MilkyWayCloudBuffers;
 };

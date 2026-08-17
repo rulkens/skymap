@@ -1,0 +1,1 @@
+../../../../../../../src/services/gpu/shaders/milkyWay/field/dustAttenuation.wesl

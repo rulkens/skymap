@@ -75,13 +75,21 @@ import package::lib::camera::CameraUniforms;
 //   offset 92  : brightness          (f32)
 //   offset 96  : camPosWorld         (vec3<f32>)
 //   offset 108 : pxPerRad            (f32)
-//   offset 112 : highlightFallback   (u32)
-//   offset 116 : realOnlyMode        (u32)
-//   offset 120 : depthFadeEnabled    (u32)
-//   offset 124 : _pad4               (u32)
-//   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
-//   offset 160..175 : pxFadeStart, pxFadeEnd, _padFade0, _padFade1
-//   total: 176 bytes.
+//   offset 112 : orientationHighlight (u32)
+//   offset 116 : orientationFilter    (u32)
+//   offset 120 : sizeHighlight        (u32)
+//   offset 124 : sizeFilter           (u32)
+//   offset 128..155 : Malmquist block (biasMode, absMagLimit, apparentMagLimit,
+//                     schechterMStar, schechterAlpha, schechterMLim, schechterNRef)
+//   offset 156 : depthFadeEnabled    (u32)
+//   offset 160..171 : pxFadeStart, pxFadeEnd, pickPass
+//   offset 172..183 : galaxySbScale, galaxySbMax, galaxyFalloffStrength
+//   offset 184..191 : _padU0, _padU1 (two pad words)
+//   total: 192 bytes.
+//
+// 'src/utils/gpu/packPointUniforms.ts' is the CPU mirror of this table —
+// it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180 and sizes
+// the buffer at UNIFORM_BYTES = 192. Any edit here is an edit there.
 //
 // The full historical narrative (why fields moved during the
 // CameraUniforms-prefix adoption, why pointSizePx + brightness now sit
@@ -128,19 +136,31 @@ struct Uniforms {
   // pre-computed CPU-side as 'viewport.y / (2 · tan(fovY / 2))'.
   pxPerRad: f32,
 
-  // ── Task 15: orientation-visibility toggles ─────────────────────────
+  // ── Provenance-audit block (two axes × (highlight, filter)) ─────────
   //
-  // u32 booleans (0 / 1) controlling how the fragment shader treats
-  // galaxies whose orientation came from the deterministic fallback
-  // rather than a real photometric measurement. The fallback flag
-  // itself rides on the sign bit of the per-vertex 'axisRatio'.
-  highlightFallback: u32,
-  realOnlyMode: u32,
-  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
-  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
-  // skips the gate and forwards 1.0 through.
-  depthFadeEnabled: u32,
-  _pad4: u32,
+  // Each of the two provenance axes says whether a galaxy's value was
+  // MEASURED or ESTIMATED by a deterministic fallback. The estimated
+  // flag rides the sign bit of the axis's per-vertex attribute:
+  // 'axisRatio < 0.0' for orientation, 'radiusMpc < 0.0' for size (the
+  // magnitude comes back through abs()).
+  //
+  // '*Highlight' is a u32 boolean (0 / 1): when 1, the vertex stage
+  // replaces the ramp colour of ESTIMATED galaxies on that axis with a
+  // flat audit colour (magenta for orientation, green for size, amber
+  // when both fire).
+  //
+  // '*Filter' is a tri-state cull code, not a boolean:
+  //   0 = all       — draw both measured and estimated.
+  //   1 = measured  — cull galaxies estimated on this axis.
+  //   2 = estimated — cull galaxies measured on this axis.
+  // A single code rather than two booleans because 'hide measured' and
+  // 'hide estimated' together would mean 'draw nothing', a state the
+  // encoding should not be able to express. The two axes' filters
+  // compose by AND: a galaxy survives only if it passes both.
+  orientationHighlight: u32,
+  orientationFilter: u32,
+  sizeHighlight: u32,
+  sizeFilter: u32,
 
   // ── Malmquist-bias correction state ─────────────────────────────────
   //
@@ -165,7 +185,13 @@ struct Uniforms {
   schechterAlpha: f32,
   schechterMLim: f32,
   schechterNRef: f32,
-  _pad5: u32,
+  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
+  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
+  // skips the gate and forwards 1.0 through. It lodges in the Malmquist
+  // group's trailing slot purely for packing — it has nothing to do with
+  // bias correction, and living here leaves the provenance block above a
+  // contiguous 112..127 run.
+  depthFadeEnabled: u32,
 
   // ── Procedural-disk crossfade-OUT band ──────────────────────────────
   //
@@ -174,8 +200,8 @@ struct Uniforms {
   // complementary fade-OUT on the points pass, both passes would be
   // fully present inside the band — a 'double-bright donut'. The
   // vertex stage folds '1 - smoothstep(start, end, apparentDiameterPx)'
-  // into 'out.shaded.rgb', so the fragment reads no per-pixel state for
-  // the crossfade.
+  // into 'out.instanceTint.rgb', so the fragment reads no per-pixel
+  // state for the crossfade.
   pxFadeStart: f32,
   pxFadeEnd: f32,
   // 0 = visual pass, 1 = pick pass.  Set in-place by pickRenderer
@@ -185,7 +211,17 @@ struct Uniforms {
   // without those gates, galaxies handed off to a procedural disk
   // would not be pickable (the disk renderer has no pick pipeline).
   pickPass: u32,
-  _padFade1: f32,
+
+  // Physical-SB live calibration knobs (galaxy-look spike). galaxySbScale is
+  // the overall HDR gain; galaxySbMax caps a compact galaxy's emitted
+  // amplitude (bloom ceiling); galaxyFalloffStrength is the exponent on the
+  // resolved-fraction readability falloff. Two pad words round the struct to
+  // 192 bytes.
+  galaxySbScale: f32,
+  galaxySbMax: f32,
+  galaxyFalloffStrength: f32,
+  _padU0: f32,
+  _padU1: f32,
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────
@@ -237,6 +273,14 @@ struct PerVertex {
   // thumbnail-footprint padding and the synthetic-fallback floor are
   // already applied; the shader reads the value directly as the
   // half-extent of the world-space quad.
+  //
+  // The SIGN BIT carries the fallback-diameter flag, mirroring
+  // '@location(3) axisRatio'. Real padded radii are always positive; the
+  // JS-side bake negates the value for rows whose diameter was a fallback
+  // estimate. The vertex stage recovers both pieces in one read:
+  //   - 'abs(radiusMpc)' for the billboard magnitude
+  //   - 'radiusMpc < 0.0' for the fallback flag
+  // 'NaN < 0.0' is false, so synthetic rows read as non-fallback.
   @location(5) radiusMpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
@@ -264,6 +308,14 @@ struct PerVertex {
   // length(position))' spent a log10 + sqrt per invocation recomputing
   // a constant.
   @location(9) absMag: f32,
+
+  // Physical surface-brightness amplitude, baked at upload: relative
+  // luminosity (vs the per-catalog mean absolute magnitude) over
+  // (diameter / 30 kpc)^2. Drives the HDR intensity so intrinsically bright
+  // / compact galaxies emit above the bloom threshold and diffuse ones stay
+  // dim. Surface brightness is distance-independent; the inverse-square
+  // behaviour on approach comes from the flux-conservation term in vs.
+  @location(10) sbAmp: f32,
 };
 
 // ─── vertex-to-fragment interface ───────────────────────────────────
@@ -285,25 +337,90 @@ struct VSOut {
   // circle/ellipse falloff.
   @location(0) uv: vec2<f32>,
 
-  // Fully-shaded per-instance appearance packed into one vec4.
-  // .rgb = ramp(restColorIndex) × magenta highlight × intensity, where
+  // Per-instance colour modulator, packed into one vec4.
+  // .rgb = intensity in the normal case — a brightness MODULATOR, not a
+  //        finished colour. The ramp colour is deliberately absent:
+  //        'colorFragment.wesl' evaluates 'rampRadial' per fragment (see
+  //        'lib/colorIndex.wesl'), because the ramp's argument depends on
+  //        the fragment's radius within the billboard and so cannot be a
+  //        flat per-instance constant.
+  //        With a provenance highlight active, .rgb is instead the FINAL
+  //        colour: the flat audit hue times intensity times a boost.
   //        intensity already folds in the magnitude clamp, brightness
   //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
-  //        procedural-disk crossfade-out. Fragment writes
-  //        '(rgb * alpha, alpha)' directly with no further scaling.
-  // .w   = pre-computed safeAB (axis ratio clamped to [0.05, 1.0],
-  //        defaulted to 1.0 for invalid/NaN inputs). Fragment uses .w
-  //        directly to squash the elliptical mask.
+  //        procedural-disk crossfade-out.
+  // .w   = colorIndex — the galaxy's rest-frame, K-corrected colour
+  //        index, forwarded unchanged from 'PerVertex.colorIndex' so the
+  //        fragment stage has the ramp's 't' argument without needing
+  //        its own attribute slot.
+  //        Its SIGN is the highlight signal. 'pickColourIndex' clamps every
+  //        real colour index to [0, 2], so a negative value is a free,
+  //        unambiguous sentinel meaning 'a provenance highlight is active,
+  //        .rgb is already final, skip the ramp'. Same sign-bit-as-flag
+  //        idiom as 'PerVertex.axisRatio' and 'PerVertex.radiusMpc'. Signal
+  //        rather than a fifth varying because varying slots cost ~1.5 ms
+  //        on this fragment-bound pass (see the note at the end of this
+  //        file) while a sign test costs nothing.
   // Flat-interpolated — all 6 vertices of an instance share the value.
-  @location(1) @interpolate(flat) shaded: vec4<f32>,
+  @location(1) @interpolate(flat) instanceTint: vec4<f32>,
 
   // Packed (source, localIdx) identity used by 'fsPick' to write the
   // pick texture. Flat-interpolated because integers can't be linearly
   // interpolated, and all 6 vertices of one instance share the same value.
   @location(2) @interpolate(flat) instanceIdx: u32,
 
-  // Pre-computed (cos, sin) of the position-angle rotation. Computed
-  // once per primitive in 'vs' instead of per fragment, saving millions
-  // of trig calls per frame. Packed into a vec2 at one location.
-  @location(3) @interpolate(flat) paRotation: vec2<f32>,
+  // Per-instance ellipse-mask parameters, packed into one vec3 at one
+  // @location. A WGSL '@location' is always a 4-component slot on the
+  // wire — a lone vec2 or a lone f32 at its own location still consumes
+  // a full interpolator, wasting the remaining 2 or 3 components.
+  // Packing all three ellipse-mask values into one vec3 therefore costs
+  // exactly one location — the same as a vec2 alone would — while
+  // giving the fragment everything the mask transform needs.
+  //
+  //   .xy = pre-computed (cos, sin) of the position-angle rotation.
+  //         Computed once per primitive in 'vs' instead of per fragment,
+  //         saving millions of trig calls per frame.
+  //   .z  = safeAB, the validated ellipse minor-axis ratio (clamped to
+  //         [0.05, 1.0], defaulted to 1.0 for invalid/NaN inputs).
+  //
+  // The grouping isn't arbitrary packing for its own sake: all three
+  // values are consumed together, in the same few lines of the
+  // elliptical-mask transform in 'colorFragment.wesl' (rotate the UV by
+  // (cos, sin), then divide by the minor-axis ratio) — they're one
+  // conceptual unit ('the ellipse this billboard is masked to'), so one
+  // field name covering all three reads truer than two unrelated fields
+  // that happened to share a struct.
+  @location(3) @interpolate(flat) ellipse: vec3<f32>,
 };
+
+// ── Why VSOut has no fifth @location for the colour gradient ─────────
+//
+// A radial warm-core / cool-rim colour gradient (see 'lib/colorIndex.
+// wesl') needs the fragment to know both the galaxy's colour index and
+// its position within the billboard — naively that argues for
+// forwarding two pre-evaluated endpoint colours and mixing by radius,
+// which would need a fifth @location.
+//
+// That would cost real, measured ground: a fifth @location measured
+// +1.5 ms on this pass (~21%) at the full-survey scenario, against a
+// per-fragment saving of one sqrt and one fused multiply-add — each
+// additional @location is a per-fragment parameter fetch from tile
+// memory paid for every covered pixel, and this pass is
+// fragment/blend-bound with billboards covering most of the screen at
+// the large tiers (see docs/RENDERER.md).
+//
+// The fix is not a workaround, it's the correct simplification: 'ramp'
+// is piecewise linear in its saturated parameter, so mixing two
+// endpoint lookups is algebraically identical to ONE lookup at the
+// mixed argument (the identity is spelled out in 'lib/colorIndex.wesl').
+// Given that, the fragment can call 'rampRadial(colorIndex, r)' itself
+// with no precomputed endpoints at all — it only needs 'colorIndex'
+// (now riding in 'instanceTint.w', a slot that was already allocated
+// and had room) and 'r' (already computed from 'uv' for the elliptical
+// mask). Evaluating the ramp per fragment costs one 'ramp' call per
+// covered pixel — MUCH cheaper than a whole interpolator slot, and
+// unavoidable regardless: the argument depends on the fragment's
+// radius, so this evaluation could never have stayed hoisted in the
+// vertex stage even if varying budget were free. 'VSOut' therefore
+// still has exactly the 4 locations (0-3) it had before the gradient
+// existed.

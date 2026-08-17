@@ -1,9 +1,15 @@
 /*
  * debugSection — the shared styling vocabulary for the DebugPanel's collapsible
- * sections. A concept module (no eponymous .tsx): each section's own module
- * `composes` the bits it needs, so the family shares one set of rules instead of
- * re-declaring the button/summary chrome inline per section.
+ * sections, AND (the `.root` rule) the module for the `DebugSection` wrapper
+ * component itself. Ideally those would be two files — a concept module plus
+ * `DebugSection.module.css` — but the checkout's filesystem is case-insensitive
+ * and the two names differ only by the leading letter's case, so they'd collide
+ * on disk. `.summary` / `.body` stay reusable by the family (sections not built
+ * on `DebugSection`, e.g. `ClipTriggersSection`, `compose` them directly).
  */
+
+.root {
+}
 
 .summary {
   font-weight: bold;

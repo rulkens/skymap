@@ -1,68 +1,12 @@
 #!/usr/bin/env node
 /**
- * buildTextures — turn the raw planet-body texture sources fetched into
- * data/raw/textures/ (see fetchTextures.ts) into the tiered runtime files the
- * browser loads on close approach: `public/data/images/textures/<bodyId>-<px>.jpg`
- * for the 13 spherical bodies, plus `saturn-ring-<px>.webp` for the ring strip.
+ * buildTextures — tier the raw texture sources (fetchTextures.ts) into the
+ * runtime files under public/data/images/textures/.
  *
- * The output name comes from the shared `bodyTextureFilename` helper — the SAME
- * helper the runtime fetcher (`bodyTextureFetcher`) calls to build its request
- * URL — so the emitted file and the requested URL can never drift onto different
- * names (a mismatch would 404 every body). Each body builds one file per `kind`
- * it declares in `BODY_TEXTURE_REGISTRY` (a `surface` albedo plus, for Earth,
- * `night` / `material` / `normal` feature maps); `surface` is the helper's
- * unsegmented default, so its opaque-sRGB names stay `<bodyId>-<px>.jpg`, while
- * the alpha/linear maps and the ring ship as lossless `.webp`.
- *
- * ## Three source formats, one sharp path
- *
- * The raws arrive in three shapes, all read by the same sharp/libvips pipeline:
- *
- *  - **SSS JPEG** — Solar System Scope albedo maps (the eight planets + Moon),
- *    2:1 equirectangular RGB JPEGs at 2k/4k/8k.
- *  - **NASA BMNG JPEG** — the Blue Marble Earth equirect (21600×10800 full, or a
- *    5400×2700 dev sibling), same 2:1 RGB shape.
- *  - **USGS GeoTIFF** — the four Galilean moons as plain 8-bit TIFFs. Io and
- *    Ganymede are RGB; Europa and Callisto ship single-channel (mono). sharp
- *    reads TIFF natively (no ISIS toolchain), so a `.tif` flows through the exact
- *    same `sharp(src)` entry as a JPEG — the format is transparent to the build.
- *
- * ## Grayscale tint for the mono USGS moons
- *
- * Europa and Callisto have no global colour mosaic — their USGS sources are
- * single-channel. `BODY_TEXTURE_REGISTRY` carries a `grayscaleTint` (a per-body
- * Vec3) for exactly those two; we expand the mono source to sRGB and multiply the
- * tint into it (`.linear(tint, 0)`), restoring a plausible hue the map lacks. The
- * tint's presence in the registry IS the mono-source marker — every full-colour
- * source has none and passes through untinted.
- *
- * ## Non-upscaled tier downsample (the source-cap intersection)
- *
- * Each body emits `emittedTiersForBody(id, 'surface')` — its registry policy
- * ceiling (Uranus/Neptune 2k, Venus 4k, else 8k) — INTERSECTED with
- * `tiersFittingSourceWidth(sourceWidth)`, the tiers the source on disk can make
- * without upscaling. The intersection is what lets a `--dev` fetch (only the 2 k
- * SSS files + the 5400×2700 Earth sibling on disk) build correctly: a 2 k source
- * emits only the `small` tier; the 5400-wide Earth dev source emits `small` +
- * `medium` but not `large`. We NEVER upscale — a wider source downsamples to a
- * narrower tier, never the reverse (spec §3). A body with no source on disk is
- * logged and skipped; the run emits whatever it can rather than crashing.
- *
- * ## Ring WebP — alpha passthrough
- *
- * Saturn's ring is a radial alpha strip (transparent gaps between the ring
- * bands), so it ships as lossless WebP, not JPEG — a JPEG cannot carry the alpha
- * channel. The strip is resized to each tier width preserving its aspect and
- * re-encoded as lossless WebP with the alpha untouched (no flatten). It rides
- * Saturn's `large` ceiling, so its emitted set is purely the source cap. The
- * runtime samples it by radius and uploads it as an N×1 `texture_2d`.
- *
- * All raw reads resolve through `rawDataPath('textures.*')` (or, for the loose
- * 2 k dev variants that are not their own registry rows, `join(rawDataPath(
- * 'textures.dir'), <filename>)`, per the `<catalog>.dir` convention). The output
- * dir `public/data/images/textures/` is a build artefact (like `public/data/*.bin`)
- * resolved relative to the repo root, exactly as `buildAllBins` / `fetchFamousImages`
- * resolve their `public/` outputs.
+ * Output names come from `bodyTextureFilename`, the SAME helper the runtime
+ * fetcher builds its request URL with — a name that drifts 404s every body.
+ * Tiers are the body's registry ceiling INTERSECTED with what the source on
+ * disk can make: we NEVER upscale, so a `--dev` (2k) source emits only `small`.
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
@@ -75,14 +19,18 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
+import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
+import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
+import { writeBodyAtlas } from './writeBodyAtlas';
 import { writeCloudTier } from './writeCloudTier';
 import { writeLinearTier } from './writeLinearTier';
 
@@ -90,39 +38,30 @@ import { writeLinearTier } from './writeLinearTier';
 const JPEG_QUALITY = 80;
 
 /**
- * The material map's R channel packs perceptual roughness in [0,1] (0 = a
- * mirror, 1 = fully diffuse), ramped across the water mask: open ocean is a
- * near-mirror glossy surface, land is rough. The ramp is linear in the mask's
- * land fraction, so an antialiased coastline gets an in-between roughness rather
- * than a hard specular seam.
+ * Endpoints of the material map's R channel: perceptual roughness in [0,1]
+ * (0 = mirror, 1 = fully diffuse), ramped linearly in the mask's land fraction
+ * so an antialiased coastline gets an in-between value, not a specular seam.
  *
- * The shader's 'lib/pbr.wesl' `OCEAN_ROUGHNESS` overrides the ocean end via the
- * G-mask mix on pure-ocean pixels, so this baked ramp value only shapes the
- * coastline blend where the mask is fractional — tune glint tightness in the
- * shader const, not here.
+ * `lib/pbr.wesl`'s `OCEAN_ROUGHNESS` overrides the ocean end on pure-ocean
+ * pixels, so this value only shapes the fractional coastline blend — tune glint
+ * tightness in the shader const, not here.
  */
 const OCEAN_RAMP_ROUGHNESS = 0.3;
 const LAND_ROUGHNESS = 0.95;
 
-/**
- * `TEXTURE_SOURCES` viewed by the wide `(bodyId, kind)` key space the build loop
- * ranges over. The const table's per-body key set is narrower than the whole
- * `TextureKind` union (today just `surface`), so the variable-kind lookup needs
- * this view; every `(bodyId, kind)` the build derives is populated, so the `!`
- * holds.
- */
+/** `TEXTURE_SOURCES` widened to the whole `(bodyId, kind)` key space so the
+ *  variable-kind lookup type-checks; every pair the build derives comes from the
+ *  registry the table mirrors, so the `!` holds. */
 const SOURCE_TABLE = TEXTURE_SOURCES as Record<
   BodyTextureId | RingTextureId,
   Partial<Record<TextureKind, TextureSourceRow>>
 >;
 
 /**
- * Ordered candidate paths for a source, best (native full-res) first, then the
- * `--dev` variant if any. `devKey` is its own registry row (Earth's BMNG
- * sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
- * bodies and the ring). Uranus/Neptune's `devFilename` resolves to the same
- * on-disk path as native (their native IS the 2 k file), so the extra candidate
- * is a harmless duplicate; the USGS moons carry neither.
+ * Ordered candidate paths for a source, best (native full-res) FIRST, then the
+ * `--dev` variant if any — so a full pull is preferred wherever both are on
+ * disk. Uranus/Neptune's `devFilename` resolves to the same path as native, a
+ * harmless duplicate candidate.
  */
 function candidatePaths(entry: TextureSourceRow): readonly string[] {
   const paths = [rawDataPath(entry.native)];
@@ -134,17 +73,24 @@ function candidatePaths(entry: TextureSourceRow): readonly string[] {
   return paths;
 }
 
-/** Ordered candidate paths for a body's `(kind)` source, best (native) first. */
 function sourcePathsFor(id: BodyTextureId, kind: TextureKind): readonly string[] {
   return candidatePaths(SOURCE_TABLE[id][kind]!);
 }
 
-/** Ordered candidate paths for the Saturn ring strip, best (full) first. */
+/**
+ * The pan-sharpen chroma source, or `null` where the row names none. Full-res
+ * only: a `--dev` fetch pulls no USGS mono mosaic either, so a `panSharpen` body
+ * is skipped by `firstExisting` before this is consulted.
+ */
+function chromaPathFor(id: BodyTextureId, kind: TextureKind): string | null {
+  const entry = SOURCE_TABLE[id][kind]!;
+  return 'chroma' in entry ? rawDataPath(entry.chroma) : null;
+}
+
 function ringSourcePaths(): readonly string[] {
   return candidatePaths(TEXTURE_SOURCES['saturn-ring'].surface);
 }
 
-/** The first candidate path that exists on disk, or `null` if none do. */
 function firstExisting(paths: readonly string[]): string | null {
   for (const p of paths) {
     if (existsSync(p)) return p;
@@ -152,27 +98,24 @@ function firstExisting(paths: readonly string[]): string | null {
   return null;
 }
 
-/** Read a source image's pixel width (0 if sharp can't report it). */
+/** Source width in pixels; 0 if sharp can't report it. */
 async function sourceWidth(srcPath: string): Promise<number> {
   const meta = await sharp(srcPath, { limitInputPixels: false }).metadata();
   return meta.width ?? 0;
 }
 
 /**
- * Multiply a grayscale tint into a single-channel mono source and write the
- * JPEG. Europa and Callisto ship one-channel USGS mosaics with no global colour;
- * the tint restores a plausible per-channel hue the map lacks.
+ * Multiply a tint into a mono source and write the JPEG — the path for a body
+ * whose only map is panchromatic AND has no colour source to recover hue from
+ * (Europa, Callisto, Charon). The tint is a stand-in, not a measurement. A mono
+ * body that DOES have a colour source takes `panSharpen` (Pluto) and never
+ * reaches here.
  *
- * This runs as TWO sharp passes, not one, because libvips fixes its internal
- * operation order: within a single pipeline `linear` executes BEFORE the
- * band-expansion that `toColourspace('srgb')` implies for a 1-band image, so a
- * `linear` with three coefficients on a still-mono pipeline throws
- * 'Band expansion using linear is unsupported'. Splitting the work sidesteps the
- * ordering entirely — pass 1 resizes-to-tier (keeping the raw buffer small; the
- * full Europa source is 19631×9816, a ~578 MB raw buffer at native width) and
- * band-expands mono→sRGB into a raw RGB buffer; pass 2 re-reads that already
- * 3-channel buffer, where `linear` with three coefficients is well-defined, and
- * applies the per-channel multiply (`a·input + b` with b = 0) before encoding.
+ * TWO sharp passes, not one, because libvips fixes its operation order: within a
+ * single pipeline `linear` runs BEFORE the band expansion that
+ * `toColourspace('srgb')` implies for a 1-band image, so three coefficients on a
+ * still-mono pipeline throw 'Band expansion using linear is unsupported'. Pass 1
+ * resizes to tier first: the full Europa source is 19631×9816, ~578 MB raw.
  */
 export async function writeTintedMonoTier(
   srcPath: string,
@@ -192,44 +135,95 @@ export async function writeTintedMonoTier(
 }
 
 /**
- * Downsample one body source to a tier and write the JPEG. Resizes by width
- * only (the sources are exactly 2:1, so height follows). Mono sources carrying a
- * grayscale tint take the two-pass tint path (`writeTintedMonoTier`); full-colour
- * RGB sources encode in a single pass at `JPEG_QUALITY`.
+ * Take luminance from a panchromatic mosaic and hue from a lower-resolution
+ * colour map, undoing that map's published enhancement with `calibration`.
+ *
+ * The chroma source is resized to the LUMINANCE tier's exact grid (`fit: 'fill'`,
+ * so a source whose aspect rounds differently cannot shift the two apart by a
+ * row). A plain resize is all the registration needed: the mosaics share an
+ * equirectangular graticule and cross-correlate at dx = dy = 0. A future pair
+ * that does NOT co-register wants its own resampling step, not a fudge offset
+ * smuggled in here.
  */
-async function writeBodyTier(
-  srcPath: string,
-  tint: Vec3 | undefined,
+export async function writePanSharpenedTier(
+  lumPath: string,
+  chromaPath: string,
+  calibration: ChromaCalibration,
   widthPx: number,
   outPath: string,
 ): Promise<void> {
-  if (tint !== undefined) {
-    await writeTintedMonoTier(srcPath, tint, widthPx, outPath);
-    return;
-  }
-  await sharp(srcPath, { limitInputPixels: false })
+  const lum = await sharp(lumPath, { limitInputPixels: false })
     .resize({ width: widthPx })
+    .toColourspace('b-w')
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width, height } = lum.info;
+  const chroma = await sharp(chromaPath, { limitInputPixels: false })
+    .resize({ width, height, fit: 'fill' })
+    .toColourspace('srgb')
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const rgb = panSharpenRgb(lum.data, chroma.data, calibration);
+  await sharp(rgb, { raw: { width, height, channels: 3 } })
     .jpeg({ quality: JPEG_QUALITY })
     .toFile(outPath);
 }
 
 /**
- * Compose Earth's material map from the NASA water mask and write one tier.
+ * Downsample one body source to a tier and write the JPEG, dispatching on the
+ * body's registry colour treatment. Width-only resize: the sources are exactly
+ * 2:1, so height follows.
+ */
+async function writeBodyTier(
+  srcPath: string,
+  treatment: ColourTreatment,
+  chromaPath: string | null,
+  widthPx: number,
+  outPath: string,
+): Promise<void> {
+  switch (treatment.kind) {
+    case 'colour': {
+      await sharp(srcPath, { limitInputPixels: false })
+        .resize({ width: widthPx })
+        .jpeg({ quality: JPEG_QUALITY })
+        .toFile(outPath);
+      return;
+    }
+    case 'monoTint': {
+      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath);
+      return;
+    }
+    case 'panSharpen': {
+      // Loud, not a silent fallback to the mono source: shipping a grey Pluto
+      // because a row lost its `chroma` key is the regression to stop here.
+      if (chromaPath === null) {
+        throw new Error(`buildTextures: panSharpen treatment with no chroma source (${srcPath})`);
+      }
+      await writePanSharpenedTier(srcPath, chromaPath, treatment.calibration, widthPx, outPath);
+      return;
+    }
+    default: {
+      const _exhaustive: never = treatment;
+      throw new Error(`unhandled colour treatment: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
+
+/**
+ * Compose Earth's material map from the NASA water mask (single channel, land =
+ * 255, water = 0) and write one tier. Channel contract, shared with the shader:
  *
- * The mask is a single-channel image where land = 255 and water = 0. We resize
- * it to the tier width FIRST (keeping the working buffer small — the native mask
- * is 21600×10800), read it raw, and pack a linear RGBA:
+ *  - **R** = roughness, ramped `OCEAN_RAMP_ROUGHNESS → LAND_ROUGHNESS` by land
+ *    fraction;
+ *  - **G** = ocean mask, `255 - land`, so 1 = ocean;
+ *  - **B**, **A** = spare (0 / opaque).
  *
- *  - **R** = roughness, ramped `OCEAN_RAMP_ROUGHNESS → LAND_ROUGHNESS` by the mask's
- *    land fraction, so calm ocean is glossy and land is diffuse;
- *  - **G** = ocean mask, `255` where the pixel is water (`255 - land`), so 1 = ocean;
- *  - **B**, **A** = spare (0 / opaque) for a future plan to claim.
- *
- * The packed buffer goes through `writeLinearTier`, which encodes lossless WebP
- * with NO sRGB gamma — the channels are numeric fields, not colour, so a gamma curve
- * would corrupt them. Resizing before packing means `writeLinearTier`'s own
- * resize is an identity op here; it stays general for a source that hands it a
- * full-res buffer to downsample.
+ * `writeLinearTier` encodes lossless WebP with NO sRGB gamma — these are numeric
+ * fields, not colour, and a gamma curve would corrupt them. Resizing before
+ * packing keeps the working buffer small (the native mask is 21600×10800).
  */
 async function writeMaterialTier(srcPath: string, widthPx: number, outPath: string): Promise<void> {
   const mask = await sharp(srcPath, { limitInputPixels: false })
@@ -253,31 +247,22 @@ async function writeMaterialTier(srcPath: string, widthPx: number, outPath: stri
   await writeLinearTier({ data: rgba, info: { width, height, channels: 4 } }, widthPx, outPath);
 }
 
-/**
- * Per-source cache of the baked normal buffer. The bake is a pure JS Sobel loop,
- * so it runs ONCE per elevation source and every tier is a resize of the shared
- * result (a normal map downsamples cleanly). Keyed by source path; the build loop
- * is sequential, but caching the Promise makes the memoisation correct even if it
- * were not.
- */
+/** Per-source cache of the baked normal buffer: the bake is a pure JS Sobel loop,
+ *  and a normal map downsamples cleanly, so every tier is a resize of one bake.
+ *  Caching the Promise keeps the memoisation correct under concurrency. */
 const bakedNormalCache = new Map<
   string,
   Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }>
 >();
 
 /**
- * Bake `bodyId`'s elevation source into a tangent-space normal map ONCE, at a
- * width capped to the widest tier the body emits for `normal`.
- *
- * The cap is load-bearing: the GEBCO relief is 21600×10800 (233 Mpx), so reading
- * it raw would hold a ~930 MB workload and Sobel-loop it pointlessly when the
- * widest tier we ship is 4 k. sharp resizes to the cap BEFORE `.raw()`, then we
- * stride-extract a single greyscale channel — `.greyscale()` keeps three
- * identical bands, so we read channel 0 by the reported stride, the same pattern
- * `writeMaterialTier` uses for its mask — and hand that heightfield to
- * `bakeNormalMap`. The result feeds `writeLinearTier` per tier. Upscaling is
- * guarded off (`withoutEnlargement`), so a source narrower than the cap resizes
- * down to itself rather than being blown up past its native detail.
+ * Bake `bodyId`'s elevation source into a tangent-space normal map ONCE, capped
+ * to the widest tier the body emits for `normal`. The cap is load-bearing: the
+ * GEBCO relief is 21600×10800 (233 Mpx, ~930 MB raw) and the widest tier shipped
+ * is 4k, so sharp must resize BEFORE `.raw()`. `.greyscale()` keeps three
+ * identical bands, so channel 0 is read by the reported stride (as
+ * `writeMaterialTier` does). `withoutEnlargement` keeps a narrow source from
+ * being blown up past its native detail.
  */
 function bakeNormalOnce(
   bodyId: BodyTextureId,
@@ -287,9 +272,8 @@ function bakeNormalOnce(
   if (baked === undefined) {
     const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
     baked = (async () => {
-      // `.greyscale()` collapses the 16-bit elevation `.tif` to an 8-bit greyscale
-      // heightfield — the `Uint8Array` `bakeNormalMap` expects; 8-bit quantization
-      // is acceptable for v1 (Earth's normal bake already lives with it).
+      // `.greyscale()` collapses the 16-bit elevation `.tif` to the 8-bit
+      // heightfield `bakeNormalMap` expects; the quantization is accepted for v1.
       const grey = await sharp(srcPath, { limitInputPixels: false })
         .resize({ width: capPx, withoutEnlargement: true })
         .greyscale()
@@ -305,7 +289,6 @@ function bakeNormalOnce(
   return baked;
 }
 
-/** Bake (or reuse) the normal map and write one tier as a linear lossless WebP. */
 async function writeNormalTier(
   bodyId: BodyTextureId,
   srcPath: string,
@@ -316,14 +299,10 @@ async function writeNormalTier(
   await writeLinearTier(baked, widthPx, outPath);
 }
 
-/**
- * The per-kind writer plus the log note that annotates its tier. `write` produces
- * the file; `note` reads whatever the note depends on (only the sRGB writer's
- * does — its tint) off the registry.
- */
 type KindWriter = {
   readonly write: (
     bodyId: BodyTextureId,
+    kind: TextureKind,
     srcPath: string,
     widthPx: number,
     outPath: string,
@@ -331,63 +310,54 @@ type KindWriter = {
   readonly note: (bodyId: BodyTextureId) => string;
 };
 
-/**
- * The sRGB (JPEG albedo) writer, shared by `surface` and `night`. The two differ
- * only in whether a grayscale tint applies, and that tint is a per-BODY property
- * (`grayscaleTint`), not a per-kind one: the mono USGS moons carry a `surface`
- * tint, Earth's `surface` AND `night` carry none. So a single registry lookup
- * serves both kinds — Europa's surface tints through the two-pass mono path,
- * Earth's night passes `undefined` and encodes in one pass — and the '(tinted)'
- * note derives from that same tint presence.
- */
-const SRGB_WRITER: KindWriter = {
-  write: (bodyId, srcPath, widthPx, outPath) =>
-    writeBodyTier(srcPath, BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint, widthPx, outPath),
-  note: (bodyId) => (BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint ? '  (tinted)' : ''),
+const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
+  colour: '',
+  monoTint: '  (tinted)',
+  panSharpen: '  (pan-sharpened)',
 };
 
 /**
- * The build's kind→writer dispatch expressed AS DATA. Each `TextureKind` maps to
- * how its tier is produced plus its log note, so a new kind is one row rather
- * than another branch of an if-chain:
- *
- *  - **`surface` + `night`** → the shared `SRGB_WRITER` (JPEG albedo / night
- *    lights), tint-parameterised off the registry.
- *  - **`material`** → `writeMaterialTier`, packing a linear roughness/ocean-mask
- *    lossless WebP (Earth's PBR map).
- *  - **`normal`** → `writeNormalTier`, baking a tangent-space normal map from the
- *    elevation source.
- *  - **`clouds`** → `writeCloudTier`, an sRGB-colour lossless WebP whose alpha is
- *    derived from the composite's luminance (white cloud → opaque, black sky →
- *    clear).
- *
- * A kind with no row is a loud build error at the dispatch below, never a silent
- * skip that would leave a body's map unbuilt — so a `kinds` row and its writer
- * row here MUST land together.
+ * The sRGB (JPEG albedo) writer, shared by `surface` and `night`: colour
+ * treatment is a per-BODY property, not a per-kind one, so one registry lookup
+ * serves both kinds.
+ */
+const SRGB_WRITER: KindWriter = {
+  write: (bodyId, kind, srcPath, widthPx, outPath) =>
+    writeBodyTier(
+      srcPath,
+      BODY_TEXTURE_REGISTRY[bodyId].treatment,
+      chromaPathFor(bodyId, kind),
+      widthPx,
+      outPath,
+    ),
+  note: (bodyId) => TREATMENT_NOTE[BODY_TEXTURE_REGISTRY[bodyId].treatment.kind],
+};
+
+/**
+ * The kind→writer dispatch as DATA, so a new kind is one row, not another
+ * if-branch. A kind with no row throws below rather than silently leaving a
+ * body's map unbuilt — a registry `kinds` entry and its row here MUST land
+ * together.
  */
 const KIND_WRITERS: Partial<Record<TextureKind, KindWriter>> = {
   surface: SRGB_WRITER,
   night: SRGB_WRITER,
   material: {
-    write: (_bodyId, srcPath, widthPx, outPath) => writeMaterialTier(srcPath, widthPx, outPath),
+    write: (_bodyId, _kind, srcPath, widthPx, outPath) =>
+      writeMaterialTier(srcPath, widthPx, outPath),
     note: () => '  (material)',
   },
   normal: {
-    write: (bodyId, srcPath, widthPx, outPath) =>
+    write: (bodyId, _kind, srcPath, widthPx, outPath) =>
       writeNormalTier(bodyId, srcPath, widthPx, outPath),
     note: () => '  (normal)',
   },
   clouds: {
-    write: (_bodyId, srcPath, widthPx, outPath) => writeCloudTier(srcPath, widthPx, outPath),
+    write: (_bodyId, _kind, srcPath, widthPx, outPath) => writeCloudTier(srcPath, widthPx, outPath),
     note: () => '  (clouds)',
   },
 };
 
-/**
- * Write one `(body, kind)` tier via the per-kind writer table and return its log
- * note. A kind with no table row is a build error, never a silent skip that would
- * leave a body's map unbuilt.
- */
 async function writeBodyKindTier(
   bodyId: BodyTextureId,
   kind: TextureKind,
@@ -399,14 +369,13 @@ async function writeBodyKindTier(
   if (writer === undefined) {
     throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
   }
-  await writer.write(bodyId, srcPath, widthPx, outPath);
+  await writer.write(bodyId, kind, srcPath, widthPx, outPath);
   return writer.note(bodyId);
 }
 
 /**
- * Downsample the ring strip to a tier and write lossless WebP. Width-only resize
- * preserves the radial aspect; lossless WebP keeps the alpha channel intact (no
- * flatten) and crushes the mostly-transparent strip far smaller than PNG.
+ * Downsample the ring strip to a tier. Lossless WebP, not JPEG: the strip's
+ * transparent gaps between ring bands need an alpha channel JPEG cannot carry.
  */
 async function writeRingTier(srcPath: string, widthPx: number, outPath: string): Promise<void> {
   await sharp(srcPath, { limitInputPixels: false })
@@ -416,13 +385,10 @@ async function writeRingTier(srcPath: string, widthPx: number, outPath: string):
 }
 
 /**
- * The build's per-`(body, kind)` work list — one entry per map every textured
- * body declares in its registry `kinds`, in registry order. The ring is NOT here:
- * it carries only `surface` and is not registry-driven (`emittedTiersForBody`
- * indexes `BODY_TEXTURE_REGISTRY`, which has no ring row), so it rides its own
- * loop below. Pure over the registry — the unit-testable spine the build loop
- * consumes, and the guard (paired with the fetch drift test) that a new map kind
- * on a body actually gets built rather than silently dropped.
+ * The build's per-`(body, kind)` work list, in registry order. The ring is NOT
+ * here: `emittedTiersForBody` indexes `BODY_TEXTURE_REGISTRY`, which has no ring
+ * row, so it rides its own loop below. Pure over the registry, so a test can
+ * catch a new map kind being silently dropped.
  */
 export function textureBuildEntries(): readonly { bodyId: BodyTextureId; kind: TextureKind }[] {
   return (Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]).flatMap((bodyId) =>
@@ -459,6 +425,16 @@ export async function buildTextures(outDir: string): Promise<void> {
       process.stderr.write(`  ok   ${filename}${note}\n`);
     }
   }
+
+  // The boot atlas downsamples the `small` surface tiers the loop above just
+  // wrote, so it must run after it. Membership is that same work list filtered
+  // to `surface`, in the same order.
+  await writeBodyAtlas(
+    outDir,
+    textureBuildEntries()
+      .filter((entry) => entry.kind === 'surface')
+      .map((entry) => entry.bodyId),
+  );
 
   const ringSrc = firstExisting(ringSourcePaths());
   if (ringSrc === null) {

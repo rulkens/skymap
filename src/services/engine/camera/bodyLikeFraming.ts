@@ -12,9 +12,10 @@
  * delegate here.
  *
  * The distance is deliberately UNCLAMPED: at ~2e-16 Mpc (Earth) any Mpc-scale
- * floor would swallow the framing. The wheel-zoom / descent clamps own the floor
- * (clampDistance.ts: MIN_DISTANCE_MPC reaches Earth-surface scale), keeping the
- * result reachable in practice.
+ * floor would swallow the framing. The wheel-zoom / descent clamps own the floor,
+ * and it is derived from this same radius (clampDistance.ts stands off
+ * `SURFACE_STANDOFF_RADII` from the pivot's surface), so the framing distance is
+ * always comfortably reachable — the fill factor puts it several radii out.
  */
 
 import { bodyFocusDistance } from './bodyFocusDistance';

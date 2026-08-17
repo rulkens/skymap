@@ -1,28 +1,22 @@
 /**
- * ComparePanel — the "validation mode" reference panel (html:63-145): pick a
- * real named galaxy, load its parameter preset, match the camera to its
- * published pose, and — photo permitting — auto-fit the live render against
- * the reference photo via `runCompareFit`.
+ * ComparePanel — the "validation mode" reference panel: pick a real named
+ * galaxy, load its parameter preset, match the camera to its published pose,
+ * and — photo permitting — auto-fit the live render against the reference
+ * photo via `runCompareFit`.
  *
  * Holds the one thing `runCompareFit` needs that isn't already in the
- * store: the live `engine` handle (forwarded from `App`, itself forwarded
- * from `Viewport.onEngine`) and a per-session descriptor cache. The cache
- * is a module-level `Map`, not component state — `runCompareFit` reads and
- * writes it directly across repeated fits against the same reference
- * (`descriptorCache` in its own signature, :688-689), and module scope is
- * the simplest thing that survives a re-render without promoting a
- * fit-run memo into store state nothing else needs.
+ * store: the live `engine` handle (forwarded from `Viewport.onEngine` via
+ * `App`) and a per-session descriptor cache — a module-level `Map` since
+ * `runCompareFit` reads/writes it directly across repeated fits.
  *
  * The Milky Way reference has no external photograph (`ref.img === null`):
- * the spike's `applyRef`/`autoFit` would run straight into a broken
- * `url(null)` background-image or a thrown `loadImageDescriptor` error.
- * This port never reaches either — the image card swaps in a model-only
- * note, and the fit button is disabled with an explanatory hint instead.
+ * the image card swaps in a model-only note, and the fit button is disabled.
  */
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../../@types/matcher/GalaxyDescriptor';
+import Button from '../../../../../src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../state/hooks';
 import {
   referenceSelected,
@@ -42,7 +36,7 @@ export type ComparePanelProps = {
 // any re-render of this component.
 const descriptorCache = new Map<string, GalaxyDescriptor>();
 
-const SCORE_GOOD = 78; // html:813
+const SCORE_GOOD = 78;
 const SCORE_WARN = 55;
 
 function scoreClass(score: number | null): string | undefined {
@@ -63,7 +57,7 @@ function ComparePanel({ engine }: ComparePanelProps): ReactNode {
   }
 
   const handleLoadPreset = (): void => {
-    dispatch(paramsPatched({ ...galaxy, ...active.params })); // html:602
+    dispatch(paramsPatched({ ...galaxy, ...active.params }));
     dispatch(viewRequested(active.view));
   };
 
@@ -143,12 +137,12 @@ function ComparePanel({ engine }: ComparePanelProps): ReactNode {
         <div className={styles.notable}>{active.notable}</div>
 
         <div className={styles.actions}>
-          <button type="button" className={styles.loadButton} onClick={handleLoadPreset}>
+          <Button variant="primary" className={styles.loadButton} onClick={handleLoadPreset}>
             Load preset →
-          </button>
-          <button type="button" className={styles.matchButton} onClick={handleMatchView}>
+          </Button>
+          <Button className={styles.matchButton} onClick={handleMatchView}>
             Match view
-          </button>
+          </Button>
         </div>
 
         <div className={styles.fitSection}>
@@ -162,14 +156,9 @@ function ComparePanel({ engine }: ComparePanelProps): ReactNode {
             Extracts scale- and rotation-invariant descriptors (radial profile, arm harmonics, axis
             ratio, dust) from the photo and hill-climbs the parameters to minimise the difference.
           </div>
-          <button
-            type="button"
-            className={styles.fitButton}
-            disabled={fitDisabled}
-            onClick={handleAutoFit}
-          >
+          <Button className={styles.fitButton} disabled={fitDisabled} onClick={handleAutoFit}>
             {compare.fitting ? 'Fitting…' : '⚙ Auto-fit render to photo'}
-          </button>
+          </Button>
           {active.img === null && <div className={styles.noPhotoHint}>no photo — model only</div>}
 
           {compare.fitting && (

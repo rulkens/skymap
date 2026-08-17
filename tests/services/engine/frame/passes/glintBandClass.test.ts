@@ -25,8 +25,8 @@ import {
 describe('glintBandClass — id → priority class', () => {
   it('maps the focus body, a heliocentric planet, and a moon to distinct classes', () => {
     // Earth is special-cased (class earth) even though it is heliocentric like a
-    // planet; jupiter is a heliocentric planet (parentId null → planet); io is a
-    // Jovian moon (parentId 'jupiter' → moon). A swap of the planet/moon ternary
+    // planet; jupiter is a heliocentric planet (focusId 'sun' → planet); io is a
+    // Jovian moon (focusId 'jupiter' → moon). A swap of the planet/moon ternary
     // arms flips two of these.
     expect(glintBandClass('earth')).toBe(GLINT_CLASS_EARTH);
     expect(glintBandClass('jupiter')).toBe(GLINT_CLASS_PLANET);
@@ -57,10 +57,9 @@ describe('glintBandClass ↔ lib/pickDepthBands.wesl GLINT_CLASS_* parity', () =
     for (const [name, tsValue] of cases) {
       const weslValue = wesl.get(name);
       expect(weslValue, `WESL constant ${name} is missing from pickDepthBands.wesl`).toBeDefined();
-      expect(
-        weslValue,
-        `WESL ${name} (${weslValue}) does not match TS ${name} (${tsValue})`,
-      ).toBe(tsValue);
+      expect(weslValue, `WESL ${name} (${weslValue}) does not match TS ${name} (${tsValue})`).toBe(
+        tsValue,
+      );
     }
   });
 });

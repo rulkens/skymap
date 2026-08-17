@@ -65,15 +65,18 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
+import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
-// Reused across frames — the engine hot path allocates nothing here. Sized for
-// the renderer's cap; each planet's 24-float record (MVP + albedo + pad +
-// sunDirLocal + pad) is rewritten in place before the single instanced draw.
-const staging = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
+// Reused across frames — the engine hot path allocates nothing here. Sized
+// for the live SCENE_PLANETS table (a compile-time constant, so this is a
+// fixed size, not a cap — the renderer itself carries no upper bound, and the
+// `flat` branch drawn below is always a subset of this same table); each
+// planet's 24-float record (MVP + albedo + pad + sunDirLocal + pad) is
+// rewritten in place before the single instanced draw.
+const staging = new Float32Array(SCENE_PLANETS.length * INSTANCE_FLOATS);
 
 export const planetsLayer: ContentLayer = {
   name: 'planets',
@@ -119,7 +122,7 @@ export const planetsLayer: ContentLayer = {
     // Live position + orientation from the per-frame snapshot (keyed by id),
     // resolved ONCE for the whole pack loop — not the baked record fields.
     const states = sceneBodyStates(state, ctx);
-    const limit = Math.min(flat.length, MAX_PLANETS);
+    const limit = flat.length;
 
     // Pack one 24-float instance record per FLAT planet: floats 0..15 the MVP
     // composed from the slab's f64 vp (see the module header's "f64 seam"

@@ -26,22 +26,26 @@
  *
  * ### Readiness signal
  *
- * The grill (Q4) resolved to "medium gating": the CTAs activate when
- *   1.  the engine is in `ready` state (WebGPU init done + first frame),
- *   2.  no catalog fetch is currently in flight (`loadProgress === null`),
- *   3.  famous-meta has settled (`famousMetaReady`).
+ * The CTAs activate when
+ *   1.  the engine is in `ready` state (WebGPU init done + first frame), and
+ *   2.  no catalog fetch is currently in flight (`loadProgress === null`).
  * The hook does NOT differentiate between Explore and Tour readiness —
  * both buttons activate together so the user never sees "Tour disabled,
- * Explore enabled" intermediate UI.  Famous-meta failure is treated as
- * "ready" downstream (the hook's input plumbing receives `ready=true`
- * from useFamousMeta in both success and error cases), but the splash
- * does render a disabled Tour tooltip — that's wired in Task 6's error
- * mapping plus the Splash component's disabled-state CSS.
+ * Explore enabled" intermediate UI.
+ *
+ * **Why famous-galaxies-meta is not a third condition.** The sidecar loads through its
+ * asset slot, and that slot's demand is conditional: it waits for the
+ * famous-galaxy `.bin` to leave `idle`, which in turn requires
+ * `galaxyCatalogs.items.famousGalaxy.enabled`. With that category switched off
+ * the slot never loads and never reports, so a readiness flag derived from it
+ * would never settle — stranding the CTAs behind the 8 s escape hatch for a
+ * payload that was never coming. Gating on a signal that can legitimately never
+ * arrive is worse than not gating: the Tour may open before its InfoCard text
+ * exists, which degrades one panel, where the alternative blocks the whole
+ * entry point.
  *
  * `status` and `loadProgress` are read from the Redux engine slice via
- * `useAppSelector` — they are no longer threaded in as props.  Only
- * `famousMetaReady` / `famousMetaFailed` remain as inputs because they
- * come from `useFamousMeta`, not the engine store.
+ * `useAppSelector` rather than threaded in as props.
  *
  * ### 8 s "Continue anyway" timer
  *
@@ -54,7 +58,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { UseSplashInput } from '../@types/splash/UseSplashInput';
 import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
 import type { SplashError } from '../@types/splash/SplashError';
 import { CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
@@ -66,9 +69,7 @@ import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 /** Milliseconds before the "Continue anyway" escape appears. */
 export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 
-export function useSplash(input: UseSplashInput): UseSplashReturn {
-  const { famousMetaReady, famousMetaFailed = false } = input;
-
+export function useSplash(): UseSplashReturn {
   // ── Engine state from the Redux slice ────────────────────────────────────
   //
   // `status` and `loadProgress` come from the engine slice rather than being
@@ -88,12 +89,11 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
 
   // ── Readiness signal ─────────────────────────────────────────────────────
   //
-  // The CTAs activate when the engine reports `ready`, no catalog fetches
-  // are in flight, and famous-meta has settled.  `blocked` is the
-  // negation — true while we're still waiting.
+  // The CTAs activate when the engine reports `ready` and no catalog fetches
+  // are in flight.  `blocked` is the negation — true while we're still waiting.
   const ready = useMemo(
-    () => status.kind === 'ready' && loadProgress === null && famousMetaReady,
-    [status, loadProgress, famousMetaReady],
+    () => status.kind === 'ready' && loadProgress === null,
+    [status, loadProgress],
   );
   const blocked = !ready;
 
@@ -143,28 +143,27 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
 
   // ── Error mapping ────────────────────────────────────────────────────────
   //
-  // Engine errors (status.kind === 'error') take precedence over famous-meta
-  // failures because an engine error blocks the whole app — the famous-meta
-  // tooltip would be misleading next to a "catalog failed to load" headline.
-  // We discriminate engine errors by inspecting the message: anything
-  // mentioning "WebGPU" is reported as a webgpu-init failure (since the
-  // synchronous "no navigator.gpu at all" case is handled in main.tsx, the
-  // only thing left to surface here is the requestAdapter-returned-null
-  // path).  Everything else is bucketed as a catalog fetch failure, which
-  // is the dominant non-WebGPU error mode (a network blip on sdss.bin /
-  // glade.bin / 2mrs.bin).
+  // `cause` is checked first: `installFormatVersionAlert` sets it to
+  // `'format-version'` on a machine-readable status, so a version mismatch is
+  // discriminated without touching the message at all. Everything else falls
+  // through to the existing message-sniffing split: anything mentioning
+  // "WebGPU" is a webgpu-init failure (the synchronous "no navigator.gpu at
+  // all" case is handled in main.tsx before React mounts, so the only thing
+  // left to surface here is the requestAdapter-returned-null path); the rest
+  // is bucketed as a catalog fetch failure, the dominant non-WebGPU error mode
+  // (a network blip on sdss.bin / glade.bin / 2mrs.bin).
   const error = useMemo<SplashError | null>(() => {
     if (status.kind === 'error') {
+      if (status.cause === 'format-version') {
+        return { kind: 'data-version-mismatch', message: status.message };
+      }
       if (/webgpu/i.test(status.message)) {
         return { kind: 'webgpu-init-failed', message: status.message };
       }
       return { kind: 'catalog-fetch-failed', message: status.message };
     }
-    if (famousMetaFailed) {
-      return { kind: 'famous-meta-failed' };
-    }
     return null;
-  }, [status, famousMetaFailed]);
+  }, [status]);
 
   return {
     splashVisible,

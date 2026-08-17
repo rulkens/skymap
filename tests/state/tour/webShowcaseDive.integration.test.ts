@@ -27,7 +27,7 @@
  * which is simpler and faster than running the full saga: the resolved clip is
  * plain data whose structure we can inspect without any async machinery. The
  * deps stub is minimal — Virgo resolves via `structures.byId`, M87 resolves
- * via `famousMeta` + a one-row FamousGalaxy cloud.
+ * via `famousGalaxiesMeta` + a one-row FamousGalaxy cloud.
  *
  * Assertion 3 wires `watchFocusTweenSaga` into a real Redux store via
  * `sagaMiddleware`, then uses `clipStarted` to activate a clip and
@@ -48,11 +48,13 @@ import { updateSelectionFocus } from '../../../src/state/selection/selectionSlic
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 
 import { Source } from '../../../src/data/source';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -75,9 +77,8 @@ function collectNodes(effects: Effect[]): Effect[] {
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-/** Minimal one-row FamousGalaxy cloud for resolving 'm87' via famousMeta. */
-const M87_CLOUD: GalaxyCatalog = {
-  count: 1,
+/** Minimal one-row FamousGalaxy cloud for resolving 'm87' via famousGalaxiesMeta. */
+const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
   positions: new Float32Array([1, 0, 0]),
   spectroscopicZ: new Float32Array([0.004]),
   magU: new Float32Array([9]),
@@ -89,19 +90,18 @@ const M87_CLOUD: GalaxyCatalog = {
   diameterKpc: new Float32Array([40]),
   axisRatio: new Float32Array([0.85]),
   positionAngleDeg: new Float32Array([155]),
-  classByte: new Uint8Array([0]),
-  parentSurveyByte: new Uint8Array([0]),
-} as unknown as GalaxyCatalog;
+});
 
 /**
- * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via `famousMeta`
- * + the one-row FamousGalaxy cloud. All other catalogs return undefined.
+ * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via
+ * `famousGalaxiesMeta` + the one-row FamousGalaxy cloud. All other catalogs
+ * return undefined.
  */
 const DIVE_DEPS: ResolveDeps = {
   catalogs: {
     get: (source) => (source === Source.FamousGalaxy ? M87_CLOUD : undefined),
   },
-  famousMeta: [
+  famousGalaxiesMeta: [
     {
       id: 'm87',
       names: ['M87', 'Virgo A', 'NGC 4486'],
@@ -125,9 +125,10 @@ const DIVE_DEPS: ResolveDeps = {
   },
 };
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -211,7 +212,7 @@ describe('webShowcase dive invariants', () => {
 
     // Activate a clip so camera.clip !== null.
     const beat2Clip = webShowcase.beats[1]!.enterClip!;
-    store.dispatch(clipStarted(beat2Clip));
+    store.dispatch(clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION }));
     expect(store.getState().camera.clip).not.toBeNull(); // guard: clip is active
 
     // Dispatch a focus update — this is what an in-clip focus() cue would

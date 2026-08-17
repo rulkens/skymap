@@ -20,6 +20,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function syntheticCloud(count: number, seedOffset: number): GalaxyCatalog {
@@ -33,22 +34,7 @@ function syntheticCloud(count: number, seedOffset: number): GalaxyCatalog {
     positions[i * 3 + 1] = Math.sin(t * Math.PI * 2) * (50 + t * 100);
     positions[i * 3 + 2] = (t - 0.5) * 200;
   }
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions,
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
-    diameterKpc: new Float32Array(count),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  return makeGalaxyCatalog(count, { positions });
 }
 
 describe('computeAngularWeights — re-bake on cloud swap', () => {

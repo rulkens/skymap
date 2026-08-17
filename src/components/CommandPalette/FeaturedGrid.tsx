@@ -11,12 +11,12 @@ import { InfoTip } from '../InfoTip/InfoTip';
 import FeaturedCardTip from './FeaturedCardTip';
 import { pickProperName } from './utils/pickProperName';
 import { resolveFeaturedEntries } from './utils/resolveFeaturedEntries';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import styles from './FeaturedGrid.module.css';
 
 export type FeaturedGridProps = {
-  readonly entries: readonly FamousMetaEntry[];
-  readonly onSelect: (entry: FamousMetaEntry) => void;
+  readonly entries: readonly FamousGalaxyMetaEntry[];
+  readonly onSelect: (entry: FamousGalaxyMetaEntry) => void;
 };
 
 function FeaturedGrid({ entries, onSelect }: FeaturedGridProps): ReactNode {

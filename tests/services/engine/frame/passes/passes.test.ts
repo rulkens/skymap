@@ -22,6 +22,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
   CONTENT_LAYERS,
   scalarVolumeLayer,
@@ -49,7 +50,7 @@ import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -159,6 +160,13 @@ const STATE_STUB = {
       isAnyAnimating: () => false,
     },
   },
+  // The Milky-Way rows' `draw` now goes through the same
+  // `deriveMilkyWayCloudAlpha` gate their `enabled` does (one liveness
+  // projection shared by the aggregate producer, its upsample consumer, and
+  // the dust pass), and that gate reads `settings.milkyWay.enabled` — so the
+  // baseline stub has to carry it or `draw` throws before reaching the
+  // renderer. Tests that need the toggle off override `settings` wholesale.
+  settings: { milkyWay: { enabled: true } },
   // pointSpritesLayer / disk layers bind the shared focus group off
   // state.gpu.focusUniform; an opaque bind group is all they read.
   // The nullable GPU renderer fields default to null (pre-bootstrap
@@ -227,13 +235,16 @@ const FOREGROUND_NAMES = [
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
 // kpc-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
 // group, driven by the program's dedicated step before the tone-map: the
-// Milky-Way impostor first (its multiplicative dust must never darken the
-// local starfield drawn after it), then the far-partition star points, the
-// orbit trails, the survey star LEAF catalog, and the survey aggregate
-// UPSAMPLE composite (adjacent to the leaf draw it composites). The survey
-// aggregate STREAM itself targets 'star-aggregates', not hdr, so it is not in
-// this group.
+// Milky-Way cloud's UPSAMPLE composite first, then the cloud's dust pass (its
+// multiplicative transmittance must land on the upsampled starlight, and must
+// never darken the local starfield drawn after it), then the far-partition
+// star points, the orbit trails, the survey star LEAF catalog, and the survey
+// aggregate UPSAMPLE composite (adjacent to the leaf draw it composites).
+// Neither aggregate STREAM is here — the Milky Way's star billboards target
+// 'mw-aggregate' and the survey's target 'star-aggregates', so both sit
+// outside the hdr group.
 const NEAR_HDR_NAMES = [
+  'milky-way-upsample',
   'milky-way',
   'star-points',
   'orbit-trails',
@@ -277,16 +288,18 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds milky-way, star-points, orbit-trails, star-catalog, additive', () => {
-    // The hdr rows outside the cosmological slab: the Milky-Way impostor,
-    // the far-partition neighbourhood stars, and the orbit trails, projected
-    // through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would clip their
-    // kpc-to-AU-scale anchors — for the Milky Way it clipped the disc
-    // mid-descent before the approach fade completed) but accumulating into
-    // the same HDR target so they ride the galaxies' tone-map. Drawn by the
-    // program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
-    // Milky-way MUST lead: its dust pass is multiplicative, and drawing it
-    // first keeps the local starfield out of that multiply.
+  it('the (hdr, NEAR0) group holds milky-way-upsample, milky-way, star-points, orbit-trails, star-catalog, additive', () => {
+    // The hdr rows outside the cosmological slab: the Milky-Way cloud's
+    // upsample + dust, the far-partition neighbourhood stars, and the orbit
+    // trails, projected through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would
+    // clip their kpc-to-AU-scale anchors — for the Milky Way it clipped the
+    // disc mid-descent before the approach fade completed) but accumulating
+    // into the same HDR target so they ride the galaxies' tone-map. Drawn by
+    // the program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
+    // The two Milky-Way rows MUST lead, in this order: the upsample adds the
+    // cloud's own starlight into HDR, then the multiplicative dust extincts it
+    // along with the cosmological accumulation behind it — and leading the
+    // group keeps the local starfield drawn after out of that multiply.
     const nearHdr = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
@@ -299,7 +312,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');
-      expect(layer.blend).toBe('additive');
+      expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
     }
   });
 });
@@ -362,17 +375,33 @@ describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
 
 describe('CONTENT_LAYERS blend legality', () => {
   it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
-    // The registry half of the target<->blend invariant (the renderer half
-    // — that the WebGPU pipeline's actual blend state matches — lands in
-    // task 10). A layer whose target/blend pair falls outside this table
-    // is a data-entry bug in its own file, not a new legal combination.
+    // The registry half of the target<->blend invariant — the renderer half,
+    // that the WebGPU pipeline's actual blend state matches, is covered
+    // elsewhere. A layer whose target/blend pair falls outside this table is
+    // a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
       if (
-        layer.target === 'hdr' ||
         layer.target === 'volume' ||
-        layer.target === 'star-aggregates'
+        layer.target === 'zoa' ||
+        layer.target === 'star-aggregates' ||
+        layer.target === 'mw-aggregate'
       ) {
+        // These four reduced-resolution offscreens accumulate the same way
+        // their contents would have accumulated straight into HDR — the
+        // raymarched volume, the zone-of-avoidance band raymarch, the
+        // survey aggregate glow, and the Milky Way cloud's star
+        // billboards are all additive sums, which is what makes "render
+        // small, bilinearly upsample, add" equivalent to drawing them
+        // full-res. A non-additive row here would break that equivalence, so
+        // it's a correctness bug, not a new legal combination.
         expect(layer.blend).toBe('additive');
+      } else if (layer.target === 'hdr') {
+        // hdr admits exactly one multiplicative row: the Milky Way dust pass
+        // extincts the emission already accumulated in HDR rather than adding
+        // to it, which is why its position in the near-hdr group is
+        // load-bearing. A second multiplicative hdr row should fail this test
+        // and be a deliberate decision.
+        expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
         // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
@@ -380,8 +409,8 @@ describe('CONTENT_LAYERS blend legality', () => {
         // them but writing no depth, straight-alpha OVER (spec §8 / §8.3 / grill
         // Q9). Their pipelines bake exactly that profile (foreground:0 formats,
         // depth read / no write, over blend), so those rows legitimately carry
-        // `over` where their siblings carry `opaque` — the sole target that admits
-        // two blends today.
+        // `over` where their siblings carry `opaque` — one of two targets that
+        // admit two blends today (hdr's dust row is the other).
         if (
           layer.name === 'rings' ||
           layer.name === 'cloud-shell' ||
@@ -647,7 +676,7 @@ describe('milkyWayLayer.enabled', () => {
 });
 
 describe('milkyWayLayer.draw', () => {
-  it('calls state.gpu.milkyWayCloudRenderer.draw with the packed args when the disc is above the FULL apparent size', () => {
+  it('calls state.gpu.milkyWayCloudRenderer.drawDust with the packed args when the disc is above the FULL apparent size', () => {
     // Half the FULL-threshold distance → apparent diameter is twice
     // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
@@ -660,11 +689,13 @@ describe('milkyWayLayer.draw', () => {
     const view = slabViewOf(ctx, NEAR0);
     const state = {
       ...STATE_STUB,
-      gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { draw: drawSpy } },
+      gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { drawDust: drawSpy } },
     } as unknown as EngineState;
     milkyWayLayer.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    // New two-pass renderer signature: draw(pass, MilkyWayCloudDrawArgs).
+    // This row draws ONLY the dust pass now — the additive star pass moved to
+    // milkyWayAggregateLayer, which renders it into the reduced-resolution
+    // `mw-aggregate` offscreen. Signature: drawDust(pass, MilkyWayCloudDrawArgs).
     const [passArg, args] = drawSpy.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
     expect(args.vp).toBe(view.vp);
@@ -744,8 +775,7 @@ const POINT_SPRITES_SETTINGS_STUB = {
   galaxyCatalogs: {
     sizePx: 2.5,
     brightness: 1.0,
-    highlightFallback: true,
-    realOnly: false,
+    provenance: DEFAULT_GALAXY_PROVENANCE,
     depthFade: true,
   },
   bias: {
@@ -880,21 +910,27 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the eleven pickables expose drawPick, in registry order', () => {
-    // Pins the spec's migration table: the five COSMO/near-field survey
-    // pickables (pointSprites / proceduralDisks / structureMarkers / milkyWay /
-    // starCatalog) PLUS the six NEAR0 true-scale foreground bodies (starPoints /
-    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets — Task 11
-    // + the selection-gated focused-field-star sphere's pick + the sub-pixel body
-    // glints' pick). Order is registry order: the COSMO pick pass leads with
-    // point-sprites (the @group(0) prefix contract); every NEAR0 body self-binds
-    // its own slot-0 camera in its own pass, so their relative order carries no
-    // @group(0) dependence (it is depth-resolved, nearest-wins). The production
-    // code stays name-blind — the pick program filters by `drawPick` presence +
-    // `enabled`, never a hardcoded name list — so this test is the ONLY place the
-    // eleven names are asserted.
+  it('exactly the twelve pickables expose drawPick, in registry order', () => {
+    // Pins the spec's migration table: the six COSMO/near-field survey
+    // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
+    // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
+    // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
+    // focusedFieldStarSphere / planets), the selection-gated
+    // focused-field-star sphere's pick and the sub-pixel body glints' pick
+    // among them. Order is registry order: the COSMO pick pass leads with
+    // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
+    // right after it in the registry for exactly that reason — its own
+    // 'zoa' render target keeps it out of every VISUAL group regardless of
+    // array position, but the pick program groups by slab alone and needs
+    // this row after the one that establishes the shared camera. Every NEAR0
+    // body self-binds its own slot-0 camera in its own pass, so their
+    // relative order carries no @group(0) dependence (it is depth-resolved,
+    // nearest-wins). The production code stays name-blind — the pick program
+    // filters by `drawPick` presence + `enabled`, never a hardcoded name
+    // list — so this test is the ONLY place the twelve names are asserted.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
+      'zone-of-avoidance',
       'procedural-disks',
       'structure-markers',
       'milky-way',

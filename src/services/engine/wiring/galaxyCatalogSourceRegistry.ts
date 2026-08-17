@@ -47,7 +47,11 @@ import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
 import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
-import { engineSourceCountReported } from '../../../state/engine/engineSlice';
+import {
+  engineSourceCountReported,
+  engineProvenanceCountsReported,
+} from '../../../state/engine/engineSlice';
+import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 
 /**
  * Registry rows, in Source enum order.  Order matters: `initGpu`'s
@@ -64,10 +68,10 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     shortName: 'famous',
     fetcher: galaxyCatalogFetcher,
     category: 'curated',
-    // famous_meta.json carries the InfoCard text, CommandPalette entries,
+    // famous_galaxies_meta.json carries the InfoCard text, CommandPalette entries,
     // and URL-focus resolution for hand-picked entries.
     // Tier-agnostic — one load per session.
-    companions: ['famousMeta'],
+    companions: ['famousGalaxiesMeta'],
   },
   {
     source: Source.Milliquas,
@@ -153,7 +157,7 @@ export function loadCompanionAssets(
   tier: Tier,
 ): void {
   if (!cfg.companions) return;
-  for (const ref of cfg.companions) state.assetSlots[ref]?.load({ tier });
+  for (const ref of cfg.companions) void state.assetSlots[ref]?.load({ tier });
 }
 
 /**
@@ -200,7 +204,6 @@ export function wireGalaxyCatalogSourceSlot(
       if (req.dissolvePrevious) await dissolveCatalogBuffer(state, catalogId);
 
       const t0 = performance.now();
-      // eslint-disable-next-line no-console
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
       // PointRenderer keys its catalogs by the string id; resolve from
       // the registry (the source code carries the matching id).
@@ -232,7 +235,6 @@ export function wireGalaxyCatalogSourceSlot(
         .map((e) => `${SHORT_NAME_BY_SOURCE.get(e.source) ?? e.source}=${e.count}`)
         .join(', ');
       const total = state.gpu.renderer.totalCount();
-      // eslint-disable-next-line no-console
       console.log(
         `[engine] upload done  ${shortName} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
@@ -242,6 +244,12 @@ export function wireGalaxyCatalogSourceSlot(
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
       cb.store.dispatch(engineSourceCountReported({ source, count: s.value.count }));
+      // One O(rows) pass over the two fallback-flag columns, paid once per
+      // commit here rather than lazily in React, so the debug panel never
+      // has to reach into the raw cloud (a couple of ms at full deck).
+      cb.store.dispatch(
+        engineProvenanceCountsReported({ source, counts: countEstimatedProvenance(s.value) }),
+      );
     }
   });
 

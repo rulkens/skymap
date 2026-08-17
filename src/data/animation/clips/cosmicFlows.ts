@@ -69,7 +69,9 @@ export const cosmicFlows: Clip = {
   id: 'cosmicFlows',
   label: 'Cosmic Flows',
   data: {
-    start: { target: [0, -0.01, 0] as Vec3, yaw: 4.44, pitch: 0.2932, distance: 0.14 },
+    // yaw/pitch encoded in the ecliptic default frame — same world bearing the
+    // legacy Y-up pair (4.44, 0.2932) framed the Local Group with.
+    start: { target: [0, -0.01, 0] as Vec3, yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
     timeline: [
       wait(2), // lead-in: hold the start pose for 2 s (the forked bob still runs)
       hide(['volumesMaster', 'filaments', 'surveyLabel'], 0), // snap cosmic web off — instant intent
@@ -77,7 +79,7 @@ export const cosmicFlows: Clip = {
       scene(setFlowEnabled(true)), // load the flow field behind the mask
 
       fork(oscillate('pitch', { amp: 0.09, period: 16 })), // gentle bob throughout the clip
-      fork(rate('yaw', { to: 0.18, over: 1.5, ease: 'in' })), // ease the orbit in; velocity persists
+      fork(rate('yaw', { to: 0.18, over: 1.5, ease: 'easeInCubic' })), // ease the orbit in; velocity persists
 
       hold(2), // I — establish on the MW
 
@@ -86,7 +88,7 @@ export const cosmicFlows: Clip = {
       all([
         // B — 11 s pull-back
         seq([dollyTo(300, 4), hold(3), dollyTo(950, 4)]), //   pull → dwell → pull
-        rate('yaw', { to: 0.025, over: 11, ease: 'inOut' }), //   decelerate orbit across the whole pull
+        rate('yaw', { to: 0.025, over: 11, ease: 'easeInOutCubic' }), //   decelerate orbit across the whole pull
       ]),
 
       hold(5), // C — hold at cosmic-web scale

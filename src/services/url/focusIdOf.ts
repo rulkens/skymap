@@ -60,6 +60,10 @@ const ENCODE: EncodeTable = {
   // it back to `{ type: 'milkyWay' }`.
   milkyWay: () => MILKY_WAY_FOCUS_ID,
 
+  // No deep link: the band has no position to fly to (spec's Non-goals), so
+  // there is nothing for a `#focus=` hash to name — mirrors urlHashFor's row.
+  zoneOfAvoidance: () => null,
+
   // Scene body → its seed id under the shared prefix (`body-earth`);
   // resolveFocusId strips the prefix and validates against SCENE_BODIES.
   body: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
@@ -85,7 +89,7 @@ function encodeGalaxy(
     deps.catalogs.get(ref.source),
     ref.index,
     ref.source,
-    deps.famousMeta,
+    deps.famousGalaxiesMeta,
   );
   // Cloud not loaded or index out of range.  The saga only encodes a LIVE
   // selection (cloud is definitely loaded), so this branch is a safety net

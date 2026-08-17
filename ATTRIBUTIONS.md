@@ -107,6 +107,63 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 - **Licence:** Publicly released via the Gaia archive; cite the paper above.
   The Gaia mission acknowledgment under **Gaia DR3** applies to this table as well.
 
+### Gillessen et al. 2017 — Galactic-Centre S-star orbits
+
+- **Use:** The 39 bound S-star orbits drawn around Sagittarius A\*. Two
+  different tables, both hand-transcribed into the repository rather than
+  fetched at build time (they are 39 and ~100 rows, not a catalogue):
+  - `J/ApJ/837/30/table3` — the fitted orbital elements (semi-major axis,
+    eccentricity, inclination, node, argument of pericentre, pericentre
+    epoch, period), plus the K magnitude and early/late spectral flag that
+    set each star's colour and size. Transcribed to
+    `src/data/bodies/sStarElements.ts`, one verbatim source line per row.
+    The 40th published row, S111, is excluded as unbound (e = 1.092).
+  - `J/ApJ/837/30/table5` — the astrometric measurements. ~34 epochs each
+    for S2, S12 and S38 are held as a test fixture
+    (`tests/fixtures/sStarAstrometry.json`) and used as the acceptance
+    oracle for the sky-frame conversion; they are never rendered.
+- **Reference:** Gillessen, Plewa, Eisenhauer, Sari, Waisberg, Habibi,
+  Pfuhl, George, Dexter, von Fellenberg, Ott & Genzel 2017, ApJ 837, 30
+  (ads: [2017ApJ...837...30G](https://ui.adsabs.harvard.edu/abs/2017ApJ...837...30G)).
+- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+- **Related:** table5's coordinate origin is a best estimate of Sgr A\*'s
+  radio position (±0.2 mas at epoch 2009.0), per **Plewa et al. 2015,
+  MNRAS 453, 3234** — the floor on the fixture's residuals, and the reason
+  the acceptance test allows a few sigma rather than exact closure.
+
+### GRAVITY Collaboration — the Galactic-Centre distance and black-hole mass
+
+- **Use:** R₀ = 8178 pc, which sets the angular-to-linear scale for every
+  S-star orbit (1″ = 8178 AU) and places Sgr A\* — and with it the Milky Way
+  impostor's hub — in the scene. The same source's M = 4.297 × 10⁶ M☉ gives
+  the Schwarzschild radius the InfoCard quotes pericentres against.
+- **Reference:** GRAVITY Collaboration (Abuter et al.) 2019, A&A 625, L10.
+- **Licence:** Publicly released; cite the paper above.
+
+### Pecaut & Mamajek 2013 — main-sequence temperature/radius scale
+
+- **Use:** The representative effective temperatures and radii assigned to
+  S-stars by brightness and spectral class (`src/data/bodies/sStarAppearance.ts`).
+  Gillessen's table carries neither, so each class is a small
+  brightness-ordered table spot-checked against this scale — a
+  representative appearance, not a measurement.
+- **Reference:** Pecaut & Mamajek 2013, ApJS 208, 9.
+- **Licence:** Publicly released; cite the paper above.
+
+### JPL Solar System Dynamics — planetary and satellite mean elements
+
+- **Use:** The J2000 Keplerian element table (`src/data/bodies/orbitalElements.ts`)
+  that positions every solar-system body AND draws its orbit trail: the eight
+  major planets from "Keplerian Elements for Approximate Positions of the Major
+  Planets" (<https://ssd.jpl.nasa.gov/planets/approx_pos.html>), each with its
+  per-Julian-century rates; the Moon and thirteen planetary satellites from
+  "Planetary Satellite Mean Orbital Parameters"
+  (<https://ssd.jpl.nasa.gov/sats/elem/>), each with its own Laplace-plane pole.
+- **Reference:** JPL Solar System Dynamics group, NASA/Caltech. The planetary
+  fit is Standish's; see the approximate-positions page above for its stated
+  validity interval and residuals.
+- **Licence:** Public domain (US Government work). Credit: "NASA/JPL-Caltech".
+
 ### Hipparcos-2 — the re-reduced Hipparcos catalogue
 
 - **Use:** The `hip2.dat` bright-star table (VizieR I/311), cross-matched to
@@ -251,6 +308,101 @@ two sources:
   to the Wikipedia article is recorded in
   `data/raw/wikipedia_famous_cache.json`.
 
+### Planetary, lunar & ring surface textures
+
+The textured solar-system bodies (`src/data/bodies/bodyTextureRegistry.ts`) and
+the ≤1 MB boot placeholder atlas (`public/data/images/textures/body-atlas.webp`,
+a 13-tile mosaic emitted by `tools/textures/buildTextures.ts`) are derived —
+downsampled into runtime tiers, and in two cases baked into normal maps — from
+three public sources. The raw sources are gitignored; per-file provenance,
+upstream URLs, and licences live in `tools/utils/io/rawDataRegistry.ts`
+(the `textures.*` rows) and `tools/utils/io/textureSources.ts`.
+
+#### Solar System Scope — planet & moon albedo maps
+
+- **Use:** Full-colour equirectangular surface maps for Mercury, Venus (cloud
+  tops), Mars, Jupiter, Saturn, Uranus, Neptune, and the Moon, plus the Saturn
+  ring radial-alpha strip.
+- **Source:** <https://www.solarsystemscope.com/textures/>.
+- **Licence:** CC BY 4.0. Attribution: "Textures by Solar System Scope
+  (solarsystemscope.com), licensed under CC BY 4.0."
+
+#### NASA — Earth & Moon imagery
+
+All public domain; NASA asks that credit go to the named observatory / program.
+
+- **Earth surface** — Blue Marble Next Generation (August 2004 topography +
+  bathymetry), NASA Earth Observatory (<https://visibleearth.nasa.gov/>). Both the
+  whole-globe base texture and the streamed surface tile pyramid come from this
+  one month, the former from the 21600×10800 equirect and the latter from the
+  eight 21600×21600 quadrants.
+- **Earth night lights** — Black Marble 2016, NASA Earth Observatory / NASA
+  Goddard Space Flight Center, Suomi NPP VIIRS.
+- **Earth water mask** (feeds the material/roughness map) — Blue Marble Next
+  Generation land/water mask, NASA Earth Observatory. Preserved via the Internet
+  Archive after NASA retired the NEO bluemarble archive.
+- **Earth relief** (baked into the normal map — a build input, never shipped as
+  runtime pixels) — GEBCO_08-derived grayscale topography/bathymetry, NASA Earth
+  Observatory, imagery by Jesse Allen using GEBCO_08 grid data.
+- **Earth clouds** — Blue Marble cloud composite, NASA Goddard Space Flight
+  Center, Reto Stockli.
+- **Moon relief** (baked into the normal map — a build input, never shipped as
+  runtime pixels) — NASA Scientific Visualization Studio "CGI Moon Kit" LOLA
+  elevation.
+
+#### USGS Astrogeology — Galilean moon mosaics
+
+- **Use:** Global surface mosaics for Io, Europa, Ganymede, and Callisto
+  (Voyager + Galileo SSI). Europa and Callisto ship single-channel and are
+  hue-tinted at build time (the `monoTint` treatment in the body-texture registry).
+- **Source:** USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/>.
+- **Licence:** Public domain. Credit: "NASA / USGS".
+
+#### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
+
+- **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px
+  equirectangular, 8-bit stretched from the 32-bit originals. Both ship
+  single-channel. Charon is hue-tinted at build time (the `monoTint` treatment
+  in the body-texture registry); Pluto's mosaic instead supplies luminance for
+  the `panSharpen` treatment below — a derived product, neither the raw mosaic
+  nor the raw NASA colour map.
+- **Source:** USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/>.
+- **Licence:** Public domain (Astropedia access constraints: none; use constraints: cite authors).
+  Credit per the Astropedia record: "New Horizons Team" (primary author), originators "NASA,
+  Johns Hopkins University Applied Physics Laboratory, Southwest Research Institute, Lunar and
+  Planetary Institute", published by USGS Astrogeology Science Center, 2017.
+
+#### NASA — Pluto derived colour (New Horizons MVIC)
+
+- **PIA11707** — New Horizons global colour map of Pluto, which NASA describes
+  as "based on a series of three color filter images obtained by the
+  Ralph/Multispectral Visual Imaging Camera". NASA attaches no colour-type
+  label to it, so that it is **enhanced** rather than natural colour is an
+  inference, from two independent things. (a) Olkin et al. 2017, _AJ_ 154, 258,
+  say of their own renderings from that same three-broadband-filter set — blue,
+  red and near-IR "displayed in the blue, green, and red color channels,
+  respectively" — that "These images are enhanced color (not natural color as
+  perceived by the human eye)"; the paper never mentions PIA11707, so this
+  carries only as far as the product family. (b) We measured it: fitting
+  PIA11707's chroma against the true-colour image below recovers a ~6.4×
+  anisotropic chroma stretch, so the two renderings of the same data
+  demonstrably disagree on saturation. skymap uses PIA11707 only as a chroma
+  source — that fitted calibration inverts the stretch before any pixels reach
+  a runtime texture, and PIA11707 itself is never shipped.
+  **Source:** NASA Photojournal (PIA11707),
+  <https://science.nasa.gov/photojournal/pluto-color-map> (the legacy
+  `photojournal.jpl.nasa.gov/catalog/PIA11707` URL now redirects here).
+  **Licence:** Public domain. **Credit:** NASA/JHUAPL/SwRI.
+- **"True Colors of Pluto"** (P_COLOR_2_TRUE_COLOR) — natural-colour New
+  Horizons MVIC disc view, of which NASA's page says "The processing creates
+  images that would approximate the colors that the human eye would perceive".
+  Used only as the calibration reference the PIA11707 chroma-inversion fit is
+  derived against (not a build input, kept for reproducibility). **Source:**
+  <https://science.nasa.gov/resource/true-colors-of-pluto/>. **Licence:**
+  Public domain. **Credit:** NASA/JHUAPL/SwRI/Alex Parker.
+
 ## Shaders
 
 ### Milky Way impostor — "Spiral galaxy" by mrange
@@ -288,8 +440,13 @@ flows from skymap to them.
 - **DESI Legacy viewer cutouts**
   (`https://www.legacysurvey.org/viewer/cutout.jpg`) — used by
   `tools/fetchFamousImages.ts` for the thumbnail fallback path.
-- **Vizier TAP** (`https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync`) —
-  used by `tools/fetch2massXsc.ts` to fetch 2MASS XSC shape data via ADQL.
+- **VizieR TAP** (`https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync`) —
+  used by `tools/fetch2massXsc.ts` to fetch 2MASS XSC shape data via ADQL, and
+  as the one-off source for the hand-transcribed Gillessen S-star tables (and
+  the check that verified that transcription). CDS asks that use of VizieR be
+  acknowledged: "This research has made use of the VizieR catalogue access
+  tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier)." The original
+  description of the service is Ochsenbein, Bauer & Marcout 2000, A&AS 143, 23.
 - **NED — NASA/IPAC Extragalactic Database**
   (`https://ned.ipac.caltech.edu/byname?objname=…`) — linked from the
   InfoCard "Catalogues" row for famous galaxies. Read-only; no programmatic

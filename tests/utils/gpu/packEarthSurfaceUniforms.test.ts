@@ -43,6 +43,11 @@ const CLOUD_SHELL_RADIUS = 1.03;
 const AMBIENT_LIGHT = 0.03125;
 // Dyadic + distinct sentinel for the new 16-byte row's first slot (byte 112).
 const OCEAN_ROUGHNESS = 0.28125;
+// The page-table window. Small integers, mutually distinct and distinct from
+// every index they sit at, so a transposed pair or an off-by-one slot fails.
+const Z_WIN = 9;
+const WIN_X0 = 341;
+const WIN_Y0 = 77;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
   it('packs a 128-byte / 32-f32 record with roughnessBase filling the vec3 tail @76', () => {
@@ -57,6 +62,9 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       CLOUD_SHELL_RADIUS,
       AMBIENT_LIGHT,
       OCEAN_ROUGHNESS,
+      Z_WIN,
+      WIN_X0,
+      WIN_Y0,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
     expect(rec.length).toBe(32); // 128 bytes
@@ -103,10 +111,13 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     // dropped the 10th arg zeroes it and fails here. Dyadic sentinel ⇒ exact toBe.
     expect(rec[28]).toBe(OCEAN_ROUGHNESS); // byte 112
 
-    // The row's trailing three slots (indices 29..31, bytes 116..127) are the
-    // zeroed pad that rounds the struct to 128 bytes.
-    expect(rec[29]).toBe(0);
-    expect(rec[30]).toBe(0);
-    expect(rec[31]).toBe(0);
+    // The page-table window fills the row's remaining three slots (bytes
+    // 116..127) — the slots that used to be zeroed pad. Integers held as f32
+    // and read shader-side with `u32(...)`, so `toBe` is exact; the fragment
+    // resolves the window from these three alone, and a swapped pair would put
+    // every tile lookup in the wrong cell with no error anywhere.
+    expect(rec[29]).toBe(Z_WIN); // byte 116
+    expect(rec[30]).toBe(WIN_X0); // byte 120
+    expect(rec[31]).toBe(WIN_Y0); // byte 124
   });
 });

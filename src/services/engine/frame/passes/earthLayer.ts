@@ -2,56 +2,30 @@
  * earthLayer — the true-scale, Blue-Marble-textured Earth as a content-layer
  * row drawing into the depth-bearing `foreground:0` target.
  *
- * ### What it draws
+ * Draws the single seeded `bodies.earth` record as a unit sphere scaled to its
+ * radius and translated to its position in the `RENDER_ORIGIN_MPC`-relative
+ * frame, packing the 128-byte `EarthSurfaceUniforms` record (MVP + sun
+ * direction + camera, all body-local, plus the PBR params including the
+ * user-tunable `settings.earth.ambientLight` / `oceanRoughness` overrides).
+ * `earthRenderer.draw` writes it into a single non-dynamic uniform buffer, so
+ * this row must draw Earth AT MOST once per frame (see that renderer's header
+ * for the `writeBuffer`-vs-`submit` race a second draw would trigger).
  *
- * The single seeded `bodies.earth` record, composed as a unit sphere scaled to
- * the body's radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
- * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame.
- * The layer packs the 128-byte `EarthSurfaceUniforms` record (MVP + body-local
- * sun direction + camera-in-local-frame + the PBR surface params, including the
- * user-tunable night-side ambient floor `settings.earth.ambientLight` and the
- * user-tunable open-water roughness `settings.earth.oceanRoughness` — both
- * Earth-scoped overrides of the WESL consts other bodies read);
- * `earthRenderer.draw` writes it into its single
- * (non-dynamic) uniform buffer and issues one indexed draw — so this row must
- * draw the Earth AT MOST once per frame (the renderer's own header spells out
- * the `writeBuffer`-vs-`submit` race a second same-frame draw would trigger).
+ * Reads the slab's f64 `view.slab.vp`, not the f32-narrowed `view.vp`, like the
+ * other near-field sphere layers: Earth sits ~4.85e-12 Mpc from the render
+ * origin, a cancellation `composeBodyMvp` must resolve in double precision
+ * BEFORE narrowing to f32, or Earth mis-places by more than its own radius.
  *
- * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
- *
- * Like the other sphere-body layers (`starSpheresLayer`, `planetsLayer`),
- * this is a near-field body that reads the slab's `Float64Array`
- * view-projection (`view.slab.vp`) rather than the f32-narrowed
- * `view.vp` every cosmological layer consumes. Earth sits ~1 AU ≈ 4.85e-12 Mpc
- * from the render origin, a tiny number the VP's large translation nearly
- * cancels. `composeBodyMvp` must resolve that cancellation in double precision
- * BEFORE narrowing to f32 — feeding it `view.vp` (already narrowed by
- * `slabViewOf`) would resolve the cancellation after the low-order bits are
- * gone, silently mis-placing Earth by more than its own radius. See
- * `composeBodyMvp`'s module header for the full compose-in-f64-then-narrow
- * argument.
- *
- * ### When it draws
- *
- * `enabled` gates on TWO handles — the `earthRenderer` GPU handle (null in the
- * pre-bootstrap window) AND the seeded `bodies.earth` record (null until the
- * scene-body seed installs it) — plus the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`): beyond it Earth is a deep-sub-pixel speck
- * at the galactic centre, and gating here (with every NEAR0 sibling) lets the
- * executor skip the whole foreground pass group as empty. Inside that gate a
- * sub-pixel cull (`SUB_PIXEL_BODY_CULL_PX`) still applies: Earth spends most
- * of the descent under a pixel across, where the sphere draw adds nothing the
- * star-point backdrop doesn't already show. The `foreground:0` target is a
- * bootstrap-guaranteed `renderTargets` row, so there is no separate
- * offscreen-null gate. `draw` re-checks both handles so a stale call is a
- * harmless no-op.
- *
- * `RENDER_ORIGIN_MPC` is imported directly as a constant (not threaded through
- * ctx state) — the render origin is fixed at the Sun for the zoom-to-earth
- * fold.
+ * `enabled` gates on the `earthRenderer` GPU handle, the seeded `bodies.earth`
+ * record, the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`),
+ * and a sub-pixel cull (`SUB_PIXEL_BODY_CULL_PX`) — Earth spends most of the
+ * descent under a pixel across, where the star-point backdrop already shows
+ * it. `draw` re-checks both handles so a stale call is a harmless no-op.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -63,11 +37,27 @@ import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
+import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 import { sceneBodyStates } from '../sceneBodyStates';
+
+/**
+ * Camera-to-Earth-centre distance in Mpc, from the live per-frame snapshot
+ * position — NOT `ctx.cam.distance` (the orbit distance-to-FOCUS, which
+ * coincides with this only while Earth is the orbit pivot). `enabled`'s
+ * sub-pixel cull and `draw`'s cloud-shadow descent fade both key off this same
+ * quantity; factoring it out here means they read it once instead of
+ * potentially drifting onto two slightly different distances.
+ */
+function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext): number {
+  const dx = earthPositionMpc[0] - ctx.drawCamPos[0];
+  const dy = earthPositionMpc[1] - ctx.drawCamPos[1];
+  const dz = earthPositionMpc[2] - ctx.drawCamPos[2];
+  return Math.hypot(dx, dy, dz);
+}
 
 export const earthLayer: ContentLayer = {
   name: 'earth',
@@ -76,27 +66,18 @@ export const earthLayer: ContentLayer = {
   blend: 'opaque',
 
   enabled(state, ctx) {
-    // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
-    // near-field distance gate, then the seeded body. The target is a
-    // bootstrap-guaranteed renderTargets row.
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const earth = state.data.bodies.earth;
     if (earth === null) return false;
-    // Live position from the per-frame snapshot (keyed by id) — not the baked
-    // record field; the record still gates presence + carries the authored radius.
+    // Live position from the per-frame snapshot, not the baked record field.
     const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-    // Sub-pixel cull: below SUB_PIXEL_BODY_CULL_PX apparent diameter the
-    // sphere cannot resolve, so drop the layer from the pass plan entirely
-    // (see that constant's docblock). Earth is the layer's only body, so the
-    // whole-layer gate is exact — unlike planetsLayer, whose per-body cull
-    // lives in its pack loop. A zero camera-to-centre distance means the
-    // camera is INSIDE the body — apparentSizePx defensively returns 0
-    // there, which would read as sub-pixel, so treat it as resolved.
-    const dx = earthState.positionMpc[0] - ctx.drawCamPos[0];
-    const dy = earthState.positionMpc[1] - ctx.drawCamPos[1];
-    const dz = earthState.positionMpc[2] - ctx.drawCamPos[2];
-    const distanceMpc = Math.hypot(dx, dy, dz);
+    // Sub-pixel cull (see SUB_PIXEL_BODY_CULL_PX): Earth is the layer's only
+    // body, so this whole-layer gate is exact, unlike planetsLayer's per-body
+    // cull. Zero distance means the camera is INSIDE the body — apparentSizePx
+    // defensively returns 0 there, which would read as sub-pixel, so treat it
+    // as resolved.
+    const distanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
     if (distanceMpc === 0) return true;
     const diameterPx = apparentSizePx({
       diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
@@ -112,13 +93,9 @@ export const earthLayer: ContentLayer = {
     const earth = state.data.bodies.earth;
     if (renderer === null || earth === null) return;
 
-    // Live position + orientation from the per-frame snapshot (keyed by id) —
-    // not the baked record fields; radius stays authored identity on the record.
     const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
 
-    // Compose the Earth's MVP from the slab's f64 vp — see the module header's
-    // "f64 seam" note for why `view.slab.vp` and not `view.vp`. Radius is the
-    // authored kilometres resolved into Mpc at the draw site.
+    // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
     const mvp = composeBodyMvp(
       view.slab.vp,
       earthState.positionMpc,
@@ -126,25 +103,35 @@ export const earthLayer: ContentLayer = {
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
       earthState.orientation,
     );
-    // Rotate the sun direction into Earth's local frame (its orientation carries
-    // the axial tilt), so the fragment's lighting stays a plain dot product. The
-    // night-side ambient floor rides the uniform below
-    // (`settings.earth.ambientLight`), an Earth-scoped override of the shared
-    // AMBIENT const other bodies read.
+    // Sun direction rotated into Earth's local frame (orientation carries the
+    // axial tilt), so the fragment's lighting stays a plain dot product.
     const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
-    // The camera in Earth's local frame (body-radii units) — the view vector the
-    // PBR fragment needs for the view-dependent ocean glint. `view.camPos` and
-    // the snapshot position are BOTH origin-relative (heliocentric) Mpc — the near
-    // slab is origin-relative — so their difference resolves cleanly in JS doubles
-    // before narrowing to f32 (the same precision posture as the f64 seam above).
+    // Camera in Earth's local frame — the view vector the PBR fragment needs
+    // for the view-dependent ocean glint.
     const camLocal = camPosLocal(
       view.camPos,
       earthState.positionMpc,
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
       earthState.orientation,
     );
-    // Pack MVP + sunDirLocal + camPosLocal + the PBR surface params into the
-    // 128-byte EarthSurfaceUniforms record.
+    // The window the fragment addresses tiles through, read from the tile
+    // subsystem rather than this frame's plan: the subsystem reports the
+    // window the page-table TEXTURE was actually built against, which lags a
+    // plan update until the texture re-derives. Null (the all-zero identity)
+    // before the first upload.
+    const tileWindow = state.subsystems.earthTiles?.getUploadedWindow() ?? null;
+    // Same descent fade the cloud shell itself uses, from the same
+    // camera-to-Earth-centre distance enabled's sub-pixel cull reads — the deck
+    // and the shadow it casts must dissolve together.
+    //
+    // KNOWN OMISSION: this fade does not reach the night-side city-lights
+    // dimming (nightLights reads cloudAlphaHere with no strength scalar).
+    // Fixing that needs a 14th uniform field and packEarthSurfaceUniforms has
+    // none free; deferred rather than paid for a night-side-only artifact.
+    const cloudFade = cloudDeckFade(
+      earthCameraDistanceMpc(earthState.positionMpc, ctx),
+      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    );
     renderer.draw(
       pass,
       packEarthSurfaceUniforms(
@@ -154,48 +141,36 @@ export const earthLayer: ContentLayer = {
         EARTH_SURFACE_PARAMS.roughnessBase,
         EARTH_SURFACE_PARAMS.f0,
         EARTH_SURFACE_PARAMS.sunIrradiance,
-        EARTH_SURFACE_PARAMS.cloudShadowStrength,
-        // The cloud deck's unit-sphere local radius — the surface shadow ray
-        // intersects this SAME shell the cloudShellLayer draws, so the cast
-        // shadow and the drawn deck agree by construction.
+        EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade,
+        // Unit-sphere local radius of the SAME shell cloudShellLayer draws, so
+        // the cast shadow and the drawn deck agree by construction.
         CLOUD_SHELL_PARAMS.radiusRatio,
-        // Night-side ambient floor — the live user setting, not the WESL const
-        // (seeded from EARTH_SURFACE_PARAMS.ambientLight so the default matches).
+        // Live user settings, not the WESL consts (seeded from
+        // EARTH_SURFACE_PARAMS so the defaults match).
         state.settings.earth.ambientLight,
-        // Open-water GGX roughness — the live user setting, not the pbr.wesl
-        // OCEAN_ROUGHNESS const (seeded from EARTH_SURFACE_PARAMS.oceanRoughness
-        // so the default matches).
         state.settings.earth.oceanRoughness,
+        // Page-table window (zWin, winX0, winY0). All-zero is the identity: no
+        // tile named anywhere, base texture shown, window never consulted.
+        tileWindow?.zWin ?? 0,
+        tileWindow?.winX0 ?? 0,
+        tileWindow?.winY0 ?? 0,
       ),
     );
   },
 
-  // Pick aspect — stamps Earth's packed identity into the NEAR0 r32uint pick
-  // pass via the shared `bodyPickRenderer`. The pick program only reaches here
-  // when `enabled` (the same foreground-distance + sub-pixel gate) passed for
-  // the pick-time camera, so the pick sphere is drawn exactly where the visual
-  // sphere is. The MVP is composed the SAME way `draw` does — `composeBodyMvp`
-  // from the slab's f64 vp (the "f64 seam" note) — so the pick silhouette is
-  // identical to the drawn one.
-  //
-  // Earth is the sole body of its source (`Source.Earth`), so its seed index is
-  // the constant 0 — there is no seed table to look up. The packed id is
-  // `packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET)`; the offset keeps a
-  // real (source, index 0) hit distinct from the cleared-to-zero no-hit texel.
+  // Stamps Earth's packed identity into the NEAR0 r32uint pick pass. Earth is
+  // the sole body of Source.Earth, so its seed index is the constant 0; the
+  // packed id's PICK_SENTINEL_OFFSET keeps a real hit distinct from the
+  // cleared-to-zero no-hit texel.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     const earth = state.data.bodies.earth;
     if (pickRenderer === null || earth === null) return;
 
-    // Live position + orientation from the per-frame snapshot (keyed by id) — not
-    // the baked record fields; radius stays authored identity on the record.
     const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
 
-    // Floor the PICK radius to the shared min footprint (visual sphere untouched):
-    // a far-edge Earth can project to a couple of pixels, too small to click, so
-    // its pick sphere inflates to the same 9 px-radius floor the point-partition
-    // bodies get — the shared `drawFlooredSpherePick` recipe. Earth carries its
-    // snapshot orientation; its identity is the constant seed index 0.
+    // Floor the pick radius (drawFlooredSpherePick) so a far-edge Earth
+    // projecting to a couple of pixels stays clickable.
     drawFlooredSpherePick(pickRenderer, pass, {
       vp: view.slab.vp,
       positionMpc: earthState.positionMpc,

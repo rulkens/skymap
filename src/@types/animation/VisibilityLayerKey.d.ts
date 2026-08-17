@@ -37,10 +37,17 @@
  * the kinds we just split (disk vs label) and lose the addressability the
  * tour depends on.
  *
- * Note on `surveyLabel`: it is the `galaxyNames`-handle row — a single
+ * Note on `surveyLabel`: it is the `galaxy`-handle row — a single
  * famous-catalog label toggle, NOT a per-catalog row. There is one survey
  * label intent across all galaxy catalogs, mirroring how `FadeId`'s
- * `labelLayer` reuses the `galaxyNames` layer for famous-galaxy labels.
+ * `labelLayer` reuses the `galaxy` layer for famous-galaxy labels.
+ *
+ * Note on `starCatalogLabel` and `bodyLabel`: both are CLUSTER-level rows — one
+ * intent across every star catalog, one across every near-field body — matching
+ * how `surveyLabel` addresses all galaxy-catalog labels at once. Per-item keys
+ * are added when a tour beat actually needs to address one row's captions
+ * alone; the fade handles underneath already carry the item, so that split is a
+ * key-vocabulary change, not a registry one.
  */
 
 export type VisibilityLayerKey =
@@ -50,6 +57,8 @@ export type VisibilityLayerKey =
   | 'volumesMaster'
   | 'milkyWayLabel'
   | 'surveyLabel'
+  | 'starCatalogLabel'
+  | 'bodyLabel'
   | 'scaleBar'
   | 'structureRing'
   | 'structureLabel'
@@ -58,4 +67,5 @@ export type VisibilityLayerKey =
   | 'flow'
   | 'orbitTrails'
   | 'constellations'
-  | 'volumeField';
+  | 'volumeField'
+  | 'zoneOfAvoidance';

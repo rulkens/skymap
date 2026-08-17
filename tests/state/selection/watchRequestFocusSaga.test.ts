@@ -8,6 +8,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -16,8 +17,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 // One-row SDSS cloud whose objID matches the sdss-<id> deep link below.
 // objIDs is BigUint64Array (unsigned) — NOT BigInt64Array.
 function makeCloud(objId: bigint): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array([1, 0, 0]),
     spectroscopicZ: new Float32Array([0.01]),
     magU: new Float32Array([18]),
@@ -28,10 +28,7 @@ function makeCloud(objId: bigint): GalaxyCatalog {
     objIDs: new BigUint64Array([objId]),
     diameterKpc: new Float32Array([30]),
     axisRatio: new Float32Array([1]),
-    positionAngleDeg: new Float32Array([0]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-  } as unknown as GalaxyCatalog;
+  });
 }
 
 describe('watchRequestFocusSaga', () => {
@@ -47,7 +44,7 @@ describe('watchRequestFocusSaga', () => {
         get: (src) =>
           cloudPresent && src === Source.SDSS ? makeCloud(1237668393006604288n) : undefined,
       },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     };

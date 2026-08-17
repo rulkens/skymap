@@ -15,7 +15,7 @@
  *
  * ### Why throw on 404?
  *
- * Same reasoning as famousMetaFetcher: the "absent sidecar = feature
+ * Same reasoning as famousGalaxiesMetaFetcher: the "absent sidecar = feature
  * off" mapping lives a layer up, in the slot subscriber. The fetcher
  * reports HTTP truth; the slot's error handler maps it to an empty
  * Map so the palette's famous-only search still works. This also

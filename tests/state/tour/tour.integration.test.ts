@@ -55,6 +55,7 @@ import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry
 import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
@@ -178,7 +179,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     // Activate the clip. cosmicFlows.data.start is a concrete CameraPose — no
     // 'live' token — so clipStarted receives it as-is. The fresh wrapper object
     // triggers the clipElapsed clock reset on the first tick.
-    store.dispatch(clipStarted(cosmicFlows.data));
+    store.dispatch(clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION }));
 
     return { store, clock, clipPlayer };
   }

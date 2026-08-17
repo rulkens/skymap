@@ -67,11 +67,8 @@ export const DESI_DEEP_ENTRY = {
   // narrow pencil-beam, not a bulk all-sky catalog), so there's no need to
   // subsample per tier.
   tierTargets: {},
-  // Seeded from Milliquas: a sparse far-field catalog whose rows sit at
-  // faint apparent magnitudes needs a higher floor than the bulk galaxy
-  // catalogs' 0.02 default, or the whole source pins to invisible. Visual
-  // tuning knob, not a measured value.
-  intensityFloor: 0.15,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   // Disable distance fade (an effectively-infinite half-distance): the
   // z ≈ 3.5 tail reaching past 7000 Mpc is the entire point of this source,
   // and the default ~1000 Mpc fade half-distance would extinguish it long

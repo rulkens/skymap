@@ -1,28 +1,18 @@
 /**
- * `RAW_DATA` — single source of truth for every catalog raw-data file the
- * build pipeline consumes. Keyed by dotted-lowercase `<catalog>.<artifact>`
- * (`'2mrs.table3'`, `'cf4.table2'`, …); consumers call `rawDataPath(key)`
- * rather than hand-writing `data/raw/...` strings, so a file move is a
- * one-line edit here. `RawDataKey` gives compile-time key checking.
+ * `RAW_DATA` — single source of truth for every raw-data file the build pipeline
+ * consumes, keyed dotted-lowercase `<catalog>.<artifact>`. Consumers call
+ * `rawDataPath(key)` rather than hand-writing `data/raw/...`, so a file move is
+ * a one-line edit here and `RawDataKey` rejects a bad key at compile time.
  *
- * ## Conventions
- *
- * - **Keys**: `<catalog>.<artifact>`. First segment = catalog/producer
- *   (`2mrs`, `glade`, `hyperleda`, `sdss`, `famous`, `cf4`, `mcpm`,
- *   `milliquas`, `mcxc`, `mscc`, `desi`, `gaia`, `textures`, `fonts`,
- *   `starnet`, `filaments`).
- * - **`source`**: `'committed'` = in git; `'gitignored'` = fetcher output.
- *   A missing gitignored file → run the fetcher; a missing committed file
- *   → the repo is broken.
- * - **`kind`**: `'file'` or `'directory'`. Directories appear when the
- *   filename is dynamic (chunk files, tier variants); consumers `join()`.
- * - **`upstream`/`fetcher`/`readme`**: optional provenance documentation.
- *
- * Build artefacts (`public/data/*.bin`) are outputs, not inputs — they are
- * not registered here.
+ * `source`: `'committed'` = in git, so a missing file means a broken repo;
+ * `'gitignored'` = fetcher output, so a missing file means "run the fetcher".
+ * `kind: 'directory'` covers dynamic filenames (chunks, tier variants) —
+ * consumers `join()`. Build artefacts are outputs; they are not registered.
  */
 
 import { resolve } from 'node:path';
+
+import { BMNG_VINTAGE } from './bmngVintage';
 
 export type RawDataEntry = {
   readonly path: string;
@@ -115,11 +105,13 @@ export const RAW_DATA = {
   // ─── SDSS — manual SkyServer SQL export ────────────────────────────────
 
   'sdss.skyserver': {
-    path: 'data/raw/sdss/Skyserver_SQL5_3_2026 6_09_20 PM.csv',
+    path: 'data/raw/sdss/Skyserver_SQL_full_2026-08-12.csv',
     kind: 'file',
     source: 'committed',
     description:
-      'Active SDSS SkyServer CSV export. Auto-picked by mtime from data/raw/sdss/Skyserver_*.csv at build time; this entry pins the current file.',
+      'Active SDSS SkyServer CSV export. Auto-picked by mtime from data/raw/sdss/Skyserver_*.csv at build time; this entry pins the current file. ' +
+      'Complete DR17 pull (970,067 rows incl. petroR50_r/petroR90_r), fetched in plate-range batches — a single SqlSearch query silently truncates at ' +
+      "500k rows and carved a fake dec +14..22 hole through the Coma supercluster (the pre-2026-08 file was that truncation; don't re-fetch unbatched).",
   },
   'sdss.dir': {
     path: 'data/raw/sdss',
@@ -537,20 +529,22 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.sssJupiter8k': {
-    path: 'data/raw/textures/8k_jupiter.jpg',
+  'textures.sssJupiter4k': {
+    path: 'data/raw/textures/4k_jupiter.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Jupiter cloud bands, 8k JPG (CC BY 4.0).',
+    description:
+      'Solar System Scope Jupiter cloud bands, 4096x2048 JPG (CC BY 4.0). Named 4k locally though the upstream filename says 8k — the delivered image is 4096x2048, not 8192x4096.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_jupiter.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.sssSaturn8k': {
-    path: 'data/raw/textures/8k_saturn.jpg',
+  'textures.sssSaturn4k': {
+    path: 'data/raw/textures/4k_saturn.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Saturn cloud bands, 8k JPG (CC BY 4.0).',
+    description:
+      'Solar System Scope Saturn cloud bands, 4096x2048 JPG (CC BY 4.0). Named 4k locally though the upstream filename says 8k — the delivered image is 4096x2048, not 8192x4096.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_saturn.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -594,28 +588,113 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+
+  // ─── BMNG Earth imagery — one vintage, two publications ───────────────
+  //
+  // Every path/URL below takes its month from `BMNG_VINTAGE`: the whole-globe
+  // equirect and the eight quadrants have to be the SAME month, since the
+  // tile layer falls back to the base outside the baked window (see
+  // `BMNG_VINTAGE` for why).
+
   'textures.nasaBmng': {
-    path: 'data/raw/textures/world.topo.bathy.200412.3x21600x10800.jpg',
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'NASA Blue Marble Next Generation, December topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source.',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x21600x10800.jpg',
+    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
   'textures.nasaBmngDev': {
-    path: 'data/raw/textures/world.topo.bathy.200412.3x5400x2700.jpg',
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     kind: 'file',
     source: 'gitignored',
     description:
       'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg',
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+
+  // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m/texel
+  // and four ladder levels deeper than the equirect (z7 against z5). Only
+  // `build-earth-tiles` reads their pixels; they ride the same `fetch-textures`
+  // pull as everything else so the 421 MB is obtainable by command, not by hand.
+  // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
+
+  'textures.nasaBmngQuadrantA1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A1 — lon -180..-90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantA2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A2 — lon -180..-90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantB1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B1 — lon -90..0, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantB2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B2 — lon -90..0, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantC1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C1 — lon 0..90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantC2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C2 — lon 0..90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantD1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D1 — lon 90..180, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantD2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D2 — lon 90..180, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
   'textures.earthWaterMask': {
     path: 'data/raw/textures/world.watermask.21600x10800.png',
     kind: 'file',
@@ -714,6 +793,62 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.usgsPluto': {
+    path: 'data/raw/textures/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Pluto global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~296 MB.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsCharon': {
+    path: 'data/raw/textures/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~77 MB.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  // ─── Pluto derived colour — chroma source + calibration reference ─────
+  //
+  // PIA11707 carries NO colour-type label of its own. That it is enhanced
+  // rather than natural colour is inferred from its product family (Olkin+
+  // 2017, AJ 154 258, of their own three-broadband-filter renderings: "These
+  // images are enhanced color (not natural color as perceived by the human
+  // eye)" — the paper never mentions PIA11707) and measured directly by the
+  // fit against the true-colour reference below. Registered ONLY as a chroma
+  // source whose stretch that fitted calibration inverts — never wire
+  // PIA11707 into a runtime texture raw.
+
+  'textures.nasaPlutoColor': {
+    path: 'data/raw/textures/PIA11707.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JHUAPL/SwRI New Horizons MVIC global colour map of Pluto (PIA11707), 5926x2963, 3-channel 8-bit sRGB, equirectangular 0-360 lon / +-90 lat, ~29 MB. NASA calls it only "based on a series of three color filter images obtained by the Ralph/Multispectral Visual Imaging Camera" — NOT natural colour; see the block comment above for how the enhancement is established. Used solely as a chroma source: a fitted calibration against `textures.nasaPlutoTrueColorRef` inverts the stretch before any of this reaches a runtime texture. Verified live 2026-08-17: HTTP 200, image/tiff, content-length 30,681,324 bytes, at the assets.science.nasa.gov "dam" path (the old photojournal.jpl.nasa.gov path now serves HTML, not a TIFF).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia11/pia11707/PIA11707.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaPlutoTrueColorRef': {
+    path: 'data/raw/textures/BIG_P_COLOR_2_TRUE_COLOR1.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JHUAPL/SwRI/Alex Parker "True Colors of Pluto" (P_COLOR_2_TRUE_COLOR) — natural-colour New Horizons MVIC disc view, of which NASA says "The processing creates images that would approximate the colors that the human eye would perceive"; single hemisphere, 8000x8000 PNG, ~57 MB. Not a build input: this is the calibration REFERENCE the PIA11707 chroma-inversion fit is derived against and re-checked against, so it rides the full pull like every other raw rather than being curl-ed by hand. Verified live 2026-08-17: HTTP 200, image/png, content-length 57,098,975 bytes — the "Download Original" target on science.nasa.gov/resource/true-colors-of-pluto/. Pin THIS dam path, not the 1980-px `dynamicimage` transform the page embeds: that endpoint resamples, re-encodes and crops by a content-dependent rule, so its bytes are not a stable reference.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/b/BIG_P_COLOR_2_TRUE_COLOR1.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
   'textures.dir': {
     path: 'data/raw/textures',
     kind: 'directory',

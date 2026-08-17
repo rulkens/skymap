@@ -22,9 +22,19 @@ function mockDevice(): GPUDevice {
 
 const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 
+// The `mw-aggregate` row's divisor is a caller-supplied live knob, not a table
+// constant. These tests are about allocation mechanics, so they pass the boot
+// value and the row behaves like any other fixed-scale row.
+const MW_DIVISOR = 2;
+
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
-    const targets = createRenderTargets(mockDevice(), SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     // Offscreen rows resolve to a live view.
     expect(targets.viewOf('hdr')).toBeDefined();
     expect(targets.viewOf('volume')).toBeDefined();
@@ -37,14 +47,21 @@ describe('createRenderTargets', () => {
   it('resize reallocates offscreen textures at size/scale', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 900, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      MW_DIVISOR,
+    );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
-    // foreground:0 @ scale 1 (colour + depth), and the five bloom-pyramid mips
-    // bloom0..bloom4 @ scale 2/4/8/16/32 (colour only) → 10 textures. hdr at
-    // full size, volume at floor(size/3), star-aggregates at floor(size/2).
-    expect(create.mock.calls).toHaveLength(10);
+    // volume @ scale 3 (colour), zoa @ scale 5 (colour), star-aggregates @
+    // scale 2 (colour), mw-aggregate @ scale 2 (colour), foreground:0 @
+    // scale 1 (colour + depth), and the five bloom-pyramid mips
+    // bloom0..bloom4 @ scale 2/4/8/16/32 (colour only) → 12 textures. hdr at
+    // full size, volume at floor(size/3), star-aggregates and mw-aggregate
+    // at floor(size/2).
+    expect(create.mock.calls).toHaveLength(12);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     const aggDesc = create.mock.calls.find(
@@ -62,8 +79,8 @@ describe('createRenderTargets', () => {
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.resize({ width: 1200, height: 900 });
 
-    // Each offscreen row reallocated at the new size/scale → 10 more textures.
-    expect(create.mock.calls).toHaveLength(20);
+    // Each offscreen row reallocated at the new size/scale → 12 more textures.
+    expect(create.mock.calls).toHaveLength(24);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -85,7 +102,7 @@ describe('createRenderTargets', () => {
   it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 });
+    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, MW_DIVISOR);
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1 });
@@ -94,7 +111,12 @@ describe('createRenderTargets', () => {
   it('allocates and resizes a depth texture alongside colour for rows that declare depth', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
 
     // foreground:0 declares depth → two textures at full resolution: an
     // rgba16float colour attachment and a depth32float depth attachment.
@@ -127,7 +149,12 @@ describe('createRenderTargets', () => {
   });
 
   it('depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap', () => {
-    const targets = createRenderTargets(mockDevice(), SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     // The one row that declares depth resolves to a live depth view.
     expect(targets.depthViewOf('foreground:0')).toBeDefined();
     // Depthless offscreen rows have no depth attachment.
@@ -141,7 +168,12 @@ describe('createRenderTargets', () => {
   it('destroy destroys every allocated texture', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     targets.destroy();
     // Both offscreen textures had destroy() called.
     for (const result of create.mock.results) {
@@ -151,10 +183,53 @@ describe('createRenderTargets', () => {
     expect(() => targets.viewOf('hdr')).toThrow();
   });
 
+  it("setSwapFormat replaces the swap row's format and leaves offscreen rows alone", () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
+
+    const specsBefore = targets.specs;
+    const hdrSpecBefore = specsBefore.find((s) => s.id === 'hdr')!;
+    const volSpecBefore = specsBefore.find((s) => s.id === 'volume')!;
+    const fgSpecBefore = specsBefore.find((s) => s.id === 'foreground:0')!;
+    const hdrViewBefore = targets.viewOf('hdr');
+    const volViewBefore = targets.viewOf('volume');
+    const fgViewBefore = targets.viewOf('foreground:0');
+    const callsBefore = create.mock.calls.length;
+
+    targets.setSwapFormat('rgba16float');
+
+    // The swap row's format changed...
+    const swapSpec = targets.specs.find((s) => s.id === 'swap')!;
+    expect(swapSpec.format).toBe('rgba16float');
+    // ...via a new specs array (house preference for immutability)...
+    expect(targets.specs).not.toBe(specsBefore);
+    // ...but every offscreen row is the SAME spec object — untouched, not
+    // rebuilt — and has no new texture allocated (the swap row carries no
+    // texture, so this is allocation-free).
+    expect(targets.specs.find((s) => s.id === 'hdr')).toBe(hdrSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'volume')).toBe(volSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'foreground:0')).toBe(fgSpecBefore);
+    expect(create.mock.calls.length).toBe(callsBefore);
+    expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
+    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
+  });
+
   it('destroy destroys depth textures alongside colour', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     const depthResult = create.mock.results.find(
       (_r, i) => create.mock.calls[i]![0].label === 'render-target-foreground:0-depth',
     )!;

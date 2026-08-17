@@ -29,16 +29,19 @@ import {
   selectSelectedFocusable,
   selectFocusedFocusable,
   selectIsSelectionActive,
+  selectHasSelectionIntent,
 } from '../../../src/state/selection/selectors';
 import {
   updateSelectionHover,
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
@@ -48,9 +51,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 
 const galaxyRef: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
 
-const galaxyRow: GalaxyRow = {
-  type: 'galaxyCatalog',
-  source: Source.SDSS,
+const galaxyRow = makeGalaxyRow({
   index: 7,
   objId: '1237668347496587264',
   x: 100,
@@ -66,8 +67,7 @@ const galaxyRow: GalaxyRow = {
   axisRatio: 0.7,
   positionAngleDeg: 45,
   classByte: 3,
-  parentSurveyByte: 0,
-};
+});
 
 const structureInfo: StructureInfo = {
   type: 'structure',
@@ -93,7 +93,13 @@ const stubState = (
   }> = {},
 ) =>
   ({
-    [selectionRoute]: { hover: null, select: null, focus: null, ...selection },
+    [selectionRoute]: {
+      hover: null,
+      select: null,
+      focus: null,
+      pending: { select: null, focus: null },
+      ...selection,
+    },
     [selectionRowsRoute]: { hover: null, select: null, focus: null, ...selectionRows },
   }) as unknown as RootState;
 
@@ -155,6 +161,26 @@ describe('selectIsSelectionActive', () => {
     const { store } = createAppStore();
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     expect(selectIsSelectionActive(store.getState())).toBe(true);
+  });
+});
+
+// --- selectHasSelectionIntent --------------------------------------------------
+
+describe('selectHasSelectionIntent', () => {
+  it('returns false on a virgin state', () => {
+    const { store } = createAppStore();
+    expect(selectHasSelectionIntent(store.getState())).toBe(false);
+  });
+
+  it('returns true when only pending.focus is set — the deferred deep-link case a ref-only guard misses', () => {
+    const { store } = createAppStore();
+    store.dispatch(requestFocus('m31'));
+    // The request is still deferring: the resolved focus ref stays null while
+    // it parks on a catalog pulse, exactly as `resolveFocusRefDeferring` does
+    // for a cold `#focus=m31` load. A guard reading only the ref slots would
+    // see this state as empty.
+    expect(store.getState().selection.focus).toBeNull();
+    expect(selectHasSelectionIntent(store.getState())).toBe(true);
   });
 });
 

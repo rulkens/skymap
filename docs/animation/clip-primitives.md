@@ -162,12 +162,13 @@ helper output before `compileClip` runs (see "Focus IDs" below). Use them when t
 target isn't known at authoring time and must be looked up from the catalog at play
 time.
 
-| Helper         | Signature                                             | Resolves to                                |
-| -------------- | ----------------------------------------------------- | ------------------------------------------ |
-| `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect`    | `moveTarget(framing.target, over, ease)`   |
-| `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`       | `dollyTo(framing.distance, over, ease)`    |
-| `lookAtId`     | `lookAtId(id, over, ease?) → FocusBoundEffect`        | `aimAt(bearing, over, ease)`               |
-| `strafeId`     | `strafeId(id, byDeg, over, ease?) → FocusBoundEffect` | `moveTarget(displaced target, over, ease)` |
+| Helper         | Signature                                                  | Resolves to                                |
+| -------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect`         | `moveTarget(framing.target, over, ease)`   |
+| `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`            | `dollyTo(framing.distance, over, ease)`    |
+| `lookAtId`     | `lookAtId(id, over, ease?) → FocusBoundEffect`             | `aimAt(bearing, over, ease)`               |
+| `strafeId`     | `strafeId(id, byDeg, over, ease?) → FocusBoundEffect`      | `moveTarget(displaced target, over, ease)` |
+| `spinToId`     | `spinToId(id, { over, turns?, ease? }) → FocusBoundEffect` | `spin('yaw', { by, over, ease })`          |
 
 > **`lookAtId` — turn your head before you walk.** The orbit camera always faces
 > its target, so it cannot rotate in place; "looking at" a subject means
@@ -188,6 +189,31 @@ camera distance` — angular, so it reads the same at every scale. Positive
 > `all([lookAtId(id, t), strafeId(id, deg, t)])` — composable because the
 > strafe writes `target` while the aim writes yaw/pitch. Same resolve-time
 > caveat as `lookAtId`: an opening move, not a mid-clip one.
+>
+> **`spinToId` — orbit the yaw until it faces a subject.** `resolveClipFoci`
+> derives `by` as the SHORTEST-arc yaw delta from the live pose to the
+> subject's bearing (a sightline, not a frame-local radian constant, so the
+> same authored effect lands on the same subject under any live orientation
+> frame). **Trap:** `opts.turns` is not additive on top of an arbitrary
+> value — it composes ON the shortest-arc base delta (`by = shortest + turns ×
+2π`), so `turns: -1` means "the shortest way round, minus one full
+> revolution", not "spin exactly one revolution". Pitch/target/distance are
+> untouched — it composes with a concurrent `dollyTo`/`moveTarget` in the same
+> `all` the way `strafeId` does. `dwellDrift`'s `spinTo` option (below) is the
+> beat-authoring surface for this primitive — it swaps the dwell's usual raw
+> `spin('yaw')` cruise for a `spinToId` bearing.
+
+`aimAlong(forward: Vec3, over, ease?) → Effect` swings the view to face a
+FIXED **world-space** direction — `orbitAnglesLookingAlong` resolved through
+whichever orientation frame is live at clip start, the same mechanism
+`lookAtId` uses. **Trap:** unlike every helper in the table above, it has NO
+live-pose dependency — `forward` alone determines the aim, there is no subject
+to look up and no orbit target read. That is what makes it (not `lookAtId`)
+the right tool for a pose that must be reproducible regardless of where the
+camera happened to be before the clip started: `openingTitle`'s cold open uses
+it for exactly this reason — a `lookAtId` there would silently depend on
+whatever pose the viewer wandered into before the tour started. `over: 0` is a
+legal snap, same as `aimAt`.
 
 ### Timeline structure & timing
 
@@ -295,13 +321,14 @@ never sailing past.
 Scene effects are timeline **cues** — they fire as the clock crosses them, not every
 frame. They change what's _drawn_, not where the camera _is_.
 
-| Helper  | Signature                                                 | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `show`  | `show(layers: VisibilityLayerKey[], over?) → SceneEffect` | Turn layers **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Rides the live fade bridge — dispatches the same settings actions the UI does.                                                                                                                                                                                                                                        |
-| `hide`  | `hide(layers, over?) → SceneEffect`                       | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
-| `fade`  | `fade(layers, to, over) → SceneEffect`                    | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
-| `scene` | `scene(action: SettingsAction) → SceneEffect`             | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws (multiplies on top of the per-layer label toggles).  |
-| `focus` | `focus(id: FocusId \| null) → FocusBoundEffect`           | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
+| Helper    | Signature                                                           | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `show`    | `show(layers: VisibilityLayerKey[], over?) → SceneEffect`           | Turn layers **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Rides the live fade bridge — dispatches the same settings actions the UI does.                                                                                                                                                                                                                                        |
+| `hide`    | `hide(layers, over?) → SceneEffect`                                 | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `fade`    | `fade(layers, to, over) → SceneEffect`                              | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
+| `scene`   | `scene(action: SettingsAction) → SceneEffect`                       | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws (multiplies on top of the per-layer label toggles).  |
+| `focus`   | `focus(id: FocusId \| null) → FocusBoundEffect`                     | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
+| `frameTo` | `frameTo(frame: OrientationFrameId, { over, ease? }) → SceneEffect` | Roll the horizon to another orientation frame over `over` seconds (`ease` defaults `'easeInOutCubic'`). The eye does **not** move and its aim does not change — only which way is up. Authored **in the clip**, never on the beat, so an act owns its pole; a clip pins the frame it started under, so a switch mid-clip cannot reinterpret its authored yaws. A tour restores the viewer's pre-tour frame when it ends.                               |
 
 **`layers` are `VisibilityLayerKey`s** — the intent-addressing keys the UI and
 `syncVisibilityFades` use. The full set is:
@@ -328,12 +355,13 @@ in the same list:
 
 ### Focus IDs and deferred resolution
 
-Six helpers produce **unresolved** id-bearing effects (`FocusBoundEffect` arms
-`moveTargetId` / `dollyToId` / `lookAtId` / `strafeId` / `focusId`, plus `atFocus`
-waypoints inside a `flyPath`). They carry a durable `FocusId` string rather than a
-concrete `Vec3` / distance / `SelectionRef`, so a clip can be authored at module-load
-time — before any catalog is loaded — and resolved against whichever tier is live at
-play time. `resolveClipFoci` walks the timeline and rewrites each one:
+Seven helpers produce **unresolved** id-bearing effects (`FocusBoundEffect` arms
+`moveTargetId` / `dollyToId` / `lookAtId` / `strafeId` / `spinToId` / `focusId`,
+plus `atFocus` waypoints inside a `flyPath`). They carry a durable `FocusId`
+string rather than a concrete `Vec3` / distance / `SelectionRef`, so a clip can
+be authored at module-load time — before any catalog is loaded — and resolved
+against whichever tier is live at play time. `resolveClipFoci` walks the
+timeline and rewrites each one:
 
 - `moveTargetId(id, …)` → `moveTarget(framing.target, …)`
 - `dollyToId(id, …)` → `dollyTo(framing.distance, …)`
@@ -343,10 +371,18 @@ play time. `resolveClipFoci` walks the timeline and rewrites each one:
 - `strafeId(id, byDeg, …)` → `moveTarget(displaced, …)` — the live orbit target
   displaced along the bearing's horizontal right axis by `tan(byDeg) × live
 camera distance`
+- `spinToId(id, { over, turns?, ease? })` → `spin('yaw', { by, over, ease })`
+  — `by` is the shortest-arc yaw delta from the live yaw to the subject's
+  bearing, plus `turns` full revolutions (see the callout above — `turns`
+  composes ON the shortest arc, not on a zero baseline)
 - `focus(id)` → `{ kind: 'focus', ref }` (an id of `null` → `{ kind: 'focus', ref: null }`)
 - a `flyPath` with `atFocus` waypoints → the same `flyPath` with each id-waypoint in
   `at`-form (gaining its subject `radius`); the `flyPath` itself survives into
   `compileClip` (it is not consumed away).
+
+`aimAlong` is resolved in the same pass (its `forward` needs the live
+orientation frame basis to encode into a bearing) but carries no `FocusId` — it
+is not one of the seven above, and never blocks `clipFociReady`.
 
 `compileClip` **throws** if it ever sees an unresolved arm — resolution must precede
 it (a readiness gate, `clipFociReady`, guarantees every id resolves first). The
@@ -464,6 +500,18 @@ const groupTour: ClipData = {
 
 If you're reaching for a primitive that needs to _react_ — to input, to load state,
 to a user choice — it belongs in a saga, not a clip.
+
+**`dwellDrift` (Layer 2) as an authoring surface over a Layer 1 primitive.**
+`dwellDrift(durationSec, opts?)` — the canonical ambient dwell every beat
+authors as `dwellClip: dwellDrift(sec)` — normally sizes its yaw layer from a
+raw `cruiseRate` (rad/s). `opts.spinTo?: FocusId` swaps that for a `spinToId`
+bearing instead: the dwell orbits until it FACES a subject rather than
+covering an authored rate, landing on the same subject under any live
+orientation frame. `opts.turns?: number` rides along, passed straight through
+to `spinToId` (same shortest-arc-plus-revolutions trap as above). `spinTo` and
+`cruiseRate` are mutually exclusive — `spinTo` REPLACES the yaw layer
+`cruiseRate` would have sized, not composes with it — and `dwellDrift` throws
+at build time if both are given.
 
 ---
 

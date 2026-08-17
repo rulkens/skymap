@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 
 import { extractGalaxyRow } from '../../../../src/services/engine/helpers/extractGalaxyRow';
 import { Source } from '../../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array([10, 20, 30]),
     spectroscopicZ: new Float32Array([0.0123]),
     magU: new Float32Array([18.1]),
@@ -18,9 +19,7 @@ function makeCloud(): GalaxyCatalog {
     diameterKpc: new Float32Array([42]),
     axisRatio: new Float32Array([0.7]),
     positionAngleDeg: new Float32Array([35]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-  };
+  });
 }
 
 describe('extractGalaxyRow', () => {
@@ -40,9 +39,25 @@ describe('extractGalaxyRow', () => {
       positionAngleDeg: expect.closeTo(35, 4),
       classByte: 0,
       parentSurveyByte: 0,
+      orientationIsFallback: false,
+      diameterIsFallback: false,
     });
     // No bigint anywhere — JSON round-trip must succeed.
     expect(() => JSON.stringify(row)).not.toThrow();
+  });
+
+  it('maps the persisted orientationIsFallback byte (1) to a boolean true', () => {
+    const cloud = makeCloud();
+    cloud.orientationIsFallback[0] = 1;
+    const row = extractGalaxyRow(cloud, 0, Source.SDSS);
+    expect(row!.orientationIsFallback).toBe(true);
+  });
+
+  it('maps the persisted diameterIsFallback byte (1) to a boolean true', () => {
+    const cloud = makeCloud();
+    cloud.diameterIsFallback[0] = 1;
+    const row = extractGalaxyRow(cloud, 0, Source.SDSS);
+    expect(row!.diameterIsFallback).toBe(true);
   });
 
   it('returns null for an out-of-bounds index or missing cloud (tier-swap race guard)', () => {

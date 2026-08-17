@@ -5,9 +5,9 @@
  * ### Why this lives in its own module
  *
  * For a fully-loaded SDSS + 2MRS + GLADE deck (~3.5 M galaxies total) the
- * bake runs a Schechter integral, a 1/V_max weight, a fallback-orientation
- * hash, a K-correction lookup, and a colour-index pickup *per row* —
- * roughly 10 seconds of CPU work, all of it during `.bin` arrival, right
+ * bake runs a Schechter integral, a 1/V_max weight, a K-correction lookup,
+ * and a colour-index pickup *per row* — roughly 10 seconds of CPU work, all
+ * of it during `.bin` arrival, right
  * when the user expects the UI to come alive.  Doing that on the main
  * thread would freeze the page, so the bake ships to a Web Worker.  That
  * requires a *pure* function — no `this`, no `device`, no DOM globals, no
@@ -47,14 +47,10 @@ import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
 } from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
-import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
-import {
-  absoluteFromApparent,
-  cartesianToRaDec,
-  expectedNumberDensity,
-  vMaxWeight,
-} from '../../../utils/math';
+import { absoluteFromApparent, expectedNumberDensity, vMaxWeight } from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
+import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
+import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
 import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
@@ -73,13 +69,14 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 4     — colorIndex (f32)
  *   slot 5     — axisRatio (f32) — sign bit carries isFallback
  *   slot 6,7   — paCos, paSin (f32×2) — cos/sin of the negated position angle
- *   slot 8     — radiusMpc (f32) — padded billboard half-extent
+ *   slot 8     — radiusMpc (f32) — padded billboard half-extent; sign bit carries diameterIsFallback
  *   slot 9     — vMaxWeight (f32)
  *   slot 10    — schechterRatio (f32)
  *   slot 11    — angularDensityWeight (f32)
  *   slot 12    — absMag (f32) — from the offset-normalised slot-3 magnitude
+ *   slot 13    — sbAmp (f32) — physical surface-brightness amplitude
  *
- * Total: 13 × 4 = 52 bytes per point.  Per-galaxy catalog constants stay out of
+ * Total: 14 × 4 = 56 bytes per point.  Per-galaxy catalog constants stay out of
  * the per-row layout: the K-correction kPerZ lives in the per-galaxy-catalog
  * `SourceUniforms` uniform (k is constant per galaxy catalog, so paying for it
  * per-row would be waste), and instance identity is composed per draw
@@ -90,6 +87,12 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * the row was classified as fallback so the shader can recover both the
  * mask shape (`abs(axisRatio)`) and the flag (`axisRatio < 0`) in one
  * read.  See the slot 5 comment in the writer loop below.
+ *
+ * The fallback-diameter flag rides the same way on the sign bit of
+ * `radiusMpc` (slot 8).  The padded radius is always positive, so we
+ * negate it when `diameterIsFallback` is set; the shader recovers the
+ * magnitude via `abs()` and the flag via `< 0`.  See the slot 8 comment
+ * in the writer loop below.
  *
  * Slot 11 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
  * by every default upload.  Mode 4 of the Malmquist-bias correction —
@@ -107,7 +110,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * once here is the classic space-for-ALU trade — +8 bytes/row against the
  * hottest per-frame loop in the app.
  */
-const SLOTS_PER_POINT = 13;
+const SLOTS_PER_POINT = 14;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
@@ -164,6 +167,15 @@ export function buildPointInterleavedBuffer(
   const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
   const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
 
+  // Surface-brightness zero-point — a DIFFERENT quantity from the magOffset
+  // above (that one is a cosmetic per-catalog display shift; this one is
+  // the physical median absolute magnitude `galaxySbAmp` normalises
+  // against). Shared with the disk-planner mirror of this bake via
+  // `cloud.medianAbsMag` when the catalog carries one (the real
+  // decode/synthetic paths always populate it); recomputed here as a
+  // fallback for lightweight test fixtures that omit the optional field.
+  const medianAbsMag = cloud.medianAbsMag ?? galaxyMedianAbsMag(cloud);
+
   // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
   //
   // Pull the galaxy catalog's apparent-magnitude flux limit once (m_lim) and pick
@@ -204,25 +216,17 @@ export function buildPointInterleavedBuffer(
   const schechterRatios: Float32Array | null =
     mode === 'with-schechter' ? computeSchechterRatios({ cloud, source }) : null;
 
-  // ── Pre-compute "is this row a fallback orientation?" flag ─────────────
+  // ── "Is this row a fallback orientation?" flag ─────────────────────────
   //
-  // Done once at upload time (not per-frame); cost is the same hash +
-  // Float32 round-trip we'd pay anyway in the InfoCard.  The build pipeline
-  // stamped the SAME f32 we recompute here whenever a galaxy lacks real
-  // orientation, so equality is exact (no epsilon needed).
-  const isFallbackArr = new Uint8Array(cloud.count);
-  for (let i = 0; i < cloud.count; i++) {
-    const x = cloud.positions[i * 3 + 0]!;
-    const y = cloud.positions[i * 3 + 1]!;
-    const z = cloud.positions[i * 3 + 2]!;
-    const [ra, dec] = cartesianToRaDec(x, y, z);
-    const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
-    const fbAr = new Float32Array([fb.axisRatio])[0]!;
-    const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
-    if (cloud.axisRatio[i] === fbAr && cloud.positionAngleDeg[i] === fbPa) {
-      isFallbackArr[i] = 1;
-    }
-  }
+  // Read straight off the cloud's persisted `orientationIsFallback` byte —
+  // the AUTHORITATIVE flag `recordsToCloud` stamped at build time and the
+  // .bin carried through verbatim.  The old code reconstructed this here by
+  // re-hashing `fallbackOrientation` from the baked f32 position and testing
+  // float equality; that round-trip is lossy (f32 cartesian → ra/dec → hash
+  // bucketed at Math.round(ra·1e5)) and silently misclassified ~10 % of
+  // fallback rows.  We `.slice()` to own a fresh buffer the worker can
+  // transfer back without detaching the caller's cloud.
+  const isFallbackArr = cloud.orientationIsFallback.slice();
 
   for (let i = 0; i < cloud.count; i++) {
     const o = i * SLOTS_PER_POINT;
@@ -287,7 +291,14 @@ export function buildPointInterleavedBuffer(
     // quad). Shares the helper with the procedural-disk + textured-
     // thumbnail pipelines so the load-fade handoff occupies an
     // identical world-space footprint across all three.
-    interleaved[o + 8] = paddedRadiusMpc(cloud.diameterKpc[i]!);
+    //
+    // The SIGN BIT carries the fallback-diameter flag, exactly like slot
+    // 5's axisRatio carries the fallback-orientation flag. The padded
+    // radius is always positive, so we negate it when the row's diameter
+    // was a fallback estimate; the shader recovers the magnitude via
+    // `abs()` and the flag via `< 0`.
+    const padded = paddedRadiusMpc(cloud.diameterKpc[i]!);
+    interleaved[o + 8] = cloud.diameterIsFallback[i] === 1 ? -padded : padded;
 
     // Slot 9 — per-galaxy 1/V_max weight.  Computed from the *raw*
     // apparent magnitude (NOT `g + magOffset` — the per-galaxy-catalog
@@ -326,6 +337,17 @@ export function buildPointInterleavedBuffer(
     // is slot 3, so the baked value must fold the same per-catalog mean
     // shift or every mode-1 threshold would move by `magOffset`.
     interleaved[o + 12] = interleaved[o + 3]! - 5 * Math.log10(dMpc) - 25;
+
+    // Slot 13 — physical surface-brightness amplitude. Relative luminosity
+    // (vs the per-catalog mean absolute magnitude) over (diameter / 30 kpc)^2.
+    // This is the intrinsic per-pixel radiance the vertex stage scales into
+    // HDR: intrinsically bright / compact galaxies emit above the bloom
+    // threshold; diffuse ones stay dim. Uses the RAW physical absMag (same as
+    // vMax), not the cosmetic offset-normalised slot-3/slot-12 value. The
+    // procedural-disk pass (`proceduralDiskSubsystem.ts`) recomputes this
+    // SAME amplitude via the shared `galaxySbAmp` helper so the point↔disk
+    // crossfade holds constant brightness.
+    interleaved[o + 13] = galaxySbAmp(absMag, medianAbsMag, cloud.diameterKpc[i]!);
   }
 
   return {

@@ -3,14 +3,14 @@
  * (bright prefilter, downsample, upsample, and the strength-scaled fold back
  * into HDR) plus the linear sampler and the per-level texel-size uniform
  * buffers. Ported from the `galaxy-renderer` dev tool's bloom stack
- * (`createGalaxyEngine.buildTargets` + its post pipelines); the fold is
+ * (`createGalaxyRenderTargets` + its post pipelines); the fold is
  * skymap's addition, carrying the per-frame `settings.bloom.strength` multiply
  * the generic compositor has no slot for.
  *
  * The pyramid's TEXTURES are not owned here — they are `renderTargets` rows
  * (`bloom0..bloom4`), recreated on resize. Each draw takes the source view as a
  * parameter and rebuilds its bind group, so a resize needs no bookkeeping in
- * this factory (same reasoning as `volumeUpsample` / `starAggregateUpsample`).
+ * this factory (same reasoning as `additiveUpsample` / `starAggregateUpsample`).
  *
  * ### Why per-level uniform buffers, NOT one shared buffer
  *

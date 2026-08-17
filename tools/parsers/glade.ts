@@ -99,6 +99,7 @@ import { galaxyDiameterKpc } from '../../src/utils/math/galaxyDiameterKpc';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
 import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 
 /**
  * Map from PGC string (no padding, no leading zeros stripped) to HyperLEDA's
@@ -210,6 +211,23 @@ function parseFloatOrNaN(s: string): number {
   if (trimmed === '' || /^-+$/.test(trimmed)) return NaN;
   const v = parseFloat(trimmed);
   return Number.isFinite(v) ? v : NaN;
+}
+
+/**
+ * Magnitude columns get a second gate on top of `parseFloatOrNaN`.
+ *
+ * GLADE is a compilation catalog: its photometry is copied verbatim from
+ * HyperLEDA, 2MASS, SDSS and friends, each of which has its own numeric
+ * "no measurement" sentinel (`-9999`, `99.99`, …). Any of those that
+ * survives the dash check parses as a finite number and would then be
+ * treated as a real, absurdly bright or absurdly faint galaxy. Routing the
+ * four magnitude columns through `isPlausibleMagnitude` collapses the whole
+ * family to NaN, the sentinel the rest of the pipeline already understands.
+ * Redshift keeps the plain parser — it has its own positivity rule below.
+ */
+function parseMagOrNaN(s: string): number {
+  const v = parseFloatOrNaN(s);
+  return isPlausibleMagnitude(v) ? v : NaN;
 }
 
 /**
@@ -363,15 +381,16 @@ export function parseGladeLine(
   const z = parseFloatOrNaN(line.slice(173, 191));
   if (!Number.isFinite(z) || z <= 0) return null;
 
-  // Photometry. All four fields use the dash-sentinel convention; any
-  // missing band collapses to NaN and propagates correctly through the
-  // renderer's colour computation. We deliberately do *not* skip the
-  // row when a band is missing — partial photometry is still useful
-  // for sorting by apparent brightness in one of the other bands.
-  const bmag = parseFloatOrNaN(line.slice(192, 198)); // bytes 193-198
-  const jmag = parseFloatOrNaN(line.slice(214, 220)); // bytes 215-220
-  const hmag = parseFloatOrNaN(line.slice(227, 233)); // bytes 228-233
-  const kmag = parseFloatOrNaN(line.slice(240, 246)); // bytes 241-246
+  // Photometry. All four fields use the dash-sentinel convention, plus the
+  // numeric-sentinel gate in `parseMagOrNaN`; any missing band collapses to
+  // NaN and propagates correctly through the renderer's colour computation.
+  // We deliberately do *not* skip the row when a band is missing — partial
+  // photometry is still useful for sorting by apparent brightness in one of
+  // the other bands.
+  const bmag = parseMagOrNaN(line.slice(192, 198)); // bytes 193-198
+  const jmag = parseMagOrNaN(line.slice(214, 220)); // bytes 215-220
+  const hmag = parseMagOrNaN(line.slice(227, 233)); // bytes 228-233
+  const kmag = parseMagOrNaN(line.slice(240, 246)); // bytes 241-246
 
   // PGC sits in bytes 1-7 (0-based: 0-7). Empty/sentinel rows (`---`, `0`) are
   // common — those rows just won't find a match in the cache and will fall

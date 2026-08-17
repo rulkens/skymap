@@ -5,7 +5,7 @@
  * silently — the grid just gets a little shorter.  Order is preserved so the
  * curator's intent (most recognisable first) survives the resolution.
  */
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 
 /**
  * Featured galaxies shown as a 5×3 thumbnail grid above the list when
@@ -40,7 +40,7 @@ const FEATURED_IDS: readonly string[] = [
   'c12', // Fireworks Galaxy (NGC 6946)
 ];
 
-export function resolveFeaturedEntries(entries: readonly FamousMetaEntry[]): FamousMetaEntry[] {
+export function resolveFeaturedEntries(entries: readonly FamousGalaxyMetaEntry[]): FamousGalaxyMetaEntry[] {
   const byId = new Map(entries.map((e) => [e.id, e]));
   return FEATURED_IDS.flatMap((id) => {
     const e = byId.get(id);

@@ -53,8 +53,14 @@ import {
   commitCameraPose,
   clipStarted,
 } from '../../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../../src/state/settings/settingsSlice';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
@@ -68,6 +74,10 @@ const TWEEN_DESC: CameraTweenDescriptor = {
   to: { target: [1, 2, 3], yaw: 2, pitch: 0.2, distance: 10 },
   durationMs: 1000,
   easing: 'easeOutCubic',
+  // Matches the store's default settings.orientation, so the tween row's
+  // re-encode is the identity branch (from === to) and the raw evaluateClip
+  // output is unchanged — the fixture other tests compare against verbatim.
+  frame: DEFAULT_ORIENTATION,
 };
 
 const CAM_STUB: OrbitCamera = {
@@ -131,7 +141,7 @@ describe('buildCameraDrivers — isActive reads the store', () => {
   it('clip.isActive ⇔ s.camera.clip !== null', () => {
     const store = makeStore();
     expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(false);
-    store.dispatch(clipStarted(CLIP_DATA));
+    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
     expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(true);
   });
 
@@ -186,6 +196,7 @@ describe('buildCameraDrivers — pose functions', () => {
       to: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1000 },
       durationMs: 1000,
       easing: 'easeOutCubic',
+      frame: DEFAULT_ORIENTATION,
     };
 
     const store = makeStore();
@@ -220,6 +231,111 @@ describe('buildCameraDrivers — pose functions', () => {
     const s = store.getState() as unknown as RootState;
     const result = byId('resting').pose(s, CAM_STUB, 0);
     expect(result).toEqual(BASE_POSE);
+  });
+});
+
+// ── clip driver: frame pinning across a mid-clip orientation switch ─────────
+//
+// A clip's authored (yaw, pitch) is only meaningful relative to the frame it
+// started under. `clip.frame` pins that frame; the driver must evaluate
+// against IT (not the live setting) and re-encode forward into whatever
+// `settings.orientation` is THIS frame. World-space aim is the invariant —
+// the (yaw, pitch) numbers are expected to differ across the switch.
+
+describe('buildCameraDrivers — clip pins the frame it started under', () => {
+  function byId(id: string): CameraDriver {
+    return buildCameraDrivers(FAKE_ENGINE_STATE).find((d) => d.id === id)!;
+  }
+
+  /** World-space target→eye direction for (yaw, pitch) decoded under `frame`. */
+  function worldAim(pose: CameraPose, frame: OrientationFrameId) {
+    return rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), ORIENTATION_FRAMES[frame]);
+  }
+
+  // A static held pose (empty timeline — no flyPath, no ramps) so the driver's
+  // yaw/pitch stay exactly the authored start values at any elapsed time; only
+  // the frame math is under test here.
+  const CLIP_WITH_AIM: ClipData = {
+    start: { target: [0, 0, 0], yaw: 0.7, pitch: 0.2, distance: 50 },
+    timeline: [],
+  };
+
+  it('a clip playing across an orientation switch keeps its world aim', () => {
+    const store = makeStore();
+    store.dispatch(setOrientation('ecliptic'));
+    store.dispatch(clipStarted({ data: CLIP_WITH_AIM, frame: 'ecliptic' }));
+    const elapsed = 2;
+
+    // Sample #1: settings.orientation still matches the pinned frame.
+    const pose1 = byId('clip').pose(store.getState() as unknown as RootState, CAM_STUB, elapsed);
+
+    // Mid-clip switch: settings.orientation moves; camera.clip.frame does not.
+    store.dispatch(setOrientation('galactic'));
+    const pose2 = byId('clip').pose(store.getState() as unknown as RootState, CAM_STUB, elapsed);
+
+    // The re-encode actually did something — the raw angles moved.
+    expect(pose2.yaw).not.toBeCloseTo(pose1.yaw, 5);
+
+    // But decoded through their OWN settings.orientation basis (the same decode
+    // updatePosition performs), both poses point the same way in world space.
+    const dir1 = worldAim(pose1, 'ecliptic');
+    const dir2 = worldAim(pose2, 'galactic');
+    expect(dir2[0]).toBeCloseTo(dir1[0], 5);
+    expect(dir2[1]).toBeCloseTo(dir1[1], 5);
+    expect(dir2[2]).toBeCloseTo(dir1[2], 5);
+  });
+});
+
+// ── tween driver: frame pinning across a mid-tween orientation switch ───────
+//
+// Same contract as the clip driver above: `tween.frame` pins the frame `from`/
+// `to` were captured under. A mid-tween orientation switch must re-express the
+// pose, not reinterpret its yaw/pitch against a new pole.
+
+describe('buildCameraDrivers — tween pins the frame it started under', () => {
+  function byId(id: string): CameraDriver {
+    return buildCameraDrivers(FAKE_ENGINE_STATE).find((d) => d.id === id)!;
+  }
+
+  /** World-space target→eye direction for (yaw, pitch) decoded under `frame`. */
+  function worldAim(pose: CameraPose, frame: OrientationFrameId) {
+    return rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), ORIENTATION_FRAMES[frame]);
+  }
+
+  // A held `to` pose (elapsed >= durationMs saturates the tween at `to`), so
+  // the driver's yaw/pitch stay exactly the authored `to` values at any
+  // elapsed >= 1000; only the frame math is under test here.
+  const TWEEN_WITH_AIM: CameraTweenDescriptor = {
+    from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
+    to: { target: [0, 0, 0], yaw: 0.7, pitch: 0.2, distance: 50 },
+    durationMs: 1000,
+    easing: 'easeOutCubic',
+    frame: 'ecliptic',
+  };
+
+  it('a tween running across an orientation switch keeps its world aim', () => {
+    const store = makeStore();
+    store.dispatch(setOrientation('ecliptic'));
+    store.dispatch(startCameraTween(TWEEN_WITH_AIM));
+    const elapsedMs = 2000; // past durationMs — saturated at `to`
+
+    // Sample #1: settings.orientation still matches the pinned frame.
+    const pose1 = byId('tween').pose(store.getState() as unknown as RootState, CAM_STUB, elapsedMs);
+
+    // Mid-tween switch: settings.orientation moves; camera.tween.frame does not.
+    store.dispatch(setOrientation('galactic'));
+    const pose2 = byId('tween').pose(store.getState() as unknown as RootState, CAM_STUB, elapsedMs);
+
+    // The re-encode actually did something — the raw angles moved.
+    expect(pose2.yaw).not.toBeCloseTo(pose1.yaw, 5);
+
+    // But decoded through their OWN settings.orientation basis (the same decode
+    // updatePosition performs), both poses point the same way in world space.
+    const dir1 = worldAim(pose1, 'ecliptic');
+    const dir2 = worldAim(pose2, 'galactic');
+    expect(dir2[0]).toBeCloseTo(dir1[0], 5);
+    expect(dir2[1]).toBeCloseTo(dir1[1], 5);
+    expect(dir2[2]).toBeCloseTo(dir1[2], 5);
   });
 });
 
@@ -267,7 +383,7 @@ describe('pickWinner', () => {
     // clip@95 outranks orbitDrag@80.
     const store = makeStore();
     store.dispatch(beginDrag());
-    store.dispatch(clipStarted(CLIP_DATA));
+    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     expect(pickWinner(drivers, s).id).toBe('clip');
@@ -362,7 +478,7 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     // orbitDrag-elapsed test is done above.
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
-    store.dispatch(clipStarted(CLIP_DATA));
+    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     const clock = createCameraClock();

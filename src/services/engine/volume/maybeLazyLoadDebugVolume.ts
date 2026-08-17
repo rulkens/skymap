@@ -28,7 +28,7 @@ export function maybeLazyLoadDebugVolume(
           : fieldId === 'debug-cartesian'
             ? 'cartesian'
             : 'spherical';
-      slot.load({ id: fieldId, shape, dims: 64, boxSizeMpc: 400 });
+      void slot.load({ id: fieldId, shape, dims: 64, boxSizeMpc: 400 });
       return;
     }
   }

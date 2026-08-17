@@ -28,6 +28,10 @@ import { seedIndexOfBody } from '../../../../../src/services/engine/frame/passes
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/sources';
@@ -38,6 +42,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarBody } from '../../../../../src/@types/scene/StarBody';
+import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
@@ -50,9 +55,19 @@ import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 
-const SUN = SCENE_STARS.find((star) => star.id === 'sun')!;
-const PROXIMA = SCENE_STARS.find((star) => star.id === 'proxima-centauri')!;
-const SIRIUS = SCENE_STARS.find((star) => star.id === 'sirius')!;
+// The record + the position this frame resolves for it — the pairing
+// `positionedVisibleStars` builds. A star is an anchor, so the resolved
+// position IS the anchor's array, by reference, which is what lets the compose
+// assertions below check the seam by identity.
+const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
+const positioned = (id: string): PositionedStar => {
+  const star = SCENE_STARS.find((s) => s.id === id)!;
+  return { ...star, positionMpc: ANCHOR_POS.get(id)! };
+};
+
+const SUN = positioned('sun');
+const PROXIMA = positioned('proxima-centauri');
+const SIRIUS = positioned('sirius');
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -83,6 +98,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
     // The drawPick radius floor (`minPickRadiusMpc`) reads this pinhole
     // radian→pixel conversion: 720 / (2·tan(30°)).
     drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
+    // The instant the star layers resolve their positions at; a star anchor is
+    // static, so any instant gives the same roster.
+    simDays: CONST_J2000,
   } as unknown as ReadyFrameContext;
 }
 
@@ -129,12 +147,20 @@ function makeNear0View(camPos: Vec3): SlabView {
 function makeState(
   starRenderer: unknown,
   stars: readonly StarBody[],
-  famousStarsEnabled = true,
+  famousStarMapEnabled = true,
 ): EngineState {
   return {
     gpu: { starRenderer },
     data: { bodies: { stars } },
-    settings: { famousStars: { enabled: famousStarsEnabled } },
+    // The cluster master is on: `visibleStars` requires it AND the row's own
+    // bit, so a fixture that omitted it would silently drive the Sun-alone path.
+    settings: {
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: famousStarMapEnabled } } },
+      // The Sun and the S-stars each answer to their own body row, so
+      // `visibleStars` reads them here rather than exempting ids from the map's
+      // gate. Derived from BODY_IDS: a missing row throws inside the gate.
+      bodies: { items: makeBodyItems() },
+    },
   } as unknown as EngineState;
 }
 
@@ -205,6 +231,24 @@ describe('starSpheresLayer.draw', () => {
     expect(color).toBe(SUN.color);
   });
 
+  it('a famous star’s drawn position comes from the snapshot', () => {
+    composeMock.mockClear();
+    // The star record carries no position at all, so the only place the drawn
+    // one can come from is the frame's body snapshot. Pinned by IDENTITY: the
+    // array `composeBodyMvp` receives must be the very `BodyState.positionMpc`
+    // the snapshot holds for Sirius — a re-derivation, a copy, or a lookup
+    // against the wrong id would all miss.
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
+    const state = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS]);
+
+    starSpheresLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    expect(composeMock.mock.calls[0]![1]).toBe(
+      deriveBodyStates(CONST_J2000).get('sirius')!.positionMpc,
+    );
+  });
+
   it('starSpheresLayer draws only the resolved stars', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
@@ -225,10 +269,10 @@ describe('starSpheresLayer.draw', () => {
     expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SIRIUS.color]);
   });
 
-  it('with the famous-stars gate off, only the Sun can resolve — never a neighbour', () => {
+  it('with the famous-star map gate off, only the Sun can resolve — never a neighbour', () => {
     composeMock.mockClear();
-    // Camera half an AU off Sirius, which WOULD resolve — but the famousStars
-    // gate is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
+    // Camera half an AU off Sirius, which WOULD resolve — but the famous-star
+    // row is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
     // this camera (sub-pixel), so nothing resolves: no sphere is composed.
     const offSirius = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS], false);
     starSpheresLayer.draw(
@@ -239,9 +283,9 @@ describe('starSpheresLayer.draw', () => {
     );
     expect(composeMock).not.toHaveBeenCalled();
 
-    // Camera half an AU off the Sun with the gate still off: the Sun is exempt,
-    // so it resolves and is the sole composed sphere — the map is muted, the
-    // descent's aim point kept.
+    // Camera half an AU off the Sun with the gate still off: the Sun answers to
+    // its own body row, so it resolves and is the sole composed sphere — the map
+    // is muted, the descent's aim point kept.
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
     const onSun = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS], false);
@@ -295,7 +339,10 @@ describe('starSpheresLayer.drawPick', () => {
     const state = {
       gpu: { bodyPickRenderer },
       data: { bodies: { stars: [SUN, PROXIMA, SIRIUS] } },
-      settings: { famousStars: { enabled: true } },
+      settings: {
+        starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+        bodies: { items: makeBodyItems() },
+      },
     } as unknown as EngineState;
 
     starSpheresLayer.drawPick!(PASS_STUB, view, makeCtx(camPos), state);

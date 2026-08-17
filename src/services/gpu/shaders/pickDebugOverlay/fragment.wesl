@@ -1,68 +1,23 @@
 // pickDebugOverlay/fragment.wesl — sample the r32uint pick texture and
-// colour-map it onto the tone-mapped swap chain.
+// colour-map it onto the tone-mapped swap chain: 'what would a click here
+// hit, and WHICH source claimed this pixel?'
 //
-// ## What it does
-//
-// At every viewport pixel:
-//   1. Read the r32uint pick texel via 'textureLoad' (integer textures
-//      can't be 'textureSample'd, and we want exact 1:1 texel mapping
-//      anyway so there'd be nothing to filter).
-//   2. If the texel is 0, emit a transparent fragment so the scene
-//      shows through unchanged (0 is the "no hit" sentinel — see
-//      'PICK_SENTINEL_OFFSET' in 'pickFragment.wesl').
-//   3. Otherwise, decode 'packed - 1' as '(sourceCode << 27) | localIdx'
-//      and emit a per-source hue with a hashed per-instance brightness
-//      so adjacent picks of the same source visually separate.
-//
-// ## Why colour BY SOURCE CODE, and why the golden angle
-//
-// The whole point of the overlay is to answer 'what would a click here
-// hit, and WHICH source claimed this pixel?'. So every pixel takes its
-// hue straight from the packed source code — an SDSS billboard, a 2MRS
-// billboard, a cluster ring, a Gaia star and a famous star each read as
-// their own stable colour.
-//
-// The hue comes from golden-angle spacing rather than a hand-maintained
-// colour table: 'hue = fract(sourceCode * 0.618034)'. 0.618034 is the
-// golden-ratio conjugate (1/phi); stepping the hue circle by it gives
-// the maximally-spread, low-discrepancy sequence — adjacent source codes
-// land far apart on the wheel, and ANY source (present or future) gets a
-// well-separated hue with zero colours to maintain. A literal palette
-// would need a new branch every time a pickable source is added; this is
-// self-maintaining, matching the house 'derive, don't enumerate' style.
-//
-// The localIdx hash modulates BRIGHTNESS (HSV value), not hue, so two
-// adjacent instances of the same source read as discrete points of the
-// same colour rather than blurring into one solid patch — while the hue
-// stays fully readable as 'which source'.
-//
-// ## Why pre-multiplied alpha
-//
-// Drawn via OVER blend ('srcFactor: one, dstFactor: one-minus-src-
-// alpha') so the overlay sits on top of the tone-mapped frame.
-// Pre-multiplying RGB by alpha at the fragment matches the rest of
-// the UI overlay stack (markerLines, labels, structureMarker).
+// Hue derives from golden-angle spacing, not a hand-maintained colour
+// table: 'hue = fract(sourceCode * 0.618034)' (1/phi) spreads adjacent
+// source codes far apart on the wheel, so any source — present or future —
+// gets a distinct hue for free. localIdx hashes into BRIGHTNESS instead, so
+// adjacent instances of one source read as discrete points, not a blurred
+// patch. Pre-multiplied alpha (OVER blend) matches the rest of the UI
+// overlay stack (markerLines, labels, structureMarker).
 
 import package::pickDebugOverlay::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 import package::lib::selectionEncoding::SELECTION_LOCAL_IDX_MASK;
 import package::lib::selectionEncoding::SOURCE_GAIA_STARS;
+import package::lib::util::hueToRgb;
 
 @group(0) @binding(0) var pickTex: texture_2d<u32>;
-
-// Fully-saturated hue -> rgb for hue in [0, 1). Reconstructs the three
-// RGB ramps of an HSV wheel at S=1, V=1 directly from the hue: each
-// channel is a clamped triangle peaking 1/3 of the wheel apart. The
-// caller scales the result by the desired value (brightness). Cheaper
-// and branch-free versus a full hsv2rgb with sector selection, and we
-// only ever need the S=1 slice.
-fn hueToRgb(h: f32) -> vec3<f32> {
-  let r = abs(h * 6.0 - 3.0) - 1.0;
-  let g = 2.0 - abs(h * 6.0 - 2.0);
-  let b = 2.0 - abs(h * 6.0 - 4.0);
-  return clamp(vec3<f32>(r, g, b), vec3<f32>(0.0), vec3<f32>(1.0));
-}
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {

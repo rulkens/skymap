@@ -46,6 +46,20 @@ export const starAggregatesLayer: ContentLayer = {
     if (renderer === null) return;
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
-    drawStream(renderer, pass, view, prep, 'aggregate');
+
+    // Viewport matches the star-aggregates texture, not the canvas:
+    // STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE TARGET BEING
+    // RASTERISED, so the canvas size would make the floor 0.75 texels here and
+    // land floor-clamped aggregates sub-texel (dropout and flicker, not wrong
+    // brightness — `toRefPx` keeps the photometry viewport-independent). The
+    // divisor is read off the spec row so it stays single-homed, the same
+    // discipline `milkyWayAggregateLayer` and `scalarVolumeLayer` follow. The
+    // view is COPIED rather than mutated: one `SlabView` is shared by every
+    // layer in the render step.
+    const scale = ctx.renderTargets.specs.find((s) => s.id === 'star-aggregates')!.scale;
+    const vw = Math.max(1, Math.floor(ctx.canvasSize.width / scale));
+    const vh = Math.max(1, Math.floor(ctx.canvasSize.height / scale));
+
+    drawStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate');
   },
 };

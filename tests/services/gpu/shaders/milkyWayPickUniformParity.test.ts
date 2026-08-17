@@ -1,5 +1,5 @@
 /**
- * Parity guard: `milkyWayPick/io.wesl`'s `Uniforms` struct is a hand-written
+ * Parity guard: `milkyWay/pick/io.wesl`'s `Uniforms` struct is a hand-written
  * prefix MIRROR of the points pick uniform buffer — the MW pick draw reuses
  * the caller's bound @group(0) (the full 176-byte points pick buffer), so
  * every field the mirror declares must sit at the exact byte offset the
@@ -24,8 +24,6 @@
  * moves one side's offset and fails the comparison.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -35,91 +33,34 @@ import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
 } from '../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
+import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
+import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';
+import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
+import { wgslPrimitiveLayout } from '../../../../tools/utils/wgsl/wgslPrimitiveLayout';
 
 // ─── WESL side: scrape the struct text and compute WGSL offsets ─────────────
 
-type WeslField = { readonly name: string; readonly type: string };
-
-/** Extract the ordered `name: type` fields of one struct from WESL source. */
-function parseStructFields(source: string, structName: string): WeslField[] {
-  // Strip line comments first so commented-out fields can't parse.
-  const stripped = source.replace(/\/\/[^\n]*/g, '');
-  const m = stripped.match(new RegExp(`struct\\s+${structName}\\s*\\{([\\s\\S]*?)\\}`));
-  expect(m, `struct ${structName} not found`).not.toBeNull();
-  const fields: WeslField[] = [];
-  const fieldRe = /(\w+)\s*:\s*([A-Za-z0-9_<>]+)/g;
-  let f: RegExpExecArray | null;
-  while ((f = fieldRe.exec(m![1]!)) !== null) {
-    fields.push({ name: f[1]!, type: f[2]! });
-  }
-  expect(fields.length, `struct ${structName} parsed no fields`).toBeGreaterThan(0);
-  return fields;
-}
-
-type Layout = { readonly size: number; readonly align: number };
-
-/** WGSL size/alignment for every type the mirrored prefix uses. */
-const PRIMITIVE_LAYOUT: Record<string, Layout> = {
-  f32: { size: 4, align: 4 },
-  u32: { size: 4, align: 4 },
-  'vec2<f32>': { size: 8, align: 8 },
-  'vec3<f32>': { size: 12, align: 16 },
-  'vec4<f32>': { size: 16, align: 16 },
-  'mat4x4<f32>': { size: 64, align: 16 },
+const primitive = (owner: string) => (type: string) => {
+  const p = wgslPrimitiveLayout(type);
+  if (!p) throw new Error(`${owner} field type ${type} has no layout entry`);
+  return p;
 };
 
-const roundUp = (align: number, n: number): number => Math.ceil(n / align) * align;
-
-/**
- * Apply WGSL structure-member layout rules: each member starts at its
- * alignment; the struct's own size rounds up to its largest member
- * alignment.  (Uniform address space additionally rounds nested-struct
- * member alignment up to 16 — CameraUniforms' natural align is already 16,
- * so the resolve below returns it directly.)
- */
-function layoutStruct(
-  fields: readonly WeslField[],
-  resolve: (type: string) => Layout,
-): { offsets: Map<string, number>; layout: Layout } {
-  const offsets = new Map<string, number>();
-  let offset = 0;
-  let structAlign = 1;
-  for (const { name, type } of fields) {
-    const { size, align } = resolve(type);
-    offset = roundUp(align, offset);
-    offsets.set(name, offset);
-    offset += size;
-    structAlign = Math.max(structAlign, align);
-  }
-  return { offsets, layout: { size: roundUp(structAlign, offset), align: structAlign } };
-}
-
-function readShader(relPath: string): string {
-  // process.cwd() is the repo root under Vitest (same convention as
-  // constants.parity.test.ts — __dirname doesn't survive the ESM runner).
-  return readFileSync(join(process.cwd(), relPath), 'utf-8');
-}
-
-const cameraFields = parseStructFields(
-  readShader('src/services/gpu/shaders/lib/camera.wesl'),
+const cameraFields = parseWgslStructFields(
+  readShaderSource('src/services/gpu/shaders/lib/camera.wesl'),
   'CameraUniforms',
 );
-const camera = layoutStruct(cameraFields, (t) => {
-  const p = PRIMITIVE_LAYOUT[t];
-  expect(p, `CameraUniforms field type ${t} has no layout entry`).toBeDefined();
-  return p!;
-});
+// CameraUniforms' natural alignment is already 16, so the uniform space's
+// nested-struct round-up is a no-op here and the measured layout goes back in.
+const camera = layoutWgslStruct(cameraFields, primitive('CameraUniforms'));
 
-const mirrorFields = parseStructFields(
-  readShader('src/services/gpu/shaders/milkyWayPick/io.wesl'),
+const mirrorFields = parseWgslStructFields(
+  readShaderSource('src/services/gpu/shaders/milkyWay/pick/io.wesl'),
   'Uniforms',
 );
-const mirror = layoutStruct(mirrorFields, (t) => {
-  if (t === 'CameraUniforms') return camera.layout;
-  const p = PRIMITIVE_LAYOUT[t];
-  expect(p, `Uniforms field type ${t} has no layout entry`).toBeDefined();
-  return p!;
-});
+const mirror = layoutWgslStruct(mirrorFields, (t) =>
+  t === 'CameraUniforms' ? camera.layout : primitive('Uniforms')(t),
+);
 
 // ─── TS side: pack sentinels and observe where they land ────────────────────
 
@@ -144,11 +85,16 @@ function packSentinels(): ArrayBuffer {
     visibleSourceMask: 0b11111,
     camPosWorld: [SENTINEL.camPosWorldX, SENTINEL.camPosWorldX + 1, SENTINEL.camPosWorldX + 2],
     pxPerRad: SENTINEL.pxPerRad,
-    highlightFallback: false,
-    realOnlyMode: false,
+    provenance: {
+      orientation: { highlight: false, filter: 'all' },
+      size: { highlight: false, filter: 'all' },
+    },
     biasMode: 0,
     absMagLimit: 0,
     depthFadeEnabled: false,
+    sbScale: 8,
+    sbMax: 30,
+    falloffStrength: 0.8,
     pxFadeStart: 0,
     pxFadeEnd: 0,
     focusBindGroup: {} as unknown as GPUBindGroup,
@@ -168,7 +114,7 @@ function observedF32Offset(buf: ArrayBuffer, value: number): number {
 
 // ─── The parity assertions ───────────────────────────────────────────────────
 
-describe('milkyWayPick/io.wesl Uniforms ↔ packPointUniforms layout parity', () => {
+describe('milkyWay/pick/io.wesl Uniforms ↔ packPointUniforms layout parity', () => {
   const buf = packSentinels();
   const at = (name: string): number => {
     const o = mirror.offsets.get(name);
@@ -212,7 +158,7 @@ describe('milkyWayPick/io.wesl Uniforms ↔ packPointUniforms layout parity', ()
     expect(at('pxPerRad')).toBe(observedF32Offset(buf, SENTINEL.pxPerRad));
   });
 
-  it('reads exactly the documented 112-byte prefix, within the 176-byte buffer', () => {
+  it('reads exactly the documented 112-byte prefix, within the 192-byte buffer', () => {
     // The mirror must stay a PREFIX: its total extent is what the MW draw
     // reads through the caller's bind group, and WGSL only permits the
     // bound buffer to be LARGER than the declared struct — never smaller.

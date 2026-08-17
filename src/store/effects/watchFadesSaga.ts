@@ -32,12 +32,15 @@ import {
   setOrbitTrailsEnabled,
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
+  setStarCatalogLabelEnabled,
+  setBodyLabelEnabled,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   writeVolumeField,
   setVolumesEnabled,
   setFlowEnabled,
   setConstellationsEnabled,
+  setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../state/settings/settingsSlice';
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
@@ -61,6 +64,8 @@ export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
   [setOrbitTrailsEnabled.type]: 'orbitTrails',
   [setMilkyWayEnabled.type]: 'milkyWayDisk',
   [setMilkyWayLabelEnabled.type]: 'milkyWayLabel',
+  [setStarCatalogLabelEnabled.type]: 'starCatalogLabel',
+  [setBodyLabelEnabled.type]: 'bodyLabel',
   [setStructureItemEnabled.type]: 'structureRing',
   [setStructureLabelEnabled.type]: 'structureLabel',
   [writeVolumeField.type]: 'volumeField',
@@ -70,6 +75,7 @@ export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
   // is a brightness scale with no fade layer — deliberately absent, mirroring
   // setFilamentIntensity.
   [setConstellationsEnabled.type]: 'constellations',
+  [setZoneOfAvoidanceEnabled.type]: 'zoneOfAvoidance',
 };
 
 export function* watchFadesSaga() {

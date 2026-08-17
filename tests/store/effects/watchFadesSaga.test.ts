@@ -16,6 +16,7 @@ import {
   setMilkyWayEnabled,
   writeVolumeField,
   setFlowEnabled,
+  setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 
@@ -88,6 +89,18 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
   });
 
+  // ── setZoneOfAvoidanceEnabled — the single band+label toggle ───────────────
+  // Regression coverage for the dead-toggle defect: fadeLayers.ts can carry
+  // fade rows with no matching FADE_ROW entry, so toggling writes the store
+  // and nothing ever calls syncFades. This is the test that would have
+  // caught it.
+
+  it('setZoneOfAvoidanceEnabled(true) → syncFades(["zoneOfAvoidance"]) called', () => {
+    store.dispatch(setZoneOfAvoidanceEnabled(true));
+
+    expect(reconcile.syncFades).toHaveBeenCalledWith(['zoneOfAvoidance']);
+  });
+
   // ── mergeSnapshot — bulk restore arm: re-fades every row (full pass) ────────
   // The tour scene-restore puts mergeSnapshot; this arm reacts with a full
   // syncFades() (no rows) so every layer re-fades to the merged intent — no
@@ -99,5 +112,4 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
   });
-
 });
