@@ -476,7 +476,8 @@ shader change knowing it re-opened every atmosphere body.
       (arithmetic shown) / [L]ook. Magnitude anchors on a measured vertical optical depth of 0.013
       over a 50 km scale height; the colour is the measured MVIC blue/red ratio of 2.5 at fixed
       phase (λ^-3.44); `miePhaseG: 0.5` is solved to reproduce the measured forward lobe height,
-      not borrowed from Earth's 0.8. Derivations live in the research report, not the row.
+      not borrowed from Earth's 0.8. Derivations live under _Task 14 — derivations_ below, not in
+      the row.
 - [x] Fix `densityOzone`, which divided by zero on every non-Earth body — `ozoneWidthKm: 0` is the
       table's "no ozone" idiom, and WGSL's Finite Math Assumption makes the result _indeterminate_
       rather than merely NaN, naming `max` as a builtin that misbehaves under exactly that
@@ -486,9 +487,75 @@ shader change knowing it re-opened every atmosphere body.
       blue-haze image is New Horizons' departure shot. Known caricature, recorded in the row: a
       single HG lobe has no backscatter term, so the front-lit case is likely under-represented.
 
-Re-homed here from `panSharpenRgb`'s header when it was cut to the comment budget: the chroma
-carrier is `RGB/Y - 1` rather than photometric matching **because** that invariance is what lets
-two independently-exposed sources combine with no photometric alignment step — only the geometric
+#### Task 14 — derivations
+
+The row's constants and where each came from. This is the surviving record: the derivations were
+worked out in a research report that lived in the branch's `.superpowers/` workspace, which is
+gitignored and which `/feature-done` deleted, so nothing else carries them. Tags are the row's own
+[M]easured / [D]erived / [L]ook.
+
+- `atmosphereTopKm` = R + 250. **[DERIVED]** LORRI resolves haze down to its stray-light noise floor
+  at ~1450 km plutocentric (Cheng+17 Fig. 3), i.e. ~260 km altitude; Alice detects it to 300 km.
+  250 km is five haze scale heights, where density is 0.7% of the surface value (e⁻⁵).
+- `rayleighScatter` = `[4.5e-7, 1.06e-6, 2.59e-6]`. **[DERIVED]** N₂ Rayleigh scaled from Earth's by
+  surface number density: 11 µbar at 40 K gives n = 1.99e15 cm⁻³, which is 7.82e-5 of Earth's
+  2.55e19, times Earth's (5.8, 13.6, 33.1)e-3. That lands ~300× below the haze term; kept non-zero
+  because it is the honest value.
+- `rayleighScaleHeightKm` = 50. **[MEASURED]** Young+18 found haze extinction approximately
+  proportional to N₂ density from 26–100 km. An isothermal 40 K scale height would be 19 km, but the
+  atmosphere climbs to 110 K by 30 km — hence 50.
+- `mieScatter` = `[1.85e-4, 3.83e-4, 8.25e-4]`. **[DERIVED]** Anchor: a vertical scattering optical
+  depth of 0.013 over a 50 km scale height (Gladstone+16) = 2.72e-4 /km at the LORRI pivot
+  wavelength, 607.6 nm. Colour: the measured MVIC blue/red I/F of 0.75/0.30 = 2.5 across 475/620 nm
+  gives λ^-3.44, evaluated at 680/550/440 nm.
+- `mieAbsorption` = 9.6e-6. **[DERIVED]** Tholin k = 0.018 at 607.6 nm (Gladstone+16) through van de
+  Hulst's anomalous-diffraction Qabs = 0.096 against Qsca = 2.7 — single-scattering albedo 0.966, so
+  absorption is 3.5% of scattering.
+- `mieScaleHeightKm` = 50. **[MEASURED]** "typical brightness scale heights of ~50 km"
+  (Gladstone+16, _Hazes_).
+- `miePhaseG` = 0.5. **[DERIVED]** Henyey-Greenstein g solved to reproduce the measured forward lobe
+  P(165°) ≈ 5 (Gladstone+16): g = 0.5 gives 4.95. Far below Earth's 0.8 because HG has to hit the
+  lobe's _height_, not merely be forward-biased.
+- Ozone terms all zero. **[MEASURED, by absence]** The Alice occultation's species inventory is N₂,
+  CH₄, C₂H₂, C₂H₄, C₂H₆ and haze (Young+18).
+- `groundAlbedo` rides the seed. **[MEASURED, with a caveat]** The seed's mean (0.49) is darker than
+  the measured disc: geometric albedo 0.62 ± 0.03 at 0.62 µm, Bond 0.72 ± 0.07 (Buratti+17). Only
+  the multi-scatter bounce reads it, and at τ_vert 0.04 that is a ~1% term — so the seed is the
+  thing to fix, not the row.
+- `twilightSoftness` = 0.1. **[LOOK CHOICE]** Wider than Earth's 0.05 because the whole visible ring
+  sits _at_ the terminator and night-limb haze is only ~4× fainter than day-limb (Cheng+17), so a
+  hard fade halves the ring.
+- `exposure` = 2.35. **[LOOK CHOICE]** Earth's calibrated value; nothing about Pluto argues for a
+  different pipeline gain. The calibration anchors: at phase ≳148° the ring must be at least as
+  bright as the sunlit crescent (Cheng+17 Fig. 16), and at phase ~20° it is nearly invisible
+  (I/F ~0.003).
+
+**Three limitations, which are why the row is a caricature and not a model.**
+
+1. The colour is defensible — a directly measured two-filter cross-section ratio, and λ^-3.44 is
+   what fractal aggregates scattering as their ~10 nm monomers should give. The phase function is
+   not: one HG lobe fits 167° and 67° but is 3.5× too bright at 148°, has no backscatter lobe, and
+   cannot express that the real phase function changes with altitude (spheres below ~15 km,
+   aggregates above). The ~20 discrete haze layers are not modelled at all.
+2. Visibility is narrow: a thin ring, backlit, at phase ≳160° with the camera anti-sunward. Below
+   ~100° phase the haze is 1–3% of the sunlit disc and invisible. The perceptible band is
+   ~100–150 km, 8–13% of the radius, so reading ~20 px at 1080p needs a camera within roughly
+   8,000 km (~7 Pluto radii). Charon gets no row at all — the LORRI 3σ limit is 7000× below Pluto's
+   haze.
+3. What Pluto breaks in the existing model: a single exponential can produce neither the ~20 layers
+   nor the observed brightness peak several km _above_ the ground, and has to choose between the
+   50 km and 30 km regimes. The grey scalars stay wrong in principle — for a tholin whose k spans a
+   factor 45 across the band (`mieAbsorption`), for a column whose phase function varies with
+   altitude and wavelength (`miePhaseG`), and over normal reflectances of 0.08–1.0
+   (`groundAlbedo`).
+
+#### Re-homed comment material
+
+Material cut from source comments under the comment budget that was worth keeping. Append here.
+
+Re-homed from `panSharpenRgb`'s header when it was cut to the comment budget: the chroma carrier is
+`RGB/Y - 1` rather than photometric matching **because** that invariance is what lets two
+independently-exposed sources combine with no photometric alignment step — only the geometric
 alignment the caller guarantees by resizing both to one grid.
 
 ---
