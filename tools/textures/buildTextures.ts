@@ -33,12 +33,12 @@
  *
  * How a body's albedo source becomes sRGB is authored per body in
  * `BODY_TEXTURE_REGISTRY` as a tagged `treatment` and switched on here: an
- * already-RGB source passes through; a single-channel USGS mosaic (Europa,
- * Callisto, Pluto, Charon) is band-expanded and multiplied by its `tint`,
- * restoring a plausible hue the map lacks; a `panSharpen` body instead takes
- * luminance from its mono mosaic and hue from the separate `chroma` source its
- * `TEXTURE_SOURCES` row names. A further treatment is a variant plus a case, not
- * a new marker field.
+ * already-RGB source passes through; a single-channel USGS mosaic with no
+ * colour source (Europa, Callisto, Charon) is band-expanded and multiplied by
+ * its `tint`, restoring a plausible hue the map lacks; a `panSharpen` body
+ * (Pluto) instead takes luminance from its mono mosaic and hue from the
+ * separate `chroma` source its `TEXTURE_SOURCES` row names. A further
+ * treatment is a variant plus a case, not a new marker field.
  *
  * ## Non-upscaled tier downsample (the source-cap intersection)
  *

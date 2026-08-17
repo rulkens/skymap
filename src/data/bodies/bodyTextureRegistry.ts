@@ -47,9 +47,11 @@
  *
  * Today every body has only a `surface` kind whose ceiling is one of the two
  * values above. `treatment` is the orthogonal axis: `{ kind: 'colour' }` for a
- * source that is already RGB, `{ kind: 'monoTint', tint }` for the USGS
- * single-channel mosaics — the two Galilean moons plus Pluto and Charon — where
- * the tint restores a plausible hue the mono map lacks (spec §3).
+ * source that is already RGB, `{ kind: 'monoTint', tint }` for a USGS
+ * single-channel mosaic with no colour source at all — the two Galilean moons
+ * and Charon — where the tint restores a plausible hue the mono map lacks
+ * (spec §3), and `{ kind: 'panSharpen', calibration }` for Pluto, whose mono
+ * mosaic is paired with a co-registered colour map so hue is derived instead.
  *
  * Nothing here checks an authored ceiling against the source it names.
  * `tools/textures/tiersFittingSourceWidth.ts` measures the real pixel width
@@ -177,18 +179,29 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // measure 24888px/12693px, well past 8k; the far-side coverage gap (only the
   // encounter hemisphere is well-resolved) is a fidelity caveat, not the tier
   // driver. Both sources measured single-channel (`sharp(...).metadata()`:
-  // channels=1, space=b-w); the `monoTint` is a reasoned calibration against
-  // the Europa/Callisto idiom, not literal RGB extraction — Pluto reads warm
-  // tan overall (disc mean R:G:B ≈ 1:0.94:0.85 off NASA's natural-colour MVIC
-  // view, https://science.nasa.gov/resource/true-colors-of-pluto/; the tint is
-  // more saturated than that mean on purpose, since one flat multiply on a
-  // panchromatic mosaic is all the hue this body gets), Charon is near-neutral
-  // but for a small reddish polar cap (Grundy+16, Science 351 aad9189).
+  // channels=1, space=b-w).
+  //
+  // Pluto gets `panSharpen`: a co-registered global chroma source exists (NASA's
+  // MVIC colour map, PIA11707), so hue is derived rather than guessed instead of
+  // flat-tinted (calibration provenance is on `ChromaCalibration`). Charon stays
+  // `monoTint`: no global colour map exists for it, only single-hemisphere disc
+  // portraits, and it is genuinely near-neutral but for a small reddish polar
+  // cap (Grundy+16, Science 351 aad9189) — a flat tint is what its source
+  // supports, not a shortfall against Pluto's treatment.
   pluto: {
     bodyId: 'pluto',
     kinds: { surface: 'medium' },
     provenance: 'usgs',
-    treatment: { kind: 'monoTint', tint: [0.8, 0.7, 0.56] },
+    treatment: {
+      kind: 'panSharpen',
+      calibration: {
+        matrix: [
+          [1.0354, 0.3565],
+          [-0.0686, 0.1579],
+        ],
+        gain: 0.958,
+      },
+    },
   },
   charon: {
     bodyId: 'charon',

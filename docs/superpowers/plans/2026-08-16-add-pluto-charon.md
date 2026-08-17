@@ -328,6 +328,42 @@ no eye can resolve on a body this small on screen.
 
 ---
 
+### Task 8c: calibrated pan-sharpen for Pluto — a derived colour, not a source swap (2026-08-17)
+
+Added after Task 8b, revisiting the flat-tint call with a different tool than "swap the source": Task
+8b correctly found that no gap-free true-colour global Pluto map exists to swap in directly — that
+finding stands, unchanged. What's new is combining Pluto's two existing sources instead of picking
+one: luminance from the high-resolution panchromatic USGS mosaic (unchanged, still `medium`/4K), hue
+from PIA11707's enhanced MVIC colour map with its published saturation enhancement undone by a fitted
+linear map on the chroma plane (`ColourTreatment`'s new `panSharpen` variant, `ChromaCalibration`
+type, `writePanSharpenedTier` in `buildTextures.ts`). PIA11707 itself is never shipped; only Pluto's
+existing mono mosaic and this derived chroma reach the runtime texture.
+
+The calibration's basis and coefficients were reconstructed empirically (not read off a paper) and
+validated against NASA's "True Colors of Pluto" natural-colour disc view: reference disc mean
+`1.0000 : 0.9385 : 0.8546` (R:G:B, encoded), shipped-code disc mean `1.0000 : 0.9419 : 0.8683` — ΔG =
++0.003, ΔB = +0.014, RMS 0.010. A side-by-side render matches the reference in hue (butterscotch north
+polar band, brown — not pink — Cthulhu Macula, pale Sputnik Planitia). The basis and anisotropy
+`ChromaCalibration`'s coefficients assume are documented on that type; the empirical derivation and
+validation method are in this branch's colour-C commit and its review trail.
+
+Charon is unaffected: it stays `monoTint` because no global colour map exists for it at all (only
+single-hemisphere disc portraits), and it is genuinely near-neutral but for a small reddish polar cap
+(Grundy+16) — a flat tint is what its source supports, not a shortfall against Pluto's treatment.
+
+**Honest limits, not resolved by this task:** the far-side (anti-encounter) hemisphere has no New
+Horizons colour data at all, so its chroma is extrapolated from the panchromatic mosaic's shape, not
+observed; the fitted transform also absorbs whatever processing NASA's own reference and colour
+products applied upstream, so it is a match to those two products, not an independent radiometric
+calibration; this is a derived, best-effort colour reconstruction, not a calibrated science product.
+
+- [x] `ColourTreatment` gains `panSharpen`; `bodyTextureRegistry`'s Pluto row moves from `monoTint` to
+      `panSharpen` with the fitted `ChromaCalibration`. Charon stays `monoTint`.
+- [x] `ATTRIBUTIONS.md` updated: the USGS mosaic entry now describes Pluto's mosaic as feeding
+      luminance for a derived product, not as a directly tinted output.
+
+---
+
 ### Task 9: `ROTATION_ELEMENTS` rows for Pluto and Charon
 
 **Files:** `src/data/bodies/rotationElements.ts` (modify), `src/@types/data/BodyTextureId.d.ts`

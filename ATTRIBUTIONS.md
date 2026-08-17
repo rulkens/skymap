@@ -363,8 +363,10 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px
   equirectangular, 8-bit stretched from the 32-bit originals. Both ship
-  single-channel and are hue-tinted at build time (the `monoTint` treatment in
-  the body-texture registry).
+  single-channel. Charon is hue-tinted at build time (the `monoTint` treatment
+  in the body-texture registry); Pluto's mosaic instead supplies luminance for
+  the `panSharpen` treatment below — a derived product, neither the raw mosaic
+  nor the raw NASA colour map.
 - **Source:** USGS Astrogeology Science Center,
   <https://planetarymaps.usgs.gov/>.
 - **Licence:** Public domain (Astropedia access constraints: none; use constraints: cite authors).
