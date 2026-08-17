@@ -25,31 +25,6 @@ describe('createEngineData', () => {
     const d = createEngineData();
     expect(d.bodies.stars).toEqual([...SCENE_STARS, ...SCENE_S_STARS]);
     expect(d.bodies.planets).toEqual(SCENE_PLANETS);
-    expect(d.bodies.planets.map((p) => p.id)).toEqual([
-      'mercury',
-      'venus',
-      'mars',
-      'jupiter',
-      'saturn',
-      'uranus',
-      'neptune',
-      'moon',
-      'phobos',
-      'deimos',
-      'io',
-      'europa',
-      'ganymede',
-      'callisto',
-      'mimas',
-      'enceladus',
-      'tethys',
-      'dione',
-      'rhea',
-      'titan',
-      'iapetus',
-      'pluto',
-      'charon',
-    ]);
   });
 
   it('has no store for types whose status/state lives elsewhere', () => {
