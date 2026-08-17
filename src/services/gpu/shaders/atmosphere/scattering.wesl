@@ -1,50 +1,15 @@
-// atmosphere/scattering.wesl — the shared physically-based atmospheric-
+// atmosphere/scattering.wesl — the Bruneton/Neyret (2008) + Hillaire (2020)
 // scattering core the three LUT bakes and the shell fragment compose.
 //
-// This is the WESL sibling of 'lib/pbr.wesl': a stateless library authored
-// BEFORE any consumer imports it (plan A landed pbr.wesl the same way). It
-// carries the density profiles, the two phase functions, the LUT
-// parametrisations, and the medium sampler that Bruneton & Neyret's
-// 'Precomputed Atmospheric Scattering' (2008) and Hillaire's 2020 'A Scalable
-// and Production Ready Sky and Atmosphere Rendering Technique' all build on.
-// The bake compute passes (transmittance / multi-scatter / sky-view) and the
-// shell fragment each import the pieces they need; nothing is duplicated.
-//
-// ## The Bruneton/Hillaire model in one paragraph
-//
-// Sunlight entering the atmosphere is attenuated (extinction) and redirected
-// (scattering) by three media: Rayleigh (molecular, per-channel, ~blue), Mie
-// (aerosol, grey, strongly forward via the Henyey-Greenstein phase), and
-// ozone (per-channel absorption only, a tent profile centred ~25 km). Each has
-// an exponential (Rayleigh/Mie) or tent (ozone) density falloff with altitude.
-// The visible sky is the integral, along the view ray, of sunlight that
-// single-scatters toward the eye (weighted by the phase functions), plus a
-// cheap isotropic estimate of higher-order 'multiple' scattering (Hillaire's
-// contribution) that keeps the daytime sky from going too dark. The whole
-// thing is precomputed into 2D lookup tables so the per-pixel cost is a couple
-// of texture samples, not a per-pixel march.
-//
-// ## Why every helper takes 'params' / radii as arguments (no captured binding)
-//
-// WESL has no global state — a lib module cannot see a consumer's
-// '@group/@binding' declarations. So the scattering coefficients arrive as an
-// explicit 'ScatteringParams' argument, and the LUT parametrisations take the
-// bottom/top radii explicitly. This is the same 'pass, don't capture' rule
-// 'lib/flow.wesl' follows (it threads 'velTex'/'velSamp' through every helper),
-// and 'lib/sphere.wesl::clip_from_local' follows for 'mvp'. It also buys a
-// crucial property for free: the LUT parametrisations are UNIT-AGNOSTIC. Every
-// mapping below is built from RATIOS of radii, so feeding kilometre radii (the
-// bakes, which integrate per-km coefficients) or local atmosphere-top-unit
-// radii (the shell fragment, where top == 1) yields the SAME uv. The bake
-// writes the LUT in km; the fragment samples it in local units; the uv agrees
-// because it is scale-invariant. That is why the fragment needs neither the km
-// radii nor 'ScatteringParams' — 'AtmosphereUniforms.bottomRadius' (a ratio) is
-// enough.
+// Everything is passed, never captured: WESL has no global state, so a lib
+// module cannot see a consumer's '@group/@binding'. That buys a property the
+// renderer depends on — the LUT parametrisations below are built from RATIOS
+// of radii, so they are UNIT-AGNOSTIC. The bakes feed km radii and the shell
+// fragment feeds local (top == 1) radii, and the uv agrees, which is why the
+// fragment needs neither the km radii nor 'ScatteringParams'.
 //
 // Comments single-quoted, NEVER backticks (the WESL parser tokenises a
-// backtick even inside a comment). Literal 'package::' imports. This is GPU
-// code, verified VISUALLY at the Task 6 acceptance (a blue limb + a reddened
-// sunset ring), not by a unit test.
+// backtick even inside a comment). Verified VISUALLY, not by a unit test.
 
 import package::lib::math::PI;
 import package::lib::util::raySphere;
@@ -66,68 +31,59 @@ const EXTINCTION_EPS: f32 = 1e-7;
 
 // ── ScatteringParams ─────────────────────────────────────────────────
 //
-// The per-body physical constants the bakes integrate — the WESL mirror of the
-// TypeScript 'AtmosphereParams' ('@types/scene/AtmosphereParams.d.ts'), packed
-// by the Task-5 renderer into the bake bind group. All coefficients are per-km
-// (1/km) and all radii/heights are in km, matching the reference radiometric
-// convention, so the bakes march in km with no unit conversion.
+// The per-body constants the bakes integrate — the WESL twin of the TypeScript
+// 'AtmosphereParams', written by 'utils/gpu/packScatteringParams.ts'. Keep the
+// two in lockstep: a byte-layout drift raises no GPU error and iOS answers it
+// with a dropped frame. Coefficients are 1/km and radii/heights are km, so the
+// bakes march in km with no conversion.
 //
-// ## Byte layout (uniform address space — the packer must match exactly)
-//
-// vec3<f32> aligns to 16 and leaves a 4-byte tail; each vec3 below is followed
-// by a REAL scalar that fills that tail (the 'RingUniforms.planetRadiusRatio'
-// trick), so the WGSL alignment rules reproduce a dense 80-byte layout the CPU
-// packer writes as 20 contiguous f32s:
-//
-//   offset  0..11 : rayleighScatter       (vec3<f32> — 16-aligned at 0)
-//   offset 12..15 : rayleighScaleHeightKm (f32 — fills the vec3 tail)
-//   offset 16..27 : ozoneAbsorption       (vec3<f32> — 16-aligned at 16)
-//   offset 28..31 : mieScaleHeightKm       (f32 — fills the vec3 tail)
-//   offset 32..43 : groundAlbedo          (vec3<f32> — 16-aligned at 32)
-//   offset 44..47 : miePhaseG             (f32 — fills the vec3 tail)
-//   offset 48..59 : mieScatter            (vec3<f32> — 16-aligned at 48; per-
-//                                          channel, e.g. Pluto's blue tholin haze)
-//   offset 60..63 : mieAbsorption         (f32 — fills the mieScatter tail)
-//   offset 64..67 : ozoneCenterKm         (f32)
-//   offset 68..71 : ozoneWidthKm          (f32)
-//   offset 72..75 : planetRadiusKm        (f32 — ground / atmosphere bottom)
-//   offset 76..79 : atmosphereTopKm       (f32 — top-of-atmosphere radius)
-//   total: 80 bytes / 20 f32, no trailing pad.
-//
-// The twilight knob rides the per-frame 'SkyViewParams' (skyViewLut.wesl), NOT
-// this construction-written buffer, so it can be tuned live.
-//
-// 'planetRadiusKm' and 'atmosphereTopKm' ride here (not only on
-// 'AtmosphereUniforms') because the bakes need the ABSOLUTE km radii to
-// integrate the per-km density falloff; the shell fragment, sampling the baked
-// LUTs, needs only the dimensionless ratio it already has.
+// The roles are NOT positional. A constituent carries its own scatter and
+// absorb vectors, its own density profile and its own phase function, so
+// 'molecules', 'haze' and 'ozone' are rows in a list rather than three named
+// struct members. The twilight knobs ride the per-frame 'SkyViewParams'
+// (skyViewLut.wesl), not this construction-written buffer, so they stay
+// live-tunable.
 
+const PROFILE_EXPONENTIAL: u32 = 0u;
+const PROFILE_TENT: u32 = 1u;
+const PHASE_RAYLEIGH: u32 = 0u;
+const PHASE_HENYEY_GREENSTEIN: u32 = 1u;
+
+// 48 bytes, align 16 — so 'array<Constituent, 4>' gets a 48-byte stride, which
+// WGSL's uniform address space requires to be a multiple of 16.
+struct Constituent {
+  scatter: vec3<f32>,
+  phaseG: f32,
+  absorb: vec3<f32>,
+  scaleHeightKm: f32,
+  centerKm: f32,
+  widthKm: f32,
+  profileKind: u32,
+  phaseKind: u32,
+};
+
+// 224 bytes: a 32-byte header, then the array (which must start 16-aligned,
+// hence the explicit pad at 24).
 struct ScatteringParams {
-  rayleighScatter: vec3<f32>,
-  rayleighScaleHeightKm: f32,
-  ozoneAbsorption: vec3<f32>,
-  mieScaleHeightKm: f32,
   groundAlbedo: vec3<f32>,
-  miePhaseG: f32,
-  mieScatter: vec3<f32>,
-  mieAbsorption: f32,
-  ozoneCenterKm: f32,
-  ozoneWidthKm: f32,
   planetRadiusKm: f32,
   atmosphereTopKm: f32,
+  constituentCount: u32,
+  _pad: vec2<f32>,
+  constituents: array<Constituent, 4>,
 };
 
 // ── MediumSample — the local optical properties at a point ───────────
 //
-// The scattering + extinction coefficients (1/km) at one position in the
-// atmosphere, the per-step quantities every march needs. 'scatterR' is the
-// per-channel Rayleigh scattering; 'scatterM' is the per-channel Mie
-// scattering; 'extinction' is the total per-channel attenuation (Rayleigh +
-// Mie scatter+absorb + ozone absorb) that drives the 'exp(-extinction*dt)'
-// transmittance across a step.
+// The per-step quantities every march needs, in 1/km, summed over the
+// constituents present at this altitude. 'scatterPhased' weights each
+// constituent by its OWN phase function, which is why the caller no longer
+// applies phases by name; 'scatterTotal' is the unweighted sum the isotropic
+// multiple-scattering estimate wants; 'extinction' drives 'exp(-extinction*dt)'
+// across a step.
 struct MediumSample {
-  scatterR: vec3<f32>,
-  scatterM: vec3<f32>,
+  scatterPhased: vec3<f32>,
+  scatterTotal: vec3<f32>,
   extinction: vec3<f32>,
 };
 
@@ -159,57 +115,89 @@ fn miePhase(cosTheta: f32, g: f32) -> f32 {
 
 // ── density profiles ─────────────────────────────────────────────────
 
-// densityRayleigh / densityMie — exponential falloff with altitude, normalised
-// to 1 at sea level. 'altitudeKm' is height above the ground sphere; the
-// scale height is the e-folding distance (Rayleigh ~8 km, Mie ~1.2 km).
-fn densityRayleigh(altitudeKm: f32, scaleHeightKm: f32) -> f32 {
+// densityExponential — falloff normalised to 1 at the ground, for a well-mixed
+// constituent. 'altitudeKm' is height above the ground sphere; the scale height
+// is the e-folding distance (Earth's molecules ~8 km, its aerosol ~1.2 km).
+fn densityExponential(altitudeKm: f32, scaleHeightKm: f32) -> f32 {
   return exp(-altitudeKm / scaleHeightKm);
 }
 
-fn densityMie(altitudeKm: f32, scaleHeightKm: f32) -> f32 {
-  return exp(-altitudeKm / scaleHeightKm);
-}
-
-// densityOzone — a symmetric TENT profile: 1 at the centre altitude, ramping
-// linearly to 0 at 'centerKm +/- widthKm', clamped to 0 outside. Ozone is not
-// exponential — it is a layer concentrated in the stratosphere, and the tent is
-// the standard cheap stand-in for its bell (Hillaire uses it). No scattering,
-// absorption only; it is the reason a clear zenith sky stays blue at twilight
-// rather than washing to grey.
-// A zero width is the table's 'this body has no ozone' idiom — every row but
-// Earth's. Keep this branch: without it the tent divides by zero at EVERY
-// sample (NaN at altitude 0, which 'sampleMedium' floors every ground-level
+// densityTent — a symmetric tent: 1 at the centre altitude, ramping linearly to
+// 0 at 'centerKm +/- widthKm', clamped to 0 outside. The standard cheap
+// stand-in for a discrete layer's bell (Hillaire uses it for ozone).
+// Keep the zero-width branch: without it the tent divides by zero at EVERY
+// sample (NaN at altitude 0, which the accumulator floors every ground-level
 // sample to; +Inf above it), and WGSL's Finite Math Assumption then makes the
 // whole expression an INDETERMINATE value, naming 'max' as a function that
 // misbehaves under exactly that optimisation. The outer clamp is not a guard.
-fn densityOzone(altitudeKm: f32, centerKm: f32, widthKm: f32) -> f32 {
+fn densityTent(altitudeKm: f32, centerKm: f32, widthKm: f32) -> f32 {
   if (widthKm <= 0.0) {
     return 0.0;
   }
   return max(0.0, 1.0 - abs(altitudeKm - centerKm) / widthKm);
 }
 
-// sampleMedium — the optical properties at 'posKm' (a position in km, planet
-// centre at the origin). Altitude is floored at 0 so a point a hair below the
-// ground sphere (numerical) does not blow the density past sea level.
-fn sampleMedium(params: ScatteringParams, posKm: vec3<f32>) -> MediumSample {
-  let altitude = max(0.0, length(posKm) - params.planetRadiusKm);
-  let dR = densityRayleigh(altitude, params.rayleighScaleHeightKm);
-  let dM = densityMie(altitude, params.mieScaleHeightKm);
-  let dO = densityOzone(altitude, params.ozoneCenterKm, params.ozoneWidthKm);
+fn constituentDensity(c: Constituent, altitudeKm: f32) -> f32 {
+  if (c.profileKind == PROFILE_TENT) {
+    return densityTent(altitudeKm, c.centerKm, c.widthKm);
+  }
+  return densityExponential(altitudeKm, c.scaleHeightKm);
+}
 
-  let scatterR = params.rayleighScatter * dR;
-  let scatterM = params.mieScatter * dM;
-  let extinction =
-    params.rayleighScatter * dR
-    + (params.mieScatter + vec3<f32>(params.mieAbsorption)) * dM
-    + params.ozoneAbsorption * dO;
+fn constituentPhase(c: Constituent, cosTheta: f32) -> f32 {
+  if (c.phaseKind == PHASE_HENYEY_GREENSTEIN) {
+    return miePhase(cosTheta, c.phaseG);
+  }
+  return rayleighPhase(cosTheta);
+}
+
+// accumulateMedium — the optical properties at 'posKm' (a position in km,
+// planet centre at the origin), summed over the body's constituents. Altitude
+// is floored at 0 so a point a hair below the ground sphere (numerical) does
+// not blow the density past ground level.
+//
+// The accumulator starts at zero and adds in list order, which is what makes
+// this arithmetically identical to the three named terms it replaced.
+fn accumulateMedium(
+  params: ScatteringParams,
+  posKm: vec3<f32>,
+  cosTheta: f32,
+  phased: bool,
+) -> MediumSample {
+  let altitude = max(0.0, length(posKm) - params.planetRadiusKm);
 
   var m: MediumSample;
-  m.scatterR = scatterR;
-  m.scatterM = scatterM;
-  m.extinction = extinction;
+  m.scatterPhased = vec3<f32>(0.0);
+  m.scatterTotal = vec3<f32>(0.0);
+  m.extinction = vec3<f32>(0.0);
+
+  var i: u32 = 0u;
+  loop {
+    if (i >= params.constituentCount) { break; }
+    let c = params.constituents[i];
+    let d = constituentDensity(c, altitude);
+    let s = c.scatter * d;
+    m.scatterTotal = m.scatterTotal + s;
+    m.extinction = m.extinction + (c.scatter + c.absorb) * d;
+    if (phased) {
+      m.scatterPhased = m.scatterPhased + s * constituentPhase(c, cosTheta);
+    }
+    i = i + 1u;
+  }
   return m;
+}
+
+// sampleMedium — with the phase-weighted single-scatter source. 'cosTheta' is
+// the cosine between the view ray and the sun.
+fn sampleMedium(params: ScatteringParams, posKm: vec3<f32>, cosTheta: f32) -> MediumSample {
+  return accumulateMedium(params, posKm, cosTheta, true);
+}
+
+// sampleMediumIsotropic — the same without it, for the transmittance bake
+// (extinction only) and the multi-scatter bake (higher orders are treated as
+// directionally uniform, so a phase weighting would be computed then discarded).
+fn sampleMediumIsotropic(params: ScatteringParams, posKm: vec3<f32>) -> MediumSample {
+  return accumulateMedium(params, posKm, 0.0, false);
 }
 
 // ── ray geometry ─────────────────────────────────────────────────────
