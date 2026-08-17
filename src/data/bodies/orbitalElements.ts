@@ -690,9 +690,10 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleDecDeg: -6.163,
     // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric
     // position rather than orbiting the Pluto–Charon barycentre, which sits
-    // ~1.8 Pluto radii outside Pluto's surface (Charon is ~12% of Pluto's
-    // mass, and the barycentre sits ~10% of the way along the pair
-    // separation) — visibly off here, though it is the SAME approximation
+    // ~2130 km from Pluto's CENTRE — 1.8 Pluto radii, so ~940 km above the
+    // surface (JPL GMs 106.1 / 869.3: Charon is ~12% of Pluto's mass, putting
+    // the barycentre ~11% of the way along the 19600 km pair separation) —
+    // visibly off here, though it is the SAME approximation
     // Earth–Moon already makes (Earth doesn't orbit the Earth–Moon
     // barycentre either). Deliberate; the real fix — a body orbiting a
     // barycentre rather than being pinned at a focus — is scoped in
