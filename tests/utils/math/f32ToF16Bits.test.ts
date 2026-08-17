@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { f32ToF16Bits } from '../../../../tools/utils/math/f32ToF16Bits';
-import { f16BitsToFloat } from '../../../../tools/utils/math/f16BitsToFloat';
+import { f32ToF16Bits } from '../../../src/utils/math/f32ToF16Bits';
+import { f16BitsToFloat } from '../../../tools/utils/math/f16BitsToFloat';
 
 describe('f32ToF16Bits', () => {
   it('packs zero as bit pattern 0', () => {

@@ -10,7 +10,7 @@
  * click. Packs the result to f16 while transposing C-order → x-fastest.
  */
 import { f32ToF16Bits } from '../math/f32ToF16Bits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 export function packLogTraceVoxels(
   values: Float32Array | Float64Array,

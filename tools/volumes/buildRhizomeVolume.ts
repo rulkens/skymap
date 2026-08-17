@@ -17,7 +17,7 @@ import { basename, dirname, extname, join, resolve } from 'node:path';
 import { buildDataManifest } from '../deploy/buildDataManifest';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
-import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
 import { quickLookSentinelPath } from '../utils/volume/quickLookSentinelPath';
 import { MCPM_TIER_FILENAME } from './buildMcpmVolume';
 import {
