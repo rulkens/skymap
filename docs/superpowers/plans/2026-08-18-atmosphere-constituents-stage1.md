@@ -76,7 +76,7 @@ Additive only. The nine old fields stay on the type and the rows keep them, so t
 - Produces: `DensityProfile`, `PhaseFunction`, `AtmosphereConstituent` types; `AtmosphereParams.constituents: readonly AtmosphereConstituent[]`.
 - Consumes: nothing.
 
-- [ ] **Step 1: Write the failing migration test**
+- [x] **Step 1: Write the failing migration test**
 
 Create `tests/data/bodies/atmosphereConstituentMigration.test.ts`:
 
@@ -242,12 +242,12 @@ describe('atmosphere constituent migration', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run tests/data/bodies/atmosphereConstituentMigration.test.ts`
 Expected: FAIL — `constituents` is undefined on every row.
 
-- [ ] **Step 3: Create the three type files**
+- [x] **Step 3: Create the three type files**
 
 `src/@types/scene/DensityProfile.d.ts`:
 
@@ -307,7 +307,7 @@ export type AtmosphereConstituent = {
 };
 ```
 
-- [ ] **Step 4: Add `constituents` to `AtmosphereParams`**
+- [x] **Step 4: Add `constituents` to `AtmosphereParams`**
 
 In `src/@types/scene/AtmosphereParams.d.ts`, add the import and the field. Leave the nine old fields in place — Task 3 removes them.
 
@@ -319,7 +319,7 @@ import type { AtmosphereConstituent } from './AtmosphereConstituent';
   readonly constituents: readonly AtmosphereConstituent[]; // ≤ MAX_CONSTITUENTS; order is the accumulation order
 ```
 
-- [ ] **Step 5: Add a `constituents` list to all eight rows**
+- [x] **Step 5: Add a `constituents` list to all eight rows**
 
 In `src/data/bodies/atmosphereParams.ts`, give each row a `constituents` array per the mapping table above, ordered Rayleigh, Mie, ozone. Keep the existing per-row comments and the Pluto row's `[M]`/`[D]`/`[L]` tags with the values they describe — move each tag comment onto the constituent that now carries that number. Earth's list:
 
@@ -348,12 +348,12 @@ In `src/data/bodies/atmosphereParams.ts`, give each row a `constituents` array p
 
 The seven other rows follow the same shape with their own numbers and **no ozone constituent** (their `ozoneWidthKm` is 0, a term that contributed nothing).
 
-- [ ] **Step 6: Run the migration test**
+- [x] **Step 6: Run the migration test**
 
 Run: `npx vitest run tests/data/bodies/atmosphereConstituentMigration.test.ts`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 7: Typecheck and commit**
+- [x] **Step 7: Typecheck and commit**
 
 Run: `npm run typecheck`
 
@@ -380,7 +380,7 @@ The atomic GPU switch: the packer's new layout and the shader's new struct must 
 
 The packer's parameter narrows to `Pick<AtmosphereParams, 'planetRadiusKm' | 'atmosphereTopKm' | 'groundAlbedo' | 'constituents'>` — the four fields it actually reads. That is not cosmetic: it decouples this task from Task 3, which is still deleting fields from `AtmosphereParams`, and it stops the test fixture having to carry nine dead keys to typecheck. It also makes the "the look dials do not ride this buffer" contract a type, not a comment.
 
-- [ ] **Step 1: Rewrite the packer test**
+- [x] **Step 1: Rewrite the packer test**
 
 Replace `tests/utils/gpu/packScatteringParams.test.ts`. Drive the real packer with a two-constituent fixture (one exponential/HG, one tent/rayleigh) using distinct dyadic sentinels, and pin every offset including the `u32` tag words and the zero-fill of unused slots:
 
@@ -476,12 +476,12 @@ describe('ScatteringParams byte offsets', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `npx vitest run tests/utils/gpu/packScatteringParams.test.ts`
 Expected: FAIL — `SCATTERING_PARAMS_BYTES` and `MAX_CONSTITUENTS` are not exported.
 
-- [ ] **Step 3: Rewrite the packer**
+- [x] **Step 3: Rewrite the packer**
 
 Replace the body of `src/utils/gpu/packScatteringParams.ts`. Rewrite the module header to describe the new layout (and cut it to the ≤ 10-line budget — the dense-vec3-tail essay describes a layout that no longer exists). The `u32` tags are why this returns an `ArrayBuffer` with two views rather than a bare `Float32Array`.
 
@@ -541,11 +541,11 @@ export function packScatteringParams(params: ScatteringInput): ArrayBuffer {
 }
 ```
 
-- [ ] **Step 4: Update the renderer's two lines**
+- [x] **Step 4: Update the renderer's two lines**
 
 In `src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts`, change the import from `SCATTERING_PARAMS_FLOATS` to `SCATTERING_PARAMS_BYTES` and line 377 from `size: SCATTERING_PARAMS_FLOATS * 4` to `size: SCATTERING_PARAMS_BYTES`. Line 380 needs no change — `writeBuffer` accepts an `ArrayBuffer`.
 
-- [ ] **Step 5: Rewrite the shader core**
+- [x] **Step 5: Rewrite the shader core**
 
 In `src/services/gpu/shaders/atmosphere/scattering.wesl`:
 
@@ -664,7 +664,7 @@ fn sampleMediumIsotropic(params: ScatteringParams, posKm: vec3<f32>) -> MediumSa
 }
 ```
 
-- [ ] **Step 6: Update the four call sites**
+- [x] **Step 6: Update the four call sites**
 
 `transmittanceLut.wesl`: line 33 import `sampleMediumIsotropic` instead of `sampleMedium`; line 65 `let m = sampleMediumIsotropic(params, pos);`.
 
@@ -672,7 +672,7 @@ fn sampleMediumIsotropic(params: ScatteringParams, posKm: vec3<f32>) -> MediumSa
 
 `skyViewLut.wesl`: drop the `rayleighPhase` / `miePhase` imports (lines 49-50) and the `rp` / `mp` locals (lines 127-128) — `params.miePhaseG` no longer exists; line 142 `let m = sampleMedium(params, pos, cosTheta);`; line 148 `let scatterPhased = m.scatterPhased;`; line 149 `let scatterTotal = m.scatterTotal;`. Keep `cosTheta` (line 126) — it is now an argument. Inline the two locals at their single use if that reads better, but do not disturb the twilight block below them.
 
-- [ ] **Step 7: Run the tests, typecheck and build**
+- [x] **Step 7: Run the tests, typecheck and build**
 
 Run: `npx vitest run tests/utils/gpu/packScatteringParams.test.ts tests/data/bodies/atmosphereConstituentMigration.test.ts`
 Expected: PASS.
@@ -680,7 +680,7 @@ Expected: PASS.
 Run: `npm run typecheck` then `npm run build` (the build relinks WESL — this is the only compile check the shader gets).
 Expected: both clean.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/utils/gpu/packScatteringParams.ts src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts src/services/gpu/shaders/atmosphere/scattering.wesl src/services/gpu/shaders/atmosphere/transmittanceLut.wesl src/services/gpu/shaders/atmosphere/multiScatterLut.wesl src/services/gpu/shaders/atmosphere/skyViewLut.wesl tests/utils/gpu/packScatteringParams.test.ts
@@ -700,25 +700,25 @@ git commit -m "refactor(atmosphere): accumulate over constituents in the LUT bak
 - Consumes: everything from Task 2 — nothing reads the old fields by this point.
 - Produces: nothing new.
 
-- [ ] **Step 1: Remove the fields from the type**
+- [x] **Step 1: Remove the fields from the type**
 
 Delete `rayleighScatter`, `rayleighScaleHeightKm`, `mieScatter`, `mieAbsorption`, `mieScaleHeightKm`, `miePhaseG`, `ozoneAbsorption`, `ozoneCenterKm`, `ozoneWidthKm` from `AtmosphereParams`. Update the type's header comment: it currently describes Bruneton/Hillaire coefficient fields that no longer exist.
 
-- [ ] **Step 2: Remove them from all eight rows**
+- [x] **Step 2: Remove them from all eight rows**
 
 Delete the same nine keys from every row in `src/data/bodies/atmosphereParams.ts`. Update the module header, which describes the old shape.
 
-- [ ] **Step 3: Confirm nothing else referenced them**
+- [x] **Step 3: Confirm nothing else referenced them**
 
 Run: `rg -n "rayleighScatter|rayleighScaleHeightKm|mieScatter|mieAbsorption|mieScaleHeightKm|miePhaseG|ozoneAbsorption|ozoneCenterKm|ozoneWidthKm" src tools tests`
 Expected: matches only inside `tests/data/bodies/atmosphereConstituentMigration.test.ts` (its own frozen `LEGACY_ROWS`).
 
-- [ ] **Step 4: Full suite, typecheck, build**
+- [x] **Step 4: Full suite, typecheck, build**
 
 Run: `npm test`, `npm run typecheck`, `npm run build`
 Expected: all clean, no test-count regression.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/scene/AtmosphereParams.d.ts src/data/bodies/atmosphereParams.ts
