@@ -1,25 +1,13 @@
 /**
- * `RAW_DATA` — single source of truth for every catalog raw-data file the
- * build pipeline consumes. Keyed by dotted-lowercase `<catalog>.<artifact>`
- * (`'2mrs.table3'`, `'cf4.table2'`, …); consumers call `rawDataPath(key)`
- * rather than hand-writing `data/raw/...` strings, so a file move is a
- * one-line edit here. `RawDataKey` gives compile-time key checking.
+ * `RAW_DATA` — single source of truth for every raw-data file the build pipeline
+ * consumes, keyed dotted-lowercase `<catalog>.<artifact>`. Consumers call
+ * `rawDataPath(key)` rather than hand-writing `data/raw/...`, so a file move is
+ * a one-line edit here and `RawDataKey` rejects a bad key at compile time.
  *
- * ## Conventions
- *
- * - **Keys**: `<catalog>.<artifact>`. First segment = catalog/producer
- *   (`2mrs`, `glade`, `hyperleda`, `sdss`, `famous`, `cf4`, `mcpm`,
- *   `milliquas`, `mcxc`, `mscc`, `desi`, `gaia`, `textures`, `fonts`,
- *   `starnet`, `filaments`).
- * - **`source`**: `'committed'` = in git; `'gitignored'` = fetcher output.
- *   A missing gitignored file → run the fetcher; a missing committed file
- *   → the repo is broken.
- * - **`kind`**: `'file'` or `'directory'`. Directories appear when the
- *   filename is dynamic (chunk files, tier variants); consumers `join()`.
- * - **`upstream`/`fetcher`/`readme`**: optional provenance documentation.
- *
- * Build artefacts (`public/data/*.bin`) are outputs, not inputs — they are
- * not registered here.
+ * `source`: `'committed'` = in git, so a missing file means a broken repo;
+ * `'gitignored'` = fetcher output, so a missing file means "run the fetcher".
+ * `kind: 'directory'` covers dynamic filenames (chunks, tier variants) —
+ * consumers `join()`. Build artefacts are outputs; they are not registered.
  */
 
 import { resolve } from 'node:path';
