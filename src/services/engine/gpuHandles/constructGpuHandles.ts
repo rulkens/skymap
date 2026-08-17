@@ -4,10 +4,8 @@ import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuH
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 /**
- * Walks `rows` in array order, writing each row's constructed handle onto
- * `state.gpu` before moving to the next — so a later row's `construct`
- * (e.g. `starCatalogPickRenderer`) can read an earlier row's result straight
- * off `state.gpu.<key>`, matching today's hand-written `initGpu.ts` body.
+ * Walks `rows` in array order, writing each result onto `state.gpu` first,
+ * so a later row's `construct` can read an earlier row's value there directly.
  */
 export function constructGpuHandles(
   rows: readonly GpuHandleRow[],
@@ -15,10 +13,8 @@ export function constructGpuHandles(
   deps: GpuHandleConstructDeps,
 ): void {
   for (const row of rows) {
-    // GpuHandleRow is distributive over GpuHandleKey, so each row literal
-    // already pins `construct`'s return to its own key's exact field type —
-    // tsc just can't carry that correlation through the loop variable's
-    // union type. The cast papers over that gap only; it adds no real slack.
+    // Correlation lives at the row literal (GpuHandleRow distributes over
+    // GpuHandleKey); tsc can't carry it through the loop var's union type.
     (state.gpu as Record<GpuHandleKey, unknown>)[row.key] = row.construct(state, deps);
   }
 }
