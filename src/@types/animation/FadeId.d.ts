@@ -35,10 +35,9 @@
  *                    once its artifact uploads, fades out on the master toggle.
  *                    No discriminator.
  *   - zoneOfAvoidance — the galactic-plane dust band overlay. Seeded from
- *                    `settings.zoneOfAvoidance.enabled`; its label is a
- *                    separate `labelLayer` controller (band and label toggle
- *                    independently, mirroring milkyWay's disk/label split).
- *                    No discriminator.
+ *                    `settings.zoneOfAvoidance.enabled`, which gates both
+ *                    the band and its curved lettering — a single toggle,
+ *                    not a band/label split. No discriminator.
  *   - orbitTrails  — the near-field Keplerian orbit trails (Earth / Jupiter /
  *                    Moon …). Seeded from `settings.orbitTrails.enabled` and
  *                    multiplied into the layer's per-orbit apparent-size alpha so

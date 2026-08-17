@@ -4,9 +4,8 @@
  * recede band × layer fade-registry opacity. The band fades IN as the Milky
  * Way frames up and back OUT once the Local Group is the subject — the guide
  * is scoped to the Milky-Way-context shot, not a permanent cosmic-scale fixture.
- *
- * Called twice per frame with the band's and label's fade opacities separately
- * so they dissolve on the same visibility window while toggling independently.
+ * Called once per frame (`zoneOfAvoidanceLiveness.ts`); feeds both the band
+ * and label draws, which share one fade toggle.
  */
 
 import { fadeBand } from '../../../utils/math/fadeBand';

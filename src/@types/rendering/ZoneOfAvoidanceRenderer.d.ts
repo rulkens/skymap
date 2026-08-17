@@ -13,7 +13,7 @@
  * discrete world-oriented MSDF glyph quads, a separate pipeline from the
  * band's fullscreen ray march (see zoneOfAvoidanceRenderer.ts's header).
  * `drawPick` reruns the SAME ray march against an r32uint pick target so a
- * click only registers where the band is actually visible.
+ * click only registers where the band's density is perceptible.
  */
 
 import type { OrbitCamera } from '../camera/OrbitCamera';
@@ -72,9 +72,9 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
    *
    * `tuning.labelColor` is the lettering's tint (linear RGB); `labelRadiusMpc`
    * is the fixed radius (Mpc) of the galactic-plane circle the lettering
-   * sits on; `fadeAlpha` is the caller's per-frame opacity
-   * (`zoneOfAvoidanceLayerOpacity` composed with the `labelLayer`/
-   * `zoneOfAvoidance` fade-registry entry — see `zoneOfAvoidanceLayer.ts`).
+   * sits on; `fadeAlpha` is the same per-frame opacity `draw` receives —
+   * band and lettering ride the single `zoneOfAvoidance` fade-registry
+   * entry, not independent controllers (see `zoneOfAvoidanceLiveness.ts`).
    * The glyph-instance buffer is built once at construction from
    * `layoutLabel`; this call only writes the small per-frame uniform and
    * issues one instanced draw.
