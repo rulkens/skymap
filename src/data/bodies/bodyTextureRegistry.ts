@@ -123,18 +123,13 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'usgs',
     grayscaleTint: [0.62, 0.58, 0.52],
   },
-  // Pluto / Charon: medium is a LOOK ceiling, not a source ceiling — the USGS
-  // sources measure 24888px and 12693px wide, well past 8k. Medium is a
-  // sensible wire-cost/detail balance for a body this small on screen; 8k
-  // would be pointless. The far-side coverage gap (New Horizons only resolved
-  // the encounter hemisphere well) is a FIDELITY caveat about the data, not a
-  // resolution ceiling.
-  // Both USGS sources measured single-channel (`sharp(...).metadata()`:
-  // channels=1, space=b-w). Tints encode the disk-averaged hue, not the
-  // brightest feature: Pluto's tholin haze is butterscotch-tan overall
-  // (Olkin+17, AJ 154 258); Charon is spectrally neutral apart from the
-  // reddish Mordor Macula cap (~2.7% of the colour variance — Protopapa+19,
-  // ApJL 872 L36), so its tint stays near-grey with a faint warm bias.
+  // Pluto / Charon: medium is a LOOK ceiling, not a source ceiling — sources
+  // measure 24888px/12693px, well past 8k; the far-side coverage gap (only the
+  // encounter hemisphere is well-resolved) is a fidelity caveat, not why the
+  // tier is capped. Both sources measured single-channel (`sharp(...).metadata()`:
+  // channels=1, space=b-w); `grayscaleTint` is a reasoned calibration against the
+  // Europa/Callisto idiom, not literal RGB extraction — see task-8a-tint-report.md
+  // for the derivation and citations.
   pluto: {
     bodyId: 'pluto',
     kinds: { surface: 'medium' },

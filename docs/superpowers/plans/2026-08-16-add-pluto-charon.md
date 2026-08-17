@@ -82,20 +82,20 @@ linear form is within visual accuracy. Record this tradeoff in a row comment (th
 plan's convention calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat
 because they don't need it.
 
-* [ ] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
+- [ ] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
       `plane` — Table 2a is ecliptic-referenced like Table 1), following the exact derivation idiom
       the Neptune row (`orbitalElements.ts:296-320`) uses: `a`/`e`/`i`/`Ω` transcribed directly,
       `ω = ϖ − Ω` and `M = L − ϖ` shown inline, the six JPL rate columns quoted in a comment and
       converted the same way (`dω/dt = dϖ/dt − dΩ/dt`, `dM/dt = dL/dt − dϖ/dt`). Use the palette
       constant from Task 1.
-* [ ] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
+- [ ] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
       the end of the array** (after Iapetus — see Global constraints). `radiusKm` from WGCCRE 2015's
       updated Pluto size (verify at the source, not from memory); `albedo` a plausible flat tan/grey
       (it's the label-tint and pre-texture fallback colour, not load-bearing once textured).
-* [ ] `npm run typecheck` → GREEN.
-* [ ] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
+- [ ] `npm run typecheck` → GREEN.
+- [ ] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
       neither table is length-pinned).
-* [ ] Commit both files.
+- [ ] Commit both files.
 
 ---
 
