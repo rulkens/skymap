@@ -128,9 +128,12 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // encounter hemisphere is well-resolved) is a fidelity caveat, not the tier
   // driver. Both sources measured single-channel (`sharp(...).metadata()`:
   // channels=1, space=b-w); `grayscaleTint` is a reasoned calibration against
-  // the Europa/Callisto idiom, not literal RGB extraction — Pluto reads
-  // butterscotch-tan overall (Olkin+17, AJ 154 258), Charon is near-neutral but
-  // for a small reddish polar cap (Grundy+16, Science 351 aad9189).
+  // the Europa/Callisto idiom, not literal RGB extraction — Pluto reads warm
+  // tan overall (disc mean R:G:B ≈ 1:0.94:0.85 off NASA's natural-colour MVIC
+  // view, https://science.nasa.gov/resource/true-colors-of-pluto/; the tint is
+  // more saturated than that mean on purpose, since one flat multiply on a
+  // panchromatic mosaic is all the hue this body gets), Charon is near-neutral
+  // but for a small reddish polar cap (Grundy+16, Science 351 aad9189).
   pluto: {
     bodyId: 'pluto',
     kinds: { surface: 'medium' },
