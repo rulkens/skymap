@@ -433,7 +433,8 @@ schema field for it; it's prose, per the grill session's Q1 decision).
 
 **Named observable behaviours (manual smoke pass):**
 
-- Pluto shows Tombaugh Regio; Charon shows Mordor Macula.
+- Pluto shows Tombaugh Regio; Charon shows its dark polar cap (Neverland Regio, IAU-adopted
+  2026-02-02, the "Mordor Macula" of the New Horizons team's nickname).
 - Charon visibly keeps one face toward Pluto as sim time advances (mutual tidal lock).
 - InfoCard copy for at least one of the pair says "dwarf planet" and describes the binary/double
   relationship.
