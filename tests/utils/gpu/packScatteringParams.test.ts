@@ -38,6 +38,9 @@ import type { AtmosphereParams } from '../../../src/@types/scene/AtmosphereParam
 // float32-representable and pairwise distinct, so a swap or a mis-slotted field
 // perturbs a slot this test pins.
 const PARAMS: AtmosphereParams = {
+  // Ignored by this packer until the constituent switch lands; present so the
+  // fixture satisfies the row type.
+  constituents: [],
   rayleighScatter: [1 / 16, 2 / 16, 3 / 16], // slots 0..2
   rayleighScaleHeightKm: 4 / 16, //             slot 3
   ozoneAbsorption: [5 / 16, 6 / 16, 7 / 16], //  slots 4..6

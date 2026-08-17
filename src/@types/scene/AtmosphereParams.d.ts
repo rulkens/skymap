@@ -10,10 +10,12 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { AtmosphereConstituent } from './AtmosphereConstituent';
 
 export type AtmosphereParams = {
   readonly planetRadiusKm: number; // ground sphere (Earth 6371, matching SCENE_EARTH.radiusKm)
   readonly atmosphereTopKm: number; // top-of-atmosphere radius (planetRadiusKm + visible-atmosphere thickness)
+  readonly constituents: readonly AtmosphereConstituent[]; // ≤ MAX_CONSTITUENTS; list order is the accumulation order
   readonly rayleighScatter: Vec3; // per-channel Rayleigh scattering coefficient, 1/km
   readonly rayleighScaleHeightKm: number; // exponential density falloff
   readonly mieScatter: Vec3; // per-channel Mie scattering, 1/km — grey for most bodies, but Pluto's sub-micron tholin haze scatters blue preferentially, which a scalar cannot express
