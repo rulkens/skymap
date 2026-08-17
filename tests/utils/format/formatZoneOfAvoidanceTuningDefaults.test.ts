@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatZoneOfAvoidanceTuningDefaults } from '../../../src/utils/format/formatZoneOfAvoidanceTuningDefaults';
 import type { ZoneOfAvoidanceTuning } from '../../../src/@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceSettings } from '../../../src/@types/settings/ZoneOfAvoidanceSettings';
 
 // Parses the formatter's output back into a plain object the same way a
 // human pasting it into defaults.ts would rely on it working: as a literal
@@ -49,5 +50,26 @@ describe('formatZoneOfAvoidanceTuningDefaults', () => {
     // knob added to `ZoneOfAvoidanceTuning` forces the fixture to grow, and
     // this assertion then covers it without anyone remembering to.
     expect(Object.keys(parsed).sort()).toEqual(Object.keys(tuning).sort());
+  });
+
+  it('drops `enabled` when called with the settings bag rather than the bare tuning cluster', () => {
+    // The real call site (`ZoneOfAvoidanceTuningSection.tsx`) passes the live
+    // `zoneOfAvoidance` settings object, typed `ZoneOfAvoidanceSettings` —
+    // `ZoneOfAvoidanceTuning` plus `enabled`. TS accepts that as a
+    // `ZoneOfAvoidanceTuning` argument (the wider type satisfies the
+    // narrower param), so only a fixture shaped like the real caller catches
+    // a walk that leaks `enabled` into the emitted literal.
+    const settings: ZoneOfAvoidanceSettings = {
+      enabled: true,
+      intensity: 0.5,
+      radialFalloff: 0.35,
+      edgeSharpness: 5,
+      color: [1, 0.75, 0.5],
+      labelColor: [1, 1, 1],
+    };
+
+    const output = formatZoneOfAvoidanceTuningDefaults(settings);
+
+    expect(output).not.toContain('enabled');
   });
 });
