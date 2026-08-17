@@ -459,6 +459,40 @@ schema field for it; it's prose, per the grill session's Q1 decision).
 
 ---
 
+### Task 14: Pluto's atmosphere (added mid-flight, at the user's choice)
+
+Not in the original plan. The Task 4 assessment concluded an accurate Pluto atmosphere was
+impossible, because `AtmosphereParams.mieScatter` was a grey scalar and Pluto's atmosphere is
+visible only as blue haze — a wavelength-dependent Mie effect off sub-micron tholin aggregates.
+Rayleigh, the one per-channel term available, is ~300× below the haze at ~1 Pa. Offered the choice
+between backlogging, a Rayleigh-as-proxy hack, and the real shader change, the user chose the
+shader change knowing it re-opened every atmosphere body.
+
+- [x] Widen `mieScatter` to `Vec3` across the type, `packScatteringParams`, `scattering.wesl`,
+      `multiScatterLut.wesl`, `skyViewLut.wesl` and the packer test, splatting all seven existing
+      rows to `[X, X, X]` so it is a provable no-op. The `vec3` lands on an already-16-byte-aligned
+      slot and absorbs both trailing pads: the struct stays exactly 80 bytes / 20 f32.
+- [x] Add the `pluto` row from primary-literature constants, each tagged [M]easured / [D]erived
+      (arithmetic shown) / [L]ook. Magnitude anchors on a measured vertical optical depth of 0.013
+      over a 50 km scale height; the colour is the measured MVIC blue/red ratio of 2.5 at fixed
+      phase (λ^-3.44); `miePhaseG: 0.5` is solved to reproduce the measured forward lobe height,
+      not borrowed from Earth's 0.8. Derivations live in the research report, not the row.
+- [x] Fix `densityOzone`, which divided by zero on every non-Earth body — `ozoneWidthKm: 0` is the
+      table's "no ozone" idiom, and WGSL's Finite Math Assumption makes the result _indeterminate_
+      rather than merely NaN, naming `max` as a builtin that misbehaves under exactly that
+      optimisation. Pre-existing; found by the research, not caused by it.
+- [x] Visual pass: the ring reads backlit and is absent front-lit. That is the model reproducing
+      itself — the forward-scattering lobe is 27× stronger at high phase, which is why the famous
+      blue-haze image is New Horizons' departure shot. Known caricature, recorded in the row: a
+      single HG lobe has no backscatter term, so the front-lit case is likely under-represented.
+
+Re-homed here from `panSharpenRgb`'s header when it was cut to the comment budget: the chroma
+carrier is `RGB/Y - 1` rather than photometric matching **because** that invariance is what lets
+two independently-exposed sources combine with no photometric alignment step — only the geometric
+alignment the caller guarantees by resizing both to one grid.
+
+---
+
 ## Definition of Done
 
 **Deliverable inventory:**
@@ -475,6 +509,12 @@ schema field for it; it's prose, per the grill session's Q1 decision).
   regenerated and committed where the project's convention commits generated output.
 - The Charon element row carries the barycentre-approximation landmine comment, linked to
   `docs/backlog/2026-08-16-barycentric-orbit-pairs.md`.
+- Pluto's texture is _derived_, not swapped: no gap-free true-colour global map exists, so
+  panchromatic luminance carries MVIC chroma with the enhancement inverted by a fitted 2×2 matrix.
+  `npm run fit-pluto-chroma` re-derives the four constants; it gates on outcome (within half a ΔE
+  of a fresh fit, still beating the uniform-scale baseline), not on digits, because the fit's tile
+  population moves with the reference rendition's noise floor.
+- `ATMOSPHERE_PARAMS` carries a `pluto` row and `mieScatter` is per-channel (Task 14).
 
 **Named observable behaviours (manual smoke pass):**
 
