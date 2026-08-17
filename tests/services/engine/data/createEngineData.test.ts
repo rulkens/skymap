@@ -47,6 +47,8 @@ describe('createEngineData', () => {
       'rhea',
       'titan',
       'iapetus',
+      'pluto',
+      'charon',
     ]);
   });
 
