@@ -50,6 +50,7 @@ import type { FlowSettings } from './FlowSettings';
 import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { MilkyWaySettings } from './MilkyWaySettings';
+import type { ZoneOfAvoidanceSettings } from './ZoneOfAvoidanceSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
@@ -78,18 +79,18 @@ export type EngineSettingsState = {
 
   /**
    * Galaxy catalog point-billboard controls — the shared appearance knobs that
-   * influence every galaxy catalog's `points.wgsl` draw — plus the galaxy-catalog-layer
-   * master gate and per-galaxy-catalog items. `enabled` is the coarse "hide all
-   * galaxy catalogs" gate (symmetric with `volumes.enabled` / `structures.enabled`).
-   * Per-galaxy catalog state lives in `items` — one row per `GalaxyCatalogId`, each carrying
-   * the layer-visibility axis (`enabled`) and the text-label axis
-   * (`labelEnabled`). Only the famous-galaxy catalog actually renders a label;
-   * the other galaxy catalogs carry `labelEnabled` inertly so all five source-type
-   * clusters share the one per-item shape (galaxy catalogs / structures / volumes /
-   * star catalogs / bodies all expose `items[id].enabled`).
+   * influence every galaxy catalog's `points.wgsl` draw, plus per-galaxy-catalog
+   * items. Per-galaxy catalog state lives in `items` — one row per
+   * `GalaxyCatalogId`, each carrying the layer-visibility axis (`enabled`) and
+   * the text-label axis (`labelEnabled`). Only the famous-galaxy catalog
+   * actually renders a label; the other galaxy catalogs carry `labelEnabled`
+   * inertly so all five source-type clusters share the one per-item shape
+   * (galaxy catalogs / structures / volumes / star catalogs / bodies all
+   * expose `items[id].enabled`). Unlike `volumes` / `starCatalogs`, there is no
+   * cluster-level master gate: no product decision has made "hide all galaxy
+   * catalogs" a control, so the cluster carries no unwritten `enabled` field.
    */
   galaxyCatalogs: {
-    enabled: boolean;
     sizePx: number;
     brightness: number;
     depthFade: boolean;
@@ -175,6 +176,14 @@ export type EngineSettingsState = {
    * themselves on `MilkyWayTuning`.
    */
   milkyWay: MilkyWaySettings;
+
+  /**
+   * Zone-of-Avoidance singleton overlay controls — one visibility toggle
+   * (`enabled` gates the band and its lettering together) plus the band's
+   * look knobs. Shape + per-field docs live on `ZoneOfAvoidanceSettings`; the
+   * knobs themselves on `ZoneOfAvoidanceTuning`.
+   */
+  zoneOfAvoidance: ZoneOfAvoidanceSettings;
 
   /**
    * Filament-skeleton overlay controls.  Master toggle + intensity scale
@@ -488,20 +497,19 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Structure-overlay master gate and per-category settings.  `enabled` is
-   * the coarse "hide all structures" gate (symmetric with `volumes.enabled`).
-   * Per-category state lives in `items` — one row per `StructureId`,
-   * each carrying the ring/marker axis (`enabled`) and the text-label axis
-   * (`labelEnabled`).  Co-locating both axes on one row replaces the two
-   * parallel root records that previously held the same booleans in different
-   * shapes: a reader walks one `items[cat]` entry to learn everything about a
-   * category's visibility instead of cross-indexing two records by the same
-   * key.  `items` is the same per-item accessor galaxy catalogs, volumes, star
-   * catalogs, and bodies expose, so all five source-type clusters share one
-   * shape.  Defaults to every category fully visible.
+   * Structure-overlay per-category settings.  State lives in `items` — one
+   * row per `StructureId`, each carrying the ring/marker axis (`enabled`) and
+   * the text-label axis (`labelEnabled`).  Co-locating both axes on one row
+   * replaces the two parallel root records that previously held the same
+   * booleans in different shapes: a reader walks one `items[cat]` entry to
+   * learn everything about a category's visibility instead of cross-indexing
+   * two records by the same key.  `items` is the same per-item accessor
+   * galaxy catalogs, volumes, star catalogs, and bodies expose, so all five
+   * source-type clusters share one shape.  No cluster-level master gate —
+   * like `galaxyCatalogs`, nothing turns a "hide all structures" knob.
+   * Defaults to every category fully visible.
    */
   structures: {
-    enabled: boolean;
     items: Record<StructureId, StructureItemSettings>;
   };
 };

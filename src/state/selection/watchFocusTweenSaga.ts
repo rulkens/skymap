@@ -38,7 +38,8 @@
  * The dispatch alone wakes the render loop: `startCameraTween` is a `camera/*`
  * write, which `watchWakeSaga`/WAKE_ROUTES turns into a render request — so there is
  * no separate requestRender here. A null ref (focus release) resolves to a null
- * row → no tween.
+ * row → no tween; a `zoneOfAvoidance` row (the band has no position) is the
+ * same kind of no-op, filtered right after the null check.
  *
  * getContext is read INSIDE the worker (per-action), like watchSelectionWakeSaga and
  * watchTierSaga, because the engine registers its saga context AFTER the root saga
@@ -50,6 +51,7 @@ import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
+import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
@@ -81,6 +83,16 @@ export function* watchFocusTweenSaga() {
         row = extractSelectionRow(action.payload, resolveDeps());
       }
       if (row === null) return;
+
+      // Some rows (the zone-of-avoidance band today) have no focus target —
+      // ROW_FOCUSABLE is exhaustive over SelectionRow['type'], so a future
+      // non-focusable arm fails to compile there until declared, instead of
+      // silently reaching focusFraming's throw. This is the ONE place every
+      // `updateSelectionFocus` dispatch funnels through (InfoCard,
+      // double-click, keyboard shortcut, deep link, tour restore), so it's
+      // the enforcement site for that invariant: a no-op here, not a crash
+      // inside the saga worker.
+      if (!ROW_FOCUSABLE[row.type]) return;
 
       // A body the `followBody` driver WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock

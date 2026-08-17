@@ -47,7 +47,7 @@ describe('textureSourcesFor', () => {
     );
   });
 
-  it('the full pull selects the native tiers + both BMNG publications + the four USGS moons', () => {
+  it('the full pull selects the native tiers + both BMNG publications + the six USGS mosaics', () => {
     const full = textureSourcesFor(false);
     expect(filenames(full).sort()).toEqual(
       [
@@ -76,6 +76,13 @@ describe('textureSourcesFor', () => {
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
         'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
         'Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+        'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+        'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+        // Pluto's second (chroma) input and the true-colour reference its
+        // calibration is fitted against: neither is a `native`, so both ride the
+        // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).
+        'PIA11707.tif',
+        'BIG_P_COLOR_2_TRUE_COLOR1.png',
       ].sort(),
     );
   });

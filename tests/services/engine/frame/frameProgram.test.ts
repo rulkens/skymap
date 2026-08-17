@@ -65,7 +65,7 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the twelve-step main program', () => {
+  it('emits the thirteen-step main program', () => {
     // The two reduced-resolution AGGREGATE renders (survey stars into
     // `star-aggregates`, the Milky-Way cloud's star billboards into
     // `mw-aggregate`) both sit BEFORE the hdr NEAR0 step, so the `star-upsample`
@@ -80,13 +80,14 @@ describe('frameProgram', () => {
     // prelude carries TWO steps — the flow integrate and the atmosphere
     // sky-view LUT bake — both ahead of the foreground render so the atmosphere
     // shell samples this frame's LUT.
-    // Bloom OFF — the base twelve-step shape (the bloom-enabled program splices
+    // Bloom OFF — the base thirteen-step shape (the bloom-enabled program splices
     // one bloom step between the foreground composite and the tone-map; see the
     // bloom-gating tests below).
     expect(frameProgram(TONE, false)).toEqual([
       { kind: 'compute', name: 'flow' },
       { kind: 'compute', name: 'atmosphereSkyView' },
       { kind: 'render', target: 'volume', slab: COSMO },
+      { kind: 'render', target: 'zoa', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
       { kind: 'render', target: 'mw-aggregate', slab: NEAR0 },
@@ -219,9 +220,12 @@ describe('timedSlotsOf', () => {
     // slot (the merged-pass timing slot), so the empty steps show up as their
     // group key alone and the matched steps show their layers then the group
     // total. The foreground:0 render now precedes both composites (bodies merge
-    // into HDR before the tone-map), so its group-key slot sits above them.
+    // into HDR before the tone-map), so its group-key slot sits above them. The
+    // zoa render step matches no fake layer either, so it contributes only
+    // its own group-key slot, right after volume·COSMO.
     expect(timedSlotsOf(frameProgram(TONE, false), layers)).toEqual([
       'volume·COSMO',
+      'zoa·COSMO',
       'point-sprites',
       'milky-way',
       'hdr·COSMO',
@@ -250,11 +254,14 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, eight hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
+  it('derives the real registry slot list: scalar-volume, nine hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
-    // iterates. scalar-volume leads (the volume render step), then the eight
-    // COSMO hdr layers in registry order, then the two aggregate offscreens,
+    // iterates. scalar-volume leads (the volume render step), then
+    // zone-of-avoidance (its own reduced-res 'zoa' step, the same shape as
+    // scalar-volume), then the nine COSMO hdr layers in registry order —
+    // zone-of-avoidance-upsample among them, beside volume-upsample, its
+    // closest sibling — then the two aggregate offscreens,
     // each its OWN NEAR0 render step ahead of the hdr NEAR0 step:
     // star-aggregates, then milky-way-aggregate. The (hdr, NEAR0) step follows
     // with milky-way-upsample + milky-way + star-points + orbit-trails +
@@ -279,12 +286,15 @@ describe('timedSlotsOf', () => {
     expect(timedSlotsOf(frameProgram(TONE, true), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'volume·COSMO',
+      'zone-of-avoidance',
+      'zoa·COSMO',
       'point-sprites',
       'procedural-disks',
       'textured-disks',
       'filaments',
       'flow',
       'volume-upsample',
+      'zone-of-avoidance-upsample',
       'horizon-shell',
       'structure-markers',
       'hdr·COSMO',
@@ -366,9 +376,11 @@ describe('timedSlotGroupsOf', () => {
     // Rows keep draw order within their group: each matched layer, then its
     // step's group-key row; the two swap steps merge under Overlays. The
     // trailing infra group carries both composites (foreground:0→hdr linear
-    // merge, then hdr→swap tone-map) and pick.
+    // merge, then hdr→swap tone-map) and pick. The zoa render step matches
+    // no fake layer, so it contributes only its group-key row, between
+    // volume·COSMO and star-aggregates·NEAR0.
     expect(groups.map((g) => g.rows.map((r) => r.name))).toEqual([
-      ['volume·COSMO', 'star-aggregates·NEAR0', 'mw-aggregate·NEAR0'],
+      ['volume·COSMO', 'zoa·COSMO', 'star-aggregates·NEAR0', 'mw-aggregate·NEAR0'],
       ['point-sprites', 'milky-way', 'hdr·COSMO'],
       ['hdr·NEAR0'],
       ['earth', 'foreground:0·NEAR0'],
@@ -381,12 +393,13 @@ describe('timedSlotGroupsOf', () => {
     expect(groups[5]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
   });
 
-  it('merges scalar-volume + the two aggregate offscreens into one group and sinks composites+pick to the last group', () => {
+  it('merges scalar-volume + zone-of-avoidance + the two aggregate offscreens into one group and sinks composites+pick to the last group', () => {
     // The real registry against the real program — the value the DebugPanel
-    // consumes. scalar-volume (volume·COSMO), star-aggregates
-    // (star-aggregates·NEAR0) and milky-way-aggregate (mw-aggregate·NEAR0) are
-    // non-adjacent steps that all map to "Volumes & aggregates"; the two
-    // composites and pick — scattered through execution order — collapse into
+    // consumes. scalar-volume (volume·COSMO), zone-of-avoidance (zoa·COSMO),
+    // star-aggregates (star-aggregates·NEAR0) and
+    // milky-way-aggregate (mw-aggregate·NEAR0) are non-adjacent steps that all
+    // map to "Volumes & aggregates"; the two composites and pick — scattered
+    // through execution order — collapse into
     // the trailing "Composites & pick".
     expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
       'Volumes & aggregates',
@@ -404,12 +417,15 @@ describe('timedSlotGroupsOf', () => {
     // passes; the frame sees one step, so one timing row).
     expect(byTitle('Bloom').rows.map((r) => r.name)).toEqual(['bloom']);
     // Each render step trails its layers with its '<target>·<SLAB>' group-key
-    // row, so volume·COSMO follows scalar-volume, star-aggregates·NEAR0 follows
-    // star-aggregates, and mw-aggregate·NEAR0 follows milky-way-aggregate
+    // row, so volume·COSMO follows scalar-volume, zoa·COSMO follows
+    // zone-of-avoidance (its own reduced-res step), star-aggregates·NEAR0
+    // follows star-aggregates, and mw-aggregate·NEAR0 follows milky-way-aggregate
     // within this merged group.
     expect(byTitle('Volumes & aggregates').rows.map((r) => r.name)).toEqual([
       'scalar-volume',
       'volume·COSMO',
+      'zone-of-avoidance',
+      'zoa·COSMO',
       'star-aggregates',
       'star-aggregates·NEAR0',
       'milky-way-aggregate',

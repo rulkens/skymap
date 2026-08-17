@@ -1,0 +1,14 @@
+/*
+ * CompactZoneOfAvoidanceCard.module.css — the band's hover-preview outer hook.
+ * The chrome is the shared compactChrome vocabulary; .root composes the panel
+ * and the component reads the inner classes straight from compactChrome. The
+ * glyph is local — no other compact card needs one.
+ */
+.root {
+  composes: infoCardCompact from '../compactChrome.module.css';
+}
+
+.glyph {
+  font-size: 16px;
+  line-height: 1;
+}

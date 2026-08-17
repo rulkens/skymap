@@ -64,6 +64,7 @@ import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
   writeVolumeField,
+  setZoneOfAvoidanceEnabled,
 } from '../../state/settings/settingsSlice';
 
 /**
@@ -89,6 +90,7 @@ export const VISIBILITY_ACTION_ROW: Record<
   volumesMaster: (on) => [setVolumesEnabled(on)],
   flow: (on) => [setFlowEnabled(on)],
   constellations: (on) => [setConstellationsEnabled(on)],
+  zoneOfAvoidance: (on) => [setZoneOfAvoidanceEnabled(on)],
 
   // ── Per-item layers (one action per registered item) ────────────────────
   // These layers fan out across a `settings.<cluster>.items` record. The factory

@@ -57,14 +57,6 @@ export type BitmapStreamSubsystem = Destroyable & {
   slotUv(slot: number): readonly [number, number, number, number];
 
   /**
-   * Frame the slot was last allocate()-touched, or undefined if the key
-   * holds no slot. A key evicted and re-requested reports a fresh frame at
-   * a DIFFERENT slot — not a substitute for "is my slot still mine"; async
-   * writers ask `uploadBitmap` instead.
-   */
-  lastSeenFrame(key: string): number | undefined;
-
-  /**
    * Upload a bitmap into the slot the atlas holds for `key` RIGHT NOW, and
    * record the key as loaded.  Returns that slot, or `null` when the key
    * holds no slot at all — evicted during the fetch's round trip, or never

@@ -152,6 +152,10 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRendere
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer', () => ({
+  createZoneOfAvoidanceRenderer: vi.fn(() => makeStub('zoneOfAvoidanceRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
@@ -382,9 +386,11 @@ function makeState(): EngineState {
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
+      zoneOfAvoidanceRenderer: null,
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,

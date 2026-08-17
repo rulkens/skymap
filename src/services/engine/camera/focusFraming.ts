@@ -107,5 +107,19 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
       return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
     case 'star':
       return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
+    // The band carries no x/y/z (a line-of-sight effect, not a point), so it
+    // has no pose to fabricate. UNREACHABLE BY CONSTRUCTION: every
+    // `updateSelectionFocus` dispatch — InfoCard, double-click, keyboard
+    // shortcut, deep link, tour restore — funnels through the single
+    // `takeLatest(updateSelectionFocus, …)` worker in `watchFocusTweenSaga`,
+    // which filters on `ROW_FOCUSABLE` (`services/engine/helpers/rowFocusable.ts`,
+    // exhaustive over `SelectionRow['type']`) before ever calling
+    // `focusTweenDescriptor`/`focusFraming` (that's the ONE enforcement site —
+    // do not add a second filter here or elsewhere). The clip-authoring path
+    // (`resolveClipFoci`) is separately unreachable: `urlHashFor`/`focusIdOf`
+    // never encode this arm, so no `FocusId` can decode back to it. This throw
+    // is therefore a should-never-happen assertion, not a live error path.
+    case 'zoneOfAvoidance':
+      throw new Error('focusFraming: zoneOfAvoidance has no focus target');
   }
 }

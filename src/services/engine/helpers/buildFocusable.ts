@@ -19,6 +19,7 @@
  */
 import { buildGalaxyInfo } from './buildGalaxyInfo';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
+import { ZONE_OF_AVOIDANCE_INFO } from '../../../data/zoneOfAvoidance/zoneOfAvoidanceInfo';
 import { sStarOrbitInfo } from '../../../data/bodies/sStarOrbitInfo';
 import { apparentMagnitudeFromAbs } from '../../../utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../utils/star/spectralClassFromBpRp';
@@ -34,6 +35,7 @@ const BUILD_FOCUSABLE: {
   galaxyCatalog: (row) => buildGalaxyInfo(row),
   structure: (row) => row,
   milkyWay: () => MILKY_WAY_INFO,
+  zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,
   body: (row): BodyInfo => ({
     type: 'body',
     id: row.id,

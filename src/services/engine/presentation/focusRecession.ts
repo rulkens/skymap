@@ -112,6 +112,7 @@ const RECESSION_BY_KIND = {
   constellations: undefined,
   orbitTrails: undefined, // near-field foreground trails never recede on focus
   overlay: undefined,
+  zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
 } satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, number | undefined>;
 
 /**

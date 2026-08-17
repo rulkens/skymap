@@ -9,10 +9,10 @@
  * ### Why `run`'s result goes through `asArray`
  *
  * A `run` returns `Action | Action[] | null`: most keys dispatch one action,
- * `escape` dispatches two (`clearSelection` + `exitTour`), and the gated keys
- * (`f` with nothing selected, the tour keys outside a tour, `/` with the palette
- * already open) return `null`. `asArray` folds all three shapes into one
- * iterable so `null` naturally puts nothing.
+ * `escape` dispatches three (`clearSelection` + `exitTour` + `stopClip`), and
+ * the gated keys (`f` with nothing selected, the tour keys outside a tour, `/`
+ * with the palette already open) return `null`. `asArray` folds all three
+ * shapes into one iterable so `null` naturally puts nothing.
  *
  * ### Why preventDefault is NOT this saga's concern
  *

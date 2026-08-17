@@ -64,6 +64,8 @@ import {
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_ORBIT_TRAILS_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
@@ -99,7 +101,6 @@ export function makeSettingsFixture(
   return {
     orientation: DEFAULT_ORIENTATION,
     galaxyCatalogs: {
-      enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
@@ -131,6 +132,10 @@ export function makeSettingsFixture(
       enabled: DEFAULT_MILKY_WAY_ENABLED,
       labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
       ...MILKY_WAY_TUNING_DEFAULTS,
+    },
+    zoneOfAvoidance: {
+      enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+      ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
@@ -198,7 +203,6 @@ export function makeSettingsFixture(
       },
     },
     structures: {
-      enabled: true,
       items: Object.fromEntries(
         STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
       ) as Record<StructureId, StructureItemSettings>,

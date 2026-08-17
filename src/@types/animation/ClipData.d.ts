@@ -23,6 +23,13 @@
  *     timeline with a `wait(sec)`; there is no separate clip-level field for it,
  *     because a leading `wait` already shifts every following window by `sec`.
  *
+ *   - `loop`: when true, `clipPlayer` rewinds the clock instead of ending the
+ *     clip once elapsed reaches `durationSec` — see `clipPlayer.tick`'s
+ *     completion arm. The clip then only ends via `stop()` (a `stopClip`
+ *     dispatch or saga cancellation), never on its own. For the loop point to
+ *     look seamless, author the timeline so `pose(durationSec) === pose(0)`
+ *     (mod 2π on any spun angle channel) — the compiler does not verify this.
+ *
  * ### Why `start?: CameraPose | 'live'` instead of always requiring a pose?
  *
  * A clip authored for a specific bookmark (e.g. the Virgo Cluster chapter) knows
@@ -40,4 +47,5 @@ import type { Effect } from './Effect';
 export type ClipData = {
   readonly start?: CameraPose | 'live';
   readonly timeline: Effect[];
+  readonly loop?: boolean;
 };

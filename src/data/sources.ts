@@ -1,7 +1,7 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Nine kinds,
+ * The single registry of every data source skymap loads. Ten kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
@@ -36,10 +36,14 @@
  *                     pass — a survey star's identity is its record index, a
  *                     seeded star's is its stable seed id — and neither is
  *                     persisted to a `.bin`.
+ *   'zoneOfAvoidance' — the dust-obscured guide band along the galactic
+ *                     plane. Single global overlay, closed-form shape (no
+ *                     asset, no per-record identity); unlike `'milkyWay'`
+ *                     it is pickable — clicking the band opens its InfoCard.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`
- * and `'body'` exist
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`,
+ * `'body'` and `'zoneOfAvoidance'` exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.
@@ -86,6 +90,7 @@ import { SUN_ENTRY } from './sources/sun';
 import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
 import { S_STAR_ENTRY } from './sources/s-star';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
+import { ZONE_OF_AVOIDANCE_ENTRY } from './sources/zone-of-avoidance';
 
 export { Source } from './source';
 
@@ -152,6 +157,7 @@ export const SOURCE_REGISTRY = {
   [Source.Sun]: SUN_ENTRY,
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
   [Source.SStar]: S_STAR_ENTRY,
+  [Source.ZoneOfAvoidance]: ZONE_OF_AVOIDANCE_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
