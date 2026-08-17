@@ -97,6 +97,16 @@ the deep tuning surface.
    mini-plans; the rest are bounded changes. Track B is unchanged and
    parallel; **Track C gates on B + rungs 1–3 only**, so the MW landing gets
    earlier, not later.
+10. **Row-divergence rule** (2026-08-17, user directive): when a subsystem's
+    row doesn't fit a family's row shape, never encode the misfit as a per-row
+    exception — no optional field only one row reads, no flag, no bolted
+    branch. Re-evaluate **both ends**: the row shape AND the underlying
+    contract (loading / rendering / data structure) that produced the misfit.
+    Either the underlying contract gets refactored so the row fits, or the row
+    shape was wrong and changes for **all** rows. An optional field is
+    legitimate only when it names a capability several rows share (e.g.
+    `rebuildOnSwapFormat`), never one subsystem's quirk. This applies at every
+    rung and at the final umbrella reassessment.
 
 ## The contract (settled sketch)
 
