@@ -1,23 +1,11 @@
 /**
- * packScatteringParams — pure packer for the 224-byte `ScatteringParams` uniform
- * (`shaders/atmosphere/scattering.wesl`), read by the three LUT bakes.
+ * packScatteringParams — pure packer for the `ScatteringParams` uniform the
+ * three LUT bakes read. Its twin is `struct ScatteringParams` in
+ * `shaders/atmosphere/scattering.wesl`; keep the field order in lockstep, since
+ * a drift raises no GPU error and iOS answers it with a dropped frame.
  *
- * This is the single source of truth for that byte layout: the renderer packs
- * through here so the CPU write can never drift from the WGSL struct — a drift
- * the GPU does not report and iOS answers with a dropped frame.
- *
- * The kind tags are `u32`, so this returns an `ArrayBuffer` with two views
- * rather than a bare `Float32Array`. Layout, matching the WESL struct exactly:
- *
- *   byte  0..11 : groundAlbedo      (vec3<f32>, 16-aligned)
- *   byte 12..15 : planetRadiusKm    (fills the vec3 tail)
- *   byte 16..19 : atmosphereTopKm
- *   byte 20..23 : constituentCount  (u32)
- *   byte 24..31 : pad — the array below must start 16-aligned
- *   byte 32..223: array<Constituent, 4>, stride 48
- *
- * Each constituent: scatter (vec3) + phaseG, absorb (vec3) + scaleHeightKm,
- * centerKm, widthKm, profileKind (u32), phaseKind (u32).
+ * The kind tags are `u32`, which is why this returns an `ArrayBuffer` with two
+ * views rather than a bare `Float32Array`.
  */
 
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';

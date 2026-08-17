@@ -731,27 +731,29 @@ git commit -m "refactor(atmosphere): drop the nine positional physics fields"
 
 The equivalence argument is a source-level proof; this is the check that the GPU agrees. It is the only gate that can catch a byte-layout error, since a wrong offset produces no GPU error.
 
-- [ ] **Step 1: Confirm the dev server is serving this worktree**
+- [x] **Step 1: Confirm the dev server is serving this worktree**
 
 The dev server stays running (CLAUDE.md). Confirm the port belongs to _this_ worktree's server before looking — a wrong port silently checks another branch.
 
-- [ ] **Step 2: Ask the user to compare each body against `main`**
+- [x] **Step 2: Ask the user to compare each body against `main`**
 
 Earth is the sensitive one (three constituents, the only tent profile, and the ozone term is what keeps the twilight zenith blue rather than grey). Then Venus, Mars, Jupiter, Saturn, Uranus, Neptune, and Pluto's backlit haze ring at phase > 160°, ~7 radii out.
 
 Expected: no perceptible difference on any body. A changed Earth twilight means the tent constituent is mis-packed; a changed Pluto ring means the per-channel Mie path is.
 
-- [ ] **Step 3: Record the outcome in the plan and commit any fix**
+- [x] **Step 3: Record the outcome in the plan and commit any fix**
+
+Outcome, 2026-08-18: all eight bodies confirmed unchanged by the user on the worktree's dev server. No fix needed.
 
 ## Definition of Done
 
-- [ ] All eight rows render identically to `main` (Task 4, user-confirmed).
-- [ ] `npm test`, `npm run typecheck`, `npm run build` clean.
-- [ ] `AtmosphereParams` carries no positional physics field.
-- [ ] The zero-width tent guard survives in `densityTent`, with its comment.
-- [ ] `MAX_CONSTITUENTS`, the 48-byte stride and the 224-byte total agree between `packScatteringParams.ts`, `scattering.wesl` and the packer test.
-- [ ] No new TODO/FIXME without an owner.
-- [ ] Comment budget respected in every touched file — `scattering.wesl`'s header and `packScatteringParams.ts`'s header both shrink.
+- [x] All eight rows render identically to `main` (Task 4, user-confirmed).
+- [x] `npm test`, `npm run typecheck`, `npm run build` clean.
+- [x] `AtmosphereParams` carries no positional physics field.
+- [x] The zero-width tent guard survives in `densityTent`, with its comment.
+- [x] `MAX_CONSTITUENTS`, the 48-byte stride and the 224-byte total agree between `packScatteringParams.ts`, `scattering.wesl` and the packer test.
+- [x] No new TODO/FIXME without an owner.
+- [x] Comment budget respected in every touched file — `packScatteringParams.ts` is now 16 comment lines against 54 of code, header 8 lines. `scattering.wesl` shrank (47-line header → 12) but the file as a whole remains over budget at 157/252; the excess is pre-existing LUT-parametrisation prose that this change did not touch, and sweeping it would be unrelated cleanup.
 
 ## Out of scope (deferred)
 
