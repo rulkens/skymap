@@ -9,8 +9,8 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('ROTATION_ELEMENTS', () => {
   it('has valid structure', () => {
-    // The 13 textured bodies (spec §3) — a flat/emissive sphere carries none.
-    expect(ROTATION_ELEMENTS).toHaveLength(13);
+    // The 15 textured bodies (spec §3) — a flat/emissive sphere carries none.
+    expect(ROTATION_ELEMENTS).toHaveLength(15);
 
     // Ids are the lookup key, so a duplicate would silently shadow a body.
     const ids = ROTATION_ELEMENTS.map((el) => el.id);
