@@ -3,8 +3,9 @@ import type { Vec2 } from '../math/Vec2';
 /**
  * ChromaCalibration — the fitted linear map that inverts a published
  * enhanced-colour map's saturation. It acts on the illumination-invariant chroma
- * `c = RGB_linear / Y - 1` (Rec.709 `Y`, so `dot(LUM, c) = 0` and re-attaching
- * the result to any luminance preserves that luminance exactly).
+ * `c = RGB_linear / Y - 1` (Rec.709 `Y`, so `dot(LUM, c) = 0`: re-attaching the
+ * result to any luminance preserves that luminance exactly, bar the gamut clamp
+ * in `panSharpenRgb`).
  *
  * `matrix` is row-major and applies to the COLUMN vector of `c`'s coordinates in
  * the plane's orthonormal basis — Gram-Schmidt over `(1, 0, -Lr/Lb)` then
