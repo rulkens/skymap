@@ -11,7 +11,7 @@
 // value injection. Mirrors the runtime's 'lib/selectionEncoding.wesl' pattern.
 
 const TRAIL: u32 = 32u;            // ring length per particle — pathline / streamline points
-const LIFE: f32 = 8.0;             // advect particle lifetime, frame-time units, then it recycles
-const FADE: f32 = 1.4;             // advect alpha fade-in/out window, age units
+const LIFE: f32 = 8.0;             // advect particle lifetime, seconds, then it recycles
+const FADE: f32 = 1.4;             // advect alpha fade-in/out window, seconds of age
 const DENS_SCALE: f32 = 1.0;       // overdensity delta -> spawn weight (clamped 0..1)
 const SPEED_COLOR_MAX: f32 = 1200.0;  // km/s mapped to the hot end of the speed colour ramp

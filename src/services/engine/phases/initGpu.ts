@@ -1,17 +1,11 @@
 /**
- * initGpu — bootstrap phase that acquires the WebGPU device + swap-chain
- * context, then constructs every renderer the engine uses (points, disks,
- * Milky Way, filaments, bodies, …), all writing into the shared HDR
- * offscreen target set up here. Runs first because every later phase depends
- * on the device: `wireSlots` mints the asset slots that bind to these
- * renderers and commits decoded clouds into them, `wireInput` builds the
- * pick renderer, `startLoop` packages everything into `RunFrameDeps`.
+ * initGpu — bootstrap phase that acquires the WebGPU device + swap-chain context and
+ * constructs every renderer onto `state.gpu.*`, all writing into the shared HDR
+ * offscreen target set up here. Runs first because every later phase needs the device.
  *
- * `device` / `context` survive past this phase via the `phaseLocals` carrier
- * (see `BootstrapDeps` in `bootstrap.ts`); `state.gpu.uiCtx` is a separate,
- * narrower home for the same two values (plus `canvas`), read only by
- * `buildSwapRenderers` for a later swap-format rebuild. Every renderer is
- * stored on `state.gpu.*` directly.
+ * `device` / `context` survive past this phase via the `phaseLocals` carrier (see
+ * `BootstrapDeps`); `state.gpu.uiCtx` is a separate, narrower home for the same two
+ * values plus `canvas`, read only by `buildSwapRenderers` on a swap-format rebuild.
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
@@ -517,15 +511,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     SLAB_REVERSED_Z[NEAR0]!,
   );
 
-  // ── Textured bodies (Plan 02 — the twelve non-Earth textured bodies) ─
+  // ── Textured bodies ──────────────────────────────────────────────────
   //
-  // One shared UV-sphere pipeline draws the seven other major planets, the Moon,
-  // and the four Galilean moons; each body id owns its own uniform buffer + bind
-  // group + surface texture inside the renderer's per-body Map. Same
-  // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
-  // + sphere-body renderers above. The bodyTextures slot family (minted in
-  // `wireSlots`) routes each non-Earth body's committed bitmap to `setMap` and
-  // its per-kind eviction to `clearMap`.
+  // One shared UV-sphere pipeline for every non-Earth textured body; each body id
+  // owns its uniform buffer + bind group + surface texture inside the renderer's
+  // per-body Map. Same ('rgba16float', 'depth32float') `foreground:0` format
+  // invariant as the renderers above. The bodyTextures family (minted in
+  // `wireSlots`) routes each committed bitmap to `setMap` and its per-kind
+  // eviction to `clearMap`.
   state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
     device,
     'rgba16float',
@@ -564,18 +557,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     SLAB_REVERSED_Z[NEAR0]!,
   );
 
-  // ── Earth's atmosphere shell (Plan E — the in-scatter halo) ──────────
+  // ── Atmosphere shell (the in-scatter halo) ───────────────────────────
   //
-  // The atmosphere renderer draws the translucent proxy sphere at the
-  // atmosphere-top radius, LAST in the (foreground:0, NEAR0) group. Its pipeline
-  // bakes the `foreground:0` format invariant AND the shell profile: straight-alpha
-  // OVER, two-sided (`cullMode: 'none'`, the fragment splits duty by front_facing),
-  // depth-tested but no depth write — so its limb passes over space and is occluded
-  // over the opaque disc. It bakes ONE bundle per `ATMOSPHERE_PARAMS` row (Earth
-  // + six planets) at construction — the view-independent transmittance + multi-scatter
-  // LUTs — while each body's sky-view LUT is re-baked per frame by the
-  // `atmosphereSkyView` compute step. The factory takes the whole table, so a
-  // second atmosphere body is a new params row, no wiring change here.
+  // The translucent proxy sphere at the atmosphere-top radius, drawn LAST in the
+  // (foreground:0, NEAR0) group: straight-alpha OVER, two-sided (`cullMode: 'none'`,
+  // the fragment splits duty by front_facing), depth-tested but no depth write, so
+  // the limb passes over space and is occluded over the opaque disc. The factory
+  // takes the whole `ATMOSPHERE_PARAMS` table and bakes one bundle per row, so a
+  // further atmosphere body is a params row with no wiring change here.
   state.gpu.atmosphereShellRenderer = createAtmosphereShellRenderer(
     device,
     'rgba16float',

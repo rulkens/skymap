@@ -1,74 +1,12 @@
 /**
- * orbitalElements — the J2000 Keplerian element table, the single source of
- * truth for BOTH the scene's foreground body positions AND their orbit trails.
- *
- * ### Why this table is upstream of everything
- *
- * The old dependency ran body-seed → orbit-ring: a ring derived its radius from
- * `|body − parent|`, so a circle always passed through its body. That inversion
- * cannot survive real ellipses — a body at an arbitrary placeholder position is
- * not generally *on* a Keplerian ellipse fitted from independent elements, so
- * the sphere would float off its own trail. We invert the dependency: elements
- * are authored here, and both the body's rendered position
- * (`keplerianPositionMpc`) and its trail conic (`keplerianEllipse`) DERIVE from
- * this one table. Body-on-trail consistency is then structural — not a
- * "remember to keep them in sync" invariant.
- *
- * ### Frames — heliocentric vs geocentric, ecliptic vs equatorial
- *
- * Two independent frame choices per row:
- *
- * - **Focus** (`focusId`): the eight major planets (Mercury through Neptune,
- *   Earth as the EMB) are **heliocentric** — `focusId: 'sun'`, focus at the Sun
- *   (the render origin). A moon is **geocentric** to its planet — `focusId`
- *   names it — so its focus resolves to that planet's own derived world position
- *   and its trail follows the planet by construction.
- * - **Reference plane** (`plane`, see `orbitPlaneFrames.ts`): the planets AND
- *   Earth's Moon are referenced to the **ecliptic** (JPL publishes them there),
- *   the default when `plane` is omitted. But a planet's OWN moons are referenced
- *   to their **local Laplace plane** — Saturn's regular moons ride ~27° off the
- *   ecliptic, which is why they look visibly tilted — so each satellite row's
- *   `plane` is built by the `satellite` maker from that moon's OWN Laplace-plane
- *   pole (the `poleRaDeg`/`poleDecDeg` JPL tabulates), not from a shared
- *   equatorial constant: the inner moons' poles ≈ the planet's equatorial pole,
- *   but a distant moon's Laplace plane tilts off the equator (Iapetus ~15°) and
- *   its own pole captures that. The ecliptic→equatorial rotation into the
- *   scene's frame is `ECLIPTIC_FRAME` (see `orbitPlaneFrames.ts`), applied
- *   downstream where the ellipse is built.
- *
- * Each planet row carries its J2000 epoch elements AND the six per-Julian-
- * century rates from the same JPL table, so `propagateElements` can advance the
- * body to any simulated instant. The Moon and the satellite rows carry the same
- * epoch elements + rates, converted by the `satellite` maker (and, for the Moon,
- * by `moonRatesFromSiderealPeriods` inline — its P column is the sidereal month
- * where the satellites' is the mean-anomaly period; see the Moon row) from JPL's
- * period columns; so the mixed table stays uniform and one affine map moves
- * every body.
- *
- * ### Authoring discipline
- *
- * No buried Mpc / radian literals: every distance is `<human value> *
- * SCALE_UNITS.…` (au / km → Mpc) and every angle is `degToRad(<deg>)`, the same
- * discipline the scene body tables observe. JPL tabulates the planets by mean
- * longitude `L` and longitude of perihelion `ϖ`; the classical `ω` and `M` are
- * derived at the seed site via `ω = ϖ − Ω` and `M = L − ϖ`, with that
- * arithmetic written out inline so the transcription stays checkable. The rates
- * follow the same discipline: the raw JPL rate columns (`dL/dt`, `dϖ/dt`,
- * `dΩ/dt`, …) sit in each row comment, and `dM/dt = dL/dt − dϖ/dt`,
- * `dω/dt = dϖ/dt − dΩ/dt` are shown inline, mirroring the `M`/`ω` derivations.
- *
- * ### Provenance (J2000 mean elements)
- *
- * - Planets: JPL SSD "Keplerian Elements for Approximate Positions of the Major
- *   Planets", Table 1 (valid 1800–2050 AD, mean ecliptic and equinox of J2000).
- *   https://ssd.jpl.nasa.gov/planets/approx_pos.html
- * - Moon + the 13 planetary satellites: JPL SSD "Planetary Satellite Mean
- *   Orbital Parameters" (epoch 2000-01-01.5 TDB; the Moon in the ecliptic frame,
- *   the planets' moons each in their local Laplace plane). Each row transcribes
- *   that moon's full table line — a, e, i, node Ω, ω, M, and the sidereal /
- *   apsidal / nodal periods P / Papsis / Pnode, plus the Laplace-plane pole
- *   RA/Dec — verbatim in its comment. These describe a precessing mean ellipse,
- *   exactly what a guidance trail needs. https://ssd.jpl.nasa.gov/sats/elem/
+ * orbitalElements — the J2000 Keplerian table, single source of truth for BOTH body
+ * positions (`keplerianPositionMpc`) and their trails (`keplerianEllipse`), so a body sitting
+ * on its own trail is structural rather than an invariant to remember. Per row: `focusId` (the
+ * Sun for planets, the parent planet for a moon) and `plane` (omitted = ecliptic, which is how
+ * JPL publishes the planets and the Moon; a planet's own moons ride their OWN Laplace pole —
+ * see `orbitPlaneFrames.ts`). No buried Mpc/radian literals, and JPL's `L`/`ϖ` columns are
+ * converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription stays
+ * checkable against the source: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons).
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
@@ -85,6 +23,8 @@ import {
   SATURN_GOLD,
   URANUS_CYAN,
   NEPTUNE_BLUE,
+  PLUTO_TAN,
+  CHARON_GREY,
   MOON_GREY,
   SAT_ROCK,
   SAT_ICE,
@@ -95,28 +35,13 @@ import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 
-/**
- * Look up a body's J2000 Keplerian seed by id — the domain wrapper the body
- * makers derive positions through. A find-over-a-table lives with its table, so
- * both the scene body seeds and this module read the one source of truth; the
- * throw-on-miss (via `findByIdOrThrow`) fires at module load so a typo fails
- * loudly rather than silently seeding a body at `undefined`/NaN.
- */
 export function elementsById(id: string): OrbitalElements {
   return findByIdOrThrow(ORBITAL_ELEMENTS, id, 'orbitalElements');
 }
 
-/**
- * The guidance orbits: the eight major planets (heliocentric, in order outward
- * from the Sun), then the Moon (geocentric, ecliptic), then each planet's own
- * major moons (geocentric, each in its own Laplace `plane` — see `satellite`).
- * Planet columns are authored in the units JPL publishes (au / km, degrees) and
- * converted at the seed site; `ω` and `M` show their `ϖ`/`L`/`Ω` derivation
- * inline. Moon rows go through `satellite`, which transcribes the full JPL
- * satellite-elements line — real epoch phases Ω/ω/M and the period columns → the
- * shared per-century rates — so the moons sit at their true J2000 positions and
- * animate with everything else.
- */
+// Planet columns are in the units JPL publishes (au / km, degrees) and converted at the seed
+// site; moon rows go through `satellite`, which turns JPL's period columns into the same
+// per-century rates so one affine map advances every body.
 export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Mercury, heliocentric. JPL: L = 252.25032350°, ϖ = 77.45779628°,
@@ -319,24 +244,45 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: NEPTUNE_BLUE,
   },
   {
-    // The Moon, geocentric — its focus is Earth's derived position. JPL sats/elem
-    // (ecliptic frame, epoch 2000-01-01.5 TDB, DE405/LE405): a=384400 km,
-    // e=0.0554, i=5.16°, node Ω=125.08°, ω=318.15°, M=135.27°, P=27.322 d,
-    // Papsis=5.997 yr, Pnode=18.600 yr. JPL gives ω and M directly (no ϖ/L
-    // derivation). Periods → rates via moonRatesFromSiderealPeriods (built
-    // inline here — the Moon is authored directly, not via `satellite`, but
-    // earns the same three rate columns so it animates too). UNLIKE the
-    // planetary-satellite rows, whose P is the mean-anomaly period, the Moon's
-    // P=27.322 d is the SIDEREAL month (the anomalistic month is 27.5545 d), so
-    // it converts through the sidereal variant: 2π/P is the mean-LONGITUDE
-    // rate, and dM/dt is that minus both precession rates. Reading 27.322 d as
-    // the M-period would double-count the apsidal advance into longitude —
-    // +0.111°/day = 40.6°/yr of phase drift, a Moon 102° off the Sun at the
-    // real 2024-04-08 eclipse (see the eclipse regression test). Papsis is the
-    // ARGUMENT-of-periapsis period (ω relative to the regressing node):
-    // 5.997 yr is consistent with the famous 8.85 yr perigee (longitude ϖ) and
-    // 18.6 yr node — 360/(360/8.85 + 360/18.6) = 5.997. Prograde: apsis
-    // advances (+), node regresses (−). Ecliptic-framed, so `plane` is omitted.
+    // Pluto, heliocentric. Same Table 1 as every planet row above, but read from its reprint
+    // in the Explanatory Supplement to the Astronomical Almanac, 3rd ed. (2013), §8.10 Table
+    // 8.10.2 — the approx_pos.html web edition dropped Pluto and the PDF it replaced now
+    // redirects there. L = 238.92903833°, ϖ = 224.06891629°, Ω = 110.30393684°.
+    id: 'pluto',
+    focusId: 'sun',
+    semiMajorMpc: 39.48211675 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.2488273,
+    inclinationRad: degToRad(17.14001206),
+    ascendingNodeRad: degToRad(110.30393684),
+    // ω = ϖ − Ω = 224.06891629 − 110.30393684
+    argPeriapsisRad: degToRad(224.06891629 - 110.30393684),
+    // M = L − ϖ = 238.92903833 − 224.06891629
+    meanAnomalyRad: degToRad(238.92903833 - 224.06891629),
+    // Rates (JPL, per Julian century): dL/dt = 145.20780515, dϖ/dt = −0.04062942,
+    // dΩ/dt = −0.01183482, da/dt = −0.00031596 au, de/dt = 0.00005170, dI/dt = 0.00004818.
+    semiMajorRateMpcPerCty: -0.00031596 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: 0.0000517,
+    inclinationRateRadPerCty: degToRad(0.00004818),
+    ascendingNodeRateRadPerCty: degToRad(-0.01183482),
+    // dω/dt = dϖ/dt − dΩ/dt = −0.04062942 − (−0.01183482)
+    argPeriapsisRateRadPerCty: degToRad(-0.04062942 - -0.01183482),
+    // dM/dt = dL/dt − dϖ/dt = 145.20780515 − (−0.04062942)
+    meanAnomalyRateRadPerCty: degToRad(145.20780515 - -0.04062942),
+    color: PLUTO_TAN,
+  },
+  {
+    // The Moon, geocentric. JPL sats/elem (ecliptic frame, epoch 2000-01-01.5 TDB, DE405/LE405):
+    // a=384400 km, e=0.0554, i=5.16°, node Ω=125.08°, ω=318.15°, M=135.27°, P=27.322 d,
+    // Papsis=5.997 yr, Pnode=18.600 yr — ω and M given directly, no ϖ/L derivation.
+    // LANDMINE — the Moon's P is the SIDEREAL month, where the planetary satellites' P below is
+    // the mean-anomaly period (the anomalistic month is 27.5545 d), hence the sidereal rate
+    // conversion: 2π/P is the mean-LONGITUDE rate and dM/dt is that minus both precession rates.
+    // Read 27.322 d as the M-period and the apsidal advance is double-counted into longitude:
+    // +0.111°/day = 40.6°/yr of phase drift, a Moon 102° off the Sun at the real 2024-04-08
+    // eclipse (see the eclipse regression test). Papsis is the ARGUMENT-of-periapsis period, ω
+    // relative to the regressing node: 360/(360/8.85 + 360/18.6) = 5.997, consistent with the
+    // familiar 8.85 yr perigee (longitude ϖ) and 18.6 yr node. Prograde, so apsis advances (+)
+    // and node regresses (−). Ecliptic-framed, so `plane` is omitted.
     id: 'moon',
     focusId: 'earth',
     semiMajorMpc: 384400 * SCALE_UNITS.KM_TO_MPC,
@@ -472,12 +418,10 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: SAT_ROCK,
   }),
 
-  // Saturn's major moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5 TDB,
-  // SAT441). Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr) Pnode(yr),
-  // pole RA/Dec. The inner moons share Saturn's pole (RA≈40.6 Dec≈83.5, tilt≈0);
-  // Iapetus sits far enough out that its Laplace plane tilts 14.8° off the
-  // equator, so its own pole (RA=288.7 Dec=78.9) and i=7.6° carry that truthfully
-  // — the trail no longer laid on Saturn's equator.
+  // Saturn's major moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5 TDB, SAT441).
+  // Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr) Pnode(yr), pole RA/Dec. The inner
+  // moons share Saturn's pole (RA≈40.6 Dec≈83.5); Iapetus sits far enough out that its Laplace
+  // plane tilts 14.8° off the equator, which its own pole and i=7.6° carry truthfully.
   satellite({
     // Mimas: a=186000 e=0.020 ω=160.4 M=275.3 i=1.6 node=66.2 P=0.942422
     // Papsis=0.493 Pnode=0.986; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
@@ -592,9 +536,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   }),
   satellite({
     // Iapetus: a=3561700 e=0.028 ω=254.5 M=74.8 i=7.6 node=86.5 P=79.331002
-    // Papsis=1662.900 Pnode=3130.302; pole RA=288.7 Dec=78.9 (tilt 14.8° — its
-    // Laplace plane is pulled well off Saturn's equator, so it rides its OWN
-    // pole, and i is 7.6° relative to THAT plane). Prograde.
+    // Papsis=1662.900 Pnode=3130.302; pole RA=288.7 Dec=78.9 (tilt 14.8°, so i=7.6° is
+    // relative to THAT plane, not Saturn's equator). Prograde.
     id: 'iapetus',
     focusId: 'saturn',
     semiMajorKm: 3561700,
@@ -610,10 +553,48 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleDecDeg: 78.9,
     color: SAT_ROCK,
   }),
-  // The 39 bound S-stars arrive mapped rather than written out: one publication,
-  // one uniform row shape, so the per-row facts stay in `sStarElements.ts` beside
-  // their verbatim Gillessen lines and the conversions stay in the `sStar` maker.
-  // Spelling them here would repeat that maker 39 times. Their focus is
-  // `sgr-a-star`, so they join the `galactic-centre` region by existing.
+
+  // Charon comes from a different page than every satellite() row above: JPL
+  // sats/elem/sep.html "Satellites of Pluto" (mean EQUATORIAL orbital elements, epoch
+  // 2000-01-01.5 TDB, ephemeris PLU060; Brozović & Jacobson 2024, AJ 167:256).
+  satellite({
+    // Charon, plutocentric. Verbatim: a=19600. e=0.000 ω=0.0 M=304.1 i=0.0 node=0.0
+    // P=6.387222 Papsis=- Pnode=-. Given DIRECTLY in Pluto's own equatorial plane, with no
+    // per-moon Laplace pole column unlike elem.html, so the pole below is Pluto's own.
+    // Papsis/Pnode are published "-" (undefined, not 0.000): e=0.000 and i=0.0 leave periapsis
+    // and node geometrically meaningless. Passed as 0, which moonRatesFromPeriods's
+    // MIN_PRECESSION_YEARS guard freezes to zero drift — the same degenerate case as
+    // Deimos/Dione/Tethys above. LANDMINE: the legend calls P "sidereal period", the word that
+    // routes the Moon through moonRatesFromSiderealPeriods instead, but with both precession
+    // rates frozen meanAnomalyRate = meanLongitudeRate − 0 − 0, so the two readings of P
+    // coincide for THIS row only. Revisit if JPL ever publishes nonzero e/i.
+    id: 'charon',
+    focusId: 'pluto',
+    semiMajorKm: 19600,
+    eccentricity: 0.0,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 304.1,
+    periodDays: 6.387222,
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: 0.0,
+    // Pluto's IAU pole (WGCCRE 2015), not a Charon one: the pair is mutually tidally locked,
+    // so the poles coincide exactly — see `rotationElements.ts` for the same lock's other
+    // three shared numbers.
+    poleRaDeg: 132.993,
+    poleDecDeg: -6.163,
+    // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric position
+    // rather than orbiting the Pluto–Charon barycentre, which sits ~2130 km from
+    // Pluto's CENTRE (JPL GMs 106.1 / 869.3 put it ~11% along the 19600 km
+    // separation) — 1.8 Pluto radii, so ~940 km above the surface and visibly
+    // off, unlike the same approximation Earth–Moon already makes. Deliberate;
+    // the fix is scoped in docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
+    color: CHARON_GREY,
+  }),
+
+  // The 39 bound S-stars are mapped rather than spelled out: their per-row facts live in
+  // `sStarElements.ts` beside the verbatim Gillessen lines. Their focus is `sgr-a-star`, so
+  // they join the `galactic-centre` region by existing.
   ...S_STAR_SEEDS.map(sStar),
 ];

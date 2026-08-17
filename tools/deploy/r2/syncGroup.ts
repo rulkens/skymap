@@ -1,8 +1,8 @@
 import { statSync } from 'node:fs';
 import type { R2SyncGroup } from './R2SyncGroup';
 import type { R2Upload } from './R2Upload';
-import { fileMd5 } from '../../utils/io/fileMd5';
 import { etagMatches } from './etagMatches';
+import { localUploadHash } from './localUploadHash';
 import { remoteEtag } from './remoteEtag';
 import { uploadViaRclone } from './uploadViaRclone';
 import { uploadViaWrangler } from './uploadViaWrangler';
@@ -65,7 +65,7 @@ async function uploadIfChanged(
   touchedKeys: string[],
 ): Promise<boolean> {
   const remote = await remoteEtag(`${ctx.publicUrl}/${file.r2Key}`);
-  if (remote && etagMatches(fileMd5(file.localPath), remote)) {
+  if (remote && etagMatches(localUploadHash(file), remote)) {
     const sizeMB = (statSync(file.localPath).size / 1024 / 1024).toFixed(1);
     console.log(`= ${file.localPath} (${sizeMB} MB) unchanged — skip`);
     return false;

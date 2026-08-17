@@ -1,42 +1,12 @@
 /**
- * EngineGpuHandles — the GPU pipelines / targets sub-bag of the
- * canonical `EngineState`.
- *
- * ### Why these fields start as null
- *
- * `createEngine` returns its handle synchronously, but the actual GPU
- * pipelines need an async `requestAdapter()` → `requestDevice()` chain.
- * The engine threads this through an async IIFE that runs in the
- * background after the handle has already been returned, so for one or
- * two frames at startup these handles are unavailable.  Modelling them
- * as `T | null` (rather than non-null with a separate "ready" flag)
- * makes the consumer null-check honest — every site that touches a
- * pipeline has to acknowledge the not-yet-built case, instead of relying
- * on a single boolean that someone might forget to read.
- *
- * ### Lifecycle
- *
- *   1. Sub-bag constructed with every field = null.
- *   2. Async IIFE runs: each field gets assigned exactly once after
- *      `initGpu` resolves.
- *   3. `destroy()` releases each pipeline and resets the field back to
- *      null for symmetry — this matters when the React layer remounts
- *      the canvas (StrictMode, hot-reload) and a fresh `createEngine`
- *      runs against a stale state object would otherwise see "ready"
- *      handles pointing at destroyed GPU resources.
- *
- * **Every field on this bag shares the same lifecycle rule** — null
- * before bootstrap, non-null after `initGpu` resolves, released and
- * re-nulled by `destroy()`.  That symmetry is load-bearing: the
- * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer`
- * fields exist on this bag specifically so the `destroy()` chain has a
- * reachable reference to call `.destroy()` on — they are not consumed
- * via this bag at runtime (the frame loop receives them through
- * `RunFrameDeps`).  When adding a new GPU-resource-owning renderer, add
- * it here so the teardown path stays complete.
- *
- * Keeping the bag named lets the renderFrame helper accept just the GPU
- * bag rather than the whole `EngineState`.
+ * EngineGpuHandles — the GPU pipelines/targets sub-bag of `EngineState`. Every
+ * field shares one lifecycle: null until `initGpu` resolves (the handle is
+ * returned synchronously, the adapter/device chain is async), assigned once, then
+ * released and re-nulled by `destroy()` — the re-null matters because a canvas
+ * remount runs a fresh `createEngine` against the stale state object, which would
+ * otherwise see "ready" handles pointing at destroyed resources.
+ * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer` are
+ * never read through this bag; they live here only so `destroy()` can reach them.
  */
 
 import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
@@ -481,18 +451,14 @@ export type EngineGpuHandles = {
    */
   planetRenderer: PlanetRenderer | null;
   /**
-   * The shared textured-sphere renderer for the twelve non-Earth textured
-   * bodies (the seven other major planets, the Moon, and the four Galilean
-   * moons) — one UV-sphere pipeline whose per-body `Map` gives each body its
-   * own uniform buffer + bind group + surface texture, so no shared uniform can
-   * be clobbered mid-frame. `texturedBodiesLayer` draws the `textured` branch of
-   * `partitionBodiesByPresentation` through it; the `bodyTextures` slot family's
-   * commit routes each non-Earth body's bitmap to `setMap`, and its per-kind
-   * onRelease frees that (body, kind)'s texture via `clearMap`. Same `foreground:0`
-   * ('rgba16float', 'depth32float') format invariant as `earthRenderer` /
-   * `planetRenderer`. Excluded from `isEngineReady` and null-checked at use.
-   * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
-   * (which also frees every per-body uniform buffer + surface/ring texture).
+   * The shared textured-sphere renderer for every non-Earth textured body — one
+   * UV-sphere pipeline whose per-body `Map` gives each body its own uniform buffer
+   * + bind group + surface texture, so no shared uniform can be clobbered
+   * mid-frame. `texturedBodiesLayer` draws the `textured` branch of
+   * `partitionBodiesByPresentation` through it; the `bodyTextures` family's commit
+   * routes each bitmap to `setMap` and its per-kind onRelease to `clearMap`. Same
+   * ('rgba16float', 'depth32float') `foreground:0` format invariant as
+   * `earthRenderer` / `planetRenderer`; excluded from `isEngineReady`.
    */
   texturedBodyRenderer: TexturedBodyRenderer | null;
   /**
@@ -510,35 +476,24 @@ export type EngineGpuHandles = {
    */
   ringRenderer: RingRenderer | null;
   /**
-   * The body-agnostic translucent cloud shell (Earth today; Venus / Titan opt in
-   * later) — a thin closed sphere drawn just ABOVE the opaque surface in the
-   * `(foreground:0, NEAR0)` group, immediately after `earthLayer`. Its
-   * ('rgba16float', 'depth32float') pipeline formats match the `foreground:0` row
-   * like the sphere bodies; it depth-tests against the opaque globe but writes no
-   * depth and blends straight-alpha OVER — the same profile as `ringRenderer`.
-   * `cloudShellLayer` draws it once per frame; the `bodyTextures` family's
-   * `earth:clouds` commit routes the cloud colour+coverage map to `setTexture`.
-   * Until that lands, a 1×1 transparent placeholder keeps the shell invisible.
-   * Excluded from `isEngineReady` and null-checked at use. Null until `initGpu`
-   * constructs it; released and re-nulled by `destroy()` (releases the position +
-   * uv VBOs, index IBO, uniform buffer, and the cloud texture).
+   * The body-agnostic translucent cloud shell — a thin closed sphere drawn just
+   * ABOVE the opaque surface in the `(foreground:0, NEAR0)` group, immediately
+   * after `earthLayer`: ('rgba16float', 'depth32float') formats, depth-tested
+   * against the globe but no depth write, straight-alpha OVER, the same profile as
+   * `ringRenderer`. The `bodyTextures` family's `earth:clouds` commit routes the
+   * colour+coverage map to `setTexture`; until one lands a 1×1 transparent
+   * placeholder keeps the shell invisible. Excluded from `isEngineReady`.
    */
   cloudShellRenderer: CloudShellRenderer | null;
   /**
-   * Earth's physically-based in-scatter atmosphere (Earth today; Mars / Venus /
-   * Titan opt in later via their own `ATMOSPHERE_PARAMS` rows + renderer
-   * instances) — the LAST `(foreground:0, NEAR0)` row, a translucent proxy sphere
-   * at the atmosphere-top radius drawn AFTER every opaque sphere and the
-   * rings/cloud-shell, depth-tested against them but writing no depth and blending
-   * straight-alpha OVER — the same profile as `ringRenderer` / `cloudShellRenderer`.
-   * Its ('rgba16float', 'depth32float') pipeline formats match the `foreground:0`
-   * row. It owns three LUT textures (transmittance + multi-scatter baked once at
-   * construction, sky-view re-baked each frame by the `atmosphereSkyView` compute
-   * step). `atmosphereShellLayer` draws it once per frame; it is non-pickable
-   * (a translucent halo has no clickable silhouette). Excluded from `isEngineReady`
-   * and null-checked at use. Null until `initGpu` constructs it; released and
-   * re-nulled by `destroy()` (releases the three LUTs + their pipelines, the proxy
-   * sphere geometry, the shell pipeline, and the three uniform buffers).
+   * The physically-based in-scatter atmosphere, one bundle per `ATMOSPHERE_PARAMS`
+   * row — the LAST `(foreground:0, NEAR0)` row: a translucent proxy sphere at the
+   * atmosphere-top radius drawn AFTER every opaque sphere and the rings/cloud
+   * shell, depth-tested but writing no depth, straight-alpha OVER. It owns three
+   * LUT textures — transmittance + multi-scatter baked once at construction,
+   * sky-view re-baked each frame by the `atmosphereSkyView` compute step.
+   * Non-pickable: a translucent halo has no clickable silhouette. Excluded from
+   * `isEngineReady`.
    */
   atmosphereShellRenderer: AtmosphereShellRenderer | null;
   /**

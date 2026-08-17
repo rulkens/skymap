@@ -1,0 +1,697 @@
+# Add Pluto and Charon to the solar-system scene
+
+> **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` to
+> implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Pluto and Charon appear in the scene as textured (`medium`/4K — raised from `small`/2k by
+Task 8b) bodies riding the existing `planet` source row — no new source, category, toggle, or
+settings key. Charon orbits Pluto as an ordinary Moon-style satellite (one-hop `focusId`); Pluto
+does not wobble around the real Pluto–Charon barycentre, a documented approximation. Labels,
+picking, InfoCard, search, and URL focus all fall out of the existing seed tables with zero new
+wiring.
+
+**Context — no separate spec.** The design work for this feature is the grill session at
+[`docs/grill-sessions/add-pluto-charon-2026-08-16.md`](../../grill-sessions/add-pluto-charon-2026-08-16.md)
+(Q6: a short plan is enough — the survey found zero ground preparation needed). Read it before
+this plan; do not re-litigate its decisions. Barycentric orbits, and Pluto's four small moons that
+depend on them, are backlogged at
+[`docs/backlog/2026-08-16-barycentric-orbit-pairs.md`](../../backlog/2026-08-16-barycentric-orbit-pairs.md).
+
+## Ground preparation
+
+None needed — the 2026-08-16 survey (grill session, codebase-verified) confirmed every touchpoint
+is an existing data-gated extension point: `SCENE_PLANETS`/`ORBITAL_ELEMENTS` are append-only
+tables read by generic consumers (labels, picking, atmosphere, regions), `BodyTextureId` is a
+closed union that forces every downstream texture table to grow in step, and `planet_facts.seed.json`
+takes an unstructured "dwarf planet" description with no schema change. Nothing here needs a new
+seam.
+
+## Global constraints
+
+- `type` aliases, never `interface`. Deep relative imports, no barrels.
+- Comment budget: module header ≤ 10 lines, comment lines ≤ half the file's code lines. A comment
+  earns its place recording a landmine, a unit, a derivation, or a cross-file contract — never
+  restating what the code does. The Charon barycentre-approximation comment is exactly this kind.
+- No baked physical constants from memory anywhere in this plan or its tasks: every orbital
+  element, radius, pole, and rotation rate is sourced live at implementation time from the cited
+  JPL/WGCCRE page and transcribed with its provenance in a row comment, following the existing
+  rows' idiom (`ω = ϖ − Ω`, `M = L − ϖ` shown inline; JPL rate columns quoted in the comment).
+  Papers (and search results) lie — verify at the source page, not this plan.
+- Tests must be able to fail on a real bug no other test or compiler check catches: no constant
+  restatements, no mirrors, no clamp-boundary tests. On-disk/generated-table length assertions
+  (`rotationElements.test.ts`) are the one class of "restatement" that stays — they pin a load-bearing
+  cross-table invariant (`ROTATION_ELEMENTS.length === BodyTextureId union size`), not an arbitrary
+  count.
+- `SCENE_PLANETS` order is **append-only** — pick indices (`resolvePickTable.ts`'s `body` arm) are
+  the row's position in the array. Pluto and Charon are appended at the **end** (after Iapetus),
+  never inserted near the other planets, regardless of where they'd sit narratively.
+  `ORBITAL_ELEMENTS` has no such constraint (`elementsById` looks up by `id`, and `deriveBodyStates`
+  resolves focus order via `focusResolveOrder`, not array position) — its rows may go wherever reads
+  best.
+- Stage specific paths in every commit; never `git add -A`. Format only touched files.
+- `npm test` and `npm run typecheck` stay green at every commit.
+
+---
+
+### Task 1: Palette trail tints for Pluto and Charon
+
+**Files:** `src/data/bodies/palette.ts` (modify)
+
+Add two `Vec3` linear-RGB constants following the existing `<BODY>_<COLOUR>` naming convention
+(e.g. `PLUTO_TAN`, `CHARON_GREY`) — dim, max channel ≲ 0.5 like every other trail tint, chosen to
+read apart from Neptune's blue and the satellite palette's greys at a glance.
+
+- [x] Add the two constants with a one-line comment if the colour choice needs explaining (it
+      probably doesn't — this file's existing rows mostly don't).
+- [x] `npm run typecheck` → GREEN (nothing imports these yet).
+- [x] Commit `src/data/bodies/palette.ts`.
+
+---
+
+### Task 2: Pluto — `ORBITAL_ELEMENTS` row + `SCENE_PLANETS` row
+
+**Files:** `src/data/bodies/orbitalElements.ts` (modify), `src/data/bodies/scenePlanets.ts` (modify)
+
+**Source:** JPL SSD "Keplerian Elements for Approximate Positions of the Major Planets",
+**Table 2a** (valid 3000 BC–3000 AD; the only table that includes Pluto) —
+<https://ssd.jpl.nasa.gov/planets/approx_pos.html>. Table 2a's **b/c/s/f** correction terms
+(Table 2b, applied to Jupiter through Pluto's mean anomaly for multi-millennial accuracy) are
+**deliberately dropped** — `propagateElements.ts` only implements the linear
+`element(T) = element₀ + rate·T` map every other row uses, and within a few centuries of J2000 the
+linear form is within visual accuracy. Record this tradeoff in a row comment (the "why comment" this
+plan's convention calls for) — the sibling Table 1 rows (Mercury–Neptune) don't carry this caveat
+because they don't need it.
+
+**Corrected after Task 13, in the final whole-branch review:** the premise above is false. Table 1
+carries Pluto too (JPL's _web edition_ dropped it in 2006; the original document did not), and
+Table 1 needs no correction terms at all. Table 2a minus its mandatory Table 2b terms is strictly
+worse than Table 1 inside 1800–2050, which is the only span the scene clock uses — so the shipped
+row is the **Table 1** row, and the dropped-corrections rationale above is gone from the code with
+it. The transcription source is the Explanatory Supplement to the Astronomical Almanac, 3rd ed.,
+Table 8.10.2, cited in the module header (the JPL page can no longer supply it).
+
+- [x] Add Pluto's `OrbitalElements` row to `ORBITAL_ELEMENTS`, heliocentric (`focusId: 'sun'`, no
+      `plane` — Table 2a is ecliptic-referenced like Table 1), following the exact derivation idiom
+      the Neptune row (`orbitalElements.ts:296-320`) uses: `a`/`e`/`i`/`Ω` transcribed directly,
+      `ω = ϖ − Ω` and `M = L − ϖ` shown inline, the six JPL rate columns quoted in a comment and
+      converted the same way (`dω/dt = dϖ/dt − dΩ/dt`, `dM/dt = dL/dt − dϖ/dt`). Use the palette
+      constant from Task 1.
+- [x] Add Pluto's `PlanetBody` row to `SCENE_PLANETS` via `heliocentricPlanet(...)`, **appended at
+      the end of the array** (after Iapetus — see Global constraints). `radiusKm` from WGCCRE 2015's
+      updated Pluto size (verify at the source, not from memory); `albedo` a plausible flat tan/grey
+      (it's the label-tint and pre-texture fallback colour, not load-bearing once textured).
+- [x] `npm run typecheck` → GREEN.
+- [x] `npm test -- orbitalElements scenePlanets` → GREEN (no existing assertions should need edits —
+      neither table is length-pinned).
+- [x] Commit both files.
+
+---
+
+### Task 3: Charon — `ORBITAL_ELEMENTS` row + `SCENE_PLANETS` row
+
+**Files:** `src/data/bodies/orbitalElements.ts` (modify), `src/data/bodies/scenePlanets.ts` (modify)
+
+**Source:** JPL SSD "Planetary Satellite Mean Elements" — the Pluto-system table specifically,
+<https://ssd.jpl.nasa.gov/sats/elem/sep.html> (NOT the general `elem.html` the other moons use;
+Charon's row lives on this dedicated page). Current reference: Brozović & Jacobson 2024,
+_AJ_ 167:256. Charon's elements are **plutocentric** (`focusId: 'pluto'`) — confirm this is what
+the page states before authoring the row. The page publishes elements referenced to both the
+ecliptic and Pluto's own equatorial plane; use the **equatorial-plane** variant (matching the
+`satellite()` maker's Laplace-plane convention every other moon row uses) and Charon's own pole for
+`planeFrameFromPole`.
+
+**Landmine comment (mandatory — this is the "looks wrong, don't fix it back" the grill session
+requires):** on Charon's row, record that Pluto is pinned at its heliocentric position rather than
+orbiting the Pluto–Charon barycentre (which sits ~2,130 km from Pluto's centre — 1.8 Pluto radii,
+~11% of the pair separation) — the same approximation Earth–Moon already makes, just far more
+visible here because Charon is 12% of Pluto's mass. Link
+[`docs/backlog/2026-08-16-barycentric-orbit-pairs.md`](../../backlog/2026-08-16-barycentric-orbit-pairs.md)
+as where the real fix lands.
+
+- [x] Determine whether the source page gives periods (`P`/`Papsis`/`Pnode`, the `elem.html` shape
+      the `satellite()` maker's `moonRatesFromPeriods` expects) or per-century rates directly (the
+      `approx_pos.html` Table-1 shape). If periods: build the row via `satellite({ ... })` exactly
+      like every other moon. If rates: author the row directly against `OrbitalElements` following
+      the planet-row idiom instead, since `satellite()` is periods-only. Either way, transcribe the
+      full source line verbatim in a comment, matching every existing row's provenance discipline.
+- [x] Charon's orbit is very nearly circular (e ≈ 0.0002 per public references — **verify the exact
+      published value**, don't assume): if going the `satellite()` route, check whether the
+      apsidal-precession period is near-degenerate the way Deimos's/Dione's/Tethys's are
+      (`orbitalElements.ts:377-395,538-556`) — if so, `moonRatesFromPeriods`'s `MIN_PRECESSION_YEARS`
+      guard already freezes that rate to zero; no special-casing needed, just don't be surprised by
+      it.
+- [x] Add Charon's `PlanetBody` row to `SCENE_PLANETS` via `satelliteBody(...)`, **appended at the
+      very end of the array** (after Pluto's Task 2 row). `radiusKm` from WGCCRE 2015 (the USGS
+      Astropedia record for the Charon mosaic cites ~606 km as the adopted radius — cross-check
+      against WGCCRE 2015 directly, not this plan). `albedo` a plausible flat icy-grey.
+- [x] `npm run typecheck` → GREEN.
+- [x] `npm test -- orbitalElements scenePlanets bodyRegions` → GREEN. `bodyRegions.test.ts` compares
+      region extents by ratio/factor, not a literal AU figure, so the `solar-system` region growing
+      from Neptune's ~30 au to Pluto's ~31 au (J2000 snapshot) should NOT require any test edit —
+      confirm this rather than pre-emptively touching the test file.
+- [x] Commit both files.
+
+---
+
+### Task 4: VISUAL CHECKPOINT — flat-albedo bodies in scene, pre-texture
+
+No code change. Pluto and Charon now exist as ordinary (untextured, flat-albedo) scene bodies with
+real J2000 positions, orbit trails, name captions, and picking — the minimum renderable state.
+
+- [x] Start (or reuse) the dev server. Ask the user to fly to the outer solar system and confirm:
+      Pluto appears near ~30–39 au from the Sun as a flat tan/grey sphere with a name caption and
+      orbit trail; Charon appears as a small satellite orbiting close beside it, also captioned and
+      trailed; both are clickable and open an InfoCard (facts land in Task 11, so the card may show
+      only the name + Wikipedia stub for now — that's expected at this checkpoint).
+- [x] Do not proceed to Task 5 until the user confirms.
+
+---
+
+### Task 5: Texture identity — `BodyTextureId`, `BODY_TEXTURE_REGISTRY`, `TEXTURE_SOURCES`, `RAW_DATA`
+
+**Files:** `src/@types/data/BodyTextureId.d.ts` (modify), `src/data/bodies/bodyTextureRegistry.ts`
+(modify), `tools/utils/io/textureSources.ts` (modify), `tools/utils/io/rawDataRegistry.ts` (modify),
+`tests/tools/fetch/fetchTextures.test.ts` (modify)
+
+**Sources (verified live via search, not memory):**
+
+- Pluto: `https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif`
+  — 296 MB.
+- Charon: `https://planetarymaps.usgs.gov/mosaic/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif`
+  — 77 MB.
+
+Both are USGS Astrogeology New Horizons LORRI+MVIC global mosaics, 300 m/px, 8-bit stretched from
+the original 32-bit data, equirectangular. **Verify on download whether each is single-channel or
+RGB** (`sharp(...).metadata().channels`) — neither filename carries the `ClrMerge`/`ClrMosaic`
+infix Io's and Ganymede's do, which on the existing naming convention (Europa's and Callisto's mono
+sources are plain `_global_mosaic_`) suggests both are grayscale and need `grayscaleTint`, matching
+the Europa/Callisto precedent — confirm, don't assume.
+
+**`BodyTextureId` — the closed-union edit:**
+
+```ts
+export type BodyTextureId =
+  | 'mercury'
+  | 'venus'
+  | 'earth'
+  | 'mars'
+  | 'jupiter'
+  | 'saturn'
+  | 'uranus'
+  | 'neptune'
+  | 'moon'
+  | 'io'
+  | 'europa'
+  | 'ganymede'
+  | 'callisto'
+  | 'pluto'
+  | 'charon';
+```
+
+Update the module's docblock: "thirteen members" → "fifteen members".
+
+**`BODY_TEXTURE_REGISTRY` rows:** both `kinds: { surface: 'small' }`, `provenance: 'usgs'`. The
+`small` ceiling is a **look ceiling for a different reason than Uranus/Neptune** — not "physically
+featureless", but "only the encounter hemisphere is well-resolved; the anti-Charon hemisphere is
+reconstructed at much lower fidelity" (grill session Q2). Write this distinction explicitly in the
+row comment — the module header already warns against conflating look-ceiling and source-ceiling
+reasons.
+
+**`TEXTURE_SOURCES` rows:** `{ surface: { native: 'textures.usgsPluto' } }` and
+`{ surface: { native: 'textures.usgsCharon' } }` — no `devKey`/`devFilename`, matching the four USGS
+Galilean-moon rows (no cheap dev variant exists).
+
+**`RAW_DATA` rows** (`textures.usgsPluto`, `textures.usgsCharon`): `path` under
+`data/raw/textures/`, `kind: 'file'`, `source: 'gitignored'`, `upstream` the two URLs above,
+`fetcher: 'tools/fetch/fetchTextures.ts'`, `readme: 'textures.readme'`, following the exact shape
+of `textures.usgsIo` etc. (`rawDataRegistry.ts:764-807`).
+
+- [x] Update `fetchTextures.test.ts`'s full-pull filename array (`~line 50`) to add
+      `'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif'` and
+      `'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif'` — RED until the `TEXTURE_SOURCES`
+      row lands. The `--dev` subset list (`~line 32`) is **unchanged** (no dev variant for either).
+- [x] `npm test -- fetchTextures` → RED.
+- [x] Make the four edits above (type union, registry row, sources row, raw-data rows).
+- [x] `npm test -- fetchTextures && npm run typecheck` → GREEN. This will also surface every other
+      closed-union compile error downstream (`BODY_TEXTURE_REGISTRY`, `ROTATION_ELEMENTS` are
+      **not** yet updated — `ROTATION_ELEMENTS` stays keyed by `id: string`, not `BodyTextureId`, so
+      it won't fail to compile; it's just incomplete until Task 9) — resolve only what's actually
+      red.
+- [x] Commit all five files.
+
+---
+
+### Task 6: Fetch the raw texture sources — ANNOUNCE FIRST
+
+The two files total **~373 MB** (296 MB + 77 MB). This is a real download — announce it and get
+explicit go-ahead before running anything, per the project's big-download convention.
+
+- [x] Tell the user: "Fetching the Pluto + Charon USGS mosaics will download ~373 MB into
+      `data/raw/textures/`. OK to proceed?" and wait for confirmation.
+- [x] On approval, run `npm run fetch-textures -- --confirm` (the full pull re-fetches only what's
+      missing — `skipIfAlreadyFetched` skips anything already verified on disk).
+- [x] Confirm `data/raw/textures/textures.sha256` gained two new lines automatically (the fetcher
+      upserts them; no hand edit).
+- [x] No commit of the raw `.tif` files themselves (gitignored); commit only the sha256 sidecar if
+      git shows it as changed.
+
+---
+
+### Task 7: Attribution
+
+**Files:** `ATTRIBUTIONS.md` (modify)
+
+The existing USGS block (`~line 353`) is scoped to "Galilean moon mosaics" (Voyager + Galileo SSI)
+— a different mission from New Horizons. Add a **new** subsection rather than folding Pluto/Charon
+into that one.
+
+- [x] Add a "USGS Astrogeology — Pluto/Charon mosaics (New Horizons)" subsection: use (global
+      surface mosaics for Pluto and Charon, LORRI + MVIC), source
+      (<https://planetarymaps.usgs.gov/>), licence (public domain; verify the exact credit line from
+      the Astropedia record — likely "NASA/JHUAPL/SwRI/USGS", don't guess).
+- [x] Commit `ATTRIBUTIONS.md`.
+
+---
+
+### Task 8: Build the tiered textures
+
+**Files:** none (generated output only: `public/data/images/textures/pluto-*.jpg`,
+`charon-*.jpg`, `body-atlas.webp`, `src/data/bodies/bodyAtlas.generated.ts`)
+
+- [x] Run `npm run build-textures`.
+- [x] Confirm the log shows `ok pluto-small.jpg` and `ok charon-small.jpg` (the only tier — `small`
+      is the registry ceiling) with the `(tinted)` note iff Task 5's channel check found mono
+      sources.
+- [x] Confirm `bodyAtlas.generated.ts`'s `BODY_ATLAS_LAYOUT` now has 15 entries and the atlas grid
+      stays 4 columns × 4 rows (15 ≤ 16 cells — no grid growth). Confirm the logged atlas byte size
+      stays under the 1 MB boot budget (`writeBodyAtlas.ts`'s `BUDGET_BYTES`).
+- [x] Commit `src/data/bodies/bodyAtlas.generated.ts` (generated, but committed like every other
+      generated codegen file in this tree). The `public/data/images/textures/` output is a build
+      artefact — confirm it's gitignored like the rest of that directory before staging anything.
+- [x] Visual spot-check in the dev server: Pluto now shows Tombaugh Regio (the "heart") on its
+      New-Horizons-facing hemisphere; Charon shows its Mordor Macula polar cap.
+
+---
+
+### Task 8b: 4K tier for both bodies — colour source rejected on the honesty gate (2026-08-17)
+
+Added after Tasks 1–8 shipped, when the flat-tint result made the fidelity gap concrete: multiplying
+a panchromatic LORRI mosaic by one `grayscaleTint` renders Pluto a uniform butterscotch and cannot
+express the dark red Cthulhu Macula beside pale Tombaugh Regio. The task originally proposed
+switching Pluto to a NASA/JHUAPL/SwRI colour mosaic; that half failed verification (below) and was
+dropped rather than shipped.
+
+**Gate:** any texture this renderer ships as a body's surface must be approximately true colour —
+the same bar the atmosphere work was held to. The only candidate global Pluto colour product,
+[PIA11707](https://photojournal.jpl.nasa.gov/catalog/PIA11707) ("Pluto Global Color Map"), is built
+from the exact MVIC 3-filter data Olkin et al. 2017 (_AJ_ 154, 258) describes — the mission's own
+paper on that dataset states outright: **"These images are enhanced color (not natural color as
+perceived by the human eye)."** The one genuinely true-colour Pluto product,
+[PIA19857](https://photojournal.jpl.nasa.gov/catalog/PIA19857), is a single hemisphere with a
+coverage gap, not a gap-free global map, so it can't back a `surface` texture either. No gap-free
+true-colour global Pluto mosaic exists — the colour half of this task fails the gate outright.
+
+**Ruling:** both bodies keep the existing greyscale panchromatic USGS mosaics and their measured
+`grayscaleTint` (Task 5) unchanged. Only the tier ceiling moves: `small` → `medium` (4K) for both —
+the USGS sources measure 24888 px (Pluto) and 12693 px (Charon) wide, far past the 8k `large`
+ceiling, so `medium` is a wire-cost/detail choice, not a source limit; `large` would spend bandwidth
+no eye can resolve on a body this small on screen.
+
+- [x] Verify true-vs-enhanced at the primary source — FAILED the gate (Olkin+2017 quote above);
+      colour source dropped, not adopted.
+- [x] `bodyTextureRegistry`: Pluto and Charon both move `surface: 'small'` → `'medium'`;
+      `grayscaleTint` unchanged on both. Row comment rewritten to state the `medium` ceiling as a
+      wire-cost/detail balance (look ceiling, not source ceiling) and the far-side coverage gap as a
+      fidelity caveat about the data, not a resolution ceiling.
+- [x] Rebuild textures + atlas; confirm `pluto-4096.jpg` and `charon-4096.jpg` are both emitted WITH
+      the `(tinted)` note (both stay mono sources — no colour source was adopted).
+
+---
+
+### Task 8c: calibrated pan-sharpen for Pluto — a derived colour, not a source swap (2026-08-17)
+
+Added after Task 8b, revisiting the flat-tint call with a different tool than "swap the source": Task
+8b correctly found that no gap-free true-colour global Pluto map exists to swap in directly — that
+finding stands, unchanged. What's new is combining Pluto's two existing sources instead of picking
+one: luminance from the high-resolution panchromatic USGS mosaic (unchanged, still `medium`/4K), hue
+from PIA11707's enhanced MVIC colour map with its published saturation enhancement undone by a fitted
+linear map on the chroma plane (`ColourTreatment`'s new `panSharpen` variant, `ChromaCalibration`
+type, `writePanSharpenedTier` in `buildTextures.ts`). PIA11707 itself is never shipped; only Pluto's
+existing mono mosaic and this derived chroma reach the runtime texture.
+
+The calibration's basis and coefficients were reconstructed empirically (not read off a paper) and
+validated against NASA's "True Colors of Pluto" natural-colour disc view: reference disc mean
+`1.0000 : 0.9385 : 0.8546` (R:G:B, encoded), shipped-code disc mean `1.0000 : 0.9419 : 0.8683` — ΔG =
++0.003, ΔB = +0.014, RMS 0.010. A side-by-side render matches the reference in hue (butterscotch north
+polar band, brown — not pink — Cthulhu Macula, pale Sputnik Planitia). The basis and anisotropy
+`ChromaCalibration`'s coefficients assume are documented on that type; the empirical derivation and
+validation method are in this branch's colour-C commit and its review trail.
+
+Charon is unaffected: it stays `monoTint` because no global colour map exists for it at all (only
+single-hemisphere disc portraits), and it is genuinely near-neutral but for a small reddish polar cap
+(Grundy+16) — a flat tint is what its source supports, not a shortfall against Pluto's treatment.
+
+**Honest limits, not resolved by this task:** the far-side (anti-encounter) hemisphere has no New
+Horizons colour data at all, so its chroma is extrapolated from the panchromatic mosaic's shape, not
+observed; the fitted transform also absorbs whatever processing NASA's own reference and colour
+products applied upstream, so it is a match to those two products, not an independent radiometric
+calibration; this is a derived, best-effort colour reconstruction, not a calibrated science product.
+
+- [x] `ColourTreatment` gains `panSharpen`; `bodyTextureRegistry`'s Pluto row moves from `monoTint` to
+      `panSharpen` with the fitted `ChromaCalibration`. Charon stays `monoTint`.
+- [x] `ATTRIBUTIONS.md` updated: the USGS mosaic entry now describes Pluto's mosaic as feeding
+      luminance for a derived product, not as a directly tinted output.
+
+---
+
+### Task 9: `ROTATION_ELEMENTS` rows for Pluto and Charon
+
+**Files:** `src/data/bodies/rotationElements.ts` (modify), `src/@types/data/BodyTextureId.d.ts`
+(docstring only, if not already done in Task 5)
+
+**Source:** Archinal et al. 2018 (WGCCRE 2015 report), which explicitly updated the pole and
+rotation rate for Pluto, Charon, and their sizes (confirmed via the report's own summary — this is
+not a guess). Both bodies get ordinary rows from that report's tables, same as the other thirteen.
+
+**Landmine comment (mandatory):** Charon's `spinRateDegPerDay` must equal `360° / Charon's orbital
+period` (Task 3's row) to the precision WGCCRE publishes — the Pluto–Charon system is _mutually_
+tidally locked (each always shows the same face to the other), unlike the Moon which is only
+one-way locked to Earth. Record this as the "why" the two numbers agree, not a coincidence to
+silently accept.
+
+- [x] Add Pluto's and Charon's rows to `ROTATION_ELEMENTS` (α₀, δ₀, W₀, spin rate — transcribed with
+      provenance, same idiom as the other thirteen rows).
+- [x] Update the module header: "thirteen rows" → "fifteen rows"; update the "eight major planets,
+      the Moon, and Jupiter's four Galilean moons" enumeration to include Pluto and Charon.
+- [x] `npm run typecheck` → GREEN.
+- [x] Commit both files.
+
+---
+
+### Task 10: Re-pin `rotationElements.test.ts`
+
+**Files:** `tests/data/bodies/rotationElements.test.ts` (modify)
+
+- [x] Change `expect(ROTATION_ELEMENTS).toHaveLength(13)` → `toHaveLength(15)`. The comment above it
+      ("The 13 textured bodies (spec §3)") becomes "The 15 textured bodies".
+- [x] `npm test -- rotationElements` → GREEN.
+- [x] Commit.
+
+---
+
+### Task 11: Facts seed
+
+**Files:** `data/seeds/planet_facts.seed.json` (modify)
+
+Two new entries, validated by `validatePlanetFactsEntry` (only `id` and `wikiTitle` are required;
+every other field is an optional display string). Description copy must say **dwarf planet** for
+Pluto and **binary pair** (or equivalent) for the Pluto–Charon relationship on at least one of the
+two entries — this is the entire mechanism by which "honest about dwarf-planet status" ships (no
+schema field for it; it's prose, per the grill session's Q1 decision).
+
+- [x] Add Pluto's entry: `id: 'pluto'`, `wikiTitle: 'Pluto'`, `moons` (Pluto has 5 known moons even
+      though only Charon is rendered — say so honestly, don't imply only one exists), `distance` in
+      AU, `description` naming it a dwarf planet and Kuiper Belt object, mentioning Tombaugh Regio.
+- [x] Add Charon's entry: `id: 'charon'`, `parent: 'Pluto'`, `wikiTitle: 'Charon_(moon)'`,
+      `dayLength: 'Tidally locked (mutual)'` or similar language distinguishing it from the Moon's
+      one-way lock, `description` naming the Pluto–Charon binary/double-planet relationship and
+      Mordor Macula.
+- [x] `npm run build-planet-facts` → regenerates `bodyFacts.generated.ts`; confirm it now contains
+      `pluto` and `charon` keys.
+- [x] `npm test -- planetFactsSeed` → GREEN (generic validator test, no per-body assertions to
+      update).
+- [x] Commit `data/seeds/planet_facts.seed.json` and the regenerated `bodyFacts.generated.ts`.
+
+---
+
+### Task 12: Full-suite verification
+
+**Files:** none
+
+- [x] `npm run typecheck` → GREEN (both `src` and `tools` configs).
+- [x] `npm test` → GREEN. In particular confirm `bodyRegions.test.ts` and
+      `foregroundMaxDistance.test.ts` pass unmodified — both compare region extents by ratio
+      against the dominant `solar-neighbourhood` region (~2.3 kpc), which the `solar-system`
+      region's ~30→~31 au growth doesn't come close to disturbing (`foregroundMaxDistance.ts` maxes
+      over ALL region extents, and `solar-neighbourhood` already dwarfs `solar-system` by six
+      orders of magnitude before this change).
+- [x] `npm run fetch-textures -- --dev` → still succeeds and does not attempt Pluto/Charon (no dev
+      source registered for either, matching the Galilean-moon precedent) — confirms Task 5 didn't
+      accidentally add a `devFilename`/`devKey`.
+- [x] Grep the diff for any leftover `'planet'`/`'body'` id literal that should have been `'pluto'`/
+      `'charon'` but wasn't — a sanity pass, not a new mechanism.
+
+---
+
+### Task 13: FINAL VISUAL PASS — the pair, with time running
+
+- [x] In the dev server, fly to Pluto/Charon. Confirm: both are textured (Tombaugh Regio, Neverland
+      Regio); clicking either opens an InfoCard with the seeded facts and "dwarf planet"/"binary
+      pair" copy; command-palette search finds "Pluto" and "Charon"; the URL hash updates to
+      `#body-pluto` / `#body-charon` on focus and a fresh load of that URL refocuses correctly.
+- [x] Advance the sim clock (or let it run) and watch Charon over one orbit (~6.4 days of sim time,
+      sped up): confirm the same hemisphere of Charon stays turned toward Pluto throughout — the
+      tidal-lock geometry Task 9's landmine comment promises.
+- [x] Confirm the single existing "planet" visibility toggle in Settings shows/hides Pluto and
+      Charon along with every other planet — no new toggle appeared anywhere.
+- [x] Report the outcome to the user; do not mark the plan done until they've confirmed the visual
+      pass themselves.
+
+---
+
+### Task 14: Pluto's atmosphere (added mid-flight, at the user's choice)
+
+Not in the original plan. The Task 4 assessment concluded an accurate Pluto atmosphere was
+impossible, because `AtmosphereParams.mieScatter` was a grey scalar and Pluto's atmosphere is
+visible only as blue haze — a wavelength-dependent Mie effect off sub-micron tholin aggregates.
+Rayleigh, the one per-channel term available, is ~300× below the haze at ~1 Pa. Offered the choice
+between backlogging, a Rayleigh-as-proxy hack, and the real shader change, the user chose the
+shader change knowing it re-opened every atmosphere body.
+
+- [x] Widen `mieScatter` to `Vec3` across the type, `packScatteringParams`, `scattering.wesl`,
+      `multiScatterLut.wesl`, `skyViewLut.wesl` and the packer test, splatting all seven existing
+      rows to `[X, X, X]` so it is a provable no-op. The `vec3` lands on an already-16-byte-aligned
+      slot and absorbs both trailing pads: the struct stays exactly 80 bytes / 20 f32.
+- [x] Add the `pluto` row from primary-literature constants, each tagged [M]easured / [D]erived
+      (arithmetic shown) / [L]ook. Magnitude anchors on a measured vertical optical depth of 0.013
+      over a 50 km scale height; the colour is the measured MVIC blue/red ratio of 2.5 at fixed
+      phase (λ^-3.44); `miePhaseG: 0.5` is solved to reproduce the measured forward lobe height,
+      not borrowed from Earth's 0.8. Derivations live under _Task 14 — derivations_ below, not in
+      the row.
+- [x] Fix `densityOzone`, which divided by zero on every non-Earth body — `ozoneWidthKm: 0` is the
+      table's "no ozone" idiom, and WGSL's Finite Math Assumption makes the result _indeterminate_
+      rather than merely NaN, naming `max` as a builtin that misbehaves under exactly that
+      optimisation. Pre-existing; found by the research, not caused by it.
+- [x] Visual pass: the ring reads backlit and is absent front-lit. That is the model reproducing
+      itself — the forward-scattering lobe is 27× stronger at high phase, which is why the famous
+      blue-haze image is New Horizons' departure shot. Known caricature, recorded in the row: a
+      single HG lobe has no backscatter term, so the front-lit case is likely under-represented.
+
+#### Task 14 — derivations
+
+The row's constants and where each came from. This is the surviving record: the derivations were
+worked out in a research report that lived in the branch's `.superpowers/` workspace, which is
+gitignored and which `/feature-done` deleted, so nothing else carries them. Tags are the row's own
+[M]easured / [D]erived / [L]ook.
+
+- `atmosphereTopKm` = R + 250. **[DERIVED]** LORRI resolves haze down to its stray-light noise floor
+  at ~1450 km plutocentric (Cheng+17 Fig. 3), i.e. ~260 km altitude; Alice detects it to 300 km.
+  250 km is five haze scale heights, where density is 0.7% of the surface value (e⁻⁵).
+- `rayleighScatter` = `[4.5e-7, 1.06e-6, 2.59e-6]`. **[DERIVED]** N₂ Rayleigh scaled from Earth's by
+  surface number density: 11 µbar at 40 K gives n = 1.99e15 cm⁻³, which is 7.82e-5 of Earth's
+  2.55e19, times Earth's (5.8, 13.6, 33.1)e-3. That lands ~300× below the haze term; kept non-zero
+  because it is the honest value.
+- `rayleighScaleHeightKm` = 50. **[MEASURED]** Young+18 found haze extinction approximately
+  proportional to N₂ density from 26–100 km. An isothermal 40 K scale height would be 19 km, but the
+  atmosphere climbs to 110 K by 30 km — hence 50.
+- `mieScatter` = `[1.85e-4, 3.83e-4, 8.25e-4]`. **[DERIVED]** Anchor: a vertical scattering optical
+  depth of 0.013 over a 50 km scale height (Gladstone+16) = 2.72e-4 /km at the LORRI pivot
+  wavelength, 607.6 nm. Colour: the measured MVIC blue/red I/F of 0.75/0.30 = 2.5 across 475/620 nm
+  gives λ^-3.44, evaluated at 680/550/440 nm.
+- `mieAbsorption` = 9.6e-6. **[DERIVED]** Tholin k = 0.018 at 607.6 nm (Gladstone+16) through van de
+  Hulst's anomalous-diffraction Qabs = 0.096 against Qsca = 2.7 — single-scattering albedo 0.966, so
+  absorption is 3.5% of scattering.
+- `mieScaleHeightKm` = 50. **[MEASURED]** "typical brightness scale heights of ~50 km"
+  (Gladstone+16, _Hazes_).
+- `miePhaseG` = 0.5. **[DERIVED]** Henyey-Greenstein g solved to reproduce the measured forward lobe
+  P(165°) ≈ 5 (Gladstone+16): g = 0.5 gives 4.95. Far below Earth's 0.8 because HG has to hit the
+  lobe's _height_, not merely be forward-biased.
+- Ozone terms all zero. **[MEASURED, by absence]** The Alice occultation's species inventory is N₂,
+  CH₄, C₂H₂, C₂H₄, C₂H₆ and haze (Young+18).
+- `groundAlbedo` rides the seed. **[MEASURED, with a caveat]** The seed's mean (0.49) is darker than
+  the measured disc: geometric albedo 0.62 ± 0.03 at 0.62 µm, Bond 0.72 ± 0.07 (Buratti+17). Only
+  the multi-scatter bounce reads it, and at τ_vert 0.04 that is a ~1% term — so the seed is the
+  thing to fix, not the row.
+- `twilightSoftness` = 0.1. **[LOOK CHOICE]** Wider than Earth's 0.05 because the whole visible ring
+  sits _at_ the terminator and night-limb haze is only ~4× fainter than day-limb (Cheng+17), so a
+  hard fade halves the ring.
+- `exposure` = 2.35. **[LOOK CHOICE]** Earth's calibrated value; nothing about Pluto argues for a
+  different pipeline gain. The calibration anchors: at phase ≳148° the ring must be at least as
+  bright as the sunlit crescent (Cheng+17 Fig. 16), and at phase ~20° it is nearly invisible
+  (I/F ~0.003).
+
+**Three limitations, which are why the row is a caricature and not a model.**
+
+1. The colour is defensible — a directly measured two-filter cross-section ratio, and λ^-3.44 is
+   what fractal aggregates scattering as their ~10 nm monomers should give. The phase function is
+   not: one HG lobe fits 167° and 67° but is 3.5× too bright at 148°, has no backscatter lobe, and
+   cannot express that the real phase function changes with altitude (spheres below ~15 km,
+   aggregates above). The ~20 discrete haze layers are not modelled at all.
+2. Visibility is narrow: a thin ring, backlit, at phase ≳160° with the camera anti-sunward. Below
+   ~100° phase the haze is 1–3% of the sunlit disc and invisible. The perceptible band is
+   ~100–150 km, 8–13% of the radius, so reading ~20 px at 1080p needs a camera within roughly
+   8,000 km (~7 Pluto radii). Charon gets no row at all — the LORRI 3σ limit is 7000× below Pluto's
+   haze.
+3. What Pluto breaks in the existing model: a single exponential can produce neither the ~20 layers
+   nor the observed brightness peak several km _above_ the ground, and has to choose between the
+   50 km and 30 km regimes. The grey scalars stay wrong in principle — for a tholin whose k spans a
+   factor 45 across the band (`mieAbsorption`), for a column whose phase function varies with
+   altitude and wavelength (`miePhaseG`), and over normal reflectances of 0.08–1.0
+   (`groundAlbedo`).
+
+#### Re-homed comment material
+
+Material cut from source comments under the comment budget that was worth keeping.
+
+Re-homed from `panSharpenRgb`'s header when it was cut to the comment budget: the chroma carrier is
+`RGB/Y - 1` rather than photometric matching **because** that invariance is what lets two
+independently-exposed sources combine with no photometric alignment step — only the geometric
+alignment the caller guarantees by resizing both to one grid.
+
+**Tier ceilings: look vs source** (`bodyTextureRegistry`). A kind's ceiling was authored for one of
+two reasons that must not be conflated. A _look ceiling_ caps detail where more resolution buys
+nothing even given a bigger source: Uranus and Neptune are near-featureless discs (`small`), Venus
+is unresolved cloud (`medium`), and everything unlisted goes to `large` (8 k). A _source ceiling_
+caps detail where the raw image itself tops out below `large` regardless of what the surface would
+reward: Jupiter and Saturn are `medium` because their Solar System Scope files are 4096×2048 despite
+the `8k_` filename prefix. Raising a source ceiling without first sourcing a genuinely
+higher-resolution image is a regression, not an upgrade. The per-row applications survive in the
+registry; the taxonomy itself does not.
+
+**Registry membership IS texture identity** (`bodyTextureRegistry`, spec §4.2/§4.3). Runtime and
+build both derive from the one table — the runtime through `clampTier(userTier, spec.kinds[kind])`,
+the build through the tier set it emits and the `treatment.kind` it dispatches on — so a textured
+body is one row here plus its id in `BodyTextureId` and its raw-data entries, never a coordinated
+edit across parallel lists. That is the whole reason texture identity lives in registry membership
+rather than a baked per-body `textured` flag: `bodyTextureSpec(id)` returning `null` is the "is this
+body textured?" predicate the body makers ask, and a second textured-id list would be one more thing
+to keep in sync.
+
+**Laplace planes** (`orbitalElements`). The planets and Earth's Moon are referenced to the ecliptic,
+which is how JPL publishes them. A planet's own moons are referenced to their local Laplace plane —
+Saturn's regular moons ride ~27° off the ecliptic, which is why they look visibly tilted — so each
+satellite row's `plane` is built by the `satellite` maker from that moon's OWN Laplace-plane pole
+(the `poleRaDeg`/`poleDecDeg` JPL tabulates) rather than from a shared equatorial constant. The
+inner moons' poles sit near the planet's equatorial pole, but a distant moon's Laplace plane tilts
+off the equator (Iapetus ~15°) and only its own pole captures that. The ecliptic→equatorial rotation
+into the scene frame is `ECLIPTIC_FRAME` (`orbitPlaneFrames.ts`), applied downstream where the
+ellipse is built.
+
+**Pluto's element provenance** (`orbitalElements`). The JPL web edition of "Keplerian Elements for
+Approximate Positions of the Major Planets" dropped Pluto, and the PDF it replaced now redirects to
+it, so Pluto's row comes from the same table reprinted in the Explanatory Supplement to the
+Astronomical Almanac, 3rd ed. (2013), §8.10 Table 8.10.2. The copy used:
+`https://www.voyagepourproxima.fr/JPL-DE_LE405-Orbital%20Ephemerides%20of%20the%20Sun,%20Moon,%20and%20Planets.pdf`.
+The row keeps the citation; only the URL was cut.
+
+**Earth's atmosphere row** (`atmosphereParams`). Earth carries the canonical parameter set from
+Bruneton & Neyret's "Precomputed Atmospheric Scattering" (2008) as refined in Hillaire's 2020 "A
+Scalable and Production Ready Sky and Atmosphere Rendering Technique": Rayleigh (5.8, 13.6, 33.1)e-3
+1/km at an 8 km scale height, Mie scattering 3.9e-3 1/km with 4.4e-3 1/km absorption at a 1.2 km
+scale height and a 0.8 Henyey-Greenstein asymmetry, and an ozone tent centred at 25 km.
+
+**Physics vs look — the two radiometric dials** (`atmosphereParams`). Most of a row is the physical
+scattering constants the three LUTs integrate. The two trailing fields are not: `sunIrradiance`
+scales the solar radiance driving the in-scatter integral and `exposure` scales the shell's radiance
+as it lands in the HDR target, both packed into `AtmosphereUniforms` per frame. They are look knobs,
+the same split `earthSurfaceParams` / `pbr.wesl` draws between artistic dials and shading-model
+floors, and they ride the physics row so a new atmosphere body carries its own look in one place
+instead of in a parallel table. Earth's `exposure: 2.35` was eye-tuned against the Meteosat
+full-disc reference so the blue limb and the reddened terminator arc read at a plausible brightness
+against the tonemapped Earth rather than washing to grey — a calibration against a photograph, and
+the reason Pluto's row simply inherits the number.
+
+**Storage-texture bakes are a repo first** (`atmosphereShellRenderer`). All three LUT bakes write a
+`texture_storage_2d<rgba16float, write>`; every earlier compute path in skymap writes storage
+_buffers_. It is core-legal WGSL, but WebKit acceptance is unproven. The modules are shaped so a
+fragment render-to-texture fallback could replace the bakes without touching a consumer, since
+consumers only sample the LUTs. This renderer is the first point such a link/validation error can
+surface, and `createShaderModuleWithDevLog` dumps the real `getCompilationInfo()` line when it does.
+
+**Rejected: per-tile `createImageBitmap`** (`texturedBodyRenderer.setPlaceholderMap`). Cropping one
+sub-bitmap per tile with `createImageBitmap(atlas, x, y, w, h)` sidesteps the `origin`/`flipY`
+interaction entirely, but it is asynchronous — the entry point would have to return a promise, or
+the crop would move out to every caller — and it allocates 13 short-lived bitmaps, all to avoid an
+interaction the WebGPU spec pins normatively.
+
+**Three source formats, one sharp path** (`buildTextures`). The raws arrive in three shapes and all
+read through the same sharp/libvips entry: Solar System Scope 2:1 equirectangular RGB JPEGs at
+2k/4k/8k for the eight planets and the Moon; the NASA Blue Marble Earth equirect (21600×10800, or a
+5400×2700 dev sibling) in the same 2:1 RGB shape; and plain 8-bit USGS/NASA GeoTIFFs for the four
+Galilean moons, Pluto and Charon. Io and Ganymede are RGB, while Europa, Callisto, Pluto and Charon
+are single-channel, and Pluto has a separate NASA MVIC colour TIFF beside its mono mosaic. sharp
+reads TIFF natively, so a `.tif` flows through the same `sharp(src)` call as a JPEG and no ISIS
+toolchain enters the pipeline.
+
+**One table, two derived views** (`TEXTURE_SOURCES`). The offline pipeline has two halves that each
+need to know a body's raw source: `fetchTextures` downloads the raws, `buildTextures` tiers them.
+Each used to author its own list — `SSS_BODIES`/`USGS_KEYS` keyed by raw-data key on the fetch side,
+`BODY_SOURCE_KEYS` keyed by body id on the build side — so adding a textured body could compile
+clean while the fetch list silently omitted it: the raw never downloaded, the build logged a skip,
+and the body rendered untextured with no error. Both halves now derive from the one table, keyed by
+`BodyTextureId | RingTextureId` so a missing key is a compile error. The second-level
+`Partial<Record<TextureKind, …>>` is the room Earth's `night`/`clouds`/`material`/`normal` rows were
+added into, which is the payoff the table exists for.
+
+**Two corrections to the demand table** (`assetWiring`, bug fixes against the original spec).
+`filaments` gates on `settings.filaments.enabled`, the real master toggle, so a disabled filament
+overlay never fetches the skeleton. `structureCatalog` gates on structure-category visibility: it
+loads when ANY of the cluster / supercluster / void categories has its ring OR its label enabled,
+read from the per-category rows (`structures.items[cat].enabled` / `.labelEnabled`), which is the
+single home for both axes. With every category visible by default the catalog still loads at boot,
+so the correction was behaviour-preserving; only a user who hides every category's ring AND label
+skips the fetch.
+
+---
+
+## Definition of Done
+
+**Deliverable inventory:**
+
+- Pluto and Charon exist as rows in `SCENE_PLANETS` / `ORBITAL_ELEMENTS` / `ROTATION_ELEMENTS` /
+  `BODY_TEXTURE_REGISTRY` / `planet_facts.seed.json`, riding the existing `planet` source with no
+  new source, category, settings key, or URL-hash scheme.
+- `BodyTextureId` carries `'pluto' | 'charon'`; `TEXTURE_SOURCES` and `RAW_DATA` name the two USGS
+  New Horizons mosaics with live-verified upstream URLs; `textures.sha256` and `ATTRIBUTIONS.md`
+  cover them.
+- Built artefacts: `public/data/images/textures/pluto-4096.jpg`, `charon-4096.jpg` (plus their
+  2048 variants),
+  `body-atlas.webp` (15-tile layout), `bodyAtlas.generated.ts`, `bodyFacts.generated.ts` all
+  regenerated and committed where the project's convention commits generated output.
+- The Charon element row carries the barycentre-approximation landmine comment, linked to
+  `docs/backlog/2026-08-16-barycentric-orbit-pairs.md`.
+- Pluto's texture is _derived_, not swapped: no gap-free true-colour global map exists, so
+  panchromatic luminance carries MVIC chroma with the enhancement inverted by a fitted 2×2 matrix.
+  `npm run fit-pluto-chroma` re-derives the four constants; it gates on outcome (within half a ΔE
+  of a fresh fit, still beating the uniform-scale baseline), not on digits, because the fit's tile
+  population moves with the reference rendition's noise floor.
+- `ATMOSPHERE_PARAMS` carries a `pluto` row and `mieScatter` is per-channel (Task 14).
+
+**Named observable behaviours (manual smoke pass):**
+
+- Pluto shows Tombaugh Regio; Charon shows its dark polar cap (Neverland Regio, IAU-adopted
+  2026-02-02, the "Mordor Macula" of the New Horizons team's nickname).
+- Charon visibly keeps one face toward Pluto as sim time advances (mutual tidal lock).
+- InfoCard copy for at least one of the pair says "dwarf planet" and describes the binary/double
+  relationship.
+- Search, pick, label, and URL deep-link all work with zero body-specific code added anywhere in
+  those subsystems.
+- The single `planet` visibility toggle covers both new bodies.
+
+**Deferral boundary (out of scope — do not chase):**
+
+- Styx, Nix, Kerberos, Hydra — backlogged, blocked on barycentric orbit pairs.
+- Pluto wobbling around the Pluto–Charon barycentre — same backlog item; Pluto stays pinned at its
+  heliocentric position by design, not a bug to fix in this PR.
+- Any new `dwarf-planet` source, category, or settings toggle — explicitly rejected in the grill
+  session (Q1); future dwarf planets ride the same `planet` row this one does.

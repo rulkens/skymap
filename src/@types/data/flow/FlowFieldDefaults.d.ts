@@ -17,7 +17,7 @@ export type FlowFieldDefaults = {
   count: number;
   /** Ring spacing per trail point (world units). */
   trail: number;
-  /** Advect head distance per frame (motion speed). */
+  /** Advect head distance per second (motion speed). */
   flowSpeed: number;
   /** Density-weighted seeding selectivity, [0, 1]. */
   densityBias: number;
