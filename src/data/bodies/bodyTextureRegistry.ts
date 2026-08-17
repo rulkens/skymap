@@ -1,19 +1,18 @@
 /**
  * bodyTextureRegistry — the single authored table of textured bodies and how
- * each body's surface texture is sized, sourced, and tinted.
+ * each body's surface texture is sized, sourced, and coloured.
  *
  * ### The single home for texture identity
  *
  * This registry is deliberately the *only* place the textured-body set is
  * enumerated for the runtime and the build. It is the single home for a body's
- * texture identity, its per-tier resolution ceiling, and its mono-source tint.
+ * texture identity, its per-tier resolution ceiling, and its colour treatment.
  * Two parts of the system derive from it:
  *
  *  - the **runtime tier clamp** — `clampTier(userTier, spec.kinds[kind])` keeps
  *    the proximity loader from requesting a resolution a body has no file for;
  *  - the **build tier-set** — the texture tool emits only the tiers `≤` a kind's
- *    ceiling, and `provenance` / `grayscaleTint` tell it whether a source is mono
- *    and how to tint it.
+ *    ceiling, and dispatches on `treatment.kind` for how to colour the source.
  *
  * The offline fetch (`tools/fetch/fetchTextures.ts`) and build
  * (`tools/textures/buildTextures.ts`) both derive their raw-source sets from a
@@ -28,7 +27,7 @@
  * That is the whole reason texture identity lives in registry membership rather
  * than a baked per-body `textured` flag (spec §4.2/§4.3).
  *
- * ### Ceilings and tints
+ * ### Ceilings and colour treatments
  *
  * A kind's tier ceiling is authored for one of two distinct reasons, and they
  * must not be conflated:
@@ -47,10 +46,10 @@
  *    that, it is a regression, not an upgrade.
  *
  * Today every body has only a `surface` kind whose ceiling is one of the two
- * values above. `grayscaleTint` marks the USGS mono sources — the two
- * Galilean moons plus Pluto and Charon all ship single-channel — the tint
- * restores a plausible hue the mono map lacks; its presence is the
- * mono-source marker (spec §3).
+ * values above. `treatment` is the orthogonal axis: `{ kind: 'colour' }` for a
+ * source that is already RGB, `{ kind: 'monoTint', tint }` for the USGS
+ * single-channel mosaics — the two Galilean moons plus Pluto and Charon — where
+ * the tint restores a plausible hue the mono map lacks (spec §3).
  *
  * Nothing here checks an authored ceiling against the source it names.
  * `tools/textures/tiersFittingSourceWidth.ts` measures the real pixel width
@@ -73,9 +72,19 @@ import type { BodyTextureSpec } from '../../@types/scene/BodyTextureSpec';
 export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSpec>> = {
   // Solar System Scope full-colour maps for the eight planets + the Moon; NASA
   // Blue Marble for Earth; USGS maps for the four Galilean moons, Pluto, and Charon.
-  mercury: { bodyId: 'mercury', kinds: { surface: 'large' }, provenance: 'sss' },
+  mercury: {
+    bodyId: 'mercury',
+    kinds: { surface: 'large' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
   // Venus tops out at medium — the source is unresolved cloud, no 8 k detail exists.
-  venus: { bodyId: 'venus', kinds: { surface: 'medium' }, provenance: 'sss' },
+  venus: {
+    bodyId: 'venus',
+    kinds: { surface: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
   // Earth carries extra maps beyond its day albedo: a `night` (city lights) sRGB
   // JPG at the full `large` (8k) ceiling — the Black Marble source resolves fine
   // detail worth keeping — a `material` (roughness + ocean mask) packed linear
@@ -95,39 +104,80 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
       clouds: 'large',
     },
     provenance: 'nasa',
+    treatment: { kind: 'colour' },
   },
-  mars: { bodyId: 'mars', kinds: { surface: 'large' }, provenance: 'sss' },
+  mars: {
+    bodyId: 'mars',
+    kinds: { surface: 'large' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
   // Jupiter / Saturn: source ceiling, not a look ceiling — see header. The
   // `8k_` source files are actually 4096×2048; `large` has no tile to load.
-  jupiter: { bodyId: 'jupiter', kinds: { surface: 'medium' }, provenance: 'sss' },
-  saturn: { bodyId: 'saturn', kinds: { surface: 'medium' }, provenance: 'sss' },
+  jupiter: {
+    bodyId: 'jupiter',
+    kinds: { surface: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  saturn: {
+    bodyId: 'saturn',
+    kinds: { surface: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
   // Uranus / Neptune are near-featureless discs — small is the highest useful tier.
-  uranus: { bodyId: 'uranus', kinds: { surface: 'small' }, provenance: 'sss' },
-  neptune: { bodyId: 'neptune', kinds: { surface: 'small' }, provenance: 'sss' },
+  uranus: {
+    bodyId: 'uranus',
+    kinds: { surface: 'small' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  neptune: {
+    bodyId: 'neptune',
+    kinds: { surface: 'small' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
   // The Moon carries a `normal` (tangent-space relief) map beyond its albedo:
   // BAKED from the LOLA elevation heightfield, capped at `medium` (4k) like
   // Earth's — a normal map downsamples cleanly, so 4k is the useful ceiling.
-  moon: { bodyId: 'moon', kinds: { surface: 'large', normal: 'medium' }, provenance: 'sss' },
-  io: { bodyId: 'io', kinds: { surface: 'large' }, provenance: 'usgs' },
+  moon: {
+    bodyId: 'moon',
+    kinds: { surface: 'large', normal: 'medium' },
+    provenance: 'sss',
+    treatment: { kind: 'colour' },
+  },
+  io: {
+    bodyId: 'io',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
+  },
   // Europa + Callisto: USGS mono maps — tinted at build time to restore hue.
   europa: {
     bodyId: 'europa',
     kinds: { surface: 'large' },
     provenance: 'usgs',
-    grayscaleTint: [0.86, 0.82, 0.74],
+    treatment: { kind: 'monoTint', tint: [0.86, 0.82, 0.74] },
   },
-  ganymede: { bodyId: 'ganymede', kinds: { surface: 'large' }, provenance: 'usgs' },
+  ganymede: {
+    bodyId: 'ganymede',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
+  },
   callisto: {
     bodyId: 'callisto',
     kinds: { surface: 'large' },
     provenance: 'usgs',
-    grayscaleTint: [0.62, 0.58, 0.52],
+    treatment: { kind: 'monoTint', tint: [0.62, 0.58, 0.52] },
   },
   // Pluto / Charon: medium is a LOOK ceiling, not a source ceiling — sources
   // measure 24888px/12693px, well past 8k; the far-side coverage gap (only the
   // encounter hemisphere is well-resolved) is a fidelity caveat, not the tier
   // driver. Both sources measured single-channel (`sharp(...).metadata()`:
-  // channels=1, space=b-w); `grayscaleTint` is a reasoned calibration against
+  // channels=1, space=b-w); the `monoTint` is a reasoned calibration against
   // the Europa/Callisto idiom, not literal RGB extraction — Pluto reads warm
   // tan overall (disc mean R:G:B ≈ 1:0.94:0.85 off NASA's natural-colour MVIC
   // view, https://science.nasa.gov/resource/true-colors-of-pluto/; the tint is
@@ -138,13 +188,13 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     bodyId: 'pluto',
     kinds: { surface: 'medium' },
     provenance: 'usgs',
-    grayscaleTint: [0.8, 0.7, 0.56],
+    treatment: { kind: 'monoTint', tint: [0.8, 0.7, 0.56] },
   },
   charon: {
     bodyId: 'charon',
     kinds: { surface: 'medium' },
     provenance: 'usgs',
-    grayscaleTint: [0.6, 0.58, 0.56],
+    treatment: { kind: 'monoTint', tint: [0.6, 0.58, 0.56] },
   },
 };
 

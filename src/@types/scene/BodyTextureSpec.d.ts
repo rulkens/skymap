@@ -1,7 +1,7 @@
 import type { BodyTextureId } from '../data/BodyTextureId';
 import type { Tier } from '../data/Tier';
 import type { TextureKind } from '../data/TextureKind';
-import type { Vec3 } from '../math/Vec3';
+import type { ColourTreatment } from './ColourTreatment';
 
 /**
  * BodyTextureSpec — one textured body's row in `BODY_TEXTURE_REGISTRY`: the
@@ -20,10 +20,9 @@ import type { Vec3 } from '../math/Vec3';
  * never requests a resolution that does not exist, and the build/fetch tools emit
  * only the tiers `≤` that ceiling.
  *
- * `grayscaleTint` is a build-time colour applied to the two USGS Galilean-moon
- * sources that ship as single-channel (mono) maps — the tint restores a
- * plausible hue that the grayscale source lacks. It is absent for full-colour
- * sources, so its presence is itself the mono-source marker (spec §3).
+ * `treatment` names, as a tag, how the build turns this body's raw albedo source
+ * into sRGB — full-colour passthrough, or a tint multiplied into a mono source
+ * (spec §3). Every row states it; nothing is inferred from a missing field.
  */
 
 export type BodyTextureSpec = {
@@ -38,6 +37,6 @@ export type BodyTextureSpec = {
   readonly kinds: Readonly<Partial<Record<TextureKind, Tier>>>;
   /** Upstream provider: `sss` (Solar System Scope), `usgs`, or `nasa` (Blue Marble). */
   readonly provenance: 'sss' | 'usgs' | 'nasa';
-  /** Build-time tint for a mono/grayscale source — present iff the source is single-channel. */
-  readonly grayscaleTint?: Vec3;
+  /** How the build colours this body's albedo source (per body, not per kind). */
+  readonly treatment: ColourTreatment;
 };

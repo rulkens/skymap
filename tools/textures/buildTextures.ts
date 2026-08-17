@@ -27,14 +27,14 @@
  *    reads TIFF natively (no ISIS toolchain), so a `.tif` flows through the exact
  *    same `sharp(src)` entry as a JPEG — the format is transparent to the build.
  *
- * ## Grayscale tint for the mono USGS moons
+ * ## Colour treatment, dispatched on the registry tag
  *
- * Europa and Callisto have no global colour mosaic — their USGS sources are
- * single-channel. `BODY_TEXTURE_REGISTRY` carries a `grayscaleTint` (a per-body
- * Vec3) for exactly those two; we expand the mono source to sRGB and multiply the
- * tint into it (`.linear(tint, 0)`), restoring a plausible hue the map lacks. The
- * tint's presence in the registry IS the mono-source marker — every full-colour
- * source has none and passes through untinted.
+ * How a body's albedo source becomes sRGB is authored per body in
+ * `BODY_TEXTURE_REGISTRY` as a tagged `treatment` and switched on here: an
+ * already-RGB source passes through, while the single-channel USGS mosaics
+ * (Europa, Callisto, Pluto, Charon — none has a global colour mosaic) are
+ * band-expanded and multiplied by their `tint`, restoring a plausible hue the map
+ * lacks. A further treatment is a variant plus a case, not a new marker field.
  *
  * ## Non-upscaled tier downsample (the source-cap intersection)
  *
@@ -75,6 +75,7 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
@@ -193,25 +194,35 @@ export async function writeTintedMonoTier(
 }
 
 /**
- * Downsample one body source to a tier and write the JPEG. Resizes by width
- * only (the sources are exactly 2:1, so height follows). Mono sources carrying a
- * grayscale tint take the two-pass tint path (`writeTintedMonoTier`); full-colour
- * RGB sources encode in a single pass at `JPEG_QUALITY`.
+ * Downsample one body source to a tier and write the JPEG, per the body's colour
+ * treatment. Resizes by width only (the sources are exactly 2:1, so height
+ * follows): a `colour` source encodes in a single pass at `JPEG_QUALITY`, a
+ * `monoTint` one takes the two-pass tint path (`writeTintedMonoTier`).
  */
 async function writeBodyTier(
   srcPath: string,
-  tint: Vec3 | undefined,
+  treatment: ColourTreatment,
   widthPx: number,
   outPath: string,
 ): Promise<void> {
-  if (tint !== undefined) {
-    await writeTintedMonoTier(srcPath, tint, widthPx, outPath);
-    return;
+  switch (treatment.kind) {
+    case 'colour': {
+      await sharp(srcPath, { limitInputPixels: false })
+        .resize({ width: widthPx })
+        .jpeg({ quality: JPEG_QUALITY })
+        .toFile(outPath);
+      return;
+    }
+    case 'monoTint': {
+      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath);
+      return;
+    }
+    // TypeScript exhaustiveness guard — the union is closed.
+    default: {
+      const _exhaustive: never = treatment;
+      throw new Error(`unhandled colour treatment: ${JSON.stringify(_exhaustive)}`);
+    }
   }
-  await sharp(srcPath, { limitInputPixels: false })
-    .resize({ width: widthPx })
-    .jpeg({ quality: JPEG_QUALITY })
-    .toFile(outPath);
 }
 
 /**
@@ -320,7 +331,7 @@ async function writeNormalTier(
 /**
  * The per-kind writer plus the log note that annotates its tier. `write` produces
  * the file; `note` reads whatever the note depends on (only the sRGB writer's
- * does — its tint) off the registry.
+ * does — its colour treatment) off the registry.
  */
 type KindWriter = {
   readonly write: (
@@ -332,19 +343,24 @@ type KindWriter = {
   readonly note: (bodyId: BodyTextureId) => string;
 };
 
+/** The log note each colour treatment annotates its tier with. */
+const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
+  colour: '',
+  monoTint: '  (tinted)',
+};
+
 /**
  * The sRGB (JPEG albedo) writer, shared by `surface` and `night`. The two differ
- * only in whether a grayscale tint applies, and that tint is a per-BODY property
- * (`grayscaleTint`), not a per-kind one: the mono USGS moons carry a `surface`
- * tint, Earth's `surface` AND `night` carry none. So a single registry lookup
- * serves both kinds — Europa's surface tints through the two-pass mono path,
- * Earth's night passes `undefined` and encodes in one pass — and the '(tinted)'
- * note derives from that same tint presence.
+ * only in colour treatment, and that is a per-BODY property, not a per-kind one:
+ * the mono USGS bodies treat their `surface`, Earth's `surface` AND `night` are
+ * both plain colour. So a single registry lookup serves both kinds — Europa's
+ * surface tints through the two-pass mono path, Earth's night encodes in one pass
+ * — and the note derives from the same tag.
  */
 const SRGB_WRITER: KindWriter = {
   write: (bodyId, srcPath, widthPx, outPath) =>
-    writeBodyTier(srcPath, BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint, widthPx, outPath),
-  note: (bodyId) => (BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint ? '  (tinted)' : ''),
+    writeBodyTier(srcPath, BODY_TEXTURE_REGISTRY[bodyId].treatment, widthPx, outPath),
+  note: (bodyId) => TREATMENT_NOTE[BODY_TEXTURE_REGISTRY[bodyId].treatment.kind],
 };
 
 /**
@@ -353,7 +369,7 @@ const SRGB_WRITER: KindWriter = {
  * than another branch of an if-chain:
  *
  *  - **`surface` + `night`** → the shared `SRGB_WRITER` (JPEG albedo / night
- *    lights), tint-parameterised off the registry.
+ *    lights), parameterised by the body's registry colour treatment.
  *  - **`material`** → `writeMaterialTier`, packing a linear roughness/ocean-mask
  *    lossless WebP (Earth's PBR map).
  *  - **`normal`** → `writeNormalTier`, baking a tangent-space normal map from the

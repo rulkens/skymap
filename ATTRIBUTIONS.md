@@ -354,7 +354,7 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 - **Use:** Global surface mosaics for Io, Europa, Ganymede, and Callisto
   (Voyager + Galileo SSI). Europa and Callisto ship single-channel and are
-  hue-tinted at build time (`grayscaleTint` in the body-texture registry).
+  hue-tinted at build time (the `monoTint` treatment in the body-texture registry).
 - **Source:** USGS Astrogeology Science Center,
   <https://planetarymaps.usgs.gov/>.
 - **Licence:** Public domain. Credit: "NASA / USGS".
@@ -363,8 +363,8 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px
   equirectangular, 8-bit stretched from the 32-bit originals. Both ship
-  single-channel and are hue-tinted at build time (`grayscaleTint` in the
-  body-texture registry).
+  single-channel and are hue-tinted at build time (the `monoTint` treatment in
+  the body-texture registry).
 - **Source:** USGS Astrogeology Science Center,
   <https://planetarymaps.usgs.gov/>.
 - **Licence:** Public domain (Astropedia access constraints: none; use constraints: cite authors).
