@@ -122,7 +122,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     gravity: '0.063 g',
     dayLength: '6.4 Earth days (retrograde)',
     yearLength: '247.9 Earth years',
-    distance: '39.6 AU',
+    distance: '39.5 AU',
     meanTemp: '−232 °C',
     moons: '5',
     atmosphere: 'N₂ (thin), trace CH₄, CO',
@@ -321,6 +321,6 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     atmosphere: 'None',
     wikiTitle: 'Charon_(moon)',
     description:
-      "Charon is Pluto's largest moon and, at roughly half Pluto's diameter, massive enough that the pair are sometimes called a double dwarf planet system rather than a planet and its moon. Its dark red north pole, Mordor Macula, is coated in tholins — methane that escapes Pluto's atmosphere, freezes onto Charon, and is chemically reddened by sunlight.",
+      "Charon is Pluto's largest moon and, at roughly half Pluto's diameter, massive enough that the pair are sometimes called a double dwarf planet system rather than a planet and its moon. Its dark red north pole, Neverland Regio (nicknamed Mordor Macula by the New Horizons team), is coated in tholins — methane that escapes Pluto's atmosphere, freezes onto Charon, and is chemically reddened by sunlight.",
   },
 };
