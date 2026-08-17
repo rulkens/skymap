@@ -16,7 +16,9 @@ import type { ZoneOfAvoidanceTuning } from '../../../src/@types/settings/ZoneOfA
 describe('ZONE_OF_AVOIDANCE_SLIDER_FIELDS — parity with the tuning knobs', () => {
   it('covers exactly the scalar keys of ZoneOfAvoidanceTuning', () => {
     const registryKeys = ZONE_OF_AVOIDANCE_SLIDER_FIELDS.map((f) => f.key).sort();
-    const scalarKeys = (Object.keys(DEFAULT_ZONE_OF_AVOIDANCE_TUNING) as (keyof ZoneOfAvoidanceTuning)[])
+    const scalarKeys = (
+      Object.keys(DEFAULT_ZONE_OF_AVOIDANCE_TUNING) as (keyof ZoneOfAvoidanceTuning)[]
+    )
       .filter((k) => k !== 'color' && k !== 'labelColor')
       .sort();
     expect(registryKeys).toEqual(scalarKeys);
@@ -27,14 +29,14 @@ describe('ZONE_OF_AVOIDANCE_SLIDER_FIELDS — parity with the tuning knobs', () 
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  // A range that excludes its own default would boot the panel showing a
-  // slider already pinned to an end stop, and the first drag would jump the
-  // value — the knob would be unusable without anyone seeing an error.
+  // A range that ends on its own default boots the panel showing a slider
+  // already pinned to an end stop, draggable in one direction only — so the
+  // upper bound is strict, not merely inclusive.
   it('every slider spans its default with a positive step', () => {
     for (const f of ZONE_OF_AVOIDANCE_SLIDER_FIELDS) {
       expect(f.step).toBeGreaterThan(0);
       expect(f.min).toBeLessThanOrEqual(DEFAULT_ZONE_OF_AVOIDANCE_TUNING[f.key]);
-      expect(f.max).toBeGreaterThanOrEqual(DEFAULT_ZONE_OF_AVOIDANCE_TUNING[f.key]);
+      expect(f.max).toBeGreaterThan(DEFAULT_ZONE_OF_AVOIDANCE_TUNING[f.key]);
     }
   });
 });

@@ -41,10 +41,9 @@ export const ZONE_OF_AVOIDANCE_SLIDER_FIELDS: readonly ZoneOfAvoidanceSliderFiel
     key: 'edgeSharpness',
     label: 'edgeSharpness',
     min: 0,
-    // Degrees of galactic latitude; the band's b-limit is itself only a few
-    // tens of degrees, so a feather past ~5deg would already blur past the
-    // limit rather than soften an edge.
-    max: 5,
+    // Degrees of galactic latitude; the b-limit itself is only 3-10deg, so a
+    // feather much past ~8 blurs across the wedge instead of softening its edge.
+    max: 8,
     step: 0.05,
     format: (v) => v.toFixed(2),
     title: "Feather width, in degrees of galactic latitude, of the band's b-limit fade.",
