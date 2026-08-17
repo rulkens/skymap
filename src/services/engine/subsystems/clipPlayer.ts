@@ -52,6 +52,14 @@
  * NOTE: The Task 11 brief's checkbox title says "dispatches clipEnded the frame
  * the clip reaches durationSec" — that wording is superseded by this contract.
  * The test pins the two-frame defer explicitly.
+ *
+ * ### Looping (`ClipData.loop`)
+ *
+ * A looping clip skips the pendingEnd/clipEnded arm entirely: on completion it
+ * rewinds `clock.clipStartMs` (keeping the sub-second remainder past
+ * `durationSec` so a slow frame doesn't cost drift) and resets `prevElapsed`
+ * so top-of-timeline cues re-fire. `clipEnded()` then only fires via `stop()` —
+ * the saga's `stopClip` race arm or `takeLatest` cancellation are the only exits.
  */
 
 import { createClipOpacityChannel } from '../../animation/clipOpacityChannel';
@@ -251,7 +259,21 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     // produce step must still run evaluateClip saturated at durationSec to
     // bake the correct final pose. clipEnded dispatches on the NEXT tick (step 1).
     if (elapsed >= compiled.durationSec) {
-      pendingEnd = true;
+      if (clip.data.loop) {
+        // Looping clip: rewind instead of ending. Keep the remainder past
+        // durationSec (rather than snapping to 0) so a slow frame doesn't cost
+        // a few ms of drift every cycle. Writing clock.clipStartMs directly
+        // (bypassing clipElapsed's own ref-change reset) is safe because the
+        // clip reference is unchanged — the next clipElapsed(clock, clip, nowMs)
+        // call sees clip === clock.lastClipRef and just reads the value we set.
+        const overshoot = elapsed - compiled.durationSec;
+        clock.clipStartMs = nowMs - overshoot * 1000;
+        // Rewind the cue cursor too, so cues at the top of the timeline (e.g. an
+        // atSec=0 fade) re-fire on the next pass instead of staying "already fired".
+        prevElapsed = -Infinity;
+      } else {
+        pendingEnd = true;
+      }
     }
   }
 

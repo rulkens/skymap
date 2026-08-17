@@ -34,8 +34,8 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
   const f = makeSettingsFixture();
   return {
     settings: {
-      galaxyCatalogs: { ...f.galaxyCatalogs, enabled: !f.galaxyCatalogs.enabled },
-      structures: { ...f.structures, enabled: !f.structures.enabled },
+      galaxyCatalogs: { ...f.galaxyCatalogs },
+      structures: { ...f.structures },
       volumes: { ...f.volumes, enabled: !f.volumes.enabled },
       filaments: { ...f.filaments, intensity: 0.42 },
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },

@@ -22,6 +22,7 @@ import type { OrientationDiagnostics } from '../../../@types/engine/OrientationD
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../@types/engine/YoungStarsLanes';
+import type { GalaxyProbeApi } from '../../../@types/engine/GalaxyProbeApi';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
@@ -98,8 +99,6 @@ import type {
   IsmMapPlaceDigVeil,
   PlaceDigVeilDispatchInput,
 } from '../ismMap/createIsmMapPlaceDigVeil';
-import { SPUR_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
-import { ARM_CLOUD_MAX_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { MAX_PARTICLE_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
@@ -231,139 +230,28 @@ export type GalaxyModel = {
   readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
   readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
   /**
-   * Debug-only pass-through to `readbacks.requestRingMeans` — see that
-   * method's own doc. Exposed on the model, not just `readbacks` (which is
-   * private to this closure), so `createGalaxyEngine.ts`'s handle can wrap
-   * it in a `Promise` the same way every other public entry point does.
+   * Debug-only: this model's share of `handle.probe` (see
+   * `GalaxyProbeApi.d.ts` for the full member docs — peek-vs-readback
+   * semantics, per-tier renorm shapes). `createGalaxyEngine.ts` spreads this
+   * into the composed `handle.probe` alongside the device/texture-bound
+   * readbacks that can't live in the model. `requestRingMeansReadback` stays
+   * callback-style here (unlike its `GalaxyProbeApi` twin) because the
+   * engine wraps it in a `Promise` on the way out — see that file's own doc
+   * for why the wrapper needs `reject`.
    */
-  requestRingMeansReadback(
-    onLand: (means: Float32Array) => void,
-    onError?: (err: unknown) => void,
-  ): void;
-  /**
-   * Debug-only: dispatches `placeDust.wesl` fresh into its own encoder and
-   * maps the dust slot range straight back — the probe's own determinism/
-   * survival-floor numeric exception (no production caller). `null` when
-   * nothing is reserved this rebuild (`dustBudget` is null).
-   * `forceGeneratorIsFluid`, when given, overrides the LIVE
-   * `fieldTuning.ismMap.generator` for this ONE dispatch only — see
-   * `dustDispatchInput`'s own doc for why the probe uses this instead of
-   * actually flipping the tuning to exercise placeDust.wesl's mode-1
-   * (smoothDisc) branch.
-   */
-  requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
-    readonly count: number;
-    readonly records: Float32Array;
-    /** Task 9's survivor-sum input (`placeDust.wesl`'s massOut), read back from the SAME dispatch as `records` — see `IsmMapPlaceDust.dispatchAndReadbackDust`'s own doc. */
-    readonly mass: Float32Array;
-    /** Task 9's GPU-computed Larson renorm scale (`ringReduce.wesl`'s csSurvivorSum output), off a survivor-sum dispatch encoded against the SAME `mass`. */
-    readonly renormScale: number;
-  } | null>;
-  /**
-   * Debug-only: COPIES the dust tail's CURRENT slot range out of the LIVE
-   * `fieldComps` buffer, without dispatching anything — the dust twin of
-   * `requestArmSpurCloudBufferPeek` (own doc below); see `dustPeekBuffer`'s
-   * own doc for why this is a distinct method from
-   * `requestDustPlacementReadback` (that one's own fresh re-dispatch would
-   * mask a stale `dustPlacementRebuild` the same way the spur-cloud one did
-   * — Task 14's own fix-round dust twin). `null` when nothing is reserved.
-   */
-  requestDustBufferPeek(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly records: Float32Array;
-  } | null>;
-  /**
-   * Debug-only: dispatches `placeArmSpurCloud.wesl` fresh into its own
-   * encoder and maps the reservation's slot range straight back — the
-   * probe's own determinism/budget/liveness/flux-parity numeric exception
-   * (no production caller). `flux` is the SAME `spurFlux` uniform the
-   * dispatch used, returned alongside the records so a caller can check the
-   * placed amplitudes actually encode that much flux (raw, pre-Task-15-
-   * renorm — see `readback:placeArmSpurCloud`'s own probe step). `null`
-   * when nothing is reserved this rebuild (`spurCloudReservation` is null —
-   * central galaxy only today, see `centralFieldMixtureAndSpurReservation`'s
-   * own doc).
-   */
-  requestArmSpurCloudPlacementReadback(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly flux: number;
-    readonly records: Float32Array;
-    /** Task 15's flux-weight-sum input (`placeArmSpurCloud.wesl`'s fluxWeightOut), read back from the SAME dispatch as `records`. */
-    readonly fluxWeight: Float32Array;
-    /** Task 15's GPU-computed reciprocal renorm scale (`ringReduce.wesl`'s csArmSpurFluxWeightSum output), off a flux-weight-sum dispatch encoded against the SAME `fluxWeight`. */
-    readonly renormScale: number;
-  } | null>;
-  /**
-   * Debug-only: COPIES the reservation's CURRENT slot range out of the LIVE
-   * `fieldComps` buffer, without dispatching anything — see
-   * `spurCloudPeekBuffer`'s own doc for why this is a distinct method from
-   * `requestArmSpurCloudPlacementReadback` rather than a flag on it (that
-   * one's own fresh re-dispatch would mask exactly the bug this one exists
-   * to catch). `null` when nothing is reserved.
-   */
-  requestArmSpurCloudBufferPeek(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly records: Float32Array;
-  } | null>;
-  /**
-   * Debug-only: Task 13's own numeric-validation exception
-   * (`placeArmCloud.wesl` has no non-GPU path to check its output against)
-   * — dispatches fresh and maps the arm-cloud reservation's slot range
-   * straight back, the arm-cloud twin of `requestArmSpurCloudPlacementReadback`.
-   * `flux` is the SAME `cloudFlux` uniform the dispatch used. No production
-   * caller. `null` when nothing is reserved this rebuild (central galaxy
-   * only today — see `armCloudReservation`).
-   */
-  requestArmCloudPlacementReadback(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly flux: number;
-    readonly records: Float32Array;
-    /** Task 15's flux-weight-sum input (`placeArmCloud.wesl`'s fluxWeightOut), read back from the SAME dispatch as `records`. */
-    readonly fluxWeight: Float32Array;
-    /** Task 15's GPU-computed reciprocal renorm scale (`ringReduce.wesl`'s csArmCloudFluxWeightSum output), off a flux-weight-sum dispatch encoded against the SAME `fluxWeight`. */
-    readonly renormScale: number;
-  } | null>;
-  /**
-   * Debug-only: the arm-cloud twin of `requestArmSpurCloudBufferPeek` — COPIES
-   * the reservation's CURRENT slot range out of the LIVE `fieldComps` buffer,
-   * without dispatching `placeArmCloud.wesl` first. `null` when nothing is
-   * reserved.
-   */
-  requestArmCloudBufferPeek(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly records: Float32Array;
-  } | null>;
-  /**
-   * Debug-only: Task 8's own numeric-validation exception (`placeDigVeil.wesl`
-   * has no non-GPU path to check its output against) — dispatches fresh and
-   * maps the DIG veil reservation's slot range straight back, the DIG twin
-   * of `requestArmCloudPlacementReadback`. No production caller. `null` when
-   * nothing is reserved this rebuild (central galaxy only — see
-   * `createGalaxyModel.ts`'s `digBudget`).
-   */
-  requestDigVeilPlacementReadback(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    /** The SAME `amplitudeBase` uniform the dispatch used — see `requestArmCloudPlacementReadback`'s own `flux` field for the identical "independent expected side" precedent. */
-    readonly amplitudeBase: number;
-    readonly records: Float32Array;
-  } | null>;
-  /**
-   * Debug-only: the DIG twin of `requestArmCloudBufferPeek` — COPIES the
-   * reservation's CURRENT slot range out of the LIVE `hiiComps` buffer,
-   * without dispatching `placeDigVeil.wesl` first. `null` when nothing is
-   * reserved.
-   */
-  requestDigVeilBufferPeek(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly records: Float32Array;
-  } | null>;
+  readonly probe: Pick<
+    GalaxyProbeApi,
+    | 'peekRecords'
+    | 'requestDustPlacementReadback'
+    | 'requestArmSpurCloudPlacementReadback'
+    | 'requestArmCloudPlacementReadback'
+    | 'requestDigVeilPlacementReadback'
+  > & {
+    requestRingMeansReadback(
+      onLand: (means: Float32Array) => void,
+      onError?: (err: unknown) => void,
+    ): void;
+  };
   /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
@@ -433,8 +321,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     label: 'galaxy:hiiComps',
     // COPY_SRC beyond STORAGE|COPY_DST's production need: Task 8's own
     // debug-only readback (`requestDigVeilPlacementReadback`/
-    // `requestDigVeilBufferPeek`) copies the DIG slot range back to the
-    // CPU, same precedent `fieldComps` already establishes for dust.
+    // `probe.peekRecords('hii', ...)`) copies the DIG slot range back to
+    // the CPU, same precedent `fieldComps` already establishes for dust.
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     floatsPerRecord: FIELD_COMPONENT_FLOATS,
     // + DIG_MAX_COUNT: the DIG veil (`hiiRegions.ts`) rides this SAME
@@ -1178,59 +1066,23 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
-   * armCloudPeekBuffer — the arm-cloud twin of `spurCloudPeekBuffer` (own doc
-   * below): `requestArmCloudPlacementReadback` always re-dispatches
-   * `placeArmCloud.wesl` fresh, so it cannot see whether `ensureFresh()`'s own
-   * `armCloudPlacementRebuild` kept the buffer filled — `requestArmCloudBufferPeek`
-   * only ever COPIES the CURRENT `fieldComps` reservation range.
+   * peekScratchBuffer — the ONE shared COPY_DST|MAP_READ target behind
+   * `probe.peekRecords` (below), replacing the four tier-dedicated peek
+   * buffers this task collapsed (dust/arm-cloud/spur-cloud/DIG veil): a peek
+   * COPIES whatever is CURRENTLY sitting in `fieldComps`/`hiiComps` without
+   * dispatching anything, so `probeGpuErrors.ts` can tell "ensureFresh()'s
+   * keyed rebuilds refilled the slots the last repack zeroed" apart from "the
+   * placement kernel itself is correct" (the readbacks below re-dispatch
+   * fresh and so can't see the former — Task 14's vanish bug). Sized at
+   * `MAX_PARTICLE_COUNT` (the dust tail, the largest of the four tiers) —
+   * every call copies only `count` records, so a smaller tier's peek just
+   * uses a prefix of this buffer. ONE peek at a time: the old four-buffer
+   * design made a concurrent pair structurally impossible (different
+   * buffers); this shared one relies on `probeGpuErrors.ts` — the sole
+   * caller — always `await`ing one `peekRecords` before starting the next.
    */
-  const armCloudPeekBuffer = device.createBuffer({
-    label: 'galaxy:armCloudPeek',
-    size: ARM_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-  /**
-   * digVeilPeekBuffer — the DIG twin of `armCloudPeekBuffer`: a plain
-   * COPY_DST|MAP_READ target for `requestDigVeilBufferPeek`, reading
-   * whatever is CURRENTLY sitting in `hiiComps` without dispatching
-   * `placeDigVeil.wesl` first.
-   */
-  const digVeilPeekBuffer = device.createBuffer({
-    label: 'galaxy:digVeilPeek',
-    size: DIG_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-
-  /**
-   * spurCloudPeekBuffer — a plain COPY_DST|MAP_READ target for
-   * `requestArmSpurCloudBufferPeek` (below): unlike
-   * `requestArmSpurCloudPlacementReadback`, which re-DISPATCHES
-   * `placeArmSpurCloud.wesl` fresh every call (masking whether the
-   * PRODUCTION `ensureFresh()`/`spurCloudPlacementRebuild` path actually
-   * kept the buffer filled), this one only ever COPIES whatever is
-   * currently sitting in `fieldComps` — the probe's own regression check
-   * for the vanish-on-dust-only-change bug needs exactly that: a read that
-   * cannot itself paper over a stale keyed rebuild.
-   */
-  const spurCloudPeekBuffer = device.createBuffer({
-    label: 'galaxy:spurCloudPeek',
-    size: SPUR_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-
-  /**
-   * dustPeekBuffer — the dust twin of `spurCloudPeekBuffer` (own doc above):
-   * `requestDustPlacementReadback` always re-dispatches `placeDust.wesl`
-   * fresh, so it cannot see whether `ensureFresh()`'s own
-   * `dustPlacementRebuild` kept the buffer filled — `requestDustBufferPeek`
-   * (below) only ever COPIES the CURRENT `fieldComps` dust range, the same
-   * "cannot paper over a stale keyed rebuild" property the spur-cloud peek
-   * needs, now needed here too for the dust twin of Task 14's vanish bug
-   * (an arms/disc-only `setFieldTuning` patch repacks — and re-zeroes — the
-   * dust tail without dust's own inputs having moved at all).
-   */
-  const dustPeekBuffer = device.createBuffer({
-    label: 'galaxy:dustPeek',
+  const peekScratchBuffer = device.createBuffer({
+    label: 'galaxy:peekScratch',
     size: MAX_PARTICLE_COUNT * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
@@ -1822,207 +1674,146 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       return spurCloudReservation;
     },
 
-    requestRingMeansReadback(onLand, onError): void {
-      readbacks.requestRingMeans(onLand, onError);
-    },
+    probe: {
+      requestRingMeansReadback(onLand, onError): void {
+        readbacks.requestRingMeans(onLand, onError);
+      },
 
-    async requestDustPlacementReadback(opts): Promise<{
-      readonly count: number;
-      readonly records: Float32Array;
-      readonly mass: Float32Array;
-      readonly renormScale: number;
-    } | null> {
-      const budget = dustBudget;
-      if (!fieldGeometry || !budget) return null;
-      const { records, mass } = await placeDust.dispatchAndReadbackDust(
-        dustDispatchInput(fieldGeometry, budget, opts?.forceGeneratorIsFluid),
-      );
-      // Own encoder/submit, AFTER the placement dispatch above's submit has
-      // already retired (dispatchAndReadbackDust awaited its own mapAsync) —
-      // placeDust.massBuffer holds THIS dispatch's fresh values with nothing
-      // else writing to it in between, so this reduction is over the same
-      // records the caller just read back.
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeDustDebugSurvivorSum' });
-      ringReduce.dispatchSurvivorSum(enc, {
-        massBuffer: placeDust.massBuffer,
-        count: budget.count,
-        totalMass: budget.totalMass,
-      });
-      device.queue.submit([enc.finish()]);
-      const renormScale = await ringReduce.readDustRenormScale();
-      return { count: budget.count, records, mass, renormScale };
-    },
+      async peekRecords(
+        buffer: 'field' | 'hii',
+        offset: number,
+        count: number,
+      ): Promise<Float32Array> {
+        if (count <= 0) return new Float32Array(0);
+        const source = buffer === 'field' ? fieldComps.buffer : hiiComps.buffer;
+        const byteSize = count * FIELD_COMPONENT_FLOATS * 4;
+        const byteOffset = offset * FIELD_COMPONENT_FLOATS * 4;
+        const enc = device.createCommandEncoder({ label: 'galaxy:peekRecords' });
+        enc.copyBufferToBuffer(source, byteOffset, peekScratchBuffer, 0, byteSize);
+        device.queue.submit([enc.finish()]);
+        await peekScratchBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+        try {
+          return new Float32Array(peekScratchBuffer.getMappedRange(0, byteSize).slice(0));
+        } finally {
+          peekScratchBuffer.unmap();
+        }
+      },
 
-    async requestDustBufferPeek(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly records: Float32Array;
-    } | null> {
-      const budget = dustBudget;
-      if (!budget || budget.count <= 0) return null;
-      const offset = fieldCounts.emission;
-      const byteSize = budget.count * FIELD_COMPONENT_FLOATS * 4;
-      const byteOffset = offset * FIELD_COMPONENT_FLOATS * 4;
-      const enc = device.createCommandEncoder({ label: 'galaxy:dustPeek' });
-      enc.copyBufferToBuffer(fieldComps.buffer, byteOffset, dustPeekBuffer, 0, byteSize);
-      device.queue.submit([enc.finish()]);
-      await dustPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
-      try {
-        const records = new Float32Array(dustPeekBuffer.getMappedRange(0, byteSize).slice(0));
-        return { count: budget.count, offset, records };
-      } finally {
-        dustPeekBuffer.unmap();
-      }
-    },
+      async requestDustPlacementReadback(opts): Promise<{
+        readonly count: number;
+        readonly records: Float32Array;
+        readonly mass: Float32Array;
+        readonly renormScale: number;
+      } | null> {
+        const budget = dustBudget;
+        if (!fieldGeometry || !budget) return null;
+        const { records, mass } = await placeDust.dispatchAndReadbackDust(
+          dustDispatchInput(fieldGeometry, budget, opts?.forceGeneratorIsFluid),
+        );
+        // Own encoder/submit, AFTER the placement dispatch above's submit has
+        // already retired (dispatchAndReadbackDust awaited its own mapAsync) —
+        // placeDust.massBuffer holds THIS dispatch's fresh values with nothing
+        // else writing to it in between, so this reduction is over the same
+        // records the caller just read back.
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeDustDebugSurvivorSum' });
+        ringReduce.dispatchSurvivorSum(enc, {
+          massBuffer: placeDust.massBuffer,
+          count: budget.count,
+          totalMass: budget.totalMass,
+        });
+        device.queue.submit([enc.finish()]);
+        const renormScale = await ringReduce.readDustRenormScale();
+        return { count: budget.count, records, mass, renormScale };
+      },
 
-    async requestArmSpurCloudPlacementReadback(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly flux: number;
-      readonly records: Float32Array;
-      readonly fluxWeight: Float32Array;
-      readonly renormScale: number;
-    } | null> {
-      const reservation = spurCloudReservation;
-      if (!fieldGeometry || !reservation) return null;
-      const { records, fluxWeight } = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
-        spurCloudDispatchInput(fieldGeometry, reservation),
-      );
-      // Own encoder/submit, AFTER the placement dispatch above's submit has
-      // already retired — `placeArmSpurCloud.fluxWeightBuffer` holds THIS
-      // dispatch's fresh values with nothing else writing to it in between,
-      // so this reduction is over the same records the caller just read back
-      // (`requestDustPlacementReadback`'s own precedent).
-      const enc = device.createCommandEncoder({
-        label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum',
-      });
-      ringReduce.dispatchArmSpurFluxWeightSum(enc, {
-        fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
-        count: reservation.count,
-      });
-      device.queue.submit([enc.finish()]);
-      const renormScale = await ringReduce.readArmSpurRenormScale();
-      return {
-        count: reservation.count,
-        offset: reservation.offset,
-        flux: reservation.flux,
-        records,
-        fluxWeight,
-        renormScale,
-      };
-    },
+      async requestArmSpurCloudPlacementReadback(): Promise<{
+        readonly count: number;
+        readonly offset: number;
+        readonly flux: number;
+        readonly records: Float32Array;
+        readonly fluxWeight: Float32Array;
+        readonly renormScale: number;
+      } | null> {
+        const reservation = spurCloudReservation;
+        if (!fieldGeometry || !reservation) return null;
+        const { records, fluxWeight } = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
+          spurCloudDispatchInput(fieldGeometry, reservation),
+        );
+        // Own encoder/submit, AFTER the placement dispatch above's submit has
+        // already retired — `placeArmSpurCloud.fluxWeightBuffer` holds THIS
+        // dispatch's fresh values with nothing else writing to it in between,
+        // so this reduction is over the same records the caller just read back
+        // (`requestDustPlacementReadback`'s own precedent).
+        const enc = device.createCommandEncoder({
+          label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum',
+        });
+        ringReduce.dispatchArmSpurFluxWeightSum(enc, {
+          fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
+          count: reservation.count,
+        });
+        device.queue.submit([enc.finish()]);
+        const renormScale = await ringReduce.readArmSpurRenormScale();
+        return {
+          count: reservation.count,
+          offset: reservation.offset,
+          flux: reservation.flux,
+          records,
+          fluxWeight,
+          renormScale,
+        };
+      },
 
-    async requestArmSpurCloudBufferPeek(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly records: Float32Array;
-    } | null> {
-      const reservation = spurCloudReservation;
-      if (!reservation || reservation.count <= 0) return null;
-      const byteSize = reservation.count * FIELD_COMPONENT_FLOATS * 4;
-      const byteOffset = reservation.offset * FIELD_COMPONENT_FLOATS * 4;
-      const enc = device.createCommandEncoder({ label: 'galaxy:spurCloudPeek' });
-      enc.copyBufferToBuffer(fieldComps.buffer, byteOffset, spurCloudPeekBuffer, 0, byteSize);
-      device.queue.submit([enc.finish()]);
-      await spurCloudPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
-      try {
-        const records = new Float32Array(spurCloudPeekBuffer.getMappedRange(0, byteSize).slice(0));
-        return { count: reservation.count, offset: reservation.offset, records };
-      } finally {
-        spurCloudPeekBuffer.unmap();
-      }
-    },
+      async requestArmCloudPlacementReadback(): Promise<{
+        readonly count: number;
+        readonly offset: number;
+        readonly flux: number;
+        readonly records: Float32Array;
+        readonly fluxWeight: Float32Array;
+        readonly renormScale: number;
+      } | null> {
+        const reservation = armCloudReservation;
+        if (!fieldGeometry || !reservation) return null;
+        const { records, fluxWeight } = await placeArmCloud.dispatchAndReadbackArmCloud(
+          armCloudDispatchInput(fieldGeometry, reservation),
+        );
+        // Own encoder/submit — `requestArmSpurCloudPlacementReadback`'s own precedent.
+        const enc = device.createCommandEncoder({
+          label: 'galaxy:placeArmCloudDebugFluxWeightSum',
+        });
+        ringReduce.dispatchArmCloudFluxWeightSum(enc, {
+          fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
+          count: reservation.count,
+        });
+        device.queue.submit([enc.finish()]);
+        const renormScale = await ringReduce.readArmCloudRenormScale();
+        return {
+          count: reservation.count,
+          offset: reservation.offset,
+          flux: reservation.flux,
+          records,
+          fluxWeight,
+          renormScale,
+        };
+      },
 
-    async requestArmCloudPlacementReadback(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly flux: number;
-      readonly records: Float32Array;
-      readonly fluxWeight: Float32Array;
-      readonly renormScale: number;
-    } | null> {
-      const reservation = armCloudReservation;
-      if (!fieldGeometry || !reservation) return null;
-      const { records, fluxWeight } = await placeArmCloud.dispatchAndReadbackArmCloud(
-        armCloudDispatchInput(fieldGeometry, reservation),
-      );
-      // Own encoder/submit — `requestArmSpurCloudPlacementReadback`'s own precedent.
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloudDebugFluxWeightSum' });
-      ringReduce.dispatchArmCloudFluxWeightSum(enc, {
-        fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
-        count: reservation.count,
-      });
-      device.queue.submit([enc.finish()]);
-      const renormScale = await ringReduce.readArmCloudRenormScale();
-      return {
-        count: reservation.count,
-        offset: reservation.offset,
-        flux: reservation.flux,
-        records,
-        fluxWeight,
-        renormScale,
-      };
-    },
-
-    async requestArmCloudBufferPeek(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly records: Float32Array;
-    } | null> {
-      const reservation = armCloudReservation;
-      if (!reservation || reservation.count <= 0) return null;
-      const byteSize = reservation.count * FIELD_COMPONENT_FLOATS * 4;
-      const byteOffset = reservation.offset * FIELD_COMPONENT_FLOATS * 4;
-      const enc = device.createCommandEncoder({ label: 'galaxy:armCloudPeek' });
-      enc.copyBufferToBuffer(fieldComps.buffer, byteOffset, armCloudPeekBuffer, 0, byteSize);
-      device.queue.submit([enc.finish()]);
-      await armCloudPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
-      try {
-        const records = new Float32Array(armCloudPeekBuffer.getMappedRange(0, byteSize).slice(0));
-        return { count: reservation.count, offset: reservation.offset, records };
-      } finally {
-        armCloudPeekBuffer.unmap();
-      }
-    },
-
-    async requestDigVeilPlacementReadback(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly amplitudeBase: number;
-      readonly records: Float32Array;
-    } | null> {
-      const budget = digBudget;
-      if (!fieldGeometry || !budget) return null;
-      const records = await placeDigVeil.dispatchAndReadbackDigVeil(
-        digDispatchInput(fieldGeometry, budget),
-      );
-      return {
-        count: budget.count,
-        offset: digOffset,
-        amplitudeBase: budget.amplitudeBase,
-        records,
-      };
-    },
-
-    async requestDigVeilBufferPeek(): Promise<{
-      readonly count: number;
-      readonly offset: number;
-      readonly records: Float32Array;
-    } | null> {
-      const budget = digBudget;
-      if (!budget || budget.count <= 0) return null;
-      const byteSize = budget.count * FIELD_COMPONENT_FLOATS * 4;
-      const byteOffset = digOffset * FIELD_COMPONENT_FLOATS * 4;
-      const enc = device.createCommandEncoder({ label: 'galaxy:digVeilPeek' });
-      enc.copyBufferToBuffer(hiiComps.buffer, byteOffset, digVeilPeekBuffer, 0, byteSize);
-      device.queue.submit([enc.finish()]);
-      await digVeilPeekBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
-      try {
-        const records = new Float32Array(digVeilPeekBuffer.getMappedRange(0, byteSize).slice(0));
-        return { count: budget.count, offset: digOffset, records };
-      } finally {
-        digVeilPeekBuffer.unmap();
-      }
+      async requestDigVeilPlacementReadback(): Promise<{
+        readonly count: number;
+        readonly offset: number;
+        readonly amplitudeBase: number;
+        readonly records: Float32Array;
+      } | null> {
+        const budget = digBudget;
+        if (!fieldGeometry || !budget) return null;
+        const records = await placeDigVeil.dispatchAndReadbackDigVeil(
+          digDispatchInput(fieldGeometry, budget),
+        );
+        return {
+          count: budget.count,
+          offset: digOffset,
+          amplitudeBase: budget.amplitudeBase,
+          records,
+        };
+      },
     },
 
     starInstances(): InstanceDraw[] {
@@ -2051,10 +1842,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       fieldComps.destroy();
       hiiComps.destroy();
       bubbleComps.destroy();
-      spurCloudPeekBuffer.destroy();
-      armCloudPeekBuffer.destroy();
-      dustPeekBuffer.destroy();
-      digVeilPeekBuffer.destroy();
+      peekScratchBuffer.destroy();
       genUbo.destroy();
     },
   };

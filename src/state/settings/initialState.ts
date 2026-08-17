@@ -91,9 +91,9 @@ export function buildInitialSettings(): EngineSettingsState {
     // stays the default's single source of truth (mirroring `tonemap.curve` ←
     // `DEFAULT_TONE_MAP_CURVE`).
     orientation: DEFAULT_ORIENTATION,
-    // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
-    // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
-    // registry entries so the seed can't drift from the galaxy catalog set — and,
+    // Galaxy catalog layer: shared billboard appearance knobs + one item row
+    // per galaxy catalog. Rows are DERIVED from the galaxy-catalog registry
+    // entries so the seed can't drift from the galaxy catalog set — and,
     // critically, each row's `enabled` is seeded from that entry's `visible`
     // field, making SOURCE_REGISTRY the single source of truth for default
     // visibility. The alternative — hardcoding `enabled: true` — silently
@@ -103,7 +103,6 @@ export function buildInitialSettings(): EngineSettingsState {
     // catalog except famousGalaxy (the only one that renders a name label) —
     // seeded uniformly true.
     galaxyCatalogs: {
-      enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
@@ -283,12 +282,11 @@ export function buildInitialSettings(): EngineSettingsState {
         },
       },
     },
-    // Structure overlay: master gate on + one item row per category, each
-    // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`
-    // so the seed can't drift from the structure-id set (famous galaxies bear no
-    // ring and so have no row here).
+    // Structure overlay: one item row per category, each ring + label
+    // default-on. Keys are DERIVED from `STRUCTURE_IDS` so the seed can't
+    // drift from the structure-id set (famous galaxies bear no ring and so
+    // have no row here).
     structures: {
-      enabled: true,
       items: Object.fromEntries(
         STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
       ) as Record<StructureId, StructureItemSettings>,
