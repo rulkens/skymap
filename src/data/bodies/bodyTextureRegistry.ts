@@ -194,6 +194,12 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'usgs',
     treatment: {
       kind: 'panSharpen',
+      // Re-derive or re-check these four: `npm run fit-pluto-chroma`. Expect the
+      // digits to drift ~1% — the fit averages gradient-quiet tiles, so the tile
+      // population moves with the reference rendition's noise floor, and the one
+      // these were fitted from is gone. The tool gates on outcome instead: these
+      // must stay within half a delta-E of a fresh fit (3.16 vs 3.13 today) and
+      // still beat the uniform-scale baseline (7.02). Re-fit only if that fails.
       calibration: {
         matrix: [
           [1.0354, 0.3565],
