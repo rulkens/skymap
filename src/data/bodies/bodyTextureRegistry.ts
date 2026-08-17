@@ -47,9 +47,10 @@
  *    that, it is a regression, not an upgrade.
  *
  * Today every body has only a `surface` kind whose ceiling is one of the two
- * values above. `grayscaleTint` marks the two USGS Galilean sources that ship
- * single-channel — the tint restores a plausible hue the mono map lacks; its
- * presence is the mono-source marker (spec §3).
+ * values above. `grayscaleTint` marks the USGS mono sources — the two
+ * Galilean moons plus Pluto and Charon all ship single-channel — the tint
+ * restores a plausible hue the mono map lacks; its presence is the
+ * mono-source marker (spec §3).
  *
  * Nothing here checks an authored ceiling against the source it names.
  * `tools/textures/tiersFittingSourceWidth.ts` measures the real pixel width
@@ -126,10 +127,24 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // Uranus/Neptune's near-featureless discs — New Horizons only resolved the
   // encounter hemisphere well; the anti-Charon hemisphere is reconstructed at
   // much lower fidelity, so more tile resolution would just upsample noise.
-  // `grayscaleTint` is deliberately absent pending Task 6's channel check
-  // (`sharp(...).metadata().channels`) — add it there if the sources are mono.
-  pluto: { bodyId: 'pluto', kinds: { surface: 'small' }, provenance: 'usgs' },
-  charon: { bodyId: 'charon', kinds: { surface: 'small' }, provenance: 'usgs' },
+  // Both USGS sources measured single-channel (`sharp(...).metadata()`:
+  // channels=1, space=b-w). Tints encode the disk-averaged hue, not the
+  // brightest feature: Pluto's tholin haze is butterscotch-tan overall
+  // (Olkin+17, AJ 154 258); Charon is spectrally neutral apart from the
+  // reddish Mordor Macula cap (~2.7% of the colour variance — Protopapa+19,
+  // ApJL 872 L36), so its tint stays near-grey with a faint warm bias.
+  pluto: {
+    bodyId: 'pluto',
+    kinds: { surface: 'small' },
+    provenance: 'usgs',
+    grayscaleTint: [0.8, 0.7, 0.56],
+  },
+  charon: {
+    bodyId: 'charon',
+    kinds: { surface: 'small' },
+    provenance: 'usgs',
+    grayscaleTint: [0.6, 0.58, 0.56],
+  },
 };
 
 /**
