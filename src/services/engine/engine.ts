@@ -38,8 +38,8 @@
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
  *
  *   Bootstrap phases (the async IIFE, lifted out of this file):
- *   - `phases/initGpu.ts`      — device + every renderer + point-source slots
- *   - `phases/wireSlots.ts`    — sidecar slots + thumbnails + parallel load
+ *   - `phases/initGpu.ts`      — device + every renderer
+ *   - `phases/wireSlots.ts`    — every asset slot + thumbnails + parallel load
  *   - `phases/wireInput.ts`    — pickRenderer + camera + orbit-controls + click
  *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
  *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
@@ -369,9 +369,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickDebugOverlay: null,
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
-      // constructs it + mints its 'earth' texture slot in the bodyTextures
-      // family (proximity-demanded, commits via setMap); excluded from
-      // isEngineReady, null-checked at use by earthLayer.
+      // constructs it; its 'earth' texture slot in the bodyTextures family
+      // (proximity-demanded, commits via setMap) is minted later, in wireSlots.
+      // Excluded from isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
       // (the Sun), one instanced planet renderer drawing every seeded
@@ -539,16 +539,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Each slot is a race-checked fetch→commit pipeline (see
     // `services/loading/AssetSlot.ts`).  The Map is declared up-front so
     // consumers can `state.assetSlots.points.get(source)?.load(...)` without
-    // a null check, but the slots are minted inside the GPU init IIFE: they
-    // close over GPU handles (renderer, filamentRenderer,
-    // volumeFieldRenderer) for their commit step, all null until initGpu
-    // resolves.  Minting them all in one IIFE pass keeps the lifecycle
-    // uniform — even the GPU-handle-free slots (famousGalaxiesMeta, pgcAlias) are
-    // born there.
+    // a null check, but the slots are minted in `wireSlots`: their commit
+    // closures re-read GPU handles (renderer, filamentRenderer,
+    // volumeFieldRenderer) at call time and null-guard, rather than assuming
+    // `initGpu` already assigned them — the same destroy-race posture the
+    // keyed `bodyTextures` family below uses.
     assetSlots: {
       points: new Map(),
-      // Per-source star catalogs — registry-built (wireSlots), unlike points'
-      // initGpu minting; the star slot's commit null-guards the renderer.
+      // Per-source star catalogs — registry-built (wireSlots), like points;
+      // the star slot's commit null-guards the renderer the same way.
       starCatalogs: new Map(),
       filaments: null,
       famousGalaxiesMeta: null,
@@ -563,8 +562,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Constellation stick-figure artifact; demand-loaded on its master gate.
       constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
-      // minted in initGpu beside the body renderers. Empty map at construction —
-      // proximity-demanded + released per body (mirrors the `points` map).
+      // minted in wireSlots. Empty map at construction — proximity-demanded +
+      // released per body (mirrors the `points` map).
       bodyTextures: new Map(),
       // The all-bodies low-res atlas: one boot fetch seeding every body's
       // placeholder, so no body ever draws untextured while its own map loads.

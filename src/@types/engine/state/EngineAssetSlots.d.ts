@@ -192,12 +192,12 @@ export type EngineAssetSlots = {
    * a data-volume tier change. Earth's former bespoke single-texture path folds
    * into this family as key `'earth:surface'`.
    *
-   * Unlike `flow` / `cf4Density` (null-then-set named fields minted in
-   * `wireSlots`), these are minted in `initGpu` beside the body renderers their
-   * commit uploads into — the same posture as the `points` slots — so the Map is
-   * declared non-null (empty at construction, filled during `initGpu`) and
-   * consumers need no null check. A 404 / decode failure surfaces as a
-   * never-fires commit; the renderer keeps its flat-albedo placeholder.
+   * Unlike `flow` / `cf4Density` (null-then-set named fields), these are
+   * minted directly in `wireSlots` — the same externally-built posture as the
+   * `points` slots — so the Map is declared non-null (empty at construction,
+   * filled during `wireSlots`) and consumers need no null check. A 404 /
+   * decode failure surfaces as a never-fires commit; the renderer keeps its
+   * flat-albedo placeholder.
    */
   bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**

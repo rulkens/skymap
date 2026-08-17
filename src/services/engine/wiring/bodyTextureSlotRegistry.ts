@@ -5,11 +5,13 @@
  * ### Mirrors `wireGalaxyCatalogSourceSlot`
  *
  * Like the per-source point slots, the body-texture slots are minted in
- * `initGpu` (not by the `ASSET_WIRING` construction pass — their rows carry
- * `built: 'external'`), right next to the body renderers their commit uploads
- * into. One `createAssetSlot<ImageBitmap, BodyTextureReq>` per family key is
- * written into `state.assetSlots.bodyTextures`. The demand loop then triggers
- * and evicts the already-minted slots via those external rows.
+ * `wireSlots` (not by the `ASSET_WIRING` construction pass — their rows carry
+ * `built: 'external'`, so that pass skips them). One
+ * `createAssetSlot<ImageBitmap, BodyTextureReq>` per family key is written into
+ * `state.assetSlots.bodyTextures`. The demand loop then triggers and evicts the
+ * already-minted slots via those external rows. Mint order relative to the body
+ * renderers built in `initGpu` doesn't matter — see the destroy-race posture
+ * below.
  *
  * ### Commit + release dispatch by key
  *
@@ -134,8 +136,10 @@ function releaseBodyTexture(state: EngineState, entry: BodyTextureKey): void {
 /**
  * Mint one asset slot per `(bodyId, kind)` family entry into
  * `state.assetSlots.bodyTextures`, keyed by its composite `bodyTextureSlotKey`.
- * Must run AFTER the body renderers exist (the commit uploads into them); safe to
- * call once per engine bootstrap.
+ * Must run before `installLoadProgress` enumerates the family into `allSlots`.
+ * Renderer construction order does not matter: `commit`/`onRelease` re-read
+ * `state.gpu.*` and null-guard the handle. Safe to call once per engine
+ * bootstrap.
  */
 export function wireBodyTextureSlots(state: EngineState): void {
   for (const entry of ALL_BODY_TEXTURE_KEYS) {

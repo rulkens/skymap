@@ -38,13 +38,14 @@
  *
  * ### Point-source rows are `built: 'external'`
  *
- * The nine point slots (8 galaxy catalogs + Synthetic) are minted in `initGpu`
- * by `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
- * into. They appear here ONLY so the demand loop can trigger their
- * already-minted slots with the right `req(tier)`; the slot-construction pass
- * skips them (`built: 'external'`). Their `factory` is a guard that throws if
- * the builder ever calls it — the row is demand+req only. See `AssetWiringRow`
- * for the rationale on this marker over the alternatives.
+ * The nine point slots (8 galaxy catalogs + Synthetic) are minted in
+ * `wireSlots` by `wireGalaxyCatalogSourceSlot`, alongside the keyed
+ * `bodyTextures` family — the other externally-built family. They appear
+ * here ONLY so the demand loop can trigger their already-minted slots with
+ * the right `req(tier)`; the slot-construction pass skips them (`built:
+ * 'external'`). Their `factory` is a guard that throws if the builder ever
+ * calls it — the row is demand+req only. See `AssetWiringRow` for the
+ * rationale on this marker over the alternatives.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -104,7 +105,7 @@ const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].id;
  */
 const externalFactory = (): never => {
   throw new Error(
-    'assetWiring: point-source slots are minted in initGpu (built: "external"); the registry must not build them',
+    'assetWiring: externally-built rows (built: "external" — point sources, body textures) are minted outside this registry; the construction pass must not build them',
   );
 };
 
@@ -147,7 +148,7 @@ const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
  * One demand+req row for a star catalog. Unlike the galaxy `pointRow` family,
  * these are registry-built (no `built: 'external'`): `createStarCatalogSlot`
  * null-guards the `starCatalogRenderer` handle at commit time, so the slot
- * needs no `initGpu` co-minting. Demand is the source-type-cluster gate — the
+ * needs no externally-minted co-construction. Demand is the source-type-cluster gate — the
  * coarse `starCatalogs.enabled` master AND the per-catalog `items[id].enabled`
  * bit, mirroring the galaxy/structure/volume clusters. Tier reload is inherent:
  * `reevaluateDemand` re-issues `req(newTier)` on any state change.
@@ -198,8 +199,8 @@ function ceilingOf(id: BodyTextureId | RingTextureId, kind: TextureKind): Tier {
 
 /**
  * One demand+release row for a body-surface texture, generated per family key,
- * mirroring `pointRow`: `built: 'external'` (minted in `initGpu` next to the
- * body renderer), demand+req only here. The slot is DEMANDED once the camera
+ * mirroring `pointRow`: `built: 'external'` (minted in `wireSlots`, alongside
+ * the point-source family), demand+req only here. The slot is DEMANDED once the camera
  * closes inside the body's own load radius and RELEASED once it retreats past
  * twice that radius. `release` is separate from `!demand` on purpose — the band
  * between `X` and `2X` is the hysteresis gap where neither fires, so a camera
@@ -279,7 +280,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     priority: 0,
   },
 
-  // ── Point sources (demand+req only; slots minted in initGpu) ──────
+  // ── Point sources (demand+req only; slots minted in wireSlots) ──────
   pointRow(Source.SDSS, 60),
   pointRow(Source.TwoMRS, 40),
   pointRow(Source.Glade, 62),
@@ -431,7 +432,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   },
 
   // ── Body-surface textures (proximity-demanded + released) ────────
-  // One row per textured body + the Saturn ring, each minted in initGpu
+  // One row per textured body + the Saturn ring, each minted in wireSlots
   // (`built: 'external'`) and gated on the camera closing inside that body's
   // own load radius — the proximity family that replaces Earth's bespoke
   // descent-gated texture. See `bodyTextureRow` for the hysteresis rationale.

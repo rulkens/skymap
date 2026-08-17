@@ -18,7 +18,7 @@
  *     numericness: star-catalog rows (`type: 'starCatalog'`) are
  *     registry-built and install into the `starCatalogs` map here; galaxy
  *     point rows are `built: 'external'` (minted + self-installed into
- *     `points` in initGpu) and never reach this map, so skipping them is a
+ *     `points` in `wireSlots`) and never reach this map, so skipping them is a
  *     defensive no-op.
  *
  * The alternative — the earlier "numeric ⇒ point source ⇒ skip" guard — baked
@@ -53,10 +53,10 @@ export function installSlots(
           slot as unknown as AssetSlot<StarCatalog, StarCatalogReq>,
         );
       }
-      // Galaxy point sources are installed in initGpu — never here.
+      // Galaxy point sources self-install into `points` in wireSlots — never here.
       continue;
     }
-    // Body-texture family keys are `built: 'external'` (minted in initGpu into
+    // Body-texture family keys are `built: 'external'` (minted in wireSlots into
     // the keyed `bodyTextures` map), so the construction pass never hands them
     // here — the guard is a defensive skip that also narrows `key` off the
     // family members so the named-field index below typechecks.

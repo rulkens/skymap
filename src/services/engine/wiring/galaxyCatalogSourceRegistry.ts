@@ -19,7 +19,7 @@
  * ## Relationship to `ASSET_WIRING`
  *
  * This registry is the point-source CONSTRUCTION + tier-reload source:
- * `initGpu` mints one slot per row, `setTier` reloads them with a
+ * `wireSlots` mints one slot per row, `setTier` reloads them with a
  * new-tier request, and the synthetic-fallback gate reads the derived
  * source lists.  WHEN each asset loads (boot, visibility toggle,
  * settings flip) is the `ASSET_WIRING` demand table's job — including
@@ -54,7 +54,7 @@ import {
 import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 
 /**
- * Registry rows, in Source enum order.  Order matters: `initGpu`'s
+ * Registry rows, in Source enum order.  Order matters: `wireSlots`'s
  * slot-mint loop, `setTier`'s tier-change reload loop, and the
  * synthetic-fallback gate iterate this list and rely on a stable
  * ordering for their per-source logs.
@@ -165,8 +165,12 @@ export function loadCompanionAssets(
  * commit body and ready-state subscriber, and register it in
  * `state.assetSlots.points`.
  *
- * Must run AFTER `state.gpu.renderer` is assigned — the commit step
- * uploads to it.  Not safe to call twice for the same source.
+ * Must run (from `wireSlots`) before `createSyntheticFallback`,
+ * `installLoadProgress`, and `reevaluateDemand`, which subscribe to and
+ * enumerate the minted slots. Renderer construction order does NOT matter:
+ * `commit` re-reads `state.gpu.renderer` at call time and null-guards it
+ * (see the check a few lines into `commit`, below) rather than assuming it
+ * is already assigned. Not safe to call twice for the same source.
  */
 export function wireGalaxyCatalogSourceSlot(
   state: EngineState,
