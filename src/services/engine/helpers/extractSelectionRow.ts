@@ -33,6 +33,7 @@ const EXTRACT_ROW: {
     extractGalaxyRow(deps.catalogs.get(ref.source), ref.index, ref.source, deps.famousGalaxiesMeta),
   structure: (ref, deps) => deps.structures.byId(ref.id),
   milkyWay: () => ({ type: 'milkyWay' as const }),
+  zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' as const }),
   // Every scene body reads its world position from the J2000 body-state
   // snapshot — the same derive the render layers read — so a selected body's
   // stored position tracks the one it is drawn at rather than a separately-baked

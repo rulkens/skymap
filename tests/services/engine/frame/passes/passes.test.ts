@@ -382,14 +382,16 @@ describe('CONTENT_LAYERS blend legality', () => {
     for (const layer of CONTENT_LAYERS) {
       if (
         layer.target === 'volume' ||
+        layer.target === 'zoa' ||
         layer.target === 'star-aggregates' ||
         layer.target === 'mw-aggregate'
       ) {
-        // These three reduced-resolution offscreens accumulate the same way
+        // These four reduced-resolution offscreens accumulate the same way
         // their contents would have accumulated straight into HDR — the
-        // raymarched volume, the survey aggregate glow, and the Milky Way
-        // cloud's star billboards are all additive sums, which is what makes
-        // "render small, bilinearly upsample, add" equivalent to drawing them
+        // raymarched volume, the zone-of-avoidance band raymarch, the
+        // survey aggregate glow, and the Milky Way cloud's star
+        // billboards are all additive sums, which is what makes "render
+        // small, bilinearly upsample, add" equivalent to drawing them
         // full-res. A non-additive row here would break that equivalence, so
         // it's a correctness bug, not a new legal combination.
         expect(layer.blend).toBe('additive');
@@ -908,21 +910,27 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the eleven pickables expose drawPick, in registry order', () => {
-    // Pins the spec's migration table: the five COSMO/near-field survey
-    // pickables (pointSprites / proceduralDisks / structureMarkers / milkyWay /
-    // starCatalog) PLUS the six NEAR0 true-scale foreground bodies (starPoints /
-    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets),
-    // the selection-gated focused-field-star sphere's pick and the sub-pixel
-    // body glints' pick among them. Order is registry order: the COSMO pick pass leads with
-    // point-sprites (the @group(0) prefix contract); every NEAR0 body self-binds
-    // its own slot-0 camera in its own pass, so their relative order carries no
-    // @group(0) dependence (it is depth-resolved, nearest-wins). The production
-    // code stays name-blind — the pick program filters by `drawPick` presence +
-    // `enabled`, never a hardcoded name list — so this test is the ONLY place the
-    // eleven names are asserted.
+  it('exactly the twelve pickables expose drawPick, in registry order', () => {
+    // Pins the spec's migration table: the six COSMO/near-field survey
+    // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
+    // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
+    // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
+    // focusedFieldStarSphere / planets), the selection-gated
+    // focused-field-star sphere's pick and the sub-pixel body glints' pick
+    // among them. Order is registry order: the COSMO pick pass leads with
+    // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
+    // right after it in the registry for exactly that reason — its own
+    // 'zoa' render target keeps it out of every VISUAL group regardless of
+    // array position, but the pick program groups by slab alone and needs
+    // this row after the one that establishes the shared camera. Every NEAR0
+    // body self-binds its own slot-0 camera in its own pass, so their
+    // relative order carries no @group(0) dependence (it is depth-resolved,
+    // nearest-wins). The production code stays name-blind — the pick program
+    // filters by `drawPick` presence + `enabled`, never a hardcoded name
+    // list — so this test is the ONLY place the twelve names are asserted.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
+      'zone-of-avoidance',
       'procedural-disks',
       'structure-markers',
       'milky-way',

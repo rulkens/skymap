@@ -22,8 +22,8 @@ Most planets, Mars included, carry `provenance: 'sss'` in
 deliberately enhanced for visual appeal rather than calibrated.
 
 The registry already has a per-body colour lever for a different purpose:
-`grayscaleTint`, which re-colours the single-channel USGS Galilean sources. So
-there is precedent for authored per-body colour, but no concept of a
+the `monoTint` colour treatment, which re-colours the single-channel USGS
+sources. So there is precedent for authored per-body colour, but no concept of a
 *calibration* distinct from a tint, and no recorded target for any body.
 
 ## What a design has to settle
@@ -43,7 +43,7 @@ there is precedent for authored per-body colour, but no concept of a
 
 ## Related
 
-- `grayscaleTint` in `bodyTextureRegistry.ts` — the existing per-body colour
+- The `treatment` tag in `bodyTextureRegistry.ts` — the existing per-body colour
   lever and the obvious place a calibration column would sit beside.
 - The boot body-texture atlas (shipped 2026-07-24) — tiles derive from the
   same sources, so any correction must apply to both or the fallback will

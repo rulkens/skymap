@@ -68,9 +68,16 @@ async function makeStarCatalog(): Promise<StarCatalog> {
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
   let cameraRuntime: () => LiveCameraRuntime | null;
+  // Captures any error the saga worker throws uncaught. redux-saga swallows an
+  // unhandled worker error (no visible test failure, no console output) unless
+  // something observes it — `onError` is that observation point, so a
+  // regression that removes the ROW_FOCUSABLE filter shows up as a non-empty
+  // array here rather than as a silently-still-null tween (see the
+  // zoneOfAvoidance test below).
+  let sagaErrors: unknown[];
 
   function build() {
-    const mw = createSagaMiddleware();
+    const mw = createSagaMiddleware({ onError: (error) => sagaErrors.push(error) });
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
@@ -79,6 +86,7 @@ describe('watchFocusTweenSaga', () => {
   }
   beforeEach(() => {
     starCatalogStub = null;
+    sagaErrors = [];
     store = build();
   });
 
@@ -202,6 +210,22 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
+  });
+
+  // Regression: the zone-of-avoidance band has no x/y/z (a line-of-sight
+  // effect, not a point), so `focusFraming`'s zoneOfAvoidance arm throws —
+  // ROW_FOCUSABLE filters it out here, the ONE place every updateSelectionFocus
+  // dispatch (including a future band double-click) funnels through. If this
+  // filter is ever removed, this test fails against that throw instead of the
+  // crash surfacing only once band picking makes the ref reachable.
+  it('a zoneOfAvoidance focus is a silent no-op (no tween, no throw)', async () => {
+    store.dispatch(updateSelectionFocus({ type: 'zoneOfAvoidance' }));
+    await flush();
+    // The tween staying null is necessary but not sufficient — it also stays
+    // null if the worker crashed before reaching `put`. sagaErrors pins the
+    // actual no-throw guarantee.
+    expect(sagaErrors).toEqual([]);
+    expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
   // A minimal clip payload: no camera motion, just timeline structure. The

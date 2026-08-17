@@ -1,85 +1,12 @@
 /**
- * atmosphereShellRenderer — the physically-based in-scatter atmosphere shell
- * (spec §8), one bundle per atmosphere body. The renderer that LINKS the six
- * Task-E4 WESL modules: three LUT bakes (`transmittanceLut`, `multiScatterLut`,
- * `skyViewLut`) + the shell vertex/fragment, sharing the
- * `atmosphere/scattering.wesl` core.
- *
- * ## Three LUTs, two baked once, one per frame
- *
- * The per-pixel sky march is precomputed into three `rgba16float` 2D tables so
- * the shell fragment costs a couple of samples, not a march (spec §11):
- *
- *   - `transmittanceLut` (256×64) — baked ONCE at construction.
- *   - `multiScatterLut`  (32×32)  — baked ONCE at construction, AFTER
- *     transmittance (it samples it).
- *   - `skyViewLut`       (192×108) — re-baked EVERY frame in `encodeSkyView`
- *     (camera altitude + sun direction change frame to frame).
- *
- * ## Per-body bundles, shared program (the single-uniform-clobber fix)
- *
- * Each atmosphere body (a row in `paramsById`) owns a bundle: its three LUT
- * textures, its `ScatteringParams`/`SkyViewParams`/`AtmosphereUniforms` buffers,
- * and its four bind groups. Only the LUT `sampler`, the proxy-sphere geometry,
- * and the four pipelines + their bind-group layouts are shared — one program
- * serves every body.
- *
- * The bundle split is the WebGPU `queue.writeBuffer` ordering trap defused by
- * construction: `encodeSkyView`/`draw` rewrite a body's `SkyViewParams` /
- * `AtmosphereUniforms` buffer immediately before that body's own dispatch/draw,
- * and interleaving `writeBuffer` with `submit` in one frame does NOT preserve
- * order. Giving each body its OWN buffers means a later body writes a DIFFERENT
- * buffer — there is no shared per-frame state for the race to corrupt. The cost
- * is a handful of small textures + buffers per body, and today Earth is the sole
- * row, so it is one bundle.
- *
- * ## On-device startup bake (transmittance → multi-scatter, ONE encoder)
- *
- * The two view-independent LUTs bake at construction. Every body's transmittance
- * pass then multi-scatter pass records into ONE shared command encoder, followed
- * by ONE `queue.submit` after the loop — never a per-body submit. The
- * multi-scatter pass reads that body's transmittance LUT, and the compute-pass
- * boundary IS the barrier: WebGPU inserts a storage barrier between two compute
- * passes in the same encoder (the ordering `flowFieldRenderer`'s seed→integrate
- * two-pass encoder documents). The loop simply repeats that pass pair per body
- * inside the one encoder. The sky-view LUT is NOT baked here — it depends on the
- * per-frame camera + sun state (`encodeSkyView`).
- *
- * ## First `texture_storage_2d<rgba16float, write>` in the repo
- *
- * All three bakes write a storage texture — a first for skymap (the existing
- * compute precedents write storage BUFFERS). It is core-legal WGSL, but WebKit
- * acceptance is unproven; the E4 modules are shaped so a fragment
- * render-to-texture fallback could replace the bakes without touching any
- * consumer (they only SAMPLE the LUTs). This renderer is the FIRST point that
- * link/validation error can surface — `createShaderModuleWithDevLog` dumps the
- * real `getCompilationInfo()` line if it does.
- *
- * ## Explicit bind-group layouts (never `'auto'`)
- *
- * Every pipeline is built off an explicit `GPUBindGroupLayout` + pipeline layout
- * (`feedback_webgpu_auto_layout_trap`). The bindings below mirror each E4
- * module's `@group(0)` declarations exactly (a mismatch is a silent mis-index the
- * GPU would not report — on iOS it drops the frame). Sharing ONE layout per
- * pipeline across every body's bind groups is what lets a single pipeline serve
- * the whole set.
- *
- * ## Shell pipeline profile (the `ringRenderer` model with two deltas)
- *
- * Colour: `targetFormat` with premultiplied OVER (`srcFactor: 'one'`,
- * `dstFactor: 'one-minus-src-alpha'` — the fragment emits premultiplied rgb).
- * Depth: `depthFormat`, `depthWriteEnabled: false`, `depthCompare: 'greater-equal'`
- * (the NEAR0 slab's reversed-Z convention — clear `0.0`, greater-z-wins; the EQUAL
- * half lets the shell pass against the coplanar surface it shares a radius with;
- * depth-TESTED against the opaque planet, writes no z). `cullMode: 'none'` —
- * BOTH walls of the atmosphere-top proxy rasterise, and the fragment splits duty
- * by `@builtin(front_facing)`: the NEAR wall carries the over-disc aerial
- * perspective (haze on the lit disc), the FAR wall carries the limb + sky.
- * Depth-testing EACH wall against the scene keeps cross-body occlusion for both
- * (a nearer body occludes the disc haze via the near wall's depth and the limb
- * via the far wall's). `frontFace: 'ccw'`.
- *
- * @module
+ * atmosphereShellRenderer — the physically-based in-scatter atmosphere shell (spec
+ * §8): one bundle per `ATMOSPHERE_PARAMS` row over one shared program. Three
+ * `rgba16float` LUTs stand in for the per-pixel march (spec §11): transmittance
+ * (256×64) and multi-scatter (32×32) bake once at construction, sky-view (192×108)
+ * re-bakes every frame from the camera + sun state. Each body owns its own LUTs,
+ * uniform buffers and bind groups — ~300 KiB per row — because `queue.writeBuffer`
+ * interleaved with `submit` does NOT preserve order, so a shared per-frame buffer
+ * would let a later body's write corrupt an earlier body's draw.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
@@ -103,8 +30,9 @@ import shellFsCode from '../../shaders/atmosphere/shell/fragment.wesl?static';
  *  limb band: only the atmosphere-top proxy's far wall rasterises, and its outer
  *  edge is the sphere silhouette, which a coarse UV sphere polygonises INWARD. A
  *  facet's silhouette chord sags to ~cos(π/SEGMENTS) of the atmosphere-top radius,
- *  clipping that fraction off the limb. The atmosphere band is only ~1.4% of the
- *  planet radius to begin with, so at 48×24 the ~0.0021 silhouette sag eats ~15% of
+ *  clipping that fraction off the limb. Sized off the THINNEST band in the table —
+ *  Earth's, ~1.4% of the planet radius (Pluto's 21% is far more forgiving) — so at
+ *  48×24 the ~0.0021 silhouette sag eats ~15% of
  *  the band and scallops its outer edge into a visible polygon. At 128×64 the sag is
  *  ~cos(π/128) ≈ 0.9997 (≈ 0.03% of radius, ~2% of the band) — a smooth limb. The
  *  glow being low-frequency does NOT excuse the coarse mesh: coarseness is invisible
@@ -124,7 +52,7 @@ const SKY_VIEW_LUT_SIZE: readonly [number, number] = [192, 108];
 /** Every bake dispatches an 8×8 workgroup grid (matches `@workgroup_size(8,8)`). */
 const WORKGROUP_SIZE = 8;
 
-/** LUT storage format — first `rgba16float` storage-texture write in the repo. */
+/** HDR in-scatter values exceed 1.0, so the LUTs cannot be an 8-bit format. */
 const LUT_FORMAT: GPUTextureFormat = 'rgba16float';
 
 /** `SkyViewParams` — 16 bytes / 4 f32 (see `skyViewLut.wesl`). */
@@ -173,7 +101,7 @@ export function createAtmosphereShellRenderer(
   targetFormat: GPUTextureFormat, // 'rgba16float' (foreground:0)
   depthFormat: GPUTextureFormat, // 'depth32float' (foreground:0)
   reversedZ: boolean,
-  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth + six planets)
+  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth, six planets, Pluto)
 ): AtmosphereShellRenderer {
   // ── Sampler: linear + clamp-to-edge both axes (SHARED across bodies) ────────
   //
@@ -213,11 +141,8 @@ export function createAtmosphereShellRenderer(
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
 
   // ── Shader modules (SHARED) ────────────────────────────────────────────────
-  //
-  // Every module linked here through `createShaderModuleWithDevLog` — the FIRST
-  // real link of the six E4 modules (nothing imported them before). A missing
-  // symbol, a binding-type mismatch, or an iOS-strict storage-texture rejection
-  // surfaces here via `getCompilationInfo()`.
+  // `createShaderModuleWithDevLog` is what surfaces a missing symbol, a
+  // binding-type mismatch or an iOS storage-texture rejection as a real message.
   const transmittanceModule = createShaderModuleWithDevLog(
     device,
     transmittanceCode,
@@ -241,7 +166,9 @@ export function createAtmosphereShellRenderer(
   );
 
   // ── Transmittance bake pipeline (SHARED) ───────────────────────────────────
-  // group 0: [0] ScatteringParams uniform, [1] storage tex (write).
+  // group 0: [0] ScatteringParams uniform, [1] storage tex (write). Layouts are
+  // explicit everywhere, never `'auto'`, and mirror each module's `@group(0)`
+  // exactly — a mismatch is a silent mis-index the GPU never reports.
   const transmittanceBgl = device.createBindGroupLayout({
     label: 'atmosphere-transmittance-bgl',
     entries: [

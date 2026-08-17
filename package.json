@@ -74,6 +74,7 @@
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
     "fetch-textures": "tsx tools/fetch/fetchTextures.ts",
+    "fit-pluto-chroma": "tsx tools/textures/fitPlutoChroma.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

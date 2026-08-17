@@ -112,6 +112,19 @@
     "description": "The most distant planet, Neptune is a deep blue world lashed by the fastest winds in the Solar System, over 2,000 kilometres per hour. It was found through mathematics first, predicted from the way its gravity tugged on Uranus before anyone saw it."
   },
   {
+    "id": "pluto",
+    "mass": "0.0022 M⊕",
+    "gravity": "0.063 g",
+    "dayLength": "6.4 Earth days (retrograde)",
+    "yearLength": "247.9 Earth years",
+    "distance": "39.5 AU",
+    "meanTemp": "−232 °C",
+    "moons": "5",
+    "atmosphere": "N₂ (thin), trace CH₄, CO",
+    "wikiTitle": "Pluto",
+    "description": "Counted as the ninth planet until 2006, Pluto is the largest known world in the Kuiper Belt, the field of icy debris beyond Neptune. Its bright heart, Tombaugh Regio, is a plain of frozen nitrogen named for the astronomer who spotted it in 1930."
+  },
+  {
     "id": "moon",
     "mass": "7.35 × 10²² kg",
     "gravity": "0.17 g",
@@ -291,5 +304,17 @@
     "atmosphere": "None",
     "wikiTitle": "Iapetus_(moon)",
     "description": "One side of Iapetus is dark as coal while the other gleams like fresh snow, a split so sharp it can be seen from Earth through a small telescope. A ridge of mountains runs along its equator, giving this moon of Saturn the outline of a walnut."
+  },
+  {
+    "id": "charon",
+    "mass": "1.59 × 10²¹ kg",
+    "gravity": "0.029 g",
+    "dayLength": "Tidally locked (mutual)",
+    "yearLength": "6.4 Earth days",
+    "distance": "19,600 km",
+    "parent": "Pluto",
+    "atmosphere": "None",
+    "wikiTitle": "Charon_(moon)",
+    "description": "At half Pluto's diameter, Charon is the largest moon in the Solar System relative to the world it orbits, and the two are often called a double dwarf planet. Methane escaping Pluto freezes onto Charon's north pole, where sunlight darkens it to the deep red of Neverland Regio, the feature the New Horizons team nicknamed Mordor."
   }
 ]

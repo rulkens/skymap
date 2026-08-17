@@ -22,6 +22,8 @@ export const BODY_ATLAS_LAYOUT: Readonly<Record<BodyTextureId, number>> = {
   europa: 10,
   ganymede: 11,
   callisto: 12,
+  pluto: 13,
+  charon: 14,
 };
 
 /** The grid those indices address. Feed it to `atlasTileRect` for a crop rect. */

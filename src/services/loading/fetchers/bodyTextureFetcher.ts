@@ -33,6 +33,17 @@ export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (r
   const url = dataUrl(`images/textures/${bodyTextureFilename(req.bodyId, req.kind, req.tier)}`);
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`bodyTexture: HTTP ${res.status} for ${url}`);
+  // A missing file under `public/` still comes back 200 in dev — Vite's SPA
+  // fallback serves index.html for any GET whose Accept header allows `*/*`
+  // (the fetch() default). Left unchecked, that HTML reaches
+  // createImageBitmap and fails as an opaque "source image could not be
+  // decoded", hiding the real 404 path.
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.startsWith('image/')) {
+    throw new Error(
+      `bodyTexture: non-image response (${contentType || 'no content-type'}) for ${url}`,
+    );
+  }
   const blob = await res.blob();
   // Linear-packed maps (material today, normal with plan C) carry NUMERIC channels
   // — roughness, an ocean mask, a normal vector — not a picture. Decoding them with

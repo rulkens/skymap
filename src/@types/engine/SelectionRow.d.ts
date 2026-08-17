@@ -7,7 +7,8 @@ import type { Vec3 } from '../math/Vec3';
  * in the saga-owned `selectionRows` derived cache. The galaxy arm is the small
  * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
  * structure arm is the already-serializable `StructureInfo` record used as-is;
- * the Milky Way is the singleton tag; the body arm carries a seeded scene body's
+ * the Milky Way and the zone of avoidance are each the singleton tag; the body
+ * arm carries a seeded scene body's
  * label, position + physical radius (the fields the InfoCard headline shows and
  * `focusFraming` frames on), snapshotted off the static `SCENE_BODIES` table at
  * extract time — like the structure arm, the row is self-contained so
@@ -23,6 +24,7 @@ export type SelectionRow =
   | GalaxyRow
   | StructureInfo
   | { readonly type: 'milkyWay' }
+  | { readonly type: 'zoneOfAvoidance' }
   | {
       readonly type: 'body';
       readonly id: string;

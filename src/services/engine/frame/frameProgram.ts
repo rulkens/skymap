@@ -2,8 +2,10 @@
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
  * A frame is an ordered sequence of steps: the compute prelude (the flow
- * integrate + the atmosphere sky-view LUT bake), a volume render, an HDR
- * render, two reduced-resolution aggregate renders into their own offscreens
+ * integrate + the atmosphere sky-view LUT bake), a volume render, a
+ * zone-of-avoidance band render (its own reduced-res offscreen, same family
+ * as the volume render), an HDR render, two reduced-resolution aggregate
+ * renders into their own offscreens
  * (survey stars, then the Milky-Way cloud), a near-field star-point render into
  * that same HDR accumulation (which also composites both aggregate offscreens
  * back in), a near-field foreground-body
@@ -41,16 +43,21 @@
  *
  * There is no `volume→hdr` composite — the volume offscreen is merged into
  * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
- * separate whole-texture composite (plan-time decision 3). The
- * `star-aggregates` offscreen is merged the same way — by the `star-upsample`
- * layer inside the hdr NEAR0 render step, adjacent to the `star-catalog` leaf
- * draw — so there is no `star-aggregates→hdr` composite step either. The
- * `mw-aggregate` offscreen is the third of that family: merged by the
- * `milky-way-upsample` layer inside the same hdr NEAR0 step, so there is no
- * `mw-aggregate→hdr` composite step. Every offscreen-into-HDR merge in this
- * program is a layer, never a `'composite'` step; the two `'composite'` steps
- * that DO exist (`foreground:0→hdr`, `hdr→swap`) merge whole textures that no
- * layer could, because they carry depth or the tone curve.
+ * separate whole-texture composite (plan-time decision 3). The `zoa`
+ * offscreen (the zone-of-avoidance band raymarch) is merged the same way, by
+ * `zoneOfAvoidanceUpsampleLayer` inside the same hdr COSMO step — so there is
+ * no `zoa→hdr` composite step either; that layer also draws the band's
+ * full-res curved lettering straight into HDR, since MSDF text can't ride a
+ * reduced-res offscreen without blurring. The `star-aggregates` offscreen is
+ * merged the same way — by the `star-upsample` layer inside the hdr NEAR0
+ * render step, adjacent to the `star-catalog` leaf draw — so there is no
+ * `star-aggregates→hdr` composite step either. The `mw-aggregate` offscreen
+ * is the fourth of that family: merged by the `milky-way-upsample` layer
+ * inside the same hdr NEAR0 step, so there is no `mw-aggregate→hdr` composite
+ * step. Every offscreen-into-HDR merge in this program is a layer, never a
+ * `'composite'` step; the two `'composite'` steps that DO exist
+ * (`foreground:0→hdr`, `hdr→swap`) merge whole textures that no layer could,
+ * because they carry depth or the tone curve.
  */
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
@@ -89,6 +96,12 @@ export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly Fra
     // is unaffected.
     { kind: 'compute', name: 'atmosphereSkyView' },
     { kind: 'render', target: 'volume', slab: COSMO },
+    // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
+    // the twin of the volume render immediately above. Precedes the hdr
+    // COSMO step so `zoneOfAvoidanceUpsampleLayer` inside it can composite
+    // this offscreen back in; merged by a LAYER, never a `'composite'` step,
+    // so there is no `zoa→hdr` step either (same reasoning as `volume`).
+    { kind: 'render', target: 'zoa', slab: COSMO },
     { kind: 'render', target: 'hdr', slab: COSMO },
     // Survey-star AGGREGATE stream into its own half-res offscreen, projected
     // through NEAR0 (the same parsec-scale anchors as the star catalog). Drawn
@@ -208,6 +221,7 @@ export type TimedSlotGroup = { readonly title: string; readonly rows: readonly T
  */
 export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'volume·COSMO': 'Volumes & aggregates',
+  'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
   'hdr·COSMO': 'Cosmos · HDR',

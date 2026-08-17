@@ -216,7 +216,17 @@ export const Source = {
    *
    * BUDGET: the pick texture's source field is 5 bits with 31 reserved as the
    * all-ones sentinel (`selectionEncoding.ts`), so after this row only 29 and
-   * 30 remain. The next-but-two source addition needs a wider field.
+   * 30 remained. `zoneOfAvoidance` (29, below) spent one; only 30 is left
+   * before the next pickable source needs a wider field.
    */
   SStar: 28,
+  /**
+   * Zone-of-avoidance guide band — the additively-blended wedge along the
+   * galactic plane annotating the dust-obscured hole every optical/near-IR
+   * catalog shares. Pickable (clicking the band opens its InfoCard), so it
+   * spends one of the two codes the SStar docblock's budget note reserved.
+   * Appended at 29 — after this row, only 30 remains before the 5-bit pick
+   * field needs a wider layout.
+   */
+  ZoneOfAvoidance: 29,
 } as const;
