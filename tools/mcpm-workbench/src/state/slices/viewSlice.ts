@@ -25,9 +25,16 @@ export const defaultViewSlice: ViewSlice = {
     additive: true,
     previewPacked: false,
   },
-  // task-V2A-report.md's "Suggested starting values" (fork defaults, adapted).
-  // traceMax has no HUD readout to seed from yet (report concern #2) — 5.0 is
-  // a guess a few times the raymarch's own transfer would call "dense".
+  // Fork defaults per task-V2A-report.md, except sampleWeight/traceMax (V2B fix
+  // round 1): the tracking majorant is σ_max = sigmaT · sampleWeight · traceMax,
+  // mean free path ≈ 1/σ_max, so a majorant must clear the field's real peak or
+  // delta tracking undersamples the densest voxels. packLogTraceVoxels.ts's own
+  // docblock is the field's measured tail (MCPM: max≈40000, p99≈320) — sizing
+  // traceMax at that max with sampleWeight 1e-4 gives σ_max = 4/voxel, mfp ≈
+  // 0.25 voxel, so the 512-step tracking cap covers ~128 voxels of a ray —
+  // half the default 256-voxel long axis. Grazing rays through the full
+  // diagonal of a large grid can still exhaust the cap; a piloting pass with
+  // eyes on the actual image is still owed (not part of this fix).
   pathTracer: {
     sigmaT: 1.0,
     albedo: 0.9,
@@ -35,11 +42,11 @@ export const defaultViewSlice: ViewSlice = {
     anisotropy: 0.3,
     ambientTrace: 0.02,
     bounces: 4,
-    traceMax: 5.0,
+    traceMax: 4e4,
     exposure: 1.0,
     compressive: false,
     trimDensity: 1e-5,
-    sampleWeight: 0.01,
+    sampleWeight: 1e-4,
   },
 };
 

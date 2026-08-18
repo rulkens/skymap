@@ -418,12 +418,22 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
         if (layers.pathTracer) {
           // Reset on any camera move, any pathTracer param change, or the trace grid
-          // moving under the accumulator (stepCount) — `cam` is the SAME serialized
-          // object already computed above, so this can't drift from what actually drew.
-          // While the sim runs, stepCount changes every frame, so this resets every
-          // frame too: the layer shows one noisy sample per frame, which is correct
-          // (task-V2A-report.md's accumulation contract), not a bug to chase.
-          const volpathKey = JSON.stringify([cam, s.view.pathTracer, s.sim.stepCount]);
+          // moving under the accumulator — `cam` is the SAME serialized object already
+          // computed above, so this can't drift from what actually drew. stepCount covers
+          // the sim stepping the field; clearTraceToken/resetToken cover "clear trace" and
+          // "reset" zeroing it directly, which stepCount alone misses while the sim is
+          // PAUSED (review Important 1) — that's exactly the workflow someone would
+          // actually be watching the tracer accumulate in. While the sim runs, stepCount
+          // changes every frame, so this resets every frame too: the layer shows one
+          // noisy sample per frame, which is correct (task-V2A-report.md's accumulation
+          // contract), not a bug to chase.
+          const volpathKey = JSON.stringify([
+            cam,
+            s.view.pathTracer,
+            s.sim.stepCount,
+            s.sim.clearTraceToken,
+            s.sim.resetToken,
+          ]);
           if (volpathKey !== lastVolpathKey) graph.resetVolpath();
           lastVolpathKey = volpathKey;
           graph.drawVolpath(encoder, cam, s.view.pathTracer);
