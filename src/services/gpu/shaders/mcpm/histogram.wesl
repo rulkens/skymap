@@ -3,7 +3,10 @@
 // each point's own density so the host can derive meanLogTraceAtPoints — a statistic THIS
 // PROJECT defines, not the fork (spec section 9: "the fork's kernel only bins"), aligned to
 // dataPointHistogram.ts's CLI definition: only IN-GRID points count, divided by how many were
-// sampled (histogramSlice.ts's recordHistogramSample — same contract, both sites say so).
+// sampled (histogramSlice.ts's recordHistogramSample — same contract, both sites say so). Both
+// sites also floor the continuous voxel coordinate before comparing it to the grid bounds —
+// truncation-toward-zero (WGSL's f32->i32) and Math.floor disagree on (-1, 0), so this identity
+// is load-bearing, not incidental.
 //
 // group(0) is io.wesl's McpmUniforms, reused as-is: grid::loadTrace's OOB guard needs
 // sim.worldWidth/Height/Depth regardless (grid.wesl imports io::sim itself), and
@@ -78,13 +81,18 @@ fn cs(
     z = rngNextFloat(&rng) * f32(sim.worldDepth);
   }
 
-  // Signed truncation, THEN the bounds check — not vec3<u32>(vec3<f32>(...)) first: a
-  // negative f32 -> u32 conversion is an indeterminate value (saturates to 0 on the
-  // hardware the fork's own comment describes), which would collapse an out-of-grid point
-  // below the origin onto voxel (0,0,0) and read that corner's REAL density instead of
-  // being recognised as out-of-grid. 'inGrid' never sees a coordinate that already lost its
-  // sign, so it catches the low side exactly like the high side.
-  let voxel = vec3<i32>(vec3<f32>(x, y, z));
+  // floor() BEFORE the i32 cast, and the cast BEFORE the bounds check — two separate fixes
+  // stacked on the same line. (1) Not vec3<u32>(vec3<f32>(...)): a negative f32 -> u32
+  // conversion is an indeterminate value (saturates to 0 on the hardware the fork's own
+  // comment describes), which would collapse an out-of-grid point below the origin onto
+  // voxel (0,0,0) and read that corner's REAL density instead of being recognised as
+  // out-of-grid. (2) Not a bare vec3<i32>(vec3<f32>(...)): WGSL's f32->i32 conversion
+  // truncates toward zero, not floor, so a continuous coordinate in (-1, 0) on any axis
+  // (data 1 voxel below a low face) would truncate to 0 — in-grid — while
+  // dataPointHistogram.ts's Math.floor sends the SAME point to -1 — out-of-grid. floor()
+  // first makes this cast agree with Math.floor exactly, so 'inGrid' below genuinely
+  // catches the low side like the high side, not just points >= 1 voxel outside.
+  let voxel = vec3<i32>(floor(vec3<f32>(x, y, z)));
   if (!inGrid(voxel)) {
     // Out-of-grid catalog points are excluded from both the bin vector and
     // meanLogTraceAtPoints, matching dataPointHistogram.ts's CLI statistic exactly

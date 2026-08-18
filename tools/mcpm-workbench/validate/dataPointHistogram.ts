@@ -9,7 +9,12 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
  * `sum(log1p(max(v,0))) / sampled` — the GPU-side live plot's
  * `recordHistogramSample` (histogramSlice.ts) uses this SAME definition
  * (out-of-grid points excluded from both the sum and the divisor), so the
- * in-UI curve and this CLI statistic mean the same thing.
+ * in-UI curve and this CLI statistic mean the same thing. That identity
+ * requires `Math.floor` (below) on BOTH sides of the voxel-index comparison:
+ * `histogram.wesl` floors its continuous voxel coordinate before the `i32`
+ * cast for the same reason — plain truncation-toward-zero disagrees with
+ * `Math.floor` on the open interval (-1, 0) per axis, which would misclassify
+ * a one-voxel shell just outside the grid's low faces.
  */
 export function dataPointHistogram(args: {
   readonly values: Float64Array | Float32Array;
