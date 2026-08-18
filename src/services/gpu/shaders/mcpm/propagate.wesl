@@ -49,7 +49,7 @@ fn modFloor(x: f32, y: f32) -> f32 {
 }
 
 @compute @workgroup_size(PROPAGATE_WG_X, PROPAGATE_WG_Y, PROPAGATE_WG_Z)
-fn main(
+fn cs(
   @builtin(local_invocation_index) threadIndex: u32,
   @builtin(workgroup_id) groupId: vec3<u32>,
   @builtin(num_workgroups) nGroups: vec3<u32>,
@@ -114,8 +114,8 @@ fn main(
 
   if (QUIRK_DEAD_CURRENT_DEPOSIT_READ) {
     // HLSL:138 loads a value HLSL:230 overwrites before its only read. The result is
-    // dead, but the load is a real transaction against a field other invocations are
-    // concurrently writing, so it is issued rather than elided.
+    // dead; this statement ports the fork's dead read site verbatim. Whether Tint elides
+    // it is irrelevant to fidelity.
     _ = loadDeposit(p);
   }
 
