@@ -32,7 +32,9 @@ export type SeededAgents = {
  * -5 sentinel the propagate kernel branches on, phi is the (unused) halo colour
  * flag, weight comes from `deriveAgentWeights`. Everything past that is a free
  * agent. Deterministic by `seed` — never Math.random, or a look is
- * irreproducible across reloads.
+ * irreproducible across reloads. `points`/`weights` must already be
+ * box-culled (`cullPointsToBox`, task S14) — an out-of-box anchor would wrap
+ * onto the opposite face under periodic agent movement.
  */
 export function seedAgents(opts: {
   readonly points: CatalogPoints;
@@ -74,8 +76,14 @@ export function seedAgents(opts: {
 
   const random = mulberry32(seed);
   const shortestAxis = Math.min(box.dims[0], box.dims[1], box.dims[2]);
+  // Callers pass an already-box-culled `points` (task S14's cullPointsToBox), so
+  // nData can be 0 when every catalog point in this box selection sits outside
+  // it. 'aroundData' has nothing to anchor on then — `nData - 1` below would go
+  // negative and index x[-1] (undefined -> NaN) — so degrade to uniform, same
+  // as the zero-catalog-points status rather than a silent NaN scatter.
+  const effectiveMode: AgentInitMode = mode === 'aroundData' && nData === 0 ? 'uniform' : mode;
   for (let i = nData; i < total; i++) {
-    if (mode === 'aroundData') {
+    if (effectiveMode === 'aroundData') {
       // The fork's upper bound is data_count-1, so the last point is never the
       // anchor; the offset is its disc-shell sample, not a ball.
       const anchor = Math.floor(random() * (nData - 1));

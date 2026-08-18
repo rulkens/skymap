@@ -20,6 +20,7 @@ import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shade
 import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate.wesl?static';
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
 import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
+import { cullPointsToBox } from '../field/cullPointsToBox';
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
 import { planGridBudget } from './planGridBudget';
@@ -80,6 +81,12 @@ export async function createMcpmHarness(opts: {
     );
   }
 
+  // Task S14: a manual box can crop the catalog (the fork's box always covers all its
+  // data, skymap's doesn't) — cull ONCE, here, before anything downstream sizes a
+  // buffer or reads a count, so nDataPoints/agentBufferLength/the histogram
+  // normalization all agree with what seedAgents actually seeds.
+  const culled = cullPointsToBox(opts.points, opts.weights, opts.box);
+
   const gpu = await initGpu(opts.canvas, {
     requiredFeatures: ['shader-f16'],
     requiredLimits: {
@@ -94,7 +101,7 @@ export async function createMcpmHarness(opts: {
   // never disagree — there is deliberately no user toggle.
   const element: GridElement = device.features.has('shader-f16') ? 'f16' : 'f32';
 
-  const agentBufferLength = opts.points.count + opts.agentCount;
+  const agentBufferLength = culled.points.count + opts.agentCount;
   const budget = planGridBudget(opts.box, agentBufferLength, element, device.limits);
   if (budget.refusal) {
     const { buffer, requestedBytes, limitBytes, maxLongAxis } = budget.refusal;
@@ -239,8 +246,8 @@ export async function createMcpmHarness(opts: {
 
   function uploadAgents(mode: AgentInitMode, seed: number): void {
     const seeded = seedAgents({
-      points: opts.points,
-      weights: opts.weights,
+      points: culled.points,
+      weights: culled.weights,
       box: opts.box,
       agentCount: opts.agentCount,
       mode,
@@ -272,7 +279,7 @@ export async function createMcpmHarness(opts: {
       y: buffers.agentY,
       z: buffers.agentZ,
       weight: buffers.agentWeight,
-      nDataPoints: opts.points.count,
+      nDataPoints: culled.points.count,
       count: agentBufferLength,
     },
     step(params: McpmParams, sampleRandomly: boolean): void {
@@ -290,7 +297,7 @@ export async function createMcpmHarness(opts: {
           propagateBindGroups,
           decayBindGroups,
           box: opts.box,
-          nDataPoints: opts.points.count,
+          nDataPoints: culled.points.count,
           nAgents: opts.agentCount,
           parity,
           iteration,
@@ -323,7 +330,7 @@ export async function createMcpmHarness(opts: {
       return readbackTrace(device, buffers.trace, opts.box, element);
     },
     readHistogram(): Promise<HistogramReadback> {
-      return readbackHistogram(device, buffers.histogram, buffers.densities, opts.points.count);
+      return readbackHistogram(device, buffers.histogram, buffers.densities, culled.points.count);
     },
   };
 }

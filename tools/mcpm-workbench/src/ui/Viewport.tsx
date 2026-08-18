@@ -532,9 +532,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
       lastPreviewPacked = false;
       previewPackedAtStep = -1;
 
+      // h.agents.nDataPoints, not pts.count: task S14 culls out-of-box catalog points
+      // inside createMcpmHarness, so the harness's own buffer sizes (what this budget
+      // must describe) are already smaller than the raw loaded count whenever the box
+      // crops the catalog.
       const budget = planGridBudget(
         box,
-        pts.count + s.sim.agentCount,
+        h.agents.nDataPoints + s.sim.agentCount,
         h.element,
         h.gpu.device.limits,
       );
