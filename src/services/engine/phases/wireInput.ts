@@ -31,10 +31,8 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
-import { createGalaxyPickRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPickRenderer';
-import { createPickProgram } from '../frame/pickProgram';
-import { SLAB_REVERSED_Z, COSMO } from '../frame/slabs';
-import { CONTENT_LAYERS } from '../frame/passes';
+import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
+import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
@@ -67,6 +65,7 @@ import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
+import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -79,36 +78,41 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // `renderer` is the null-guard subject on the next line.
   const renderer = state.gpu.galaxyPointRenderer;
   if (!renderer) return;
-  // The point-pick draw provider: it records the galaxy point billboards
-  // into the pick pass the pick program owns. The ring / disk / Milky-Way
-  // pick draws are their own registry `drawPick` rows now — the picker no
-  // longer folds them in, so it takes no marker / disk / MW arguments.
-  const galaxyPickRenderer = createGalaxyPickRenderer(
-    deps.phaseLocals!.device,
-    state.gpu.fadeBgl!,
-    state.gpu.sourceBgl!,
-    state.gpu.focusBgl!,
-    // The live shared focus buffer — so the pick pass excludes non-members
-    // of a focused structure from hit-testing (vertex shader culls them).
-    state.gpu.focusUniform!.bindGroup,
-    SLAB_REVERSED_Z[COSMO]!,
-  );
-  state.gpu.galaxyPickRenderer = galaxyPickRenderer;
-
-  // The parallel per-slab pick program over the content-layer registry — the
-  // single owner of the hover / click / debug-overlay pick path. It filters
-  // `CONTENT_LAYERS` by `drawPick` + `enabled`, re-rasterises each pickable
-  // slab into its own r32uint target, reads back the cursor texel, and folds
-  // the results near→far. It derives the pick-time camera, the pickable
-  // sources, the point size, and the timing slot internally from `state`, so
-  // its callers only supply the cursor position.
-  const pickProgram = createPickProgram({
+  // The two GPU_HANDLE_ROWS rows declared LAST: they read `state.gpu.focusUniform`,
+  // built by `initGpu`'s walker call, so they wait for this phase. Getters, not
+  // eager reads, for the fields neither row consumes (context/format/hdrCapable/
+  // uiCtx/fontAtlases) — keeps the bag honestly typed without widening this
+  // phase's boot-state requirement past what the old inline code required.
+  const handleDeps: GpuHandleConstructDeps = {
     device: deps.phaseLocals!.device,
+    get context() {
+      return state.gpu.uiCtx!.context;
+    },
     canvas,
+    get format() {
+      return state.gpu.renderTargets!.specs.find((spec) => spec.id === 'swap')!.format;
+    },
+    get hdrCapable() {
+      return state.gpu.uiCtx!.hdrCapable;
+    },
+    fadeBgl: state.gpu.fadeBgl!,
+    sourceBgl: state.gpu.sourceBgl!,
+    focusBgl: state.gpu.focusBgl!,
+    get uiCtx() {
+      return state.gpu.uiCtx!;
+    },
+    get fontAtlases() {
+      return state.gpu.fontAtlases!;
+    },
+  };
+  constructGpuHandles(
+    GPU_HANDLE_ROWS.filter((row) => row.key === 'galaxyPickRenderer' || row.key === 'pickProgram'),
     state,
-    layers: CONTENT_LAYERS,
-  });
-  state.gpu.pickProgram = pickProgram;
+    handleDeps,
+  );
+  // `pickProgram` derives its pick-time inputs from `state`; used below only
+  // as the hover/click resolvers' entry point.
+  const pickProgram = state.gpu.pickProgram!;
 
   // ── Hover-pick driver ────────────────────────────────────────────────
   //
