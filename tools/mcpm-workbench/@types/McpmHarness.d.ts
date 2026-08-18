@@ -3,6 +3,7 @@ import type { GridBox } from './GridBox';
 import type { GridElement } from './GridElement';
 import type { AgentInitMode } from './AgentInitMode';
 import type { McpmParams } from './McpmParams';
+import type { TraceReadback } from './TraceReadback';
 import type { GpuContext } from '../../../src/@types/rendering/GpuContext';
 
 /**
@@ -38,4 +39,6 @@ export type McpmHarness = {
   /** Re-seeds agents and zeroes every grid; resets the step counter. */
   reset(mode: AgentInitMode, seed: number): void;
   dispose(): void;
+  /** Copies the trace grid to the CPU; rejects before allocating if the MAP_READ staging copy would exceed the device's `maxBufferSize`. */
+  readbackTrace(): Promise<TraceReadback>;
 };

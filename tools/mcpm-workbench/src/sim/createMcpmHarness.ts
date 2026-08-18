@@ -21,6 +21,7 @@ import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?st
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
 import { planGridBudget } from './planGridBudget';
+import { readbackTrace } from './readbackTrace';
 import { AGENT_COUNT_STEP, seedAgents } from './seedAgents';
 import { specializeGridElement } from './specializeGridElement';
 
@@ -249,6 +250,9 @@ export async function createMcpmHarness(opts: {
       // The device stays alive: the harness shares the canvas context with the
       // tool's render graph, which outlives a sim teardown.
       buffers.destroy();
+    },
+    readbackTrace() {
+      return readbackTrace(device, buffers.trace, opts.box, element);
     },
   };
 }
