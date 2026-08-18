@@ -17,6 +17,7 @@ import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxies
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
+import { createPolyphormSlot } from '../../loading/slots/polyphormSlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
@@ -55,6 +56,7 @@ const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['cluster', 'supercluste
  */
 const CF4_FIELD = SOURCE_REGISTRY[Source.Cf4Density].id;
 const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].id;
+const POLYPHORM_FIELD = SOURCE_REGISTRY[Source.Polyphorm].id;
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
@@ -253,6 +255,16 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     req: () => undefined,
     demand: (ctx) => ctx.settings.volumes.items[CF4_FIELD]?.enabled === true,
     priority: 82, // last of the cosmic-web overlays; default-off, so it rarely competes at boot
+  },
+
+  // ── Polyphorm 2MRS density volume ─────────────────────────────────
+  // Void request: the cube is neither tiered nor per-source, like CF-4.
+  {
+    key: 'polyphorm',
+    factory: (deps) => createPolyphormSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: (ctx) => ctx.settings.volumes.items[POLYPHORM_FIELD]?.enabled === true,
+    priority: 82, // same rung as cf4Density; default-off, so it rarely competes at boot
   },
 
   // ── CF4++ velocity flow field ────────────────────────────────────

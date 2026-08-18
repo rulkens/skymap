@@ -58,6 +58,8 @@ export type EngineAssetSlots = {
   mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
   /** CF4++ `flowfield.scfd`, SCFD v3 `channels = 4`: rgb = velocity, a = overdensity δ. Tier-agnostic, default-off. */
   flow: AssetSlot<ScalarCube, void> | null;
+  /** `polyphorm.scfd` — 2MRS Polyphorm-derived cosmic-web density volume. Tier-agnostic, default-off. */
+  polyphorm: AssetSlot<ScalarCube, void> | null;
   /**
    * Opt-in on `settings.constellations.enabled`. The commit uploads the static
    * segment buffer and kicks `syncVisibilityFades`, ramping the seeded-0

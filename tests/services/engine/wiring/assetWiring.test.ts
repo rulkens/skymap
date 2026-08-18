@@ -94,6 +94,7 @@ describe('ASSET_WIRING membership', () => {
       'filaments',
       'mcpm',
       'cf4Density',
+      'polyphorm',
       'flow',
       'constellations',
       'structureCatalog',

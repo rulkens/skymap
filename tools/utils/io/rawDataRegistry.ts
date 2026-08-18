@@ -266,6 +266,16 @@ export const RAW_DATA = {
       'MCPM-extracted SDSS Cosmic Web tiers — `mcpm_sdss_d{2,4,8}.npy`. Produced once per VAC release by the Python extractor; mirrored to R2.',
   },
 
+  // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
+
+  'polyphorm.dir': {
+    path: 'data/raw/polyphorm',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py, consumed by buildRhizomeVolume.ts.',
+  },
+
   // ─── Milliquas (AGN/quasar compilation) ───────────────────────────────
 
   'milliquas.txt': {
