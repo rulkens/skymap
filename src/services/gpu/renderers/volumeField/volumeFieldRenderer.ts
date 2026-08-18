@@ -129,6 +129,12 @@ export function createVolumeFieldRenderer(
   const volumeSampler = device.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
+    // Fix round 1 (task-6-review Important #1): WebGPU defaults mipmapFilter
+    // to 'nearest', so the cone-LOD's fractional level snapped to whichever
+    // mip is closer -- hard-edged detail shells around the camera that slide
+    // as it moves, exactly the stationary artifact this feature exists to
+    // remove. 'linear' blends the two nearest mips (trilinear).
+    mipmapFilter: 'linear',
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
     addressModeW: 'clamp-to-edge',

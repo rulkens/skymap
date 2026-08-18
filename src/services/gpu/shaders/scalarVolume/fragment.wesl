@@ -132,9 +132,12 @@ struct VolumeUniforms {
 
 // Safety cap on loop iterations only (Task 6): step sizing below is
 // LOD-driven, not STEP_COUNT/(tMax-tMin), so this no longer sets sample
-// density. Raised from 128 because honest LOD-0 steps near the camera are
-// voxel-sized and can need more of them to cross a short span;
-// SATURATION_THRESHOLD below still bounds the common case.
+// density. Invariant that must hold for this to be a true safety cap rather
+// than a truncation (fix round 1, task-6-review Important #2): the
+// per-iteration step floor below guarantees 't' always reaches 'tMax'
+// within STEP_COUNT iterations, at any tier -- the LOD-driven step alone
+// could not (256 * voxel-sized steps falls short of a tier-large cube's
+// diagonal), which silently dropped the far half of the ray.
 const STEP_COUNT: i32 = 256;
 const SATURATION_THRESHOLD: f32 = 0.99;
 // Coarse-to-fine skip policy (Task 5): two pyramid levels is enough for a
@@ -394,7 +397,17 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     if (i >= STEP_COUNT || t >= tMax) { break; }
     let p = rayOriginLocal + rayDirLocal * t;
     let lod = coneLod(t, u.pixelConeTan, u.voxelSizeLocal, maxLevel);
-    let stepLength = u.voxelSizeLocal * exp2(lod) * STEP_QUALITY;
+    let lodStepLength = u.voxelSizeLocal * exp2(lod) * STEP_QUALITY;
+    // Per-iteration step floor (fix round 1, task-6-review Important #2): a
+    // no-op whenever the LOD step already fits the iterations left before
+    // STEP_COUNT, so it doesn't reintroduce distance-independent
+    // oversampling near the camera. It only grows the step as the budget
+    // runs low, which is exactly when it must -- guaranteeing 't' reaches
+    // 'tMax' by the last iteration instead of the cap truncating the ray.
+    // 'STEP_COUNT - i' is >= 1 here (the loop guard above already excluded
+    // i >= STEP_COUNT).
+    let remainingSteps = f32(STEP_COUNT - i);
+    let stepLength = max(lodStepLength, (tMax - t) / remainingSteps);
 
     // Coarse-to-fine skip: consult the max pyramid before paying for a
     // full-res sample, throttled to every SKIP_CHECK_STRIDEth iteration
@@ -418,13 +431,20 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
       }
     }
     if (skip) {
-      // Jump straight to the cell's exit point (plus the epsilon nudge).
-      // No fixed step-grid to land on anymore -- step length now varies
-      // continuously with 't' via coneLod. Correctness only needs the
-      // skipped span to contribute no opacity, which skipCutoff already
-      // proved, so a direct jump changes nothing about the accumulated
-      // integral.
-      t = skipExitT + CELL_EXIT_EPS;
+      // Jump straight to the cell's exit point (plus the epsilon nudge),
+      // then re-add THIS RAY's own jitter fraction of the LOD-sized step
+      // (fix round 1, task-6-review Important #3). Without it, every ray
+      // that skips the same pyramid cell lands on that cell's exit plane at
+      // an identical 't', re-synchronising rays the entry jitter had
+      // decorrelated -- since stepLength varies smoothly with 't', they'd
+      // then stay phase-correlated for the rest of the march, showing up as
+      // stationary banding on the pyramid-cell lattice. Salting the hash by
+      // 'i' keeps successive skips on the SAME ray from reusing one offset.
+      // Correctness is unaffected: skipCutoff already proved the omitted
+      // span contributes zero opacity regardless of where within
+      // [skipExitT, skipExitT + lodStepLength) the next sample lands.
+      let skipJitter = hash21Hq(jitterSeed + vec2<f32>(f32(i) * 3.17, f32(i) * 5.91));
+      t = skipExitT + CELL_EXIT_EPS + skipJitter * lodStepLength;
       i = i + 1;
       continue;
     }
