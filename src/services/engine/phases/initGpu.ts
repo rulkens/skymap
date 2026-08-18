@@ -25,6 +25,7 @@ import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
+import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 /**
  * Bootstrap phase 1: GPU device acquisition + renderer construction. Writes
@@ -79,7 +80,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Complement of wireInput.ts's filter below, by construction: this phase
   // builds every row EXCEPT the ones marked `constructPhase: 'wireInput'`.
   constructGpuHandles(
-    GPU_HANDLE_ROWS.filter((row) => !('constructPhase' in row)),
+    GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase !== 'wireInput'),
     state,
     handleDeps,
   );

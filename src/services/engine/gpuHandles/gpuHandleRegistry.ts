@@ -55,6 +55,7 @@ import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRin
 import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram } from '../frame/pickProgram';
 import { CONTENT_LAYERS } from '../frame/passes';
+import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
@@ -84,17 +85,25 @@ export const GPU_HANDLE_ROWS = [
       createCompositor({
         device: deps.ctx.device,
         swapFormat: deps.ctx.format,
+        // Not HDR_TARGET_FORMAT: compositor.ts documents swapFormat/hdrFormat
+        // as accepted-but-no-longer-read (decisions #11, RESOLVED NEGATIVE),
+        // so sharing the constant here would assert a live contract that
+        // doesn't exist.
         hdrFormat: 'rgba16float',
       }),
   },
   {
+    // `state`, not a defaults constant: the `mw-aggregate` row's `scale` is a
+    // function of `settings.milkyWay.aggregateDivisor`, and every reconcile
+    // re-reads it off this same live state. Not a second path to the same
+    // answer — the scale function IS the reconcile path, seeded here.
     key: 'renderTargets',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+    construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
       createRenderTargets(
         deps.ctx.device,
         deps.ctx.format,
         { width: deps.ctx.canvas.width, height: deps.ctx.canvas.height },
-        MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+        state,
       ),
   },
   {
@@ -102,7 +111,7 @@ export const GPU_HANDLE_ROWS = [
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createGalaxyPointRenderer({
         device: deps.ctx.device,
-        targetFormat: 'rgba16float',
+        targetFormat: HDR_TARGET_FORMAT,
         fadeBgl: deps.fadeBgl,
         sourceBgl: deps.sourceBgl,
         focusBgl: deps.focusBgl,
@@ -177,7 +186,12 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'structureMarkerRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStructureMarkerRenderer(deps.ctx, 'rgba16float', deps.fadeBgl, SLAB_REVERSED_Z[COSMO]!),
+      createStructureMarkerRenderer(
+        deps.ctx,
+        HDR_TARGET_FORMAT,
+        deps.fadeBgl,
+        SLAB_REVERSED_Z[COSMO]!,
+      ),
   },
   {
     key: 'milkyWayPickRenderer',
@@ -191,7 +205,7 @@ export const GPU_HANDLE_ROWS = [
         {
           device: deps.ctx.device,
           context: deps.ctx.context,
-          targetFormat: 'rgba16float',
+          targetFormat: HDR_TARGET_FORMAT,
           canvas: deps.ctx.canvas,
         },
         deps.focusBgl,
@@ -203,7 +217,7 @@ export const GPU_HANDLE_ROWS = [
       createProceduralDiskRenderer({
         device: deps.ctx.device,
         context: deps.ctx.context,
-        targetFormat: 'rgba16float',
+        targetFormat: HDR_TARGET_FORMAT,
         canvas: deps.ctx.canvas,
         focusBgl: deps.focusBgl,
         reversedZ: SLAB_REVERSED_Z[COSMO]!,
@@ -212,22 +226,22 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'horizonShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: 'rgba16float' }),
+      createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'zoneOfAvoidanceRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createZoneOfAvoidanceRenderer(deps.ctx.device, 'rgba16float', deps.fontAtlases),
+      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
   },
   {
     key: 'filamentRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createFilamentRenderer(deps.ctx.device, 'rgba16float', deps.fadeBgl),
+      createFilamentRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
   },
   {
     key: 'constellationRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createConstellationRenderer(deps.ctx.device, 'rgba16float', deps.fadeBgl),
+      createConstellationRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
   },
   {
     // `MILKY_WAY_TUNING_DEFAULTS.starCount`, not `state.settings.milkyWay`:
@@ -240,58 +254,67 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'milkyWayCloudRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayCloudRenderer({ device: deps.ctx.device, targetFormat: 'rgba16float' }),
+      createMilkyWayCloudRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'volumeFieldRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createVolumeFieldRenderer(deps.ctx.device, 'rgba16float', deps.fadeBgl),
+      createVolumeFieldRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
   },
   {
     key: 'flowFieldRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createFlowFieldRenderer({ device: deps.ctx.device, targetFormat: 'rgba16float' }),
+      createFlowFieldRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'volumeUpsample',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, 'rgba16float'),
+      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'milkyWayAggregateUpsample',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, 'rgba16float'),
+      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'zoneOfAvoidanceUpsample',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, 'rgba16float'),
+      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'starAggregateUpsample',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarAggregateUpsample(deps.ctx.device, 'rgba16float'),
+      createStarAggregateUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'bloomPyramid',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createBloomPyramid(deps.ctx.device, 'rgba16float'),
+      createBloomPyramid(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   // ── Sphere-body renderers: draw into the `foreground:0` render-target row ──
   // (also earthRenderer through atmosphereShellRenderer further down). Their
-  // ('rgba16float', 'depth32float') pipeline formats MUST match that row's
-  // format/depth in renderTargets.ts — nothing imports renderTargets to
-  // enforce it, so a change there needs a matching change to every literal
-  // pair below. Convention + this comment only.
+  // pipeline formats share HDR_TARGET_FORMAT/FOREGROUND_DEPTH_FORMAT
+  // (data/renderTargetFormats.ts) with that row's format/depth in
+  // renderTargets.ts, so the two can't drift apart.
   {
     key: 'starRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarRenderer(deps.ctx.device, 'rgba16float', 'depth32float', SLAB_REVERSED_Z[NEAR0]!),
+      createStarRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
+      ),
   },
   {
     key: 'planetRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createPlanetRenderer(deps.ctx.device, 'rgba16float', 'depth32float', SLAB_REVERSED_Z[NEAR0]!),
+      createPlanetRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
+      ),
   },
   {
     // The camera-free boot seed: the whole star list, positioned at the fixed
@@ -301,7 +324,7 @@ export const GPU_HANDLE_ROWS = [
     key: 'starPointRenderer',
     construct: (state: EngineState, deps: GpuHandleConstructDeps) => {
       const bootBodyStates = deriveBodyStates(CONST_J2000);
-      const starPointRenderer = createStarPointRenderer(deps.ctx.device, 'rgba16float');
+      const starPointRenderer = createStarPointRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
       starPointRenderer.setStars(
         state.data.bodies.stars.map((star) => ({
           ...star,
@@ -314,12 +337,12 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'bodyGlintRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createBodyGlintRenderer(deps.ctx.device, 'rgba16float'),
+      createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'starCatalogRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarCatalogRenderer(deps.ctx.device, 'rgba16float'),
+      createStarCatalogRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Cross-handle read: borrows the visual renderer's exposed BGLs + records
@@ -341,37 +364,47 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'orbitTrailRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createOrbitTrailRenderer(deps.ctx.device, 'rgba16float'),
+      createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   // Foreground-target invariant continues here — see the starRenderer/
   // planetRenderer comment above.
   {
     key: 'earthRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createEarthRenderer(deps.ctx.device, 'rgba16float', 'depth32float', SLAB_REVERSED_Z[NEAR0]!),
+      createEarthRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
+      ),
   },
   {
     key: 'texturedBodyRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createTexturedBodyRenderer(
         deps.ctx.device,
-        'rgba16float',
-        'depth32float',
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
         SLAB_REVERSED_Z[NEAR0]!,
       ),
   },
   {
     key: 'ringRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createRingRenderer(deps.ctx.device, 'rgba16float', 'depth32float', SLAB_REVERSED_Z[NEAR0]!),
+      createRingRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
+      ),
   },
   {
     key: 'cloudShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createCloudShellRenderer(
         deps.ctx.device,
-        'rgba16float',
-        'depth32float',
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
         SLAB_REVERSED_Z[NEAR0]!,
       ),
   },
@@ -380,8 +413,8 @@ export const GPU_HANDLE_ROWS = [
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createAtmosphereShellRenderer(
         deps.ctx.device,
-        'rgba16float',
-        'depth32float',
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
         SLAB_REVERSED_Z[NEAR0]!,
         ATMOSPHERE_PARAMS,
       ),

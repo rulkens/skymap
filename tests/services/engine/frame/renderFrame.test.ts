@@ -121,28 +121,77 @@ function makeFakeHdrView(): GPUTextureView {
  * construction.
  */
 function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
+  // Clear values match production (`renderTargets.ts`'s `renderTargetRows`): hdr
+  // and swap opaque black (a=1), every other row a=0. `specOf` is what
+  // `executeFrame`'s colorAttachment/depthAttachment/composite-dstFormat read.
+  const specs = [
+    {
+      id: 'hdr',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+    {
+      id: 'volume',
+      format: 'rgba16float',
+      depth: null,
+      scale: 3,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // zoneOfAvoidanceLayer.draw reads this row's `scale` to size the
+    // downscaled viewport it hands the band raymarch. The default fixture
+    // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
+    // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
+    // gate) — the row still has to exist for the spec lookup, though.
+    {
+      id: 'zoa',
+      format: 'rgba16float',
+      depth: null,
+      scale: 5,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+    // downscaled viewport it hands the star pass (the sprite clamp is in
+    // TARGET pixels), so the row has to be here, not just a view.
+    {
+      id: 'mw-aggregate',
+      format: 'rgba16float',
+      depth: null,
+      scale: 2,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    {
+      id: 'swap',
+      format: 'bgra8unorm',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+  ];
   return {
-    specs: [
-      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-      // zoneOfAvoidanceLayer.draw reads this row's `scale` to size the
-      // downscaled viewport it hands the band raymarch. The default fixture
-      // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
-      // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
-      // gate) — the row still has to exist for the spec lookup, though.
-      { id: 'zoa', format: 'rgba16float', depth: null, scale: 5 },
-      // milkyWayAggregateLayer.draw reads this row's `scale` to size the
-      // downscaled viewport it hands the star pass (the sprite clamp is in
-      // TARGET pixels), so the row has to be here, not just a view.
-      { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2 },
-      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
-    ],
+    specs,
+    specOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
+    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // downscaled viewport; the fixture canvas is the fixed 1280x720 the
+    // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
+    sizeOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec || id === 'swap') throw new Error(`mock renderTargets: no size for '${id}'`);
+      return {
+        width: Math.max(1, Math.floor(1280 / spec.scale)),
+        height: Math.max(1, Math.floor(FIXTURE_CANVAS_HEIGHT_PX / spec.scale)),
+      };
+    },
     viewOf: (id: string) => {
       const view = views[id];
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
-    resize: vi.fn(),
     destroy: vi.fn(),
   } as any;
 }

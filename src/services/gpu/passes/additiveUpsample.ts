@@ -106,8 +106,8 @@ export function createAdditiveUpsample(
   return {
     draw(pass: GPURenderPassEncoder, halfResView: GPUTextureView): void {
       // Bind group rebuilt per draw because the half-res view is
-      // recreated on every renderTargets.resize().  Caching across resize
-      // would bind a destroyed view.  One bind-group alloc per frame is
+      // recreated on every renderTargets.reconcile().  Caching across a
+      // reallocation would bind a destroyed view.  One bind-group alloc per frame is
       // negligible compared to the fullscreen blit it carries.
       const bindGroup = device.createBindGroup({
         label: 'additiveUpsample-bg',
