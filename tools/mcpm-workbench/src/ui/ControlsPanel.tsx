@@ -21,6 +21,7 @@ import {
   requestClearTrace,
   requestExport,
   requestReset,
+  requestScfdExport,
   setAgentCount,
   setInitMode,
   setRunning,
@@ -300,6 +301,16 @@ function ControlsPanel(): ReactNode {
               onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
             >
               download trace
+            </Button>
+            {/* T17 leg 2: same one-shot token pattern, downloading a
+                ready-to-serve `.scfd` through the SAME packing code
+                (packLogTraceVoxels/encodeScalarField) the offline
+                buildRhizomeVolume importer uses. */}
+            <Button
+              className={styles.actionButton}
+              onClick={() => store.setState((s) => ({ ...s, sim: requestScfdExport(s.sim) }))}
+            >
+              download .scfd
             </Button>
           </div>
         </div>

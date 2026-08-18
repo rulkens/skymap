@@ -29,6 +29,7 @@ export const defaultSimSlice: SimSlice = {
   resetToken: 0,
   clearTraceToken: 0,
   exportToken: 0,
+  scfdToken: 0,
 };
 
 export function setSimParam(prev: SimSlice, key: keyof McpmParams, value: number): SimSlice {
@@ -74,6 +75,13 @@ export function requestClearTrace(prev: SimSlice): SimSlice {
  * triggerDownload) against its own harness/points closure. */
 export function requestExport(prev: SimSlice): SimSlice {
   return { ...prev, exportToken: prev.exportToken + 1 };
+}
+
+/** One-shot command: Viewport diffs `scfdToken` the same way, then runs the
+ * `.scfd` download (readbackTrace → widenTrace → exportScfd → triggerDownload)
+ * against its own harness/points closure. */
+export function requestScfdExport(prev: SimSlice): SimSlice {
+  return { ...prev, scfdToken: prev.scfdToken + 1 };
 }
 
 /** Viewport calls this once it has actually reseeded, zeroing the HUD's step counter. */

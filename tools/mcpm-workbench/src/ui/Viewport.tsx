@@ -22,7 +22,9 @@ import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { downloadStem } from '../export/downloadStem';
 import { emitTraceSidecar } from '../export/emitTraceSidecar';
 import { exportNpy } from '../export/exportNpy';
+import { exportScfd } from '../export/exportScfd';
 import { triggerDownload } from '../export/triggerDownload';
+import { widenTrace } from '../export/widenTrace';
 import { autoFitGridBox } from '../field/autoFitGridBox';
 import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
@@ -200,6 +202,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let lastResetToken = store.getSnapshot().sim.resetToken;
     let lastClearToken = store.getSnapshot().sim.clearTraceToken;
     let lastExportToken = store.getSnapshot().sim.exportToken;
+    let lastScfdToken = store.getSnapshot().sim.scfdToken;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
     let boxPreviewUntil = 0;
     // -1 sentinel: skips the first frame's delta, which spans the async catalog
@@ -250,6 +253,26 @@ function Viewport({ store }: ViewportProps): ReactNode {
         triggerDownload(`${stem}.json`, sidecar, 'application/json');
       } catch (err) {
         console.error('mcpm-workbench: export failed', err);
+      }
+    }
+
+    /**
+     * T17 leg 2: readback → widen → `.scfd`, through the SAME
+     * `packLogTraceVoxels`/`encodeScalarField` the offline `buildRhizomeVolume`
+     * importer runs, so the two outputs are diffable. Same refusal contract
+     * as `runExport` above — caught here so it can never kill the rAF loop.
+     */
+    async function runScfdExport(): Promise<void> {
+      const h = harness;
+      if (!h) return;
+      try {
+        const readback = await h.readbackTrace();
+        const values = widenTrace(readback);
+        const scfd = exportScfd(values, h.box);
+        const stem = downloadStem(new Date());
+        triggerDownload(`${stem}.scfd`, scfd, 'application/octet-stream');
+      } catch (err) {
+        console.error('mcpm-workbench: scfd export failed', err);
       }
     }
 
@@ -353,6 +376,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       lastResetToken = store.getSnapshot().sim.resetToken;
       lastClearToken = store.getSnapshot().sim.clearTraceToken;
       lastExportToken = store.getSnapshot().sim.exportToken;
+      lastScfdToken = store.getSnapshot().sim.scfdToken;
 
       const budget = planGridBudget(
         box,
@@ -470,6 +494,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (s.sim.exportToken !== lastExportToken) {
           lastExportToken = s.sim.exportToken;
           void runExport();
+        }
+        if (s.sim.scfdToken !== lastScfdToken) {
+          lastScfdToken = s.sim.scfdToken;
+          void runScfdExport();
         }
       }
     });

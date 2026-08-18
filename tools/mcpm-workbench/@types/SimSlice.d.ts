@@ -11,6 +11,9 @@ import type { McpmParams } from './McpmParams';
  * `exportToken` is the same one-shot shape for the T16 `.npy`+sidecar
  * download pair — only the harness's own closure (Viewport) can reach
  * `readbackTrace`, so ControlsPanel's download button can only request.
+ * `scfdToken` is T17's fourth sibling of the same pattern: the in-browser
+ * `.scfd` download, through the same `packLogTraceVoxels`/`encodeScalarField`
+ * the offline importer uses.
  */
 export type SimSlice = {
   readonly params: McpmParams;
@@ -22,4 +25,5 @@ export type SimSlice = {
   readonly resetToken: number;
   readonly clearTraceToken: number;
   readonly exportToken: number;
+  readonly scfdToken: number;
 };
