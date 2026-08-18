@@ -19,7 +19,10 @@ export const QUIRK_DISPATCH_TRUNCATION = true;
 const PROPAGATE_DISPATCH_X = 10; // main.cpp:1122 — run_compute(10, 10, grid_z)
 const PROPAGATE_DISPATCH_Y = 10;
 const PROPAGATE_INVOCATIONS_PER_GROUP = 1000; // main.cpp:205 THREAD_GROUP_SIZE
-const DECAY_WG_EDGE = 8; // constants.wesl DECAY_WG_* — dims are multiples of 8
+// Exported: importParams.ts's grid-dims validation quotes this rather than
+// restating 8 a second place — the decay dispatch below has no bounds tail,
+// so a dims value that isn't an exact multiple silently truncates it.
+export const DECAY_WG_EDGE = 8; // constants.wesl DECAY_WG_* — dims are multiples of 8
 
 const DEG_TO_RAD = Math.PI / 180;
 

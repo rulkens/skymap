@@ -2,6 +2,7 @@ import type { AgentInitMode } from '../../@types/AgentInitMode';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { DECAY_WG_EDGE } from '../sim/encodeStep';
 import { MCPM_PARAM_KEYS, MCPM_PARAMS_FORMAT, MCPM_PARAMS_VERSION } from './exportParams';
 
 export type ImportedParams = {
@@ -81,6 +82,14 @@ export function importParams(json: string): ImportedParams {
   const dims = vec3(g, 'dims');
   const voxelSizeMpc = num(g, 'voxelSizeMpc');
   if (dims.some((d) => d <= 0)) fail('"gridBox.dims" must be positive on every axis');
+  // encodeStep.ts's decay-pass dispatch computes box.dims[i] / DECAY_WG_EDGE with no
+  // bounds tail — a dims value that isn't an exact multiple silently truncates the
+  // dispatch (the trailing voxels never decay-clear), so this must fail HERE rather
+  // than reach the sim. autoFitGridBox's own ceil8() is what guarantees this for every
+  // box it constructs; a hand-edited preset has no such guarantee.
+  if (dims.some((d) => !Number.isInteger(d) || d % DECAY_WG_EDGE !== 0)) {
+    fail(`"gridBox.dims" must be positive integer multiples of ${DECAY_WG_EDGE}`);
+  }
 
   const impliedVoxelSizes: Vec3 = [
     sizeMpc[0] / dims[0],

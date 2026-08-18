@@ -63,6 +63,44 @@ describe('importParams', () => {
     expect(() => importParams(JSON.stringify(preset))).toThrow(/cubic/i);
   });
 
+  it("rejects a payload whose grid box is cubic but not a multiple-of-8 dims — encodeStep.ts's decay dispatch has no bounds tail", () => {
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'uniform',
+      gridBox: GRID_BOX,
+    });
+    const preset = JSON.parse(json) as { gridBox: GridBox };
+    // Perfectly cubic (voxelSizeMpc 1 on every axis, sizeMpc === dims), positive —
+    // passes every OTHER check, and would silently truncate the decay dispatch.
+    preset.gridBox = {
+      centerMpc: [0, 0, 0],
+      sizeMpc: [100, 100, 100],
+      dims: [100, 100, 100],
+      voxelSizeMpc: 1,
+    };
+
+    expect(() => importParams(JSON.stringify(preset))).toThrow(/multiple/i);
+  });
+
+  it('rejects a cubic grid box with non-integer dims', () => {
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'uniform',
+      gridBox: GRID_BOX,
+    });
+    const preset = JSON.parse(json) as { gridBox: GridBox };
+    preset.gridBox = {
+      centerMpc: [0, 0, 0],
+      sizeMpc: [8.5, 8, 8],
+      dims: [8.5, 8, 8],
+      voxelSizeMpc: 1,
+    };
+
+    expect(() => importParams(JSON.stringify(preset))).toThrow(/multiple/i);
+  });
+
   it('rejects malformed JSON with a readable error, not a crash', () => {
     expect(() => importParams('{not json')).toThrow();
   });
