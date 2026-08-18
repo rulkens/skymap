@@ -1,7 +1,9 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import type { GridBox } from '../../@types/GridBox';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { rotateVec3ByQuat } from '../../../../src/utils/math/rotateVec3ByQuat';
 
 /** An orthonormal right-handed frame: `forward` looks at the target, `up` is re-derived. */
 export type CameraBasis = {
@@ -14,11 +16,10 @@ export type CameraBasis = {
  * cameraBasis — the frame every mcpm view projects through, shared so the raymarch, the
  * agent splat and the galaxy overlay cannot drift apart on screen.
  *
- * Directions need no world→voxel transform of their own: GridBox voxels are cubic by
- * construction, so that map is a uniform scale and this normalises anyway.
- *
- * `box` is unused until F2.3 rotates these directions by R⁻¹ — GridBox has no
- * rotation field yet, so today this is identity.
+ * Built in world space, then rotated into box-local by R⁻¹ (conjugate of box.rotation) —
+ * the same leg worldToBoxLocal applies to positions, since GridBox voxels are cubic by
+ * construction and a rotated box's directions need R⁻¹ too (rotation doesn't commute with
+ * the uniform-scale shortcut this used to rely on).
  */
 export function cameraBasis(
   eyeMpc: Readonly<Vec3>,
@@ -39,5 +40,12 @@ export function cameraBasis(
       ? sideways
       : cross3(forward, Math.abs(forward[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1]),
   );
-  return { right, up: cross3(right, forward), forward };
+  const up = cross3(right, forward);
+  const [x, y, z, w] = box.rotation;
+  const conjugate: Vec4 = [-x, -y, -z, w];
+  return {
+    right: rotateVec3ByQuat(conjugate, right),
+    up: rotateVec3ByQuat(conjugate, up),
+    forward: rotateVec3ByQuat(conjugate, forward),
+  };
 }
