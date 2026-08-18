@@ -167,44 +167,48 @@ function GridBoxPanel(): ReactNode {
           }
         />
       </label>
-      {AXES.map(({ axis, label }) => (
-        <ParamSlider
-          key={`center-${label}`}
-          label={`center ${label}`}
-          value={grid.manualCenterMpc[axis]}
-          min={-500}
-          max={500}
-          step={1}
-          format={(v) => v.toFixed(0)}
-          info="Centre of the simulated box (Mpc)."
-          onChange={(v) =>
-            store.setState((s) => ({
-              ...s,
-              grid: setManualCenterMpc(s.grid, withAxis(s.grid.manualCenterMpc, axis, v)),
-            }))
-          }
-          path={`grid.manualCenterMpc.${axis}`}
-        />
-      ))}
-      {AXES.map(({ axis, label }) => (
-        <ParamSlider
-          key={`size-${label}`}
-          label={`size ${label}`}
-          value={grid.manualSizeMpc[axis]}
-          min={10}
-          max={1000}
-          step={5}
-          format={(v) => v.toFixed(0)}
-          info="Extent of the simulated box along this axis (Mpc)."
-          onChange={(v) =>
-            store.setState((s) => ({
-              ...s,
-              grid: setManualSizeMpc(s.grid, withAxis(s.grid.manualSizeMpc, axis, v)),
-            }))
-          }
-          path={`grid.manualSizeMpc.${axis}`}
-        />
-      ))}
+      {/* One wrapper for all six sliders: consecutive ParamSliders space by their
+          own margin (like every other panel); the root grid's gap would double it. */}
+      <div>
+        {AXES.map(({ axis, label }) => (
+          <ParamSlider
+            key={`center-${label}`}
+            label={`center ${label}`}
+            value={grid.manualCenterMpc[axis]}
+            min={-500}
+            max={500}
+            step={1}
+            format={(v) => v.toFixed(0)}
+            info="Centre of the simulated box (Mpc)."
+            onChange={(v) =>
+              store.setState((s) => ({
+                ...s,
+                grid: setManualCenterMpc(s.grid, withAxis(s.grid.manualCenterMpc, axis, v)),
+              }))
+            }
+            path={`grid.manualCenterMpc.${axis}`}
+          />
+        ))}
+        {AXES.map(({ axis, label }) => (
+          <ParamSlider
+            key={`size-${label}`}
+            label={`size ${label}`}
+            value={grid.manualSizeMpc[axis]}
+            min={10}
+            max={1000}
+            step={5}
+            format={(v) => v.toFixed(0)}
+            info="Extent of the simulated box along this axis (Mpc)."
+            onChange={(v) =>
+              store.setState((s) => ({
+                ...s,
+                grid: setManualSizeMpc(s.grid, withAxis(s.grid.manualSizeMpc, axis, v)),
+              }))
+            }
+            path={`grid.manualSizeMpc.${axis}`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
