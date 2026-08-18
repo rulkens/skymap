@@ -32,33 +32,33 @@ identically in both apps. It keeps exactly one shader of its own,
 
 ## Export verification (Phase 2 gate)
 
-2026-08-18, HEAD `68edbe774`. Headless run (`?probe` synthetic catalog,
-small tier, 34 sim steps) captured a `mcpm-20260818-0859.{npy,json,scfd}`
+2026-08-18, HEAD `05556bd02`. Headless run (`?probe` synthetic catalog,
+small tier, 34 sim steps, paused before exporting so both legs read the
+identical static trace) captured a `mcpm-20260818-0915.{npy,json,scfd}`
 pair — dims 64×64×56, f16, 100k agents, seed 1.
 
 - **Leg 1 (headless export run):** PASS — both download buttons produce
   their files (`.npy` + `polyphy-trace` sidecar; `.scfd`).
 - **Leg 2 (importer round-trip):** PASS — `buildRhizomeVolume.ts` accepts
   the captured `.npy` + sidecar untouched and writes a same-dims `.scfd`.
-- **Leg 3 (decode agreement):** **BLOCKED.** Decoding the browser's own
-  `.scfd` and the importer's `.scfd` and diffing voxels elementwise: of
-  229,376 voxels, 188,084 (82%) are bit-identical — but every one of those
-  is a background voxel that is zero on *both* sides (206,215/208,511
-  zeros respectively). Of the 41,292 non-both-zero voxels, **100% mismatch**
-  (max deviation = 1, i.e. full normalised range) — not f16 rounding noise.
-  Re-diffing with the importer's X↔Z axes swapped does not resolve it
-  (187,461 identical, marginally worse), so this isn't a clean transpose
-  either. Root cause (not yet fixed): `exportNpy.ts` writes the trace
-  readback's raw bytes (grid.wesl's x-fastest GPU layout) straight to
-  `.npy` with no reorder, but `buildRhizomeVolume.ts`/`packLogTraceVoxels`
-  default to interpreting `.npy` input as C-order (z-fastest) — the
-  convention a real PolyPhy-fork export would satisfy, but this
-  workbench's own `.npy` leg does not. `exportScfd.ts` sidesteps the same
-  landmine by passing the `'x-fastest'` layout explicitly; `exportNpy.ts`
-  has no equivalent switch.
+- **Leg 3 (decode agreement):** PASS — decoding the browser's own `.scfd`
+  and the importer's `.scfd` and diffing all 229,376 voxels elementwise:
+  **100% bit-identical, max deviation = 0.** Fixed in this round:
+  `exportNpy.ts` was writing the trace readback's raw bytes (grid.wesl's
+  x-fastest GPU layout) straight to `.npy` with no reorder, while
+  `buildRhizomeVolume.ts`'s default `packLogTraceVoxels` call — matching a
+  real PolyPhy-fork export, per the shipped MCPM volumes rendering
+  correctly — expects true NumPy C-order. `exportNpy.ts` now transposes
+  through a new `xFastestToCOrder` (pure index permutation, no value
+  change) before writing, so this tool's `.npy` leg is byte-diffable
+  against a real fork export the same way `exportScfd.ts` already was.
+  (An earlier un-paused capture showed a smaller residual deviation from
+  the sim continuing to step between the two separate download clicks —
+  not an export bug; pausing first eliminated it.)
 - **Leg 4 (tests):** PASS — `tests/parsers/npyWriter.test.ts`,
-  `tests/tools/mcpm-workbench/export/`, `tests/utils/volume/packLogTraceVoxels.test.ts`,
-  `tests/tools/buildRhizomeVolume.smoke.test.ts` (15 tests, 4 files) all green.
+  `tests/tools/mcpm-workbench/`, `tests/utils/volume/packLogTraceVoxels.test.ts`,
+  `tests/tools/buildRhizomeVolume.smoke.test.ts` (67 tests, 22 files) all
+  green, including new `exportNpy.test.ts` coverage for the transpose.
 
 Preview-vs-live visual check is pending the maintainer's eyes; an automated
 orientation check passed during T18's fix round.
