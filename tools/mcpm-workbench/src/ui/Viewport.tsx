@@ -23,6 +23,7 @@ import { downloadStem } from '../export/downloadStem';
 import { emitTraceSidecar } from '../export/emitTraceSidecar';
 import { exportNpy } from '../export/exportNpy';
 import { exportScfd } from '../export/exportScfd';
+import { previewPackedTrace } from '../export/previewPackedTrace';
 import { triggerDownload } from '../export/triggerDownload';
 import { widenTrace } from '../export/widenTrace';
 import { autoFitGridBox } from '../field/autoFitGridBox';
@@ -31,7 +32,7 @@ import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
 import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
-import type { TraceView } from '../render/tracePass';
+import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
@@ -43,6 +44,7 @@ import {
   setCameraTargetOffset,
   setCameraYawPitch,
   setFps,
+  setPreviewPacked,
 } from '../state/slices/viewSlice';
 
 // The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
@@ -209,6 +211,15 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let lastScfdToken = store.getSnapshot().sim.scfdToken;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
     let boxPreviewUntil = 0;
+    // T18 preview-export view: a second TracePass over a packed-cube buffer,
+    // built once per false→true edge of `view.raymarch.previewPacked` (see the
+    // subscriber below) rather than every frame. `previewPackedAtStep` is the
+    // `sim.stepCount` snapshot taken the moment the pack landed; frame() drops
+    // back to the live trace once `stepCount` moves past it (spec's "STALE").
+    let previewPass: TracePass | null = null;
+    let previewBuffer: GPUBuffer | null = null;
+    let previewPackedAtStep = -1;
+    let lastPreviewPacked = store.getSnapshot().view.raymarch.previewPacked;
     // null whenever the path tracer is off — reaching this frame with the layer freshly
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
@@ -220,7 +231,16 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let lastFpsPushTime = 0;
     let lastPushedFps = 0;
 
+    /** Frees the T18 preview pass + its packed buffer. Idempotent. */
+    function disposePreview(): void {
+      previewPass?.dispose();
+      previewPass = null;
+      previewBuffer?.destroy();
+      previewBuffer = null;
+    }
+
     function disposeHarness(): void {
+      disposePreview();
       renderGraph?.dispose();
       renderGraph = null;
       harness?.dispose();
@@ -284,6 +304,45 @@ function Viewport({ store }: ViewportProps): ReactNode {
       }
     }
 
+    /**
+     * T18: readback → widen → `previewPackedTrace` (the REAL packLogTraceVoxels,
+     * `runScfdExport`'s own call) → a second TracePass over the packed buffer,
+     * in place of RenderGraph's live one. Runs once per toggle-on; frame()
+     * below is what decides every frame whether the result is still fresh
+     * enough to draw. `harness !== h` guards the rebuild race the same way
+     * `buildFromPoints` guards `generation` — `readbackTrace` can outlive a
+     * catalog switch that starts mid-await.
+     */
+    async function runPreviewPacked(): Promise<void> {
+      const h = harness;
+      const graph = renderGraph;
+      if (!h || !graph) return;
+      try {
+        const readback = await h.readbackTrace();
+        const values = widenTrace(readback);
+        if (disposed || harness !== h) return;
+        disposePreview();
+        const packed = previewPackedTrace(h.gpu.device, values, h.box);
+        previewBuffer = packed.buffer;
+        previewPass = createTracePass({
+          device: h.gpu.device,
+          targetFormat: graph.hdrFormat,
+          makeShader: (code, label) => h.gpu.device.createShaderModule({ code, label }),
+          source: {
+            traceBuffer: packed.buffer,
+            box: h.box,
+            element: packed.element,
+            paletteId: store.getSnapshot().view.raymarch.paletteId,
+          },
+        });
+        previewPackedAtStep = store.getSnapshot().sim.stepCount;
+      } catch (err) {
+        console.error('mcpm-workbench: preview packed trace failed', err);
+        disposePreview();
+        store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
+      }
+    }
+
     function startLoop(): void {
       if (rafHandle) cancelAnimationFrame(rafHandle);
       // Re-seed the FPS sentinels exactly as their declarations do: every rebuild tears
@@ -335,7 +394,24 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // with every layer off the frame is black, not last frame's pixels.
         const { layers } = s.view;
         graph.clear(encoder);
-        if (layers.raymarch) graph.drawTrace(encoder, traceViewFor(s, h.box, cam));
+        if (layers.raymarch) {
+          // T18: previewPacked wants the packed cube, but only while it is still
+          // the pack of THIS stepCount — a sim step invalidates it (spec's
+          // "STALE"), and the fallback IS the live trace, not a blank frame.
+          if (
+            s.view.raymarch.previewPacked &&
+            previewPass &&
+            previewPackedAtStep === s.sim.stepCount
+          ) {
+            previewPass.draw(encoder, graph.accumView(), traceViewFor(s, h.box, cam));
+          } else {
+            if (s.view.raymarch.previewPacked && previewPass) {
+              disposePreview();
+              store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
+            }
+            graph.drawTrace(encoder, traceViewFor(s, h.box, cam));
+          }
+        }
         if (layers.agents) {
           graph.drawSplat(encoder, { ...cam, sampleWeight: s.view.raymarch.sampleWeight });
         }
@@ -399,6 +475,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
       lastClearToken = store.getSnapshot().sim.clearTraceToken;
       lastExportToken = store.getSnapshot().sim.exportToken;
       lastScfdToken = store.getSnapshot().sim.scfdToken;
+      // disposeHarness() (above, via disposePreview()) already freed the old
+      // preview pass/buffer; forcing the edge low re-packs against the fresh
+      // harness on the subscriber's next tick, IF the toggle was left on.
+      lastPreviewPacked = false;
+      previewPackedAtStep = -1;
 
       const budget = planGridBudget(
         box,
@@ -527,7 +608,18 @@ function Viewport({ store }: ViewportProps): ReactNode {
           lastScfdToken = s.sim.scfdToken;
           void runScfdExport();
         }
+        // T18: a boolean edge, not a token — ControlsPanel's checkbox already
+        // IS the one-shot trigger (checking it twice without unchecking is a
+        // no-op, unlike reset/export's repeatable click), and frame() above
+        // owns the false transition it fires on staleness, so mirroring that
+        // here too keeps a manual uncheck responsive without waiting a frame.
+        if (s.view.raymarch.previewPacked && !lastPreviewPacked) {
+          void runPreviewPacked();
+        } else if (!s.view.raymarch.previewPacked && lastPreviewPacked) {
+          disposePreview();
+        }
       }
+      lastPreviewPacked = s.view.raymarch.previewPacked;
     });
 
     // ── Orbit input → view slice camera ────────────────────────────────────

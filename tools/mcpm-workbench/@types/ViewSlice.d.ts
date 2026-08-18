@@ -4,10 +4,11 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 /**
  * ViewSlice — the render layers plus the tool-local orbit camera (T10's trace
  * pass consumes camera + raymarch params via its own narrow options type, not
- * this one directly — Viewport maps between the two). Spec §7's remaining
- * view (preview export) will add its own layer flag and panel section here;
- * its knobs are that track's own addition, not stubbed now, same reasoning
- * as the deferred `histogram` slice.
+ * this one directly — Viewport maps between the two). Spec §7's last view
+ * (preview export, T18) is `raymarch.previewPacked` below, not a fifth
+ * `layers` entry: it swaps the raymarch layer's own data source rather than
+ * adding an independent draw, so its ControlsPanel control lives in the
+ * Raymarch section — see Viewport for the pack-once/go-stale mechanics.
  */
 export type ViewSlice = {
   /**
@@ -49,6 +50,16 @@ export type ViewSlice = {
      * per-slab alpha goes opaque a few voxels in and buries the interior.
      */
     readonly additive: boolean;
+    /**
+     * On demand, never per frame: true means the raymarch layer marches the
+     * PACKED export cube (the real `packLogTraceVoxels`, same call as the
+     * `.scfd` leg) instead of the live trace buffer — a structure check for a
+     * transpose/shift regression, not a brightness match (packed values are
+     * log-transfer). Viewport packs once on the false→true edge and flips
+     * this back to `false` itself once `sim.stepCount` moves past the
+     * snapshot it packed, rather than repacking automatically.
+     */
+    readonly previewPacked: boolean;
   };
   /**
    * The volumetric path tracer's own knobs — field names match `VolpathParams`

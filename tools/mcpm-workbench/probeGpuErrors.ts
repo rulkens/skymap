@@ -306,6 +306,20 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // T18: packs the live trace through the REAL packLogTraceVoxels and marches
+      // it via a second TracePass — exercises pipeline code (pack, upload, a
+      // second f16/f32-specialized shader compile) that no other step reaches.
+      // sim.running stays true here, so by the time the async pack lands the
+      // preview is already stale; Viewport drops back to the live trace and
+      // un-checks this itself — the settle is what proves that whole round trip
+      // raises no GPU errors, not a picture the probe judges.
+      name: 'raymarch:preview-packed',
+      run: async (page) => {
+        await page.getByRole('checkbox', { name: 'preview packed export', exact: true }).check();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
       // Agents joins the two default-on layers: all three passes encode into one frame.
       name: 'layers:agents-on',
       run: async (page) => {

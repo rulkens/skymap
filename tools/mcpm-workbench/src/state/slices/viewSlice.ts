@@ -23,6 +23,7 @@ export const defaultViewSlice: ViewSlice = {
     sampleWeight: 0.01,
     stepVoxels: 1,
     additive: true,
+    previewPacked: false,
   },
   // task-V2A-report.md's "Suggested starting values" (fork defaults, adapted).
   // traceMax has no HUD readout to seed from yet (report concern #2) — 5.0 is
@@ -105,6 +106,12 @@ export function setStepVoxels(prev: ViewSlice, stepVoxels: number): ViewSlice {
 
 export function setAdditive(prev: ViewSlice, additive: boolean): ViewSlice {
   return { ...prev, raymarch: { ...prev.raymarch, additive } };
+}
+
+/** T18: Viewport both sets this true on the ControlsPanel toggle and flips it
+ * back to false itself once the packed preview goes stale — see ViewSlice. */
+export function setPreviewPacked(prev: ViewSlice, previewPacked: boolean): ViewSlice {
+  return { ...prev, raymarch: { ...prev.raymarch, previewPacked } };
 }
 
 type PathTracerNumericKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive'>;

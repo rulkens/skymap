@@ -36,6 +36,7 @@ import {
   setOpticalThickness,
   setPathTracerCompressive,
   setPathTracerParam,
+  setPreviewPacked,
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
@@ -467,6 +468,14 @@ function ControlsPanel(): ReactNode {
             label="additive blend"
             on={view.raymarch.additive}
             onChange={(on) => store.setState((s) => ({ ...s, view: setAdditive(s.view, on) }))}
+          />
+          {/* T18: on demand, not a mode — Viewport packs once on the rising edge
+              and un-checks this itself once the sim steps past that snapshot. */}
+          <ToggleRow
+            label="preview packed export"
+            on={view.raymarch.previewPacked}
+            info="Marches the packed export cube (real packLogTraceVoxels) instead of the live trace — a structure check, not a brightness match. Goes stale and reverts on the next sim step."
+            onChange={(on) => store.setState((s) => ({ ...s, view: setPreviewPacked(s.view, on) }))}
           />
           <SliderGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
