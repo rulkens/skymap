@@ -14,7 +14,12 @@
  * alongside the texture inside `resize` rather than handed in from outside.
  *
  * The blit uniform write order is `[exposure, contrast]`.
+ *
+ * The graph is also where a layer becomes part of the frame: a pass that is
+ * constructed but not registered here is silently never opened.
  */
+import type { TracePass, TraceSource, TraceView } from './tracePass';
+import { createTracePass } from './tracePass';
 import blitWgsl from './shaders/blit.wesl?static';
 
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
@@ -26,6 +31,14 @@ export type RenderGraph = {
   accumView(): GPUTextureView;
   /** Recreate the accum texture + blit bind group iff the drawable size changed. */
   resize(width: number, height: number): void;
+  /**
+   * Build the trace raymarch over `source` and make it the frame's base layer.
+   * Called once the sim harness exists (it owns the trace buffer); replaces and
+   * disposes any pass attached before.
+   */
+  attachTrace(source: TraceSource): void;
+  /** March the attached trace pass into the accum target. Throws if none is attached. */
+  drawTrace(encoder: GPUCommandEncoder, view: TraceView): void;
   /** Tonemap the accum buffer into `target`: Reinhard + contrast + sRGB gamma. */
   tonemap(
     encoder: GPUCommandEncoder,
@@ -64,6 +77,7 @@ export function createRenderGraph(
   let accumTex: GPUTexture | null = null;
   let accumTexView: GPUTextureView | null = null;
   let blitBindGroup: GPUBindGroup | null = null;
+  let tracePass: TracePass | null = null;
 
   function resize(width: number, height: number): void {
     // No-op on an unchanged drawable size — recreating the texture every frame
@@ -97,6 +111,23 @@ export function createRenderGraph(
     return accumTexView;
   }
 
+  function attachTrace(source: TraceSource): void {
+    tracePass?.dispose();
+    tracePass = createTracePass({
+      device,
+      targetFormat: HDR_FORMAT,
+      makeShader,
+      source,
+    });
+  }
+
+  function drawTrace(encoder: GPUCommandEncoder, view: TraceView): void {
+    if (!tracePass) {
+      throw new Error('RenderGraph.drawTrace: call attachTrace() before drawing the raymarch');
+    }
+    tracePass.draw(encoder, accumView(), view);
+  }
+
   function tonemap(
     encoder: GPUCommandEncoder,
     target: GPUTextureView,
@@ -124,6 +155,8 @@ export function createRenderGraph(
   }
 
   function dispose(): void {
+    tracePass?.dispose();
+    tracePass = null;
     accumTex?.destroy();
     accumTex = null;
     accumTexView = null;
@@ -135,6 +168,8 @@ export function createRenderGraph(
     hdrFormat: HDR_FORMAT,
     accumView,
     resize,
+    attachTrace,
+    drawTrace,
     tonemap,
     dispose,
   };
