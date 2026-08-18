@@ -8,6 +8,8 @@ export const BYTES_PER_ELEMENT: Readonly<Record<GridElement, number>> = { f16: 2
 export const UNIFORM_BYTES = 64; // McpmUniforms: 16 x 4-byte scalars, no padding (io.wesl)
 export const HISTOGRAM_FLAGS_BYTES = 4; // HistogramFlags: one i32 (histogram.wesl)
 export const HISTOGRAM_BINS = 17; // constants.wesl N_HISTOGRAM_BINS: 16 counts + running max
+// The `histogram` buffer holds one MORE element than HISTOGRAM_BINS: index HISTOGRAM_BINS is
+// this project's own in-grid sampled-point counter (histogram.wesl), not one of the fork's bins.
 
 /**
  * GridBuffers — every GPU allocation the sim owns. The three grids are
@@ -69,7 +71,7 @@ export function createGridBuffers(
     agentWeight: lane('mcpm-agent-weight'),
     histogram: device.createBuffer({
       label: 'mcpm-histogram',
-      size: HISTOGRAM_BINS * 4,
+      size: (HISTOGRAM_BINS + 1) * 4,
       usage: storageUsage,
     }),
     densities: lane('mcpm-densities'),

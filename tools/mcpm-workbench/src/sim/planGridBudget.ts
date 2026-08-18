@@ -3,7 +3,10 @@ import type { GridBudget } from '../../@types/GridBudget';
 import type { GridElement } from '../../@types/GridElement';
 import { BYTES_PER_ELEMENT } from './createGridBuffers';
 
-const AGENT_LANES = 6; // agentX/Y/Z/Phi/Theta/Weight — io.wesl slots 3..8
+// agentX/Y/Z/Phi/Theta/Weight (io.wesl slots 3..8) plus T20's `densities` lane
+// (histogram.wesl) — createGridBuffers.ts sizes all seven the same way (agentBufferLength
+// entries), so the HUD's totalBytes must count all seven or it silently under-reports.
+const AGENT_LANES = 7;
 const BYTES_PER_AGENT_LANE_ENTRY = 4; // f32; only the grids carry GridElem
 const DIM_GRANULARITY = 8; // decay dispatches dims/8 with no bounds tail
 
@@ -15,7 +18,7 @@ const BUFFER_NAMES = ['depositA', 'depositB', 'trace', 'agents'] as const;
  *
  * `agentCount` is the SoA lane LENGTH to budget: the harness passes
  * `points.count + agentCount`, since indices [0, nDataPoints) are the catalog
- * points sharing the same six buffers. A storage buffer must clear both
+ * points sharing the same seven buffers. A storage buffer must clear both
  * `maxBufferSize` (to be created) and `maxStorageBufferBindingSize` (to be
  * bound), so the tighter of the two is the limit reported.
  */

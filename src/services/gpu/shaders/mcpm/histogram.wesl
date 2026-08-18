@@ -1,7 +1,9 @@
 // mcpm/histogram.wesl — Polyphorm's cs_density_histo: bins the trace density sampled at
 // data-point positions into the fork's 17-bin (N_HISTOGRAM_BINS) log histogram, and writes
 // each point's own density so the host can derive meanLogTraceAtPoints — a statistic THIS
-// PROJECT defines, not the fork (spec section 9: "the fork's kernel only bins").
+// PROJECT defines, not the fork (spec section 9: "the fork's kernel only bins"), aligned to
+// dataPointHistogram.ts's CLI definition: only IN-GRID points count, divided by how many were
+// sampled (histogramSlice.ts's recordHistogramSample — same contract, both sites say so).
 //
 // group(0) is io.wesl's McpmUniforms, reused as-is: grid::loadTrace's OOB guard needs
 // sim.worldWidth/Height/Depth regardless (grid.wesl imports io::sim itself), and
@@ -22,6 +24,7 @@ import package::mcpm::io::agentX;
 import package::mcpm::io::agentY;
 import package::mcpm::io::agentZ;
 import package::mcpm::io::agentWeight;
+import package::mcpm::grid::inGrid;
 import package::mcpm::grid::loadTrace;
 import package::mcpm::rng::Rng;
 import package::mcpm::rng::wangHash;
@@ -35,7 +38,10 @@ struct HistogramFlags {
 // This pass's own resources, not part of io.wesl's group(1) contract (its header
 // reserves them here). 'densities' has no fork analogue by that name (halos_densities
 // there); the host reads it back to derive meanLogTraceAtPoints (spec section 9) from
-// the SAME per-point samples this kernel bins.
+// the SAME per-point samples this kernel bins. histogramCounts is N_HISTOGRAM_BINS + 1
+// elements: 0..16 are the fork's bins/max-marker, unchanged; index 17 is THIS project's
+// own addition, the count of IN-GRID points actually sampled this step — the divisor
+// dataPointHistogram.ts's CLI statistic uses, so the host never has to re-derive it.
 @group(2) @binding(0) var<uniform> flags: HistogramFlags;
 @group(2) @binding(1) var<storage, read_write> histogramCounts: array<atomic<u32>>;
 @group(2) @binding(2) var<storage, read_write> densities: array<f32>;
@@ -72,11 +78,25 @@ fn cs(
     z = rngNextFloat(&rng) * f32(sim.worldDepth);
   }
 
-  // cs_density_histo.wgsl:106 loads tex_density with no OOB guard (m2b-carryovers.md
-  // flagged it 'fix-in-M3+'); grid.wesl's loadTrace always guards, so every load in this
-  // port gets the fix for free rather than as a special case here.
-  let density = loadTrace(vec3<i32>(vec3<u32>(vec3<f32>(x, y, z))));
+  // Signed truncation, THEN the bounds check — not vec3<u32>(vec3<f32>(...)) first: a
+  // negative f32 -> u32 conversion is an indeterminate value (saturates to 0 on the
+  // hardware the fork's own comment describes), which would collapse an out-of-grid point
+  // below the origin onto voxel (0,0,0) and read that corner's REAL density instead of
+  // being recognised as out-of-grid. 'inGrid' never sees a coordinate that already lost its
+  // sign, so it catches the low side exactly like the high side.
+  let voxel = vec3<i32>(vec3<f32>(x, y, z));
+  if (!inGrid(voxel)) {
+    // Out-of-grid catalog points are excluded from both the bin vector and
+    // meanLogTraceAtPoints, matching dataPointHistogram.ts's CLI statistic exactly
+    // (module header). -1 is recordHistogramSample's skip sentinel — a real density is
+    // never negative.
+    densities[idx] = -1.0;
+    return;
+  }
+
+  let density = loadTrace(voxel);
   densities[idx] = density;
+  atomicAdd(&histogramCounts[N_HISTOGRAM_BINS], 1u); // in-grid sampled count
 
   var histoIndex = 0u;
   if (density > 1.0e-5) {

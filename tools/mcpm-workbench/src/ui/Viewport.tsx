@@ -226,6 +226,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let previewBuffer: GPUBuffer | null = null;
     let previewPackedAtStep = -1;
     let lastPreviewPacked = store.getSnapshot().view.raymarch.previewPacked;
+    // T20: jittered-position samples and data-point samples are differently-defined
+    // statistics under the same `meanLogTraceAtPoints` name — every toggle edge clears
+    // `history` (below) so the two never ride the same convergence curve.
+    let lastSampleRandomly = store.getSnapshot().histogram.sampleRandomly;
     // null whenever the path tracer is off — reaching this frame with the layer freshly
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
@@ -368,11 +372,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (histogramInFlight) return;
       histogramInFlight = true;
       try {
-        const { counts, densities } = await h.readHistogram();
+        const { counts, sampledCount, densities } = await h.readHistogram();
         if (disposed || harness !== h) return;
         store.setState((st) => ({
           ...st,
-          histogram: recordHistogramSample(st.histogram, counts, densities, stepCount),
+          histogram: recordHistogramSample(
+            st.histogram,
+            counts,
+            sampledCount,
+            densities,
+            stepCount,
+          ),
         }));
       } catch (err) {
         console.error('mcpm-workbench: histogram readback failed', err);
@@ -541,6 +551,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
         ...st,
         grid: setResolvedGrid(st.grid, box, h.element, budget),
         sim: resetStepCount(st.sim),
+        // A new grid box / catalog never continues the old convergence curve — same
+        // reasoning as the resetToken path below, same one-line fix.
+        histogram: resetHistogram(st.histogram),
       }));
 
       const makeShader = (code: string, label: string): GPUShaderModule =>
@@ -664,6 +677,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (s.sim.scfdToken !== lastScfdToken) {
           lastScfdToken = s.sim.scfdToken;
           void runScfdExport();
+        }
+        // T20: jittered-position samples and data-point samples are differently-defined
+        // statistics under the same name — a toggle mid-run must not interleave them
+        // into one curve, so every edge clears history (and counts/mean) outright.
+        if (s.histogram.sampleRandomly !== lastSampleRandomly) {
+          lastSampleRandomly = s.histogram.sampleRandomly;
+          store.setState((st) => ({ ...st, histogram: resetHistogram(st.histogram) }));
         }
         // T18: a boolean edge, not a token — ControlsPanel's checkbox already
         // IS the one-shot trigger (checking it twice without unchecking is a

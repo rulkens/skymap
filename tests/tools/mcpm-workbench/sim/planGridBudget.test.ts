@@ -26,8 +26,9 @@ describe('planGridBudget', () => {
     expect(budget.perBufferBytes.depositB).toBe(1_244_006_400);
     expect(budget.perBufferBytes.trace).toBe(1_244_006_400);
     expect(budget.refusal).toBeNull();
-    // Three grids + six f32 agent lanes of 1e6 entries.
-    expect(budget.totalBytes).toBe(3 * 1_244_006_400 + 6 * 4_000_000);
+    // Three grids + seven f32 agent lanes of 1e6 entries (the six SoA lanes plus T20's
+    // `densities` lane, which createGridBuffers.ts sizes identically).
+    expect(budget.totalBytes).toBe(3 * 1_244_006_400 + 7 * 4_000_000);
   });
 
   it('refuses by naming the first buffer that exceeds maxBufferSize', () => {

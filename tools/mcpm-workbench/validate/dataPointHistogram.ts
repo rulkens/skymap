@@ -5,7 +5,11 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
  * sampled only at catalog point locations (nearest voxel, points outside
  * the grid skipped) rather than every voxel. Also returns the mean of
  * those samples — `meanLogTraceAtPoints`, this project's convergence
- * signal (spec §9: "the fork's kernel only bins").
+ * signal (spec §9: "the fork's kernel only bins"). `meanLogTrace` here is
+ * `sum(log1p(max(v,0))) / sampled` — the GPU-side live plot's
+ * `recordHistogramSample` (histogramSlice.ts) uses this SAME definition
+ * (out-of-grid points excluded from both the sum and the divisor), so the
+ * in-UI curve and this CLI statistic mean the same thing.
  */
 export function dataPointHistogram(args: {
   readonly values: Float64Array | Float32Array;
