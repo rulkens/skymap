@@ -379,7 +379,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         const handleY = 306;
         // Self-check (F1.6 review MINOR): the aim above is a hardcoded pixel pair
         // that would silently degrade to an inert orbit-drag if the boot box,
-        // camera, viewport, or ARROW_REACH_FRACTION ever drift. The +Y translate
+        // camera, viewport, or gizmoArrowLengthMpc's constant ever drift. The +Y translate
         // handle writes grid.manualCenterMpc[1], surfaced live by the already-open
         // GridBoxPanel's "center y" ParamSlider (role="slider", aria-valuenow) —
         // reading it before/after is how the aim was empirically verified during

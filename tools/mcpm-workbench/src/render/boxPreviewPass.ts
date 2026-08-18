@@ -8,8 +8,10 @@
  *
  * `builtBox` (the camera's own voxel frame) and `pendingBox` (what's previewed, in world Mpc,
  * converted host-side) are deliberately different GridBoxes — glyph geometry comes from
- * `pendingBox`'s own `gizmoHandleGeometry(box, UNIT_AXES)`; F2 swaps in a rotated basis with
- * no signature change here (spec §5).
+ * `pendingBox`'s own `gizmoHandleGeometry(box, UNIT_AXES, arrowLengthMpc)`; F2 swaps in a
+ * rotated basis with no signature change here (spec §5). `arrowLengthMpc` is derived from
+ * `view` each draw via gizmoArrowLengthMpc — the SAME formula Viewport.tsx's pick/hover path
+ * uses, or grabbing an arrow would miss where it's drawn.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { cross3 } from '../../../../src/utils/math/cross3';
@@ -20,6 +22,7 @@ import type { GridBox } from '../../@types/GridBox';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 import { worldToVoxel } from '../field/worldToVoxel';
 import { encodeGizmoHandleId } from '../gizmo/encodeGizmoHandleId';
+import { gizmoArrowLengthMpc } from '../gizmo/gizmoArrowLengthMpc';
 import { gizmoHandleGeometry, PICK_TOLERANCE_FRACTION } from '../gizmo/gizmoHandleGeometry';
 import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from './writeMcpmCamera';
 import boxLinesWgsl from '../../../../src/services/gpu/shaders/mcpm/boxLines.wesl?static';
@@ -109,10 +112,10 @@ function crossArmVectors(axisDir: Readonly<Vec3>): readonly [Vec3, Vec3] {
  * single solid-filled screen-space triangle. Resize crosses: two constant-width segments
  * through the handle position, perpendicular to its axis.
  */
-function buildGlyphSegments(box: GridBox): GlyphSegment[] {
+function buildGlyphSegments(box: GridBox, arrowLengthMpc: number): GlyphSegment[] {
   const half = boxHalfExtentMpc(box.sizeMpc);
   const crossArmMpc = CROSS_ARM_FRACTION * Math.min(half[0], half[1], half[2]);
-  const geometry = gizmoHandleGeometry(box, UNIT_AXES);
+  const geometry = gizmoHandleGeometry(box, UNIT_AXES, arrowLengthMpc);
   const segs: GlyphSegment[] = [];
 
   for (const handle of geometry.translate) {
@@ -282,8 +285,10 @@ export function createBoxPreviewPass(opts: {
       boxF32.set(worldToVoxel(builtBox, bounds.max), 4);
       device.queue.writeBuffer(boxBuffer, 0, boxF32);
 
+      const arrowLengthMpc = gizmoArrowLengthMpc(view.eyeMpc, pendingBox.centerMpc, view.fovYRad);
+
       let si = 0;
-      for (const seg of buildGlyphSegments(pendingBox)) {
+      for (const seg of buildGlyphSegments(pendingBox, arrowLengthMpc)) {
         const a = worldToVoxel(builtBox, seg.posA);
         const b = worldToVoxel(builtBox, seg.posB);
         const base = si * GLYPH_SEGMENT_FLOATS;

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import {
-  ARROW_REACH_FRACTION,
-  gizmoHandleGeometry,
-} from '../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
+import { gizmoHandleGeometry } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
+
+// Hand-picked, unrelated to the box's own size — the point of the feature.
+const ARROW_LENGTH_MPC = 42;
 
 // world-space axis directions before F2's rotated basis lands.
 const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
@@ -22,19 +22,25 @@ const BOX: GridBox = {
 };
 
 describe('gizmoHandleGeometry', () => {
-  it('places each translate arrow at ARROW_REACH_FRACTION of the half-extent along its axis', () => {
-    // ARROW_REACH_FRACTION(0.6) * half(4) = 2.4, added to center on that axis only.
-    expect(ARROW_REACH_FRACTION).toBe(0.6);
-    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES);
+  it('places each translate arrow at center + axisDir·arrowLengthMpc', () => {
+    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
 
-    expect(geometry.translate[0].positionMpc).toEqual([1 + 2.4, 2, 3]);
-    expect(geometry.translate[1].positionMpc).toEqual([1, 2 + 2.4, 3]);
-    expect(geometry.translate[2].positionMpc).toEqual([1, 2, 3 + 2.4]);
+    expect(geometry.translate[0].positionMpc).toEqual([1 + 42, 2, 3]);
+    expect(geometry.translate[1].positionMpc).toEqual([1, 2 + 42, 3]);
+    expect(geometry.translate[2].positionMpc).toEqual([1, 2, 3 + 42]);
     expect(geometry.translate[0].id).toEqual({ kind: 'translate', axis: 0 });
   });
 
+  it('leaves translate tip placement UNCHANGED when the box size doubles — the point of the feature', () => {
+    const doubledBox: GridBox = { ...BOX, sizeMpc: [16, 16, 16] };
+    const geometry = gizmoHandleGeometry(doubledBox, UNIT_AXES, ARROW_LENGTH_MPC);
+
+    // Same arrowLengthMpc, same tip — only halfExtentMpc (and so resize/rotate) moved.
+    expect(geometry.translate[0].positionMpc).toEqual([1 + 42, 2, 3]);
+  });
+
   it('places each resize handle at its face center (center ± half-extent along its axis)', () => {
-    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES);
+    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
     const plusX = geometry.resize.find(
       (h) => h.id.kind === 'resize' && h.id.axis === 0 && h.id.sign === 1,
     );
@@ -49,7 +55,7 @@ describe('gizmoHandleGeometry', () => {
   });
 
   it('gives every rotate handle a radiusMpc-0 F1 stub, centered on the box', () => {
-    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES);
+    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
     for (const ring of geometry.rotate) {
       expect(ring.radiusMpc).toBe(0);
       expect(ring.centerMpc).toEqual(BOX.centerMpc);

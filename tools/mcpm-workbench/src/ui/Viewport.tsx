@@ -37,6 +37,7 @@ import { syntheticCatalog } from '../field/syntheticCatalog';
 import { applyResizeDrag } from '../gizmo/applyResizeDrag';
 import { applyTranslateDrag } from '../gizmo/applyTranslateDrag';
 import { closestPointOnRayToLine } from '../gizmo/closestPointOnRayToLine';
+import { gizmoArrowLengthMpc } from '../gizmo/gizmoArrowLengthMpc';
 import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { screenToRay } from '../gizmo/screenToRay';
@@ -790,12 +791,23 @@ function Viewport({ store }: ViewportProps): ReactNode {
       return screenToRay(cam.eyeMpc, basis, cam.fovYRad, aspect, ndc);
     }
 
+    /** Translate-arrow length for `box`, from the SAME camera formula boxPreviewPass draws
+     *  against — pick and draw must agree or grabbing an arrow will miss where it's drawn. */
+    function arrowLengthMpcFor(s: AppState, boxCenterMpc: Vec3): number {
+      const cam = cameraViewFor(s, [canvas.width, canvas.height]);
+      return gizmoArrowLengthMpc(cam.eyeMpc, boxCenterMpc, cam.fovYRad);
+    }
+
     const onPointerDown = (e: PointerEvent): void => {
       const s = store.getSnapshot();
       if (boxWireframeVisible(s, performance.now())) {
         const pendingBox = deriveGridBox(s.grid);
         const ray = rayFromPointer(e, s);
-        const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, UNIT_AXES));
+        const arrowLengthMpc = arrowLengthMpcFor(s, pendingBox.centerMpc);
+        const hit = pickGizmoHandle(
+          ray,
+          gizmoHandleGeometry(pendingBox, UNIT_AXES, arrowLengthMpc),
+        );
         if (hit && hit.kind !== 'rotate') {
           const anchorAxisParam = closestPointOnRayToLine(
             ray,
@@ -849,8 +861,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
       if (!dragging) {
         if (boxWireframeVisible(s, performance.now())) {
+          const box = deriveGridBox(s.grid);
           const ray = rayFromPointer(e, s);
-          hoverHandle = pickGizmoHandle(ray, gizmoHandleGeometry(deriveGridBox(s.grid), UNIT_AXES));
+          const arrowLengthMpc = arrowLengthMpcFor(s, box.centerMpc);
+          hoverHandle = pickGizmoHandle(ray, gizmoHandleGeometry(box, UNIT_AXES, arrowLengthMpc));
         } else {
           hoverHandle = null;
         }

@@ -49,20 +49,25 @@ function halfExtentsFromGeometry(geometry: GizmoHandleGeometry): Vec3 {
 }
 
 /**
- * pickGizmoHandle — nearest handle within world-space pick tolerance
- * (`PICK_TOLERANCE_FRACTION · min(halfExtentMpc)`) of the ray, or `null`. Translate arrows
- * hit-test the whole center→tip shaft (segment), since that's the visible, grabbable shape;
- * resize crosses stay point-tested at their single drawn position. Rotate rings are skipped
- * outright while `radiusMpc <= 0` (F1 stub geometry — `gizmoHandleGeometry` doesn't place real
- * rings until F2, so there is nothing on them yet to hit-test).
+ * pickGizmoHandle — nearest handle within world-space pick tolerance of the ray, or `null`.
+ * Translate arrows hit-test the whole center→tip shaft (segment), since that's the visible,
+ * grabbable shape; resize crosses stay point-tested at their single drawn position. Rotate
+ * rings are skipped outright while `radiusMpc <= 0` (F1 stub geometry — `gizmoHandleGeometry`
+ * doesn't place real rings until F2, so there is nothing on them yet to hit-test).
+ *
+ * Deliberate asymmetry: translate arrows hold a constant screen size (gizmoArrowLengthMpc), so
+ * their tolerance rebases onto their OWN length — `PICK_TOLERANCE_FRACTION · arrowLength`,
+ * recovered per-axis from the tip's distance from center — not the box-based
+ * `PICK_TOLERANCE_FRACTION · min(halfExtentMpc)` resize handles keep, since those still scale
+ * with the box.
  */
 export function pickGizmoHandle(ray: Ray, geometry: GizmoHandleGeometry): GizmoHandleId | null {
   const half = halfExtentsFromGeometry(geometry);
-  const tolerance = PICK_TOLERANCE_FRACTION * Math.min(half[0], half[1], half[2]);
+  const resizeTolerance = PICK_TOLERANCE_FRACTION * Math.min(half[0], half[1], half[2]);
   const center = geometry.rotate[0].centerMpc;
 
   let bestId: GizmoHandleId | null = null;
-  let bestDist = tolerance;
+  let bestDist = Infinity;
 
   for (const handle of geometry.translate) {
     const length = Math.hypot(
@@ -70,8 +75,9 @@ export function pickGizmoHandle(ray: Ray, geometry: GizmoHandleGeometry): GizmoH
       handle.positionMpc[1] - center[1],
       handle.positionMpc[2] - center[2],
     );
+    const tolerance = PICK_TOLERANCE_FRACTION * length; // arrow's own scale, not the box's.
     const dist = distanceToSegment(ray, center, handle.axisDir, length);
-    if (dist <= bestDist) {
+    if (dist <= tolerance && dist <= bestDist) {
       bestDist = dist;
       bestId = handle.id;
     }
@@ -79,7 +85,7 @@ export function pickGizmoHandle(ray: Ray, geometry: GizmoHandleGeometry): GizmoH
 
   for (const handle of geometry.resize) {
     const dist = distanceToRay(ray, handle.positionMpc);
-    if (dist <= bestDist) {
+    if (dist <= resizeTolerance && dist <= bestDist) {
       bestDist = dist;
       bestId = handle.id;
     }

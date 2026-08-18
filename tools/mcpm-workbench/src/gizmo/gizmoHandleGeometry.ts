@@ -5,12 +5,9 @@ import type { RingHandle } from '../../@types/RingHandle';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 
-/** Arrow tip distance from center, as a fraction of that axis' half-extent — inside the face
- *  (< 1) so the arrow never pokes through the box wall. */
-export const ARROW_REACH_FRACTION = 0.6;
-
 /** World-space pick tolerance, as a fraction of min(halfExtentMpc) — sized off the box itself,
- *  not screen-space-constant (see spec §5's "Handle geometry and picking"). */
+ *  not screen-space-constant. Resize handles only; translate arrows rebase onto their own
+ *  arrowLengthMpc (see pickGizmoHandle.ts) since they hold a constant screen size instead. */
 export const PICK_TOLERANCE_FRACTION = 0.05;
 
 /** Rotate-ring radius, as a fraction of min(halfExtentMpc) — F2's constant, defined here beside
@@ -25,11 +22,11 @@ function translateHandle(
   axis: 0 | 1 | 2,
   axisDir: Readonly<Vec3>,
   center: Readonly<Vec3>,
-  half: Readonly<Vec3>,
+  arrowLengthMpc: number,
 ): Handle {
   return {
     id: { kind: 'translate', axis },
-    positionMpc: addScaled(center, axisDir, ARROW_REACH_FRACTION * half[axis]),
+    positionMpc: addScaled(center, axisDir, arrowLengthMpc),
     axisDir: [axisDir[0], axisDir[1], axisDir[2]],
   };
 }
@@ -65,20 +62,23 @@ function rotateHandle(
  * gizmoHandleGeometry — world-space position/direction for every gizmo handle (spec §5's "Handle
  * set" table), built from `box` and the caller-supplied axis directions. F1 always passes
  * UNIT_AXES; F2 passes the box's own rotated basis instead — this function doesn't care which,
- * so it needs no change when F2 lands (spec §5, "Handle set").
+ * so it needs no change when F2 lands (spec §5, "Handle set"). `arrowLengthMpc` is the
+ * translate-arrow reach, computed by the caller via gizmoArrowLengthMpc.ts so it holds a
+ * constant screen size instead of scaling with the box; resize/rotate stay box-scaled.
  */
 export function gizmoHandleGeometry(
   box: GridBox,
   axes: readonly [Readonly<Vec3>, Readonly<Vec3>, Readonly<Vec3>],
+  arrowLengthMpc: number,
 ): GizmoHandleGeometry {
   const half = boxHalfExtentMpc(box.sizeMpc);
   const center = box.centerMpc;
 
   return {
     translate: [
-      translateHandle(0, axes[0], center, half),
-      translateHandle(1, axes[1], center, half),
-      translateHandle(2, axes[2], center, half),
+      translateHandle(0, axes[0], center, arrowLengthMpc),
+      translateHandle(1, axes[1], center, arrowLengthMpc),
+      translateHandle(2, axes[2], center, arrowLengthMpc),
     ],
     resize: [
       resizeHandle(0, 1, axes[0], center, half),
