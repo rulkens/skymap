@@ -10,11 +10,18 @@
  */
 import type { AgentWeights } from '../../@types/AgentWeights';
 
+/**
+ * Every `AgentWeights.weights` this module produces sums to exactly this —
+ * regardless of population size — so a consumer of a SUBSET (task S14's
+ * `cullPointsToBox`) must re-establish the same total via
+ * `renormalizeWeightMass` before anything downstream (the deposit, or
+ * `galaxyOverlayPass`'s `weightScale = n/TOTAL_WEIGHT_MASS`) assumes it again.
+ */
+export const TOTAL_WEIGHT_MASS = 1e6;
+
 function median(sorted: readonly number[]): number {
   const mid = sorted.length >> 1;
-  return sorted.length % 2 === 0
-    ? (sorted[mid - 1]! + sorted[mid]!) / 2
-    : sorted[mid]!;
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
 export function deriveAgentWeights(
@@ -49,7 +56,7 @@ export function deriveAgentWeights(
 
   let sum = 0;
   for (let i = 0; i < n; i++) sum += weights[i]!;
-  const scale = 1e6 / n / (sum / n);
+  const scale = TOTAL_WEIGHT_MASS / n / (sum / n);
   for (let i = 0; i < n; i++) weights[i] = weights[i]! * scale;
 
   return { weights, nanCount, medianLog10Mass };

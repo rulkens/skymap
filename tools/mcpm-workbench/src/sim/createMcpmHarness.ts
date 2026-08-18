@@ -21,6 +21,7 @@ import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
 import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
 import { cullPointsToBox } from '../field/cullPointsToBox';
+import { renormalizeWeightMass } from '../field/renormalizeWeightMass';
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
 import { planGridBudget } from './planGridBudget';
@@ -86,6 +87,14 @@ export async function createMcpmHarness(opts: {
   // buffer or reads a count, so nDataPoints/agentBufferLength/the histogram
   // normalization all agree with what seedAgents actually seeds.
   const culled = cullPointsToBox(opts.points, opts.weights, opts.box);
+  // Fix round 1: cullPointsToBox filters values, it doesn't rescale them — restore the
+  // sum-to-TOTAL_WEIGHT_MASS invariant over the culled population specifically, the one
+  // both the deposit and galaxyOverlayPass's weightScale actually read (see
+  // renormalizeWeightMass's docblock).
+  const seedWeights: AgentWeights = {
+    ...culled.weights,
+    weights: renormalizeWeightMass(culled.weights.weights),
+  };
 
   const gpu = await initGpu(opts.canvas, {
     requiredFeatures: ['shader-f16'],
@@ -247,7 +256,7 @@ export async function createMcpmHarness(opts: {
   function uploadAgents(mode: AgentInitMode, seed: number): void {
     const seeded = seedAgents({
       points: culled.points,
-      weights: culled.weights,
+      weights: seedWeights,
       box: opts.box,
       agentCount: opts.agentCount,
       mode,

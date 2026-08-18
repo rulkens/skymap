@@ -95,14 +95,16 @@ export function createGalaxyOverlayPass(opts: {
   });
 
   // OverlayParams: [weightScale, intensity, radiusPx] + pad to the 16-byte minimum.
-  // weightScale un-does deriveAgentWeights' mean of 1e6/n, so the shader sees mean 1
-  // whatever the catalog size; it only changes with a harness rebuild, which recreates
-  // this pass, so only the two live knobs are rewritten per draw.
+  // weightScale un-does deriveAgentWeights' mean of TOTAL_WEIGHT_MASS/n, so the shader
+  // sees mean 1; it only changes with a harness rebuild, which recreates this pass, so
+  // only the two live knobs are rewritten per draw.
   const overlayParams = device.createBuffer({
     label: 'mcpm-galaxy-overlay-params',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
+  // This draws the CULLED set (agents.nDataPoints), so 1e6 here must be the weight mass
+  // OF that same set — createMcpmHarness's renormalizeWeightMass is what keeps it so.
   const overlayF32 = new Float32Array([agents.nDataPoints / 1e6, 0, 0, 0]);
 
   const pointBindGroup = device.createBindGroup({
