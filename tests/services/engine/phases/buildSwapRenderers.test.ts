@@ -1,11 +1,15 @@
 /**
- * buildSwapRenderers — the re-runnable seam for the eight renderers whose
- * pipelines are baked against the swap-chain colour-target format.
+ * buildSwapRenderers — the re-runnable seam for the eight
+ * `rebuildOnSwapFormat` renderers `GPU_HANDLE_ROWS` flags, baked against the
+ * swap-chain colour-target format.
  *
  * Every `createX` factory builds a real `GPURenderPipeline` against
  * `device`, which JSDOM's stub `GPUDevice` can't service — mocked so
  * `buildSwapRenderers` runs to completion and its `state.gpu.*` writes +
- * label-director wiring can be observed directly.
+ * label-director wiring can be observed directly. Importing
+ * `buildSwapRenderers` also imports the rest of `GPU_HANDLE_ROWS`'s
+ * factories transitively (module eval only) — unmocked ones are never
+ * invoked, since only the 8 flagged rows' `construct` ever runs here.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -39,7 +43,8 @@ import { buildSwapRenderers } from '../../../../src/services/engine/phases/build
 
 /**
  * The eight handle keys `buildSwapRenderers` owns on `state.gpu.*`, plus the
- * `uiCtx` / `fontAtlases` inputs it reads.
+ * `uiCtx` / `fontAtlases` inputs it reads, plus one NOT-flagged row
+ * (`filamentRenderer`) — the untouched-identity proof's subject.
  */
 function makeState(): EngineState {
   return {
@@ -60,6 +65,7 @@ function makeState(): EngineState {
       diskRadiusRing: null,
       foregroundLabelRenderer: null,
       foregroundMarkerLineRenderer: null,
+      filamentRenderer: makeStub(),
     },
     subsystems: {
       labelDirector: {
@@ -118,5 +124,20 @@ describe('buildSwapRenderers', () => {
     expect(lastMarkerArg).toBe(state.gpu.markerLineRenderer);
     expect(lastLabelArg).not.toBe(firstLabelRenderer);
     expect(lastMarkerArg).not.toBe(firstMarkerLineRenderer);
+  });
+
+  it("a non-swap-format row's handle identity is unchanged across a rebuild", () => {
+    const state = makeState();
+    const filamentRenderer = state.gpu.filamentRenderer;
+
+    buildSwapRenderers(state, 'bgra8unorm');
+    buildSwapRenderers(state, 'rgba16float');
+
+    // Proves the rebuildOnSwapFormat filter is exact, not a superset: a row
+    // absent from GPU_HANDLE_ROWS's flagged 8 must survive two rebuilds
+    // untouched — same reference, destroy() never called.
+    const stub = filamentRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
+    expect(state.gpu.filamentRenderer).toBe(filamentRenderer);
+    expect(stub.destroy).not.toHaveBeenCalled();
   });
 });
