@@ -332,7 +332,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         ...s,
         view: setCameraYawPitch(
           s.view,
-          s.view.camera.yaw + dx * DRAG_SPEED,
+          s.view.camera.yaw - dx * DRAG_SPEED,
           s.view.camera.pitch + dy * DRAG_SPEED,
         ),
       }));
