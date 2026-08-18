@@ -19,13 +19,25 @@ import { applySwapFormat } from '../../../../src/services/engine/phases/applySwa
 import { buildSwapRenderers } from '../../../../src/services/engine/phases/buildSwapRenderers';
 
 function makeSwapSpec(format: GPUTextureFormat): RenderTargetSpec {
-  return { id: 'swap', format, depth: null, scale: 1 };
+  return { id: 'swap', format, depth: null, scale: 1, clearValue: { r: 0, g: 0, b: 0, a: 1 } };
+}
+
+// `applySwapFormat` now reads the live format via `renderTargets.specOf('swap')`
+// rather than scanning `.specs` by hand — every fixture's single-row table
+// needs this to resolve 'swap'.
+function specOfStub(specs: readonly RenderTargetSpec[]) {
+  return (id: string): RenderTargetSpec => {
+    const spec = specs.find((s) => s.id === id);
+    if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
+    return spec;
+  };
 }
 
 function makeState(liveFormat: GPUTextureFormat, requestRender: () => void) {
+  const specs = [makeSwapSpec(liveFormat)];
   return {
     gpu: {
-      renderTargets: { specs: [makeSwapSpec(liveFormat)], setSwapFormat: vi.fn() },
+      renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat: vi.fn() },
       uiCtx: { device: {}, context: { configure: vi.fn() }, canvas: {} },
     },
     subsystems: { scheduler: { requestRender } },
@@ -53,9 +65,10 @@ describe('applySwapFormat', () => {
     // `state.gpu.fontAtlases!` and throws inside a takeEvery worker.
     const configure = vi.fn();
     const setSwapFormat = vi.fn();
+    const specs = [makeSwapSpec('bgra8unorm')];
     const state = {
       gpu: {
-        renderTargets: { specs: [makeSwapSpec('bgra8unorm')], setSwapFormat },
+        renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat },
         uiCtx: { device: {}, context: { configure }, canvas: {} },
         fontAtlases: null,
       },
@@ -71,9 +84,10 @@ describe('applySwapFormat', () => {
   it('is a no-op when the desired format already matches the live format', () => {
     const configure = vi.fn();
     const setSwapFormat = vi.fn();
+    const specs = [makeSwapSpec('bgra8unorm')];
     const state = {
       gpu: {
-        renderTargets: { specs: [makeSwapSpec('bgra8unorm')], setSwapFormat },
+        renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat },
         uiCtx: { device: {}, context: { configure }, canvas: {} },
       },
     } as unknown as EngineState;
@@ -89,9 +103,10 @@ describe('applySwapFormat', () => {
     const configure = vi.fn(() => calls.push('configure'));
     const setSwapFormat = vi.fn(() => calls.push('setSwapFormat'));
     vi.mocked(buildSwapRenderers).mockImplementation(() => calls.push('buildSwapRenderers'));
+    const specs = [makeSwapSpec('bgra8unorm')];
     const state = {
       gpu: {
-        renderTargets: { specs: [makeSwapSpec('bgra8unorm')], setSwapFormat },
+        renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat },
         uiCtx: { device: {}, context: { configure }, canvas: {} },
       },
       subsystems: { scheduler: { requestRender: vi.fn() } },
@@ -134,9 +149,10 @@ describe('applySwapFormat', () => {
   it('going to rgba16float requests extended tone mapping alongside the right device/format/alphaMode', () => {
     const device = {};
     const configure = vi.fn();
+    const specs = [makeSwapSpec('bgra8unorm')];
     const state = {
       gpu: {
-        renderTargets: { specs: [makeSwapSpec('bgra8unorm')], setSwapFormat: vi.fn() },
+        renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat: vi.fn() },
         uiCtx: { device, context: { configure }, canvas: {} },
       },
       subsystems: { scheduler: { requestRender: vi.fn() } },
@@ -155,9 +171,10 @@ describe('applySwapFormat', () => {
   it('going to the preferred SDR format requests no toneMapping key at all', () => {
     const device = {};
     const configure = vi.fn();
+    const specs = [makeSwapSpec('rgba16float')];
     const state = {
       gpu: {
-        renderTargets: { specs: [makeSwapSpec('rgba16float')], setSwapFormat: vi.fn() },
+        renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat: vi.fn() },
         uiCtx: { device, context: { configure }, canvas: {} },
       },
       subsystems: { scheduler: { requestRender: vi.fn() } },

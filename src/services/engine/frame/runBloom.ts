@@ -38,19 +38,22 @@ import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingServi
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
 import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
 
 /**
  * Open one bloom pass against `target`'s view. A `'clear'` pass reads the
- * target's clear value from the render-target table (the bright + downsample
- * producers own their level); a `'load'` pass keeps what the sequence already
- * wrote (the additive upsample folds and the fold into HDR). `timestampWrites`
+ * target's clear value off its spec row (the bright + downsample producers
+ * own their level); a `'load'` pass keeps what the sequence already wrote
+ * (the additive upsample folds and the fold into HDR). `timestampWrites`
  * carries the bloom slot's begin (on the first pass) or end (on the last).
+ * `specOf` throwing on a missing row (rather than the old table lookup's
+ * silent `{0,0,0,0}` fallback under `noUncheckedIndexedAccess`) is this rung's
+ * one sanctioned behaviour change.
  */
 function openBloomPass(
   encoder: GPUCommandEncoder,
+  ctx: ReadyFrameContext,
   view: GPUTextureView,
   target: string,
   loadOp: 'clear' | 'load',
@@ -58,7 +61,12 @@ function openBloomPass(
 ): GPURenderPassEncoder {
   const colorAttachment: GPURenderPassColorAttachment =
     loadOp === 'clear'
-      ? { view, loadOp: 'clear', clearValue: TARGET_CLEAR_VALUES[target]!, storeOp: 'store' }
+      ? {
+          view,
+          loadOp: 'clear',
+          clearValue: ctx.renderTargets.specOf(target).clearValue,
+          storeOp: 'store',
+        }
       : { view, loadOp: 'load', storeOp: 'store' };
   return encoder.beginRenderPass({
     label: `bloom-${target}`,
@@ -95,7 +103,7 @@ export function runBloom(
     : undefined;
 
   // Bright prefilter: hdr → bloom0, clearing bloom0. Carries the slot's begin.
-  const brightPass = openBloomPass(encoder, viewOf('bloom0'), 'bloom0', 'clear', beginWrites);
+  const brightPass = openBloomPass(encoder, ctx, viewOf('bloom0'), 'bloom0', 'clear', beginWrites);
   pyramid.bright(brightPass, viewOf('hdr'), threshold);
   brightPass.end();
 
@@ -107,7 +115,7 @@ export function runBloom(
   for (const level of downsampleLevels) {
     const src = `bloom${level - 1}`;
     const target = `bloom${level}`;
-    const pass = openBloomPass(encoder, viewOf(target), target, 'clear', undefined);
+    const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'clear', undefined);
     pyramid.downsample(
       pass,
       viewOf(src),
@@ -129,7 +137,7 @@ export function runBloom(
   for (const level of upsampleLevels) {
     const src = `bloom${level + 1}`;
     const target = `bloom${level}`;
-    const pass = openBloomPass(encoder, viewOf(target), target, 'load', undefined);
+    const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'load', undefined);
     pyramid.upsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, viewportPx, src));
     pass.end();
   }
@@ -137,7 +145,7 @@ export function runBloom(
   // Fold: bloom0 → hdr, LOADING hdr (it already holds the composited scene — the
   // program places the bloom step after the foreground:0→hdr composite). Carries
   // the slot's end.
-  const foldPass = openBloomPass(encoder, viewOf('hdr'), 'hdr', 'load', endWrites);
+  const foldPass = openBloomPass(encoder, ctx, viewOf('hdr'), 'hdr', 'load', endWrites);
   pyramid.fold(foldPass, viewOf('bloom0'), strength);
   foldPass.end();
 }

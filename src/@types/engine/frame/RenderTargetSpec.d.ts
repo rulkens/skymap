@@ -26,4 +26,18 @@ export type RenderTargetSpec = {
   depth: GPUTextureFormat | null;
   /** 1 = full resolution; 3 = volume's downsample divisor. */
   scale: number;
+  /**
+   * First-touch colour clear, read by `executeFrame`/`runBloom`: the first
+   * pass opened against this target in a frame clears to this colour; later
+   * passes load. This field is what rung 2 (target-contributions)
+   * deliberately unlocks from the "locked cross-plan contract" this type used
+   * to be — see `renderTargets.ts`'s `buildSpecs` rows for the per-target
+   * rationale, so a future reader doesn't re-lock it.
+   *
+   * The paired DEPTH clear is NOT here — it is the far-plane depth (`0.0`
+   * under the NEAR0 `foreground:0` row's reversed-Z convention), supplied by
+   * `depthClearValueFor` when `executeFrame`'s `depthAttachment` opens the
+   * pass, not fixed table data.
+   */
+  clearValue: GPUColor;
 };

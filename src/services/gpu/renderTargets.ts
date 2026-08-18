@@ -145,52 +145,6 @@ import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 
 /**
- * Per-target first-touch clear values, consumed by the executor: the first
- * pass opened against a target in a frame clears to this colour; later
- * passes load. They live beside the target table (not on `RenderTargetSpec`
- * — that type is a locked cross-plan contract) because a clear value is a
- * property of the target, not of any layer drawing into it. `hdr` and
- * `swap` clear opaque black (a=1); `volume` clears to a=0 so the half-res
- * additive raymarch starts from zero coverage — the upsample's additive
- * blend then adds nothing for fragments the volumes didn't reach.
- * `foreground:0` clears transparent (a=0) so the later OVER composite leaves
- * every pixel the foreground did not draw unchanged — an empty foreground
- * frame composites to a no-op rather than a black wash over the background.
- * `star-aggregates` clears to a=0 for the same reason `volume` does — its
- * upsample composite adds nothing where no aggregate glow landed.
- *
- * The paired depth clear (the far-plane depth — `0.0` under the NEAR0
- * `foreground:0` row's reversed-Z convention) is NOT table data here — the
- * executor supplies each depth-bearing row's value via `depthClearValueFor`
- * when it opens the pass. See `executeFrame`.
- */
-export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
-  hdr: { r: 0, g: 0, b: 0, a: 1 },
-  volume: { r: 0, g: 0, b: 0, a: 0 },
-  // Zone-of-avoidance band raymarch — same reason as `volume`: the upsample's
-  // additive blend must add nothing for a fragment the 1/5-res march didn't
-  // reach.
-  zoa: { r: 0, g: 0, b: 0, a: 0 },
-  'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
-  // Same reason as `volume` and `star-aggregates`: the Milky Way's star
-  // billboards draw additively into this row, so an untouched texel must
-  // contribute nothing when the upsample composites it back into HDR.
-  'mw-aggregate': { r: 0, g: 0, b: 0, a: 0 },
-  'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
-  // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
-  // additively (the upsample fold uses one/one blend), so an untouched texel
-  // must contribute nothing. The bright pass overwrites bloom0 outright, but
-  // the upsample folds add onto bloom0..3, and any level the fold does not
-  // cover has to start from zero coverage. Generated from BLOOM_LEVELS (the
-  // shared pyramid-depth home) so the clear table can never fall out of step
-  // with the `bloomN` spec rows below.
-  ...Object.fromEntries(
-    Array.from({ length: BLOOM_LEVELS }, (_unused, n) => [`bloom${n}`, { r: 0, g: 0, b: 0, a: 0 }]),
-  ),
-  swap: { r: 0, g: 0, b: 0, a: 1 },
-};
-
-/**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
  * reduction is its square (2 → 1/4 the fragments). Named here beside the
  * target table (the volume row's divisor is inline `scale: 3`) so raising it
@@ -218,18 +172,67 @@ function buildSpecs(
   mwAggregateDivisor: number,
 ): readonly RenderTargetSpec[] {
   return [
-    { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-    { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-    { id: 'zoa', format: 'rgba16float', depth: null, scale: ZONE_OF_AVOIDANCE_DIVISOR },
-    { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
-    { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: mwAggregateDivisor },
-    { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
+    // hdr and swap clear opaque black (a=1); every other row clears to a=0 so
+    // its upsample/composite adds nothing for a fragment it didn't reach —
+    // WebGPU defaults an omitted clearValue to {0,0,0,0}, so dropping either
+    // a=1 row here would be a silent visual change.
+    {
+      id: 'hdr',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+    // Half-res additive raymarch starts from zero coverage.
+    {
+      id: 'volume',
+      format: 'rgba16float',
+      depth: null,
+      scale: 3,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Zone-of-avoidance band raymarch — same reason as `volume`.
+    {
+      id: 'zoa',
+      format: 'rgba16float',
+      depth: null,
+      scale: ZONE_OF_AVOIDANCE_DIVISOR,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Same reason as `volume`.
+    {
+      id: 'star-aggregates',
+      format: 'rgba16float',
+      depth: null,
+      scale: STAR_AGGREGATE_DIVISOR,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Same reason as `volume` and `star-aggregates`: the Milky Way's star
+    // billboards draw additively into this row.
+    {
+      id: 'mw-aggregate',
+      format: 'rgba16float',
+      depth: null,
+      scale: mwAggregateDivisor,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Transparent (a=0) so the later OVER composite leaves every pixel the
+    // foreground did not draw unchanged — an empty foreground frame
+    // composites to a no-op rather than a black wash over the background.
+    {
+      id: 'foreground:0',
+      format: 'rgba16float',
+      depth: 'depth32float',
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
     // Bloom mip pyramid: an ever-wider glow. rgba16float mirrors the HDR
     // precision so the additive fold keeps its dynamic range. No depth: these
-    // are fullscreen post passes, not depth-tested geometry. Both the depth and
-    // the per-level divisor come from `bloomConstants` (the shared pyramid-shape
-    // home) so adding a level or respacing the pyramid is a one-line edit that
-    // stays consistent with the uniform arrays and pass loops deriving from it.
+    // are fullscreen post passes, not depth-tested geometry. The depth, the
+    // per-level divisor, AND the clear (a=0 — the pyramid accumulates
+    // additively, so an untouched texel must contribute nothing) all come
+    // from `bloomConstants`/this one generator so a pyramid level can never
+    // fall out of step with its row.
     ...Array.from(
       { length: BLOOM_LEVELS },
       (_unused, n): RenderTargetSpec => ({
@@ -237,9 +240,16 @@ function buildSpecs(
         format: 'rgba16float',
         depth: null,
         scale: bloomScale(n),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
       }),
     ),
-    { id: 'swap', format: swapFormat, depth: null, scale: 1 },
+    {
+      id: 'swap',
+      format: swapFormat,
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
   ];
 }
 
@@ -315,6 +325,13 @@ export function createRenderTargets(
     // callers must observe the replacement through the same handle.
     get specs() {
       return specs;
+    },
+    specOf(id: string): RenderTargetSpec {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec) {
+        throw new Error(`renderTargets: no spec row for target '${id}'`);
+      }
+      return spec;
     },
     viewOf(id: string): GPUTextureView {
       const view = views.get(id);

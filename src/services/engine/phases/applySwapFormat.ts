@@ -19,7 +19,7 @@ export function applySwapFormat(state: EngineState, desired: GPUTextureFormat): 
   if (state.gpu.fontAtlases === null) return;
 
   const renderTargets = state.gpu.renderTargets;
-  const live = renderTargets.specs.find((spec) => spec.id === 'swap')!.format;
+  const live = renderTargets.specOf('swap').format;
   if (live === desired) return;
 
   const { device, context } = state.gpu.uiCtx;

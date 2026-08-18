@@ -9,5 +9,5 @@
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 
 export function hdrActiveOf(renderTargets: RenderTargets): boolean {
-  return renderTargets.specs.find((spec) => spec.id === 'swap')?.format === 'rgba16float';
+  return renderTargets.specOf('swap').format === 'rgba16float';
 }

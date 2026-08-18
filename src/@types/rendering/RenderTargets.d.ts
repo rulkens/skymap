@@ -39,6 +39,13 @@ export type RenderTargets = {
    */
   readonly specs: readonly RenderTargetSpec[];
   /**
+   * The declared row for `id` — the throwing counterpart to scanning `specs`
+   * by hand. Throws for an unknown id (same loud-failure discipline as
+   * `viewOf`), so a caller reading a spec-table fact (a row's `format`,
+   * `scale`, or `clearValue`) never silently falls back to `undefined`.
+   */
+  specOf(id: string): RenderTargetSpec;
+  /**
    * Current colour-attachment view for an OFFSCREEN row (`hdr`, `volume`,
    * `foreground:0`). Stable until the next `resize()`. Throws for `swap` (and
    * any unknown id): the swap chain is executor-resolved from the acquired

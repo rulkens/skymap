@@ -26,6 +26,23 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';
 
+const FIXTURE_SPECS = [
+  {
+    id: 'hdr',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+  {
+    id: 'volume',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 3,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
+];
+
 /**
  * Build a minimal ReadyFrameContext.  The `offscreenView` parameter
  * becomes the target table's 'volume' row view — the same value the layer
@@ -54,10 +71,12 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
     },
     galaxyPointRenderer: {} as never,
     renderTargets: {
-      specs: [
-        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-        { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-      ],
+      specs: FIXTURE_SPECS,
+      specOf: (id: string) => {
+        const spec = FIXTURE_SPECS.find((s) => s.id === id);
+        if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
+        return spec;
+      },
       viewOf: (id: string) => (id === 'volume' ? offscreenView : ({} as GPUTextureView)),
       // No row in this fixture declares depth, and the upsample layer never
       // asks for a depth view — throwing mirrors the real table's behaviour

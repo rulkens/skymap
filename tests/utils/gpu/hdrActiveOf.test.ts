@@ -8,6 +8,11 @@ import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTa
 function makeStub(specs: readonly RenderTargetSpec[]): RenderTargets {
   return {
     specs,
+    specOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
     viewOf: vi.fn(),
     depthViewOf: vi.fn(),
     resize: vi.fn(),
@@ -16,15 +21,17 @@ function makeStub(specs: readonly RenderTargetSpec[]): RenderTargets {
   };
 }
 
+const CLEAR = { r: 0, g: 0, b: 0, a: 1 };
+
 describe('hdrActiveOf', () => {
   it('is true only for an rgba16float swap row', () => {
     const sdr = makeStub([
-      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
+      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1, clearValue: CLEAR },
+      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1, clearValue: CLEAR },
     ]);
     const hdr = makeStub([
-      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-      { id: 'swap', format: 'rgba16float', depth: null, scale: 1 },
+      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1, clearValue: CLEAR },
+      { id: 'swap', format: 'rgba16float', depth: null, scale: 1, clearValue: CLEAR },
     ]);
 
     expect(hdrActiveOf(sdr)).toBe(false);

@@ -69,7 +69,6 @@ import { slabViewOf, groupKeyOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
-import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 
 /**
@@ -102,16 +101,18 @@ function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): 
 
 /** Build a colour attachment that clears (first touch) or loads (later). */
 function colorAttachment(
+  ctx: ReadyFrameContext,
   target: string,
   view: GPUTextureView,
   touched: boolean,
 ): GPURenderPassColorAttachment {
   if (touched) return { view, loadOp: 'load', storeOp: 'store' };
-  const clearValue = TARGET_CLEAR_VALUES[target];
-  if (!clearValue) {
-    throw new Error(`executeFrame: no clear value for target '${target}'`);
-  }
-  return { view, loadOp: 'clear', clearValue, storeOp: 'store' };
+  return {
+    view,
+    loadOp: 'clear',
+    clearValue: ctx.renderTargets.specOf(target).clearValue,
+    storeOp: 'store',
+  };
 }
 
 /**
@@ -124,6 +125,11 @@ function colorAttachment(
  * occlusion already written this frame. Composite steps never call this —
  * their dest rows are depthless — so the depth budget is confined to the
  * opaque render passes that own it.
+ *
+ * `specOf` throws for an unknown target, where the old `specs.find(...)` here
+ * tolerated one (`undefined` → `{}`, no depth attachment). Unreachable in
+ * production — `viewFor` throws first, at the top of `renderGroup` — so this
+ * is a tightening, not a behaviour change.
  */
 function depthAttachment(
   ctx: ReadyFrameContext,
@@ -131,8 +137,8 @@ function depthAttachment(
   touched: boolean,
   reversedZ: boolean,
 ): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
-  const spec = ctx.renderTargets.specs.find((s) => s.id === target);
-  if (!spec?.depth) return {};
+  const spec = ctx.renderTargets.specOf(target);
+  if (!spec.depth) return {};
   return {
     depthStencilAttachment: {
       view: ctx.renderTargets.depthViewOf(target),
@@ -225,7 +231,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const pass = encoder.beginRenderPass({
           label: `composite-${source}->${dest}`,
           colorAttachments: [
-            colorAttachment(dest, viewFor(dest, ctx, swapView), touched.has(dest)),
+            colorAttachment(ctx, dest, viewFor(dest, ctx, swapView), touched.has(dest)),
           ],
           ...timestampSpread(timing, `${source}→${dest}`),
         });
@@ -244,7 +250,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // from the acquired frame texture, not the target table — the FORMAT is
         // a spec-table fact for every row including `swap` (whose spec carries
         // the swap-chain format), so it resolves uniformly with no swap branch.
-        const dstFormat = ctx.renderTargets.specs.find((s) => s.id === dest)!.format;
+        const dstFormat = ctx.renderTargets.specOf(dest).format;
         compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat);
         pass.end();
         touched.add(dest);
@@ -289,7 +295,7 @@ function renderGroup(
     // dst.color. Production path.
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
-      colorAttachments: [colorAttachment(target, targetView, alreadyTouched)],
+      colorAttachments: [colorAttachment(ctx, target, targetView, alreadyTouched)],
       ...depthAttachment(ctx, target, alreadyTouched, view.slab.reversedZ),
       // Bill the whole group against its per-step group slot — the one honest
       // timing a single-pass shape can give (per-layer slots are the
@@ -313,7 +319,7 @@ function renderGroup(
     const touchedBefore = alreadyTouched || i > 0;
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${layer.name}`,
-      colorAttachments: [colorAttachment(target, targetView, touchedBefore)],
+      colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
       ...depthAttachment(ctx, target, touchedBefore, view.slab.reversedZ),
       ...timestampSpread(timing, layer.name),
     });

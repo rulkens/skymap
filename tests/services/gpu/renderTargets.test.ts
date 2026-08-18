@@ -221,6 +221,33 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
+  it('specOf returns the declared row and throws for an unknown id', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
+    expect(targets.specOf('hdr').id).toBe('hdr');
+    expect(() => targets.specOf('nope')).toThrow();
+  });
+
+  // Two independently maintained tables (the spec rows and their clear
+  // values) were merged onto one this rung — a row that lost its clear value
+  // in that merge would otherwise be silent (every field but this one has a
+  // fallback-free type, so a typo would surface as a tsc error instead).
+  it('every declared row carries a clearValue', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
+    for (const spec of targets.specs) {
+      expect(spec.clearValue).toBeDefined();
+    }
+  });
+
   it('destroy destroys depth textures alongside colour', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
