@@ -6,13 +6,16 @@ import { Source } from '../../../../../src/data/source';
 import { catalogBounds } from '../../field/catalogBounds';
 
 /**
- * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `small` tier (spec §10's
- * worked example uses this trio; `small` keeps the workbench's first paint
- * fast — a user reaching for `large` opts in explicitly via the panel).
+ * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `medium` tier (spec §10's
+ * worked example uses this trio). `small` was the original boot default for
+ * a fast first paint, but SDSS ships no `small`-tier bin at all
+ * (`tierTargets: { small: 0, ... }`, sources/sdss.ts) — the default trio was
+ * silently SDSS-less at boot. `medium` is the smallest tier that actually
+ * carries all three; `large` is still an explicit opt-in via the panel.
  */
 export const defaultCatalogSlice: CatalogSlice = {
   sources: [Source.SDSS, Source.TwoMRS, Source.Glade],
-  tier: 'small',
+  tier: 'medium',
   loadStatus: 'idle',
   pointCount: 0,
   nanFillCount: 0,
