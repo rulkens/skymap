@@ -55,6 +55,14 @@ export type ViewSlice = {
      */
     readonly additive: boolean;
     /**
+     * Integer 1-8, default 1 (exact current behaviour: no offscreen target).
+     * >1 marches into a `floor(size/divisor)` offscreen target instead and
+     * bilinear-upsamples it in — same shape as the main app's `volume`
+     * render-target row (renderTargets.ts), whose `scale: 3` is what 3 here
+     * reproduces. Fragment cost falls with the square of the divisor.
+     */
+    readonly divisor: number;
+    /**
      * On demand, never per frame: true means the raymarch layer marches the
      * PACKED export cube (the real `packLogTraceVoxels`, same call as the
      * `.scfd` leg) instead of the live trace buffer — a structure check for a

@@ -228,6 +228,13 @@ async function setLayers(page: Page, layers: Record<string, boolean>): Promise<v
   }
 }
 
+/** Drive a `role="slider"` pill by keyboard — Slider.tsx has no native input to set
+ * (galaxy-renderer/probeGpuErrors.ts's own helper of the same name). */
+async function pressSlider(page: Page, label: string, keys: readonly string[]): Promise<void> {
+  const slider = page.getByRole('slider', { name: label, exact: true });
+  for (const key of keys) await slider.press(key);
+}
+
 /**
  * The exercise: boot, drive the run/reset/clear-trace commands that rebuild
  * bind groups or clear buffers outside the steady state, then the render
@@ -353,6 +360,20 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       name: 'raymarch:preview-packed',
       run: async (page) => {
         await page.getByRole('checkbox', { name: 'preview packed export', exact: true }).check();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // S9: divisor > 1 opens RenderGraph's offscreen path — reduced-target allocation,
+      // the clear pass, and the bilinear upsample blit, none of which any earlier step
+      // reaches (every one above runs at the default divisor 1, straight into the accum
+      // target). 'End' jumps the slider to its max (8, Slider.tsx's keyDown handling);
+      // 'Home' returns it to 1 so later steps exercise the divisor-1 path as before.
+      name: 'raymarch:divisor',
+      run: async (page) => {
+        await pressSlider(page, 'divisor', ['End']);
+        await settleFrames(page, SETTLE_FRAMES);
+        await pressSlider(page, 'divisor', ['Home']);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

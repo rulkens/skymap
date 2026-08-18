@@ -18,6 +18,7 @@ import type { GridBox } from '../../@types/GridBox';
 import { createBoxPreviewPass, type BoxPreviewPass } from './boxPreviewPass';
 import type { GalaxyOverlayOptions, GalaxyOverlayPass } from './galaxyOverlayPass';
 import { createGalaxyOverlayPass } from './galaxyOverlayPass';
+import { reducedTraceSize } from './reducedTraceSize';
 import type { SplatPass, SplatView } from './splatPass';
 import { createSplatPass } from './splatPass';
 import type { TracePass, TraceSource, TraceView } from './tracePass';
@@ -26,6 +27,8 @@ import type { VolpathParams, VolpathPass } from './volpathPass';
 import { createVolpathPass } from './volpathPass';
 import type { McpmCameraView } from './writeMcpmCamera';
 import blitWgsl from './shaders/blit.wesl?static';
+import mcpmVertexWgsl from '../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
+import traceUpsampleWgsl from '../../../../src/services/gpu/shaders/mcpm/traceUpsample.wesl?static';
 
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
 
@@ -56,8 +59,27 @@ export type RenderGraph = {
    * the trace buffer); replaces and disposes any pass attached before.
    */
   attachTrace(source: TraceSource): void;
-  /** March the attached trace pass into the accum target. Throws if none is attached. */
-  drawTrace(encoder: GPUCommandEncoder, view: TraceView): void;
+  /**
+   * March the attached trace pass into the accum target, at `divisor` (view.raymarch.divisor
+   * — see drawTracePass). Throws if none is attached.
+   */
+  drawTrace(encoder: GPUCommandEncoder, view: TraceView, divisor: number): void;
+  /**
+   * March ANY `TracePass` — the attached live one, or T18's previewPass (which Viewport
+   * owns and draws directly, bypassing attachTrace/drawTrace) — through the same divisor
+   * path. `divisor` is a parameter, not a TraceView field: TraceView mirrors the fragment
+   * shader's own uniform byte-for-byte (VIEW_UNIFORM_BYTES), and the shader carries no
+   * screen-size uniform to receive it. `divisor <= 1` draws straight into the accum
+   * target; `divisor > 1` draws into a shared `floor(size/divisor)` target (reducedTraceSize),
+   * cleared to a=0 first, then upsamples it into the accum target with LAYER_BLEND — same
+   * shape as the main app's `volume` render-target row.
+   */
+  drawTracePass(
+    encoder: GPUCommandEncoder,
+    pass: TracePass,
+    view: TraceView,
+    divisor: number,
+  ): void;
   /**
    * Build the path tracer over `source` — the same `TraceSource` `attachTrace` takes, so
    * both passes are attached together in `attachTrace`'s caller. Replaces and disposes any
@@ -124,6 +146,40 @@ export function createRenderGraph(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
+  // The trace-preview upsample (drawTracePass, divisor > 1) — built eagerly, same
+  // reasoning as boxPreviewPass below: it needs no harness to compile, so a broken
+  // traceUpsample.wesl fails at boot rather than the first time someone raises the
+  // divisor slider. Explicit layout, never 'auto' — group(0): the reduced target's
+  // texture + a linear sampler, nothing else.
+  const traceUpsampleVertexModule = makeShader(mcpmVertexWgsl, 'mcpm-trace-upsample-vertex');
+  const traceUpsampleFragmentModule = makeShader(traceUpsampleWgsl, 'mcpm-trace-upsample-fragment');
+  const traceUpsampleLayout = device.createBindGroupLayout({
+    label: 'mcpm-trace-upsample-layout',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
+  });
+  const traceUpsamplePipeline = device.createRenderPipeline({
+    label: 'mcpm-trace-upsample',
+    layout: device.createPipelineLayout({
+      label: 'mcpm-trace-upsample-pipeline-layout',
+      bindGroupLayouts: [traceUpsampleLayout],
+    }),
+    vertex: { module: traceUpsampleVertexModule, entryPoint: 'vs' },
+    fragment: {
+      module: traceUpsampleFragmentModule,
+      entryPoint: 'fs',
+      targets: [{ format: HDR_FORMAT, blend: LAYER_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+  const traceUpsampleSampler = device.createSampler({
+    label: 'mcpm-trace-upsample-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+
   let curWidth = 0;
   let curHeight = 0;
   let accumTex: GPUTexture | null = null;
@@ -133,6 +189,17 @@ export function createRenderGraph(
   let volpathPass: VolpathPass | null = null;
   let splatPass: SplatPass | null = null;
   let galaxyOverlayPass: GalaxyOverlayPass | null = null;
+  // The shared offscreen trace target (drawTracePass, divisor > 1) — one texture reused
+  // by whichever pass draws this frame (the live trace or T18's previewPass; never both
+  // in the same frame). `reducedDivisor` starts at 0 (not 1) so the FIRST divisor-1 frame
+  // still skips allocating it — the lazy check in drawTracePass below never runs for
+  // divisor <= 1, so this trio only ever gets built once something actually needs it.
+  let reducedTex: GPUTexture | null = null;
+  let reducedView: GPUTextureView | null = null;
+  let reducedWidth = 0;
+  let reducedHeight = 0;
+  let reducedDivisor = 0;
+  let traceUpsampleBindGroup: GPUBindGroup | null = null;
   // Eager, not lazy like the agent-fed passes above (attachTrace/attachAgents, called
   // once the harness exists): it needs neither the harness nor a box to compile, so
   // building it here (graph construction) is what makes a broken boxLines.wesl fail at
@@ -208,11 +275,89 @@ export function createRenderGraph(
     });
   }
 
-  function drawTrace(encoder: GPUCommandEncoder, view: TraceView): void {
+  function drawTrace(encoder: GPUCommandEncoder, view: TraceView, divisor: number): void {
     if (!tracePass) {
       throw new Error('RenderGraph.drawTrace: call attachTrace() before drawing the raymarch');
     }
-    tracePass.draw(encoder, accumView(), view);
+    drawTracePass(encoder, tracePass, view, divisor);
+  }
+
+  /** (Re)build the shared reduced target iff its size or divisor changed since last call —
+   * see the module-scope `reduced*` vars above for why this is lazy, not resize()-driven. */
+  function ensureReducedTraceTarget(divisor: number): void {
+    const { width, height } = reducedTraceSize(curWidth, curHeight, divisor);
+    if (
+      width === reducedWidth &&
+      height === reducedHeight &&
+      divisor === reducedDivisor &&
+      reducedTex
+    ) {
+      return;
+    }
+    reducedWidth = width;
+    reducedHeight = height;
+    reducedDivisor = divisor;
+
+    reducedTex?.destroy();
+    reducedTex = device.createTexture({
+      label: 'mcpm-trace-reduced',
+      size: { width, height },
+      format: HDR_FORMAT,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    reducedView = reducedTex.createView();
+    traceUpsampleBindGroup = device.createBindGroup({
+      label: 'mcpm-trace-upsample',
+      layout: traceUpsampleLayout,
+      entries: [
+        { binding: 0, resource: reducedView },
+        { binding: 1, resource: traceUpsampleSampler },
+      ],
+    });
+  }
+
+  function drawTracePass(
+    encoder: GPUCommandEncoder,
+    pass: TracePass,
+    view: TraceView,
+    divisor: number,
+  ): void {
+    if (divisor <= 1) {
+      pass.draw(encoder, accumView(), view);
+      return;
+    }
+    // resize() runs before any layer draws each frame (Viewport's frame()), so
+    // curWidth/curHeight are already this frame's drawable — safe to size off here
+    // rather than threading divisor through resize() itself, which every OTHER layer
+    // (splat, galaxy overlay, volpath) has no use for.
+    ensureReducedTraceTarget(divisor);
+    if (!reducedView || !traceUpsampleBindGroup) {
+      throw new Error('RenderGraph.drawTracePass: reduced target was not built');
+    }
+    // Cleared every frame it's used (unlike accumView(), which the graph clears once):
+    // an untouched texel must contribute nothing to the upsample's additive blend below.
+    const reducedClear = encoder.beginRenderPass({
+      label: 'mcpm-trace-reduced-clear',
+      colorAttachments: [
+        {
+          view: reducedView,
+          loadOp: 'clear',
+          clearValue: { r: 0, g: 0, b: 0, a: 0 },
+          storeOp: 'store',
+        },
+      ],
+    });
+    reducedClear.end();
+    pass.draw(encoder, reducedView, view);
+
+    const upsample = encoder.beginRenderPass({
+      label: 'mcpm-trace-upsample',
+      colorAttachments: [{ view: accumView(), loadOp: 'load', storeOp: 'store' }],
+    });
+    upsample.setPipeline(traceUpsamplePipeline);
+    upsample.setBindGroup(0, traceUpsampleBindGroup);
+    upsample.draw(3);
+    upsample.end();
   }
 
   function attachVolpath(source: TraceSource): void {
@@ -327,6 +472,13 @@ export function createRenderGraph(
     accumTexView = null;
     blitBindGroup = null;
     blitUniform.destroy();
+    reducedTex?.destroy();
+    reducedTex = null;
+    reducedView = null;
+    reducedWidth = 0;
+    reducedHeight = 0;
+    reducedDivisor = 0;
+    traceUpsampleBindGroup = null;
   }
 
   return {
@@ -336,6 +488,7 @@ export function createRenderGraph(
     clear,
     attachTrace,
     drawTrace,
+    drawTracePass,
     attachVolpath,
     drawVolpath,
     resetVolpath,

@@ -450,13 +450,21 @@ function Viewport({ store }: ViewportProps): ReactNode {
             previewPass &&
             previewPackedAtStep === s.sim.stepCount
           ) {
-            previewPass.draw(encoder, graph.accumView(), traceViewFor(s, h.box, cam));
+            // Routed through drawTracePass (not previewPass.draw directly) so the
+            // divisor preview applies identically here — same reduced target, same
+            // upsample, no special-casing for the packed source.
+            graph.drawTracePass(
+              encoder,
+              previewPass,
+              traceViewFor(s, h.box, cam),
+              s.view.raymarch.divisor,
+            );
           } else {
             if (s.view.raymarch.previewPacked && previewPass) {
               disposePreview();
               store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
             }
-            graph.drawTrace(encoder, traceViewFor(s, h.box, cam));
+            graph.drawTrace(encoder, traceViewFor(s, h.box, cam), s.view.raymarch.divisor);
           }
         }
         if (layers.agents) {

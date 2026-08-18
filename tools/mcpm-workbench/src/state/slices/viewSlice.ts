@@ -24,6 +24,7 @@ export const defaultViewSlice: ViewSlice = {
     stepVoxels: 1,
     additive: true,
     previewPacked: false,
+    divisor: 1,
   },
   // Fork defaults per task-V2A-report.md, except sampleWeight/traceMax (V2B fix
   // round 1): the tracking majorant is σ_max = sigmaT · sampleWeight · traceMax,
@@ -113,6 +114,10 @@ export function setStepVoxels(prev: ViewSlice, stepVoxels: number): ViewSlice {
 
 export function setAdditive(prev: ViewSlice, additive: boolean): ViewSlice {
   return { ...prev, raymarch: { ...prev.raymarch, additive } };
+}
+
+export function setDivisor(prev: ViewSlice, divisor: number): ViewSlice {
+  return { ...prev, raymarch: { ...prev.raymarch, divisor } };
 }
 
 /** T18: Viewport both sets this true on the ControlsPanel toggle and flips it

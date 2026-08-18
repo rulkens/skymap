@@ -34,6 +34,7 @@ import {
 } from '../state/slices/simSlice';
 import {
   setAdditive,
+  setDivisor,
   setGalaxyIntensity,
   setGalaxyPointSize,
   setLayerEnabled,
@@ -567,6 +568,19 @@ function ControlsPanel(): ReactNode {
                 path={`view.raymarch.${spec.key}`}
               />
             ))}
+          </SliderGroup>
+          <SliderGroup title="Preview">
+            <ParamSlider
+              label="divisor"
+              value={view.raymarch.divisor}
+              min={1}
+              max={8}
+              step={1}
+              format={(v) => v.toFixed(0)}
+              info="Marches into a floor(size/divisor) offscreen target and bilinear-upsamples it in, instead of straight into the frame. Fragment cost falls with the square of the divisor; 3 matches the main app's volume row."
+              onChange={(v) => store.setState((s) => ({ ...s, view: setDivisor(s.view, v) }))}
+              path="view.raymarch.divisor"
+            />
           </SliderGroup>
         </CollapsibleSection>
 
