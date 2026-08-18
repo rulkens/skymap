@@ -48,6 +48,8 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
+import { destroyGpuHandles } from './gpuHandles/destroyGpuHandles';
+import { GPU_HANDLE_ROWS } from './gpuHandles/gpuHandleRegistry';
 import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
@@ -800,105 +802,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.loadProgress = null;
 
     // 4. GPU renderers.  WebGPU buffers/textures don't release via JS GC, so
-    //    destroy() is mandatory.  The point renderer owns the largest
-    //    allocations (per-source vertex buffers, ~14 MB GPU + CPU mirror per
-    //    SDSS deck).
-    state.gpu.galaxyPickRenderer?.destroy();
-    state.gpu.galaxyPickRenderer = null;
-    state.gpu.pickProgram?.destroy();
-    state.gpu.pickProgram = null;
-    state.gpu.milkyWayPickRenderer?.destroy();
-    state.gpu.milkyWayPickRenderer = null;
-    state.gpu.renderTargets?.destroy();
-    state.gpu.renderTargets = null;
-    state.gpu.compositor?.destroy();
-    state.gpu.compositor = null;
-    state.gpu.filamentRenderer?.destroy();
-    state.gpu.filamentRenderer = null;
-    state.gpu.constellationRenderer?.destroy();
-    state.gpu.constellationRenderer = null;
-    // No GPU resource of their own (decoded atlas data / raw device+context+
-    // canvas refs) — re-nulled for lifecycle symmetry, not released.
+    //    destroy() is mandatory.  One reverse walk over GPU_HANDLE_ROWS covers
+    //    every registry-owned handle: declaration order is construction order
+    //    (`focusUniform` first, `pickProgram`/`galaxyPickRenderer` last —
+    //    see gpuHandleRegistry.ts), so the reversed walk destroys the two
+    //    pick rows first and `focusUniform` last, after the pick renderer
+    //    that captures its bind group at construction.
+    destroyGpuHandles(GPU_HANDLE_ROWS, state);
+    // The 6 registry exclusions keep their own teardown. fontAtlases/uiCtx
+    // own no GPU resource (decoded atlas data / raw device+context+canvas
+    // refs) — re-nulled for lifecycle symmetry, not released.
     state.gpu.fontAtlases = null;
     state.gpu.uiCtx = null;
-    state.gpu.labelRenderer?.destroy();
-    state.gpu.labelRenderer = null;
-    state.gpu.foregroundLabelRenderer?.destroy();
-    state.gpu.foregroundLabelRenderer = null;
-    state.gpu.foregroundMarkerLineRenderer?.destroy();
-    state.gpu.foregroundMarkerLineRenderer = null;
-    state.gpu.markerLineRenderer?.destroy();
-    state.gpu.markerLineRenderer = null;
-    state.gpu.debugLineRenderer?.destroy();
-    state.gpu.debugLineRenderer = null;
-    state.gpu.selectionRingRenderer?.destroy();
-    state.gpu.selectionRingRenderer = null;
-    state.gpu.structureMarkerRenderer?.destroy();
-    state.gpu.structureMarkerRenderer = null;
-    state.gpu.texturedDiskRenderer?.destroy();
-    state.gpu.texturedDiskRenderer = null;
-    state.gpu.proceduralDiskRenderer?.destroy();
-    state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayCloud?.destroy();
-    state.gpu.milkyWayCloud = null;
-    state.gpu.milkyWayCloudRenderer?.destroy();
-    state.gpu.milkyWayCloudRenderer = null;
-    state.gpu.horizonShellRenderer?.destroy();
-    state.gpu.horizonShellRenderer = null;
-    state.gpu.zoneOfAvoidanceRenderer?.destroy();
-    state.gpu.zoneOfAvoidanceRenderer = null;
-    state.gpu.volumeFieldRenderer?.destroy();
-    state.gpu.volumeFieldRenderer = null;
-    state.gpu.flowFieldRenderer?.destroy();
-    state.gpu.flowFieldRenderer = null;
-    state.gpu.volumeUpsample?.destroy();
-    state.gpu.volumeUpsample = null;
-    state.gpu.milkyWayAggregateUpsample?.destroy();
-    state.gpu.milkyWayAggregateUpsample = null;
-    state.gpu.zoneOfAvoidanceUpsample?.destroy();
-    state.gpu.zoneOfAvoidanceUpsample = null;
-    state.gpu.starAggregateUpsample?.destroy();
-    state.gpu.starAggregateUpsample = null;
-    state.gpu.bloomPyramid?.destroy();
-    state.gpu.bloomPyramid = null;
-    state.gpu.pickDebugOverlay?.destroy();
-    state.gpu.pickDebugOverlay = null;
-    state.gpu.diskRadiusRing?.destroy();
-    state.gpu.diskRadiusRing = null;
-    state.gpu.earthRenderer?.destroy();
-    state.gpu.earthRenderer = null;
-    state.gpu.starRenderer?.destroy();
-    state.gpu.starRenderer = null;
-    state.gpu.planetRenderer?.destroy();
-    state.gpu.planetRenderer = null;
-    state.gpu.texturedBodyRenderer?.destroy();
-    state.gpu.texturedBodyRenderer = null;
-    state.gpu.ringRenderer?.destroy();
-    state.gpu.ringRenderer = null;
-    state.gpu.cloudShellRenderer?.destroy();
-    state.gpu.cloudShellRenderer = null;
-    state.gpu.atmosphereShellRenderer?.destroy();
-    state.gpu.atmosphereShellRenderer = null;
-    state.gpu.starPointRenderer?.destroy();
-    state.gpu.starPointRenderer = null;
-    state.gpu.bodyGlintRenderer?.destroy();
-    state.gpu.bodyGlintRenderer = null;
-    state.gpu.starCatalogRenderer?.destroy();
-    state.gpu.starCatalogRenderer = null;
-    state.gpu.starCatalogPickRenderer?.destroy();
-    state.gpu.starCatalogPickRenderer = null;
-    state.gpu.bodyPickRenderer?.destroy();
-    state.gpu.bodyPickRenderer = null;
-    state.gpu.orbitTrailRenderer?.destroy();
-    state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
-    state.gpu.galaxyPointRenderer?.destroy();
-    state.gpu.galaxyPointRenderer = null;
-    // Shared cluster-focus uniform — released after the renderers that bind
-    // its group (points/disks/pick already destroyed above).
-    state.gpu.focusUniform?.destroy();
-    state.gpu.focusUniform = null;
 
     // 5. Drop remaining strong references to aid GC.
     for (const source of [...state.data.galaxies.catalogs.keys()]) {

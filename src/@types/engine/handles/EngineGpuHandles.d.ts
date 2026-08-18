@@ -1,12 +1,14 @@
 /**
- * EngineGpuHandles — the GPU pipelines/targets sub-bag of `EngineState`. Every
- * field shares one lifecycle: null until `initGpu` resolves (the handle is
- * returned synchronously, the adapter/device chain is async), assigned once, then
- * released and re-nulled by `destroy()` — the re-null matters because a canvas
- * remount runs a fresh `createEngine` against the stale state object, which would
- * otherwise see "ready" handles pointing at destroyed resources.
- * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer` are
- * never read through this bag; they live here only so `destroy()` can reach them.
+ * EngineGpuHandles — GPU pipelines/targets sub-bag of `EngineState`. Every
+ * field: null until `initGpu` resolves, released + re-nulled by `destroy()`.
+ * Assigned once, EXCEPT the 8 `rebuildOnSwapFormat` rows (reassigned on
+ * every HDR toggle). Add a field here AND a row to `GPU_HANDLE_ROWS`
+ * (`gpuHandles/gpuHandleRegistry.ts`) — the totality check fails `tsc` until
+ * both exist — unless it belongs in `GpuHandleKey`'s Exclude list
+ * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `uiCtx`,
+ * `timingService`). `galaxyPickRenderer`/`pickProgram` are rows too, built
+ * from `wireInput.ts`. Flag `rebuildOnSwapFormat: true` if the new row
+ * bakes the swap format, or it silently goes stale on the first HDR toggle.
  */
 
 import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';

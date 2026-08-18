@@ -1,20 +1,11 @@
 /**
- * initGpu.destroyReachability — guards that GPU-owning renderers are
- * reachable from the teardown chain.
- *
- * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
- * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU resources
- * and expose `.destroy()`. They must live on `state.gpu.*` (alongside
- * `galaxyPointRenderer`, `galaxyPickRenderer`, `renderTargets`, …) so `engine.ts.destroy()`
- * has a reachable reference to each — otherwise every HMR / StrictMode
- * remount leaks their GPU buffers. After `initGpu(state, deps)`, this test
- * checks each renderer field on `state.gpu.*` holds the constructed
- * renderer, not null/undefined.
- *
- * `initGpu` calls `gpuInitGpu(canvas)` (real WebGPU device acquisition),
- * `loadFontAtlases()` (network fetch), and the renderer constructors — none
- * of which work in JSDOM, so each is mocked with a spy-bearing stub whose
- * `destroy` calls can be asserted.
+ * initGpu.hdrCapabilityWiring — the HDR-capability listener wiring inside
+ * `initGpu`: boot dispatch, re-dispatch on a live change, and that
+ * `phaseLocals.unwatchHdrCapability` survives a later throw. GPU-handle
+ * reachability/teardown, formerly this file's other describe block, now
+ * lives in `gpuHandles/gpuHandleRegistry.test.ts` (a construct/destroy
+ * round-trip against the real `GPU_HANDLE_ROWS` table). Every renderer
+ * constructor stays mocked below purely so `initGpu` completes in JSDOM.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -51,13 +42,15 @@ function makeStub(name: string): Stub {
     // shape because other stubbed renderers built from the same factory
     // expose the method.
     setLabels: vi.fn(),
-    // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
-    // synchronously after constructing the star-point renderer.
+    // The `starPointRenderer` row's construct closure (gpuHandleRegistry.ts)
+    // calls `setStars(<the seeded star list>)` synchronously right after
+    // constructing the renderer.
     setStars: vi.fn(),
-    // `initGpu` calls `starCatalogRenderer.pickResources()` synchronously to
-    // hand the pick twin (`starCatalogPickRenderer`) its shared BGLs + the
-    // per-source records bind-group lookup. The pick factory is itself mocked
-    // here, so this only needs to be a callable returning the resource shape.
+    // The `starCatalogPickRenderer` row's construct closure calls
+    // `starCatalogRenderer.pickResources()` synchronously to hand the pick
+    // twin its shared BGLs + the per-source records bind-group lookup. The
+    // pick factory is itself mocked here, so this only needs to be a
+    // callable returning the resource shape.
     pickResources: vi.fn(() => ({
       cameraBgl: { __mockStarCameraBgl: true },
       drawBgl: { __mockStarDrawBgl: true },
@@ -94,8 +87,9 @@ vi.mock('../../../../src/services/gpu/device', () => ({
     hdrCapable: false,
   })),
   resizeCanvasToDisplay: vi.fn(),
-  // Returns a no-op cleanup — this test asserts renderer reachability, not
-  // the HDR-capability listener wiring (see device.hdrCapability.test.ts).
+  // Returns a no-op cleanup so boot doesn't need a real matchMedia listener;
+  // the dispatch-wiring tests below recover the registered callback via
+  // `.mock.calls` and invoke it directly to exercise the re-dispatch path.
   watchHdrCapability: vi.fn(() => () => {}),
 }));
 
@@ -219,10 +213,11 @@ vi.mock('../../../../src/services/gpu/renderers/devTools/diskRadiusRing', () => 
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
-// The earth renderer keeps its `?static` WESL imports out of JSDOM;
-// mock it so initGpu's foreground block constructs a stub on
-// `state.gpu.earthRenderer` (the un-awaited Blue Marble fetch it fires runs
-// after initGpu resolves and fails harmlessly in the test env).
+// The earth renderer keeps its `?static` WESL imports out of JSDOM; mock it
+// so the `earthRenderer` row's construct closure (gpuHandleRegistry.ts)
+// lands a stub on `state.gpu.earthRenderer` (the un-awaited Blue Marble
+// fetch it fires runs after initGpu resolves and fails harmlessly in the
+// test env).
 vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
   createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
 }));
@@ -235,26 +230,28 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
   createStarRenderer: vi.fn(() => makeStub('starRenderer')),
 }));
 // The shared textured-body renderer keeps its `?static` WESL imports out of
-// JSDOM; mock it so initGpu's foreground block lands a stub on
-// `state.gpu.texturedBodyRenderer`.
+// JSDOM; mock it so the `texturedBodyRenderer` row's construct closure
+// lands a stub on `state.gpu.texturedBodyRenderer`.
 vi.mock('../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer', () => ({
   createTexturedBodyRenderer: vi.fn(() => makeStub('texturedBodyRenderer')),
 }));
 // The ring renderer keeps its `?static` WESL imports out of JSDOM; mock it so
-// initGpu's foreground block lands a stub on `state.gpu.ringRenderer`.
+// the `ringRenderer` row's construct closure lands a stub on `state.gpu.ringRenderer`.
 vi.mock('../../../../src/services/gpu/renderers/bodies/ringRenderer', () => ({
   createRingRenderer: vi.fn(() => makeStub('ringRenderer')),
 }));
 // Earth's cloud-shell renderer keeps its `?static` WESL imports out of JSDOM;
-// mock it so initGpu's foreground block lands a stub on `state.gpu.cloudShellRenderer`.
+// mock it so the `cloudShellRenderer` row's construct closure lands a stub on
+// `state.gpu.cloudShellRenderer`.
 vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () => ({
   createCloudShellRenderer: vi.fn(() => makeStub('cloudShellRenderer')),
 }));
 // Earth's atmosphere-shell renderer bakes LUTs against the full device API (compute
 // pipelines + storage textures) the plain stub device can't service, and keeps its
-// `?static` WESL imports out of JSDOM; mock it so initGpu's foreground block lands a
-// stub on `state.gpu.atmosphereShellRenderer`. initGpu calls it with
-// `ATMOSPHERE_PARAMS['earth']` (a real data row — no mock needed for that import).
+// `?static` WESL imports out of JSDOM; mock it so the `atmosphereShellRenderer`
+// row's construct closure lands a stub on `state.gpu.atmosphereShellRenderer`.
+// That row passes the whole `ATMOSPHERE_PARAMS` record (a real data import —
+// no mock needed for it).
 vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
@@ -338,19 +335,15 @@ import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineS
 // to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
 // happens AFTER the listener is registered but before `initGpu` returns.
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
-// The mocked label-renderer factory itself: the main `labelRenderer` and the
-// foreground caption renderer are both built through it, so tests index its
-// `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
-// DISTINCT instances land on state.gpu.* — the shared `stubs.labelRenderer`
-// key is overwritten by the second call and cannot make that distinction.
-import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labels/labelRenderer';
-// The single planet-renderer factory: asserted constructed exactly once (one
-// dynamic-offset renderer draws every seeded planet).
-import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/bodies/planetRenderer';
-// The real seeded data bag: initGpu reads `state.data.bodies` (the far-star
-// partition for setStars; the seeded planet list drives planetsLayer), so the
-// state fixture carries the real construction-time seeds.
+// The real seeded data bag: the starPointRenderer row's construct closure
+// reads `state.data.bodies` (the far-star partition for setStars; the seeded
+// planet list drives planetsLayer), so the state fixture carries the real
+// construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+// The registry itself: derives the expected non-null / null key sets for the
+// phase-split assertion below, rather than a hand-written key list that
+// could drift from GPU_HANDLE_ROWS.
+import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -363,6 +356,7 @@ function makeState(): EngineState {
     gpu: {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
+      pickProgram: null,
       milkyWayPickRenderer: null,
       renderTargets: null,
       compositor: null,
@@ -436,124 +430,6 @@ function makeDeps(): BootstrapDeps {
   };
 }
 
-describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/milky-way renderers', () => {
-  beforeEach(() => {
-    // Clear the spy cache so each test sees fresh stubs. The vi.mock
-    // factories run per-call, so the map repopulates as initGpu runs.
-    for (const k of Object.keys(stubs)) delete stubs[k];
-    // Reset the label-factory call history so `mock.results` indices are
-    // deterministic within each test (call 0 = main, call 1 = foreground),
-    // and the planet-factory history so the "constructed exactly once"
-    // assertion holds per test.
-    vi.mocked(createLabelRenderer).mockClear();
-    vi.mocked(createPlanetRenderer).mockClear();
-  });
-
-  it('writes texturedDiskRenderer/proceduralDiskRenderer/milkyWayCloudRenderer onto state.gpu.*', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    // Every GPU-owning renderer must reach `state.gpu.*` — that's the
-    // reachability claim the destroy chain depends on.
-    expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
-    expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
-    // The cloud + its renderer must also reach state.gpu.* so destroy() can
-    // release the star/dust VBs + the shared uniform/corner buffers.
-    expect(state.gpu.milkyWayCloud).toBe(stubs.milkyWayCloud);
-    expect(state.gpu.milkyWayCloudRenderer).toBe(stubs.milkyWayCloudRenderer);
-    expect(state.gpu.horizonShellRenderer).toBe(stubs.horizonShellRenderer);
-  });
-
-  it('writes compositor + renderTargets onto state.gpu.*', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    // Same reachability claim as the other GPU-resource owners: the
-    // compositor's cached pipelines' uniform buffers need a live
-    // `state.gpu.*` reference for the destroy chain to find.
-    expect(state.gpu.compositor).toBe(stubs.compositor);
-    // The render-target table owns the offscreen textures (hdr + volume
-    // rows) — the destroy chain must reach it the same way.
-    expect(state.gpu.renderTargets).toBe(stubs.renderTargets);
-  });
-
-  it('writes the anchor renderers + foregroundLabelRenderer onto state.gpu.*', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    // Reachability claim for the textured Earth — it owns the position +
-    // uv VBOs, index IBO, uniform buffer, and Earth texture.
-    expect(state.gpu.earthRenderer).toBe(stubs.earthRenderer);
-    // The resolved-star renderer (the Sun sphere) must reach state.gpu.* the
-    // same way.
-    expect(state.gpu.starRenderer).toBe(stubs.starRenderer);
-    // A SINGLE planet renderer draws every seeded planet via dynamic-offset
-    // slots (see EngineGpuHandles) — constructed exactly once and landed on
-    // the singular handle.
-    expect(vi.mocked(createPlanetRenderer)).toHaveBeenCalledTimes(1);
-    expect(state.gpu.planetRenderer).toBe(stubs.planetRenderer);
-    // The shared textured-body renderer owns per-body uniform buffers + surface
-    // textures — the destroy chain must reach it the same way.
-    expect(state.gpu.texturedBodyRenderer).toBe(stubs.texturedBodyRenderer);
-    // The ring renderer owns the disc VBO/IBO + strip texture — the destroy chain
-    // must reach it the same way.
-    expect(state.gpu.ringRenderer).toBe(stubs.ringRenderer);
-    // Earth's cloud shell owns its position + uv VBOs, index IBO, uniform buffer,
-    // and cloud texture — the destroy chain must reach it the same way.
-    expect(state.gpu.cloudShellRenderer).toBe(stubs.cloudShellRenderer);
-    // Earth's atmosphere shell owns three LUT textures + their pipelines, the proxy
-    // sphere geometry, the shell pipeline, and three uniform buffers — the destroy
-    // chain must reach it the same way.
-    expect(state.gpu.atmosphereShellRenderer).toBe(stubs.atmosphereShellRenderer);
-    // The star-point renderer receives the FULL star list exactly once, at
-    // construction — at the galaxy-scale boot camera every star (the Sun
-    // included) is a sub-pixel point, so the whole seed IS the boot
-    // partition; the layer's draw stays pure.
-    expect(state.gpu.starPointRenderer).toBe(stubs.starPointRenderer);
-    // The body-glint renderer (sub-pixel body sprites) needs no data delivery —
-    // bodyGlintsLayer packs and hands the batch every frame — so construction
-    // alone lands the handle; the destroy chain must reach it to release its
-    // instance + uniform buffers.
-    expect(state.gpu.bodyGlintRenderer).toBe(stubs.bodyGlintRenderer);
-    // The orbit-trail renderer needs no bootstrap data delivery (orbitTrailsLayer
-    // derives + packs the conics per frame) — construction alone lands the handle.
-    expect(state.gpu.orbitTrailRenderer).toBe(stubs.orbitTrailRenderer);
-    // The body pick renderer owns its sphere mesh VBO/IBO + the sphere/point
-    // uniform + point instance buffers — the destroy chain must reach it.
-    expect(state.gpu.bodyPickRenderer).toBe(stubs.bodyPickRenderer);
-    expect(stubs.starPointRenderer!.setStars).toHaveBeenCalledTimes(1);
-    const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
-      id: string;
-    }>;
-    // Compared against the SEEDED list rather than one seed table, so the claim
-    // stays "the whole star set" as more tables land in the store.
-    const seededIds = state.data.bodies.stars.map((star) => star.id);
-    expect(uploaded.map((star) => star.id)).toEqual(seededIds);
-    expect(seededIds).toContain('sun');
-    // Both label renderers come from the same createLabelRenderer factory,
-    // so index its call results ordinally: call 0 built the main
-    // `labelRenderer`, call 1 the foreground caption renderer.  Asserting
-    // each field against its OWN call result — plus the not.toBe below —
-    // proves initGpu constructed two distinct instances rather than
-    // aliasing one renderer onto both fields.
-    const labelResults = vi.mocked(createLabelRenderer).mock.results;
-    expect(labelResults).toHaveLength(2);
-    expect(state.gpu.labelRenderer).toBe(labelResults[0]!.value);
-    expect(state.gpu.foregroundLabelRenderer).toBe(labelResults[1]!.value);
-    expect(state.gpu.foregroundLabelRenderer).not.toBe(state.gpu.labelRenderer);
-    // Neither label renderer gets a bootstrap `setLabels` call: the executor
-    // never runs a layer's `draw` before its `enabled()` gate reads true (see
-    // `executeFrame`), so an empty starting buffer is never observed — the
-    // director and `foregroundLabelsLayer` both upload their live set on the
-    // first real draw instead.
-    expect(state.gpu.foregroundLabelRenderer!.setLabels).not.toHaveBeenCalled();
-    expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();
-  });
-});
-
 describe('initGpu — HDR capability dispatch wiring', () => {
   beforeEach(() => {
     // `watchHdrCapability` is a module-level mock shared across every test in
@@ -599,5 +475,29 @@ describe('initGpu — HDR capability dispatch wiring', () => {
     await expect(initGpu(state, deps)).rejects.toThrow('font atlas fetch failed');
 
     expect(deps.phaseLocals?.unwatchHdrCapability).toBeTypeOf('function');
+  });
+});
+
+describe('initGpu — GPU_HANDLE_ROWS phase split', () => {
+  it('constructs every row except the wireInput-phase rows, which stay null', async () => {
+    // Emptying or widening initGpu's row filter (or wireInput's complement)
+    // must fail here: this is what the stub round-trip test in
+    // gpuHandleRegistry.test.ts structurally cannot see (it stubs every
+    // row's construct and never runs either phase's filter).
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    const gpu = state.gpu as unknown as Record<string, unknown>;
+    for (const row of GPU_HANDLE_ROWS) {
+      if ('constructPhase' in row) {
+        expect(gpu[row.key]).toBeNull();
+      } else {
+        // `toBeTruthy`, not `.not.toBeNull()`: several keys start `undefined`
+        // (absent from the fixture literal below), and `undefined` would
+        // pass a bare not-null check without ever running `construct`.
+        expect(gpu[row.key]).toBeTruthy();
+      }
+    }
   });
 });
