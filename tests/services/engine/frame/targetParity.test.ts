@@ -4,10 +4,10 @@
  * `renderTargetRows` table, `CONTENT_LAYERS`' `target` field, and
  * `frameProgram`'s `'render'`/`'composite'` steps. Nothing type-checks a
  * `ContentLayer.target`/`FrameStep.target` string against the row table — a
- * typo produces an empty `.filter()` group, so the layer silently never draws
- * (`executeFrame.ts:193`, no throw, no test failure) instead of an error at
- * the typo site. These are structural invariants over real production data,
- * not registry restatements (`testing.md`).
+ * typo produces an empty `.filter()` group instead of an error at the typo
+ * site, so the layer silently never draws (`executeFrame.ts:193`, no throw,
+ * no test failure). These are structural invariants over real production
+ * data, not registry restatements (`testing.md`).
  */
 
 import { describe, it, expect } from 'vitest';
