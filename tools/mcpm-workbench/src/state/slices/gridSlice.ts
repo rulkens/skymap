@@ -5,13 +5,14 @@ import type { GridElement } from '../../../@types/GridElement';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
- * defaultGridSlice — auto-fit on, no box resolved yet (nothing loaded).
+ * defaultGridSlice — auto-fit OFF by user directive: the catalog's outliers
+ * stretch an auto-fitted box until the local volume is a sliver of it, so the
+ * manual 200 Mpc origin-centred cube is the better boot view.
  * `longAxisTarget: 300` matches Phase 1's own "a ≥300-class grid runs
- * continuously" exit criterion; manual fields are placeholders until the
- * user switches modes.
+ * continuously" exit criterion.
  */
 export const defaultGridSlice: GridSlice = {
-  autoFit: true,
+  autoFit: false,
   longAxisTarget: 300,
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],

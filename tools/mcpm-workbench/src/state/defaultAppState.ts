@@ -16,7 +16,9 @@ const PROBE_AGENT_COUNT = 100_000;
 export const defaultAppState: AppState = hasUrlGate('probe')
   ? {
       catalog: defaultCatalogSlice,
-      grid: { ...defaultGridSlice, longAxisTarget: PROBE_LONG_AXIS_TARGET },
+      // autoFit pinned ON: the boot default is manual mode, where longAxisTarget is
+      // inert and manualResolution (128) would silently double the probe grid.
+      grid: { ...defaultGridSlice, autoFit: true, longAxisTarget: PROBE_LONG_AXIS_TARGET },
       sim: { ...defaultSimSlice, agentCount: PROBE_AGENT_COUNT },
       view: defaultViewSlice,
     }
