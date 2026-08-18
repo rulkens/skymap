@@ -2,7 +2,7 @@
  * renderCubeMips.ts — offline eyeball check for a scalar cube: writes a
  * max-intensity projection PNG per axis + prints a value-distribution line.
  * Catches a broken cube (speckle noise, scrambled strides, empty field) in
- * seconds, before a quick-look import or a viewer session.
+ * seconds, before an .scfd import or a viewer session.
  *
  * Usage:
  *   npx tsx tools/volumes/renderCubeMips.ts <cube.npy|cube.scfd> [--out-dir <dir>]
