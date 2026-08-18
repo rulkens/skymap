@@ -12,8 +12,8 @@ import type { GalaxyArmCloudTuning } from '../../../../../src/@types/galaxy/Gala
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../ParamSlider/ParamSlider';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import styles from './ArmCloudSection.module.css';
 
 type ArmCloudSliderKey = Exclude<keyof GalaxyArmCloudTuning, 'enabled'>;

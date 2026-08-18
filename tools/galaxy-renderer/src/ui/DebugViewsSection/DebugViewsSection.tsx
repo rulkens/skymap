@@ -13,9 +13,9 @@ import type { ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import { DEBUG_VIEWS } from '../../data/debugViews';
-import ParamSlider from '../ParamSlider/ParamSlider';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import styles from './DebugViewsSection.module.css';
 
 function DebugViewsSection(): ReactNode {
