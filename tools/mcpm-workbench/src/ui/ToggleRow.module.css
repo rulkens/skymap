@@ -1,30 +1,70 @@
-/* Local class names composing the app's checkbox-row vocabulary, so the markup
-   in ToggleRow.tsx never names an app class directly. */
-.toggleRow {
-  composes: toggleRow from '../../../../src/components/common/shared.module.css';
-}
+/* Local class names composing the app's ParamSlider/Slider vocabulary, so
+   ToggleRow's pill matches the slider rows above it without restating their
+   chrome (row layout, ⓘ affordance, label typography). */
 
-.toggleLabel {
-  composes: toggleLabel from '../../../../src/components/common/shared.module.css';
-}
-
-.checkbox {
-  composes: checkbox from '../../../../src/components/common/shared.module.css';
+.root {
+  composes: root from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
 }
 
 .infoIcon {
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: help;
-  font-size: var(--font-size-lg);
-  line-height: 1;
-  opacity: 0.55;
-  color: var(--color-fg-faint);
-  flex: none;
+  composes: infoIcon from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
 }
 
-.infoIcon:hover,
-.infoIcon:focus-visible {
-  opacity: 0.85;
+.seedSlot {
+  composes: seedSlot from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+}
+
+.main {
+  composes: main from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  cursor: pointer;
+}
+
+.labelText {
+  composes: label from '../../../../src/components/common/Slider/Slider.module.css';
+}
+
+/* Visually hidden but accessibility-tree-visible and still hit-testable:
+   NOT display:none (drops it from the a11y tree) and NOT the clip-rect
+   1px pattern either — a target with zero painted area fails Playwright's
+   "receives events" actionability check, which the probe relies on to
+   drive these via getByRole('checkbox', ...).check()/.uncheck(). Instead
+   the input covers the whole pill (inset: 0) at opacity 0, so it's the
+   real topmost click target, just invisible. */
+.hiddenCheckbox {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Same chrome as the tool's tier pills (Toggle.tsx): quiet by default,
+   accent-filled once the backing checkbox is checked. */
+.statePill {
+  flex: none;
+  padding: var(--space-3) var(--space-5);
+  border-radius: 4px;
+  border: 1px solid var(--border-control);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-tight);
+  background: var(--surface-control);
+  color: var(--color-fg-muted);
+  transition:
+    background var(--duration-color) var(--ease-standard),
+    color var(--duration-color) var(--ease-standard);
+}
+
+.hiddenCheckbox:checked + .statePill {
+  background: var(--surface-control-active);
+  color: var(--color-accent-bright);
+}
+
+.hiddenCheckbox:focus-visible + .statePill {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
 }

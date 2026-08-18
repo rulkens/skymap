@@ -1,10 +1,12 @@
 /**
- * ToggleRow — a boolean option as a labelled checkbox row, the same vocabulary
- * the app's panels use (`shared.module.css`). Tool-local like Slider/Toggle,
- * but the classes compose from the app so a look tuned there transfers here.
+ * ToggleRow — a boolean option as a pill row, aligned with the ParamSlider
+ * rows above it (same ⓘ slot, main column, 20px trailing spacer).
  *
- * The ⓘ sits OUTSIDE the `<label>`: a label forwards clicks to its control, so
- * a tip button nested inside it would flip the checkbox.
+ * A real hidden `<input type="checkbox">` still backs the pill (NOT
+ * display:none, which drops it from the accessibility tree) so the probe's
+ * role/name selector still finds it; the pill is styled via
+ * `input:checked + .statePill`. The ⓘ stays OUTSIDE the `<label>` — a label
+ * forwards clicks, so a tip button inside it would flip the checkbox.
  */
 import type { ReactNode } from 'react';
 import CompactInfoTip from '../../../../src/components/common/CompactInfoTip/CompactInfoTip';
@@ -19,7 +21,7 @@ export type ToggleRowProps = {
 
 function ToggleRow({ label, on, onChange, info }: ToggleRowProps): ReactNode {
   return (
-    <div className={styles.toggleRow}>
+    <div className={styles.root}>
       {info !== undefined && (
         <CompactInfoTip label={info} align="start">
           <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
@@ -27,18 +29,20 @@ function ToggleRow({ label, on, onChange, info }: ToggleRowProps): ReactNode {
           </button>
         </CompactInfoTip>
       )}
-      <label className={styles.toggleLabel}>
-        <span>{label}</span>
+      <label className={styles.main}>
+        <span className={styles.labelText}>{label}</span>
         {/* aria-label as well as the label text: the probe selects these by exact
             accessible name, which the wrapping label alone would not pin down. */}
         <input
           type="checkbox"
-          className={styles.checkbox}
+          className={styles.hiddenCheckbox}
           aria-label={label}
           checked={on}
           onChange={(e) => onChange(e.target.checked)}
         />
+        <span className={styles.statePill}>{on ? 'on' : 'off'}</span>
       </label>
+      <div className={styles.seedSlot} />
     </div>
   );
 }
