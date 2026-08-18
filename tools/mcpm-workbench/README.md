@@ -1,12 +1,13 @@
 # MCPM Workbench
 
-A WebGPU dev tool that will visualise the **MCPM cosmic-web simulation** —
-the constrained-realisation dark-matter density field skymap's volume
-renderers already consume, but driven live rather than baked offline. This
-task (T1) scaffolds the empty shell only: a Vite + React + TS app with a
-canvas that clears to a colour through the HDR-accumulate → tonemap render
-graph. No MCPM data, compute, or UI yet — those land in later tasks of the
-`mcpm-workbench` plan.
+A WebGPU dev tool that visualises the **MCPM cosmic-web simulation** — the
+constrained-realisation dark-matter density field skymap's volume renderers
+already consume, driven live rather than baked offline. It runs the port of
+Polyphorm's agent-based sim (propagate/decay/histogram compute kernels) over
+a real catalog box, with four render layers (raymarch, agent splat, galaxy
+overlay, path tracer) and `.npy`/`.scfd` export plus a headless comparator
+CLI (`validate/compareTraceCubes.ts`) for validating against a real
+PolyPhy-fork export.
 
 This is a sibling dev tool, like `tools/flow-workbench/` and
 `tools/galaxy-renderer/` — its own self-contained Vite + React + TS app, not
@@ -65,9 +66,9 @@ orientation check passed during T18's fix round.
 
 ## Validation (Phase 3 gate)
 
-2026-08-18, HEAD `e9dd16a64` (numbers below re-measured at full anchor
-resolution after a comparator fix landed; see "Comparator fix" below for
-the run this superseded). The dev-only packed-catalog loader (T21) fed
+2026-08-18. Numbers below are the **second correction** to this section —
+see "Comparator fix, round 2" below for what changed and why every row in
+the two main tables moved again. The dev-only packed-catalog loader (T21) fed
 the fork's real VAC catalog (`sdssGalaxy_rsdCorr_dbscan_e2p0ms3_dz0p001_m10p0_t=0.0.bin`,
 324,901 points) through two independent headless runs at the anchor's exact
 grid box — center `(-239.469, -16.5618, 201.275)` Mpc, size
@@ -98,106 +99,126 @@ confirmed this: the last five 20-step samples of each vary by <0.02% with no
 trend — genuinely converged, not just far enough along a slow ramp. Wall
 clock: ~508 s/run.
 
-**Comparator fix (FIXED, no longer an open item).** The first pass at this
-gate found the 622M-voxel scale broke
-`tools/mcpm-workbench/validate/compareTraceCubes.ts` and `readTraceCube.ts`
-two different ways, closing off every dtype: (1) `Float32Array.from(bits,
+**Comparator fix, round 1 (FIXED).** The first pass at this gate found the
+622M-voxel scale broke `compareTraceCubes.ts` and `readTraceCube.ts` two
+different ways, closing off every dtype: (1) `Float32Array.from(bits,
 mapFn)`'s f16 decode always goes through the iterator protocol regardless
 of the map-fn, boxing 622M elements and OOMing even with a 16 GB heap; (2)
 Node's `fs.readFileSync` hard-refuses files over 2 GiB
 (`ERR_FS_FILE_TOO_LARGE`), and the real `trace.bin` (2,488,012,800 bytes)
-is over that ceiling — no dtype cleared both (f16 hit bug 1, f32 hit bug
-2, including for `trace.bin` itself). That first pass worked around both
-with data reformatting only (block-averaging to 356×600×364, comparator
-itself untouched) rather than editing production code, and reported the
-two bugs as backlog items. Both are now fixed at `e9dd16a64`
-(`fix(mcpm-workbench): comparator reads anchor-scale cubes — chunked IO,
-loop decode` — new `decodeF16.ts`/`readFileChunked.ts`, see
-task-T22-report.md's "Fix round 3"). The numbers below are the **real,
-unmodified comparator run directly against the full 712×1200×728 anchor**
-— no downsampling, no reformatting, the same `.npy` exports the original
-run produced.
+is over that ceiling. Both fixed at `e9dd16a64` with chunked IO and a loop
+decode (`decodeF16.ts`/`readFileChunked.ts`).
+
+**Comparator fix, round 2 (FIXED) — voxel-order normalisation.** A
+whole-branch review (`final-review.md` §A/X1) found round 1's full-
+resolution numbers below were themselves an artifact: `loadShape` read
+every `.npy` with no layout normalisation, but `exportNpy.ts` writes
+`.npy` in NumPy C-order (`xFastestToCOrder`) while `axisMarginals` /
+`dataPointHistogram` both index x-fastest — the two workbench `.npy` runs
+were silently read with X and Z transposed. `trace.bin` (a headerless
+`.bin`, always x-fastest) was unaffected, so this only ever hit one side
+of the comparison. Fixed by adding an explicit `voxel_order` field to the
+`polyphy-trace` sidecar (`emitTraceSidecar.ts` always writes `'c-order'`,
+matching `exportNpy.ts`'s unconditional transpose) plus `--a-order`/
+`--b-order` CLI overrides for `.npy` inputs whose sidecar predates the
+field or has none — `loadShape` now hard-errors rather than defaulting
+when a `.npy`'s order can't be determined either way. `cOrderToXFastest.ts`
+is the actual un-transpose; a fixture test (`compareTraceCubes.test.ts`)
+pins it against `xFastestToCOrder` on an asymmetric cube and proves a
+correctly-normalised transposed pair compares clean (TV 0, marginals
+exact). **Everything below is the re-run against the SAME `t23-artifacts/`
+exports round 1 produced** — no new sim runs, only the comparator fix.
 
 ### Floor — two runs, same config, seeds 1 vs 2 (n=2), full 712×1200×728
 
-| statistic                          | value                           |
-| ---------------------------------- | ------------------------------- |
-| logHistogram TV                    | 0.0001                          |
-| dataPointHistogram TV              | 0.0007                          |
-| marginal max rel. dev. (x, y, z)   | 0.0068, 0.0117, 0.0546          |
-| meanLogTraceAtPoints (seed 1 vs 2) | 0.22226 vs 0.22146 (0.36% rel.) |
+| statistic                          | round-1 value (INVALID, order artifact) | corrected value                        |
+| ---------------------------------- | --------------------------------------- | -------------------------------------- |
+| logHistogram TV                    | 0.0001                                  | 0.0001 (unchanged — order-independent) |
+| dataPointHistogram TV              | 0.0007                                  | 0.0028                                 |
+| marginal max rel. dev. (x, y, z)   | 0.0068, 0.0117, 0.0546                  | 0.0560, 0.0585, 0.0817                 |
+| meanLogTraceAtPoints (seed 1 vs 2) | 0.22226 vs 0.22146 (0.36% rel.)         | 4.78672 vs 4.78664 (0.0018% rel.)      |
 
-Same shape as the earlier downsampled floor: small, consistent noise, z the
-noisiest marginal axis (~8× the x-axis one).
+`logHistogram TV` doesn't move: it's a value-only histogram with no spatial
+indexing, so voxel order can't affect it — the same reasoning covers the
+total-trace-mass ratio below. Everything that touches a voxel's _position_
+(marginals, point sampling) moved, and moved a lot: the floor is now
+tighter on `meanLogTraceAtPoints` (both runs are reading the SAME,
+correctly-oriented voxel at each point now) and looser on the marginals —
+still small, percent-level noise, still z the noisiest axis.
 
 ### Workbench vs. fork (each run vs. `trace.bin`, both seeds agree), full 712×1200×728
 
-| statistic                                 | value                  | vs. floor |
-| ----------------------------------------- | ---------------------- | --------- |
-| logHistogram TV                           | 0.0721                 | ~1116×    |
-| dataPointHistogram TV                     | 0.9909                 | ~1484×    |
-| marginal max rel. dev. (x, y, z)          | 1.0000, 1.0000, 1.0000 | ~18–147×  |
-| meanLogTraceAtPoints (fork vs. workbench) | 7.137 vs 0.222 (32.1×) | —         |
+| statistic                                 | round-1 value (INVALID) | corrected value              | vs. corrected floor |
+| ----------------------------------------- | ----------------------- | ---------------------------- | ------------------- |
+| logHistogram TV                           | 0.0721                  | 0.0721 (unchanged)           | ~1116×              |
+| dataPointHistogram TV                     | 0.9909                  | 0.6692 / 0.6690 (seed 1 / 2) | ~238×               |
+| marginal max rel. dev. (x, y, z)          | 1.0000, 1.0000, 1.0000  | 1.0000, 1.0000, 1.0000       | ~12–18×             |
+| meanLogTraceAtPoints (fork vs. workbench) | 7.137 vs 0.222 (32.1×)  | 7.137 vs 4.787 (1.49×)       | —                   |
+| total trace mass ratio (fork ÷ workbench) | 9.28×                   | 9.28× (unchanged)            | —                   |
 
-Both seeds land on identical vs-fork numbers to 4 decimal places — a
-systematic disagreement, not noise.
+`logHistogram TV` and the mass ratio reproduce exactly, as predicted — a
+fix to voxel ORDER cannot move an order-independent statistic. Everything
+else moved, some by a lot: `meanLogTraceAtPoints`'s ratio collapsed from
+32.1× to 1.49× — the round-1 number was reading the trace at scrambled
+voxel coordinates for every catalog point. The marginal max-rel-dev is
+numerically unchanged (still pinned at 1.0000 on all three axes) but for a
+legitimate reason this time — see the diagnostic note below — not a byte-
+order coincidence.
 
-**Derived acceptance band (3× the full-resolution floor — n=2, so treat as
-a first approximation, not a settled constant):** logHistogram TV ≤
-0.0002, dataPointHistogram TV ≤ 0.0020, marginal max rel. dev. ≤ 0.164,
-meanLogTraceAtPoints rel. diff. ≤ 1.1%. **Every vs-fork statistic misses
-this band by three orders of magnitude** — the exact multiplier chosen for
-the band is immaterial to that verdict.
+**Derived acceptance band (3× the corrected full-resolution floor — n=2,
+first approximation):** logHistogram TV ≤ 0.0002, dataPointHistogram TV ≤
+0.0084, marginal max rel. dev. ≤ 0.245, meanLogTraceAtPoints rel. diff. ≤
+0.0054%. **The picture is no longer a uniform three-orders-of-magnitude
+miss**: logHistogram TV misses by ~372×, dataPointHistogram TV by ~79×, and
+`meanLogTraceAtPoints`'s relative difference (39.4%, against an extremely
+tight band) by ~7300× — but the marginal max-rel-dev, the statistic round
+1's transposition most directly corrupted, now misses the band by only
+~4.1× on every axis (order 10⁰–10¹, not 10²–10³). That is real information
+the transposed run destroyed: the marginals were never this branch's
+worst-agreeing statistic, they were its most _scrambled_ one.
 
-**Downsampled cross-check (356×600×364, the first pass's workaround
-resolution) — kept because the deltas between the two resolutions are
-themselves informative, not because the downsampled numbers are
-load-bearing:**
-
-| statistic                       | downsampled | full-res | direction                |
-| ------------------------------- | ----------- | -------- | ------------------------ |
-| logHistogram TV (vs-fork)       | 0.1359      | 0.0721   | **improves** at full res |
-| dataPointHistogram TV (vs-fork) | 0.9816      | 0.9909   | worsens slightly         |
-| meanLogTraceAtPoints ratio      | 15.8×       | 32.1×    | **worsens** at full res  |
-| total trace mass ratio (a ÷ b)  | 9.3×        | 9.28×    | resolution-stable        |
-
-Total trace mass is resolution-stable (9.3× at both scales) — an
-integrated quantity, robust to block-averaging, so this is very likely a
-real, resolution-independent magnitude difference rather than a
-downsampling artifact. The point-sampled statistics are not stable: going
-to full resolution roughly **doubles** the `meanLogTraceAtPoints` gap
-(nearest-voxel sampling is more sensitive to exact point-to-voxel
-alignment at finer voxel size) while `logHistogramTV` (whole-cube shape,
-dominated by the vast near-zero background) actually improves. Reading
-either resolution's numbers alone would understate one of these two
-effects — worth keeping both rows.
+**Downsampled cross-check (356×600×364) — SUPERSEDED, not re-derived.**
+The T23 downsample helper that produced the 356×600×364 `.npy` pair
+(`t23-artifacts/downsampleForCompare.ts`, not production code) block-
+averaged its input assuming x-fastest layout — the SAME wrong assumption
+X1 found in the comparator, compounded on top of an already-C-order
+source. Unlike a plain unindexed read, block-averaging groups voxels
+before summing, so the resulting cube's values are not merely
+mis-positioned but mis-computed — averaging the wrong 8-voxel groups is
+not something a transpose can undo after the fact. The one exception is
+**total trace mass**: summing block averages recovers the whole-cube sum
+regardless of which voxels got grouped (every voxel is used exactly once,
+correctly grouped or not), so the downsampled run's 9.3× mass ratio was,
+and remains, a valid, resolution-independent cross-check of the corrected
+9.28× above. `logHistogram TV` (0.1359), `dataPointHistogram TV` (0.9816),
+and the `meanLogTraceAtPoints` ratio (15.8×) from that earlier table are
+**not** reproduced here — a corrected downsample would need regenerating
+the `.npy` pair, out of scope for this comparator-only fix.
 
 **Diagnostic evidence, not yet root-caused (open items for the backlog /
-T24 quirk-strip) — reconfirmed at full resolution, unchanged in kind:**
+T24 quirk-strip) — re-confirmed with the corrected comparator:**
 
 - The anchor's per-axis marginals are **exactly zero** in the outermost
-  ~80–85 bins on every axis (both ends, all three axes, at full
-  resolution — roughly double the ~40-bin downsampled count, i.e. the same
-  physical margin at 2× the voxel density); the workbench's are not (a
-  flat, non-zero floor reaching every edge). This alone explains the
-  marginal max-rel-dev pinning at 1.0000 (an edge bin with `a=0, b>0`
-  trivially maxes the ratio) but not the magnitude gap below.
-- Total trace mass: anchor ≈9.28× the workbench's (full resolution,
-  matching the downsampled run's ≈9.3× almost exactly — see the
-  cross-check table above). The packed catalog's own point cloud sits well
-  inside the box with tens of Mpc of margin on every side (its metadata
-  bounds vs. the box bounds), so the zero-edge shells are not simply "no
-  agent ever reaches there" on the fork's side while ours does — worth
-  checking against the fork's actual boundary handling before assuming
-  it's a workbench bug.
+  ~80–85 bins on every axis; the workbench's are not (a flat, non-zero
+  floor reaching every edge). This still explains the marginal max-rel-dev
+  pinning at 1.0000 (an edge bin with `a=0, b>0` trivially maxes the
+  ratio) — now confirmed on the correctly-identified axes, not a byte-
+  order coincidence, and — per the corrected band comparison above — the
+  LEAST discrepant of the four vs-fork statistics once floor noise is
+  accounted for.
+- Total trace mass: anchor ≈9.28× the workbench's, cross-checked against
+  the (order-bug-immune) downsampled ≈9.3× above. The packed catalog's own
+  point cloud sits well inside the box with tens of Mpc of margin on every
+  side, so the zero-edge shells are not simply "no agent ever reaches
+  there" on the fork's side while ours does — worth checking against the
+  fork's actual boundary handling before assuming it's a workbench bug.
 - `data/raw/mcpm/export_metadata.txt`'s data-point count (324,849) and the
   packed catalog sidecar's declared count (324,901, used here) differ by
   52 points — the two files are related but not byte-identical exports;
   not investigated further.
-- New this round: `meanLogTraceAtPoints` disagrees more, not less, at full
-  resolution (32.1× vs the downsampled run's 15.8×), while the whole-cube
-  `logHistogramTV` disagrees less (0.0721 vs 0.1359). The two statistics
-  are answering different questions (point-sampled vs. whole-volume shape)
-  and shouldn't be expected to track each other — flagging so a future
-  pass doesn't average them into one "resolution improves agreement"
-  conclusion, which the point-sampled numbers directly contradict.
+- `meanLogTraceAtPoints`'s corrected 1.49× ratio and the mass's 9.28× ratio
+  are now much closer in magnitude than round 1's 32.1× suggested — both
+  point at the fork depositing roughly an order of magnitude more trace
+  mass than the workbench, rather than at two unrelated effects. Worth the
+  T24 quirk-strip's first look: a single deposit/normalisation divergence
+  would move both together, which is what's observed.
