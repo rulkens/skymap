@@ -59,7 +59,7 @@ flowchart LR
     RF --> RD["renderFrame"]
     FP["frameProgram(tone, bloom)<br/>13–14 ordered FrameSteps"] --> EX["executeFrame"]
     CL["CONTENT_LAYERS<br/>36 ContentLayer rows"] --> EX
-    RT["RenderTargets<br/>buildSpecs(): 12 spec rows"] --> EX
+    RT["RenderTargets<br/>renderTargetRows(): 12 spec rows"] --> EX
     CR["COMPUTE record<br/>flow, atmosphereSkyView"] --> EX
     RD --> EX
     EX -->|"render step: filter layers by (target, slab)"| PASS["one GPU pass per group"]
