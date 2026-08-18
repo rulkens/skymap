@@ -31,6 +31,7 @@ describe('catalogSlice setPackedCatalog', () => {
     expect(next.packedOverride).toBe(points);
     expect(next.packedSourceName).toBe('sdssGalaxy_metadata.txt');
     expect(next.packedDropId).toBe(1);
+    expect(next.catalogBoundsMpc).toEqual({ min: [1, 2, 3], max: [1, 2, 3] });
   });
 
   it('bumps packedDropId on every install, even a same-filename re-drop', () => {
@@ -46,7 +47,7 @@ describe('catalogSlice zero-point status', () => {
   it('setCatalogLoaded clears a stale statusMessage — a real load must supersede it', () => {
     const stale = setCatalogStatusMessage(defaultCatalogSlice, 'no catalog points');
 
-    const loaded = setCatalogLoaded(stale, 1, 0);
+    const loaded = setCatalogLoaded(stale, 1, 0, null);
 
     expect(loaded.statusMessage).toBeNull();
   });

@@ -321,18 +321,22 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     },
     {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
-      // of gridShapeKeyFor's six fields (Viewport.tsx) — no other step here ever touches
+      // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this was the only render layer no gate exercised at all (final-review.md
       // §A/X3). The "Grid box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's
       // `gridBoxOpen` starts false) and its body doesn't exist in the DOM until opened —
-      // the fold button's accessible name is its title text, not an aria-label. Under
-      // `?probe`, defaultAppState.ts pins autoFit on, so the visible control once open is
-      // "long-axis target" (GridBoxPanel's autoFit branch), not manualResolution.
+      // the fold button's accessible name is its title text, not an aria-label. S10: the
+      // grid divisor pill row is one shared control for both auto-fit and manual mode
+      // (`deriveGridBox`'s BASE_LONG_AXIS/divisor), so "grid divisor 2" reaches the same
+      // long axis (128) the old "long-axis target" select's '128' option did — its
+      // accessible name is deliberately distinct from the raymarch preview's own
+      // "divisor" slider (see raymarch:divisor below), a role="button" vs role="slider"
+      // AND a different name, so no probe selector or screen-reader name collides.
       // BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
         await page.getByRole('button', { name: 'Grid box', exact: true }).click();
-        await page.getByLabel('long-axis target').selectOption('128');
+        await page.getByRole('button', { name: 'grid divisor 2', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -365,10 +369,11 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     },
     {
       // S9: divisor > 1 opens RenderGraph's offscreen path — reduced-target allocation,
-      // the clear pass, and the bilinear upsample blit, none of which any earlier step
-      // reaches (every one above runs at the default divisor 1, straight into the accum
-      // target). 'End' jumps the slider to its max (8, Slider.tsx's keyDown handling);
-      // 'Home' returns it to 1 so later steps exercise the divisor-1 path as before.
+      // the clear pass, and the bilinear upsample blit. S10 changed the shipped default
+      // to 3 (main-app volume-row parity), so every step above already exercises that
+      // offscreen path from boot; this step is what now covers the OTHER extreme. 'End'
+      // jumps the slider to its max (8, Slider.tsx's keyDown handling); 'Home' drops it
+      // to 1, exercising the straight-into-accum path for the first time.
       name: 'raymarch:divisor',
       run: async (page) => {
         await pressSlider(page, 'divisor', ['End']);

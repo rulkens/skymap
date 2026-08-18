@@ -7,18 +7,17 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 /**
  * defaultGridSlice — auto-fit OFF by user directive: the catalog's outliers
  * stretch an auto-fitted box until the local volume is a sliver of it, so the
- * manual 200 Mpc origin-centred cube is the better boot view.
- * Resolution defaults sit on GridBoxPanel's RESOLUTION_OPTIONS notch 256;
- * the 360 notch covers Phase 1's "a ≥300-class grid runs continuously"
- * exit criterion.
+ * manual 200 Mpc origin-centred cube is the better boot view. `divisor: 1`
+ * is `deriveGridBox`'s BASE_LONG_AXIS (256) unscaled; divisor 0.75 (the
+ * finest notch) covers Phase 1's "a ≥300-class grid runs continuously" exit
+ * criterion at 341.
  */
 export const defaultGridSlice: GridSlice = {
   autoFit: false,
-  longAxisTarget: 256,
+  divisor: 1,
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],
   manualSizeMpc: [200, 200, 200],
-  manualResolution: 256,
   box: null,
   resolvedElement: null,
   byteBudget: null,
@@ -28,8 +27,8 @@ export function setAutoFit(prev: GridSlice, autoFit: boolean): GridSlice {
   return { ...prev, autoFit };
 }
 
-export function setLongAxisTarget(prev: GridSlice, longAxisTarget: number): GridSlice {
-  return { ...prev, longAxisTarget };
+export function setDivisor(prev: GridSlice, divisor: number): GridSlice {
+  return { ...prev, divisor };
 }
 
 export function setPaddingMpc(prev: GridSlice, paddingMpc: number): GridSlice {
@@ -42,10 +41,6 @@ export function setManualCenterMpc(prev: GridSlice, manualCenterMpc: Vec3): Grid
 
 export function setManualSizeMpc(prev: GridSlice, manualSizeMpc: Vec3): GridSlice {
   return { ...prev, manualSizeMpc };
-}
-
-export function setManualResolution(prev: GridSlice, manualResolution: number): GridSlice {
-  return { ...prev, manualResolution };
 }
 
 /** Records a completed fit: the resolved box, its element, and its byte budget. */

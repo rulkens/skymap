@@ -55,11 +55,11 @@ export type ViewSlice = {
      */
     readonly additive: boolean;
     /**
-     * Integer 1-8, default 1 (exact current behaviour: no offscreen target).
-     * >1 marches into a `floor(size/divisor)` offscreen target instead and
-     * bilinear-upsamples it in — same shape as the main app's `volume`
-     * render-target row (renderTargets.ts), whose `scale: 3` is what 3 here
-     * reproduces. Fragment cost falls with the square of the divisor.
+     * Integer 1-8, default 3 (main-app volume-row parity — renderTargets.ts's
+     * `scale: 3`, which this reproduces). 1 is the exact original behaviour
+     * (no offscreen target); >1 marches into a `floor(size/divisor)` offscreen
+     * target instead and bilinear-upsamples it in. Fragment cost falls with
+     * the square of the divisor.
      */
     readonly divisor: number;
     /**

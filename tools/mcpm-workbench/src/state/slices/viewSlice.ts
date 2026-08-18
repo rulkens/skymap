@@ -24,7 +24,9 @@ export const defaultViewSlice: ViewSlice = {
     stepVoxels: 1,
     additive: true,
     previewPacked: false,
-    divisor: 1,
+    // S10: shipped default 3 = main-app volume-row parity (renderTargets.ts's
+    // `scale: 3`) — slide to 1 for full-res, no offscreen target.
+    divisor: 3,
   },
   // Fork defaults per task-V2A-report.md, except sampleWeight/traceMax (V2B fix
   // round 1): the tracking majorant is σ_max = sigmaT · sampleWeight · traceMax,

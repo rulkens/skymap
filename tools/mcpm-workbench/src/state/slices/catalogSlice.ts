@@ -3,6 +3,7 @@ import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import { Source } from '../../../../../src/data/source';
+import { catalogBounds } from '../../field/catalogBounds';
 
 /**
  * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `small` tier (spec §10's
@@ -20,6 +21,7 @@ export const defaultCatalogSlice: CatalogSlice = {
   packedSourceName: null,
   packedDropId: 0,
   statusMessage: null,
+  catalogBoundsMpc: null,
 };
 
 export function setCatalogSources(
@@ -41,17 +43,25 @@ export function setCatalogLoadStatus(
 }
 
 /**
- * Records a completed load: point count, NaN-fill count, `loadStatus: 'loaded'`,
- * and clears `statusMessage` — a completed load (zero-point included; Viewport
- * calls this on that path too) always supersedes whatever status the PREVIOUS
- * load left behind.
+ * Records a completed load: point count, NaN-fill count, bounds, `loadStatus:
+ * 'loaded'`, and clears `statusMessage` — a completed load (zero-point
+ * included; Viewport calls this on that path too, with `boundsMpc` null)
+ * always supersedes whatever status the PREVIOUS load left behind.
  */
 export function setCatalogLoaded(
   prev: CatalogSlice,
   pointCount: number,
   nanFillCount: number,
+  boundsMpc: CatalogSlice['catalogBoundsMpc'],
 ): CatalogSlice {
-  return { ...prev, loadStatus: 'loaded', pointCount, nanFillCount, statusMessage: null };
+  return {
+    ...prev,
+    loadStatus: 'loaded',
+    pointCount,
+    nanFillCount,
+    statusMessage: null,
+    catalogBoundsMpc: boundsMpc,
+  };
 }
 
 /** Viewport's zero-point path sets this after `setCatalogLoaded` (which just cleared it). */
@@ -83,8 +93,9 @@ export function setPackedCatalog(
   nanFillCount: number,
   sourceName: string,
 ): CatalogSlice {
+  const boundsMpc = points.count > 0 ? catalogBounds(points.positions) : null;
   return {
-    ...setCatalogLoaded(prev, points.count, nanFillCount),
+    ...setCatalogLoaded(prev, points.count, nanFillCount, boundsMpc),
     packedOverride: points,
     packedSourceName: sourceName,
     packedDropId: prev.packedDropId + 1,

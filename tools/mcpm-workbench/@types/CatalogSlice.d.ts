@@ -1,5 +1,6 @@
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import type { Tier } from '../../../src/@types/data/Tier';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { CatalogPoints } from './CatalogPoints';
 
 /**
@@ -17,6 +18,12 @@ import type { CatalogPoints } from './CatalogPoints';
  * `setPackedCatalog` bumps on every install — the fork names its export
  * file identically across runs, so a filename alone can't tell two
  * different drops apart; a rebuild-trigger key needs this instead.
+ *
+ * `catalogBoundsMpc` is `catalogBounds` over the last load's positions —
+ * cached here (not recomputed from the Float32Array) so `deriveGridBox`
+ * can derive the SAME auto-fit box from state alone, for both Viewport's
+ * build and the grid panel's live dims readout. Null until a load lands
+ * or lands empty.
  */
 export type CatalogSlice = {
   readonly sources: readonly SourceType[];
@@ -28,6 +35,7 @@ export type CatalogSlice = {
   readonly packedOverride: CatalogPoints | null;
   readonly packedSourceName: string | null;
   readonly packedDropId: number;
+  readonly catalogBoundsMpc: { readonly min: Vec3; readonly max: Vec3 } | null;
   /**
    * Human-readable status for a state Viewport can reach but isn't an error —
    * currently just the zero-point case (every selected source excluded at

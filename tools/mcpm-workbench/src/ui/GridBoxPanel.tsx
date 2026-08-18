@@ -1,34 +1,32 @@
 /**
- * GridBoxPanel — auto-fit vs. manual grid-box configuration. Manual mode
- * takes center + size + long-axis resolution, NEVER free dims: Viewport
- * routes both modes through `autoFitGridBox` (auto-fit derives bounds from
- * the catalog bbox; manual derives them from center±size/2), so the cubic-
- * voxel invariant can't be typed away by this panel. This panel only edits
- * the target knobs — it holds no catalog data, so it can't compute a box
- * itself; Viewport watches these fields and rebuilds.
- *
- * The manual center/size sliders also feed Viewport's transient box-preview
- * timer — it watches these same six store fields for a change, not this
- * component, so dragging one needs no wiring here beyond the plain setter.
+ * GridBoxPanel — auto-fit vs. manual grid-box configuration. Both modes
+ * share ONE divisor (never free dims): Viewport and this panel's dims
+ * readout both call `deriveGridBox`, so they can't disagree. This panel
+ * holds no catalog data, so the readout reads the cached
+ * `catalog.catalogBoundsMpc` instead of re-deriving from raw positions.
+ * The manual sliders also feed Viewport's box-preview timer, which
+ * watches the same store fields directly — no wiring needed here.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
+import { deriveGridBox } from '../field/deriveGridBox';
 import { useStore } from '../state/useStore';
 import {
   setAutoFit,
-  setLongAxisTarget,
+  setDivisor,
   setManualCenterMpc,
-  setManualResolution,
   setManualSizeMpc,
   setPaddingMpc,
 } from '../state/slices/gridSlice';
 import { useAppStore } from './storeContext';
+import Toggle from './Toggle';
 import ToggleRow from './ToggleRow';
 
-// Notches, not free text: grid memory scales cubically, so the panel offers only
-// resolutions the byte budget has been sanity-checked at (360 ≈ the fork class).
-const RESOLUTION_OPTIONS = [64, 128, 256, 360] as const;
+// User-specified stepping: finer than 1 in quarter steps, coarser in half
+// steps — a discrete list, not a uniform-step range, so Slider (fixed step)
+// can't drive it; a pill row (like the tier row) can.
+const DIVISOR_OPTIONS = [0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 
 // Literal-typed axis index (not a `.map` callback index, which noUncheckedIndexedAccess
 // would widen to `number` and turn every `vec[axis]` read into `number | undefined`).
@@ -49,6 +47,12 @@ const fieldStyle: CSSProperties = {
   padding: 'var(--space-2)',
 };
 
+const dimsReadoutStyle: CSSProperties = {
+  fontFamily: 'var(--font-family-mono)',
+  fontSize: 'var(--font-size-sm)',
+  color: 'var(--color-fg-muted)',
+};
+
 function withAxis(vec: Vec3, axis: number, value: number): Vec3 {
   const next: Vec3 = [...vec];
   next[axis] = value;
@@ -58,6 +62,8 @@ function withAxis(vec: Vec3, axis: number, value: number): Vec3 {
 function GridBoxPanel(): ReactNode {
   const store = useAppStore();
   const grid = useStore(store, (s) => s.grid);
+  const catalogBoundsMpc = useStore(store, (s) => s.catalog.catalogBoundsMpc);
+  const box = deriveGridBox(grid, catalogBoundsMpc);
 
   return (
     <div
@@ -74,42 +80,42 @@ function GridBoxPanel(): ReactNode {
         on={grid.autoFit}
         onChange={(on) => store.setState((s) => ({ ...s, grid: setAutoFit(s.grid, on) }))}
       />
-      {grid.autoFit ? (
-        <>
-          <label>
-            long-axis target
-            <select
-              style={fieldStyle}
-              value={grid.longAxisTarget}
-              onChange={(e) =>
-                store.setState((s) => ({
-                  ...s,
-                  grid: setLongAxisTarget(s.grid, parseInt(e.target.value, 10)),
-                }))
-              }
-            >
-              {RESOLUTION_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            padding (Mpc)
-            <input
-              type="number"
-              style={fieldStyle}
-              value={grid.paddingMpc}
-              onChange={(e) =>
-                store.setState((s) => ({
-                  ...s,
-                  grid: setPaddingMpc(s.grid, parseFloat(e.target.value)),
-                }))
-              }
+      <div>
+        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-fg-label)' }}>
+          grid divisor
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+          {DIVISOR_OPTIONS.map((d) => (
+            <Toggle
+              key={d}
+              label={String(d)}
+              ariaLabel={`grid divisor ${d}`}
+              on={grid.divisor === d}
+              onToggle={() => store.setState((s) => ({ ...s, grid: setDivisor(s.grid, d) }))}
             />
-          </label>
-        </>
+          ))}
+        </div>
+        <div style={dimsReadoutStyle}>
+          {box
+            ? `${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox`
+            : 'no catalog loaded yet'}
+        </div>
+      </div>
+      {grid.autoFit ? (
+        <label>
+          padding (Mpc)
+          <input
+            type="number"
+            style={fieldStyle}
+            value={grid.paddingMpc}
+            onChange={(e) =>
+              store.setState((s) => ({
+                ...s,
+                grid: setPaddingMpc(s.grid, parseFloat(e.target.value)),
+              }))
+            }
+          />
+        </label>
       ) : (
         <>
           {AXES.map(({ axis, label }) => (
@@ -150,25 +156,6 @@ function GridBoxPanel(): ReactNode {
               path={`grid.manualSizeMpc.${axis}`}
             />
           ))}
-          <label>
-            long-axis resolution
-            <select
-              style={fieldStyle}
-              value={grid.manualResolution}
-              onChange={(e) =>
-                store.setState((s) => ({
-                  ...s,
-                  grid: setManualResolution(s.grid, parseInt(e.target.value, 10)),
-                }))
-              }
-            >
-              {RESOLUTION_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
         </>
       )}
     </div>

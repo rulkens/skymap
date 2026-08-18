@@ -9,13 +9,21 @@ export type ToggleProps = {
   readonly label: string;
   readonly on: boolean;
   readonly onToggle: () => void;
+  /**
+   * Overrides the accessible name (default: the visible "{label}: on/off"
+   * text). A row of value pills (e.g. grid divisor) wants a name that says
+   * what the row IS, not just the bare number, so a screen reader or probe
+   * selector doesn't have to infer it from neighbouring buttons.
+   */
+  readonly ariaLabel?: string;
 };
 
-function Toggle({ label, on, onToggle }: ToggleProps): ReactNode {
+function Toggle({ label, on, onToggle, ariaLabel }: ToggleProps): ReactNode {
   return (
     <button
       type="button"
       aria-pressed={on}
+      aria-label={ariaLabel}
       onClick={onToggle}
       style={{
         fontFamily: 'var(--font-family-mono)',

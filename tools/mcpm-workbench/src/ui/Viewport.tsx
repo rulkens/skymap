@@ -26,9 +26,9 @@ import { exportScfd } from '../export/exportScfd';
 import { previewPackedTrace } from '../export/previewPackedTrace';
 import { triggerDownload } from '../export/triggerDownload';
 import { widenTrace } from '../export/widenTrace';
-import { autoFitGridBox } from '../field/autoFitGridBox';
 import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
+import { deriveGridBox } from '../field/deriveGridBox';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
 import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
@@ -86,11 +86,10 @@ function buildKey(s: AppState): unknown[] {
   return [
     s.catalog.weightMode,
     s.grid.autoFit,
-    s.grid.longAxisTarget,
+    s.grid.divisor,
     s.grid.paddingMpc,
     s.grid.manualCenterMpc,
     s.grid.manualSizeMpc,
-    s.grid.manualResolution,
     s.sim.agentCount,
     s.sim.initMode,
     s.sim.seed,
@@ -110,34 +109,29 @@ function catalogKey(s: AppState): unknown[] {
   return [s.catalog.sources, s.catalog.tier, s.catalog.packedDropId, s.catalog.packedSourceName];
 }
 
-/** The six fields that reshape the grid box — a change here restarts the preview timer. */
+/** The five fields that reshape the grid box — a change here restarts the preview timer. */
 function gridShapeKeyFor(s: AppState): unknown[] {
   return [
     s.grid.autoFit,
     s.grid.manualCenterMpc,
     s.grid.manualSizeMpc,
-    s.grid.manualResolution,
-    s.grid.longAxisTarget,
+    s.grid.divisor,
     s.grid.paddingMpc,
   ];
 }
 
-function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
-  const half: Vec3 = [size[0] / 2, size[1] / 2, size[2] / 2];
-  return {
-    min: [center[0] - half[0], center[1] - half[1], center[2] - half[2]],
-    max: [center[0] + half[0], center[1] + half[1], center[2] + half[2]],
-  };
-}
-
+/**
+ * The live catalog bounds (not the cached `catalog.catalogBoundsMpc`, which
+ * lags one render behind the points this build is about to use) — the ONLY
+ * caller with the raw Float32Array in hand, so it recomputes rather than
+ * trusting the store's copy. `deriveGridBox` never throws null here: auto-fit
+ * with `points` present always has bounds.
+ */
 function gridBoxFor(s: AppState, points: CatalogPoints): GridBox {
-  const { grid } = s;
-  const bounds = grid.autoFit
-    ? catalogBounds(points.positions)
-    : manualBounds(grid.manualCenterMpc, grid.manualSizeMpc);
-  const longAxisTarget = grid.autoFit ? grid.longAxisTarget : grid.manualResolution;
-  const paddingMpc = grid.autoFit ? grid.paddingMpc : 0;
-  return autoFitGridBox(bounds, longAxisTarget, paddingMpc);
+  const bounds = s.grid.autoFit ? catalogBounds(points.positions) : null;
+  const box = deriveGridBox(s.grid, bounds);
+  if (!box) throw new Error('gridBoxFor: deriveGridBox returned null with points already loaded');
+  return box;
 }
 
 /** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
@@ -510,9 +504,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     async function buildFromPoints(pts: CatalogPoints, generation: number): Promise<void> {
       const s = store.getSnapshot();
       const weights = deriveAgentWeights(pts.log10StellarMass, s.catalog.weightMode);
+      const boundsMpc = pts.count > 0 ? catalogBounds(pts.positions) : null;
       store.setState((st) => ({
         ...st,
-        catalog: setCatalogLoaded(st.catalog, pts.count, weights.nanCount),
+        catalog: setCatalogLoaded(st.catalog, pts.count, weights.nanCount, boundsMpc),
       }));
 
       const box = gridBoxFor(s, pts);
@@ -615,7 +610,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           store.setState((st) => ({
             ...st,
             catalog: setCatalogStatusMessage(
-              setCatalogLoaded(st.catalog, 0, 0),
+              setCatalogLoaded(st.catalog, 0, 0, null),
               'no catalog points — enable a source or pick a tier that carries one',
             ),
           }));

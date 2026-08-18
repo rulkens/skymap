@@ -8,17 +8,16 @@ import type { GridElement } from './GridElement';
  * RESOLVED box (what the sim actually runs on). `box`/`resolvedElement`/
  * `byteBudget` are null until the first successful build — the panel can be
  * open before any catalog has loaded. Manual mode takes center + size +
- * long-axis resolution, never free dims (`autoFitGridBox`'s own contract);
- * `manualResolution` reuses the same "long axis target" meaning as
- * `longAxisTarget` does for auto-fit.
+ * a long-axis resolution, never free dims (`autoFitGridBox`'s own contract);
+ * one `divisor` derives that resolution for BOTH auto-fit and manual — one
+ * resolution lever, not two (see `deriveGridBox`).
  */
 export type GridSlice = {
   readonly autoFit: boolean;
-  readonly longAxisTarget: number;
+  readonly divisor: number;
   readonly paddingMpc: number;
   readonly manualCenterMpc: Vec3;
   readonly manualSizeMpc: Vec3;
-  readonly manualResolution: number;
   readonly box: GridBox | null;
   readonly resolvedElement: GridElement | null;
   readonly byteBudget: GridBudget | null;
