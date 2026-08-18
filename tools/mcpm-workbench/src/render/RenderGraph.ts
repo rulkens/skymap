@@ -14,6 +14,7 @@
  * `drawBoxPreview`, last so its wireframe sits over the galaxy dots.
  */
 import type { AgentBuffers } from '../../@types/AgentBuffers';
+import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { GridBox } from '../../@types/GridBox';
 import { createBoxPreviewPass, type BoxPreviewPass } from './boxPreviewPass';
 import type { GalaxyOverlayOptions, GalaxyOverlayPass } from './galaxyOverlayPass';
@@ -106,14 +107,18 @@ export type RenderGraph = {
     options: GalaxyOverlayOptions,
   ): void;
   /**
-   * Wireframe `pendingBox` (converted into `builtBox`'s voxel frame) over whatever is
-   * already in the accum target — drawn last so it sits over the galaxy dots.
+   * Wireframe `pendingBox` (converted into `builtBox`'s voxel frame) plus its gizmo handle
+   * glyphs, over whatever is already in the accum target — drawn last so it sits over the
+   * galaxy dots. `hoverHandle`/`activeHandle` pick the glyph highlight color (null for
+   * neither); Viewport.tsx wires them in F1.5.
    */
   drawBoxPreview(
     encoder: GPUCommandEncoder,
     view: McpmCameraView,
     builtBox: GridBox,
     pendingBox: GridBox,
+    hoverHandle: GizmoHandleId | null,
+    activeHandle: GizmoHandleId | null,
   ): void;
   /** Tonemap the accum buffer into `target`: Reinhard + contrast + sRGB gamma. */
   tonemap(
@@ -422,8 +427,18 @@ export function createRenderGraph(
     view: McpmCameraView,
     builtBox: GridBox,
     pendingBox: GridBox,
+    hoverHandle: GizmoHandleId | null,
+    activeHandle: GizmoHandleId | null,
   ): void {
-    boxPreviewPass.draw(encoder, accumView(), view, builtBox, pendingBox);
+    boxPreviewPass.draw(
+      encoder,
+      accumView(),
+      view,
+      builtBox,
+      pendingBox,
+      hoverHandle,
+      activeHandle,
+    );
   }
 
   function tonemap(

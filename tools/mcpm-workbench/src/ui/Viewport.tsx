@@ -484,7 +484,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
         // the galaxy dots.
         if (points && now < boxPreviewUntil) {
-          graph.drawBoxPreview(encoder, cam, h.box, deriveGridBox(s.grid));
+          // hoverHandle/activeHandle wired by F1.5 — the pointer gizmo-drag plumbing.
+          graph.drawBoxPreview(encoder, cam, h.box, deriveGridBox(s.grid), null, null);
         }
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
