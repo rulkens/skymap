@@ -311,9 +311,9 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // reaches the fork-parity 'over' branch of the march loop at all.
       name: 'toggle:additive',
       run: async (page) => {
-        await page.getByRole('button', { name: 'additive: on', exact: true }).click();
+        await page.getByRole('button', { name: 'additive blend: on', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
-        await page.getByRole('button', { name: 'additive: off', exact: true }).click();
+        await page.getByRole('button', { name: 'additive blend: off', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -322,9 +322,9 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // because a pass that only ever runs cannot show what disabling it breaks.
       name: 'toggle:galaxy-overlay',
       run: async (page) => {
-        await page.getByRole('button', { name: 'galaxies: off', exact: true }).click();
+        await page.getByRole('button', { name: 'galaxy overlay: off', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
-        await page.getByRole('button', { name: 'galaxies: on', exact: true }).click();
+        await page.getByRole('button', { name: 'galaxy overlay: on', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

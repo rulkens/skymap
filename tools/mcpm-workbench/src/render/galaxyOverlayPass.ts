@@ -37,11 +37,14 @@ export function createGalaxyOverlayPass(opts: {
   });
   const pointLayout = device.createBindGroupLayout({
     label: 'mcpm-galaxy-points-layout',
-    entries: [0, 1, 2].map((binding) => ({
-      binding,
-      visibility: GPUShaderStage.VERTEX,
-      buffer: { type: 'read-only-storage' as const },
-    })),
+    entries: [
+      ...[0, 1, 2, 3].map((binding) => ({
+        binding,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: 'read-only-storage' as const },
+      })),
+      { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' as const } },
+    ],
   });
 
   const pipeline = device.createRenderPipeline({
@@ -81,6 +84,21 @@ export function createGalaxyOverlayPass(opts: {
     layout: camLayout,
     entries: [{ binding: 0, resource: { buffer: camBuffer } }],
   });
+
+  // weightScale un-does deriveAgentWeights' mean of 1e6/n, so the shader sees mean 1
+  // whatever the catalog size; written once — it only changes with a harness rebuild,
+  // which recreates this pass.
+  const overlayParams = device.createBuffer({
+    label: 'mcpm-galaxy-overlay-params',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(
+    overlayParams,
+    0,
+    new Float32Array([agents.nDataPoints / 1e6, 0, 0, 0]),
+  );
+
   const pointBindGroup = device.createBindGroup({
     label: 'mcpm-galaxy-points',
     layout: pointLayout,
@@ -88,6 +106,8 @@ export function createGalaxyOverlayPass(opts: {
       { binding: 0, resource: { buffer: agents.x } },
       { binding: 1, resource: { buffer: agents.y } },
       { binding: 2, resource: { buffer: agents.z } },
+      { binding: 3, resource: { buffer: agents.weight } },
+      { binding: 4, resource: { buffer: overlayParams } },
     ],
   });
 
@@ -109,6 +129,7 @@ export function createGalaxyOverlayPass(opts: {
     },
     dispose(): void {
       camBuffer.destroy();
+      overlayParams.destroy();
     },
   };
 }

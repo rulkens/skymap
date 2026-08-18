@@ -12,6 +12,8 @@ export type AgentBuffers = {
   readonly y: GPUBuffer;
   readonly z: GPUBuffer;
   readonly theta: GPUBuffer;
+  /** Deposit weights (io slot 6): data rows carry deriveAgentWeights' mass term, mean 1e6/nDataPoints. */
+  readonly weight: GPUBuffer;
   readonly nDataPoints: number;
   readonly count: number;
 };
