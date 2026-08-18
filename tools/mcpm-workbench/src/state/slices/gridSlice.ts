@@ -5,15 +5,14 @@ import type { GridElement } from '../../../@types/GridElement';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
- * defaultGridSlice — auto-fit OFF by user directive: the catalog's outliers
- * stretch an auto-fitted box until the local volume is a sliver of it, so the
- * manual 200 Mpc origin-centred cube is the better boot view. `divisor: 1`
- * is `deriveGridBox`'s BASE_LONG_AXIS (256) unscaled; divisor 0.75 covers
+ * defaultGridSlice — the manual 200 Mpc origin-centred cube is the boot
+ * view (an auto-fit-on-boot box would stretch to the catalog's outliers
+ * until the local volume is a sliver of it). `divisor: 1` is
+ * `deriveGridBox`'s BASE_LONG_AXIS (256) unscaled; divisor 0.75 covers
  * Phase 1's "a ≥300-class grid runs continuously" exit criterion at 341
  * (S12 added a finer 0.5 notch above it, 512 long axis).
  */
 export const defaultGridSlice: GridSlice = {
-  autoFit: false,
   divisor: 1,
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],
@@ -28,10 +27,6 @@ export const defaultGridSlice: GridSlice = {
 // clears `importedBox` — a loaded preset's box wins until the user steers
 // the controls again, then the override has to die (setResolvedGrid, below,
 // is NOT one of these: it records a completed build, not a user edit).
-export function setAutoFit(prev: GridSlice, autoFit: boolean): GridSlice {
-  return { ...prev, autoFit, importedBox: null };
-}
-
 export function setDivisor(prev: GridSlice, divisor: number): GridSlice {
   return { ...prev, divisor, importedBox: null };
 }
@@ -51,6 +46,29 @@ export function setManualSizeMpc(prev: GridSlice, manualSizeMpc: Vec3): GridSlic
 /** V3's load-side setter: installs a preset's grid box verbatim. */
 export function setImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
   return { ...prev, importedBox };
+}
+
+/**
+ * fitBoxToCatalog — "auto fit" as a one-shot ACTION, not a persistent mode:
+ * snapshots `boundsMpc` into `manualCenterMpc`/`manualSizeMpc` once, and
+ * from then on the box is an ordinary manual one (editable, survives a
+ * catalog reload, etc — no boolean remembers how it got here). `paddingMpc`
+ * bakes in at click time: it's an input to the NEXT fit, not a live modifier
+ * of whatever box is already showing. A grid-control edit per the V3 ruling,
+ * so it clears `importedBox` too.
+ */
+export function fitBoxToCatalog(prev: GridSlice, boundsMpc: { min: Vec3; max: Vec3 }): GridSlice {
+  const manualCenterMpc: Vec3 = [
+    (boundsMpc.min[0] + boundsMpc.max[0]) / 2,
+    (boundsMpc.min[1] + boundsMpc.max[1]) / 2,
+    (boundsMpc.min[2] + boundsMpc.max[2]) / 2,
+  ];
+  const manualSizeMpc: Vec3 = [
+    boundsMpc.max[0] - boundsMpc.min[0] + 2 * prev.paddingMpc,
+    boundsMpc.max[1] - boundsMpc.min[1] + 2 * prev.paddingMpc,
+    boundsMpc.max[2] - boundsMpc.min[2] + 2 * prev.paddingMpc,
+  ];
+  return { ...prev, manualCenterMpc, manualSizeMpc, importedBox: null };
 }
 
 /** Records a completed fit: the resolved box, its element, and its byte budget. */

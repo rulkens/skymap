@@ -20,10 +20,11 @@ const PROBE_AGENT_COUNT = 100_000;
 export const defaultAppState: AppState = hasUrlGate('probe')
   ? {
       catalog: defaultCatalogSlice,
-      // autoFit pinned ON: the boot default is manual mode, where the
-      // auto-fit divisor is inert and the manual grid's own (256) would
-      // silently quadruple the probe grid.
-      grid: { ...defaultGridSlice, autoFit: true, divisor: PROBE_GRID_DIVISOR },
+      // Grid derivation is always the manual path ("auto fit" is a one-shot
+      // action, not a mode — gridSlice.ts's fitBoxToCatalog) — PROBE_GRID_DIVISOR
+      // alone is what keeps the probe grid small; the default manual box's own
+      // 256 long axis would otherwise ship unscaled.
+      grid: { ...defaultGridSlice, divisor: PROBE_GRID_DIVISOR },
       sim: { ...defaultSimSlice, agentCount: PROBE_AGENT_COUNT },
       view: defaultViewSlice,
       histogram: defaultHistogramSlice,

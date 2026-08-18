@@ -87,11 +87,10 @@ type ProbeWindow = { __mcpmProbeReady?: boolean };
 /** Everything but catalog identity — a change here reuses already-loaded points.
  * `grid.importedBox` (V3): loading a preset must rebuild even when none of the
  * raw config fields below moved — deriveGridBox reads the override VERBATIM,
- * so the box itself, not autoFit/divisor/manual bounds, is what changed. */
+ * so the box itself, not divisor/manual bounds, is what changed. */
 function buildKey(s: AppState): unknown[] {
   return [
     s.catalog.weightMode,
-    s.grid.autoFit,
     s.grid.divisor,
     s.grid.paddingMpc,
     s.grid.manualCenterMpc,
@@ -116,29 +115,11 @@ function catalogKey(s: AppState): unknown[] {
   return [s.catalog.sources, s.catalog.tier, s.catalog.packedDropId, s.catalog.packedSourceName];
 }
 
-/** The five fields that reshape the grid box — a change here restarts the preview timer. */
+/** The four fields that reshape the grid box — a change here restarts the preview
+ * timer. "Auto fit" (fitBoxToCatalog) is covered for free: it's a one-shot write
+ * to manualCenterMpc/manualSizeMpc, not a fifth field this key has to track. */
 function gridShapeKeyFor(s: AppState): unknown[] {
-  return [
-    s.grid.autoFit,
-    s.grid.manualCenterMpc,
-    s.grid.manualSizeMpc,
-    s.grid.divisor,
-    s.grid.paddingMpc,
-  ];
-}
-
-/**
- * The live catalog bounds (not the cached `catalog.catalogBoundsMpc`, which
- * lags one render behind the points this build is about to use) — the ONLY
- * caller with the raw Float32Array in hand, so it recomputes rather than
- * trusting the store's copy. `deriveGridBox` never throws null here: auto-fit
- * with `points` present always has bounds.
- */
-function gridBoxFor(s: AppState, points: CatalogPoints): GridBox {
-  const bounds = s.grid.autoFit ? catalogBounds(points.positions) : null;
-  const box = deriveGridBox(s.grid, bounds);
-  if (!box) throw new Error('gridBoxFor: deriveGridBox returned null with points already loaded');
-  return box;
+  return [s.grid.manualCenterMpc, s.grid.manualSizeMpc, s.grid.divisor, s.grid.paddingMpc];
 }
 
 /** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
@@ -503,7 +484,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
         // the galaxy dots.
         if (points && now < boxPreviewUntil) {
-          graph.drawBoxPreview(encoder, cam, h.box, gridBoxFor(s, points));
+          graph.drawBoxPreview(encoder, cam, h.box, deriveGridBox(s.grid));
         }
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
@@ -520,7 +501,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         catalog: setCatalogLoaded(st.catalog, pts.count, weights.nanCount, boundsMpc),
       }));
 
-      const box = gridBoxFor(s, pts);
+      const box = deriveGridBox(s.grid);
       // Free the old device memory BEFORE allocating the new grids: the two sets of
       // buffers must never be resident together on a box-sized allocation.
       disposeHarness();

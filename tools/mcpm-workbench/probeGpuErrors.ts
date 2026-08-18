@@ -324,8 +324,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // download, fed straight back into the hidden file input importParams
       // reads. The GPU-relevant half is what setImportedBox provokes: it lands
       // in buildKey (Viewport.tsx), so this is the only step that exercises a
-      // harness rebuild triggered by a grid-box change with none of autoFit /
-      // divisor / manual bounds moving.
+      // harness rebuild triggered by a grid-box change with none of divisor /
+      // manual bounds moving.
       name: 'params:save-load',
       run: async (page) => {
         const [download] = await Promise.all([
@@ -340,19 +340,20 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     },
     {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
-      // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
+      // of gridShapeKeyFor's four fields (Viewport.tsx) — no other step here ever touches
       // one, so this was the only render layer no gate exercised at all (final-review.md
       // §A/X3). The "Grid box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's
       // `gridBoxOpen` starts false) and its body doesn't exist in the DOM until opened —
       // the fold button's accessible name is its title text, not an aria-label. S10: the
-      // grid divisor select is one shared control for both auto-fit and manual mode
-      // (`deriveGridBox`'s BASE_LONG_AXIS/divisor), so option '2' reaches the same
-      // long axis (128) the old "long-axis target" select's '128' option did. S12
-      // swapped the pill row for a <select> — its accessible name is still distinct
-      // from the raymarch preview's own "divisor" slider (see raymarch:divisor
-      // below), a role="combobox" vs role="slider" AND a different name, so no
-      // probe selector or screen-reader name collides. BOX_PREVIEW_MS is 200ms;
-      // SETTLE_FRAMES worth of frames comfortably outlasts it.
+      // grid divisor select is deriveGridBox's one resolution lever regardless of how
+      // the box's center/size got set (S13.5: "auto fit" is a one-shot action now, not
+      // a mode), so option '2' reaches the same long axis (128) the old "long-axis
+      // target" select's '128' option did. S12 swapped the pill row for a <select> —
+      // its accessible name is still distinct from the raymarch preview's own
+      // "divisor" slider (see raymarch:divisor below), a role="combobox" vs
+      // role="slider" AND a different name, so no probe selector or screen-reader name
+      // collides. BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames comfortably
+      // outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
         await page.getByRole('button', { name: 'Grid box', exact: true }).click();

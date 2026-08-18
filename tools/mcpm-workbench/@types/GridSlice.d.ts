@@ -7,19 +7,25 @@ import type { GridElement } from './GridElement';
  * GridSlice — the grid-box CONFIG (what the panel edits) plus the last
  * RESOLVED box (what the sim actually runs on). `box`/`resolvedElement`/
  * `byteBudget` are null until the first successful build — the panel can be
- * open before any catalog has loaded. Manual mode takes center + size +
- * a long-axis resolution, never free dims (`autoFitGridBox`'s own contract);
- * one `divisor` derives that resolution for BOTH auto-fit and manual — one
- * resolution lever, not two (see `deriveGridBox`).
+ * open before any catalog has loaded. Derivation is always the manual path:
+ * center + size + a long-axis resolution, never free dims (`autoFitGridBox`'s
+ * own contract) — `divisor` is the one resolution lever (see `deriveGridBox`).
+ *
+ * "Auto fit" is a one-shot ACTION (`fitBoxToCatalog`, gridSlice.ts), not a
+ * persistent mode: it snapshots the current catalog bounds straight into
+ * `manualCenterMpc`/`manualSizeMpc` once, `paddingMpc` baked in at click
+ * time. There is no boolean flag recording "how the box got here" — after
+ * the click it's an ordinary manual box, editable the same as any hand-tuned
+ * one.
  *
  * `importedBox` is V3's load-side override: `deriveGridBox` returns it
  * VERBATIM when set, so a loaded preset reloads to a bit-identical box
- * regardless of autoFit/divisor/manual bounds. Every setter below that
- * represents a user editing the grid controls clears it back to null — the
- * override exists only until the user starts steering again.
+ * regardless of divisor/manual bounds. Every setter below that represents a
+ * user editing the grid controls (including `fitBoxToCatalog`) clears it
+ * back to null — the override exists only until the user starts steering
+ * again.
  */
 export type GridSlice = {
-  readonly autoFit: boolean;
   readonly divisor: number;
   readonly paddingMpc: number;
   readonly manualCenterMpc: Vec3;

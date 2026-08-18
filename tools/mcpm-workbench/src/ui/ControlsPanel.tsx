@@ -373,16 +373,13 @@ function ControlsPanel(): ReactNode {
 
   const onSaveParams = (): void => {
     const s = store.getSnapshot();
-    const box = deriveGridBox(s.grid, s.catalog.catalogBoundsMpc);
-    if (!box) {
-      setParamsStatus('save params: no grid box yet — load a catalog first');
-      return;
-    }
+    // deriveGridBox is never null now that grid derivation is always the
+    // manual path (S13.5) — manualCenterMpc/manualSizeMpc always have a value.
     const json = exportParams({
       params: s.sim.params,
       agentCount: s.sim.agentCount,
       initMode: s.sim.initMode,
-      gridBox: box,
+      gridBox: deriveGridBox(s.grid),
     });
     triggerDownload(`${downloadStem(new Date())}-params.json`, json, 'application/json');
     setParamsStatus(null);

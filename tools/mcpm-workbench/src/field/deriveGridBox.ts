@@ -20,27 +20,25 @@ function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
 }
 
 /**
- * deriveGridBox — the ONE place grid-panel config + the loaded catalog's
- * bounds become the actual simulated GridBox. Viewport calls this to build
- * the harness; GridBoxPanel's dims readout calls it too, from the same
- * state, so the two can never disagree about what "the box" is. Null when
- * auto-fit is on but no catalog has finished loading yet — there is nothing
- * to fit around.
+ * deriveGridBox — the ONE place grid-panel config becomes the actual
+ * simulated GridBox. Viewport calls this to build the harness;
+ * GridBoxPanel's dims readout calls it too, from the same state, so the two
+ * can never disagree about what "the box" is. Derivation is always the
+ * manual path — center + size (`manualBounds`) at the panel's `divisor` —
+ * since "auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot action
+ * that writes those same fields rather than a persistent mode this function
+ * has to branch on; padding is baked into `manualSizeMpc` at that point, so
+ * `autoFitGridBox` is always called with padding 0 here — adding
+ * `grid.paddingMpc` again on top would double-pad every derivation after a
+ * fit. Never null: `manualCenterMpc`/`manualSizeMpc` always have a value.
  *
  * `grid.importedBox` (V3) short-circuits all of the above: a loaded preset's
  * box is returned VERBATIM, so the panel's dims readout and the harness both
  * see the exact box the preset was saved with, not a recomputation from the
- * current (possibly unrelated) autoFit/divisor/manual state.
+ * current (possibly unrelated) divisor/manual state.
  */
-export function deriveGridBox(
-  grid: GridSlice,
-  catalogBoundsMpc: { min: Vec3; max: Vec3 } | null,
-): GridBox | null {
+export function deriveGridBox(grid: GridSlice): GridBox {
   if (grid.importedBox) return grid.importedBox;
-  const bounds = grid.autoFit
-    ? catalogBoundsMpc
-    : manualBounds(grid.manualCenterMpc, grid.manualSizeMpc);
-  if (!bounds) return null;
-  const paddingMpc = grid.autoFit ? grid.paddingMpc : 0;
-  return autoFitGridBox(bounds, longAxisFor(grid.divisor), paddingMpc);
+  const bounds = manualBounds(grid.manualCenterMpc, grid.manualSizeMpc);
+  return autoFitGridBox(bounds, longAxisFor(grid.divisor), 0);
 }

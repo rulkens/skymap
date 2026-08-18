@@ -1,26 +1,34 @@
 /**
- * GridBoxPanel — auto-fit vs. manual grid-box configuration. Both modes
- * share ONE divisor (never free dims): Viewport and this panel's dims
- * readout both call `deriveGridBox`, so they can't disagree. This panel
- * holds no catalog data, so the readout reads the cached
- * `catalog.catalogBoundsMpc` instead of re-deriving from raw positions.
- * The manual sliders also feed Viewport's box-preview timer, which
- * watches the same store fields directly — no wiring needed here.
+ * GridBoxPanel — grid-box configuration. Both modes share ONE divisor
+ * (never free dims): Viewport and this panel's dims readout both call
+ * `deriveGridBox`, so they can't disagree. This panel holds no catalog
+ * data, so the readout reads the cached `catalog.catalogBoundsMpc` instead
+ * of re-deriving from raw positions.
+ *
+ * "Auto fit" is a one-shot ACTION (`fitBoxToCatalog`, gridSlice.ts), not a
+ * persistent mode: clicking it snapshots the current catalog bounds into
+ * the manual center/size fields below, `paddingMpc` baked in at click
+ * time — the padding slider is an input to the NEXT fit, not a live
+ * modifier of whatever box is already showing. After the click the box is
+ * an ordinary manual one, editable the same as any hand-tuned box; the
+ * manual sliders also feed Viewport's box-preview timer, which watches the
+ * same store fields directly — no wiring needed here.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import Button from '../../../../src/components/common/Button/Button';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import { deriveGridBox } from '../field/deriveGridBox';
 import { useStore } from '../state/useStore';
 import {
-  setAutoFit,
+  fitBoxToCatalog,
   setDivisor,
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
 } from '../state/slices/gridSlice';
 import { useAppStore } from './storeContext';
-import ToggleRow from './ToggleRow';
+import styles from './GridBoxPanel.module.css';
 
 // User-specified stepping: finer than 1 in quarter steps, coarser in half
 // steps — a discrete list, not a uniform-step range, so Slider (fixed step)
@@ -91,7 +99,7 @@ function GridBoxPanel(): ReactNode {
   const store = useAppStore();
   const grid = useStore(store, (s) => s.grid);
   const catalogBoundsMpc = useStore(store, (s) => s.catalog.catalogBoundsMpc);
-  const box = deriveGridBox(grid, catalogBoundsMpc);
+  const box = deriveGridBox(grid);
 
   return (
     <div
@@ -103,11 +111,16 @@ function GridBoxPanel(): ReactNode {
         color: 'var(--color-fg-muted)',
       }}
     >
-      <ToggleRow
-        label="auto-fit"
-        on={grid.autoFit}
-        onChange={(on) => store.setState((s) => ({ ...s, grid: setAutoFit(s.grid, on) }))}
-      />
+      <Button
+        className={styles.autoFitButton}
+        disabled={!catalogBoundsMpc}
+        onClick={() => {
+          if (!catalogBoundsMpc) return;
+          store.setState((s) => ({ ...s, grid: fitBoxToCatalog(s.grid, catalogBoundsMpc) }));
+        }}
+      >
+        auto fit
+      </Button>
       <div>
         <div style={divisorRowStyle}>
           <label htmlFor="grid-divisor" style={divisorLabelStyle}>
@@ -129,68 +142,61 @@ function GridBoxPanel(): ReactNode {
           </select>
         </div>
         <div style={dimsReadoutStyle}>
-          {box
-            ? `${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox`
-            : 'no catalog loaded yet'}
+          {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox
         </div>
       </div>
-      {grid.autoFit ? (
-        <label>
-          padding (Mpc)
-          <input
-            type="number"
-            style={fieldStyle}
-            value={grid.paddingMpc}
-            onChange={(e) =>
-              store.setState((s) => ({
-                ...s,
-                grid: setPaddingMpc(s.grid, parseFloat(e.target.value)),
-              }))
-            }
-          />
-        </label>
-      ) : (
-        <>
-          {AXES.map(({ axis, label }) => (
-            <ParamSlider
-              key={`center-${label}`}
-              label={`center ${label}`}
-              value={grid.manualCenterMpc[axis]}
-              min={-500}
-              max={500}
-              step={1}
-              format={(v) => v.toFixed(0)}
-              info="Centre of the simulated box (Mpc)."
-              onChange={(v) =>
-                store.setState((s) => ({
-                  ...s,
-                  grid: setManualCenterMpc(s.grid, withAxis(s.grid.manualCenterMpc, axis, v)),
-                }))
-              }
-              path={`grid.manualCenterMpc.${axis}`}
-            />
-          ))}
-          {AXES.map(({ axis, label }) => (
-            <ParamSlider
-              key={`size-${label}`}
-              label={`size ${label}`}
-              value={grid.manualSizeMpc[axis]}
-              min={10}
-              max={1000}
-              step={5}
-              format={(v) => v.toFixed(0)}
-              info="Extent of the simulated box along this axis (Mpc)."
-              onChange={(v) =>
-                store.setState((s) => ({
-                  ...s,
-                  grid: setManualSizeMpc(s.grid, withAxis(s.grid.manualSizeMpc, axis, v)),
-                }))
-              }
-              path={`grid.manualSizeMpc.${axis}`}
-            />
-          ))}
-        </>
-      )}
+      <label>
+        padding (Mpc)
+        <input
+          type="number"
+          style={fieldStyle}
+          value={grid.paddingMpc}
+          onChange={(e) =>
+            store.setState((s) => ({
+              ...s,
+              grid: setPaddingMpc(s.grid, parseFloat(e.target.value)),
+            }))
+          }
+        />
+      </label>
+      {AXES.map(({ axis, label }) => (
+        <ParamSlider
+          key={`center-${label}`}
+          label={`center ${label}`}
+          value={grid.manualCenterMpc[axis]}
+          min={-500}
+          max={500}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          info="Centre of the simulated box (Mpc)."
+          onChange={(v) =>
+            store.setState((s) => ({
+              ...s,
+              grid: setManualCenterMpc(s.grid, withAxis(s.grid.manualCenterMpc, axis, v)),
+            }))
+          }
+          path={`grid.manualCenterMpc.${axis}`}
+        />
+      ))}
+      {AXES.map(({ axis, label }) => (
+        <ParamSlider
+          key={`size-${label}`}
+          label={`size ${label}`}
+          value={grid.manualSizeMpc[axis]}
+          min={10}
+          max={1000}
+          step={5}
+          format={(v) => v.toFixed(0)}
+          info="Extent of the simulated box along this axis (Mpc)."
+          onChange={(v) =>
+            store.setState((s) => ({
+              ...s,
+              grid: setManualSizeMpc(s.grid, withAxis(s.grid.manualSizeMpc, axis, v)),
+            }))
+          }
+          path={`grid.manualSizeMpc.${axis}`}
+        />
+      ))}
     </div>
   );
 }
