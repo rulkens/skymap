@@ -2,10 +2,10 @@
  * createRenderGraph — the HDR-accumulate → tonemap stage (same shape as
  * tools/flow-workbench's): it owns the shared `rgba16float` accum texture every
  * MCPM layer draws into and the fullscreen tonemap that resolves it to the
- * swap-chain. `drawTrace` and `drawSplat` are the two mutually exclusive base
- * layers and each CLEARS that texture, so an additive layer (`drawGalaxyOverlay`)
- * must be encoded after one of them; and a pass that is constructed but never
- * registered here is silently never opened.
+ * swap-chain. No layer clears: `clear()` opens the frame, then any subset of
+ * `drawTrace` / `drawSplat` / `drawGalaxyOverlay` loads and blends one/one onto
+ * it, in that order. A pass constructed but never registered here is silently
+ * never opened.
  *
  * `accumView()` is a method, not a field: the texture is recreated on resize, so
  * a cached view would dangle, and the blit's `layout:'auto'` bind group is
@@ -13,7 +13,7 @@
  */
 import type { AgentBuffers } from '../../@types/AgentBuffers';
 import type { GridBox } from '../../@types/GridBox';
-import type { GalaxyOverlayPass } from './galaxyOverlayPass';
+import type { GalaxyOverlayOptions, GalaxyOverlayPass } from './galaxyOverlayPass';
 import { createGalaxyOverlayPass } from './galaxyOverlayPass';
 import type { SplatPass, SplatView } from './splatPass';
 import { createSplatPass } from './splatPass';
@@ -32,22 +32,30 @@ export type RenderGraph = {
   /** Recreate the accum texture + blit bind group iff the drawable size changed. */
   resize(width: number, height: number): void;
   /**
-   * Build the trace raymarch over `source` and make it the frame's base layer.
-   * Called once the sim harness exists (it owns the trace buffer); replaces and
-   * disposes any pass attached before.
+   * Black out the accum target. Every frame opens with this, whether or not a layer
+   * follows: with all layers off the tonemap would otherwise resolve last frame's pixels.
+   */
+  clear(encoder: GPUCommandEncoder): void;
+  /**
+   * Build the trace raymarch over `source`. Called once the sim harness exists (it owns
+   * the trace buffer); replaces and disposes any pass attached before.
    */
   attachTrace(source: TraceSource): void;
   /** March the attached trace pass into the accum target. Throws if none is attached. */
   drawTrace(encoder: GPUCommandEncoder, view: TraceView): void;
   /**
-   * Build the two agent-fed views — the splat and the galaxy-point overlay — over the
+   * Build the two agent-fed layers — the swarm splat and the galaxy points — over the
    * harness's lanes. Both die with their harness, so this is re-called on every rebuild.
    */
   attachAgents(agents: AgentBuffers, box: GridBox): void;
-  /** Splat the agents into the accum target. CLEARS it: this is the whole frame. */
+  /** Splat the free agents onto whatever is already in the accum target. */
   drawSplat(encoder: GPUCommandEncoder, view: SplatView): void;
-  /** Dot the catalog points over whatever is already in the accum target. */
-  drawGalaxyOverlay(encoder: GPUCommandEncoder, view: McpmCameraView): void;
+  /** Dot the catalog points onto whatever is already in the accum target. */
+  drawGalaxyOverlay(
+    encoder: GPUCommandEncoder,
+    view: McpmCameraView,
+    options: GalaxyOverlayOptions,
+  ): void;
   /** Tonemap the accum buffer into `target`: Reinhard + contrast + sRGB gamma. */
   tonemap(
     encoder: GPUCommandEncoder,
@@ -125,6 +133,21 @@ export function createRenderGraph(
     return accumTexView;
   }
 
+  function clear(encoder: GPUCommandEncoder): void {
+    const pass = encoder.beginRenderPass({
+      label: 'mcpm-accum-clear',
+      colorAttachments: [
+        {
+          view: accumView(),
+          loadOp: 'clear',
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
+          storeOp: 'store',
+        },
+      ],
+    });
+    pass.end();
+  }
+
   function attachTrace(source: TraceSource): void {
     tracePass?.dispose();
     tracePass = createTracePass({
@@ -160,11 +183,15 @@ export function createRenderGraph(
     splatPass.draw(encoder, accumView(), view);
   }
 
-  function drawGalaxyOverlay(encoder: GPUCommandEncoder, view: McpmCameraView): void {
+  function drawGalaxyOverlay(
+    encoder: GPUCommandEncoder,
+    view: McpmCameraView,
+    options: GalaxyOverlayOptions,
+  ): void {
     if (!galaxyOverlayPass) {
       throw new Error('RenderGraph.drawGalaxyOverlay: call attachAgents() before drawing');
     }
-    galaxyOverlayPass.draw(encoder, accumView(), view);
+    galaxyOverlayPass.draw(encoder, accumView(), view, options);
   }
 
   function tonemap(
@@ -211,6 +238,7 @@ export function createRenderGraph(
     hdrFormat: HDR_FORMAT,
     accumView,
     resize,
+    clear,
     attachTrace,
     drawTrace,
     attachAgents,

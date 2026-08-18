@@ -2,21 +2,29 @@ import type { ScalarFieldPaletteId } from '../../../src/@types/data/volume/Scala
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 /**
- * ViewSlice — the render mode plus the tool-local orbit camera (T10's trace
- * pass consumes camera + raymarch params via its own narrow options type,
- * not this one directly — Viewport maps between the two). `traceRaymarch`
- * and `agentSplat` render today; `pathTracer`/`previewExport` are spec §7's
- * remaining two views and Viewport falls back to the raymarch for them.
- * Path-tracer knobs are that track's own addition — not stubbed here, same
- * reasoning as the deferred `histogram` slice.
+ * ViewSlice — the render layers plus the tool-local orbit camera (T10's trace
+ * pass consumes camera + raymarch params via its own narrow options type, not
+ * this one directly — Viewport maps between the two). Spec §7's remaining
+ * views (path tracer, preview export) will each add their OWN layer flag and
+ * panel section here; their knobs are that track's own addition, not stubbed
+ * now, same reasoning as the deferred `histogram` slice.
  */
 export type ViewSlice = {
-  readonly mode: 'traceRaymarch' | 'agentSplat' | 'pathTracer' | 'previewExport';
   /**
-   * Dot the catalog points over the raymarch. A no-op in `agentSplat`, which
-   * already draws them (10000x weighted) as part of the swarm.
+   * Independent layers, NOT a mode picker: any subset may be on, including
+   * none. Viewport composites them additively over a cleared target in
+   * declaration order — raymarch, agents, galaxies.
    */
-  readonly overlayGalaxies: boolean;
+  readonly layers: {
+    readonly raymarch: boolean;
+    readonly agents: boolean;
+    readonly galaxies: boolean;
+  };
+  readonly galaxies: {
+    readonly intensity: number;
+    /** Screen-space dot radius; galaxyPoints.wesl's `radiusPx`. */
+    readonly pointSizePx: number;
+  };
   readonly camera: {
     readonly yaw: number;
     readonly pitch: number;

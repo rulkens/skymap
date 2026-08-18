@@ -1,13 +1,13 @@
-// mcpm/splatTransform.wesl — Polyphorm's cs_particles_transform: every particle projected
-// to a pixel and counted into an atomic u32 screen buffer, data points 10000x, agents 10x.
+// mcpm/splatTransform.wesl — Polyphorm's cs_particles_transform: every FREE AGENT projected
+// to a pixel and counted into an atomic u32 screen buffer, 10x each.
 // WebGPU has no atomic storage texture, so the fork's InterlockedAdd on a RWTexture2D<uint>
 // becomes atomicAdd into a row-major buffer (y*width + x) — an exact behavioural match, and
 // the conclusion the fork's own WGSL draft reached.
 //
 // DIVERGENCES: agents already live in voxel space here, so the fork's mold-space normalise,
-// its y/z flip and its trim box all go, exactly as fragment.wesl drops them; and its
-// galaxy_weight gate (which suppresses data-point splats entirely below 0.001) has no knob
-// in this tool, so data points always splat.
+// its y/z flip and its trim box all go, exactly as fragment.wesl drops them; and the fork's
+// data-point splat (10000x, gated on galaxy_weight) is dropped wholesale — the workbench
+// draws the catalog as its own Galaxies layer, so this kernel starts at index nDataPoints.
 
 import package::mcpm::camera::McpmCamera;
 import package::mcpm::camera::voxelToNdc;
@@ -15,14 +15,13 @@ import package::mcpm::io::sim;
 import package::mcpm::io::agentX;
 import package::mcpm::io::agentY;
 import package::mcpm::io::agentZ;
-import package::mcpm::io::agentTheta;
 
 // group(0)/(1) are io.wesl's contract; group(2) is this pass's, as tracePass does.
 @group(2) @binding(0) var<uniform> cam: McpmCamera;
 @group(2) @binding(1) var<storage, read_write> splat: array<atomic<u32>>;
 
-// cs_particles_transform.hlsl:99,102 — splatBlit.wesl's 'val < 10000' branch reads both back.
-const DATA_POINT_WEIGHT: u32 = 10000u;
+// cs_particles_transform.hlsl:102. The fork's companion DATA_POINT_WEIGHT (10000) is gone
+// with the data-point branch, and with it splatBlit.wesl's 'val < 10000' fork.
 const AGENT_WEIGHT: u32 = 10u;
 // The fork dispatches (10,10,10). Flat here: the index is only a bijection onto the particle
 // range, and unlike propagate this pass has no dispatch-truncation quirk to preserve — a
@@ -31,7 +30,9 @@ const SPLAT_WG_SIZE: u32 = 256u;
 
 @compute @workgroup_size(SPLAT_WG_SIZE)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let idx = gid.x;
+  // Base offset, not a filter: the host dispatches nAgents invocations, so shifting the
+  // index past the catalog prefix is what makes the swarm free-agents-only.
+  let idx = gid.x + u32(sim.nDataPoints);
   if (idx >= u32(sim.nDataPoints + sim.nAgents)) { return; }
 
   let ndc = voxelToNdc(cam, vec3<f32>(agentX[idx], agentY[idx], agentZ[idx]));
@@ -51,11 +52,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let w = u32(cam.screenWidth);
   if (out.x >= w || out.y >= u32(cam.screenHeight)) { return; }
 
-  // Indices [0, nDataPoints) carry seedAgents' theta = -5 sentinel, tested as propagate.wesl
-  // tests it. The fork's own 't < 0.0' is equivalent: an agent theta comes out of acos.
-  if (agentTheta[idx] < -1.0) {
-    atomicAdd(&splat[out.y * w + out.x], DATA_POINT_WEIGHT);
-  } else {
-    atomicAdd(&splat[out.y * w + out.x], AGENT_WEIGHT);
-  }
+  atomicAdd(&splat[out.y * w + out.x], AGENT_WEIGHT);
 }

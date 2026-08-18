@@ -1,5 +1,5 @@
 /**
- * createGalaxyOverlayPass — the catalog points as additive dots over the raymarch
+ * createGalaxyOverlayPass — the catalog points as additive dots, the Galaxies layer
  * (mcpm/galaxyPoints.wesl): six vertices per instance, positions vertex-pulled from the
  * first `nDataPoints` entries of the agent lanes.
  *
@@ -12,9 +12,20 @@ import type { GridBox } from '../../@types/GridBox';
 import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from './writeMcpmCamera';
 import pointsWgsl from '../../../../src/services/gpu/shaders/mcpm/galaxyPoints.wesl?static';
 
+/** The layer's two live knobs; `pointSizePx` is galaxyPoints.wesl's screen-space `radiusPx`. */
+export type GalaxyOverlayOptions = {
+  readonly intensity: number;
+  readonly pointSizePx: number;
+};
+
 export type GalaxyOverlayPass = {
-  /** Draw the points into `target`. LOADS it: the raymarch is the base layer underneath. */
-  draw(encoder: GPUCommandEncoder, target: GPUTextureView, view: McpmCameraView): void;
+  /** Draw the points into `target`. LOADS and adds onto whatever layers came before. */
+  draw(
+    encoder: GPUCommandEncoder,
+    target: GPUTextureView,
+    view: McpmCameraView,
+    options: GalaxyOverlayOptions,
+  ): void;
   dispose(): void;
 };
 
@@ -85,19 +96,16 @@ export function createGalaxyOverlayPass(opts: {
     entries: [{ binding: 0, resource: { buffer: camBuffer } }],
   });
 
+  // OverlayParams: [weightScale, intensity, radiusPx] + pad to the 16-byte minimum.
   // weightScale un-does deriveAgentWeights' mean of 1e6/n, so the shader sees mean 1
-  // whatever the catalog size; written once — it only changes with a harness rebuild,
-  // which recreates this pass.
+  // whatever the catalog size; it only changes with a harness rebuild, which recreates
+  // this pass, so only the two live knobs are rewritten per draw.
   const overlayParams = device.createBuffer({
     label: 'mcpm-galaxy-overlay-params',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  device.queue.writeBuffer(
-    overlayParams,
-    0,
-    new Float32Array([agents.nDataPoints / 1e6, 0, 0, 0]),
-  );
+  const overlayF32 = new Float32Array([agents.nDataPoints / 1e6, 0, 0, 0]);
 
   const pointBindGroup = device.createBindGroup({
     label: 'mcpm-galaxy-points',
@@ -112,9 +120,17 @@ export function createGalaxyOverlayPass(opts: {
   });
 
   return {
-    draw(encoder: GPUCommandEncoder, target: GPUTextureView, view: McpmCameraView): void {
+    draw(
+      encoder: GPUCommandEncoder,
+      target: GPUTextureView,
+      view: McpmCameraView,
+      options: GalaxyOverlayOptions,
+    ): void {
       writeMcpmCamera(camF32, opts.box, view);
       device.queue.writeBuffer(camBuffer, 0, camF32);
+      overlayF32[1] = options.intensity;
+      overlayF32[2] = options.pointSizePx;
+      device.queue.writeBuffer(overlayParams, 0, overlayF32);
 
       const pass = encoder.beginRenderPass({
         label: 'mcpm-galaxy-points',

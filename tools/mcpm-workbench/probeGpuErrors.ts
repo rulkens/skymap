@@ -212,12 +212,27 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 }
 
 /**
+ * Drive the layer switches to an exact configuration. `check`/`uncheck` and not
+ * `click`, so a step states the state it wants rather than a delta off whatever
+ * the previous one left behind.
+ */
+async function setLayers(page: Page, layers: Record<string, boolean>): Promise<void> {
+  for (const [title, on] of Object.entries(layers)) {
+    const pill = page.getByRole('checkbox', { name: `Toggle ${title}`, exact: true });
+    if (on) await pill.check();
+    else await pill.uncheck();
+  }
+}
+
+/**
  * The exercise: boot, drive the run/reset/clear-trace commands that rebuild
- * bind groups or clear buffers outside the steady state, then each rendering
- * path in turn — the raymarch, the agent splat that replaces it, and the
- * galaxy overlay that layers over it. Order matters once: `resize` runs while
- * splat mode is on, so it covers the screen-sized accumulation buffer as well
- * as the graph's own target. Track V's path tracer appends its step here.
+ * bind groups or clear buffers outside the steady state, then the render
+ * layers in every combination that opens a distinct pass set — agents alone,
+ * all three, none at all. Layers are switched through each section's header
+ * checkbox (CollapsibleSection renders it with `aria-label="Toggle <title>"`).
+ * Order matters once: `resize` runs last, with all layers on, so it covers the
+ * splat's screen-sized accumulation buffer as well as the graph's own target.
+ * Track V's path tracer appends its step here.
  */
 function buildSteps(url: string): readonly ExerciseStep[] {
   return [
@@ -278,37 +293,9 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // The agent splat: a compute dispatch into the atomic screen buffer plus its
-      // tonemap blit, replacing the raymarch as the frame's base layer. Left in splat
-      // mode so `resize` below exercises the accumulation buffer's rebuild too.
-      name: 'run:splat',
-      run: async (page) => {
-        await page.getByRole('button', { name: 'splat: off', exact: true }).click();
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      // Canvas resize rebuilds the accum target, the blit's `layout:'auto'` bind group
-      // and — because the step above left splat mode on — the splat's screen-sized
-      // accumulation buffer, which a stale size would index straight past the end of.
-      name: 'resize',
-      run: async (page) => {
-        await page.setViewportSize({ width: 900, height: 620 });
-        await settleFrames(page, SETTLE_FRAMES);
-        await page.setViewportSize(VIEWPORT);
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      name: 'run:raymarch-again',
-      run: async (page) => {
-        await page.getByRole('button', { name: 'raymarch: off', exact: true }).click();
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      // The raymarch's other composite. It defaults ON, so only turning it off
-      // reaches the fork-parity 'over' branch of the march loop at all.
+      // The raymarch's own composite (an in-fragment choice, unrelated to the pass-level
+      // blend). It defaults ON, so only turning it off reaches the fork-parity 'over'
+      // branch of the march loop at all.
       name: 'toggle:additive',
       run: async (page) => {
         await page.getByRole('button', { name: 'additive blend: on', exact: true }).click();
@@ -318,13 +305,53 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // The galaxy-point overlay, an additive layer over the raymarch — on, then off,
-      // because a pass that only ever runs cannot show what disabling it breaks.
-      name: 'toggle:galaxy-overlay',
+      // Agents joins the two default-on layers: all three passes encode into one frame.
+      name: 'layers:agents-on',
       run: async (page) => {
-        await page.getByRole('button', { name: 'galaxy overlay: off', exact: true }).click();
+        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
         await settleFrames(page, SETTLE_FRAMES);
-        await page.getByRole('button', { name: 'galaxy overlay: on', exact: true }).click();
+      },
+    },
+    {
+      // The splat alone over the graph's clear — the only frame that proves the layer
+      // renders without a base layer underneath it.
+      name: 'layers:agents-only',
+      run: async (page) => {
+        await setLayers(page, { Raymarch: false, Agents: true, Galaxies: false });
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      name: 'layers:all-on',
+      run: async (page) => {
+        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // Nothing but the clear pass: a frame with no draws at all still has to encode.
+      name: 'layers:all-off',
+      run: async (page) => {
+        await setLayers(page, { Raymarch: false, Agents: false, Galaxies: false });
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      name: 'layers:restore',
+      run: async (page) => {
+        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // Canvas resize rebuilds the accum target, the blit's `layout:'auto'` bind group
+      // and — because every layer is on here — the splat's screen-sized accumulation
+      // buffer, which a stale size would index straight past the end of.
+      name: 'resize',
+      run: async (page) => {
+        await page.setViewportSize({ width: 900, height: 620 });
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.setViewportSize(VIEWPORT);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

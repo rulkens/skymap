@@ -195,16 +195,15 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
         const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
         const cam = cameraViewFor(s, h.box, [canvas.width, canvas.height]);
-        // Exactly one base layer per frame, and it clears the accum target itself, so any
-        // additive layer must be encoded after it, not before. The two unimplemented modes
-        // fall back to the raymarch rather than leaving the target uncleared.
-        if (s.view.mode === 'agentSplat') {
+        // Independent layers over one clear, back to front. The clear is unconditional:
+        // with every layer off the frame is black, not last frame's pixels.
+        const { layers } = s.view;
+        graph.clear(encoder);
+        if (layers.raymarch) graph.drawTrace(encoder, traceViewFor(s, h.box, cam));
+        if (layers.agents) {
           graph.drawSplat(encoder, { ...cam, sampleWeight: s.view.raymarch.sampleWeight });
-        } else {
-          graph.drawTrace(encoder, traceViewFor(s, h.box, cam));
-          // Only reachable here: splat mode already draws the data points, at 10000x.
-          if (s.view.overlayGalaxies) graph.drawGalaxyOverlay(encoder, cam);
         }
+        if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
       };
@@ -410,10 +409,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       e.preventDefault();
       store.setState((s) => ({
         ...s,
-        view: setCameraDistance(
-          s.view,
-          s.view.camera.distance * Math.exp(e.deltaY * ZOOM_SPEED),
-        ),
+        view: setCameraDistance(s.view, s.view.camera.distance * Math.exp(e.deltaY * ZOOM_SPEED)),
       }));
     };
     canvas.addEventListener('pointerdown', onPointerDown);

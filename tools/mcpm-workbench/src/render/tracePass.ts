@@ -50,7 +50,7 @@ export type TraceView = {
 };
 
 export type TracePass = {
-  /** Open the raymarch into `target`. CLEARS it: this is the frame's base layer. */
+  /** March into `target`. LOADS and adds: the frame's clear is the graph's, not a layer's. */
   draw(encoder: GPUCommandEncoder, target: GPUTextureView, view: TraceView): void;
   dispose(): void;
 };
@@ -103,7 +103,18 @@ export function createTracePass(opts: {
     fragment: {
       module: fragmentModule,
       entryPoint: 'fs',
-      targets: [{ format: opts.targetFormat }],
+      targets: [
+        {
+          format: opts.targetFormat,
+          // Every layer blends one/one premultiplied over the graph's cleared target.
+          // Orthogonal to the march's OWN 'additive' uniform, which chooses how the
+          // slabs composite with each other inside the fragment.
+          blend: {
+            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+          },
+        },
+      ],
     },
     primitive: { topology: 'triangle-list' },
   });
@@ -186,14 +197,7 @@ export function createTracePass(opts: {
       writeView(view);
       const pass = encoder.beginRenderPass({
         label: 'mcpm-trace',
-        colorAttachments: [
-          {
-            view: target,
-            loadOp: 'clear',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-            storeOp: 'store',
-          },
-        ],
+        colorAttachments: [{ view: target, loadOp: 'load', storeOp: 'store' }],
       });
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, simBindGroup);

@@ -3,7 +3,7 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
- * defaultViewSlice — trace raymarch, framing a box a few hundred Mpc across
+ * defaultViewSlice — raymarch + galaxies on, framing a box a few hundred Mpc across
  * (the sim's own scale, not the runtime's power-of-ten ladder). `inferno`
  * matches the runtime MCPM volume entry's default palette (`src/data/sources/mcpm.ts`)
  * so a workbench/app comparison isn't also a palette diff. `trimDensity`/
@@ -12,8 +12,8 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
  * also a knob diff. `additive` is the deliberate exception (see ViewSlice).
  */
 export const defaultViewSlice: ViewSlice = {
-  mode: 'traceRaymarch',
-  overlayGalaxies: false,
+  layers: { raymarch: true, agents: false, galaxies: true },
+  galaxies: { intensity: 0.6, pointSizePx: 2 },
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetOffsetMpc: [0, 0, 0] },
   raymarch: {
     opticalThickness: 0.25,
@@ -25,12 +25,20 @@ export const defaultViewSlice: ViewSlice = {
   },
 };
 
-export function setViewMode(prev: ViewSlice, mode: ViewSlice['mode']): ViewSlice {
-  return { ...prev, mode };
+export function setLayerEnabled(
+  prev: ViewSlice,
+  layer: keyof ViewSlice['layers'],
+  on: boolean,
+): ViewSlice {
+  return { ...prev, layers: { ...prev.layers, [layer]: on } };
 }
 
-export function setOverlayGalaxies(prev: ViewSlice, overlayGalaxies: boolean): ViewSlice {
-  return { ...prev, overlayGalaxies };
+export function setGalaxyIntensity(prev: ViewSlice, intensity: number): ViewSlice {
+  return { ...prev, galaxies: { ...prev.galaxies, intensity } };
+}
+
+export function setGalaxyPointSize(prev: ViewSlice, pointSizePx: number): ViewSlice {
+  return { ...prev, galaxies: { ...prev.galaxies, pointSizePx } };
 }
 
 const PITCH_LIMIT = 1.5;

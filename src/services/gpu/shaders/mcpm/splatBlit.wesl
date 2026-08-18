@@ -3,10 +3,11 @@
 // shader then samples; the intermediate exists only to bridge the two, so this port drops
 // it and draws the colour straight into the HDR accum target.
 //
-// The '10000' threshold is the fork's own, hardcoded in both halves rather than read from a
-// uniform: a pixel carrying a data-point splat renders RED, everything below it takes the
-// teal agent ramp scaled by sampleWeight. QUIRK kept verbatim — 1000+ agents on one pixel
-// also reach 10000 and flip to red, indistinguishable from a galaxy.
+// DELIBERATE FORK DIVERGENCE (user directive): the fork's '10000' threshold — a pixel
+// carrying a data-point splat renders RED, everything below takes the teal agent ramp — is
+// gone along with the data-point splat itself (splatTransform.wesl). The catalog is its own
+// Galaxies layer in this tool, so one continuous ramp is all that is left to draw, and the
+// fork's quirk of 1000+ agents on a pixel flipping to red goes with it.
 
 import package::mcpm::vertex::McpmVsOut;
 
@@ -26,15 +27,7 @@ fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
   let px = vec2<u32>(input.pos.xy);
   let raw = f32(splat[px.y * blit.screenWidth + px.x]);
 
-  // cs_particles_blit.hlsl:35-39 — the scale applies to the agent branch only.
-  var v = raw;
-  if (raw < 10000.0) { v = raw * blit.sampleWeight; }
-
-  // ps_particles_color.hlsl:11-17. The exponential is unclamped upstream and stays so: it
-  // is bounded in (0, 1) for any finite non-negative v anyway.
-  if (v > 9999.0) {
-    return vec4<f32>(1.0 - exp(-0.0001 * v), 0.0, 0.0, 1.0);
-  }
-  let a = v / 3.0;
+  // cs_particles_blit.hlsl:35-39 then ps_particles_color.hlsl:11-17, agent branch only.
+  let a = raw * blit.sampleWeight / 3.0;
   return vec4<f32>(0.6 * a, a, 0.7 * a, 1.0);
 }

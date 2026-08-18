@@ -4,6 +4,9 @@
  * to the sim slice; the harness reads `params` fresh each step, so these
  * are live with no rebuild. Agent count / weight mode / init mode / grid
  * box are structural — Viewport watches them and rebuilds the harness.
+ *
+ * The Raymarch / Agents / Galaxies sections are the three render layers: each
+ * section's header pill IS its layer's on/off switch, and any subset may be on.
  */
 import { useState, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
@@ -23,12 +26,13 @@ import {
 } from '../state/slices/simSlice';
 import {
   setAdditive,
+  setGalaxyIntensity,
+  setGalaxyPointSize,
+  setLayerEnabled,
   setOpticalThickness,
-  setOverlayGalaxies,
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
-  setViewMode,
 } from '../state/slices/viewSlice';
 import { useAppStore } from './storeContext';
 import Toggle from './Toggle';
@@ -171,13 +175,6 @@ const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
   },
 ];
 
-// The two view modes that render; ViewSlice's other two are Track V's remaining work and
-// Viewport falls back to the raymarch for them, so offering them here would toggle nothing.
-const VIEW_MODES: readonly { readonly mode: ViewSlice['mode']; readonly label: string }[] = [
-  { mode: 'traceRaymarch', label: 'raymarch' },
-  { mode: 'agentSplat', label: 'splat' },
-];
-
 const RAYMARCH_SETTERS: {
   readonly [K in RaymarchSliderKey]: (prev: ViewSlice, value: number) => ViewSlice;
 } = {
@@ -196,6 +193,10 @@ function ControlsPanel(): ReactNode {
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
+  const [agentsOpen, setAgentsOpen] = useState(false);
+  const [galaxiesOpen, setGalaxiesOpen] = useState(false);
+  const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
+    store.setState((s) => ({ ...s, view: setLayerEnabled(s.view, layer, on) }));
 
   return (
     <div className={styles.root}>
@@ -307,92 +308,98 @@ function ControlsPanel(): ReactNode {
 
         <GridBoxPanel />
 
+        {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
+            picker. Section order is the compositing order Viewport encodes them in. */}
         <CollapsibleSection
-          title="View"
+          title="Raymarch"
           open={raymarchOpen}
           onToggle={() => setRaymarchOpen((v) => !v)}
+          headerToggle={view.layers.raymarch}
+          onHeaderToggleChange={toggleLayer('raymarch')}
         >
-          <div>
-            <span
-              style={{
-                fontFamily: 'var(--font-family-mono)',
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-fg-label)',
-              }}
-            >
-              mode
-            </span>
-            <div
-              style={{
-                display: 'flex',
-                gap: 'var(--space-3)',
-                margin: 'var(--space-2) 0 var(--space-4)',
-              }}
-            >
-              {VIEW_MODES.map((entry) => (
-                <Toggle
-                  key={entry.mode}
-                  label={entry.label}
-                  on={view.mode === entry.mode}
-                  onToggle={() =>
-                    store.setState((s) => ({ ...s, view: setViewMode(s.view, entry.mode) }))
-                  }
-                />
-              ))}
-            </div>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+            {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
+            <Toggle
+              label="additive blend"
+              on={view.raymarch.additive}
+              onToggle={() =>
+                store.setState((s) => ({
+                  ...s,
+                  view: setAdditive(s.view, !s.view.raymarch.additive),
+                }))
+              }
+            />
           </div>
-          {/* Everything below is raymarch-only, so splat mode hides it — the overlay is
-              inert there too (data points already drawn at 10000x). */}
-          {view.mode === 'traceRaymarch' && (
-            <>
-              <div
-                style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}
-              >
-                {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
-                <Toggle
-                  label="additive blend"
-                  on={view.raymarch.additive}
-                  onToggle={() =>
-                    store.setState((s) => ({
-                      ...s,
-                      view: setAdditive(s.view, !s.view.raymarch.additive),
-                    }))
-                  }
-                />
-                <Toggle
-                  label="galaxy overlay"
-                  on={view.overlayGalaxies}
-                  onToggle={() =>
-                    store.setState((s) => ({
-                      ...s,
-                      view: setOverlayGalaxies(s.view, !s.view.overlayGalaxies),
-                    }))
-                  }
-                />
-              </div>
-              <SliderGroup title="Trace">
-                {RAYMARCH_SLIDERS.map((spec) => (
-                  <ParamSlider
-                    key={spec.key}
-                    label={spec.label}
-                    value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
-                    min={spec.min}
-                    max={spec.max}
-                    step={spec.step}
-                    format={spec.format}
-                    info={spec.info}
-                    onChange={(v) =>
-                      store.setState((s) => ({
-                        ...s,
-                        view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
-                      }))
-                    }
-                    path={`view.raymarch.${spec.key}`}
-                  />
-                ))}
-              </SliderGroup>
-            </>
-          )}
+          <SliderGroup title="Trace">
+            {RAYMARCH_SLIDERS.map((spec) => (
+              <ParamSlider
+                key={spec.key}
+                label={spec.label}
+                value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
+                min={spec.min}
+                max={spec.max}
+                step={spec.step}
+                format={spec.format}
+                info={spec.info}
+                onChange={(v) =>
+                  store.setState((s) => ({
+                    ...s,
+                    view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
+                  }))
+                }
+                path={`view.raymarch.${spec.key}`}
+              />
+            ))}
+          </SliderGroup>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Agents"
+          open={agentsOpen}
+          onToggle={() => setAgentsOpen((v) => !v)}
+          headerToggle={view.layers.agents}
+          onHeaderToggleChange={toggleLayer('agents')}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-family-mono)',
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--color-fg-muted)',
+            }}
+          >
+            free agents only — catalog points are the Galaxies layer
+          </span>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Galaxies"
+          open={galaxiesOpen}
+          onToggle={() => setGalaxiesOpen((v) => !v)}
+          headerToggle={view.layers.galaxies}
+          onHeaderToggleChange={toggleLayer('galaxies')}
+        >
+          <ParamSlider
+            label="intensity"
+            value={view.galaxies.intensity}
+            min={0.05}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            info="Brightness of each catalog dot, before its own mass weighting."
+            onChange={(v) => store.setState((s) => ({ ...s, view: setGalaxyIntensity(s.view, v) }))}
+            path="view.galaxies.intensity"
+          />
+          <ParamSlider
+            label="point size (px)"
+            value={view.galaxies.pointSizePx}
+            min={0.5}
+            max={8}
+            step={0.5}
+            format={(v) => v.toFixed(1)}
+            info="Screen-space dot radius — constant with distance, so far galaxies stay visible."
+            onChange={(v) => store.setState((s) => ({ ...s, view: setGalaxyPointSize(s.view, v) }))}
+            path="view.galaxies.pointSizePx"
+          />
         </CollapsibleSection>
       </div>
     </div>

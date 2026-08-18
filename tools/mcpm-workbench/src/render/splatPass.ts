@@ -1,10 +1,11 @@
 /**
- * createSplatPass — Polyphorm's particle view: a compute dispatch splats every agent into
- * an atomic u32 screen buffer (mcpm/splatTransform.wesl), then a fullscreen fragment
- * tonemaps that buffer into the HDR accum target (mcpm/splatBlit.wesl).
+ * createSplatPass — Polyphorm's particle view: a compute dispatch splats every FREE AGENT
+ * into an atomic u32 screen buffer (mcpm/splatTransform.wesl), then a fullscreen fragment
+ * tonemaps that buffer into the HDR accum target (mcpm/splatBlit.wesl). The catalog prefix
+ * of the lanes is skipped here — those rows are the Galaxies layer's to draw.
  *
  * Bind groups follow io.wesl's contract so the kernel reads the agent lanes unchanged —
- * group(0) a `McpmUniforms`-shaped buffer for the counts, group(1) slots 3..5 and 7, and
+ * group(0) a `McpmUniforms`-shaped buffer for the counts, group(1) slots 3..5, and
  * group(2) this pass's own camera plus the accumulation buffer. Layouts are explicit,
  * never 'auto'. The pass owns its group(0) buffer rather than sharing the sim's, for the
  * same two reasons tracePass does: it reads only counts, and the sim's is COMPUTE-only.
@@ -25,7 +26,7 @@ export type SplatView = McpmCameraView & {
 export type SplatPass = {
   /** Follow the drawable size; the accumulation buffer is one u32 per pixel. */
   resize(width: number, height: number): void;
-  /** Splat then blit into `target`. CLEARS it: in splat mode this is the whole frame. */
+  /** Splat then blit into `target`. LOADS and adds: the graph clears the frame, not this. */
   draw(encoder: GPUCommandEncoder, target: GPUTextureView, view: SplatView): void;
   dispose(): void;
 };
@@ -56,7 +57,7 @@ export function createSplatPass(opts: {
   });
   const agentLayout = device.createBindGroupLayout({
     label: 'mcpm-splat-agent-layout',
-    entries: [3, 4, 5, 7].map((binding) => ({
+    entries: [3, 4, 5].map((binding) => ({
       binding,
       visibility: GPUShaderStage.COMPUTE,
       buffer: { type: 'storage' as const },
@@ -92,7 +93,20 @@ export function createSplatPass(opts: {
       bindGroupLayouts: [blitLayout],
     }),
     vertex: { module: vertexModule, entryPoint: 'vs' },
-    fragment: { module: blitModule, entryPoint: 'fs', targets: [{ format: opts.targetFormat }] },
+    fragment: {
+      module: blitModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format: opts.targetFormat,
+          // One/one premultiplied, like every other layer: the graph owns the clear.
+          blend: {
+            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+          },
+        },
+      ],
+    },
     primitive: { topology: 'triangle-list' },
   });
 
@@ -134,7 +148,6 @@ export function createSplatPass(opts: {
       { binding: 3, resource: { buffer: agents.x } },
       { binding: 4, resource: { buffer: agents.y } },
       { binding: 5, resource: { buffer: agents.z } },
-      { binding: 7, resource: { buffer: agents.theta } },
     ],
   });
 
@@ -192,19 +205,14 @@ export function createSplatPass(opts: {
       splat.setBindGroup(0, simBindGroup);
       splat.setBindGroup(1, agentBindGroup);
       splat.setBindGroup(2, transformBindGroup);
-      splat.dispatchWorkgroups(Math.ceil(agents.count / SPLAT_WG_SIZE));
+      // Free agents only — the kernel adds nDataPoints to its invocation index, so the
+      // dispatch must cover the SUFFIX of the lanes, not all of them.
+      splat.dispatchWorkgroups(Math.ceil((agents.count - agents.nDataPoints) / SPLAT_WG_SIZE));
       splat.end();
 
       const blit = encoder.beginRenderPass({
         label: 'mcpm-splat-blit',
-        colorAttachments: [
-          {
-            view: target,
-            loadOp: 'clear',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-            storeOp: 'store',
-          },
-        ],
+        colorAttachments: [{ view: target, loadOp: 'load', storeOp: 'store' }],
       });
       blit.setPipeline(blitPipeline);
       blit.setBindGroup(0, blitBindGroup);
