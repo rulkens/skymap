@@ -173,7 +173,7 @@ export function createTracePass(opts: {
     const eye = worldToVoxel(source.box, [view.eyeMpc[0], view.eyeMpc[1], view.eyeMpc[2]]);
     // Shared with the splat and overlay passes: camera.wesl's projection is the exact
     // inverse of the ray setup below, and only holds if both read the same basis.
-    const { right, up, forward } = cameraBasis(view.eyeMpc, view.targetMpc, view.upMpc);
+    const { right, up, forward } = cameraBasis(view.eyeMpc, view.targetMpc, view.upMpc, source.box);
     const tanHalfFov = Math.tan(view.fovYRad * 0.5);
 
     viewF32.set(eye, 0);

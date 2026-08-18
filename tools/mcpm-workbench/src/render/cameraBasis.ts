@@ -1,4 +1,5 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { GridBox } from '../../@types/GridBox';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 
@@ -15,11 +16,15 @@ export type CameraBasis = {
  *
  * Directions need no world→voxel transform of their own: GridBox voxels are cubic by
  * construction, so that map is a uniform scale and this normalises anyway.
+ *
+ * `box` is unused until F2.3 rotates these directions by R⁻¹ — GridBox has no
+ * rotation field yet, so today this is identity.
  */
 export function cameraBasis(
   eyeMpc: Readonly<Vec3>,
   targetMpc: Readonly<Vec3>,
   upMpc: Readonly<Vec3>,
+  box: GridBox,
 ): CameraBasis {
   const forward = normalize3([
     targetMpc[0] - eyeMpc[0],
