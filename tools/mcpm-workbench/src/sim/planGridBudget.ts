@@ -1,8 +1,8 @@
 import type { GridBox } from '../../@types/GridBox';
 import type { GridBudget } from '../../@types/GridBudget';
 import type { GridElement } from '../../@types/GridElement';
+import { BYTES_PER_ELEMENT } from './createGridBuffers';
 
-const BYTES_PER_ELEMENT: Readonly<Record<GridElement, number>> = { f16: 2, f32: 4 };
 const AGENT_LANES = 6; // agentX/Y/Z/Phi/Theta/Weight — io.wesl slots 3..8
 const BYTES_PER_AGENT_LANE_ENTRY = 4; // f32; only the grids carry GridElem
 const DIM_GRANULARITY = 8; // decay dispatches dims/8 with no bounds tail

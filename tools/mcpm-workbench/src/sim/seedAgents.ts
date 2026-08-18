@@ -5,7 +5,10 @@ import type { GridBox } from '../../@types/GridBox';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { worldToVoxel } from '../field/worldToVoxel';
 
-/** The fork's UI offers agents in millions; the dispatch quantum is 100k. */
+/**
+ * The fork's UI offers agents in millions; the dispatch quantum is 100k —
+ * also the propagate dispatch's truncation granularity (encodeStep.ts).
+ */
 export const AGENT_COUNT_STEP = 100_000;
 
 const TWO_PI = Math.PI * 2;
@@ -40,8 +43,10 @@ export function seedAgents(opts: {
   readonly seed: number;
 }): SeededAgents {
   const { points, weights, box, agentCount, mode, seed } = opts;
-  if (agentCount % AGENT_COUNT_STEP !== 0) {
-    throw new Error(`seedAgents: agentCount must be a multiple of ${AGENT_COUNT_STEP}`);
+  // Below AGENT_COUNT_STEP, the propagate dispatch's truncation (encodeStep.ts) can
+  // floor gridZ to 0 and silently run nothing; a positive multiple keeps it >= 1.
+  if (agentCount < AGENT_COUNT_STEP || agentCount % AGENT_COUNT_STEP !== 0) {
+    throw new Error(`seedAgents: agentCount must be a positive multiple of ${AGENT_COUNT_STEP}`);
   }
 
   const nData = points.count;

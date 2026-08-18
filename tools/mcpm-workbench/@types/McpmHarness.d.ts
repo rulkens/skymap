@@ -2,6 +2,7 @@ import type { GridBox } from './GridBox';
 import type { GridElement } from './GridElement';
 import type { AgentInitMode } from './AgentInitMode';
 import type { McpmParams } from './McpmParams';
+import type { GpuContext } from '../../../src/@types/rendering/GpuContext';
 
 /**
  * McpmHarness — the stepping MCPM simulation: GPU buffers, pipelines and the
@@ -11,6 +12,14 @@ import type { McpmParams } from './McpmParams';
 export type McpmHarness = {
   readonly element: GridElement;
   readonly box: GridBox;
+  /**
+   * The device the harness allocated via `initGpu`. T10's render passes and
+   * T11's viewport must consume this rather than calling `initGpu` again on
+   * the same canvas — a second call reconfigures the swap chain and would
+   * hand the render passes a device without the compute limits the kernels
+   * need (see task-T9-review.md concern 4).
+   */
+  readonly gpu: GpuContext;
   /** Queues one propagate + decay pair and advances the step counter. */
   step(params: McpmParams): void;
   /** Zeroes the trace grid only; agents and deposit survive. */

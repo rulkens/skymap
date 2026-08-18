@@ -1,8 +1,11 @@
 import type { GridBox } from '../../@types/GridBox';
 import type { GridElement } from '../../@types/GridElement';
 
-const BYTES_PER_ELEMENT: Readonly<Record<GridElement, number>> = { f16: 2, f32: 4 };
-const UNIFORM_BYTES = 64; // McpmUniforms: 16 x 4-byte scalars, no padding (io.wesl)
+// Single-sourced here: planGridBudget's preflight and encodeStep's uniform write
+// must agree with these byte-for-byte or the preflight greenlights an allocation
+// that overflows, or the write silently disagrees with the buffer it targets.
+export const BYTES_PER_ELEMENT: Readonly<Record<GridElement, number>> = { f16: 2, f32: 4 };
+export const UNIFORM_BYTES = 64; // McpmUniforms: 16 x 4-byte scalars, no padding (io.wesl)
 const HISTOGRAM_BINS = 17; // constants.wesl N_HISTOGRAM_BINS: 16 counts + running max
 
 /**

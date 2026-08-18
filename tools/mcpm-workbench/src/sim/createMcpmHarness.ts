@@ -21,7 +21,7 @@ import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?st
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
 import { planGridBudget } from './planGridBudget';
-import { seedAgents } from './seedAgents';
+import { AGENT_COUNT_STEP, seedAgents } from './seedAgents';
 import { specializeGridElement } from './specializeGridElement';
 
 // io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2.
@@ -51,10 +51,20 @@ export async function createMcpmHarness(opts: {
   readonly initMode: AgentInitMode;
   readonly seed: number;
 }): Promise<McpmHarness> {
+  // Every input check runs BEFORE any GPU allocation: a bad count or an empty
+  // selection must fail without leaking buffers already created downstream.
+  //
   // catalogBounds and the seeder both misbehave silently on an empty selection
   // (every tier excluded), so refuse it here rather than fit a grid to nothing.
   if (opts.points.count === 0) {
     throw new Error('createMcpmHarness: no catalog points — every source tier is excluded');
+  }
+  // Mirrors seedAgents' own check: enforced here too so a bad count is refused
+  // before any GPU allocation, not after createGridBuffers has already run.
+  if (opts.agentCount < AGENT_COUNT_STEP || opts.agentCount % AGENT_COUNT_STEP !== 0) {
+    throw new Error(
+      `createMcpmHarness: agentCount must be a positive multiple of ${AGENT_COUNT_STEP}`,
+    );
   }
 
   const gpu = await initGpu(opts.canvas, {
@@ -191,6 +201,7 @@ export async function createMcpmHarness(opts: {
   return {
     element,
     box: opts.box,
+    gpu,
     step(params: McpmParams): void {
       // Flip BEFORE encoding, as the fork does at the top of its propagate block.
       parity = parity === 0 ? 1 : 0;
