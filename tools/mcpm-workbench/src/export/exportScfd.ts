@@ -4,6 +4,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
 import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
+import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 
 // FRAME_TO_WORLD already applies the frame rotation at render time
 // (buildRhizomeVolume.ts precedent) — writing it again here would compound it.
@@ -20,10 +21,11 @@ export function exportScfd(values: Float32Array, box: GridBox): ArrayBuffer {
   // layout, not numpy C-order — so 'x-fastest' skips the packer's transpose
   // (which would otherwise swap X and Z a second time; see packLogTraceVoxels).
   const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, box.dims, 'x-fastest');
+  const half = boxHalfExtentMpc(box.sizeMpc);
   const origin: Vec3 = [
-    box.centerMpc[0] - box.sizeMpc[0] / 2,
-    box.centerMpc[1] - box.sizeMpc[1] / 2,
-    box.centerMpc[2] - box.sizeMpc[2] / 2,
+    box.centerMpc[0] - half[0],
+    box.centerMpc[1] - half[1],
+    box.centerMpc[2] - half[2],
   ];
   const cube: ScalarCube = {
     dims: box.dims,
