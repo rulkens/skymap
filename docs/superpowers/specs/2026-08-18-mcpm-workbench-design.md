@@ -221,7 +221,7 @@ is *closer* to upstream than the fork's own r32float port.
 | deposit A / B     | `GridElem`             | 1.24 GB each     | 27-tap diffusion reads neighbours — needs a separate read and write target |
 | trace             | `GridElem`             | 1.24 GB          | decay is per-voxel in place (`×(0.985 + 0.01·rand)`), so no ping-pong      |
 | agents            | 6 × `f32` SoA          | 240 MB at 10M    | x, y, z, phi, theta, weight; length `n_agents + n_data_points`             |
-| histogram         | `atomic<u32>` × 18     | 72 B             | 17 bins + max                                                              |
+| histogram         | `atomic<u32>` × 17     | 68 B             | 16 count bins + running max at index 16                                   |
 | splat / volpath   | `atomic<u32>` / `vec4f`| screen-sized     | already buffers in the fork                                                |
 
 WGSL has no type generics, so "one code path" is bought with a single-line textual

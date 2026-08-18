@@ -382,9 +382,12 @@ becomes a `grid.wesl` buffer index and **nothing else changes**. Specifically pr
 `docs/superpowers/research/m2/wgsl-drafts/cs_field_decay.wgsl` +
 `m2/wgsl-drafts/translation-notes.md` in that repo.
 
-**Contract (spec §5):** 27-tap diffusion weighted `1/sqrt(|dx| + |dy| + |dz|)` (centre 1.0), with the
-`%`-wrap asymmetry behind its quirk override; deposit × `decay_factor`; trace
-× `(0.985 + 0.01·rand)` per voxel. Dispatch `[8,8,8]` over `dims/8` with **no bounds tail** — this is
+**Contract (spec §5):** 27-tap diffusion. The fork's DEFAULT weighting is its `all()` bug, behind
+`QUIRK_DECAY_WEIGHT_ALL_INT3`: 19 of the 27 taps (centre + faces + edges) weigh 1.0 and only the 8
+corners get `1/sqrt(3)`; quirk-OFF is the *intended* centre-only-1.0 kernel with
+`1/sqrt(|dx| + |dy| + |dz|)` falloff elsewhere. The `%`-wrap asymmetry sits behind its own quirk
+override; deposit × `decay_factor`; trace × `(0.985 + 0.01·rand)` per voxel behind
+`QUIRK_DITHERED_TRACE_DECAY`. Dispatch `[8,8,8]` over `dims/8` with **no bounds tail** — this is
 why every grid dimension must be a multiple of 8 (T7 enforces it). Deposit needs A/B ping-pong
 because the 27-tap reads neighbours; trace decays in place.
 
@@ -644,7 +647,7 @@ export function createMcpmHarness(opts: {
   the flag and the device cannot disagree.
 
 - **Buffers (spec §5 table):** deposit A/B and trace as `array<GridElem>`; agents as six `f32` SoA
-  buffers of length `n_agents + n_data_points`; histogram as 18 × `atomic<u32>` (17 bins + max).
+  buffers of length `n_agents + n_data_points`; histogram as 17 × `atomic<u32>` (16 count bins + running max at index 16).
 - **Preflight:** `planGridBudget` runs before any allocation and refuses by name, reporting the
   largest long-axis resolution that would fit. WebGPU exposes no total-memory limit, only per-buffer
   ones, so the total is reported for the human to judge (T11's HUD), never enforced.
