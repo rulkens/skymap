@@ -58,22 +58,40 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 2.35,
   },
   venus: {
-    // Mie-dominated: thick CO2 + H2SO4 haze, dense near the cloud tops, under a warm
-    // Rayleigh tint.
+    // Altitude 0 is the tau = 1 CLOUD TOP (50 mbar, 68.8 km up), not the 92 bar surface: the
+    // drawn texture is already unresolved cloud, and the 41 optical depths of blue Rayleigh
+    // below it are unmarchable. `planetRadiusKm` therefore draws the shell 68 km low — 1.1%
+    // of the radius, and raising it would desync the shell from the rasterised sphere.
     planetRadiusKm: seededPlanet('venus').radiusKm,
-    atmosphereTopKm: seededPlanet('venus').radiusKm + 100,
+    atmosphereTopKm: seededPlanet('venus').radiusKm + 40, // [M] haze tops ~110 km = +41
     constituents: [
       {
-        scatter: [12e-3, 10e-3, 7e-3],
+        // [D] CO2/N2 at 50 mbar, 233 K (He+21 sigmas). tau(440) = 0.022 above the reference:
+        // correctness only — invisible under the cloud, and NOT a colour dial.
+        scatter: [7.45e-4, 1.77e-3, 4.45e-3],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 15.9 },
+        profile: { kind: 'exponential', scaleHeightKm: 5 }, // [D] kT/(mu g) at 233 K
         phase: { kind: 'rayleigh' },
       },
       {
-        scatter: [25e-3, 25e-3, 25e-3],
-        absorb: [2e-3, 2e-3, 2e-3],
-        profile: { kind: 'exponential', scaleHeightKm: 5 },
-        phase: { kind: 'henyeyGreenstein', g: 0.7 },
+        // [D] tau = 1 above the reference by definition of the level, over a 4 km scale height.
+        // [M] Grey to 1.5% over RGB, and conservative (Titov+18): NO colour here — never warm it.
+        scatter: [0.25, 0.25, 0.25],
+        absorb: [0, 0, 0],
+        profile: { kind: 'exponential', scaleHeightKm: 4 }, // [D] 4-5 km at the top, 2.8 in haze
+        // [D] Mie g 0.679/0.718/0.750 at 680/550/440; one slot, so the green anchor. HG has
+        // neither glory nor rainbow — an accepted loss, not a miss to chase by raising g.
+        phase: { kind: 'henyeyGreenstein', g: 0.72 },
+      },
+      {
+        // [L] however it is written: the near-UV absorber's identity is unsettled, and its
+        // unfitted 0.4-0.5 um slope is exactly where B lives. [D] 0.25*(1-w0)/w0 (HH74 via
+        // Bailey+26), small because most of the column sits BELOW altitude 0. Tune against
+        // the rendered disc's B/R, which must read ~0.93 (Mallama+17), not 0.71.
+        scatter: [0, 0, 0],
+        absorb: [1.75e-4, 2.58e-4, 1.26e-3],
+        profile: { kind: 'exponential', scaleHeightKm: 4 }, // mixed with the droplets
+        phase: { kind: 'henyeyGreenstein', g: 0.72 },
       },
     ],
     groundAlbedo: seededPlanet('venus').albedo,
@@ -83,22 +101,40 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 3.0,
   },
   mars: {
-    // Butterscotch sky is dust, not molecules: the red-heavy Rayleigh vec3 (inverted from
-    // Earth's) plus the Mie term ARE the dust — there is no separate dust channel.
+    // Altitude 0 is the drawn surface. Dust carries 98%+ of the extinction and both colour
+    // effects; tau_ext(880) = 0.40 [L on M], Gale's clear-season floor, is this row's one honest
+    // dial — if the disc reads flat over an already-hazy mosaic lower tau, do NOT desaturate the
+    // coefficients. No water-ice slot: that belt is seasonal and tropical, a shell is neither.
     planetRadiusKm: seededPlanet('mars').radiusKm,
     atmosphereTopKm: seededPlanet('mars').radiusKm + 60,
     constituents: [
       {
-        scatter: [8e-3, 5e-3, 3e-3],
+        // [D] CO2/N2/Ar Rayleigh at 610 Pa, 210 K (Bideau-Mehu n + He+21 King factor). Worth
+        // 0.3/0.7/1.7% of extinction at 680/550/440 — kept for correctness, not for the look.
+        scatter: [1.0e-4, 2.38e-4, 5.97e-4],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 11.1 },
+        profile: { kind: 'exponential', scaleHeightKm: 10.8 }, // [D] RT/(43.568 g/mol · 3.72076)
         phase: { kind: 'rayleigh' },
       },
       {
-        scatter: [10e-3, 10e-3, 10e-3],
-        absorb: [4e-3, 4e-3, 4e-3],
-        profile: { kind: 'exponential', scaleHeightKm: 8 },
-        phase: { kind: 'henyeyGreenstein', g: 0.6 },
+        // Dust, forward lobe. TWO lobes because one g cannot make the sunset blue: g rises
+        // toward the blue (0.766 @440 vs 0.700 @680), so a single g gives a butterscotch sky
+        // AND a butterscotch sunset. Lobe g's are Chen-Chen+19's measured DHG, the split their
+        // alpha(lambda). [M] Extinction is grey (Angstrom -0.09, five Mars years), deliberately
+        // overriding Wolff09's Q_ext, whose red bump is one narrow size bin's Mie resonance.
+        scatter: [0.022541, 0.019934, 0.019163], // [D]
+        absorb: [0.000623, 0.002516, 0.005506], // [D] omega_0 0.97 red / 0.78 blue = butterscotch
+        profile: { kind: 'exponential', scaleHeightKm: 13 }, // [M] MSL's adopted value
+        phase: { kind: 'henyeyGreenstein', g: 0.889 }, // [M] Chen-Chen+19
+      },
+      {
+        // Dust, broad lobe — same profile and same single-scattering albedo as the forward
+        // lobe, only g differs. The pair is one aerosol split by alpha, so the two rows'
+        // scatter+absorb SUM to the dust column; changing one alone breaks the extinction.
+        scatter: [0.007007, 0.006518, 0.003518], // [D]
+        absorb: [0.000194, 0.000823, 0.001011], // [D]
+        profile: { kind: 'exponential', scaleHeightKm: 13 },
+        phase: { kind: 'henyeyGreenstein', g: 0.094 }, // [M] Chen-Chen+19
       },
     ],
     groundAlbedo: seededPlanet('mars').albedo,
