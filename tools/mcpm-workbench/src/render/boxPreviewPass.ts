@@ -14,11 +14,14 @@
  * uses, or grabbing an arrow would miss where it's drawn.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { lerpVec3 } from '../../../../src/utils/math/lerpVec3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { rotateVec3ByQuat } from '../../../../src/utils/math/rotateVec3ByQuat';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { GridBox } from '../../@types/GridBox';
+import { boxBasisVectors } from '../field/boxBasisVectors';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 import { worldToVoxel } from '../field/worldToVoxel';
 import { encodeGizmoHandleId } from '../gizmo/encodeGizmoHandleId';
@@ -52,8 +55,9 @@ const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
   [0, 0, 1],
 ];
 
-// BoxUniform: boxMin vec3+pad, boxMax vec3+pad — boxLines.wesl's struct, 16-byte aligned.
-const BOX_UNIFORM_BYTES = 32;
+// BoxUniform: center, halfExtents, basisX, basisY, basisZ — each vec3+pad, 16-byte
+// aligned — boxLines.wesl's struct (plan contract §5's byte table), byte-for-byte.
+const BOX_UNIFORM_BYTES = 80;
 const LINE_VERTICES = 24; // boxLines.wesl's EDGE_CORNERS: 12 edges x 2 endpoints.
 
 // GlyphSegment{posA:vec3+widthA, posB:vec3+widthB, handleId:i32+12 pad} — 48 bytes / 12 floats,
@@ -86,14 +90,6 @@ type GlyphSegment = {
   readonly widthB: number;
   readonly handleId: number;
 };
-
-function worldBounds(box: GridBox): { min: Vec3; max: Vec3 } {
-  const half = boxHalfExtentMpc(box.sizeMpc);
-  return {
-    min: [box.centerMpc[0] - half[0], box.centerMpc[1] - half[1], box.centerMpc[2] - half[2]],
-    max: [box.centerMpc[0] + half[0], box.centerMpc[1] + half[1], box.centerMpc[2] + half[2]],
-  };
-}
 
 function addScaled(p: Readonly<Vec3>, dir: Readonly<Vec3>, scale: number): Vec3 {
   return [p[0] + dir[0] * scale, p[1] + dir[1] * scale, p[2] + dir[2] * scale];
@@ -281,9 +277,30 @@ export function createBoxPreviewPass(opts: {
       writeMcpmCamera(camF32, builtBox, view);
       device.queue.writeBuffer(camBuffer, 0, camF32);
 
-      const bounds = worldBounds(pendingBox);
-      boxF32.set(worldToVoxel(builtBox, bounds.min), 0);
-      boxF32.set(worldToVoxel(builtBox, bounds.max), 4);
+      // center is a POSITION: worldToVoxel carries it through builtBox's full affine
+      // (rotate, translate, uniform-scale) exactly as before. halfExtents and the three
+      // basis vectors are magnitudes/DIRECTIONS, not positions — halfExtents only needs
+      // the uniform voxel-size division (rotation doesn't touch a length), and each basis
+      // vector only needs builtBox's own rotation (no translate, no scale: a rotation
+      // preserves unit length) — the same "direction, not position" leg cameraBasis
+      // applies to right/up/forward in writeMcpmCamera.ts. At identity builtBox.rotation
+      // this reduces to today's plain division/no-op, so the wireframe lands exactly where
+      // it always has.
+      const half = boxHalfExtentMpc(pendingBox.sizeMpc);
+      const halfExtentsVoxel: Vec3 = [
+        half[0] / builtBox.voxelSizeMpc,
+        half[1] / builtBox.voxelSizeMpc,
+        half[2] / builtBox.voxelSizeMpc,
+      ];
+      const pendingBasis = boxBasisVectors(pendingBox.rotation);
+      const [bx, by, bz, bw] = builtBox.rotation;
+      const builtConjugate: Vec4 = [-bx, -by, -bz, bw];
+
+      boxF32.set(worldToVoxel(builtBox, pendingBox.centerMpc), 0);
+      boxF32.set(halfExtentsVoxel, 4);
+      boxF32.set(rotateVec3ByQuat(builtConjugate, pendingBasis.x), 8);
+      boxF32.set(rotateVec3ByQuat(builtConjugate, pendingBasis.y), 12);
+      boxF32.set(rotateVec3ByQuat(builtConjugate, pendingBasis.z), 16);
       device.queue.writeBuffer(boxBuffer, 0, boxF32);
 
       const arrowLengthMpc = gizmoArrowLengthMpc(view.eyeMpc, pendingBox.centerMpc, view.fovYRad);

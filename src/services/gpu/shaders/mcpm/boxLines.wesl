@@ -1,7 +1,8 @@
-// mcpm/boxLines.wesl — a 12-edge wireframe of an axis-aligned box, drawn over every other
-// layer to preview the PENDING grid box while its sliders drag. Vertex-pulled: 24 vertices,
-// line-list, no vertex buffers — corners come from BoxUniform's min/max, already converted
-// to the BUILT box's voxel space on the host (worldToVoxel), through the same shared camera
+// mcpm/boxLines.wesl — a 12-edge wireframe of an oriented box, drawn over every other
+// layer to preview the PENDING grid box while its sliders/gizmo drag. Vertex-pulled: 24
+// vertices, line-list, no vertex buffers — corners are reconstructed from BoxUniform's
+// center/halfExtents/three basis vectors, already converted to the BUILT box's voxel
+// space on the host (worldToVoxel + basis rotation), through the same shared camera
 // (package::mcpm::camera) as every other layer.
 //
 // A second vertex-pulled draw (vsGlyph/fsGlyph) renders the gizmo handle glyphs: per-axis
@@ -13,11 +14,20 @@
 import package::mcpm::camera::McpmCamera;
 import package::mcpm::camera::voxelToNdc;
 
+// F2.4 (plan contract §5's byte-layout table): center + halfExtents + 3 basis vectors,
+// each a vec3+trailing-pad 16-byte row, 80 bytes total. boxPreviewPass.ts's uniform-fill
+// packs this byte-for-byte — keep the two in sync.
 struct BoxUniform {
-  boxMin: vec3<f32>,
+  center: vec3<f32>,
   _pad0: f32,
-  boxMax: vec3<f32>,
+  halfExtents: vec3<f32>,
   _pad1: f32,
+  basisX: vec3<f32>,
+  _pad2: f32,
+  basisY: vec3<f32>,
+  _pad3: f32,
+  basisZ: vec3<f32>,
+  _pad4: f32,
 };
 
 // handleId matches encodeGizmoHandleId.ts's flat int (-1 = no hover/active handle).
@@ -73,11 +83,13 @@ const EDGE_CORNERS: array<u32, 24> = array<u32, 24>(
   0u, 4u, 1u, 5u, 3u, 7u, 2u, 6u,
 );
 
+// Oriented-box corner: center offset by ±halfExtents along each of the box's OWN basis
+// directions (three FMAs, not a matrix — spec §4) rather than an axis-aligned min/max.
 fn cornerPos(corner: u32) -> vec3<f32> {
-  let x = select(box.boxMin.x, box.boxMax.x, (corner & 1u) != 0u);
-  let y = select(box.boxMin.y, box.boxMax.y, (corner & 2u) != 0u);
-  let z = select(box.boxMin.z, box.boxMax.z, (corner & 4u) != 0u);
-  return vec3<f32>(x, y, z);
+  let sx = select(-box.halfExtents.x, box.halfExtents.x, (corner & 1u) != 0u);
+  let sy = select(-box.halfExtents.y, box.halfExtents.y, (corner & 2u) != 0u);
+  let sz = select(-box.halfExtents.z, box.halfExtents.z, (corner & 4u) != 0u);
+  return box.center + sx * box.basisX + sy * box.basisY + sz * box.basisZ;
 }
 
 struct LineVsOut {

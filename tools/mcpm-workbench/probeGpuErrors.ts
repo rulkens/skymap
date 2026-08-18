@@ -12,6 +12,7 @@
 import { chromium, type Browser, type Page, type ConsoleMessage } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
+import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const VIEWPORT = { width: 1280, height: 800 };
@@ -335,6 +336,37 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         const path = await download.path();
         if (!path) throw new Error('params:save-load: download produced no local path');
         await page.locator('input[type="file"]').setInputFiles(path);
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // F2.4: the only automated check that boxLines.wesl's oriented cornerPos
+      // reconstruction (center + halfExtents·basis, plan contract §5) is correct —
+      // no rotation UI exists yet (F2.5 adds the rotate rings), so this drives the
+      // same real preset-load path 'params:save-load' above exercises, but mutates
+      // the downloaded preset's gridBox.rotation to a non-identity quaternion before
+      // feeding it back through the file input. installImportedBox (gridSlice.ts)
+      // then makes deriveGridBox return that box VERBATIM, rotation included.
+      // grid.showGridBox defaults true (gridSlice.ts), so the wireframe is already
+      // drawn every frame regardless of the 200ms preview timer — no divisor/manual-
+      // bounds nudge needed to make this rotated box actually render.
+      name: 'gizmo:rotated-box',
+      run: async (page) => {
+        const [download] = await Promise.all([
+          page.waitForEvent('download'),
+          page.getByRole('button', { name: 'save params', exact: true }).click(),
+        ]);
+        const path = await download.path();
+        if (!path) throw new Error('gizmo:rotated-box: download produced no local path');
+        const preset = JSON.parse(await readFile(path, 'utf8')) as {
+          gridBox: { rotation: number[] };
+        };
+        // +90° about Y: [0, sin(45°), 0, cos(45°)] — the same worked case
+        // boxBasisVectors.test.ts / cameraBasis.test.ts hand-compute.
+        preset.gridBox.rotation = [0, Math.SQRT1_2, 0, Math.SQRT1_2];
+        const rotatedPath = `${path}.rotated.json`;
+        await writeFile(rotatedPath, JSON.stringify(preset));
+        await page.locator('input[type="file"]').setInputFiles(rotatedPath);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
