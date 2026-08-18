@@ -32,8 +32,12 @@ export function deriveAgentWeights(
   const nanCount = n - finiteSorted.length;
   const medianLog10Mass = median(finiteSorted);
 
+  // No finite mass in the slice degrades stellarMass to uniform: medianLog10Mass
+  // stays NaN (nothing to fill from) rather than poisoning every weight with NaN.
+  const degradeToUniform = mode === 'uniform' || finiteSorted.length === 0;
+
   const weights = new Float32Array(n);
-  if (mode === 'uniform') {
+  if (degradeToUniform) {
     weights.fill(1);
   } else {
     for (let i = 0; i < n; i++) {

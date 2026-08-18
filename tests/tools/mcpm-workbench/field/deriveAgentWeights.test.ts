@@ -46,4 +46,26 @@ describe('deriveAgentWeights', () => {
       expect(result.weights[i]).toBeCloseTo(expected, 3);
     }
   });
+
+  it('median fill reaches the weights', () => {
+    // finite sorted: 10,12 → median 11 → w = log10(11), log10(12), log10(13)
+    const input = new Float32Array([10, NaN, 12]);
+    const result = deriveAgentWeights(input, 'stellarMass');
+    const w = [Math.log10(11), Math.log10(12), Math.log10(13)];
+    const scale = 1e6 / (w[0]! + w[1]! + w[2]!);
+    // Float32Array-precision, not Float64: 3 sig figs at this magnitude.
+    expect(result.weights[1]).toBeCloseTo(w[1]! * scale, -1);
+    expect(result.weights[2]).toBeCloseTo(w[2]! * scale, -1);
+  });
+
+  it('all-NaN masses degrade to uniform weights', () => {
+    const input = new Float32Array([NaN, NaN, NaN]);
+    const result = deriveAgentWeights(input, 'stellarMass');
+    const expected = 1e6 / input.length;
+    for (let i = 0; i < result.weights.length; i++) {
+      expect(result.weights[i]).toBeCloseTo(expected, -1);
+    }
+    expect(result.medianLog10Mass).toBeNaN();
+    expect(result.nanCount).toBe(3);
+  });
 });
