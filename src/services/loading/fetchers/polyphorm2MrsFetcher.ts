@@ -1,5 +1,5 @@
 /**
- * polyphormFetcher — Fetcher<ScalarCube, PolyphormReq>.
+ * polyphorm2MrsFetcher — Fetcher<ScalarCube, Polyphorm2MRSReq>.
  *
  * Tier-aware filename: `polyphorm-2mrs-{small,medium,large}.scfd`. Mirrors
  * mcpmFetcher's `{ tier }` request shape — same physical quantity, same
@@ -9,7 +9,7 @@
  * the Volumes panel simply doesn't show "Polyphorm (2MRS)".
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { PolyphormReq } from '../../../@types/loading/PolyphormReq';
+import type { Polyphorm2MRSReq } from '../../../@types/loading/Polyphorm2MRSReq';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { Tier } from '../../../@types/data/Tier';
 import {
@@ -24,7 +24,7 @@ const FILENAME: Record<Tier, string> = {
   large: `${SCALAR_FIELD_DATA_PREFIX}/polyphorm-2mrs-large.scfd`,
 };
 
-export const polyphormFetcher: Fetcher<ScalarCube, PolyphormReq> = async (
+export const polyphorm2MrsFetcher: Fetcher<ScalarCube, Polyphorm2MRSReq> = async (
   req,
   signal,
   onProgress,

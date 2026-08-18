@@ -1,9 +1,9 @@
 import type { VolumeSourceEntry } from '../../@types/data/volume/VolumeSourceEntry';
 import { Source } from '../source';
 
-export const POLYPHORM_ENTRY = {
+export const POLYPHORM_2MRS_ENTRY = {
   type: 'volume',
-  code: Source.Polyphorm,
+  code: Source.Polyphorm2MRS,
   id: 'polyphorm-2mrs',
   label: 'Polyphorm (2MRS)',
   allSky: true, // 2MRS footprint run, same all-sky framing as MCPM

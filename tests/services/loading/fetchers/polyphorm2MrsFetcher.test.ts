@@ -1,5 +1,5 @@
 /**
- * Unit test for polyphormFetcher: maps `req.tier` to the right filename and
+ * Unit test for polyphorm2MrsFetcher: maps `req.tier` to the right filename and
  * decodes the response into a ScalarCube. We stub fetchWithProgress to
  * avoid a real network call.
  */
@@ -10,7 +10,7 @@ vi.mock('../../../../src/services/loading/fetchWithProgress', () => ({
   fetchWithProgress: vi.fn(),
 }));
 
-import { polyphormFetcher } from '../../../../src/services/loading/fetchers/polyphormFetcher';
+import { polyphorm2MrsFetcher } from '../../../../src/services/loading/fetchers/polyphorm2MrsFetcher';
 import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
 import { fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
 import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
@@ -27,7 +27,7 @@ const fakeCube: ScalarCube = {
   valueMax: 1,
 };
 
-describe('polyphormFetcher', () => {
+describe('polyphorm2MrsFetcher', () => {
   beforeEach(() => vi.mocked(fetchWithProgress).mockReset());
 
   it.each([
@@ -36,7 +36,7 @@ describe('polyphormFetcher', () => {
     ['large', 'polyphorm-2mrs-large.scfd'],
   ] as const)('fetches %s tier from %s', async (tier, expectedFilename) => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(encodeScalarField(fakeCube));
-    const cube = await polyphormFetcher({ tier }, new AbortController().signal, () => {});
+    const cube = await polyphorm2MrsFetcher({ tier }, new AbortController().signal, () => {});
     expect(fetchWithProgress).toHaveBeenCalledOnce();
     const url = vi.mocked(fetchWithProgress).mock.calls[0]![0];
     expect(url).toContain(expectedFilename);

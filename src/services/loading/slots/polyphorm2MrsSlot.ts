@@ -1,5 +1,5 @@
 /**
- * polyphormSlot — factory for the Polyphorm 2MRS volume's asset slot.
+ * polyphorm2MrsSlot — factory for the Polyphorm 2MRS volume's asset slot.
  *
  * Tier-aware (unlike cf4DensitySlot's void request), mirroring mcpmSlot. On
  * commit, hands the decoded `ScalarCube` to `volumeFieldRenderer.upload`
@@ -20,21 +20,21 @@
  */
 
 import { createAssetSlot } from '../AssetSlot';
-import { polyphormFetcher } from '../fetchers/polyphormFetcher';
-import type { PolyphormReq } from '../../../@types/loading/PolyphormReq';
+import { polyphorm2MrsFetcher } from '../fetchers/polyphorm2MrsFetcher';
+import type { Polyphorm2MRSReq } from '../../../@types/loading/Polyphorm2MRSReq';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createPolyphormSlot: SlotFactory<ScalarCube, PolyphormReq> = (state, _cb) => {
+export const createPolyphorm2MrsSlot: SlotFactory<ScalarCube, Polyphorm2MRSReq> = (state, _cb) => {
   const slot = createAssetSlot({
-    name: 'polyphorm',
-    fetch: polyphormFetcher,
+    name: 'polyphorm2Mrs',
+    fetch: polyphorm2MrsFetcher,
     commit: async (cube) => {
       const renderer = state.gpu.volumeFieldRenderer;
       if (!renderer) return;
-      const id = SOURCE_REGISTRY[Source.Polyphorm].id;
+      const id = SOURCE_REGISTRY[Source.Polyphorm2MRS].id;
       // Upload the cube; the renderer reads this field's per-cube static
       // config (contrastCenter, envelope, palette) from the registry and
       // its user-tunable knobs from `state.settings.volumes.items` per
@@ -55,7 +55,7 @@ export const createPolyphormSlot: SlotFactory<ScalarCube, PolyphormReq> = (state
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
       console.log(
-        `[engine] polyphorm: ${s.value.dims.join('x')} cube, ` +
+        `[engine] polyphorm2Mrs: ${s.value.dims.join('x')} cube, ` +
           `min=${s.value.valueMin.toFixed(3)}, max=${s.value.valueMax.toFixed(3)}`,
       );
     }
