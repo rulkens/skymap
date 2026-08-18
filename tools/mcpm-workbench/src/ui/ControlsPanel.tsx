@@ -30,7 +30,6 @@ import {
   setViewMode,
 } from '../state/slices/viewSlice';
 import { useAppStore } from './storeContext';
-import Slider from './Slider';
 import Toggle from './Toggle';
 import GridBoxPanel from './GridBoxPanel';
 
@@ -40,19 +39,76 @@ type ParamSliderSpec = {
   readonly min: number;
   readonly max: number;
   readonly step: number;
+  readonly info: string;
 };
 
 // Ranges are workbench UI convenience, not physics — wide enough to explore
 // well past the SDSS-VAC preset in either direction.
 const PARAM_SLIDER_SPECS: readonly ParamSliderSpec[] = [
-  { id: 'senseSpreadDeg', label: 'sense spread (deg)', min: 0, max: 90, step: 0.5 },
-  { id: 'senseDistanceMpc', label: 'sense distance (Mpc)', min: 0, max: 20, step: 0.1 },
-  { id: 'turnAngleDeg', label: 'turn angle (deg)', min: 0, max: 90, step: 0.5 },
-  { id: 'moveDistanceMpc', label: 'move distance (Mpc)', min: 0, max: 2, step: 0.01 },
-  { id: 'depositValue', label: 'deposit value', min: 0, max: 10, step: 0.1 },
-  { id: 'persistence', label: 'persistence', min: 0, max: 1, step: 0.01 },
-  { id: 'sharpness', label: 'sharpness', min: 0, max: 10, step: 0.1 },
-  { id: 'normalizationFactor', label: 'normalization', min: 0, max: 5, step: 0.05 },
+  {
+    id: 'senseSpreadDeg',
+    label: 'sense spread (deg)',
+    min: 0,
+    max: 90,
+    step: 0.5,
+    info: 'Angular offset of the off-axis sense probes from the agent heading.',
+  },
+  {
+    id: 'senseDistanceMpc',
+    label: 'sense distance (Mpc)',
+    min: 0,
+    max: 20,
+    step: 0.1,
+    info: 'How far ahead the sense probes sample the deposit grid.',
+  },
+  {
+    id: 'turnAngleDeg',
+    label: 'turn angle (deg)',
+    min: 0,
+    max: 90,
+    step: 0.5,
+    info: 'Rotation toward the winning probe direction each step.',
+  },
+  {
+    id: 'moveDistanceMpc',
+    label: 'move distance (Mpc)',
+    min: 0,
+    max: 2,
+    step: 0.01,
+    info: 'Distance an agent travels per step.',
+  },
+  {
+    id: 'depositValue',
+    label: 'deposit value',
+    min: 0,
+    max: 10,
+    step: 0.1,
+    info: 'Amount each agent adds to the deposit (steering) grid per step.',
+  },
+  {
+    id: 'persistence',
+    label: 'persistence',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    info: 'Fraction of the deposit grid that survives each decay step.',
+  },
+  {
+    id: 'sharpness',
+    label: 'sharpness',
+    min: 0,
+    max: 10,
+    step: 0.1,
+    info: 'Exponent on probe samples in the turn decision — higher steers harder toward the strongest signal.',
+  },
+  {
+    id: 'normalizationFactor',
+    label: 'normalization',
+    min: 0,
+    max: 5,
+    step: 0.05,
+    info: 'Rescales data-point deposits against agent deposits.',
+  },
 ];
 
 type RaymarchSliderKey = 'opticalThickness' | 'sampleWeight' | 'trimDensity' | 'stepVoxels';
@@ -81,6 +137,7 @@ const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
     max: 2,
     step: 0.01,
     format: (v) => v.toFixed(2),
+    info: 'Scales how opaque a given trace density renders along the ray.',
   },
   {
     key: 'sampleWeight',
@@ -99,6 +156,7 @@ const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
     max: 0.5,
     step: 0.00001,
     format: (v) => v.toFixed(5),
+    info: 'Trace values at or below this render as empty space.',
   },
   {
     key: 'stepVoxels',
@@ -133,7 +191,8 @@ function ControlsPanel(): ReactNode {
   const catalog = useStore(store, (s) => s.catalog);
   const view = useStore(store, (s) => s.view);
   // No open/close slice for the workbench's panel sections yet — CollapsibleSection
-  // is controlled, so a local flag is enough until a second section needs one too.
+  // is controlled, so local flags are enough until a section's state must persist.
+  const [simOpen, setSimOpen] = useState(true);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
 
   return (
@@ -153,29 +212,36 @@ function ControlsPanel(): ReactNode {
         overflowY: 'auto',
       }}
     >
-      <div>
-        {PARAM_SLIDER_SPECS.map((spec) => (
-          <Slider
-            key={spec.id}
-            label={spec.label}
-            min={spec.min}
-            max={spec.max}
-            step={spec.step}
-            value={sim.params[spec.id]}
-            onChange={(v) => store.setState((s) => ({ ...s, sim: setSimParam(s.sim, spec.id, v) }))}
+      <CollapsibleSection title="Simulation" open={simOpen} onToggle={() => setSimOpen((v) => !v)}>
+        <SliderGroup title="Agents">
+          {PARAM_SLIDER_SPECS.map((spec) => (
+            <ParamSlider
+              key={spec.id}
+              label={spec.label}
+              min={spec.min}
+              max={spec.max}
+              step={spec.step}
+              info={spec.info}
+              value={sim.params[spec.id]}
+              onChange={(v) =>
+                store.setState((s) => ({ ...s, sim: setSimParam(s.sim, spec.id, v) }))
+              }
+              path={`sim.params.${spec.id}`}
+            />
+          ))}
+          <ParamSlider
+            label="agent count"
+            min={1_000_000}
+            max={10_000_000}
+            step={100_000}
+            value={sim.agentCount}
+            format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
+            info="Structural: changing it rebuilds the harness and reseeds the swarm."
+            onChange={(v) => store.setState((s) => ({ ...s, sim: setAgentCount(s.sim, v) }))}
+            path="sim.agentCount"
           />
-        ))}
-      </div>
-
-      <Slider
-        label="agent count"
-        min={1_000_000}
-        max={10_000_000}
-        step={100_000}
-        value={sim.agentCount}
-        format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
-        onChange={(v) => store.setState((s) => ({ ...s, sim: setAgentCount(s.sim, v) }))}
-      />
+        </SliderGroup>
+      </CollapsibleSection>
 
       <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
         <Toggle

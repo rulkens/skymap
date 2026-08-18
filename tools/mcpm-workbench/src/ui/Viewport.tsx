@@ -113,9 +113,13 @@ function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView
     sampleWeight: s.view.raymarch.sampleWeight,
     opticalThickness: s.view.raymarch.opticalThickness,
     stepVoxels: s.view.raymarch.stepVoxels,
-    // Scaled to the grid, never fixed: the box diagonal is longer than any axis, and a
-    // bound short of it truncates the march silently, with no visual cue that it did.
-    maxSteps: 2 * Math.max(box.dims[0], box.dims[1], box.dims[2]),
+    // Scaled to the grid AND the step length, never fixed: the box diagonal is longer
+    // than any axis, and sub-1 stepVoxels needs proportionally more steps — a bound
+    // short of the crossing truncates the march silently, with no visual cue that it did.
+    maxSteps: Math.ceil(
+      (2 * Math.max(box.dims[0], box.dims[1], box.dims[2])) /
+        Math.max(s.view.raymarch.stepVoxels, 0.25),
+    ),
   };
 }
 
