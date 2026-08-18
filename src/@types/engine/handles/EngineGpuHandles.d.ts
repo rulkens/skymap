@@ -413,9 +413,9 @@ export type EngineGpuHandles = {
    * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
    * render-target row (Plan 02 — zoom-to-Earth).  Same UV-sphere mesh as the
    * star/planet renderers below, but shaded by sampling an equirectangular
-   * Blue Marble bitmap. Its ('rgba16float', 'depth32float') pipeline formats
-   * MUST match that row's `format` / `depth` in `renderTargets.ts` — the
-   * target↔renderer-profile invariant. Constructed in `initGpu`, which also
+   * Blue Marble bitmap. Its pipeline formats MUST match the `foreground:0`
+   * row's `format` / `depth` — see `renderTargetFormats.ts` for the shared
+   * constants both sides read. Constructed in `initGpu`, which also
    * mints its surface texture into the `bodyTextures` slot family (key
    * `'earth'`); that slot is proximity-demanded on descent and its commit calls
    * `setTexture`. Until the bitmap lands the renderer draws a plain mid-blue
@@ -429,10 +429,11 @@ export type EngineGpuHandles = {
    * Flat-emissive resolved stars (the `spheres` branch of
    * `partitionStarsByResolution` — any star whose apparent size crosses
    * `STAR_RESOLVE_PX`, the Sun included) drawn into the `foreground:0`
-   * render-target row.  Same ('rgba16float', 'depth32float') format
-   * invariant as `earthRenderer`.  Owns a single non-dynamic uniform
-   * buffer, so same-frame draws through it clobber each other's uniforms
-   * (last write wins) — a known gap should two stars ever resolve at once;
+   * render-target row.  Same `foreground:0` format invariant as
+   * `earthRenderer` (see `renderTargetFormats.ts`).  Owns a single
+   * non-dynamic uniform buffer, so same-frame draws through it clobber
+   * each other's uniforms (last write wins) — a known gap should two
+   * stars ever resolve at once;
    * see `starSpheresLayer`'s module header for why the case is out of
    * reach today and what the real fix is.
    * Excluded from `isEngineReady` and null-checked at use.  Null until
@@ -460,18 +461,19 @@ export type EngineGpuHandles = {
    * mid-frame. `texturedBodiesLayer` draws the `textured` branch of
    * `partitionBodiesByPresentation` through it; the `bodyTextures` family's commit
    * routes each bitmap to `setMap` and its per-kind onRelease to `clearMap`. Same
-   * ('rgba16float', 'depth32float') `foreground:0` format invariant as
-   * `earthRenderer` / `planetRenderer`; excluded from `isEngineReady`.
+   * `foreground:0` format invariant as `earthRenderer` / `planetRenderer`
+   * (see `renderTargetFormats.ts`); excluded from `isEngineReady`.
    */
   texturedBodyRenderer: TexturedBodyRenderer | null;
   /**
    * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
    * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a
    * two-sided translucent annulus that depth-tests against the opaque spheres
-   * but writes no depth and blends straight-alpha OVER. Its ('rgba16float',
-   * 'depth32float') pipeline formats match the `foreground:0` row like the sphere
-   * bodies. `ringsLayer` draws each resident `SCENE_RINGS` entry through it; the
-   * `bodyTextures` family's `saturn-ring` commit routes the radial strip to
+   * but writes no depth and blends straight-alpha OVER. Its pipeline formats
+   * match the `foreground:0` row like the sphere bodies (see
+   * `renderTargetFormats.ts`). `ringsLayer` draws each resident
+   * `SCENE_RINGS` entry through it; the `bodyTextures` family's
+   * `saturn-ring` commit routes the radial strip to
    * `setTexture` (alongside `texturedBodyRenderer.setRingTexture` for the
    * ring-on-planet shadow half). Excluded from `isEngineReady` and null-checked
    * at use. Null until `initGpu` constructs it; released and re-nulled by
@@ -481,11 +483,12 @@ export type EngineGpuHandles = {
   /**
    * The body-agnostic translucent cloud shell — a thin closed sphere drawn just
    * ABOVE the opaque surface in the `(foreground:0, NEAR0)` group, immediately
-   * after `earthLayer`: ('rgba16float', 'depth32float') formats, depth-tested
-   * against the globe but no depth write, straight-alpha OVER, the same profile as
-   * `ringRenderer`. The `bodyTextures` family's `earth:clouds` commit routes the
-   * colour+coverage map to `setTexture`; until one lands a 1×1 transparent
-   * placeholder keeps the shell invisible. Excluded from `isEngineReady`.
+   * after `earthLayer`: `foreground:0` formats (see `renderTargetFormats.ts`),
+   * depth-tested against the globe but no depth write, straight-alpha OVER,
+   * the same profile as `ringRenderer`. The `bodyTextures` family's
+   * `earth:clouds` commit routes the colour+coverage map to `setTexture`;
+   * until one lands a 1×1 transparent placeholder keeps the shell invisible.
+   * Excluded from `isEngineReady`.
    */
   cloudShellRenderer: CloudShellRenderer | null;
   /**

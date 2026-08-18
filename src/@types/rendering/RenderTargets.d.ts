@@ -60,16 +60,18 @@ export type RenderTargets = {
   sizeOf(id: string): Size;
   /**
    * Current colour-attachment view for an OFFSCREEN row (`hdr`, `volume`,
-   * `foreground:0`). Stable until a `reconcile` moves this row. Throws for `swap` (and
-   * any unknown id): the swap chain is executor-resolved from the acquired
-   * frame view, not an allocated texture this owner holds.
+   * `foreground:0`). Stable until the next `reconcile()` that changes this
+   * row's size — a reconcile where nothing moved keeps view identity. Throws
+   * for `swap` (and any unknown id): the swap chain is executor-resolved from
+   * the acquired frame view, not an allocated texture this owner holds.
    */
   viewOf(id: string): GPUTextureView;
   /**
    * Current depth-attachment view for a row whose spec declares `depth`
-   * (`foreground:0`). Stable until a `reconcile` moves this row. Throws for depthless
-   * rows (`hdr`, `volume`), `swap`, and any unknown id — an absent depth view
-   * means the row has no depth attachment, not a nullable success.
+   * (`foreground:0`). Stable until the next `reconcile()` that changes this
+   * row's size, same guarantee as `viewOf`. Throws for depthless rows (`hdr`,
+   * `volume`), `swap`, and any unknown id — an absent depth view means the
+   * row has no depth attachment, not a nullable success.
    */
   depthViewOf(id: string): GPUTextureView;
   /**
@@ -79,7 +81,8 @@ export type RenderTargets = {
    * depth-bearing row's depth texture moves with its colour texture). The ONE
    * seam answering both a canvas resize and a settings-driven divisor move —
    * `runFrame` calls it unconditionally, and a frame where nothing moved
-   * allocates nothing.
+   * allocates nothing. Unrelated to `ReconcileEffects.ts` (the store→engine
+   * saga-callback surface) — same word, two independent concerns.
    */
   reconcile(state: EngineState, size: Size): void;
   /**
