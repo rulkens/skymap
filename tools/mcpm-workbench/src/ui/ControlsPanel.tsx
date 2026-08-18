@@ -366,6 +366,54 @@ function ControlsPanel(): ReactNode {
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
         >
+          <ToggleRow
+            label="running"
+            on={sim.running}
+            info="Steps the simulation every frame. Pause to let the path tracer accumulate and to take stable exports."
+            onChange={(on) => store.setState((s) => ({ ...s, sim: setRunning(s.sim, on) }))}
+          />
+          <ToggleRow
+            label="seed around data"
+            on={sim.initMode === 'aroundData'}
+            info="Seeds agents near catalog points instead of uniformly across the grid, so the fit converges onto the survey volume faster."
+            onChange={(on) =>
+              store.setState((s) => ({
+                ...s,
+                sim: setInitMode(s.sim, on ? 'aroundData' : 'uniform'),
+              }))
+            }
+          />
+          <ToggleRow
+            label="weight by mass"
+            on={catalog.weightMode === 'stellarMass'}
+            info="Data-point deposits scale with each galaxy's stellar mass; off, every data point deposits equally. Free agents always deposit at a flat weight either way."
+            onChange={(on) =>
+              store.setState((s) => ({
+                ...s,
+                catalog: setWeightMode(s.catalog, on ? 'stellarMass' : 'uniform'),
+              }))
+            }
+          />
+          {/* reset / clear trace: momentary commands, not state — the slice records
+              a request the Viewport consumes on its next frame. Divided from the
+              toggle rows above with the same --border-divider hairline
+              HistogramPlot/CollapsibleSection use, and one font-size step smaller
+              than the panel's other buttons so the pair reads as secondary to the
+              run/seed/weight toggles it now sits under. */}
+          <div className={styles.simActions}>
+            <Button
+              className={styles.simActionButton}
+              onClick={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
+            >
+              reset
+            </Button>
+            <Button
+              className={styles.simActionButton}
+              onClick={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
+            >
+              clear trace
+            </Button>
+          </div>
           <SliderGroup title="Agents">
             {PARAM_SLIDER_SPECS.map((spec) => (
               <ParamSlider
@@ -420,70 +468,33 @@ function ControlsPanel(): ReactNode {
           <GridBoxPanel />
         </CollapsibleSection>
 
-        <div>
-          <ToggleRow
-            label="running"
-            on={sim.running}
-            onChange={(on) => store.setState((s) => ({ ...s, sim: setRunning(s.sim, on) }))}
-          />
-          <ToggleRow
-            label="weight by mass"
-            on={catalog.weightMode === 'stellarMass'}
-            onChange={(on) =>
-              store.setState((s) => ({
-                ...s,
-                catalog: setWeightMode(s.catalog, on ? 'stellarMass' : 'uniform'),
-              }))
-            }
-          />
-          <ToggleRow
-            label="seed around data"
-            on={sim.initMode === 'aroundData'}
-            onChange={(on) =>
-              store.setState((s) => ({
-                ...s,
-                sim: setInitMode(s.sim, on ? 'aroundData' : 'uniform'),
-              }))
-            }
-          />
-          {/* Momentary commands, not state: the slice records a request the
-              Viewport consumes on its next frame. */}
-          <div className={styles.actions}>
-            <Button
-              className={styles.actionButton}
-              onClick={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
-            >
-              reset
-            </Button>
-            <Button
-              className={styles.actionButton}
-              onClick={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
-            >
-              clear trace
-            </Button>
-            {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
-                both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
-                token shape as reset/clear-trace above — only Viewport's
-                harness closure can actually call readbackTrace, so this
-                button can only request; Viewport's token-diff effect is the
-                consumer that performs the readback and triggerDownloads. */}
-            <Button
-              className={styles.actionButton}
-              onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
-            >
-              download trace
-            </Button>
-            {/* T17 leg 2: same one-shot token pattern, downloading a
-                ready-to-serve `.scfd` through the SAME packing code
-                (packLogTraceVoxels/encodeScalarField) the offline
-                buildRhizomeVolume importer uses. */}
-            <Button
-              className={styles.actionButton}
-              onClick={() => store.setState((s) => ({ ...s, sim: requestScfdExport(s.sim) }))}
-            >
-              download .scfd
-            </Button>
-          </div>
+        {/* Momentary commands, not state: the slice records a request the
+            Viewport consumes on its next frame. reset/clear-trace moved into
+            the Simulation section (S12), below the run/seed/weight toggles —
+            this wrapper now holds only the two export buttons. */}
+        <div className={styles.actions}>
+          {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
+              both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
+              token shape as reset/clear-trace (Simulation section above) —
+              only Viewport's harness closure can actually call readbackTrace,
+              so this button can only request; Viewport's token-diff effect is
+              the consumer that performs the readback and triggerDownloads. */}
+          <Button
+            className={styles.actionButton}
+            onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
+          >
+            download trace
+          </Button>
+          {/* T17 leg 2: same one-shot token pattern, downloading a
+              ready-to-serve `.scfd` through the SAME packing code
+              (packLogTraceVoxels/encodeScalarField) the offline
+              buildRhizomeVolume importer uses. */}
+          <Button
+            className={styles.actionButton}
+            onClick={() => store.setState((s) => ({ ...s, sim: requestScfdExport(s.sim) }))}
+          >
+            download .scfd
+          </Button>
         </div>
 
         <CollapsibleSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>

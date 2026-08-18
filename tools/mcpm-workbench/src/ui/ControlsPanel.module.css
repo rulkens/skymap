@@ -31,7 +31,8 @@
   gap: var(--space-5);
 }
 
-/* reset / clear trace — two momentary commands sharing a row. */
+/* download trace / download .scfd — two momentary commands sharing a row.
+   reset/clear trace (S12) moved into the Simulation section — see .simActions. */
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -41,4 +42,21 @@
 
 .actionButton {
   composes: blockButton from '../../../../src/components/common/shared.module.css';
+}
+
+/* reset / clear trace, inside the Simulation section below the run/seed/weight
+   toggles — the border-top is the same --border-divider hairline
+   HistogramPlot/CollapsibleSection use to separate sections. */
+.simActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-divider);
+}
+
+.simActionButton {
+  composes: blockButton from '../../../../src/components/common/shared.module.css';
+  font-size: var(--font-size-sm);
 }
