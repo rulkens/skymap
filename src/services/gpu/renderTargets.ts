@@ -85,8 +85,8 @@
  * every `reconcile`. The divisor trades against the star shader's `starPxMin` /
  * `starPxMax` clamps, stated in TARGET pixels and already live sliders, so the
  * three move together against a moving frame. No 'last applied' record exists
- * anywhere: the allocated texture size (`sizeOf`) is the record of the divisor
- * in force, and `reconcile` compares against it.
+ * anywhere: the allocated texture size (`sizeOf`) is the record of the size in
+ * force, and `reconcile` compares against it.
  *
  * ### Why the zone-of-avoidance row renders at 1/5 scale
  *

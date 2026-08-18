@@ -10,7 +10,7 @@
  * executor's view resolution reached into two separate context fields.
  * Collapsing them onto one table-driven owner removes that duplication: the
  * offscreen rows (`hdr`, `volume`, …) are DATA — a `RenderTargetSpec[]` — and
- * this handle allocates, resizes, and releases every row uniformly.
+ * this handle allocates, reconciles, and releases every row uniformly.
  *
  * `viewOf` resolves an offscreen row's current colour-attachment view. The
  * `swap` row is deliberately NOT allocated here — the swap chain is an

@@ -74,7 +74,6 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
         };
       },
       viewOf: () => ({}) as GPUTextureView,
-      resize: vi.fn(),
       destroy: vi.fn(),
     } as never,
     texturedDisks: {} as never,

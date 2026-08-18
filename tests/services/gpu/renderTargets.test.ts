@@ -23,10 +23,9 @@ function mockDevice(): GPUDevice {
 
 const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 
-// The `mw-aggregate` row's divisor is not a table constant: it resolves off
-// `state` on every reconcile, so the divisor arrives off `state`. Most of these
-// tests are about allocation mechanics, so they hand over the boot value and
-// the row behaves like any other fixed-scale row.
+// The `mw-aggregate` row's divisor arrives off `state`, not the table. Most of
+// these tests are about allocation mechanics, so they hand over the boot value
+// and the row behaves like any other fixed-scale row.
 const MW_DIVISOR = 2;
 
 function stateWithDivisor(aggregateDivisor: number): EngineState {

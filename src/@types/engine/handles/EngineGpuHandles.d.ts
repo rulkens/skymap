@@ -114,11 +114,12 @@ export type EngineGpuHandles = {
    */
   focusUniform: FocusUniformBuffer | null;
   /**
-   * The offscreen render-target table — one owner for every offscreen
-   * row's (`hdr`, `volume`, …) texture lifecycle, resized as a unit on
-   * canvas resize.  See `services/gpu/renderTargets.ts` for the target
-   * table + the per-row rationale (why the HDR offscreen exists, why the
-   * volume row renders at 1/3 scale).
+   * The offscreen render-target table — one owner for every offscreen row's
+   * (`hdr`, `volume`, …) texture lifecycle, reconciled every frame against the
+   * canvas size and the live state — only the rows whose pixel size moved are
+   * reallocated.  See `services/gpu/renderTargets.ts` for the target table +
+   * the per-row rationale (why the HDR offscreen exists, why the volume row
+   * renders at 1/3 scale).
    */
   renderTargets: RenderTargets | null;
   /**

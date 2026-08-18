@@ -219,7 +219,6 @@ function makeRenderTargets(): any {
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
-    resize: vi.fn(),
     destroy: vi.fn(),
   };
 }
