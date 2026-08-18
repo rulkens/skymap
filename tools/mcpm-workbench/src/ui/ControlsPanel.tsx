@@ -468,35 +468,6 @@ function ControlsPanel(): ReactNode {
           <GridBoxPanel />
         </CollapsibleSection>
 
-        {/* Momentary commands, not state: the slice records a request the
-            Viewport consumes on its next frame. reset/clear-trace moved into
-            the Simulation section (S12), below the run/seed/weight toggles —
-            this wrapper now holds only the two export buttons. */}
-        <div className={styles.actions}>
-          {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
-              both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
-              token shape as reset/clear-trace (Simulation section above) —
-              only Viewport's harness closure can actually call readbackTrace,
-              so this button can only request; Viewport's token-diff effect is
-              the consumer that performs the readback and triggerDownloads. */}
-          <Button
-            className={styles.actionButton}
-            onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
-          >
-            download trace
-          </Button>
-          {/* T17 leg 2: same one-shot token pattern, downloading a
-              ready-to-serve `.scfd` through the SAME packing code
-              (packLogTraceVoxels/encodeScalarField) the offline
-              buildRhizomeVolume importer uses. */}
-          <Button
-            className={styles.actionButton}
-            onClick={() => store.setState((s) => ({ ...s, sim: requestScfdExport(s.sim) }))}
-          >
-            download .scfd
-          </Button>
-        </div>
-
         <CollapsibleSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
           {WORKBENCH_SOURCES.map((s) => (
             <ToggleRow
@@ -708,6 +679,32 @@ function ControlsPanel(): ReactNode {
             }
           />
         </CollapsibleSection>
+      </div>
+      {/* Pinned below the scroll area, always visible (S12) — a seam for the
+          eventual V3 save-params button, not built here (later task). */}
+      <div className={styles.footer}>
+        {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
+            both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
+            token shape as reset/clear-trace (Simulation section above) —
+            only Viewport's harness closure can actually call readbackTrace,
+            so this button can only request; Viewport's token-diff effect is
+            the consumer that performs the readback and triggerDownloads. */}
+        <Button
+          className={styles.actionButton}
+          onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
+        >
+          download trace
+        </Button>
+        {/* T17 leg 2: same one-shot token pattern, downloading a
+            ready-to-serve `.scfd` through the SAME packing code
+            (packLogTraceVoxels/encodeScalarField) the offline
+            buildRhizomeVolume importer uses. */}
+        <Button
+          className={styles.actionButton}
+          onClick={() => store.setState((s) => ({ ...s, sim: requestScfdExport(s.sim) }))}
+        >
+          download .scfd
+        </Button>
       </div>
     </div>
   );

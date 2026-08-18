@@ -21,9 +21,13 @@
 }
 
 /* `align-content: start` because the grid is inside a flex:1 box: auto rows
-   would otherwise stretch to fill a taller-than-content panel. */
+   would otherwise stretch to fill a taller-than-content panel. `min-height: 0`
+   is load-bearing, not decorative: a flex item's default min-height is its
+   content size, which overrides flex:1 and silently defeats overflow-y:auto
+   once a sibling (.footer) exists. */
 .scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 22px 22px 40px;
   display: grid;
@@ -31,13 +35,18 @@
   gap: var(--space-5);
 }
 
-/* download trace / download .scfd — two momentary commands sharing a row.
-   reset/clear trace (S12) moved into the Simulation section — see .simActions. */
-.actions {
+/* download trace / download .scfd — pinned below .scroll (S12), always visible
+   regardless of scroll position. Same --surface-panel background as .root so
+   scrolled-under content can't bleed through; the border-top is the same
+   --border-divider hairline the Simulation section's own divider uses. */
+.footer {
+  flex: none;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
-  margin-top: var(--space-4);
+  padding: var(--space-4) 22px;
+  border-top: 1px solid var(--border-divider);
+  background: var(--surface-panel);
 }
 
 .actionButton {
