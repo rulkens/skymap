@@ -6,10 +6,17 @@
  *
  * Bin 16 (constants.wesl's `N_HISTOGRAM_BINS - 1`) is not a count — it's the
  * running `atomicMax(1e5 * density)` marker — so only bins 0..15 draw as
- * bars; its value surfaces as the 'peak' caption instead.
+ * bars; its value surfaces in the 'M' readout instead (S13, below).
+ *
+ * S13 fork parity (vendor main.cpp:1589-1622): the four info labels —
+ * E (mean), M (top-bin marker), null% and the log base — are drawn straight
+ * onto the canvas, right-aligned beside the bars, rather than as DOM text:
+ * `ctx.textAlign = 'right'` means a value's width changing can never nudge
+ * anything else (the brief's "no layout jump"), and it keeps the readout in
+ * the same coordinate space `draw()` already uses for the bars/line.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import { HISTOGRAM_BINS } from '../sim/createGridBuffers';
+import { HISTOGRAM_BASE, HISTOGRAM_BINS } from '../sim/createGridBuffers';
 import { useStore } from '../state/useStore';
 import { useAppStore } from './storeContext';
 import styles from './HistogramPlot.module.css';
@@ -18,13 +25,41 @@ const COUNT_BIN_COUNT = HISTOGRAM_BINS - 1; // bins 0..15; bin 16 is the max mar
 const MAX_BIN_INDEX = HISTOGRAM_BINS - 1;
 const BAR_GAP_PX = 1;
 const LINE_AREA_FRACTION = 0.4; // bottom 40% of the canvas is the mean-log-trace line
+const READOUT_MARGIN_PX = 4;
+const READOUT_LINE_HEIGHT_PX = 12;
 
 function cssVar(el: Element, name: string, fallback: string): string {
   const value = getComputedStyle(el).getPropertyValue(name).trim();
   return value === '' ? fallback : value;
 }
 
-function draw(canvas: HTMLCanvasElement, counts: Uint32Array, history: readonly number[]): void {
+/** Fork parity: `precision(4)`/`precision(2)` (std::defaultfloat) — the shortest
+ * fixed-or-scientific form carrying exactly `sigFigs` significant digits. */
+function formatSignificant(value: number, sigFigs: number): string {
+  return Number.isFinite(value) ? value.toPrecision(sigFigs) : '—';
+}
+
+/**
+ * Sum of the 16 real count bins — every in-grid sampled point increments
+ * exactly one of them (histogram.wesl's `histoIndex` is always 0..15), so
+ * this sum IS the sampled total the fork calls `norm_coef` (main.cpp:1622)
+ * without a second buffer element: `HistogramReadback.sampledCount` already
+ * carries the same number, but `recordHistogramSample` doesn't thread it
+ * into `HistogramSlice` (it's consumed there, not stored) — re-deriving it
+ * from `counts` avoids growing the slice for a value already implicit in it.
+ */
+function sampledTotal(counts: Uint32Array): number {
+  let total = 0;
+  for (let i = 0; i < COUNT_BIN_COUNT; i++) total += counts[i] ?? 0;
+  return total;
+}
+
+function draw(
+  canvas: HTMLCanvasElement,
+  counts: Uint32Array,
+  history: readonly number[],
+  meanLogTraceAtPoints: number,
+): void {
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = canvas.clientWidth;
   const cssHeight = canvas.clientHeight;
@@ -43,17 +78,40 @@ function draw(canvas: HTMLCanvasElement, counts: Uint32Array, history: readonly 
   const barColor = cssVar(canvas, '--color-accent-bright', '#5fb0ff');
   const lineColor = cssVar(canvas, '--color-fg-base', '#e8e8e8');
   const dividerColor = cssVar(canvas, '--border-divider', '#3a3a3a');
+  const mutedColor = cssVar(canvas, '--color-fg-muted', '#c8dcff');
+  const readoutFont =
+    `${cssVar(canvas, '--font-size-sm', '10px')} ` +
+    cssVar(canvas, '--font-family-mono', 'monospace');
 
   const barAreaHeight = cssHeight * (1 - LINE_AREA_FRACTION);
   const lineAreaTop = barAreaHeight + 4;
   const lineAreaHeight = cssHeight - lineAreaTop;
+
+  // S13: E / M / null% / log-base — computed and measured BEFORE the bars
+  // below, so the bars can be laid out in a narrower strip that leaves this
+  // text its own column (never overlaid on top of a tall bar). Confined to
+  // the bar area only — the mean-trace line beneath is this project's own
+  // addition (the fork has no such series), so it keeps the full width.
+  const peak = counts[MAX_BIN_INDEX] ?? 0;
+  const nullCount = counts[0] ?? 0;
+  const total = sampledTotal(counts);
+  const nullPct = total > 0 ? (100 * nullCount) / total : NaN;
+  const readoutLines = [
+    `E: ${formatSignificant(meanLogTraceAtPoints, 4)}`,
+    `M: ${formatSignificant(peak / 1e5, 4)}`,
+    total > 0 ? `null: ${formatSignificant(nullPct, 2)}%` : 'null: —',
+    `(log ${HISTOGRAM_BASE})`,
+  ];
+  ctx.font = readoutFont;
+  const readoutWidth = Math.max(...readoutLines.map((line) => ctx.measureText(line).width));
+  const barsWidth = Math.max(0, cssWidth - readoutWidth - READOUT_MARGIN_PX * 3);
 
   // Bars — bins 0..15, linear height by count. The null bin (index 0, density <=
   // 1e-5 at the sample) is included: a swarm that hasn't reached a point yet shows
   // as a tall bar there, which is itself useful signal, not noise to hide.
   let maxCount = 0;
   for (let i = 0; i < COUNT_BIN_COUNT; i++) maxCount = Math.max(maxCount, counts[i] ?? 0);
-  const barWidth = (cssWidth - BAR_GAP_PX * (COUNT_BIN_COUNT - 1)) / COUNT_BIN_COUNT;
+  const barWidth = (barsWidth - BAR_GAP_PX * (COUNT_BIN_COUNT - 1)) / COUNT_BIN_COUNT;
   ctx.fillStyle = barColor;
   for (let i = 0; i < COUNT_BIN_COUNT; i++) {
     const count = counts[i] ?? 0;
@@ -92,6 +150,21 @@ function draw(canvas: HTMLCanvasElement, counts: Uint32Array, history: readonly 
     });
     ctx.stroke();
   }
+
+  // S13: E / M / null% / log-base, right-aligned so a value's width changing
+  // never shifts anything else. `mutedColor` matches the panel's usual
+  // data-label styling; `E` alone shares `lineColor` — the same series
+  // (meanLogTraceAtPoints) the line beneath the bars already plots, tying
+  // its readout to that line the way the fork ties E's text to the eplot.
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  const rightX = cssWidth - READOUT_MARGIN_PX;
+  let y = READOUT_MARGIN_PX;
+  readoutLines.forEach((line, i) => {
+    ctx.fillStyle = i === 0 ? lineColor : mutedColor;
+    ctx.fillText(line, rightX, y);
+    y += READOUT_LINE_HEIGHT_PX;
+  });
 }
 
 function HistogramPlot(): ReactNode {
@@ -106,28 +179,14 @@ function HistogramPlot(): ReactNode {
       canvas,
       histogram.counts,
       histogram.history.map((sample) => sample.meanLogTraceAtPoints),
+      histogram.meanLogTraceAtPoints,
     );
   }, [histogram]);
-
-  const peak = histogram.counts[MAX_BIN_INDEX] ?? 0;
 
   return (
     <div className={styles.root}>
       <div className={styles.canvasBox}>
         <canvas ref={canvasRef} className={styles.canvas} />
-      </div>
-      <div className={styles.caption}>
-        <span>
-          mean log trace:{' '}
-          <span className={styles.captionValue}>
-            {Number.isFinite(histogram.meanLogTraceAtPoints)
-              ? histogram.meanLogTraceAtPoints.toFixed(3)
-              : '—'}
-          </span>
-        </span>
-        <span>
-          peak: <span className={styles.captionValue}>{(peak / 1e5).toFixed(3)}</span>
-        </span>
       </div>
     </div>
   );

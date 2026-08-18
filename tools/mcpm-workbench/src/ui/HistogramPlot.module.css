@@ -17,15 +17,3 @@
   width: 100%;
   height: 110px;
 }
-
-.caption {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-muted);
-}
-
-.captionValue {
-  color: var(--color-fg-base);
-}

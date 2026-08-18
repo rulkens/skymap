@@ -10,6 +10,10 @@ export const HISTOGRAM_FLAGS_BYTES = 4; // HistogramFlags: one i32 (histogram.we
 export const HISTOGRAM_BINS = 17; // constants.wesl N_HISTOGRAM_BINS: 16 counts + running max
 // The `histogram` buffer holds one MORE element than HISTOGRAM_BINS: index HISTOGRAM_BINS is
 // this project's own in-grid sampled-point counter (histogram.wesl), not one of the fork's bins.
+// constants.wesl's HISTOGRAM_BASE is a `const` (not `override`) — fixed at build time, never a
+// per-run knob — so one host-side mirror is enough; HistogramPlot's "(log <base>)" readout
+// quotes this rather than restating 10 a second time.
+export const HISTOGRAM_BASE = 10;
 
 /**
  * GridBuffers — every GPU allocation the sim owns. The three grids are
