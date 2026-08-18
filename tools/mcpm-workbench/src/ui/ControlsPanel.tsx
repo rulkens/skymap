@@ -12,18 +12,23 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { ViewSlice } from '../../@types/ViewSlice';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
 import Button from '../../../../src/components/common/Button/Button';
 import CollapsibleSection from '../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { tierTarget } from '../../../../src/data/tierTargets';
 import { downloadStem } from '../export/downloadStem';
 import { triggerDownload } from '../export/triggerDownload';
 import { deriveGridBox } from '../field/deriveGridBox';
 import { useStore } from '../state/useStore';
-import { setCatalogSources, setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
+import {
+  setCatalogSources,
+  setCatalogTier,
+  setWeightMode,
+  toggleCatalogSource,
+  WORKBENCH_SOURCES,
+} from '../state/slices/catalogSlice';
 import { exportParams } from '../state/exportParams';
 import { setImportedBox } from '../state/slices/gridSlice';
 import { setSampleRandomly } from '../state/slices/histogramSlice';
@@ -138,34 +143,6 @@ const PARAM_SLIDER_SPECS: readonly ParamSliderSpec[] = [
     info: 'Rescales data-point deposits against agent deposits.',
   },
 ];
-
-// The main app's full toggleable galaxy-catalog ladder (GalaxiesSection.tsx),
-// same order. `toggleCatalogSource` re-derives the sources array from this
-// fixed order every time, so clicking GLADE then 2MRS still yields
-// [2MRS, GLADE], never the click order. May legitimately go empty — the
-// zero-point path is a first-class state Viewport surfaces, not something
-// this helper guards against.
-const WORKBENCH_SOURCES: readonly SourceType[] = [
-  Source.FamousGalaxy,
-  Source.TwoMRS,
-  Source.SDSS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
-];
-
-function toggleCatalogSource(
-  current: readonly SourceType[],
-  s: SourceType,
-  on: boolean,
-): readonly SourceType[] {
-  const enabled = new Set(current);
-  if (on) enabled.add(s);
-  else enabled.delete(s);
-  return WORKBENCH_SOURCES.filter((source) => enabled.has(source));
-}
 
 type RaymarchSliderKey = 'opticalThickness' | 'sampleWeight' | 'trimDensity' | 'stepVoxels';
 
@@ -380,6 +357,7 @@ function ControlsPanel(): ReactNode {
       agentCount: s.sim.agentCount,
       initMode: s.sim.initMode,
       gridBox: deriveGridBox(s.grid),
+      sources: s.catalog.sources,
     });
     triggerDownload(`${downloadStem(new Date())}-params.json`, json, 'application/json');
     setParamsStatus(null);
@@ -402,6 +380,16 @@ function ControlsPanel(): ReactNode {
             imported.agentCount,
           ),
           grid: setImportedBox(s.grid, imported.gridBox),
+          // Folded into this same update, not a follow-up setState: Viewport's
+          // subscriber branches on catalog identity FIRST when both catalogKey and
+          // buildKey move together, and buildOnce always re-reads deriveGridBox(s.grid)
+          // off the live snapshot at build time — so one combined write can never
+          // race the box install, it just yields one rebuild instead of two. Omitted
+          // field (pre-S15 preset) ⇒ leave the current selection untouched.
+          catalog:
+            imported.sources !== undefined
+              ? setCatalogSources(s.catalog, imported.sources)
+              : s.catalog,
         }));
         setParamsStatus(null);
       })

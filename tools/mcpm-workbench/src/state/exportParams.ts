@@ -1,6 +1,7 @@
 import type { AgentInitMode } from '../../@types/AgentInitMode';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 /**
  * MCPM_PARAM_KEYS — McpmParams' field list, spelled once. `buildParamsPayload`
@@ -38,18 +39,22 @@ export type McpmParamsPreset = {
   readonly agentCount: number;
   readonly initMode: AgentInitMode;
   readonly gridBox: GridBox;
+  readonly sources: readonly SourceType[];
 };
 
 /**
  * exportParams — the V3 save-side of the preset pair (spec §10): McpmParams +
- * agent count + init mode + grid box, as pretty JSON ready for
- * `triggerDownload`. `importParams` is the exact inverse.
+ * agent count + init mode + grid box + enabled data sources (S15), as pretty
+ * JSON ready for `triggerDownload`. `importParams` is the exact inverse.
+ * Tier is deliberately NOT saved — restoring it silently from a preset would
+ * be surprising (coordinator ruling, task-S15-brief.md).
  */
 export function exportParams(input: {
   readonly params: McpmParams;
   readonly agentCount: number;
   readonly initMode: AgentInitMode;
   readonly gridBox: GridBox;
+  readonly sources: readonly SourceType[];
 }): string {
   const preset: McpmParamsPreset = {
     format: MCPM_PARAMS_FORMAT,
@@ -58,6 +63,7 @@ export function exportParams(input: {
     agentCount: input.agentCount,
     initMode: input.initMode,
     gridBox: input.gridBox,
+    sources: input.sources,
   };
   return JSON.stringify(preset, null, 2);
 }

@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import type { McpmParams } from '../../../../tools/mcpm-workbench/@types/McpmParams';
+import { Source } from '../../../../src/data/source';
 import { exportParams } from '../../../../tools/mcpm-workbench/src/state/exportParams';
 import { importParams } from '../../../../tools/mcpm-workbench/src/state/importParams';
 
@@ -31,6 +32,8 @@ const GRID_BOX: GridBox = {
   voxelSizeMpc: 1,
 };
 
+const SOURCES = [Source.SDSS, Source.TwoMRS] as const;
+
 describe('importParams', () => {
   it('round trips an exportParams payload, every field including the nested GridBox', () => {
     const json = exportParams({
@@ -38,6 +41,7 @@ describe('importParams', () => {
       agentCount: 5_300_000,
       initMode: 'aroundData',
       gridBox: GRID_BOX,
+      sources: SOURCES,
     });
 
     const imported = importParams(json);
@@ -46,6 +50,40 @@ describe('importParams', () => {
     expect(imported.agentCount).toBe(5_300_000);
     expect(imported.initMode).toBe('aroundData');
     expect(imported.gridBox).toEqual(GRID_BOX);
+    expect(imported.sources).toEqual(SOURCES);
+  });
+
+  it('imports a preset that omits "sources" (pre-S15) and leaves the field undefined', () => {
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'aroundData',
+      gridBox: GRID_BOX,
+      sources: SOURCES,
+    });
+    const preset = JSON.parse(json) as Record<string, unknown>;
+    delete preset.sources;
+
+    const imported = importParams(JSON.stringify(preset));
+
+    expect(imported.sources).toBeUndefined();
+  });
+
+  it('rejects a "sources" entry that is not a known workbench source id', () => {
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'aroundData',
+      gridBox: GRID_BOX,
+      sources: SOURCES,
+    });
+    const preset = JSON.parse(json) as Record<string, unknown>;
+    // Cluster (5) is a real Source code but not one of the workbench's toggleable
+    // galaxy-catalog sources — importParams must reject it against the ladder,
+    // not merely check "is this a number".
+    preset.sources = [Source.SDSS, Source.Cluster];
+
+    expect(() => importParams(JSON.stringify(preset))).toThrow(/unknown source id.*5/i);
   });
 
   it('rejects a payload whose grid box has non-cubic voxels', () => {
@@ -54,6 +92,7 @@ describe('importParams', () => {
       agentCount: 5_300_000,
       initMode: 'uniform',
       gridBox: GRID_BOX,
+      sources: SOURCES,
     });
     const preset = JSON.parse(json) as { gridBox: GridBox };
     // Hand-edit as a human would: stretch one axis without touching dims or
@@ -69,6 +108,7 @@ describe('importParams', () => {
       agentCount: 5_300_000,
       initMode: 'uniform',
       gridBox: GRID_BOX,
+      sources: SOURCES,
     });
     const preset = JSON.parse(json) as { gridBox: GridBox };
     // Perfectly cubic (voxelSizeMpc 1 on every axis, sizeMpc === dims), positive —
@@ -89,6 +129,7 @@ describe('importParams', () => {
       agentCount: 5_300_000,
       initMode: 'uniform',
       gridBox: GRID_BOX,
+      sources: SOURCES,
     });
     const preset = JSON.parse(json) as { gridBox: GridBox };
     preset.gridBox = {
@@ -111,6 +152,7 @@ describe('importParams', () => {
       agentCount: 5_300_000,
       initMode: 'aroundData',
       gridBox: GRID_BOX,
+      sources: SOURCES,
     });
     const preset = JSON.parse(json) as Record<string, unknown>;
     delete preset.agentCount;
@@ -124,6 +166,7 @@ describe('importParams', () => {
       agentCount: 5_300_000,
       initMode: 'aroundData',
       gridBox: GRID_BOX,
+      sources: SOURCES,
     });
     const preset = JSON.parse(json) as Record<string, unknown>;
     preset.format = 'something-else';

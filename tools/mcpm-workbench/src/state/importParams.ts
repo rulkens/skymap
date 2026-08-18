@@ -1,8 +1,10 @@
 import type { AgentInitMode } from '../../@types/AgentInitMode';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { DECAY_WG_EDGE } from '../sim/encodeStep';
+import { WORKBENCH_SOURCES } from './slices/catalogSlice';
 import { MCPM_PARAM_KEYS, MCPM_PARAMS_FORMAT, MCPM_PARAMS_VERSION } from './exportParams';
 
 export type ImportedParams = {
@@ -10,6 +12,10 @@ export type ImportedParams = {
   readonly agentCount: number;
   readonly initMode: AgentInitMode;
   readonly gridBox: GridBox;
+  /** S15: undefined ⇒ leave the current catalog selection untouched — every preset
+   * saved before this field existed (and any preset that simply omits it) must
+   * still import cleanly. */
+  readonly sources?: readonly SourceType[];
 };
 
 // Mirrors buildRhizomeVolume.ts's own "Voxel-size spread assert" (rule 6): a
@@ -45,6 +51,26 @@ function vec3(obj: Record<string, unknown>, field: string): Vec3 {
   return v as Vec3;
 }
 
+/** Optional field (S15): absent ⇒ undefined, "leave selection unchanged". Present ⇒
+ * validated in full against WORKBENCH_SOURCES, the one spelling of "which sources
+ * exist" the Data-section toggles also key off — duplicates are tolerated, but any
+ * id outside the ladder fails with the offending id named. */
+function optionalSourceList(
+  obj: Record<string, unknown>,
+  field: string,
+): readonly SourceType[] | undefined {
+  const v = obj[field];
+  if (v === undefined) return undefined;
+  if (!Array.isArray(v)) fail(`"${field}" must be an array of source ids`);
+  const known = new Set<SourceType>(WORKBENCH_SOURCES);
+  for (const id of v) {
+    if (typeof id !== 'number' || !known.has(id as SourceType)) {
+      fail(`"${field}" contains unknown source id ${JSON.stringify(id)}`);
+    }
+  }
+  return v as SourceType[];
+}
+
 /**
  * importParams — the V3 load-side inverse of `exportParams`. Validation is
  * total: every field is checked before anything is trusted, so a malformed
@@ -75,6 +101,8 @@ export function importParams(json: string): ImportedParams {
   if (initMode !== 'aroundData' && initMode !== 'uniform') {
     fail('"initMode" must be "aroundData" or "uniform"');
   }
+
+  const sources = optionalSourceList(root, 'sources');
 
   const g = asRecord(root.gridBox, 'gridBox');
   const centerMpc = vec3(g, 'centerMpc');
@@ -111,5 +139,6 @@ export function importParams(json: string): ImportedParams {
     agentCount,
     initMode,
     gridBox: { centerMpc, sizeMpc, dims, voxelSizeMpc },
+    ...(sources !== undefined ? { sources } : {}),
   };
 }
