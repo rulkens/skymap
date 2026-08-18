@@ -63,11 +63,14 @@ type RaymarchSliderSpec = {
   readonly step: number;
   readonly format: (value: number) => string;
   readonly info?: string;
+  /** Present ⇒ the pill travels in log10 space: min/max/step are log10 units,
+   * and `format` receives the log10 value, not the stored one. */
+  readonly log?: boolean;
 };
 
 // Ranges bracket the fork's shipped defaults (viewSlice's `defaultViewSlice`
-// docblock) — no log/exp mapping on `ParamSlider` yet, so sampleWeight and
-// trimDensity trade a wide range for a fine linear step instead.
+// docblock). `ParamSlider` is linear-only, so decade-spanning params map to
+// log10 here at the spec seam; trimDensity's range includes 0 so it cannot.
 const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
   {
     key: 'opticalThickness',
@@ -80,10 +83,11 @@ const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
   {
     key: 'sampleWeight',
     label: 'sample weight',
-    min: 0.0001,
-    max: 1,
-    step: 0.0001,
-    format: (v) => v.toFixed(4),
+    min: -7,
+    max: 0,
+    step: 0.05,
+    log: true,
+    format: (v) => Math.pow(10, v).toExponential(1),
     info: 'Inverts the ~100x steady-state amplification of the trace decay (1% retained per step).',
   },
   {
@@ -244,14 +248,17 @@ function ControlsPanel(): ReactNode {
             <ParamSlider
               key={spec.key}
               label={spec.label}
-              value={view.raymarch[spec.key]}
+              value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
               min={spec.min}
               max={spec.max}
               step={spec.step}
               format={spec.format}
               info={spec.info}
               onChange={(v) =>
-                store.setState((s) => ({ ...s, view: RAYMARCH_SETTERS[spec.key](s.view, v) }))
+                store.setState((s) => ({
+                  ...s,
+                  view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
+                }))
               }
               path={`view.raymarch.${spec.key}`}
             />
