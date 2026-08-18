@@ -30,7 +30,9 @@ import { setResolvedGrid } from '../state/slices/gridSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import { setCameraDistance, setCameraYawPitch } from '../state/slices/viewSlice';
 
-const EXPOSURE = 1;
+// The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
+// so exposure 2 reproduces it exactly through the blit.
+const EXPOSURE = 2;
 const CONTRAST = 1;
 const REBUILD_DEBOUNCE_MS = 400;
 const DRAG_SPEED = 0.005;
