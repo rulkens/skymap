@@ -114,16 +114,21 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     atmosphereTopKm: seededPlanet('jupiter').radiusKm + 150,
     constituents: [
       {
-        scatter: [4e-3, 4e-3, 5e-3],
+        // [M/D] H2/He Rayleigh at the Galileo composition (x_He 0.1356) and 1-bar T (166 K).
+        // Was flat-grey [4,4,5]e-3, red:blue inverted; H2/He is derivable from first principles.
+        scatter: [1.62e-3, 3.85e-3, 9.68e-3],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 27 },
+        profile: { kind: 'exponential', scaleHeightKm: 25.8 }, // [D] kT/(mu m_u g_eff)
         phase: { kind: 'rayleigh' },
       },
       {
-        scatter: [3e-3, 3e-3, 3e-3],
-        absorb: [1e-3, 1e-3, 1e-3],
-        profile: { kind: 'exponential', scaleHeightKm: 12 },
-        phase: { kind: 'henyeyGreenstein', g: 0.6 },
+        // [M] Cloud+haze retrieved as conservatively scattering (k~1e-9); old absorb 1e-3 (omega
+        // 0.75) killed the rim's colour. Jupiter's colour IS its chromophore, and the chromophore
+        // is in the ground TEXTURE: as a uniform shell term it would delete the limb, not tint it.
+        scatter: [3e-3, 3e-3, 3e-3], // [L] bracket 2-6e-3, any value here reads about the same
+        absorb: [0, 0, 0],
+        profile: { kind: 'exponential', scaleHeightKm: 14 }, // [D] 0.7x gas H at the ~0.5 bar haze
+        phase: { kind: 'henyeyGreenstein', g: 0.75 }, // [D] Mie at the measured haze radius
       },
     ],
     groundAlbedo: seededPlanet('jupiter').albedo,
@@ -138,16 +143,35 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     atmosphereTopKm: seededPlanet('saturn').radiusKm + 300,
     constituents: [
       {
-        scatter: [4e-3, 4e-3, 4e-3],
+        // [M/D] H2/He Rayleigh, 35% stronger than Jupiter's at 1 bar (g_eff is 2.5x smaller).
+        // x_He is genuinely unsettled — 0.033-0.14 across five non-overlapping Cassini/Voyager
+        // determinations [L, midpoint 0.08 used] — but that whole spread moves this row only
+        // +3/-6%, since He's cross section is 1/16 of H2's. Do not re-derive on the next He paper.
+        scatter: [2.18e-3, 5.18e-3, 13.0e-3],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 59.5 },
+        profile: { kind: 'exponential', scaleHeightKm: 55 }, // [D] old 59.5 = pre-Cassini 3.25% He
         phase: { kind: 'rayleigh' },
       },
       {
+        // [M] Particle scale height 25 km is Sanz-Requena+19's MEASURED tropospheric-haze value —
+        // already correct; do not "fix" it back toward the gas scale height. [D] absorb: retrieved
+        // haze m_i ~1e-3 rising to the blue vs Jupiter's ~1e-9 — the measured colour difference.
+        // [L] Grey, and the only free dial here. Must stay optically THIN: the body texture is a
+        // photograph of these same clouds, so a shell thick enough to grey the limb (tau_vert ~2.5)
+        // erases the banding the texture carries. Tried and rejected on screen, 2026-08-18.
         scatter: [3e-3, 3e-3, 3e-3],
-        absorb: [1e-3, 1e-3, 1e-3],
+        absorb: [4.5e-5, 1.1e-4, 2.7e-4],
         profile: { kind: 'exponential', scaleHeightKm: 25 },
-        phase: { kind: 'henyeyGreenstein', g: 0.6 },
+        phase: { kind: 'henyeyGreenstein', g: 0.75 }, // [D] same g as Jupiter's; differs via absorb
+      },
+      {
+        // [D] Well-mixed methane. Present here, absent from Jupiter's row: slant optical depth at
+        // 680nm is 1.26 on Saturn vs 0.33 on Jupiter (lower g_eff -> 6x the CH4 column), so
+        // Saturn's clears the noise floor and Jupiter's does not.
+        scatter: [0, 0, 0],
+        absorb: [2.78e-4, 1.6e-5, 1.7e-5],
+        profile: { kind: 'exponential', scaleHeightKm: 55 }, // gas scale height, not methane's own
+        phase: { kind: 'rayleigh' }, // unused: scatter is zero
       },
     ],
     groundAlbedo: seededPlanet('saturn').albedo,
@@ -157,21 +181,39 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 1.3,
   },
   uranus: {
-    // Methane-blue Rayleigh: red suppressed to stand in for methane's red absorption.
+    // Cloud-tops-as-ground; the old row faked methane's red absorption with a suppressed-red
+    // Rayleigh vector. That vector was already close to right — the real gap was that methane
+    // (the thing that actually reddens/blues these planets) had no constituent at all.
     planetRadiusKm: seededPlanet('uranus').radiusKm,
     atmosphereTopKm: seededPlanet('uranus').radiusKm + 150,
     constituents: [
       {
-        scatter: [4e-3, 10e-3, 20e-3],
+        // [D] H2/He Rayleigh (Dalgarno & Williams 1962 sigma_H2 + Mansfield & Peck 1969 sigma_He)
+        // at N(1 bar) = 3.566 amagat. Steeper than lambda^-4 (D&W's lambda^-6/-8 terms); He is 1.2%.
+        scatter: [3.15e-3, 7.5e-3, 18.9e-3],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 27.7 },
+        profile: { kind: 'exponential', scaleHeightKm: 27.7 }, // [M] NASA fact sheet
         phase: { kind: 'rayleigh' },
       },
       {
-        scatter: [2e-3, 2e-3, 2e-3],
-        absorb: [1e-3, 1e-3, 1e-3],
-        profile: { kind: 'exponential', scaleHeightKm: 12 },
-        phase: { kind: 'henyeyGreenstein', g: 0.6 },
+        // [D] Methane. Karkoschka (1998) k, band-averaged R/G/B, x n_CH4 = 0.0347 amagat at the
+        // 1-bar level — saturation-capped there, NOT the 3% deep value: methane condenses at
+        // 1.4-1.5 bar, below the drawn sphere. scatter is CH4's own Rayleigh.
+        scatter: [0.38e-3, 0.93e-3, 2.38e-3],
+        absorb: [1.76e-3, 0.51e-3, 0.066e-3],
+        // [D] 6.6 km is METHANE's own scale height (vapour tracks p_sat(T), e-folding 4x faster
+        // than pressure above the condensation level) — not the 27.7 km gas value above.
+        profile: { kind: 'exponential', scaleHeightKm: 6.6 },
+        phase: { kind: 'rayleigh' },
+      },
+      {
+        // [M/D] Extended photochemical haze (Irwin+22 Aerosol-3: tau 0.03 @ 0.8um, base 1.6 bar,
+        // r 0.05um) — the only one of Irwin's 3 Uranus aerosol layers above 1 bar. Scatters as
+        // ~lambda^-4 with g~0.06, i.e. Rayleigh in all but name.
+        scatter: [0.68e-3, 1.57e-3, 3.75e-3],
+        absorb: [0.027e-3, 0.025e-3, 0.26e-3],
+        profile: { kind: 'exponential', scaleHeightKm: 55 }, // fsh 2x gas value (Irwin+22)
+        phase: { kind: 'henyeyGreenstein', g: 0.06 },
       },
     ],
     groundAlbedo: seededPlanet('uranus').albedo,
@@ -181,21 +223,47 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 1.8,
   },
   neptune: {
-    // Methane-blue like Uranus, red suppressed harder for the more saturated limb.
+    // Cloud-tops-as-ground like Uranus. Uses all 4 constituent slots — MAX_CONSTITUENTS is
+    // exactly consumed, no headroom left on this row.
     planetRadiusKm: seededPlanet('neptune').radiusKm,
     atmosphereTopKm: seededPlanet('neptune').radiusKm + 120,
     constituents: [
       {
-        scatter: [4e-3, 9e-3, 22e-3],
+        // [D] H2/He Rayleigh, same cross sections as Uranus's. Only 5% above Uranus's — the higher
+        // number density is nearly cancelled by the larger He fraction. Molecular Rayleigh is NOT
+        // why Neptune reads bluer.
+        scatter: [3.32e-3, 7.91e-3, 19.9e-3],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 20 },
+        profile: { kind: 'exponential', scaleHeightKm: 20 }, // [M/D] fact sheet range 19.1-20.3
         phase: { kind: 'rayleigh' },
       },
       {
-        scatter: [2e-3, 2e-3, 2e-3],
-        absorb: [1e-3, 1e-3, 1e-3],
-        profile: { kind: 'exponential', scaleHeightKm: 10 },
-        phase: { kind: 'henyeyGreenstein', g: 0.6 },
+        // [D] Methane, saturation-capped at the 1-bar level like Uranus's — n = 0.0160 amagat,
+        // LESS than Uranus's 0.0347, since Neptune's 1-bar level is 4K colder despite Neptune's
+        // larger deep abundance (7% vs 3%, Irwin+22): that reservoir sits below the sphere.
+        scatter: [0.18e-3, 0.42e-3, 1.09e-3],
+        absorb: [0.81e-3, 0.24e-3, 0.031e-3],
+        profile: { kind: 'exponential', scaleHeightKm: 5.9 }, // methane's own H, as for Uranus
+        phase: { kind: 'rayleigh' },
+      },
+      {
+        // [M/D] Aerosol-3 (Irwin+22, tau 0.04 @ 0.8um). 10-40x more ABSORBING than Uranus's
+        // (single-scattering albedo 0.31 vs 0.96 in red) — real, but Irwin's own colour
+        // decomposition gives this layer little weight; don't hang the U/N colour difference on it.
+        scatter: [0.15e-3, 0.35e-3, 0.84e-3],
+        absorb: [0.34e-3, 0.14e-3, 0.32e-3],
+        profile: { kind: 'exponential', scaleHeightKm: 42 },
+        phase: { kind: 'henyeyGreenstein', g: 0.06 },
+      },
+      {
+        // [M/D] Detached methane-ice layer at 0.2 bar (Irwin+22 Aerosol-4) — the discrete case
+        // `tent` exists for, unlike Uranus which has none above 1 bar. Grey, conservative (r
+        // 2.5um ice, no absorption). LOOK RISK: ~100x limb enhancement drives tau_limb to ~3, a
+        // bright ring unseen in reference imagery — eyeball, ready to halve `scatter` [L].
+        scatter: [7.1e-3, 7.1e-3, 7.1e-3],
+        absorb: [0, 0, 0],
+        profile: { kind: 'tent', centerKm: 30, widthKm: 4.2 },
+        phase: { kind: 'henyeyGreenstein', g: 0.84 },
       },
     ],
     groundAlbedo: seededPlanet('neptune').albedo,
