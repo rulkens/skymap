@@ -88,13 +88,17 @@ export const GPU_HANDLE_ROWS = [
       }),
   },
   {
+    // `state`, not a defaults constant: the `mw-aggregate` row's `scale` is a
+    // function of `settings.milkyWay.aggregateDivisor`, and every reconcile
+    // re-reads it off this same live state. Not a second path to the same
+    // answer — the scale function IS the reconcile path, seeded here.
     key: 'renderTargets',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+    construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
       createRenderTargets(
         deps.ctx.device,
         deps.ctx.format,
         { width: deps.ctx.canvas.width, height: deps.ctx.canvas.height },
-        MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+        state,
       ),
   },
   {

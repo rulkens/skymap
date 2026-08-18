@@ -3,9 +3,9 @@
  * lifecycle, driven by the `RenderTargetSpec` table.
  *
  * An offscreen target is a ROW (`id`, `format`, `depth`, `scale`), and this
- * module allocates, resizes, and releases every row uniformly — a new
+ * module allocates, reconciles, and releases every row uniformly — a new
  * offscreen (a pick target, a foreground slab) is a new row, not a new
- * module + handle + resize call, and the resize path never has to enumerate
+ * module + handle + resize call, and the frame loop never has to enumerate
  * targets by hand.
  *
  * ### Why the HDR offscreen exists at all
@@ -80,16 +80,13 @@
  * multiplicative transmittance has to land on the real cosmological
  * accumulation, and it is not the fill-bound half.
  *
- * This is the one row whose divisor is NOT a constant here: it arrives as the
- * `mwAggregateDivisor` argument, carrying `settings.milkyWay.aggregateDivisor`.
- * The divisor trades directly against the star shader's `starPxMin` /
- * `starPxMax` clamps, which are stated in TARGET pixels and are already live
- * sliders, so the three have to be findable together against a moving frame.
- * A target's dimensions are fixed at creation, so the frame loop answers a
- * change by rebuilding this table (see `runFrame`) — the divisor currently in
- * force is readable straight off this row's `scale`, which is why no separate
- * 'last applied' record exists anywhere. `MILKY_WAY_TUNING_DEFAULTS` is the
- * home of its boot value.
+ * This is the one row whose divisor is NOT a constant here: its `scale` is a
+ * function of the live `settings.milkyWay.aggregateDivisor`, resolved afresh by
+ * every `reconcile`. The divisor trades against the star shader's `starPxMin` /
+ * `starPxMax` clamps, stated in TARGET pixels and already live sliders, so the
+ * three move together against a moving frame. No 'last applied' record exists
+ * anywhere: the allocated texture size (`sizeOf`) is the record of the divisor
+ * in force, and `reconcile` compares against it.
  *
  * ### Why the zone-of-avoidance row renders at 1/5 scale
  *
@@ -139,6 +136,7 @@
  * producers whose colour attachment is provided by whoever opens the pass.
  */
 
+import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
@@ -160,18 +158,19 @@ const STAR_AGGREGATE_DIVISOR = 2;
  */
 const ZONE_OF_AVOIDANCE_DIVISOR = 5;
 
+/** A row's divisor for this state — constant rows ignore the state entirely. */
+function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
+  return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
+}
+
 /**
  * Build the concrete target table for this frame configuration. A function
- * (not a module constant) because two rows are runtime-decided: the swap row's
- * format is the runtime swap-chain format (`bgra8unorm` on macOS, `rgba8unorm`
- * elsewhere), and the `mw-aggregate` row's divisor is a live tuning knob (see
- * the module header). Rows per the renderer-unification design's concrete
- * target table; the pick rows arrive in a later plan phase.
+ * (not a module constant) because the swap row's format is runtime-decided —
+ * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
+ * Rows per the renderer-unification design's concrete target table; the pick
+ * rows arrive in a later plan phase.
  */
-function buildSpecs(
-  swapFormat: GPUTextureFormat,
-  mwAggregateDivisor: number,
-): readonly RenderTargetSpec[] {
+function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
   return [
     // hdr and swap clear opaque black (a=1); every other row clears to a=0 so
     // its upsample/composite adds nothing for a fragment it didn't reach —
@@ -214,7 +213,7 @@ function buildSpecs(
       id: 'mw-aggregate',
       format: 'rgba16float',
       depth: null,
-      scale: mwAggregateDivisor,
+      scale: (state) => state.settings.milkyWay.aggregateDivisor,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
     // Transparent (a=0) so the later OVER composite leaves every pixel the
@@ -261,11 +260,11 @@ export function createRenderTargets(
   device: GPUDevice,
   swapFormat: GPUTextureFormat,
   size: Size,
-  mwAggregateDivisor: number,
+  state: EngineState,
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = buildSpecs(swapFormat, mwAggregateDivisor);
+  let specs = buildSpecs(swapFormat);
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.
@@ -285,11 +284,7 @@ export function createRenderTargets(
   // real dimensions (see `renderTargets.test.ts`'s `mockDevice`).
   const sizes = new Map<string, Size>();
 
-  function allocate(spec: RenderTargetSpec, s: Size): void {
-    // `reducedTargetSize` is the sizing rule every reduced-resolution target
-    // shares (see its docblock); the depth texture, when present, shares
-    // these dimensions exactly so its samples line up with the colour target.
-    const [width, height] = reducedTargetSize(s.width, s.height, spec.scale);
+  function allocate(spec: RenderTargetSpec, width: number, height: number): void {
     sizes.set(spec.id, { width, height });
 
     textures.get(spec.id)?.destroy();
@@ -325,7 +320,24 @@ export function createRenderTargets(
     }
   }
 
-  for (const spec of offscreenSpecs) allocate(spec, size);
+  // Keyed on the size the row was allocated at, never on a remembered divisor:
+  // the texture is the authoritative record of what it was built at, so a canvas
+  // resize and a settings-driven divisor move reduce to one question. Two
+  // divisors that floor to the same pixels genuinely need no reallocation — the
+  // surviving texture is the one every consumer's `viewOf` already resolves.
+  // (`reducedTargetSize` is the shared sizing rule; see its docblock.)
+  function reconcile(s: EngineState, canvas: Size): void {
+    for (const spec of offscreenSpecs) {
+      const [width, height] = reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
+      const held = sizes.get(spec.id);
+      if (held !== undefined && held.width === width && held.height === height) continue;
+      allocate(spec, width, height);
+    }
+  }
+
+  // Boot takes the same path a frame does: nothing is allocated yet, so every
+  // offscreen row misses and gets its first texture.
+  reconcile(state, size);
 
   return {
     // A getter, not a captured value: setSwapFormat reassigns `specs`, and
@@ -368,9 +380,7 @@ export function createRenderTargets(
       }
       return view;
     },
-    resize(s: Size): void {
-      for (const spec of offscreenSpecs) allocate(spec, s);
-    },
+    reconcile,
     setSwapFormat(next: GPUTextureFormat): void {
       specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
     },

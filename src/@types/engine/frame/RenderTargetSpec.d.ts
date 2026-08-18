@@ -17,6 +17,8 @@
  * `pick:cosmo`, `pick:near0`) this spec instantiates.
  */
 
+import type { EngineState } from '../state/EngineState';
+
 export type RenderTargetSpec = {
   /** e.g. 'hdr' | 'volume' | 'foreground:0' | 'swap' | 'pick:cosmo' | 'pick:near0'. */
   id: string;
@@ -24,8 +26,13 @@ export type RenderTargetSpec = {
   format: GPUTextureFormat;
   /** 'depth32float' for opaque slabs, 'depth24plus' for pick, null for additive/over targets. */
   depth: GPUTextureFormat | null;
-  /** 1 = full resolution; 3 = volume's downsample divisor. */
-  scale: number;
+  /**
+   * Downsample divisor: 1 = full resolution; 3 = volume's. A FUNCTION for a row
+   * whose divisor is a live setting (`mw-aggregate`) — `reconcile` resolves it
+   * every frame and reallocates only when the resulting pixel size moved, so a
+   * knob-driven row needs no rebuild path of its own.
+   */
+  scale: number | ((state: EngineState) => number);
   /**
    * First-touch colour clear, read by `executeFrame`/`runBloom`: the first
    * pass opened against this target in a frame clears to this colour; later

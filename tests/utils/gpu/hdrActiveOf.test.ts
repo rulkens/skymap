@@ -17,7 +17,7 @@ function makeStub(specs: readonly RenderTargetSpec[]): RenderTargets {
     sizeOf: vi.fn(),
     viewOf: vi.fn(),
     depthViewOf: vi.fn(),
-    resize: vi.fn(),
+    reconcile: vi.fn(),
     setSwapFormat: vi.fn(),
     destroy: vi.fn(),
   };

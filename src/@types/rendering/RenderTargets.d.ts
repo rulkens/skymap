@@ -27,6 +27,7 @@
  * whose spec row carries a non-null `depth`.
  */
 
+import type { EngineState } from '../engine/state/EngineState';
 import type { RenderTargetSpec } from '../engine/frame/RenderTargetSpec';
 import type { Size } from './Size';
 
@@ -59,24 +60,28 @@ export type RenderTargets = {
   sizeOf(id: string): Size;
   /**
    * Current colour-attachment view for an OFFSCREEN row (`hdr`, `volume`,
-   * `foreground:0`). Stable until the next `resize()`. Throws for `swap` (and
+   * `foreground:0`). Stable until a `reconcile` moves this row. Throws for `swap` (and
    * any unknown id): the swap chain is executor-resolved from the acquired
    * frame view, not an allocated texture this owner holds.
    */
   viewOf(id: string): GPUTextureView;
   /**
    * Current depth-attachment view for a row whose spec declares `depth`
-   * (`foreground:0`). Stable until the next `resize()`. Throws for depthless
+   * (`foreground:0`). Stable until a `reconcile` moves this row. Throws for depthless
    * rows (`hdr`, `volume`), `swap`, and any unknown id — an absent depth view
    * means the row has no depth attachment, not a nullable success.
    */
   depthViewOf(id: string): GPUTextureView;
   /**
-   * Reallocate every offscreen row at `floor(size / spec.scale)` per axis
-   * (min 1 px). The ONE resize seam — the frame's resize handler calls this
-   * once and every offscreen row tracks the new canvas size together.
+   * Bring every offscreen row up to date with `size` and the live `state`:
+   * resolve each row's desired `floor(size / scale)` per axis (min 1 px) and
+   * reallocate only the rows whose allocated size no longer matches (a
+   * depth-bearing row's depth texture moves with its colour texture). The ONE
+   * seam answering both a canvas resize and a settings-driven divisor move —
+   * `runFrame` calls it unconditionally, and a frame where nothing moved
+   * allocates nothing.
    */
-  resize(size: Size): void;
+  reconcile(state: EngineState, size: Size): void;
   /**
    * Replace the `swap` row's format in `specs` — the single home for the
    * live swap-chain format, so a caller that reconfigures the swap chain

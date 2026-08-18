@@ -37,7 +37,6 @@
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Vec2 } from '../../../@types/math/Vec2';
 import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
 
@@ -88,7 +87,6 @@ export function runBloom(
   if (pyramid === null) return;
 
   const { threshold, strength } = state.settings.bloom;
-  const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
   const viewOf = (id: string): GPUTextureView => ctx.renderTargets.viewOf(id);
 
   // One `'bloom'` slot spanning the sub-routine: begin on the bright pass, end
@@ -116,13 +114,7 @@ export function runBloom(
     const src = `bloom${level - 1}`;
     const target = `bloom${level}`;
     const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'clear', undefined);
-    pyramid.downsample(
-      pass,
-      viewOf(src),
-      level,
-      bloomSrcTexelSize(ctx, viewportPx, src),
-      level === 1,
-    );
+    pyramid.downsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, src), level === 1);
     pass.end();
   }
 
@@ -138,7 +130,7 @@ export function runBloom(
     const src = `bloom${level + 1}`;
     const target = `bloom${level}`;
     const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'load', undefined);
-    pyramid.upsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, viewportPx, src));
+    pyramid.upsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, src));
     pass.end();
   }
 

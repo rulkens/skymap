@@ -85,7 +85,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       depthViewOf: (id: string): GPUTextureView => {
         throw new Error(`fixture renderTargets: no depth view for '${id}'`);
       },
-      resize: vi.fn(),
+      reconcile: vi.fn(),
       setSwapFormat: vi.fn(),
       destroy: vi.fn(),
     },

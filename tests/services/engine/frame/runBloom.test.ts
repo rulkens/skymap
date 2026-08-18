@@ -109,6 +109,17 @@ function makeCtx(): ReadyFrameContext {
         if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
         return spec;
       },
+      // `bloomSrcTexelSize` reads the ALLOCATED size of the source level, so
+      // every pass in the sequence throws without this — the fixture mirrors
+      // production's `floor(canvas / scale)` over the table declared above.
+      sizeOf: (id: string) => {
+        const spec = BLOOM_SPECS.find((s) => s.id === id);
+        if (!spec) throw new Error(`mock renderTargets: no size for '${id}'`);
+        return {
+          width: Math.max(1, Math.floor(1920 / spec.scale)),
+          height: Math.max(1, Math.floor(1080 / spec.scale)),
+        };
+      },
     },
   } as unknown as ReadyFrameContext;
 }
