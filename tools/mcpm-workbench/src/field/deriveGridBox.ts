@@ -2,6 +2,7 @@ import type { GridBox } from '../../@types/GridBox';
 import type { GridSlice } from '../../@types/GridSlice';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { autoFitGridBox } from './autoFitGridBox';
+import { boxHalfExtentMpc } from './boxHalfExtentMpc';
 
 // divisor 1 = the tool's long-standing 256 default; >1 coarser, <1 finer —
 // same direction as the raymarch preview divisor (view.raymarch.divisor).
@@ -12,7 +13,7 @@ function longAxisFor(divisor: number): number {
 }
 
 function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
-  const half: Vec3 = [size[0] / 2, size[1] / 2, size[2] / 2];
+  const half = boxHalfExtentMpc(size);
   return {
     min: [center[0] - half[0], center[1] - half[1], center[2] - half[2]],
     max: [center[0] + half[0], center[1] + half[1], center[2] + half[2]],

@@ -4,6 +4,7 @@ import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 import { buildParamsPayload } from '../state/exportParams';
 
 // Local time with a numeric (no-colon) UTC offset — "+0200", matching the
@@ -43,10 +44,11 @@ export function emitTraceSidecar(input: {
   readonly producedAt: Date;
 }): string {
   const { box, points, weights, tier, params, agentCount, steps, seed, producedAt } = input;
+  const half = boxHalfExtentMpc(box.sizeMpc);
   const originMpc = [
-    box.centerMpc[0] - box.sizeMpc[0] / 2,
-    box.centerMpc[1] - box.sizeMpc[1] / 2,
-    box.centerMpc[2] - box.sizeMpc[2] / 2,
+    box.centerMpc[0] - half[0],
+    box.centerMpc[1] - half[1],
+    box.centerMpc[2] - half[2],
   ];
 
   const sidecar = {

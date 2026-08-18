@@ -11,6 +11,7 @@
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../@types/GridBox';
+import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 import { worldToVoxel } from '../field/worldToVoxel';
 import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from './writeMcpmCamera';
 import boxLinesWgsl from '../../../../src/services/gpu/shaders/mcpm/boxLines.wesl?static';
@@ -32,7 +33,7 @@ const BOX_UNIFORM_BYTES = 32;
 const LINE_VERTICES = 24; // boxLines.wesl's EDGE_CORNERS: 12 edges x 2 endpoints.
 
 function worldBounds(box: GridBox): { min: Vec3; max: Vec3 } {
-  const half: Vec3 = [box.sizeMpc[0] / 2, box.sizeMpc[1] / 2, box.sizeMpc[2] / 2];
+  const half = boxHalfExtentMpc(box.sizeMpc);
   return {
     min: [box.centerMpc[0] - half[0], box.centerMpc[1] - half[1], box.centerMpc[2] - half[2]],
     max: [box.centerMpc[0] + half[0], box.centerMpc[1] + half[1], box.centerMpc[2] + half[2]],
