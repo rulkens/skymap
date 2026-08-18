@@ -82,6 +82,17 @@ describe('GPU_HANDLE_ROWS — construct/destroy round-trip', () => {
     expect(order.at(-1)).toBe('focusUniform');
     expect(order.indexOf('focusUniform')).toBeGreaterThan(order.indexOf('galaxyPickRenderer'));
   });
+
+  it('declares starCatalogRenderer before its pick twin, which reads it at construction', () => {
+    // starCatalogPickRenderer's real construct closure reads
+    // `state.gpu.starCatalogRenderer!` (see gpuHandleRegistry.ts) — moving
+    // starCatalogRenderer below it would throw a TypeError on first boot,
+    // a failure this stub-based suite otherwise can't see.
+    const keys = GPU_HANDLE_ROWS.map((row) => row.key);
+    expect(keys.indexOf('starCatalogRenderer')).toBeLessThan(
+      keys.indexOf('starCatalogPickRenderer'),
+    );
+  });
 });
 
 describe('GPU_HANDLE_ROWS — starPointRenderer boot seed', () => {
@@ -90,7 +101,7 @@ describe('GPU_HANDLE_ROWS — starPointRenderer boot seed', () => {
       | GpuHandleRow
       | undefined;
     const state = { data: createEngineData(), gpu: {} } as unknown as EngineState;
-    const realDeps = { device: {} } as unknown as GpuHandleConstructDeps;
+    const realDeps = { ctx: { device: {} } } as unknown as GpuHandleConstructDeps;
 
     row!.construct(state, realDeps);
 

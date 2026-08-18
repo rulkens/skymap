@@ -42,13 +42,15 @@ function makeStub(name: string): Stub {
     // shape because other stubbed renderers built from the same factory
     // expose the method.
     setLabels: vi.fn(),
-    // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
-    // synchronously after constructing the star-point renderer.
+    // The `starPointRenderer` row's construct closure (gpuHandleRegistry.ts)
+    // calls `setStars(<the seeded star list>)` synchronously right after
+    // constructing the renderer.
     setStars: vi.fn(),
-    // `initGpu` calls `starCatalogRenderer.pickResources()` synchronously to
-    // hand the pick twin (`starCatalogPickRenderer`) its shared BGLs + the
-    // per-source records bind-group lookup. The pick factory is itself mocked
-    // here, so this only needs to be a callable returning the resource shape.
+    // The `starCatalogPickRenderer` row's construct closure calls
+    // `starCatalogRenderer.pickResources()` synchronously to hand the pick
+    // twin its shared BGLs + the per-source records bind-group lookup. The
+    // pick factory is itself mocked here, so this only needs to be a
+    // callable returning the resource shape.
     pickResources: vi.fn(() => ({
       cameraBgl: { __mockStarCameraBgl: true },
       drawBgl: { __mockStarDrawBgl: true },
@@ -85,8 +87,9 @@ vi.mock('../../../../src/services/gpu/device', () => ({
     hdrCapable: false,
   })),
   resizeCanvasToDisplay: vi.fn(),
-  // Returns a no-op cleanup — this test asserts renderer reachability, not
-  // the HDR-capability listener wiring (see device.hdrCapability.test.ts).
+  // Returns a no-op cleanup so boot doesn't need a real matchMedia listener;
+  // the dispatch-wiring tests below recover the registered callback via
+  // `.mock.calls` and invoke it directly to exercise the re-dispatch path.
   watchHdrCapability: vi.fn(() => () => {}),
 }));
 
@@ -210,10 +213,11 @@ vi.mock('../../../../src/services/gpu/renderers/devTools/diskRadiusRing', () => 
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
-// The earth renderer keeps its `?static` WESL imports out of JSDOM;
-// mock it so initGpu's foreground block constructs a stub on
-// `state.gpu.earthRenderer` (the un-awaited Blue Marble fetch it fires runs
-// after initGpu resolves and fails harmlessly in the test env).
+// The earth renderer keeps its `?static` WESL imports out of JSDOM; mock it
+// so the `earthRenderer` row's construct closure (gpuHandleRegistry.ts)
+// lands a stub on `state.gpu.earthRenderer` (the un-awaited Blue Marble
+// fetch it fires runs after initGpu resolves and fails harmlessly in the
+// test env).
 vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
   createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
 }));
@@ -226,26 +230,28 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
   createStarRenderer: vi.fn(() => makeStub('starRenderer')),
 }));
 // The shared textured-body renderer keeps its `?static` WESL imports out of
-// JSDOM; mock it so initGpu's foreground block lands a stub on
-// `state.gpu.texturedBodyRenderer`.
+// JSDOM; mock it so the `texturedBodyRenderer` row's construct closure
+// lands a stub on `state.gpu.texturedBodyRenderer`.
 vi.mock('../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer', () => ({
   createTexturedBodyRenderer: vi.fn(() => makeStub('texturedBodyRenderer')),
 }));
 // The ring renderer keeps its `?static` WESL imports out of JSDOM; mock it so
-// initGpu's foreground block lands a stub on `state.gpu.ringRenderer`.
+// the `ringRenderer` row's construct closure lands a stub on `state.gpu.ringRenderer`.
 vi.mock('../../../../src/services/gpu/renderers/bodies/ringRenderer', () => ({
   createRingRenderer: vi.fn(() => makeStub('ringRenderer')),
 }));
 // Earth's cloud-shell renderer keeps its `?static` WESL imports out of JSDOM;
-// mock it so initGpu's foreground block lands a stub on `state.gpu.cloudShellRenderer`.
+// mock it so the `cloudShellRenderer` row's construct closure lands a stub on
+// `state.gpu.cloudShellRenderer`.
 vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () => ({
   createCloudShellRenderer: vi.fn(() => makeStub('cloudShellRenderer')),
 }));
 // Earth's atmosphere-shell renderer bakes LUTs against the full device API (compute
 // pipelines + storage textures) the plain stub device can't service, and keeps its
-// `?static` WESL imports out of JSDOM; mock it so initGpu's foreground block lands a
-// stub on `state.gpu.atmosphereShellRenderer`. initGpu calls it with
-// `ATMOSPHERE_PARAMS['earth']` (a real data row — no mock needed for that import).
+// `?static` WESL imports out of JSDOM; mock it so the `atmosphereShellRenderer`
+// row's construct closure lands a stub on `state.gpu.atmosphereShellRenderer`.
+// That row passes the whole `ATMOSPHERE_PARAMS` record (a real data import —
+// no mock needed for it).
 vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
@@ -329,10 +335,15 @@ import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineS
 // to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
 // happens AFTER the listener is registered but before `initGpu` returns.
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
-// The real seeded data bag: initGpu reads `state.data.bodies` (the far-star
-// partition for setStars; the seeded planet list drives planetsLayer), so the
-// state fixture carries the real construction-time seeds.
+// The real seeded data bag: the starPointRenderer row's construct closure
+// reads `state.data.bodies` (the far-star partition for setStars; the seeded
+// planet list drives planetsLayer), so the state fixture carries the real
+// construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+// The registry itself: derives the expected non-null / null key sets for the
+// phase-split assertion below, rather than a hand-written key list that
+// could drift from GPU_HANDLE_ROWS.
+import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -345,6 +356,7 @@ function makeState(): EngineState {
     gpu: {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
+      pickProgram: null,
       milkyWayPickRenderer: null,
       renderTargets: null,
       compositor: null,
@@ -463,5 +475,29 @@ describe('initGpu — HDR capability dispatch wiring', () => {
     await expect(initGpu(state, deps)).rejects.toThrow('font atlas fetch failed');
 
     expect(deps.phaseLocals?.unwatchHdrCapability).toBeTypeOf('function');
+  });
+});
+
+describe('initGpu — GPU_HANDLE_ROWS phase split', () => {
+  it('constructs every row except the wireInput-phase rows, which stay null', async () => {
+    // Emptying or widening initGpu's row filter (or wireInput's complement)
+    // must fail here: this is what the stub round-trip test in
+    // gpuHandleRegistry.test.ts structurally cannot see (it stubs every
+    // row's construct and never runs either phase's filter).
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    const gpu = state.gpu as unknown as Record<string, unknown>;
+    for (const row of GPU_HANDLE_ROWS) {
+      if ('constructPhase' in row) {
+        expect(gpu[row.key]).toBeNull();
+      } else {
+        // `toBeTruthy`, not `.not.toBeNull()`: several keys start `undefined`
+        // (absent from the fixture literal below), and `undefined` would
+        // pass a bare not-null check without ever running `construct`.
+        expect(gpu[row.key]).toBeTruthy();
+      }
+    }
   });
 });

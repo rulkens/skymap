@@ -78,35 +78,39 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // `renderer` is the null-guard subject on the next line.
   const renderer = state.gpu.galaxyPointRenderer;
   if (!renderer) return;
-  // The two GPU_HANDLE_ROWS rows declared LAST: they read `state.gpu.focusUniform`,
-  // built by `initGpu`'s walker call, so they wait for this phase. Getters, not
-  // eager reads, for the fields neither row consumes (context/format/hdrCapable/
-  // uiCtx/fontAtlases) — keeps the bag honestly typed without widening this
-  // phase's boot-state requirement past what the old inline code required.
+  // The two GPU_HANDLE_ROWS rows marked `constructPhase: 'wireInput'`: they
+  // read `state.gpu.focusUniform`, built by `initGpu`'s walker call, so they
+  // wait for this phase. `ctx.context`/`ctx.format`/`ctx.hdrCapable` and
+  // `fontAtlases` stay getters — neither row reads them — so this bag never
+  // widens this phase's boot-state requirement past what the old inline code
+  // required. `ctx.format` has no live source at this phase (no row here
+  // bakes a swap-format pipeline); it throws rather than silently re-deriving
+  // a value that could diverge from `initGpu`'s boot format.
   const handleDeps: GpuHandleConstructDeps = {
-    device: deps.phaseLocals!.device,
-    get context() {
-      return state.gpu.uiCtx!.context;
-    },
-    canvas,
-    get format() {
-      return state.gpu.renderTargets!.specs.find((spec) => spec.id === 'swap')!.format;
-    },
-    get hdrCapable() {
-      return state.gpu.uiCtx!.hdrCapable;
+    ctx: {
+      device: deps.phaseLocals!.device,
+      get context() {
+        return state.gpu.uiCtx!.context;
+      },
+      canvas,
+      get format(): GPUTextureFormat {
+        throw new Error('wireInput-phase rows never read ctx.format — wire a derivation first');
+      },
+      get hdrCapable() {
+        return state.gpu.uiCtx!.hdrCapable;
+      },
     },
     fadeBgl: state.gpu.fadeBgl!,
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
-    get uiCtx() {
-      return state.gpu.uiCtx!;
-    },
     get fontAtlases() {
       return state.gpu.fontAtlases!;
     },
   };
+  // Complement of initGpu.ts's filter, by construction: this phase builds
+  // only the rows marked `constructPhase: 'wireInput'`.
   constructGpuHandles(
-    GPU_HANDLE_ROWS.filter((row) => row.key === 'galaxyPickRenderer' || row.key === 'pickProgram'),
+    GPU_HANDLE_ROWS.filter((row) => 'constructPhase' in row),
     state,
     handleDeps,
   );

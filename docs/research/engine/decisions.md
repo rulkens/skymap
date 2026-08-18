@@ -122,8 +122,11 @@ the deep tuning surface.
     director, now joined by zone-of-avoidance's private MSDF glyph pipeline as
     a 3rd private label path, #555) sequences after Track C. Hygiene
     basket (grow-buffer ×7, fade-scratch ×4, fullscreen-tri ×5, hypot ×10) is
-    PR-anytime. Bug-suspects to verify early: compositor not swap-rebuilt;
-    fieldStarSphere missing the FOREGROUND_MAX gate.
+    PR-anytime. Bug-suspects to verify early: ~~compositor not swap-rebuilt~~
+    RESOLVED NEGATIVE — `compositor.ts:178-190` documents `swapFormat`/
+    `hdrFormat` as unused, pipelines cache on the live per-frame `dstFormat`,
+    so there is no baked format to go stale; confirmed also by a clean
+    HDR-toggle visual smoke; fieldStarSphere missing the FOREGROUND_MAX gate.
 
 ## The contract (settled sketch)
 

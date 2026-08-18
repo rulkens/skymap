@@ -28,8 +28,9 @@ import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuH
 
 /**
  * Bootstrap phase 1: GPU device acquisition + renderer construction. Writes
- * every `GPU_HANDLE_ROWS`-owned handle except `galaxyPickRenderer`/`pickProgram`
- * (Task 7, from `wireInput`). Mints no `state.assetSlots.*` — those are minted
+ * every `GPU_HANDLE_ROWS`-owned handle except the `constructPhase: 'wireInput'`
+ * rows (`galaxyPickRenderer`/`pickProgram`, built by `wireInput` once
+ * `focusUniform` exists). Mints no `state.assetSlots.*` — those are minted
  * in `wireSlots`. Stashes `device`/`context`/`unwatchHdrCapability` on
  * `deps.phaseLocals` so `engine.ts`'s `destroy()` can remove the HDR listener.
  */
@@ -50,8 +51,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   deps.phaseLocals = { device, context, unwatchHdrCapability };
 
   // fadeBgl/sourceBgl/focusBgl/timingService/uiCtx/fontAtlases: the 6
-  // `GpuHandleKey`-excluded deps `GpuHandleConstructDeps` bundles for rows
-  // below — built here, not as rows (see GpuHandleKey.d.ts).
+  // `GpuHandleKey`-excluded state.gpu fields (see GpuHandleKey.d.ts) — built
+  // here, not as rows. fadeBgl/sourceBgl/focusBgl/fontAtlases also feed
+  // `handleDeps` below; uiCtx/timingService don't.
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
   state.gpu.focusBgl = createFocusUniformsBgl(device);
@@ -68,19 +70,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.fontAtlases = await loadFontAtlases();
 
   const handleDeps: GpuHandleConstructDeps = {
-    device,
-    context,
-    canvas,
-    format,
-    hdrCapable,
+    ctx: { device, context, canvas, format, hdrCapable },
     fadeBgl: state.gpu.fadeBgl!,
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
-    uiCtx: state.gpu.uiCtx!,
     fontAtlases: state.gpu.fontAtlases!,
   };
+  // Complement of wireInput.ts's filter below, by construction: this phase
+  // builds every row EXCEPT the ones marked `constructPhase: 'wireInput'`.
   constructGpuHandles(
-    GPU_HANDLE_ROWS.filter((row) => row.key !== 'galaxyPickRenderer' && row.key !== 'pickProgram'),
+    GPU_HANDLE_ROWS.filter((row) => !('constructPhase' in row)),
     state,
     handleDeps,
   );
