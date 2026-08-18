@@ -23,7 +23,9 @@ export function previewPackedTrace(
   values: Float32Array,
   box: GridBox,
 ): PreviewPackedTrace {
-  const { voxels } = packLogTraceVoxels(values, box.dims);
+  // `values` is a `readbackTrace()` widening — already grid.wesl's X-fastest
+  // layout, not numpy C-order — see exportScfd.ts's identical call.
+  const { voxels } = packLogTraceVoxels(values, box.dims, 'x-fastest');
   const element: GridElement = device.features.has('shader-f16') ? 'f16' : 'f32';
   const data = element === 'f16' ? voxels : Float32Array.from(voxels, f16ToFloat);
 

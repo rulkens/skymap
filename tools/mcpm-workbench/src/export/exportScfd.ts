@@ -16,7 +16,10 @@ const IDENTITY_ROTATION: Vec4 = [0, 0, 0, 1];
  * box, not a sidecar's provenance fields — this leg has no sidecar.
  */
 export function exportScfd(values: Float32Array, box: GridBox): ArrayBuffer {
-  const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, box.dims);
+  // `values` is a `readbackTrace()` widening — already grid.wesl's X-fastest
+  // layout, not numpy C-order — so 'x-fastest' skips the packer's transpose
+  // (which would otherwise swap X and Z a second time; see packLogTraceVoxels).
+  const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, box.dims, 'x-fastest');
   const origin: Vec3 = [
     box.centerMpc[0] - box.sizeMpc[0] / 2,
     box.centerMpc[1] - box.sizeMpc[1] / 2,

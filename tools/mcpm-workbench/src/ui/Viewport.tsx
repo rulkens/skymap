@@ -311,7 +311,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
      * below is what decides every frame whether the result is still fresh
      * enough to draw. `harness !== h` guards the rebuild race the same way
      * `buildFromPoints` guards `generation` — `readbackTrace` can outlive a
-     * catalog switch that starts mid-await.
+     * catalog switch that starts mid-await. The `previewPacked` re-check
+     * guards a second race the token-diff style above doesn't: the user can
+     * uncheck before this lands, and only the flag at COMMIT time (not at
+     * call time) says whether the result is still wanted — skip installing
+     * rather than build-then-dispose, so nothing orphaned is ever created.
      */
     async function runPreviewPacked(): Promise<void> {
       const h = harness;
@@ -321,6 +325,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const readback = await h.readbackTrace();
         const values = widenTrace(readback);
         if (disposed || harness !== h) return;
+        if (!store.getSnapshot().view.raymarch.previewPacked) return;
         disposePreview();
         const packed = previewPackedTrace(h.gpu.device, values, h.box);
         previewBuffer = packed.buffer;
