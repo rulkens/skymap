@@ -1,15 +1,12 @@
 /**
  * buildSwapRenderers — the re-runnable seam for the eight
- * `rebuildOnSwapFormat` renderers `GPU_HANDLE_ROWS` flags, baked against the
- * swap-chain colour-target format.
- *
- * Every `createX` factory builds a real `GPURenderPipeline` against
- * `device`, which JSDOM's stub `GPUDevice` can't service — mocked so
- * `buildSwapRenderers` runs to completion and its `state.gpu.*` writes +
- * label-director wiring can be observed directly. Importing
- * `buildSwapRenderers` also imports the rest of `GPU_HANDLE_ROWS`'s
- * factories transitively (module eval only) — unmocked ones are never
- * invoked, since only the 8 flagged rows' `construct` ever runs here.
+ * `rebuildOnSwapFormat` renderers `GPU_HANDLE_ROWS` flags. Each factory
+ * builds a real `GPURenderPipeline` against `device`, which JSDOM's stub
+ * `GPUDevice` can't service — mocked so the run completes and its
+ * `state.gpu.*` writes + label-director wiring can be observed directly.
+ * Importing this file also imports the REST of `GPU_HANDLE_ROWS`'s
+ * factories transitively; those stay unmocked safely because only the 8
+ * flagged rows' `construct` ever runs here.
  */
 
 import { describe, it, expect, vi } from 'vitest';
