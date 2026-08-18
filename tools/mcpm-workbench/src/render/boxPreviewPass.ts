@@ -1,15 +1,15 @@
 /**
  * createBoxPreviewPass — a transient wireframe of the PENDING grid box (mcpm/boxLines.wesl),
- * plus its gizmo handle glyphs (translate arrows, resize crosses; rotate rings are F1's
- * zero-radius stubs, no geometry yet). Vertex-pulled, no vertex buffers — corners and glyph
- * positions are rewritten into small buffers every draw call, so unlike the agent-fed passes
- * this needs neither the harness nor a box at construction; RenderGraph builds it EAGERLY, so
- * a shader compile error surfaces at graph construction, not on the first drag.
+ * plus its gizmo handle glyphs (translate arrows, resize crosses, rotate rings). Vertex-pulled,
+ * no vertex buffers — corners and glyph positions are rewritten into small buffers every draw
+ * call, so unlike the agent-fed passes this needs neither the harness nor a box at construction;
+ * RenderGraph builds it EAGERLY, so a shader compile error surfaces at graph construction, not
+ * on the first drag.
  *
  * `builtBox` (the camera's own voxel frame) and `pendingBox` (what's previewed, in world Mpc,
  * converted host-side) are deliberately different GridBoxes — glyph geometry comes from
- * `pendingBox`'s own `gizmoHandleGeometry(box, UNIT_AXES, arrowLengthMpc)`; F2 swaps in a
- * rotated basis with no signature change here (spec §5). `arrowLengthMpc` is derived from
+ * `pendingBox`'s own `gizmoHandleGeometry(box, axesFor(box.rotation), arrowLengthMpc)` (F2.5's
+ * axes swap: arrows/crosses/rings all rotate with the box). `arrowLengthMpc` is derived from
  * `view` each draw via gizmoArrowLengthMpc — the SAME formula Viewport.tsx's pick/hover path
  * uses, or grabbing an arrow would miss where it's drawn.
  */
@@ -48,13 +48,6 @@ export type BoxPreviewPass = {
   dispose(): void;
 };
 
-// world-space axis directions before F2's rotated basis lands (spec §5's "Handle set").
-const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
-  [1, 0, 0],
-  [0, 1, 0],
-  [0, 0, 1],
-];
-
 // BoxUniform: center, halfExtents, basisX, basisY, basisZ — each vec3+pad, 16-byte
 // aligned — boxLines.wesl's struct (plan contract §5's byte table), byte-for-byte.
 const BOX_UNIFORM_BYTES = 80;
@@ -65,9 +58,10 @@ const LINE_VERTICES = 24; // boxLines.wesl's EDGE_CORNERS: 12 edges x 2 endpoint
 // (VERTICES_PER_SEGMENT) in vsGlyph, so the draw call's vertex count is a multiple of it.
 const GLYPH_SEGMENT_FLOATS = 12;
 const VERTICES_PER_SEGMENT = 6;
-// 3 translate arrows x (1 shaft + 1 tapered cone) + 6 resize crosses x 2 arms;
-// rotate rings are F1 stubs (no geometry yet).
-const GLYPH_SEGMENT_COUNT = 3 * 2 + 6 * 2;
+const RING_SEGMENTS = 48; // per rotate ring, sampled evenly around the circle — closed polyline.
+// 3 translate arrows x (1 shaft + 1 tapered cone) + 6 resize crosses x 2 arms +
+// 3 rotate rings x RING_SEGMENTS (F2.5).
+const GLYPH_SEGMENT_COUNT = 3 * 2 + 6 * 2 + 3 * RING_SEGMENTS;
 const GLYPH_VERTEX_COUNT = GLYPH_SEGMENT_COUNT * VERTICES_PER_SEGMENT;
 const GLYPH_STORAGE_BYTES = GLYPH_SEGMENT_COUNT * GLYPH_SEGMENT_FLOATS * 4;
 // GizmoUniform: hoverHandle i32 + activeHandle i32 + 8 bytes pad.
@@ -82,6 +76,7 @@ const ARROWHEAD_TIP_WIDTH_PX = 1;
 const ARROWHEAD_BASE_WIDTH_PX = 24;
 const ARROWHEAD_LENGTH_FRACTION = 0.15; // of the arrow's center-to-tip length
 const CROSS_ARM_FRACTION = 1.5 * PICK_TOLERANCE_FRACTION; // visually bigger than the (unchanged) pick radius
+const TWO_PI = Math.PI * 2;
 
 type GlyphSegment = {
   readonly posA: Vec3;
@@ -95,23 +90,51 @@ function addScaled(p: Readonly<Vec3>, dir: Readonly<Vec3>, scale: number): Vec3 
   return [p[0] + dir[0] * scale, p[1] + dir[1] * scale, p[2] + dir[2] * scale];
 }
 
-/** Two unit vectors spanning the plane perpendicular to `axisDir` — the resize cross's arms. */
+/** Two unit vectors spanning the plane perpendicular to `axisDir` — the resize cross's arms,
+ *  and (F2.5) a rotate ring's own (u, v) circle basis for sampling its polyline. */
 function crossArmVectors(axisDir: Readonly<Vec3>): readonly [Vec3, Vec3] {
   const helper: Vec3 = Math.abs(axisDir[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
   const u = normalize3(cross3(axisDir, helper));
   return [u, cross3(axisDir, u)];
 }
 
+/** A point on the circle (center, u, v, radius) at `angle` — u/v an orthonormal pair
+ *  spanning the circle's own plane (crossArmVectors' output). */
+function ringPoint(
+  center: Readonly<Vec3>,
+  u: Readonly<Vec3>,
+  v: Readonly<Vec3>,
+  radius: number,
+  angle: number,
+): Vec3 {
+  const c = radius * Math.cos(angle);
+  const s = radius * Math.sin(angle);
+  return [
+    center[0] + u[0] * c + v[0] * s,
+    center[1] + u[1] * c + v[1] * s,
+    center[2] + u[2] * c + v[2] * s,
+  ];
+}
+
+/** boxBasisVectors' named triplet, reshaped into gizmoHandleGeometry's `axes` tuple — F2.5's
+ *  axes swap: the glyph build feeds the box's OWN rotated axes now, not world UNIT_AXES, so
+ *  arrows/crosses/rings all rotate with the box (same reshape Viewport.tsx applies). */
+function axesFor(rotation: Readonly<Vec4>): readonly [Vec3, Vec3, Vec3] {
+  const basis = boxBasisVectors(rotation);
+  return [basis.x, basis.y, basis.z];
+}
+
 /**
  * Translate arrows: a constant-width shaft (center -> cone base) plus one tapered segment
  * (cone base -> the handle's own tip, base width -> tip width) that vsGlyph expands into a
  * single solid-filled screen-space triangle. Resize crosses: two constant-width segments
- * through the handle position, perpendicular to its axis.
+ * through the handle position, perpendicular to its axis. Rotate rings: a closed RING_SEGMENTS-
+ * gon polyline of constant-width segments around the circle.
  */
 function buildGlyphSegments(box: GridBox, arrowLengthMpc: number): GlyphSegment[] {
   const half = boxHalfExtentMpc(box.sizeMpc);
   const crossArmMpc = CROSS_ARM_FRACTION * Math.min(half[0], half[1], half[2]);
-  const geometry = gizmoHandleGeometry(box, UNIT_AXES, arrowLengthMpc);
+  const geometry = gizmoHandleGeometry(box, axesFor(box.rotation), arrowLengthMpc);
   const segs: GlyphSegment[] = [];
 
   for (const handle of geometry.translate) {
@@ -154,6 +177,22 @@ function buildGlyphSegments(box: GridBox, arrowLengthMpc: number): GlyphSegment[
       widthB: CROSS_WIDTH_PX,
       handleId: id,
     });
+  }
+
+  for (const ring of geometry.rotate) {
+    const id = encodeGizmoHandleId(ring.id);
+    const [u, v] = crossArmVectors(ring.axisDir);
+    for (let i = 0; i < RING_SEGMENTS; i++) {
+      const a0 = (i / RING_SEGMENTS) * TWO_PI;
+      const a1 = ((i + 1) / RING_SEGMENTS) * TWO_PI;
+      segs.push({
+        posA: ringPoint(ring.centerMpc, u, v, ring.radiusMpc, a0),
+        widthA: SHAFT_WIDTH_PX,
+        posB: ringPoint(ring.centerMpc, u, v, ring.radiusMpc, a1),
+        widthB: SHAFT_WIDTH_PX,
+        handleId: id,
+      });
+    }
   }
 
   return segs;

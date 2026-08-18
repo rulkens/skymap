@@ -38,10 +38,12 @@ import { syntheticCatalog } from '../field/syntheticCatalog';
 import { applyResizeDrag } from '../gizmo/applyResizeDrag';
 import { applyTranslateDrag } from '../gizmo/applyTranslateDrag';
 import { closestPointOnRayToLine } from '../gizmo/closestPointOnRayToLine';
+import { dragRotate } from '../gizmo/dragRotate';
 import { gizmoArrowLengthMpc } from '../gizmo/gizmoArrowLengthMpc';
 import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { screenToRay } from '../gizmo/screenToRay';
+import { boxBasisVectors } from '../field/boxBasisVectors';
 import { cameraBasis } from '../render/cameraBasis';
 import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
 import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
@@ -53,7 +55,18 @@ import {
   setCatalogLoaded,
   setCatalogStatusMessage,
 } from '../state/slices/catalogSlice';
-import { setManualCenterMpc, setManualSizeMpc, setResolvedGrid } from '../state/slices/gridSlice';
+import { buildKey } from '../state/buildKey';
+import { gridShapeKeyFor } from '../state/gridShapeKeyFor';
+import {
+  setManualCenterMpc,
+  setManualSizeMpc,
+  setResolvedGrid,
+  setRotation,
+} from '../state/slices/gridSlice';
+import { cross3 } from '../../../../src/utils/math/cross3';
+import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
+import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
 import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import {
@@ -90,36 +103,11 @@ const ZOOM_SPEED = 0.0018;
 const PAN_SPEED = 0.0016;
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];
-// World-space axis directions the gizmo drags along, before F2's rotated basis lands —
-// same local const boxPreviewPass.ts draws its glyphs against (spec §5's "Handle set").
-const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
-  [1, 0, 0],
-  [0, 1, 0],
-  [0, 0, 1],
-];
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
 /** `?probe`-gated boot signal: probeGpuErrors.ts has no React tree to observe, so it polls this instead of racing the HUD's own text. */
 type ProbeWindow = { __mcpmProbeReady?: boolean };
-
-/** Everything but catalog identity — a change here reuses already-loaded points.
- * `grid.importedBox` (V3): loading a preset must rebuild even when none of the
- * raw config fields below moved — deriveGridBox reads the override VERBATIM,
- * so the box itself, not divisor/manual bounds, is what changed. */
-function buildKey(s: AppState): unknown[] {
-  return [
-    s.catalog.weightMode,
-    s.grid.divisor,
-    s.grid.paddingMpc,
-    s.grid.manualCenterMpc,
-    s.grid.manualSizeMpc,
-    s.grid.importedBox,
-    s.sim.agentCount,
-    s.sim.initMode,
-    s.sim.seed,
-  ];
-}
 
 /**
  * `packedDropId`/`packedSourceName` stand in for the dropped catalog's
@@ -132,13 +120,6 @@ function buildKey(s: AppState): unknown[] {
  */
 function catalogKey(s: AppState): unknown[] {
   return [s.catalog.sources, s.catalog.tier, s.catalog.packedDropId, s.catalog.packedSourceName];
-}
-
-/** The four fields that reshape the grid box — a change here restarts the preview
- * timer. "Auto fit" (fitBoxToCatalog) is covered for free: it's a one-shot write
- * to manualCenterMpc/manualSizeMpc, not a fifth field this key has to track. */
-function gridShapeKeyFor(s: AppState): unknown[] {
-  return [s.grid.manualCenterMpc, s.grid.manualSizeMpc, s.grid.divisor, s.grid.paddingMpc];
 }
 
 /** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
@@ -181,13 +162,31 @@ export type ViewportProps = {
 
 /** Narrows away GizmoDragState's rotate variant — nested on `handle.kind`, one level past
  *  what TS's discriminated-union narrowing follows automatically, so an explicit predicate
- *  earns its place here rather than a cast at each call site (rotate stays inert until F2). */
+ *  earns its place here rather than a cast at each call site. */
 type AxisDragState = Extract<
   GizmoDragState,
   { readonly handle: { readonly kind: 'translate' | 'resize' } }
 >;
 function isAxisDrag(drag: GizmoDragState): drag is AxisDragState {
   return drag.handle.kind !== 'rotate';
+}
+
+/** boxBasisVectors' named triplet, reshaped into gizmoHandleGeometry's `axes` tuple — F2.5's
+ *  axes swap: every gizmo call site feeds the box's OWN rotated axes now, not world UNIT_AXES,
+ *  so arrows/crosses/rings all rotate with the box (same reshape boxPreviewPass.ts applies). */
+function axesFor(rotation: Readonly<Vec4>): readonly [Vec3, Vec3, Vec3] {
+  const basis = boxBasisVectors(rotation);
+  return [basis.x, basis.y, basis.z];
+}
+
+/** A unit vector ⊥ `axisDir` — the rotate ring's 0°-angle reference for `dragRotate`. Same
+ *  "helper axis not near-parallel" fallback as cameraBasis.ts's right/up derivation and
+ *  boxPreviewPass.ts's crossArmVectors — deterministic in axisDir alone, so calling it fresh at
+ *  pointer-down and every pointer-move yields the SAME reference `dragRotate`'s absolute-angle
+ *  anchor/current pair needs, with no state to carry between calls. */
+function ringReferenceDirFor(axisDir: Readonly<Vec3>): Vec3 {
+  const helper: Vec3 = Math.abs(axisDir[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
+  return normalize3(cross3(axisDir, helper));
 }
 
 function Viewport({ store }: ViewportProps): ReactNode {
@@ -813,15 +812,25 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const pendingBox = deriveGridBox(s.grid);
         const ray = rayFromPointer(e, s);
         const arrowLengthMpc = arrowLengthMpcFor(s, pendingBox.centerMpc);
-        const hit = pickGizmoHandle(
-          ray,
-          gizmoHandleGeometry(pendingBox, UNIT_AXES, arrowLengthMpc),
-        );
-        if (hit && hit.kind !== 'rotate') {
+        const axes = axesFor(pendingBox.rotation);
+        const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, axes, arrowLengthMpc));
+        if (hit && hit.kind === 'rotate') {
+          const axisDir = axes[hit.axis];
+          const referenceDir = ringReferenceDirFor(axisDir);
+          const anchorAngleRad = dragRotate(ray, pendingBox.centerMpc, axisDir, referenceDir);
+          // null only on a ray parallel to the ring's own plane — an edge-on view a real click
+          // on the visible ring can't produce in practice; falls through to orbit rather than
+          // starting an undefined-angle drag.
+          if (anchorAngleRad !== null) {
+            gizmoDragging = { handle: hit, anchorAngleRad, anchorRotation: pendingBox.rotation };
+            canvas.setPointerCapture(e.pointerId);
+            return;
+          }
+        } else if (hit) {
           const anchorAxisParam = closestPointOnRayToLine(
             ray,
             pendingBox.centerMpc,
-            UNIT_AXES[hit.axis],
+            axes[hit.axis],
           );
           gizmoDragging = { handle: hit, anchorAxisParam, anchorBox: pendingBox };
           canvas.setPointerCapture(e.pointerId);
@@ -843,27 +852,51 @@ function Viewport({ store }: ViewportProps): ReactNode {
     const onPointerMove = (e: PointerEvent): void => {
       const s = store.getSnapshot();
 
-      if (gizmoDragging && isAxisDrag(gizmoDragging)) {
-        const drag = gizmoDragging;
-        const axisDir = UNIT_AXES[drag.handle.axis];
-        const ray = rayFromPointer(e, s);
-        const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
-        const deltaMpc = param - drag.anchorAxisParam;
-        if (drag.handle.kind === 'translate') {
-          const centerMpc = applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc);
-          store.setState((st) => ({ ...st, grid: setManualCenterMpc(st.grid, centerMpc) }));
+      if (gizmoDragging) {
+        if (isAxisDrag(gizmoDragging)) {
+          const drag = gizmoDragging;
+          const axisDir = axesFor(drag.anchorBox.rotation)[drag.handle.axis];
+          const ray = rayFromPointer(e, s);
+          const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
+          const deltaMpc = param - drag.anchorAxisParam;
+          if (drag.handle.kind === 'translate') {
+            const centerMpc = applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc);
+            store.setState((st) => ({ ...st, grid: setManualCenterMpc(st.grid, centerMpc) }));
+          } else {
+            const { centerMpc, sizeMpc } = applyResizeDrag(
+              drag.anchorBox,
+              drag.handle.axis,
+              axisDir,
+              drag.handle.sign,
+              deltaMpc,
+            );
+            store.setState((st) => ({
+              ...st,
+              grid: setManualSizeMpc(setManualCenterMpc(st.grid, centerMpc), sizeMpc),
+            }));
+          }
         } else {
-          const { centerMpc, sizeMpc } = applyResizeDrag(
-            drag.anchorBox,
-            drag.handle.axis,
-            axisDir,
-            drag.handle.sign,
-            deltaMpc,
-          );
-          store.setState((st) => ({
-            ...st,
-            grid: setManualSizeMpc(setManualCenterMpc(st.grid, centerMpc), sizeMpc),
-          }));
+          // Fixed-anchor recompute (spec §5): every pointermove recomputes rotation' from the
+          // SAME anchorRotation captured at pointerdown — no incremental accumulation onto the
+          // previous frame's rotation, no renormalize. axisDir is invariant under its own
+          // rotation (rotating about an axis never moves that axis), so deriving it from
+          // anchorRotation rather than the live (already-changing) box rotation is exact, not
+          // an approximation. centerMpc alone is read live: unlike translate/resize, a rotate
+          // drag never writes it, so there is no re-derive feedback loop to guard against
+          // (drag.anchorBox's whole reason to exist for THAT pair).
+          const drag = gizmoDragging;
+          const axisDir = axesFor(drag.anchorRotation)[drag.handle.axis];
+          const referenceDir = ringReferenceDirFor(axisDir);
+          const centerMpc = deriveGridBox(s.grid).centerMpc;
+          const ray = rayFromPointer(e, s);
+          const angleNow = dragRotate(ray, centerMpc, axisDir, referenceDir);
+          if (angleNow !== null) {
+            const rotation = multiplyQuat(
+              quatFromAxisAngle(axisDir, angleNow - drag.anchorAngleRad),
+              drag.anchorRotation,
+            );
+            store.setState((st) => ({ ...st, grid: setRotation(st.grid, rotation) }));
+          }
         }
         return;
       }
@@ -873,7 +906,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
           const box = deriveGridBox(s.grid);
           const ray = rayFromPointer(e, s);
           const arrowLengthMpc = arrowLengthMpcFor(s, box.centerMpc);
-          hoverHandle = pickGizmoHandle(ray, gizmoHandleGeometry(box, UNIT_AXES, arrowLengthMpc));
+          hoverHandle = pickGizmoHandle(
+            ray,
+            gizmoHandleGeometry(box, axesFor(box.rotation), arrowLengthMpc),
+          );
         } else {
           hoverHandle = null;
         }

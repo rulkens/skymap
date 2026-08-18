@@ -3,6 +3,7 @@ import type { GridBox } from '../../../@types/GridBox';
 import type { GridBudget } from '../../../@types/GridBudget';
 import type { GridElement } from '../../../@types/GridElement';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 
 /**
  * defaultGridSlice — the manual 200 Mpc origin-centred cube is the boot
@@ -17,6 +18,7 @@ export const defaultGridSlice: GridSlice = {
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],
   manualSizeMpc: [200, 200, 200],
+  manualRotation: [0, 0, 0, 1],
   importedBox: null,
   box: null,
   resolvedElement: null,
@@ -45,12 +47,23 @@ export function setManualSizeMpc(prev: GridSlice, manualSizeMpc: Vec3): GridSlic
 }
 
 /**
+ * setRotation — F2.5's rotate-ring setter, same shape as its three siblings above
+ * (manualCenterMpc/manualSizeMpc/…): a ring drag is "the user reaching through the
+ * grid controls" exactly like a slider nudge, so it clears `importedBox` (V3) too.
+ */
+export function setRotation(prev: GridSlice, rotation: Readonly<Vec4>): GridSlice {
+  return { ...prev, manualRotation: rotation, importedBox: null };
+}
+
+/**
  * installImportedBox — V3's load-side setter: installs a preset's grid box
- * verbatim AND syncs the manual center/size fields to match, so the sliders
- * (which read manualCenterMpc/manualSizeMpc directly, not importedBox) show
- * the loaded values instead of stale ones (S17). importedBox still wins in
- * deriveGridBox until a later edit clears it — this sync only makes a later
- * slider nudge continue FROM the imported box instead of snapping to it.
+ * verbatim AND syncs the manual center/size/rotation fields to match, so the
+ * sliders (which read manualCenterMpc/manualSizeMpc directly, not importedBox)
+ * show the loaded values instead of stale ones (S17), and a later translate/
+ * resize/rotate drag — which falls onto the manual path by clearing
+ * importedBox — continues FROM the imported box's orientation instead of
+ * snapping to identity. importedBox still wins in deriveGridBox until a
+ * later edit clears it.
  */
 export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
   return {
@@ -58,6 +71,7 @@ export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridS
     importedBox,
     manualCenterMpc: importedBox.centerMpc,
     manualSizeMpc: importedBox.sizeMpc,
+    manualRotation: importedBox.rotation,
   };
 }
 

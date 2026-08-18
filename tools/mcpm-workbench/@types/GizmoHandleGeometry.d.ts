@@ -6,5 +6,5 @@ import type { RingHandle } from './RingHandle';
 export type GizmoHandleGeometry = {
   readonly translate: readonly [Handle, Handle, Handle]; // one per axis
   readonly resize: readonly [Handle, Handle, Handle, Handle, Handle, Handle]; // one per face, ±axis order
-  readonly rotate: readonly [RingHandle, RingHandle, RingHandle]; // F1: radiusMpc 0 stubs
+  readonly rotate: readonly [RingHandle, RingHandle, RingHandle]; // one per axis
 };

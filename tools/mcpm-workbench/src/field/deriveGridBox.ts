@@ -37,9 +37,16 @@ function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
  * box is returned VERBATIM, so the panel's dims readout and the harness both
  * see the exact box the preset was saved with, not a recomputation from the
  * current (possibly unrelated) divisor/manual state.
+ *
+ * `autoFitGridBox` itself has no rotation concept — it always returns
+ * identity (see its own doc comment) — so the manual path's `rotation` comes
+ * from `grid.manualRotation` (F2.5), applied AFTER fitting: rotation is an
+ * orientation of the already-sized box, not an input to the dims/voxel-size
+ * fit (which only ever cares about extent magnitudes, never direction).
  */
 export function deriveGridBox(grid: GridSlice): GridBox {
   if (grid.importedBox) return grid.importedBox;
   const bounds = manualBounds(grid.manualCenterMpc, grid.manualSizeMpc);
-  return autoFitGridBox(bounds, longAxisFor(grid.divisor), 0);
+  const box = autoFitGridBox(bounds, longAxisFor(grid.divisor), 0);
+  return { ...box, rotation: grid.manualRotation };
 }

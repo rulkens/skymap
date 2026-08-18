@@ -55,11 +55,26 @@ describe('gizmoHandleGeometry', () => {
     expect(minusY?.positionMpc).toEqual([1, -2, 3]);
   });
 
-  it('gives every rotate handle a radiusMpc-0 F1 stub, centered on the box', () => {
+  it('places every rotate ring at RING_RADIUS_FRACTION · arrowLengthMpc, centered on the box', () => {
     const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
+    // RING_RADIUS_FRACTION(1.3) * ARROW_LENGTH_MPC(42) = 54.6 — hand-computed from the
+    // constant, not re-derived from the module under test.
     for (const ring of geometry.rotate) {
-      expect(ring.radiusMpc).toBe(0);
+      expect(ring.radiusMpc).toBeCloseTo(54.6, 10);
       expect(ring.centerMpc).toEqual(BOX.centerMpc);
     }
+  });
+
+  it('leaves ring radius UNCHANGED when the box size doubles — rides arrowLengthMpc, not half-extent', () => {
+    const doubledBox: GridBox = { ...BOX, sizeMpc: [16, 16, 16] };
+    const geometry = gizmoHandleGeometry(doubledBox, UNIT_AXES, ARROW_LENGTH_MPC);
+    expect(geometry.rotate[0].radiusMpc).toBeCloseTo(54.6, 10);
+  });
+
+  it("each rotate ring's axisDir equals the passed axes entry (structural)", () => {
+    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
+    expect(geometry.rotate[0].axisDir).toEqual(UNIT_AXES[0]);
+    expect(geometry.rotate[1].axisDir).toEqual(UNIT_AXES[1]);
+    expect(geometry.rotate[2].axisDir).toEqual(UNIT_AXES[2]);
   });
 });

@@ -36,6 +36,12 @@ describe('deriveGridBox', () => {
     expect(longAxis(fine)).toBeGreaterThan(longAxis(coarse));
   });
 
+  it('derives rotation from grid.manualRotation — autoFitGridBox itself always returns identity', () => {
+    const manualRotation: Vec4 = [0, Math.SQRT1_2, 0, Math.SQRT1_2]; // 90° about Y
+    const box = deriveGridBox({ ...defaultGridSlice, manualRotation });
+    expect(box.rotation).toEqual(manualRotation);
+  });
+
   it('grid.importedBox short-circuits derivation, returned verbatim', () => {
     const importedBox = {
       centerMpc: [1, 2, 3] as Vec3,

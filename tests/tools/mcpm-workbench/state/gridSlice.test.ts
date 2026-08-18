@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import {
   defaultGridSlice,
@@ -18,18 +19,20 @@ import {
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
+  setRotation,
 } from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
 
-// centerMpc/sizeMpc deliberately differ from defaultGridSlice's manual
+// centerMpc/sizeMpc/rotation deliberately differ from defaultGridSlice's manual
 // values on every axis — an installImportedBox test asserting sync against
 // a fixture that coincides with the defaults can't distinguish "synced"
-// from "left untouched" (see task-S17-review.md).
+// from "left untouched" (see task-S17-review.md; rotation follows the same
+// reasoning for F2.5's manualRotation sync).
 const IMPORTED_BOX: GridBox = {
   centerMpc: [10, -5, 3],
   sizeMpc: [300, 300, 300],
   dims: [256, 256, 256],
   voxelSizeMpc: 1.171875,
-  rotation: [0, 0, 0, 1],
+  rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2], // 90° about Y — non-identity
 };
 
 const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };
@@ -51,6 +54,11 @@ describe('gridSlice setters clear importedBox on any user edit', () => {
     expect(setManualSizeMpc(withImportedBox, [50, 50, 50]).importedBox).toBeNull();
   });
 
+  it('setRotation clears it', () => {
+    const rotation: Vec4 = [0, 0, Math.SQRT1_2, Math.SQRT1_2];
+    expect(setRotation(withImportedBox, rotation).importedBox).toBeNull();
+  });
+
   it('fitBoxToCatalog clears it', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
     expect(fitBoxToCatalog(withImportedBox, bounds).importedBox).toBeNull();
@@ -58,16 +66,27 @@ describe('gridSlice setters clear importedBox on any user edit', () => {
 });
 
 describe('installImportedBox', () => {
-  it('syncs manualCenterMpc/manualSizeMpc to the imported box while installing it (S17)', () => {
+  it('syncs manualCenterMpc/manualSizeMpc/manualRotation to the imported box while installing it (S17, F2.5)', () => {
     const next = installImportedBox(defaultGridSlice, IMPORTED_BOX);
     expect(next.importedBox).toEqual(IMPORTED_BOX);
     expect(next.manualCenterMpc).toEqual(IMPORTED_BOX.centerMpc);
     expect(next.manualSizeMpc).toEqual(IMPORTED_BOX.sizeMpc);
+    expect(next.manualRotation).toEqual(IMPORTED_BOX.rotation);
   });
 
   it('a subsequent setManualSizeMpc still clears importedBox (V3 ruling stays green)', () => {
     const loaded = installImportedBox(defaultGridSlice, IMPORTED_BOX);
     expect(setManualSizeMpc(loaded, [50, 50, 50]).importedBox).toBeNull();
+  });
+
+  it('a subsequent resize/translate drag on a loaded rotated box keeps its rotation (no snap to identity)', () => {
+    // F2.5 regression: manualRotation must be synced at install time, not left at the
+    // default identity — otherwise clearing importedBox (any manual edit, V3) would fall
+    // onto deriveGridBox's manual path and silently reset a loaded box's orientation.
+    const loaded = installImportedBox(defaultGridSlice, IMPORTED_BOX);
+    const afterDrag = setManualCenterMpc(loaded, [20, 20, 20]);
+    expect(afterDrag.importedBox).toBeNull();
+    expect(afterDrag.manualRotation).toEqual(IMPORTED_BOX.rotation);
   });
 });
 

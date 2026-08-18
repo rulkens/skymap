@@ -105,10 +105,22 @@ describe('pickGizmoHandle', () => {
     expect(pickGizmoHandle(ray, geometry)).toEqual({ kind: 'resize', axis: 0, sign: 1 });
   });
 
-  it('never returns a rotate handle when every RingHandle has radiusMpc 0', () => {
-    const geometry = gizmoHandleGeometry(SMALL_BOX, UNIT_AXES, SMALL_ARROW_LENGTH_MPC);
-    expect(geometry.rotate.every((r) => r.radiusMpc === 0)).toBe(true);
+  it('hits a rotate ring when the ray is aimed at a point on its circle', () => {
+    const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
+    // Ring radius: RING_RADIUS_FRACTION(1.3) * ARROW_LENGTH_MPC(2.4) = 3.12.
+    // The axis2 ring (normal [0,0,1]) lies in the z=3 plane; pick a point on its circle at 45°
+    // (not axis-aligned, so it doesn't coincide with any translate arrow's own shaft line):
+    // [1 + 3.12·cos45°, 2 + 3.12·sin45°, 3]. A ray straight along +z through that (x,y) hits the
+    // ring's own plane exactly there (perpendicular distance 0), and sits >2.2 Mpc from every
+    // other handle — comfortably outside the 0.12 tolerance every candidate but the ring clears.
+    const off = 3.12 * Math.SQRT1_2;
+    const ray: Ray = { origin: [1 + off, 2 + off, -10], dir: [0, 0, 1] };
 
+    expect(pickGizmoHandle(ray, geometry)).toEqual({ kind: 'rotate', axis: 2 });
+  });
+
+  it('returns null for a ray that misses every ring circle (aimed at empty space near the box)', () => {
+    const geometry = gizmoHandleGeometry(SMALL_BOX, UNIT_AXES, SMALL_ARROW_LENGTH_MPC);
     // Every rotate ring is centered at the box center [0,0,0], which is now also where every
     // translate shaft starts — a ray through the exact center would graze a shaft (distance 0)
     // before ever reaching rotate-ring logic, so this is re-aimed off-center rather than through
@@ -116,10 +128,9 @@ describe('pickGizmoHandle', () => {
     // (Δx,Δy)=(-0.4,-0.4) from center; a +z ray there has a free z, so distance to any
     // translate/resize/ring-center point reduces to hypot(0.4,0.4)≈0.566 at best (axis0/axis1
     // shafts nearest at their t=0 center end; axis2's shaft and z-resize points have z cancelled
-    // by the ray's free z) — outside both the 0.06 translate and 0.1 resize tolerances.
-    // An implementation that ignored radiusMpc and picked rings by centerMpc alone would still
-    // return null here (center itself is >tolerance away too); this pins that rotate stays inert
-    // regardless, without the shaft coincidence at dead center.
+    // by the ray's free z) — outside the 0.06 translate/ring and 0.1 resize tolerances. Ring
+    // radius here is RING_RADIUS_FRACTION(1.3) * SMALL_ARROW_LENGTH_MPC(1.2) = 1.56, so the
+    // axis2 ring's plane-hit distance from its circle is |0.566 - 1.56| ≈ 0.994 — also a miss.
     const ray: Ray = { origin: [-0.4, -0.4, -10], dir: [0, 0, 1] };
 
     expect(pickGizmoHandle(ray, geometry)).toBeNull();

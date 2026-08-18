@@ -340,6 +340,60 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // F2.5: rotate-ring drag — the last handle family with no automated coverage.
+      // Rotation has no ParamSlider readout the way F1.6's translate arrow does, so the
+      // self-check reads the ACTUAL applied rotation via a real save-params round trip
+      // (the same download+parse 'gizmo:rotated-box' below uses), before vs after the
+      // drag — the F1.6 lesson: a step that can silently degrade to an inert orbit-drag
+      // must FAIL, not just run. Placement matters: runs right after 'params:save-load'
+      // and BEFORE 'gizmo:rotated-box' mutates the box's rotation, and 'command:reset'
+      // (two steps earlier) guarantees the camera is exactly defaultViewSlice.camera —
+      // so this is the one point in the queue where the box is still perfectly at its
+      // untouched boot state (identity rotation, center [0,0,0]) under a known camera,
+      // same precondition 'gizmo:hover-drag' below relies on for its own arrow aim.
+      // Target: a point at 45° around the z-axis ring's own circle (axisDir [0,0,1]),
+      // precomputed off cameraBasis/gizmoArrowLengthMpc/gizmoHandleGeometry's own
+      // formulas against the boot box + camera at this probe's 1280x800 viewport,
+      // verified during development by round-tripping the pixel back through
+      // screenToRay + pickGizmoHandle (hits {kind:'rotate',axis:2} exactly). The three
+      // intermediate moves walk on around the same circle to 75°, a 30° drag.
+      name: 'gizmo:rotate-drag',
+      run: async (page) => {
+        async function currentRotation(): Promise<number[]> {
+          const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            page.getByRole('button', { name: 'save params', exact: true }).click(),
+          ]);
+          const path = await download.path();
+          if (!path) throw new Error('gizmo:rotate-drag: download produced no local path');
+          const preset = JSON.parse(await readFile(path, 'utf8')) as {
+            gridBox: { rotation: number[] };
+          };
+          return preset.gridBox.rotation;
+        }
+
+        const before = await currentRotation();
+
+        await page.mouse.move(568, 302);
+        await settleFrames(page, 1);
+        await page.mouse.down();
+        await settleFrames(page, 2);
+        await page.mouse.move(558, 316);
+        await page.mouse.move(551, 332);
+        await page.mouse.move(546, 349);
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.mouse.up();
+        await settleFrames(page, SETTLE_FRAMES);
+
+        const after = await currentRotation();
+        if (JSON.stringify(after) === JSON.stringify(before)) {
+          throw new Error(
+            'gizmo rotate-drag did not change rotation — aim coordinates likely stale',
+          );
+        }
+      },
+    },
+    {
       // F2.4: the only automated check that boxLines.wesl's oriented cornerPos
       // reconstruction (center + halfExtents·basis, plan contract §5) is correct —
       // no rotation UI exists yet (F2.5 adds the rotate rings), so this drives the

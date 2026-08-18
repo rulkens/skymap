@@ -6,10 +6,12 @@
 // (package::mcpm::camera) as every other layer.
 //
 // A second vertex-pulled draw (vsGlyph/fsGlyph) renders the gizmo handle glyphs: per-axis
-// colored translate arrows with cone tips, and resize crosses. Each glyph is a list of
-// GlyphSegments (the host rebuilds the buffer from gizmoHandleGeometry every frame); vsGlyph
-// expands each into a screen-space quad (2 triangles, constant pixel width) rather than
-// drawing 1px line-list hairlines. Rotate rings are F1 zero-radius stubs — no geometry yet.
+// colored translate arrows with cone tips, resize crosses, and rotate rings (a closed polyline
+// of segments sampled around each ring's circle). Each glyph is a list of GlyphSegments (the
+// host rebuilds the buffer from gizmoHandleGeometry every frame); vsGlyph expands each into a
+// screen-space quad (2 triangles, constant pixel width) rather than drawing 1px line-list
+// hairlines — the same GlyphSegment shape serves all three handle families, no new geometry
+// kind needed for rings.
 
 import package::mcpm::camera::McpmCamera;
 import package::mcpm::camera::voxelToNdc;

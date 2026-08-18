@@ -1,4 +1,5 @@
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { GridBox } from './GridBox';
 import type { GridBudget } from './GridBudget';
 import type { GridElement } from './GridElement';
@@ -30,12 +31,22 @@ import type { GridElement } from './GridElement';
  * exportParams/importParams, which only round-trip the resolved `GridBox`).
  * Default true keeps the gizmo reachable; Viewport OR-composes it with the
  * existing 200ms post-edit preview and the live-drag hold.
+ *
+ * `manualRotation` (F2.5) is rotation's own manual-path home, the same shape
+ * `manualCenterMpc`/`manualSizeMpc` already have: `deriveGridBox` writes it
+ * into the derived box's `rotation` field (autoFitGridBox itself always
+ * returns identity — it has no rotation concept), and `installImportedBox`
+ * syncs it from a loaded preset exactly as it syncs center/size, so a
+ * translate/resize drag on a loaded ROTATED box (which clears `importedBox`,
+ * V3) doesn't snap the box back to identity the instant it falls onto the
+ * manual path.
  */
 export type GridSlice = {
   readonly divisor: number;
   readonly paddingMpc: number;
   readonly manualCenterMpc: Vec3;
   readonly manualSizeMpc: Vec3;
+  readonly manualRotation: Readonly<Vec4>;
   readonly importedBox: GridBox | null;
   readonly box: GridBox | null;
   readonly resolvedElement: GridElement | null;
