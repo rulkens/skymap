@@ -13,7 +13,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
  */
 export const defaultViewSlice: ViewSlice = {
   layers: { raymarch: true, agents: false, galaxies: true, pathTracer: false },
-  galaxies: { intensity: 0.6, pointSizePx: 2 },
+  galaxies: { intensity: 0.45, pointSizePx: 1 },
   // Reproduces the splat pass's old hardcoded look exactly: intensity 1 is the
   // identity multiplier splatBlit.wesl always applied implicitly (no knob existed),
   // pointSizePx 1 is the single-pixel footprint splatTransform.wesl always wrote.
