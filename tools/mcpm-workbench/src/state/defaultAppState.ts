@@ -10,7 +10,7 @@ import { defaultViewSlice } from './slices/viewSlice';
 // respect ruling R11's quantum floor — 100_000 sits BELOW the panel's own
 // Slider min of 1M (see ControlsPanel.tsx), which only clamps user drags,
 // never this seed value, so the harness sees it untouched.
-const PROBE_LONG_AXIS_TARGET = 64; // <=128 per task-T12-brief.md, still >8 (decay's /8 dispatch)
+const PROBE_LONG_AXIS_TARGET = 64; // <=128, still >8 (decay's /8 dispatch)
 const PROBE_AGENT_COUNT = 100_000;
 
 /** defaultAppState — the store's seed value, one slice default per field. */

@@ -27,6 +27,8 @@ function formatProducedAt(d: Date): string {
  * `voxel_size_mpc` repeats `box.voxelSizeMpc` three times: GridBox's voxels
  * are cubic by construction (autoFitGridBox), so the importer's 0.5% spread
  * assert passes with zero margin consumed, not just under the line.
+ * `voxel_order` is always `'c-order'`: this sidecar only ever accompanies
+ * `exportNpy.ts`'s output, which unconditionally runs `xFastestToCOrder`.
  */
 export function emitTraceSidecar(input: {
   readonly box: GridBox;
@@ -52,6 +54,7 @@ export function emitTraceSidecar(input: {
     dims: box.dims,
     origin_mpc: originMpc,
     voxel_size_mpc: [box.voxelSizeMpc, box.voxelSizeMpc, box.voxelSizeMpc],
+    voxel_order: 'c-order',
     frame: 'equatorial-cartesian',
     value_units: 'mcpm-trace-density',
     provenance: {

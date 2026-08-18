@@ -34,6 +34,7 @@ const VERTICES_PER_POINT = 6; // galaxyPoints.wesl's two-triangle quad
 export function createGalaxyOverlayPass(opts: {
   readonly device: GPUDevice;
   readonly targetFormat: GPUTextureFormat;
+  readonly blend: GPUBlendState;
   readonly makeShader: (code: string, label: string) => GPUShaderModule;
   readonly agents: AgentBuffers;
   readonly box: GridBox;
@@ -71,12 +72,9 @@ export function createGalaxyOverlayPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // Additive and premultiplied: dots pile onto the trace rather than punching
+          // RenderGraph's LAYER_BLEND: dots pile onto the trace rather than punching
           // through it, and the overlay never darkens what it sits over.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          blend: opts.blend,
         },
       ],
     },

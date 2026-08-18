@@ -31,8 +31,11 @@ function ToggleRow({ label, on, onChange, info }: ToggleRowProps): ReactNode {
       )}
       <label className={styles.main}>
         <span className={styles.labelText}>{label}</span>
-        {/* aria-label as well as the label text: the probe selects these by exact
-            accessible name, which the wrapping label alone would not pin down. */}
+        {/* aria-label, not just the wrapping <label>: the state pill below is INSIDE that
+            label, so its computed accessible name is "{label} on/off" — aria-label is what
+            pins the probe's exact:true role/name selectors to `label` alone. Do not delete
+            this thinking a wrapping <label> already supplies the name; it supplies a
+            DIFFERENT one. */}
         <input
           type="checkbox"
           className={styles.hiddenCheckbox}

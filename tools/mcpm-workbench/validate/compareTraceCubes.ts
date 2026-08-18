@@ -13,6 +13,7 @@ import { readNpy } from '../../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../../parsers/polyphyTraceSidecar';
 import { readTraceCube } from './readTraceCube';
 import { decodeF16 } from './decodeF16';
+import { cOrderToXFastest } from './cOrderToXFastest';
 import { traceHistogram } from './traceHistogram';
 import { dataPointHistogram } from './dataPointHistogram';
 import { axisMarginals } from './axisMarginals';
@@ -20,6 +21,7 @@ import { totalVariation } from './totalVariation';
 import { parseExportMetadata } from './parseExportMetadata';
 import { readPackedCatalog } from './readPackedCatalog';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { PackedTraceInputLayout } from '../../../src/utils/volume/packLogTraceVoxels';
 import type { TraceStats } from '../@types/TraceStats';
 
 const LOG_HISTOGRAM_BIN_COUNT = 64;
@@ -32,6 +34,12 @@ export type CompareTraceCubesArgs = {
   readonly metaPath?: string; // origin + voxel size for a headerless .bin side
   readonly pointsPath?: string; // fork's flat f32 [X, Y, Z, W] packed catalog
   readonly bins?: number; // dataPointHistogram bin count, default 17
+  // .npy voxel order, overriding whatever the sidecar's own `voxel_order` says (if
+  // anything) — see resolveNpyOrder. Meaningless for a .bin side, which is always
+  // x-fastest (readTraceCube's own documented contract; no writer in this codebase
+  // produces a C-order .bin).
+  readonly aOrder?: PackedTraceInputLayout;
+  readonly bOrder?: PackedTraceInputLayout;
 };
 
 export type ComparisonReport = {
@@ -67,6 +75,35 @@ function squeezeTrailingSingleton(shape: readonly number[]): readonly number[] {
   return shape.length === 4 && shape[3] === 1 ? shape.slice(0, 3) : shape;
 }
 
+// X1 (final-review.md §A): every .npy this comparator ever read went straight into
+// axisMarginals/dataPointHistogram, both of which index x-fastest — correct for a .bin
+// (readTraceCube's own layout) but NOT for exportNpy.ts's C-order .npy output, silently
+// transposing X and Z. A blanket "all .npy are C-order" fix would be equally wrong: the
+// T23 downsample helper writes genuinely x-fastest .npy. So the order must come from
+// somewhere explicit per file — the sidecar's own `voxel_order` (preferred; recorded by
+// emitTraceSidecar.ts) or an explicit --a-order/--b-order override — never a default.
+function resolveNpyOrder(
+  path: string,
+  explicit: PackedTraceInputLayout | undefined,
+): PackedTraceInputLayout {
+  if (explicit !== undefined) return explicit;
+  let sidecarOrder: PackedTraceInputLayout | undefined;
+  try {
+    sidecarOrder = parsePolyphyTraceSidecar(readFileSync(sidecarPathFor(path), 'utf8')).voxelOrder;
+  } catch {
+    sidecarOrder = undefined; // no sidecar, or one that predates the voxel_order field
+  }
+  if (sidecarOrder !== undefined) return sidecarOrder;
+  throw new Error(
+    `compareTraceCubes: ${path} is a .npy with no voxel_order in its sidecar (or no sidecar at ` +
+      "all) — pass --a-order/--b-order explicitly ('x-fastest' or 'c-order'). A silent default " +
+      'is exactly the bug this flag exists to prevent (final-review.md §A/X1).',
+  );
+}
+
+// Order-agnostic: reads the .npy/.bin bytes and its declared dims only, no sidecar touch —
+// keeps the pre-existing "shape mismatch fails before any --meta/--points file is touched"
+// fast-fail (compareTraceCubes calls assertSameDims on this BEFORE normalizeOrder runs).
 function loadShape(path: string, dims: Vec3): CubeShape {
   if (!isNpy(path)) return { values: readTraceCube(path, dims), dims };
 
@@ -79,6 +116,17 @@ function loadShape(path: string, dims: Vec3): CubeShape {
   const npyDims: Vec3 = [shape[0]!, shape[1]!, shape[2]!];
   const values = npy.values instanceof Uint16Array ? decodeF16(npy.values) : npy.values;
   return { values, dims: npyDims };
+}
+
+// Applied AFTER the shape check (see loadShape). A no-op for .bin — always x-fastest already.
+function normalizeOrder(
+  path: string,
+  shape: CubeShape,
+  order: PackedTraceInputLayout | undefined,
+): CubeShape {
+  if (!isNpy(path)) return shape;
+  if (resolveNpyOrder(path, order) !== 'c-order') return shape;
+  return { values: cOrderToXFastest(shape.values, shape.dims), dims: shape.dims };
 }
 
 function assertSameDims(aPath: string, aDims: Vec3, bPath: string, bDims: Vec3): void {
@@ -179,9 +227,11 @@ export async function compareTraceCubes(args: CompareTraceCubesArgs): Promise<Co
   // Fail fast: shape check happens before any --meta/--points file is
   // touched, so a shape mismatch is reported in microseconds regardless of
   // whether those optional inputs even exist on disk.
-  const a = loadShape(args.aPath, args.dims);
-  const b = loadShape(args.bPath, args.dims);
-  assertSameDims(args.aPath, a.dims, args.bPath, b.dims);
+  const aRaw = loadShape(args.aPath, args.dims);
+  const bRaw = loadShape(args.bPath, args.dims);
+  assertSameDims(args.aPath, aRaw.dims, args.bPath, bRaw.dims);
+  const a = normalizeOrder(args.aPath, aRaw, args.aOrder);
+  const b = normalizeOrder(args.bPath, bRaw, args.bOrder);
 
   const maxLogTrace = Math.max(maxOf(a.values), maxOf(b.values));
 
@@ -231,8 +281,18 @@ function printUsage(): void {
   console.log(
     'Usage: npx tsx tools/mcpm-workbench/validate/compareTraceCubes.ts \\\n' +
       '  --a <cube.bin|cube.npy> --b <cube.bin|cube.npy> --dims Nx,Ny,Nz \\\n' +
-      '  [--meta export_metadata.txt] [--points packed-catalog.bin] [--bins 17] [--json out.json]',
+      '  [--meta export_metadata.txt] [--points packed-catalog.bin] [--bins 17] [--json out.json] \\\n' +
+      '  [--a-order x-fastest|c-order] [--b-order x-fastest|c-order]\n' +
+      "--a-order/--b-order override a .npy side's sidecar `voxel_order`; required when that\n" +
+      'side is a .npy with no sidecar (or a sidecar older than the voxel_order field).',
   );
+}
+
+function parseVoxelOrder(flag: string, raw: string | undefined): PackedTraceInputLayout {
+  if (raw !== 'x-fastest' && raw !== 'c-order') {
+    throw new Error(`compareTraceCubes: ${flag} must be "x-fastest" or "c-order", got "${raw}"`);
+  }
+  return raw;
 }
 
 function parseArgv(argv: readonly string[]): CompareTraceCubesArgs {
@@ -242,6 +302,8 @@ function parseArgv(argv: readonly string[]): CompareTraceCubesArgs {
   let metaPath: string | undefined;
   let pointsPath: string | undefined;
   let bins: number | undefined;
+  let aOrder: PackedTraceInputLayout | undefined;
+  let bOrder: PackedTraceInputLayout | undefined;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--a') aPath = argv[++i];
@@ -250,6 +312,8 @@ function parseArgv(argv: readonly string[]): CompareTraceCubesArgs {
     else if (a === '--meta') metaPath = argv[++i];
     else if (a === '--points') pointsPath = argv[++i];
     else if (a === '--bins') bins = Number(argv[++i]);
+    else if (a === '--a-order') aOrder = parseVoxelOrder('--a-order', argv[++i]);
+    else if (a === '--b-order') bOrder = parseVoxelOrder('--b-order', argv[++i]);
     else if (a === '--json') i++; // consumed by main(), not this fn
   }
   if (aPath === undefined || bPath === undefined || dimsRaw === undefined) {
@@ -270,6 +334,8 @@ function parseArgv(argv: readonly string[]): CompareTraceCubesArgs {
     ...(metaPath !== undefined ? { metaPath } : {}),
     ...(pointsPath !== undefined ? { pointsPath } : {}),
     ...(bins !== undefined ? { bins } : {}),
+    ...(aOrder !== undefined ? { aOrder } : {}),
+    ...(bOrder !== undefined ? { bOrder } : {}),
   };
 }
 

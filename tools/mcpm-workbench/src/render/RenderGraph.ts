@@ -10,6 +10,8 @@
  * `accumView()` is a method, not a field: the texture is recreated on resize, so
  * a cached view would dangle, and the blit's `layout:'auto'` bind group is
  * rebuilt alongside it. The blit uniform write order is `[exposure, contrast]`.
+ * Draw order: `drawTrace` / `drawSplat` / `drawGalaxyOverlay` / `drawVolpath` /
+ * `drawBoxPreview`, last so its wireframe sits over the galaxy dots.
  */
 import type { AgentBuffers } from '../../@types/AgentBuffers';
 import type { GridBox } from '../../@types/GridBox';
@@ -26,6 +28,16 @@ import type { McpmCameraView } from './writeMcpmCamera';
 import blitWgsl from './shaders/blit.wesl?static';
 
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
+
+// One/one premultiplied, every layer: the graph owns the clear, each pass LOADs and adds.
+// Fifth copy of this literal was the trigger (tracePass, splatPass, galaxyOverlayPass,
+// volpathPass, boxPreviewPass) — an omitted blend REPLACES everything drawn beneath it
+// instead of adding to it, alpha lane included, so a layer that forgets this errors loud
+// (missing import) rather than silently wiping the frame.
+export const LAYER_BLEND: GPUBlendState = {
+  color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+  alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+};
 
 export type RenderGraph = {
   /** The HDR accumulation format every layer's pipeline must target ('rgba16float'). */
@@ -121,12 +133,17 @@ export function createRenderGraph(
   let volpathPass: VolpathPass | null = null;
   let splatPass: SplatPass | null = null;
   let galaxyOverlayPass: GalaxyOverlayPass | null = null;
-  // Eager, not lazy like the agent-fed passes above: it needs neither the harness nor a
-  // box to compile, so building it here (graph construction) is what makes a broken
-  // boxLines.wesl fail at boot instead of surviving until someone drags a grid-box slider.
+  // Eager, not lazy like the agent-fed passes above (attachTrace/attachAgents, called
+  // once the harness exists): it needs neither the harness nor a box to compile, so
+  // building it here (graph construction) is what makes a broken boxLines.wesl fail at
+  // boot instead of surviving until someone drags a grid-box slider. This is about
+  // WITHIN one graph's construction, not across rebuilds — createRenderGraph itself runs
+  // inside Viewport's buildFromPoints, so every pass here, this one included, is torn
+  // down and rebuilt with the rest of the graph on every harness rebuild.
   const boxPreviewPass: BoxPreviewPass = createBoxPreviewPass({
     device,
     targetFormat: HDR_FORMAT,
+    blend: LAYER_BLEND,
     makeShader,
   });
 
@@ -185,6 +202,7 @@ export function createRenderGraph(
     tracePass = createTracePass({
       device,
       targetFormat: HDR_FORMAT,
+      blend: LAYER_BLEND,
       makeShader,
       source,
     });
@@ -199,7 +217,13 @@ export function createRenderGraph(
 
   function attachVolpath(source: TraceSource): void {
     volpathPass?.dispose();
-    volpathPass = createVolpathPass({ device, targetFormat: HDR_FORMAT, makeShader, source });
+    volpathPass = createVolpathPass({
+      device,
+      targetFormat: HDR_FORMAT,
+      blend: LAYER_BLEND,
+      makeShader,
+      source,
+    });
   }
 
   function drawVolpath(
@@ -220,7 +244,14 @@ export function createRenderGraph(
   function attachAgents(agents: AgentBuffers, box: GridBox): void {
     splatPass?.dispose();
     galaxyOverlayPass?.dispose();
-    const shared = { device, targetFormat: HDR_FORMAT, makeShader, agents, box };
+    const shared = {
+      device,
+      targetFormat: HDR_FORMAT,
+      blend: LAYER_BLEND,
+      makeShader,
+      agents,
+      box,
+    };
     splatPass = createSplatPass(shared);
     galaxyOverlayPass = createGalaxyOverlayPass(shared);
     // A pass attached after the first resize would otherwise never be sized: resize()

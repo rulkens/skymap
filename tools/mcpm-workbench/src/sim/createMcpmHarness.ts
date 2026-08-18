@@ -271,7 +271,6 @@ export async function createMcpmHarness(opts: {
       x: buffers.agentX,
       y: buffers.agentY,
       z: buffers.agentZ,
-      theta: buffers.agentTheta,
       weight: buffers.agentWeight,
       nDataPoints: opts.points.count,
       count: agentBufferLength,

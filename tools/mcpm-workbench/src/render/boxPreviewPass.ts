@@ -42,6 +42,7 @@ function worldBounds(box: GridBox): { min: Vec3; max: Vec3 } {
 export function createBoxPreviewPass(opts: {
   readonly device: GPUDevice;
   readonly targetFormat: GPUTextureFormat;
+  readonly blend: GPUBlendState;
   readonly makeShader: (code: string, label: string) => GPUShaderModule;
 }): BoxPreviewPass {
   const { device } = opts;
@@ -69,11 +70,8 @@ export function createBoxPreviewPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // Additive and premultiplied, one/one — same convention as every other layer.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          // RenderGraph's LAYER_BLEND — same convention as every other layer.
+          blend: opts.blend,
         },
       ],
     },

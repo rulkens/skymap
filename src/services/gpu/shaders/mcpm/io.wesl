@@ -1,5 +1,6 @@
 // mcpm/io.wesl — the McpmUniforms layout and the storage bindings the propagate/decay
-// kernels and the field views share (the histogram pass adds its own — atomic counts, a stats uniform).
+// kernels and the field views share (the histogram pass adds its own bindings at group(2),
+// including a HistogramFlags uniform).
 //
 // The port swaps Polyphorm's RWTexture3D grids for storage buffers: WebGPU has no f16
 // storage texture and allows read_write only on r32float, which caps the grid near a

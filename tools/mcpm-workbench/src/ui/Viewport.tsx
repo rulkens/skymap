@@ -31,7 +31,7 @@ import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
-import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
+import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
 import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
@@ -346,6 +346,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         previewPass = createTracePass({
           device: h.gpu.device,
           targetFormat: graph.hdrFormat,
+          blend: LAYER_BLEND,
           makeShader: (code, label) => h.gpu.device.createShaderModule({ code, label }),
           source: {
             traceBuffer: packed.buffer,

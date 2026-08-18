@@ -68,6 +68,7 @@ const MAX_STEPS_CEILING = 4096;
 export function createTracePass(opts: {
   readonly device: GPUDevice;
   readonly targetFormat: GPUTextureFormat;
+  readonly blend: GPUBlendState;
   readonly makeShader: (code: string, label: string) => GPUShaderModule;
   readonly source: TraceSource;
 }): TracePass {
@@ -109,13 +110,10 @@ export function createTracePass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // Every layer blends one/one premultiplied over the graph's cleared target.
-          // Orthogonal to the march's OWN 'additive' uniform, which chooses how the
-          // slabs composite with each other inside the fragment.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          // RenderGraph's LAYER_BLEND, taken as an argument like targetFormat — see its
+          // own doc comment. Orthogonal to the march's OWN 'additive' uniform, which
+          // chooses how the slabs composite with each other inside the fragment.
+          blend: opts.blend,
         },
       ],
     },

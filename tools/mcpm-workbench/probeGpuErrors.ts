@@ -5,9 +5,8 @@
  * Structure and infra (own ephemeral-port dev server, chromium-channel launch
  * with a headless-shell fallback, the `requestDevice` monkey-patch, the step
  * queue + settle-frame + drain loop) mirror `tools/galaxy-renderer/probeGpuErrors.ts`
- * — copied for its structure, not its content: this tool has no collapsible
- * sections/sliders to sweep, so that machinery is dropped. It judges nothing
- * about the picture, only what the GPU itself complained about.
+ * — copied for its structure, not its content. It judges nothing about the
+ * picture, only what the GPU itself complained about.
  */
 
 import { chromium, type Browser, type Page, type ConsoleMessage } from '@playwright/test';
@@ -314,6 +313,23 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
+      // of gridShapeKeyFor's six fields (Viewport.tsx) — no other step here ever touches
+      // one, so this was the only render layer no gate exercised at all (final-review.md
+      // §A/X3). The "Grid box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's
+      // `gridBoxOpen` starts false) and its body doesn't exist in the DOM until opened —
+      // the fold button's accessible name is its title text, not an aria-label. Under
+      // `?probe`, defaultAppState.ts pins autoFit on, so the visible control once open is
+      // "long-axis target" (GridBoxPanel's autoFit branch), not manualResolution.
+      // BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
+      name: 'grid:box-preview',
+      run: async (page) => {
+        await page.getByRole('button', { name: 'Grid box', exact: true }).click();
+        await page.getByLabel('long-axis target').selectOption('128');
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
       // The raymarch's own composite (an in-fragment choice, unrelated to the pass-level
       // blend). It defaults ON, so only turning it off reaches the fork-parity 'over'
       // branch of the march loop at all.
@@ -373,7 +389,10 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      name: 'layers:restore',
+      // Configuration-identical to layers:all-on above — only the TRANSITION out of
+      // layers:all-off is new (a distinct bind-group/draw-call sequence than settling
+      // into the same state from boot).
+      name: 'layers:back-on',
       run: async (page) => {
         await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
         await settleFrames(page, SETTLE_FRAMES);

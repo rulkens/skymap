@@ -13,6 +13,8 @@ import { join } from 'node:path';
 import { totalVariation } from '../../../../tools/mcpm-workbench/validate/totalVariation';
 import { axisMarginals } from '../../../../tools/mcpm-workbench/validate/axisMarginals';
 import { compareTraceCubes } from '../../../../tools/mcpm-workbench/validate/compareTraceCubes';
+import { writeNpy } from '../../../../tools/parsers/npyWriter';
+import { xFastestToCOrder } from '../../../../tools/mcpm-workbench/src/export/xFastestToCOrder';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {
   const headerDict = `{'descr': '<f4', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
@@ -140,5 +142,94 @@ describe('compareTraceCubes', () => {
     expect(report.logHistogramTV).toBe(1);
     // No --points given, so the data-point stats are the documented no-op.
     expect(Number.isNaN(report.dataPointHistogramTV)).toBe(true);
+  });
+
+  // X1 (final-review.md §A): a C-order .npy read with no order normalisation
+  // scrambles X and Z against an x-fastest .bin holding the SAME logical cube —
+  // this pins the fix that stops that from happening silently.
+  describe('voxel-order normalisation (X1)', () => {
+    const dims: [number, number, number] = [2, 3, 4]; // nx != nz — a symmetric cube can't tell transposed from identical
+
+    function logicalCube(): Float32Array {
+      // x-fastest layout: offset = z*ny*nx + y*nx + x. Every voxel gets a
+      // distinct value so a transposed read produces a DIFFERENT distribution,
+      // not one that happens to match by symmetry.
+      const [nx, ny, nz] = dims;
+      const values = new Float32Array(nx * ny * nz);
+      for (let z = 0; z < nz; z++) {
+        for (let y = 0; y < ny; y++) {
+          for (let x = 0; x < nx; x++) {
+            values[z * ny * nx + y * nx + x] = x * 100 + y * 10 + z;
+          }
+        }
+      }
+      return values;
+    }
+
+    function writeSidecar(path: string, voxelOrder?: 'x-fastest' | 'c-order'): void {
+      writeFileSync(
+        path,
+        JSON.stringify({
+          format: 'polyphy-trace',
+          version: 1,
+          dims,
+          origin_mpc: [0, 0, 0],
+          voxel_size_mpc: [1, 1, 1],
+          frame: 'equatorial-cartesian',
+          ...(voxelOrder !== undefined ? { voxel_order: voxelOrder } : {}),
+        }),
+      );
+    }
+
+    it('a C-order .npy (sidecar-declared) compares clean against the same cube as an x-fastest .bin', async () => {
+      const xFastest = logicalCube();
+      const cOrder = xFastestToCOrder(xFastest, dims);
+
+      const aPath = join(dir, 'a.npy');
+      writeFileSync(aPath, Buffer.from(writeNpy(cOrder, dims, '<f4')));
+      writeSidecar(join(dir, 'a.json'), 'c-order');
+
+      const bPath = join(dir, 'b.bin');
+      writeFileSync(bPath, Buffer.from(xFastest.buffer, xFastest.byteOffset, xFastest.byteLength));
+
+      const report = await compareTraceCubes({ aPath, bPath, dims });
+
+      // Same logical cube on both sides, correctly normalised: identical
+      // distributions and marginals, not the ~1.0 TV / max-rel-dev a
+      // transposed read would produce.
+      expect(report.logHistogramTV).toBe(0);
+      expect(report.marginalMaxRelDev).toEqual([0, 0, 0]);
+    });
+
+    it('--a-order overrides a sidecar with no voxel_order (pre-fix sidecars)', async () => {
+      const xFastest = logicalCube();
+      const cOrder = xFastestToCOrder(xFastest, dims);
+
+      const aPath = join(dir, 'a.npy');
+      writeFileSync(aPath, Buffer.from(writeNpy(cOrder, dims, '<f4')));
+      writeSidecar(join(dir, 'a.json')); // no voxel_order — the pre-fix shape
+
+      const bPath = join(dir, 'b.bin');
+      writeFileSync(bPath, Buffer.from(xFastest.buffer, xFastest.byteOffset, xFastest.byteLength));
+
+      const report = await compareTraceCubes({ aPath, bPath, dims, aOrder: 'c-order' });
+
+      expect(report.logHistogramTV).toBe(0);
+      expect(report.marginalMaxRelDev).toEqual([0, 0, 0]);
+    });
+
+    it('errors instead of defaulting when a .npy has no voxel_order and no --a-order/--b-order', async () => {
+      const xFastest = logicalCube();
+      const aPath = join(dir, 'a.npy');
+      writeFileSync(aPath, Buffer.from(writeNpy(xFastest, dims, '<f4')));
+      writeSidecar(join(dir, 'a.json')); // no voxel_order
+
+      const bPath = join(dir, 'b.bin');
+      writeFileSync(bPath, Buffer.from(xFastest.buffer, xFastest.byteOffset, xFastest.byteLength));
+
+      await expect(compareTraceCubes({ aPath, bPath, dims })).rejects.toThrow(
+        /voxel_order|--a-order/,
+      );
+    });
   });
 });

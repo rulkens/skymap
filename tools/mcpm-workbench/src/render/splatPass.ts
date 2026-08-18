@@ -41,6 +41,7 @@ const BLIT_UNIFORM_BYTES = 16;
 export function createSplatPass(opts: {
   readonly device: GPUDevice;
   readonly targetFormat: GPUTextureFormat;
+  readonly blend: GPUBlendState;
   readonly makeShader: (code: string, label: string) => GPUShaderModule;
   readonly agents: AgentBuffers;
   readonly box: GridBox;
@@ -99,11 +100,8 @@ export function createSplatPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // One/one premultiplied, like every other layer: the graph owns the clear.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          // RenderGraph's LAYER_BLEND, taken as an argument like targetFormat.
+          blend: opts.blend,
         },
       ],
     },

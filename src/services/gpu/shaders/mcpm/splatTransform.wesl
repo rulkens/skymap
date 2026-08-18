@@ -36,7 +36,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (idx >= u32(sim.nDataPoints + sim.nAgents)) { return; }
 
   let ndc = voxelToNdc(cam, vec3<f32>(agentX[idx], agentY[idx], agentZ[idx]));
-  // Replaces the near clip the fork got for free from its projection matrix.
+  // FIX, not a compensation: cs_particles_transform.hlsl:88-92 w-divides and tests only
+  // x/y, so the fork has no near clip here and folds behind-camera points onto the screen.
   if (ndc.z <= 0.0) { return; }
   // cs_particles_transform.hlsl:91-92, in ndc rather than its own [0,1] frame.
   if (ndc.x < -1.0 || ndc.x > 1.0 || ndc.y < -1.0 || ndc.y > 1.0) { return; }

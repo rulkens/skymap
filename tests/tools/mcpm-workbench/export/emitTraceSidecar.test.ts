@@ -87,6 +87,7 @@ describe('emitTraceSidecar', () => {
       dims: [712, 1200, 728],
       origin_mpc: [-712, -1200, -728],
       voxel_size_mpc: [1, 1, 1],
+      voxel_order: 'c-order',
       frame: 'equatorial-cartesian',
       value_units: 'mcpm-trace-density',
       provenance: {
@@ -108,6 +109,7 @@ describe('emitTraceSidecar', () => {
     expect(parsed.dims).toEqual([712, 1200, 728]);
     expect(parsed.originMpc).toEqual([-712, -1200, -728]);
     expect(parsed.voxelSizeMpc).toEqual([1, 1, 1]);
+    expect(parsed.voxelOrder).toBe('c-order');
     expect(parsed.frame).toBe('equatorial-cartesian');
     expect(parsed.valueUnits).toBe('mcpm-trace-density');
     // provenance is opaque pass-through past the parser (spec Decision 2) —
