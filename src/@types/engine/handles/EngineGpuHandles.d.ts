@@ -1,12 +1,13 @@
 /**
- * EngineGpuHandles — the GPU pipelines/targets sub-bag of `EngineState`. Every
- * field shares one lifecycle: null until `initGpu` resolves (the handle is
- * returned synchronously, the adapter/device chain is async), assigned once, then
- * released and re-nulled by `destroy()` — the re-null matters because a canvas
- * remount runs a fresh `createEngine` against the stale state object, which would
- * otherwise see "ready" handles pointing at destroyed resources.
- * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer` are
- * never read through this bag; they live here only so `destroy()` can reach them.
+ * EngineGpuHandles — GPU pipelines/targets sub-bag of `EngineState`. Every
+ * field: null until `initGpu` resolves, assigned once, released + re-nulled
+ * by `destroy()` (a remount reuses the state object, so stale "ready" handles
+ * must not point at destroyed resources). Add a field here AND a row to
+ * `GPU_HANDLE_ROWS` (`gpuHandles/gpuHandleRegistry.ts`) — its totality check
+ * fails `tsc` until both exist — unless it belongs in `GpuHandleKey`'s
+ * Exclude list (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `uiCtx`,
+ * `timingService`). `galaxyPickRenderer`/`pickProgram` ARE rows, just built
+ * from `wireInput.ts` instead of `initGpu.ts`.
  */
 
 import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
