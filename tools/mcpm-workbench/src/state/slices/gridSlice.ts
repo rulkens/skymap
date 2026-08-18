@@ -18,29 +18,39 @@ export const defaultGridSlice: GridSlice = {
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],
   manualSizeMpc: [200, 200, 200],
+  importedBox: null,
   box: null,
   resolvedElement: null,
   byteBudget: null,
 };
 
+// V3 ruling: every setter below a user reaches through the grid-controls UI
+// clears `importedBox` — a loaded preset's box wins until the user steers
+// the controls again, then the override has to die (setResolvedGrid, below,
+// is NOT one of these: it records a completed build, not a user edit).
 export function setAutoFit(prev: GridSlice, autoFit: boolean): GridSlice {
-  return { ...prev, autoFit };
+  return { ...prev, autoFit, importedBox: null };
 }
 
 export function setDivisor(prev: GridSlice, divisor: number): GridSlice {
-  return { ...prev, divisor };
+  return { ...prev, divisor, importedBox: null };
 }
 
 export function setPaddingMpc(prev: GridSlice, paddingMpc: number): GridSlice {
-  return { ...prev, paddingMpc };
+  return { ...prev, paddingMpc, importedBox: null };
 }
 
 export function setManualCenterMpc(prev: GridSlice, manualCenterMpc: Vec3): GridSlice {
-  return { ...prev, manualCenterMpc };
+  return { ...prev, manualCenterMpc, importedBox: null };
 }
 
 export function setManualSizeMpc(prev: GridSlice, manualSizeMpc: Vec3): GridSlice {
-  return { ...prev, manualSizeMpc };
+  return { ...prev, manualSizeMpc, importedBox: null };
+}
+
+/** V3's load-side setter: installs a preset's grid box verbatim. */
+export function setImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
+  return { ...prev, importedBox };
 }
 
 /** Records a completed fit: the resolved box, its element, and its byte budget. */

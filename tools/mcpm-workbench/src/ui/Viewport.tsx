@@ -84,7 +84,10 @@ const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '
 /** `?probe`-gated boot signal: probeGpuErrors.ts has no React tree to observe, so it polls this instead of racing the HUD's own text. */
 type ProbeWindow = { __mcpmProbeReady?: boolean };
 
-/** Everything but catalog identity — a change here reuses already-loaded points. */
+/** Everything but catalog identity — a change here reuses already-loaded points.
+ * `grid.importedBox` (V3): loading a preset must rebuild even when none of the
+ * raw config fields below moved — deriveGridBox reads the override VERBATIM,
+ * so the box itself, not autoFit/divisor/manual bounds, is what changed. */
 function buildKey(s: AppState): unknown[] {
   return [
     s.catalog.weightMode,
@@ -93,6 +96,7 @@ function buildKey(s: AppState): unknown[] {
     s.grid.paddingMpc,
     s.grid.manualCenterMpc,
     s.grid.manualSizeMpc,
+    s.grid.importedBox,
     s.sim.agentCount,
     s.sim.initMode,
     s.sim.seed,

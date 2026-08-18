@@ -26,11 +26,17 @@ function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
  * state, so the two can never disagree about what "the box" is. Null when
  * auto-fit is on but no catalog has finished loading yet — there is nothing
  * to fit around.
+ *
+ * `grid.importedBox` (V3) short-circuits all of the above: a loaded preset's
+ * box is returned VERBATIM, so the panel's dims readout and the harness both
+ * see the exact box the preset was saved with, not a recomputation from the
+ * current (possibly unrelated) autoFit/divisor/manual state.
  */
 export function deriveGridBox(
   grid: GridSlice,
   catalogBoundsMpc: { min: Vec3; max: Vec3 } | null,
 ): GridBox | null {
+  if (grid.importedBox) return grid.importedBox;
   const bounds = grid.autoFit
     ? catalogBoundsMpc
     : manualBounds(grid.manualCenterMpc, grid.manualSizeMpc);

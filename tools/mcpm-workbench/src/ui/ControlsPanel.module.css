@@ -53,6 +53,17 @@
   composes: blockButton from '../../../../src/components/common/shared.module.css';
 }
 
+/* V3: importParams' rejection message (malformed/hand-edited JSON) — same
+   panel background as .footer, sitting just under it so it never pushes the
+   download buttons around. */
+.paramsStatus {
+  flex: none;
+  padding: var(--space-2) 22px var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+  background: var(--surface-panel);
+}
+
 /* reset / clear trace, inside the Simulation section below the run/seed/weight
    toggles — the border-top is the same --border-divider hairline
    HistogramPlot/CollapsibleSection use to separate sections. */

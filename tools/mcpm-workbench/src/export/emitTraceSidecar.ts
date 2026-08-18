@@ -4,6 +4,7 @@ import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { buildParamsPayload } from '../state/exportParams';
 
 // Local time with a numeric (no-colon) UTC offset — "+0200", matching the
 // spec §8 example. parsePolyphyTraceSidecar stores provenance untyped, so
@@ -66,16 +67,9 @@ export function emitTraceSidecar(input: {
         n_points: points.count,
         nan_mass_filled: weights.nanCount,
       },
-      params: {
-        senseSpreadDeg: params.senseSpreadDeg,
-        senseDistanceMpc: params.senseDistanceMpc,
-        turnAngleDeg: params.turnAngleDeg,
-        moveDistanceMpc: params.moveDistanceMpc,
-        depositValue: params.depositValue,
-        persistence: params.persistence,
-        sharpness: params.sharpness,
-        normalizationFactor: params.normalizationFactor,
-      },
+      // V3's exportParams preset carries the SAME object, via the same
+      // buildParamsPayload — spec §10's "keep the two shapes identical".
+      params: buildParamsPayload(params),
       n_agents: agentCount,
       steps,
       seed,

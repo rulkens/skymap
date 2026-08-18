@@ -320,6 +320,25 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // V3: the full save→load round trip through the real DOM — exportParams'
+      // download, fed straight back into the hidden file input importParams
+      // reads. The GPU-relevant half is what setImportedBox provokes: it lands
+      // in buildKey (Viewport.tsx), so this is the only step that exercises a
+      // harness rebuild triggered by a grid-box change with none of autoFit /
+      // divisor / manual bounds moving.
+      name: 'params:save-load',
+      run: async (page) => {
+        const [download] = await Promise.all([
+          page.waitForEvent('download'),
+          page.getByRole('button', { name: 'save params', exact: true }).click(),
+        ]);
+        const path = await download.path();
+        if (!path) throw new Error('params:save-load: download produced no local path');
+        await page.locator('input[type="file"]').setInputFiles(path);
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this was the only render layer no gate exercised at all (final-review.md
@@ -499,7 +518,14 @@ async function main(): Promise<void> {
   let adapterLine = 'NONE RECORDED — the probe hook never saw requestAdapter resolve';
 
   try {
-    const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+    // acceptDownloads: the params:save-load step below needs a real on-disk
+    // path for the save-params download so it can feed it straight back into
+    // the load-params file input.
+    const context = await browser.newContext({
+      viewport: VIEWPORT,
+      deviceScaleFactor: 1,
+      acceptDownloads: true,
+    });
     const page = await context.newPage();
     page.setDefaultTimeout(30_000);
     await installGpuProbe(page);

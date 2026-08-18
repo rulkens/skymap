@@ -9,7 +9,7 @@
  * layers: each section's header pill IS its layer's on/off switch, and any
  * subset may be on.
  */
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { ViewSlice } from '../../@types/ViewSlice';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -19,9 +19,15 @@ import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlid
 import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { tierTarget } from '../../../../src/data/tierTargets';
+import { downloadStem } from '../export/downloadStem';
+import { triggerDownload } from '../export/triggerDownload';
+import { deriveGridBox } from '../field/deriveGridBox';
 import { useStore } from '../state/useStore';
 import { setCatalogSources, setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
+import { exportParams } from '../state/exportParams';
+import { setImportedBox } from '../state/slices/gridSlice';
 import { setSampleRandomly } from '../state/slices/histogramSlice';
+import { importParams } from '../state/importParams';
 import {
   requestClearTrace,
   requestExport,
@@ -358,6 +364,55 @@ function ControlsPanel(): ReactNode {
   const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
     store.setState((s) => ({ ...s, view: setLayerEnabled(s.view, layer, on) }));
 
+  // V3: save/load a McpmParams + agent count + init mode + grid box preset,
+  // the same shape emitTraceSidecar's provenance.params rides (exportParams).
+  // `null` grid box (no catalog loaded yet, manual bounds never null) blocks
+  // save — there's nothing meaningful to freeze into a preset yet.
+  const [paramsStatus, setParamsStatus] = useState<string | null>(null);
+  const paramsFileInputRef = useRef<HTMLInputElement>(null);
+
+  const onSaveParams = (): void => {
+    const s = store.getSnapshot();
+    const box = deriveGridBox(s.grid, s.catalog.catalogBoundsMpc);
+    if (!box) {
+      setParamsStatus('save params: no grid box yet — load a catalog first');
+      return;
+    }
+    const json = exportParams({
+      params: s.sim.params,
+      agentCount: s.sim.agentCount,
+      initMode: s.sim.initMode,
+      gridBox: box,
+    });
+    triggerDownload(`${downloadStem(new Date())}-params.json`, json, 'application/json');
+    setParamsStatus(null);
+  };
+
+  const onLoadParamsClick = (): void => paramsFileInputRef.current?.click();
+
+  const onLoadParamsFile = (e: ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = ''; // clears the input so re-selecting the same file still fires onChange
+    if (!file) return;
+    void file
+      .text()
+      .then((text) => {
+        const imported = importParams(text);
+        store.setState((s) => ({
+          ...s,
+          sim: setAgentCount(
+            { ...s.sim, params: imported.params, initMode: imported.initMode },
+            imported.agentCount,
+          ),
+          grid: setImportedBox(s.grid, imported.gridBox),
+        }));
+        setParamsStatus(null);
+      })
+      .catch((err: unknown) => {
+        setParamsStatus((err as Error).message);
+      });
+  };
+
   return (
     <div className={styles.root}>
       <div className={styles.scroll}>
@@ -680,8 +735,7 @@ function ControlsPanel(): ReactNode {
           />
         </CollapsibleSection>
       </div>
-      {/* Pinned below the scroll area, always visible (S12) — a seam for the
-          eventual V3 save-params button, not built here (later task). */}
+      {/* Pinned below the scroll area, always visible (S12). */}
       <div className={styles.footer}>
         {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
             both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
@@ -705,7 +759,28 @@ function ControlsPanel(): ReactNode {
         >
           download .scfd
         </Button>
+        {/* V3: unlike the two exports above, this runs synchronously right
+            here — exportParams needs no GPU readback, just the live snapshot. */}
+        <Button className={styles.actionButton} onClick={onSaveParams}>
+          save params
+        </Button>
+        {/* The visible control is the Button; the <input> stays off-screen and
+            is only ever driven programmatically (App.tsx's dev packed-drop
+            reads a File the same way, via drag-drop instead of a click). Works
+            in prod builds, unlike that DEV-gated drop path. */}
+        <Button className={styles.actionButton} onClick={onLoadParamsClick}>
+          load params
+        </Button>
+        <input
+          ref={paramsFileInputRef}
+          type="file"
+          accept="application/json,.json"
+          aria-label="load params file"
+          style={{ display: 'none' }}
+          onChange={onLoadParamsFile}
+        />
       </div>
+      {paramsStatus && <div className={styles.paramsStatus}>{paramsStatus}</div>}
     </div>
   );
 }
