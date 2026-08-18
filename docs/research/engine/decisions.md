@@ -80,9 +80,10 @@ the deep tuning surface.
    each rung a behaviour-neutral PR of its own. The umbrella `SubsystemBundle`
    type is **deferred** until the rungs land, then reassessed: by that point it
    is a thin grouping over rows that already exist, or possibly unnecessary.
-   Anti-drift discipline: every family's rows are keyed by the same subsystem
-   `key: string` from rung 1, and the contract sketch below stays the north
-   star each rung is checked against. The Track A spec becomes
+   Anti-drift discipline: ~~every family's rows are keyed by the same subsystem
+   `key: string` from rung 1~~ **REFINED by #12 (2026-08-18)** — rows are
+   identified in their own domain; only the contract sketch below stays the
+   north star each rung is checked against. The Track A spec becomes
    reference-not-executable (target shape, not an execution plan).
    Rungs, in order: **1** handle registry (`key`, `construct`,
    `rebuildOnSwapFormat?`; teardown + swap-rebuild derived), **2** target
@@ -127,6 +128,20 @@ the deep tuning surface.
     `hdrFormat` as unused, pipelines cache on the live per-frame `dstFormat`,
     so there is no baked format to go stale; confirmed also by a clean
     HDR-toggle visual smoke; fieldStarSphere missing the FOREGROUND_MAX gate.
+12. **How family rows are keyed** (2026-08-18, ruled in rung 2 — refines #9's
+    anti-drift sentence): a row is identified **in its own domain** — the handle
+    row by its `EngineGpuHandles` field name, the target row by its
+    `RenderTargetSpec.id`, the upsample layer row by its `ContentLayer.name`.
+    Subsystem attribution is carried by the contributing **bundle**, never
+    duplicated onto each row. #9's literal reading doesn't survive the code:
+    rung 1's `key` is an `EngineGpuHandles` field name, not a subsystem (one
+    subsystem owns several rows — `milkyWay` owns four), and 6 of the 12 target
+    rows are engine-core per #8, so a subsystem `key` would have to be
+    fabricated for them. Binding for rungs 3–7: **do not add a `key: string` to
+    a family row whose identity already exists in its own domain.** At the
+    umbrella reassessment rows get **grouped** under a bundle key, never
+    re-keyed. Evidence + the rejected alternatives:
+    [rung-2 plan](../../superpowers/plans/2026-08-18-target-contributions.md).
 
 ## The contract (settled sketch)
 

@@ -264,7 +264,7 @@ boundary · engine-core accumulators/gates/ctx (#8).
 
 ## 8. Gaps the spec does not cover (addendum candidates)
 
-1. **Clear values onto the target row** — kill the `TARGET_CLEAR_VALUES` drift pair; one source for `runBloom` too.
+1. ~~**Clear values onto the target row** — kill the `TARGET_CLEAR_VALUES` drift pair; one source for `runBloom` too.~~ 🟢 **DONE (rung 2)** — `clearValue` rides each row in `renderTargetRows()`; `executeFrame` and `runBloom` both read it via `specOf(target).clearValue`.
 2. **`FADE_ROW` / `VISIBILITY_ACTION_ROW` derivation** — derive both inverse maps from the bundle's fade declaration, or record why they stay.
 3. **Validation depth** — add the acknowledged-unbuilt blend-legality + format-parity checks to the frame-assembly walker.
 4. **Swap-format subset** — replace `buildSwapRenderers`' hand list with a `rebuildOnSwapFormat` flag on the handle row.

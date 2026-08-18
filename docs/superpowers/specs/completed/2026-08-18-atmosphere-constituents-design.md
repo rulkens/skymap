@@ -34,8 +34,8 @@ Ran 2026-08-18. Full checkpoint in the session; verdicts:
 | Phase applied by the caller, by name        | **bolt-on** | `skyViewLut.wesl:148` — `scatterR*rp + scatterM*mp` cannot be written for N unnamed constituents.                                                                                                                   |
 | `densityRayleigh` / `densityMie` duplicated | trivial     | `scattering.wesl:165-171` — one `densityExponential`.                                                                                                                                                               |
 | Titan atmosphere                            | growth      | none: `atmosphereDrawList.ts:39` data-gate; `initGpu.ts:597-604` bakes per row.                                                                                                                                     |
-| Titan texture                               | growth      | rows in four closed tables; the one-table-two-views seam already exists.                                                                                                                                            |
-| Titan rotation                              | growth      | absent row falls back to `IDENTITY_MAT3` — silent, so it is a task, not an afterthought.                                                                                                                            |
+| Titan texture                               | ~~growth~~  | Dropped at stage 3: no visible-light global mosaic of Titan exists. The verdict was sound; the premise was not.                                                                                                     |
+| Titan rotation                              | ~~growth~~  | Dropped with the texture — orientation is gated on texture-registry membership (`orientationForBody.ts:33`), so the row would never be read.                                                                        |
 
 **Prep = stage 1 below, its own PR.** Stages 2 and 3 are then pure growth.
 
@@ -83,7 +83,8 @@ vectors — which is what Titan's haze and Venus's UV absorber need.
 
 ## Uniform layout
 
-`MAX_CONSTITUENTS = 4` (Earth 3, Venus 3, Titan 3–4, Pluto 2). 48-byte stride, which
+`MAX_CONSTITUENTS = 4` (Earth 3, Venus 3, Titan 3, Pluto 2; as shipped, Neptune 4 is
+the only row that spends the budget). 48-byte stride, which
 satisfies WGSL's 16-byte array-stride rule:
 
 ```
@@ -203,33 +204,71 @@ research output and are deliberately not pre-committed here**:
   carry it in `groundAlbedo` against measured geometric albedos rather than
   manufacturing a haze for it.
 
-Sources are to be verified before they are cited. This branch has already shipped one
-fabricated citation past two reviews; a quote that does not name the object it is
-being used to describe is not support.
+Sources are to be verified before they are cited. The Pluto/Charon branch got a
+fabricated citation — "Protopapa+19, ApJL 872 L36", no such paper — past two reviews
+in `bodyTextureRegistry.ts`; a third caught it, and the 2.7% PCA figure turned out to
+trace to Grundy et al. 2016, Science 351, aad9189, which the row cites today
+(`docs/superpowers/plans/completed/2026-08-16-add-pluto-charon.ledger.md:64`). Two
+reviews is not a filter. A quote that does not name the object it is being used to
+describe is not support.
 
 ### Stage 3 — Titan
 
 Titan takes **Venus's shape**, not Pluto's: the visible "surface" is the haze deck
 itself. Supersedes `docs/backlog/2026-07-19-titan-atmosphere.md`, whose two-level
-split named this.
+split named this. Derivation: `../../research/atmospheres/titan.md`.
 
-- Atmosphere row: N₂ Rayleigh, the main organic haze as a per-channel Mie
-  constituent, and the detached haze layer as a `tent` constituent — the case that
-  motivates a fourth slot.
-- Texture — the **haze deck**, from a Cassini ISS visible-light global mosaic:
-  `BodyTextureId` member, `BODY_TEXTURE_REGISTRY` row (`surface: 'medium'`, a look
-  ceiling — unresolved cloud, same reasoning as Venus's row), `TEXTURE_SOURCES` row,
-  raw-data registry entry, a `ROTATION_ELEMENTS` row (tidally locked; pole from
-  Archinal et al. 2018), and a `LIMB_DARKENING_PARAMS` row so the disc darkens toward
-  the limb like a lit body.
-- **Why not the surface mosaic.** The available Titan surface maps are infrared
-  (VIMS / ISS 938 nm), where the haze is transparent. Registering one as the surface
-  would be wrong twice over: hidden behind a correct haze from orbit, and — per
-  `docs/backlog/2026-07-29-in-atmosphere-haze.md` — rendered at **full albedo with no
-  haze at all** once the camera is inside the shell, because the near wall stops
-  rasterising and the over-disc haze branch gets no fragments. A haze-deck texture is
-  correct at every distance the camera can currently reach, and depends on no
-  deferred renderer work.
+**One row, no texture.** Titan ships as an `ATMOSPHERE_PARAMS` entry and nothing
+else — no `BodyTextureId` member, no `BODY_TEXTURE_REGISTRY` / `TEXTURE_SOURCES` /
+raw-registry row, no `ROTATION_ELEMENTS` row and no `LIMB_DARKENING_PARAMS` row. It
+therefore draws through `planetsLayer` / `planetRenderer` as a flat Lambert sphere
+tinted by its seed albedo, with the shell above it.
+
+- **Three constituents.** N₂/CH₄ Rayleigh (0.2% of the extinction — correctness
+  only), then the organic haze split across **two** Henyey–Greenstein lobes. The
+  haze particles are fractal aggregates: a 2–3 µm projected area sets a 7.7°
+  diffraction lobe while the 0.05 µm monomers keep a near-Rayleigh backscatter, and
+  a single `g` must give up one of them — losing the forward lobe loses the twilight
+  surge that is Titan's defining optical property (García Muñoz+17 measure Titan
+  brighter backlit than fully lit). No methane constituent, unlike Uranus/Neptune:
+  the CH₄ column above the reference level is 1.9 × 10⁻³ km-am against 4 km-am for
+  the whole atmosphere, so the deep bands form below the drawn sphere.
+- **The detached haze gets no `tent`, and does not motivate a fourth slot** — the
+  claim this section previously made. Its normal optical depth is ~1 × 10⁻³ (100×
+  thinner at the limb than Neptune's Aerosol-4, which is already a look risk) and it
+  was undetectable from late 2012 to early 2016. A layer that comes and goes is not
+  a table constant. The slot it would have taken goes to the second phase lobe.
+- **Geometry.** Altitude 0 is the nadir τ = 1 haze level, 160 km up — 6.2% of the
+  radius, against Venus's 1.1%, so Titan draws visibly small. `planetRadiusKm`
+  cannot be raised to close that: above the rasterised radius the fragment's ground
+  test reads true where no disc was drawn and the limb glow is amputated
+  (`shell/fragment.wesl:176-181`). The prerequisite is instead that
+  `planetRenderer` take its silhouette from the analytic sphere, since the
+  tessellated mesh inscribes the true sphere by 0.43% — the same failure in
+  miniature. That un-braiding landed as its own commit before this stage.
+
+**Why textureless — and why not to go looking again.** There is **no Cassini ISS
+visible-light global mosaic of Titan**. The search covered the USGS mosaic bucket
+(every Titan product there is ISS 938 nm or radar), the NASA Photojournal (every
+true-colour Titan is a small single-hemisphere perspective image, not
+map-projected), Björn Jónsson's map set (no Titan) and Solar System Scope (no
+Titan). `data/raw/textures/README.md` had already recorded this and was right.
+
+The infrared surface maps (VIMS / ISS 938 nm) are not a substitute — the haze is
+transparent there. Registering one as the surface would be wrong twice over: hidden
+behind a correct haze from orbit, and — per
+`docs/backlog/2026-07-29-in-atmosphere-haze.md` — rendered at **full albedo with no
+haze at all** once the camera is inside the shell, because the near wall stops
+rasterising and the over-disc haze branch gets no fragments.
+
+The cost of shipping flat is a disc with no structure but its own shading gradient,
+and a composite that reads too bright and much too red — predicted, quantified, and
+attributed to the seed albedo rather than to the coefficients in the note's §0. The
+seed correction is table-wide
+(`docs/backlog/2026-08-18-body-seed-albedos-vs-measured.md`), not Titan's to make.
+Titan's one piece of real large-scale visible structure is a seasonally reversing
+north/south albedo asymmetry, which no static texture could carry anyway →
+`docs/backlog/2026-08-18-titan-seasonal-albedo-asymmetry.md`.
 
 ## Testing
 
@@ -257,5 +296,7 @@ Per `docs/superpowers/conventions/testing.md` — test what can break:
 - Seed albedos vs measured Bond albedos (Pluto's 0.49 vs 0.72 ± 0.07, and the same
   question for every row). → backlog.
 - Multiple scattering beyond the existing Hillaire-style LUT; no change here.
-- `EngineGpuHandles.d.ts:490-507`'s stale "Mars / Venus / Titan opt in later" comment
-  rides stage 3, which makes it true.
+- ~~`EngineGpuHandles.d.ts:490-507`'s stale "Mars / Venus / Titan opt in later"
+  comment rides stage 3, which makes it true.~~ No such file. The surviving text is
+  `CloudShellRenderer.d.ts:3`, and it is about the **cloud** shell (Earth's clouds),
+  a different subsystem that stage 3 does not opt Titan into. Left alone.

@@ -11,17 +11,15 @@
  * prefilter, `bloom[n-1]` for downsample n, `bloom[n+1]` for upsample n,
  * `bloom0` for the fold — so no pass ever samples an uncleared or stale level.
  *
- * That is exactly what the previous ten-`ContentLayer` wiring got wrong. The
- * frame executor fires every layer whose `(target, slab)` matches a render
- * step, with no already-drawn exclusion, and the pyramid REUSES targets
- * (`bloom0` and `bloom3` each host a downsample AND an upsample). So each
- * upsample layer fired PREMATURELY at its target's downsample step and read the
- * coarser level before that level's first-touch clear happened this frame,
- * pulling in last frame's stored contents. That cross-frame feedback ramped
- * brightness every frame until it saturated the whole screen to white. Modeling
- * bloom as one sequential pipeline removes the reuse hazard: the passes run in
- * fixed order, and `runBloom` owns its own clears rather than leaning on the
- * executor's per-target first-touch bookkeeping (which tracks scene targets).
+ * The pyramid REUSES targets (`bloom0` and `bloom3` each host a downsample AND
+ * an upsample), so the generic frame executor — which fires every layer whose
+ * `(target, slab)` matches a render step, with no already-drawn exclusion —
+ * cannot express this pipeline: an upsample layer would fire at its target's
+ * downsample step and read the coarser level before that level's first-touch
+ * clear this frame, pulling in last frame's stored contents and ramping
+ * brightness toward white across frames. `runBloom` instead owns its own
+ * clears and fixed pass order, bypassing the executor's per-target
+ * first-touch bookkeeping (which tracks scene targets) entirely.
  *
  * ### One timing slot spanning the whole sub-routine
  *
@@ -37,20 +35,22 @@
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
 import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
 
 /**
  * Open one bloom pass against `target`'s view. A `'clear'` pass reads the
- * target's clear value from the render-target table (the bright + downsample
- * producers own their level); a `'load'` pass keeps what the sequence already
- * wrote (the additive upsample folds and the fold into HDR). `timestampWrites`
+ * target's clear value off its spec row (the bright + downsample producers
+ * own their level); a `'load'` pass keeps what the sequence already wrote
+ * (the additive upsample folds and the fold into HDR). `timestampWrites`
  * carries the bloom slot's begin (on the first pass) or end (on the last).
+ * `specOf` throws on a missing row rather than silently falling back to a
+ * zero clear colour — a mis-registered target fails loudly instead of
+ * rendering black.
  */
 function openBloomPass(
   encoder: GPUCommandEncoder,
+  ctx: ReadyFrameContext,
   view: GPUTextureView,
   target: string,
   loadOp: 'clear' | 'load',
@@ -58,7 +58,12 @@ function openBloomPass(
 ): GPURenderPassEncoder {
   const colorAttachment: GPURenderPassColorAttachment =
     loadOp === 'clear'
-      ? { view, loadOp: 'clear', clearValue: TARGET_CLEAR_VALUES[target]!, storeOp: 'store' }
+      ? {
+          view,
+          loadOp: 'clear',
+          clearValue: ctx.renderTargets.specOf(target).clearValue,
+          storeOp: 'store',
+        }
       : { view, loadOp: 'load', storeOp: 'store' };
   return encoder.beginRenderPass({
     label: `bloom-${target}`,
@@ -75,12 +80,11 @@ export function runBloom(
 ): void {
   // Handle-ready gate: the `settings.bloom.enabled` master toggle already gated
   // this step out of the program at build time, so this only guards a
-  // pre-bootstrap or torn-down pyramid — mirroring the old per-layer null check.
+  // pre-bootstrap or torn-down pyramid.
   const pyramid = state.gpu.bloomPyramid;
   if (pyramid === null) return;
 
   const { threshold, strength } = state.settings.bloom;
-  const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
   const viewOf = (id: string): GPUTextureView => ctx.renderTargets.viewOf(id);
 
   // One `'bloom'` slot spanning the sub-routine: begin on the bright pass, end
@@ -95,7 +99,7 @@ export function runBloom(
     : undefined;
 
   // Bright prefilter: hdr → bloom0, clearing bloom0. Carries the slot's begin.
-  const brightPass = openBloomPass(encoder, viewOf('bloom0'), 'bloom0', 'clear', beginWrites);
+  const brightPass = openBloomPass(encoder, ctx, viewOf('bloom0'), 'bloom0', 'clear', beginWrites);
   pyramid.bright(brightPass, viewOf('hdr'), threshold);
   brightPass.end();
 
@@ -107,14 +111,8 @@ export function runBloom(
   for (const level of downsampleLevels) {
     const src = `bloom${level - 1}`;
     const target = `bloom${level}`;
-    const pass = openBloomPass(encoder, viewOf(target), target, 'clear', undefined);
-    pyramid.downsample(
-      pass,
-      viewOf(src),
-      level,
-      bloomSrcTexelSize(ctx, viewportPx, src),
-      level === 1,
-    );
+    const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'clear', undefined);
+    pyramid.downsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, src), level === 1);
     pass.end();
   }
 
@@ -129,15 +127,15 @@ export function runBloom(
   for (const level of upsampleLevels) {
     const src = `bloom${level + 1}`;
     const target = `bloom${level}`;
-    const pass = openBloomPass(encoder, viewOf(target), target, 'load', undefined);
-    pyramid.upsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, viewportPx, src));
+    const pass = openBloomPass(encoder, ctx, viewOf(target), target, 'load', undefined);
+    pyramid.upsample(pass, viewOf(src), level, bloomSrcTexelSize(ctx, src));
     pass.end();
   }
 
   // Fold: bloom0 → hdr, LOADING hdr (it already holds the composited scene — the
   // program places the bloom step after the foreground:0→hdr composite). Carries
   // the slot's end.
-  const foldPass = openBloomPass(encoder, viewOf('hdr'), 'hdr', 'load', endWrites);
+  const foldPass = openBloomPass(encoder, ctx, viewOf('hdr'), 'hdr', 'load', endWrites);
   pyramid.fold(foldPass, viewOf('bloom0'), strength);
   foldPass.end();
 }

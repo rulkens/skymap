@@ -34,12 +34,21 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
   return [pc[0] * PC_TO_MPC, pc[1] * PC_TO_MPC, pc[2] * PC_TO_MPC];
 }
 
+// The layer reads its viewport via `sizeOf('star-aggregates')` — the fixture
+// hardcodes the size the production table's scale: 2 implies for the 1280x720
+// canvas below (floor(1280 / 2), floor(720 / 2)).
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
   return {
     drawCamPos: camPos,
     nowMs,
     canvasSize: { width: 1280, height: 720 },
-    renderTargets: { specs: [{ id: 'star-aggregates', scale: 2 }] },
+    renderTargets: {
+      specs: [{ id: 'star-aggregates', scale: 2 }],
+      sizeOf: (id: string) => {
+        if (id !== 'star-aggregates') throw new Error(`fixture renderTargets: no size for '${id}'`);
+        return { width: 640, height: 360 };
+      },
+    },
   } as unknown as ReadyFrameContext;
 }
 

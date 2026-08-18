@@ -66,6 +66,7 @@ import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
+import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -110,7 +111,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // Complement of initGpu.ts's filter, by construction: this phase builds
   // only the rows marked `constructPhase: 'wireInput'`.
   constructGpuHandles(
-    GPU_HANDLE_ROWS.filter((row) => 'constructPhase' in row),
+    GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase === 'wireInput'),
     state,
     handleDeps,
   );

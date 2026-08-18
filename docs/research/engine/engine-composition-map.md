@@ -66,12 +66,13 @@ calls `executeFrame` with `CONTENT_LAYERS` + the resolved `RenderStrategy`.
 `{ id, format, depth, scale }`. `scale` is the downsample **divisor** (not a
 multiplier) — `floor(canvasSize / scale)`, min 1px
 (`renderTargets.ts:244-250`). One `allocate()` loop handles every offscreen
-row uniformly; `resize()` re-runs it; `destroy()` clears every map. The
+row uniformly; `reconcile()` re-runs it; `destroy()` clears every map. The
 `swap` row has a spec (format, for pipeline-format matching) but no
 allocated texture — it resolves from the per-frame acquired swap-chain view
-(`executeFrame.ts:97-100`). `TARGET_CLEAR_VALUES`
-(`renderTargets.ts:153-173`) is a parallel per-target-id clear-colour table
-consumed by `executeFrame`'s `colorAttachment()`.
+(`executeFrame.ts:97-100`). `clearValue` rides each row in
+`renderTargetRows()` (`renderTargets.ts`) — `specOf(target).clearValue` is
+read by both `executeFrame`'s `colorAttachment()` and `runBloom`, one source
+instead of the old parallel `TARGET_CLEAR_VALUES` table.
 
 Today's rows: `hdr` (rgba16float, scale 1 — the shared additive accumulator),
 `volume` (scale 3, the raymarch half-res-cubed offscreen), `star-aggregates`
@@ -107,8 +108,9 @@ own passes in strict order, outside the `(target, slab)` grouping.
 
 Concretely, adding an N-th offscreen (e.g. an analytic MW field target)
 means:
-1. A row in `renderTargets.ts`'s `buildSpecs()` (id/format/depth/scale) +
-   a clear-colour entry in `TARGET_CLEAR_VALUES` if it's additive-cleared.
+1. A row in `renderTargets.ts`'s `renderTargetRows()`
+   (id/format/depth/scale/clearValue) — the clear colour rides the row,
+   not a separate table.
 2. A `{ kind: 'render', target: <id>, slab: <COSMO|NEAR0> }` step in
    `frameProgram()`, positioned relative to its producer/consumer neighbours
    (order is load-bearing where blend is multiplicative or where an upsample

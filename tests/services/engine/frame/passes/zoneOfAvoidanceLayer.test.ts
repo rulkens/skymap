@@ -25,18 +25,19 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// The layer reads the downsample divisor off the 'zoa' spec row — the
-// fixture mirrors the production table's scale: 5.
+// The layer reads its viewport via `sizeOf('zoa')` — the fixture computes it
+// here, mirroring the production table's scale: 5.
 const ZOA_SCALE = 5;
 
 /** Inside the visibility window: both bands saturate to 1 here. */
 const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
 
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+  const canvasSize = over.canvasSize ?? { width: 1280, height: 720 };
   return {
     isReady: true,
     cam: { position: [0, 0, INSIDE_CAM_DIST] } as never,
-    canvasSize: { width: 1280, height: 720 },
+    canvasSize,
     drawCamPos: [0, 0, INSIDE_CAM_DIST] as Readonly<[number, number, number]>,
     nowMs: 0,
     focusBlend: 0,
@@ -45,8 +46,14 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
         { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
         { id: 'zoa', format: 'rgba16float', depth: null, scale: ZOA_SCALE },
       ],
+      sizeOf: (id: string) => {
+        if (id !== 'zoa') throw new Error(`fixture renderTargets: no size for '${id}'`);
+        return {
+          width: Math.max(1, Math.floor(canvasSize.width / ZOA_SCALE)),
+          height: Math.max(1, Math.floor(canvasSize.height / ZOA_SCALE)),
+        };
+      },
       viewOf: () => ({}) as GPUTextureView,
-      resize: vi.fn(),
       destroy: vi.fn(),
     } as never,
     ...over,
@@ -109,14 +116,6 @@ describe('zoneOfAvoidanceLayer.draw', () => {
     expect(typeof args[6]).toBe('number'); // bulgeDeg
     expect(typeof args[7]).toBe('number'); // anticenterDeg
     expect(args[8]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
-  });
-
-  it('clamps the downsampled viewport to a minimum of 1 px', () => {
-    const drawSpy = vi.fn();
-    const state = liveState({ draw: drawSpy });
-    const ctx = makeCtx({ canvasSize: { width: 1, height: 1 } });
-    zoneOfAvoidanceLayer.draw(PASS_STUB, {} as never, ctx, state);
-    expect(drawSpy.mock.calls[0]![2]).toEqual([1, 1]);
   });
 
   it('is a no-op when the renderer is null (pre-bootstrap)', () => {

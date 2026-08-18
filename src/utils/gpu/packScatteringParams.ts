@@ -10,7 +10,7 @@
 
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
 
-/** Uniform slots for constituents. Earth uses 3, Venus and Titan will use 3-4. */
+/** Uniform slots for constituents. Neptune spends all four; no row has headroom past it. */
 export const MAX_CONSTITUENTS = 4;
 
 /** Byte size of `ScatteringParams` — 32-byte header + 4 × 48-byte constituents. */

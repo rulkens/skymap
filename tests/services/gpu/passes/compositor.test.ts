@@ -67,7 +67,7 @@ function mockPass() {
 const SRC = {} as unknown as GPUTextureView;
 
 function make(device: GPUDevice) {
-  return createCompositor({ device, swapFormat: 'bgra8unorm', hdrFormat: 'rgba16float' });
+  return createCompositor({ device });
 }
 
 // Snapshot the ArrayBuffer that was handed to writeBuffer on call `i`.
