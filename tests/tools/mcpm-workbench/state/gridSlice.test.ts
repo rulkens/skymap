@@ -20,11 +20,15 @@ import {
   setPaddingMpc,
 } from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
 
+// centerMpc/sizeMpc deliberately differ from defaultGridSlice's manual
+// values on every axis — an installImportedBox test asserting sync against
+// a fixture that coincides with the defaults can't distinguish "synced"
+// from "left untouched" (see task-S17-review.md).
 const IMPORTED_BOX: GridBox = {
-  centerMpc: [0, 0, 0],
-  sizeMpc: [200, 200, 200],
+  centerMpc: [10, -5, 3],
+  sizeMpc: [300, 300, 300],
   dims: [256, 256, 256],
-  voxelSizeMpc: 0.78125,
+  voxelSizeMpc: 1.171875,
 };
 
 const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };
