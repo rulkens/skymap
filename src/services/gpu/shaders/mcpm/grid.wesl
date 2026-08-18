@@ -71,9 +71,9 @@ fn scaleTrace(v: vec3<i32>, factor: f32) {
 
 // Trilinear sample of the trace field at 'p', in the same voxel space agent positions
 // live in: voxel i covers [i, i+1) and so is centred at i + 0.5, which is why the
-// interpolation base is floor(p - 0.5) and not floor(p). Corners outside the grid read
-// 0 through loadTrace, so the field fades out at the box faces instead of smearing the
-// boundary voxel outward.
+// interpolation base is floor(p - 0.5) and not floor(p). DIVERGENCE: the fork's trace
+// sampler clamps to edge (main.cpp:578, cpplib/graphics.cpp:450-451), smearing the
+// boundary voxel outward; here corners outside the grid read 0 via loadTrace instead.
 fn sampleTrace(p: vec3<f32>) -> f32 {
   let g = p - vec3<f32>(0.5);
   let b = floor(g);
@@ -89,10 +89,12 @@ fn sampleTrace(p: vec3<f32>) -> f32 {
   let c011 = loadTrace(i + vec3<i32>(0, 1, 1));
   let c111 = loadTrace(i + vec3<i32>(1, 1, 1));
 
-  let c00 = mix(c000, c100, f.x);
-  let c10 = mix(c010, c110, f.x);
-  let c01 = mix(c001, c101, f.x);
-  let c11 = mix(c011, c111, f.x);
+  // x-lerped planes below; the two digits are (y, z), not (x, y) — contrast the corners'
+  // 3-digit (x, y, z) names above.
+  let x00 = mix(c000, c100, f.x);
+  let x10 = mix(c010, c110, f.x);
+  let x01 = mix(c001, c101, f.x);
+  let x11 = mix(c011, c111, f.x);
 
-  return mix(mix(c00, c10, f.y), mix(c01, c11, f.y), f.z);
+  return mix(mix(x00, x10, f.y), mix(x01, x11, f.y), f.z);
 }

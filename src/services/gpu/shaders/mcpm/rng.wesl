@@ -5,7 +5,8 @@
 // Every constant, shift and evaluation order is the fork's, and the number and ORDER of
 // draws in a kernel is part of the simulation's identity — a "better" generator, or a
 // draw hoisted out of a branch, is a different simulation. The seed guard carries an
-// upstream typo behind QUIRK_RNG_SEED_GUARD_TYPO.
+// upstream typo behind QUIRK_RNG_SEED_GUARD_TYPO. Fork spellings: wang_hash, set_seed,
+// random_uint, random_float -> wangHash, rngSetSeed, rngNextUint, rngNextFloat.
 
 import package::mcpm::constants::QUIRK_RNG_SEED_GUARD_TYPO;
 

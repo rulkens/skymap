@@ -1,5 +1,5 @@
-// mcpm/io.wesl — the McpmUniforms layout and the storage bindings every MCPM kernel
-// and view shares.
+// mcpm/io.wesl — the McpmUniforms layout and the storage bindings the propagate/decay
+// kernels and the field views share (the histogram pass adds its own — atomic counts, a stats uniform).
 //
 // The port swaps Polyphorm's RWTexture3D grids for storage buffers: WebGPU has no f16
 // storage texture and allows read_write only on r32float, which caps the grid near a
@@ -42,12 +42,15 @@ struct McpmUniforms {
 // (u1 trace -> 2, u2..u7 particles -> 3..8) because slot 1 is decay's write target. The
 // host swaps the physical buffers per step (the fork's is_a ping-pong); 'deposit' is
 // read_write because WGSL storage has no write-only mode and propagate accumulates here.
+// Fork names: deposit/depositOut/trace were tex_deposit (tex_in in the decay kernel),
+// tex_out, and tex_trace.
 @group(1) @binding(0) var<storage, read_write> deposit: array<GridElem>;
 @group(1) @binding(1) var<storage, read_write> depositOut: array<GridElem>;
 @group(1) @binding(2) var<storage, read_write> trace: array<GridElem>;
 
 // The six SoA agent buffers in the fork's register order (u2..u7), each of length
 // nDataPoints + nAgents; indices [0, nDataPoints) are the catalog points, theta = -5.0.
+// Fork names: particles_x/y/z/phi/theta/weights.
 @group(1) @binding(3) var<storage, read_write> agentX: array<f32>;
 @group(1) @binding(4) var<storage, read_write> agentY: array<f32>;
 @group(1) @binding(5) var<storage, read_write> agentZ: array<f32>;
