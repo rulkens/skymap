@@ -8,7 +8,7 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
  * so a workbench/app comparison isn't also a palette diff. `trimDensity`/
  * `sampleWeight`/`stepVoxels` are the fork's shipped raymarch defaults (vendor
  * main.cpp:764,:770) — keep them exact so a workbench/fork comparison isn't
- * also a knob diff.
+ * also a knob diff. `additive` is the deliberate exception (see ViewSlice).
  */
 export const defaultViewSlice: ViewSlice = {
   mode: 'traceRaymarch',
@@ -20,6 +20,7 @@ export const defaultViewSlice: ViewSlice = {
     trimDensity: 1e-5,
     sampleWeight: 0.01,
     stepVoxels: 1,
+    additive: true,
   },
 };
 
@@ -66,4 +67,8 @@ export function setSampleWeight(prev: ViewSlice, sampleWeight: number): ViewSlic
 
 export function setStepVoxels(prev: ViewSlice, stepVoxels: number): ViewSlice {
   return { ...prev, raymarch: { ...prev.raymarch, stepVoxels } };
+}
+
+export function setAdditive(prev: ViewSlice, additive: boolean): ViewSlice {
+  return { ...prev, raymarch: { ...prev.raymarch, additive } };
 }

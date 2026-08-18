@@ -307,6 +307,17 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // The raymarch's other composite. It defaults ON, so only turning it off
+      // reaches the fork-parity 'over' branch of the march loop at all.
+      name: 'toggle:additive',
+      run: async (page) => {
+        await page.getByRole('button', { name: 'additive: on', exact: true }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.getByRole('button', { name: 'additive: off', exact: true }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
       // The galaxy-point overlay, an additive layer over the raymarch — on, then off,
       // because a pass that only ever runs cannot show what disabling it breaks.
       name: 'toggle:galaxy-overlay',

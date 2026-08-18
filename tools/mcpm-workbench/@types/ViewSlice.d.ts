@@ -28,5 +28,11 @@ export type ViewSlice = {
     readonly trimDensity: number;
     readonly sampleWeight: number;
     readonly stepVoxels: number;
+    /**
+     * Composite the march as pure emission instead of the fork's front-to-back
+     * 'over'. Fork parity is `false`; the workbench defaults it on because the
+     * per-slab alpha goes opaque a few voxels in and buries the interior.
+     */
+    readonly additive: boolean;
   };
 };

@@ -1,13 +1,12 @@
 // mcpm/fragment.wesl — raymarch of the sim's trace grid under Polyphorm's transfer
-// function. The buffer is sampled in place through grid.wesl's manual trilinear; there
-// is no copy into a texture and no packing step.
+// function, sampled in place through grid.wesl's manual trilinear (no texture copy).
 //
 // Everything is in VOXEL space, the frame sampleTrace and the agents share: the grid
-// AABB is [0, dims]. 'stepVoxels = 1.0' is FORK PARITY exactly — the obliquity divide at
-// the step below gives every ray the fork's own sample count, one per axis-aligned slab
-// (main.cpp:711-731), at any view angle. The fork's closing 'fragment.rgb *= 2.0' is
-// dropped as a plain scale on rgb: exposure = 2 in the blit reproduces it.
-// DIVERGENCE: no trim box; the workbench's grid box is the crop.
+// AABB is [0, dims]. FORK PARITY is 'additive = 0' with 'stepVoxels = 1.0' — the
+// obliquity divide below then gives every ray the fork's own sample count, one per
+// axis-aligned slab (main.cpp:711-731), at any view angle. The fork's closing
+// 'fragment.rgb *= 2.0' is dropped as a plain scale on rgb: exposure = 2 in the blit
+// reproduces it. DIVERGENCE: no trim box; the workbench's grid box is the crop.
 
 import package::mcpm::grid::gridDims;
 import package::mcpm::grid::sampleTrace;
@@ -27,6 +26,8 @@ struct TraceView {
   camUp: vec3<f32>,
   stepVoxels: f32,
   maxSteps: u32,
+  // Grows into the struct's existing tail padding: still 80 bytes (tracePass.ts).
+  additive: u32,
 };
 
 @group(2) @binding(0) var<uniform> view: TraceView;
@@ -81,11 +82,17 @@ fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
       let r = remap((density - view.trimDensity) * view.sampleWeight);
       let rgb = textureSampleLevel(palette, paletteSampler, vec2<f32>(r, 0.5), 0.0).rgb;
       let a = view.opticalThickness * r;
-      // Front-to-back 'over', premultiplied — the same operator as the fork's
-      // back-to-front ALPHA blend state over its slab stack, walked the other way.
-      accum = accum + (1.0 - accum.a) * vec4<f32>(rgb * a, a);
-      if (accum.a > SATURATION) {
-        break;
+      if (view.additive != 0u) {
+        // Emission only, alpha left at 0 so nothing occludes. The stepLength factor
+        // (in voxels) is what holds brightness fixed across the stepVoxels slider.
+        accum = accum + vec4<f32>(rgb * a * stepLength, 0.0);
+      } else {
+        // Front-to-back 'over', premultiplied — the same operator as the fork's
+        // back-to-front ALPHA blend state over its slab stack, walked the other way.
+        accum = accum + (1.0 - accum.a) * vec4<f32>(rgb * a, a);
+        if (accum.a > SATURATION) {
+          break;
+        }
       }
     }
     t = t + stepLength;

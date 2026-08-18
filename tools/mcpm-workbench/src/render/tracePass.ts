@@ -45,6 +45,8 @@ export type TraceView = {
   readonly opticalThickness: number;
   readonly stepVoxels: number;
   readonly maxSteps: number;
+  /** Emission composite instead of the fork's 'over'; false is fork parity. */
+  readonly additive: boolean;
 };
 
 export type TracePass = {
@@ -55,7 +57,7 @@ export type TracePass = {
 
 // The grid dims are members 7..9 of io.wesl's McpmUniforms (UNIFORM_BYTES sizes it).
 const DIMS_INDEX = 7;
-// TraceView in WGSL: four vec3+scalar rows, then maxSteps and 12 bytes of tail padding.
+// TraceView in WGSL: four vec3+scalar rows, then maxSteps, additive, 8 bytes of padding.
 const VIEW_UNIFORM_BYTES = 80;
 // An unbounded step count is a GPU hang, not a slow frame.
 const MAX_STEPS_CEILING = 4096;
@@ -175,6 +177,7 @@ export function createTracePass(opts: {
     viewF32[14] = up[2] * tanHalfFov;
     viewF32[15] = view.stepVoxels;
     viewU32[16] = Math.max(1, Math.min(MAX_STEPS_CEILING, Math.floor(view.maxSteps)));
+    viewU32[17] = view.additive ? 1 : 0;
     device.queue.writeBuffer(viewBuffer, 0, viewBytes);
   }
 

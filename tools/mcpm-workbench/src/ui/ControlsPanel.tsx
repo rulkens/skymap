@@ -22,6 +22,7 @@ import {
   setSimParam,
 } from '../state/slices/simSlice';
 import {
+  setAdditive,
   setOpticalThickness,
   setOverlayGalaxies,
   setSampleWeight,
@@ -353,6 +354,17 @@ function ControlsPanel(): ReactNode {
         open={raymarchOpen}
         onToggle={() => setRaymarchOpen((v) => !v)}
       >
+        {/* Off is fork parity: per-slab 'over' that goes opaque a few voxels in. */}
+        <Toggle
+          label="additive"
+          on={view.raymarch.additive}
+          onToggle={() =>
+            store.setState((s) => ({
+              ...s,
+              view: setAdditive(s.view, !s.view.raymarch.additive),
+            }))
+          }
+        />
         <SliderGroup title="Trace">
           {RAYMARCH_SLIDERS.map((spec) => (
             <ParamSlider
