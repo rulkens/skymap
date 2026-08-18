@@ -28,7 +28,12 @@ export type VolpathParams = {
   readonly albedo: number;
   /** Emission scale — how bright a collision glows through the palette. */
   readonly sigmaE: number;
-  /** Henyey-Greenstein g: <0 back-scatters, 0 isotropic, >0 forward. */
+  /**
+   * Henyey-Greenstein mean cosine: 0 isotropic, up to 0.99 sharply forward. UNSIGNED —
+   * the fork's sampler divides by 2·|g|, which folds a negative g onto the same
+   * distribution as its positive twin, so the host clamps this to [0, 0.99] rather than
+   * offer a back-scattering half that cannot do anything (landmine in volpath.wesl).
+   */
   readonly anisotropy: number;
   /** Density floor inside the box, so the void between filaments still scatters. */
   readonly ambientTrace: number;
@@ -65,8 +70,8 @@ const VOLPATH_WG = 8;
 const PARAMS_BYTES = 64;
 const BLIT_UNIFORM_BYTES = 16;
 // Each bounce is a full tracking walk; an unbounded count is a hung device, not a slow
-// frame. sigmaT and traceMax divide inside the kernel; anisotropy at ±1 divides by zero
-// in the Henyey-Greenstein sample.
+// frame. sigmaT and traceMax divide inside the kernel; anisotropy is clamped UNIPOLAR,
+// 1 dividing by zero in the Henyey-Greenstein sample and the negative half being inert.
 const MAX_BOUNCES = 64;
 const MIN_SIGMA_T = 1e-4;
 const MIN_TRACE_MAX = 1e-6;
@@ -243,7 +248,7 @@ export function createVolpathPass(opts: {
     paramsF32[3] = Math.max(MIN_SIGMA_T, params.sigmaT);
     paramsF32[4] = Math.min(1, Math.max(0, params.albedo));
     paramsF32[5] = params.sigmaE;
-    paramsF32[6] = Math.min(MAX_ANISOTROPY, Math.max(-MAX_ANISOTROPY, params.anisotropy));
+    paramsF32[6] = Math.min(MAX_ANISOTROPY, Math.max(0, params.anisotropy));
     paramsF32[7] = Math.max(0, params.ambientTrace);
     paramsF32[8] = Math.max(MIN_TRACE_MAX, params.traceMax);
     paramsF32[9] = params.trimDensity;

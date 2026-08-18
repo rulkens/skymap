@@ -173,6 +173,11 @@ fn sampleHG(v: vec3<f32>, g: f32, rng: ptr<function, Rng>) -> vec3<f32> {
   var cosTheta: f32;
   if (abs(g) > 1e-3) {
     let sqrTerm = (1.0 - g * g) / (1.0 - g + 2.0 * g * xi);
+    // FORK QUIRK, kept (HLSL:256): the textbook denominator is 2g, and this abs() folds a
+    // negative g onto its positive twin (substitute xi -> 1-xi and the two samplers are the
+    // same), so the mean cosine is |g| and back-scattering is unreachable. The host clamps
+    // the knob to [0, 0.99] rather than expose a sign that does nothing; restoring it is a
+    // constants.wesl quirk-registry lever, not an edit here.
     cosTheta = (1.0 + g * g - sqrTerm * sqrTerm) / (2.0 * abs(g));
   } else {
     cosTheta = 1.0 - 2.0 * xi;
