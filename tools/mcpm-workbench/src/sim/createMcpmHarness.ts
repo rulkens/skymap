@@ -203,6 +203,14 @@ export async function createMcpmHarness(opts: {
     box: opts.box,
     gpu,
     traceBuffer: buffers.trace,
+    agents: {
+      x: buffers.agentX,
+      y: buffers.agentY,
+      z: buffers.agentZ,
+      theta: buffers.agentTheta,
+      nDataPoints: opts.points.count,
+      count: agentBufferLength,
+    },
     step(params: McpmParams): void {
       // Flip BEFORE encoding, as the fork does at the top of its propagate block.
       parity = parity === 0 ? 1 : 0;

@@ -25,6 +25,7 @@ import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
 import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
 import type { TraceView } from '../render/tracePass';
+import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
 import { setCatalogLoadStatus, setCatalogLoaded } from '../state/slices/catalogSlice';
@@ -85,7 +86,12 @@ function gridBoxFor(s: AppState, points: CatalogPoints): GridBox {
   return autoFitGridBox(bounds, longAxisTarget, paddingMpc);
 }
 
-function traceViewFor(s: AppState, box: GridBox, aspect: number): TraceView {
+/** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
+function cameraViewFor(
+  s: AppState,
+  box: GridBox,
+  viewportPx: readonly [number, number],
+): McpmCameraView {
   const { yaw, pitch, distance } = s.view.camera;
   const cosPitch = Math.cos(pitch);
   const eyeMpc: Vec3 = [
@@ -93,12 +99,16 @@ function traceViewFor(s: AppState, box: GridBox, aspect: number): TraceView {
     box.centerMpc[1] + distance * Math.sin(pitch),
     box.centerMpc[2] + distance * cosPitch * Math.cos(yaw),
   ];
+  return { eyeMpc, targetMpc: box.centerMpc, upMpc: CAMERA_UP, fovYRad: FOV_Y_RAD, viewportPx };
+}
+
+function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView {
   return {
-    eyeMpc,
-    targetMpc: box.centerMpc,
-    upMpc: CAMERA_UP,
-    fovYRad: FOV_Y_RAD,
-    aspect,
+    eyeMpc: cam.eyeMpc,
+    targetMpc: cam.targetMpc,
+    upMpc: cam.upMpc,
+    fovYRad: cam.fovYRad,
+    aspect: cam.viewportPx[0] / cam.viewportPx[1],
     trimDensity: s.view.raymarch.trimDensity,
     sampleWeight: s.view.raymarch.sampleWeight,
     opticalThickness: s.view.raymarch.opticalThickness,
@@ -166,9 +176,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
         graph.resize(canvas.width, canvas.height);
 
         const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
-        // The raymarch clears the accum target itself: it is the frame's base layer, so
-        // any additive layer added later must be encoded after this call, not before.
-        graph.drawTrace(encoder, traceViewFor(s, h.box, canvas.width / canvas.height));
+        const cam = cameraViewFor(s, h.box, [canvas.width, canvas.height]);
+        // Exactly one base layer per frame, and it clears the accum target itself, so any
+        // additive layer must be encoded after it, not before. The two unimplemented modes
+        // fall back to the raymarch rather than leaving the target uncleared.
+        if (s.view.mode === 'agentSplat') {
+          graph.drawSplat(encoder, { ...cam, sampleWeight: s.view.raymarch.sampleWeight });
+        } else {
+          graph.drawTrace(encoder, traceViewFor(s, h.box, cam));
+          // Only reachable here: splat mode already draws the data points, at 10000x.
+          if (s.view.overlayGalaxies) graph.drawGalaxyOverlay(encoder, cam);
+        }
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
       };
@@ -229,6 +247,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         element: h.element,
         paletteId: s.view.raymarch.paletteId,
       });
+      graph.attachAgents(h.agents, box);
       renderGraph = graph;
       startLoop();
       if (hasUrlGate('probe')) (window as unknown as ProbeWindow).__mcpmProbeReady = true;

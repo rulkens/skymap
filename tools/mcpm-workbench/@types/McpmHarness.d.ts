@@ -1,3 +1,4 @@
+import type { AgentBuffers } from './AgentBuffers';
 import type { GridBox } from './GridBox';
 import type { GridElement } from './GridElement';
 import type { AgentInitMode } from './AgentInitMode';
@@ -25,6 +26,11 @@ export type McpmHarness = {
    * a consumer that outlives a rebuild must re-read it from the new harness.
    */
   readonly traceBuffer: GPUBuffer;
+  /**
+   * The lanes the agent-splat and galaxy-overlay views draw from — same ownership rule as
+   * `traceBuffer`. Exposed read-only: only the sim's own kernels ever write them.
+   */
+  readonly agents: AgentBuffers;
   /** Queues one propagate + decay pair and advances the step counter. */
   step(params: McpmParams): void;
   /** Zeroes the trace grid only; agents and deposit survive. */

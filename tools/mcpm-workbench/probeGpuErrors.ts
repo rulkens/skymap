@@ -212,12 +212,12 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 }
 
 /**
- * The exercise. Phase 1 has exactly one render pass (the trace raymarch,
- * always-on in Viewport's rAF loop) and no view-mode switch yet, so this
- * queue is deliberately short: boot, then drive the run/reset/clear-trace
- * commands that rebuild bind groups or clear buffers outside the steady
- * state. Track V's agent-splat and path-tracer view modes each get their own
- * step appended here once they exist — this array IS the seam, not a stub.
+ * The exercise: boot, drive the run/reset/clear-trace commands that rebuild
+ * bind groups or clear buffers outside the steady state, then each rendering
+ * path in turn — the raymarch, the agent splat that replaces it, and the
+ * galaxy overlay that layers over it. Order matters once: `resize` runs while
+ * splat mode is on, so it covers the screen-sized accumulation buffer as well
+ * as the graph's own target. Track V's path tracer appends its step here.
  */
 function buildSteps(url: string): readonly ExerciseStep[] {
   return [
@@ -278,13 +278,42 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // Canvas resize rebuilds the accum target and the blit's `layout:'auto'`
-      // bind group.
+      // The agent splat: a compute dispatch into the atomic screen buffer plus its
+      // tonemap blit, replacing the raymarch as the frame's base layer. Left in splat
+      // mode so `resize` below exercises the accumulation buffer's rebuild too.
+      name: 'run:splat',
+      run: async (page) => {
+        await page.getByRole('button', { name: 'splat: off', exact: true }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // Canvas resize rebuilds the accum target, the blit's `layout:'auto'` bind group
+      // and — because the step above left splat mode on — the splat's screen-sized
+      // accumulation buffer, which a stale size would index straight past the end of.
       name: 'resize',
       run: async (page) => {
         await page.setViewportSize({ width: 900, height: 620 });
         await settleFrames(page, SETTLE_FRAMES);
         await page.setViewportSize(VIEWPORT);
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      name: 'run:raymarch-again',
+      run: async (page) => {
+        await page.getByRole('button', { name: 'raymarch: off', exact: true }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // The galaxy-point overlay, an additive layer over the raymarch — on, then off,
+      // because a pass that only ever runs cannot show what disabling it breaks.
+      name: 'toggle:galaxy-overlay',
+      run: async (page) => {
+        await page.getByRole('button', { name: 'galaxies: off', exact: true }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.getByRole('button', { name: 'galaxies: on', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

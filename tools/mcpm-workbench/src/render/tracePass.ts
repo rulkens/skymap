@@ -11,11 +11,10 @@
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import { cross3 } from '../../../../src/utils/math/cross3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
 import type { GridBox } from '../../@types/GridBox';
 import type { GridElement } from '../../@types/GridElement';
 import { worldToVoxel } from '../field/worldToVoxel';
+import { cameraBasis } from './cameraBasis';
 import { UNIFORM_BYTES } from '../sim/createGridBuffers';
 import { specializeGridElement } from '../sim/specializeGridElement';
 import { uploadPaletteLut } from './uploadPaletteLut';
@@ -158,22 +157,9 @@ export function createTracePass(opts: {
 
   function writeView(view: TraceView): void {
     const eye = worldToVoxel(source.box, [view.eyeMpc[0], view.eyeMpc[1], view.eyeMpc[2]]);
-    const forward = normalize3([
-      view.targetMpc[0] - view.eyeMpc[0],
-      view.targetMpc[1] - view.eyeMpc[1],
-      view.targetMpc[2] - view.eyeMpc[2],
-    ]);
-    // Directions need no world→voxel transform of their own: GridBox voxels are cubic by
-    // construction, so the map is a uniform scale and the shader normalises anyway.
-    // A camera looking straight along 'up' collapses the cross product; fall back to an
-    // axis forward is not aligned with so the basis stays finite.
-    const sideways = cross3(forward, view.upMpc);
-    const right = normalize3(
-      Math.hypot(sideways[0], sideways[1], sideways[2]) > 1e-6
-        ? sideways
-        : cross3(forward, Math.abs(forward[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1]),
-    );
-    const up = cross3(right, forward);
+    // Shared with the splat and overlay passes: camera.wesl's projection is the exact
+    // inverse of the ray setup below, and only holds if both read the same basis.
+    const { right, up, forward } = cameraBasis(view.eyeMpc, view.targetMpc, view.upMpc);
     const tanHalfFov = Math.tan(view.fovYRad * 0.5);
 
     viewF32.set(eye, 0);

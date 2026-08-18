@@ -12,6 +12,7 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
  */
 export const defaultViewSlice: ViewSlice = {
   mode: 'traceRaymarch',
+  overlayGalaxies: false,
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false },
   raymarch: {
     opticalThickness: 0.25,
@@ -24,6 +25,10 @@ export const defaultViewSlice: ViewSlice = {
 
 export function setViewMode(prev: ViewSlice, mode: ViewSlice['mode']): ViewSlice {
   return { ...prev, mode };
+}
+
+export function setOverlayGalaxies(prev: ViewSlice, overlayGalaxies: boolean): ViewSlice {
+  return { ...prev, overlayGalaxies };
 }
 
 const PITCH_LIMIT = 1.5;

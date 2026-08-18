@@ -23,9 +23,11 @@ import {
 } from '../state/slices/simSlice';
 import {
   setOpticalThickness,
+  setOverlayGalaxies,
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
+  setViewMode,
 } from '../state/slices/viewSlice';
 import { useAppStore } from './storeContext';
 import Slider from './Slider';
@@ -107,6 +109,13 @@ const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
     format: (v) => v.toFixed(2),
     info: '1 is fork-parity sampling — below 1 oversamples each voxel, above 1 skips some.',
   },
+];
+
+// The two view modes that render; ViewSlice's other two are Track V's remaining work and
+// Viewport falls back to the raymarch for them, so offering them here would toggle nothing.
+const VIEW_MODES: readonly { readonly mode: ViewSlice['mode']; readonly label: string }[] = [
+  { mode: 'traceRaymarch', label: 'raymarch' },
+  { mode: 'agentSplat', label: 'splat' },
 ];
 
 const RAYMARCH_SETTERS: {
@@ -233,6 +242,41 @@ function ControlsPanel(): ReactNode {
               }
             />
           ))}
+        </div>
+      </div>
+
+      <div>
+        <span
+          style={{
+            fontFamily: 'var(--font-family-mono)',
+            fontSize: 'var(--font-size-sm)',
+            color: 'var(--color-fg-label)',
+          }}
+        >
+          view
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+          {VIEW_MODES.map((entry) => (
+            <Toggle
+              key={entry.mode}
+              label={entry.label}
+              on={view.mode === entry.mode}
+              onToggle={() =>
+                store.setState((s) => ({ ...s, view: setViewMode(s.view, entry.mode) }))
+              }
+            />
+          ))}
+          {/* Inert in splat mode: the data points are already drawn there, at 10000x. */}
+          <Toggle
+            label="galaxies"
+            on={view.overlayGalaxies}
+            onToggle={() =>
+              store.setState((s) => ({
+                ...s,
+                view: setOverlayGalaxies(s.view, !s.view.overlayGalaxies),
+              }))
+            }
+          />
         </div>
       </div>
 

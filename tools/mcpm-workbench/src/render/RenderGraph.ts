@@ -2,16 +2,24 @@
  * createRenderGraph — the HDR-accumulate → tonemap stage (same shape as
  * tools/flow-workbench's): it owns the shared `rgba16float` accum texture every
  * MCPM layer draws into and the fullscreen tonemap that resolves it to the
- * swap-chain. `drawTrace` is the base layer and CLEARS that texture, so an
- * additive layer must be encoded after it; and a pass that is constructed but
- * never registered here is silently never opened.
+ * swap-chain. `drawTrace` and `drawSplat` are the two mutually exclusive base
+ * layers and each CLEARS that texture, so an additive layer (`drawGalaxyOverlay`)
+ * must be encoded after one of them; and a pass that is constructed but never
+ * registered here is silently never opened.
  *
  * `accumView()` is a method, not a field: the texture is recreated on resize, so
  * a cached view would dangle, and the blit's `layout:'auto'` bind group is
  * rebuilt alongside it. The blit uniform write order is `[exposure, contrast]`.
  */
+import type { AgentBuffers } from '../../@types/AgentBuffers';
+import type { GridBox } from '../../@types/GridBox';
+import type { GalaxyOverlayPass } from './galaxyOverlayPass';
+import { createGalaxyOverlayPass } from './galaxyOverlayPass';
+import type { SplatPass, SplatView } from './splatPass';
+import { createSplatPass } from './splatPass';
 import type { TracePass, TraceSource, TraceView } from './tracePass';
 import { createTracePass } from './tracePass';
+import type { McpmCameraView } from './writeMcpmCamera';
 import blitWgsl from './shaders/blit.wesl?static';
 
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
@@ -31,6 +39,15 @@ export type RenderGraph = {
   attachTrace(source: TraceSource): void;
   /** March the attached trace pass into the accum target. Throws if none is attached. */
   drawTrace(encoder: GPUCommandEncoder, view: TraceView): void;
+  /**
+   * Build the two agent-fed views — the splat and the galaxy-point overlay — over the
+   * harness's lanes. Both die with their harness, so this is re-called on every rebuild.
+   */
+  attachAgents(agents: AgentBuffers, box: GridBox): void;
+  /** Splat the agents into the accum target. CLEARS it: this is the whole frame. */
+  drawSplat(encoder: GPUCommandEncoder, view: SplatView): void;
+  /** Dot the catalog points over whatever is already in the accum target. */
+  drawGalaxyOverlay(encoder: GPUCommandEncoder, view: McpmCameraView): void;
   /** Tonemap the accum buffer into `target`: Reinhard + contrast + sRGB gamma. */
   tonemap(
     encoder: GPUCommandEncoder,
@@ -70,6 +87,8 @@ export function createRenderGraph(
   let accumTexView: GPUTextureView | null = null;
   let blitBindGroup: GPUBindGroup | null = null;
   let tracePass: TracePass | null = null;
+  let splatPass: SplatPass | null = null;
+  let galaxyOverlayPass: GalaxyOverlayPass | null = null;
 
   function resize(width: number, height: number): void {
     // No-op on an unchanged drawable size — recreating the texture every frame
@@ -77,6 +96,9 @@ export function createRenderGraph(
     if (width === curWidth && height === curHeight && accumTex) return;
     curWidth = width;
     curHeight = height;
+    // The splat's accumulation buffer is one u32 per pixel, so it follows the drawable
+    // too — a stale one indexes past its own end on the first larger frame.
+    splatPass?.resize(width, height);
 
     accumTex?.destroy();
     accumTex = device.createTexture({
@@ -120,6 +142,31 @@ export function createRenderGraph(
     tracePass.draw(encoder, accumView(), view);
   }
 
+  function attachAgents(agents: AgentBuffers, box: GridBox): void {
+    splatPass?.dispose();
+    galaxyOverlayPass?.dispose();
+    const shared = { device, targetFormat: HDR_FORMAT, makeShader, agents, box };
+    splatPass = createSplatPass(shared);
+    galaxyOverlayPass = createGalaxyOverlayPass(shared);
+    // A pass attached after the first resize would otherwise never be sized: resize()
+    // returns early once the drawable stops changing, which is the steady state.
+    if (curWidth > 0) splatPass.resize(curWidth, curHeight);
+  }
+
+  function drawSplat(encoder: GPUCommandEncoder, view: SplatView): void {
+    if (!splatPass) {
+      throw new Error('RenderGraph.drawSplat: call attachAgents() before splatting');
+    }
+    splatPass.draw(encoder, accumView(), view);
+  }
+
+  function drawGalaxyOverlay(encoder: GPUCommandEncoder, view: McpmCameraView): void {
+    if (!galaxyOverlayPass) {
+      throw new Error('RenderGraph.drawGalaxyOverlay: call attachAgents() before drawing');
+    }
+    galaxyOverlayPass.draw(encoder, accumView(), view);
+  }
+
   function tonemap(
     encoder: GPUCommandEncoder,
     target: GPUTextureView,
@@ -149,6 +196,10 @@ export function createRenderGraph(
   function dispose(): void {
     tracePass?.dispose();
     tracePass = null;
+    splatPass?.dispose();
+    splatPass = null;
+    galaxyOverlayPass?.dispose();
+    galaxyOverlayPass = null;
     accumTex?.destroy();
     accumTex = null;
     accumTexView = null;
@@ -162,6 +213,9 @@ export function createRenderGraph(
     resize,
     attachTrace,
     drawTrace,
+    attachAgents,
+    drawSplat,
+    drawGalaxyOverlay,
     tonemap,
     dispose,
   };
