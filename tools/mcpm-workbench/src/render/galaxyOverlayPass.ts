@@ -1,7 +1,9 @@
 /**
  * createGalaxyOverlayPass — the catalog points as additive dots, the Galaxies layer
- * (mcpm/galaxyPoints.wesl): six vertices per instance, positions vertex-pulled from the
- * first `nDataPoints` entries of the agent lanes.
+ * (mcpm/galaxyPoints.wesl): six vertices per instance, positions vertex-pulled from
+ * `agents`. Task S16: the harness hands this pass its OWN `overlayAgents` lanes — every
+ * point that survived source/tier load, in-box or not — not the box-culled set the
+ * sim/splat share, so `nDataPoints === count` and every lane is drawn.
  *
  * The lanes are bound read-only here, NOT through io.wesl's group(1) contract: a vertex
  * stage cannot bind read_write storage, so this pass declares its own. What keeps the dots
@@ -103,8 +105,8 @@ export function createGalaxyOverlayPass(opts: {
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // This draws the CULLED set (agents.nDataPoints), so 1e6 here must be the weight mass
-  // OF that same set — createMcpmHarness's renormalizeWeightMass is what keeps it so.
+  // This draws the RAW set (agents.nDataPoints, task S16), so 1e6 here must be the weight
+  // mass OF that same set — buildOverlayCatalog's renormalizeWeightMass is what keeps it so.
   const overlayF32 = new Float32Array([agents.nDataPoints / 1e6, 0, 0, 0]);
 
   const pointBindGroup = device.createBindGroup({
@@ -139,7 +141,8 @@ export function createGalaxyOverlayPass(opts: {
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, camBindGroup);
       pass.setBindGroup(1, pointBindGroup);
-      // Instances, not vertices: only the catalog prefix of the lanes is drawn.
+      // Instances, not vertices: agents.nDataPoints === agents.count here (overlayAgents
+      // holds only catalog rows), so this draws every RAW loaded point.
       pass.draw(VERTICES_PER_POINT, agents.nDataPoints);
       pass.end();
     },

@@ -91,10 +91,12 @@ export type RenderGraph = {
   /** Drop the path tracer's accumulated samples; a no-op before `attachVolpath`. */
   resetVolpath(): void;
   /**
-   * Build the two agent-fed layers — the swarm splat and the galaxy points — over the
-   * harness's lanes. Both die with their harness, so this is re-called on every rebuild.
+   * Build the two agent-fed layers — the swarm splat over `agents` (box-culled, the sim's
+   * own set) and the galaxy points over `overlayAgents` (task S16: the RAW loaded set,
+   * the overlay's own lanes). Both die with their harness, so this is re-called on every
+   * rebuild.
    */
-  attachAgents(agents: AgentBuffers, box: GridBox): void;
+  attachAgents(agents: AgentBuffers, overlayAgents: AgentBuffers, box: GridBox): void;
   /** Splat the free agents onto whatever is already in the accum target. */
   drawSplat(encoder: GPUCommandEncoder, view: SplatView): void;
   /** Dot the catalog points onto whatever is already in the accum target. */
@@ -386,19 +388,12 @@ export function createRenderGraph(
     volpathPass?.reset();
   }
 
-  function attachAgents(agents: AgentBuffers, box: GridBox): void {
+  function attachAgents(agents: AgentBuffers, overlayAgents: AgentBuffers, box: GridBox): void {
     splatPass?.dispose();
     galaxyOverlayPass?.dispose();
-    const shared = {
-      device,
-      targetFormat: HDR_FORMAT,
-      blend: LAYER_BLEND,
-      makeShader,
-      agents,
-      box,
-    };
-    splatPass = createSplatPass(shared);
-    galaxyOverlayPass = createGalaxyOverlayPass(shared);
+    const shared = { device, targetFormat: HDR_FORMAT, blend: LAYER_BLEND, makeShader, box };
+    splatPass = createSplatPass({ ...shared, agents });
+    galaxyOverlayPass = createGalaxyOverlayPass({ ...shared, agents: overlayAgents });
     // A pass attached after the first resize would otherwise never be sized: resize()
     // returns early once the drawable stops changing, which is the steady state.
     if (curWidth > 0) splatPass.resize(curWidth, curHeight);

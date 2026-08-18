@@ -20,6 +20,7 @@ import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shade
 import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate.wesl?static';
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
 import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
+import { buildOverlayCatalog } from '../field/buildOverlayCatalog';
 import { cullPointsToBox } from '../field/cullPointsToBox';
 import { renormalizeWeightMass } from '../field/renormalizeWeightMass';
 import { createGridBuffers } from './createGridBuffers';
@@ -95,6 +96,11 @@ export async function createMcpmHarness(opts: {
     ...culled.weights,
     weights: renormalizeWeightMass(culled.weights.weights),
   };
+  // Task S16: the Galaxies overlay previews the RAW loaded set, in-box or not — a data
+  // preview, not the sim's readout, so it gets its own voxel-space lanes over
+  // `opts.points`/`opts.weights` rather than `culled`'s. Pure CPU-side math; the GPU
+  // buffers it feeds are built below once `device` exists.
+  const overlayCatalog = buildOverlayCatalog(opts.points, opts.weights, opts.box);
 
   const gpu = await initGpu(opts.canvas, {
     requiredFeatures: ['shader-f16'],
@@ -179,6 +185,25 @@ export async function createMcpmHarness(opts: {
   });
 
   const buffers = createGridBuffers(device, opts.box, agentBufferLength, element);
+
+  // A one-time upload, separate from `buffers.agent*`: the compute kernels never touch
+  // these, only createGalaxyOverlayPass's vertex stage reads them, so they don't ride
+  // the sim's ping-ponged/COPY_SRC storage usage.
+  const overlayLane = (label: string, data: Float32Array): GPUBuffer => {
+    const buffer = device.createBuffer({
+      label,
+      size: data.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(buffer, 0, data);
+    return buffer;
+  };
+  const overlayBuffers = {
+    x: overlayLane('mcpm-overlay-x', overlayCatalog.x),
+    y: overlayLane('mcpm-overlay-y', overlayCatalog.y),
+    z: overlayLane('mcpm-overlay-z', overlayCatalog.z),
+    weight: overlayLane('mcpm-overlay-weight', overlayCatalog.weight),
+  };
 
   const uniformBindGroup = device.createBindGroup({
     label: 'mcpm-uniforms',
@@ -291,6 +316,17 @@ export async function createMcpmHarness(opts: {
       nDataPoints: culled.points.count,
       count: agentBufferLength,
     },
+    // Task S16: nDataPoints === count here — every lane is a raw catalog row, no free
+    // agents follow — so galaxyOverlayPass's draw call (which uses agents.nDataPoints)
+    // draws the whole RAW set unchanged.
+    overlayAgents: {
+      x: overlayBuffers.x,
+      y: overlayBuffers.y,
+      z: overlayBuffers.z,
+      weight: overlayBuffers.weight,
+      nDataPoints: opts.points.count,
+      count: opts.points.count,
+    },
     step(params: McpmParams, sampleRandomly: boolean): void {
       // Flip BEFORE encoding, as the fork does at the top of its propagate block.
       parity = parity === 0 ? 1 : 0;
@@ -334,6 +370,7 @@ export async function createMcpmHarness(opts: {
       // The device stays alive: the harness shares the canvas context with the
       // tool's render graph, which outlives a sim teardown.
       buffers.destroy();
+      for (const buffer of Object.values(overlayBuffers)) buffer.destroy();
     },
     readbackTrace() {
       return readbackTrace(device, buffers.trace, opts.box, element);

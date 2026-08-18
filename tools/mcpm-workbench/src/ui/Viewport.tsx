@@ -564,7 +564,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       };
       graph.attachTrace(traceSource);
       graph.attachVolpath(traceSource);
-      graph.attachAgents(h.agents, box);
+      graph.attachAgents(h.agents, h.overlayAgents, box);
       renderGraph = graph;
       // A fresh accumulator already clears on its own first draw (VolpathPass's
       // `pendingClear` starts true) — this just keeps the reset-tracking key from

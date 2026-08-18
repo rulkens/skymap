@@ -29,10 +29,18 @@ export type McpmHarness = {
    */
   readonly traceBuffer: GPUBuffer;
   /**
-   * The lanes the agent-splat and galaxy-overlay views draw from — same ownership rule as
-   * `traceBuffer`. Exposed read-only: only the sim's own kernels ever write them.
+   * The lanes the agent-splat and sim itself read from — box-culled, same set the deposit
+   * seeds from. Same ownership rule as `traceBuffer`; read-only, only the sim's own
+   * kernels ever write them.
    */
   readonly agents: AgentBuffers;
+  /**
+   * The Galaxies overlay's OWN lanes (task S16) — every point that survived source/tier
+   * load, in-box or not, weighted mean-1 over that same RAW population. A preview layer,
+   * not the sim's readout: `nDataPoints === count` here, no free-agent suffix, and no
+   * compute kernel ever writes them. Same ownership rule as `traceBuffer`.
+   */
+  readonly overlayAgents: AgentBuffers;
   /**
    * Queues one propagate + decay + histogram triple and advances the step
    * counter. The histogram dispatch runs every step (cheap: only
