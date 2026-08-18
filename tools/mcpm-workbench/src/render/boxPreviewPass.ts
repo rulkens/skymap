@@ -71,10 +71,10 @@ const GIZMO_UNIFORM_BYTES = 16;
 // Rendering-only sizing (screen-space pixel widths, world-space cone/cross proportions) — none
 // of this feeds pickGizmoHandle, which hit-tests handle.positionMpc against PICK_TOLERANCE_
 // FRACTION directly and never reads the glyph geometry built below.
-const SHAFT_WIDTH_PX = 3;
-const CROSS_WIDTH_PX = 3;
+const SHAFT_WIDTH_PX = 4;
+const CROSS_WIDTH_PX = 4;
 const ARROWHEAD_TIP_WIDTH_PX = 0.5;
-const ARROWHEAD_BASE_WIDTH_PX = 5;
+const ARROWHEAD_BASE_WIDTH_PX = 7;
 const ARROWHEAD_LENGTH_FRACTION = 0.15; // of the arrow's center-to-tip length
 const ARROWHEAD_RADIUS_FRACTION = 0.5; // of the cone's own length, i.e. how splayed its legs are
 const CROSS_ARM_FRACTION = 1.5 * PICK_TOLERANCE_FRACTION; // visually bigger than the (unchanged) pick radius
