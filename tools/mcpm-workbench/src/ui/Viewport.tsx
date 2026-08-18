@@ -31,7 +31,11 @@ import { planGridBudget } from '../sim/planGridBudget';
 import { setCatalogLoadStatus, setCatalogLoaded } from '../state/slices/catalogSlice';
 import { setResolvedGrid } from '../state/slices/gridSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
-import { setCameraDistance, setCameraYawPitch } from '../state/slices/viewSlice';
+import {
+  setCameraDistance,
+  setCameraTargetOffset,
+  setCameraYawPitch,
+} from '../state/slices/viewSlice';
 
 // The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
 // so exposure 2 reproduces it exactly through the blit.
@@ -43,6 +47,7 @@ const DRAG_SPEED = 0.005;
 // constant, so both tools zoom with the same hand feel; a sign-only step ignores
 // delta magnitude and crawls on trackpads.
 const ZOOM_SPEED = 0.0018;
+const PAN_SPEED = 0.0016;
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];
 
@@ -95,14 +100,19 @@ function cameraViewFor(
   box: GridBox,
   viewportPx: readonly [number, number],
 ): McpmCameraView {
-  const { yaw, pitch, distance } = s.view.camera;
+  const { yaw, pitch, distance, targetOffsetMpc } = s.view.camera;
+  const targetMpc: Vec3 = [
+    box.centerMpc[0] + targetOffsetMpc[0],
+    box.centerMpc[1] + targetOffsetMpc[1],
+    box.centerMpc[2] + targetOffsetMpc[2],
+  ];
   const cosPitch = Math.cos(pitch);
   const eyeMpc: Vec3 = [
-    box.centerMpc[0] + distance * cosPitch * Math.sin(yaw),
-    box.centerMpc[1] + distance * Math.sin(pitch),
-    box.centerMpc[2] + distance * cosPitch * Math.cos(yaw),
+    targetMpc[0] + distance * cosPitch * Math.sin(yaw),
+    targetMpc[1] + distance * Math.sin(pitch),
+    targetMpc[2] + distance * cosPitch * Math.cos(yaw),
   ];
-  return { eyeMpc, targetMpc: box.centerMpc, upMpc: CAMERA_UP, fovYRad: FOV_Y_RAD, viewportPx };
+  return { eyeMpc, targetMpc, upMpc: CAMERA_UP, fovYRad: FOV_Y_RAD, viewportPx };
 }
 
 function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView {
@@ -346,16 +356,19 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     // ── Orbit input → view slice camera ────────────────────────────────────
     let dragging = false;
+    let panning = false;
     let lastX = 0;
     let lastY = 0;
     const onPointerDown = (e: PointerEvent): void => {
       dragging = true;
+      panning = e.button === 2 || e.button === 1;
       lastX = e.clientX;
       lastY = e.clientY;
       canvas.setPointerCapture(e.pointerId);
     };
     const onPointerUp = (): void => {
       dragging = false;
+      panning = false;
     };
     const onPointerMove = (e: PointerEvent): void => {
       if (!dragging) return;
@@ -363,6 +376,26 @@ function Viewport({ store }: ViewportProps): ReactNode {
       const dy = e.clientY - lastY;
       lastX = e.clientX;
       lastY = e.clientY;
+      if (panning) {
+        // Right/middle-drag pans the orbit target along the camera's right/up axes,
+        // grab-the-world signs and screen-constant dist*0.0016 px rate — both
+        // galaxy-renderer's createOrbitCameraInput, so the two tools share one hand feel.
+        store.setState((s) => {
+          const { yaw, pitch, distance, targetOffsetMpc } = s.view.camera;
+          const cosY = Math.cos(yaw);
+          const sinY = Math.sin(yaw);
+          const cosP = Math.cos(pitch);
+          const sinP = Math.sin(pitch);
+          const k = distance * PAN_SPEED;
+          const next: Vec3 = [
+            targetOffsetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
+            targetOffsetMpc[1] + cosP * dy * k,
+            targetOffsetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
+          ];
+          return { ...s, view: setCameraTargetOffset(s.view, next) };
+        });
+        return;
+      }
       store.setState((s) => ({
         ...s,
         view: setCameraYawPitch(
@@ -372,6 +405,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         ),
       }));
     };
+    const onContextMenu = (e: Event): void => e.preventDefault();
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
       store.setState((s) => ({
@@ -386,6 +420,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', onContextMenu);
 
     return () => {
       disposed = true;
@@ -397,6 +432,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('contextmenu', onContextMenu);
     };
   }, [store]);
 

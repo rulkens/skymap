@@ -1,4 +1,5 @@
 import type { ScalarFieldPaletteId } from '../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 /**
  * ViewSlice — the render mode plus the tool-local orbit camera (T10's trace
@@ -21,6 +22,8 @@ export type ViewSlice = {
     readonly pitch: number;
     readonly distance: number;
     readonly autoRotate: boolean;
+    /** Right/middle-drag pan, as an offset from the grid-box centre the orbit target defaults to. */
+    readonly targetOffsetMpc: Vec3;
   };
   readonly raymarch: {
     readonly opticalThickness: number;

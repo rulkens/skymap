@@ -1,5 +1,6 @@
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
  * defaultViewSlice — trace raymarch, framing a box a few hundred Mpc across
@@ -13,7 +14,7 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
 export const defaultViewSlice: ViewSlice = {
   mode: 'traceRaymarch',
   overlayGalaxies: false,
-  camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false },
+  camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetOffsetMpc: [0, 0, 0] },
   raymarch: {
     opticalThickness: 0.25,
     paletteId: 'inferno',
@@ -43,6 +44,10 @@ export function setCameraYawPitch(prev: ViewSlice, yaw: number, pitch: number): 
 
 export function setCameraDistance(prev: ViewSlice, distance: number): ViewSlice {
   return { ...prev, camera: { ...prev.camera, distance: Math.max(1, distance) } };
+}
+
+export function setCameraTargetOffset(prev: ViewSlice, targetOffsetMpc: Vec3): ViewSlice {
+  return { ...prev, camera: { ...prev.camera, targetOffsetMpc } };
 }
 
 export function setAutoRotate(prev: ViewSlice, autoRotate: boolean): ViewSlice {
