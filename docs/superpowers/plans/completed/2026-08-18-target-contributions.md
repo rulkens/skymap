@@ -428,16 +428,16 @@ parameter is a supertype of the element type, and `filter` still returns the
 literal-union element type, so `constructGpuHandles`' argument type is
 unaffected.
 
-- [ ] `initGpu.ts:82` → `GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase !== 'wireInput')`.
-- [ ] `wireInput.ts:113` → `GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase === 'wireInput')`.
-- [ ] `buildSwapRenderers.ts:45-47` → `GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.rebuildOnSwapFormat === true)`,
+- [x] `initGpu.ts:82` → `GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase !== 'wireInput')`.
+- [x] `wireInput.ts:113` → `GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase === 'wireInput')`.
+- [x] `buildSwapRenderers.ts:45-47` → `GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.rebuildOnSwapFormat === true)`,
       replacing the two-clause `in`-plus-truthiness guard. Its 6-line
       explanatory comment (`:41-44`) shrinks accordingly — the
       `exactOptionalPropertyTypes` hazard it warns about is answered by the
       `=== true` value test itself.
-- [ ] Import `GpuHandleRow` as a type where not already imported.
-- [ ] `npm run typecheck` + `npm test -- initGpu wireInput buildSwapRenderers`.
-- [ ] Commit.
+- [x] Import `GpuHandleRow` as a type where not already imported.
+- [x] `npm run typecheck` + `npm test -- initGpu wireInput buildSwapRenderers`.
+- [x] Commit.
 
 ### Task 2 — `clearValue` onto the row; `specOf` replaces the `find`s
 
@@ -462,11 +462,11 @@ unaffected.
 row; throws `` `renderTargets: no spec row for target '${id}'` `` for an
 unknown id (same loud-failure discipline as `viewOf`).
 
-- [ ] Add `clearValue: GPUColor` to `RenderTargetSpec`. Note in its docblock
+- [x] Add `clearValue: GPUColor` to `RenderTargetSpec`. Note in its docblock
       that the "locked cross-plan contract" caveat at `renderTargets.ts:151-155`
       is what this rung deliberately unlocks (decisions #9), so a future reader
       doesn't re-lock it.
-- [ ] Move all **12** `TARGET_CLEAR_VALUES` entries onto the matching row in
+- [x] Move all **12** `TARGET_CLEAR_VALUES` entries onto the matching row in
       `buildSpecs` (`renderTargets.ts:220-243`): the **7 named** ones — `hdr`
       (`:168`), `volume` (`:169`), `zoa` (`:173`), `star-aggregates` (`:174`),
       `mw-aggregate` (`:178`), `foreground:0` (`:179`), `swap` (`:190`) — plus
@@ -478,14 +478,14 @@ unknown id (same loud-failure discipline as `viewOf`).
       are the load-bearing half. The `bloom` rows keep their
       `Array.from(BLOOM_LEVELS)` generation; the clear value rides the same
       generated row. Delete `TARGET_CLEAR_VALUES`.
-- [ ] The depth-clear paragraph (`renderTargets.ts:161-165`) belongs to no row —
+- [x] The depth-clear paragraph (`renderTargets.ts:161-165`) belongs to no row —
       it is the standing answer to "why isn't there a `depthClearValue` field
       too?" (the depth clear is the slab's far-plane convention, supplied by
       `depthClearValueFor`). Rehome it explicitly onto
       `RenderTargetSpec.clearValue`'s docblock, next to `executeFrame`'s
       `depthAttachment` pointer. Do not let it fall off the edit.
-- [ ] Add `specOf` to the type + implementation.
-- [ ] `executeFrame.ts:104-115` reads `ctx.renderTargets.specOf(target).clearValue`;
+- [x] Add `specOf` to the type + implementation.
+- [x] `executeFrame.ts:104-115` reads `ctx.renderTargets.specOf(target).clearValue`;
       drop the `TARGET_CLEAR_VALUES` import (`:72`) and the now-dead
       "no clear value" throw (`specOf` throws first). Also route
       `depthAttachment`'s row lookup (`:134`) and the composite's `dstFormat`
@@ -495,18 +495,18 @@ unknown id (same loud-failure discipline as `viewOf`).
       in production — `viewFor` throws first at `:285` — so this is a
       tightening, not a behaviour change; say so rather than leaving a reviewer
       to re-derive it.
-- [ ] `runBloom.ts:52-68` reads the clear value the same way; drop its import
+- [x] `runBloom.ts:52-68` reads the clear value the same way; drop its import
       (`:41`). Name the one real behaviour delta in this task: `runBloom.ts:61`
       is `TARGET_CLEAR_VALUES[target]!`, and under `noUncheckedIndexedAccess`
       (`tsconfig.json:7`) a missing key silently became WebGPU's `{0,0,0,0}`.
       `specOf` throws instead. Better behaviour, but a behaviour-neutral rung
       states its exceptions — put it in the commit message.
-- [ ] `applySwapFormat.ts:22` reads `renderTargets.specOf('swap').format`.
-- [ ] `hdrActiveOf.ts:12` reads `renderTargets.specOf('swap').format ===
+- [x] `applySwapFormat.ts:22` reads `renderTargets.specOf('swap').format`.
+- [x] `hdrActiveOf.ts:12` reads `renderTargets.specOf('swap').format ===
     'rgba16float'`. With `applySwapFormat` and `executeFrame`'s two, that is 4
       of the 11 `specs.find(...)` sites in `src/` gone; Task 3 takes the four
       producer layers and Task 4 the last three (see the DoD).
-- [ ] Fixtures (finding 8 — none of these is optional, all fail `tsc` or fail at
+- [x] Fixtures (finding 8 — none of these is optional, all fail `tsc` or fail at
       runtime): spec rows gain `clearValue` wherever they are typed
       (`hdrActiveOf.test.ts:21-28`, `applySwapFormat.test.ts:21-23`,
       `volumeUpsampleLayer.test.ts:56-70`) or actually read
@@ -521,15 +521,15 @@ unknown id (same loud-failure discipline as `viewOf`).
       and then throw at runtime through `executeFrame`'s `colorAttachment`, so
       they are invisible to a filtered run. **Assertions stay as they are** —
       parity gate 1.
-- [ ] Add test `specOf returns the declared row and throws for an unknown id`
+- [x] Add test `specOf returns the declared row and throws for an unknown id`
       to `renderTargets.test.ts`.
-- [ ] Add test `every declared row carries a clearValue` to
+- [x] Add test `every declared row carries a clearValue` to
       `renderTargets.test.ts`. This is a structural check, not a registry
       restatement: two independently maintained tables are being merged, and a
       row that loses its clear value in the merge is otherwise silent.
-- [ ] `npm run typecheck` + **`npm test`** (full suite — a filtered run cannot
+- [x] `npm run typecheck` + **`npm test`** (full suite — a filtered run cannot
       prove this task; see finding 8).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3 — `sizeOf` kills the quadruplicated viewport derivation
 
@@ -552,14 +552,14 @@ an offscreen row. Throws for `'swap'` and unknown ids, matching `viewOf`.
 This must land BEFORE Task 4 (finding 2): these four sites read `spec.scale` as
 a number today and stop typechecking once the union exists.
 
-- [ ] `allocate` records `sizes.set(spec.id, { width, height })` beside
+- [x] `allocate` records `sizes.set(spec.id, { width, height })` beside
       `textures`/`views`, and `sizeOf` reads THAT map, throwing on a miss the
       way `viewOf` does. Do **not** implement it as `textures.get(id)!.width`:
       the test mocks return `{ createView, destroy }` with no dimensions
       (`renderTargets.test.ts:15-20`, `runFrame.test.ts:747`), so that reading
       returns `undefined` and looks like a plan error. The size record is also
       what Task 4's `reconcile` compares against, so it is needed either way.
-- [ ] `allocate` computes those dimensions by calling
+- [x] `allocate` computes those dimensions by calling
       `reducedTargetSize(s.width, s.height, resolvedScale)`
       (`src/utils/gpu/reducedTargetSize.ts:12-14`) instead of writing the
       `Math.max(1, Math.floor(...))` pair inline. That helper's docblock
@@ -567,7 +567,7 @@ a number today and stop typechecking once the union exists.
       formula, same clamp"; calling it makes the claim structural and lets that
       sentence shrink to "the sizing rule for every reduced-resolution target".
       Same move Task 3 makes for the producer layers, one level down.
-- [ ] Replace the `specs.find(...).scale` + `Math.max(1, Math.floor(...))` pair
+- [x] Replace the `specs.find(...).scale` + `Math.max(1, Math.floor(...))` pair
       in each of the four producer layers with one
       `ctx.renderTargets.sizeOf('<id>')` call. Collapse each site's copy of the
       shared rationale to a one-line pointer at `sizeOf`; keep only the part
@@ -576,13 +576,13 @@ a number today and stop typechecking once the union exists.
       `milkyWayAggregateLayer.ts:65-67`'s px-sprite-clamp note earn their
       keep; the "divisor read off the spec row keeps it single-homed" sentence
       does not, once the divisor is no longer read here at all.
-- [ ] One line, in the module that gains the seam (not four times over): the
+- [x] One line, in the module that gains the seam (not four times over): the
       viewport now comes from the ALLOCATED size rather than from
       `ctx.canvasSize / scale`. The two can disagree only in the window between
       a canvas-size change and that frame's reconcile — which `runFrame` makes
       unreachable (reconcile precedes `deriveFrameContext`). That is the actual
       content of "true by construction"; write it once instead of asserting it.
-- [ ] Fixtures: the three producer-layer stubs
+- [x] Fixtures: the three producer-layer stubs
       (`scalarVolumeLayer.test.ts:63-71`, `starAggregatesLayer.test.ts:42`,
       `zoneOfAvoidanceLayer.test.ts:44-51`) gain a `sizeOf` returning **exactly
       the size their `specs` row implied**, so the existing viewport assertions
@@ -591,7 +591,7 @@ a number today and stop typechecking once the union exists.
       verified; don't hunt for one. The two typed stubs
       (`hdrActiveOf.test.ts:8-17`, `volumeUpsampleLayer.test.ts:56-70`) gain
       `sizeOf` too or `tsc` fails (finding 8).
-- [ ] **Relocate the clamp coverage; do not just delete it.**
+- [x] **Relocate the clamp coverage; do not just delete it.**
       `scalarVolumeLayer.test.ts:133` and `zoneOfAvoidanceLayer.test.ts:114`
       (`clamps the downsampled viewport to a minimum of 1 px`) assert a clamp
       that after this task is not in those layers at all — left in place they
@@ -602,11 +602,11 @@ a number today and stop typechecking once the union exists.
       `renderTargets.test.ts:102` already covers the clamp on the ALLOCATION
       path (the `createTexture` descriptor) — the new case is the `sizeOf`
       reader, not a duplicate of it.
-- [ ] Add test `sizeOf returns the allocated pixel size of an offscreen row and throws for swap`
+- [x] Add test `sizeOf returns the allocated pixel size of an offscreen row and throws for swap`
       — hand-computed: a 900×600 canvas gives `volume` (scale 3) 300×200 and
       `zoa` (scale 5) 180×120.
-- [ ] `npm run typecheck` + **`npm test`** (full suite — finding 8).
-- [ ] Commit.
+- [x] `npm run typecheck` + **`npm test`** (full suite — finding 8).
+- [x] Commit.
 
 ### Task 4 — `scale` as `number | (state) => number`; `reconcile` replaces `resize`
 
@@ -635,25 +635,25 @@ pixel sizes, so an unmoved divisor is a no-op."_ Independent evidence that the
 design is sound and that a per-frame call is cheap. Don't re-derive it; don't
 import it either (the tool keeps its own table).
 
-- [ ] Widen `RenderTargetSpec.scale` to `number | ((state: EngineState) => number)`
+- [x] Widen `RenderTargetSpec.scale` to `number | ((state: EngineState) => number)`
       (importing `EngineState` — precedent: `GpuHandleRow.d.ts:4`).
-- [ ] `buildSpecs` loses its `mwAggregateDivisor` parameter; the `mw-aggregate`
+- [x] `buildSpecs` loses its `mwAggregateDivisor` parameter; the `mw-aggregate`
       row becomes
       `scale: (state) => state.settings.milkyWay.aggregateDivisor`
       (`renderTargets.ts:225`).
-- [ ] `createRenderTargets`' 4th parameter becomes `state: EngineState`
+- [x] `createRenderTargets`' 4th parameter becomes `state: EngineState`
       (`renderTargets.ts:246-254`); `allocate` resolves the scale through a
       module-private helper.
-- [ ] Replace `resize(size)` (`:338-340`) with `reconcile(state, size)` per the
+- [x] Replace `resize(size)` (`:338-340`) with `reconcile(state, size)` per the
       contract: recompute each offscreen row's desired `(width, height)`,
       reallocate only rows whose desired size differs from what they hold, and
       reallocate a depth-bearing row's depth texture in lockstep with its
       colour texture.
-- [ ] Rewrite the module header's mw-divisor paragraph (`:83-92`): the record of
+- [x] Rewrite the module header's mw-divisor paragraph (`:83-92`): the record of
       the divisor in force is now the allocated texture size (`sizeOf`), not the
       spec row — still no last-applied mirror, but for a different reason
       (finding 4). Respect the comment budget: this paragraph should shrink.
-- [ ] `bloomSrcTexelSize.ts` (finding 2 — the reader that breaks `tsc`): its
+- [x] `bloomSrcTexelSize.ts` (finding 2 — the reader that breaks `tsc`): its
       body becomes `const [w, h] = ctx.renderTargets.sizeOf(srcId); return [1 /
     w, 1 / h];`, and the now-unused `viewportPx` parameter goes, along with
       its two call sites' argument (`runBloom.ts:115,133`) and the
@@ -667,10 +667,10 @@ import it either (the tool keeps its own table).
       message: on a viewport not divisible by the divisor the two differ by the
       floor's remainder (a sub-texel tap offset), and the new value is the
       correct one — the pyramid's textures are `floor`ed, not exact.
-- [ ] `runBloom.test.ts`'s ctx stub gains `sizeOf` over the five `bloomN` rows
+- [x] `runBloom.test.ts`'s ctx stub gains `sizeOf` over the five `bloomN` rows
       (and `hdr`), returning `floor(1920/scale) × floor(1080/scale)` for the
       table it already declares (`:83-94`) — otherwise every bloom test throws.
-- [ ] `gpuHandleRegistry.ts:90-99` passes `state` instead of
+- [x] `gpuHandleRegistry.ts:90-99` passes `state` instead of
       `MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor`; its `construct` parameter is
       `(_state: EngineState, deps)` today (`:92`) and the underscore must go
       when the row starts using it (lint gate). Keep the
@@ -678,14 +678,14 @@ import it either (the tool keeps its own table).
       needs it — and add one line to that row's comment noting the target row
       now reads settings directly, and that this is not a second path to the
       same answer: the scale function IS the reconcile path.
-- [ ] `runFrame.ts`: delete the whole mw-divisor branch and its comment
+- [x] `runFrame.ts`: delete the whole mw-divisor branch and its comment
       (`:211-246`) and the now-unused `createRenderTargets` import (`:68`).
       Replace the in-branch `resize` call (`:208`) with an unconditional
       `state.gpu.renderTargets?.reconcile(state, { width: deps.canvas.width, height: deps.canvas.height })`
       placed immediately after the `resizeCanvasToDisplay` branch — the aspect
       write stays inside that branch. Trim the resize comment (`:189-204`) to
       match: it is now one seam answering two inputs.
-- [ ] `renderTargets.test.ts`: every `createRenderTargets(...)` call in the file
+- [x] `renderTargets.test.ts`: every `createRenderTargets(...)` call in the file
       passes a stub `EngineState` (a `{ settings: { milkyWay: {
     aggregateDivisor } } } as unknown as EngineState` is enough) in place of
       the `MW_DIVISOR` 4th argument, and the `MW_DIVISOR` comment (`:25-28`)
@@ -697,17 +697,17 @@ import it either (the tool keeps its own table).
       (assert `device.createTexture` call count is unchanged across a second
       call — carrying the migrated comment from `runFrame.test.ts:736-742`
       about steady-state frames).
-- [ ] `runFrame.test.ts`: delete the `runFrame — mw-aggregate divisor` describe
+- [x] `runFrame.test.ts`: delete the `runFrame — mw-aggregate divisor` describe
       (`:734-772`) and the now-unused `createRenderTargets` import; add
       `runFrame reconciles the render targets against the live canvas size every frame`
       asserting a `reconcile` spy is called with the canvas dimensions — the
       wiring the deleted test used to protect.
-- [ ] The two typed stubs gain `reconcile` and lose `resize`
+- [x] The two typed stubs gain `reconcile` and lose `resize`
       (`hdrActiveOf.test.ts:8-17`, `volumeUpsampleLayer.test.ts:56-70`), or
       `tsc` fails (finding 8). Grep `resize: vi.fn()` across `tests/` for
       stragglers rather than trusting this list.
-- [ ] `npm run typecheck` + **`npm test`** (full suite — finding 8).
-- [ ] Commit.
+- [x] `npm run typecheck` + **`npm test`** (full suite — finding 8).
+- [x] Commit.
 
 ### Task 5 — Export the row table; add the target-parity checks
 
@@ -729,14 +729,14 @@ structural invariants, not registry restatements (`testing.md`). A typo'd
 `ContentLayer.target` today produces an empty group and the layer silently
 never draws (`executeFrame.ts:193`) — no throw, no test failure.
 
-- [ ] Export `renderTargetRows`; keep the runtime swap format as its parameter.
-- [ ] Test `every CONTENT_LAYERS target names a declared render-target row`.
-- [ ] Test `every frameProgram step names a declared render-target row` —
+- [x] Export `renderTargetRows`; keep the runtime swap format as its parameter.
+- [x] Test `every CONTENT_LAYERS target names a declared render-target row`.
+- [x] Test `every frameProgram step names a declared render-target row` —
       covering `render` steps' `target` and `composite` steps' `source` + `dest`
       (build the program with any tone + `bloomEnabled: true`).
-- [ ] Test `render-target row ids are unique`.
-- [ ] `npm run typecheck` + `npm test -- targetParity renderTargets`.
-- [ ] Commit.
+- [x] Test `render-target row ids are unique`.
+- [x] `npm run typecheck` + `npm test -- targetParity renderTargets`.
+- [x] Commit.
 
 ### Task 6 — Single-source the target formats (the format half of parity)
 
@@ -756,13 +756,13 @@ in that one file) "MUST match that row's format/depth in renderTargets.ts —
 nothing imports renderTargets to enforce it". Sharing one constant makes the
 parity structural, which no runtime check could achieve.
 
-- [ ] Add the two constants (contract above) with a short header naming both
+- [x] Add the two constants (contract above) with a short header naming both
       consumers: the offscreen spec rows and every renderer pipeline that draws
       into them.
-- [ ] `renderTargets.ts`' offscreen rows use `HDR_TARGET_FORMAT`;
+- [x] `renderTargets.ts`' offscreen rows use `HDR_TARGET_FORMAT`;
       `foreground:0`'s `depth` uses `FOREGROUND_DEPTH_FORMAT`. The `swap` row's
       format stays the runtime parameter.
-- [ ] Every `'rgba16float'` / `'depth32float'` literal in `GPU_HANDLE_ROWS`'
+- [x] Every `'rgba16float'` / `'depth32float'` literal in `GPU_HANDLE_ROWS`'
       `construct` bodies uses the constants — with ONE exemption: the
       `compositor` row's `hdrFormat: 'rgba16float'` argument
       (`gpuHandleRegistry.ts:82-89`). `compositor.ts:175-192` documents
@@ -771,14 +771,14 @@ parity structural, which no runtime check could achieve.
       substituting the shared constant there would assert a live
       target↔pipeline contract that does not exist. Leave the literal and say
       why in one clause; the argument's removal is backlog-bound, not this rung.
-- [ ] Rewrite the `gpuHandleRegistry.ts:280-285` comment: it no longer describes
+- [x] Rewrite the `gpuHandleRegistry.ts:280-285` comment: it no longer describes
       an unenforced convention, so it shrinks to a pointer at the shared
       constant.
-- [ ] No test — this is a compile-time single-sourcing, and a test asserting
+- [x] No test — this is a compile-time single-sourcing, and a test asserting
       "the constant equals `'rgba16float'`" is exactly the constant restatement
       `testing.md` forbids.
-- [ ] `npm run typecheck` + `npm test -- renderTargets gpuHandle`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- renderTargets gpuHandle`.
+- [x] Commit.
 
 ### Task 7 — `createUpsampleLayer` primitive (TDD)
 
@@ -793,25 +793,25 @@ returns `{ name, slab, target: 'hdr', blend: 'additive', enabled, draw }` where
 `row.handleOf(state)` when that handle is non-null, then calls `row.postBlit`
 if present. The types are contract-only; write the tests first.
 
-- [ ] Test `createUpsampleLayer blits the source target's view through the row's handle`
+- [x] Test `createUpsampleLayer blits the source target's view through the row's handle`
       — assert the handle's `draw` spy received the pass and the view `viewOf`
       returned for `sourceTargetId`.
-- [ ] Test `createUpsampleLayer skips the blit when the handle is null`
+- [x] Test `createUpsampleLayer skips the blit when the handle is null`
       — no throw, no draw (the defensive null-check every one of the four
       layers carries today).
-- [ ] Test `createUpsampleLayer runs postBlit after the blit, into the same pass`
+- [x] Test `createUpsampleLayer runs postBlit after the blit, into the same pass`
       — one shared order array; assert `['blit', 'postBlit']` and that both saw
       the same pass object.
-- [ ] Test `createUpsampleLayer still runs postBlit when the blit handle is null`
+- [x] Test `createUpsampleLayer still runs postBlit when the blit handle is null`
       — the load-bearing one (finding 7): it preserves
       `zoneOfAvoidanceUpsampleLayer.ts:30-38`'s independent guards. Getting this
       wrong silently drops the ZoA caption whenever its upsample handle is
       absent.
-- [ ] Implement. The module header carries the rationale now shared by all four
+- [x] Implement. The module header carries the rationale now shared by all four
       rows (screen-space blit ignores the `SlabView`; producer and consumer must
       share one liveness gate); keep it inside the ≤10-line budget.
-- [ ] `npm run typecheck` + `npm test -- createUpsampleLayer`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- createUpsampleLayer`.
+- [x] Commit.
 
 ### Task 8 — Migrate the four upsample layers onto the primitive
 
@@ -823,29 +823,29 @@ Each file keeps its name, its export, and its position in
 `passes/index.ts` (`:263, :267, :290, :308` — do not reorder). Only the body
 collapses to a `createUpsampleLayer({ ... })` call.
 
-- [ ] `volumeUpsampleLayer`: `name: 'volume-upsample'`, `slab: COSMO`,
+- [x] `volumeUpsampleLayer`: `name: 'volume-upsample'`, `slab: COSMO`,
       `sourceTargetId: 'volume'`, `handleOf: (state) => state.gpu.volumeUpsample`,
       `enabled` unchanged (`deriveVolumeLiveness(...) !== null`).
-- [ ] `starAggregateUpsampleLayer`: `'star-upsample'`, `NEAR0`,
+- [x] `starAggregateUpsampleLayer`: `'star-upsample'`, `NEAR0`,
       `'star-aggregates'`, `state.gpu.starAggregateUpsample`,
       `enabled: starCatalogVisible`.
-- [ ] `milkyWayUpsampleLayer`: `'milky-way-upsample'`, `NEAR0`,
+- [x] `milkyWayUpsampleLayer`: `'milky-way-upsample'`, `NEAR0`,
       `'mw-aggregate'`, `state.gpu.milkyWayAggregateUpsample`, `enabled`
       unchanged (`deriveMilkyWayCloudAlpha(...) !== null`).
-- [ ] `zoneOfAvoidanceUpsampleLayer`: `'zone-of-avoidance-upsample'`, `COSMO`,
+- [x] `zoneOfAvoidanceUpsampleLayer`: `'zone-of-avoidance-upsample'`, `COSMO`,
       `'zoa'`, `state.gpu.zoneOfAvoidanceUpsample`, `enabled` unchanged, plus
       `postBlit` carrying the existing caption draw verbatim
       (`zoneOfAvoidanceUpsampleLayer.ts:36-47`) — including its own null-check,
       its liveness re-derivation, and the module-local `LABEL_RADIUS_MPC`.
-- [ ] Trim each header to what is NOT now in the factory's header: the
+- [x] Trim each header to what is NOT now in the factory's header: the
       per-layer position rationale and the per-layer "why this handle / why not
       the other upsample" notes stay (`milkyWayUpsampleLayer.ts:23-35` is the
       clearest example); the four copies of "draw ignores the SlabView" and
       "defensive null-check, same pattern as…" go.
-- [ ] Existing `passes.test.ts` layer-name/uniqueness assertions and the four
+- [x] Existing `passes.test.ts` layer-name/uniqueness assertions and the four
       liveness test files must pass unmodified.
-- [ ] `npm run typecheck` + `npm test -- passes upsample zoneOfAvoidance volumeLiveness`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- passes upsample zoneOfAvoidance volumeLiveness`.
+- [x] Commit.
 
 ### Task 9 — Docblock sweep
 
@@ -857,68 +857,68 @@ collapses to a `createUpsampleLayer({ ... })` call.
 
 Runs LAST of the code tasks: it rewrites docblocks Tasks 2–4 shape.
 
-- [ ] `RenderTargets.d.ts`: the `viewOf`/`depthViewOf` docblocks say views are
+- [x] `RenderTargets.d.ts`: the `viewOf`/`depthViewOf` docblocks say views are
       "Stable until the next `resize()`" (`:43,:50`) — now "until the next
       `reconcile()` that changes this row's size", which is a stronger and more
       useful guarantee (a reconcile that changes nothing keeps view identity).
-- [ ] Confirm `reconcile`'s own docblock (written in Task 4) carries the
+- [x] Confirm `reconcile`'s own docblock (written in Task 4) carries the
       one-clause disambiguation from the contract above: `ReconcileEffects.ts`
       already owns "reconcile" for the store→engine callback surface, and a
       reader grepping the word now meets two unrelated concepts. Incumbent name
       kept (decision #6); the clause is what pays for it.
-- [ ] Grep for `renderTargets.resize` and update the three comment sites
+- [x] Grep for `renderTargets.resize` and update the three comment sites
       (finding 6) — none of them is wrong about the mechanism, only about the
       method name.
-- [ ] `EngineGpuHandles.d.ts` carries five more copies of the
+- [x] `EngineGpuHandles.d.ts` carries five more copies of the
       "(`'rgba16float'`, `'depth32float'`) matches the `foreground:0` row" prose
       (`:415`, `:431`, `:462`, `:470-471`, `:483`) — the invariant Task 6 made
       structural. Each shrinks to a pointer at `renderTargetFormats.ts`;
       resist restating the formats a third time.
-- [ ] `npm run typecheck` + `npm test` (docblock-only, but the gate is cheap).
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test` (docblock-only, but the gate is cheap).
+- [x] Commit.
 
 ### Task 10 — Full-suite gate, decisions record, visual smoke, perf
 
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
-- [ ] `docs/research/engine/decisions.md` carries the 4.5 ruling as **decision
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
+- [x] `docs/research/engine/decisions.md` carries the 4.5 ruling as **decision
       #12**, with #9's anti-drift sentence (`:83-85`) amended in place to point
       at it. Without this, rungs 3–7 are written against a north star this rung
       overturned, in a plan file `/feature-done` will have relocated. Verify it
       is in the PR diff (docs ship with the code that motivates them).
-- [ ] Dev-server visual smoke — ask the user to look; this task cannot
+- [x] Dev-server visual smoke — ask the user to look; this task cannot
       self-certify pixels. Cover: the galaxy field + Milky Way disc render
       unchanged; scalar volumes, star aggregates, and the ZoA band all
       composite as before; **the ZoA curved lettering still draws and fades
       with its band** (the post-blit hook's only live consumer).
-- [ ] Drag the DebugPanel's Milky-Way `aggregateDivisor` slider across its
+- [x] Drag the DebugPanel's Milky-Way `aggregateDivisor` slider across its
       range — the cloud must rescale smoothly with no black frame and no
       console error. This is the one dynamic-scale row and the path Task 4
       rewrote end to end.
-- [ ] Resize the window (including a slow drag) — every offscreen stays crisp
+- [x] Resize the window (including a slow drag) — every offscreen stays crisp
       and correctly aligned; no smearing or off-canvas content.
-- [ ] Toggle the HDR display mode — the swap row's format change still
+- [x] Toggle the HDR display mode — the swap row's format change still
       reconfigures the context and rebuilds the 8 swap renderers
       (Tasks 1 + 2 both touched that path).
-- [ ] With `?gpuTimings`, confirm the DebugPanel's timing rows and group titles
+- [x] With `?gpuTimings`, confirm the DebugPanel's timing rows and group titles
       are **identical** to `main`'s (parity gate 3) — same names, same order,
       same groups.
-- [ ] `npm run perf` before and after, from this worktree, passing
+- [x] `npm run perf` before and after, from this worktree, passing
       `--url http://localhost:<port>` off THIS server's `Local:` line (per
       `.claude/skills/perf/SKILL.md` — omitting it silently measures another
       branch). The frame loop gained a per-frame `reconcile` over 12 rows;
       confirm no CPU-side regression beyond noise.
-- [ ] Commit (if any smoke-driven fixes were needed).
+- [x] Commit (if any smoke-driven fixes were needed).
 
 ## Definition of Done
 
-- [ ] Deliverables exist: `RenderTargetSpec` carries `clearValue` and a
+- [x] Deliverables exist: `RenderTargetSpec` carries `clearValue` and a
       `number | (state) => number` `scale`; `RenderTargets` exposes `specOf`,
       `sizeOf`, and `reconcile` and no longer exposes `resize`;
       `renderTargetRows` is exported; `src/data/renderTargetFormats.ts`,
       `src/@types/rendering/Upsample.d.ts`,
       `src/@types/engine/frame/UpsampleLayerRow.d.ts`, and
       `src/services/engine/frame/passes/createUpsampleLayer.ts` are new files.
-- [ ] `TARGET_CLEAR_VALUES` no longer exists anywhere, and all 12 of its entries
+- [x] `TARGET_CLEAR_VALUES` no longer exists anywhere, and all 12 of its entries
       landed on rows (7 named + 5 generated `bloomN`); `executeFrame` and
       `runBloom` each read their clear value from the target row through
       `specOf`. No `specs.find(...)` expression remains in `src/`: all **11**
@@ -926,39 +926,39 @@ Runs LAST of the code tasks: it rewrites docblocks Tasks 2–4 shape.
       `executeFrame.ts:134`, `executeFrame.ts:247`, `hdrActiveOf.ts:12`
       (Task 2); the four producer layers (Task 3); `runFrame.ts:233`,
       `runFrame.ts:236`, `bloomSrcTexelSize.ts:29` (Task 4).
-- [ ] `createRenderTargets` takes no `mwAggregateDivisor`; `runFrame` contains
+- [x] `createRenderTargets` takes no `mwAggregateDivisor`; `runFrame` contains
       no `createRenderTargets` call, no `mw-aggregate` branch, and exactly one
       target-reconciliation statement. `state.gpu.renderTargets` is assigned in
       exactly one place repo-wide (its `GPU_HANDLE_ROWS` row).
-- [ ] The `Math.max(1, Math.floor(canvasSize / scale))` expression appears in
+- [x] The `Math.max(1, Math.floor(canvasSize / scale))` expression appears in
       exactly one place in `src/` — `src/utils/gpu/reducedTargetSize.ts:12-14`,
       which `renderTargets.ts`'s `allocate` now calls — down from **six** (the
       four producer layers, `allocate`'s own copy, and the helper itself, whose
       "must match `allocate`" docblock becomes true by construction). The
       helper keeps its `tools/galaxy-renderer` consumer.
-- [ ] The four upsample layer files each declare one `createUpsampleLayer({…})`
+- [x] The four upsample layer files each declare one `createUpsampleLayer({…})`
       call and no blit body of their own, at unchanged positions in
       `passes/index.ts`; ZoA's caption draw rides `postBlit`.
-- [ ] All three `GPU_HANDLE_ROWS` filters (`initGpu`, `wireInput`,
+- [x] All three `GPU_HANDLE_ROWS` filters (`initGpu`, `wireInput`,
       `buildSwapRenderers`) test a field's VALUE; no `'<field>' in row` idiom
       remains in the phase files.
-- [ ] `docs/research/engine/decisions.md` ships in this PR carrying the 4.5
+- [x] `docs/research/engine/decisions.md` ships in this PR carrying the 4.5
       ruling as decision #12, with #9's anti-drift sentence amended in place.
       Rungs 3–7 must be able to read the current north star from decisions.md
       alone, without this plan file.
-- [ ] Sizing note for the ladder, not a gate: decisions #9 expected rung 2 to be
+- [x] Sizing note for the ladder, not a gate: decisions #9 expected rung 2 to be
       a "bounded change" (`decisions.md:95-96`, only rungs 1 and 3 getting
       mini-plans). It arrived as a 10-task plan. Every task traces to #9 or #11,
       so this is scope DISCOVERED, not scope crept — but rungs 4–7 should be
       sized against this precedent, not against #9's original estimate.
-- [ ] Named observable behaviours for the manual smoke pass: galaxy field +
+- [x] Named observable behaviours for the manual smoke pass: galaxy field +
       Milky Way disc unchanged; scalar volumes / star aggregates / ZoA band
       composite unchanged; ZoA curved lettering draws and fades with its band;
       the aggregate-divisor slider rescales the cloud live with no black frame;
       window resize keeps every offscreen crisp; the HDR toggle re-renders
       without a blank frame or console error; the `?gpuTimings` slot names and
       group titles are identical to `main`'s.
-- [ ] Deferral boundary — a reviewer should NOT expect to find, in this PR:
+- [x] Deferral boundary — a reviewer should NOT expect to find, in this PR:
       blend-parity validation (blocked on renderers exposing their baked
       blend — a renderer-contract change, not a target-contribution one); the
       `foreground:0` step-level gate (behaviour-changing for
