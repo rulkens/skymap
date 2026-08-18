@@ -377,6 +377,16 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         const handleX = 640;
         const handleY = 306;
+        // Self-check (F1.6 review MINOR): the aim above is a hardcoded pixel pair
+        // that would silently degrade to an inert orbit-drag if the boot box,
+        // camera, viewport, or ARROW_REACH_FRACTION ever drift. The +Y translate
+        // handle writes grid.manualCenterMpc[1], surfaced live by the already-open
+        // GridBoxPanel's "center y" ParamSlider (role="slider", aria-valuenow) —
+        // reading it before/after is how the aim was empirically verified during
+        // development (0 -> 4.920103375067377); asserting it here keeps that proof
+        // running instead of relying on the drag being silently correct forever.
+        const centerY = page.getByRole('slider', { name: 'center y', exact: true });
+        const before = await centerY.getAttribute('aria-valuenow');
         await page.mouse.move(handleX, handleY);
         await settleFrames(page, 1);
         await page.mouse.down();
@@ -386,6 +396,10 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         await settleFrames(page, SETTLE_FRAMES);
         await page.mouse.up();
         await settleFrames(page, SETTLE_FRAMES);
+        const after = await centerY.getAttribute('aria-valuenow');
+        if (after === before) {
+          throw new Error('gizmo drag did not move the box — aim coordinates likely stale');
+        }
       },
     },
     {
