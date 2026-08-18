@@ -13,7 +13,6 @@
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { cross3 } from '../../../../src/utils/math/cross3';
-import { distance3 } from '../../../../src/utils/math/distance3';
 import { lerpVec3 } from '../../../../src/utils/math/lerpVec3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
@@ -59,10 +58,9 @@ const LINE_VERTICES = 24; // boxLines.wesl's EDGE_CORNERS: 12 edges x 2 endpoint
 // (VERTICES_PER_SEGMENT) in vsGlyph, so the draw call's vertex count is a multiple of it.
 const GLYPH_SEGMENT_FLOATS = 12;
 const VERTICES_PER_SEGMENT = 6;
-// 3 translate arrows x (1 shaft + ARROWHEAD_LEG_COUNT cone legs) + 6 resize crosses x 2 arms;
+// 3 translate arrows x (1 shaft + 1 tapered cone) + 6 resize crosses x 2 arms;
 // rotate rings are F1 stubs (no geometry yet).
-const ARROWHEAD_LEG_COUNT = 4;
-const GLYPH_SEGMENT_COUNT = 3 * (1 + ARROWHEAD_LEG_COUNT) + 6 * 2;
+const GLYPH_SEGMENT_COUNT = 3 * 2 + 6 * 2;
 const GLYPH_VERTEX_COUNT = GLYPH_SEGMENT_COUNT * VERTICES_PER_SEGMENT;
 const GLYPH_STORAGE_BYTES = GLYPH_SEGMENT_COUNT * GLYPH_SEGMENT_FLOATS * 4;
 // GizmoUniform: hoverHandle i32 + activeHandle i32 + 8 bytes pad.
@@ -74,9 +72,8 @@ const GIZMO_UNIFORM_BYTES = 16;
 const SHAFT_WIDTH_PX = 4;
 const CROSS_WIDTH_PX = 4;
 const ARROWHEAD_TIP_WIDTH_PX = 0.5;
-const ARROWHEAD_BASE_WIDTH_PX = 7;
+const ARROWHEAD_BASE_WIDTH_PX = 12;
 const ARROWHEAD_LENGTH_FRACTION = 0.15; // of the arrow's center-to-tip length
-const ARROWHEAD_RADIUS_FRACTION = 0.5; // of the cone's own length, i.e. how splayed its legs are
 const CROSS_ARM_FRACTION = 1.5 * PICK_TOLERANCE_FRACTION; // visually bigger than the (unchanged) pick radius
 
 type GlyphSegment = {
@@ -107,9 +104,9 @@ function crossArmVectors(axisDir: Readonly<Vec3>): readonly [Vec3, Vec3] {
 }
 
 /**
- * Translate arrows: a constant-width shaft (center -> cone base) plus ARROWHEAD_LEG_COUNT
- * tapered legs (cone base ring -> the handle's own tip) forming a pointed cone silhouette once
- * vsGlyph expands each into a screen-space quad. Resize crosses: two constant-width segments
+ * Translate arrows: a constant-width shaft (center -> cone base) plus one tapered segment
+ * (cone base -> the handle's own tip, base width -> tip width) that vsGlyph expands into a
+ * single solid-filled screen-space triangle. Resize crosses: two constant-width segments
  * through the handle position, perpendicular to its axis.
  */
 function buildGlyphSegments(box: GridBox): GlyphSegment[] {
@@ -121,11 +118,7 @@ function buildGlyphSegments(box: GridBox): GlyphSegment[] {
   for (const handle of geometry.translate) {
     const id = encodeGizmoHandleId(handle.id);
     const tip = handle.positionMpc;
-    const armLengthMpc = distance3(box.centerMpc, tip);
-    const coneLengthMpc = ARROWHEAD_LENGTH_FRACTION * armLengthMpc;
     const coneBase = lerpVec3(box.centerMpc, tip, 1 - ARROWHEAD_LENGTH_FRACTION);
-    const coneRadiusMpc = ARROWHEAD_RADIUS_FRACTION * coneLengthMpc;
-    const [u, v] = crossArmVectors(handle.axisDir);
 
     segs.push({
       posA: box.centerMpc,
@@ -134,15 +127,15 @@ function buildGlyphSegments(box: GridBox): GlyphSegment[] {
       widthB: SHAFT_WIDTH_PX,
       handleId: id,
     });
-    for (const legDir of [u, [-u[0], -u[1], -u[2]] as Vec3, v, [-v[0], -v[1], -v[2]] as Vec3]) {
-      segs.push({
-        posA: addScaled(coneBase, legDir, coneRadiusMpc),
-        widthA: ARROWHEAD_BASE_WIDTH_PX,
-        posB: tip,
-        widthB: ARROWHEAD_TIP_WIDTH_PX,
-        handleId: id,
-      });
-    }
+    // Single tapered segment, base -> tip: vsGlyph expands this into ONE solid-filled
+    // screen-space triangle (the fan of thin legs this replaced rendered as an outline).
+    segs.push({
+      posA: coneBase,
+      widthA: ARROWHEAD_BASE_WIDTH_PX,
+      posB: tip,
+      widthB: ARROWHEAD_TIP_WIDTH_PX,
+      handleId: id,
+    });
   }
 
   for (const handle of geometry.resize) {
