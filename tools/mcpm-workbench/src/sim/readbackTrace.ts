@@ -35,17 +35,29 @@ export async function readbackTrace(
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
-  const encoder = device.createCommandEncoder({ label: 'mcpm-trace-readback' });
-  encoder.copyBufferToBuffer(traceBuffer, 0, staging, 0, requestedBytes);
-  device.queue.submit([encoder.finish()]);
+  // try/finally, per pickProgram.ts's own mapAsync readback: anything that
+  // throws after createBuffer (a validation error from copy/submit, or a
+  // device-lost mapAsync rejection) must still reach destroy(), or the
+  // staging buffer's GPU memory leaks until GC. unmap() only runs once
+  // mapAsync has actually resolved — calling it unmapped is the bug this
+  // guards against, not a fallback path.
+  try {
+    const encoder = device.createCommandEncoder({ label: 'mcpm-trace-readback' });
+    encoder.copyBufferToBuffer(traceBuffer, 0, staging, 0, requestedBytes);
+    device.queue.submit([encoder.finish()]);
 
-  await staging.mapAsync(GPUMapMode.READ);
-  const Ctor = element === 'f16' ? Uint16Array : Float32Array;
-  // .slice() copies out of the mapped range into its own buffer — the range
-  // itself detaches on unmap/destroy below.
-  const data = new Ctor(staging.getMappedRange()).slice();
-  staging.unmap();
-  staging.destroy();
-
-  return { data, element, dims: box.dims };
+    await staging.mapAsync(GPUMapMode.READ);
+    const Ctor = element === 'f16' ? Uint16Array : Float32Array;
+    let data: Uint16Array | Float32Array;
+    try {
+      // .slice() copies out of the mapped range into its own buffer — the
+      // range itself detaches on unmap/destroy below.
+      data = new Ctor(staging.getMappedRange()).slice();
+    } finally {
+      staging.unmap();
+    }
+    return { data, element, dims: box.dims };
+  } finally {
+    staging.destroy();
+  }
 }
