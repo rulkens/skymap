@@ -33,14 +33,25 @@ import traceUpsampleWgsl from '../../../../src/services/gpu/shaders/mcpm/traceUp
 
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
 
-// One/one premultiplied, every layer: the graph owns the clear, each pass LOADs and adds.
-// Fifth copy of this literal was the trigger (tracePass, splatPass, galaxyOverlayPass,
-// volpathPass, boxPreviewPass) — an omitted blend REPLACES everything drawn beneath it
-// instead of adding to it, alpha lane included, so a layer that forgets this errors loud
-// (missing import) rather than silently wiping the frame.
+// One/one premultiplied, every LIGHT-EMITTING layer: the graph owns the clear, each pass
+// LOADs and adds. Fifth copy of this literal was the trigger (tracePass, splatPass,
+// galaxyOverlayPass, volpathPass, boxPreviewPass) — an omitted blend REPLACES everything
+// drawn beneath it instead of adding to it, alpha lane included, so a layer that forgets
+// this errors loud (missing import) rather than silently wiping the frame. The one
+// exception is boxPreviewPass (OVERLAY_BLEND, below): it's a UI overlay, not a light
+// emitter, so it must stay visible over a bright raymarch instead of washing out into it.
 export const LAYER_BLEND: GPUBlendState = {
   color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+};
+
+// Premultiplied-over, for the gizmo/wireframe overlay only: with fragment alpha 1.0 (opaque
+// glyphs/lines — see boxLines.wesl's fs/fsGlyph) this REPLACES the destination pixel instead
+// of adding to it, so the gizmo stays legible over a bright raymarch region instead of
+// blowing out additively.
+export const OVERLAY_BLEND: GPUBlendState = {
+  color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+  alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
 };
 
 export type RenderGraph = {
@@ -217,7 +228,7 @@ export function createRenderGraph(
   const boxPreviewPass: BoxPreviewPass = createBoxPreviewPass({
     device,
     targetFormat: HDR_FORMAT,
-    blend: LAYER_BLEND,
+    blend: OVERLAY_BLEND,
     makeShader,
   });
 

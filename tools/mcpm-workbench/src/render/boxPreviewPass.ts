@@ -201,7 +201,8 @@ export function createBoxPreviewPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // RenderGraph's LAYER_BLEND — same convention as every other layer.
+          // RenderGraph's OVERLAY_BLEND (premultiplied-over) — this pass is the one
+          // exception to every other layer's additive LAYER_BLEND; see RenderGraph.ts.
           blend: opts.blend,
         },
       ],

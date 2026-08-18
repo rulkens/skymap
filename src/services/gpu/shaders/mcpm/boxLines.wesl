@@ -100,8 +100,9 @@ fn vs(@builtin(vertex_index) vi: u32) -> LineVsOut {
 
 @fragment
 fn fs() -> @location(0) vec4<f32> {
-  // Premultiplied, one/one additive — the carried alpha lane is never read downstream.
-  return vec4<f32>(LINE_COLOR * LINE_INTENSITY, LINE_INTENSITY);
+  // Premultiplied-over (RenderGraph's OVERLAY_BLEND): alpha 1.0 makes this opaque, so the
+  // gizmo stays legible over a bright raymarch region instead of washing out additively.
+  return vec4<f32>(LINE_COLOR * LINE_INTENSITY, 1.0);
 }
 
 struct GlyphVsOut {
@@ -157,5 +158,6 @@ fn fsGlyph(in: GlyphVsOut) -> @location(0) vec4<f32> {
   let isHover = in.handleId == gizmo.hoverHandle && gizmo.hoverHandle >= 0;
   let hovered = mix(base, vec3<f32>(1.0), GLYPH_HOVER_MIX);
   let color = select(select(base, hovered, isHover), GLYPH_ACTIVE_COLOR, isActive);
-  return vec4<f32>(color * GLYPH_INTENSITY, GLYPH_INTENSITY);
+  // Alpha 1.0, same premultiplied-over reasoning as fs() above.
+  return vec4<f32>(color * GLYPH_INTENSITY, 1.0);
 }
