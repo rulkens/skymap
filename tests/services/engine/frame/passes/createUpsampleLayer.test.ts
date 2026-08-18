@@ -1,10 +1,10 @@
 /**
- * createUpsampleLayer tests — the shared factory the four HDR upsample
- * ContentLayers (volume, star-aggregate, milky-way, zone-of-avoidance) will
- * collapse onto. `enabled`/`name`/`slab` are forwarded verbatim from the row
- * (untested here — trivial passthrough); these tests cover `draw`'s two
- * independent halves: the blit (guarded by the row's handle) and `postBlit`
- * (guarded by nothing the factory adds — see finding 7 in the brief).
+ * createUpsampleLayer tests — the shared factory behind the four HDR upsample
+ * ContentLayers (volume, star-aggregate, milky-way, zone-of-avoidance).
+ * `enabled`/`name`/`slab` are forwarded verbatim from the row (untested here
+ * — trivial passthrough); these tests cover `draw`'s two independent halves:
+ * the blit (guarded by the row's handle) and `postBlit`, which the factory
+ * guards independently of the blit — a missing handle must never suppress it.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createUpsampleLayer } from '../../../../../src/services/engine/frame/passes/createUpsampleLayer';

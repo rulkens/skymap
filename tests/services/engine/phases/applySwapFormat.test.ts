@@ -22,9 +22,8 @@ function makeSwapSpec(format: GPUTextureFormat): RenderTargetSpec {
   return { id: 'swap', format, depth: null, scale: 1, clearValue: { r: 0, g: 0, b: 0, a: 1 } };
 }
 
-// `applySwapFormat` now reads the live format via `renderTargets.specOf('swap')`
-// rather than scanning `.specs` by hand — every fixture's single-row table
-// needs this to resolve 'swap'.
+// `applySwapFormat` reads the live format via `renderTargets.specOf('swap')`,
+// so every fixture's single-row table needs this to resolve 'swap'.
 function specOfStub(specs: readonly RenderTargetSpec[]) {
   return (id: string): RenderTargetSpec => {
     const spec = specs.find((s) => s.id === id);

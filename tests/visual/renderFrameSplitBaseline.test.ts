@@ -162,8 +162,7 @@ function makeRenderTargets(): any {
     volume: { __id: 'volume-view' } as unknown as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
-  // Clear values match production; `specOf` is what `executeFrame` reads now
-  // in place of the old `TARGET_CLEAR_VALUES` lookup + `specs.find`.
+  // Clear values match production; `specOf` is what `executeFrame` reads.
   const specs = [
     {
       id: 'hdr',

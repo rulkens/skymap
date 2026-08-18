@@ -136,10 +136,9 @@ describe('createRenderTargets', () => {
   });
 
   it('reconcile allocates nothing when neither the canvas size nor a resolved scale moved', () => {
-    // Migrated from `runFrame.test.ts`'s mw-aggregate divisor test: comparing
-    // against what the textures actually hold (rather than a 'last applied'
-    // field) has to SETTLE, or every steady-state frame would throw away and
-    // re-allocate every offscreen target.
+    // Comparing against what the textures actually hold (rather than a 'last
+    // applied' field) has to SETTLE, or every steady-state frame would throw
+    // away and re-allocate every offscreen target.
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
@@ -303,11 +302,9 @@ describe('createRenderTargets', () => {
     expect(() => targets.sizeOf('nope')).toThrow();
   });
 
-  // Relocated from `scalarVolumeLayer.test.ts` / `zoneOfAvoidanceLayer.test.ts`
-  // once those layers stopped computing the viewport inline — the clamp now
-  // lives only here, on the `sizeOf` reader path. `renderTargets.test.ts`'s
-  // 'clamps volume to a 1 px minimum' case above covers the same clamp on the
-  // ALLOCATION path (the `createTexture` descriptor); this is the reader.
+  // The clamp on the `sizeOf` READER path — the 'clamps volume to a 1 px
+  // minimum' case above covers the same clamp on the ALLOCATION path (the
+  // `createTexture` descriptor).
   it('sizeOf clamps to a 1 px minimum when floor(size/scale) is 0', () => {
     const targets = createRenderTargets(
       mockDevice(),

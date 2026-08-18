@@ -1,30 +1,15 @@
 /**
  * RenderTargets — the single owner of every offscreen `RenderTargetSpec`
- * row's GPU texture lifecycle.
- *
- * Pre-unification the HDR target and the half-res volume target each had
- * their own module (`postProcess.ts`, `volumeOffscreen.ts`), each with its
- * own construct / resize / destroy triple and its own `state.gpu.*` field.
- * That meant the frame's resize handler enumerated the pair by hand, the
- * bootstrap gate checked two handles that always flip together, and the
- * executor's view resolution reached into two separate context fields.
- * Collapsing them onto one table-driven owner removes that duplication: the
- * offscreen rows (`hdr`, `volume`, …) are DATA — a `RenderTargetSpec[]` — and
- * this handle allocates, reconciles, and releases every row uniformly.
+ * row's GPU texture lifecycle: allocates, reconciles, and releases every
+ * row uniformly from table DATA (`RenderTargetSpec[]`), not one path per row.
  *
  * `viewOf` resolves an offscreen row's current colour-attachment view. The
  * `swap` row is deliberately NOT allocated here — the swap chain is an
  * acquired texture (`context.getCurrentTexture()`), not one this owner
  * creates — so `viewOf('swap')` throws; the executor resolves swap from the
- * per-frame acquired view instead. Keeping that one asymmetry to a throwing
- * lookup (rather than a nullable return) makes a mis-wired swap resolution a
- * loud failure, not a silent null.
- *
- * `depthViewOf` mirrors that shape for the rows whose spec declares `depth`
- * (`foreground:0` — an opaque pass that occludes by depth-test). Depthless
- * rows have no depth texture, so `depthViewOf` throws for them just as it
- * does for unknown ids and `swap` — the executor only calls it for a target
- * whose spec row carries a non-null `depth`.
+ * per-frame acquired view instead. `depthViewOf` mirrors that shape for the
+ * rows whose spec declares `depth` (`foreground:0`), throwing the same way
+ * for depthless rows, `swap`, and unknown ids.
  */
 
 import type { EngineState } from '../engine/state/EngineState';

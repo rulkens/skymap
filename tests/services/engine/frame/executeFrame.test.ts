@@ -187,10 +187,10 @@ function makeCtx(): ReadyFrameContext {
     // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
     // + `depthViewOf` let the executor discover which target rows declare a
     // depth attachment (only `foreground:0` here). `specOf` is what
-    // `colorAttachment`/`depthAttachment`/the composite's dstFormat actually
-    // read now — clear values here match production (`hdr`/`swap` at a=1,
-    // the rest a=0) so a clear-value regression would show up in the
-    // clear/load assertions below.
+    // `colorAttachment`/`depthAttachment`/the composite's dstFormat read —
+    // clear values here match production (`hdr`/`swap` at a=1, the rest
+    // a=0) so a clear-value regression would show up in the clear/load
+    // assertions below.
     renderTargets: {
       specs: EXEC_SPECS,
       specOf: (id: string) => {

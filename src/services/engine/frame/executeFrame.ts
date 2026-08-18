@@ -126,10 +126,8 @@ function colorAttachment(
  * their dest rows are depthless — so the depth budget is confined to the
  * opaque render passes that own it.
  *
- * `specOf` throws for an unknown target, where the old `specs.find(...)` here
- * tolerated one (`undefined` → `{}`, no depth attachment). Unreachable in
- * production — `viewFor` throws first, at the top of `renderGroup` — so this
- * is a tightening, not a behaviour change.
+ * `specOf` throws for an unknown target, but that's unreachable here:
+ * `viewFor` throws first, at the top of `renderGroup`.
  */
 function depthAttachment(
   ctx: ReadyFrameContext,

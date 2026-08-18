@@ -127,8 +127,7 @@ function makeLoggingRenderer() {
  * shared by reference so a test can swap the volume row's view.
  */
 function makeRenderTargets(views: Record<string, GPUTextureView>) {
-  // Clear values match production; `specOf` is what `executeFrame` reads now
-  // in place of the old `TARGET_CLEAR_VALUES` lookup + `specs.find`.
+  // Clear values match production; `specOf` is what `executeFrame` reads.
   const specs = [
     {
       id: 'hdr',

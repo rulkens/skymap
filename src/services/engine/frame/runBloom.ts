@@ -11,17 +11,15 @@
  * prefilter, `bloom[n-1]` for downsample n, `bloom[n+1]` for upsample n,
  * `bloom0` for the fold — so no pass ever samples an uncleared or stale level.
  *
- * That is exactly what the previous ten-`ContentLayer` wiring got wrong. The
- * frame executor fires every layer whose `(target, slab)` matches a render
- * step, with no already-drawn exclusion, and the pyramid REUSES targets
- * (`bloom0` and `bloom3` each host a downsample AND an upsample). So each
- * upsample layer fired PREMATURELY at its target's downsample step and read the
- * coarser level before that level's first-touch clear happened this frame,
- * pulling in last frame's stored contents. That cross-frame feedback ramped
- * brightness every frame until it saturated the whole screen to white. Modeling
- * bloom as one sequential pipeline removes the reuse hazard: the passes run in
- * fixed order, and `runBloom` owns its own clears rather than leaning on the
- * executor's per-target first-touch bookkeeping (which tracks scene targets).
+ * The pyramid REUSES targets (`bloom0` and `bloom3` each host a downsample AND
+ * an upsample), so the generic frame executor — which fires every layer whose
+ * `(target, slab)` matches a render step, with no already-drawn exclusion —
+ * cannot express this pipeline: an upsample layer would fire at its target's
+ * downsample step and read the coarser level before that level's first-touch
+ * clear this frame, pulling in last frame's stored contents and ramping
+ * brightness toward white across frames. `runBloom` instead owns its own
+ * clears and fixed pass order, bypassing the executor's per-target
+ * first-touch bookkeeping (which tracks scene targets) entirely.
  *
  * ### One timing slot spanning the whole sub-routine
  *
@@ -46,9 +44,9 @@ import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
  * own their level); a `'load'` pass keeps what the sequence already wrote
  * (the additive upsample folds and the fold into HDR). `timestampWrites`
  * carries the bloom slot's begin (on the first pass) or end (on the last).
- * `specOf` throwing on a missing row (rather than the old table lookup's
- * silent `{0,0,0,0}` fallback under `noUncheckedIndexedAccess`) is this rung's
- * one sanctioned behaviour change.
+ * `specOf` throws on a missing row rather than silently falling back to a
+ * zero clear colour — a mis-registered target fails loudly instead of
+ * rendering black.
  */
 function openBloomPass(
   encoder: GPUCommandEncoder,
@@ -82,7 +80,7 @@ export function runBloom(
 ): void {
   // Handle-ready gate: the `settings.bloom.enabled` master toggle already gated
   // this step out of the program at build time, so this only guards a
-  // pre-bootstrap or torn-down pyramid — mirroring the old per-layer null check.
+  // pre-bootstrap or torn-down pyramid.
   const pyramid = state.gpu.bloomPyramid;
   if (pyramid === null) return;
 

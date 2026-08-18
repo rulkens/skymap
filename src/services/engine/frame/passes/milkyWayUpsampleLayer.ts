@@ -6,8 +6,7 @@
  * fix, so this draws through its OWN handle rather than sharing that one.
  *
  * Position: immediately before `milkyWayLayer`'s dust pass, so dust
- * transmittance multiplies the upsampled starlight too — matching the
- * old single-encoder ordering (stars then dust).
+ * transmittance multiplies the upsampled starlight too.
  *
  * `enabled` shares `deriveMilkyWayCloudAlpha` with the producer, so the two
  * can never disagree about whether the offscreen was written this frame.

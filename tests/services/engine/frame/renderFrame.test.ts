@@ -123,8 +123,7 @@ function makeFakeHdrView(): GPUTextureView {
 function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
   // Clear values match production (`renderTargets.ts`'s `renderTargetRows`): hdr
   // and swap opaque black (a=1), every other row a=0. `specOf` is what
-  // `executeFrame`'s colorAttachment/depthAttachment/composite-dstFormat
-  // read now, in place of the old `TARGET_CLEAR_VALUES` lookup + `specs.find`.
+  // `executeFrame`'s colorAttachment/depthAttachment/composite-dstFormat read.
   const specs = [
     {
       id: 'hdr',
