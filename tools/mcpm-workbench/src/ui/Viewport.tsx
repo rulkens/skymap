@@ -67,6 +67,9 @@ const FPS_PUSH_INTERVAL_MS = 500;
 // host round trip, and every sim step already queues one GPU submission of its own.
 // Steps, not wall-clock, so the convergence plot's x-axis is exact step counts.
 const HISTOGRAM_INTERVAL_STEPS = 20;
+// Volpath accumulator refresh cadence — the field drifts slowly, so 16 steps of drift is
+// invisible next to 1-sample noise, and a paused sim (stepCount frozen) converges indefinitely.
+const VOLPATH_ACCUM_REFRESH_STEPS = 16;
 const DRAG_SPEED = 0.005;
 // Exponential in the raw wheel delta — galaxy-renderer's createOrbitCameraInput
 // constant, so both tools zoom with the same hand feel; a sign-only step ignores
@@ -468,18 +471,16 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (layers.pathTracer) {
           // Reset on any camera move, any pathTracer param change, or the trace grid
           // moving under the accumulator — `cam` is the SAME serialized object already
-          // computed above, so this can't drift from what actually drew. stepCount covers
-          // the sim stepping the field; clearTraceToken/resetToken cover "clear trace" and
-          // "reset" zeroing it directly, which stepCount alone misses while the sim is
-          // PAUSED (review Important 1) — that's exactly the workflow someone would
-          // actually be watching the tracer accumulate in. While the sim runs, stepCount
-          // changes every frame, so this resets every frame too: the layer shows one
-          // noisy sample per frame, which is correct (task-V2A-report.md's accumulation
-          // contract), not a bug to chase.
+          // computed above, so this can't drift from what actually drew. The sim-step
+          // term is FLOORED to VOLPATH_ACCUM_REFRESH_STEPS so a running sim (stepCount
+          // changing every rAF) doesn't reset the accumulator every frame — that collapsed
+          // it to one noisy sample forever. clearTraceToken/resetToken still cover "clear
+          // trace" and "reset" zeroing it directly, which the floored step alone misses
+          // while the sim is PAUSED.
           const volpathKey = JSON.stringify([
             cam,
             s.view.pathTracer,
-            s.sim.stepCount,
+            Math.floor(s.sim.stepCount / VOLPATH_ACCUM_REFRESH_STEPS),
             s.sim.clearTraceToken,
             s.sim.resetToken,
           ]);

@@ -28,16 +28,16 @@ export const defaultViewSlice: ViewSlice = {
     // `scale: 3`) — slide to 1 for full-res, no offscreen target.
     divisor: 3,
   },
-  // Fork defaults per task-V2A-report.md, except sampleWeight/traceMax (V2B fix
-  // round 1): the tracking majorant is σ_max = sigmaT · sampleWeight · traceMax,
-  // mean free path ≈ 1/σ_max, so a majorant must clear the field's real peak or
-  // delta tracking undersamples the densest voxels. packLogTraceVoxels.ts's own
-  // docblock is the field's measured tail (MCPM: max≈40000, p99≈320) — sizing
-  // traceMax at that max with sampleWeight 1e-4 gives σ_max = 4/voxel, mfp ≈
-  // 0.25 voxel, so the 512-step tracking cap covers ~128 voxels of a ray —
-  // half the default 256-voxel long axis. Grazing rays through the full
-  // diagonal of a large grid can still exhaust the cap; a piloting pass with
-  // eyes on the actual image is still owed (not part of this fix).
+  // Fork's shipped tracking defaults (vendor main.cpp:770,784): traceMax=100,
+  // sampleWeight=0.01 — NOT a majorant sized at the field's max (4e4). That
+  // sizing shrinks the Woodcock step to 0.25 voxel (rhoMax=4/voxel), so the
+  // 512-step tracking cap only reaches ~128 voxels into a 256-long-axis box
+  // (CPU repro: 0% of first-scatters past halfway, 81.5% cap-exhaustion at
+  // mean density). traceMax=100 instead CLAMPS the rare hot tail (up to 4e4):
+  // accept probability saturates at 1 once eventRho > rhoMax (volpath.wesl's
+  // `xi <= eventRho * rhoMaxInv`, xi<1), biasing the hottest cores but giving
+  // ~1-voxel mean steps that cross the whole box. sampleWeight also feeds the
+  // emission palette (traceToRho) — 0.01 un-does the 100x darkening of 1e-4.
   pathTracer: {
     sigmaT: 1.0,
     albedo: 0.9,
@@ -45,11 +45,11 @@ export const defaultViewSlice: ViewSlice = {
     anisotropy: 0.3,
     ambientTrace: 0.02,
     bounces: 4,
-    traceMax: 4e4,
+    traceMax: 100,
     exposure: 1.0,
     compressive: false,
     trimDensity: 1e-5,
-    sampleWeight: 1e-4,
+    sampleWeight: 0.01,
   },
 };
 
