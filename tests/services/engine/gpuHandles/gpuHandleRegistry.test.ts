@@ -1,12 +1,12 @@
 /**
  * gpuHandleRegistry — integration tests one layer above the generic walker
- * tests (constructGpuHandles.test.ts / destroyGpuHandles.test.ts): a
- * construct-then-destroy round-trip against the REAL 44-row GPU_HANDLE_ROWS
- * table (every key torn down exactly once, structurally — no per-name
- * update needed when a row is added), the one proven teardown-order
- * constraint (focusUniform outlives galaxyPickRenderer, whose bind group it
- * supplies at construction), and the one row with real boot-time logic
- * beyond a bare factory call (starPointRenderer's epoch-derived seed).
+ * tests: a construct-then-destroy round-trip against the REAL 44-row
+ * GPU_HANDLE_ROWS table (every key torn down exactly once), a key-
+ * uniqueness check (a duplicate row overwrites+leaks silently — the
+ * round-trip alone can't see it), the one proven teardown-order constraint
+ * (focusUniform outlives galaxyPickRenderer, whose bind group it supplies
+ * at construction), and the one row with real boot-time logic beyond a
+ * bare factory call (starPointRenderer's epoch-derived seed).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -56,6 +56,16 @@ describe('GPU_HANDLE_ROWS — construct/destroy round-trip', () => {
     for (const row of GPU_HANDLE_ROWS) {
       expect(destroyCounts.get(row.key)).toBe(1);
     }
+  });
+
+  it('declares every key exactly once', () => {
+    // constructGpuHandles writes state.gpu[key] POSITIONALLY: a duplicated
+    // row's second construct silently overwrites the first's stub, and
+    // destroyGpuHandles' null-guard then skips that key's second visit —
+    // so a copy-pasted row leaks its first handle while the round-trip
+    // test above stays green. Neither tsc's totality check (coverage only,
+    // not uniqueness) nor the walkers catch this; only counting keys does.
+    expect(new Set(GPU_HANDLE_ROWS.map((row) => row.key)).size).toBe(GPU_HANDLE_ROWS.length);
   });
 
   it('destroys focusUniform last, strictly after galaxyPickRenderer', () => {
