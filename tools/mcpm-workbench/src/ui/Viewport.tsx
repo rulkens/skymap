@@ -13,8 +13,11 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { AgentWeights } from '../../@types/AgentWeights';
 import type { AppState } from '../../@types/AppState';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
+import type { GizmoDragState } from '../../@types/GizmoDragState';
+import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmHarness } from '../../@types/McpmHarness';
+import type { Ray } from '../../@types/Ray';
 import type { Store } from '../../@types/Store';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
@@ -31,6 +34,13 @@ import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { deriveGridBox } from '../field/deriveGridBox';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
+import { applyResizeDrag } from '../gizmo/applyResizeDrag';
+import { applyTranslateDrag } from '../gizmo/applyTranslateDrag';
+import { closestPointOnRayToLine } from '../gizmo/closestPointOnRayToLine';
+import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
+import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
+import { screenToRay } from '../gizmo/screenToRay';
+import { cameraBasis } from '../render/cameraBasis';
 import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
 import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
@@ -41,7 +51,7 @@ import {
   setCatalogLoaded,
   setCatalogStatusMessage,
 } from '../state/slices/catalogSlice';
-import { setResolvedGrid } from '../state/slices/gridSlice';
+import { setManualCenterMpc, setManualSizeMpc, setResolvedGrid } from '../state/slices/gridSlice';
 import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import {
@@ -78,6 +88,13 @@ const ZOOM_SPEED = 0.0018;
 const PAN_SPEED = 0.0016;
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];
+// World-space axis directions the gizmo drags along, before F2's rotated basis lands —
+// same local const boxPreviewPass.ts draws its glyphs against (spec §5's "Handle set").
+const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
+  [1, 0, 0],
+  [0, 1, 0],
+  [0, 0, 1],
+];
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
@@ -159,6 +176,17 @@ function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView
 export type ViewportProps = {
   readonly store: Store<AppState>;
 };
+
+/** Narrows away GizmoDragState's rotate variant — nested on `handle.kind`, one level past
+ *  what TS's discriminated-union narrowing follows automatically, so an explicit predicate
+ *  earns its place here rather than a cast at each call site (rotate stays inert until F2). */
+type AxisDragState = Extract<
+  GizmoDragState,
+  { readonly handle: { readonly kind: 'translate' | 'resize' } }
+>;
+function isAxisDrag(drag: GizmoDragState): drag is AxisDragState {
+  return drag.handle.kind !== 'rotate';
+}
 
 function Viewport({ store }: ViewportProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -483,9 +511,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // The pending box leads the debounced harness rebuild by up to REBUILD_DEBOUNCE_MS —
         // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
         // the galaxy dots.
-        if (points && now < boxPreviewUntil) {
-          // hoverHandle/activeHandle wired by F1.5 — the pointer gizmo-drag plumbing.
-          graph.drawBoxPreview(encoder, cam, h.box, deriveGridBox(s.grid), null, null);
+        // gizmoDragging keeps the wireframe up through a drag even once the 200ms
+        // preview timer lapses — a continuous pointer signal is its own "still hot".
+        if (points && (now < boxPreviewUntil || gizmoDragging !== null)) {
+          graph.drawBoxPreview(
+            encoder,
+            cam,
+            h.box,
+            deriveGridBox(s.grid),
+            hoverHandle,
+            gizmoDragging?.handle ?? null,
+          );
         }
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
@@ -714,12 +750,49 @@ function Viewport({ store }: ViewportProps): ReactNode {
       lastPreviewPacked = s.view.raymarch.previewPacked;
     });
 
-    // ── Orbit input → view slice camera ────────────────────────────────────
+    // ── Orbit input → view slice camera (a gizmo handle hit short-circuits it) ──
     let dragging = false;
     let panning = false;
     let lastX = 0;
     let lastY = 0;
+    // Closure-local, like dragging/panning above — not store fields (spec §5's "State
+    // flow"). gizmoDragging's anchor is captured once at pointer-down; hoverHandle is
+    // recomputed every non-dragging move, purely for drawBoxPreview's glyph highlight.
+    let gizmoDragging: GizmoDragState | null = null;
+    let hoverHandle: GizmoHandleId | null = null;
+
+    /** World-space pick ray through the pointer, against the *unrotated* CameraBasis —
+     *  screenToRay's own contract: the gizmo picks world-space handle geometry, never
+     *  voxel space, so the box parameter is inert until F2 gives cameraBasis a rotation
+     *  to apply. */
+    function rayFromPointer(e: PointerEvent, s: AppState): Ray {
+      const rect = canvas.getBoundingClientRect();
+      const ndc: [number, number] = [
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -(((e.clientY - rect.top) / rect.height) * 2 - 1),
+      ];
+      const cam = cameraViewFor(s, [canvas.width, canvas.height]);
+      const basis = cameraBasis(cam.eyeMpc, cam.targetMpc, cam.upMpc, deriveGridBox(s.grid));
+      const aspect = cam.viewportPx[0] / cam.viewportPx[1];
+      return screenToRay(cam.eyeMpc, basis, cam.fovYRad, aspect, ndc);
+    }
+
     const onPointerDown = (e: PointerEvent): void => {
+      const s = store.getSnapshot();
+      const pendingBox = deriveGridBox(s.grid);
+      const ray = rayFromPointer(e, s);
+      const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, UNIT_AXES));
+      if (hit && hit.kind !== 'rotate') {
+        const anchorAxisParam = closestPointOnRayToLine(
+          ray,
+          pendingBox.centerMpc,
+          UNIT_AXES[hit.axis],
+        );
+        gizmoDragging = { handle: hit, anchorAxisParam };
+        canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+
       dragging = true;
       panning = e.button === 2 || e.button === 1;
       lastX = e.clientX;
@@ -729,9 +802,43 @@ function Viewport({ store }: ViewportProps): ReactNode {
     const onPointerUp = (): void => {
       dragging = false;
       panning = false;
+      gizmoDragging = null;
     };
     const onPointerMove = (e: PointerEvent): void => {
-      if (!dragging) return;
+      const s = store.getSnapshot();
+
+      if (gizmoDragging && isAxisDrag(gizmoDragging)) {
+        const drag = gizmoDragging;
+        const pendingBox = deriveGridBox(s.grid);
+        const axisDir = UNIT_AXES[drag.handle.axis];
+        const ray = rayFromPointer(e, s);
+        const param = closestPointOnRayToLine(ray, pendingBox.centerMpc, axisDir);
+        const deltaMpc = param - drag.anchorAxisParam;
+        if (drag.handle.kind === 'translate') {
+          const centerMpc = applyTranslateDrag(pendingBox, axisDir, deltaMpc);
+          store.setState((st) => ({ ...st, grid: setManualCenterMpc(st.grid, centerMpc) }));
+        } else {
+          const { centerMpc, sizeMpc } = applyResizeDrag(
+            pendingBox,
+            drag.handle.axis,
+            axisDir,
+            drag.handle.sign,
+            deltaMpc,
+          );
+          store.setState((st) => ({
+            ...st,
+            grid: setManualSizeMpc(setManualCenterMpc(st.grid, centerMpc), sizeMpc),
+          }));
+        }
+        return;
+      }
+
+      if (!dragging) {
+        const ray = rayFromPointer(e, s);
+        hoverHandle = pickGizmoHandle(ray, gizmoHandleGeometry(deriveGridBox(s.grid), UNIT_AXES));
+        return;
+      }
+
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX;
