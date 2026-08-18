@@ -18,6 +18,7 @@ export const defaultCatalogSlice: CatalogSlice = {
   weightMode: 'stellarMass',
   packedOverride: null,
   packedSourceName: null,
+  packedDropId: 0,
 };
 
 export function setCatalogSources(
@@ -57,7 +58,10 @@ export function setWeightMode(
 /**
  * Installs a dev-dropped packed catalog through the exact same completed-load
  * transition (`setCatalogLoaded`) the network path uses, plus the override
- * payload a harness-rebuild consumer reads instead of fetching.
+ * payload a harness-rebuild consumer reads instead of fetching. `packedDropId`
+ * always increments, even on a same-filename re-drop — the rebuild trigger
+ * (Viewport's `catalogKey`) needs a value that changes on every install, not
+ * just every distinct name.
  */
 export function setPackedCatalog(
   prev: CatalogSlice,
@@ -69,5 +73,6 @@ export function setPackedCatalog(
     ...setCatalogLoaded(prev, points.count, nanFillCount),
     packedOverride: points,
     packedSourceName: sourceName,
+    packedDropId: prev.packedDropId + 1,
   };
 }

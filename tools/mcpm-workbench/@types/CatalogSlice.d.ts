@@ -13,7 +13,10 @@ import type { CatalogPoints } from './CatalogPoints';
  * `packedOverride` carries a dev-drop's parsed Polyphorm-fork catalog
  * (spec §9) — set once App.tsx installs a drop, cleared never (a session
  * that drops in stays on the packed catalog). `packedSourceName` is its
- * filename, for the HUD/status line.
+ * filename, for the HUD/status line. `packedDropId` is a monotonic counter
+ * `setPackedCatalog` bumps on every install — the fork names its export
+ * file identically across runs, so a filename alone can't tell two
+ * different drops apart; a rebuild-trigger key needs this instead.
  */
 export type CatalogSlice = {
   readonly sources: readonly SourceType[];
@@ -24,4 +27,5 @@ export type CatalogSlice = {
   readonly weightMode: 'stellarMass' | 'uniform';
   readonly packedOverride: CatalogPoints | null;
   readonly packedSourceName: string | null;
+  readonly packedDropId: number;
 };
