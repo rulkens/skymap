@@ -65,7 +65,9 @@ orientation check passed during T18's fix round.
 
 ## Validation (Phase 3 gate)
 
-2026-08-18, HEAD `52b446041`. The dev-only packed-catalog loader (T21) fed
+2026-08-18, HEAD `e9dd16a64` (numbers below re-measured at full anchor
+resolution after a comparator fix landed; see "Comparator fix" below for
+the run this superseded). The dev-only packed-catalog loader (T21) fed
 the fork's real VAC catalog (`sdssGalaxy_rsdCorr_dbscan_e2p0ms3_dz0p001_m10p0_t=0.0.bin`,
 324,901 points) through two independent headless runs at the anchor's exact
 grid box — center `(-239.469, -16.5618, 201.275)` Mpc, size
@@ -96,112 +98,106 @@ confirmed this: the last five 20-step samples of each vary by <0.02% with no
 trend — genuinely converged, not just far enough along a slow ramp. Wall
 clock: ~508 s/run.
 
-**Comparator blockers at full anchor resolution (both confirmed, neither
-fixed — no production-code edits).** The 622M-voxel scale breaks
+**Comparator fix (FIXED, no longer an open item).** The first pass at this
+gate found the 622M-voxel scale broke
 `tools/mcpm-workbench/validate/compareTraceCubes.ts` and `readTraceCube.ts`
-two different ways, closing off every dtype:
+two different ways, closing off every dtype: (1) `Float32Array.from(bits,
+mapFn)`'s f16 decode always goes through the iterator protocol regardless
+of the map-fn, boxing 622M elements and OOMing even with a 16 GB heap; (2)
+Node's `fs.readFileSync` hard-refuses files over 2 GiB
+(`ERR_FS_FILE_TOO_LARGE`), and the real `trace.bin` (2,488,012,800 bytes)
+is over that ceiling — no dtype cleared both (f16 hit bug 1, f32 hit bug
+2, including for `trace.bin` itself). That first pass worked around both
+with data reformatting only (block-averaging to 356×600×364, comparator
+itself untouched) rather than editing production code, and reported the
+two bugs as backlog items. Both are now fixed at `e9dd16a64`
+(`fix(mcpm-workbench): comparator reads anchor-scale cubes — chunked IO,
+loop decode` — new `decodeF16.ts`/`readFileChunked.ts`, see
+task-T22-report.md's "Fix round 3"). The numbers below are the **real,
+unmodified comparator run directly against the full 712×1200×728 anchor**
+— no downsampling, no reformatting, the same `.npy` exports the original
+run produced.
 
-1. `compareTraceCubes.ts:82`, `readTraceCube.ts:40` —
-   `Float32Array.from(uint16Bits, (b) => f16BitsToFloat(b))`. Per spec,
-   `%TypedArray%.from` on a source with `Symbol.iterator` (every typed array)
-   always goes through the iterator protocol regardless of the map-fn,
-   materialising every element as a boxed value first. At 622M elements this
-   is catastrophic — confirmed empirically: `NODE_OPTIONS=--max-old-space-size=16384`
-   still crashes with `FATAL ERROR: invalid array length ... JavaScript heap
-out of memory` (stack: `Builtins_IterableToList` → `Builtins_TypedArrayFrom`)
-   — a young-gen allocation-churn failure, not an old-space budget the heap
-   flag can buy past. Blocks any f16 `.npy` side (our own exports) at full
-   resolution.
-2. Node's own `fs.readFileSync` refuses files over 2 GiB
-   (`ERR_FS_FILE_TOO_LARGE`) — confirmed directly:
-   `node -e "require('fs').readFileSync('data/raw/mcpm/trace.bin')"` →
-   `File size (2488012800) is greater than 2 GiB`. `readTraceCube.ts`'s
-   unconditional `readFileSync(filePath)` can't load the real anchor **at
-   all**, independent of dtype, resolution choice, or memory available —
-   the anchor's own fixed size is the problem. Widening our f16 exports to
-   f32 (2.49 GB) to dodge bug 1 lands squarely in bug 2 instead.
-
-No dtype clears both at 712×1200×728: f16 triggers the OOM, f32 exceeds the
-read ceiling — including for the real `trace.bin`, so **the comparator
-cannot run at full anchor resolution on any leg, for any input.** Both are
-genuine bugs in `tools/mcpm-workbench/validate/`, not fixed here per the
-task's no-production-edits constraint; flagged below for the backlog.
-
-**Workaround (data reformatting only, comparator itself untouched and
-unmodified).** `t23-artifacts/downsampleForCompare.ts` reads `trace.bin` and
-both runs' `.npy` exports in bounded chunks (`fs.openSync`/`readSync`, ≤512 MB
-per call — the same technique that dodges the >2 GiB _write_ ceiling on the
-export side), block-averages 2×2×2 (712×1200×728 → 356×600×364, same
-x-fastest `index = z·ny·nx + y·nx + x` convention `axisMarginals.ts` already
-documents), and writes plain small f32 `.npy` + sidecar files. The **real,
-unmodified** `compareTraceCubes.ts` then runs end-to-end on those, through
-its already-correct f32 code path — this changes storage format and
-resolution, never a measured value, and is exactly the resolution-step-down
-contingency the brief already names ("state clearly which comparisons are
-valid at your resolution"); the reason here is a comparator I/O ceiling
-rather than a GPU budget refusal, but the remedy is identical. **All Phase 3
-numbers below are at 356×600×364 (voxel size 1.5626 Mpc), not the anchor's
-native 712×1200×728** — the histogram/marginal statistics are
-resolution-normalized by design (T22), but the two-run floor and the
-vs-fork comparison are only valid AT this shared downsampled resolution
-against each other, not against any other run's numbers at a different
-resolution.
-
-### Floor — two runs, same config, seeds 1 vs 2 (n=2)
+### Floor — two runs, same config, seeds 1 vs 2 (n=2), full 712×1200×728
 
 | statistic                          | value                           |
 | ---------------------------------- | ------------------------------- |
-| logHistogram TV                    | 0.0002                          |
-| dataPointHistogram TV              | 0.0024                          |
-| marginal max rel. dev. (x, y, z)   | 0.0050, 0.0078, 0.0446          |
-| meanLogTraceAtPoints (seed 1 vs 2) | 0.42388 vs 0.42322 (0.16% rel.) |
+| logHistogram TV                    | 0.0001                          |
+| dataPointHistogram TV              | 0.0007                          |
+| marginal max rel. dev. (x, y, z)   | 0.0068, 0.0117, 0.0546          |
+| meanLogTraceAtPoints (seed 1 vs 2) | 0.22226 vs 0.22146 (0.36% rel.) |
 
-Racy-deposit noise is small and consistent across both seeds; the z-axis
-marginal is the noisiest floor statistic (~9× the x-axis one) — plausibly
-the line-of-sight axis catching more shot noise from fewer independent
-agent passes per slice, not investigated further here.
+Same shape as the earlier downsampled floor: small, consistent noise, z the
+noisiest marginal axis (~8× the x-axis one).
 
-### Workbench vs. fork (each run vs. `trace.bin`, both seeds agree)
+### Workbench vs. fork (each run vs. `trace.bin`, both seeds agree), full 712×1200×728
 
 | statistic                                 | value                  | vs. floor |
 | ----------------------------------------- | ---------------------- | --------- |
-| logHistogram TV                           | 0.1359                 | ~600×     |
-| dataPointHistogram TV                     | 0.9816                 | ~410×     |
-| marginal max rel. dev. (x, y, z)          | 1.0000, 1.0000, 1.0000 | ~20–200×  |
-| meanLogTraceAtPoints (fork vs. workbench) | 6.696 vs 0.424 (15.8×) | —         |
+| logHistogram TV                           | 0.0721                 | ~1116×    |
+| dataPointHistogram TV                     | 0.9909                 | ~1484×    |
+| marginal max rel. dev. (x, y, z)          | 1.0000, 1.0000, 1.0000 | ~18–147×  |
+| meanLogTraceAtPoints (fork vs. workbench) | 7.137 vs 0.222 (32.1×) | —         |
 
-Both seeds land on near-identical vs-fork numbers (logHistogram TV differs
-in the 4th decimal), so this is a systematic disagreement, not noise.
+Both seeds land on identical vs-fork numbers to 4 decimal places — a
+systematic disagreement, not noise.
 
-**Derived acceptance band (3× the measured floor — n=2, so treat as a first
-approximation, not a settled constant):** logHistogram TV ≤ 0.0007,
-dataPointHistogram TV ≤ 0.0072, marginal max rel. dev. ≤ 0.134,
-meanLogTraceAtPoints rel. diff. ≤ 0.5%. **Every vs-fork statistic misses
-this band by two to three orders of magnitude** — the exact multiplier
-chosen for the band is immaterial to that verdict.
+**Derived acceptance band (3× the full-resolution floor — n=2, so treat as
+a first approximation, not a settled constant):** logHistogram TV ≤
+0.0002, dataPointHistogram TV ≤ 0.0020, marginal max rel. dev. ≤ 0.164,
+meanLogTraceAtPoints rel. diff. ≤ 1.1%. **Every vs-fork statistic misses
+this band by three orders of magnitude** — the exact multiplier chosen for
+the band is immaterial to that verdict.
+
+**Downsampled cross-check (356×600×364, the first pass's workaround
+resolution) — kept because the deltas between the two resolutions are
+themselves informative, not because the downsampled numbers are
+load-bearing:**
+
+| statistic                       | downsampled | full-res | direction                |
+| ------------------------------- | ----------- | -------- | ------------------------ |
+| logHistogram TV (vs-fork)       | 0.1359      | 0.0721   | **improves** at full res |
+| dataPointHistogram TV (vs-fork) | 0.9816      | 0.9909   | worsens slightly         |
+| meanLogTraceAtPoints ratio      | 15.8×       | 32.1×    | **worsens** at full res  |
+| total trace mass ratio (a ÷ b)  | 9.3×        | 9.28×    | resolution-stable        |
+
+Total trace mass is resolution-stable (9.3× at both scales) — an
+integrated quantity, robust to block-averaging, so this is very likely a
+real, resolution-independent magnitude difference rather than a
+downsampling artifact. The point-sampled statistics are not stable: going
+to full resolution roughly **doubles** the `meanLogTraceAtPoints` gap
+(nearest-voxel sampling is more sensitive to exact point-to-voxel
+alignment at finer voxel size) while `logHistogramTV` (whole-cube shape,
+dominated by the vast near-zero background) actually improves. Reading
+either resolution's numbers alone would understate one of these two
+effects — worth keeping both rows.
 
 **Diagnostic evidence, not yet root-caused (open items for the backlog /
-T24 quirk-strip):**
+T24 quirk-strip) — reconfirmed at full resolution, unchanged in kind:**
 
 - The anchor's per-axis marginals are **exactly zero** in the outermost
-  ~40 bins on every axis (both ends, all three axes); the workbench's are
-  not (a flat ~200–380k/slice floor reaching every edge). This alone
-  explains the marginal max-rel-dev pinning at 1.0000 (an edge bin with
-  `a=0, b>0` trivially maxes the ratio) but not the magnitude gap below.
-- Total trace mass: anchor ≈9.3× the workbench's, at this resolution.
-  `meanLogTraceAtPoints` similarly off by ~15.8×. The packed catalog's own
-  point cloud sits well inside the box with tens of Mpc of margin on every
-  side (its metadata bounds vs. the box bounds), so the zero-edge shells
-  are not simply "no agent ever reaches there" on the fork's side while
-  ours does — worth checking against the fork's actual boundary handling
-  before assuming it's a workbench bug.
+  ~80–85 bins on every axis (both ends, all three axes, at full
+  resolution — roughly double the ~40-bin downsampled count, i.e. the same
+  physical margin at 2× the voxel density); the workbench's are not (a
+  flat, non-zero floor reaching every edge). This alone explains the
+  marginal max-rel-dev pinning at 1.0000 (an edge bin with `a=0, b>0`
+  trivially maxes the ratio) but not the magnitude gap below.
+- Total trace mass: anchor ≈9.28× the workbench's (full resolution,
+  matching the downsampled run's ≈9.3× almost exactly — see the
+  cross-check table above). The packed catalog's own point cloud sits well
+  inside the box with tens of Mpc of margin on every side (its metadata
+  bounds vs. the box bounds), so the zero-edge shells are not simply "no
+  agent ever reaches there" on the fork's side while ours does — worth
+  checking against the fork's actual boundary handling before assuming
+  it's a workbench bug.
 - `data/raw/mcpm/export_metadata.txt`'s data-point count (324,849) and the
   packed catalog sidecar's declared count (324,901, used here) differ by
   52 points — the two files are related but not byte-identical exports;
   not investigated further.
-
-**Backlog candidates (comparator bugs, confirmed but not fixed here):**
-`compareTraceCubes.ts`'s and `readTraceCube.ts`'s f16 decode via
-`TypedArray.from(bits, mapFn)` needs a plain loop instead (OOMs at anchor
-scale); `readTraceCube.ts`'s `readFileSync` needs chunked reads (the anchor
-itself exceeds Node's 2 GiB `readFileSync` ceiling).
+- New this round: `meanLogTraceAtPoints` disagrees more, not less, at full
+  resolution (32.1× vs the downsampled run's 15.8×), while the whole-cube
+  `logHistogramTV` disagrees less (0.0721 vs 0.1359). The two statistics
+  are answering different questions (point-sampled vs. whole-volume shape)
+  and shouldn't be expected to track each other — flagging so a future
+  pass doesn't average them into one "resolution improves agreement"
+  conclusion, which the point-sampled numbers directly contradict.
