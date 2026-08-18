@@ -22,6 +22,7 @@ const BOX: GridBox = {
   sizeMpc: [8, 8, 8],
   dims: [8, 8, 8],
   voxelSizeMpc: 1,
+  rotation: [0, 0, 0, 1],
 };
 
 // dims at deriveGridBox's 8-voxel floor, voxelSizeMpc small ⇒ the smallest sane box:
@@ -36,6 +37,7 @@ const SMALL_BOX: GridBox = {
   sizeMpc: [4, 4, 4],
   dims: [8, 8, 8],
   voxelSizeMpc: 0.5,
+  rotation: [0, 0, 0, 1],
 };
 
 describe('pickGizmoHandle', () => {

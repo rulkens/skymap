@@ -1,4 +1,5 @@
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../src/@types/math/Vec4';
 
 /**
  * GridBox — placement and cubic voxel size of the MCPM simulation grid.
@@ -13,4 +14,5 @@ export type GridBox = {
   readonly sizeMpc: Vec3; // dims × voxelSizeMpc, exactly
   readonly dims: Vec3; // each a multiple of 8
   readonly voxelSizeMpc: number; // cubic, by construction
+  readonly rotation: Readonly<Vec4>; // quaternion [x,y,z,w], identity [0,0,0,1]
 };

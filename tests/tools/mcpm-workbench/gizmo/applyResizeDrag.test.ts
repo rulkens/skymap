@@ -12,6 +12,7 @@ const BOX: GridBox = {
   sizeMpc: [8, 8, 8],
   dims: [8, 8, 8],
   voxelSizeMpc: 1,
+  rotation: [0, 0, 0, 1],
 };
 
 describe('applyResizeDrag', () => {

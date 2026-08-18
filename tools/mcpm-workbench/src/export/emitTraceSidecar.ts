@@ -57,6 +57,10 @@ export function emitTraceSidecar(input: {
     dims: box.dims,
     origin_mpc: originMpc,
     voxel_size_mpc: [box.voxelSizeMpc, box.voxelSizeMpc, box.voxelSizeMpc],
+    // Honest metadata, not an instruction the importer acts on (spec §8's non-goal) —
+    // buildRhizomeVolume/the comparator keep treating the cube as the flat grid-space
+    // array it is; a downstream consumer that cares reads this and applies it itself.
+    rotation: box.rotation,
     voxel_order: 'c-order',
     frame: 'equatorial-cartesian',
     value_units: 'mcpm-trace-density',

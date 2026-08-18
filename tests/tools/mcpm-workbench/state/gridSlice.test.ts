@@ -29,6 +29,7 @@ const IMPORTED_BOX: GridBox = {
   sizeMpc: [300, 300, 300],
   dims: [256, 256, 256],
   voxelSizeMpc: 1.171875,
+  rotation: [0, 0, 0, 1],
 };
 
 const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };

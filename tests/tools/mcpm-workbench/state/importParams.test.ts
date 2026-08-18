@@ -30,6 +30,7 @@ const GRID_BOX: GridBox = {
   sizeMpc: [712, 1200, 728],
   dims: [712, 1200, 728],
   voxelSizeMpc: 1,
+  rotation: [0, 0, 0, 1],
 };
 
 const SOURCES = [Source.SDSS, Source.TwoMRS] as const;
@@ -67,6 +68,57 @@ describe('importParams', () => {
     const imported = importParams(JSON.stringify(preset));
 
     expect(imported.sources).toBeUndefined();
+  });
+
+  it('defaults a missing rotation field to identity', () => {
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'aroundData',
+      gridBox: GRID_BOX,
+      sources: SOURCES,
+    });
+    const preset = JSON.parse(json) as { gridBox: Record<string, unknown> };
+    delete preset.gridBox.rotation;
+
+    const imported = importParams(JSON.stringify(preset));
+
+    expect(imported.gridBox.rotation).toEqual([0, 0, 0, 1]);
+  });
+
+  it('rejects a non-unit rotation quaternion, naming the field', () => {
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'aroundData',
+      gridBox: GRID_BOX,
+      sources: SOURCES,
+    });
+    const preset = JSON.parse(json) as { gridBox: GridBox };
+    preset.gridBox = { ...preset.gridBox, rotation: [0, 0, 0, 2] };
+
+    expect(() => importParams(JSON.stringify(preset))).toThrow(/rotation/i);
+  });
+
+  it('round-trips a non-identity rotation', () => {
+    // 90° about Y — a genuine unit quaternion, not identity, so this exercises
+    // exportParams and importParams as two independent implementations rather
+    // than a value that would pass even if rotation were dropped silently.
+    const rotatedBox: GridBox = {
+      ...GRID_BOX,
+      rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
+    };
+    const json = exportParams({
+      params: PARAMS,
+      agentCount: 5_300_000,
+      initMode: 'aroundData',
+      gridBox: rotatedBox,
+      sources: SOURCES,
+    });
+
+    const imported = importParams(json);
+
+    expect(imported.gridBox.rotation).toEqual(rotatedBox.rotation);
   });
 
   it('rejects a "sources" entry that is not a known workbench source id', () => {
@@ -118,6 +170,7 @@ describe('importParams', () => {
       sizeMpc: [100, 100, 100],
       dims: [100, 100, 100],
       voxelSizeMpc: 1,
+      rotation: [0, 0, 0, 1],
     };
 
     expect(() => importParams(JSON.stringify(preset))).toThrow(/multiple/i);
@@ -137,6 +190,7 @@ describe('importParams', () => {
       sizeMpc: [8.5, 8, 8],
       dims: [8.5, 8, 8],
       voxelSizeMpc: 1,
+      rotation: [0, 0, 0, 1],
     };
 
     expect(() => importParams(JSON.stringify(preset))).toThrow(/multiple/i);

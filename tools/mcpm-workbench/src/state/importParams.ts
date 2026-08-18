@@ -3,6 +3,7 @@ import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { DECAY_WG_EDGE } from '../sim/encodeStep';
 import { WORKBENCH_SOURCES } from './slices/catalogSlice';
 import { MCPM_PARAM_KEYS, MCPM_PARAMS_FORMAT, MCPM_PARAMS_VERSION } from './exportParams';
@@ -49,6 +50,34 @@ function vec3(obj: Record<string, unknown>, field: string): Vec3 {
     fail(`"${field}" must be an array of 3 finite numbers`);
   }
   return v as Vec3;
+}
+
+// Quaternion magnitude tolerance (spec §7): catches a hand-edited or drifted
+// rotation here, before a non-unit quaternion reaches rotateVec3ByQuat and
+// silently scales rather than rotates.
+const QUAT_MAGNITUDE_TOLERANCE = 0.01;
+const IDENTITY_ROTATION: Vec4 = [0, 0, 0, 1];
+
+/** Optional field (spec §8): absent ⇒ identity, the same backward-compat pattern
+ * as `sources` — every sidecar/preset written before rotation existed stays
+ * valid. Present ⇒ shape-checked as 4 finite numbers, then asserted unit-length
+ * (the one property GridBox.rotation's rotateVec3ByQuat contract depends on). */
+function vec4(obj: Record<string, unknown>, field: string): Vec4 {
+  const v = obj[field];
+  if (v === undefined) return IDENTITY_ROTATION;
+  if (
+    !Array.isArray(v) ||
+    v.length !== 4 ||
+    v.some((n) => typeof n !== 'number' || !Number.isFinite(n))
+  ) {
+    fail(`"${field}" must be an array of 4 finite numbers`);
+  }
+  const [x, y, z, w] = v as Vec4;
+  const magnitude = Math.sqrt(x * x + y * y + z * z + w * w);
+  if (Math.abs(magnitude - 1) > QUAT_MAGNITUDE_TOLERANCE) {
+    fail(`"${field}" must be a unit quaternion — magnitude ${magnitude.toFixed(4)} is not ≈ 1`);
+  }
+  return v as Vec4;
 }
 
 /** Optional field (S15): absent ⇒ undefined, "leave selection unchanged". Present ⇒
@@ -109,6 +138,7 @@ export function importParams(json: string): ImportedParams {
   const sizeMpc = vec3(g, 'sizeMpc');
   const dims = vec3(g, 'dims');
   const voxelSizeMpc = num(g, 'voxelSizeMpc');
+  const rotation = vec4(g, 'rotation');
   if (dims.some((d) => d <= 0)) fail('"gridBox.dims" must be positive on every axis');
   // encodeStep.ts's decay-pass dispatch computes box.dims[i] / DECAY_WG_EDGE with no
   // bounds tail — a dims value that isn't an exact multiple silently truncates the
@@ -138,7 +168,7 @@ export function importParams(json: string): ImportedParams {
     params: params as McpmParams,
     agentCount,
     initMode,
-    gridBox: { centerMpc, sizeMpc, dims, voxelSizeMpc },
+    gridBox: { centerMpc, sizeMpc, dims, voxelSizeMpc, rotation },
     ...(sources !== undefined ? { sources } : {}),
   };
 }

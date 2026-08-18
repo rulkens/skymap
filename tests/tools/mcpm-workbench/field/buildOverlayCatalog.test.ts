@@ -20,6 +20,7 @@ const box: GridBox = {
   sizeMpc: [16, 16, 16],
   dims: [8, 8, 8],
   voxelSizeMpc: 2,
+  rotation: [0, 0, 0, 1],
 };
 
 const sum = (a: Float32Array): number => {

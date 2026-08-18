@@ -13,6 +13,7 @@ const boxOf = (dims: Vec3): GridBox => ({
   sizeMpc: [dims[0], dims[1], dims[2]],
   dims,
   voxelSizeMpc: 1,
+  rotation: [0, 0, 0, 1],
 });
 
 // Well past anything a real adapter reports, so nothing refuses for size alone.

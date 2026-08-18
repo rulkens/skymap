@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { deriveGridBox } from '../../../../tools/mcpm-workbench/src/field/deriveGridBox';
 import { defaultGridSlice } from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
 
@@ -41,6 +42,7 @@ describe('deriveGridBox', () => {
       sizeMpc: [80, 80, 80] as Vec3,
       dims: [40, 40, 40] as Vec3,
       voxelSizeMpc: 2,
+      rotation: [0, 0, 0, 1] as Vec4,
     };
     const box = deriveGridBox({ ...defaultGridSlice, importedBox });
     expect(box).toEqual(importedBox);

@@ -65,6 +65,7 @@ describe('emitTraceSidecar', () => {
       sizeMpc: [712, 1200, 728],
       dims: [712, 1200, 728],
       voxelSizeMpc: 1,
+      rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
     };
     const producedAt = new Date(2026, 7, 18, 14, 2, 11); // 2026-08-18T14:02:11 local
     const text = emitTraceSidecar({
@@ -87,6 +88,7 @@ describe('emitTraceSidecar', () => {
       dims: [712, 1200, 728],
       origin_mpc: [-712, -1200, -728],
       voxel_size_mpc: [1, 1, 1],
+      rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
       voxel_order: 'c-order',
       frame: 'equatorial-cartesian',
       value_units: 'mcpm-trace-density',

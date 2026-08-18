@@ -13,6 +13,7 @@ const box: GridBox = {
   sizeMpc: [24, 16, 8],
   dims: [24, 16, 8],
   voxelSizeMpc: 1,
+  rotation: [0, 0, 0, 1],
 };
 
 describe('worldToBoxLocal', () => {

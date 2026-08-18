@@ -38,5 +38,5 @@ export function autoFitGridBox(
     (bounds.min[2] + bounds.max[2]) / 2,
   ];
 
-  return { centerMpc, sizeMpc, dims, voxelSizeMpc };
+  return { centerMpc, sizeMpc, dims, voxelSizeMpc, rotation: [0, 0, 0, 1] };
 }
