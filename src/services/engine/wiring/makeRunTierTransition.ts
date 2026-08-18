@@ -8,9 +8,9 @@
  * change, packaged as a `RunTierTransition` the root saga calls through its
  * injected `SagaContext`. The saga owns the WRITE (it dispatched the `tier`
  * slice action and computed `prev`/`next`); this runner owns the EFFECT
- * (cancel + re-fetch each source's `.bin`, reload MCPM, rebuild the hi-res
- * famous texture). No dispatch here, and no `selectTier` read — prev/next
- * arrive as params so the saga is the single source of the diff.
+ * (cancel + re-fetch each source's `.bin`, reload MCPM + Polyphorm2MRS, rebuild
+ * the hi-res famous texture). No dispatch here, and no `selectTier` read —
+ * prev/next arrive as params so the saga is the single source of the diff.
  *
  * ## Why a factory closing over EngineState
  *
@@ -70,6 +70,10 @@ export function makeRunTierTransition(
     // MCPM volume is tier-aware (unlike CF-4); same per-tier reload via the
     // AssetSlot machinery.
     void state.assetSlots.mcpm?.load({ tier: nextTier });
+
+    // Polyphorm2MRS is tier-aware like MCPM (same physical quantity, same
+    // per-tier `.scfd` variants), so it gets the same per-tier reload.
+    void state.assetSlots.polyphorm2Mrs?.load({ tier: nextTier });
 
     // Star catalogs are tier-aware like MCPM, but per-source and demand-loaded.
     // This runner (not reevaluateDemand, whose idle-guard deliberately leaves

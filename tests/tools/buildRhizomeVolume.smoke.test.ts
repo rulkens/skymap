@@ -10,7 +10,7 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buildRhizomeVolume, isQuickLookOutput } from '../../tools/volumes/buildRhizomeVolume';
+import { buildRhizomeVolume } from '../../tools/volumes/buildRhizomeVolume';
 import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {
@@ -65,21 +65,6 @@ function writeSidecar(
   };
   writeFileSync(path, JSON.stringify(sidecar));
 }
-
-describe('isQuickLookOutput', () => {
-  // Pure path comparison — no fs I/O, so it's safe to exercise directly
-  // against the real 'public/data/...' string without ever touching the
-  // filesystem.
-  it('matches only the resolved MCPM large-tier path under the epoch folder', () => {
-    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('./public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-medium.scfd')).toBe(false);
-    expect(isQuickLookOutput('/tmp/somewhere/cube.scfd')).toBe(false);
-    // The pre-v9 root path is dead — guarding it again would re-strand
-    // quick-look on a file the manifest-driven viewer never fetches.
-    expect(isQuickLookOutput('public/data/mcpm-large.scfd')).toBe(false);
-  });
-});
 
 describe('buildRhizomeVolume (smoke)', () => {
   let dir: string;

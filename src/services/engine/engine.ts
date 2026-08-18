@@ -506,6 +506,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Default-off 2MRS Polyphorm density volume; tier-aware like mcpm.
+      polyphorm2Mrs: null,
       // Constellation stick-figure artifact; demand-loaded on its master gate.
       constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),

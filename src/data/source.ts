@@ -229,4 +229,12 @@ export const Source = {
    * field needs a wider layout.
    */
   ZoneOfAvoidance: 29,
+  /**
+   * Polyphorm ("2MRS Polyphorm") cosmic-web density volume — a test field
+   * for a Polyphorm-derived run over the 2MRS footprint. Registry-key-only
+   * code (not persisted, not pickable); the entry carries its presentation
+   * defaults like CF-4/MCPM. Default-off — it's a test field the user
+   * toggles on. Appended at 30 — never renumber the codes below it.
+   */
+  Polyphorm2MRS: 30,
 } as const;

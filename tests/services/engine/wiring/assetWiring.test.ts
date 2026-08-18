@@ -94,6 +94,7 @@ describe('ASSET_WIRING membership', () => {
       'filaments',
       'mcpm',
       'cf4Density',
+      'polyphorm2Mrs',
       'flow',
       'constellations',
       'structureCatalog',
@@ -194,6 +195,17 @@ describe('ASSET_WIRING demand predicates', () => {
     ).toBe(true);
     // Default-off (field absent) ⇒ false.
     expect(mcpm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
+  });
+
+  it('polyphorm2Mrs demand follows its field-enabled flag', () => {
+    const polyphorm2Mrs = rowFor('polyphorm2Mrs');
+    expect(
+      polyphorm2Mrs.demand(
+        makeCtx({ settings: { volumes: { items: { 'polyphorm-2mrs': { enabled: true } } } } }),
+      ),
+    ).toBe(true);
+    // Default-off (field absent) ⇒ false.
+    expect(polyphorm2Mrs.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
@@ -375,6 +387,7 @@ describe('ASSET_WIRING req builders', () => {
     expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
     expect(rowFor('filaments').req('medium')).toEqual({ tier: 'medium' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
+    expect(rowFor('polyphorm2Mrs').req('large')).toEqual({ tier: 'large' });
   });
 
   it('structureCatalog req is the empty request', () => {

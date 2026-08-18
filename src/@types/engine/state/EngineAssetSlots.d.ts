@@ -20,6 +20,7 @@ import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
+import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
@@ -58,6 +59,11 @@ export type EngineAssetSlots = {
   mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
   /** CF4++ `flowfield.scfd`, SCFD v3 `channels = 4`: rgb = velocity, a = overdensity δ. Tier-agnostic, default-off. */
   flow: AssetSlot<ScalarCube, void> | null;
+  /**
+   * `polyphorm-2mrs-{small,medium,large}.scfd` — 2MRS Polyphorm-derived cosmic-web
+   * density volume. Tier-aware like `mcpm`, default-off.
+   */
+  polyphorm2Mrs: AssetSlot<ScalarCube, Polyphorm2MRSReq> | null;
   /**
    * Opt-in on `settings.constellations.enabled`. The commit uploads the static
    * segment buffer and kicks `syncVisibilityFades`, ramping the seeded-0
