@@ -141,6 +141,7 @@ import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
+import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 
 /**
@@ -180,7 +181,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // a=1 row here would be a silent visual change.
     {
       id: 'hdr',
-      format: 'rgba16float',
+      format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 1,
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
@@ -188,7 +189,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // Half-res additive raymarch starts from zero coverage.
     {
       id: 'volume',
-      format: 'rgba16float',
+      format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
@@ -196,7 +197,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // Zone-of-avoidance band raymarch — same reason as `volume`.
     {
       id: 'zoa',
-      format: 'rgba16float',
+      format: HDR_TARGET_FORMAT,
       depth: null,
       scale: ZONE_OF_AVOIDANCE_DIVISOR,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
@@ -204,7 +205,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // Same reason as `volume`.
     {
       id: 'star-aggregates',
-      format: 'rgba16float',
+      format: HDR_TARGET_FORMAT,
       depth: null,
       scale: STAR_AGGREGATE_DIVISOR,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
@@ -213,7 +214,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // billboards draw additively into this row.
     {
       id: 'mw-aggregate',
-      format: 'rgba16float',
+      format: HDR_TARGET_FORMAT,
       depth: null,
       scale: (state) => state.settings.milkyWay.aggregateDivisor,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
@@ -223,8 +224,8 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // composites to a no-op rather than a black wash over the background.
     {
       id: 'foreground:0',
-      format: 'rgba16float',
-      depth: 'depth32float',
+      format: HDR_TARGET_FORMAT,
+      depth: FOREGROUND_DEPTH_FORMAT,
       scale: 1,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
@@ -242,7 +243,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       { length: BLOOM_LEVELS },
       (_unused, n): RenderTargetSpec => ({
         id: `bloom${n}`,
-        format: 'rgba16float',
+        format: HDR_TARGET_FORMAT,
         depth: null,
         scale: bloomScale(n),
         clearValue: { r: 0, g: 0, b: 0, a: 0 },
