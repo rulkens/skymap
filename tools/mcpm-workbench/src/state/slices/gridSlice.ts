@@ -43,9 +43,21 @@ export function setManualSizeMpc(prev: GridSlice, manualSizeMpc: Vec3): GridSlic
   return { ...prev, manualSizeMpc, importedBox: null };
 }
 
-/** V3's load-side setter: installs a preset's grid box verbatim. */
-export function setImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
-  return { ...prev, importedBox };
+/**
+ * installImportedBox — V3's load-side setter: installs a preset's grid box
+ * verbatim AND syncs the manual center/size fields to match, so the sliders
+ * (which read manualCenterMpc/manualSizeMpc directly, not importedBox) show
+ * the loaded values instead of stale ones (S17). importedBox still wins in
+ * deriveGridBox until a later edit clears it — this sync only makes a later
+ * slider nudge continue FROM the imported box instead of snapping to it.
+ */
+export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
+  return {
+    ...prev,
+    importedBox,
+    manualCenterMpc: importedBox.centerMpc,
+    manualSizeMpc: importedBox.sizeMpc,
+  };
 }
 
 /**

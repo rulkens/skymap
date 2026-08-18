@@ -30,7 +30,7 @@ import {
   WORKBENCH_SOURCES,
 } from '../state/slices/catalogSlice';
 import { exportParams } from '../state/exportParams';
-import { setImportedBox } from '../state/slices/gridSlice';
+import { installImportedBox } from '../state/slices/gridSlice';
 import { setSampleRandomly } from '../state/slices/histogramSlice';
 import { importParams } from '../state/importParams';
 import {
@@ -379,7 +379,7 @@ function ControlsPanel(): ReactNode {
             { ...s.sim, params: imported.params, initMode: imported.initMode },
             imported.agentCount,
           ),
-          grid: setImportedBox(s.grid, imported.gridBox),
+          grid: installImportedBox(s.grid, imported.gridBox),
           // Folded into this same update, not a follow-up setState: Viewport's
           // subscriber branches on catalog identity FIRST when both catalogKey and
           // buildKey move together, and buildOnce always re-reads deriveGridBox(s.grid)

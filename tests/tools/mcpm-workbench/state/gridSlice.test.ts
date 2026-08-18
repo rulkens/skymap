@@ -13,6 +13,7 @@ import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import {
   defaultGridSlice,
   fitBoxToCatalog,
+  installImportedBox,
   setDivisor,
   setManualCenterMpc,
   setManualSizeMpc,
@@ -48,6 +49,20 @@ describe('gridSlice setters clear importedBox on any user edit', () => {
   it('fitBoxToCatalog clears it', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
     expect(fitBoxToCatalog(withImportedBox, bounds).importedBox).toBeNull();
+  });
+});
+
+describe('installImportedBox', () => {
+  it('syncs manualCenterMpc/manualSizeMpc to the imported box while installing it (S17)', () => {
+    const next = installImportedBox(defaultGridSlice, IMPORTED_BOX);
+    expect(next.importedBox).toEqual(IMPORTED_BOX);
+    expect(next.manualCenterMpc).toEqual(IMPORTED_BOX.centerMpc);
+    expect(next.manualSizeMpc).toEqual(IMPORTED_BOX.sizeMpc);
+  });
+
+  it('a subsequent setManualSizeMpc still clears importedBox (V3 ruling stays green)', () => {
+    const loaded = installImportedBox(defaultGridSlice, IMPORTED_BOX);
+    expect(setManualSizeMpc(loaded, [50, 50, 50]).importedBox).toBeNull();
   });
 });
 
