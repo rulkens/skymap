@@ -13,6 +13,11 @@ const ceil8 = (n: number): number => Math.ceil(n / 8) * 8;
  * are required because the decay kernel dispatches dims/8 with no bounds tail.
  * A manual override is not a second constructor: it derives bounds from a
  * center+size and calls this function, so the invariant survives it.
+ *
+ * `paddingMpc` is real margin, not a voxel-size inflation: every axis's dims
+ * derive from ITS OWN padded extent, so data stays ≥paddingMpc from every
+ * face — deriving dims from the raw extent (padding only in voxelSizeMpc)
+ * left short axes with just ceil8 slack, pinning data to the box faces.
  */
 export function autoFitGridBox(
   bounds: { min: Vec3; max: Vec3 },
@@ -28,15 +33,11 @@ export function autoFitGridBox(
   const voxelSizeMpc = (longestExtent + 2 * paddingMpc) / longAxisTarget;
 
   const dims: Vec3 = [
-    ceil8(extent[0] / voxelSizeMpc),
-    ceil8(extent[1] / voxelSizeMpc),
-    ceil8(extent[2] / voxelSizeMpc),
+    ceil8((extent[0] + 2 * paddingMpc) / voxelSizeMpc),
+    ceil8((extent[1] + 2 * paddingMpc) / voxelSizeMpc),
+    ceil8((extent[2] + 2 * paddingMpc) / voxelSizeMpc),
   ];
-  const sizeMpc: Vec3 = [
-    dims[0] * voxelSizeMpc,
-    dims[1] * voxelSizeMpc,
-    dims[2] * voxelSizeMpc,
-  ];
+  const sizeMpc: Vec3 = [dims[0] * voxelSizeMpc, dims[1] * voxelSizeMpc, dims[2] * voxelSizeMpc];
   const centerMpc: Vec3 = [
     (bounds.min[0] + bounds.max[0]) / 2,
     (bounds.min[1] + bounds.max[1]) / 2,

@@ -57,4 +57,23 @@ describe('autoFitGridBox', () => {
     expect(perAxis[1]).toBe(perAxis[0]);
     expect(perAxis[2]).toBe(perAxis[0]);
   });
+
+  it('keeps at least paddingMpc of margin on every axis, not just the longest', () => {
+    // Non-cubic bounds so the short axes are the ones at risk: the bug computed
+    // voxelSizeMpc from the padded longest extent but sized every axis's dims
+    // from its RAW extent, so data on a short axis could sit within ceil8
+    // slack of the box face — padding inflated voxel size instead of buying
+    // real margin.
+    const padding = 5;
+    const box = autoFitGridBox({ min: [0, 0, 0], max: [100, 50, 30] }, 64, padding);
+    for (let i = 0; i < 3; i++) {
+      const extent = [100, 50, 30][i]!;
+      const margin = (box.sizeMpc[i]! - extent) / 2;
+      expect(margin).toBeGreaterThanOrEqual(padding);
+    }
+    const perAxis = box.sizeMpc.map((s, i) => s / box.dims[i]!);
+    expect(perAxis[1]).toBe(perAxis[0]);
+    expect(perAxis[2]).toBe(perAxis[0]);
+    for (const d of box.dims) expect(d % 8).toBe(0);
+  });
 });
