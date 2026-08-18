@@ -5,25 +5,15 @@ import type { CatalogPoints } from './CatalogPoints';
 
 /**
  * CatalogSlice — which v9 catalogs feed the sim, and what the last load
- * produced. `weightMode` mirrors `deriveAgentWeights`'s own union so a
- * slice value can be passed straight through with no re-mapping.
- * `pointCount`/`nanFillCount` are the load's own report — the HUD's NaN
- * fraction is `nanFillCount / pointCount`, computed at the display site
- * rather than stored (it's derived, not state).
- *
- * `packedOverride` carries a dev-drop's parsed Polyphorm-fork catalog
- * (spec §9) — set once App.tsx installs a drop, cleared never (a session
- * that drops in stays on the packed catalog). `packedSourceName` is its
- * filename, for the HUD/status line. `packedDropId` is a monotonic counter
- * `setPackedCatalog` bumps on every install — the fork names its export
- * file identically across runs, so a filename alone can't tell two
- * different drops apart; a rebuild-trigger key needs this instead.
- *
- * `catalogBoundsMpc` is `catalogBounds` over the last load's positions —
- * cached here (not recomputed from the Float32Array) so `deriveGridBox`
- * can derive the SAME auto-fit box from state alone, for both Viewport's
- * build and the grid panel's live dims readout. Null until a load lands
- * or lands empty.
+ * produced. `weightMode` mirrors `deriveAgentWeights`'s own union for a
+ * no-remap pass-through. `nanFillCount / pointCount` is the NaN fraction,
+ * computed at the display site rather than stored. `packedOverride` is a
+ * dev-drop's parsed fork catalog — sticky for the session, cleared never;
+ * `packedDropId` bumps on every install since the fork's export filename
+ * repeats across runs, so it's the only reliable rebuild-trigger key.
+ * `catalogBoundsMpc` is cached (not recomputed from positions) so
+ * `deriveGridBox` derives the SAME box for Viewport's build and the grid
+ * panel's live readout.
  */
 export type CatalogSlice = {
   readonly sources: readonly SourceType[];

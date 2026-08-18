@@ -298,7 +298,7 @@ const PATHTRACER_SLIDERS: readonly PathTracerSliderSpec[] = [
     step: 0.05,
     log: true,
     format: (v) => Math.pow(10, v).toExponential(1),
-    info: "Tracking majorant, log-mapped 1e0–1e5 to reach the field's real scale (packLogTraceVoxels.ts: p99≈320, max≈40000). Below the field's true peak the image undersamples the densest voxels — raise this first if the render looks too dim.",
+    info: "Tracking majorant, log-mapped 1e0–1e5 to reach the field's real scale (packLogTraceVoxels.ts: p99≈320, max≈40000) — fork-faithful default sits below the field's peak (40000) on purpose, clamping the accept probability to 1 in the hottest voxels rather than spending tracking steps resolving them.",
   },
   {
     key: 'exposure',
