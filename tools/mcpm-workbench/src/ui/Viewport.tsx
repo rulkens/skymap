@@ -10,6 +10,7 @@
  * Only structural changes are debounced; params, run tokens and camera are live.
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import type { AgentWeights } from '../../@types/AgentWeights';
 import type { AppState } from '../../@types/AppState';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
@@ -18,6 +19,10 @@ import type { Store } from '../../@types/Store';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
+import { downloadStem } from '../export/downloadStem';
+import { emitTraceSidecar } from '../export/emitTraceSidecar';
+import { exportNpy } from '../export/exportNpy';
+import { triggerDownload } from '../export/triggerDownload';
 import { autoFitGridBox } from '../field/autoFitGridBox';
 import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
@@ -175,6 +180,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let harness: McpmHarness | null = null;
     let renderGraph: RenderGraph | null = null;
     let points: CatalogPoints | null = null;
+    // The T16 export leg's other half of buildFromPoints' local `weights` —
+    // held here so runExport (below) can reach the SAME weights the running
+    // harness was seeded with, not a freshly re-derived copy.
+    let latestWeights: AgentWeights | null = null;
     let loadedCatalogKey = '';
     // REQUESTED, not "last built": the frame loop notifies this subscriber every
     // frame (the step counter is store state), so the guard has to compare against
@@ -185,6 +194,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let building = false;
     let lastResetToken = store.getSnapshot().sim.resetToken;
     let lastClearToken = store.getSnapshot().sim.clearTraceToken;
+    let lastExportToken = store.getSnapshot().sim.exportToken;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
     let boxPreviewUntil = 0;
     // -1 sentinel: skips the first frame's delta, which spans the async catalog
@@ -199,6 +209,43 @@ function Viewport({ store }: ViewportProps): ReactNode {
       renderGraph = null;
       harness?.dispose();
       harness = null;
+    }
+
+    /**
+     * T16 export leg: readback → `.npy` + `polyphy-trace` sidecar from one
+     * `downloadStem`, both via `triggerDownload`. `readbackTrace` refuses
+     * by name (over `maxBufferSize`) rather than throwing mid-copy, but
+     * either way a failure here must not reach the caller — it runs off
+     * the store subscriber, not inside the rAF `frame()` loop, so an
+     * unhandled rejection would only be a silent console error, not a
+     * dead loop; caught explicitly anyway so the failure reads as an
+     * export-specific message, not a generic unhandled-rejection trace.
+     */
+    async function runExport(): Promise<void> {
+      const h = harness;
+      const pts = points;
+      const weights = latestWeights;
+      if (!h || !pts || !weights) return;
+      const s = store.getSnapshot();
+      try {
+        const readback = await h.readbackTrace();
+        const stem = downloadStem(new Date());
+        triggerDownload(`${stem}.npy`, exportNpy(readback), 'application/octet-stream');
+        const sidecar = emitTraceSidecar({
+          box: h.box,
+          points: pts,
+          weights,
+          tier: s.catalog.tier,
+          params: s.sim.params,
+          agentCount: s.sim.agentCount,
+          steps: s.sim.stepCount,
+          seed: s.sim.seed,
+          producedAt: new Date(),
+        });
+        triggerDownload(`${stem}.json`, sidecar, 'application/json');
+      } catch (err) {
+        console.error('mcpm-workbench: export failed', err);
+      }
     }
 
     function startLoop(): void {
@@ -297,8 +344,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
         return;
       }
       harness = h;
+      latestWeights = weights;
       lastResetToken = store.getSnapshot().sim.resetToken;
       lastClearToken = store.getSnapshot().sim.clearTraceToken;
+      lastExportToken = store.getSnapshot().sim.exportToken;
 
       const budget = planGridBudget(
         box,
@@ -408,6 +457,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (s.sim.clearTraceToken !== lastClearToken) {
           lastClearToken = s.sim.clearTraceToken;
           harness.clearTrace();
+        }
+        if (s.sim.exportToken !== lastExportToken) {
+          lastExportToken = s.sim.exportToken;
+          void runExport();
         }
       }
     });
