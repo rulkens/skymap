@@ -262,22 +262,22 @@ unrelated concepts under one name).
 
 **Files:** `src/@types/engine/handles/Disposable.d.ts` (new)
 
-- [ ] Add the type shown above.
-- [ ] `npm run typecheck` — no consumers yet, just confirms the file compiles standalone.
-- [ ] Commit.
+- [x] Add the type shown above.
+- [x] `npm run typecheck` — no consumers yet, just confirms the file compiles standalone.
+- [x] Commit.
 
 ### Task 2 — `GpuHandleKey`, `GpuHandleConstructDeps`, `GpuHandleRow` types
 
 **Files:** `src/@types/engine/handles/GpuHandleKey.d.ts`,
 `GpuHandleConstructDeps.d.ts`, `GpuHandleRow.d.ts` (new)
 
-- [ ] Add the three types shown above. Import `FadeUniformsBgl` /
+- [x] Add the three types shown above. Import `FadeUniformsBgl` /
       `SourceUniformsBgl` / `FocusUniformsBgl` / `GpuContext` /
       `LoadedFontAtlases` / `EngineState` from their existing locations
       (see `EngineGpuHandles.d.ts:51-57` for the import paths this file
       already uses for the same types).
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ### Task 3 — `constructGpuHandles` walker (TDD)
 
@@ -287,17 +287,17 @@ unrelated concepts under one name).
 **Signature:** `constructGpuHandles(rows: readonly GpuHandleRow[], state: EngineState, deps: GpuHandleConstructDeps): void` —
 walks `rows` in array order, calling `state.gpu[row.key] = row.construct(state, deps)` for each.
 
-- [ ] Test `constructGpuHandles calls each row's construct in declared order`
+- [x] Test `constructGpuHandles calls each row's construct in declared order`
       — a fake 3-row array with a shared `order: string[]` each construct
       pushes its key into; assert `order` equals the declared key order.
-- [ ] Test `constructGpuHandles lets a later row read an earlier row's constructed value off state.gpu`
+- [x] Test `constructGpuHandles lets a later row read an earlier row's constructed value off state.gpu`
       — row 2's `construct` reads `state.gpu.<row1Key>` and asserts it is
       already the row-1 stub (not null/undefined) — the load-bearing proof
       of the `starCatalogRenderer` → `starCatalogPickRenderer` dependency
       pattern this walker must support.
-- [ ] Implement.
-- [ ] `npm test -- constructGpuHandles`.
-- [ ] Commit.
+- [x] Implement.
+- [x] `npm test -- constructGpuHandles`.
+- [x] Commit.
 
 ### Task 4 — `destroyGpuHandles` walker (TDD)
 
@@ -308,17 +308,17 @@ walks `rows` in array order, calling `state.gpu[row.key] = row.construct(state, 
 walks `rows` in **reverse** array order; for each row whose
 `state.gpu[row.key]` is non-null, calls `.destroy()` then sets it to `null`.
 
-- [ ] Test `destroyGpuHandles destroys handles in reverse declared order`
+- [x] Test `destroyGpuHandles destroys handles in reverse declared order`
       — 3 fake rows, each stub's `destroy` pushes its key into a shared
       array; assert the array is the REVERSE of declaration order.
-- [ ] Test `destroyGpuHandles nulls every destroyed field` — assert
+- [x] Test `destroyGpuHandles nulls every destroyed field` — assert
       `state.gpu[key] === null` after, for all 3 rows.
-- [ ] Test `destroyGpuHandles skips an already-null handle without throwing`
+- [x] Test `destroyGpuHandles skips an already-null handle without throwing`
       — one row's field starts `null`; assert no `.destroy` call is
       attempted on it and the walker completes.
-- [ ] Implement.
-- [ ] `npm test -- destroyGpuHandles`.
-- [ ] Commit.
+- [x] Implement.
+- [x] `npm test -- destroyGpuHandles`.
+- [x] Commit.
 
 ### Task 5 — Author `GPU_HANDLE_ROWS`
 
@@ -330,7 +330,7 @@ Cite, don't paste (plan-style.md) — the executor reads the current
 construction call at its cited line and moves it into
 `construct: (state, deps) => { ... }` unchanged.
 
-- [ ] Row order: `focusUniform` FIRST (see teardown-order finding above),
+- [x] Row order: `focusUniform` FIRST (see teardown-order finding above),
       then `compositor`, `renderTargets`, `renderer` (`initGpu.ts:116,144-145,153-158,164-171`),
       then the 8 swap-format rows in `buildSwapRenderers.ts:31-74`'s order,
       each with `rebuildOnSwapFormat: true`, then the remaining rows in
@@ -342,34 +342,34 @@ construction call at its cited line and moves it into
       them last is load-bearing, not incidental: it's what makes
       reverse-order teardown destroy them first (see the teardown-order
       finding's design-choice paragraph).
-- [ ] `starCatalogPickRenderer`'s `construct` reads
+- [x] `starCatalogPickRenderer`'s `construct` reads
       `state.gpu.starCatalogRenderer!.pickResources()` (mirrors
       `initGpu.ts:511`).
-- [ ] `starPointRenderer`'s `construct` performs the construction AND the
+- [x] `starPointRenderer`'s `construct` performs the construction AND the
       `setStars(...)` seed call in one closure (mirrors `initGpu.ts:476-483`,
       folding in the `deriveBodyStates(CONST_J2000)` + `state.data.bodies.stars`
       read per the risk-register note above).
-- [ ] `pickRenderer`'s `construct` reads `state.gpu.focusUniform!.bindGroup`
+- [x] `pickRenderer`'s `construct` reads `state.gpu.focusUniform!.bindGroup`
       off `state` (same cross-handle mechanism as `starCatalogPickRenderer`)
       and imports `CONTENT_LAYERS` as a static module value (mirrors
       `wireInput.ts:86-96`).
-- [ ] `pickProgram`'s `construct` takes only `device`, `canvas`, `state`,
+- [x] `pickProgram`'s `construct` takes only `device`, `canvas`, `state`,
       and `CONTENT_LAYERS` (mirrors `createPickProgram`, `pickProgram.ts:92-98`).
-- [ ] Add the `_totalityCheck` compile-time assertion from the contract
+- [x] Add the `_totalityCheck` compile-time assertion from the contract
       section, tuned until it actually compiles and actually fails when a
       row is temporarily commented out (verify this manually once, then
       restore).
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ### Task 6 — Wire `initGpu.ts` to the construction walker
 
 **Files:** `src/services/engine/phases/initGpu.ts` (modify)
 
-- [ ] Build the BGL/`uiCtx`/`fontAtlases` prerequisites exactly as today
+- [x] Build the BGL/`uiCtx`/`fontAtlases` prerequisites exactly as today
       (`initGpu.ts:110-116, 198-200`) — these stay hand-written (excluded
       fields).
-- [ ] Replace the 42 initGpu-phase `state.gpu.X = createX(...)` assignments
+- [x] Replace the 42 initGpu-phase `state.gpu.X = createX(...)` assignments
       (everything the registry owns at this phase — all of `GPU_HANDLE_ROWS`
       except `pickRenderer`/`pickProgram`) with one
       `constructGpuHandles(GPU_HANDLE_ROWS.filter(r => r.key !== 'pickRenderer' && r.key !== 'pickProgram'), state, deps)`
@@ -381,14 +381,14 @@ construction call at its cited line and moves it into
       replaced by this walker call happening in the right position (before
       `structureMarkerRenderer`/`milkyWayPickRenderer`, after
       `uiCtx`/`fontAtlases` are set — matching today's sequencing).
-- [ ] Keep every POST-construction wiring step unchanged, now reading the
+- [x] Keep every POST-construction wiring step unchanged, now reading the
       walker's output off `state.gpu.*`: `biasCorrection.attachRenderer(state.gpu.renderer!)`
       (`initGpu.ts:181`), the `GALAXY_CATALOG_SOURCE_REGISTRY` loop
       (`:246-248`), `state.subsystems.labelDirector.attachRenderers(...)`
       (currently inside `buildSwapRenderers.ts:78-81` — see Task 8), and
       `wireBodyTextureSlots(state)` (`:613`).
-- [ ] `npm run typecheck` + `npm test -- initGpu`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- initGpu`.
+- [x] Commit.
 
 ### Task 7 — Wire `wireInput.ts` to the construction walker
 
@@ -398,19 +398,19 @@ Behaviour-neutral: `pickRenderer`/`pickProgram` still construct at the same
 bootstrap point they do today, just via the shared walker instead of two
 hand-written `createX(...)` calls.
 
-- [ ] Replace the two hand-written assignments (`wireInput.ts:86-111`) with
+- [x] Replace the two hand-written assignments (`wireInput.ts:86-111`) with
       `constructGpuHandles(GPU_HANDLE_ROWS.filter(r => r.key === 'pickRenderer' || r.key === 'pickProgram'), state, deps)`,
       built from the same `device`/`canvas` already available at this call
       site.
-- [ ] `npm run typecheck` + `npm test -- wireInput`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- wireInput`.
+- [x] Commit.
 
 ### Task 8 — Swap-format rebuild via the registry
 
 **Files:** `src/services/engine/phases/buildSwapRenderers.ts` (modify),
 `tests/services/engine/phases/buildSwapRenderers.test.ts` (modify)
 
-- [ ] Replace the 8 hand-written `state.gpu.X?.destroy(); state.gpu.X = createX(...)`
+- [x] Replace the 8 hand-written `state.gpu.X?.destroy(); state.gpu.X = createX(...)`
       pairs (`buildSwapRenderers.ts:31-74`) with a filtered walk:
       `GPU_HANDLE_ROWS.filter(r => r.rebuildOnSwapFormat)`, destroy-then-construct
       **per row** (not a destroy-all-then-construct-all pass — matches
@@ -420,28 +420,28 @@ hand-written `createX(...)` calls.
       design, not an oversight; the drift risk is mitigated by both sites
       deriving their destroy calls from the same `GPU_HANDLE_ROWS`
       declaration rather than duplicating a renderer list.
-- [ ] Keep the `state.subsystems.labelDirector.attachRenderers(...)` call
+- [x] Keep the `state.subsystems.labelDirector.attachRenderers(...)` call
       (`:78-81`) exactly as today, reading the post-rebuild
       `state.gpu.labelRenderer` / `markerLineRenderer` — this stays a named
       follow-up step, not folded into any row's `construct` (per the
       contract's "no unified presentation-producer registry" boundary from
       decisions.md #6, which this rung must not quietly cross).
-- [ ] Existing test `destroys the previous renderers before replacing them`
+- [x] Existing test `destroys the previous renderers before replacing them`
       must keep passing unmodified (behaviour-neutrality gate).
-- [ ] Add test `a non-swap-format row's handle identity is unchanged across a rebuild`
+- [x] Add test `a non-swap-format row's handle identity is unchanged across a rebuild`
       — pick one row NOT flagged `rebuildOnSwapFormat` (e.g. `filamentRenderer`,
       present in the same `state.gpu` bag), call the (now walker-backed)
       `buildSwapRenderers` twice, and assert the field's reference is
       untouched — the load-bearing proof the `rebuildOnSwapFormat` filter
       rebuilds exactly the intended subset, not more.
-- [ ] `npm test -- buildSwapRenderers`.
-- [ ] Commit.
+- [x] `npm test -- buildSwapRenderers`.
+- [x] Commit.
 
 ### Task 9 — Wire `engine.ts`'s `destroy()` to the teardown walker
 
 **Files:** `src/services/engine/engine.ts` (modify)
 
-- [ ] Replace all 44 in-scope hand-written destroy+null pairs
+- [x] Replace all 44 in-scope hand-written destroy+null pairs
       (`engine.ts:807-902`, everything except the `fontAtlases`/`uiCtx`
       re-null lines and the `timingService.destroy()` + stub-replace lines)
       — including the `pickRenderer`/`pickProgram` pair currently
@@ -452,13 +452,13 @@ hand-written `createX(...)` calls.
       owns, and `pickRenderer`/`pickProgram` being declared last in the
       array means reverse order destroys them first, automatically — see
       the teardown-order finding.
-- [ ] Keep `state.gpu.fontAtlases = null` / `state.gpu.uiCtx = null`
+- [x] Keep `state.gpu.fontAtlases = null` / `state.gpu.uiCtx = null`
       (`:823-824`) and the `timingService` destroy+stub-replace
       (`:895-896`) as explicit hand-written lines, positioned anywhere
       relative to the walker call (they touch different fields, no
       ordering interaction).
-- [ ] `npm run typecheck` + `npm test -- engine`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- engine`.
+- [x] Commit.
 
 ### Task 10 — Integration regression test + retire the stale reachability test
 
@@ -466,7 +466,7 @@ hand-written `createX(...)` calls.
 `tests/services/engine/phases/initGpu.destroyReachability.test.ts` (delete
 or fold in — see below)
 
-- [ ] Test `every GPU_HANDLE_ROWS handle is destroyed exactly once by a construct-then-destroy round-trip`
+- [x] Test `every GPU_HANDLE_ROWS handle is destroyed exactly once by a construct-then-destroy round-trip`
       — build a minimal stub `EngineState` + `GpuHandleConstructDeps` where
       every row's `construct` returns a fresh `{ destroy: vi.fn() }`,
       run `constructGpuHandles` then `destroyGpuHandles` against the REAL
@@ -476,12 +476,12 @@ or fold in — see below)
       assertions — it covers all 44 keys structurally instead of by name,
       so it does not need updating every time a new renderer is added
       (avoids the "registry restatement" anti-pattern from `testing.md`).
-- [ ] Test `focusUniform is destroyed last across the real GPU_HANDLE_ROWS teardown`
+- [x] Test `focusUniform is destroyed last across the real GPU_HANDLE_ROWS teardown`
       — same round-trip, assert `focusUniform`'s stub `destroy` fired
       strictly after every other stub's, including `pickRenderer`'s — the
       regression test for the one proven ordering constraint found in the
       risk register above (`pickRenderer` before `focusUniform`).
-- [ ] Decide + do ONE of: (a) delete
+- [x] Decide + do ONE of: (a) delete
       `initGpu.destroyReachability.test.ts` now that the round-trip test
       covers reachability structurally and `initGpu`'s own existing
       behavioural tests (`initGpu.test.ts` if present, or the assertions
@@ -493,14 +493,14 @@ or fold in — see below)
       which is unrelated to this rung and must keep passing regardless.
       Rename the file if (b) is chosen, since "destroyReachability" would
       no longer describe its contents.
-- [ ] `npm test -- gpuHandles initGpu`.
-- [ ] Commit.
+- [x] `npm test -- gpuHandles initGpu`.
+- [x] Commit.
 
 ### Task 11 — Update `EngineGpuHandles.d.ts`'s docblock
 
 **Files:** `src/@types/engine/handles/EngineGpuHandles.d.ts` (modify)
 
-- [ ] Add a terse "add a row when you add a field" pointer to the module
+- [x] Add a terse "add a row when you add a field" pointer to the module
       header (`EngineGpuHandles.d.ts:1-10`). The header is already AT the
       file's ≤10-line comment budget, with no spare line — trim existing
       prose to make room rather than appending. Say: add a field here (the
@@ -513,21 +513,21 @@ or fold in — see below)
       that `pickRenderer`/`pickProgram` ARE rows, just constructed from
       `wireInput.ts` (Task 7) instead of `initGpu.ts` — rather than
       re-deriving any of this inline.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 12 — Full-suite gate + visual smoke
 
-- [ ] `npm run typecheck` (both `src` and `tools` tsconfigs) — green.
-- [ ] `npm test` — green, no new failures, no skipped/xfail additions.
-- [ ] Dev-server visual smoke (per `feedback_verify_rendering_visually_before_measuring`):
+- [x] `npm run typecheck` (both `src` and `tools` tsconfigs) — green.
+- [x] `npm test` — green, no new failures, no skipped/xfail additions.
+- [x] Dev-server visual smoke (per `feedback_verify_rendering_visually_before_measuring`):
       boot the app, confirm the scene renders identically (galaxy points,
       Milky Way disk, labels, pick/hover, HDR toggle if easy to trigger) —
       ask the user to look; this task cannot self-certify pixels.
-- [ ] Toggle the HDR display mode (or otherwise trigger `applySwapFormat`)
+- [x] Toggle the HDR display mode (or otherwise trigger `applySwapFormat`)
       once during the smoke pass — the swap-rebuild path is the one most
       likely to silently regress (Task 8) and has no automated visual
       assertion.
-- [ ] While the swap format is toggled, specifically inspect the
+- [x] While the swap format is toggled, specifically inspect the
       compositor's output for staleness (wrong `dstFormat`/blend state
       after the toggle) — `compositor` is deliberately NOT a
       `rebuildOnSwapFormat` row (behaviour-preserving per this plan), and
@@ -536,38 +536,38 @@ or fold in — see below)
       either way. If staleness is confirmed, the fix (setting
       `rebuildOnSwapFormat` on the compositor row) is a follow-up in a
       separate commit/PR, not part of this task.
-- [ ] Commit (if any smoke-driven fixes were needed).
+- [x] Commit (if any smoke-driven fixes were needed).
 
 ## Definition of Done
 
-- [ ] Deliverables exist: `Disposable.d.ts`, `GpuHandleKey.d.ts`,
+- [x] Deliverables exist: `Disposable.d.ts`, `GpuHandleKey.d.ts`,
       `GpuHandleConstructDeps.d.ts`, `GpuHandleRow.d.ts` (types);
       `gpuHandleRegistry.ts`, `constructGpuHandles.ts`, `destroyGpuHandles.ts`
       (implementation) — all under the paths named in the tasks above.
-- [ ] `initGpu.ts` no longer contains per-handle `state.gpu.X = createX(...)`
+- [x] `initGpu.ts` no longer contains per-handle `state.gpu.X = createX(...)`
       assignments for any of the 42 initGpu-phase in-scope keys — only the
       6 excluded prerequisites (BGLs, `uiCtx`, `fontAtlases`) plus the
       single filtered `constructGpuHandles(...)` call and the unchanged
       post-construction wiring steps. `wireInput.ts` no longer contains
       hand-written `state.gpu.pickRenderer = ...` / `pickProgram = ...`
       assignments — only its own filtered `constructGpuHandles(...)` call.
-- [ ] `buildSwapRenderers.ts` derives its 8-renderer rebuild subset from
+- [x] `buildSwapRenderers.ts` derives its 8-renderer rebuild subset from
       `GPU_HANDLE_ROWS`'s `rebuildOnSwapFormat` flag — no hand-written list
       of 8 renderer names remains anywhere in the phase files.
-- [ ] `engine.ts`'s `destroy()` contains exactly 3 hand-written GPU-lifecycle
+- [x] `engine.ts`'s `destroy()` contains exactly 3 hand-written GPU-lifecycle
       lines for the excluded fields (`fontAtlases`, `uiCtx`, `timingService`
       — 2 re-nulls, 1 destroy+stub-replace) plus one
       `destroyGpuHandles(GPU_HANDLE_ROWS, state)` call covering all 44 rows,
       `pickRenderer`/`pickProgram` included; no other
       `state.gpu.X?.destroy(); state.gpu.X = null;` pair remains
       hand-written.
-- [ ] Named observable behaviours for the manual smoke pass: galaxy points
+- [x] Named observable behaviours for the manual smoke pass: galaxy points
       render, Milky Way disk + labels render, hover/click picking works,
       an HDR display-mode toggle re-renders without a blank frame or
       console error (the swap-rebuild path), and the compositor's output
       is confirmed non-stale (or a follow-up is filed) after the same
       toggle.
-- [ ] Deferral boundary: rungs 2–7 (target contributions, staleness helper,
+- [x] Deferral boundary: rungs 2–7 (target contributions, staleness helper,
       volume-ingest consolidation, wake-vote fold, debug derivation,
       fade-manifest derivation) are NOT touched by this plan — a reviewer
       should not expect `mwAggregateDivisor`, `runFrame.ts`'s staleness
