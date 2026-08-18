@@ -203,6 +203,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     function startLoop(): void {
       if (rafHandle) cancelAnimationFrame(rafHandle);
+      // Re-seed the FPS sentinels exactly as their declarations do: every rebuild tears
+      // the loop down and restarts it here, and without this reset the first frame back
+      // would blend the multi-second build gap into the EMA as a ~5fps reading.
+      lastFrameTime = -1;
+      fpsEma = 0;
+      lastFpsPushTime = 0;
+      lastPushedFps = 0;
       const frame = (): void => {
         if (disposed || !harness || !renderGraph) return;
         rafHandle = requestAnimationFrame(frame);
