@@ -8,9 +8,9 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
  * defaultGridSlice — auto-fit OFF by user directive: the catalog's outliers
  * stretch an auto-fitted box until the local volume is a sliver of it, so the
  * manual 200 Mpc origin-centred cube is the better boot view. `divisor: 1`
- * is `deriveGridBox`'s BASE_LONG_AXIS (256) unscaled; divisor 0.75 (the
- * finest notch) covers Phase 1's "a ≥300-class grid runs continuously" exit
- * criterion at 341.
+ * is `deriveGridBox`'s BASE_LONG_AXIS (256) unscaled; divisor 0.75 covers
+ * Phase 1's "a ≥300-class grid runs continuously" exit criterion at 341
+ * (S12 added a finer 0.5 notch above it, 512 long axis).
  */
 export const defaultGridSlice: GridSlice = {
   autoFit: false,

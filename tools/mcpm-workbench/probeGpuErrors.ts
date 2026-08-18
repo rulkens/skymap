@@ -326,17 +326,18 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // §A/X3). The "Grid box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's
       // `gridBoxOpen` starts false) and its body doesn't exist in the DOM until opened —
       // the fold button's accessible name is its title text, not an aria-label. S10: the
-      // grid divisor pill row is one shared control for both auto-fit and manual mode
-      // (`deriveGridBox`'s BASE_LONG_AXIS/divisor), so "grid divisor 2" reaches the same
-      // long axis (128) the old "long-axis target" select's '128' option did — its
-      // accessible name is deliberately distinct from the raymarch preview's own
-      // "divisor" slider (see raymarch:divisor below), a role="button" vs role="slider"
-      // AND a different name, so no probe selector or screen-reader name collides.
-      // BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
+      // grid divisor select is one shared control for both auto-fit and manual mode
+      // (`deriveGridBox`'s BASE_LONG_AXIS/divisor), so option '2' reaches the same
+      // long axis (128) the old "long-axis target" select's '128' option did. S12
+      // swapped the pill row for a <select> — its accessible name is still distinct
+      // from the raymarch preview's own "divisor" slider (see raymarch:divisor
+      // below), a role="combobox" vs role="slider" AND a different name, so no
+      // probe selector or screen-reader name collides. BOX_PREVIEW_MS is 200ms;
+      // SETTLE_FRAMES worth of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
         await page.getByRole('button', { name: 'Grid box', exact: true }).click();
-        await page.getByRole('button', { name: 'grid divisor 2', exact: true }).click();
+        await page.getByRole('combobox', { name: 'grid divisor', exact: true }).selectOption('2');
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

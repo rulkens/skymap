@@ -20,13 +20,13 @@ import {
   setPaddingMpc,
 } from '../state/slices/gridSlice';
 import { useAppStore } from './storeContext';
-import Toggle from './Toggle';
 import ToggleRow from './ToggleRow';
 
 // User-specified stepping: finer than 1 in quarter steps, coarser in half
 // steps — a discrete list, not a uniform-step range, so Slider (fixed step)
-// can't drive it; a pill row (like the tier row) can.
-const DIVISOR_OPTIONS = [0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
+// can't drive it; a <select> (like this row) can. 0.5 = 512 long axis, the
+// finest notch below the S10-era 0.75.
+const DIVISOR_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 
 // Literal-typed axis index (not a `.map` callback index, which noUncheckedIndexedAccess
 // would widen to `number` and turn every `vec[axis]` read into `number | undefined`).
@@ -51,6 +51,34 @@ const dimsReadoutStyle: CSSProperties = {
   fontFamily: 'var(--font-family-mono)',
   fontSize: 'var(--font-size-sm)',
   color: 'var(--color-fg-muted)',
+};
+
+// Row chrome matches the ParamSlider rows above it (mono label left, control
+// right); the select itself models the main app's GalaxiesSection
+// `styles.modeSelect` chip — this tool has no shared select style of its own.
+const divisorRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 'var(--space-3)',
+};
+
+const divisorLabelStyle: CSSProperties = {
+  fontFamily: 'var(--font-family-mono)',
+  fontSize: 'var(--font-size-sm)',
+  color: 'var(--color-fg-label)',
+};
+
+const divisorSelectStyle: CSSProperties = {
+  flexShrink: 0,
+  padding: 'var(--space-1) var(--space-3)',
+  border: '1px solid var(--border-control)',
+  borderRadius: 'var(--radius-md)',
+  background: 'var(--surface-control)',
+  color: 'var(--color-fg-base)',
+  fontFamily: 'var(--font-family-mono)',
+  fontSize: 'var(--font-size-md)',
+  cursor: 'pointer',
 };
 
 function withAxis(vec: Vec3, axis: number, value: number): Vec3 {
@@ -81,19 +109,24 @@ function GridBoxPanel(): ReactNode {
         onChange={(on) => store.setState((s) => ({ ...s, grid: setAutoFit(s.grid, on) }))}
       />
       <div>
-        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-fg-label)' }}>
-          grid divisor
-        </span>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-          {DIVISOR_OPTIONS.map((d) => (
-            <Toggle
-              key={d}
-              label={String(d)}
-              ariaLabel={`grid divisor ${d}`}
-              on={grid.divisor === d}
-              onToggle={() => store.setState((s) => ({ ...s, grid: setDivisor(s.grid, d) }))}
-            />
-          ))}
+        <div style={divisorRowStyle}>
+          <label htmlFor="grid-divisor" style={divisorLabelStyle}>
+            grid divisor
+          </label>
+          <select
+            id="grid-divisor"
+            style={divisorSelectStyle}
+            value={grid.divisor}
+            onChange={(e) =>
+              store.setState((s) => ({ ...s, grid: setDivisor(s.grid, Number(e.target.value)) }))
+            }
+          >
+            {DIVISOR_OPTIONS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
         <div style={dimsReadoutStyle}>
           {box
