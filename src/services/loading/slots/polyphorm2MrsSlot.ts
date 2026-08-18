@@ -1,22 +1,10 @@
 /**
  * polyphorm2MrsSlot — factory for the Polyphorm 2MRS volume's asset slot.
  *
- * Tier-aware (unlike cf4DensitySlot's void request), mirroring mcpmSlot. On
- * commit, hands the decoded `ScalarCube` to `volumeFieldRenderer.upload`
- * under the registry id `'polyphorm-2mrs'`. The renderer reads per-cube static config
- * (contrastCenter, envelope, paletteId) from the registry and user-tunable
- * knobs from `state.settings.volumes.items` per frame — the commit replays
- * no renderer setter.
- *
- * **Lazy fetch.**  Polyphorm is registry-visible:false, so its construction
- * seed lands `enabled: false` and the slot stays idle at boot.
- * Toggling the field on dispatches `writeVolumeField`, which flips the
- * `enabled` bit and triggers a demand-reevaluation load — keeping
- * default-off Polyphorm off the boot bandwidth budget.
- *
- * **Settings row.**  Polyphorm is a shippable volume, so the construction
- * seed already created the entry in `state.settings.volumes.items`
- * before this commit fires.
+ * Tier-aware (unlike cf4DensitySlot's void request), mirroring mcpmSlot. Hands
+ * the decoded `ScalarCube` to `volumeFieldRenderer.upload` under the registry
+ * id `'polyphorm-2mrs'` on commit. Lazy fetch: registry-visible:false seeds
+ * `enabled: false`; toggling dispatches `writeVolumeField` to load on demand.
  */
 
 import { createAssetSlot } from '../AssetSlot';
@@ -35,21 +23,14 @@ export const createPolyphorm2MrsSlot: SlotFactory<ScalarCube, Polyphorm2MRSReq> 
       const renderer = state.gpu.volumeFieldRenderer;
       if (!renderer) return;
       const id = SOURCE_REGISTRY[Source.Polyphorm2MRS].id;
-      // Upload the cube; the renderer reads this field's per-cube static
-      // config (contrastCenter, envelope, palette) from the registry and
-      // its user-tunable knobs from `state.settings.volumes.items` per
-      // frame, so the commit replays no renderer setter.  Polyphorm is a
-      // shippable volume, so its settings row already exists from the
-      // construction seed.
+      // Renderer reads static config from the registry and per-frame knobs
+      // from `state.settings.volumes.items`; settings row already exists (shippable).
       renderer.upload(id, cube);
-      // Drive the first-load fade through the intent → fade bridge; the
-      // volumeField row's intent gate (reads settings.volumes.items[id].enabled)
-      // decides, so a load that completes while the field is toggled off snaps to
-      // opacity 0 and never renders until the user enables it.
+      // Drives the first-load fade via the intent → fade bridge; a load completing
+      // while toggled off snaps to opacity 0 until the field is enabled.
       syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-      // No echo: React reads the per-field rows via `selectVolumeFieldItems` +
-      // a `useMemo` projection off the engine-owned settings store, so the
-      // commit's settings-row seed needs no callback fan-out.
+      // No echo: React reads per-field rows via `selectVolumeFieldItems`, an
+      // engine-store projection — no callback fan-out needed.
     },
   });
   slot.subscribe((s) => {

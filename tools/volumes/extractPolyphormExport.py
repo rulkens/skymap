@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 """
-extractPolyphormExport.py — convert one Polyphorm MCPM export folder's
-raw trace.bin (headerless f16, C-order z*W*H + y*W + x) into block-mean
--downsampled `.npy` + `polyphy-trace` v1 sidecar `.json` tiers, ready for
-tools/volumes/buildRhizomeVolume.ts. Mirrors extractMcpmCube.py's
-small/medium/large tiering (factors 8/4/2), but reads trace.bin once and
-cascades: d4 = block-mean(d2, 2), d8 = block-mean(d4, 2). Exact, not an
-approximation — block-mean over equal-sized partitions is associative, so
-cascading matches downsampling straight from source at each factor.
+extractPolyphormExport.py — convert one Polyphorm MCPM export folder's raw
+trace.bin (headerless f16, C-order z*W*H + y*W + x) into block-mean
+-downsampled `.npy` + `polyphy-trace` v1 sidecar `.json` tiers for
+tools/volumes/buildRhizomeVolume.ts. Cascades d4 = block-mean(d2, 2), d8 =
+block-mean(d4, 2) instead of downsampling from source at each factor —
+exact, since block-mean over equal-sized partitions is associative.
 
 Usage:
     python3 tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>
     # writes <out-prefix>_d8.npy/.json, _d4.npy/.json, _d2.npy/.json
-
-Dims/size/center are parsed from <export-dir>/export_metadata.txt, never
-hardcoded — a re-export with a different grid needs no script edit.
 """
 import json
 import os

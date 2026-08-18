@@ -23,7 +23,7 @@ never pair mismatched code and bytes:
 | `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`     | `galaxyCatalogFormat.ts` (9)    |
 | `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                          | `starCatalogFormat.ts` (1)      |
 | `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair) | `structureCatalogFormat.ts` (1) |
-| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*` `.scfd`                              | `scalarFieldFormat.ts` (3)      |
+| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*` `.scfd`          | `scalarFieldFormat.ts` (3)      |
 | `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
 
 Some family-folder residents are deliberately untracked and stay at their
