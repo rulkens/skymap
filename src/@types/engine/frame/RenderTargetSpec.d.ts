@@ -38,7 +38,7 @@ export type RenderTargetSpec = {
    * pass opened against this target in a frame clears to this colour; later
    * passes load. This field is what rung 2 (target-contributions)
    * deliberately unlocks from the "locked cross-plan contract" this type used
-   * to be — see `renderTargets.ts`'s `buildSpecs` rows for the per-target
+   * to be — see `renderTargets.ts`'s `renderTargetRows` rows for the per-target
    * rationale, so a future reader doesn't re-lock it.
    *
    * The paired DEPTH clear is NOT here — it is the far-plane depth (`0.0`

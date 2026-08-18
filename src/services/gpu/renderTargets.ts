@@ -164,13 +164,15 @@ function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
 }
 
 /**
- * Build the concrete target table for this frame configuration. A function
+ * The declared render-target table for this frame configuration. A function
  * (not a module constant) because the swap row's format is runtime-decided —
  * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
  * Rows per the renderer-unification design's concrete target table; the pick
- * rows arrive in a later plan phase.
+ * rows arrive in a later plan phase. Exported so `targetParity.test.ts` can
+ * cross-check its ids against `CONTENT_LAYERS` and `frameProgram` without a
+ * GPU device — see that file's header for why those checks matter.
  */
-function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
+export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
   return [
     // hdr and swap clear opaque black (a=1); every other row clears to a=0 so
     // its upsample/composite adds nothing for a fragment it didn't reach —
@@ -264,7 +266,7 @@ export function createRenderTargets(
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = buildSpecs(swapFormat);
+  let specs = renderTargetRows(swapFormat);
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.

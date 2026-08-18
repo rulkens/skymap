@@ -77,7 +77,7 @@ function makeEncoder() {
 
 // hdr clears a=1 (opaque black); every bloom mip clears a=0, matching
 // production — the pyramid accumulates additively, so an untouched texel
-// must contribute nothing (see `renderTargets.ts`'s `buildSpecs`).
+// must contribute nothing (see `renderTargets.ts`'s `renderTargetRows`).
 const BLOOM_SPECS = [
   {
     id: 'hdr',
