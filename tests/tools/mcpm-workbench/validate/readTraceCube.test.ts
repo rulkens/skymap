@@ -10,6 +10,7 @@ import { join } from 'node:path';
 
 import { readTraceCube } from '../../../../tools/mcpm-workbench/validate/readTraceCube';
 import { f32ToF16Bits } from '../../../../src/utils/math/f32ToF16Bits';
+import { f16BitsToFloat } from '../../../../tools/utils/math/f16BitsToFloat';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 describe('readTraceCube', () => {
@@ -23,9 +24,16 @@ describe('readTraceCube', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('decodes a buffer of exactly voxelCount*2 bytes as f16', () => {
+  it('decodes a buffer of exactly voxelCount*2 bytes as f16, matching the round-trip exactly', () => {
     const dims: Vec3 = [2, 2, 2]; // 8 voxels
-    const values = [0, 1, 2, 3, 4, 5, 6, 7];
+    // Fractional, distinct-per-index values — not the integer ramp a prior
+    // version used, which is exact in f16 regardless of whether decodeF16's
+    // loop is correct. Expectation is the actual f16 round-trip
+    // (f16BitsToFloat(f32ToF16Bits(v))), not the pre-rounding input, so this
+    // is an exact (not fuzzy) assertion — pins the loop's per-index
+    // correctness (readTraceCube's chunked-read + decodeF16 loop, added to
+    // replace the OOM-prone Float32Array.from(bits, mapFn) — T22 fix round 3).
+    const values = [0.3, 1.7, 2.5, 3.9, 4.1, 5.6, 6.2, 7.8];
     const bits = Uint16Array.from(values, (v) => f32ToF16Bits(v));
     const path = join(dir, 'f16.bin');
     writeFileSync(path, Buffer.from(bits.buffer));
@@ -34,7 +42,7 @@ describe('readTraceCube', () => {
 
     expect(decoded.length).toBe(8);
     for (let i = 0; i < values.length; i++) {
-      expect(decoded[i]).toBeCloseTo(values[i]!, 3); // f16 rounding, small integers are exact anyway
+      expect(decoded[i]).toBe(f16BitsToFloat(f32ToF16Bits(values[i]!)));
     }
   });
 

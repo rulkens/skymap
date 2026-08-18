@@ -11,8 +11,8 @@ import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readNpy } from '../../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../../parsers/polyphyTraceSidecar';
-import { f16BitsToFloat } from '../../utils/math/f16BitsToFloat';
 import { readTraceCube } from './readTraceCube';
+import { decodeF16 } from './decodeF16';
 import { traceHistogram } from './traceHistogram';
 import { dataPointHistogram } from './dataPointHistogram';
 import { axisMarginals } from './axisMarginals';
@@ -77,10 +77,7 @@ function loadShape(path: string, dims: Vec3): CubeShape {
     throw new Error(`compareTraceCubes: ${path} is not a 3D cube (shape ${npy.shape.join('x')})`);
   }
   const npyDims: Vec3 = [shape[0]!, shape[1]!, shape[2]!];
-  const values =
-    npy.values instanceof Uint16Array
-      ? Float32Array.from(npy.values, (bits) => f16BitsToFloat(bits))
-      : npy.values;
+  const values = npy.values instanceof Uint16Array ? decodeF16(npy.values) : npy.values;
   return { values, dims: npyDims };
 }
 

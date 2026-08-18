@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { f16BitsToFloat } from '../../utils/math/f16BitsToFloat';
+import { readFileChunked } from './readFileChunked';
+import { decodeF16 } from './decodeF16';
 
 // Pooled small reads can land misaligned (TypedArray views need alignment);
 // a full-file read is always a fresh offset-0 allocation — zero-copy in practice.
@@ -23,21 +23,23 @@ function alignedTypedArrayBuffer(
  * bytes/voxel) — see task-T22-brief.md. Anything but exactly 2 or 4
  * bytes/voxel is a hard error carrying the numbers needed to diagnose it.
  *
- * Peak RSS at the anchor's ~622M-voxel scale: f32 is one zero-copy view
- * (~2.5 GB). f16 can't avoid a copy — decoding to floats needs a new f32
- * array — so it transiently holds ~1.25 GB (raw) + ~2.5 GB (decoded).
- * `compareTraceCubes` keeps both cubes live at once: budget ~5-8 GB peak
- * for a full run, not the 15-20 GB the old double-copy + f64 widen risked.
+ * Reads chunked (readFileSync refuses files >2 GiB; the anchor is 2.49 GB)
+ * and decodes f16 with a plain loop, not `.from(bits, mapFn)` (OOMs on the
+ * iterator protocol at ~622M elements) — both confirmed failures, T23's
+ * report. Peak RSS at that scale: f32 is one zero-copy view (~2.5 GB); f16
+ * additionally holds the raw buffer (~1.25 GB) until the decoded ~2.5 GB
+ * array replaces it. Both cubes stay live at once in `compareTraceCubes`:
+ * budget ~5-8 GB peak per run.
  */
 export function readTraceCube(filePath: string, dims: Vec3): Float32Array {
-  const raw = readFileSync(filePath);
+  const raw = readFileChunked(filePath);
   const voxelCount = dims[0] * dims[1] * dims[2];
   const bytesPerVoxel = raw.byteLength / voxelCount;
 
   if (bytesPerVoxel === 2) {
     const { buffer, byteOffset } = alignedTypedArrayBuffer(raw, 2);
     const bits = new Uint16Array(buffer, byteOffset, voxelCount);
-    return Float32Array.from(bits, (b) => f16BitsToFloat(b));
+    return decodeF16(bits);
   }
   if (bytesPerVoxel === 4) {
     const { buffer, byteOffset } = alignedTypedArrayBuffer(raw, 4);
