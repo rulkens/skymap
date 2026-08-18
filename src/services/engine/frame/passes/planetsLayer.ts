@@ -17,8 +17,11 @@
  * ### Why one renderer with one instanced draw
  *
  * A single `planetRenderer` draws every flat planet in ONE instanced
- * `drawIndexed`. This layer packs each body's MVP + albedo into a reused
- * module-level staging array (no per-frame allocation on the engine hot path)
+ * `drawIndexed`. That batching is also why the record carries a per-body
+ * `camPosLocal`: the renderer ray-traces its silhouette analytically, and one
+ * draw cannot carry N ray origins on a uniform. This layer packs each body's
+ * MVP + albedo + sun direction + local camera into a reused module-level
+ * staging array (no per-frame allocation on the engine hot path)
  * and hands the whole batch to `draw`, which uploads it with one
  * `queue.writeBuffer`. Each planet reads its own baked record via the instance
  * step, so nothing races `queue.writeBuffer` against submit — the alternative
@@ -61,6 +64,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { sceneBodyPartition } from '../sceneBodyPartition';
@@ -74,8 +78,8 @@ import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 // for the live SCENE_PLANETS table (a compile-time constant, so this is a
 // fixed size, not a cap — the renderer itself carries no upper bound, and the
 // `flat` branch drawn below is always a subset of this same table); each
-// planet's 24-float record (MVP + albedo + pad + sunDirLocal + pad) is
-// rewritten in place before the single instanced draw.
+// planet's `INSTANCE_FLOATS`-long record is rewritten in place before the
+// single instanced draw.
 const staging = new Float32Array(SCENE_PLANETS.length * INSTANCE_FLOATS);
 
 export const planetsLayer: ContentLayer = {
@@ -124,27 +128,35 @@ export const planetsLayer: ContentLayer = {
     const states = sceneBodyStates(state, ctx);
     const limit = flat.length;
 
-    // Pack one 24-float instance record per FLAT planet: floats 0..15 the MVP
+    // Pack one 28-float instance record per FLAT planet: floats 0..15 the MVP
     // composed from the slab's f64 vp (see the module header's "f64 seam"
     // note), 16..18 the albedo, 19 the pad, 20..22 the sun direction rotated
-    // into the body's local frame, 23 the pad. Then ONE instanced draw. The
-    // partition already dropped sub-pixel bodies to `glints` and resident-texture
-    // bodies to `textured`, so this loop packs exactly the flat-lit set with no
-    // per-body test of its own.
+    // into the body's local frame, 23 the pad, 24..26 the camera in that same
+    // local frame, 27 the pad. Then ONE instanced draw. The partition already
+    // dropped sub-pixel bodies to `glints` and resident-texture bodies to
+    // `textured`, so this loop packs exactly the flat-lit set with no per-body
+    // test of its own.
     for (let i = 0; i < limit; i++) {
       const planet = flat[i]!;
       const bodyState = states.get(planet.id)!;
+      const radiusMpc = planet.radiusKm * SCALE_UNITS.KM_TO_MPC;
       const mvp = composeBodyMvp(
         view.slab.vp,
         bodyState.positionMpc,
         RENDER_ORIGIN_MPC,
-        planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        radiusMpc,
         bodyState.orientation,
       );
       // Rotate the sun direction into the body's local frame (its orientation
       // carries any axial tilt) so the fragment's Lambert term stays a plain
       // co-framed dot product — same rotate earthLayer does.
       const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+      // The analytic ray's ORIGIN, in the frame where this body is the unit
+      // sphere. It is a PAIR with the mvp above and must be built from the same
+      // `radiusMpc` — the mvp's model scale is what defines that frame, so a
+      // camera divided by a different radius puts the ray origin somewhere the
+      // vertex stage never went. Same call `texturedBodiesLayer` makes.
+      const cam = camPosLocal(view.camPos, bodyState.positionMpc, radiusMpc, bodyState.orientation);
       const base = i * INSTANCE_FLOATS;
       staging.set(mvp, base);
       staging[base + 16] = planet.albedo[0];
@@ -155,6 +167,10 @@ export const planetsLayer: ContentLayer = {
       staging[base + 21] = sun[1];
       staging[base + 22] = sun[2];
       staging[base + 23] = 0; // sunDir pad — kept zeroed across frames
+      staging[base + 24] = cam[0];
+      staging[base + 25] = cam[1];
+      staging[base + 26] = cam[2];
+      staging[base + 27] = 0; // camPosLocal pad — kept zeroed across frames
     }
     if (limit > 0) renderer.draw(pass, staging, limit);
   },
