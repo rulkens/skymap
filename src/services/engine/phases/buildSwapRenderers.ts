@@ -12,6 +12,7 @@ import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
+import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 import type { Disposable } from '../../../@types/engine/handles/Disposable';
 
@@ -36,14 +37,11 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
     fontAtlases,
   };
 
-  // `in`, not `.rebuildOnSwapFormat` — the flag is absent (not `false`) on
-  // unflagged rows, so property access on the 44-member union is TS2339.
-  // The truthiness re-check after `in` matters without
-  // `exactOptionalPropertyTypes`: a row that wrote `rebuildOnSwapFormat:
-  // undefined` would pass `'rebuildOnSwapFormat' in row` too, meaning "no"
-  // read as "yes" and get destroyed/rebuilt on every HDR toggle.
+  // `=== true`, not `.rebuildOnSwapFormat` truthiness — the flag is absent
+  // (not `false`) on unflagged rows, so the value test doubles as the
+  // presence check without an `exactOptionalPropertyTypes` hazard.
   for (const row of GPU_HANDLE_ROWS.filter(
-    (row) => 'rebuildOnSwapFormat' in row && row.rebuildOnSwapFormat,
+    (row: GpuHandleRow) => row.rebuildOnSwapFormat === true,
   )) {
     (state.gpu as Record<GpuHandleKey, Disposable | null>)[row.key]?.destroy();
     (state.gpu as Record<GpuHandleKey, unknown>)[row.key] = row.construct(state, deps);
