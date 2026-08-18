@@ -305,80 +305,94 @@ function ControlsPanel(): ReactNode {
           </div>
         </div>
 
-        <div>
-          <span
-            style={{
-              fontFamily: 'var(--font-family-mono)',
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-fg-label)',
-            }}
-          >
-            view
-          </span>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-            {VIEW_MODES.map((entry) => (
-              <Toggle
-                key={entry.mode}
-                label={entry.label}
-                on={view.mode === entry.mode}
-                onToggle={() =>
-                  store.setState((s) => ({ ...s, view: setViewMode(s.view, entry.mode) }))
-                }
-              />
-            ))}
-            {/* Inert in splat mode: the data points are already drawn there, at 10000x. */}
-            <Toggle
-              label="galaxies"
-              on={view.overlayGalaxies}
-              onToggle={() =>
-                store.setState((s) => ({
-                  ...s,
-                  view: setOverlayGalaxies(s.view, !s.view.overlayGalaxies),
-                }))
-              }
-            />
-          </div>
-        </div>
-
         <GridBoxPanel />
 
         <CollapsibleSection
-          title="Raymarch"
+          title="View"
           open={raymarchOpen}
           onToggle={() => setRaymarchOpen((v) => !v)}
         >
-          {/* Off is fork parity: per-slab 'over' that goes opaque a few voxels in. */}
-          <Toggle
-            label="additive"
-            on={view.raymarch.additive}
-            onToggle={() =>
-              store.setState((s) => ({
-                ...s,
-                view: setAdditive(s.view, !s.view.raymarch.additive),
-              }))
-            }
-          />
-          <SliderGroup title="Trace">
-            {RAYMARCH_SLIDERS.map((spec) => (
-              <ParamSlider
-                key={spec.key}
-                label={spec.label}
-                value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
-                min={spec.min}
-                max={spec.max}
-                step={spec.step}
-                format={spec.format}
-                info={spec.info}
-                onChange={(v) =>
-                  store.setState((s) => ({
-                    ...s,
-                    view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
-                  }))
-                }
-                path={`view.raymarch.${spec.key}`}
-              />
-            ))}
-          </SliderGroup>
+          <div>
+            <span
+              style={{
+                fontFamily: 'var(--font-family-mono)',
+                fontSize: 'var(--font-size-sm)',
+                color: 'var(--color-fg-label)',
+              }}
+            >
+              mode
+            </span>
+            <div
+              style={{
+                display: 'flex',
+                gap: 'var(--space-3)',
+                margin: 'var(--space-2) 0 var(--space-4)',
+              }}
+            >
+              {VIEW_MODES.map((entry) => (
+                <Toggle
+                  key={entry.mode}
+                  label={entry.label}
+                  on={view.mode === entry.mode}
+                  onToggle={() =>
+                    store.setState((s) => ({ ...s, view: setViewMode(s.view, entry.mode) }))
+                  }
+                />
+              ))}
+            </div>
+          </div>
+          {/* Everything below is raymarch-only, so splat mode hides it — the overlay is
+              inert there too (data points already drawn at 10000x). */}
+          {view.mode === 'traceRaymarch' && (
+            <>
+              <div
+                style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}
+              >
+                {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
+                <Toggle
+                  label="additive blend"
+                  on={view.raymarch.additive}
+                  onToggle={() =>
+                    store.setState((s) => ({
+                      ...s,
+                      view: setAdditive(s.view, !s.view.raymarch.additive),
+                    }))
+                  }
+                />
+                <Toggle
+                  label="galaxy overlay"
+                  on={view.overlayGalaxies}
+                  onToggle={() =>
+                    store.setState((s) => ({
+                      ...s,
+                      view: setOverlayGalaxies(s.view, !s.view.overlayGalaxies),
+                    }))
+                  }
+                />
+              </div>
+              <SliderGroup title="Trace">
+                {RAYMARCH_SLIDERS.map((spec) => (
+                  <ParamSlider
+                    key={spec.key}
+                    label={spec.label}
+                    value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
+                    min={spec.min}
+                    max={spec.max}
+                    step={spec.step}
+                    format={spec.format}
+                    info={spec.info}
+                    onChange={(v) =>
+                      store.setState((s) => ({
+                        ...s,
+                        view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
+                      }))
+                    }
+                    path={`view.raymarch.${spec.key}`}
+                  />
+                ))}
+              </SliderGroup>
+            </>
+          )}
         </CollapsibleSection>
       </div>
     </div>
