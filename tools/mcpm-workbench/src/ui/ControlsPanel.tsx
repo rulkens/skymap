@@ -5,8 +5,9 @@
  * are live with no rebuild. Agent count / weight mode / init mode / grid
  * box are structural — Viewport watches them and rebuilds the harness.
  *
- * The Raymarch / Agents / Galaxies sections are the three render layers: each
- * section's header pill IS its layer's on/off switch, and any subset may be on.
+ * The Raymarch / Agents / Galaxies / Path tracer sections are the four render
+ * layers: each section's header pill IS its layer's on/off switch, and any
+ * subset may be on.
  */
 import { useState, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
@@ -33,6 +34,8 @@ import {
   setGalaxyPointSize,
   setLayerEnabled,
   setOpticalThickness,
+  setPathTracerCompressive,
+  setPathTracerParam,
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
@@ -188,6 +191,116 @@ const RAYMARCH_SETTERS: {
   stepVoxels: setStepVoxels,
 };
 
+type PathTracerSliderKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive'>;
+
+type PathTracerSliderSpec = {
+  readonly key: PathTracerSliderKey;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format: (value: number) => string;
+  readonly info: string;
+  /** Present ⇒ log10 space, same convention as RAYMARCH_SLIDERS' sampleWeight. */
+  readonly log?: boolean;
+};
+
+// Spec §7's nine knobs plus the raymarch layer's own trimDensity/sampleWeight
+// (VolpathParams' full list — task-V2A-report.md). Order matches the brief.
+const PATHTRACER_SLIDERS: readonly PathTracerSliderSpec[] = [
+  {
+    key: 'sigmaT',
+    label: 'sigma t',
+    min: 0.01,
+    max: 20,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: 'Extinction. Scattering = albedo · sigmaT.',
+  },
+  {
+    key: 'albedo',
+    label: 'albedo',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: 'Fraction of extinction that scatters rather than absorbs.',
+  },
+  {
+    key: 'sigmaE',
+    label: 'sigma e',
+    min: 0,
+    max: 10,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: 'Emission scale — how bright a collision glows through the palette.',
+  },
+  {
+    key: 'anisotropy',
+    label: 'anisotropy',
+    min: 0,
+    max: 0.99,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "Henyey-Greenstein mean cosine: 0 isotropic, up to 0.99 sharply forward. UNSIGNED — the fork's sampler folds a negative value onto its positive twin, so back-scattering is unreachable.",
+  },
+  {
+    key: 'ambientTrace',
+    label: 'ambient trace',
+    min: 0,
+    max: 1,
+    step: 0.001,
+    format: (v) => v.toFixed(3),
+    info: 'Density floor inside the box, so the void between filaments still scatters.',
+  },
+  {
+    key: 'traceMax',
+    label: 'trace max',
+    min: 0.01,
+    max: 100,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    info: "Tracking majorant. Below the field's true peak the image biases dark — raise this first if the render looks too dim.",
+  },
+  {
+    key: 'exposure',
+    label: 'exposure',
+    min: 0,
+    max: 5,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: 'Tonemap exposure applied when the accumulator resolves.',
+  },
+  {
+    key: 'trimDensity',
+    label: 'trim density',
+    min: 0,
+    max: 0.5,
+    step: 0.00001,
+    format: (v) => v.toFixed(5),
+    info: "Trace values at or below this are treated as empty space — the raymarch layer's own knob of the same name, kept separately tunable here.",
+  },
+  {
+    key: 'sampleWeight',
+    label: 'sample weight',
+    min: -7,
+    max: 0,
+    step: 0.05,
+    log: true,
+    format: (v) => Math.pow(10, v).toExponential(1),
+    info: 'Inverts the ~100x steady-state amplification of the trace decay (1% retained per step).',
+  },
+  {
+    key: 'bounces',
+    label: 'bounces',
+    min: 1,
+    max: 64,
+    step: 1,
+    format: (v) => v.toFixed(0),
+    info: "Tracking walks per path, not the fork's n_bounces (this layer passes it through as given, one less than the fork's call-site convention).",
+  },
+];
+
 function ControlsPanel(): ReactNode {
   const store = useAppStore();
   const sim = useStore(store, (s) => s.sim);
@@ -200,6 +313,7 @@ function ControlsPanel(): ReactNode {
   const [raymarchOpen, setRaymarchOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
+  const [pathTracerOpen, setPathTracerOpen] = useState(false);
   const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
     store.setState((s) => ({ ...s, view: setLayerEnabled(s.view, layer, on) }));
 
@@ -423,6 +537,47 @@ function ControlsPanel(): ReactNode {
             info="Screen-space dot radius — constant with distance, so far galaxies stay visible."
             onChange={(v) => store.setState((s) => ({ ...s, view: setGalaxyPointSize(s.view, v) }))}
             path="view.galaxies.pointSizePx"
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Path tracer"
+          open={pathTracerOpen}
+          onToggle={() => setPathTracerOpen((v) => !v)}
+          headerToggle={view.layers.pathTracer}
+          onHeaderToggleChange={toggleLayer('pathTracer')}
+        >
+          {/* Off by default: worst case is bounces×512 tracking steps per pixel,
+              far heavier than the raymarch — this is not a layer to leave on
+              while exploring. */}
+          <SliderGroup title="Trace">
+            {PATHTRACER_SLIDERS.map((spec) => (
+              <ParamSlider
+                key={spec.key}
+                label={spec.label}
+                value={spec.log ? Math.log10(view.pathTracer[spec.key]) : view.pathTracer[spec.key]}
+                min={spec.min}
+                max={spec.max}
+                step={spec.step}
+                format={spec.format}
+                info={spec.info}
+                onChange={(v) =>
+                  store.setState((s) => ({
+                    ...s,
+                    view: setPathTracerParam(s.view, spec.key, spec.log ? Math.pow(10, v) : v),
+                  }))
+                }
+                path={`view.pathTracer.${spec.key}`}
+              />
+            ))}
+          </SliderGroup>
+          <ToggleRow
+            label="compressive"
+            on={view.pathTracer.compressive}
+            info="Tonemap each sample before accumulating (the fork's LDR accumulation) instead of averaging linear radiance."
+            onChange={(on) =>
+              store.setState((s) => ({ ...s, view: setPathTracerCompressive(s.view, on) }))
+            }
           />
         </CollapsibleSection>
       </div>

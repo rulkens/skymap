@@ -12,7 +12,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
  * also a knob diff. `additive` is the deliberate exception (see ViewSlice).
  */
 export const defaultViewSlice: ViewSlice = {
-  layers: { raymarch: true, agents: false, galaxies: true },
+  layers: { raymarch: true, agents: false, galaxies: true, pathTracer: false },
   galaxies: { intensity: 0.6, pointSizePx: 2 },
   fps: 0,
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetOffsetMpc: [0, 0, 0] },
@@ -23,6 +23,22 @@ export const defaultViewSlice: ViewSlice = {
     sampleWeight: 0.01,
     stepVoxels: 1,
     additive: true,
+  },
+  // task-V2A-report.md's "Suggested starting values" (fork defaults, adapted).
+  // traceMax has no HUD readout to seed from yet (report concern #2) — 5.0 is
+  // a guess a few times the raymarch's own transfer would call "dense".
+  pathTracer: {
+    sigmaT: 1.0,
+    albedo: 0.9,
+    sigmaE: 1.0,
+    anisotropy: 0.3,
+    ambientTrace: 0.02,
+    bounces: 4,
+    traceMax: 5.0,
+    exposure: 1.0,
+    compressive: false,
+    trimDensity: 1e-5,
+    sampleWeight: 0.01,
   },
 };
 
@@ -89,4 +105,18 @@ export function setStepVoxels(prev: ViewSlice, stepVoxels: number): ViewSlice {
 
 export function setAdditive(prev: ViewSlice, additive: boolean): ViewSlice {
   return { ...prev, raymarch: { ...prev.raymarch, additive } };
+}
+
+type PathTracerNumericKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive'>;
+
+export function setPathTracerParam(
+  prev: ViewSlice,
+  key: PathTracerNumericKey,
+  value: number,
+): ViewSlice {
+  return { ...prev, pathTracer: { ...prev.pathTracer, [key]: value } };
+}
+
+export function setPathTracerCompressive(prev: ViewSlice, compressive: boolean): ViewSlice {
+  return { ...prev, pathTracer: { ...prev.pathTracer, compressive } };
 }

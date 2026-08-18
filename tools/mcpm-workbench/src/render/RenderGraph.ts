@@ -3,9 +3,9 @@
  * tools/flow-workbench's): it owns the shared `rgba16float` accum texture every
  * MCPM layer draws into and the fullscreen tonemap that resolves it to the
  * swap-chain. No layer clears: `clear()` opens the frame, then any subset of
- * `drawTrace` / `drawSplat` / `drawGalaxyOverlay` loads and blends one/one onto
- * it, in that order. A pass constructed but never registered here is silently
- * never opened.
+ * `drawTrace` / `drawSplat` / `drawGalaxyOverlay` / `drawVolpath` loads and
+ * blends one/one onto it, in that order. A pass constructed but never
+ * registered here is silently never opened.
  *
  * `accumView()` is a method, not a field: the texture is recreated on resize, so
  * a cached view would dangle, and the blit's `layout:'auto'` bind group is
@@ -20,6 +20,8 @@ import type { SplatPass, SplatView } from './splatPass';
 import { createSplatPass } from './splatPass';
 import type { TracePass, TraceSource, TraceView } from './tracePass';
 import { createTracePass } from './tracePass';
+import type { VolpathParams, VolpathPass } from './volpathPass';
+import { createVolpathPass } from './volpathPass';
 import type { McpmCameraView } from './writeMcpmCamera';
 import blitWgsl from './shaders/blit.wesl?static';
 
@@ -44,6 +46,16 @@ export type RenderGraph = {
   attachTrace(source: TraceSource): void;
   /** March the attached trace pass into the accum target. Throws if none is attached. */
   drawTrace(encoder: GPUCommandEncoder, view: TraceView): void;
+  /**
+   * Build the path tracer over `source` — the same `TraceSource` `attachTrace` takes, so
+   * both passes are attached together in `attachTrace`'s caller. Replaces and disposes any
+   * pass attached before.
+   */
+  attachVolpath(source: TraceSource): void;
+  /** Accumulate one path-traced sample per pixel and resolve. Throws if none is attached. */
+  drawVolpath(encoder: GPUCommandEncoder, view: McpmCameraView, params: VolpathParams): void;
+  /** Drop the path tracer's accumulated samples; a no-op before `attachVolpath`. */
+  resetVolpath(): void;
   /**
    * Build the two agent-fed layers — the swarm splat and the galaxy points — over the
    * harness's lanes. Both die with their harness, so this is re-called on every rebuild.
@@ -106,6 +118,7 @@ export function createRenderGraph(
   let accumTexView: GPUTextureView | null = null;
   let blitBindGroup: GPUBindGroup | null = null;
   let tracePass: TracePass | null = null;
+  let volpathPass: VolpathPass | null = null;
   let splatPass: SplatPass | null = null;
   let galaxyOverlayPass: GalaxyOverlayPass | null = null;
   // Eager, not lazy like the agent-fed passes above: it needs neither the harness nor a
@@ -184,6 +197,26 @@ export function createRenderGraph(
     tracePass.draw(encoder, accumView(), view);
   }
 
+  function attachVolpath(source: TraceSource): void {
+    volpathPass?.dispose();
+    volpathPass = createVolpathPass({ device, targetFormat: HDR_FORMAT, makeShader, source });
+  }
+
+  function drawVolpath(
+    encoder: GPUCommandEncoder,
+    view: McpmCameraView,
+    params: VolpathParams,
+  ): void {
+    if (!volpathPass) {
+      throw new Error('RenderGraph.drawVolpath: call attachVolpath() before drawing');
+    }
+    volpathPass.draw(encoder, accumView(), view, params);
+  }
+
+  function resetVolpath(): void {
+    volpathPass?.reset();
+  }
+
   function attachAgents(agents: AgentBuffers, box: GridBox): void {
     splatPass?.dispose();
     galaxyOverlayPass?.dispose();
@@ -251,6 +284,8 @@ export function createRenderGraph(
   function dispose(): void {
     tracePass?.dispose();
     tracePass = null;
+    volpathPass?.dispose();
+    volpathPass = null;
     splatPass?.dispose();
     splatPass = null;
     galaxyOverlayPass?.dispose();
@@ -270,6 +305,9 @@ export function createRenderGraph(
     clear,
     attachTrace,
     drawTrace,
+    attachVolpath,
+    drawVolpath,
+    resetVolpath,
     attachAgents,
     drawSplat,
     drawGalaxyOverlay,

@@ -345,6 +345,22 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // Track V's path tracer: off by default, so this is the only step that ever
+      // compiles/dispatches its pass — the compute-heavy layer this probe is most
+      // likely to be the first to notice broke. Left on for the resize step below
+      // too, so its accumulator buffer gets resized exactly like the splat's.
+      // NOTE: grid element (f16 vs f32) is chosen from `device.features.has('shader-f16')`
+      // in createMcpmHarness, not a UI lever — this probe's headless Chromium always
+      // resolves one of the two, and there is no existing step that flips it, so the
+      // f16 kernel variant (task-V2A-report.md's open concern) is exercised only when
+      // the probe's own GPU adapter happens to support shader-f16.
+      name: 'layers:path-tracer-on',
+      run: async (page) => {
+        await setLayers(page, { 'Path tracer': true });
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
       // Canvas resize rebuilds the accum target, the blit's `layout:'auto'` bind group
       // and — because every layer is on here — the splat's screen-sized accumulation
       // buffer, which a stale size would index straight past the end of.

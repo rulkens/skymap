@@ -209,6 +209,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let lastScfdToken = store.getSnapshot().sim.scfdToken;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
     let boxPreviewUntil = 0;
+    // null whenever the path tracer is off — reaching this frame with the layer freshly
+    // turned on always differs from null, so enabling it always resets, per the
+    // accumulation contract (task-V2A-report.md).
+    let lastVolpathKey: string | null = null;
     // -1 sentinel: skips the first frame's delta, which spans the async catalog
     // load + harness build and would otherwise seed the EMA with a huge bogus dt.
     let lastFrameTime = -1;
@@ -336,6 +340,20 @@ function Viewport({ store }: ViewportProps): ReactNode {
           graph.drawSplat(encoder, { ...cam, sampleWeight: s.view.raymarch.sampleWeight });
         }
         if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
+        if (layers.pathTracer) {
+          // Reset on any camera move, any pathTracer param change, or the trace grid
+          // moving under the accumulator (stepCount) — `cam` is the SAME serialized
+          // object already computed above, so this can't drift from what actually drew.
+          // While the sim runs, stepCount changes every frame, so this resets every
+          // frame too: the layer shows one noisy sample per frame, which is correct
+          // (task-V2A-report.md's accumulation contract), not a bug to chase.
+          const volpathKey = JSON.stringify([cam, s.view.pathTracer, s.sim.stepCount]);
+          if (volpathKey !== lastVolpathKey) graph.resetVolpath();
+          lastVolpathKey = volpathKey;
+          graph.drawVolpath(encoder, cam, s.view.pathTracer);
+        } else {
+          lastVolpathKey = null;
+        }
         // The pending box leads the debounced harness rebuild by up to REBUILD_DEBOUNCE_MS —
         // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
         // the galaxy dots.
@@ -397,16 +415,22 @@ function Viewport({ store }: ViewportProps): ReactNode {
       const makeShader = (code: string, label: string): GPUShaderModule =>
         h.gpu.device.createShaderModule({ code, label });
       const graph = createRenderGraph(h.gpu.device, h.gpu.format, makeShader);
-      // The trace buffer dies with its harness, so the pass is re-attached on every
-      // rebuild — a graph kept across one would march freed memory.
-      graph.attachTrace({
+      // The trace buffer dies with its harness, so both passes reading it are
+      // re-attached on every rebuild — a graph kept across one would march freed memory.
+      const traceSource = {
         traceBuffer: h.traceBuffer,
         box,
         element: h.element,
         paletteId: s.view.raymarch.paletteId,
-      });
+      };
+      graph.attachTrace(traceSource);
+      graph.attachVolpath(traceSource);
       graph.attachAgents(h.agents, box);
       renderGraph = graph;
+      // A fresh accumulator already clears on its own first draw (VolpathPass's
+      // `pendingClear` starts true) — this just keeps the reset-tracking key from
+      // outliving the harness it was computed against.
+      lastVolpathKey = null;
       startLoop();
       if (hasUrlGate('probe')) (window as unknown as ProbeWindow).__mcpmProbeReady = true;
     }
