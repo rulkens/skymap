@@ -21,6 +21,7 @@ export const defaultGridSlice: GridSlice = {
   box: null,
   resolvedElement: null,
   byteBudget: null,
+  showGridBox: true,
 };
 
 // V3 ruling: every setter below a user reaches through the grid-controls UI
@@ -81,6 +82,15 @@ export function fitBoxToCatalog(prev: GridSlice, boundsMpc: { min: Vec3; max: Ve
     boundsMpc.max[2] - boundsMpc.min[2] + 2 * prev.paddingMpc,
   ];
   return { ...prev, manualCenterMpc, manualSizeMpc, importedBox: null };
+}
+
+/**
+ * F1.7: persistent box-wireframe visibility, not a grid-control edit — unlike
+ * every setter above, this does NOT clear `importedBox` (view state, no
+ * bearing on which box is loaded).
+ */
+export function setShowGridBox(prev: GridSlice, showGridBox: boolean): GridSlice {
+  return { ...prev, showGridBox };
 }
 
 /** Records a completed fit: the resolved box, its element, and its byte budget. */

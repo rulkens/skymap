@@ -513,7 +513,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // the galaxy dots.
         // gizmoDragging keeps the wireframe up through a drag even once the 200ms
         // preview timer lapses — a continuous pointer signal is its own "still hot".
-        if (points && (now < boxPreviewUntil || gizmoDragging !== null)) {
+        // showGridBox (F1.7) ORs in a persistent third reason; see boxWireframeVisible.
+        if (points && boxWireframeVisible(s, now)) {
           graph.drawBoxPreview(
             encoder,
             cam,
@@ -761,6 +762,18 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let gizmoDragging: GizmoDragState | null = null;
     let hoverHandle: GizmoHandleId | null = null;
 
+    /**
+     * F1.7: the box wireframe (and therefore the gizmo, which draws with it)
+     * is visible for any of three independent reasons — the persistent
+     * toggle, the 200ms post-edit flash, or a drag in progress — and the
+     * gizmo hit-test/hover-pick below must agree with the draw call in
+     * frame() exactly, or picking an invisible handle would hijack an orbit
+     * click while the toggle is off.
+     */
+    function boxWireframeVisible(s: AppState, now: number): boolean {
+      return s.grid.showGridBox || now < boxPreviewUntil || gizmoDragging !== null;
+    }
+
     /** World-space pick ray through the pointer, against the *unrotated* CameraBasis —
      *  screenToRay's own contract: the gizmo picks world-space handle geometry, never
      *  voxel space, so the box parameter is inert until F2 gives cameraBasis a rotation
@@ -779,18 +792,20 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     const onPointerDown = (e: PointerEvent): void => {
       const s = store.getSnapshot();
-      const pendingBox = deriveGridBox(s.grid);
-      const ray = rayFromPointer(e, s);
-      const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, UNIT_AXES));
-      if (hit && hit.kind !== 'rotate') {
-        const anchorAxisParam = closestPointOnRayToLine(
-          ray,
-          pendingBox.centerMpc,
-          UNIT_AXES[hit.axis],
-        );
-        gizmoDragging = { handle: hit, anchorAxisParam };
-        canvas.setPointerCapture(e.pointerId);
-        return;
+      if (boxWireframeVisible(s, performance.now())) {
+        const pendingBox = deriveGridBox(s.grid);
+        const ray = rayFromPointer(e, s);
+        const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, UNIT_AXES));
+        if (hit && hit.kind !== 'rotate') {
+          const anchorAxisParam = closestPointOnRayToLine(
+            ray,
+            pendingBox.centerMpc,
+            UNIT_AXES[hit.axis],
+          );
+          gizmoDragging = { handle: hit, anchorAxisParam };
+          canvas.setPointerCapture(e.pointerId);
+          return;
+        }
       }
 
       dragging = true;
@@ -834,8 +849,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
       }
 
       if (!dragging) {
-        const ray = rayFromPointer(e, s);
-        hoverHandle = pickGizmoHandle(ray, gizmoHandleGeometry(deriveGridBox(s.grid), UNIT_AXES));
+        if (boxWireframeVisible(s, performance.now())) {
+          const ray = rayFromPointer(e, s);
+          hoverHandle = pickGizmoHandle(ray, gizmoHandleGeometry(deriveGridBox(s.grid), UNIT_AXES));
+        } else {
+          hoverHandle = null;
+        }
         return;
       }
 

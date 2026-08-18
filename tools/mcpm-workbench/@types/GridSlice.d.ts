@@ -24,6 +24,12 @@ import type { GridElement } from './GridElement';
  * user editing the grid controls (including `fitBoxToCatalog`) clears it
  * back to null — the override exists only until the user starts steering
  * again.
+ *
+ * `showGridBox` (F1.7) is view state, not a grid-box edit — its setter does
+ * NOT clear `importedBox` and it is never written into a preset (see
+ * exportParams/importParams, which only round-trip the resolved `GridBox`).
+ * Default true keeps the gizmo reachable; Viewport OR-composes it with the
+ * existing 200ms post-edit preview and the live-drag hold.
  */
 export type GridSlice = {
   readonly divisor: number;
@@ -34,4 +40,5 @@ export type GridSlice = {
   readonly box: GridBox | null;
   readonly resolvedElement: GridElement | null;
   readonly byteBudget: GridBudget | null;
+  readonly showGridBox: boolean;
 };

@@ -26,8 +26,10 @@ import {
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
+  setShowGridBox,
 } from '../state/slices/gridSlice';
 import { useAppStore } from './storeContext';
+import ToggleRow from './ToggleRow';
 import styles from './GridBoxPanel.module.css';
 
 // User-specified stepping: finer than 1 in quarter steps, coarser in half
@@ -111,6 +113,12 @@ function GridBoxPanel(): ReactNode {
         color: 'var(--color-fg-muted)',
       }}
     >
+      <ToggleRow
+        label="show box"
+        on={grid.showGridBox}
+        info="Keeps the box wireframe and its drag handles on screen, instead of only the 200ms flash after a slider edit."
+        onChange={(on) => store.setState((s) => ({ ...s, grid: setShowGridBox(s.grid, on) }))}
+      />
       <Button
         className={styles.autoFitButton}
         disabled={!catalogBoundsMpc}
