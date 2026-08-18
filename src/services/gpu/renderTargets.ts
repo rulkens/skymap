@@ -40,8 +40,8 @@
  * shader's sample-at-uv semantics, and the min-1-px clamp guards tiny
  * canvases where `floor(size / 3)` would yield an illegal 0-dimension
  * texture. Consumers that need "viewport == texture size" (the raymarch
- * layer's dither-frequency viewport) read the SAME `scale` off the
- * `'volume'` spec row, so the two sites cannot drift.
+ * layer's dither-frequency viewport) read it via `sizeOf`, so the two sites
+ * cannot drift.
  *
  * ### Why the star-aggregate row renders at half scale
  *
@@ -143,6 +143,7 @@ import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
+import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -276,14 +277,17 @@ export function createRenderTargets(
   const views = new Map<string, GPUTextureView>();
   const depthTextures = new Map<string, GPUTexture>();
   const depthViews = new Map<string, GPUTextureView>();
+  // Recorded beside `textures`/`views` so `sizeOf` never reads a texture's
+  // width directly — test doubles for `RenderTargets` stub textures without
+  // real dimensions (see `renderTargets.test.ts`'s `mockDevice`).
+  const sizes = new Map<string, Size>();
 
   function allocate(spec: RenderTargetSpec, s: Size): void {
-    // floor(size / scale), min 1 px — see the module header on why floor
-    // (upsample uv semantics) and why the clamp (0 is an illegal texture
-    // dimension on tiny canvases). The depth texture, when present, shares
+    // `reducedTargetSize` is the sizing rule every reduced-resolution target
+    // shares (see its docblock); the depth texture, when present, shares
     // these dimensions exactly so its samples line up with the colour target.
-    const width = Math.max(1, Math.floor(s.width / spec.scale));
-    const height = Math.max(1, Math.floor(s.height / spec.scale));
+    const [width, height] = reducedTargetSize(s.width, s.height, spec.scale);
+    sizes.set(spec.id, { width, height });
 
     textures.get(spec.id)?.destroy();
     const texture = device.createTexture({
@@ -333,6 +337,15 @@ export function createRenderTargets(
       }
       return spec;
     },
+    sizeOf(id: string): Size {
+      const size = sizes.get(id);
+      if (!size) {
+        // Covers 'swap' (no allocated texture), unknown ids, and
+        // use-after-destroy — the same loud-failure discipline as `viewOf`.
+        throw new Error(`renderTargets: no allocated size for target '${id}'`);
+      }
+      return size;
+    },
     viewOf(id: string): GPUTextureView {
       const view = views.get(id);
       if (!view) {
@@ -365,6 +378,7 @@ export function createRenderTargets(
       views.clear();
       depthTextures.clear();
       depthViews.clear();
+      sizes.clear();
     },
   };
 }

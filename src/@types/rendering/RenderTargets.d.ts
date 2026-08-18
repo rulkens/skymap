@@ -46,6 +46,18 @@ export type RenderTargets = {
    */
   specOf(id: string): RenderTargetSpec;
   /**
+   * Allocated pixel dimensions of an offscreen row — the throwing
+   * counterpart to reading a texture's size by hand. Throws for `swap` (no
+   * allocated texture) and any unknown id, matching `viewOf`.
+   *
+   * A caller wanting "the viewport this row draws at" should read THIS, not
+   * `ctx.canvasSize` divided by the spec's `scale`: the two can only
+   * disagree in the window between a canvas resize and that frame's
+   * reconcile, which `runFrame` makes unreachable (reconcile runs before
+   * `deriveFrameContext`) — so the allocated size is true by construction.
+   */
+  sizeOf(id: string): Size;
+  /**
    * Current colour-attachment view for an OFFSCREEN row (`hdr`, `volume`,
    * `foreground:0`). Stable until the next `resize()`. Throws for `swap` (and
    * any unknown id): the swap chain is executor-resolved from the acquired

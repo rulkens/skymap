@@ -13,6 +13,7 @@ function makeStub(specs: readonly RenderTargetSpec[]): RenderTargets {
       if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
       return spec;
     },
+    sizeOf: vi.fn(),
     viewOf: vi.fn(),
     depthViewOf: vi.fn(),
     resize: vi.fn(),

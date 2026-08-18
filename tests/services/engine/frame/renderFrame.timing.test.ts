@@ -169,6 +169,17 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
+    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // downscaled viewport; the fixture canvas is the fixed 1280x720
+    // `makeMinimalInputWithTiming` builds `ctx` with.
+    sizeOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec || id === 'swap') throw new Error(`mock renderTargets: no size for '${id}'`);
+      return {
+        width: Math.max(1, Math.floor(1280 / spec.scale)),
+        height: Math.max(1, Math.floor(FIXTURE_CANVAS_HEIGHT_PX / spec.scale)),
+      };
+    },
     viewOf: (id: string) => {
       const view = views[id];
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);

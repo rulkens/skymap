@@ -232,6 +232,37 @@ describe('createRenderTargets', () => {
     expect(() => targets.specOf('nope')).toThrow();
   });
 
+  it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      MW_DIVISOR,
+    );
+    // volume @ scale 3 -> floor(900/3), floor(600/3); zoa @ scale 5 ->
+    // floor(900/5), floor(600/5).
+    expect(targets.sizeOf('volume')).toEqual({ width: 300, height: 200 });
+    expect(targets.sizeOf('zoa')).toEqual({ width: 180, height: 120 });
+    expect(() => targets.sizeOf('swap')).toThrow();
+    expect(() => targets.sizeOf('nope')).toThrow();
+  });
+
+  // Relocated from `scalarVolumeLayer.test.ts` / `zoneOfAvoidanceLayer.test.ts`
+  // once those layers stopped computing the viewport inline — the clamp now
+  // lives only here, on the `sizeOf` reader path. `renderTargets.test.ts`'s
+  // 'clamps volume to a 1 px minimum' case above covers the same clamp on the
+  // ALLOCATION path (the `createTexture` descriptor); this is the reader.
+  it('sizeOf clamps to a 1 px minimum when floor(size/scale) is 0', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 2, height: 2 },
+      MW_DIVISOR,
+    );
+    // floor(2 / 3) = 0 -> clamped up to 1.
+    expect(targets.sizeOf('volume')).toEqual({ width: 1, height: 1 });
+  });
+
   // Two independently maintained tables (the spec rows and their clear
   // values) were merged onto one this rung — a row that lost its clear value
   // in that merge would otherwise be silent (every field but this one has a

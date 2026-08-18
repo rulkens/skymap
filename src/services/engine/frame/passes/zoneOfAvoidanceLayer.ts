@@ -37,11 +37,8 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
     const opacity = deriveZoneOfAvoidanceLiveness(state, ctx);
     if (opacity === null) return;
 
-    // Viewport matches the 'zoa' target's own size (aspect uniform); divisor
-    // read off the spec row keeps it single-homed with the render-target table.
-    const scale = ctx.renderTargets.specs.find((s) => s.id === 'zoa')!.scale;
-    const vw = Math.max(1, Math.floor(ctx.canvasSize.width / scale));
-    const vh = Math.max(1, Math.floor(ctx.canvasSize.height / scale));
+    // Viewport is the 'zoa' target's allocated size (see `sizeOf`).
+    const { width: vw, height: vh } = ctx.renderTargets.sizeOf('zoa');
 
     state.gpu.zoneOfAvoidanceRenderer.draw(
       pass,
