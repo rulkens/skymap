@@ -28,4 +28,11 @@ export type CatalogSlice = {
   readonly packedOverride: CatalogPoints | null;
   readonly packedSourceName: string | null;
   readonly packedDropId: number;
+  /**
+   * Human-readable status for a state Viewport can reach but isn't an error —
+   * currently just the zero-point case (every selected source excluded at
+   * this tier, or none selected). `setCatalogLoaded` clears it on every
+   * completed load so a stale message can't survive a real one.
+   */
+  readonly statusMessage: string | null;
 };

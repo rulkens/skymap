@@ -18,6 +18,7 @@ import CollapsibleSection from '../../../../src/components/common/CollapsibleSec
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { tierTarget } from '../../../../src/data/tierTargets';
 import { useStore } from '../state/useStore';
 import { setCatalogSources, setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
 import { setSampleRandomly } from '../state/slices/histogramSlice';
@@ -129,26 +130,31 @@ const PARAM_SLIDER_SPECS: readonly ParamSliderSpec[] = [
   },
 ];
 
-// Smallest → largest, the main app's GalaxiesSection convention (~20k → 500k
-// → 2M rows). `toggleCatalogSource` re-derives the sources array from this
+// The main app's full toggleable galaxy-catalog ladder (GalaxiesSection.tsx),
+// same order. `toggleCatalogSource` re-derives the sources array from this
 // fixed order every time, so clicking GLADE then 2MRS still yields
-// [2MRS, GLADE], never the click order.
-const WORKBENCH_SOURCES: readonly SourceType[] = [Source.TwoMRS, Source.SDSS, Source.Glade];
+// [2MRS, GLADE], never the click order. May legitimately go empty — the
+// zero-point path is a first-class state Viewport surfaces, not something
+// this helper guards against.
+const WORKBENCH_SOURCES: readonly SourceType[] = [
+  Source.FamousGalaxy,
+  Source.TwoMRS,
+  Source.SDSS,
+  Source.Glade,
+  Source.Milliquas,
+  Source.DesiDeep,
+  Source.DesiWedge,
+  Source.DesiSgw,
+];
 
-/**
- * Returns the next `catalog.sources` array, or `null` if `s`/`on` would empty
- * it — an empty catalog seeds zero agents and sizes GPU buffers at zero, so
- * the caller must treat `null` as "ignore this click", not a valid state.
- */
 function toggleCatalogSource(
   current: readonly SourceType[],
   s: SourceType,
   on: boolean,
-): readonly SourceType[] | null {
+): readonly SourceType[] {
   const enabled = new Set(current);
   if (on) enabled.add(s);
   else enabled.delete(s);
-  if (enabled.size === 0) return null;
   return WORKBENCH_SOURCES.filter((source) => enabled.has(source));
 }
 
@@ -483,10 +489,12 @@ function ControlsPanel(): ReactNode {
               key={s}
               label={SOURCE_REGISTRY[s].label}
               on={catalog.sources.includes(s)}
+              // Excluded at the current tier (e.g. SDSS at 'small') carries no bin for
+              // this tier, but selection must survive a tier switch — mute + hint, never
+              // disable.
+              hint={tierTarget(s, catalog.tier) === 0 ? `not in ${catalog.tier} tier` : undefined}
               onChange={(on) => {
                 const next = toggleCatalogSource(catalog.sources, s, on);
-                // Guard: ignore the click rather than let the catalog go empty.
-                if (next === null) return;
                 store.setState((st) => ({ ...st, catalog: setCatalogSources(st.catalog, next) }));
               }}
             />

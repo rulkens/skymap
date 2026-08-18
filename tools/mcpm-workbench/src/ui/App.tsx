@@ -16,6 +16,7 @@ import { defaultAppState } from '../state/defaultAppState';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { loadPackedCatalog } from '../field/loadPackedCatalog';
 import { setCatalogLoadStatus, setPackedCatalog } from '../state/slices/catalogSlice';
+import { useStore } from '../state/useStore';
 import { StoreContext } from './storeContext';
 import Viewport from './Viewport';
 import ControlsPanel from './ControlsPanel';
@@ -33,6 +34,11 @@ const statusStyle: CSSProperties = {
   pointerEvents: 'none',
 };
 
+// Stacked above the (dev-only) packed-drop status line rather than sharing its
+// slot: catalog.statusMessage (e.g. "no catalog points") can be live in prod,
+// so the two must never silently overlap if both happen to be set at once.
+const catalogStatusStyle: CSSProperties = { ...statusStyle, bottom: 44 };
+
 async function readDroppedPackedCatalog(
   files: readonly File[],
 ): Promise<{ bin: ArrayBuffer; metadataText: string; sourceName: string } | null> {
@@ -46,6 +52,7 @@ async function readDroppedPackedCatalog(
 function App(): ReactNode {
   const store = useMemo(() => createStore(defaultAppState), []);
   const [packedStatus, setPackedStatus] = useState<string | null>(null);
+  const catalogStatusMessage = useStore(store, (s) => s.catalog.statusMessage);
 
   const onDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
@@ -85,6 +92,7 @@ function App(): ReactNode {
         <Viewport store={store} />
         <Hud />
         <ControlsPanel />
+        {catalogStatusMessage && <div style={catalogStatusStyle}>{catalogStatusMessage}</div>}
         {import.meta.env.DEV && packedStatus && <div style={statusStyle}>{packedStatus}</div>}
       </div>
     </StoreContext.Provider>

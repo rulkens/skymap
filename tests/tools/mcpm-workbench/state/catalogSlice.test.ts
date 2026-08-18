@@ -9,6 +9,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultCatalogSlice,
+  setCatalogLoaded,
+  setCatalogStatusMessage,
   setPackedCatalog,
 } from '../../../../tools/mcpm-workbench/src/state/slices/catalogSlice';
 
@@ -37,5 +39,15 @@ describe('catalogSlice setPackedCatalog', () => {
 
     expect(second.packedDropId).toBe(2);
     expect(second.packedDropId).not.toBe(first.packedDropId);
+  });
+});
+
+describe('catalogSlice zero-point status', () => {
+  it('setCatalogLoaded clears a stale statusMessage — a real load must supersede it', () => {
+    const stale = setCatalogStatusMessage(defaultCatalogSlice, 'no catalog points');
+
+    const loaded = setCatalogLoaded(stale, 1, 0);
+
+    expect(loaded.statusMessage).toBeNull();
   });
 });

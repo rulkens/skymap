@@ -28,6 +28,16 @@
   composes: label from '../../../../src/components/common/Slider/Slider.module.css';
 }
 
+.labelMuted {
+  color: var(--color-fg-muted);
+}
+
+.hint {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+}
+
 .toggle {
   composes: pillToggle from '../../../../src/components/SettingsPanel/pillToggle.module.css';
   margin: 0;

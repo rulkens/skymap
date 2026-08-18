@@ -19,6 +19,7 @@ export const defaultCatalogSlice: CatalogSlice = {
   packedOverride: null,
   packedSourceName: null,
   packedDropId: 0,
+  statusMessage: null,
 };
 
 export function setCatalogSources(
@@ -39,13 +40,26 @@ export function setCatalogLoadStatus(
   return { ...prev, loadStatus };
 }
 
-/** Records a completed load: point count, NaN-fill count, and `loadStatus: 'loaded'`. */
+/**
+ * Records a completed load: point count, NaN-fill count, `loadStatus: 'loaded'`,
+ * and clears `statusMessage` — a completed load (zero-point included; Viewport
+ * calls this on that path too) always supersedes whatever status the PREVIOUS
+ * load left behind.
+ */
 export function setCatalogLoaded(
   prev: CatalogSlice,
   pointCount: number,
   nanFillCount: number,
 ): CatalogSlice {
-  return { ...prev, loadStatus: 'loaded', pointCount, nanFillCount };
+  return { ...prev, loadStatus: 'loaded', pointCount, nanFillCount, statusMessage: null };
+}
+
+/** Viewport's zero-point path sets this after `setCatalogLoaded` (which just cleared it). */
+export function setCatalogStatusMessage(
+  prev: CatalogSlice,
+  statusMessage: string | null,
+): CatalogSlice {
+  return { ...prev, statusMessage };
 }
 
 export function setWeightMode(

@@ -36,11 +36,16 @@ import { createTracePass, type TracePass, type TraceView } from '../render/trace
 import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
-import { setCatalogLoadStatus, setCatalogLoaded } from '../state/slices/catalogSlice';
+import {
+  setCatalogLoadStatus,
+  setCatalogLoaded,
+  setCatalogStatusMessage,
+} from '../state/slices/catalogSlice';
 import { setResolvedGrid } from '../state/slices/gridSlice';
 import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import {
+  defaultViewSlice,
   setCameraDistance,
   setCameraTarget,
   setCameraYawPitch,
@@ -593,6 +598,21 @@ function Viewport({ store }: ViewportProps): ReactNode {
           points = pts;
           loadedCatalogKey = ck;
         }
+        if (points.count === 0) {
+          // Zero points is a real, reachable state (every selected source excluded
+          // at this tier, or none selected) — not a crash: tear down any harness
+          // left from a previous non-empty selection and surface a human status
+          // instead of letting createMcpmHarness's own guard throw.
+          disposeHarness();
+          store.setState((st) => ({
+            ...st,
+            catalog: setCatalogStatusMessage(
+              setCatalogLoaded(st.catalog, 0, 0),
+              'no catalog points — enable a source or pick a tier that carries one',
+            ),
+          }));
+          return;
+        }
         await buildFromPoints(points, generation);
       } catch (err) {
         console.error('mcpm-workbench: build failed', err);
@@ -656,6 +676,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
             ...st,
             sim: resetStepCount(st.sim),
             histogram: resetHistogram(st.histogram),
+            // Reset restores framing too, deliberately: the orbit target is absolute
+            // world Mpc now (no longer box-relative), so nothing else recenters the
+            // camera onto the box — this is the one recovery path for "camera drifted".
+            view: { ...st.view, camera: defaultViewSlice.camera },
           }));
         }
         if (s.sim.clearTraceToken !== lastClearToken) {
