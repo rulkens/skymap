@@ -13,6 +13,8 @@
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { cross3 } from '../../../../src/utils/math/cross3';
+import { distance3 } from '../../../../src/utils/math/distance3';
+import { lerpVec3 } from '../../../../src/utils/math/lerpVec3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { GridBox } from '../../@types/GridBox';
@@ -52,15 +54,38 @@ const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
 const BOX_UNIFORM_BYTES = 32;
 const LINE_VERTICES = 24; // boxLines.wesl's EDGE_CORNERS: 12 edges x 2 endpoints.
 
-// GlyphVertex{position:vec3<f32>, handleId:i32} — 16 bytes (vec3's align-16 rounds the struct
-// up). 3 translate arrows x 2 verts + 6 resize crosses x 4 verts; rotate rings are F1 stubs.
-const GLYPH_VERTEX_COUNT = 3 * 2 + 6 * 4;
-const GLYPH_VERTEX_FLOATS = 4;
-const GLYPH_STORAGE_BYTES = GLYPH_VERTEX_COUNT * GLYPH_VERTEX_FLOATS * 4;
+// GlyphSegment{posA:vec3+widthA, posB:vec3+widthB, handleId:i32+12 pad} — 48 bytes / 12 floats,
+// boxLines.wesl's struct byte-for-byte. Each segment expands to a 2-triangle screen-space quad
+// (VERTICES_PER_SEGMENT) in vsGlyph, so the draw call's vertex count is a multiple of it.
+const GLYPH_SEGMENT_FLOATS = 12;
+const VERTICES_PER_SEGMENT = 6;
+// 3 translate arrows x (1 shaft + ARROWHEAD_LEG_COUNT cone legs) + 6 resize crosses x 2 arms;
+// rotate rings are F1 stubs (no geometry yet).
+const ARROWHEAD_LEG_COUNT = 4;
+const GLYPH_SEGMENT_COUNT = 3 * (1 + ARROWHEAD_LEG_COUNT) + 6 * 2;
+const GLYPH_VERTEX_COUNT = GLYPH_SEGMENT_COUNT * VERTICES_PER_SEGMENT;
+const GLYPH_STORAGE_BYTES = GLYPH_SEGMENT_COUNT * GLYPH_SEGMENT_FLOATS * 4;
 // GizmoUniform: hoverHandle i32 + activeHandle i32 + 8 bytes pad.
 const GIZMO_UNIFORM_BYTES = 16;
 
-type GlyphVertex = { readonly position: Vec3; readonly handleId: number };
+// Rendering-only sizing (screen-space pixel widths, world-space cone/cross proportions) — none
+// of this feeds pickGizmoHandle, which hit-tests handle.positionMpc against PICK_TOLERANCE_
+// FRACTION directly and never reads the glyph geometry built below.
+const SHAFT_WIDTH_PX = 3;
+const CROSS_WIDTH_PX = 3;
+const ARROWHEAD_TIP_WIDTH_PX = 0.5;
+const ARROWHEAD_BASE_WIDTH_PX = 5;
+const ARROWHEAD_LENGTH_FRACTION = 0.15; // of the arrow's center-to-tip length
+const ARROWHEAD_RADIUS_FRACTION = 0.5; // of the cone's own length, i.e. how splayed its legs are
+const CROSS_ARM_FRACTION = 1.5 * PICK_TOLERANCE_FRACTION; // visually bigger than the (unchanged) pick radius
+
+type GlyphSegment = {
+  readonly posA: Vec3;
+  readonly widthA: number;
+  readonly posB: Vec3;
+  readonly widthB: number;
+  readonly handleId: number;
+};
 
 function worldBounds(box: GridBox): { min: Vec3; max: Vec3 } {
   const half = boxHalfExtentMpc(box.sizeMpc);
@@ -82,33 +107,64 @@ function crossArmVectors(axisDir: Readonly<Vec3>): readonly [Vec3, Vec3] {
 }
 
 /**
- * Translate arrows (center -> handle tip, one line segment each) and resize crosses (two
- * segments through the handle position, perpendicular to its axis). The cross arm length
- * reuses `PICK_TOLERANCE_FRACTION` — the glyph is sized off the same fraction of the box its
- * own pick tolerance is, so what's drawn is what's clickable, with no separate visual constant.
+ * Translate arrows: a constant-width shaft (center -> cone base) plus ARROWHEAD_LEG_COUNT
+ * tapered legs (cone base ring -> the handle's own tip) forming a pointed cone silhouette once
+ * vsGlyph expands each into a screen-space quad. Resize crosses: two constant-width segments
+ * through the handle position, perpendicular to its axis.
  */
-function buildGlyphVertices(box: GridBox): GlyphVertex[] {
+function buildGlyphSegments(box: GridBox): GlyphSegment[] {
   const half = boxHalfExtentMpc(box.sizeMpc);
-  const armMpc = PICK_TOLERANCE_FRACTION * Math.min(half[0], half[1], half[2]);
+  const crossArmMpc = CROSS_ARM_FRACTION * Math.min(half[0], half[1], half[2]);
   const geometry = gizmoHandleGeometry(box, UNIT_AXES);
-  const verts: GlyphVertex[] = [];
+  const segs: GlyphSegment[] = [];
 
   for (const handle of geometry.translate) {
     const id = encodeGizmoHandleId(handle.id);
-    verts.push({ position: box.centerMpc, handleId: id });
-    verts.push({ position: handle.positionMpc, handleId: id });
+    const tip = handle.positionMpc;
+    const armLengthMpc = distance3(box.centerMpc, tip);
+    const coneLengthMpc = ARROWHEAD_LENGTH_FRACTION * armLengthMpc;
+    const coneBase = lerpVec3(box.centerMpc, tip, 1 - ARROWHEAD_LENGTH_FRACTION);
+    const coneRadiusMpc = ARROWHEAD_RADIUS_FRACTION * coneLengthMpc;
+    const [u, v] = crossArmVectors(handle.axisDir);
+
+    segs.push({
+      posA: box.centerMpc,
+      widthA: SHAFT_WIDTH_PX,
+      posB: coneBase,
+      widthB: SHAFT_WIDTH_PX,
+      handleId: id,
+    });
+    for (const legDir of [u, [-u[0], -u[1], -u[2]] as Vec3, v, [-v[0], -v[1], -v[2]] as Vec3]) {
+      segs.push({
+        posA: addScaled(coneBase, legDir, coneRadiusMpc),
+        widthA: ARROWHEAD_BASE_WIDTH_PX,
+        posB: tip,
+        widthB: ARROWHEAD_TIP_WIDTH_PX,
+        handleId: id,
+      });
+    }
   }
 
   for (const handle of geometry.resize) {
     const id = encodeGizmoHandleId(handle.id);
     const [u, v] = crossArmVectors(handle.axisDir);
-    verts.push({ position: addScaled(handle.positionMpc, u, -armMpc), handleId: id });
-    verts.push({ position: addScaled(handle.positionMpc, u, armMpc), handleId: id });
-    verts.push({ position: addScaled(handle.positionMpc, v, -armMpc), handleId: id });
-    verts.push({ position: addScaled(handle.positionMpc, v, armMpc), handleId: id });
+    segs.push({
+      posA: addScaled(handle.positionMpc, u, -crossArmMpc),
+      widthA: CROSS_WIDTH_PX,
+      posB: addScaled(handle.positionMpc, u, crossArmMpc),
+      widthB: CROSS_WIDTH_PX,
+      handleId: id,
+    });
+    segs.push({
+      posA: addScaled(handle.positionMpc, v, -crossArmMpc),
+      widthA: CROSS_WIDTH_PX,
+      posB: addScaled(handle.positionMpc, v, crossArmMpc),
+      widthB: CROSS_WIDTH_PX,
+      handleId: id,
+    });
   }
 
-  return verts;
+  return segs;
 }
 
 export function createBoxPreviewPass(opts: {
@@ -166,7 +222,9 @@ export function createBoxPreviewPass(opts: {
       entryPoint: 'fsGlyph',
       targets: [{ format: opts.targetFormat, blend: opts.blend }],
     },
-    primitive: { topology: 'line-list' },
+    // Triangle quads (vsGlyph expands each GlyphSegment to 2 tris), not the hairline box's
+    // line-list — pixel-space thickness needs real triangle coverage.
+    primitive: { topology: 'triangle-list' },
   });
 
   const camBuffer = device.createBuffer({
@@ -231,15 +289,21 @@ export function createBoxPreviewPass(opts: {
       boxF32.set(worldToVoxel(builtBox, bounds.max), 4);
       device.queue.writeBuffer(boxBuffer, 0, boxF32);
 
-      let vi = 0;
-      for (const v of buildGlyphVertices(pendingBox)) {
-        const voxelPos = worldToVoxel(builtBox, v.position);
-        const base = vi * GLYPH_VERTEX_FLOATS;
-        glyphF32[base] = voxelPos[0];
-        glyphF32[base + 1] = voxelPos[1];
-        glyphF32[base + 2] = voxelPos[2];
-        glyphI32[base + 3] = v.handleId;
-        vi++;
+      let si = 0;
+      for (const seg of buildGlyphSegments(pendingBox)) {
+        const a = worldToVoxel(builtBox, seg.posA);
+        const b = worldToVoxel(builtBox, seg.posB);
+        const base = si * GLYPH_SEGMENT_FLOATS;
+        glyphF32[base] = a[0];
+        glyphF32[base + 1] = a[1];
+        glyphF32[base + 2] = a[2];
+        glyphF32[base + 3] = seg.widthA;
+        glyphF32[base + 4] = b[0];
+        glyphF32[base + 5] = b[1];
+        glyphF32[base + 6] = b[2];
+        glyphF32[base + 7] = seg.widthB;
+        glyphI32[base + 8] = seg.handleId;
+        si++;
       }
       device.queue.writeBuffer(glyphBuffer, 0, glyphF32);
 
