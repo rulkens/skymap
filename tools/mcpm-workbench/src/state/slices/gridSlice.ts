@@ -8,16 +8,17 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
  * defaultGridSlice — auto-fit OFF by user directive: the catalog's outliers
  * stretch an auto-fitted box until the local volume is a sliver of it, so the
  * manual 200 Mpc origin-centred cube is the better boot view.
- * `longAxisTarget: 300` matches Phase 1's own "a ≥300-class grid runs
- * continuously" exit criterion.
+ * Resolution defaults sit on GridBoxPanel's RESOLUTION_OPTIONS notch 256;
+ * the 360 notch covers Phase 1's "a ≥300-class grid runs continuously"
+ * exit criterion.
  */
 export const defaultGridSlice: GridSlice = {
   autoFit: false,
-  longAxisTarget: 300,
+  longAxisTarget: 256,
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],
   manualSizeMpc: [200, 200, 200],
-  manualResolution: 128,
+  manualResolution: 256,
   box: null,
   resolvedElement: null,
   byteBudget: null,

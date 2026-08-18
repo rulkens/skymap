@@ -21,6 +21,10 @@ import {
 import { useAppStore } from './storeContext';
 import Toggle from './Toggle';
 
+// Notches, not free text: grid memory scales cubically, so the panel offers only
+// resolutions the byte budget has been sanity-checked at (360 ≈ the fork class).
+const RESOLUTION_OPTIONS = [64, 128, 256, 360] as const;
+
 const fieldStyle: CSSProperties = {
   width: '64px',
   fontFamily: 'var(--font-family-mono)',
@@ -81,8 +85,7 @@ function GridBoxPanel(): ReactNode {
         <>
           <label>
             long-axis target
-            <input
-              type="number"
+            <select
               style={fieldStyle}
               value={grid.longAxisTarget}
               onChange={(e) =>
@@ -91,7 +94,13 @@ function GridBoxPanel(): ReactNode {
                   grid: setLongAxisTarget(s.grid, parseInt(e.target.value, 10)),
                 }))
               }
-            />
+            >
+              {RESOLUTION_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             padding (Mpc)
@@ -128,8 +137,7 @@ function GridBoxPanel(): ReactNode {
           </label>
           <label>
             long-axis resolution
-            <input
-              type="number"
+            <select
               style={fieldStyle}
               value={grid.manualResolution}
               onChange={(e) =>
@@ -138,7 +146,13 @@ function GridBoxPanel(): ReactNode {
                   grid: setManualResolution(s.grid, parseInt(e.target.value, 10)),
                 }))
               }
-            />
+            >
+              {RESOLUTION_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </label>
         </>
       )}
