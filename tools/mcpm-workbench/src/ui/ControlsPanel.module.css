@@ -1,0 +1,32 @@
+/* Full-height right sidebar, the galaxy-renderer ControlsPanel's shape: the
+   glass chrome is on `.root` and the SCROLL lives on the inner `.scroll`, so
+   the wheel scrolls the controls instead of the viewport's own zoom handler. */
+.root {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 90vw;
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  border-left: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  /* This tool has no App-level wrapper carrying the ambient text style, and
+     global.css's page reset sets none — without these, anything that doesn't
+     colour itself falls through to the browser's black-on-black. */
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+}
+
+/* `align-content: start` because the grid is inside a flex:1 box: auto rows
+   would otherwise stretch to fill a taller-than-content panel. */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 22px 40px;
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}

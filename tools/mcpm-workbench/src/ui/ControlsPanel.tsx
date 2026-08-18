@@ -33,6 +33,7 @@ import {
 import { useAppStore } from './storeContext';
 import Toggle from './Toggle';
 import GridBoxPanel from './GridBoxPanel';
+import styles from './ControlsPanel.module.css';
 
 type ParamSliderSpec = {
   readonly id: keyof McpmParams;
@@ -197,196 +198,189 @@ function ControlsPanel(): ReactNode {
   const [raymarchOpen, setRaymarchOpen] = useState(true);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 'var(--space-6)',
-        right: 'var(--space-6)',
-        display: 'grid',
-        gap: 'var(--space-5)',
-        padding: 'var(--space-6)',
-        borderRadius: '6px',
-        background: 'var(--surface-panel)',
-        border: '1px solid var(--border-card)',
-        width: '280px',
-        maxHeight: 'calc(100vh - var(--space-6) * 2)',
-        overflowY: 'auto',
-      }}
-    >
-      <CollapsibleSection title="Simulation" open={simOpen} onToggle={() => setSimOpen((v) => !v)}>
-        <SliderGroup title="Agents">
-          {PARAM_SLIDER_SPECS.map((spec) => (
+    <div className={styles.root}>
+      <div className={styles.scroll}>
+        <CollapsibleSection
+          title="Simulation"
+          open={simOpen}
+          onToggle={() => setSimOpen((v) => !v)}
+        >
+          <SliderGroup title="Agents">
+            {PARAM_SLIDER_SPECS.map((spec) => (
+              <ParamSlider
+                key={spec.id}
+                label={spec.label}
+                min={spec.min}
+                max={spec.max}
+                step={spec.step}
+                info={spec.info}
+                value={sim.params[spec.id]}
+                onChange={(v) =>
+                  store.setState((s) => ({ ...s, sim: setSimParam(s.sim, spec.id, v) }))
+                }
+                path={`sim.params.${spec.id}`}
+              />
+            ))}
             <ParamSlider
-              key={spec.id}
-              label={spec.label}
-              min={spec.min}
-              max={spec.max}
-              step={spec.step}
-              info={spec.info}
-              value={sim.params[spec.id]}
-              onChange={(v) =>
-                store.setState((s) => ({ ...s, sim: setSimParam(s.sim, spec.id, v) }))
-              }
-              path={`sim.params.${spec.id}`}
+              label="agent count"
+              min={1_000_000}
+              max={10_000_000}
+              step={100_000}
+              value={sim.agentCount}
+              format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
+              info="Structural: changing it rebuilds the harness and reseeds the swarm."
+              onChange={(v) => store.setState((s) => ({ ...s, sim: setAgentCount(s.sim, v) }))}
+              path="sim.agentCount"
             />
-          ))}
-          <ParamSlider
-            label="agent count"
-            min={1_000_000}
-            max={10_000_000}
-            step={100_000}
-            value={sim.agentCount}
-            format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
-            info="Structural: changing it rebuilds the harness and reseeds the swarm."
-            onChange={(v) => store.setState((s) => ({ ...s, sim: setAgentCount(s.sim, v) }))}
-            path="sim.agentCount"
-          />
-        </SliderGroup>
-      </CollapsibleSection>
+          </SliderGroup>
+        </CollapsibleSection>
 
-      <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-        <Toggle
-          label={sim.running ? 'pause' : 'resume'}
-          on={sim.running}
-          onToggle={() => store.setState((s) => ({ ...s, sim: setRunning(s.sim, !s.sim.running) }))}
-        />
-        <Toggle
-          label="reset"
-          on={false}
-          onToggle={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
-        />
-        <Toggle
-          label="clear trace"
-          on={false}
-          onToggle={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
-        />
-      </div>
-
-      <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-        <Toggle
-          label="weight: mass"
-          on={catalog.weightMode === 'stellarMass'}
-          onToggle={() =>
-            store.setState((s) => ({
-              ...s,
-              catalog: setWeightMode(
-                s.catalog,
-                s.catalog.weightMode === 'stellarMass' ? 'uniform' : 'stellarMass',
-              ),
-            }))
-          }
-        />
-        <Toggle
-          label="init: around data"
-          on={sim.initMode === 'aroundData'}
-          onToggle={() =>
-            store.setState((s) => ({
-              ...s,
-              sim: setInitMode(s.sim, s.sim.initMode === 'aroundData' ? 'uniform' : 'aroundData'),
-            }))
-          }
-        />
-      </div>
-
-      <div>
-        <span
-          style={{
-            fontFamily: 'var(--font-family-mono)',
-            fontSize: 'var(--font-size-sm)',
-            color: 'var(--color-fg-label)',
-          }}
-        >
-          tier
-        </span>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-          {(['small', 'medium', 'large'] as const).map((tier) => (
-            <Toggle
-              key={tier}
-              label={tier}
-              on={catalog.tier === tier}
-              onToggle={() =>
-                store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))
-              }
-            />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <span
-          style={{
-            fontFamily: 'var(--font-family-mono)',
-            fontSize: 'var(--font-size-sm)',
-            color: 'var(--color-fg-label)',
-          }}
-        >
-          view
-        </span>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-          {VIEW_MODES.map((entry) => (
-            <Toggle
-              key={entry.mode}
-              label={entry.label}
-              on={view.mode === entry.mode}
-              onToggle={() =>
-                store.setState((s) => ({ ...s, view: setViewMode(s.view, entry.mode) }))
-              }
-            />
-          ))}
-          {/* Inert in splat mode: the data points are already drawn there, at 10000x. */}
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
           <Toggle
-            label="galaxies"
-            on={view.overlayGalaxies}
+            label={sim.running ? 'pause' : 'resume'}
+            on={sim.running}
+            onToggle={() =>
+              store.setState((s) => ({ ...s, sim: setRunning(s.sim, !s.sim.running) }))
+            }
+          />
+          <Toggle
+            label="reset"
+            on={false}
+            onToggle={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
+          />
+          <Toggle
+            label="clear trace"
+            on={false}
+            onToggle={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <Toggle
+            label="weight: mass"
+            on={catalog.weightMode === 'stellarMass'}
             onToggle={() =>
               store.setState((s) => ({
                 ...s,
-                view: setOverlayGalaxies(s.view, !s.view.overlayGalaxies),
+                catalog: setWeightMode(
+                  s.catalog,
+                  s.catalog.weightMode === 'stellarMass' ? 'uniform' : 'stellarMass',
+                ),
+              }))
+            }
+          />
+          <Toggle
+            label="init: around data"
+            on={sim.initMode === 'aroundData'}
+            onToggle={() =>
+              store.setState((s) => ({
+                ...s,
+                sim: setInitMode(s.sim, s.sim.initMode === 'aroundData' ? 'uniform' : 'aroundData'),
               }))
             }
           />
         </div>
-      </div>
 
-      <GridBoxPanel />
+        <div>
+          <span
+            style={{
+              fontFamily: 'var(--font-family-mono)',
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--color-fg-label)',
+            }}
+          >
+            tier
+          </span>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+            {(['small', 'medium', 'large'] as const).map((tier) => (
+              <Toggle
+                key={tier}
+                label={tier}
+                on={catalog.tier === tier}
+                onToggle={() =>
+                  store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))
+                }
+              />
+            ))}
+          </div>
+        </div>
 
-      <CollapsibleSection
-        title="Raymarch"
-        open={raymarchOpen}
-        onToggle={() => setRaymarchOpen((v) => !v)}
-      >
-        {/* Off is fork parity: per-slab 'over' that goes opaque a few voxels in. */}
-        <Toggle
-          label="additive"
-          on={view.raymarch.additive}
-          onToggle={() =>
-            store.setState((s) => ({
-              ...s,
-              view: setAdditive(s.view, !s.view.raymarch.additive),
-            }))
-          }
-        />
-        <SliderGroup title="Trace">
-          {RAYMARCH_SLIDERS.map((spec) => (
-            <ParamSlider
-              key={spec.key}
-              label={spec.label}
-              value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
-              min={spec.min}
-              max={spec.max}
-              step={spec.step}
-              format={spec.format}
-              info={spec.info}
-              onChange={(v) =>
+        <div>
+          <span
+            style={{
+              fontFamily: 'var(--font-family-mono)',
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--color-fg-label)',
+            }}
+          >
+            view
+          </span>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+            {VIEW_MODES.map((entry) => (
+              <Toggle
+                key={entry.mode}
+                label={entry.label}
+                on={view.mode === entry.mode}
+                onToggle={() =>
+                  store.setState((s) => ({ ...s, view: setViewMode(s.view, entry.mode) }))
+                }
+              />
+            ))}
+            {/* Inert in splat mode: the data points are already drawn there, at 10000x. */}
+            <Toggle
+              label="galaxies"
+              on={view.overlayGalaxies}
+              onToggle={() =>
                 store.setState((s) => ({
                   ...s,
-                  view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
+                  view: setOverlayGalaxies(s.view, !s.view.overlayGalaxies),
                 }))
               }
-              path={`view.raymarch.${spec.key}`}
             />
-          ))}
-        </SliderGroup>
-      </CollapsibleSection>
+          </div>
+        </div>
+
+        <GridBoxPanel />
+
+        <CollapsibleSection
+          title="Raymarch"
+          open={raymarchOpen}
+          onToggle={() => setRaymarchOpen((v) => !v)}
+        >
+          {/* Off is fork parity: per-slab 'over' that goes opaque a few voxels in. */}
+          <Toggle
+            label="additive"
+            on={view.raymarch.additive}
+            onToggle={() =>
+              store.setState((s) => ({
+                ...s,
+                view: setAdditive(s.view, !s.view.raymarch.additive),
+              }))
+            }
+          />
+          <SliderGroup title="Trace">
+            {RAYMARCH_SLIDERS.map((spec) => (
+              <ParamSlider
+                key={spec.key}
+                label={spec.label}
+                value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
+                min={spec.min}
+                max={spec.max}
+                step={spec.step}
+                format={spec.format}
+                info={spec.info}
+                onChange={(v) =>
+                  store.setState((s) => ({
+                    ...s,
+                    view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
+                  }))
+                }
+                path={`view.raymarch.${spec.key}`}
+              />
+            ))}
+          </SliderGroup>
+        </CollapsibleSection>
+      </div>
     </div>
   );
 }
