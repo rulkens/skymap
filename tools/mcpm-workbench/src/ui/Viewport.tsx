@@ -802,7 +802,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
             pendingBox.centerMpc,
             UNIT_AXES[hit.axis],
           );
-          gizmoDragging = { handle: hit, anchorAxisParam };
+          gizmoDragging = { handle: hit, anchorAxisParam, anchorBox: pendingBox };
           canvas.setPointerCapture(e.pointerId);
           return;
         }
@@ -824,17 +824,16 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
       if (gizmoDragging && isAxisDrag(gizmoDragging)) {
         const drag = gizmoDragging;
-        const pendingBox = deriveGridBox(s.grid);
         const axisDir = UNIT_AXES[drag.handle.axis];
         const ray = rayFromPointer(e, s);
-        const param = closestPointOnRayToLine(ray, pendingBox.centerMpc, axisDir);
+        const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
         const deltaMpc = param - drag.anchorAxisParam;
         if (drag.handle.kind === 'translate') {
-          const centerMpc = applyTranslateDrag(pendingBox, axisDir, deltaMpc);
+          const centerMpc = applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc);
           store.setState((st) => ({ ...st, grid: setManualCenterMpc(st.grid, centerMpc) }));
         } else {
           const { centerMpc, sizeMpc } = applyResizeDrag(
-            pendingBox,
+            drag.anchorBox,
             drag.handle.axis,
             axisDir,
             drag.handle.sign,
