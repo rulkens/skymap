@@ -362,6 +362,33 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
+      // F1.6: drives the REAL pointer path — hover sets hoverHandle, drag sets
+      // activeHandle (Viewport.tsx's gizmoDragging), both non-null together once the
+      // drag starts, so drawBoxPreview's glyph shader runs the highlight branch for
+      // both uniforms under error capture. Target: the +Y translate arrow tip,
+      // precomputed off cameraBasis/screenToRay's own formulas against the boot box
+      // (defaultGridSlice's 200 Mpc origin-centred cube — PROBE_GRID_DIVISOR only
+      // coarsens resolution, sizeMpc stays exactly 200) and camera (defaultViewSlice:
+      // yaw 0.6, pitch 0.35, distance 600) at this probe's 1280x800 viewport —
+      // isolated on-screen from every other handle by 60+ px. gizmoDragging !== null
+      // keeps the wireframe visible for the whole drag, independent of the 200ms
+      // box-preview timer that `grid:box-preview` above relies on instead.
+      name: 'gizmo:hover-drag',
+      run: async (page) => {
+        const handleX = 640;
+        const handleY = 306;
+        await page.mouse.move(handleX, handleY);
+        await settleFrames(page, 1);
+        await page.mouse.down();
+        await settleFrames(page, 2);
+        await page.mouse.move(handleX, handleY - 4);
+        await page.mouse.move(handleX, handleY - 8);
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.mouse.up();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
       // The raymarch's own composite (an in-fragment choice, unrelated to the pass-level
       // blend). It defaults ON, so only turning it off reaches the fork-parity 'over'
       // branch of the march loop at all.
