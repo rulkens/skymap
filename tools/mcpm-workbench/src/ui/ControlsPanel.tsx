@@ -627,15 +627,6 @@ function ControlsPanel(): ReactNode {
           headerToggle={view.layers.agents}
           onHeaderToggleChange={toggleLayer('agents')}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-family-mono)',
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-fg-muted)',
-            }}
-          >
-            free agents only — catalog points are the Galaxies layer
-          </span>
           <ParamSlider
             label="intensity"
             value={view.agents.intensity}
