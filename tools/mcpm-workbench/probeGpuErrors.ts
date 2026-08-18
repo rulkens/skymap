@@ -264,14 +264,14 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // both branches of that guard get exercised here.
       name: 'toggle:pause',
       run: async (page) => {
-        await page.getByRole('button', { name: /^pause: on$/ }).click();
+        await page.getByRole('checkbox', { name: 'running', exact: true }).uncheck();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
       name: 'toggle:resume',
       run: async (page) => {
-        await page.getByRole('button', { name: /^resume: off$/ }).click();
+        await page.getByRole('checkbox', { name: 'running', exact: true }).check();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -280,7 +280,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // buffer-clear path `run:raymarch` above never touches.
       name: 'command:reset',
       run: async (page) => {
-        await page.getByRole('button', { name: 'reset: off', exact: true }).click();
+        await page.getByRole('button', { name: 'reset', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -288,7 +288,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // Clears ONLY the trace grid — agents and deposit survive, unlike reset.
       name: 'command:clear-trace',
       run: async (page) => {
-        await page.getByRole('button', { name: 'clear trace: off', exact: true }).click();
+        await page.getByRole('button', { name: 'clear trace', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -298,9 +298,10 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // branch of the march loop at all.
       name: 'toggle:additive',
       run: async (page) => {
-        await page.getByRole('button', { name: 'additive blend: on', exact: true }).click();
+        const additive = page.getByRole('checkbox', { name: 'additive blend', exact: true });
+        await additive.uncheck();
         await settleFrames(page, SETTLE_FRAMES);
-        await page.getByRole('button', { name: 'additive blend: off', exact: true }).click();
+        await additive.check();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

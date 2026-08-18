@@ -1,0 +1,30 @@
+/* Local class names composing the app's checkbox-row vocabulary, so the markup
+   in ToggleRow.tsx never names an app class directly. */
+.toggleRow {
+  composes: toggleRow from '../../../../src/components/common/shared.module.css';
+}
+
+.toggleLabel {
+  composes: toggleLabel from '../../../../src/components/common/shared.module.css';
+}
+
+.checkbox {
+  composes: checkbox from '../../../../src/components/common/shared.module.css';
+}
+
+.infoIcon {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  opacity: 0.55;
+  color: var(--color-fg-faint);
+  flex: none;
+}
+
+.infoIcon:hover,
+.infoIcon:focus-visible {
+  opacity: 0.85;
+}

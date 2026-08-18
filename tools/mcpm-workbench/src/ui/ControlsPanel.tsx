@@ -11,6 +11,7 @@
 import { useState, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { ViewSlice } from '../../@types/ViewSlice';
+import Button from '../../../../src/components/common/Button/Button';
 import CollapsibleSection from '../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
@@ -36,6 +37,7 @@ import {
 } from '../state/slices/viewSlice';
 import { useAppStore } from './storeContext';
 import Toggle from './Toggle';
+import ToggleRow from './ToggleRow';
 import GridBoxPanel from './GridBoxPanel';
 import styles from './ControlsPanel.module.css';
 
@@ -236,50 +238,48 @@ function ControlsPanel(): ReactNode {
           </SliderGroup>
         </CollapsibleSection>
 
-        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-          <Toggle
-            label={sim.running ? 'pause' : 'resume'}
+        <div>
+          <ToggleRow
+            label="running"
             on={sim.running}
-            onToggle={() =>
-              store.setState((s) => ({ ...s, sim: setRunning(s.sim, !s.sim.running) }))
-            }
+            onChange={(on) => store.setState((s) => ({ ...s, sim: setRunning(s.sim, on) }))}
           />
-          <Toggle
-            label="reset"
-            on={false}
-            onToggle={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
-          />
-          <Toggle
-            label="clear trace"
-            on={false}
-            onToggle={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <Toggle
-            label="weight: mass"
+          <ToggleRow
+            label="weight by mass"
             on={catalog.weightMode === 'stellarMass'}
-            onToggle={() =>
+            onChange={(on) =>
               store.setState((s) => ({
                 ...s,
-                catalog: setWeightMode(
-                  s.catalog,
-                  s.catalog.weightMode === 'stellarMass' ? 'uniform' : 'stellarMass',
-                ),
+                catalog: setWeightMode(s.catalog, on ? 'stellarMass' : 'uniform'),
               }))
             }
           />
-          <Toggle
-            label="init: around data"
+          <ToggleRow
+            label="seed around data"
             on={sim.initMode === 'aroundData'}
-            onToggle={() =>
+            onChange={(on) =>
               store.setState((s) => ({
                 ...s,
-                sim: setInitMode(s.sim, s.sim.initMode === 'aroundData' ? 'uniform' : 'aroundData'),
+                sim: setInitMode(s.sim, on ? 'aroundData' : 'uniform'),
               }))
             }
           />
+          {/* Momentary commands, not state: the slice records a request the
+              Viewport consumes on its next frame. */}
+          <div className={styles.actions}>
+            <Button
+              className={styles.actionButton}
+              onClick={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
+            >
+              reset
+            </Button>
+            <Button
+              className={styles.actionButton}
+              onClick={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
+            >
+              clear trace
+            </Button>
+          </div>
         </div>
 
         <div>
@@ -317,19 +317,12 @@ function ControlsPanel(): ReactNode {
           headerToggle={view.layers.raymarch}
           onHeaderToggleChange={toggleLayer('raymarch')}
         >
-          <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
-            {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
-            <Toggle
-              label="additive blend"
-              on={view.raymarch.additive}
-              onToggle={() =>
-                store.setState((s) => ({
-                  ...s,
-                  view: setAdditive(s.view, !s.view.raymarch.additive),
-                }))
-              }
-            />
-          </div>
+          {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
+          <ToggleRow
+            label="additive blend"
+            on={view.raymarch.additive}
+            onChange={(on) => store.setState((s) => ({ ...s, view: setAdditive(s.view, on) }))}
+          />
           <SliderGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
               <ParamSlider

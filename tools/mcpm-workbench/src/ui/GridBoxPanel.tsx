@@ -19,7 +19,7 @@ import {
   setPaddingMpc,
 } from '../state/slices/gridSlice';
 import { useAppStore } from './storeContext';
-import Toggle from './Toggle';
+import ToggleRow from './ToggleRow';
 
 // Notches, not free text: grid memory scales cubically, so the panel offers only
 // resolutions the byte budget has been sanity-checked at (360 ≈ the fork class).
@@ -76,10 +76,10 @@ function GridBoxPanel(): ReactNode {
         color: 'var(--color-fg-muted)',
       }}
     >
-      <Toggle
+      <ToggleRow
         label="auto-fit"
         on={grid.autoFit}
-        onToggle={() => store.setState((s) => ({ ...s, grid: setAutoFit(s.grid, !s.grid.autoFit) }))}
+        onChange={(on) => store.setState((s) => ({ ...s, grid: setAutoFit(s.grid, on) }))}
       />
       {grid.autoFit ? (
         <>

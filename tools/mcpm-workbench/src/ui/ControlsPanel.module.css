@@ -30,3 +30,15 @@
   align-content: start;
   gap: var(--space-5);
 }
+
+/* reset / clear trace — two momentary commands sharing a row. */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.actionButton {
+  composes: blockButton from '../../../../src/components/common/shared.module.css';
+}
