@@ -39,7 +39,10 @@ const EXPOSURE = 2;
 const CONTRAST = 1;
 const REBUILD_DEBOUNCE_MS = 400;
 const DRAG_SPEED = 0.005;
-const ZOOM_STEP = 0.025;
+// Exponential in the raw wheel delta — galaxy-renderer's createOrbitCameraInput
+// constant, so both tools zoom with the same hand feel; a sign-only step ignores
+// delta magnitude and crawls on trackpads.
+const ZOOM_SPEED = 0.0018;
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];
 
@@ -375,7 +378,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         ...s,
         view: setCameraDistance(
           s.view,
-          s.view.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP),
+          s.view.camera.distance * Math.exp(e.deltaY * ZOOM_SPEED),
         ),
       }));
     };
