@@ -82,8 +82,13 @@ function buildKey(s: AppState): unknown[] {
   ];
 }
 
+/**
+ * `packedSourceName` stands in for the dropped catalog's identity — cheap to
+ * JSON.stringify every store notification (incl. every running-sim frame),
+ * where the override's own Float32Arrays would not be.
+ */
 function catalogKey(s: AppState): unknown[] {
-  return [s.catalog.sources, s.catalog.tier];
+  return [s.catalog.sources, s.catalog.tier, s.catalog.packedSourceName];
 }
 
 /** The six fields that reshape the grid box — a change here restarts the preview timer. */
@@ -385,13 +390,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
       try {
         if (!points || ck !== loadedCatalogKey) {
           store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'loading') }));
-          // `?probe` (probeGpuErrors.ts) swaps ONLY this line — a deterministic
-          // in-tool catalog instead of the network fetch — so the gate never
-          // touches the network or `public/data` and every downstream pass
+          // A dev-dropped packed catalog (App.tsx) wins outright — sticky for the
+          // session, same as the doc comment on CatalogSlice's packedOverride field.
+          // Otherwise `?probe` (probeGpuErrors.ts) swaps ONLY the next line — a
+          // deterministic in-tool catalog instead of the network fetch — so the gate
+          // never touches the network or `public/data` and every downstream pass
           // (grid fit, seeding, propagate/decay/raymarch) runs unmodified.
-          const pts = hasUrlGate('probe')
-            ? syntheticCatalog()
-            : await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
+          const pts = s.catalog.packedOverride
+            ? s.catalog.packedOverride
+            : hasUrlGate('probe')
+              ? syntheticCatalog()
+              : await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
           if (disposed || generation !== buildGeneration) return;
           points = pts;
           loadedCatalogKey = ck;

@@ -1,3 +1,4 @@
+import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../../src/@types/data/Tier';
@@ -15,6 +16,8 @@ export const defaultCatalogSlice: CatalogSlice = {
   pointCount: 0,
   nanFillCount: 0,
   weightMode: 'stellarMass',
+  packedOverride: null,
+  packedSourceName: null,
 };
 
 export function setCatalogSources(
@@ -44,6 +47,27 @@ export function setCatalogLoaded(
   return { ...prev, loadStatus: 'loaded', pointCount, nanFillCount };
 }
 
-export function setWeightMode(prev: CatalogSlice, weightMode: CatalogSlice['weightMode']): CatalogSlice {
+export function setWeightMode(
+  prev: CatalogSlice,
+  weightMode: CatalogSlice['weightMode'],
+): CatalogSlice {
   return { ...prev, weightMode };
+}
+
+/**
+ * Installs a dev-dropped packed catalog through the exact same completed-load
+ * transition (`setCatalogLoaded`) the network path uses, plus the override
+ * payload a harness-rebuild consumer reads instead of fetching.
+ */
+export function setPackedCatalog(
+  prev: CatalogSlice,
+  points: CatalogPoints,
+  nanFillCount: number,
+  sourceName: string,
+): CatalogSlice {
+  return {
+    ...setCatalogLoaded(prev, points.count, nanFillCount),
+    packedOverride: points,
+    packedSourceName: sourceName,
+  };
 }
