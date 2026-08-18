@@ -10,9 +10,13 @@ actually lives in, and add Titan.
 
 `rayleighScatter` is doing duty as a per-body colour dial. Rayleigh goes as λ⁻⁴, so
 `[12, 10, 7]e-3` (Venus) and `[8, 5, 3]e-3` (Mars) describe no molecular scattering
-that exists; both bodies' colour is aerosol. Uranus and Neptune push the other way —
-`[4, 10, 20]e-3` mimics methane's red _absorption_ as scattering, while the table's
-one per-channel absorption vector sits at `[0, 0, 0]` in all six rows.
+that exists; both bodies' colour is aerosol. Uranus and Neptune's `[4, 10, 20]e-3` and
+`[4, 9, 22]e-3` are, by contrast, ordinary λ⁻⁴ Rayleigh — within ~10% of shape and
+~25% of the correct H₂/He magnitude
+(`../../research/atmospheres/uranus-neptune.md` §0). Their actual defect is that the
+table's one per-channel absorption vector sits at `[0, 0, 0]` in all six rows, so
+methane — the thing that actually makes these planets blue — is absent from the
+model entirely.
 
 Pluto's row widened `mieScatter` to a `Vec3`, so aerosol colour now has a correct
 home. Methane does not: it is **well-mixed**, and the only absorption profile in the
@@ -155,6 +159,10 @@ three-term expression across a spread of altitudes and `cosTheta`, per body row.
 
 ### Stage 2 — recalibrate six rows (one commit + one visual pass per body)
 
+Derivations for all six rows live in `../../research/atmospheres/` (one note per
+pair: `mars.md`, `venus.md`, `uranus-neptune.md`, `jupiter-saturn.md`); this section
+states conclusions, not derivations.
+
 Physics leads; the look follows. Each row is derived and tagged `[M]`easured /
 `[D]`erived / `[L]`ook the way Pluto's row is, so a later tuner knows which values a
 nudge would falsify.
@@ -162,20 +170,38 @@ nudge would falsify.
 Per body, what must be derived — **quantities, not values; the numbers are stage-2
 research output and are deliberately not pre-committed here**:
 
-- **Venus** — molecular Rayleigh for a ~92 bar CO₂ column (λ⁻⁴, blue-heavy, not the
-  current warm ramp); H₂SO₄ cloud as a per-channel Mie constituent; the near-UV
-  absorber as a third constituent. The UV absorber's identity is still unsettled in
-  the literature, so it is an `[L]` row whatever shape the model takes — say so.
+- **Venus** — a geometry change first, not just coefficients: altitude 0 is
+  currently the solid surface, which sits under τ ≈ 41 (blue Rayleigh) + τ ≈ 25
+  (cloud) — unrenderable, and wrong even if it were rendered, since the
+  multi-scatter LUT's Hillaire-style approximation is calibrated for τ ≲ 1. Re-anchor
+  altitude 0 at the τ = 1 cloud top (68.8 km, 50 mbar) and drop `atmosphereTopKm`
+  from `+100` to `+40`; `planetRadiusKm` itself is unaffected — the 68 km offset is
+  1.1% of the radius, cosmetically irrelevant. Then: molecular Rayleigh for the thin
+  column above the cloud top (λ⁻⁴, blue-heavy, not the current warm ramp); H₂SO₄
+  cloud as a per-channel Mie constituent; the near-UV absorber as a third
+  constituent, still unsettled in the literature, so an `[L]` row whatever shape the
+  model takes — say so. See `../../research/atmospheres/venus.md`.
 - **Mars** — thin CO₂ Rayleigh (blue-heavy but weak); suspended dust as the
   per-channel Mie constituent carrying the butterscotch. Dust loading is seasonal;
   pick a stated τ and record which.
-- **Jupiter / Saturn** — H₂/He Rayleigh; ammonia (Jupiter) / ammonia + haze (Saturn)
-  aerosol. Least affected today; verify rather than assume they need no change.
-- **Uranus / Neptune** — H₂/He Rayleigh λ⁻⁴, and methane as a **well-mixed absorbing
-  constituent** (`exponential` profile at the gas scale height, `scatter: 0`), which
-  is the change this design exists for. Neptune's deeper blue than Uranus at similar
-  CH₄ mixing ratio is a real and only partly explained difference — do not
-  manufacture a tidy derivation for it.
+- **Jupiter / Saturn** — H₂/He Rayleigh, but not grey: the current vectors
+  (`[4,4,5]e-3`, `[4,4,4]e-3`) are wrong in shape, not magnitude — Jupiter's red is
+  ~2.5× too high, blue ~1.9× too low. Jupiter's aerosol `absorb` should be `0`, not
+  the current `1e-3`, which implies a single-scattering albedo of 0.75; both cloud
+  and haze measure as conservative scatterers (k ≈ 1e-9). The Mie/aerosol scale
+  heights are already right — Saturn's 25 km is the measured particle scale height —
+  leave them. See `../../research/atmospheres/jupiter-saturn.md`.
+- **Uranus / Neptune** — H₂/He Rayleigh λ⁻⁴; the current vectors are already close
+  (see "Why"), so this row barely moves. The actual gap is methane, the change this
+  design exists for — a constituent that both scatters (Rayleigh, like any molecule)
+  and absorbs hard in the red. Two traps: 1 bar is _above_ the CH₄ condensation
+  level, so methane there is saturation-limited and e-folds in ~6 km, not the 20–28 km
+  gas scale height; and Neptune carries _less_ methane than Uranus, being colder.
+  Neptune also needs a `tent` for the detached methane-ice layer, which takes it to
+  four constituents — the whole budget. Their colour difference is attributed to an
+  aerosol layer below the drawn sphere and is not fully explained in the literature;
+  carry it in `groundAlbedo` against measured geometric albedos rather than
+  manufacturing a haze for it.
 
 Sources are to be verified before they are cited. This branch has already shipped one
 fabricated citation past two reviews; a quote that does not name the object it is
