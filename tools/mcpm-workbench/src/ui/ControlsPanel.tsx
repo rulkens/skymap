@@ -12,12 +12,14 @@
 import { useState, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { ViewSlice } from '../../@types/ViewSlice';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 import Button from '../../../../src/components/common/Button/Button';
 import CollapsibleSection from '../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
+import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { useStore } from '../state/useStore';
-import { setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
+import { setCatalogSources, setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
 import { setSampleRandomly } from '../state/slices/histogramSlice';
 import {
   requestClearTrace,
@@ -126,6 +128,29 @@ const PARAM_SLIDER_SPECS: readonly ParamSliderSpec[] = [
     info: 'Rescales data-point deposits against agent deposits.',
   },
 ];
+
+// Smallest → largest, the main app's GalaxiesSection convention (~20k → 500k
+// → 2M rows). `toggleCatalogSource` re-derives the sources array from this
+// fixed order every time, so clicking GLADE then 2MRS still yields
+// [2MRS, GLADE], never the click order.
+const WORKBENCH_SOURCES: readonly SourceType[] = [Source.TwoMRS, Source.SDSS, Source.Glade];
+
+/**
+ * Returns the next `catalog.sources` array, or `null` if `s`/`on` would empty
+ * it — an empty catalog seeds zero agents and sizes GPU buffers at zero, so
+ * the caller must treat `null` as "ignore this click", not a valid state.
+ */
+function toggleCatalogSource(
+  current: readonly SourceType[],
+  s: SourceType,
+  on: boolean,
+): readonly SourceType[] | null {
+  const enabled = new Set(current);
+  if (on) enabled.add(s);
+  else enabled.delete(s);
+  if (enabled.size === 0) return null;
+  return WORKBENCH_SOURCES.filter((source) => enabled.has(source));
+}
 
 type RaymarchSliderKey = 'opticalThickness' | 'sampleWeight' | 'trimDensity' | 'stepVoxels';
 
@@ -314,6 +339,7 @@ function ControlsPanel(): ReactNode {
   // No open/close slice for the workbench's panel sections yet — CollapsibleSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
+  const [dataOpen, setDataOpen] = useState(true);
   const [gridBoxOpen, setGridBoxOpen] = useState(false);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(false);
@@ -451,29 +477,44 @@ function ControlsPanel(): ReactNode {
           </div>
         </div>
 
-        <div>
-          <span
-            style={{
-              fontFamily: 'var(--font-family-mono)',
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-fg-label)',
-            }}
-          >
-            tier
-          </span>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-            {(['small', 'medium', 'large'] as const).map((tier) => (
-              <Toggle
-                key={tier}
-                label={tier}
-                on={catalog.tier === tier}
-                onToggle={() =>
-                  store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))
-                }
-              />
-            ))}
+        <CollapsibleSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
+          {WORKBENCH_SOURCES.map((s) => (
+            <ToggleRow
+              key={s}
+              label={SOURCE_REGISTRY[s].label}
+              on={catalog.sources.includes(s)}
+              onChange={(on) => {
+                const next = toggleCatalogSource(catalog.sources, s, on);
+                // Guard: ignore the click rather than let the catalog go empty.
+                if (next === null) return;
+                store.setState((st) => ({ ...st, catalog: setCatalogSources(st.catalog, next) }));
+              }}
+            />
+          ))}
+          <div>
+            <span
+              style={{
+                fontFamily: 'var(--font-family-mono)',
+                fontSize: 'var(--font-size-sm)',
+                color: 'var(--color-fg-label)',
+              }}
+            >
+              tier
+            </span>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+              {(['small', 'medium', 'large'] as const).map((tier) => (
+                <Toggle
+                  key={tier}
+                  label={tier}
+                  on={catalog.tier === tier}
+                  onToggle={() =>
+                    store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))
+                  }
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
             picker. Section order is the compositing order Viewport encodes them in. */}

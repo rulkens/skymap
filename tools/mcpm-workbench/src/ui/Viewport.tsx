@@ -42,7 +42,7 @@ import { recordHistogramSample, resetHistogram } from '../state/slices/histogram
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import {
   setCameraDistance,
-  setCameraTargetOffset,
+  setCameraTarget,
   setCameraYawPitch,
   setFps,
   setPreviewPacked,
@@ -136,17 +136,8 @@ function gridBoxFor(s: AppState, points: CatalogPoints): GridBox {
 }
 
 /** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
-function cameraViewFor(
-  s: AppState,
-  box: GridBox,
-  viewportPx: readonly [number, number],
-): McpmCameraView {
-  const { yaw, pitch, distance, targetOffsetMpc } = s.view.camera;
-  const targetMpc: Vec3 = [
-    box.centerMpc[0] + targetOffsetMpc[0],
-    box.centerMpc[1] + targetOffsetMpc[1],
-    box.centerMpc[2] + targetOffsetMpc[2],
-  ];
+function cameraViewFor(s: AppState, viewportPx: readonly [number, number]): McpmCameraView {
+  const { yaw, pitch, distance, targetMpc } = s.view.camera;
   const cosPitch = Math.cos(pitch);
   const eyeMpc: Vec3 = [
     targetMpc[0] + distance * cosPitch * Math.sin(yaw),
@@ -440,7 +431,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         graph.resize(canvas.width, canvas.height);
 
         const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
-        const cam = cameraViewFor(s, h.box, [canvas.width, canvas.height]);
+        const cam = cameraViewFor(s, [canvas.width, canvas.height]);
         // Independent layers over one clear, back to front. The clear is unconditional:
         // with every layer off the frame is black, not last frame's pixels.
         const { layers } = s.view;
@@ -727,18 +718,18 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // grab-the-world signs and screen-constant dist*0.0016 px rate — both
         // galaxy-renderer's createOrbitCameraInput, so the two tools share one hand feel.
         store.setState((s) => {
-          const { yaw, pitch, distance, targetOffsetMpc } = s.view.camera;
+          const { yaw, pitch, distance, targetMpc } = s.view.camera;
           const cosY = Math.cos(yaw);
           const sinY = Math.sin(yaw);
           const cosP = Math.cos(pitch);
           const sinP = Math.sin(pitch);
           const k = distance * PAN_SPEED;
           const next: Vec3 = [
-            targetOffsetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
-            targetOffsetMpc[1] + cosP * dy * k,
-            targetOffsetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
+            targetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
+            targetMpc[1] + cosP * dy * k,
+            targetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
           ];
-          return { ...s, view: setCameraTargetOffset(s.view, next) };
+          return { ...s, view: setCameraTarget(s.view, next) };
         });
         return;
       }

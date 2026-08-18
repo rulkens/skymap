@@ -28,43 +28,7 @@
   composes: label from '../../../../src/components/common/Slider/Slider.module.css';
 }
 
-/* Visually hidden but accessibility-tree-visible and still hit-testable:
-   NOT display:none (drops it from the a11y tree) and NOT the clip-rect
-   1px pattern either — a target with zero painted area fails Playwright's
-   "receives events" actionability check, which the probe relies on to
-   drive these via getByRole('checkbox', ...).check()/.uncheck(). Instead
-   the input covers the whole pill (inset: 0) at opacity 0, so it's the
-   real topmost click target, just invisible. */
-.hiddenCheckbox {
-  position: absolute;
-  inset: 0;
+.toggle {
+  composes: pillToggle from '../../../../src/components/SettingsPanel/pillToggle.module.css';
   margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/* Same chrome as the tool's tier pills (Toggle.tsx): quiet by default,
-   accent-filled once the backing checkbox is checked. */
-.statePill {
-  flex: none;
-  padding: var(--space-3) var(--space-5);
-  border-radius: 4px;
-  border: 1px solid var(--border-control);
-  font-size: var(--font-size-sm);
-  letter-spacing: var(--letter-spacing-tight);
-  background: var(--surface-control);
-  color: var(--color-fg-muted);
-  transition:
-    background var(--duration-color) var(--ease-standard),
-    color var(--duration-color) var(--ease-standard);
-}
-
-.hiddenCheckbox:checked + .statePill {
-  background: var(--surface-control-active);
-  color: var(--color-accent-bright);
-}
-
-.hiddenCheckbox:focus-visible + .statePill {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
 }

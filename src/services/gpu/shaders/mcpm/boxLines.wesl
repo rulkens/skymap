@@ -17,7 +17,8 @@ struct BoxUniform {
 @group(0) @binding(0) var<uniform> cam: McpmCamera;
 @group(1) @binding(0) var<uniform> box: BoxUniform;
 
-const LINE_COLOR: vec3<f32> = vec3<f32>(0.7, 0.8, 0.9);
+// Loud on purpose: this is a transient drag affordance, not part of the scene palette.
+const LINE_COLOR: vec3<f32> = vec3<f32>(1.0, 0.55, 0.1);
 const LINE_INTENSITY: f32 = 0.35;
 
 // Corner index bits: bit0=x, bit1=y, bit2=z (0=min, 1=max). 12 edges x 2 endpoints.

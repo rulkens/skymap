@@ -35,8 +35,12 @@ export type ViewSlice = {
     readonly pitch: number;
     readonly distance: number;
     readonly autoRotate: boolean;
-    /** Right/middle-drag pan, as an offset from the grid-box centre the orbit target defaults to. */
-    readonly targetOffsetMpc: Vec3;
+    /**
+     * Orbit target in absolute world Mpc — deliberately NOT box-relative, so
+     * dragging the grid-box centre sliders doesn't drag the camera with it.
+     * Right/middle-drag pan writes here directly.
+     */
+    readonly targetMpc: Vec3;
   };
   readonly raymarch: {
     readonly opticalThickness: number;

@@ -15,7 +15,7 @@ export const defaultViewSlice: ViewSlice = {
   layers: { raymarch: true, agents: false, galaxies: true, pathTracer: false },
   galaxies: { intensity: 0.6, pointSizePx: 2 },
   fps: 0,
-  camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetOffsetMpc: [0, 0, 0] },
+  camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetMpc: [0, 0, 0] },
   raymarch: {
     opticalThickness: 0.25,
     paletteId: 'inferno',
@@ -83,8 +83,8 @@ export function setCameraDistance(prev: ViewSlice, distance: number): ViewSlice 
   return { ...prev, camera: { ...prev.camera, distance: Math.max(1, distance) } };
 }
 
-export function setCameraTargetOffset(prev: ViewSlice, targetOffsetMpc: Vec3): ViewSlice {
-  return { ...prev, camera: { ...prev.camera, targetOffsetMpc } };
+export function setCameraTarget(prev: ViewSlice, targetMpc: Vec3): ViewSlice {
+  return { ...prev, camera: { ...prev.camera, targetMpc } };
 }
 
 export function setAutoRotate(prev: ViewSlice, autoRotate: boolean): ViewSlice {
