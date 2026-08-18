@@ -19,6 +19,7 @@ import { useStore } from '../state/useStore';
 import { setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
 import {
   requestClearTrace,
+  requestExport,
   requestReset,
   setAgentCount,
   setInitMode,
@@ -287,6 +288,18 @@ function ControlsPanel(): ReactNode {
               onClick={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
             >
               clear trace
+            </Button>
+            {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
+                both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
+                token shape as reset/clear-trace above — only Viewport's
+                harness closure can actually call readbackTrace, so this
+                button can only request; Viewport's token-diff effect is the
+                consumer that performs the readback and triggerDownloads. */}
+            <Button
+              className={styles.actionButton}
+              onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
+            >
+              download trace
             </Button>
           </div>
         </div>

@@ -28,13 +28,10 @@ export const defaultSimSlice: SimSlice = {
   seed: 1,
   resetToken: 0,
   clearTraceToken: 0,
+  exportToken: 0,
 };
 
-export function setSimParam(
-  prev: SimSlice,
-  key: keyof McpmParams,
-  value: number,
-): SimSlice {
+export function setSimParam(prev: SimSlice, key: keyof McpmParams, value: number): SimSlice {
   return { ...prev, params: { ...prev.params, [key]: value } };
 }
 
@@ -70,6 +67,13 @@ export function requestReset(prev: SimSlice): SimSlice {
 /** One-shot command: Viewport diffs `clearTraceToken` the same way. */
 export function requestClearTrace(prev: SimSlice): SimSlice {
   return { ...prev, clearTraceToken: prev.clearTraceToken + 1 };
+}
+
+/** One-shot command: Viewport diffs `exportToken` the same way, then runs the
+ * `.npy`+sidecar download pair (readbackTrace → exportNpy/emitTraceSidecar →
+ * triggerDownload) against its own harness/points closure. */
+export function requestExport(prev: SimSlice): SimSlice {
+  return { ...prev, exportToken: prev.exportToken + 1 };
 }
 
 /** Viewport calls this once it has actually reseeded, zeroing the HUD's step counter. */

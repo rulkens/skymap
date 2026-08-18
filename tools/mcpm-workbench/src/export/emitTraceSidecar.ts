@@ -1,0 +1,83 @@
+import type { AgentWeights } from '../../@types/AgentWeights';
+import type { CatalogPoints } from '../../@types/CatalogPoints';
+import type { GridBox } from '../../@types/GridBox';
+import type { McpmParams } from '../../@types/McpmParams';
+import type { Tier } from '../../../../src/@types/data/Tier';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+
+// Local time with a numeric (no-colon) UTC offset — "+0200", matching the
+// spec §8 example. parsePolyphyTraceSidecar stores provenance untyped, so
+// this exact format is this exporter's convention, not a parsed contract.
+function formatProducedAt(d: Date): string {
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const offsetH = pad(Math.floor(Math.abs(offsetMin) / 60));
+  const offsetM = pad(Math.abs(offsetMin) % 60);
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+    `${sign}${offsetH}${offsetM}`
+  );
+}
+
+/**
+ * emitTraceSidecar — the `polyphy-trace` v1 JSON `parsePolyphyTraceSidecar`/
+ * `buildRhizomeVolume` expect next to the `.npy`, same basename (spec §8).
+ * `voxel_size_mpc` repeats `box.voxelSizeMpc` three times: GridBox's voxels
+ * are cubic by construction (autoFitGridBox), so the importer's 0.5% spread
+ * assert passes with zero margin consumed, not just under the line.
+ */
+export function emitTraceSidecar(input: {
+  readonly box: GridBox;
+  readonly points: CatalogPoints;
+  readonly weights: AgentWeights;
+  readonly tier: Tier;
+  readonly params: McpmParams;
+  readonly agentCount: number;
+  readonly steps: number;
+  readonly seed: number;
+  readonly producedAt: Date;
+}): string {
+  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt } = input;
+  const originMpc = [
+    box.centerMpc[0] - box.sizeMpc[0] / 2,
+    box.centerMpc[1] - box.sizeMpc[1] / 2,
+    box.centerMpc[2] - box.sizeMpc[2] / 2,
+  ];
+
+  const sidecar = {
+    format: 'polyphy-trace',
+    version: 1,
+    dims: box.dims,
+    origin_mpc: originMpc,
+    voxel_size_mpc: [box.voxelSizeMpc, box.voxelSizeMpc, box.voxelSizeMpc],
+    frame: 'equatorial-cartesian',
+    value_units: 'mcpm-trace-density',
+    provenance: {
+      producer: 'mcpm-workbench',
+      produced_at: formatProducedAt(producedAt),
+      catalog: {
+        sources: points.sources.map(galaxyCatalogIdOf),
+        tier,
+        n_points: points.count,
+        nan_mass_filled: weights.nanCount,
+      },
+      params: {
+        senseSpreadDeg: params.senseSpreadDeg,
+        senseDistanceMpc: params.senseDistanceMpc,
+        turnAngleDeg: params.turnAngleDeg,
+        moveDistanceMpc: params.moveDistanceMpc,
+        depositValue: params.depositValue,
+        persistence: params.persistence,
+        sharpness: params.sharpness,
+        normalizationFactor: params.normalizationFactor,
+      },
+      n_agents: agentCount,
+      steps,
+      seed,
+    },
+  };
+
+  return JSON.stringify(sidecar, null, 2);
+}
