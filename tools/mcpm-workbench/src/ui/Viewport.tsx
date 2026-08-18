@@ -17,10 +17,12 @@ import type { McpmHarness } from '../../@types/McpmHarness';
 import type { Store } from '../../@types/Store';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
+import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { autoFitGridBox } from '../field/autoFitGridBox';
 import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
+import { syntheticCatalog } from '../field/syntheticCatalog';
 import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
 import type { TraceView } from '../render/tracePass';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
@@ -47,6 +49,9 @@ const SAMPLE_WEIGHT = 1;
 const STEP_VOXELS = 1;
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
+
+/** `?probe`-gated boot signal: probeGpuErrors.ts has no React tree to observe, so it polls this instead of racing the HUD's own text. */
+type ProbeWindow = { __mcpmProbeReady?: boolean };
 
 /** Everything but catalog identity — a change here reuses already-loaded points. */
 function buildKey(s: AppState): unknown[] {
@@ -232,6 +237,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       });
       renderGraph = graph;
       startLoop();
+      if (hasUrlGate('probe')) (window as unknown as ProbeWindow).__mcpmProbeReady = true;
     }
 
     /** One build against the live snapshot, reloading the catalog only if its key moved. */
@@ -241,7 +247,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
       try {
         if (!points || ck !== loadedCatalogKey) {
           store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'loading') }));
-          const pts = await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
+          // `?probe` (probeGpuErrors.ts) swaps ONLY this line — a deterministic
+          // in-tool catalog instead of the network fetch — so the gate never
+          // touches the network or `public/data` and every downstream pass
+          // (grid fit, seeding, propagate/decay/raymarch) runs unmodified.
+          const pts = hasUrlGate('probe')
+            ? syntheticCatalog()
+            : await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
           if (disposed || generation !== buildGeneration) return;
           points = pts;
           loadedCatalogKey = ck;

@@ -1,13 +1,28 @@
 import type { AppState } from '../../@types/AppState';
+import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { defaultCatalogSlice } from './slices/catalogSlice';
 import { defaultGridSlice } from './slices/gridSlice';
 import { defaultSimSlice } from './slices/simSlice';
 import { defaultViewSlice } from './slices/viewSlice';
 
+// `?probe` (probeGpuErrors.ts) needs the gate's own run to be fast and to
+// respect ruling R11's quantum floor — 100_000 sits BELOW the panel's own
+// Slider min of 1M (see ControlsPanel.tsx), which only clamps user drags,
+// never this seed value, so the harness sees it untouched.
+const PROBE_LONG_AXIS_TARGET = 64; // <=128 per task-T12-brief.md, still >8 (decay's /8 dispatch)
+const PROBE_AGENT_COUNT = 100_000;
+
 /** defaultAppState — the store's seed value, one slice default per field. */
-export const defaultAppState: AppState = {
-  catalog: defaultCatalogSlice,
-  grid: defaultGridSlice,
-  sim: defaultSimSlice,
-  view: defaultViewSlice,
-};
+export const defaultAppState: AppState = hasUrlGate('probe')
+  ? {
+      catalog: defaultCatalogSlice,
+      grid: { ...defaultGridSlice, longAxisTarget: PROBE_LONG_AXIS_TARGET },
+      sim: { ...defaultSimSlice, agentCount: PROBE_AGENT_COUNT },
+      view: defaultViewSlice,
+    }
+  : {
+      catalog: defaultCatalogSlice,
+      grid: defaultGridSlice,
+      sim: defaultSimSlice,
+      view: defaultViewSlice,
+    };
