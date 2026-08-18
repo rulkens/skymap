@@ -37,7 +37,7 @@
  * pill references resolves here too, and a retune of the app's control look
  * follows automatically. */
 .headerToggle {
-  composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  composes: pillToggle from '../../SettingsPanel/pillToggle.module.css';
   margin-right: 8px;
 }
 
