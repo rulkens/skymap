@@ -5,13 +5,14 @@
  * are live with no rebuild. Agent count / weight mode / init mode / grid
  * box are structural — Viewport watches them and rebuilds the harness.
  */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { McpmParams } from '../../@types/McpmParams';
+import type { ViewSlice } from '../../@types/ViewSlice';
+import CollapsibleSection from '../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
+import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
 import { useStore } from '../state/useStore';
-import {
-  setCatalogTier,
-  setWeightMode,
-} from '../state/slices/catalogSlice';
+import { setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
 import {
   requestClearTrace,
   requestReset,
@@ -20,6 +21,12 @@ import {
   setRunning,
   setSimParam,
 } from '../state/slices/simSlice';
+import {
+  setOpticalThickness,
+  setSampleWeight,
+  setStepVoxels,
+  setTrimDensity,
+} from '../state/slices/viewSlice';
 import { useAppStore } from './storeContext';
 import Slider from './Slider';
 import Toggle from './Toggle';
@@ -46,10 +53,75 @@ const PARAM_SLIDER_SPECS: readonly ParamSliderSpec[] = [
   { id: 'normalizationFactor', label: 'normalization', min: 0, max: 5, step: 0.05 },
 ];
 
+type RaymarchSliderKey = 'opticalThickness' | 'sampleWeight' | 'trimDensity' | 'stepVoxels';
+
+type RaymarchSliderSpec = {
+  readonly key: RaymarchSliderKey;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly format: (value: number) => string;
+  readonly info?: string;
+};
+
+// Ranges bracket the fork's shipped defaults (viewSlice's `defaultViewSlice`
+// docblock) — no log/exp mapping on `ParamSlider` yet, so sampleWeight and
+// trimDensity trade a wide range for a fine linear step instead.
+const RAYMARCH_SLIDERS: readonly RaymarchSliderSpec[] = [
+  {
+    key: 'opticalThickness',
+    label: 'optical thickness',
+    min: 0.01,
+    max: 2,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+  },
+  {
+    key: 'sampleWeight',
+    label: 'sample weight',
+    min: 0.0001,
+    max: 1,
+    step: 0.0001,
+    format: (v) => v.toFixed(4),
+    info: 'Inverts the ~100x steady-state amplification of the trace decay (1% retained per step).',
+  },
+  {
+    key: 'trimDensity',
+    label: 'trim density',
+    min: 0,
+    max: 0.5,
+    step: 0.00001,
+    format: (v) => v.toFixed(5),
+  },
+  {
+    key: 'stepVoxels',
+    label: 'step voxels',
+    min: 0.25,
+    max: 4,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    info: '1 is fork-parity sampling — below 1 oversamples each voxel, above 1 skips some.',
+  },
+];
+
+const RAYMARCH_SETTERS: {
+  readonly [K in RaymarchSliderKey]: (prev: ViewSlice, value: number) => ViewSlice;
+} = {
+  opticalThickness: setOpticalThickness,
+  sampleWeight: setSampleWeight,
+  trimDensity: setTrimDensity,
+  stepVoxels: setStepVoxels,
+};
+
 function ControlsPanel(): ReactNode {
   const store = useAppStore();
   const sim = useStore(store, (s) => s.sim);
   const catalog = useStore(store, (s) => s.catalog);
+  const view = useStore(store, (s) => s.view);
+  // No open/close slice for the workbench's panel sections yet — CollapsibleSection
+  // is controlled, so a local flag is enough until a second section needs one too.
+  const [raymarchOpen, setRaymarchOpen] = useState(true);
 
   return (
     <div
@@ -77,9 +149,7 @@ function ControlsPanel(): ReactNode {
             max={spec.max}
             step={spec.step}
             value={sim.params[spec.id]}
-            onChange={(v) =>
-              store.setState((s) => ({ ...s, sim: setSimParam(s.sim, spec.id, v) }))
-            }
+            onChange={(v) => store.setState((s) => ({ ...s, sim: setSimParam(s.sim, spec.id, v) }))}
           />
         ))}
       </div>
@@ -139,7 +209,13 @@ function ControlsPanel(): ReactNode {
       </div>
 
       <div>
-        <span style={{ fontFamily: 'var(--font-family-mono)', fontSize: 'var(--font-size-sm)', color: 'var(--color-fg-label)' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-family-mono)',
+            fontSize: 'var(--font-size-sm)',
+            color: 'var(--color-fg-label)',
+          }}
+        >
           tier
         </span>
         <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
@@ -148,13 +224,40 @@ function ControlsPanel(): ReactNode {
               key={tier}
               label={tier}
               on={catalog.tier === tier}
-              onToggle={() => store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))}
+              onToggle={() =>
+                store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))
+              }
             />
           ))}
         </div>
       </div>
 
       <GridBoxPanel />
+
+      <CollapsibleSection
+        title="Raymarch"
+        open={raymarchOpen}
+        onToggle={() => setRaymarchOpen((v) => !v)}
+      >
+        <SliderGroup title="Trace">
+          {RAYMARCH_SLIDERS.map((spec) => (
+            <ParamSlider
+              key={spec.key}
+              label={spec.label}
+              value={view.raymarch[spec.key]}
+              min={spec.min}
+              max={spec.max}
+              step={spec.step}
+              format={spec.format}
+              info={spec.info}
+              onChange={(v) =>
+                store.setState((s) => ({ ...s, view: RAYMARCH_SETTERS[spec.key](s.view, v) }))
+              }
+              path={`view.raymarch.${spec.key}`}
+            />
+          ))}
+        </SliderGroup>
+      </CollapsibleSection>
     </div>
   );
 }

@@ -20,5 +20,8 @@ export type ViewSlice = {
   readonly raymarch: {
     readonly opticalThickness: number;
     readonly paletteId: ScalarFieldPaletteId;
+    readonly trimDensity: number;
+    readonly sampleWeight: number;
+    readonly stepVoxels: number;
   };
 };

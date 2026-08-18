@@ -5,12 +5,21 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
  * defaultViewSlice — trace raymarch, framing a box a few hundred Mpc across
  * (the sim's own scale, not the runtime's power-of-ten ladder). `inferno`
  * matches the runtime MCPM volume entry's default palette (`src/data/sources/mcpm.ts`)
- * so a workbench/app comparison isn't also a palette diff.
+ * so a workbench/app comparison isn't also a palette diff. `trimDensity`/
+ * `sampleWeight`/`stepVoxels` are the fork's shipped raymarch defaults (vendor
+ * main.cpp:764,:770) — keep them exact so a workbench/fork comparison isn't
+ * also a knob diff.
  */
 export const defaultViewSlice: ViewSlice = {
   mode: 'traceRaymarch',
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false },
-  raymarch: { opticalThickness: 0.25, paletteId: 'inferno' },
+  raymarch: {
+    opticalThickness: 0.25,
+    paletteId: 'inferno',
+    trimDensity: 1e-5,
+    sampleWeight: 0.01,
+    stepVoxels: 1,
+  },
 };
 
 export function setViewMode(prev: ViewSlice, mode: ViewSlice['mode']): ViewSlice {
@@ -40,4 +49,16 @@ export function setOpticalThickness(prev: ViewSlice, opticalThickness: number): 
 
 export function setPaletteId(prev: ViewSlice, paletteId: ScalarFieldPaletteId): ViewSlice {
   return { ...prev, raymarch: { ...prev.raymarch, paletteId } };
+}
+
+export function setTrimDensity(prev: ViewSlice, trimDensity: number): ViewSlice {
+  return { ...prev, raymarch: { ...prev.raymarch, trimDensity } };
+}
+
+export function setSampleWeight(prev: ViewSlice, sampleWeight: number): ViewSlice {
+  return { ...prev, raymarch: { ...prev.raymarch, sampleWeight } };
+}
+
+export function setStepVoxels(prev: ViewSlice, stepVoxels: number): ViewSlice {
+  return { ...prev, raymarch: { ...prev.raymarch, stepVoxels } };
 }
