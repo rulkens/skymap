@@ -175,21 +175,11 @@ const BLEND_TABLE: Record<
 /**
  * createCompositor — build the unified composite primitive.
  *
- * `swapFormat` / `hdrFormat` are accepted for call-site stability but are no
- * longer used to derive the dst format: each draw now carries its own
- * `dstFormat`, resolved by the caller from the composite's dest target (see
- * `draw`). A blend no longer implies a single format — `over` can target the
- * swap chain OR the HDR buffer — so the format has to ride in per draw.
- *
- * @param init.device      GPU device (mockable in tests).
- * @param init.swapFormat  Retained for signature stability; unused here.
- * @param init.hdrFormat   Retained for signature stability; unused here.
+ * A blend does not imply a single format — `over` can target the swap chain
+ * OR the HDR buffer — so the dst format rides per draw, resolved by the
+ * caller from the composite's dest target (see `draw`).
  */
-export function createCompositor(init: {
-  device: GPUDevice;
-  swapFormat: GPUTextureFormat;
-  hdrFormat: GPUTextureFormat;
-}): Compositor {
+export function createCompositor(init: { device: GPUDevice }): Compositor {
   const { device } = init;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'compositor.vertex');

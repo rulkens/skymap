@@ -82,15 +82,7 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'compositor',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createCompositor({
-        device: deps.ctx.device,
-        swapFormat: deps.ctx.format,
-        // Not HDR_TARGET_FORMAT: compositor.ts documents swapFormat/hdrFormat
-        // as accepted-but-no-longer-read (decisions #11, RESOLVED NEGATIVE),
-        // so sharing the constant here would assert a live contract that
-        // doesn't exist.
-        hdrFormat: 'rgba16float',
-      }),
+      createCompositor({ device: deps.ctx.device }),
   },
   {
     // `state`, not a defaults constant: the `mw-aggregate` row's `scale` is a
