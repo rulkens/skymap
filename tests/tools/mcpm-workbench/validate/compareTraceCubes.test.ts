@@ -48,6 +48,17 @@ describe('totalVariation', () => {
     const b = new Float64Array([0.4, 0.6]);
     expect(totalVariation(a, b)).toBeCloseTo(0.3, 10);
   });
+
+  it('normalizes before diffing — unequal-mass raw counts still match the hand-computed value', () => {
+    // Raw counts, NOT pre-normalized: sumA=10, sumB=20. Normalized:
+    // a=[0.7,0.3], b=[0.4,0.6] — same distributions as the two-bin case
+    // above, so TV is still 0.3. An unnormalized "sum |a-b|/2" would give
+    // (|7-8|+|3-12|)/2 = 5 instead — this is the case that catches a
+    // regression that deletes the /sumA, /sumB normalization step.
+    const a = new Float64Array([7, 3]);
+    const b = new Float64Array([8, 12]);
+    expect(totalVariation(a, b)).toBeCloseTo(0.3, 10);
+  });
 });
 
 describe('axisMarginals', () => {
@@ -94,5 +105,40 @@ describe('compareTraceCubes', () => {
     await expect(compareTraceCubes({ aPath: binPath, bPath: npyPath, dims })).rejects.toThrow(
       /shape mismatch/,
     );
+  });
+
+  it('applies one shared maxLogTrace to both sides, not a per-side max', async () => {
+    // Two single-voxel .bin cubes. A's only value is e-1 (log1p = 1
+    // exactly); B's is e^3-1 (log1p = 3 exactly) — B is the larger side,
+    // so maxLogTrace must come out as 3 for BOTH histograms. Under a
+    // (buggy) per-side max, A's own histogram would use its own max (1)
+    // as the top of its range, putting A's single count in the LAST bin —
+    // exactly like B's. Under the correct shared max, A's count lands
+    // strictly before the last bin (1 is only 1/3 of the shared range),
+    // while B's count — which *is* the shared max — lands exactly in the
+    // last bin (clamped, since floor(3/binWidth) as ratio 1.0 hits the
+    // bin-count boundary). That split is only observable under sharing.
+    const dims: [number, number, number] = [1, 1, 1];
+    const aPath = join(dir, 'hot-a.bin');
+    const bPath = join(dir, 'hot-b.bin');
+    writeFileSync(aPath, Buffer.from(new Float32Array([Math.E - 1]).buffer));
+    writeFileSync(bPath, Buffer.from(new Float32Array([Math.E ** 3 - 1]).buffer));
+
+    const report = await compareTraceCubes({ aPath, bPath, dims });
+
+    const aHist = Array.from(report.aStats.logHistogram);
+    const bHist = Array.from(report.bStats.logHistogram);
+    const aPeak = aHist.indexOf(1);
+    const bPeak = bHist.indexOf(1);
+
+    expect(aPeak).toBeGreaterThanOrEqual(0);
+    expect(bPeak).toBe(bHist.length - 1); // B's own value is the shared max
+    expect(aPeak).toBeLessThan(bHist.length - 1); // A's is well short of it
+
+    // Both histograms sum to 1 (one voxel each) and land in different
+    // bins, so this is the disjoint-support case: TV distance is exactly 1.
+    expect(report.logHistogramTV).toBe(1);
+    // No --points given, so the data-point stats are the documented no-op.
+    expect(Number.isNaN(report.dataPointHistogramTV)).toBe(true);
   });
 });

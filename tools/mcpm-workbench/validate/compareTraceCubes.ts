@@ -49,6 +49,17 @@ function isNpy(path: string): boolean {
   return path.toLowerCase().endsWith('.npy');
 }
 
+// readNpy/readPackedCatalog take a single ArrayBuffer with no offset param,
+// so a copy is required unless `raw` already spans its whole backing buffer
+// at offset 0 — true for any real-size readFileSync (Node only pools small
+// reads); at the anchor's multi-GB scale this is always the zero-copy path.
+function wholeArrayBuffer(raw: Buffer): ArrayBuffer {
+  if (raw.byteOffset === 0 && raw.buffer.byteLength === raw.byteLength) {
+    return raw.buffer as ArrayBuffer;
+  }
+  return raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer;
+}
+
 // 4D PolyPhy raw exports carry a trailing singleton axis; squeezing it here
 // (same rule buildRhizomeVolume.ts uses) keeps both raw and pre-squeezed
 // .npy exports readable without a flag.
@@ -60,7 +71,7 @@ function loadShape(path: string, dims: Vec3): CubeShape {
   if (!isNpy(path)) return { values: readTraceCube(path, dims), dims };
 
   const raw = readFileSync(path);
-  const npy = readNpy(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+  const npy = readNpy(wholeArrayBuffer(raw));
   const shape = squeezeTrailingSingleton(npy.shape);
   if (shape.length !== 3) {
     throw new Error(`compareTraceCubes: ${path} is not a 3D cube (shape ${npy.shape.join('x')})`);
@@ -107,9 +118,7 @@ function resolveOrigin(
 // unused here; meanLogTraceAtPoints is an unweighted mean per spec §9.
 function loadPackedCatalogPositions(path: string): { positions: Float32Array; count: number } {
   const raw = readFileSync(path);
-  const { positions, count } = readPackedCatalog(
-    raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
-  );
+  const { positions, count } = readPackedCatalog(wholeArrayBuffer(raw));
   return { positions, count };
 }
 
@@ -123,12 +132,9 @@ function statsFor(
     | undefined,
 ): TraceStats {
   const logHistogram = traceHistogram(values, LOG_HISTOGRAM_BIN_COUNT, maxLogTrace);
-  // axisMarginals' signature is Float64Array-only (task-T22-brief.md, verbatim);
-  // widen only when the source isn't already f64 to avoid a needless copy.
-  const marginals = axisMarginals(
-    values instanceof Float64Array ? values : Float64Array.from(values),
-    dims,
-  );
+  // axisMarginals now accepts f32 directly (see its doc comment) — no widen,
+  // no copy, load-bearing at the anchor's ~622M-voxel scale.
+  const marginals = axisMarginals(values, dims);
   if (points === undefined) {
     return {
       logHistogram,

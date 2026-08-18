@@ -5,8 +5,16 @@ import type { TraceStats } from '../@types/TraceStats';
  * axisMarginals — sum a flat cube down to one 1D profile per axis, in a
  * single O(N) pass. Layout matches the anchor's own indexing (spec Phase 3
  * header): `offset = z*Ny*Nx + y*Nx + x`, x fastest.
+ *
+ * Accepts Float32Array too (widened from the brief's Float64Array-only
+ * signature, controller fix-round-2): a strict superset, and the accumulator
+ * output stays Float64Array either way — avoids an unconditional whole-cube
+ * f64 widen at the anchor's ~622M-voxel scale (readTraceCube is f32-native).
  */
-export function axisMarginals(values: Float64Array, dims: Vec3): TraceStats['marginals'] {
+export function axisMarginals(
+  values: Float64Array | Float32Array,
+  dims: Vec3,
+): TraceStats['marginals'] {
   const [nx, ny, nz] = dims;
   if (values.length !== nx * ny * nz) {
     throw new Error(
