@@ -41,11 +41,11 @@ const DRAG_SPEED = 0.005;
 const ZOOM_STEP = 0.025;
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];
-// Polyphorm's marching knobs, at the fork's neutral settings until the view slice
-// grows controls for them: no low-end cutoff, unit weight, and one sample per slab
-// (stepVoxels = 1.0 is fork parity — see mcpm/fragment.wesl).
-const TRIM_DENSITY = 0;
-const SAMPLE_WEIGHT = 1;
+// Polyphorm's marching knobs, at the fork's shipped defaults (vendor main.cpp:764,
+// :770) until the view slice grows controls for them. sample_weight 0.01 inverts
+// the ~100x steady-state amplification of the 1%-per-step trace decay.
+const TRIM_DENSITY = 1e-5;
+const SAMPLE_WEIGHT = 0.01;
 const STEP_VOXELS = 1;
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
