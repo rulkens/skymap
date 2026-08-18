@@ -1,10 +1,10 @@
 /**
  * Hud — the tool's title block plus the diagnostic readout the spec requires
  * AT ALL TIMES: point count, NaN-fill count and fraction, resolved
- * GridElement, summed byte budget, step counter. The NaN fraction is the one
- * number that says what a median-filled fit stands on (spec §6), so it's
- * never hidden behind a toggle. Read-only: every value comes straight off
- * the store.
+ * GridElement, summed byte budget, step counter, fps. The NaN fraction is
+ * the one number that says what a median-filled fit stands on (spec §6), so
+ * it's never hidden behind a toggle. Read-only: every value comes straight
+ * off the store — fps is Viewport's own throttled push, not measured here.
  */
 import type { ReactNode } from 'react';
 import { useStore } from '../state/useStore';
@@ -22,6 +22,7 @@ function Hud(): ReactNode {
   const catalog = useStore(store, (s) => s.catalog);
   const grid = useStore(store, (s) => s.grid);
   const stepCount = useStore(store, (s) => s.sim.stepCount);
+  const fps = useStore(store, (s) => s.view.fps);
 
   const nanFraction = catalog.pointCount > 0 ? catalog.nanFillCount / catalog.pointCount : 0;
 
@@ -53,6 +54,10 @@ function Hud(): ReactNode {
         <div className={styles.badge}>
           <span className={styles.label}>step</span>
           <span className={styles.value}>{stepCount.toLocaleString()}</span>
+        </div>
+        <div className={styles.badge}>
+          <span className={styles.label}>fps</span>
+          <span className={styles.value}>{fps === 0 ? '—' : fps}</span>
         </div>
       </div>
     </div>

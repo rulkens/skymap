@@ -194,6 +194,7 @@ function ControlsPanel(): ReactNode {
   // No open/close slice for the workbench's panel sections yet — CollapsibleSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
+  const [gridBoxOpen, setGridBoxOpen] = useState(false);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
@@ -236,6 +237,14 @@ function ControlsPanel(): ReactNode {
               path="sim.agentCount"
             />
           </SliderGroup>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Grid box"
+          open={gridBoxOpen}
+          onToggle={() => setGridBoxOpen((v) => !v)}
+        >
+          <GridBoxPanel />
         </CollapsibleSection>
 
         <div>
@@ -305,8 +314,6 @@ function ControlsPanel(): ReactNode {
             ))}
           </div>
         </div>
-
-        <GridBoxPanel />
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
             picker. Section order is the compositing order Viewport encodes them in. */}

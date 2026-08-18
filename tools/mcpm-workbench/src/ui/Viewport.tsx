@@ -35,6 +35,7 @@ import {
   setCameraDistance,
   setCameraTargetOffset,
   setCameraYawPitch,
+  setFps,
 } from '../state/slices/viewSlice';
 
 // The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
@@ -42,6 +43,10 @@ import {
 const EXPOSURE = 2;
 const CONTRAST = 1;
 const REBUILD_DEBOUNCE_MS = 400;
+// How long the pending-box wireframe stays up after the last grid-shaping change.
+const BOX_PREVIEW_MS = 200;
+// FPS badge throttle — pushing every frame would re-render the Hud at 60Hz.
+const FPS_PUSH_INTERVAL_MS = 500;
 const DRAG_SPEED = 0.005;
 // Exponential in the raw wheel delta — galaxy-renderer's createOrbitCameraInput
 // constant, so both tools zoom with the same hand feel; a sign-only step ignores
@@ -74,6 +79,18 @@ function buildKey(s: AppState): unknown[] {
 
 function catalogKey(s: AppState): unknown[] {
   return [s.catalog.sources, s.catalog.tier];
+}
+
+/** The six fields that reshape the grid box — a change here restarts the preview timer. */
+function gridShapeKeyFor(s: AppState): unknown[] {
+  return [
+    s.grid.autoFit,
+    s.grid.manualCenterMpc,
+    s.grid.manualSizeMpc,
+    s.grid.manualResolution,
+    s.grid.longAxisTarget,
+    s.grid.paddingMpc,
+  ];
 }
 
 function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
@@ -168,6 +185,14 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let building = false;
     let lastResetToken = store.getSnapshot().sim.resetToken;
     let lastClearToken = store.getSnapshot().sim.clearTraceToken;
+    let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
+    let boxPreviewUntil = 0;
+    // -1 sentinel: skips the first frame's delta, which spans the async catalog
+    // load + harness build and would otherwise seed the EMA with a huge bogus dt.
+    let lastFrameTime = -1;
+    let fpsEma = 0;
+    let lastFpsPushTime = 0;
+    let lastPushedFps = 0;
 
     function disposeHarness(): void {
       renderGraph?.dispose();
@@ -190,6 +215,27 @@ function Viewport({ store }: ViewportProps): ReactNode {
           store.setState((st) => ({ ...st, sim: incrementStep(st.sim) }));
         }
 
+        const now = performance.now();
+        if (lastFrameTime >= 0) {
+          const dt = now - lastFrameTime;
+          fpsEma = fpsEma === 0 ? dt : fpsEma * 0.9 + dt * 0.1;
+          if (fpsEma > 0 && now - lastFpsPushTime >= FPS_PUSH_INTERVAL_MS) {
+            const fpsRounded = Math.round(1000 / fpsEma);
+            if (fpsRounded !== lastPushedFps) {
+              lastPushedFps = fpsRounded;
+              store.setState((st) => ({ ...st, view: setFps(st.view, fpsRounded) }));
+            }
+            lastFpsPushTime = now;
+          }
+        }
+        lastFrameTime = now;
+
+        const gridShapeKey = JSON.stringify(gridShapeKeyFor(s));
+        if (gridShapeKey !== lastGridShapeKey) {
+          lastGridShapeKey = gridShapeKey;
+          boxPreviewUntil = now + BOX_PREVIEW_MS;
+        }
+
         resizeCanvasToDisplay(canvas);
         graph.resize(canvas.width, canvas.height);
 
@@ -204,6 +250,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
           graph.drawSplat(encoder, { ...cam, sampleWeight: s.view.raymarch.sampleWeight });
         }
         if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
+        // The pending box leads the debounced harness rebuild by up to REBUILD_DEBOUNCE_MS —
+        // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
+        // the galaxy dots.
+        if (points && now < boxPreviewUntil) {
+          graph.drawBoxPreview(encoder, cam, h.box, gridBoxFor(s, points));
+        }
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
       };

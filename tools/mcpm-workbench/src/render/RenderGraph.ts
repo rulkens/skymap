@@ -13,6 +13,7 @@
  */
 import type { AgentBuffers } from '../../@types/AgentBuffers';
 import type { GridBox } from '../../@types/GridBox';
+import { createBoxPreviewPass, type BoxPreviewPass } from './boxPreviewPass';
 import type { GalaxyOverlayOptions, GalaxyOverlayPass } from './galaxyOverlayPass';
 import { createGalaxyOverlayPass } from './galaxyOverlayPass';
 import type { SplatPass, SplatView } from './splatPass';
@@ -56,6 +57,16 @@ export type RenderGraph = {
     view: McpmCameraView,
     options: GalaxyOverlayOptions,
   ): void;
+  /**
+   * Wireframe `pendingBox` (converted into `builtBox`'s voxel frame) over whatever is
+   * already in the accum target — drawn last so it sits over the galaxy dots.
+   */
+  drawBoxPreview(
+    encoder: GPUCommandEncoder,
+    view: McpmCameraView,
+    builtBox: GridBox,
+    pendingBox: GridBox,
+  ): void;
   /** Tonemap the accum buffer into `target`: Reinhard + contrast + sRGB gamma. */
   tonemap(
     encoder: GPUCommandEncoder,
@@ -97,6 +108,14 @@ export function createRenderGraph(
   let tracePass: TracePass | null = null;
   let splatPass: SplatPass | null = null;
   let galaxyOverlayPass: GalaxyOverlayPass | null = null;
+  // Eager, not lazy like the agent-fed passes above: it needs neither the harness nor a
+  // box to compile, so building it here (graph construction) is what makes a broken
+  // boxLines.wesl fail at boot instead of surviving until someone drags a grid-box slider.
+  const boxPreviewPass: BoxPreviewPass = createBoxPreviewPass({
+    device,
+    targetFormat: HDR_FORMAT,
+    makeShader,
+  });
 
   function resize(width: number, height: number): void {
     // No-op on an unchanged drawable size — recreating the texture every frame
@@ -194,6 +213,15 @@ export function createRenderGraph(
     galaxyOverlayPass.draw(encoder, accumView(), view, options);
   }
 
+  function drawBoxPreview(
+    encoder: GPUCommandEncoder,
+    view: McpmCameraView,
+    builtBox: GridBox,
+    pendingBox: GridBox,
+  ): void {
+    boxPreviewPass.draw(encoder, accumView(), view, builtBox, pendingBox);
+  }
+
   function tonemap(
     encoder: GPUCommandEncoder,
     target: GPUTextureView,
@@ -227,6 +255,7 @@ export function createRenderGraph(
     splatPass = null;
     galaxyOverlayPass?.dispose();
     galaxyOverlayPass = null;
+    boxPreviewPass.dispose();
     accumTex?.destroy();
     accumTex = null;
     accumTexView = null;
@@ -244,6 +273,7 @@ export function createRenderGraph(
     attachAgents,
     drawSplat,
     drawGalaxyOverlay,
+    drawBoxPreview,
     tonemap,
     dispose,
   };

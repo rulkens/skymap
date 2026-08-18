@@ -25,6 +25,8 @@ export type ViewSlice = {
     /** Screen-space dot radius; galaxyPoints.wesl's `radiusPx`. */
     readonly pointSizePx: number;
   };
+  /** Viewport's rAF-loop EMA, throttled to the store at most every 500ms; 0 = not measured yet. */
+  readonly fps: number;
   readonly camera: {
     readonly yaw: number;
     readonly pitch: number;

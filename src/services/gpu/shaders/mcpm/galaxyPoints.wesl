@@ -62,10 +62,13 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Point
     out.pos = vec4<f32>(0.0, 0.0, 2.0, 1.0);
     return out;
   }
+  // Same wNorm as the intensity above, split to a gentler exponent: area ~ wNorm (radius
+  // squared) while brightness ~ wNorm^2 — massive galaxies read bigger AND hotter.
+  let radiusScale = clamp(pow(wNorm, 0.5), 0.6, 2.5);
   // 'half' would be a WGSL reserved word.
   let halfPx = vec2<f32>(
-    overlay.radiusPx * 2.0 / cam.screenWidth,
-    overlay.radiusPx * 2.0 / cam.screenHeight);
+    overlay.radiusPx * radiusScale * 2.0 / cam.screenWidth,
+    overlay.radiusPx * radiusScale * 2.0 / cam.screenHeight);
   out.pos = vec4<f32>(ndc.xy + corner * halfPx, 0.0, 1.0);
   return out;
 }

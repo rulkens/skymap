@@ -14,6 +14,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 export const defaultViewSlice: ViewSlice = {
   layers: { raymarch: true, agents: false, galaxies: true },
   galaxies: { intensity: 0.6, pointSizePx: 2 },
+  fps: 0,
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetOffsetMpc: [0, 0, 0] },
   raymarch: {
     opticalThickness: 0.25,
@@ -39,6 +40,10 @@ export function setGalaxyIntensity(prev: ViewSlice, intensity: number): ViewSlic
 
 export function setGalaxyPointSize(prev: ViewSlice, pointSizePx: number): ViewSlice {
   return { ...prev, galaxies: { ...prev.galaxies, pointSizePx } };
+}
+
+export function setFps(prev: ViewSlice, fps: number): ViewSlice {
+  return { ...prev, fps };
 }
 
 const PITCH_LIMIT = 1.5;
