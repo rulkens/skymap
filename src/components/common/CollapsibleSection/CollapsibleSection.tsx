@@ -13,7 +13,7 @@
  */
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import CopyButton from '../../../../../src/components/common/CopyButton/CopyButton';
+import CopyButton from '../CopyButton/CopyButton';
 import styles from './CollapsibleSection.module.css';
 
 export type CollapsibleSectionProps = {

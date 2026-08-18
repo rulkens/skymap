@@ -10,8 +10,8 @@
  * Label + value are the `Slider` pill's own; drawing them here too doubles them.
  */
 import type { ReactNode } from 'react';
-import Slider from '../../../../../src/components/common/Slider/Slider';
-import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import Slider from '../Slider/Slider';
+import CompactInfoTip from '../CompactInfoTip/CompactInfoTip';
 import styles from './ParamSlider.module.css';
 
 export type ParamSliderProps = {

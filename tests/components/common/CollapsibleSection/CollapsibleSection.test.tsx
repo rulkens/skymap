@@ -13,8 +13,8 @@
 import { describe, expect, it } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { useState } from 'react';
-import CollapsibleSection from '../../../../tools/galaxy-renderer/src/ui/CollapsibleSection/CollapsibleSection';
-import styles from '../../../../tools/galaxy-renderer/src/ui/CollapsibleSection/CollapsibleSection.module.css';
+import CollapsibleSection from '../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import styles from '../../../../src/components/common/CollapsibleSection/CollapsibleSection.module.css';
 
 describe('CollapsibleSection nesting', () => {
   it('renders a top-level section with no nested class or data-nested hook', () => {
