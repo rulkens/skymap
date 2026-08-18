@@ -7,6 +7,11 @@
  * uniform buffers and bind groups — ~300 KiB per row — because `queue.writeBuffer`
  * interleaved with `submit` does NOT preserve order, so a shared per-frame buffer
  * would let a later body's write corrupt an earlier body's draw.
+ *
+ * The shell itself draws TWICE per body: a MULTIPLY pass (`dst *= per-channel
+ * transmittance`) then an ADD pass (`dst += in-scatter`). One alpha channel cannot
+ * attenuate three wavelengths, and the collapsed-to-luminance alpha it replaces
+ * washed the disc cyan under a λ⁻⁴ Rayleigh ramp — see `shell/fragment.wesl`.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
@@ -278,63 +283,82 @@ export function createAtmosphereShellRenderer(
     [1, 1, 1],
   );
 
-  const shellPipeline = device.createRenderPipeline({
-    label: 'atmosphere-shell-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'atmosphere-shell-pipeline-layout',
-      bindGroupLayouts: [shellBgl],
-    }),
-    vertex: {
-      module: shellVsModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: 12, // 3 × f32 position
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        },
-      ],
+  // The shell is drawn TWICE per body over one shared pipeline layout, geometry,
+  // bind group and depth/primitive state — only the fragment entry point and the
+  // blend differ. Everything except those two is built here ONCE so the pair can
+  // never diverge: any drift in depth compare, cull mode or the `front_facing`
+  // wall split would make the two passes cover different pixels, which
+  // double-counts the limb or drops it (`fragment.wesl`'s wall-duty split).
+  const shellPipelineLayout = device.createPipelineLayout({
+    label: 'atmosphere-shell-pipeline-layout',
+    bindGroupLayouts: [shellBgl],
+  });
+  const shellVertexState: GPUVertexState = {
+    module: shellVsModule,
+    entryPoint: 'vs',
+    buffers: [
+      {
+        arrayStride: 12, // 3 × f32 position
+        attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+      },
+    ],
+  };
+  const shellPrimitiveState: GPUPrimitiveState = {
+    topology: 'triangle-list',
+    // Draw BOTH walls (no cull): the fragment splits duty by front_facing — the
+    // NEAR (front) wall carries the over-disc aerial perspective, the FAR (back)
+    // wall carries the limb + sky. Depth-testing each wall against the opaque
+    // scene keeps cross-body occlusion for both (disc haze via the near wall's
+    // depth, the limb via the far wall's).
+    frontFace: 'ccw',
+    cullMode: 'none',
+  };
+  const shellDepthState: GPUDepthStencilState = {
+    format: depthFormat,
+    // Depth-TESTED against the opaque planet (reversed-Z 'greater-equal') but
+    // writes NO depth — a translucent overlay must not stamp z, and the ADD pass
+    // must see exactly the depth the MULTIPLY pass tested against.
+    depthWriteEnabled: false,
+    depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
+  };
+
+  function createShellPipeline(
+    label: string,
+    entryPoint: string,
+    blend: GPUBlendState,
+  ): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout: shellPipelineLayout,
+      vertex: shellVertexState,
+      fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
+      primitive: shellPrimitiveState,
+      depthStencil: shellDepthState,
+    });
+  }
+
+  // Pass 1 — MULTIPLY. `dstFactor: 'src'` is a plain (non-dual-source) blend
+  // factor taking the source's OWN component, so `out = 0*src + src*dst` is a
+  // per-channel `dst *= transmittance`. This is the whole point of the split: one
+  // alpha channel cannot attenuate three wavelengths differently, and a
+  // luminance-collapsed alpha let a λ⁻⁴ Rayleigh ramp add blue to the disc
+  // without removing blue from it (cyan wash).
+  const shellMultiplyPipeline = createShellPipeline(
+    'atmosphere-shell-multiply-pipeline',
+    'fsMultiply',
+    {
+      color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+      alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
     },
-    fragment: {
-      module: shellFsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: targetFormat,
-          // Premultiplied OVER: the fragment emits premultiplied rgb
-          // (`inScatter`), so src is added straight and the background is
-          // attenuated by (1 - src.a).
-          blend: {
-            color: {
-              srcFactor: 'one',
-              dstFactor: 'one-minus-src-alpha',
-              operation: 'add',
-            },
-            alpha: {
-              srcFactor: 'one',
-              dstFactor: 'one-minus-src-alpha',
-              operation: 'add',
-            },
-          },
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-      // Draw BOTH walls (no cull): the fragment splits duty by front_facing — the
-      // NEAR (front) wall carries the over-disc aerial perspective, the FAR (back)
-      // wall carries the limb + sky. Depth-testing each wall against the opaque
-      // scene keeps cross-body occlusion for both (disc haze via the near wall's
-      // depth, the limb via the far wall's).
-      frontFace: 'ccw',
-      cullMode: 'none',
-    },
-    depthStencil: {
-      format: depthFormat,
-      // Depth-TESTED against the opaque planet (reversed-Z 'greater-equal') but
-      // writes NO depth — a translucent overlay must not stamp z.
-      depthWriteEnabled: false,
-      depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
-    },
+  );
+
+  // Pass 2 — ADD. Straight accumulation of the exposed in-scatter. Its alpha
+  // contribution is the coverage complement, so the two passes together leave the
+  // target alpha at the value the single OVER draw produced (the compositor reads
+  // `foreground:0` as STRAIGHT alpha — it is the background weight, not decoration).
+  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', {
+    color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+    alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   });
 
   // ── Per-body bundles ───────────────────────────────────────────────────────
@@ -582,10 +606,17 @@ export function createAtmosphereShellRenderer(
     // shared buffer for a later body's write to race (see the module header).
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
-    pass.setPipeline(shellPipeline);
     pass.setBindGroup(0, bundle.shellBindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
+    // MULTIPLY strictly BEFORE ADD: the multiply pass scales whatever is already
+    // in the target, so running it second would attenuate this body's own
+    // in-scatter by its own transmittance. The two pipelines share one pipeline
+    // layout, so the bind group + vertex/index state set above survives the
+    // `setPipeline` switch between them.
+    pass.setPipeline(shellMultiplyPipeline);
+    pass.drawIndexed(indexCount);
+    pass.setPipeline(shellAddPipeline);
     pass.drawIndexed(indexCount);
   }
 
