@@ -34,6 +34,8 @@ import {
 } from '../state/slices/simSlice';
 import {
   setAdditive,
+  setAgentIntensity,
+  setAgentPointSize,
   setDivisor,
   setGalaxyIntensity,
   setGalaxyPointSize,
@@ -600,6 +602,28 @@ function ControlsPanel(): ReactNode {
           >
             free agents only — catalog points are the Galaxies layer
           </span>
+          <ParamSlider
+            label="intensity"
+            value={view.agents.intensity}
+            min={0.05}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            info="Brightness multiplier on the resolved agent splat."
+            onChange={(v) => store.setState((s) => ({ ...s, view: setAgentIntensity(s.view, v) }))}
+            path="view.agents.intensity"
+          />
+          <ParamSlider
+            label="point size"
+            value={view.agents.pointSizePx}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => v.toFixed(0)}
+            info="Per-agent splat footprint, in whole pixels — the splat compute kernel writes a discrete square, unlike the Galaxies layer's continuously-sized quad."
+            onChange={(v) => store.setState((s) => ({ ...s, view: setAgentPointSize(s.view, v) }))}
+            path="view.agents.pointSizePx"
+          />
         </CollapsibleSection>
 
         <CollapsibleSection

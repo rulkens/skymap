@@ -6,9 +6,10 @@
  *
  * Bind groups follow io.wesl's contract so the kernel reads the agent lanes unchanged —
  * group(0) a `McpmUniforms`-shaped buffer for the counts, group(1) slots 3..5, and
- * group(2) this pass's own camera plus the accumulation buffer. Layouts are explicit,
- * never 'auto'. The pass owns its group(0) buffer rather than sharing the sim's, for the
- * same two reasons tracePass does: it reads only counts, and the sim's is COMPUTE-only.
+ * group(2) this pass's own camera, accumulation buffer, and (S12) footprint uniform.
+ * Layouts are explicit, never 'auto'. The pass owns its group(0) buffer rather than
+ * sharing the sim's, for the same two reasons tracePass does: it reads only counts,
+ * and the sim's is COMPUTE-only.
  */
 import type { AgentBuffers } from '../../@types/AgentBuffers';
 import type { GridBox } from '../../@types/GridBox';
@@ -18,9 +19,16 @@ import vertexWgsl from '../../../../src/services/gpu/shaders/mcpm/vertex.wesl?st
 import transformWgsl from '../../../../src/services/gpu/shaders/mcpm/splatTransform.wesl?static';
 import blitWgsl from '../../../../src/services/gpu/shaders/mcpm/splatBlit.wesl?static';
 
-/** `sampleWeight` is the raymarch's own knob: the fork feeds both views the same one. */
+/**
+ * `sampleWeight` is the raymarch's own knob: the fork feeds both views the same one.
+ * `intensity`/`pointSizePx` are this layer's own (ControlsPanel's Agents section) — routed
+ * to the blit uniform and the transform-stage footprint uniform respectively, the same split
+ * galaxyOverlayPass makes between vertex-stage size and its own brightness knob.
+ */
 export type SplatView = McpmCameraView & {
   readonly sampleWeight: number;
+  readonly intensity: number;
+  readonly pointSizePx: number;
 };
 
 export type SplatPass = {
@@ -35,8 +43,11 @@ export type SplatPass = {
 const N_DATA_POINTS_INDEX = 12;
 // splatTransform.wesl's SPLAT_WG_SIZE — mirrored, so the dispatch covers every particle.
 const SPLAT_WG_SIZE = 256;
-// SplatBlit is 8 bytes of payload; uniform buffers bind at a 16-byte minimum.
+// SplatBlit is 12 bytes of payload (screenWidth, sampleWeight, intensity); uniform
+// buffers bind at a 16-byte minimum.
 const BLIT_UNIFORM_BYTES = 16;
+// SplatFootprint is 4 bytes of payload (pointSizePx); same 16-byte minimum.
+const FOOTPRINT_UNIFORM_BYTES = 16;
 
 export function createSplatPass(opts: {
   readonly device: GPUDevice;
@@ -69,6 +80,7 @@ export function createSplatPass(opts: {
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
     ],
   });
   const blitLayout = device.createBindGroupLayout({
@@ -134,6 +146,13 @@ export function createSplatPass(opts: {
   const blitU32 = new Uint32Array(blitBytes);
   const blitF32 = new Float32Array(blitBytes);
 
+  const footprintUniform = device.createBuffer({
+    label: 'mcpm-splat-footprint-uniform',
+    size: FOOTPRINT_UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const footprintF32 = new Float32Array(FOOTPRINT_UNIFORM_BYTES / 4);
+
   const simBindGroup = device.createBindGroup({
     label: 'mcpm-splat-sim',
     layout: simLayout,
@@ -173,6 +192,7 @@ export function createSplatPass(opts: {
       entries: [
         { binding: 0, resource: { buffer: camBuffer } },
         { binding: 1, resource: { buffer: accumBuffer } },
+        { binding: 2, resource: { buffer: footprintUniform } },
       ],
     });
     blitBindGroup = device.createBindGroup({
@@ -195,7 +215,10 @@ export function createSplatPass(opts: {
       device.queue.writeBuffer(camBuffer, 0, camF32);
       blitU32[0] = curWidth;
       blitF32[1] = view.sampleWeight;
+      blitF32[2] = view.intensity;
       device.queue.writeBuffer(blitUniform, 0, blitBytes);
+      footprintF32[0] = view.pointSizePx;
+      device.queue.writeBuffer(footprintUniform, 0, footprintF32);
 
       encoder.clearBuffer(accumBuffer);
       const splat = encoder.beginComputePass({ label: 'mcpm-splat-transform' });
@@ -223,6 +246,7 @@ export function createSplatPass(opts: {
       simBuffer.destroy();
       camBuffer.destroy();
       blitUniform.destroy();
+      footprintUniform.destroy();
     },
   };
 }

@@ -465,7 +465,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
           }
         }
         if (layers.agents) {
-          graph.drawSplat(encoder, { ...cam, sampleWeight: s.view.raymarch.sampleWeight });
+          graph.drawSplat(encoder, {
+            ...cam,
+            sampleWeight: s.view.raymarch.sampleWeight,
+            intensity: s.view.agents.intensity,
+            pointSizePx: s.view.agents.pointSizePx,
+          });
         }
         if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
         if (layers.pathTracer) {

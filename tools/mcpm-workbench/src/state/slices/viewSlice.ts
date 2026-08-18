@@ -14,6 +14,10 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 export const defaultViewSlice: ViewSlice = {
   layers: { raymarch: true, agents: false, galaxies: true, pathTracer: false },
   galaxies: { intensity: 0.6, pointSizePx: 2 },
+  // Reproduces the splat pass's old hardcoded look exactly: intensity 1 is the
+  // identity multiplier splatBlit.wesl always applied implicitly (no knob existed),
+  // pointSizePx 1 is the single-pixel footprint splatTransform.wesl always wrote.
+  agents: { intensity: 1, pointSizePx: 1 },
   fps: 0,
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetMpc: [0, 0, 0] },
   raymarch: {
@@ -67,6 +71,14 @@ export function setGalaxyIntensity(prev: ViewSlice, intensity: number): ViewSlic
 
 export function setGalaxyPointSize(prev: ViewSlice, pointSizePx: number): ViewSlice {
   return { ...prev, galaxies: { ...prev.galaxies, pointSizePx } };
+}
+
+export function setAgentIntensity(prev: ViewSlice, intensity: number): ViewSlice {
+  return { ...prev, agents: { ...prev.agents, intensity } };
+}
+
+export function setAgentPointSize(prev: ViewSlice, pointSizePx: number): ViewSlice {
+  return { ...prev, agents: { ...prev.agents, pointSizePx } };
 }
 
 export function setFps(prev: ViewSlice, fps: number): ViewSlice {

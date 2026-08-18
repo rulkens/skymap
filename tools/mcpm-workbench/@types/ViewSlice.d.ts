@@ -28,6 +28,12 @@ export type ViewSlice = {
     /** Screen-space dot radius; galaxyPoints.wesl's `radiusPx`. */
     readonly pointSizePx: number;
   };
+  readonly agents: {
+    /** Brightness multiplier on the resolved splat, splatBlit.wesl's `intensity`. */
+    readonly intensity: number;
+    /** Per-agent footprint side in pixels, splatTransform.wesl's `pointSizePx`. */
+    readonly pointSizePx: number;
+  };
   /** Viewport's rAF-loop EMA, throttled to the store at most every 500ms; 0 = not measured yet. */
   readonly fps: number;
   readonly camera: {

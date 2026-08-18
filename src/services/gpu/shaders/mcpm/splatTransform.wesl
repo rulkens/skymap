@@ -20,6 +20,14 @@ import package::mcpm::io::agentZ;
 @group(2) @binding(0) var<uniform> cam: McpmCamera;
 @group(2) @binding(1) var<storage, read_write> splat: array<atomic<u32>>;
 
+struct SplatFootprint {
+  // S12: ControlsPanel's Agents "point size" slider — the side, in pixels, of the
+  // square block this kernel splats per agent. 1 reproduces the single-pixel write
+  // this kernel always made before the knob existed.
+  pointSizePx: f32,
+};
+@group(2) @binding(2) var<uniform> footprint: SplatFootprint;
+
 // cs_particles_transform.hlsl:102. The fork's companion DATA_POINT_WEIGHT (10000) is gone
 // with the data-point branch, and with it splatBlit.wesl's 'val < 10000' fork.
 const AGENT_WEIGHT: u32 = 10u;
@@ -46,12 +54,21 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let px = vec2<f32>(
     (ndc.x * 0.5 + 0.5) * cam.screenWidth,
     (0.5 - ndc.y * 0.5) * cam.screenHeight);
-  let out = vec2<u32>(px);
-  // Not defensive padding: the clip test above is inclusive, so a particle on the right or
-  // bottom edge lands one past the end, and WGSL CLAMPS an out-of-range buffer index onto
-  // the last element rather than discarding the write as D3D11's typed-UAV store did.
-  let w = u32(cam.screenWidth);
-  if (out.x >= w || out.y >= u32(cam.screenHeight)) { return; }
+  let out = vec2<i32>(px);
+  let w = i32(cam.screenWidth);
+  let h = i32(cam.screenHeight);
 
-  atomicAdd(&splat[out.y * w + out.x], AGENT_WEIGHT);
+  // S12: splat a side x side block instead of the single centre pixel. Per-pixel bounds
+  // checks replace the single-pixel early-return above: a multi-pixel footprint can hang
+  // partly off an edge even when its centre passed the clip test, unlike the old 1x1 write.
+  let side = max(1, i32(round(footprint.pointSizePx)));
+  let half = side / 2;
+  for (var dy = -half; dy < side - half; dy++) {
+    for (var dx = -half; dx < side - half; dx++) {
+      let x = out.x + dx;
+      let y = out.y + dy;
+      if (x < 0 || y < 0 || x >= w || y >= h) { continue; }
+      atomicAdd(&splat[u32(y) * u32(w) + u32(x)], AGENT_WEIGHT);
+    }
+  }
 }

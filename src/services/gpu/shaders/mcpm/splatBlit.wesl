@@ -14,6 +14,9 @@ import package::mcpm::vertex::McpmVsOut;
 struct SplatBlit {
   screenWidth: u32,
   sampleWeight: f32,
+  // S12: ControlsPanel's Agents "intensity" slider, mirroring galaxyPoints.wesl's
+  // OverlayParams.intensity — a plain brightness multiplier, 1.0 = today's fixed look.
+  intensity: f32,
 };
 
 @group(0) @binding(0) var<uniform> blit: SplatBlit;
@@ -28,6 +31,6 @@ fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
   let raw = f32(splat[px.y * blit.screenWidth + px.x]);
 
   // cs_particles_blit.hlsl:35-39 then ps_particles_color.hlsl:11-17, agent branch only.
-  let a = raw * blit.sampleWeight / 3.0;
+  let a = raw * blit.sampleWeight * blit.intensity / 3.0;
   return vec4<f32>(0.6 * a, a, 0.7 * a, 1.0);
 }
