@@ -252,7 +252,11 @@ export function applyResizeDrag(
 
 `applyResizeDrag`'s opposite face stays anchored: `sizeMpc[axis] += sign · deltaMpc` (floored at a
 small positive minimum so a handle can't be dragged through the box), `centerMpc += axisDir ·
-(sign · deltaMpc / 2)`. Both are ray-vs-axis problems, not ray-vs-plane: `deltaMpc` is the caller's
+(deltaMpc / 2)` — no `sign` factor; the `sign · deltaMpc/2` form is wrong at `sign = -1`, where it
+drifts the anchored face by `|deltaMpc|` instead of holding it fixed (erratum found in F1.3 review).
+The shipped code uses the equivalent anchored form `center = anchor + sign·newHalf·axisDir`
+(`tools/mcpm-workbench/src/gizmo/applyResizeDrag.ts`), which expands to the sign-independent formula
+above at both signs. Both are ray-vs-axis problems, not ray-vs-plane: `deltaMpc` is the caller's
 job to derive, via the closest point between the pointer ray and the 3D line `(anchorWorldPos,
 axisDir)` — a skew-line closest-point calculation, one pure function:
 
