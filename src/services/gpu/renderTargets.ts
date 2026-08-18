@@ -233,7 +233,10 @@ function buildSpecs(
     // per-level divisor, AND the clear (a=0 — the pyramid accumulates
     // additively, so an untouched texel must contribute nothing) all come
     // from `bloomConstants`/this one generator so a pyramid level can never
-    // fall out of step with its row.
+    // fall out of step with its row. bloom0 keeps a=0 too even though the
+    // bright pass overwrites it outright: the upsample folds add onto
+    // bloom0..3, and any level the fold doesn't cover has to start from zero
+    // coverage.
     ...Array.from(
       { length: BLOOM_LEVELS },
       (_unused, n): RenderTargetSpec => ({

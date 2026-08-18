@@ -263,11 +263,13 @@ describe('createRenderTargets', () => {
     expect(targets.sizeOf('volume')).toEqual({ width: 1, height: 1 });
   });
 
-  // Two independently maintained tables (the spec rows and their clear
-  // values) were merged onto one this rung — a row that lost its clear value
-  // in that merge would otherwise be silent (every field but this one has a
-  // fallback-free type, so a typo would surface as a tsc error instead).
-  it('every declared row carries a clearValue', () => {
+  // `clearValue` is a required field, so a row silently losing it in a future
+  // edit is already a tsc error — not what this guards. What tsc cannot
+  // catch is a row's clearValue landing on the WRONG alpha (e.g. a=0 row
+  // copy-pasted from `hdr` keeping its a=1): `hdr`/`swap` are the only two
+  // rows that clear opaque; every other row must clear to zero coverage so
+  // its upsample/composite adds nothing for a fragment it didn't reach.
+  it('only hdr and swap clear to opaque alpha', () => {
     const targets = createRenderTargets(
       mockDevice(),
       SWAP_FORMAT,
@@ -275,7 +277,11 @@ describe('createRenderTargets', () => {
       MW_DIVISOR,
     );
     for (const spec of targets.specs) {
-      expect(spec.clearValue).toBeDefined();
+      const expectedAlpha = spec.id === 'hdr' || spec.id === 'swap' ? 1 : 0;
+      // Every row in this table is written as a `{r,g,b,a}` dict (never the
+      // 4-tuple alternative `GPUColor` also allows), so this cast is safe.
+      const clearValue = spec.clearValue as GPUColorDict;
+      expect(clearValue.a).toBe(expectedAlpha);
     }
   });
 

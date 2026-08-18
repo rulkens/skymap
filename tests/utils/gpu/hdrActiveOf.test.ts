@@ -3,8 +3,9 @@ import { hdrActiveOf } from '../../../src/utils/gpu/hdrActiveOf';
 import type { RenderTargets } from '../../../src/@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 
-// hdrActiveOf only reads `.specs`; the rest of the interface is unused by
-// the function under test, so these are inert stubs.
+// hdrActiveOf's only live read path is `specOf('swap')`; `specs` is passed
+// through so `specOf` has something to resolve against, and the rest of the
+// interface is unused by the function under test.
 function makeStub(specs: readonly RenderTargetSpec[]): RenderTargets {
   return {
     specs,
