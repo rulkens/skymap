@@ -4,15 +4,15 @@ import { Source } from '../source';
 export const POLYPHORM_ENTRY = {
   type: 'volume',
   code: Source.Polyphorm,
-  id: 'polyphorm',
+  id: 'polyphorm-2mrs',
   label: 'Polyphorm (2MRS)',
   allSky: true, // 2MRS footprint run, same all-sky framing as MCPM
   // Default-off: a test field the user toggles on from the Volumes panel.
   visible: false,
   bearsLabel: false,
   bearsMarker: false,
-  binBaseName: 'polyphorm',
-  tiered: false, // single .scfd; no per-tier variants
+  binBaseName: 'polyphorm-2mrs',
+  tiered: true, // small / medium / large `.scfd` variants
   // Same physical quantity as MCPM (log-normalized MCPM trace density), so
   // its presentation defaults mirror MCPM's — distinct palette (viridis,
   // not MCPM's inferno) to tell the two apart on screen.

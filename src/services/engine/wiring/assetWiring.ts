@@ -258,11 +258,12 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   },
 
   // ── Polyphorm 2MRS density volume ─────────────────────────────────
-  // Void request: the cube is neither tiered nor per-source, like CF-4.
+  // Tier-aware like MCPM (same physical quantity, same per-tier `.scfd`
+  // variants), unlike CF-4's void request.
   {
     key: 'polyphorm',
     factory: (deps) => createPolyphormSlot(deps.state, deps.cb),
-    req: () => undefined,
+    req: (tier) => ({ tier }),
     demand: (ctx) => ctx.settings.volumes.items[POLYPHORM_FIELD]?.enabled === true,
     priority: 82, // same rung as cf4Density; default-off, so it rarely competes at boot
   },

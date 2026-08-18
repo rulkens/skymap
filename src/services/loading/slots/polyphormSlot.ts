@@ -1,12 +1,12 @@
 /**
  * polyphormSlot — factory for the Polyphorm 2MRS volume's asset slot.
  *
- * On commit, hands the decoded `ScalarCube` to
- * `volumeFieldRenderer.upload` under the id `'polyphorm'`.
- * The renderer reads per-cube static config (contrastCenter, envelope,
- * paletteId) from the registry and user-tunable knobs from
- * `state.settings.volumes.items` per frame — the commit replays no
- * renderer setter.
+ * Tier-aware (unlike cf4DensitySlot's void request), mirroring mcpmSlot. On
+ * commit, hands the decoded `ScalarCube` to `volumeFieldRenderer.upload`
+ * under the registry id `'polyphorm-2mrs'`. The renderer reads per-cube static config
+ * (contrastCenter, envelope, paletteId) from the registry and user-tunable
+ * knobs from `state.settings.volumes.items` per frame — the commit replays
+ * no renderer setter.
  *
  * **Lazy fetch.**  Polyphorm is registry-visible:false, so its construction
  * seed lands `enabled: false` and the slot stays idle at boot.
@@ -21,12 +21,13 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { polyphormFetcher } from '../fetchers/polyphormFetcher';
+import type { PolyphormReq } from '../../../@types/loading/PolyphormReq';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createPolyphormSlot: SlotFactory<ScalarCube, void> = (state, _cb) => {
+export const createPolyphormSlot: SlotFactory<ScalarCube, PolyphormReq> = (state, _cb) => {
   const slot = createAssetSlot({
     name: 'polyphorm',
     fetch: polyphormFetcher,

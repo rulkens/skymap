@@ -197,6 +197,17 @@ describe('ASSET_WIRING demand predicates', () => {
     expect(mcpm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
+  it('polyphorm demand follows its field-enabled flag', () => {
+    const polyphorm = rowFor('polyphorm');
+    expect(
+      polyphorm.demand(
+        makeCtx({ settings: { volumes: { items: { 'polyphorm-2mrs': { enabled: true } } } } }),
+      ),
+    ).toBe(true);
+    // Default-off (field absent) ⇒ false.
+    expect(polyphorm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
+  });
+
   it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
     const cf4 = rowFor('cf4Density');
     expect(
@@ -376,6 +387,7 @@ describe('ASSET_WIRING req builders', () => {
     expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
     expect(rowFor('filaments').req('medium')).toEqual({ tier: 'medium' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
+    expect(rowFor('polyphorm').req('large')).toEqual({ tier: 'large' });
   });
 
   it('structureCatalog req is the empty request', () => {
