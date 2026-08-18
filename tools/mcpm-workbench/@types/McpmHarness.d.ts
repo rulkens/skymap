@@ -2,6 +2,7 @@ import type { AgentBuffers } from './AgentBuffers';
 import type { GridBox } from './GridBox';
 import type { GridElement } from './GridElement';
 import type { AgentInitMode } from './AgentInitMode';
+import type { HistogramReadback } from './HistogramReadback';
 import type { McpmParams } from './McpmParams';
 import type { TraceReadback } from './TraceReadback';
 import type { GpuContext } from '../../../src/@types/rendering/GpuContext';
@@ -32,8 +33,14 @@ export type McpmHarness = {
    * `traceBuffer`. Exposed read-only: only the sim's own kernels ever write them.
    */
   readonly agents: AgentBuffers;
-  /** Queues one propagate + decay pair and advances the step counter. */
-  step(params: McpmParams): void;
+  /**
+   * Queues one propagate + decay + histogram triple and advances the step
+   * counter. The histogram dispatch runs every step (cheap: only
+   * `nDataPoints` invocations do real work) so its GPU-side counts/densities
+   * are always fresh; `sampleRandomly` toggles its jittered-position mode.
+   * Throttling which steps bother to call `readHistogram` is the caller's job.
+   */
+  step(params: McpmParams, sampleRandomly: boolean): void;
   /** Zeroes the trace grid only; agents and deposit survive. */
   clearTrace(): void;
   /** Re-seeds agents and zeroes every grid; resets the step counter. */
@@ -41,4 +48,6 @@ export type McpmHarness = {
   dispose(): void;
   /** Copies the trace grid to the CPU; rejects before allocating if the MAP_READ staging copy would exceed the device's `maxBufferSize`. */
   readbackTrace(): Promise<TraceReadback>;
+  /** Copies back the last `step()`'s histogram counts + per-point densities. */
+  readHistogram(): Promise<HistogramReadback>;
 };

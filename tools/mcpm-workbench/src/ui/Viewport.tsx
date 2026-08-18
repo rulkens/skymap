@@ -38,6 +38,7 @@ import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
 import { setCatalogLoadStatus, setCatalogLoaded } from '../state/slices/catalogSlice';
 import { setResolvedGrid } from '../state/slices/gridSlice';
+import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import {
   setCameraDistance,
@@ -56,6 +57,11 @@ const REBUILD_DEBOUNCE_MS = 400;
 const BOX_PREVIEW_MS = 200;
 // FPS badge throttle — pushing every frame would re-render the Hud at 60Hz.
 const FPS_PUSH_INTERVAL_MS = 500;
+// T20: the histogram PASS runs every step (encodeStep.ts) — cheap, only nDataPoints
+// invocations do real work. What's worth throttling is the READBACK: mapAsync is a
+// host round trip, and every sim step already queues one GPU submission of its own.
+// Steps, not wall-clock, so the convergence plot's x-axis is exact step counts.
+const HISTOGRAM_INTERVAL_STEPS = 20;
 const DRAG_SPEED = 0.005;
 // Exponential in the raw wheel delta — galaxy-renderer's createOrbitCameraInput
 // constant, so both tools zoom with the same hand feel; a sign-only step ignores
@@ -230,6 +236,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let fpsEma = 0;
     let lastFpsPushTime = 0;
     let lastPushedFps = 0;
+    // Guards against overlapping readbacks: a mapAsync round trip can outlive the next
+    // throttle boundary on a slow device, and stacking calls would only queue more of
+    // the same expensive wait.
+    let histogramInFlight = false;
 
     /** Frees the T18 preview pass + its packed buffer. Idempotent. */
     function disposePreview(): void {
@@ -348,6 +358,29 @@ function Viewport({ store }: ViewportProps): ReactNode {
       }
     }
 
+    /**
+     * T20: throttled histogram readback (HISTOGRAM_INTERVAL_STEPS above) — reads back
+     * whatever `step()`'s last dispatch left in the histogram counts + densities
+     * buffers and derives `meanLogTraceAtPoints` from it. `harness !== h` guards the
+     * same rebuild race `runPreviewPacked` does: a catalog switch can land mid-await.
+     */
+    async function runHistogram(h: McpmHarness, stepCount: number): Promise<void> {
+      if (histogramInFlight) return;
+      histogramInFlight = true;
+      try {
+        const { counts, densities } = await h.readHistogram();
+        if (disposed || harness !== h) return;
+        store.setState((st) => ({
+          ...st,
+          histogram: recordHistogramSample(st.histogram, counts, densities, stepCount),
+        }));
+      } catch (err) {
+        console.error('mcpm-workbench: histogram readback failed', err);
+      } finally {
+        histogramInFlight = false;
+      }
+    }
+
     function startLoop(): void {
       if (rafHandle) cancelAnimationFrame(rafHandle);
       // Re-seed the FPS sentinels exactly as their declarations do: every rebuild tears
@@ -365,8 +398,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
         const s = store.getSnapshot();
         if (s.sim.running) {
-          h.step(s.sim.params);
+          h.step(s.sim.params, s.histogram.sampleRandomly);
+          const nextStepCount = s.sim.stepCount + 1;
           store.setState((st) => ({ ...st, sim: incrementStep(st.sim) }));
+          if (nextStepCount % HISTOGRAM_INTERVAL_STEPS === 0) void runHistogram(h, nextStepCount);
         }
 
         const now = performance.now();
@@ -609,7 +644,14 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (s.sim.resetToken !== lastResetToken) {
           lastResetToken = s.sim.resetToken;
           harness.reset(s.sim.initMode, s.sim.seed);
-          store.setState((st) => ({ ...st, sim: resetStepCount(st.sim) }));
+          // Old history entries would otherwise show larger step counts than the
+          // freshly zeroed HUD counter — a convergence plot that looks like it jumped
+          // backward in time.
+          store.setState((st) => ({
+            ...st,
+            sim: resetStepCount(st.sim),
+            histogram: resetHistogram(st.histogram),
+          }));
         }
         if (s.sim.clearTraceToken !== lastClearToken) {
           lastClearToken = s.sim.clearTraceToken;

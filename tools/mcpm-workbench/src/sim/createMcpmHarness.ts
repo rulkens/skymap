@@ -12,22 +12,28 @@ import type { AgentWeights } from '../../@types/AgentWeights';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
 import type { GridElement } from '../../@types/GridElement';
+import type { HistogramReadback } from '../../@types/HistogramReadback';
 import type { McpmHarness } from '../../@types/McpmHarness';
 import type { McpmParams } from '../../@types/McpmParams';
 import { initGpu } from '../../../../src/services/gpu/device';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate.wesl?static';
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
+import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
 import { planGridBudget } from './planGridBudget';
+import { readbackHistogram } from './readbackHistogram';
 import { readbackTrace } from './readbackTrace';
 import { AGENT_COUNT_STEP, seedAgents } from './seedAgents';
 import { specializeGridElement } from './specializeGridElement';
 
-// io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2.
+// io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the T20
+// histogram pass a subset of propagate's — trace, agent positions, and the (dead-read)
+// weight lane — at 2, 3, 4, 5, 8.
 const PROPAGATE_SLOTS = [0, 2, 3, 4, 5, 6, 7, 8];
 const DECAY_SLOTS = [0, 1, 2];
+const HISTOGRAM_STORAGE_SLOTS = [2, 3, 4, 5, 8];
 
 const storageLayout = (
   device: GPUDevice,
@@ -41,6 +47,12 @@ const storageLayout = (
       visibility: GPUShaderStage.COMPUTE,
       buffer: { type: 'storage' as const },
     })),
+  });
+
+const uniformLayoutFor = (device: GPUDevice, label: string): GPUBindGroupLayout =>
+  device.createBindGroupLayout({
+    label,
+    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }],
   });
 
 export async function createMcpmHarness(opts: {
@@ -102,13 +114,35 @@ export async function createMcpmHarness(opts: {
     specializeGridElement(decaySource, element),
     'mcpm-decay',
   );
+  // histogram.wesl transitively imports io::trace (via grid::loadTrace), so it needs the
+  // same f16/f32 GridElem specialization as propagate/decay, even though it declares no
+  // GridElem-typed storage of its own.
+  const histogramModule = createShaderModuleWithDevLog(
+    device,
+    specializeGridElement(histogramSource, element),
+    'mcpm-histogram',
+  );
 
-  const uniformLayout = device.createBindGroupLayout({
-    label: 'mcpm-uniform-layout',
-    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }],
-  });
+  const uniformLayout = uniformLayoutFor(device, 'mcpm-uniform-layout');
   const propagateLayout = storageLayout(device, 'mcpm-propagate-layout', PROPAGATE_SLOTS);
   const decayLayout = storageLayout(device, 'mcpm-decay-layout', DECAY_SLOTS);
+  // histogram.wesl's own group(1)/group(2): group(0) is McpmUniforms, reused as-is — a
+  // second @group(0)@binding(0) uniform does not link (histogram.wesl's header). group(2)
+  // is its own new resources: the sampleRandomly flag plus the histogram-counts/densities
+  // buffers — never io.wesl's group(1) contract.
+  const histogramStorageLayout = storageLayout(
+    device,
+    'mcpm-histogram-storage-layout',
+    HISTOGRAM_STORAGE_SLOTS,
+  );
+  const histogramOwnLayout = device.createBindGroupLayout({
+    label: 'mcpm-histogram-own-layout',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    ],
+  });
 
   const propagatePipeline = device.createComputePipeline({
     label: 'mcpm-propagate',
@@ -120,6 +154,13 @@ export async function createMcpmHarness(opts: {
     layout: device.createPipelineLayout({ bindGroupLayouts: [uniformLayout, decayLayout] }),
     compute: { module: decayModule, entryPoint: 'cs' },
   });
+  const histogramPipeline = device.createComputePipeline({
+    label: 'mcpm-histogram',
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [uniformLayout, histogramStorageLayout, histogramOwnLayout],
+    }),
+    compute: { module: histogramModule, entryPoint: 'cs' },
+  });
 
   const buffers = createGridBuffers(device, opts.box, agentBufferLength, element);
 
@@ -127,6 +168,28 @@ export async function createMcpmHarness(opts: {
     label: 'mcpm-uniforms',
     layout: uniformLayout,
     entries: [{ binding: 0, resource: { buffer: buffers.uniform } }],
+  });
+  // Static, unlike propagate/decay's ping-ponged pair: trace, the agent lanes, and the
+  // histogram/densities buffers never swap sides.
+  const histogramStorageBindGroup = device.createBindGroup({
+    label: 'mcpm-histogram-storage',
+    layout: histogramStorageLayout,
+    entries: [
+      { binding: 2, resource: { buffer: buffers.trace } },
+      { binding: 3, resource: { buffer: buffers.agentX } },
+      { binding: 4, resource: { buffer: buffers.agentY } },
+      { binding: 5, resource: { buffer: buffers.agentZ } },
+      { binding: 8, resource: { buffer: buffers.agentWeight } },
+    ],
+  });
+  const histogramOwnBindGroup = device.createBindGroup({
+    label: 'mcpm-histogram-own',
+    layout: histogramOwnLayout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.histogramFlags } },
+      { binding: 1, resource: { buffer: buffers.histogram } },
+      { binding: 2, resource: { buffer: buffers.densities } },
+    ],
   });
 
   // The fork's is_a ping-pong: propagate accumulates into the deposit grid that
@@ -213,7 +276,7 @@ export async function createMcpmHarness(opts: {
       nDataPoints: opts.points.count,
       count: agentBufferLength,
     },
-    step(params: McpmParams): void {
+    step(params: McpmParams, sampleRandomly: boolean): void {
       // Flip BEFORE encoding, as the fork does at the top of its propagate block.
       parity = parity === 0 ? 1 : 0;
       const encoder = device.createCommandEncoder({ label: 'mcpm-step' });
@@ -232,8 +295,14 @@ export async function createMcpmHarness(opts: {
           nAgents: opts.agentCount,
           parity,
           iteration,
+          histogramPipeline,
+          histogramFlagsBuffer: buffers.histogramFlags,
+          histogramCountsBuffer: buffers.histogram,
+          histogramStorageBindGroup,
+          histogramOwnBindGroup,
         },
         params,
+        sampleRandomly,
       );
       device.queue.submit([encoder.finish()]);
       iteration += 1; // the fork increments at the END of the frame
@@ -253,6 +322,9 @@ export async function createMcpmHarness(opts: {
     },
     readbackTrace() {
       return readbackTrace(device, buffers.trace, opts.box, element);
+    },
+    readHistogram(): Promise<HistogramReadback> {
+      return readbackHistogram(device, buffers.histogram, buffers.densities, opts.points.count);
     },
   };
 }

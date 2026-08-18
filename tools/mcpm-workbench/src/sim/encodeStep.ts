@@ -37,13 +37,27 @@ export type McpmStep = {
   readonly nAgents: number;
   readonly parity: 0 | 1;
   readonly iteration: number;
+  /**
+   * T20: the histogram pass. Its group(0) is `uniformBindGroup` above, reused
+   * as-is (histogram.wesl's header explains why it can't have its own
+   * full-size uniform); group(1)/group(2) are STATIC (unlike propagate/decay's
+   * ping-ponged pair) — neither trace, the agent lanes, nor the
+   * histogram/densities buffers swap sides.
+   */
+  readonly histogramPipeline: GPUComputePipeline;
+  readonly histogramFlagsBuffer: GPUBuffer;
+  readonly histogramCountsBuffer: GPUBuffer;
+  readonly histogramStorageBindGroup: GPUBindGroup;
+  readonly histogramOwnBindGroup: GPUBindGroup;
 };
 
 /**
  * encodeStep — one simulation iteration: propagate over the agents, then decay
- * over the grid, in that order (main.cpp:1105 then 1159). Both dispatches share
- * one compute pass; WebGPU orders dispatches within a pass, so decay cannot
- * observe a half-written deposit field.
+ * over the grid, then the T20 histogram pass over the (now-decayed) trace, in
+ * that order (main.cpp:1105, 1159, 1178). All three dispatches share one
+ * compute pass; WebGPU orders dispatches within a pass, so decay cannot
+ * observe a half-written deposit field, and the histogram pass reads the
+ * SAME trace values decay just wrote in place.
  *
  * This is also the Mpc → voxel / degrees → radians boundary: the shaders never
  * see either human unit.
@@ -53,6 +67,7 @@ export function encodeStep(
   encoder: GPUCommandEncoder,
   step: McpmStep,
   params: McpmParams,
+  sampleRandomly: boolean,
 ): void {
   const { box } = step;
   const uniforms = new ArrayBuffer(UNIFORM_BYTES);
@@ -75,6 +90,14 @@ export function encodeStep(
   i32[14] = step.iteration;
   i32[15] = 0;
   device.queue.writeBuffer(step.uniformBuffer, 0, uniforms);
+
+  // T20's own tiny uniform — everything else the histogram pass needs (nDataPoints,
+  // world dims) is already in the McpmUniforms write above; group(0) reuses it as-is.
+  device.queue.writeBuffer(step.histogramFlagsBuffer, 0, new Int32Array([sampleRandomly ? 1 : 0]));
+  // main.cpp zeroes density_histogram every frame it samples (1181-1184), then dispatches:
+  // each step's counts are one point-in-time snapshot, never a running total across steps.
+  // clearBuffer is an encoder-level command — must run before the compute pass begins.
+  encoder.clearBuffer(step.histogramCountsBuffer);
 
   const items = step.nDataPoints + step.nAgents;
   // main.cpp:1121 — ((active_agents + data_count) / 100) / THREAD_GROUP_SIZE, both C
@@ -101,5 +124,15 @@ export function encodeStep(
     box.dims[1] / DECAY_WG_EDGE,
     box.dims[2] / DECAY_WG_EDGE,
   );
+
+  // T20: main.cpp recomputes grid_z with the identical formula for this pass (its own
+  // 'active_agents + data_count' quantity), so it shares propagate's dispatch shape and
+  // gridZ exactly — the kernel's own idx guard makes the (mostly-idle) coverage safe.
+  pass.setPipeline(step.histogramPipeline);
+  pass.setBindGroup(0, step.uniformBindGroup); // group(0) is McpmUniforms, reused as-is
+  pass.setBindGroup(1, step.histogramStorageBindGroup);
+  pass.setBindGroup(2, step.histogramOwnBindGroup);
+  pass.dispatchWorkgroups(PROPAGATE_DISPATCH_X, PROPAGATE_DISPATCH_Y, gridZ);
+
   pass.end();
 }

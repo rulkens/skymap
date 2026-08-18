@@ -2,6 +2,7 @@ import type { AppState } from '../../@types/AppState';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { defaultCatalogSlice } from './slices/catalogSlice';
 import { defaultGridSlice } from './slices/gridSlice';
+import { defaultHistogramSlice } from './slices/histogramSlice';
 import { defaultSimSlice } from './slices/simSlice';
 import { defaultViewSlice } from './slices/viewSlice';
 
@@ -21,10 +22,12 @@ export const defaultAppState: AppState = hasUrlGate('probe')
       grid: { ...defaultGridSlice, autoFit: true, longAxisTarget: PROBE_LONG_AXIS_TARGET },
       sim: { ...defaultSimSlice, agentCount: PROBE_AGENT_COUNT },
       view: defaultViewSlice,
+      histogram: defaultHistogramSlice,
     }
   : {
       catalog: defaultCatalogSlice,
       grid: defaultGridSlice,
       sim: defaultSimSlice,
       view: defaultViewSlice,
+      histogram: defaultHistogramSlice,
     };

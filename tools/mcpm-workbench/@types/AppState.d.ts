@@ -1,5 +1,6 @@
 import type { CatalogSlice } from './CatalogSlice';
 import type { GridSlice } from './GridSlice';
+import type { HistogramSlice } from './HistogramSlice';
 import type { SimSlice } from './SimSlice';
 import type { ViewSlice } from './ViewSlice';
 
@@ -9,4 +10,5 @@ export type AppState = {
   readonly grid: GridSlice;
   readonly sim: SimSlice;
   readonly view: ViewSlice;
+  readonly histogram: HistogramSlice;
 };

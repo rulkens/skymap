@@ -18,6 +18,7 @@ import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlid
 import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
 import { useStore } from '../state/useStore';
 import { setCatalogTier, setWeightMode } from '../state/slices/catalogSlice';
+import { setSampleRandomly } from '../state/slices/histogramSlice';
 import {
   requestClearTrace,
   requestExport,
@@ -45,6 +46,7 @@ import { useAppStore } from './storeContext';
 import Toggle from './Toggle';
 import ToggleRow from './ToggleRow';
 import GridBoxPanel from './GridBoxPanel';
+import HistogramPlot from './HistogramPlot';
 import styles from './ControlsPanel.module.css';
 
 type ParamSliderSpec = {
@@ -308,6 +310,7 @@ function ControlsPanel(): ReactNode {
   const sim = useStore(store, (s) => s.sim);
   const catalog = useStore(store, (s) => s.catalog);
   const view = useStore(store, (s) => s.view);
+  const histogram = useStore(store, (s) => s.histogram);
   // No open/close slice for the workbench's panel sections yet — CollapsibleSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
@@ -316,6 +319,7 @@ function ControlsPanel(): ReactNode {
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
   const [pathTracerOpen, setPathTracerOpen] = useState(false);
+  const [histogramOpen, setHistogramOpen] = useState(true);
   const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
     store.setState((s) => ({ ...s, view: setLayerEnabled(s.view, layer, on) }));
 
@@ -355,6 +359,22 @@ function ControlsPanel(): ReactNode {
               path="sim.agentCount"
             />
           </SliderGroup>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Histogram"
+          open={histogramOpen}
+          onToggle={() => setHistogramOpen((v) => !v)}
+        >
+          <HistogramPlot />
+          <ToggleRow
+            label="jittered sampling"
+            on={histogram.sampleRandomly}
+            info="Samples the histogram at random positions instead of the catalog points themselves (the fork's HIST RNG SAMPLING toggle) — a coverage check, not the convergence signal itself."
+            onChange={(on) =>
+              store.setState((s) => ({ ...s, histogram: setSampleRandomly(s.histogram, on) }))
+            }
+          />
         </CollapsibleSection>
 
         <CollapsibleSection

@@ -19,6 +19,11 @@ const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so
 // every step lets a few frames encode before its errors are drained.
 const SETTLE_FRAMES = 6;
+// T20: Viewport.tsx throttles the histogram READBACK to every 20 steps
+// (HISTOGRAM_INTERVAL_STEPS) — the dispatch itself runs every step (encodeStep.ts)
+// and so is already covered by every other settle above, but the readbackHistogram
+// mapAsync round trip needs a longer settle to guarantee it fires at least once.
+const HISTOGRAM_SETTLE_FRAMES = 21;
 const BOOT_TIMEOUT_MS = 60_000;
 
 /** One `uncapturederror` / device-loss entry, tagged with the step that provoked it. */
@@ -273,6 +278,22 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         await page.getByRole('checkbox', { name: 'running', exact: true }).check();
         await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // T20: the histogram compute pass (uniform write, clearBuffer, dispatch, all
+      // three bind groups) already runs every step above; this step is the one that
+      // forces its READBACK — jittered sampling toggled on then off (exercising
+      // histogram.wesl's cfg.sampleRandomly branch both ways) with a long enough
+      // settle to cross HISTOGRAM_INTERVAL_STEPS at least twice, so readbackHistogram's
+      // mapAsync round trip and the HistogramPlot draw path both run for real.
+      name: 'histogram:readback',
+      run: async (page) => {
+        const jitter = page.getByRole('checkbox', { name: 'jittered sampling', exact: true });
+        await jitter.check();
+        await settleFrames(page, HISTOGRAM_SETTLE_FRAMES);
+        await jitter.uncheck();
+        await settleFrames(page, HISTOGRAM_SETTLE_FRAMES);
       },
     },
     {

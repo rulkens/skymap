@@ -6,13 +6,19 @@ import type { GridElement } from '../../@types/GridElement';
 // that overflows, or the write silently disagrees with the buffer it targets.
 export const BYTES_PER_ELEMENT: Readonly<Record<GridElement, number>> = { f16: 2, f32: 4 };
 export const UNIFORM_BYTES = 64; // McpmUniforms: 16 x 4-byte scalars, no padding (io.wesl)
-const HISTOGRAM_BINS = 17; // constants.wesl N_HISTOGRAM_BINS: 16 counts + running max
+export const HISTOGRAM_FLAGS_BYTES = 4; // HistogramFlags: one i32 (histogram.wesl)
+export const HISTOGRAM_BINS = 17; // constants.wesl N_HISTOGRAM_BINS: 16 counts + running max
 
 /**
  * GridBuffers — every GPU allocation the sim owns. The three grids are
  * `array<GridElem>`, so f16 halves their bytes; the agent lanes stay f32
  * whatever the grid element is. `histogram` is allocated here and first used
- * by the trace-histogram pass.
+ * by the trace-histogram pass; `densities` and `histogramFlags` are its
+ * T20 siblings — one density sample per agent-lane slot (the kernel only
+ * ever writes the first `nDataPoints` of them) and the pass's own tiny
+ * uniform (just `sampleRandomly` — the pass reuses `uniform`/McpmUniforms
+ * for everything else; see histogram.wesl's header for why it can't have
+ * its own full-size uniform).
  */
 export type GridBuffers = {
   readonly depositA: GPUBuffer;
@@ -25,6 +31,8 @@ export type GridBuffers = {
   readonly agentTheta: GPUBuffer;
   readonly agentWeight: GPUBuffer;
   readonly histogram: GPUBuffer;
+  readonly densities: GPUBuffer;
+  readonly histogramFlags: GPUBuffer;
   readonly uniform: GPUBuffer;
   destroy(): void;
 };
@@ -63,6 +71,12 @@ export function createGridBuffers(
       label: 'mcpm-histogram',
       size: HISTOGRAM_BINS * 4,
       usage: storageUsage,
+    }),
+    densities: lane('mcpm-densities'),
+    histogramFlags: device.createBuffer({
+      label: 'mcpm-histogram-flags',
+      size: HISTOGRAM_FLAGS_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }),
     uniform: device.createBuffer({
       label: 'mcpm-uniforms',

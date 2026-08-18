@@ -18,6 +18,14 @@ override DECAY_WG_Y: u32 = 8u;       // over 256, but each invocation writes one
 override DECAY_WG_Z: u32 = 8u;       // its own global id, so a reshape is bitwise identical.
 
 const N_HISTOGRAM_BINS: u32 = 17u;   // main.cpp:206 — 0..15 count, 16 holds 1e5 x max
+// config.polyp's 'Histogram base = 10.0' default; mirrored TS-side in encodeStep.ts's own
+// HISTOGRAM_BASE (no runtime injection between the two — see the wesl-shaders skill's
+// "TS <-> WESL constant parity" note — so keep both literals in sync by hand).
+const HISTOGRAM_BASE: f32 = 10.0;
+
+override HISTOGRAM_WG_X: u32 = 10u;  // cs_density_histo.wgsl's own WG_X/Y/Z override, same
+override HISTOGRAM_WG_Y: u32 = 10u;  // (10,10,10) shape as propagate's; the histogram dispatch
+override HISTOGRAM_WG_Z: u32 = 10u;  // reuses propagate's gridZ (main.cpp: identical formula).
 
 // cs_agents_propagate.hlsl:44 guards m_w where it means m_z: a zero m_z is never repaired.
 override QUIRK_RNG_SEED_GUARD_TYPO: bool = true;
