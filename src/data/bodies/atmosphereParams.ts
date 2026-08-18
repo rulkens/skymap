@@ -216,6 +216,69 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     sunIrradiance: 1.0,
     exposure: 1.3,
   },
+  titan: {
+    // Cloud-tops-as-ground like Venus, except the offset is not free: altitude 0 is the nadir
+    // tau=1 haze level 160 km up, so Titan draws 6.2% small. Do NOT close that by raising
+    // `planetRadiusKm` above the rasterised radius — the fragment's ground test then reads true
+    // where no disc was drawn, amputating the limb glow (shell/fragment.wesl:176-181).
+    // Textureless: no visible-light mosaic of Titan exists, so the shell sits over a flat
+    // Lambert sphere. Every number here, and what the disc should composite to:
+    // docs/research/atmospheres/titan.md.
+    planetRadiusKm: seededPlanet('titan').radiusKm,
+    // [D] 7.8 aerosol scale heights (limb tau 0.009), and tall enough to contain the 500 km
+    // detached haze, so the shell never has to grow.
+    atmosphereTopKm: seededPlanet('titan').radiusKm + 350,
+    constituents: [
+      {
+        // [D] N2/CH4 at 193 Pa, 172 K (HASI/Huygens; He+21 sigmas) — 0.2% of the extinction,
+        // present for correctness and never a colour dial. No methane constituent, unlike
+        // Uranus/Neptune: Titan's deep bands form below the drawn sphere, not above it.
+        scatter: [1.62e-5, 3.84e-5, 9.58e-5],
+        absorb: [0, 0, 0],
+        profile: { kind: 'exponential', scaleHeightKm: 43 }, // [M] HASI dlnp/dz, 160-180 km
+        phase: { kind: 'rayleigh' },
+      },
+      {
+        // Organic haze, forward lobe. TWO lobes because the particles are fractal aggregates and
+        // one g cannot hold both ends: g=0.85 alone darkens the low-phase disc ~6x, g=0.55 alone
+        // kills the twilight surge that is Titan's defining optical property. The two rows SUM to
+        // the haze column — changing one alone breaks the extinction.
+        // [D] tau = 0.61/1.00/1.69 above the reference. The lambda^-2.34 slope is MEASURED and is
+        // the aggregate's own signature (D_f=2 gives lambda^-2); flattening it greys the limb.
+        scatter: [6.67e-3, 10.68e-3, 16.07e-3],
+        // [D] beta*(1-w), w inverted from Karkoschka 98's measured full-disk albedo. 28x more
+        // absorbing in blue than red — this, not `scatter`, is most of Titan's orange. w(440) is
+        // a LOWER bound, so a Titan reading too brown is cured by cutting this, not by `scatter`.
+        absorb: [0.096e-3, 0.427e-3, 2.66e-3],
+        profile: { kind: 'exponential', scaleHeightKm: 45 }, // [M] Doose+16 revision via GM+17
+        phase: { kind: 'henyeyGreenstein', g: 0.85 }, // [D] width-matched to the 7.7 deg Airy lobe
+      },
+      {
+        // Organic haze, broad lobe — same medium, same albedo, 50/50 energy split. [L] on g: the
+        // pair's mean cosine 0.55 is the g the `absorb` inversion assumed, so the two move together.
+        scatter: [6.67e-3, 10.68e-3, 16.07e-3],
+        absorb: [0.096e-3, 0.427e-3, 2.66e-3],
+        profile: { kind: 'exponential', scaleHeightKm: 45 },
+        phase: { kind: 'henyeyGreenstein', g: 0.25 },
+      },
+      // [M] No tent for the detached haze at 500 km: normal tau ~1e-3, and it was undetectable
+      // from late 2012 to early 2016. A layer that comes and goes is not a table constant.
+    ],
+    // [M] Karkoschka 98 measures the disc at [0.28, 0.21, 0.12] and the seed is ~2.8x brighter,
+    // which at tau~1 is first-order in the bounce, not Pluto's 1% rounding. NOT fixed here — the
+    // seed's hue is right because it was eyeballed as the COMPOSITE, and that is table-wide:
+    // docs/backlog/2026-08-18-body-seed-albedos-vs-measured.md.
+    groundAlbedo: seededPlanet('titan').albedo,
+    // [L] The table's widest terminator, and the one with a measured reason: H_a/R = 1.5e-2
+    // (GM+17), ~23x Venus's, puts the lit shell top at 29 deg of solar depression vs Earth's 10.
+    twilightSoftness: 0.12,
+    // [L] 1.0 = the physical result; the surge already lives in the forward lobe.
+    twilightIntensity: 1.0,
+    sunIrradiance: 1.0,
+    // [L] Between Mars's 1.5 and Venus's 3.0. Scales in-scatter only, so it is NOT the dial for a
+    // composite that reads too bright or too red — that is the seed albedo above.
+    exposure: 2.0,
+  },
   uranus: {
     // Cloud-tops-as-ground; the old row faked methane's red absorption with a suppressed-red
     // Rayleigh vector. That vector was already close to right — the real gap was that methane

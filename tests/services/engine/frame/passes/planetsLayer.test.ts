@@ -1,16 +1,19 @@
 /**
  * planetsLayer — unit tests for the seeded-planets content row.
  *
- * Two load-bearing assertions:
+ * Three load-bearing assertions:
  *
  *   1. The f64 seam — every planet's MVP composes from the slab's
  *      `Float64Array` view-projection (`view.slab.vp`), NOT the f32-narrowed
  *      `view.vp` (identity-pinned via a mocked `composeBodyMvp`).
  *   2. The single instanced draw — ONE `renderer.draw(pass, staging, n)` paints
- *      every planet, with body i's albedo packed at instance stride 20 floats
- *      (albedo at floats base+16..18). A per-draw uniform would instead race
+ *      every planet, with body i's own albedo and sun direction packed into
+ *      body i's record. A per-draw uniform would instead race
  *      `queue.writeBuffer` against submit and render both planets at the
  *      last-written MVP; the packed instance batch is what avoids that.
+ *   3. The MVP / `camPosLocal` pairing — the renderer ray-traces its silhouette
+ *      from that packed camera, so it must be measured in the frame the packed
+ *      MVP's model scale defines.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -24,6 +27,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
 import { minPickRadiusMpc } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -266,19 +270,15 @@ describe('planetsLayer.draw', () => {
     expect(staging).toBeInstanceOf(Float32Array);
 
     // The staging layout: each planet's albedo sits at floats base+16..18 of
-    // its 24-float record. Planet 1 (Jupiter) → base 24 → albedo at 40..42.
+    // its record, so body i's colour is packed against body i's MVP and not a
+    // neighbour's.
     SEEDED_PLANETS.forEach((planet, i) => {
       const base = i * INSTANCE_FLOATS;
-      expect(base).toBe(i * 24);
       expect(staging[base + 16]).toBeCloseTo(planet.albedo[0]);
       expect(staging[base + 17]).toBeCloseTo(planet.albedo[1]);
       expect(staging[base + 18]).toBeCloseTo(planet.albedo[2]);
       expect(staging[base + 19]).toBe(0); // albedo pad stays zeroed
     });
-    // Spelled out for the second planet so the 40..42 offset is explicit.
-    expect(staging[40]).toBeCloseTo(SEEDED_PLANETS[1]!.albedo[0]);
-    expect(staging[41]).toBeCloseTo(SEEDED_PLANETS[1]!.albedo[1]);
-    expect(staging[42]).toBeCloseTo(SEEDED_PLANETS[1]!.albedo[2]);
   });
 
   it('packs each body`s sunDirLocal at floats base+20..22 with a zeroed pad', () => {
@@ -301,6 +301,38 @@ describe('planetsLayer.draw', () => {
       expect(staging[base + 21]).toBeCloseTo(sun[1]);
       expect(staging[base + 22]).toBeCloseTo(sun[2]);
       expect(staging[base + 23]).toBe(0); // sunDir pad stays zeroed
+    });
+  });
+
+  it('packs camPosLocal at floats base+24..26 against the SAME radius the MVP used', () => {
+    // The ray origin for the renderer's analytic silhouette. It and the MVP are
+    // a pair: the MVP's model scale defines the frame where the body is the unit
+    // sphere, so a camera divided by any other radius puts the ray origin
+    // somewhere the vertex stage never went — the silhouette, depth and normal
+    // then go wrong together, silently and only on screen. Recomputed here from
+    // the radius argument the layer actually handed composeBodyMvp, so the pin
+    // is on the PAIRING and not on a restated constant. camPosLocal is not
+    // mocked; the layer runs the real transpose-rotate.
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+    const state = makeState(renderer, SEEDED_PLANETS);
+
+    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, state);
+
+    const [, staging] = renderer.draw.mock.calls[0]!;
+    SEEDED_PLANETS.forEach((planet, i) => {
+      const base = i * INSTANCE_FLOATS;
+      const mvpRadiusMpc = composeMock.mock.calls[i]![3] as number;
+      const cam = camPosLocal(view.camPos, planet.positionMpc, mvpRadiusMpc, planet.orientation);
+      // `Math.fround`, not a tolerance: the staging array is Float32Array, and
+      // the stub camera sits 5 Mpc out, so a body-radius-normalised component
+      // runs to ~1e16 where one f32 ULP is ~1e9 — larger than any absolute
+      // epsilon worth writing. fround is what the store does, exactly.
+      expect(staging[base + 24]).toBe(Math.fround(cam[0]));
+      expect(staging[base + 25]).toBe(Math.fround(cam[1]));
+      expect(staging[base + 26]).toBe(Math.fround(cam[2]));
+      expect(staging[base + 27]).toBe(0); // camPosLocal pad stays zeroed
     });
   });
 

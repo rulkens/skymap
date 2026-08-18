@@ -11,6 +11,12 @@
  * instance buffer (no fixed cap — see the module header), and the opaque
  * foreground pipeline profile (caller's `targetFormat` on the colour target,
  * depth state present).
+ *
+ * The two failures worth pinning here are the silent ones, both cross-file
+ * contracts with no compiler check: the vertex-attribute layout drifting from
+ * the `@location` declarations in the linked WESL, and an `entryPoint` string
+ * naming a function the shader no longer declares. Both fail only when a
+ * browser builds the pipeline.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -26,11 +32,13 @@ type BufferDesc = { label?: string; size: number };
 function mockDevice(opts?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
   buffers?: BufferDesc[];
+  shaderCode?: string[];
 }): GPUDevice {
   return {
-    createShaderModule: vi.fn(() => ({
-      getCompilationInfo: () => Promise.resolve({ messages: [] }),
-    })),
+    createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => {
+      opts?.shaderCode?.push(desc.code);
+      return { getCompilationInfo: () => Promise.resolve({ messages: [] }) };
+    }),
     createBuffer: vi.fn((desc: BufferDesc) => {
       opts?.buffers?.push(desc);
       return { destroy: vi.fn() };
@@ -81,7 +89,6 @@ describe('createPlanetRenderer', () => {
     expect(buffers.find((b) => b.label === 'planet-position-vbo')).toBeDefined();
     expect(buffers.find((b) => b.label === 'planet-index-ibo')).toBeDefined();
     expect(buffers.find((b) => b.label === 'planet-instance-vbo')).toBeUndefined();
-    expect(INSTANCE_STRIDE).toBe(96);
   });
 
   it('draw is callable with (pass, instances, count) and records ONE indexed draw', () => {
@@ -191,18 +198,92 @@ describe('createPlanetRenderer', () => {
       depthWriteEnabled: true,
       depthCompare: 'less',
     });
-    // Two vertex buffers: per-vertex position (stride 12) + per-instance
-    // records (stride 96, instance-stepped).
+    // Two vertex buffers: per-vertex position + per-instance records.
     const vbs = Array.from(desc.vertex.buffers!);
     expect(vbs).toHaveLength(2);
     expect(vbs[1]!.stepMode).toBe('instance');
     expect(vbs[1]!.arrayStride).toBe(INSTANCE_STRIDE);
-    // The vertex-stride keep-rule: sunDirLocal rides at @location(6), byte
-    // offset 80 (four MVP columns 0..63 + albedo 64..79 + sunDir 80..95). This
-    // MUST match planet/vertex.wesl's attribute or the shader reads garbage.
-    const sunAttr = Array.from(vbs[1]!.attributes).find((a) => a.shaderLocation === 6);
-    expect(sunAttr).toBeDefined();
-    expect(sunAttr!.offset).toBe(80);
-    expect(sunAttr!.format).toBe('float32x4');
+  });
+
+  it('draws the proxy shell`s FAR hemisphere — cullMode front, not back', () => {
+    // The mesh is a circumscribing proxy, not the surface. Culling the FRONT
+    // faces is what keeps the body on screen once the camera crosses inside the
+    // 5% shell (a legal close approach); culling back faces instead makes the
+    // whole body vanish at the moment of closest approach and at no other time,
+    // which no other assertion here would catch.
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    createPlanetRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
+    expect(renderPipelines[0]!.primitive).toMatchObject({ frontFace: 'ccw', cullMode: 'front' });
+  });
+
+  it('names entry points the linked WESL modules actually declare', () => {
+    // The TS `entryPoint` string and the `fn` name in the .wesl are a cross-file
+    // contract with no compiler check; a rename on one side fails only when the
+    // browser builds the pipeline.
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    const shaderCode: string[] = [];
+    createPlanetRenderer(
+      mockDevice({ renderPipelines, shaderCode }),
+      'rgba16float',
+      'depth32float',
+      false,
+    );
+    const linked = shaderCode.join('\n');
+    const desc = renderPipelines[0]!;
+    for (const entryPoint of [desc.vertex.entryPoint, desc.fragment!.entryPoint]) {
+      expect(linked).toMatch(new RegExp(`fn\\s+${entryPoint!}\\s*\\(`));
+    }
+  });
+
+  it('every vertex attribute is declared by the linked WESL, and the records tile the stride', () => {
+    // The layout is a byte-for-byte contract between the pipeline descriptor
+    // here and the `@location` list in planet/vertex.wesl, and nothing checks
+    // it: a slot added on one side alone reads garbage (or silently shifts the
+    // fields after it), which shows up as a mis-lit or mis-placed planet, not an
+    // error. So: the shader must declare exactly the locations the descriptor
+    // binds, at matching widths, and the instance record must tile its stride
+    // with no gap and no overlap.
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    const shaderCode: string[] = [];
+    createPlanetRenderer(
+      mockDevice({ renderPipelines, shaderCode }),
+      'rgba16float',
+      'depth32float',
+      false,
+    );
+    const linked = shaderCode.join('\n');
+
+    // Only the `fn vs(...)` parameter list — the inter-stage struct carries its
+    // own unrelated `@location`s.
+    const params = /fn\s+vs\s*\(([\s\S]*?)\)\s*->/.exec(linked)![1]!;
+    const declared = new Map<number, string>();
+    for (const m of params.matchAll(/@location\((\d+)\)\s*\w+\s*:\s*(vec\d<f32>)/g)) {
+      declared.set(Number(m[1]!), m[2]!);
+    }
+
+    const WGSL_TYPE: Record<string, string> = { float32x3: 'vec3<f32>', float32x4: 'vec4<f32>' };
+    const BYTES: Record<string, number> = { float32x3: 12, float32x4: 16 };
+
+    const vbs = Array.from(renderPipelines[0]!.vertex.buffers!);
+    const bound = vbs.flatMap((vb) => Array.from(vb!.attributes));
+    for (const attr of bound) {
+      expect(declared.get(attr.shaderLocation)).toBe(WGSL_TYPE[attr.format]);
+    }
+    // …and nothing the shader declares goes unbound: an @location added to the
+    // shader alone is the same defect from the other side.
+    expect([...declared.keys()].sort((a, b) => a - b)).toEqual(
+      bound.map((a) => a.shaderLocation).sort((a, b) => a - b),
+    );
+
+    // The instance record tiles its stride exactly — no hole a forgotten field
+    // could hide in, and no overlap.
+    const instance = Array.from(vbs[1]!.attributes).sort((a, b) => a.offset - b.offset);
+    let cursor = 0;
+    for (const attr of instance) {
+      expect(attr.offset).toBe(cursor);
+      cursor += BYTES[attr.format]!;
+    }
+    expect(cursor).toBe(vbs[1]!.arrayStride);
+    expect(instance.length * 4).toBe(INSTANCE_FLOATS); // every slot is a vec4
   });
 });

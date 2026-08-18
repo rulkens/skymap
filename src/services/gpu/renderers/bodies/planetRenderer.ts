@@ -2,20 +2,25 @@
  * planetRenderer — flat-lit albedo planets drawn into the opaque near-field
  * foreground target with ONE instanced draw.
  *
- * Structural twin of `starRenderer` (same `uvSphereMesh` geometry, same opaque
- * depth-tested pipeline profile against the caller's foreground `targetFormat`
- * / `depthFormat`); the difference is the shader pair AND that this renderer
- * draws N planets in a single `drawIndexed(indexCount, count)`. The planet's
- * vertex stage forwards the unit-sphere local position (== outward normal) and
- * the fragment modulates the per-instance albedo by ONE lambert dot product
- * against the per-instance sun direction (the Sun's direction rotated into the
- * body's local frame, baked into the instance record) plus a small ambient
- * floor — see `planet/fragment.wesl` and the shared `lib/bodyLighting.wesl`.
+ * The uploaded `uvSphereMesh` is NOT the surface: the vertex stage inflates it
+ * into a shell that CIRCUMSCRIBES the body and the fragment recovers the
+ * analytic sphere per pixel, the same path `texturedBodyRenderer` and
+ * `bodyPickRenderer` take (maths in `shaders/lib/analyticSphere.wesl`). A
+ * pixel-exact silhouette is not a texture privilege: the atmosphere shell rays
+ * against a perfectly round ground radius, so a drawn polygon inscribed 0.2–0.4%
+ * inside it leaves a limb sliver that neither rasterises — over-disc haze on
+ * empty background, and the glow amputated where it is brightest. Being
+ * untextured has nothing to do with it, so every flat body gets the ray test.
+ *
+ * The shading is still one lambert dot product against the per-instance sun
+ * direction (the Sun rotated into the body's local frame, baked into the
+ * instance record) plus an ambient floor — see `planet/fragment.wesl` and the
+ * shared `lib/bodyLighting.wesl`.
  *
  * No texture machinery: a per-instance albedo is enough at the descent's
- * fly-past distances. If a body ever earns imagery it would grow the Earth's
- * placeholder-texture + `setTexture` pattern; starting textureless keeps this
- * renderer at exactly the surface the plan's contract names.
+ * fly-past distances. If a body ever earns imagery it moves to
+ * `texturedBodyRenderer`, and — now that both silhouettes come from the same ray
+ * test — it does so without changing shape.
  *
  * ### Why GPU instancing — one write + one draw for N planets
  *
@@ -58,24 +63,35 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 /**
  * Float32 slots per per-instance record: four `vec4<f32>` MVP columns (16) +
  * one `vec4<f32>` albedo (rgb + 1 pad float, 4) + one `vec4<f32>` sunDirLocal
- * (xyz + 1 pad float, 4) = 24. The caller writes each body's record at
- * `i * INSTANCE_FLOATS`, and `draw` uploads `count` records in one
- * `writeBuffer`.
+ * (xyz + 1 pad, 4) + one `vec4<f32>` camPosLocal (xyz + 1 pad, 4) = 28. The
+ * caller writes each body's record at `i * INSTANCE_FLOATS`, and `draw` uploads
+ * `count` records in one `writeBuffer`.
+ *
+ * `camPosLocal` is the ray ORIGIN for the analytic sphere test, and it is
+ * per-body data: `texturedBodyRenderer` can keep it on a uniform because it
+ * draws one body per draw, but this renderer batches every flat body into one
+ * `drawIndexed`, so a uniform would give them all the same ray origin.
  */
-export const INSTANCE_FLOATS = 24;
+export const INSTANCE_FLOATS = 28;
 
 /**
- * Per-instance byte stride: 24 × 4 = 96. Declared here AND in the pipeline's
+ * Per-instance byte stride: 28 × 4 = 112. Declared here AND in the pipeline's
  * instance-buffer descriptor; a mismatch either validate-errors or silently
  * reads garbage.
  */
-export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 96 bytes
+export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 112 bytes
 
 /**
  * Per-instance vertex attributes — the four MVP columns (reassembled into a
- * `mat4x4<f32>` in the shader), the albedo, then the body-local sun direction,
- * at `@location`s 1..6 (location 0 is the per-vertex sphere position). Byte
- * offsets must match `planet/vertex.wesl` exactly.
+ * `mat4x4<f32>` in the shader), the albedo, the body-local sun direction, then
+ * the body-local camera, at `@location`s 1..7 (location 0 is the per-vertex
+ * sphere position). Byte offsets must match `planet/vertex.wesl` exactly.
+ *
+ * `camPosLocal` takes a whole `vec4` slot rather than the `.w` lanes `albedo`
+ * and `sunDirLocal` leave free: a `vec3` wants three lanes and there are only
+ * two, so the saving would need the vector split across two attributes — 16
+ * bytes on a roster of tens of bodies, against a layout nobody can read off
+ * against the shader.
  */
 const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // mvp column 0
@@ -84,6 +100,7 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 4, offset: 48, format: 'float32x4' }, // mvp column 3
   { shaderLocation: 5, offset: 64, format: 'float32x4' }, // albedo (rgb + pad)
   { shaderLocation: 6, offset: 80, format: 'float32x4' }, // sunDirLocal (xyz + pad)
+  { shaderLocation: 7, offset: 96, format: 'float32x4' }, // camPosLocal (xyz + pad)
 ];
 
 /**
@@ -122,10 +139,11 @@ export function createPlanetRenderer(
 
   // ── Render pipeline (opaque foreground profile, same as earthRenderer) ────
   //
-  // No bind groups: the MVP + albedo + sunDirLocal are per-instance vertex
-  // attributes and the ambient floor is a WESL `const` (in `lib/bodyLighting`),
-  // so the shader reads nothing from the uniform address space. An explicit
-  // empty pipeline layout keeps this off the 'auto'-layout path entirely.
+  // No bind groups: every per-body value (MVP, albedo, sunDirLocal, camPosLocal)
+  // is a per-instance vertex attribute and the ambient floor is a WESL `const`
+  // (in `lib/bodyLighting`), so the shader reads nothing from the uniform
+  // address space. An explicit empty pipeline layout keeps this off the
+  // 'auto'-layout path entirely.
   const pipeline = device.createRenderPipeline({
     label: 'planet-pipeline',
     layout: device.createPipelineLayout({
@@ -163,7 +181,12 @@ export function createPlanetRenderer(
     primitive: {
       topology: 'triangle-list',
       frontFace: 'ccw', // CCW = outward-facing (matches uvSphereMesh winding)
-      cullMode: 'back', // discard inward-facing (inner-surface) triangles
+      // The proxy is invisible scaffolding, so its FAR hemisphere is the one to
+      // keep. Front faces would vanish the moment the camera crossed inside the
+      // 5% shell — a legal close approach — and take the body with them; the far
+      // hemisphere still covers the whole disc from in there, because the near
+      // hemisphere is behind the eye.
+      cullMode: 'front',
     },
     depthStencil: {
       format: depthFormat,
