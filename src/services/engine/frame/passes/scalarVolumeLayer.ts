@@ -61,16 +61,14 @@ export const scalarVolumeLayer: ContentLayer = {
     const scale = ctx.renderTargets.specs.find((s) => s.id === 'volume')!.scale;
     const vw = Math.max(1, Math.floor(ctx.canvasSize.width / scale));
     const vh = Math.max(1, Math.floor(ctx.canvasSize.height / scale));
-    // Tangent of one pixel's half-angle at the volume target, mirroring
-    // `drawPxPerRad`'s shape (frameContext.ts:177) but against the
-    // downscaled `vh` above rather than the canvas height, and inverted
-    // to a per-pixel tangent: half the target's vertical FOV subtends
-    // `tan(fovYRad/2)` over `vh/2` pixels, so one pixel's angular width
-    // is `2 * tan(fovYRad/2) / vh` — exact, not a small-angle approximation:
-    // perspective projection is linear in tan-space, so dividing the full
-    // tan(fovYRad/2) span evenly by pixel count gives each pixel's tangent
-    // exactly. Task 6's cone-LOD march uses this to grow its sample
-    // footprint with distance.
+    // Tangent of one pixel's FULL angular width at the volume target,
+    // mirroring `drawPxPerRad`'s shape (frameContext.ts:177) but against
+    // the downscaled `vh` above rather than the canvas height: half the
+    // target's vertical FOV subtends `tan(fovYRad/2)` over `vh/2` pixels,
+    // so one pixel's angular width is `2 * tan(fovYRad/2) / vh` — exact,
+    // not a small-angle approximation, since perspective is linear in
+    // tan-space. Already the FULL width (not a half-angle to double) —
+    // fragment.wesl's coneLod multiplies it straight by march distance.
     const pixelConeTan = (2 * Math.tan(ctx.fovYRad / 2)) / vh;
     renderer.draw(
       pass,

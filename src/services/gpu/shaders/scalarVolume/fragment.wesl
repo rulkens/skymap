@@ -97,13 +97,16 @@ struct VolumeUniforms {
   frame: f32,
   // Edge length of one voxel in the cube's LOCAL [0,1]³ space
   // (distance, not a normalised fraction of anything else) —
-  // 1 / max(dims), per-cube static.  Not yet read; Task 5's skip
-  // march sizes its step against the data's native resolution.
+  // 1 / max(dims), per-cube static.  Task 5's skip march and Task 6's
+  // cone-LOD step sizing both size themselves against the data's
+  // native resolution.
   voxelSizeLocal: f32,
-  // Tangent (not angle) of one screen pixel's half-angle at the
-  // downscaled volume target, per-frame.  Not yet read; Task 6's
-  // cone-LOD sampling grows its footprint with march distance by
-  // multiplying this by the local-space distance from the camera.
+  // Tangent of one screen pixel's FULL angular width (2*tan(fovY/2)/vh,
+  // see scalarVolumeLayer.ts), per-frame. coneLod multiplies this
+  // directly by the LOCAL-space march distance 't' — no extra scale
+  // term, since the cube's local<->world factor cancels between t and
+  // the footprint. Already carries the spec's '2', so coneLod uses
+  // 't * pixelConeTan', not '2 * t * pixelConeTan'.
   pixelConeTan: f32,
 };
 
@@ -127,7 +130,12 @@ struct VolumeUniforms {
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
-const STEP_COUNT: i32 = 128;
+// Safety cap on loop iterations only (Task 6): step sizing below is
+// LOD-driven, not STEP_COUNT/(tMax-tMin), so this no longer sets sample
+// density. Raised from 128 because honest LOD-0 steps near the camera are
+// voxel-sized and can need more of them to cross a short span;
+// SATURATION_THRESHOLD below still bounds the common case.
+const STEP_COUNT: i32 = 256;
 const SATURATION_THRESHOLD: f32 = 0.99;
 // Coarse-to-fine skip policy (Task 5): two pyramid levels is enough for a
 // correct first pass. Level 1 (~16-voxel cells) catches large uniform-void
@@ -138,11 +146,25 @@ const SATURATION_THRESHOLD: f32 = 0.99;
 // alone proves too coarse to skip meaningfully sized void regions.
 const PYRAMID_FINE_LEVEL: i32 = 0;
 // Local-space nudge past a skipped cell's exit point, so the next sampled
-// step-grid position falls strictly inside the NEXT cell rather than
-// landing back on the boundary and re-testing the one just skipped.
-// Two orders of magnitude below a typical pyramid cell (level 0 spans
-// ~8 * voxelSizeLocal, e.g. ~0.06 at dims=128) so it never eats a real step.
+// position falls strictly inside the NEXT cell rather than landing back on
+// the boundary and re-testing the one just skipped. Two orders of magnitude
+// below a typical pyramid cell (level 0 spans ~8 * voxelSizeLocal, e.g.
+// ~0.06 at dims=128) so it never eats a real step.
 const CELL_EXIT_EPS: f32 = 1e-4;
+// Pay the pyramid skip check's two texture loads only every Nth iteration:
+// near the camera, LOD-0 steps are voxel-sized, so many consecutive steps
+// land in the SAME coarse cell and re-testing membership every one of
+// them is redundant. A step skipped over by the stride just samples
+// normally; correctness only needs skips to be based on a provably-empty
+// cell when the check does run.
+const SKIP_CHECK_STRIDE: i32 = 4;
+// Step length as a multiple of one texel's edge at whatever LOD coneLod
+// selects. 1.0 samples once per texel (Nyquist-marginal for a
+// box-filtered mip chain); values above 1 take bigger-than-texel steps,
+// trading per-step alpha precision for fewer iterations. Tuned against
+// the visual checkpoint and perf gate; see task-6-report.md for the
+// measured tradeoff.
+const STEP_QUALITY: f32 = 2.0;
 
 struct FsIn {
   @location(0) localPos: vec3<f32>,
@@ -272,6 +294,16 @@ fn pyramidCellQuery(p: vec3<f32>, level: i32, rayOrigin: vec3<f32>, rayDir: vec3
   return vec2<f32>(maxDev, exitT);
 }
 
+// Cone-footprint LOD (Task 6): the mip level whose texel size best matches
+// one screen pixel's footprint at march distance 't' (LOCAL-space).
+// coneDiameter is that footprint's local-space diameter; dividing by
+// voxelSizeLocal (level 0's texel size) and taking log2 gives "how many
+// texel-doublings fit" -- exactly a mip level.
+fn coneLod(t: f32, pixelConeTan: f32, voxelSizeLocal: f32, maxLevel: f32) -> f32 {
+  let coneDiameter = t * pixelConeTan;
+  return clamp(log2(coneDiameter / max(voxelSizeLocal, 1e-6)), 0.0, maxLevel);
+}
+
 @fragment
 fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
   // Reconstruct the camera-to-fragment ray in WORLD space, then transform
@@ -300,21 +332,28 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     discard;
   }
 
-  // Fixed-step march from tMin to tMax.  stepLength normalises against
-  // STEP_COUNT so opacity is invariant to changes in the constant.
-  let stepLength = (tMax - tMin) / f32(STEP_COUNT);
+  // Cone-LOD honest step sizing (Task 6): step length now tracks the
+  // texel size of whatever mip the cone footprint selects at the CURRENT
+  // march distance (computed fresh each iteration below), not a fixed
+  // (tMax-tMin)/STEP_COUNT that oversampled short rays and undersampled
+  // long ones regardless of what was actually on screen.
+  let maxLevel = f32(textureNumLevels(volume)) - 1.0;
+
   // Jitter the start offset by [0, stepLength) per fragment to break
   // the visible step-grid moiré that would otherwise slide across the
-  // cube during camera motion.  Without jitter, the 192 fixed sample
-  // positions along each ray show through as a coherent grid because
-  // every pixel uses the same step phase — at high densityScale
-  // (MCPM=18, CF-4=20), per-step opacity is large enough to make that
-  // grid visible.  Per-fragment jitter decorrelates neighbouring rays:
-  // visible aliasing becomes high-frequency grain instead of a moving
-  // grid, and the accumulated integral stays unbiased (jitter averages
-  // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
-  // used instead of the cheaper sin-based hash21 because the latter's
-  // diagonal banding is visible as a stationary screen-space pattern.
+  // cube during camera motion. Sized against the step length AT THE
+  // RAY'S ENTRY POINT (t = tMin) -- the only one known before the loop
+  // starts; later steps recompute their own length dynamically.  Without
+  // jitter, the fixed sample positions along each ray show through as a
+  // coherent grid because every pixel uses the same step phase — at high
+  // densityScale (MCPM=18, CF-4=20), per-step
+  // opacity is large enough to make that grid visible. Per-fragment
+  // jitter decorrelates neighbouring rays: visible aliasing becomes
+  // high-frequency grain instead of a moving grid, and the accumulated
+  // integral stays unbiased (jitter averages to stepLength/2). hash21Hq
+  // (Dave Hoskins' "Hash without Sine") is used instead of the cheaper
+  // sin-based hash21 because the latter's diagonal banding is visible as
+  // a stationary screen-space pattern.
   //
   // Temporal seed: offsetting the hash input by frame * irrational
   // constants decorrelates the dither pattern frame-to-frame, so the
@@ -326,8 +365,10 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // failure mode the user reported.  The constants 7.13 / 13.71 are
   // arbitrary irrationals that don't share factors with anything in
   // the hash mixer.
+  let entryLod = coneLod(tMin, u.pixelConeTan, u.voxelSizeLocal, maxLevel);
+  let entryStepLength = u.voxelSizeLocal * exp2(entryLod) * STEP_QUALITY;
   let jitterSeed = fragCoord.xy + vec2<f32>(u.frame * 7.13, u.frame * 13.71);
-  let jitter = hash21Hq(jitterSeed) * stepLength;
+  let jitter = hash21Hq(jitterSeed) * entryStepLength;
 
   // TF-adaptive empty-space skip cutoff (Task 5), derived once per fragment
   // from the SAME live contrast/trim uniforms applyContrastWindow uses per
@@ -350,54 +391,56 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   var t = tMin + jitter;
   var i = 0;
   loop {
-    if (i >= STEP_COUNT) { break; }
+    if (i >= STEP_COUNT || t >= tMax) { break; }
     let p = rayOriginLocal + rayDirLocal * t;
+    let lod = coneLod(t, u.pixelConeTan, u.voxelSizeLocal, maxLevel);
+    let stepLength = u.voxelSizeLocal * exp2(lod) * STEP_QUALITY;
 
     // Coarse-to-fine skip: consult the max pyramid before paying for a
-    // full-res sample. A cell below skipCutoff at EITHER level provably
-    // contributes zero, so we jump straight to that cell's ray-exit point
-    // instead of full-res-sampling through it one step at a time.
+    // full-res sample, throttled to every SKIP_CHECK_STRIDEth iteration
+    // (see its doc comment above) rather than every one. A cell below
+    // skipCutoff at EITHER level provably contributes zero, so we jump
+    // straight to that cell's ray-exit point instead of full-res-sampling
+    // through it one step at a time.
     var skip = false;
     var skipExitT = t;
-    let coarse = pyramidCellQuery(p, coarseLevel, rayOriginLocal, rayDirLocal);
-    if (coarse.x < skipCutoff) {
-      skip = true;
-      skipExitT = coarse.y;
-    } else if (coarseLevel != PYRAMID_FINE_LEVEL) {
-      let fine = pyramidCellQuery(p, PYRAMID_FINE_LEVEL, rayOriginLocal, rayDirLocal);
-      if (fine.x < skipCutoff) {
+    if (i % SKIP_CHECK_STRIDE == 0) {
+      let coarse = pyramidCellQuery(p, coarseLevel, rayOriginLocal, rayDirLocal);
+      if (coarse.x < skipCutoff) {
         skip = true;
-        skipExitT = fine.y;
+        skipExitT = coarse.y;
+      } else if (coarseLevel != PYRAMID_FINE_LEVEL) {
+        let fine = pyramidCellQuery(p, PYRAMID_FINE_LEVEL, rayOriginLocal, rayDirLocal);
+        if (fine.x < skipCutoff) {
+          skip = true;
+          skipExitT = fine.y;
+        }
       }
     }
     if (skip) {
-      // Land on the NEXT fixed step-grid position (tMin + jitter +
-      // k*stepLength) at or past the cell's exit, rather than jumping to
-      // skipExitT itself. Every sample that survives this skip is then
-      // bit-identical to a position the un-accelerated march would also
-      // have visited -- the only difference is the omitted samples, which
-      // were already proven zero-opacity above. Landing off-grid would
-      // shift the phase of all LATER samples too, silently changing which
-      // voxels the rest of the ray sees.
-      let resumeT = skipExitT + CELL_EXIT_EPS;
-      let stepsToSkip = max(1, i32(ceil((resumeT - t) / stepLength)));
-      i = i + stepsToSkip;
-      t = t + f32(stepsToSkip) * stepLength;
+      // Jump straight to the cell's exit point (plus the epsilon nudge).
+      // No fixed step-grid to land on anymore -- step length now varies
+      // continuously with 't' via coneLod. Correctness only needs the
+      // skipped span to contribute no opacity, which skipCutoff already
+      // proved, so a direct jump changes nothing about the accumulated
+      // integral.
+      t = skipExitT + CELL_EXIT_EPS;
+      i = i + 1;
       continue;
     }
 
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
     // local AABB, so 'p' is directly the texture coordinate.
     //
-    // Why textureSampleLevel with explicit LOD 0 instead of textureSample:
+    // Why textureSampleLevel with an explicit LOD instead of textureSample:
     // textureSample requires UNIFORM control flow (it computes implicit
     // mipmap derivatives across a quad of fragments), but the early-out
     // 'break' below at saturation makes the loop's iteration count vary
     // across neighbouring fragments — non-uniform.  textureSampleLevel
     // takes an explicit LOD instead of computing one, so it works in
-    // non-uniform control flow.  Our 3D texture has only one mip level
-    // anyway, so explicit LOD 0 is exactly what we want.
-    let sampleValue = textureSampleLevel(volume, volumeSampler, p, 0.0).r;
+    // non-uniform control flow.  'lod' here is the cone-footprint LOD
+    // computed above, not a hardcoded 0 -- see coneLod's doc comment.
+    let sampleValue = textureSampleLevel(volume, volumeSampler, p, lod).r;
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,
@@ -417,21 +460,10 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let lut = textureSampleLevel(palette, paletteSampler, vec2<f32>(signedT, 0.5), 0.0);
     // Per-step alpha = density * stepLength.  This is the discrete form
     // of the optical-depth integral: total opacity along the ray =
-    // sum(density * dx) which is path-length-correct (a longer ray
-    // through the same density yields proportionally more opacity).
-    //
-    // The original (buggy) formula was 'lut.a * intensity * stepLength
-    // * STEP_COUNT * 0.01', which cancels the '/ STEP_COUNT' inside
-    // stepLength and ends up with per-step alpha ∝ total path length.
-    // That made the contribution amplitude depend on the ray's full
-    // extent, so a long ray (camera far from cube) over-saturated the
-    // first sample's RGB (alpha can exceed 1, scaling lut.rgb past
-    // unity in the pre-multiply), while a short ray (camera inside)
-    // produced smaller per-step contributions and a darker result.
-    // The visible symptom: the blob got LIGHTER as the camera entered
-    // it.  The fix below makes per-step alpha proportional to the
-    // sampled length, and the multi-step composite naturally
-    // integrates to the correct total optical depth.
+    // sum(density * dx), path-length-correct regardless of how dx
+    // varies -- since Task 6, stepLength is THIS iteration's own
+    // cone-LOD length, not a ray-global constant, so a coarser step at
+    // high LOD contributes proportionally more per sample.
     //
     // The DENSITY_SCALE constant tunes how aggressive the opacity is
     // per local-space unit.  Local space spans [0,1]^3 so a full
