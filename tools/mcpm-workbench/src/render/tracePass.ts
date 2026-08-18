@@ -16,6 +16,7 @@ import { normalize3 } from '../../../../src/utils/math/normalize3';
 import type { GridBox } from '../../@types/GridBox';
 import type { GridElement } from '../../@types/GridElement';
 import { worldToVoxel } from '../field/worldToVoxel';
+import { UNIFORM_BYTES } from '../sim/createGridBuffers';
 import { specializeGridElement } from '../sim/specializeGridElement';
 import { uploadPaletteLut } from './uploadPaletteLut';
 import vertexWgsl from '../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
@@ -53,8 +54,7 @@ export type TracePass = {
   dispose(): void;
 };
 
-// io.wesl's McpmUniforms is 16 four-byte scalars; the grid dims are members 7..9.
-const SIM_UNIFORM_BYTES = 64;
+// The grid dims are members 7..9 of io.wesl's McpmUniforms (UNIFORM_BYTES sizes it).
 const DIMS_INDEX = 7;
 // TraceView in WGSL: four vec3+scalar rows, then maxSteps and 12 bytes of tail padding.
 const VIEW_UNIFORM_BYTES = 80;
@@ -109,10 +109,10 @@ export function createTracePass(opts: {
 
   const simBuffer = device.createBuffer({
     label: 'mcpm-trace-sim',
-    size: SIM_UNIFORM_BYTES,
+    size: UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const dims = new Int32Array(SIM_UNIFORM_BYTES / 4);
+  const dims = new Int32Array(UNIFORM_BYTES / 4);
   dims[DIMS_INDEX] = source.box.dims[0];
   dims[DIMS_INDEX + 1] = source.box.dims[1];
   dims[DIMS_INDEX + 2] = source.box.dims[2];

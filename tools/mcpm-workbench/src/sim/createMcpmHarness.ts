@@ -202,6 +202,7 @@ export async function createMcpmHarness(opts: {
     element,
     box: opts.box,
     gpu,
+    traceBuffer: buffers.trace,
     step(params: McpmParams): void {
       // Flip BEFORE encoding, as the fork does at the top of its propagate block.
       parity = parity === 0 ? 1 : 0;

@@ -1,8 +1,9 @@
 // mcpm/vertex.wesl — the fullscreen triangle every mcpm screen-space pass draws with.
 //
-// 'uv' is the [0,1] screen coordinate with +v DOWN — the convention a blit samples a
-// texture with; a fragment that wants clip space (the raymarch's ray setup) undoes the
-// flip as 'vec2(uv.x * 2 - 1, 1 - uv.y * 2)'.
+// 'uv' is the [0,1] screen coordinate with +v DOWN; a fragment that wants clip space
+// (the raymarch's ray setup) undoes the flip as 'vec2(uv.x * 2 - 1, 1 - uv.y * 2)'.
+// blit.wesl's varying is +v UP and 'fsTonemap' flips at sample time, so swapping the blit
+// onto this vertex shader must drop that '1.0 - i.uv.y' or the resolve flips vertically.
 //
 // The entry point is declared here rather than imported from lib/fullscreenTri: the
 // linker gives no guarantee an imported entry point keeps its name, and the pipeline

@@ -1,22 +1,14 @@
 /**
- * createRenderGraph — the HDR-accumulate → tonemap stage of the engine.
+ * createRenderGraph — the HDR-accumulate → tonemap stage (same shape as
+ * tools/flow-workbench's): it owns the shared `rgba16float` accum texture every
+ * MCPM layer draws into and the fullscreen tonemap that resolves it to the
+ * swap-chain. `drawTrace` is the base layer and CLEARS that texture, so an
+ * additive layer must be encoded after it; and a pass that is constructed but
+ * never registered here is silently never opened.
  *
- * Same shape as tools/flow-workbench's RenderGraph: it owns the shared
- * `rgba16float` accumulation texture every future MCPM layer will draw
- * additively into, and the single fullscreen-triangle tonemap pass that
- * resolves that linear-light buffer to the swap-chain. For T1 there is
- * nothing to accumulate yet — Viewport clears the accum texture to a colour
- * and blits it straight through.
- *
- * `accumView()` is a method, not a field: the accum texture is destroyed and
- * recreated whenever the drawable resizes, so a cached `GPUTextureView` would
- * dangle. The blit pipeline uses `layout:'auto'`, so its bind group is rebuilt
- * alongside the texture inside `resize` rather than handed in from outside.
- *
- * The blit uniform write order is `[exposure, contrast]`.
- *
- * The graph is also where a layer becomes part of the frame: a pass that is
- * constructed but not registered here is silently never opened.
+ * `accumView()` is a method, not a field: the texture is recreated on resize, so
+ * a cached view would dangle, and the blit's `layout:'auto'` bind group is
+ * rebuilt alongside it. The blit uniform write order is `[exposure, contrast]`.
  */
 import type { TracePass, TraceSource, TraceView } from './tracePass';
 import { createTracePass } from './tracePass';

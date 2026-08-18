@@ -20,6 +20,11 @@ export type McpmHarness = {
    * need (see task-T9-review.md concern 4).
    */
   readonly gpu: GpuContext;
+  /**
+   * The trace grid the render passes march. Stays the harness's to destroy —
+   * a consumer that outlives a rebuild must re-read it from the new harness.
+   */
+  readonly traceBuffer: GPUBuffer;
   /** Queues one propagate + decay pair and advances the step counter. */
   step(params: McpmParams): void;
   /** Zeroes the trace grid only; agents and deposit survive. */

@@ -1,22 +1,13 @@
 /**
- * Viewport — owns the <canvas>, the McpmHarness, the render graph, and the
- * RAF loop; bridges pointer/wheel input into the view slice's orbit camera.
+ * Viewport — owns the <canvas>, the McpmHarness, the render graph and the RAF
+ * loop; bridges pointer/wheel input into the view slice's orbit camera.
  *
- * Device ownership (adjudicated): `createMcpmHarness` is the ONLY caller of
- * `initGpu` — it requests the shader-f16 feature and the compute limits the
- * kernels need. Calling `initGpu` here too would race a second device onto
- * the same canvas and hand the render graph a device without those limits.
- * `harness.gpu` is the one device both sim and render use.
- *
- * A harness REBUILD (catalog reload, grid box, agent count, init mode,
- * weight mode, seed) disposes the old harness fully before `createMcpmHarness`
- * runs again — sequential, never concurrent, so there is still only ever one
- * live device per canvas. Structural changes are debounced (400ms) so typing
- * into a grid-box field doesn't reallocate GPU buffers per keystroke;
- * McpmParams sliders, run controls (pause/resume/reset/clear), and camera
- * input are NOT debounced — the harness reads params live each step, and
- * reset/clear-trace are one-shot commands processed the instant their token
- * changes.
+ * `createMcpmHarness` is the ONLY caller of `initGpu` (it asks for shader-f16 and
+ * the kernels' compute limits); a second call here would race another device onto
+ * the same canvas. Every rebuild — catalog reload or structural — goes through
+ * `requestBuild`, which serialises on `buildGeneration`: one in flight, latest
+ * config wins, a request arriving mid-build served on completion, not dropped.
+ * Only structural changes are debounced; params, run tokens and camera are live.
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { AppState } from '../../@types/AppState';
@@ -31,6 +22,7 @@ import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
+import type { TraceView } from '../render/tracePass';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
 import { setCatalogLoadStatus, setCatalogLoaded } from '../state/slices/catalogSlice';
@@ -38,12 +30,19 @@ import { setResolvedGrid } from '../state/slices/gridSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import { setCameraDistance, setCameraYawPitch } from '../state/slices/viewSlice';
 
-const CLEAR_COLOR: readonly [number, number, number] = [0.08, 0.03, 0.16];
 const EXPOSURE = 1;
 const CONTRAST = 1;
 const REBUILD_DEBOUNCE_MS = 400;
 const DRAG_SPEED = 0.005;
 const ZOOM_STEP = 0.025;
+const FOV_Y_RAD = Math.PI / 4;
+const CAMERA_UP: Vec3 = [0, 1, 0];
+// Polyphorm's marching knobs, at the fork's neutral settings until the view slice
+// grows controls for them: no low-end cutoff, unit weight, and one sample per slab
+// (stepVoxels = 1.0 is fork parity — see mcpm/fragment.wesl).
+const TRIM_DENSITY = 0;
+const SAMPLE_WEIGHT = 1;
+const STEP_VOXELS = 1;
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
@@ -85,6 +84,30 @@ function gridBoxFor(s: AppState, points: CatalogPoints): GridBox {
   return autoFitGridBox(bounds, longAxisTarget, paddingMpc);
 }
 
+function traceViewFor(s: AppState, box: GridBox, aspect: number): TraceView {
+  const { yaw, pitch, distance } = s.view.camera;
+  const cosPitch = Math.cos(pitch);
+  const eyeMpc: Vec3 = [
+    box.centerMpc[0] + distance * cosPitch * Math.sin(yaw),
+    box.centerMpc[1] + distance * Math.sin(pitch),
+    box.centerMpc[2] + distance * cosPitch * Math.cos(yaw),
+  ];
+  return {
+    eyeMpc,
+    targetMpc: box.centerMpc,
+    upMpc: CAMERA_UP,
+    fovYRad: FOV_Y_RAD,
+    aspect,
+    trimDensity: TRIM_DENSITY,
+    sampleWeight: SAMPLE_WEIGHT,
+    opticalThickness: s.view.raymarch.opticalThickness,
+    stepVoxels: STEP_VOXELS,
+    // Scaled to the grid, never fixed: the box diagonal is longer than any axis, and a
+    // bound short of it truncates the march silently, with no visual cue that it did.
+    maxSteps: 2 * Math.max(box.dims[0], box.dims[1], box.dims[2]),
+  };
+}
+
 export type ViewportProps = {
   readonly store: Store<AppState>;
 };
@@ -103,12 +126,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let disposed = false;
     let rafHandle = 0;
     let rebuildTimer = 0;
-    let rebuilding = false;
     let harness: McpmHarness | null = null;
     let renderGraph: RenderGraph | null = null;
     let points: CatalogPoints | null = null;
-    let lastCatalogKey = JSON.stringify(catalogKey(store.getSnapshot()));
-    let lastBuildKey = '';
+    let loadedCatalogKey = '';
+    // REQUESTED, not "last built": the frame loop notifies this subscriber every
+    // frame (the step counter is store state), so the guard has to compare against
+    // what a build was last asked for or every frame would request another one.
+    let requestedCatalogKey = JSON.stringify(catalogKey(store.getSnapshot()));
+    let requestedBuildKey = JSON.stringify(buildKey(store.getSnapshot()));
+    let buildGeneration = 0;
+    let building = false;
     let lastResetToken = store.getSnapshot().sim.resetToken;
     let lastClearToken = store.getSnapshot().sim.clearTraceToken;
 
@@ -137,119 +165,135 @@ function Viewport({ store }: ViewportProps): ReactNode {
         graph.resize(canvas.width, canvas.height);
 
         const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
-        const pass = encoder.beginRenderPass({
-          colorAttachments: [
-            {
-              view: graph.accumView(),
-              loadOp: 'clear',
-              clearValue: { r: CLEAR_COLOR[0], g: CLEAR_COLOR[1], b: CLEAR_COLOR[2], a: 1 },
-              storeOp: 'store',
-            },
-          ],
-        });
-        pass.end();
+        // The raymarch clears the accum target itself: it is the frame's base layer, so
+        // any additive layer added later must be encoded after this call, not before.
+        graph.drawTrace(encoder, traceViewFor(s, h.box, canvas.width / canvas.height));
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
         h.gpu.device.queue.submit([encoder.finish()]);
       };
       rafHandle = requestAnimationFrame(frame);
     }
 
-    async function buildFromPoints(pts: CatalogPoints): Promise<void> {
-      if (disposed) return;
+    async function buildFromPoints(pts: CatalogPoints, generation: number): Promise<void> {
       const s = store.getSnapshot();
-      lastBuildKey = JSON.stringify(buildKey(s));
-
       const weights = deriveAgentWeights(pts.log10StellarMass, s.catalog.weightMode);
-      store.setState((st) => ({ ...st, catalog: setCatalogLoaded(st.catalog, pts.count, weights.nanCount) }));
+      store.setState((st) => ({
+        ...st,
+        catalog: setCatalogLoaded(st.catalog, pts.count, weights.nanCount),
+      }));
 
       const box = gridBoxFor(s, pts);
+      // Free the old device memory BEFORE allocating the new grids: the two sets of
+      // buffers must never be resident together on a box-sized allocation.
       disposeHarness();
       if (disposed) return;
 
-      try {
-        const h = await createMcpmHarness({
-          canvas,
-          points: pts,
-          weights,
-          box,
-          agentCount: s.sim.agentCount,
-          initMode: s.sim.initMode,
-          seed: s.sim.seed,
-        });
-        if (disposed) {
-          h.dispose();
-          return;
-        }
-        harness = h;
-        lastResetToken = store.getSnapshot().sim.resetToken;
-        lastClearToken = store.getSnapshot().sim.clearTraceToken;
-
-        const budget = planGridBudget(box, pts.count + s.sim.agentCount, h.element, h.gpu.device.limits);
-        store.setState((st) => ({
-          ...st,
-          grid: setResolvedGrid(st.grid, box, h.element, budget),
-          sim: resetStepCount(st.sim),
-        }));
-
-        const makeShader = (code: string, label: string): GPUShaderModule =>
-          h.gpu.device.createShaderModule({ code, label });
-        renderGraph = createRenderGraph(h.gpu.device, h.gpu.format, makeShader);
-        startLoop();
-      } catch (err) {
-        console.error('mcpm-workbench: harness build failed', err);
-        if (!disposed) {
-          store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'error') }));
-        }
+      const h = await createMcpmHarness({
+        canvas,
+        points: pts,
+        weights,
+        box,
+        agentCount: s.sim.agentCount,
+        initMode: s.sim.initMode,
+        seed: s.sim.seed,
+      });
+      if (disposed || generation !== buildGeneration) {
+        h.dispose();
+        return;
       }
+      harness = h;
+      lastResetToken = store.getSnapshot().sim.resetToken;
+      lastClearToken = store.getSnapshot().sim.clearTraceToken;
+
+      const budget = planGridBudget(
+        box,
+        pts.count + s.sim.agentCount,
+        h.element,
+        h.gpu.device.limits,
+      );
+      store.setState((st) => ({
+        ...st,
+        grid: setResolvedGrid(st.grid, box, h.element, budget),
+        sim: resetStepCount(st.sim),
+      }));
+
+      const makeShader = (code: string, label: string): GPUShaderModule =>
+        h.gpu.device.createShaderModule({ code, label });
+      const graph = createRenderGraph(h.gpu.device, h.gpu.format, makeShader);
+      // The trace buffer dies with its harness, so the pass is re-attached on every
+      // rebuild — a graph kept across one would march freed memory.
+      graph.attachTrace({
+        traceBuffer: h.traceBuffer,
+        box,
+        element: h.element,
+        paletteId: s.view.raymarch.paletteId,
+      });
+      renderGraph = graph;
+      startLoop();
     }
 
-    async function loadAndBuild(): Promise<void> {
+    /** One build against the live snapshot, reloading the catalog only if its key moved. */
+    async function buildOnce(generation: number): Promise<void> {
       const s = store.getSnapshot();
-      lastCatalogKey = JSON.stringify(catalogKey(s));
-      store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'loading') }));
+      const ck = JSON.stringify(catalogKey(s));
       try {
-        const pts = await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
-        if (disposed) return;
-        points = pts;
-        await buildFromPoints(pts);
+        if (!points || ck !== loadedCatalogKey) {
+          store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'loading') }));
+          const pts = await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
+          if (disposed || generation !== buildGeneration) return;
+          points = pts;
+          loadedCatalogKey = ck;
+        }
+        await buildFromPoints(points, generation);
       } catch (err) {
-        console.error('mcpm-workbench: catalog load failed', err);
+        console.error('mcpm-workbench: build failed', err);
         if (!disposed) {
           store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'error') }));
         }
       }
     }
 
-    loadAndBuild().catch((err: unknown) => {
-      console.error('mcpm-workbench: boot failed', err);
-    });
+    /**
+     * Serialised rebuild: one build in flight, latest config wins. The generation
+     * bump is what makes a request arriving mid-build survive — the runner re-reads
+     * it on completion and goes round again, where a boolean gate would drop it.
+     */
+    function requestBuild(): void {
+      buildGeneration += 1;
+      if (building) return;
+      void (async () => {
+        building = true;
+        try {
+          let served = -1;
+          while (!disposed && served !== buildGeneration) {
+            served = buildGeneration;
+            await buildOnce(served);
+          }
+        } finally {
+          building = false;
+        }
+      })();
+    }
+
+    requestBuild();
 
     const unsubscribe = store.subscribe(() => {
       if (disposed) return;
       const s = store.getSnapshot();
 
       const ck = JSON.stringify(catalogKey(s));
-      if (ck !== lastCatalogKey) {
-        lastCatalogKey = ck;
-        clearTimeout(rebuildTimer);
-        loadAndBuild().catch((err: unknown) => {
-          console.error('mcpm-workbench: reload failed', err);
-        });
-        return;
-      }
-
       const bk = JSON.stringify(buildKey(s));
-      if (bk !== lastBuildKey && points) {
-        lastBuildKey = bk;
+      if (ck !== requestedCatalogKey) {
+        requestedCatalogKey = ck;
+        requestedBuildKey = bk;
         clearTimeout(rebuildTimer);
-        rebuildTimer = window.setTimeout(() => {
-          if (points && !rebuilding) {
-            rebuilding = true;
-            buildFromPoints(points).finally(() => {
-              rebuilding = false;
-            });
-          }
-        }, REBUILD_DEBOUNCE_MS);
+        requestBuild();
+      } else if (bk !== requestedBuildKey) {
+        // Debounced so typing into a grid-box field doesn't reallocate the GPU
+        // buffers per keystroke; a catalog switch is a deliberate click, so it isn't.
+        requestedBuildKey = bk;
+        clearTimeout(rebuildTimer);
+        rebuildTimer = window.setTimeout(requestBuild, REBUILD_DEBOUNCE_MS);
       }
 
       if (harness) {
@@ -297,7 +341,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
       e.preventDefault();
       store.setState((s) => ({
         ...s,
-        view: setCameraDistance(s.view, s.view.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP)),
+        view: setCameraDistance(
+          s.view,
+          s.view.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP),
+        ),
       }));
     };
     canvas.addEventListener('pointerdown', onPointerDown);

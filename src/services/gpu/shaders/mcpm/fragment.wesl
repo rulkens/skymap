@@ -3,11 +3,11 @@
 // is no copy into a texture and no packing step.
 //
 // Everything is in VOXEL space, the frame sampleTrace and the agents share: the grid
-// AABB is [0, dims] and 'stepVoxels = 1.0' is FORK PARITY, because ps_volume_trace draws
-// one screen-aligned slab per voxel of grid depth (main.cpp:711-731). The marcher does
-// pay obliquity that the axis-aligned slab stack ignores, and the fork's closing
-// 'fragment.rgb *= 2.0' is dropped with it — that constant compensates a slab count the
-// marcher does not have. DIVERGENCE: no trim box; the workbench's grid box is the crop.
+// AABB is [0, dims]. 'stepVoxels = 1.0' is FORK PARITY exactly — the obliquity divide at
+// the step below gives every ray the fork's own sample count, one per axis-aligned slab
+// (main.cpp:711-731), at any view angle. The fork's closing 'fragment.rgb *= 2.0' is
+// dropped as a plain scale on rgb: exposure = 2 in the blit reproduces it.
+// DIVERGENCE: no trim box; the workbench's grid box is the crop.
 
 import package::mcpm::grid::gridDims;
 import package::mcpm::grid::sampleTrace;
@@ -61,7 +61,11 @@ fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
 
-  let stepLength = max(view.stepVoxels, 1e-3);
+  // Step one slab, not one voxel of ray: the fork's slabs are axis-aligned, so a ray
+  // crosses dims[dominant axis] of them whatever its angle. Dividing by the dominant
+  // component undoes the obliquity a fixed ray-length step would over-sample (up to
+  // 1.73x); dir is normalized, so that component is at least 1/sqrt(3).
+  let stepLength = max(view.stepVoxels / max(max(abs(dir.x), abs(dir.y)), abs(dir.z)), 1e-3);
   var accum = vec4<f32>(0.0);
   // Half a step in, so the first sample sits at the centre of the first voxel of path
   // rather than on the box face where the trilinear is half outside the grid.
