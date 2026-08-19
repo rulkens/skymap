@@ -1,7 +1,8 @@
 // ── Volume field removal ────────────────────────────────────────────────────
 //
-// `uploadVolumeField`'s twin. Module-scope so `createEngine` and the volume
-// slot commits can delegate here without a full GPU engine to test against.
+// `uploadVolumeField`'s twin. Module-scope so `createEngine`'s handle (and
+// any future `onRelease` wiring) can delegate here without a full GPU engine
+// to test against.
 //
 // Deliberately asymmetric with the upload guard (decision #14): unload still
 // removes the settings row even with no renderer — its lifetime is independent.
