@@ -393,7 +393,7 @@ their exact frame sequence and expectations, asserting the returned vote instead
 of a spy's call count. The bug they catch is unchanged — a director that stops
 reporting mid-ramp sleeps the loop and freezes a label mid-fade.
 
-- [ ] Rewrite `labelDirectorSubsystem.test.ts:506-529` (`keeps the loop awake
+- [x] Rewrite `labelDirectorSubsystem.test.ts:506-529` (`keeps the loop awake
       while any envelope ramps, and goes quiet once settled`) against the return
       value: same five `runFrame` calls at `nowMs` 0/150/300/400/700, expecting
       `true, true, false, true, false`. Rewrite `:134-144` (`calls
@@ -401,30 +401,30 @@ reporting mid-ramp sleeps the loop and freezes a label mid-fade.
       "reports the vote when any producer is awake". Drop `makeState`'s
       `requestRender` parameter (`:11-18`); the `fades.fadeTo` spy stays (other
       tests assert the director never fires a layer load-in).
-- [ ] Add to `shouldKeepTicking.test.ts`, beside the star and Earth-tile term
+- [x] Add to `shouldKeepTicking.test.ts`, beside the star and Earth-tile term
       tests (`:215-235`): `a label envelope mid-ramp → true even with everything
       else at rest`, driven as `{ ...NO_ANIM, labelsAnimating: true }`. Extend
       `NO_ANIM` with the third field (finding 4).
-- [ ] Implement: `runFrame` returns `anyAwake || anyRamping` (and `false` from
+- [x] Implement: `runFrame` returns `anyAwake || anyRamping` (and `false` from
       the `!labelRenderer || !lineRenderer` early return at `:442`); delete the
       `requestRender` call at `:478-480`; rewrite the `### Awake aggregation`
       header paragraph (`:19-27`) to describe the vote, no longer.
-- [ ] Thread it: `runFrame.ts:639` captures the return; the bag at `:708-711`
+- [x] Thread it: `runFrame.ts:639` captures the return; the bag at `:708-711`
       gains `labelsAnimating`; `shouldKeepTicking` gains the required field and
       the disjunct, plus ≤4 header lines (finding 6).
-- [ ] `grep -n "subsystems.scheduler" src/services/engine/subsystems/labelDirectorSubsystem.ts`
+- [x] `grep -n "subsystems.scheduler" src/services/engine/subsystems/labelDirectorSubsystem.ts`
       → **no hits** (finding 2). The gate is on the *reference*, not the word:
       the rewritten header may still say "the director never wakes the loop
       itself" — that is in fact the sentence to write.
-- [ ] `grep -n labelsAnimating src/services/engine/frame/runFrame.ts` → exactly
+- [x] `grep -n labelsAnimating src/services/engine/frame/runFrame.ts` → exactly
       **two** hits: the capture at `:639` and the bag entry at `:708-711`. Read
       the first one — it must be the director call's return value, not a literal
       `false` and not a re-passed `earthTilesAnimating`. A required bag field
       forces the call site to pass *something* (finding 1); this grep is what
       makes it the *right* something, since a wrong-but-typed value compiles and
       passes every unit test.
-- [ ] `npm run typecheck` + `npm test -- labelDirector shouldKeepTicking`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- labelDirector shouldKeepTicking`.
+- [x] Commit.
 
 ### Task 2 — Delete the two volume-ingest wakes (mechanical, D7)
 
@@ -441,20 +441,20 @@ true because no code path can reach a call that no longer exists. Per
 Its two siblings on `:82-83` (`store.dispatch`, `bridge`) still carry the
 null-renderer early-return contract in full, so only the wake line goes.
 
-- [ ] Delete `uploadVolumeField.ts:30` and `unloadVolumeField.ts:26`, and the
+- [x] Delete `uploadVolumeField.ts:30` and `unloadVolumeField.ts:26`, and the
       "kept local until rung 5" / "Redundant-but-local" clauses that justified
       them (`uploadVolumeField.ts:5-7`, `unloadVolumeField.ts:25`). Replace each
       with one line: the wake rides the settings dispatch on the line above,
       which `watchWakeSaga`'s route table turns into a render request
       (finding 9). `uploadVolumeField`'s header nets ~2 lines shorter;
       `unloadVolumeField` is flat.
-- [ ] Delete `uploadVolumeField.test.ts:84` — that line only, keeping `:82-83`
+- [x] Delete `uploadVolumeField.test.ts:84` — that line only, keeping `:82-83`
       and the `scheduler.requestRender` spy in the fixture (other cases may
       still construct it). This is the rung's one deleted assertion and it is
       an assertion about deleted code.
-- [ ] `grep -rn requestRender src/services/engine/volume/` → no hits.
-- [ ] `npm run typecheck` + `npm test -- uploadVolumeField volumeSlotIngest`.
-- [ ] Commit.
+- [x] `grep -rn requestRender src/services/engine/volume/` → no hits.
+- [x] `npm run typecheck` + `npm test -- uploadVolumeField volumeSlotIngest`.
+- [x] Commit.
 
 ### Task 3 — Correct the three kept sites' comments (comment-only, D8/D9)
 
@@ -466,25 +466,25 @@ Zero behaviour, zero test churn — the point is that a future reader re-running
 this census finds the ruling instead of redoing it. One or two lines each; a
 paragraph is over budget.
 
-- [ ] `biasCorrectionSubsystem.ts:272-273` (the comment; `:271` is `mode = next;`
+- [x] `biasCorrectionSubsystem.ts:272-273` (the comment; `:271` is `mode = next;`
       and `:274` the call) — **add** the missing clause, do not replace the
       existing one: "the only wake identity modes need" is true about wake count
       and stays. What is missing is that the wake is redundant with the settings
       route today (`setBiasMode` → `watchWakeSaga`) and kept because `setMode`
       dispatches nothing itself, so the coverage is its caller's (D8).
-- [ ] `startLoop.ts:144-148` (the comment; `:149` is the call) — one line: the
+- [x] `startLoop.ts:144-148` (the comment; `:149` is the call) — one line: the
       ignition must not depend on `goLiveNowAction`'s route membership; the
       neighbouring dispatch covers a different fact (D8).
-- [ ] `wireInput.ts:376-378` — record why the wake is unconditional while the
+- [x] `wireInput.ts:376-378` — record why the wake is unconditional while the
       dispatch is not: the follow branch of
       `src/services/engine/camera/applyWheelZoom.ts:72-75` mutates
       `clock.followDistanceTarget` and returns `null`, so a wheel tick on a
       followed body dispatches nothing and steady follow does not keep the loop
       ticking (D9, finding 3).
-- [ ] `npm run typecheck` + `npm test -- biasCorrection startLoop wireInput` —
+- [x] `npm run typecheck` + `npm test -- biasCorrection startLoop wireInput` —
       all green with **no test edited** (that is the check that these are
       comment-only).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4 — decisions.md gains decision #15
 
@@ -494,7 +494,7 @@ Rungs 6–8 and the umbrella reassessment are written against decisions.md long
 after this plan moves to `plans/completed/`. This is the rung's durable
 deliverable.
 
-- [ ] Add **decision #15** carrying D1–D10: the census counts — **28 sites = 3
+- [x] Add **decision #15** carrying D1–D10: the census counts — **28 sites = 3
       mechanisms + 15 essential + 5 redundant-covered + 2 votes + 3 mixed**, and
       check the sum before writing it (the source survey labelled ESSENTIAL "14"
       while listing fifteen; #15 is what rungs 6–8 read as ground truth); the
@@ -505,28 +505,28 @@ deliverable.
       function, same fact** — plus the `startLoop` worked exception that shows
       why the second clause exists; the `onZoom` reclassification with the
       `applyWheelZoom` evidence (D9).
-- [ ] Record **#14 D2 as discharged** (D7): the hedge it kept the line for
+- [x] Record **#14 D2 as discharged** (D7): the hedge it kept the line for
       ("does not depend on saga wiring order") is answered — each function
       dispatches its own covering settings action, and the upload path is
       covered three ways. Record that `watchWakeSaga` and `installSlotReadyWake`,
       the other two owners #14 named, are reckoned with and **stay** (D3).
-- [ ] Record **#13's site 6 as closed** (D10): the wake half was already the
+- [x] Record **#13's site 6 as closed** (D10): the wake half was already the
       reference shape (`isAnimating()` → the bag), nothing was built, and it is
       what the label director was measured against. Include the marker-path
       no-wake-gap finding.
-- [ ] Record **no manifest, and the accretion cost accepted** (D4): a required
+- [x] Record **no manifest, and the accretion cost accepted** (D4): a required
       bag field is the compile-time gate a closure-bearing row table could not
       be; the "hand-maintained disjunction" loose spot is re-deferred to the
       umbrella reassessment, not to a rung.
-- [ ] Record the **rung-8 hand-off** (D6) with all four reasons, so rung 8's
+- [x] Record the **rung-8 hand-off** (D6) with all four reasons, so rung 8's
       author inherits the finding rather than re-deriving it.
-- [ ] Record the **rung-7 hand-off** (D8): `syncVisibilityFadeItem`'s dead
+- [x] Record the **rung-7 hand-off** (D8): `syncVisibilityFadeItem`'s dead
       `animate:false` branch.
-- [ ] Amend **#9's rung-5 clause in place** (`decisions.md:104`), the way #13
+- [x] Amend **#9's rung-5 clause in place** (`decisions.md:104`), the way #13
       and #14 amended theirs: the fold is one bag field, the deletion is two
       lines, no table — with a pointer to #15, so a reader of #9 alone does not
       expect a wake registry.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5 — Doc sweep across the four maps
 
@@ -540,43 +540,43 @@ before editing:** several wake claims survive this rung intact (the `anim`
 parameter mechanism is extended, not replaced), and an edit that only restates
 the same fact is churn.
 
-- [ ] `engine-composition-map.md:165-168` — "**the one** layer family with its
+- [x] `engine-composition-map.md:165-168` — "**the one** layer family with its
       own dedicated wake term" is now false; labels have one too. Its `runFrame`
       pointer is also dead: `:167` cites `runFrame.ts:776-779` for the star vote
       in a 722-line file — the real site is **`:708-711`**. Fix both in the same
       edit.
-- [ ] `subsystem-sweep.md:17` (Star-catalog row, non-fit column) — "Its own
+- [x] `subsystem-sweep.md:17` (Star-catalog row, non-fit column) — "Its own
       bespoke wake-vote field" is stale in exactly the way the line above is:
       the bag now has a second layer-family vote. Same edit, same reason.
-- [ ] `engine-composition-map.md:224-227` ("threaded explicitly through
+- [x] `engine-composition-map.md:224-227` ("threaded explicitly through
       `shouldKeepTicking`'s `anim` parameter") — **verify only**: the mechanism
       is unchanged, so this should need no edit.
-- [ ] `subsystem-sweep.md:22` (Labels/marker-lines row, Wake column) — "settings
+- [x] `subsystem-sweep.md:22` (Labels/marker-lines row, Wake column) — "settings
       route (indirect)" → the director's per-frame vote into the bag.
-- [ ] `subsystem-sweep.md:29` (Misfit #2) — the named-field list gains
+- [x] `subsystem-sweep.md:29` (Misfit #2) — the named-field list gains
       `labelsAnimating`, and the misfit gets #15's ruling: hand-maintained is
       the accepted shape, not a gap awaiting a registry.
-- [ ] `subsystem-sweep.md:54` (Task B "wake vote" row) and `:66` (summary #5,
+- [x] `subsystem-sweep.md:54` (Task B "wake vote" row) and `:66` (summary #5,
       "bundle votes should fold into the anim bag, not a subscription model") —
       done; point at #15 for what the fold turned out to be.
-- [ ] `current-contracts-map.md:25`, `:180` — the disjunction is 10 terms and
+- [x] `current-contracts-map.md:25`, `:180` — the disjunction is 10 terms and
       the bag 3 fields.
-- [ ] `current-contracts-map.md:166` (mermaid WAKE node), `:193`, and **`:211`**
+- [x] `current-contracts-map.md:166` (mermaid WAKE node), `:193`, and **`:211`**
       (§6 item 6, "Wake accretion") — carry D4's ruling; the 🟠 is a recorded
       acceptance, not an open item for the rungs. **Do not touch `:208`** — that
       is §6 item 3, "Off-registry lifecycles", which records #13's and #14's
       rulings and has nothing to do with wake.
-- [ ] `current-contracts-map.md:226-233` (§7 `W7` "wake fold") and `:256`
+- [x] `current-contracts-map.md:226-233` (§7 `W7` "wake fold") and `:256`
       (surface table wake row) — the fold shipped; describe what it was (one
       field, two deletions) rather than a planned walker.
-- [ ] `current-contracts-map.md:190` (marker path 🔴) — close the "no wake vote"
+- [x] `current-contracts-map.md:190` (marker path 🔴) — close the "no wake vote"
       half with D10's evidence; leave the shadow-producer half open and say so.
       Its pointer is dead too: the row cites `runFrame.ts:731-734`; the real
       site is **`:663-666`**. Fix it in the same edit.
-- [ ] `renderer-layer-outliers.md:59`, `:75` — record that rung 5 examined
+- [x] `renderer-layer-outliers.md:59`, `:75` — record that rung 5 examined
       `foregroundLabelsLayer.ts:810` and ruled its wake half to **rung 8** with
       the fold, so the row stops reading as unassigned.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6 — Full gate + visual smoke
 
@@ -585,28 +585,28 @@ optional and each behaviour below must be observed with the **camera at rest** �
 a moving camera keeps the loop ticking on its own and would pass every one of
 these regardless.
 
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
-- [ ] Dev-server smoke, with the user's eyes — **label envelope**: fly toward
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
+- [x] Dev-server smoke, with the user's eyes — **label envelope**: fly toward
       the Milky Way label's fade band and **stop the camera** mid-crossing. The
       label must keep easing to its settled opacity with no input; a step, a
       freeze mid-fade, or a jump on the next mouse move is the regression this
       task exists to catch.
-- [ ] **Label appear/disappear**: with the camera at rest, toggle a structure
+- [x] **Label appear/disappear**: with the camera at rest, toggle a structure
       category (or focus a cluster) so labels enter and leave. They must fade in
       and out, not pop.
-- [ ] **Volume ingest**: with the camera at rest, toggle **mcpm** and
+- [x] **Volume ingest**: with the camera at rest, toggle **mcpm** and
       **cf4-density** off and on in the Volumes panel. Each must still fade in —
       this is the settings-route wake standing in for the two deleted lines
       (D7).
-- [ ] **Bias mode**: with the camera at rest, switch the bias mode in the
+- [x] **Bias mode**: with the camera at rest, switch the bias mode in the
       settings panel. The scene must repaint — the coverage Task 3's corrected
       comment now asserts.
-- [ ] Confirm the loop still **sleeps**: open the **DebugPanel** and watch its
+- [x] Confirm the loop still **sleeps**: open the **DebugPanel** and watch its
       always-on `FrameStatsRow` (the fps + CPU-frame-time line,
       `src/components/DebugPanel/FrameStatsRow.tsx`) with the scene at rest and
       everything settled — it must stop updating, not sit at a steady ~60 fps.
       A stuck-true vote pins the loop and is invisible without this panel open.
-- [ ] Commit (if any smoke-driven fixes were needed).
+- [x] Commit (if any smoke-driven fixes were needed).
 
 ## Global Constraints
 
@@ -683,27 +683,27 @@ these regardless.
 
 ## Definition of Done
 
-- [ ] `LabelDirectorSubsystem.runFrame` returns `boolean`, and
+- [x] `LabelDirectorSubsystem.runFrame` returns `boolean`, and
       `labelDirectorSubsystem.ts` contains **no reference to
       `state.subsystems.scheduler`** — the fold's completion check. The `anim`
       bag has exactly three required fields and `shouldKeepTicking` ten
       disjuncts.
-- [ ] The ramp triple is **two folded, one assigned**: star-cut and label
+- [x] The ramp triple is **two folded, one assigned**: star-cut and label
       director both vote through the bag; `foregroundLabelsLayer.ts:810` is
       untouched and recorded as rung 8's in both decisions.md and
       `renderer-layer-outliers.md`.
-- [ ] `src/services/engine/volume/` contains **no `requestRender` call**, and
+- [x] `src/services/engine/volume/` contains **no `requestRender` call**, and
       both files carry one line naming the settings dispatch as the wake.
-- [ ] Of the **ten** non-mechanism, non-essential sites: **two deleted, one
+- [x] Of the **ten** non-mechanism, non-essential sites: **two deleted, one
       folded, seven kept with rulings rather than patches** — and the three whose
       comments were silent or incomplete (`biasCorrectionSubsystem`, `startLoop`,
       `wireInput`) now say why they stay. `clipPlayer.ts:206`,
       `foregroundLabelsLayer.ts:810` and both `syncVisibilityFades` calls are
       byte-identical.
-- [ ] **No registry, row type, walker, ctx vote sink or `WAKE_LAYERS` manifest
+- [x] **No registry, row type, walker, ctx vote sink or `WAKE_LAYERS` manifest
       was built** — the deliberate outcome of D4, and the thing a reviewer
       expecting "the wake fold" must find explained in decision #15.
-- [ ] **No test of surviving behaviour was deleted.** Task 1's two director
+- [x] **No test of surviving behaviour was deleted.** Task 1's two director
       tests keep their exact frame sequences and expectations, reading the vote
       instead of a spy. The single deleted assertion is
       `uploadVolumeField.test.ts:84` — an assertion about the line Task 2
@@ -712,24 +712,24 @@ these regardless.
       `clipPlayer.test.ts`, `startLoop.test.ts`, `syncVisibilityFades.test.ts`,
       `foregroundLabelsLayer.test.ts`, `watchWakeSaga.test.ts` and
       `watchSelectionWakeSaga.test.ts` are all untouched.
-- [ ] `decisions.md` ships in this PR with decision #15 (the census, the vote
+- [x] `decisions.md` ships in this PR with decision #15 (the census, the vote
       boundary, the internal-coverage test, the fold, the two deletions
       discharging #14 D2, site 6 closed, the rung-7 and rung-8 hand-offs, the
       accretion acceptance) and #9's rung-5 clause amended in place. Rungs 6–8
       must read the current north star from decisions.md alone, without this
       plan file.
-- [ ] The doc sweep is done across all four maps: neither
+- [x] The doc sweep is done across all four maps: neither
       `engine-composition-map.md:165-168` nor `subsystem-sweep.md:17` still
       calls the star catalog the *one* family with a dedicated wake term; the
       wake-accretion ruling landed on `current-contracts-map.md:211` and **not**
       on `:208`; and the two dead `runFrame.ts` pointers in the swept rows
       (`:776-779` → `:708-711`, `:731-734` → `:663-666`) are corrected.
-- [ ] Named observable behaviours for the manual smoke pass, **all with the
+- [x] Named observable behaviours for the manual smoke pass, **all with the
       camera at rest**: the Milky Way label keeps easing after the camera stops
       mid-band; structure labels fade rather than pop on a category toggle;
       mcpm and cf4-density still fade in from the Volumes panel; a bias-mode
       switch repaints; and a fully settled scene stops advancing frames.
-- [ ] Deferral boundary — a reviewer should NOT expect to find, in this PR: any
+- [x] Deferral boundary — a reviewer should NOT expect to find, in this PR: any
       change to `watchWakeSaga`, `watchSelectionWakeSaga`, `installSlotReadyWake`
       or `renderScheduler` (D3); any change to the seven non-bag disjuncts (D2);
       `foregroundLabelsLayer`'s caption wake or its `enabled()`/`draw` inversion
