@@ -149,7 +149,11 @@ describe('bakeCoarserLevel', () => {
     const stub = {
       id: 'stub-filler',
       attribution: 'stub-filler attribution',
-      provenance: { sourceId: 'stub-filler', attribution: 'stub-filler attribution', vintage: 'stub' },
+      provenance: {
+        sourceId: 'stub-filler',
+        attribution: 'stub-filler attribution',
+        vintage: 'stub',
+      },
       maxLevel: 20,
       coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
       readBoxCalls: 0,
@@ -226,6 +230,70 @@ describe('bakeAll', () => {
       },
     };
   }
+
+  // The Fix-1 "always opaque" invariant, exercised through `bakeAll` itself
+  // rather than `underfillImagerySource`/`bakeCoarserLevel` in isolation —
+  // pins the `effective = underfillImagerySource(source, underfill)` wiring
+  // at the DEEPEST level (buildEarthTiles.ts's `bakeDeepestLevel` call),
+  // which the two halves' own tests don't reach.
+  const ORANGE = [255, 128, 0, 255] as const;
+
+  it('fills a partial deepest-level primary read from the underfill source, fully opaque', async () => {
+    const dir = tmpDir();
+    // Primary answers only its own half of every tile's box (see the raster
+    // below); the rest of each tile stays transparent unless underfilled.
+    const primary: EarthImagerySource = {
+      id: 'stub-primary',
+      attribution: 'stub-primary attribution',
+      provenance: {
+        sourceId: 'stub-primary',
+        attribution: 'stub-primary attribution',
+        vintage: 'stub',
+      },
+      maxLevel: STUB_Z,
+      coverage: [BOX_WEST],
+      async readBox(box, widthPx, heightPx) {
+        if (box.west !== BOX_WEST.west) return null;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        // Opaque red in the left half only — the right half stays [0,0,0,0].
+        for (let y = 0; y < heightPx; y++) {
+          for (let x = 0; x < widthPx / 2; x++) {
+            const i = (y * widthPx + x) * 4;
+            raster.set([255, 0, 0, 255], i);
+          }
+        }
+        return raster;
+      },
+    };
+    const underfill = stubSource('stub-underfill', BOX_WEST, ORANGE);
+
+    await bakeAll([{ source: primary, minLevel: STUB_Z, underfill }], dir);
+
+    const tilePath = join(
+      dir,
+      earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    const { data, info } = await sharp(tilePath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const left = pixelAt(
+      data,
+      info.width,
+      Math.floor(info.width * 0.25),
+      Math.floor(info.height / 2),
+    );
+    const right = pixelAt(
+      data,
+      info.width,
+      Math.floor(info.width * 0.75),
+      Math.floor(info.height / 2),
+    );
+
+    expectPixelNear(left, [255, 0, 0, 255]); // primary, untouched
+    expectPixelNear(right, ORANGE); // underfilled, fully opaque
+  });
 
   it('writes two manifest entries and both sources tiles, in band order', async () => {
     const dir = tmpDir();

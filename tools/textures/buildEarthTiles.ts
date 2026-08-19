@@ -239,10 +239,7 @@ export async function bakeCoarserLevel(
             },
           });
 
-      await canvas
-        .composite(quadrants)
-        .webp({ quality: WEBP_QUALITY })
-        .toFile(outPath);
+      await canvas.composite(quadrants).webp({ quality: WEBP_QUALITY }).toFile(outPath);
       written.push(relPath);
     }
   }

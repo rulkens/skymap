@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -130,12 +130,18 @@ describe('eoxTileSource', () => {
     const coverageDir = tmpCoverageDir();
     const rowNW = 300;
     const colNW = 400;
-    // SE (colNW + 1, rowNW + 1) is left unwritten — 3 of 4 present.
+    // All four written so the harvest tree is CONTIGUOUS at construction time
+    // (the coverage guard requires it); SE is then deleted so `readBox` — which
+    // checks disk fresh, not a cached scan — sees the same 3-of-4 partial block
+    // an interrupted-mid-fetch harvest would leave.
     await writeEoxTile(coverageDir, rowNW, colNW, RED); // NW
     await writeEoxTile(coverageDir, rowNW, colNW + 1, GREEN); // NE
     await writeEoxTile(coverageDir, rowNW + 1, colNW, BLUE); // SW
+    await writeEoxTile(coverageDir, rowNW + 1, colNW + 1, WHITE); // SE
 
     const source = await eoxTileSource({ coverageDir });
+    rmSync(join(coverageDir, String(EOX_MAX_LEVEL), String(rowNW + 1), `${colNW + 1}.jpg`));
+
     const box = boxForBlock(rowNW, colNW);
     const rgba = await source.readBox(box, 512, 512);
     expect(rgba).not.toBeNull();
@@ -145,6 +151,20 @@ describe('eoxTileSource', () => {
 
     expectPixelNear(nw, [...RED, 255]);
     expect(se[3]).toBe(0); // missing SE quadrant: transparent, filled later by underfillImagerySource
+  });
+
+  it('throws at construction when the harvest tree spans two disjoint patches', async () => {
+    const coverageDir = tmpCoverageDir();
+    // Two isolated single tiles, far enough apart that the naive bounding rect
+    // over both claims a huge span of ground never actually harvested —
+    // exactly the shape a second `fetch-eox` region leaves in the same flat
+    // `data/raw/eox/13/` tree.
+    await writeEoxTile(coverageDir, 100, 200, RED);
+    await writeEoxTile(coverageDir, 5000, 9000, GREEN);
+
+    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(
+      /incomplete or spans multiple regions/,
+    );
   });
 
   it('derives coverage from the harvested row/col rectangle on disk', async () => {

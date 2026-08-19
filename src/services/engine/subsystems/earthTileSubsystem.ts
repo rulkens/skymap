@@ -119,6 +119,10 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     const baseLevel = earthBaseLevelForTier(tier);
     const bands: EarthTileBand[] = [];
     for (const level of levels) {
+      // A structurally-wrong manifest entry (missing/malformed `bounds`)
+      // degrades by skipping it, matching this function's whole stance —
+      // never throw out of `refreshParams` over one bad band.
+      if (typeof level?.bounds?.west !== 'number') continue;
       // Deeper of the band's own min and base+1: at/above base would
       // re-download detail the whole-globe base already delivers.
       const min = Math.max(level.min, baseLevel + 1);

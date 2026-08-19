@@ -101,6 +101,22 @@ describe('earthTileSubsystem manifest validation', () => {
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX / 2))).toBeNull();
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX * 2))).toBeNull();
   });
+
+  it('skips a structurally-malformed band entry and derives params from the good ones', async () => {
+    // A manifest a broken bake or a hand-edit could produce: one entry
+    // missing `bounds` entirely alongside one well-formed entry. Skipping
+    // the bad one — never throwing out of `refreshParams` — is the module's
+    // stated stance for any manifest shape this build can't address.
+    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const goodLevel = manifest.levels.surface![0]!;
+    manifest.levels.surface = [{ ...goodLevel, bounds: undefined as never }, goodLevel];
+
+    const params = await plannerParamsFor(manifest);
+
+    expect(params).not.toBeNull();
+    expect(params!.bands).toHaveLength(1);
+    expect(params!.bands[0]!.max).toBe(goodLevel.max);
+  });
 });
 
 describe('earthTileSubsystem base level', () => {

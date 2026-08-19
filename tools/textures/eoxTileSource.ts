@@ -68,13 +68,27 @@ function eoxTileAt(lon: number, lat: number, z: number): { row: number; col: num
 }
 
 /** Bounding row/col rectangle of every `<z>/<row>/<col>.jpg` under
- *  `coverageDir` — the harvest's own footprint, not a requested bbox. */
-function scanCoverage(coverageDir: string): { rowMin: number; rowMax: number; colMin: number; colMax: number } {
+ *  `coverageDir` — the harvest's own footprint, not a requested bbox.
+ *  `fileCount` lets the caller assert the rect is actually CONTIGUOUS: a
+ *  full rectangle has `fileCount === (rowMax-rowMin+1)*(colMax-colMin+1)`,
+ *  fewer means the harvest tree spans a gap (e.g. two disjoint regions). */
+function scanCoverage(coverageDir: string): {
+  rowMin: number;
+  rowMax: number;
+  colMin: number;
+  colMax: number;
+  fileCount: number;
+} {
   const levelDir = join(coverageDir, String(EOX_MAX_LEVEL));
+  if (!existsSync(levelDir)) {
+    throw new Error(`eoxTileSource: no z${EOX_MAX_LEVEL} tiles found under ${levelDir}`);
+  }
+
   let rowMin = Infinity;
   let rowMax = -Infinity;
   let colMin = Infinity;
   let colMax = -Infinity;
+  let fileCount = 0;
 
   for (const rowEntry of readdirSync(levelDir, { withFileTypes: true })) {
     if (!rowEntry.isDirectory()) continue;
@@ -82,6 +96,7 @@ function scanCoverage(coverageDir: string): { rowMin: number; rowMax: number; co
     for (const fileName of readdirSync(join(levelDir, rowEntry.name))) {
       if (!fileName.endsWith('.jpg')) continue;
       const col = Number(fileName.slice(0, -'.jpg'.length));
+      fileCount++;
       rowMin = Math.min(rowMin, row);
       rowMax = Math.max(rowMax, row);
       colMin = Math.min(colMin, col);
@@ -92,7 +107,7 @@ function scanCoverage(coverageDir: string): { rowMin: number; rowMax: number; co
   if (!Number.isFinite(rowMin)) {
     throw new Error(`eoxTileSource: no z${EOX_MAX_LEVEL} tiles found under ${levelDir}`);
   }
-  return { rowMin, rowMax, colMin, colMax };
+  return { rowMin, rowMax, colMin, colMax, fileCount };
 }
 
 function boundsForRowColRect(rect: {
@@ -113,7 +128,23 @@ function boundsForRowColRect(rect: {
 export async function eoxTileSource(opts: {
   readonly coverageDir: string; // rawDataPath('eox.dir')
 }): Promise<EarthImagerySource> {
-  const coverage = [boundsForRowColRect(scanCoverage(opts.coverageDir))];
+  const rect = scanCoverage(opts.coverageDir);
+  // A cheap contiguity assertion, not a full connected-components check: this
+  // source declares exactly ONE coverage box (see the module header), so a
+  // rect whose area exceeds its file count means the harvest tree spans a gap
+  // — two disjoint `fetch-eox` regions sharing one flat `data/raw/eox/13/`
+  // tree — and this box would silently claim the ground between them.
+  // See docs/backlog/2026-08-19-multi-region-eox-coverage.md.
+  const rectArea = (rect.rowMax - rect.rowMin + 1) * (rect.colMax - rect.colMin + 1);
+  if (rectArea !== rect.fileCount) {
+    throw new Error(
+      `eoxTileSource: the harvest tree under ${opts.coverageDir} is incomplete or spans ` +
+        `multiple regions (${rect.fileCount} tiles found, ${rectArea} expected for one ` +
+        `contiguous patch) — this source supports exactly one contiguous patch; see ` +
+        `docs/backlog/2026-08-19-multi-region-eox-coverage.md`,
+    );
+  }
+  const coverage = [boundsForRowColRect(rect)];
 
   return {
     id: EOX_PROVENANCE.sourceId,

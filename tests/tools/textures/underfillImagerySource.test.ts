@@ -9,10 +9,7 @@ const WIDTH = 4;
 const HEIGHT = 4;
 
 /** Minimal stub source: constant identity fields, `readBox` fixed to one return value. */
-function stubSource(
-  id: string,
-  readBox: EarthImagerySource['readBox'],
-): EarthImagerySource {
+function stubSource(id: string, readBox: EarthImagerySource['readBox']): EarthImagerySource {
   return {
     id,
     attribution: `${id} attribution`,
@@ -30,7 +27,11 @@ function solid(rgba: readonly [number, number, number, number]): Uint8Array {
   return raster;
 }
 
-function pixelAt(data: Uint8Array, x: number, y: number): readonly [number, number, number, number] {
+function pixelAt(
+  data: Uint8Array,
+  x: number,
+  y: number,
+): readonly [number, number, number, number] {
   const i = (y * WIDTH + x) * 4;
   return [data[i]!, data[i + 1]!, data[i + 2]!, data[i + 3]!];
 }

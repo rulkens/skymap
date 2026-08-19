@@ -25,7 +25,7 @@ export function underfillImagerySource(
     async readBox(box, widthPx, heightPx) {
       // A primary decline means nothing here for the box at all — return null
       // WITHOUT reading filler. `bakeDeepestLevel` probes every z13 box on the
-      // globe (~58M), and this decline path must stay existsSync-cheap.
+      // globe (~33.5M), and this decline path must stay existsSync-cheap.
       const primaryRaster = await primary.readBox(box, widthPx, heightPx);
       if (primaryRaster === null) return null;
 

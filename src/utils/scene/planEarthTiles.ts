@@ -114,7 +114,8 @@ export function planEarthTiles(input: {
     const uMid = (u0 + u1) / 2;
     const vMid = (vNorth + vSouth) / 2;
     // `v0`/`v1` are min/max, so `vSouth` (mesh-v increases north) is `v0`.
-    const uv = { u0, u1, v0: vSouth, v1: vNorth };
+    const v0 = vSouth;
+    const v1 = vNorth;
 
     const centre = equirectUvToDirection([uMid, vMid]);
     // Angular radius of the patch, to its corners (farthest from centre).
@@ -173,10 +174,10 @@ export function planEarthTiles(input: {
       maxTileLevel,
       Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
     );
-    if (required > z && earthTileBandRefineAllowed(bands, z, uv)) {
+    if (required > z && earthTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
       // Same band-request gate as the leaf branch: a would-be ancestor no
       // band bakes at this z has no file to fetch either.
-      if (earthTileBandRequestAllowed(bands, z, uv))
+      if (earthTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
         requests.push({ tile: { kind, z, x, y }, screenPx });
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
@@ -188,7 +189,7 @@ export function planEarthTiles(input: {
     // covers, regardless of which files happen to exist.
     if (z > zWin) zWin = z;
     // Served by the base texture, but has no file to fetch.
-    if (!earthTileBandRequestAllowed(bands, z, uv)) continue;
+    if (!earthTileBandRequestAllowed(bands, z, u0, u1, v0, v1)) continue;
     requests.push({ tile: { kind, z, x, y }, screenPx });
   }
 
