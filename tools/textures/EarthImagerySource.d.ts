@@ -29,6 +29,8 @@ export type EarthImagerySource = {
   readonly attribution: string;
   /** Deepest pyramid level with real (non-upsampled) detail. */
   readonly maxLevel: number;
+  /** Geographic bounds this source covers. Multiple bounds allow partial-globe sources. */
+  readonly coverage: ReadonlyArray<LonLatBounds>;
   /** Sample a lon/lat box into an RGBA raster of exactly widthPx x heightPx, graded and
    *  sRGB-encoded, alpha 0 where the source has no land data. Null when the box is
    *  entirely outside coverage, so the caller emits no tile at all. */

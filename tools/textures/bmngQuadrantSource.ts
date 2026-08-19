@@ -205,6 +205,7 @@ export async function bmngQuadrantSource(source: {
     id: source.id,
     attribution: source.attribution,
     maxLevel: earthLevelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
+    coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
 
     async readBox(box, widthPx, heightPx) {
       const placement = quadrantForBox(box);
