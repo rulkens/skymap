@@ -293,7 +293,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     const misses: EarthTileRequest[] = [];
     for (const request of plan.requests) {
       const key = earthTilePath(request.tile, prefix);
-      // Checked BEFORE touching: an allocated failed key would keep its LRU
+      // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
       if (atlas.isFailed(key)) continue;
       if (atlas.touch(key, frameCounter) === null) misses.push(request);
@@ -304,7 +304,6 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
       // Null means the atlas is already full this frame.
       if (atlas.allocate(key, frameCounter) === null) continue;
-      if (atlas.isLoaded(key)) continue;
 
       atlas.enqueueFetch({
         key,
