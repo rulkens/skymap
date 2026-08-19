@@ -116,7 +116,7 @@
     "tsx": "4.21.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.65.0",
-    "vite": "8.0.10",
+    "vite": "8.2.1",
     "vitest": "4.1.5",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
