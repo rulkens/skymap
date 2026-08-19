@@ -405,7 +405,7 @@ the deep tuning surface.
     while listing fifteen sites — corrected here; #15, not the survey, is what
     rungs 6–8 read as ground truth.) The recurring smell: a "ramp needs another
     frame" wake fired from three independent places — one already folded into
-    the bag before this rung (`runFrame.ts:649-652`, the star-cut LOD fade),
+    the bag before this rung (`runFrame.ts:650-653`, the star-cut LOD fade),
     one this rung folds (the label director), one this rung hands to rung 8
     (`foregroundLabelsLayer.ts:810`'s caption ramp).
 
@@ -415,7 +415,7 @@ the deep tuning surface.
       unchanged (`decisions.md:198`, "No registry, no walker, no row type was
       built") — the bag **is** the seam, and extending it is growth.
     - **D2 — a "vote" is an `anim` bag entry, and that is the rung's
-      boundary.** `shouldKeepTicking.ts:19-29` draws the line itself: every
+      boundary.** `shouldKeepTicking.ts:19-30` draws the line itself: every
       term but `anim` is read off `(state, s, nowMs)`; `anim` is an explicit
       bag of in-frame votes computed as a side effect of per-frame work
       already running, with no resting-state home to read from instead. The
@@ -448,7 +448,7 @@ the deep tuning surface.
     - **D5 — the label director's vote folds into the bag; the rung's one
       structural change.** `labelDirectorSubsystem.runFrame` used to call
       `state.subsystems.scheduler.requestRender()` from inside per-frame
-      producer polling — the exact pattern `runFrame.ts:649-652` already
+      producer polling — the exact pattern `runFrame.ts:650-653` already
       documents as eliminated elsewhere. It folds cleanly because the ordering
       permits it: the director runs at `runFrame.ts:640`, the frame body's
       only early return sits at `:475` (well above it), and the
@@ -461,9 +461,9 @@ the deep tuning surface.
       the file; its `### Awake aggregation` header (`labelDirectorSubsystem.ts:19-23`)
       now describes the vote instead of the call; `shouldKeepTicking`'s `anim`
       parameter carries the required `labelsAnimating` field
-      (`shouldKeepTicking.ts:120`) alongside `starFadeAnimating` and
+      (`shouldKeepTicking.ts:121`) alongside `starFadeAnimating` and
       `earthTilesAnimating`, and the disjunction is ten terms, not nine
-      (`shouldKeepTicking.ts:122-133`).
+      (`shouldKeepTicking.ts:123-134`).
     - **D6 — `foregroundLabelsLayer.ts:810`'s caption wake is rung 8's, and
       the split is clean.** Four reasons: (1) no return channel exists — the
       label director is invoked directly and can return a vote,
@@ -508,8 +508,8 @@ the deep tuning surface.
       coverage that depends on who called. The second clause is what
       separates the two volume functions (D7, whose dispatch **is** the state
       change the wake announces) from three kept sites where it fails:
-      `biasCorrectionSubsystem.ts:277` (`setMode`'s entry wake — dispatches
-      nothing itself; its comment, `:272-276`, gained the missing clause — the
+      `biasCorrectionSubsystem.ts:276` (`setMode`'s entry wake — dispatches
+      nothing itself; its comment, `:272-275`, gained the missing clause — the
       wake is redundant with the settings route today, but coverage is the
       caller's job, not this function's); `startLoop.ts:150` — **the rule's
       worked exception, and the reason the second clause exists**: its
@@ -517,8 +517,8 @@ the deep tuning surface.
       write in the *same function body*, so clause one alone would predict
       DELETE, but it covers a different fact (a clock snap) — the ignition
       must not depend on the clock snap's route membership, one added comment
-      (`startLoop.ts:149`) records why; `syncVisibilityFadeItem.ts`'s
-      production-dead `animate:false` branch, which fails the test for a
+      (`startLoop.ts:149`) records why; `syncVisibilityFades.ts:192`'s
+      (`syncVisibilityFadeItem`'s) production-dead `animate:false` branch, which fails the test for a
       third reason — it exists to mirror a sibling's wake policy the test
       does not reach at all — and is recorded here as **rung 7's**: it is
       dead-branch hygiene on the FADE_LAYERS bridge (#11: "rung 7 widens to
@@ -532,7 +532,7 @@ the deep tuning surface.
       `clock.followDistanceTarget` **and returns `null`**, so a wheel tick
       while following a body changes real state and dispatches nothing, and
       steady follow after saturation does not itself keep the loop ticking
-      (`shouldKeepTicking.ts:129`, deliberately). Without the wake, zooming a
+      (`shouldKeepTicking.ts:130`, deliberately). Without the wake, zooming a
       followed planet from a resting camera would not repaint until something
       else woke the loop. `syncVisibilityFades.ts:152` (batch snap wake) and
       `clipPlayer.ts:206` (fade cue) stay untouched — the first is the paired

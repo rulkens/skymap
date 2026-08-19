@@ -375,8 +375,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         pivotRadiusMpc(selectFocusRow(root)),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
-      // Unconditional: applyWheelZoom's follow branch (applyWheelZoom.ts:72-75) mutates
-      // clock.followDistanceTarget and returns null, so a followed-body wheel tick dispatches nothing (D9, finding 3).
+      // Unconditional — the follow branch (applyWheelZoom.ts:72-75) mutates followDistanceTarget
+      // and returns null; a followed-body wheel tick dispatches nothing (D9, finding 3).
       state.subsystems.scheduler.requestRender();
     },
 

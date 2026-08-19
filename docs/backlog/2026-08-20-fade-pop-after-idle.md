@@ -28,8 +28,10 @@ visibly over ~600 ms.
 
 Diagnosed while investigating a suspected regression on `refactor/wake-vote-fold`
 (deleted `requestRender()` calls in `uploadVolumeField`/`unloadVolumeField`);
-traced and ruled pre-existing — see
-`.superpowers/sdd/2026-08-19-wake-vote-fold/smoke-mcpm-pop-investigation.md`.
+traced to `fadeRegistry.fadeTo`'s start-stamp (`fadeRegistry.ts:125-133`) and
+ruled pre-existing — the same stale-clock path is reached through any
+`applyIntent`-driven fade, e.g. `syncVisibilityFades`'s per-row call
+(`syncVisibilityFades.ts:147`), not just the volume routes.
 
 ## Fix sketch
 

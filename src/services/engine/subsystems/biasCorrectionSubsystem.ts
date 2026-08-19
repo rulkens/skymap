@@ -270,10 +270,9 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const myGen = generation;
     mode = next;
     // Entry wake — flips the mode gate next frame; the only wake identity
-    // modes need (bake modes wake again post-splice below). Redundant today
-    // with the settings route (setBiasMode → watchWakeSaga); kept because
-    // setMode dispatches nothing itself, so covering that route is the
-    // caller's job, not this function's (D8).
+    // modes need (bake modes wake again post-splice below). Redundant with
+    // the settings route today (`setBiasMode` → `watchWakeSaga`), but `setMode`
+    // dispatches nothing itself, so that coverage is the caller's — D8.
     requestRender();
 
     if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {
