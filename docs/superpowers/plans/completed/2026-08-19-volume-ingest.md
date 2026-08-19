@@ -519,15 +519,15 @@ the `move` steps take the _new_ filenames as their source. The `<file>#<symbol>`
 prefix is mandatory: `addVolumeField`/`removeVolumeField` are also action-creator
 exports from `settingsSlice.ts:533-534` (finding 9).
 
-- [ ] `npm run refactor -- rename src/services/engine/handles/addVolumeField.ts#addVolumeField uploadVolumeField`
+- [x] `npm run refactor -- rename src/services/engine/handles/addVolumeField.ts#addVolumeField uploadVolumeField`
       (`--dry` first), then the same for
       `src/services/engine/handles/removeVolumeField.ts#removeVolumeField unloadVolumeField`.
       The settings actions keep their names; the now-pointless local alias
       `addVolumeFieldAction` (`addVolumeField.ts:15`) collapses to a plain
       import. Commit.
-- [ ] `npm run move-files -- src/services/engine/handles/uploadVolumeField.ts src/services/engine/volume/uploadVolumeField.ts`
+- [x] `npm run move-files -- src/services/engine/handles/uploadVolumeField.ts src/services/engine/volume/uploadVolumeField.ts`
       and the same for `unloadVolumeField.ts` (`--dry` first). Commit.
-- [ ] `engine.ts:846-851` keeps `volumes.add` / `volumes.remove` delegating to
+- [x] `engine.ts:846-851` keeps `volumes.add` / `volumes.remove` delegating to
       the renamed functions (D3). The handle's public method names do **not**
       change. In the same commit, `EngineVolumesHandle.d.ts:5-18` records D3's
       ruling in two or three lines: `add`/`remove` are the entry point for
@@ -538,7 +538,7 @@ exports from `settingsSlice.ts:533-534` (finding 9).
       `list`/`getState` are "the read-side methods the SettingsPanel uses" (the
       panel reads the store through `selectVolumeFieldItems`; these are
       dev-console reads).
-- [ ] `npm run typecheck` + `npm test`. Nothing should need editing beyond
+- [x] `npm run typecheck` + `npm test`. Nothing should need editing beyond
       imports; if it does, the tooling was bypassed. Commit the handle + docblock
       step.
 
@@ -555,25 +555,25 @@ the store stub is `{ dispatch: vi.fn() } as unknown as AppStore`. The reducer's
 identity-no-op semantics are already pinned at `settingsSlice.test.ts:161-173`
 and must not be restated here.
 
-- [ ] Test `dispatches the settings-row seed before uploading the cube` —
+- [x] Test `dispatches the settings-row seed before uploading the cube` —
       asserts both calls and their order (finding 3). Catches the inverted order
       that would make the fade read a missing row.
-- [ ] Test `drives only the volumeField fade layer, animated, after the upload` —
+- [x] Test `drives only the volumeField fade layer, animated, after the upload` —
       asserts `syncVisibilityFades` received `{ animate: true, only: ['volumeField'] }`
       and ran after `upload`. The scoped `only` is what keeps an ingest from
       re-driving every fade in the scene; the order is what the row's
       `listIds()` guard depends on (`fadeLayers.ts:306-308`).
-- [ ] Test `does nothing at all when the renderer is not constructed` — no
+- [x] Test `does nothing at all when the renderer is not constructed` — no
       dispatch, no fade, no wake (difference 4, finding 2). No separate wake test:
       the wake is redundant with the settings route (difference 2), so pinning it
       would pin a line rung 5 is expected to delete; this test covers the only
       wake behaviour that matters here, its absence on the no-op path.
-- [ ] Implement: guard the whole body on the renderer, then seed → upload → fade
+- [x] Implement: guard the whole body on the renderer, then seed → upload → fade
       → wake. The header carries the surviving notes from finding 7 plus the
       flow counter-example (D2) in one or two lines — the reasoning lives in
       decision #14, this is a pointer.
-- [ ] `npm run typecheck` + `npm test -- uploadVolumeField`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- uploadVolumeField`.
+- [x] Commit.
 
 ### Task 3 — The four slot-source call sites call it; the copies and their orphans go
 
@@ -589,28 +589,28 @@ splitting it into four one-assertion mirrors would be four files of noise.
 `tests/services/engine/wiring/demandTable.test.ts` is the existing precedent for
 a cross-cutting test file with no src twin.
 
-- [ ] Test `each volume slot ingests its cube under its own field id` — drive all
+- [x] Test `each volume slot ingests its cube under its own field id` — drive all
       four call sites (the three registry factories plus one synthetic fixture)
       with a mocked fetcher to a `ready` transition and assert the id each one
       passes. This is parity gate 2; a per-slot id mix-up is otherwise silent.
-- [ ] Replace each commit body with the single `uploadVolumeField(...)` call.
+- [x] Replace each commit body with the single `uploadVolumeField(...)` call.
       `_cb` becomes `cb` in all four factories (finding 5).
-- [ ] Delete the duplicated commentary per finding 7; each slot header keeps only
+- [x] Delete the duplicated commentary per finding 7; each slot header keeps only
       what is its own. `syntheticVolumeSlots.ts:18-25`'s "Commit pattern"
       paragraph goes entirely — including its stale `engine.ts addVolumeField`
       reference — along with the in-body seed note at `:81-85`; the
       `mintSyntheticVolumeSlot` comment (`:63-70`) keeps only the per-fixture
       closure rationale. The net comment count across the four files must go
       **down** substantially.
-- [ ] Re-verify with
+- [x] Re-verify with
       `npm run refactor -- refs src/services/engine/helpers/writeVolumeFieldSetting.ts#writeVolumeFieldSetting`
       (and the same for `removeVolumeFieldSetting`) that both have only `test`
       references (finding 8). If confirmed, delete each with
       `npm run refactor -- delete <file>#<symbol>` — it takes the `tests/` mirror
       with it, and refuses if any live reference remains, which is the gate. If a
       caller has appeared, leave them and say so in the commit message.
-- [ ] `npm run typecheck` + `npm test`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test`.
+- [x] Commit.
 
 ### Task 4 — Cover the release half, and record the `onRelease` coupling (TDD)
 
@@ -621,21 +621,21 @@ The survey found `unload` and the replace-on-ingest destroy both untested — th
 two paths that free GPU resources, and the ones D7 says must be correct before
 anyone adds a release predicate.
 
-- [ ] Test `unload destroys the field's four GPU resources and drops it from the
+- [x] Test `unload destroys the field's four GPU resources and drops it from the
 map` — texture, palette texture, uniform buffer and fade buffer
       (`volumeFieldRenderer.ts:340-344`), then `listIds()` no longer contains it.
       A missed `destroy()` here is a real GPU-memory leak that nothing else
       catches.
-- [ ] Test `re-uploading the same id destroys the previous field's resources
+- [x] Test `re-uploading the same id destroys the previous field's resources
 first` — the replace-on-ingest path (`volumeFieldRenderer.ts:266-273`),
       which every tier reload of `mcpm` and `polyphorm2Mrs` takes today via
       `makeRunTierTransition`.
-- [ ] Add **one** line at the volume rows (`assetWiring.ts:242-269`): these rows
+- [x] Add **one** line at the volume rows (`assetWiring.ts:242-269`): these rows
       are load-once and deliberately declare no `release`; adding one requires
       wiring `onRelease` to `unloadVolumeField` or the four GPU resources leak on
       evict (D7). No other prose.
-- [ ] `npm run typecheck` + `npm test -- volumeFieldRenderer`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- volumeFieldRenderer`.
+- [x] Commit.
 
 ### Task 5 — decisions.md gains decision #14
 
@@ -645,12 +645,12 @@ Rungs 5–7 and the umbrella reassessment are written against decisions.md long
 after this plan moves to `plans/completed/`, so the rulings cannot live only
 here. This is the rung's durable deliverable.
 
-- [ ] Add **decision #14** carrying: the five-copies-not-three count and the
+- [x] Add **decision #14** carrying: the five-copies-not-three count and the
       four-differences classification (all accidental, resolved by the majority
       form, no options bag); the flow/filament/constellation/starCatalog
       counter-examples and the rejected generic `commitUpload`; D3's ruling on
       the door, with the three-dead-release-surfaces argument.
-- [ ] Record the **answer to #13's re-open condition**: checked, **fails** — with
+- [x] Record the **answer to #13's re-open condition**: checked, **fails** — with
       the count spelled out so it adds up. Three registry volumes are `fetched`;
       the three DEV fixtures read as `generated` (their fetcher generates,
       `syntheticVolumeFetcher.ts:1-8`, and they have no `ASSET_WIRING` row) but
@@ -664,7 +664,7 @@ here. This is the rung's durable deliverable.
       artifact kind**, closing the gap `subsystem-sweep.md:15` names. #7's
       "stalenessKey + optional budget" is re-deferred to the **umbrella
       reassessment**, not to a rung, and the condition is closed for rungs 4–7.
-- [ ] Record **site 4's ruling** (D5): no code change, the compare is already
+- [x] Record **site 4's ruling** (D5): no code change, the compare is already
       split correctly (fact resource-owned via `lastRequest()`, policy
       loop-owned), both alternatives are worse, and the `isBodyTextureKey` gate
       is a proxy for "no tier-transition driver". State the outcome as **the
@@ -672,17 +672,17 @@ here. This is the rung's durable deliverable.
       twice, at `makeRunTierTransition.ts:56-88` and `reevaluateDemand.ts:102`,
       neither derivable from `ASSET_WIRING` — re-handed to the umbrella
       reassessment, explicitly not closed here.
-- [ ] Record the **wake finding** (difference 2): the door's "essential wake"
+- [x] Record the **wake finding** (difference 2): the door's "essential wake"
       comment is false — `watchWakeSaga.ts:47-55` wakes on every settings-route
       action — so the line is redundant-but-local, and **rung 5** owns removing
       it along with the path's other wake owners.
-- [ ] Record **#11's widening boundary** (D6) and **D7** (no `onRelease`, with
+- [x] Record **#11's widening boundary** (D6) and **D7** (no `onRelease`, with
       the coupling recorded in `assetWiring.ts`).
-- [ ] Amend **#9's rung-4 clause in place**: five copies, not three; the door
+- [x] Amend **#9's rung-4 clause in place**: five copies, not three; the door
       kept and folded; the re-open condition answered; site 4 ruled — with a
       pointer to #14, so a reader of #9 alone is not left expecting a deletion or
       a table that does not exist.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6 — The deferred doc sweep + the ingest lines this rung makes stale
 
@@ -694,52 +694,52 @@ here. This is the rung's durable deliverable.
 The first six items are rung 3's deferred sweep; the rest is this rung's own
 wake. Locate each by its quoted text — line numbers are as of `df590f5d3`.
 
-- [ ] `engine-composition-map.md:340` — "`runFrame`'s mismatch branch is the only
+- [x] `engine-composition-map.md:340` — "`runFrame`'s mismatch branch is the only
       regenerate path" → it is `MilkyWayCloud.reconcile` (rung 3).
-- [ ] `engine-composition-map.md:351-354` — "the two MW-specific per-frame
+- [x] `engine-composition-map.md:351-354` — "the two MW-specific per-frame
       mismatch branches … both inline": both are deleted (rungs 2 and 3).
-- [ ] `engine-composition-map.md:422-428` (ACCRETION §4 item 1) — same two
+- [x] `engine-composition-map.md:422-428` (ACCRETION §4 item 1) — same two
       branches described as live and unfactored; superseded.
-- [ ] `subsystem-sweep.md:16` — "2 hand-wired mismatch branches inline in
+- [x] `subsystem-sweep.md:16` — "2 hand-wired mismatch branches inline in
       runFrame.ts:211-281"; superseded.
-- [ ] `subsystem-sweep.md:28` — the 4th kind exists (`streamed`, #7), and
+- [x] `subsystem-sweep.md:28` — the 4th kind exists (`streamed`, #7), and
       "promote runFrame.ts:211-281 to a named helper" is superseded by #13
       (resource-owned, no helper). Its `addVolumeField` clause also needs #14's
       answer, not #7's premise.
-- [ ] `subsystem-sweep.md:15` (the scalar-volumes row) — "imperative upload via
+- [x] `subsystem-sweep.md:15` (the scalar-volumes row) — "imperative upload via
       handle.addVolumeField (public API, bypasses slot/demand entirely)" and
       "addVolumeField is a whole artifact class the 3-way taxonomy doesn't name":
       after the fold it bypasses the _demand loop_ but shares the ingest path, and
       #14 classifies it as an ingest-contract entry point rather than a kind. The
       row's own name for the gap is what D4 closes.
-- [ ] `current-contracts-map.md:225` — the W1 mermaid label "(replaces buildSpecs
+- [x] `current-contracts-map.md:225` — the W1 mermaid label "(replaces buildSpecs
       hand-table + divisor rebuild branch)": the divisor branch went in rung 2,
       and the label self-contradicts `:247`.
-- [ ] `current-contracts-map.md:142`, `:206`, `:249` and the `:117`/`:121-124`
+- [x] `current-contracts-map.md:142`, `:206`, `:249` and the `:117`/`:121-124`
       mermaid `IMP` node — ingest is **five copies → one function**; the door is
       folded, not off-registry, so the 🔴 is discharged; `:249`'s bundle-mapping
       cell must match #14 (one ingest fn; **not** a `generated` membership).
       `:140`'s "registry covers 1 of 5 lifecycles" count changes with it.
-- [ ] `renderer-layer-outliers.md:166` (dead ingest surfaces, a 🔴 bug-suspect
+- [x] `renderer-layer-outliers.md:166` (dead ingest surfaces, a 🔴 bug-suspect
       row with "grep repo-wide for callers" as its cheap check) — the check is
       done: `catalogStore.unload` has test-only callers, `filamentRenderer.clear`
       has none outside its own module, `handle.volumes.add` is discharged by the
       fold. Record the result and the reason the other two stay (D3/D6), so the
       row stops reading as unverified.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7 — Full gate + visual smoke
 
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
       `reevaluateDemand.test.ts` must be untouched (finding 6).
-- [ ] Dev-server smoke, with the user's eyes: toggle **mcpm**, **cf4-density**
+- [x] Dev-server smoke, with the user's eyes: toggle **mcpm**, **cf4-density**
       and **polyphorm-2mrs** off and on from the Volumes panel. Each must fade in
       on first enable, stay resident across a second off/on with no re-fetch, and
       log its ready line once.
-- [ ] Switch tiers with `mcpm` enabled: it re-loads **once** at the new tier
+- [x] Switch tiers with `mcpm` enabled: it re-loads **once** at the new tier
       (the `makeRunTierTransition` driver) and re-appears — no double fetch, no
       stuck-at-old-tier cube. This is the second-load-driver gate.
-- [ ] In dev, reach a debug fixture the only way there is (finding 10 — **not**
+- [x] In dev, reach a debug fixture the only way there is (finding 10 — **not**
       the Volumes panel, which filters `debug-*` out): in Redux DevTools dispatch
       `settings/addVolumeField` with payload `'debug-gaussian'`, then
       `settings/writeVolumeField` with
@@ -747,13 +747,13 @@ wake. Locate each by its quoted text — line numbers are as of `df590f5d3`.
       upload and fade in with **no console error**. This exercises the
       synthetic call site's new ingest path end to end; it is not a check on the
       deleted seed branch, whose deletion is its own verification (finding 1).
-- [ ] Optional deeper evidence: `npx playwright test tests/e2e/cf4-density-volume.spec.ts`
+- [x] Optional deeper evidence: `npx playwright test tests/e2e/cf4-density-volume.spec.ts`
       against the running dev server.
-- [ ] Commit (if any smoke-driven fixes were needed).
+- [x] Commit (if any smoke-driven fixes were needed).
 
 ## Definition of Done
 
-- [ ] `src/services/engine/volume/uploadVolumeField.ts` and
+- [x] `src/services/engine/volume/uploadVolumeField.ts` and
       `unloadVolumeField.ts` exist with the contract's signatures; **five** call
       sites reach `volumeFieldRenderer.upload` through the first of them (the four
       slot-source call sites + `handle.volumes.add`), and no **volume** slot file
@@ -761,48 +761,48 @@ wake. Locate each by its quoted text — line numbers are as of `df590f5d3`.
       references `volumeFieldRenderer` or `syncVisibilityFades` any more. The
       other slot files keep their own `syncVisibilityFades` imports — D2 keeps
       them out of the fold on purpose.
-- [ ] The shared function takes **no options bag, no flag, and no per-caller
+- [x] The shared function takes **no options bag, no flag, and no per-caller
       policy argument** — the deliberate outcome of the four-differences
       classification, and the thing a reviewer expecting a parameterized helper
       must find explained in decision #14.
-- [ ] `handle.volumes.add` / `.remove` still exist and still work, as three-line
+- [x] `handle.volumes.add` / `.remove` still exist and still work, as three-line
       delegations; `src/@types/engine/handles/EngineVolumesHandle.d.ts`'s docblock
       records the escape-hatch ruling (runtime-supplied cubes), states that the
       door executes the same ingest functions the volume slots do, and no longer
       claims `list`/`getState` serve the SettingsPanel.
-- [ ] New tests: `uploadVolumeField` (three behaviours incl. the null-renderer
+- [x] New tests: `uploadVolumeField` (three behaviours incl. the null-renderer
       no-op), the four-call-site id-wiring test, and `volumeFieldRenderer`'s
       `unload` + re-upload-destroy. **No test of surviving behaviour was
       deleted**; the two orphan helpers' tests go with their symbols via
       `refactor -- delete` (testing.md: a dead symbol's test can never fail on a
       real bug). `reevaluateDemand.test.ts` — the clamp-ceiling non-thrash case
       included — is byte-identical.
-- [ ] The net comment count across the four slot files went **down**
+- [x] The net comment count across the four slot files went **down**
       substantially; the "No echo" and construction-seed paragraphs survive once,
       in the shared function's header, and `syntheticVolumeSlots.ts`'s two stale
       claims — the `engine.ts addVolumeField` reference and "Toggle any of them
       from the Volumes panel" — are gone.
-- [ ] `decisions.md` ships in this PR with decision #14 (the ingest contract, the
+- [x] `decisions.md` ships in this PR with decision #14 (the ingest contract, the
       door's fate, the answer to #13's re-open condition, #7's refinement and
       re-deferral, site 4's ruling plus the tier-response knot, #11's boundary,
       D7) and #9's rung-4 clause amended in place. Rungs 5–7 must read the
       current north star from decisions.md alone, without this plan file.
-- [ ] The deferred doc sweep is done (six items plus `subsystem-sweep.md:15`),
+- [x] The deferred doc sweep is done (six items plus `subsystem-sweep.md:15`),
       and the ingest surfaces in `current-contracts-map.md` plus the dead-ingest
       bug-suspect row in `renderer-layer-outliers.md` describe the post-rung-4
       world.
-- [ ] Named observable behaviours for the manual smoke pass: each of the three
+- [x] Named observable behaviours for the manual smoke pass: each of the three
       shippable volumes fades in on first enable and survives an off/on with no
       re-fetch; a tier switch re-loads `mcpm` exactly once; a DEV debug fixture,
       reached by the two-dispatch DevTools recipe, uploads and fades with no
       console error.
-- [ ] Sizing note for the ladder, not a gate: rung 4 arrives as 7 tasks, of which
+- [x] Sizing note for the ladder, not a gate: rung 4 arrives as 7 tasks, of which
       **two** touch behaviour-bearing code, and three of its four inherited
       questions (#13's re-open condition, site 4, #7's imperative-upload
       classification) close with a recorded ruling rather than a diff. Rung 3 saw
       the same pattern; rungs 5–7 should expect it wherever #9 named a "family"
       that the code turns out to have already resolved.
-- [ ] Deferral boundary — a reviewer should NOT expect to find, in this PR: any
+- [x] Deferral boundary — a reviewer should NOT expect to find, in this PR: any
       change to `reevaluateDemand.ts`, `staleTierEvict`, `makeRunTierTransition`
       or `ASSET_WIRING`'s row shape (D5); a generated-artifact registry, row type
       or walker, or an `ArtifactDecl` union / `SubsystemBundle` umbrella (D4);
