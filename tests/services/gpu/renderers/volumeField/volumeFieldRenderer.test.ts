@@ -258,6 +258,59 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 });
 
+/**
+ * Recovers the actual mock instances `device.createTexture` /
+ * `device.createBuffer` returned, in call order — each call in
+ * `mockDevice` returns a fresh object with its own `destroy: vi.fn()`,
+ * so a snapshot taken right after `upload()` lets a test assert
+ * `destroy` on the SPECIFIC resource rather than on any texture/buffer.
+ */
+function createdTextures(device: GPUDevice): { destroy: () => void }[] {
+  return (
+    device.createTexture as unknown as { mock: { results: { value: { destroy: () => void } }[] } }
+  ).mock.results.map((r) => r.value);
+}
+function createdBuffers(device: GPUDevice): { destroy: () => void }[] {
+  return (
+    device.createBuffer as unknown as { mock: { results: { value: { destroy: () => void } }[] } }
+  ).mock.results.map((r) => r.value);
+}
+
+describe('createVolumeFieldRenderer unload / re-upload', () => {
+  it("unload destroys the field's four GPU resources and drops it from the map", () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture());
+    // upload() creates textures [volumeTexture, paletteTexture] (the only
+    // createTexture calls) and, last among buffers, [uniformBuffer, fadeBuffer]
+    // — the factory itself already created cornerBuffer/indexBuffer, so the
+    // last two createBuffer results are the ones upload() just made.
+    const [volumeTexture, paletteTexture] = createdTextures(device);
+    const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
+    r.unload('mcpm');
+    expect(volumeTexture!.destroy).toHaveBeenCalledTimes(1);
+    expect(paletteTexture!.destroy).toHaveBeenCalledTimes(1);
+    expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
+    expect(fadeBuffer!.destroy).toHaveBeenCalledTimes(1);
+    expect(r.listIds()).not.toContain('mcpm');
+  });
+
+  it("re-uploading the same id destroys the previous field's resources first", () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture());
+    const [volumeTexture, paletteTexture] = createdTextures(device);
+    const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
+    r.upload('mcpm', fixture());
+    expect(volumeTexture!.destroy).toHaveBeenCalledTimes(1);
+    expect(paletteTexture!.destroy).toHaveBeenCalledTimes(1);
+    expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
+    expect(fadeBuffer!.destroy).toHaveBeenCalledTimes(1);
+    // The replace, not an add: exactly one 'mcpm' entry survives.
+    expect(r.listIds()).toEqual(['mcpm']);
+  });
+});
+
 describe('createVolumeFieldRenderer hasActiveFields', () => {
   it('is false when the only enabled field has opacity 0, true through a fade-out tail', () => {
     // The liveness projection must see an enabled-but-fully-faded field as

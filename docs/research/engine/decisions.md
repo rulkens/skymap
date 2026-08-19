@@ -96,9 +96,12 @@ the deep tuning surface.
    5 already resource-owned, **1 relocated into its own resource**
    (`MilkyWayCloud.reconcile`), 1 deferred to rung 4, and **no helper exists** —
    the registry question re-opens at rung 4 only under #13's condition;
-   **4** volume-ingest
-   consolidation (3 copies → 1 fn; imperative side-door's fate decided here),
-   **5** wake-vote fold, **6** debug derivation, **7** the
+   **4** ~~volume-ingest consolidation (3 copies → 1 fn; imperative side-door's
+   fate decided here)~~ **REFINED by #14 (2026-08-19)** — **five** copies, not
+   three, folded into one `uploadVolumeField`; the imperative side-door is
+   **kept and folded**, not deleted; #13's re-open condition is checked and
+   **fails**, so there is no table to expect; site 4 closes with a ruling, not a
+   patch; **5** wake-vote fold, **6** debug derivation, **7** the
    `FADE_ROW`/`VISIBILITY_ACTION_ROW` derivation decision. Rungs 1 and 3 get
    mini-plans; the rest are bounded changes. Track B is unchanged and
    parallel; **Track C gates on B + rungs 1–3 only**, so the MW landing gets
@@ -227,6 +230,154 @@ the deep tuning surface.
     needs a comparator, which is the first step toward the fused predicates #10
     bans. Evidence + the rejected registry:
     [rung-3 plan](../../superpowers/plans/2026-08-19-generated-staleness.md).
+
+14. **Volume ingest is one function, and the imperative door folds into it**
+    (2026-08-19, ruled in rung 4 — refines #9's rung-4 clause): the docs said
+    "ingest ×3"; the exhaustive survey found **five** hand-written copies of the
+    same commit body — `cf4DensitySlot`, `mcpmSlot`, `polyphorm2MrsSlot`, the
+    shared closure that mints all three DEV fixtures (`syntheticVolumeSlots`),
+    and the public `handle.volumes.add`. They differed along four dimensions and
+    **all four are accidental**: each has a majority form that is also the
+    correct form, so `uploadVolumeField(state, store, id, cube)` takes them
+    as-is — **no options bag, no flag, no per-caller policy argument**. A
+    reviewer expecting a parameterized helper should read the four rulings:
+    - **1** settings seed — the store dispatch is an identity no-op when the row
+      already exists, so it is correct for all five callers. The fixtures'
+      inline copy-on-write was the odd one out **and was broken**: it assigned
+      into Immer-frozen slice state, a `TypeError` had it ever been reachable.
+      Deleted, not ported.
+    - **2** wake — the door's explicit `requestRender()` is redundant, and its
+      "essential wake" comment was **false**: `watchWakeSaga.ts:47-55` wakes on
+      _every_ settings-route action, and `settings/addVolumeField` is one. The
+      line stays, relabelled redundant-but-local, so the ingest path's wake does
+      not depend on saga wiring order; **rung 5 owns deleting it**, together with
+      the path's other wake owners (`watchWakeSaga`, `installSlotReadyWake`).
+    - **3** id source — not a difference at all: it is the function's `id`
+      argument, each caller holding its own id in its own domain (#12).
+    - **4** null renderer — four of five copies returned early; the door alone
+      faded and woke with nothing uploaded, contradicting its own docblock.
+      Majority form wins: the guard wraps the whole body, re-read per call.
+
+    The pair is deliberately **not** symmetric about the null renderer:
+    `unloadVolumeField` still removes the settings row, because the row's
+    lifetime is independent of the GPU resource's. Essential ⇒ kept, one line in
+    the header, not a section.
+
+    **The fold stops at the volume family.** `flowFieldSlot` uploads a _velocity_
+    cube into a _different, singleton_ renderer (`upload(cube)` — no id) and
+    gates a _different_ fade key behind a _different_ guard; `filamentSlot`,
+    `constellationsSlot` and `starCatalogSlot` (which drives no fade at all) are
+    the same story one family over. A generic
+    `commitUpload(state, pickRenderer, upload, fadeKey)` spanning all eight slot
+    commits was considered and **rejected**: it parameterizes away exactly what
+    the volume function asserts, and #6 already named the failure mode — no
+    fake-unified registry. Four counter-examples, one recorded reason, written in
+    the shared function's header where the apparent inconsistency is visible.
+
+    **The imperative door is KEPT and folded, not deleted** (D3).
+    `handle.volumes.add`/`.remove` have zero callers in `src/`, `tests/` and
+    `tools/`. Deleting them was considered and rejected on three grounds. (1)
+    Track A's 2026-08-17 investigation already ruled the handle the legitimate
+    entry point for runtime-supplied cubes the demand system cannot express (no
+    URL, not in the registry), and prescribed exactly this consolidation; rung
+    4's evidence confirms it rather than overturning it. (2) The 🔴 the contracts
+    map flagged was the _duplicated bookkeeping_, and the fold deletes it — the
+    door is no longer a parallel lifecycle, and rung 3's D2 "generality with no
+    instance" objection dissolves at five callers. (3) `unloadVolumeField` is the
+    **only** caller of `volumeFieldRenderer.unload` anywhere in `src/`; deleting
+    the door would make `volumeFieldRenderer` a **third dead release surface**
+    beside `catalogStore.unload` (test-only callers) and `filamentRenderer.clear`
+    (none outside its own module) — i.e. it would mint the very outlier
+    (upload-without-unload, `starCatalogRenderer`) that #11 asks this rung to
+    normalize away from. The door stays a three-line delegation, its public
+    method names unchanged, with the escape-hatch ruling recorded on
+    `EngineVolumesHandle.d.ts`.
+
+    **#13's re-open condition is checked, and it FAILS — no row table, no row
+    type, no walker** (D4). The condition asked for **≥2** artifacts genuinely
+    sharing the shape once ingest is normalized. The count, spelled out: the
+    **three** registry volumes are `fetched` — fetcher, `AssetSlot`, `req(tier)`,
+    `LoadState` and demand predicate, already three `ASSET_WIRING` rows
+    (`assetWiring.ts:239-269`); riding a shared ingest function does not
+    reclassify them. The **three** DEV fixtures do read as `generated` — their
+    fetcher generates the cube (`syntheticVolumeFetcher.ts:1-8`) and they have no
+    `ASSET_WIRING` row — but carry **no `stalenessKey`**: their request is a
+    hard-coded literal at the single call site (`maybeLazyLoadDebugVolume.ts:31`)
+    projected from no live setting, the load is one-shot behind an idle guard,
+    and the whole path is `import.meta.env.DEV`-gated, so a table built for them
+    ships **zero rows** in production. The door's cube is **externally
+    supplied**, with neither a `stalenessKey` (it is a projection of no setting)
+    nor a `regenerate` (the engine cannot re-derive a cube it was handed). So the
+    keyed `generated` family still has exactly **one** member — the Milky-Way
+    cloud, whose compare rung 3 moved into `MilkyWayCloud.reconcile`. One is not
+    two; the family stays resource-owned.
+
+    **#7's "imperative upload folds into `generated` explicitly" is refined, not
+    executed as written**: the fold lands at the **ingest contract** — one
+    function, five callers — not in the kind taxonomy. Classifying a
+    runtime-supplied cube as `generated` would put a member with neither
+    `stalenessKey` nor `regenerate` into a family defined by both, which is #10's
+    banned per-row exception wearing a taxonomy hat. So the door is named for
+    what it is: **an ingest-contract entry point, not an artifact kind** — which
+    closes the gap `subsystem-sweep.md` opened by calling it "a whole artifact
+    class the 3-way taxonomy doesn't name". Kinds classify how an artifact's
+    _bytes are produced and kept fresh_; the door produces nothing and keeps
+    nothing fresh, and from the renderer's side its field is indistinguishable
+    from a fetched one. `baked | generated | fetched | streamed` stays a four-way
+    union. **#7's "`generated` carries stalenessKey + optional budget" is
+    re-deferred to the umbrella reassessment, not to another rung** — with no
+    table, the clause has no home in the rungs; `budget` still has no instance
+    anywhere in the repo and gets its first only at the fly-by target (#5), whose
+    per-galaxy artifacts already fail #13's clauses 3 and 5. **The condition is
+    closed for rungs 4–7**, and can re-open only when a second genuine keyed
+    `generated` artifact exists.
+
+    **Site 4's compare CLOSES here; its residue is re-handed** (D5). No code
+    change: `staleTierEvict` (`reevaluateDemand.ts:97-106`) is already split
+    correctly — the **fact** is resource-owned (`slot.lastRequest()`, whose
+    docblock at `AssetSlot.d.ts:25-37` says it exists for precisely this edge)
+    and only the **policy** lives in the loop, because only the loop holds
+    `slot`, `row` and `state.tier` at once. The ingest normalization gives it
+    nothing to move into: the ingest function is a commit-side effect and never
+    sees a `req`. Both alternatives are worse — universalizing it (drop the
+    `isBodyTextureKey` gate) is not behaviour-neutral and would fire `release()`
+    in parallel with `makeRunTierTransition`'s in-place `slot.load({tier})` on
+    `mcpm`/`polyphorm2Mrs`; putting `stale?(committed, req)` on the row is the
+    single-family optional field #10 bans. The gate is therefore not the misfit
+    it looks like: it is a proxy for "this family has no tier-transition driver",
+    and that difference is essential. **Re-handed, explicitly not closed here**:
+    how a family responds to a tier change is expressed **twice**, as two
+    hand-coded membership tests (`makeRunTierTransition.ts:56-88` and
+    `reevaluateDemand.ts:102`), neither derivable from `ASSET_WIRING`. That knot
+    belongs to whichever family owns tier response, which is the **umbrella
+    reassessment**'s question, not a rung's.
+
+    **#11's widening boundary is the caller side, not the renderer side** (D6).
+    The renderer verbs already agree — `upload(id, x)` / `unload(id)` is family
+    D's norm, honoured by both `volumeFieldRenderer` and `catalogStore`. The
+    divergence #11 points at is on the caller side, and that is what this rung
+    normalized: five hand-written commit bodies became one function whose name
+    carries the verb. Explicitly untouched, each with a reason:
+    `starCatalogRenderer` has no `unload` because it has no evict path — minting
+    one is dead code, the same test that sank rung 3's registry;
+    `texturedBodyRenderer`'s `setMap`/`clearMap` is family C,
+    single-item-per-body with the id repeated at draw time, so renaming it is a
+    different family's refactor; `atmosphereShell` bakes its item set at
+    construction. They stay in the outliers doc and in #11's PR-anytime hygiene
+    basket.
+
+    **No `onRelease` is wired; the coupling is recorded where it will be needed**
+    (D7). Volume rows are load-once — `assetWiring.ts` declares no `release`
+    predicate, and `reevaluateDemand` only calls `slot.release()` on a ready slot
+    that has one — so a handler added now could never fire: untestable dead
+    wiring, and speculative eviction is not this rung's business. The landmine
+    runs the other way: adding a `release` predicate later **without** wiring
+    `onRelease` leaks the field's four GPU resources
+    (`volumeFieldRenderer.ts:340-344`). The mitigation is one comment line at the
+    volume rows in `assetWiring.ts`, where a reader adding the predicate is
+    already looking, plus this rung's tests over the release half, which land
+    before it has a caller. Evidence + the rejected generic:
+    [rung-4 plan](../../superpowers/plans/2026-08-19-volume-ingest.md).
 
 ## The contract (settled sketch)
 

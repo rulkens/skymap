@@ -1,23 +1,27 @@
 // ── Volume field removal ────────────────────────────────────────────────────
 //
-// Module-scope so the `createEngine` literal delegates here (mirroring the other
-// `handles/` setters) and so it's testable without a full GPU engine.
+// `uploadVolumeField`'s twin. Module-scope so `createEngine`'s handle (and
+// any future `onRelease` wiring) can delegate here without a full GPU engine
+// to test against.
+//
+// Deliberately asymmetric with the upload guard (decision #14): unload still
+// removes the settings row even with no renderer — its lifetime is independent.
 //
 // Drop the GPU upload first, then remove the settings row. No fade: removal
 // fires no ramp — the field vanishes outright.
 
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { AppStore } from '../../../store/types';
-import { removeVolumeField as removeVolumeFieldAction } from '../../../state/settings/settingsSlice';
+import { removeVolumeField } from '../../../state/settings/settingsSlice';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
-export function removeVolumeField(
+export function unloadVolumeField(
   state: ApplyIntentState,
   store: AppStore,
-  fieldId: VolumeFieldId,
+  id: VolumeFieldId,
 ): void {
-  state.gpu.volumeFieldRenderer?.unload(fieldId);
-  store.dispatch(removeVolumeFieldAction(fieldId));
-  // Essential wake: removal fires no fade — the field vanishes outright.
+  state.gpu.volumeFieldRenderer?.unload(id);
+  store.dispatch(removeVolumeField(id));
+  // Redundant-but-local; rung 5 owns the wake accounting.
   state.subsystems.scheduler.requestRender();
 }

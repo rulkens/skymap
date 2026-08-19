@@ -236,9 +236,14 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
   },
 
+  // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs ────────────
+  // All three are load-once and deliberately declare no `release`: adding one
+  // requires wiring `onRelease` to `unloadVolumeField`, or the four GPU
+  // resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
+  // Optional-chained `demand` because `settings.volumes.items` has no entry
+  // for a field until it is seeded.
+
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
-  // Optional-chained because `settings.volumes.items` has no entry for a field
-  // until it is seeded.
   {
     key: 'mcpm',
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),

@@ -323,8 +323,8 @@ const settingsSlice = createSlice({
       settings,
       action: PayloadAction<{ id: VolumeFieldId; patch: Partial<VolumeFieldSettings> }>,
     ) => {
-      // Shallow per-field merge, matching `writeVolumeFieldSetting`'s
-      // `{ ...cur, ...patch }`. An unknown id is a silent no-op.
+      // Shallow per-field merge via Immer's `Object.assign`. An unknown id
+      // is a silent no-op.
       const row = settings.volumes.items[action.payload.id];
       if (!row) return;
       Object.assign(row, action.payload.patch);
