@@ -3,28 +3,16 @@ import type { EarthTilePlan } from '../../@types/scene/EarthTilePlan';
 import { earthTileColumns } from './earthTileColumns';
 
 /**
- * buildEarthPageTable — the `windowSide × windowSide` RGBA8UI indirection the
- * fragment reads to turn a mesh uv into "which atlas slot, at which level,
- * blended how hard against the whole-globe base". One texel per window cell,
- * row-major: R/G = atlas slot column/row, B = tile level `z`, A = blend
- * weight 0..255. `A = 0` reads as "sample the base and nothing else" — the
- * identity case that makes the feature strictly additive.
+ * buildEarthPageTable — windowSide×windowSide RGBA8UI page table: per cell,
+ * R/G = atlas slot col/row, B = tile `z`, A = blend weight 0..255 against the
+ * whole-globe base (A=0 → base only). Rebuilt whole every frame — patching
+ * risks a cell naming a slot since evicted (eviction ≠ slot granularity).
  *
- * Always rebuilt whole, never patched: patching only the changed cells is
- * precisely the project's "eviction granularity must match slot granularity"
- * landmine (a texel naming a slot since recycled under a different tile).
- * Affordable because of the window (see `EarthTilePlan`): 128 cells square is
- * 64 KB, versus hundreds of megabytes for the deepest level's full grid.
- *
- * Resident tiles are written in INCREASING `z`, but a finer tile only claims a
- * cell whose alpha it can match or beat — else a fresh arrival (alpha ≈ 0)
- * would dip an opaque coarse ancestor's ground to base for its fade-in.
- * A saturated ancestor holds its cells until the finer tile catches up;
- * ground with no ancestor still fades up from base as before.
- *
- * Projects whatever is RESIDENT, not whatever was requested: a tile resident
- * but no longer requested is the coarse ancestor that should still cover
- * ground while a finer one loads.
+ * Written in increasing `z`; a tile only claims a cell whose alpha it can
+ * match, so a saturated ancestor holds until a landing finer tile finishes
+ * fading, instead of dipping the footprint to base. Unrequested-but-resident
+ * tiles still project — coverage for ground whose finer replacement is still
+ * loading.
  */
 export function buildEarthPageTable(input: {
   /** Every tile currently in the atlas, in any order. */
@@ -72,9 +60,6 @@ export function buildEarthPageTable(input: {
         const dx = (((x0 + i - plan.winX0) % cols) + cols) % cols;
         if (dx >= windowSide) continue;
         const at = (rowBase + dx) * 4;
-        // A finer tile may only take a cell whose current alpha it can
-        // match — otherwise a fresh arrival (alpha ≈ 0) would bury a
-        // saturated ancestor and dip the ground to base for its fade-in.
         if (alpha < table[at + 3]!) continue;
         table[at] = col;
         table[at + 1] = row;
