@@ -16,9 +16,11 @@ import { earthTileColumns } from './earthTileColumns';
  * Affordable because of the window (see `EarthTilePlan`): 128 cells square is
  * 64 KB, versus hundreds of megabytes for the deepest level's full grid.
  *
- * Resident tiles are written in INCREASING `z`, so a finer tile overwrites its
- * coarse ancestor's cells and every cell ends up naming the finest resident
- * ancestor covering it, with no search — the graceful-degradation mechanism.
+ * Resident tiles are written in INCREASING `z`, but a finer tile only claims a
+ * cell whose alpha it can match or beat — else a fresh arrival (alpha ≈ 0)
+ * would dip an opaque coarse ancestor's ground to base for its fade-in.
+ * A saturated ancestor holds its cells until the finer tile catches up;
+ * ground with no ancestor still fades up from base as before.
  *
  * Projects whatever is RESIDENT, not whatever was requested: a tile resident
  * but no longer requested is the coarse ancestor that should still cover
@@ -70,6 +72,10 @@ export function buildEarthPageTable(input: {
         const dx = (((x0 + i - plan.winX0) % cols) + cols) % cols;
         if (dx >= windowSide) continue;
         const at = (rowBase + dx) * 4;
+        // A finer tile may only take a cell whose current alpha it can
+        // match — otherwise a fresh arrival (alpha ≈ 0) would bury a
+        // saturated ancestor and dip the ground to base for its fade-in.
+        if (alpha < table[at + 3]!) continue;
         table[at] = col;
         table[at + 1] = row;
         table[at + 2] = entry.tile.z;
