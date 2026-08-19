@@ -1,6 +1,8 @@
 # Generated-artifact staleness — rung 3 of the engine-composition ladder
 
-**Status.** Plan. **Date.** 2026-08-19.
+**Status.** Complete — shipped on `refactor/generated-staleness` (PR #579), DoD
+audit READY 2026-08-19; visual smoke (slider re-densify / tier-switch-once /
+idle-nothing) confirmed by the user. **Date.** 2026-08-19.
 **Scope.** Rung 3 of the ladder in
 [`docs/research/engine/decisions.md`](../../research/engine/decisions.md)
 (decision #9): _"**3** generated-artifact staleness helper (`stalenessKey` +
@@ -421,46 +423,46 @@ pattern, `milkyWayCloud.test.ts:1-40`). They must not restage
 the frame loop call this at all"), these own the compare's semantics. Different
 level, different failure mode, no shared numbers.
 
-- [ ] Test `reconcile regenerates at the wanted count when it differs from the resident one`
+- [x] Test `reconcile regenerates at the wanted count when it differs from the resident one`
       — assert against the observable the file already uses for
       `regenerate` (`milkyWayCloud.test.ts:156-178`: old buffers destroyed, a
       new generation submitted) and that `starCount()` reports the new count
       afterwards. Catches an inverted argument, which is otherwise silent — the
       cloud would regenerate forever at the count it already holds.
-- [ ] Test `reconcile does nothing when the resident count already matches` —
+- [x] Test `reconcile does nothing when the resident count already matches` —
       no buffer destroyed, no new submit. The steady-state half; without it,
       every frame destroys and re-allocates.
-- [ ] Test `reconcile regenerates again when the resident count is reset behind the caller's back`
+- [x] Test `reconcile regenerates again when the resident count is reset behind the caller's back`
       — reconcile to a new count, then `regenerate` back to
       the original directly, then reconcile to the new count again and expect a
       second generation. This is the no-shadow-copy property (D1, finding 7) and
       the reason the tier path works; it fails if anyone caches a last-count.
-- [ ] Implement. `reconcile`'s docblock carries the per-input-event cost note
+- [x] Implement. `reconcile`'s docblock carries the per-input-event cost note
       (finding 7) — it is the method whose cost that is. The factory's existing
       "two mutable cells" comment (`milkyWayCloud.ts:87-92`) already states the
       no-shadow-copy rule: repoint its last clause at `reconcile` rather than
       writing it again.
-- [ ] `npm run typecheck` + `npm test -- milkyWayCloud`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- milkyWayCloud`.
+- [x] Commit.
 
 ### Task 2 — `runFrame` calls `reconcile`; the hand branch goes
 
 **Files:** `src/services/engine/frame/runFrame.ts` (modify),
 `tests/services/engine/frame/runFrame.test.ts` (stub only)
 
-- [ ] Replace `runFrame.ts:209-243` — the comment block and the
+- [x] Replace `runFrame.ts:209-243` — the comment block and the
       `const cloud = …; if (cloud) { … }` branch — with the single line from the
       contract, at that exact position (finding 2). The surviving comment is two
       or three lines: what the step does and why it is unconditional. The
       rationale now lives at the contract.
-- [ ] `runFrame.test.ts:777-786`'s hand-built cloud stub gains `reconcile`
+- [x] `runFrame.test.ts:777-786`'s hand-built cloud stub gains `reconcile`
       delegating to its existing `regenerate`/`currentCount` closure, so the
       test still observes the same spies. **Assertions unmodified** (finding 1,
       parity gate 1). If an assertion needs editing, the wiring is wrong — fix
       the wiring.
-- [ ] `npm run typecheck` + `npm test -- runFrame`, then `npm test` (the frame
+- [x] `npm run typecheck` + `npm test -- runFrame`, then `npm test` (the frame
       loop has fixtures beyond its own file).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3 — Repoint the four stale cross-references
 
@@ -472,38 +474,38 @@ level, different failure mode, no shared numbers.
 Comment-only, and the budget direction is **down** (finding 4). Every edit is
 didactic and timeless — why, not what.
 
-- [ ] `EngineGpuHandles.d.ts:276-284` — delete the false claim that the cloud is
+- [x] `EngineGpuHandles.d.ts:276-284` — delete the false claim that the cloud is
       "regenerated in `makeRunTierTransition` on a tier swap"; it is regenerated
       by `reconcile` from the live setting. This one is a bug in the docs, not a
       relocation (finding 3).
-- [ ] `MilkyWayCloud.ts:17-22` — keep the no-shadow-copy rule (the generator is
+- [x] `MilkyWayCloud.ts:17-22` — keep the no-shadow-copy rule (the generator is
       the one place the fact is produced); drop `runFrame`'s name now that the
       compare is a method on this very type. It should get shorter.
-- [ ] `watchTierSaga.ts:19` and `:70-73` — "`runFrame`'s per-frame mismatch
+- [x] `watchTierSaga.ts:19` and `:70-73` — "`runFrame`'s per-frame mismatch
       check" → the cloud's own `reconcile`. The sentence's real content — the
       saga writes the setting and nothing here talks to the GPU cloud — is
       unchanged and must stay.
-- [ ] `makeRunTierTransition.ts:87-97` — the deliberate no-regenerate-here note
+- [x] `makeRunTierTransition.ts:87-97` — the deliberate no-regenerate-here note
       is the single-writer contract in prose. Repoint it and **shorten it**: the
       racing-writers argument is now one clause, because the mechanism is a
       named method rather than an inline branch.
-- [ ] `npm run typecheck` + `npm test`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test`.
+- [x] Commit.
 
 ### Task 4 — Record the flow-field ruling where the inconsistency is visible
 
 **Files:** `src/utils/createReseedLatch.ts` (modify)
 
-- [ ] Add **two or three lines** to the module header: the latch and the
+- [x] Add **two or three lines** to the module header: the latch and the
       MW cloud's `reconcile` answer the same question for two subsystems, and
       the latch stays because the reseed is a compute pass encoded only when the
       render path runs, so the fact cannot be recorded at compare time — plus the
       one-shot-per-arm vs self-healing difference (D4). Cite `MilkyWayCloud` by
       name. Do **not** restate D4's full reasoning: that is decisions.md
       content, and this file's budget is a pointer.
-- [ ] No test — no behaviour changes and a comment is not testable.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] No test — no behaviour changes and a comment is not testable.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ### Task 5 — decisions.md gains decision #13
 
@@ -513,27 +515,27 @@ Rungs 4–7 are written against decisions.md long after this plan has moved to
 `plans/completed/`, so the rulings cannot live only here — the same reason rung
 2 wrote decision #12. This is the rung's durable deliverable.
 
-- [ ] Add **decision #13** carrying: the five-clause membership analysis and its
+- [x] Add **decision #13** carrying: the five-clause membership analysis and its
       conclusion (**the staleness family is resource-owned; site 1 was a compare
       inlined in the wrong module**); the seven per-site rulings, one line each;
       D4 (the flow latch stays, with its reason); D5 (the key is a primitive —
       a refinement of the contract sketch's looser typing).
-- [ ] Record the **re-open condition** as D3 words it: a generated-artifact row
+- [x] Record the **re-open condition** as D3 words it: a generated-artifact row
       table is reconsidered at rung 4 iff the `addVolumeField`-into-`generated`
       fold that decision #7 already mandates yields ≥2 artifacts genuinely
       sharing the shape; if it does, rows are plain data (`stalenessKey` /
       `resident` / `regenerate` readable at the table), never closures. Note in
       the same clause that #7's "`generated` carries stalenessKey + optional
       budget" is deferred to that reassessment.
-- [ ] Amend #9's rung-3 clause **in place**: the registry premise is refined,
+- [x] Amend #9's rung-3 clause **in place**: the registry premise is refined,
       not dropped — 7 sites surveyed, 1 relocated into its resource, no helper
       built, with a pointer to #13. A reader of #9 alone must not be left
       expecting a registry that does not exist.
-- [ ] Record the two handoffs where the receiving rung will look for them: rung
+- [x] Record the two handoffs where the receiving rung will look for them: rung
       4 inherits site 4 (`reevaluateDemand`'s stale-tier evict) alongside the
       re-open condition; rung 5 inherits site 6's wake half; the target family
       inherits site 3.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6 — Correct the contracts map's stale staleness counts
 
@@ -543,64 +545,64 @@ The map predates rung 2 and still describes a world with two `runFrame`
 branches. **Check first** whether an unrelated one-word mermaid-label fix is
 already in flight on this file, and rebase onto it rather than reverting it.
 
-- [ ] `:119` ("generated (MW cloud, runFrame staleness ifs)") — the frame loop
+- [x] `:119` ("generated (MW cloud, runFrame staleness ifs)") — the frame loop
       has no staleness `if`s after Task 2; the node becomes the resource-owned
       compare.
-- [ ] `:207` (assessment row 3, "staleness ×8") — 7 surveyed, 6 already
+- [x] `:207` (assessment row 3, "staleness ×8") — 7 surveyed, 6 already
       resource-owned, 1 relocated; adjust the count, the wording and its colour.
-- [ ] `:248` (the surface→walker table row citing "both `runFrame.ts:211-281`
+- [x] `:248` (the surface→walker table row citing "both `runFrame.ts:211-281`
       branches") — the divisor branch went in rung 2 and the MW branch goes
       here. Its "bundle field / walker" cell must now match decision #13, not
       promise a `generated{stalenessKey}` sweep that this rung declined to
       build.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7 — Full gate + visual smoke
 
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
-- [ ] Dev-server smoke, with the user's eyes (this task cannot self-certify
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
+- [x] Dev-server smoke, with the user's eyes (this task cannot self-certify
       pixels): drag the DebugPanel's Milky-Way `starCount` slider across its
       range. The cloud must re-densify continuously with no console error and no
       frozen frame — the same responsiveness as `main`, since the cost is
       unchanged.
-- [ ] Switch tiers and confirm the cloud regenerates **once** at the new budget
+- [x] Switch tiers and confirm the cloud regenerates **once** at the new budget
       — the single-writer path (`watchTierSaga` re-seeds the setting,
       `makeRunTierTransition` stays out of it). A double regeneration or a cloud
       stuck at the old density is the failure this smoke exists for.
-- [ ] Leave the app idle at a fixed camera for ~10 s with the Milky Way visible:
+- [x] Leave the app idle at a fixed camera for ~10 s with the Milky Way visible:
       no regeneration should occur. Watch for GPU-memory growth or a periodic
       hitch.
-- [ ] Commit (if any smoke-driven fixes were needed).
+- [x] Commit (if any smoke-driven fixes were needed).
 
 ## Definition of Done
 
-- [ ] `MilkyWayCloud` declares `reconcile(wantedCount: number)`, implemented in
+- [x] `MilkyWayCloud` declares `reconcile(wantedCount: number)`, implemented in
       `milkyWayCloud.ts`, with the three tests from Task 1 present and passing —
       including the reset-behind-the-caller's-back one.
-- [ ] `runFrame.ts` contains **no `state.gpu.milkyWayCloud` reference outside
+- [x] `runFrame.ts` contains **no `state.gpu.milkyWayCloud` reference outside
       the single `reconcile` call** and no staleness compare, at the position the
       deleted branch occupied.
-- [ ] `runFrame.test.ts:763-797` passes with its **assertions** unmodified (its
+- [x] `runFrame.test.ts:763-797` passes with its **assertions** unmodified (its
       stub gains `reconcile`); no existing test anywhere was deleted by this rung.
-- [ ] No registry, row type, or walker was added — the deliberate outcome
+- [x] No registry, row type, or walker was added — the deliberate outcome
       (D2/D3), and the thing a reviewer expecting decision #9's literal reading
       must be able to find explained in decisions.md rather than inferred.
-- [ ] `EngineGpuHandles.d.ts`'s false "regenerated in `makeRunTierTransition`"
+- [x] `EngineGpuHandles.d.ts`'s false "regenerated in `makeRunTierTransition`"
       claim is gone; the three other cross-references point at the cloud's own
       `reconcile`; the net comment count across the touched files went **down**.
-- [ ] `createReseedLatch`'s header names the ruling that keeps it distinct from
+- [x] `createReseedLatch`'s header names the ruling that keeps it distinct from
       the staleness compare.
-- [ ] `docs/research/engine/decisions.md` ships in this PR with decision #13
+- [x] `docs/research/engine/decisions.md` ships in this PR with decision #13
       (analysis + conclusion, seven rulings, flow-latch ruling, primitive-key
       refinement, the rung-4 re-open condition, the three handoffs) and #9's
       rung-3 clause amended in place; `current-contracts-map.md`'s three
       staleness lines match the post-rung-2, post-rung-3 world. Rungs 4–7 must
       read the current north star from decisions.md alone, without this plan file.
-- [ ] Named observable behaviours for the manual smoke pass: the `starCount`
+- [x] Named observable behaviours for the manual smoke pass: the `starCount`
       slider re-densifies the Milky Way continuously across its range with no
       console error; a tier switch regenerates the cloud exactly once at the new
       budget; an idle scene regenerates nothing.
-- [ ] Sizing note for the ladder, not a gate: rung 3 arrives as 7 tasks, of
+- [x] Sizing note for the ladder, not a gate: rung 3 arrives as 7 tasks, of
       which **two** touch behaviour-bearing code. Decision #9 sized it as a
       mini-plan expecting "~8 hand sites" to migrate onto a new helper; the
       survey found 7 sites, 6 already in the target shape, and no helper worth
@@ -608,7 +610,7 @@ already in flight on this file, and rebase onto it rather than reverting it.
       should expect the same possibility wherever a "family" named in #9 turns
       out to be heterogeneous — the rung's deliverable may legitimately be a
       ruling plus a small relocation.
-- [ ] Deferral boundary — a reviewer should NOT expect to find, in this PR: a
+- [x] Deferral boundary — a reviewer should NOT expect to find, in this PR: a
       generated-artifact registry, row type, or walker (D2, re-opened at rung 4
       under D3's condition); the `SubsystemBundle` umbrella or the `ArtifactDecl`
       union; a `budget` field or any time-slicing; migrations of sites 2–7 (each
