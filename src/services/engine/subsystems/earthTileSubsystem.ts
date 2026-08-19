@@ -21,6 +21,7 @@ import type { EarthResidentTile } from '../../../@types/scene/EarthResidentTile'
 import type { EarthTileBand } from '../../../@types/scene/EarthTileBand';
 import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
 import type { EarthTilePlannerParams } from '../../../@types/scene/EarthTilePlannerParams';
+import type { EarthTileRequest } from '../../../@types/scene/EarthTileRequest';
 import type { EarthTileSubsystem } from '../../../@types/engine/subsystems/EarthTileSubsystem';
 import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -282,13 +283,24 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     frameCounter++;
 
-    // Requests arrive largest-on-screen-first: decides slot priority AND fetch order.
+    // Requests arrive largest-on-screen-first: decides slot priority AND fetch
+    // order. Two passes, not one: a single allocating pass let a new,
+    // higher-priority request evict a resident this same plan would have
+    // touched moments later — it still carried last frame's LRU stamp, so it
+    // looked stale (and losing its pixels cascaded into evicting the next
+    // untouched one). Pass 1 stamps every resident first; only genuine misses
+    // reach pass 2's allocator.
+    const misses: EarthTileRequest[] = [];
     for (const request of plan.requests) {
       const key = earthTilePath(request.tile, prefix);
-
-      // Checked BEFORE allocating: an allocated failed key would keep its LRU
+      // Checked BEFORE touching: an allocated failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
       if (atlas.isFailed(key)) continue;
+      if (atlas.touch(key, frameCounter) === null) misses.push(request);
+    }
+
+    for (const request of misses) {
+      const key = earthTilePath(request.tile, prefix);
 
       // Null means the atlas is already full this frame.
       if (atlas.allocate(key, frameCounter) === null) continue;
