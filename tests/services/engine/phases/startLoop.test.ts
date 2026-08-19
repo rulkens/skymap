@@ -92,13 +92,19 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
  * Minimal `BootstrapDeps` shaped for startLoop's body.  Populates only
  * the fields the phase reads.  `frameRef.current` starts as a no-op
  * stub so we can assert it gets replaced.
+ *
+ * `timeMode` is what the phase's clock-snap guard reads: 'live' is the
+ * untouched boot default; 'manual' is where a `#t=` deep link's arrival
+ * read lands the clock before this phase runs.
  */
-function makeDeps(): BootstrapDeps {
+function makeDeps({ timeMode = 'live' }: { timeMode?: 'live' | 'manual' } = {}): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     // `startLoop` dispatches the bootstrap `goLive` through this store — a
     // spy so the clock-snap can be asserted without a real reducer.
-    cb: { store: { dispatch: vi.fn() } } as never,
+    cb: {
+      store: { dispatch: vi.fn(), getState: () => ({ time: { mode: timeMode } }) },
+    } as never,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },
@@ -188,6 +194,26 @@ describe('startLoop', () => {
     // finite performance.now() anchor.
     expect(payload.simDays).toBeGreaterThan(2451545);
     expect(Number.isFinite(payload.nowMs)).toBe(true);
+  });
+
+  it('skips the boot goLive when the clock is already in manual mode (a #t= deep link)', async () => {
+    // The arrival read (`watchHashReadSaga`) applies `#t=<instant>` as
+    // manual+paused BEFORE this async phase runs — same boot ordering
+    // `wireInput` relies on for its Earth seed. An unconditional goLive here
+    // would clobber that deep link back to the wall clock, and the write half
+    // would then strip `t` off the address bar.
+    const state = makeState({ cloudCount: 1 });
+    const deps = makeDeps({ timeMode: 'manual' });
+
+    await startLoop(state, deps);
+
+    const dispatch = deps.cb.store.dispatch as unknown as ReturnType<typeof vi.fn>;
+    const goLiveCalls = dispatch.mock.calls.filter(
+      (call) => (call[0] as { type?: string }).type === goLive.type,
+    );
+    expect(goLiveCalls).toHaveLength(0);
+    // The rest of the phase is unaffected — the loop still starts.
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
   it('throws a clear error when a required GPU renderer is null', async () => {
