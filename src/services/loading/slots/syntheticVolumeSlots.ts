@@ -14,22 +14,12 @@
  * axis-verification fixtures, not science data — production users
  * would just see noise.  Vite tree-shakes the block from production
  * bundles because `import.meta.env.DEV` is a compile-time constant.
- *
- * **Commit pattern.**  The commit seeds the settings row (copy-on-write,
- * first load only), calls `upload`, and drives the fade from the
- * settings enable bit — mirroring what `engine.ts addVolumeField` does.
- * The renderer reads per-cube static config from the registry and
- * user-tunable knobs from `state.settings.volumes.items` per frame;
- * no renderer setters are replayed here.  Accessing `state` directly
- * (the same pattern the `filamentSlot` commit uses) is safe: `state` is
- * fully initialised before any slot commit runs.
  */
 
 import { createAssetSlot } from '../AssetSlot';
 import { syntheticVolumeFetcher } from '../fetchers/syntheticVolumeFetcher';
 import type { SyntheticVolumeReq } from '../../../@types/loading/SyntheticVolumeReq';
-import { buildVolumeFieldSettings } from '../../../data/volume/volumeFieldDefaults';
-import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
+import { uploadVolumeField } from '../../engine/volume/uploadVolumeField';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -58,16 +48,13 @@ type SyntheticVolumeSlotRecord = Record<
  */
 export function createSyntheticVolumeSlots(
   state: EngineState,
-  _cb: EngineCallbacks,
+  cb: EngineCallbacks,
 ): SyntheticVolumeSlotRecord {
-  // Helper that mints one synthetic-volume slot.  The id is baked
-  // into a closure (the AssetSlot commit signature only sees the
-  // decoded payload, not the request, so per-fixture identity has to
+  // The id is baked into a closure (the AssetSlot commit signature only sees
+  // the decoded payload, not the request, so per-fixture identity has to
   // ride along on the slot).  Three sibling slots share this helper;
-  // refactoring to a Map of three would lose the per-id commit
-  // closure that's the whole point.  The default-enabled bit comes from
-  // each fixture's registry `visible` flag (all three are false), so
-  // there's no separate argument to thread through.
+  // refactoring to a Map of three would lose the per-id commit closure
+  // that's the whole point.
   const mintSyntheticVolumeSlot = (
     id: SyntheticVolumeId,
   ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>
@@ -75,28 +62,7 @@ export function createSyntheticVolumeSlots(
       name: `syntheticVolume:${id}`,
       fetch: syntheticVolumeFetcher,
       commit: async (cube) => {
-        const renderer = state.gpu.volumeFieldRenderer;
-        if (!renderer) return;
-        renderer.upload(id, cube);
-        // Synthetic fixtures get NO construction seed (DEV-only), so this
-        // commit seeds the settings row on first load (copy-on-write).  The
-        // renderer reads the per-cube static config from the registry and
-        // the user knobs from settings per frame, so no renderer setter is
-        // replayed here.
-        if (!state.settings.volumes.items[id]) {
-          state.settings.volumes.items = {
-            ...state.settings.volumes.items,
-            [id]: buildVolumeFieldSettings(id),
-          };
-        }
-        // Drive the first-load fade through the intent → fade bridge; the
-        // volumeField row's intent gate (reads settings.volumes.items[id].enabled)
-        // decides, so a load that completes while the fixture is toggled off snaps
-        // to opacity 0 and never renders until the user enables it.
-        syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-        // No echo: React reads the per-field rows via `selectVolumeFieldItems` +
-        // a `useMemo` projection off the engine-owned settings store, so the
-        // commit's settings-row seed needs no callback fan-out.
+        uploadVolumeField(state, cb.store, id, cube);
       },
     });
 
@@ -105,7 +71,7 @@ export function createSyntheticVolumeSlots(
   // visible?" smoke tests, the two grids for axis/scale/origin
   // verification).  The CF-4 density field is what users should see
   // first; cluttering the scene with a default-on Gaussian sphere
-  // fights that.  Toggle any of them from the Volumes panel.
+  // fights that.
   const slots: SyntheticVolumeSlotRecord = {
     'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian'),
     'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian'),
