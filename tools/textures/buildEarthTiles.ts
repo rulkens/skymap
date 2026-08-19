@@ -249,11 +249,25 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
     process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
   }
 
+  // One world-spanning band today (BMNG); a source with partial coverage
+  // would need one entry per box, which is a later task's concern.
   const manifest: EarthTileManifest = {
     prefix: TILE_PREFIX,
     tilePx,
-    levels: { [KIND]: { min: minLevel, max: maxLevel } },
-    builtFrom: { [KIND]: `${source.id} — ${source.attribution}` },
+    levels: {
+      [KIND]: [
+        {
+          bounds: source.coverage[0],
+          min: minLevel,
+          max: maxLevel,
+          builtFrom: {
+            sourceId: source.id,
+            attribution: source.attribution,
+            vintage: BMNG_VINTAGE.label,
+          },
+        },
+      ],
+    },
   };
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a

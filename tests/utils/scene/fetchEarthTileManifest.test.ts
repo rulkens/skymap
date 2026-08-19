@@ -23,8 +23,16 @@ describe('fetchEarthTileManifest', () => {
     const manifest = {
       prefix: 'earth-tiles/v1',
       tilePx: 512,
-      levels: { surface: { min: 4, max: 6 } },
-      builtFrom: { surface: 'blue-marble' },
+      levels: {
+        surface: [
+          {
+            bounds: { west: -180, south: -90, east: 180, north: 90 },
+            min: 4,
+            max: 6,
+            builtFrom: { sourceId: 'blue-marble', attribution: 'NASA', vintage: '2004' },
+          },
+        ],
+      },
     };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
@@ -34,7 +42,7 @@ describe('fetchEarthTileManifest', () => {
   });
 
   it('returns null for a manifest with no prefix', async () => {
-    const manifest = { tilePx: 512, levels: {}, builtFrom: {} };
+    const manifest = { tilePx: 512, levels: {} };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
@@ -43,7 +51,20 @@ describe('fetchEarthTileManifest', () => {
   });
 
   it('returns null for a manifest with an empty prefix', async () => {
-    const manifest = { prefix: '', tilePx: 512, levels: {}, builtFrom: {} };
+    const manifest = { prefix: '', tilePx: 512, levels: {} };
+    globalThis.fetch = vi.fn(
+      async () => new Response(JSON.stringify(manifest), { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    expect(await fetchEarthTileManifest()).toBeNull();
+  });
+
+  it('returns null for a v1-shaped (pre-band-list) manifest', async () => {
+    const manifest = {
+      prefix: 'earth-tiles/v1',
+      tilePx: 512,
+      levels: { surface: { min: 4, max: 6 } },
+    };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;

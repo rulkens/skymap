@@ -53,12 +53,22 @@ const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 /** A manifest describing a usable surface pyramid, with `tilePx` left to the
  *  caller — `undefined` standing in for a bake that omitted the field. */
+const WORLD_BOUNDS = { west: -180, south: -90, east: 180, north: 90 };
+
 function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
   return {
     prefix: 'earth-tiles/v1',
     tilePx,
-    levels: { surface: { min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1 } },
-    builtFrom: { surface: 'test-fixture' },
+    levels: {
+      surface: [
+        {
+          bounds: WORLD_BOUNDS,
+          min: MIN_TILE_LEVEL,
+          max: MIN_TILE_LEVEL + 1,
+          builtFrom: { sourceId: 'test', attribution: 'test', vintage: 'test' },
+        },
+      ],
+    },
   } as unknown as EarthTileManifest;
 }
 

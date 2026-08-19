@@ -111,7 +111,9 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     fetched: EarthTileManifest,
     tier: Tier,
   ): EarthTilePlannerParams | null {
-    const levels = fetched.levels?.[TILED_KIND];
+    // One world-spanning band today; index 0 is an exact reduction of the
+    // band list to a scalar range. A later task reads the full array.
+    const levels = fetched.levels?.[TILED_KIND]?.[0];
     if (!levels) return null;
     const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
