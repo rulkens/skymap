@@ -90,8 +90,12 @@ the deep tuning surface.
    contributions (`clearValue` onto the spec row, `scale` as
    `number | (state)=>number`, blend/format-parity validation; deletes the
    `mwAggregateDivisor` param + `runFrame` rebuild branch), **3**
-   generated-artifact staleness helper (`stalenessKey` + `regenerate`; migrate
-   the ~8 hand sites starting with MW `starCount`), **4** volume-ingest
+   ~~generated-artifact staleness helper (`stalenessKey` + `regenerate`; migrate
+   the ~8 hand sites starting with MW `starCount`)~~ **REFINED by #13
+   (2026-08-19)** — the premise is refined, not dropped: 7 true sites surveyed,
+   6 already resource-owned, **1 relocated into its own resource**
+   (`MilkyWayCloud.reconcile`), and **no helper exists** — the registry question
+   re-opens at rung 4 only under #13's condition; **4** volume-ingest
    consolidation (3 copies → 1 fn; imperative side-door's fate decided here),
    **5** wake-vote fold, **6** debug derivation, **7** the
    `FADE_ROW`/`VISIBILITY_ACTION_ROW` derivation decision. Rungs 1 and 3 get
@@ -142,6 +146,86 @@ the deep tuning surface.
     umbrella reassessment rows get **grouped** under a bundle key, never
     re-keyed. Evidence + the rejected alternatives:
     [rung-2 plan](../../superpowers/plans/2026-08-18-target-contributions.md).
+13. **The staleness family is resource-owned** (2026-08-19, ruled in rung 3 —
+    refines #9's rung-3 clause): a fresh survey of the idiom "compare a live
+    setting against a fact recorded on an already-constructed resource, then
+    regenerate" found **7** sites, not ~8 — the missing one was the
+    render-target divisor rebuild, which rung 2 already folded into
+    `RenderTargets.reconcile`. A site could have joined a shared mechanism only
+    if all five clauses held: (1) the want is a pure function of `EngineState`;
+    (2) the fact is recorded **on** the resource by `regenerate` itself, no
+    shadow copy; (3) `regenerate` is synchronous and self-recording, so the next
+    compare settles; (4) the compare is the sole trigger — no fused disjunction,
+    no supplementary gate, no second writer; (5) the cadence is per-frame and
+    unconditional. Exactly one site passes, and that is the **result**, not an
+    admission gate for the future: sites 2, 5 and 6 fail only the clauses that
+    describe _where the compare is called from_, and they fail them because
+    their compare already lives inside the resource; site 3 is the same, one
+    family over. Conclusion: **the staleness idiom in this codebase is
+    resource-owned, and site 1 was a compare inlined in the wrong module.**
+    `RenderTargets.reconcile` (`renderTargets.ts:326-338`) is that same answer,
+    written down first. Per-site rulings:
+    - **1** MW `starCount` → cloud regenerate (was `runFrame.ts:209-243`) —
+      **moved** into `MilkyWayCloud.reconcile`; `runFrame` makes one declarative
+      call, and no caller-side copy of the count can exist any more.
+    - **2** volume-field palette → LUT re-upload
+      (`volumeFieldRenderer.ts:409-412`) — **stays**: already resource-owned,
+      and per-item over a dynamic collection rather than a singleton handle.
+    - **3** pick-slab targets vs viewport (`pickProgram.ts:126-155`) — **the
+      target family inherits it**, via `RenderTargets`' deferred pick rows
+      (`renderTargets.ts:170-175`); routing it elsewhere would fork the
+      render-target family across two owners.
+    - **4** stale committed tier on a texture slot
+      (`reevaluateDemand.ts:97-106`) — **rung 4 inherits it**: its action is one
+      arm of a two-reason `release()` over an else-if chain that exactly
+      partitions the slot states, so per #10 the fix is at the ingest contract.
+    - **5** earth planner params vs live tier (`earthTileSubsystem.ts:140-153`)
+      — **stays**: hoisting the compare out of its accessor would arm the
+      manifest fetch on frames where the earth layer is off.
+    - **6** earth page table vs uploaded window
+      (`earthTileSubsystem.ts:299-308`) — **stays**; **rung 5 inherits its wake
+      half** (the same staleness fact _is_ `isAnimating()`). Its compare is
+      fused with `rebuildOwed()`, and `uploaded === null` is load-bearing in
+      both directions.
+    - **7** swap format vs the swap row (`applySwapFormat.ts:21-23`) — **stays,
+      and is finished**: an event-armed debouncer over an already-declarative
+      rebuild set (`GPU_HANDLE_ROWS.rebuildOnSwapFormat`) is not debt.
+
+    **No registry, no walker, no row type was built.** A
+    `GENERATED_ARTIFACT_ROWS` table plus a per-frame sweep was considered and
+    rejected: it ships with one row whose resource dies at Track C's F3, its
+    closure-shaped rows erase `stalenessKey` _as data_ — the one thing a future
+    budget walker must read — and #5's fly-by artifacts, the future rows it was
+    being built for, fail clauses 3 and 5 of the test above.
+
+    **Re-open condition, checkable at rung 4**: a generated-artifact row table
+    is reconsidered **iff** folding `addVolumeField`'s imperative upload into
+    the `generated` kind — which #7 already mandates by name — yields **two or
+    more** artifacts that genuinely share the shape once the ingest contract is
+    normalized. Rung 4 arrives carrying both this condition and site 4. If it
+    holds, rows are **plain data** — `stalenessKey` / `resident` / `regenerate`
+    readable at the table, **never closures**. If it does not, the family is
+    resource-owned and stays that way. #7's "`generated` carries stalenessKey +
+    optional budget" is deferred to that same reassessment.
+
+    **The flow-field latch stays; it is not unified.** `flowFieldRenderer` +
+    `createReseedLatch` + `watchFlowReseedSaga` solve the same user-visible
+    problem (count/mode change → reseed) recording no fact on the resource, and
+    are deliberately kept: the reseed is a compute pass that does not run while
+    flow is disabled, so the new fact cannot be recorded at compare time (clause
+    3); and a latch fires **once per arm** where a compare **self-heals from any
+    divergence source** — load-bearing for MW (a tier re-seed of
+    `settings.milkyWay.starCount` is picked up with no second writer) and
+    deliberately absent for flow, whose saga re-arms on an unchanged value. Two
+    idioms, two shapes, one recorded reason.
+
+    **`stalenessKey` is a primitive** — a refinement of the looser typing a
+    reader could infer from the contract sketch's `(state, ctx) => unknown`.
+    Every recorded fact across the seven sites is a primitive or a small record
+    compared field-by-field, and the compare is `!==`. A key typed `unknown`
+    needs a comparator, which is the first step toward the fused predicates #10
+    bans. Evidence + the rejected registry:
+    [rung-3 plan](../../superpowers/plans/2026-08-19-generated-staleness.md).
 
 ## The contract (settled sketch)
 
