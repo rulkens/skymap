@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -295,6 +295,102 @@ describe('bakeAll', () => {
     expectPixelNear(right, ORANGE); // underfilled, fully opaque
   });
 
+  // The perf fix this pins: bakeDeepestLevel must probe only the tile range a
+  // band's coverage box implies, not the whole z-level grid.
+  it('clamps the deepest-level bake to the band coverage instead of walking the whole grid', async () => {
+    const dir = tmpDir();
+    // At TILE_PX=512, z=3 is an 8x4 tile grid (lonStep=latStep=45); this box
+    // is exactly tile (x=3, y=1)'s own span, so the clamped rect is 1x1 —
+    // pre-fix, bakeDeepestLevel probes all 32 tiles of the z3 grid instead.
+    const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
+    let readBoxCalls = 0;
+    const regional: EarthImagerySource = {
+      id: 'stub-regional',
+      attribution: 'stub-regional attribution',
+      provenance: {
+        sourceId: 'stub-regional',
+        attribution: 'stub-regional attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [coverageBox],
+      async readBox(_box, widthPx, heightPx) {
+        readBoxCalls++;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        raster.fill(255);
+        return raster;
+      },
+    };
+
+    await bakeAll([{ source: regional, minLevel: 3 }], dir);
+
+    expect(readBoxCalls).toBe(1);
+  });
+
+  // Every OTHER bakeAll test uses minLevel === maxLevel, so the coarser-level
+  // loop never runs and can't catch bakeAll dropping `source.coverage` off
+  // its bakeCoarserLevel call. This one bakes a real coarser level and counts
+  // underfill reads, the only observable side effect bakeCoarserLevel has.
+  it('clamps the coarser-level bake to the band coverage too, not just the deepest level', async () => {
+    const dir = tmpDir();
+    // z3 (8x4) is the deepest level, z2 (4x2) the one coarser level baked.
+    // This box is exactly z3 tile (x=3, y=1)'s span, whose z2 parent is
+    // (x=1, y=0) (same lonStep/latStep=45/90 arithmetic as
+    // earthTileIndicesForBounds's own tests).
+    const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
+    let underfillCalls = 0;
+    const underfill: EarthImagerySource = {
+      id: 'stub-underfill-2',
+      attribution: 'stub-underfill-2 attribution',
+      provenance: {
+        sourceId: 'stub-underfill-2',
+        attribution: 'stub-underfill-2 attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [{ west: -180, east: 180, north: 90, south: -90 }],
+      async readBox(_box, widthPx, heightPx) {
+        underfillCalls++;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        raster.fill(200);
+        return raster;
+      },
+    };
+    const regional: EarthImagerySource = {
+      id: 'stub-regional-2',
+      attribution: 'stub-regional-2 attribution',
+      provenance: {
+        sourceId: 'stub-regional-2',
+        attribution: 'stub-regional-2 attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [coverageBox],
+      async readBox(_box, widthPx, heightPx) {
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        raster.fill(255);
+        return raster;
+      },
+    };
+
+    // Orphan left over from an earlier, differently-shaped bake: a z3 child
+    // at (0, 0), whose z2 parent (0, 0) sits OUTSIDE this band's coverage
+    // (which clamps to parent (1, 0)). A coverage-clamped coarser loop never
+    // visits parent (0, 0); an unclamped (full 4x2 z2 grid) loop would find
+    // its one present child and call the underfill source to fill the rest.
+    await writeChild(dir, 3, 0, 0, [9, 9, 9, 255]);
+
+    await bakeAll([{ source: regional, minLevel: 2, underfill }], dir);
+
+    // 1 underfill call from the deepest level's own clamped tile (z3, x=3,
+    // y=1) + 1 from the coarser level's one clamped parent (z2, x=1, y=0).
+    // Dropping `source.coverage` from bakeAll's bakeCoarserLevel call would
+    // walk the full z2 grid instead, pick up the orphan's partial parent
+    // too, and this becomes 3 — verified by temporarily making that drop
+    // (see the report for the sabotage-run evidence).
+    expect(underfillCalls).toBe(2);
+  });
+
   it('writes two manifest entries and both sources tiles, in band order', async () => {
     const dir = tmpDir();
     const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
@@ -324,6 +420,144 @@ describe('bakeAll', () => {
     const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
     expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX));
     expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX));
+  });
+
+  describe('--only', () => {
+    /** Same shape as `stubSource`, plus a call counter — needed to prove a
+     *  skipped band's `readBox` never runs. */
+    function countingStub(
+      id: string,
+      coverage: LonLatBounds,
+      rgba: readonly [number, number, number, number],
+    ): EarthImagerySource & { readBoxCalls: number } {
+      const stub = {
+        id,
+        attribution: `${id} attribution`,
+        provenance: { sourceId: id, attribution: `${id} attribution`, vintage: 'stub-vintage' },
+        maxLevel: STUB_Z,
+        coverage: [coverage],
+        readBoxCalls: 0,
+        async readBox(box: LonLatBounds, widthPx: number, heightPx: number) {
+          stub.readBoxCalls++;
+          if (box.west !== coverage.west) return null;
+          const raster = new Uint8Array(widthPx * heightPx * 4);
+          for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
+          return raster;
+        },
+      };
+      return stub;
+    }
+
+    it('writes a per-band index for every band on a full bake', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+
+      await bakeAll(
+        [
+          { source: west, minLevel: STUB_Z },
+          { source: east, minLevel: STUB_Z },
+        ],
+        dir,
+      );
+
+      const westIndex = readFileSync(join(dir, 'earth-tiles/index-stub-west.txt'), 'utf8');
+      const eastIndex = readFileSync(join(dir, 'earth-tiles/index-stub-east.txt'), 'utf8');
+      expect(westIndex).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      );
+      expect(eastIndex).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+    });
+
+    it('skips a band --only does not name: no readBox calls, its tile untouched, merged index and manifest still carry it', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      const bands = [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ];
+      await bakeAll(bands, dir);
+      const eastTilePath = join(
+        dir,
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+      const beforeMtime = statSync(eastTilePath).mtimeMs;
+      east.readBoxCalls = 0;
+
+      await bakeAll(bands, dir, { only: 'stub-west' });
+
+      expect(east.readBoxCalls).toBe(0);
+      expect(statSync(eastTilePath).mtimeMs).toBe(beforeMtime);
+
+      const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
+      expect(index).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      );
+      expect(index).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+
+      const manifest = JSON.parse(
+        readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+      ) as EarthTileManifest;
+      expect(manifest.levels.surface).toHaveLength(2);
+    });
+
+    it('throws naming the band when a stitched tile has been deleted from disk', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      const bands = [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ];
+      await bakeAll(bands, dir);
+      const eastTilePath = join(
+        dir,
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+      rmSync(eastTilePath);
+
+      await expect(bakeAll(bands, dir, { only: 'stub-west' })).rejects.toThrow(/stub-east/);
+    });
+
+    it('throws naming the band when its minLevel drifted since the prior index', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      await bakeAll(
+        [
+          { source: west, minLevel: STUB_Z },
+          { source: east, minLevel: STUB_Z },
+        ],
+        dir,
+      );
+
+      // Same band, now claiming a deeper floor than the run that wrote its
+      // stitched index — that index still only has z1 lines, not z0.
+      await expect(
+        bakeAll(
+          [
+            { source: west, minLevel: STUB_Z },
+            { source: east, minLevel: STUB_Z - 1 },
+          ],
+          dir,
+          { only: 'stub-west' },
+        ),
+      ).rejects.toThrow(/stub-east/);
+    });
+
+    it('throws listing available ids when --only names an unknown band', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+
+      await expect(
+        bakeAll([{ source: west, minLevel: STUB_Z }], dir, { only: 'does-not-exist' }),
+      ).rejects.toThrow(/stub-west/);
+    });
   });
 });
 

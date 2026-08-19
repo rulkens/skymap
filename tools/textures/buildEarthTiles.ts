@@ -26,7 +26,7 @@
  * `public/data/` is gitignored — nothing here is committed.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,12 +43,45 @@ import { parseFlags } from '../utils/cli/args';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import { eoxTileSource } from './eoxTileSource';
 import { underfillImagerySource } from './underfillImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+
+/** Default coverage for a caller that doesn't clamp — degenerates
+ *  `candidateTileIndices` back to the whole grid. */
+const WHOLE_GLOBE: readonly LonLatBounds[] = [{ west: -180, east: 180, south: -90, north: 90 }];
+
+/**
+ * Every `(x, y)` a bake at level `z` needs to visit for `coverage`: the union
+ * of each box's tile rect, deduped through a `Set` so overlapping or adjacent
+ * boxes can't queue the same tile twice, in row-major order so `written`
+ * stays deterministic before its final sort.
+ */
+function candidateTileIndices(
+  coverage: ReadonlyArray<LonLatBounds>,
+  z: number,
+  tilePx: number,
+): ReadonlyArray<{ readonly x: number; readonly y: number }> {
+  const seen = new Set<string>();
+  const indices: Array<{ x: number; y: number }> = [];
+  for (const bounds of coverage) {
+    const rect = earthTileIndicesForBounds(bounds, z, tilePx);
+    for (let y = rect.yMin; y <= rect.yMax; y++) {
+      for (let x = rect.xMin; x <= rect.xMax; x++) {
+        const key = `${x},${y}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        indices.push({ x, y });
+      }
+    }
+  }
+  indices.sort((a, b) => a.y - b.y || a.x - b.x);
+  return indices;
+}
 
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
  *  that doubles as the land mask. */
@@ -134,18 +167,14 @@ async function bakeDeepestLevel(
   tilePx: number,
   outDir: string,
 ): Promise<readonly string[]> {
-  const columns = earthTileColumns(z, tilePx);
-  const rows = columns / 2;
   const written: string[] = [];
 
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < columns; x++) {
-      const rgba = await source.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx);
-      if (rgba === null) continue;
-      const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
-      await writeTile(rgba, tilePx, join(outDir, relPath));
-      written.push(relPath);
-    }
+  for (const { x, y } of candidateTileIndices(source.coverage, z, tilePx)) {
+    const rgba = await source.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx);
+    if (rgba === null) continue;
+    const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    await writeTile(rgba, tilePx, join(outDir, relPath));
+    written.push(relPath);
   }
   return written;
 }
@@ -181,69 +210,129 @@ export async function bakeCoarserLevel(
   tilePx: number,
   outDir: string,
   underfill?: EarthImagerySource,
+  coverage: ReadonlyArray<LonLatBounds> = WHOLE_GLOBE,
 ): Promise<string[]> {
-  const columns = earthTileColumns(z, tilePx);
-  const rows = columns / 2;
   const halfPx = tilePx / 2;
   const written: string[] = [];
 
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < columns; x++) {
-      const childPaths = [
-        { i: 0, j: 0 },
-        { i: 1, j: 0 },
-        { i: 0, j: 1 },
-        { i: 1, j: 1 },
-      ]
-        .map(({ i, j }) => ({
-          input: join(
-            outDir,
-            earthTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
-          ),
-          left: i * halfPx,
-          top: j * halfPx,
-        }))
-        .filter((child) => existsSync(child.input));
-      if (childPaths.length === 0) continue;
+  for (const { x, y } of candidateTileIndices(coverage, z, tilePx)) {
+    const childPaths = [
+      { i: 0, j: 0 },
+      { i: 1, j: 0 },
+      { i: 0, j: 1 },
+      { i: 1, j: 1 },
+    ]
+      .map(({ i, j }) => ({
+        input: join(
+          outDir,
+          earthTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
+        ),
+        left: i * halfPx,
+        top: j * halfPx,
+      }))
+      .filter((child) => existsSync(child.input));
+    if (childPaths.length === 0) continue;
 
-      // ensureAlpha restores a plane a fully-opaque WebP may have dropped (see
-      // writeTile); resize happens here, per child, never after the composite below.
-      const quadrants = await Promise.all(
-        childPaths.map(async ({ input, left, top }) => ({
-          input: await sharp(input).ensureAlpha().resize(halfPx, halfPx).raw().toBuffer(),
-          raw: { width: halfPx, height: halfPx, channels: 4 as const },
-          left,
-          top,
-        })),
-      );
+    // ensureAlpha restores a plane a fully-opaque WebP may have dropped (see
+    // writeTile); resize happens here, per child, never after the composite below.
+    const quadrants = await Promise.all(
+      childPaths.map(async ({ input, left, top }) => ({
+        input: await sharp(input).ensureAlpha().resize(halfPx, halfPx).raw().toBuffer(),
+        raw: { width: halfPx, height: halfPx, channels: 4 as const },
+        left,
+        top,
+      })),
+    );
 
-      const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
-      const outPath = join(outDir, relPath);
-      mkdirSync(dirname(outPath), { recursive: true });
+    const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    const outPath = join(outDir, relPath);
+    mkdirSync(dirname(outPath), { recursive: true });
 
-      // Four children cover the whole canvas already — no filler read (the
-      // common interior case). A filler decline (never happens for BMNG in
-      // practice) falls back to the transparent canvas, no worse than today.
-      const fillerRaster =
-        underfill && childPaths.length < 4
-          ? await underfill.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx)
-          : null;
-      const canvas = fillerRaster
-        ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })
-        : sharp({
-            create: {
-              width: tilePx,
-              height: tilePx,
-              channels: 4,
-              background: { r: 0, g: 0, b: 0, alpha: 0 },
-            },
-          });
+    // Four children cover the whole canvas already — no filler read (the
+    // common interior case). A filler decline (never happens for BMNG in
+    // practice) falls back to the transparent canvas, no worse than today.
+    const fillerRaster =
+      underfill && childPaths.length < 4
+        ? await underfill.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx)
+        : null;
+    const canvas = fillerRaster
+      ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })
+      : sharp({
+          create: {
+            width: tilePx,
+            height: tilePx,
+            channels: 4,
+            background: { r: 0, g: 0, b: 0, alpha: 0 },
+          },
+        });
 
-      await canvas.composite(quadrants).webp({ quality: WEBP_QUALITY }).toFile(outPath);
-      written.push(relPath);
-    }
+    await canvas.composite(quadrants).webp({ quality: WEBP_QUALITY }).toFile(outPath);
+    written.push(relPath);
   }
   return written;
+}
+
+/** Per-band index path — local bake state read back by `--only` to stitch a
+ *  skipped band forward; the deploy collector reads only the merged
+ *  `index.txt` (`collectEarthTiles`), never these. */
+function perBandIndexPath(outDir: string, sourceId: string): string {
+  return join(outDir, TILE_ROOT, `index-${sourceId}.txt`);
+}
+
+function writePerBandIndex(outDir: string, sourceId: string, relPaths: readonly string[]): void {
+  const sorted = [...relPaths].sort();
+  writeFileSync(perBandIndexPath(outDir, sourceId), `${sorted.join('\n')}\n`);
+}
+
+/** The z a tile path encodes, read off the same `kind/z/x/y.webp` suffix
+ *  `earthTilePath` writes — independent of `TILE_PREFIX`'s own depth, so a
+ *  version bump between the stitched run and now can't misalign the parse. */
+function zFromTilePath(relPath: string): number {
+  const parts = relPath.split('/');
+  return Number(parts[parts.length - 3]);
+}
+
+/**
+ * Read back a band's own prior index and hand its lines to the merged index
+ * unbaked — the `--only` fast path. Verified before trust: a manually deleted
+ * tile, or a level range that drifted since the index was written, would
+ * otherwise ship a manifest promising tiles that 404.
+ */
+function stitchBandIndex(
+  outDir: string,
+  source: EarthImagerySource,
+  minLevel: number,
+): readonly string[] {
+  const indexPath = perBandIndexPath(outDir, source.id);
+  if (!existsSync(indexPath)) {
+    throw new Error(
+      `bakeAll: --only needs a prior index for '${source.id}' at ${indexPath} — run a full bake first`,
+    );
+  }
+  const relPaths = readFileSync(indexPath, 'utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  for (const relPath of relPaths) {
+    if (!existsSync(join(outDir, relPath))) {
+      throw new Error(
+        `bakeAll: stitched band '${source.id}' is missing '${relPath}' on disk — run a full bake to repair it`,
+      );
+    }
+  }
+
+  const indexedLevels = new Set(relPaths.map(zFromTilePath));
+  for (let z = minLevel; z <= source.maxLevel; z++) {
+    if (!indexedLevels.has(z)) {
+      throw new Error(
+        `bakeAll: stitched band '${source.id}' has no z${z} tiles — its level range drifted since the ` +
+          `prior index was written (now z${minLevel}-z${source.maxLevel}) — run a full bake`,
+      );
+    }
+  }
+
+  return relPaths;
 }
 
 /**
@@ -252,6 +341,13 @@ export async function bakeCoarserLevel(
  * `manifest.json` covering all bands — several imagery sources can share a
  * kind at different geographic footprints and depths (EOX deep tiles over
  * BMNG; see `EarthTileManifest`).
+ *
+ * `opts.only` re-bakes a single band and stitches every other band's tiles
+ * forward from its own prior per-band index (`writePerBandIndex`) instead of
+ * re-baking them — the ~10 minute BMNG tax on every EOX-only iteration this
+ * exists to cut. Manifest entries are still derived fresh for every band
+ * (coverage/min/max are pre-bake data, never stale), only the tile BAKE is
+ * skipped.
  */
 export async function bakeAll(
   bands: ReadonlyArray<{
@@ -263,10 +359,17 @@ export async function bakeAll(
     readonly underfill?: EarthImagerySource;
   }>,
   outDir: string,
+  opts?: { readonly only?: string },
 ): Promise<void> {
   const tilePx = EARTH_TILE_PX;
   const written: string[] = [];
   const bandEntries: NonNullable<EarthTileManifest['levels'][typeof KIND]>[number][] = [];
+
+  if (opts?.only !== undefined && !bands.some((band) => band.source.id === opts.only)) {
+    throw new Error(
+      `bakeAll: --only '${opts.only}' matches no band — available: ${bands.map((band) => band.source.id).join(', ')}`,
+    );
+  }
 
   for (const { source, minLevel, underfill } of bands) {
     const maxLevel = source.maxLevel;
@@ -280,22 +383,37 @@ export async function bakeAll(
       );
     }
 
-    process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
-    const effective = underfill ? underfillImagerySource(source, underfill) : source;
-    const deepest = await bakeDeepestLevel(effective, maxLevel, tilePx, outDir);
-    written.push(...deepest);
-    process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
+    if (opts?.only !== undefined && source.id !== opts.only) {
+      const stitched = stitchBandIndex(outDir, source, minLevel);
+      written.push(...stitched);
+      process.stderr.write(
+        `  ${source.id}: stitched ${stitched.length} tiles from its prior index\n`,
+      );
+    } else {
+      process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
+      const effective = underfill ? underfillImagerySource(source, underfill) : source;
+      const deepest = await bakeDeepestLevel(effective, maxLevel, tilePx, outDir);
+      const bandWritten = [...deepest];
+      process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
 
-    for (let z = maxLevel - 1; z >= minLevel; z--) {
-      const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill);
-      written.push(...levelPaths);
-      process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
+      for (let z = maxLevel - 1; z >= minLevel; z--) {
+        // A parent's coverage box is the same as its children's (containment
+        // of bounds), so the band's own boxes clamp every coarser level too.
+        const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill, source.coverage);
+        bandWritten.push(...levelPaths);
+        process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
+      }
+
+      writePerBandIndex(outDir, source.id, bandWritten);
+      written.push(...bandWritten);
     }
 
     // One entry per coverage box: a source spanning the antimeridian declares
     // two boxes rather than one that wraps (see `LonLatBounds`). `builtFrom`
     // is the source's OWN provenance — never a module-level assumption, or a
     // second band's manifest entry would carry the first band's identity.
+    // Derived from `source`, not the stitched index, for every band alike —
+    // the manifest is always fresh.
     for (const bounds of source.coverage) {
       bandEntries.push({ bounds, min: minLevel, max: maxLevel, builtFrom: source.provenance });
     }
@@ -354,14 +472,25 @@ async function devSource(): Promise<EarthImagerySource> {
   });
 }
 
+/** `--only <sourceId>`: the one string-valued flag this tool takes.
+ *  `parseFlags` stays bool-only by design (see its own docstring), so this
+ *  mirrors `fetchFamousImages`'s `--source-preference` — a bespoke scan
+ *  beside the `parseFlags` call, not a change to its schema. */
+function onlySourceId(argv: readonly string[]): string | undefined {
+  const idx = argv.indexOf('--only');
+  return idx >= 0 && idx + 1 < argv.length ? argv[idx + 1] : undefined;
+}
+
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
-  const { '--dev': dev } = parseFlags(process.argv.slice(2), { '--dev': 'bool' });
+  const argv = process.argv.slice(2);
+  const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
+  const only = onlySourceId(argv);
   process.stderr.write(`buildEarthTiles: -> ${join(outDir, 'earth-tiles')}\n`);
   if (dev) {
     // Whole-globe BMNG only — the EOX band needs the real harvest on disk,
     // which `--dev` explicitly opts out of (see `devSource`).
-    await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir);
+    await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir, { only });
   } else {
     // Shared instance, not two separate `deepSource()` calls: reuses BMNG's
     // band cache, and its `readBox` handles arbitrary small boxes (Copenhagen
@@ -378,6 +507,7 @@ async function main(): Promise<void> {
         },
       ],
       outDir,
+      { only },
     );
   }
   process.stderr.write(`done; tiles under ${join(outDir, 'earth-tiles')}\n`);
