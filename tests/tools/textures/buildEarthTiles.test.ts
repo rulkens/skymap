@@ -156,6 +156,7 @@ describe('bakeAll', () => {
     return {
       id,
       attribution: `${id} attribution`,
+      provenance: { sourceId: id, attribution: `${id} attribution`, vintage: 'stub-vintage' },
       maxLevel: STUB_Z,
       coverage: [coverage],
       async readBox(box, widthPx, heightPx) {
@@ -186,9 +187,12 @@ describe('bakeAll', () => {
     const bands = manifest.levels.surface;
     expect(bands).toHaveLength(2);
     expect(bands?.[0]?.bounds).toEqual(BOX_WEST);
-    expect(bands?.[0]?.builtFrom.sourceId).toBe('stub-west');
+    // Each band's builtFrom is ITS OWN source's provenance, not a shared
+    // module-level assumption — the bug this pins would stamp both bands
+    // with whichever source's vintage happened to be hardcoded.
+    expect(bands?.[0]?.builtFrom).toEqual(west.provenance);
     expect(bands?.[1]?.bounds).toEqual(BOX_EAST);
-    expect(bands?.[1]?.builtFrom.sourceId).toBe('stub-east');
+    expect(bands?.[1]?.builtFrom).toEqual(east.provenance);
 
     const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
     expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX));

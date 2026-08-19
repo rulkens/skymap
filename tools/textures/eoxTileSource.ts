@@ -28,11 +28,8 @@ const EOX_TILE_PX = 256;
  *  ladder identity in the module header. */
 const NATIVE_EDGE_PX = EOX_TILE_PX * 2;
 
-/** Verbatim from spec §4. `vintage` has no home yet: `EarthImagerySource`
- *  carries no vintage field (the gap Task 4 flagged for BMNG — every band's
- *  manifest entry is still stamped with BMNG's vintage regardless of
- *  source, `buildEarthTiles.ts:268`). Kept here for whichever task closes
- *  that gap; `id`/`attribution` below are this source's own facts either way. */
+/** Verbatim from spec §4 — this source's own identity, carried into the
+ *  manifest's `builtFrom` for every band `bakeAll` builds from it. */
 const EOX_PROVENANCE = {
   sourceId: 'eox-s2cloudless-2016',
   attribution:
@@ -123,6 +120,7 @@ export async function eoxTileSource(opts: {
     attribution: EOX_PROVENANCE.attribution,
     maxLevel: EOX_MAX_LEVEL,
     coverage,
+    provenance: EOX_PROVENANCE,
 
     async readBox(box, widthPx, heightPx) {
       // Checked first, before any disk read or compositing: the module

@@ -113,6 +113,8 @@ export async function bmngQuadrantSource(source: {
   readonly id: string;
   /** Verbatim attribution the licence requires. */
   readonly attribution: string;
+  /** Human-readable vintage, folded with `id`/`attribution` into `provenance`. */
+  readonly vintage: string;
   /** Absolute path per quadrant — paths rather than registry keys because the
    *  eight files are one raster whose VINTAGE is the caller's choice, same as
    *  `equirectFileSource`. Keying on the quadrant union makes a forgotten file
@@ -206,6 +208,7 @@ export async function bmngQuadrantSource(source: {
     attribution: source.attribution,
     maxLevel: earthLevelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
     coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
+    provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 
     async readBox(box, widthPx, heightPx) {
       const placement = quadrantForBox(box);

@@ -35,7 +35,6 @@ import sharp from 'sharp';
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
 import type { Tier } from '../../src/@types/data/Tier';
 import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
-import type { EarthTileProvenance } from '../../src/@types/scene/EarthTileProvenance';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
@@ -47,6 +46,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
+import { eoxTileSource } from './eoxTileSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
@@ -65,6 +65,14 @@ const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
  */
 const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
 
+/**
+ * Shallowest level the EOX regional band emits: one deeper than BMNG's OWN
+ * max (z7), not derived from `BAKE_MIN_LEVEL` — a regional band's floor is a
+ * different rule ("pick up where the global band stops"), not the global
+ * band's own tier-derived floor.
+ */
+const EOX_MIN_LEVEL = 8;
+
 /** The only kind this tool bakes — relief, clouds, night lights and the
  *  material map carry no fine structure worth streaming. */
 const KIND: EarthTileKind = 'surface';
@@ -79,7 +87,7 @@ const TILE_ROOT = 'earth-tiles';
  * manifest for up to a day — mismatched, not merely stale. A new version is
  * new keys, which cost nothing extra and need no purge.
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v1`;
+export const TILE_PREFIX = `${TILE_ROOT}/v2`;
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
@@ -262,15 +270,12 @@ export async function bakeAll(
       process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
     }
 
-    const builtFrom: EarthTileProvenance = {
-      sourceId: source.id,
-      attribution: source.attribution,
-      vintage: BMNG_VINTAGE.label,
-    };
     // One entry per coverage box: a source spanning the antimeridian declares
-    // two boxes rather than one that wraps (see `LonLatBounds`).
+    // two boxes rather than one that wraps (see `LonLatBounds`). `builtFrom`
+    // is the source's OWN provenance — never a module-level assumption, or a
+    // second band's manifest entry would carry the first band's identity.
     for (const bounds of source.coverage) {
-      bandEntries.push({ bounds, min: minLevel, max: maxLevel, builtFrom });
+      bandEntries.push({ bounds, min: minLevel, max: maxLevel, builtFrom: source.provenance });
     }
   }
 
@@ -305,6 +310,7 @@ async function deepSource(): Promise<EarthImagerySource> {
   return bmngQuadrantSource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
     attribution: BMNG_ATTRIBUTION,
+    vintage: BMNG_VINTAGE.label,
     quadrantPaths: Object.fromEntries(
       Object.entries(BMNG_QUADRANT_KEYS).map(([quadrant, key]) => [quadrant, rawDataPath(key)]),
     ) as Record<BmngQuadrant, string>,
@@ -322,16 +328,27 @@ async function devSource(): Promise<EarthImagerySource> {
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-equirect`,
     rawKey: 'textures.nasaBmng',
     attribution: BMNG_ATTRIBUTION,
+    vintage: BMNG_VINTAGE.label,
   });
 }
 
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const { '--dev': dev } = parseFlags(process.argv.slice(2), { '--dev': 'bool' });
-  const source = dev ? await devSource() : await deepSource();
-  process.stderr.write(`buildEarthTiles: ${source.id} -> ${join(outDir, 'earth-tiles')}\n`);
-  // One band today (BMNG); the EOX band joins this list in a later task.
-  await bakeAll([{ source, minLevel: BAKE_MIN_LEVEL }], outDir);
+  process.stderr.write(`buildEarthTiles: -> ${join(outDir, 'earth-tiles')}\n`);
+  if (dev) {
+    // Whole-globe BMNG only — the EOX band needs the real harvest on disk,
+    // which `--dev` explicitly opts out of (see `devSource`).
+    await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir);
+  } else {
+    await bakeAll(
+      [
+        { source: await deepSource(), minLevel: BAKE_MIN_LEVEL },
+        { source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }), minLevel: EOX_MIN_LEVEL },
+      ],
+      outDir,
+    );
+  }
   process.stderr.write(`done; tiles under ${join(outDir, 'earth-tiles')}\n`);
 }
 

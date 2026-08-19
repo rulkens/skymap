@@ -83,6 +83,7 @@ async function makeSource(decodes?: BmngQuadrant[]) {
   return bmngQuadrantSource({
     id: 'synthetic',
     attribution: 'synthetic',
+    vintage: 'synthetic',
     quadrantPaths: paths,
     onBandDecode: (quadrant) => decodes?.push(quadrant),
   });
@@ -238,6 +239,7 @@ describe('grid validation', () => {
       bmngQuadrantSource({
         id: 'synthetic',
         attribution: 'synthetic',
+        vintage: 'synthetic',
         quadrantPaths: { ...paths, C2: join(dir, 'absent.png') },
       }),
     ).rejects.toThrow(/C2/);
@@ -257,6 +259,7 @@ describe('grid validation', () => {
       bmngQuadrantSource({
         id: 'synthetic',
         attribution: 'synthetic',
+        vintage: 'synthetic',
         quadrantPaths: { ...paths, D1: oddPath },
       }),
     ).rejects.toThrow(/D1/);
