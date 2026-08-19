@@ -177,7 +177,7 @@ flowchart LR
     F1["ctor divergence +<br/>teardown anomalies"] --> R1["rung 1"]
     F2["upsample scaffold +<br/>fullscreen-tri + BG copies"] --> R2["rung 2"]
     F3["MW cloud-gen staleness +<br/>earth third ingest"] --> R3["rung 3"]
-    F4["multi-item ingest<br/>divergence + volume ×3"] --> R4["rung 4"]
+    F4["multi-item ingest<br/>divergence + volume ×5"] --> R4["rung 4"]
     F5["fade consumption<br/>canonical vs raw"] --> R7["rung 7"]
     F6["label/marker<br/>shadow paths"] --> R8["rung 8 (new)"]
     HYG(["hygiene basket +<br/>backlog items"])
