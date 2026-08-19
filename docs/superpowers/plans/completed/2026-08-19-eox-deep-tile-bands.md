@@ -1,6 +1,6 @@
 # EOX deep tile bands Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add EOX s2cloudless z8–z13 imagery over Copenhagen as a second, regional, deeper band in Earth's existing surface virtual-texture pyramid, so descending over that one city resolves 9.55 m/px Sentinel-2 detail instead of stopping at BMNG's z7 ~611 m/texel floor.
 
@@ -48,12 +48,12 @@ Tasks 1–5 are the ground-preparation refactor from the spec's §2: they reshap
 
 Purely mechanical — the type's shape does not change, only its name and location.
 
-- [ ] Run `npm run move-files -- --dry tools/textures/LonLatBox.d.ts src/@types/scene/LonLatBounds.d.ts` and confirm the reported blast radius matches the four files listed above (plus the file itself).
-- [ ] Run it for real (drop `--dry`): `npm run move-files -- tools/textures/LonLatBox.d.ts src/@types/scene/LonLatBounds.d.ts`.
-- [ ] Run `npm run refactor -- rename src/@types/scene/LonLatBounds.d.ts#LonLatBox LonLatBounds` to rename the exported symbol everywhere it's referenced. Pass `--dry` first to confirm the four-file blast radius, then for real.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- bmngQuadrantSource` — green (this test file imports the type only, no behavioral change).
-- [ ] Commit:
+- [x] Run `npm run move-files -- --dry tools/textures/LonLatBox.d.ts src/@types/scene/LonLatBounds.d.ts` and confirm the reported blast radius matches the four files listed above (plus the file itself).
+- [x] Run it for real (drop `--dry`): `npm run move-files -- tools/textures/LonLatBox.d.ts src/@types/scene/LonLatBounds.d.ts`.
+- [x] Run `npm run refactor -- rename src/@types/scene/LonLatBounds.d.ts#LonLatBox LonLatBounds` to rename the exported symbol everywhere it's referenced. Pass `--dry` first to confirm the four-file blast radius, then for real.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- bmngQuadrantSource` — green (this test file imports the type only, no behavioral change).
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -94,10 +94,10 @@ export type EarthImagerySource = {
 
 Both existing sources cover the whole globe today (BMNG's eight quadrants tile it, the equirect file is a whole-globe raster), so both declare `coverage: [{ west: -180, south: -90, east: 180, north: 90 }]` — a one-line addition to each return object, not new behavior. No new tests: the compiler enforces the required field at every `EarthImagerySource`-returning call site, and a wrong literal has no runtime consequence yet (nothing reads `coverage` until Task 4).
 
-- [ ] Add `coverage: ReadonlyArray<LonLatBounds>` to `EarthImagerySource.d.ts`, replacing the optional-or-absent convention the spec's §3 rationale describes.
-- [ ] Add the world-bounds literal to `bmngQuadrantSource.ts`'s returned object (`tools/textures/bmngQuadrantSource.ts:204-241`) and `equirectFileSource.ts`'s returned object (`tools/textures/equirectFileSource.ts:46-77`).
-- [ ] `npm run typecheck` — clean; this is the whole verification (a missing `coverage` field on either source is a compile error).
-- [ ] Commit:
+- [x] Add `coverage: ReadonlyArray<LonLatBounds>` to `EarthImagerySource.d.ts`, replacing the optional-or-absent convention the spec's §3 rationale describes.
+- [x] Add the world-bounds literal to `bmngQuadrantSource.ts`'s returned object (`tools/textures/bmngQuadrantSource.ts:204-241`) and `equirectFileSource.ts`'s returned object (`tools/textures/equirectFileSource.ts:46-77`).
+- [x] `npm run typecheck` — clean; this is the whole verification (a missing `coverage` field on either source is a compile error).
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -157,15 +157,15 @@ export type EarthTileManifest = {
 
 This task's `derivePlannerParams` change is scoped narrowly: it must read the new band-list `levels` shape without throwing, but it may still reduce internally to the scalar `minTileLevel`/`maxTileLevel` it returns today — the full band-aware `EarthTilePlannerParams.bands` reshape is Task 5. With exactly one world-spanning band, `{min: entry.min, max: entry.max}` off that single entry is an *exact* reduction (spec §2's verification claim), so this task's internal change is a one-line "read `levels.surface[0]` instead of `levels.surface`" — not a behavior change, just a shape adaptation.
 
-- [ ] Add `EarthTileProvenance.d.ts` — one type, three required `string` fields.
-- [ ] Rewrite `EarthTileManifest.d.ts`'s `levels` field to the band-list shape above; delete the top-level `builtFrom` field entirely (module header comment needs updating too — it currently documents `levels`/`builtFrom` as parallel `Partial<Record>`s, which is no longer true).
-- [ ] **Test: `fetchEarthTileManifest` collapses a v1-shaped manifest to `null`.** Add a case to `tests/utils/scene/fetchEarthTileManifest.test.ts` alongside the existing "no prefix" / "empty prefix" cases (`fetchEarthTileManifest.test.ts:36-52`): a manifest with a valid non-empty `prefix` but v1-shaped `levels` (`{ surface: { min: 4, max: 6 } }` — a bare object, not an array) must resolve to `null`, not throw and not be returned as-is. Name it `'returns null for a v1-shaped (pre-band-list) manifest'`.
-- [ ] Check whether `fetchEarthTileManifest.ts`'s current validation (`fetchEarthTileManifest.ts:17-30`, which only checks `prefix`) already satisfies this test as a side effect of TypeScript's structural typing being bypassed by `as EarthTileManifest` at the JSON-parse boundary — it will not, since nothing currently inspects `levels` shape at runtime. Add a runtime check: `Array.isArray(parsed.levels?.surface ?? [])` is not enough on its own (an absent `surface` key is legitimately valid — see Task 4/8's staged rollout); the check needs to positively reject the case where `levels.surface` *exists* but is not an array. Fold that into the existing `if` alongside the prefix check, still collapsing to `null`.
-- [ ] Update `derivePlannerParams` (`earthTileSubsystem.ts:110-131`) to read `fetched.levels?.[TILED_KIND]?.[0]` in place of `fetched.levels?.[TILED_KIND]` (one world band, so index 0 is exact for now — Task 5 replaces this whole function's body).
-- [ ] Update `earthTileSubsystem.test.ts`'s `surfaceManifest()` fixture helper (`earthTileSubsystem.test.ts:56-62`) to the new array-of-bands shape: `levels: { surface: [{ bounds: WORLD_BOUNDS, min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1, builtFrom: { sourceId: 'test', attribution: 'test', vintage: 'test' } }] }`, dropping the deleted top-level `builtFrom`. Existing assertions in that file (`earthTileSubsystem.test.ts:84-113` and onward) should pass unmodified once the fixture shape matches — they assert on `plannerParams()`'s *output*, which Task 3 does not change.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- fetchEarthTileManifest earthTileSubsystem` — green.
-- [ ] Commit:
+- [x] Add `EarthTileProvenance.d.ts` — one type, three required `string` fields.
+- [x] Rewrite `EarthTileManifest.d.ts`'s `levels` field to the band-list shape above; delete the top-level `builtFrom` field entirely (module header comment needs updating too — it currently documents `levels`/`builtFrom` as parallel `Partial<Record>`s, which is no longer true).
+- [x] **Test: `fetchEarthTileManifest` collapses a v1-shaped manifest to `null`.** Add a case to `tests/utils/scene/fetchEarthTileManifest.test.ts` alongside the existing "no prefix" / "empty prefix" cases (`fetchEarthTileManifest.test.ts:36-52`): a manifest with a valid non-empty `prefix` but v1-shaped `levels` (`{ surface: { min: 4, max: 6 } }` — a bare object, not an array) must resolve to `null`, not throw and not be returned as-is. Name it `'returns null for a v1-shaped (pre-band-list) manifest'`.
+- [x] Check whether `fetchEarthTileManifest.ts`'s current validation (`fetchEarthTileManifest.ts:17-30`, which only checks `prefix`) already satisfies this test as a side effect of TypeScript's structural typing being bypassed by `as EarthTileManifest` at the JSON-parse boundary — it will not, since nothing currently inspects `levels` shape at runtime. Add a runtime check: `Array.isArray(parsed.levels?.surface ?? [])` is not enough on its own (an absent `surface` key is legitimately valid — see Task 4/8's staged rollout); the check needs to positively reject the case where `levels.surface` *exists* but is not an array. Fold that into the existing `if` alongside the prefix check, still collapsing to `null`.
+- [x] Update `derivePlannerParams` (`earthTileSubsystem.ts:110-131`) to read `fetched.levels?.[TILED_KIND]?.[0]` in place of `fetched.levels?.[TILED_KIND]` (one world band, so index 0 is exact for now — Task 5 replaces this whole function's body).
+- [x] Update `earthTileSubsystem.test.ts`'s `surfaceManifest()` fixture helper (`earthTileSubsystem.test.ts:56-62`) to the new array-of-bands shape: `levels: { surface: [{ bounds: WORLD_BOUNDS, min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1, builtFrom: { sourceId: 'test', attribution: 'test', vintage: 'test' } }] }`, dropping the deleted top-level `builtFrom`. Existing assertions in that file (`earthTileSubsystem.test.ts:84-113` and onward) should pass unmodified once the fixture shape matches — they assert on `plannerParams()`'s *output*, which Task 3 does not change.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- fetchEarthTileManifest earthTileSubsystem` — green.
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -207,13 +207,13 @@ export async function bakeAll(
 
 `main()`'s `devSource()`/`deepSource()` call sites (`buildEarthTiles.ts:296-311`) become `bakeAll([{ source: await (dev ? devSource() : deepSource()), minLevel: BAKE_MIN_LEVEL }], outDir)` — still one band, BMNG only, in this task.
 
-- [ ] **Test: `bakeAll` with two stub sources writes two entries in band order.** Following the existing file's idiom (temp dirs via `tmpDir()`, synthetic single-colour tiles via `sharp({create: ...})` — see `writeChild`/`expectPixelNear` at `buildEarthTiles.test.ts:24-68` for the pattern, though `bakeAll` needs its own minimal stub `EarthImagerySource`s rather than pre-written child tiles since it drives `readBox` itself). Two stub sources, each covering a small disjoint 1-tile-wide box at a shallow level (keep the fixture's level range tiny — e.g. `minLevel = maxLevel` per band, one tile each — so the test doesn't bake a real pyramid depth). Assert: `manifest.json`'s `levels.surface` has exactly two entries, in the same order the `bands` array was given, each entry's `bounds`/`builtFrom.sourceId` matching its stub source; `index.txt` lists tiles from both sources.
-- [ ] Implement `bakeAll`, keeping `bakeDeepestLevel`/`bakeCoarserLevel` untouched — only the level-range/manifest bookkeeping moves from one source to a loop over bands.
-- [ ] Update `main()` to call `bakeAll` with the single BMNG band, `TILE_PREFIX` still `v1`.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- buildEarthTiles` — green.
-- [ ] **Verification that prep changed nothing observable:** run `npm run build-earth-tiles -- --dev` before this task's changes (capture a copy of `public/data/images/earth-tiles/` — it's in main's checkout via the worktree symlink, so `cp -r` it aside first) and after; diff the two. Tile bytes and `index.txt` must be byte-identical; only `manifest.json`'s shape differs (band-list `levels.surface` with one BMNG entry vs. the old scalar shape) while its *content* (min/max/source id/attribution) is equivalent. Note the diff result in the commit body.
-- [ ] Commit:
+- [x] **Test: `bakeAll` with two stub sources writes two entries in band order.** Following the existing file's idiom (temp dirs via `tmpDir()`, synthetic single-colour tiles via `sharp({create: ...})` — see `writeChild`/`expectPixelNear` at `buildEarthTiles.test.ts:24-68` for the pattern, though `bakeAll` needs its own minimal stub `EarthImagerySource`s rather than pre-written child tiles since it drives `readBox` itself). Two stub sources, each covering a small disjoint 1-tile-wide box at a shallow level (keep the fixture's level range tiny — e.g. `minLevel = maxLevel` per band, one tile each — so the test doesn't bake a real pyramid depth). Assert: `manifest.json`'s `levels.surface` has exactly two entries, in the same order the `bands` array was given, each entry's `bounds`/`builtFrom.sourceId` matching its stub source; `index.txt` lists tiles from both sources.
+- [x] Implement `bakeAll`, keeping `bakeDeepestLevel`/`bakeCoarserLevel` untouched — only the level-range/manifest bookkeeping moves from one source to a loop over bands.
+- [x] Update `main()` to call `bakeAll` with the single BMNG band, `TILE_PREFIX` still `v1`.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- buildEarthTiles` — green.
+- [x] **Verification that prep changed nothing observable:** run `npm run build-earth-tiles -- --dev` before this task's changes (capture a copy of `public/data/images/earth-tiles/` — it's in main's checkout via the worktree symlink, so `cp -r` it aside first) and after; diff the two. Tile bytes and `index.txt` must be byte-identical; only `manifest.json`'s shape differs (band-list `levels.surface` with one BMNG entry vs. the old scalar shape) while its *content* (min/max/source id/attribution) is equivalent. Note the diff result in the commit body.
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -296,18 +296,18 @@ if (!earthTileBandRequestAllowed(bands, z, { u0, u1, v0: vSouth, v1: vNorth })) 
 
 — note `planEarthTiles`'s local `vNorth`/`vSouth` naming (mesh-`v`-increases-north) maps to the predicate's `v0`/`v1` as `v0 = min = vSouth`, `v1 = max = vNorth`; get this backwards and every band-overlap test silently inverts. `maxTileLevel`'s role in the refine clamp (the overall `z < maxTileLevel` half of the `&&`) becomes "the deepest `max` across all bands," derived once in `derivePlannerParams` alongside `bands`, since the walk still needs *some* global depth ceiling to stop descending past every band's deepest level.
 
-- [ ] **Test `earthTileBandRefineAllowed`, single band overlap.** One band whose `uBounds`/`vBounds` fully contain a query `uv` at `z < band.max`: returns `true`. The same band, query `uv` at `z >= band.max`: returns `false`.
-- [ ] **Test `earthTileBandRefineAllowed`/`earthTileBandRequestAllowed`, two disjoint bands (Copenhagen case).** A world band (`min: 3, max: 7`) plus a small regional band (`min: 8, max: 13`) at a disjoint `uv`. Query `uv` inside the regional band's box at `z = 10`: `earthTileBandRefineAllowed` is `true` (regional band permits deeper); query the same `z = 10` at a `uv` *outside* the regional box (world band only): `earthTileBandRefineAllowed` is `false` (world band's `max` is 7). This is the load-bearing case — it's what makes "deep band only allows refinement inside its bbox" true.
-- [ ] **Test antimeridian pair.** Two band entries both with `min`/`max` describing one logical region split at 180° (one `uBounds` ending at `u=1`, one starting at `u=0`), and a query `uv` straddling the seam. Assert both `earthTileBandRefineAllowed`/`earthTileBandRequestAllowed` see it as covered by *one* of the two entries (whichever side the query's `u` range actually overlaps) — this proves the "one `LonLatBounds` per band entry, region crossing 180° is two entries" architecture (spec §2) actually works at the predicate level, not just at the manifest-shape level.
-- [ ] **Test degenerate single-world-band reproduces prior scalar behavior.** Reuse `planEarthTiles.test.ts`'s existing fixtures unmodified (do not add new assertions to that file for this — the fact that its existing test suite still passes *is* the proof, per the spec's own framing). If `nadirAt()`'s fixture (`planEarthTiles.test.ts:49-76`) still passes `minTileLevel`/`maxTileLevel` directly, update it (and the `planEarthTiles` call signature) to pass a single `bands: [{ uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 13 }]` in their place, changing nothing about what values it asserts.
-- [ ] Implement both predicate files. Overlap test: `uv.u1 > band.uBounds[0] && uv.u0 < band.uBounds[1] && uv.v1 > band.vBounds[0] && uv.v0 < band.vBounds[1]` (standard AABB overlap, open intervals so an edge-touching tile still counts as adjacent-not-overlapping the way `planEarthTiles`'s own window-overlap test at `planEarthTiles.ts:211-219` treats edges — verify against that existing convention rather than inventing a new one).
-- [ ] Update `EarthTilePlannerParams.d.ts` to the `bands: readonly EarthTileBand[]` shape; delete `minTileLevel`/`maxTileLevel`.
-- [ ] Update `planEarthTiles.ts`'s two call sites per the sketch above; update its own function-signature JSDoc/type accordingly (it currently documents `minTileLevel`/`maxTileLevel` at `planEarthTiles.ts:42-46`).
-- [ ] Rewrite `derivePlannerParams` (`earthTileSubsystem.ts:110-131`) to build `bands` from `fetched.levels?.[TILED_KIND]` (now a real array, every entry converted via the u/v formula above), still gated on `tilePx === EARTH_TILE_PX` and `levels` being present/non-empty; the `baseLevel + 1` floor logic (today's `Math.max(levels.min, baseLevel + 1)`) becomes a per-band `min` floor: each band's effective `min` is `Math.max(band.min, baseLevel + 1)`, so a band whose stated `min` is at or shallower than the base is clamped up per-band rather than globally.
-- [ ] Update `earthTileSubsystem.test.ts`'s manifest fixtures and any assertions reading `params.minTileLevel`/`maxTileLevel` to read `params.bands[0].min`/`.max` instead.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- earthTileBandRefineAllowed earthTileBandRequestAllowed planEarthTiles earthTileSubsystem` — green.
-- [ ] Commit:
+- [x] **Test `earthTileBandRefineAllowed`, single band overlap.** One band whose `uBounds`/`vBounds` fully contain a query `uv` at `z < band.max`: returns `true`. The same band, query `uv` at `z >= band.max`: returns `false`.
+- [x] **Test `earthTileBandRefineAllowed`/`earthTileBandRequestAllowed`, two disjoint bands (Copenhagen case).** A world band (`min: 3, max: 7`) plus a small regional band (`min: 8, max: 13`) at a disjoint `uv`. Query `uv` inside the regional band's box at `z = 10`: `earthTileBandRefineAllowed` is `true` (regional band permits deeper); query the same `z = 10` at a `uv` *outside* the regional box (world band only): `earthTileBandRefineAllowed` is `false` (world band's `max` is 7). This is the load-bearing case — it's what makes "deep band only allows refinement inside its bbox" true.
+- [x] **Test antimeridian pair.** Two band entries both with `min`/`max` describing one logical region split at 180° (one `uBounds` ending at `u=1`, one starting at `u=0`), and a query `uv` straddling the seam. Assert both `earthTileBandRefineAllowed`/`earthTileBandRequestAllowed` see it as covered by *one* of the two entries (whichever side the query's `u` range actually overlaps) — this proves the "one `LonLatBounds` per band entry, region crossing 180° is two entries" architecture (spec §2) actually works at the predicate level, not just at the manifest-shape level.
+- [x] **Test degenerate single-world-band reproduces prior scalar behavior.** Reuse `planEarthTiles.test.ts`'s existing fixtures unmodified (do not add new assertions to that file for this — the fact that its existing test suite still passes *is* the proof, per the spec's own framing). If `nadirAt()`'s fixture (`planEarthTiles.test.ts:49-76`) still passes `minTileLevel`/`maxTileLevel` directly, update it (and the `planEarthTiles` call signature) to pass a single `bands: [{ uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 13 }]` in their place, changing nothing about what values it asserts.
+- [x] Implement both predicate files. Overlap test: `uv.u1 > band.uBounds[0] && uv.u0 < band.uBounds[1] && uv.v1 > band.vBounds[0] && uv.v0 < band.vBounds[1]` (standard AABB overlap, open intervals so an edge-touching tile still counts as adjacent-not-overlapping the way `planEarthTiles`'s own window-overlap test at `planEarthTiles.ts:211-219` treats edges — verify against that existing convention rather than inventing a new one).
+- [x] Update `EarthTilePlannerParams.d.ts` to the `bands: readonly EarthTileBand[]` shape; delete `minTileLevel`/`maxTileLevel`.
+- [x] Update `planEarthTiles.ts`'s two call sites per the sketch above; update its own function-signature JSDoc/type accordingly (it currently documents `minTileLevel`/`maxTileLevel` at `planEarthTiles.ts:42-46`).
+- [x] Rewrite `derivePlannerParams` (`earthTileSubsystem.ts:110-131`) to build `bands` from `fetched.levels?.[TILED_KIND]` (now a real array, every entry converted via the u/v formula above), still gated on `tilePx === EARTH_TILE_PX` and `levels` being present/non-empty; the `baseLevel + 1` floor logic (today's `Math.max(levels.min, baseLevel + 1)`) becomes a per-band `min` floor: each band's effective `min` is `Math.max(band.min, baseLevel + 1)`, so a band whose stated `min` is at or shallower than the base is clamped up per-band rather than globally.
+- [x] Update `earthTileSubsystem.test.ts`'s manifest fixtures and any assertions reading `params.minTileLevel`/`maxTileLevel` to read `params.bands[0].min`/`.max` instead.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- earthTileBandRefineAllowed earthTileBandRequestAllowed planEarthTiles earthTileSubsystem` — green.
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -363,18 +363,18 @@ https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless/default/WGS84/{z}/{row}/{col}.j
 
 WGS84 TMS grid: z0 is 2 columns × 1 row, doubling per level — `columns(z) = 2 ** (z + 1)`, `rows(z) = 2 ** z`. This is the *same* ladder as skymap's own `earthTileColumns` (`src/utils/scene/earthTileColumns.ts`, `(512 << z) / tilePx` at `tilePx = 256`, since EOX serves 256 px tiles) — verify this identity holds for `z = 13` before writing the enumeration loop (`earthTileColumns(13, 256)` should equal `eoxTileIndicesForBbox`'s column count), since it's what lets Task 7 composite EOX tiles straight into skymap's grid with no re-numbering.
 
-- [ ] **Test `eoxTileIndicesForBbox`: enumerates the correct row/col range for a small bbox at z13.** Hand-compute the expected row/col range for the Copenhagen bbox (`{ west: 12.4, south: 55.5, east: 12.9, north: 55.8 }`) against the WGS84 z13 grid (`columns = 2^14 = 16384`, `rows = 2^13 = 8192`) and assert the returned set matches — this is the "~276 tiles" figure the spec cites (spec §4), so the count is a good sanity assertion too (`toHaveLength` in the same ballpark, not an exact restatement of an arbitrary literal — assert the hand-computed row/col bounds, and let the count fall out of that).
-- [ ] **Test `eoxTileIndicesForBbox`: row-before-col grid, not col-before-row.** A bbox whose row range and column range are distinguishable (different widths) — assert the function doesn't silently transpose them (a mirror bug here would enumerate the *right number* of tiles at the *wrong* coordinates, invisible until the harvest produces a scrambled patch).
-- [ ] **Test `eoxResponseIsImage`.** `'image/jpeg'` → `true`; `'text/html; charset=utf-8'` → `false`; `null` → `false`. This is the pure half of spec §4's "non-image response aborts loudly" rule — the fetcher's network loop calls it and throws when it returns `false`, but the loop itself isn't unit-tested (no network in tests, per `testing.md`).
-- [ ] **Test the backoff/retry shape**, modeled on `tests/tools/fetch/fetchDesi.test.ts`'s pattern (mock `delay` per that file's `vi.mock('../../../tools/utils/async/delay', ...)` idiom at `fetchDesi.test.ts:11-14`, assert `delay` was called with the exponential sequence on a retryable failure, and that a non-retryable status rethrows without calling `delay`).
-- [ ] **Test resume-by-file-existence**: given a tile path that already exists on disk, the harvester's per-tile fetch step is skipped (assert the injected transport/fetch function was never called for that index) — no chunk-state sidecar, unlike `fetchDesi`'s.
-- [ ] Implement `eoxTileIndicesForBbox`, `eoxResponseIsImage`, and the CLI (`bbox` args + `--level` defaulting to `13`, per spec §4) driving them with a throttled (~2 req/s) worker loop over `eoxTileIndicesForBbox`'s output, writing each tile to `data/raw/eox/<z>/<row>/<col>.jpg`. A non-image response throws and stops the run (spec §4's inversion of `fetchEarthTileBitmap.ts:36-38`'s silent-miss convention — the *fetcher* must not treat a throttled HTML redirect as a miss).
-- [ ] Add the `'eox.dir'` registry entry (model on `hyperleda.designations-dir` at `tools/utils/io/rawDataRegistry.ts:96-101` for the `kind: 'directory'`/`fetcher` shape): `path: 'data/raw/eox'`, `kind: 'directory'`, `source: 'gitignored'`, `description` naming the s2cloudless 2016 harvest, `fetcher: 'tools/fetch/fetchEoxTiles.ts'`.
-- [ ] Write `data/raw/eox/README.md` per `docs/DATA.md`'s "Adding a new raw data source" step 5: upstream URL, tile-index convention (row-before-col, WGS84 TMS, z13 only — coarser levels derived at bake time), fetch date, licence (CC BY 4.0, s2cloudless 2016 layer only, per this plan's Global Constraints).
-- [ ] Add `"fetch-eox": "tsx tools/fetch/fetchEoxTiles.ts"` to `package.json`, in the `fetch-*` block.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- fetchEoxTiles` — green.
-- [ ] Commit:
+- [x] **Test `eoxTileIndicesForBbox`: enumerates the correct row/col range for a small bbox at z13.** Hand-compute the expected row/col range for the Copenhagen bbox (`{ west: 12.4, south: 55.5, east: 12.9, north: 55.8 }`) against the WGS84 z13 grid (`columns = 2^14 = 16384`, `rows = 2^13 = 8192`) and assert the returned set matches — this is the "~276 tiles" figure the spec cites (spec §4), so the count is a good sanity assertion too (`toHaveLength` in the same ballpark, not an exact restatement of an arbitrary literal — assert the hand-computed row/col bounds, and let the count fall out of that).
+- [x] **Test `eoxTileIndicesForBbox`: row-before-col grid, not col-before-row.** A bbox whose row range and column range are distinguishable (different widths) — assert the function doesn't silently transpose them (a mirror bug here would enumerate the *right number* of tiles at the *wrong* coordinates, invisible until the harvest produces a scrambled patch).
+- [x] **Test `eoxResponseIsImage`.** `'image/jpeg'` → `true`; `'text/html; charset=utf-8'` → `false`; `null` → `false`. This is the pure half of spec §4's "non-image response aborts loudly" rule — the fetcher's network loop calls it and throws when it returns `false`, but the loop itself isn't unit-tested (no network in tests, per `testing.md`).
+- [x] **Test the backoff/retry shape**, modeled on `tests/tools/fetch/fetchDesi.test.ts`'s pattern (mock `delay` per that file's `vi.mock('../../../tools/utils/async/delay', ...)` idiom at `fetchDesi.test.ts:11-14`, assert `delay` was called with the exponential sequence on a retryable failure, and that a non-retryable status rethrows without calling `delay`).
+- [x] **Test resume-by-file-existence**: given a tile path that already exists on disk, the harvester's per-tile fetch step is skipped (assert the injected transport/fetch function was never called for that index) — no chunk-state sidecar, unlike `fetchDesi`'s.
+- [x] Implement `eoxTileIndicesForBbox`, `eoxResponseIsImage`, and the CLI (`bbox` args + `--level` defaulting to `13`, per spec §4) driving them with a throttled (~2 req/s) worker loop over `eoxTileIndicesForBbox`'s output, writing each tile to `data/raw/eox/<z>/<row>/<col>.jpg`. A non-image response throws and stops the run (spec §4's inversion of `fetchEarthTileBitmap.ts:36-38`'s silent-miss convention — the *fetcher* must not treat a throttled HTML redirect as a miss).
+- [x] Add the `'eox.dir'` registry entry (model on `hyperleda.designations-dir` at `tools/utils/io/rawDataRegistry.ts:96-101` for the `kind: 'directory'`/`fetcher` shape): `path: 'data/raw/eox'`, `kind: 'directory'`, `source: 'gitignored'`, `description` naming the s2cloudless 2016 harvest, `fetcher: 'tools/fetch/fetchEoxTiles.ts'`.
+- [x] Write `data/raw/eox/README.md` per `docs/DATA.md`'s "Adding a new raw data source" step 5: upstream URL, tile-index convention (row-before-col, WGS84 TMS, z13 only — coarser levels derived at bake time), fetch date, licence (CC BY 4.0, s2cloudless 2016 layer only, per this plan's Global Constraints).
+- [x] Add `"fetch-eox": "tsx tools/fetch/fetchEoxTiles.ts"` to `package.json`, in the `fetch-*` block.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- fetchEoxTiles` — green.
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -428,13 +428,13 @@ Provenance constants, verbatim from spec §4:
 }
 ```
 
-- [ ] **Test: composite arithmetic with stub tile files.** Following `bakeCoarserLevel`'s test idiom (`buildEarthTiles.test.ts:24-113` — solid-colour children, `pixelAt`/`expectPixelNear` helpers), write four 256 px solid-colour stub `.jpg` files at `<coverageDir>/13/<row>/<col>.jpg` for one 512 px bake tile's four EOX children, call `readBox` for the corresponding `LonLatBounds`, and assert each quadrant of the returned 512 px raster carries its own child's colour (reuse the NW/NE/SW/SE quadrant-sampling pattern from `buildEarthTiles.test.ts:89-113`).
-- [ ] **Test: `readBox` returns `null` outside coverage.** With only a small set of stub tiles on disk, a box entirely outside their range returns `null`.
-- [ ] **Test: coverage-from-disk bbox derivation.** Given a stub tile tree spanning a known row/col rectangle at z13, assert `(await eoxTileSource(...)).coverage` is the `LonLatBounds` that rectangle converts to — hand-computed from the WGS84 z13 grid formula, not re-derived via the same code path the source itself uses (a mirror per `testing.md` would prove nothing).
-- [ ] Implement `eoxTileSource`: scan `coverageDir` for the on-disk row/col range at startup, derive `coverage` and stash it; `readBox` maps the requested `LonLatBounds` to the 2×2 EOX z13 tile indices it needs (inverse of `eoxTileIndicesForBbox`'s per-tile bbox math), reads each with `sharp`, shrinks each to 256 px (already native size — a resize here would only be a no-op/identity unless a future harvest changes tile size, so this may be a direct read with no resize, per-child, still composited via `.composite()` never `.resize()`-after-`.composite()`), composites into the 512 px output, `ensureAlpha()`, returns the raw RGBA buffer. Missing quadrant(s) → `null` (matching `EarthImagerySource`'s decline contract — no partial-tile output, unlike `bakeCoarserLevel`'s "missing quadrants transparent" rule, since a *source* declining is different from a *bake* tolerating coastal gaps).
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- eoxTileSource` — green.
-- [ ] Commit:
+- [x] **Test: composite arithmetic with stub tile files.** Following `bakeCoarserLevel`'s test idiom (`buildEarthTiles.test.ts:24-113` — solid-colour children, `pixelAt`/`expectPixelNear` helpers), write four 256 px solid-colour stub `.jpg` files at `<coverageDir>/13/<row>/<col>.jpg` for one 512 px bake tile's four EOX children, call `readBox` for the corresponding `LonLatBounds`, and assert each quadrant of the returned 512 px raster carries its own child's colour (reuse the NW/NE/SW/SE quadrant-sampling pattern from `buildEarthTiles.test.ts:89-113`).
+- [x] **Test: `readBox` returns `null` outside coverage.** With only a small set of stub tiles on disk, a box entirely outside their range returns `null`.
+- [x] **Test: coverage-from-disk bbox derivation.** Given a stub tile tree spanning a known row/col rectangle at z13, assert `(await eoxTileSource(...)).coverage` is the `LonLatBounds` that rectangle converts to — hand-computed from the WGS84 z13 grid formula, not re-derived via the same code path the source itself uses (a mirror per `testing.md` would prove nothing).
+- [x] Implement `eoxTileSource`: scan `coverageDir` for the on-disk row/col range at startup, derive `coverage` and stash it; `readBox` maps the requested `LonLatBounds` to the 2×2 EOX z13 tile indices it needs (inverse of `eoxTileIndicesForBbox`'s per-tile bbox math), reads each with `sharp`, shrinks each to 256 px (already native size — a resize here would only be a no-op/identity unless a future harvest changes tile size, so this may be a direct read with no resize, per-child, still composited via `.composite()` never `.resize()`-after-`.composite()`), composites into the 512 px output, `ensureAlpha()`, returns the raw RGBA buffer. Missing quadrant(s) → `null` (matching `EarthImagerySource`'s decline contract — no partial-tile output, unlike `bakeCoarserLevel`'s "missing quadrants transparent" rule, since a *source* declining is different from a *bake* tolerating coastal gaps).
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- eoxTileSource` — green.
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -476,13 +476,13 @@ await bakeAll(
 
 The `--dev` path (`devSource()`, whole-globe equirect, no EOX) stays single-band — the EOX band needs the real harvest on disk, which `--dev` explicitly opts out of (per its existing docstring at `buildEarthTiles.ts:290-295`, "an explicit flag rather than a silent fallback"). `TILE_PREFIX` bumps `earth-tiles/v1` → `earth-tiles/v2` (`buildEarthTiles.ts:81`) — the module's own versioning rule (tiles serve `immutable`, so a shape change needs new keys). EOX's `minLevel: 8` is explicit, not derived from `BAKE_MIN_LEVEL` (spec §3's rationale: the regional band's floor is "one level deeper than the global band's own max," 7 + 1 = 8, a different rule than the whole-globe band's tier-derived floor).
 
-- [ ] Update `main()`'s production branch to the two-band `bakeAll` call above.
-- [ ] Bump `TILE_PREFIX` to `earth-tiles/v2`.
-- [ ] Add the EOX subsection to `ATTRIBUTIONS.md` under "NASA — Earth & Moon imagery" (near `ATTRIBUTIONS.md:330`, alongside the existing Blue Marble bullet list at `ATTRIBUTIONS.md:328-345`): **EOX IT Services — EOxCloudless (Sentinel-2)**, carrying the attribution string verbatim from Task 7's constants, noting CC BY 4.0 and the 2016-layer-only rule.
-- [ ] **No new test.** Task 4's `bakeAll` two-band test already covers "two bands in one invocation write two `levels.surface` entries" — this task only changes which two sources `main()` passes, which is a CLI wiring concern with no independent pure-function surface to test (same "no test — GPU/CLI wiring" reasoning the completed virtual-texture plan applied throughout its Phase B, e.g. `docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md` task B2).
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test` — full suite green (confirms nothing downstream of `TILE_PREFIX`/`main()` broke).
-- [ ] Commit:
+- [x] Update `main()`'s production branch to the two-band `bakeAll` call above.
+- [x] Bump `TILE_PREFIX` to `earth-tiles/v2`.
+- [x] Add the EOX subsection to `ATTRIBUTIONS.md` under "NASA — Earth & Moon imagery" (near `ATTRIBUTIONS.md:330`, alongside the existing Blue Marble bullet list at `ATTRIBUTIONS.md:328-345`): **EOX IT Services — EOxCloudless (Sentinel-2)**, carrying the attribution string verbatim from Task 7's constants, noting CC BY 4.0 and the 2016-layer-only rule.
+- [x] **No new test.** Task 4's `bakeAll` two-band test already covers "two bands in one invocation write two `levels.surface` entries" — this task only changes which two sources `main()` passes, which is a CLI wiring concern with no independent pure-function surface to test (same "no test — GPU/CLI wiring" reasoning the completed virtual-texture plan applied throughout its Phase B, e.g. `docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md` task B2).
+- [x] `npm run typecheck` — clean.
+- [x] `npm test` — full suite green (confirms nothing downstream of `TILE_PREFIX`/`main()` broke).
+- [x] Commit:
 
 ```
 git commit -m "$(cat <<'EOF'
@@ -505,8 +505,8 @@ EOF
 
 **Not a code task — no new files, no tests.** This is where the architecture built in Tasks 1–8 gets pointed at real data for the first time.
 
-- [ ] **Announce to the user before any network request leaves the machine**, and get an explicit go-ahead: the harvest is ~276 requests against `tiles.maps.eox.at` (spec §4's Copenhagen-patch estimate) at ~2 req/s, roughly 2–3 minutes, hitting a third-party service under its stated CC BY 4.0 / courtesy terms (spec §9 — no bulk-access email sent yet, this is a hand-picked-patch harvest, within the terms the spec's ground-preparation research already checked).
-- [ ] On go-ahead, run the harvest: `npm run fetch-eox -- --west 12.4 --south 55.5 --east 12.9 --north 55.8` (or whatever exact flag names Task 6 implemented — use its actual CLI, this is the Copenhagen bbox from spec §3). Confirm ~276 tiles landed under `data/raw/eox/13/`.
-- [ ] Run the real bake: `npm run build-earth-tiles` (no `--dev` — this is the production two-band path from Task 8). Confirm it emits both BMNG (`z3`–`z7`) and EOX (`z8`–`z13` over Copenhagen) tiles under `public/data/images/earth-tiles/` (main checkout's directory, via the worktree symlink — this is intended), and that `manifest.json`'s `levels.surface` has two entries with `prefix: 'earth-tiles/v2'`.
-- [ ] **Stop here and hand off to the user for the dev-server visual pass** (spec §7): fly to Copenhagen and confirm EOX detail resolves at z8–z13 with no seam artifact worse than the accepted BMNG(2004)/Sentinel(2016) look jump (spec §6 — if it reads jarring rather than "you've zoomed into a sharper source," the named fallback is baking Copenhagen's z3–z7 from EOX too, a second manifest entry, not a code change); `EARTH_TILE_LOD_BIAS` reads sane at z12–z13 with no obvious over/under-refinement; flying anywhere outside the Copenhagen patch is visually unchanged from before this feature.
-- [ ] **Explicitly NOT in this task:** R2 sync. Record as a post-merge checklist item for whoever merges this branch: after merge, from the **main worktree only** (never from this worktree — worktrees don't own `data/`, per `project_worktree_data_isolation`), run `npm run sync-r2-secure` and verify the CDN serves `v2` tiles and the flipped manifest (spec §5's cache-skew note: up to a day of clients holding a stale `v1` manifest against a fresh bundle is accepted, not adapted for).
+- [x] **Announce to the user before any network request leaves the machine**, and get an explicit go-ahead: the harvest is ~276 requests against `tiles.maps.eox.at` (spec §4's Copenhagen-patch estimate) at ~2 req/s, roughly 2–3 minutes, hitting a third-party service under its stated CC BY 4.0 / courtesy terms (spec §9 — no bulk-access email sent yet, this is a hand-picked-patch harvest, within the terms the spec's ground-preparation research already checked).
+- [x] On go-ahead, run the harvest: `npm run fetch-eox -- --west 12.4 --south 55.5 --east 12.9 --north 55.8` (or whatever exact flag names Task 6 implemented — use its actual CLI, this is the Copenhagen bbox from spec §3). Confirm ~276 tiles landed under `data/raw/eox/13/`.
+- [x] Run the real bake: `npm run build-earth-tiles` (no `--dev` — this is the production two-band path from Task 8). Confirm it emits both BMNG (`z3`–`z7`) and EOX (`z8`–`z13` over Copenhagen) tiles under `public/data/images/earth-tiles/` (main checkout's directory, via the worktree symlink — this is intended), and that `manifest.json`'s `levels.surface` has two entries with `prefix: 'earth-tiles/v2'`.
+- [x] **Stop here and hand off to the user for the dev-server visual pass** (spec §7): fly to Copenhagen and confirm EOX detail resolves at z8–z13 with no seam artifact worse than the accepted BMNG(2004)/Sentinel(2016) look jump (spec §6 — if it reads jarring rather than "you've zoomed into a sharper source," the named fallback is baking Copenhagen's z3–z7 from EOX too, a second manifest entry, not a code change); `EARTH_TILE_LOD_BIAS` reads sane at z12–z13 with no obvious over/under-refinement; flying anywhere outside the Copenhagen patch is visually unchanged from before this feature.
+- [x] **Explicitly NOT in this task:** R2 sync. Record as a post-merge checklist item for whoever merges this branch: after merge, from the **main worktree only** (never from this worktree — worktrees don't own `data/`, per `project_worktree_data_isolation`), run `npm run sync-r2-secure` and verify the CDN serves `v2` tiles and the flipped manifest (spec §5's cache-skew note: up to a day of clients holding a stale `v1` manifest against a fresh bundle is accepted, not adapted for).
