@@ -29,7 +29,7 @@ const CSS_HEIGHT = 1000;
 
 describe('orbitRadPerPixel', () => {
   it('damps well below the flat cap at a low-altitude standoff', () => {
-    // 1.02 radii — the SURFACE_STANDOFF_RADII floor, ~127 km over Earth.
+    // 1.02 radii — ~127 km over Earth, well inside the damped regime.
     const distance = EARTH_RADIUS_MPC * 1.02;
     const rate = orbitRadPerPixel(FOV_Y_RAD, distance, CSS_HEIGHT, EARTH_RADIUS_MPC);
 

@@ -3,9 +3,9 @@
  * pixel, damped by altitude above a focused body's surface.
  *
  * A flat rate rotates the world about the target's CENTRE, so the ground it
- * sweeps scales with the pivot's radius, not altitude — at Earth's standoff
- * floor (127 km, `SURFACE_STANDOFF_RADII`) a flat-rate pixel sweeps ~350x the
- * ground the screen actually spans.
+ * sweeps scales with the pivot's radius, not altitude — 127 km over Earth a
+ * flat-rate pixel sweeps ~350x the ground the screen actually spans, and the
+ * `SURFACE_STANDOFF_RADII` floor sits far lower still.
  *
  * `2 * tan(fovYRad / 2) * h / (cssHeight * pivotRadiusMpc)`, where
  * `h = distance - pivotRadiusMpc`, rates the drag against the ground instead —

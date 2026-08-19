@@ -24,13 +24,14 @@ export const MIN_DISTANCE_MPC = 1e-17;
 
 /**
  * Where the camera stops relative to the pivot's surface, as a multiple of its
- * radius — a RATIO, so one number is right for every body (127 km over Earth,
- * proportionally less over the Moon) instead of re-tuning per body. 2%, not a
- * hair over 1.0, because the standoff needs a horizon: `planEarthTiles`
- * returns an empty plan at or below 1.0 radii, where there is none to plan
- * against.
+ * radius — a RATIO, so one number is right for every body (~1 km over Earth,
+ * proportionally less over the Moon) instead of re-tuning per body. Sized for
+ * the z13 tile band (~9 m/texel); the old 2% floor (127 km) was tuned for the
+ * z7-era pyramid. Must stay strictly above 1.0: the standoff needs a horizon —
+ * `planEarthTiles` returns an empty plan at or below 1.0 radii, where there is
+ * none to plan against.
  */
-export const SURFACE_STANDOFF_RADII = 1.02;
+export const SURFACE_STANDOFF_RADII = 1.00015;
 
 /**
  * Maximum allowed `cam.distance` in Mpc.
