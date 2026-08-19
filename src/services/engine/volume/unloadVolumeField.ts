@@ -22,6 +22,5 @@ export function unloadVolumeField(
 ): void {
   state.gpu.volumeFieldRenderer?.unload(id);
   store.dispatch(removeVolumeField(id));
-  // Redundant-but-local; rung 5 owns the wake accounting.
-  state.subsystems.scheduler.requestRender();
+  // Wake rides the settings dispatch above; watchWakeSaga's route table renders it (#14 D2).
 }
