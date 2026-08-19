@@ -295,6 +295,38 @@ describe('bakeAll', () => {
     expectPixelNear(right, ORANGE); // underfilled, fully opaque
   });
 
+  // The perf fix this pins: bakeDeepestLevel must probe only the tile range a
+  // band's coverage box implies, not the whole z-level grid.
+  it('clamps the deepest-level bake to the band coverage instead of walking the whole grid', async () => {
+    const dir = tmpDir();
+    // At TILE_PX=512, z=3 is an 8x4 tile grid (lonStep=latStep=45); this box
+    // is exactly tile (x=3, y=1)'s own span, so the clamped rect is 1x1 —
+    // pre-fix, bakeDeepestLevel probes all 32 tiles of the z3 grid instead.
+    const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
+    let readBoxCalls = 0;
+    const regional: EarthImagerySource = {
+      id: 'stub-regional',
+      attribution: 'stub-regional attribution',
+      provenance: {
+        sourceId: 'stub-regional',
+        attribution: 'stub-regional attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [coverageBox],
+      async readBox(_box, widthPx, heightPx) {
+        readBoxCalls++;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        raster.fill(255);
+        return raster;
+      },
+    };
+
+    await bakeAll([{ source: regional, minLevel: 3 }], dir);
+
+    expect(readBoxCalls).toBe(1);
+  });
+
   it('writes two manifest entries and both sources tiles, in band order', async () => {
     const dir = tmpDir();
     const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
