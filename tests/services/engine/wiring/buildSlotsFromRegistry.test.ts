@@ -7,7 +7,8 @@
  *
  *   - one slot per non-external row, keyed by `row.key`;
  *   - `built: 'external'` rows are skipped (their throwing factory is never
- *     called) — the contract that keeps point slots minted only in initGpu;
+ *     called) — the contract that keeps point slots minted only directly in
+ *     `wireSlots`;
  *   - no state mutation and no `.load()` (purity).
  *
  * Stub rows keep the loop logic isolated from the real ASSET_WIRING registry,

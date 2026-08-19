@@ -3,9 +3,9 @@
  * lifecycle, driven by the `RenderTargetSpec` table.
  *
  * An offscreen target is a ROW (`id`, `format`, `depth`, `scale`), and this
- * module allocates, resizes, and releases every row uniformly — a new
+ * module allocates, reconciles, and releases every row uniformly — a new
  * offscreen (a pick target, a foreground slab) is a new row, not a new
- * module + handle + resize call, and the resize path never has to enumerate
+ * module + handle + resize call, and the frame loop never has to enumerate
  * targets by hand.
  *
  * ### Why the HDR offscreen exists at all
@@ -40,8 +40,8 @@
  * shader's sample-at-uv semantics, and the min-1-px clamp guards tiny
  * canvases where `floor(size / 3)` would yield an illegal 0-dimension
  * texture. Consumers that need "viewport == texture size" (the raymarch
- * layer's dither-frequency viewport) read the SAME `scale` off the
- * `'volume'` spec row, so the two sites cannot drift.
+ * layer's dither-frequency viewport) read it via `sizeOf`, so the two sites
+ * cannot drift.
  *
  * ### Why the star-aggregate row renders at half scale
  *
@@ -80,16 +80,27 @@
  * multiplicative transmittance has to land on the real cosmological
  * accumulation, and it is not the fill-bound half.
  *
- * This is the one row whose divisor is NOT a constant here: it arrives as the
- * `mwAggregateDivisor` argument, carrying `settings.milkyWay.aggregateDivisor`.
- * The divisor trades directly against the star shader's `starPxMin` /
- * `starPxMax` clamps, which are stated in TARGET pixels and are already live
- * sliders, so the three have to be findable together against a moving frame.
- * A target's dimensions are fixed at creation, so the frame loop answers a
- * change by rebuilding this table (see `runFrame`) — the divisor currently in
- * force is readable straight off this row's `scale`, which is why no separate
- * 'last applied' record exists anywhere. `MILKY_WAY_TUNING_DEFAULTS` is the
- * home of its boot value.
+ * This is the one row whose divisor is NOT a constant here: its `scale` is a
+ * function of the live `settings.milkyWay.aggregateDivisor`, resolved afresh by
+ * every `reconcile`. The divisor trades against the star shader's `starPxMin` /
+ * `starPxMax` clamps, stated in TARGET pixels and already live sliders, so the
+ * three move together against a moving frame. No 'last applied' record exists
+ * anywhere: the allocated texture size (`sizeOf`) is the record of the size in
+ * force, and `reconcile` compares against it.
+ *
+ * ### Why the zone-of-avoidance row renders at 1/5 scale
+ *
+ * The band is a fullscreen 32-step ray march — the heaviest per-pixel
+ * additive overlay after the scalar-volume raymarch, too costly to run at
+ * full res. Same remedy as `volume` /
+ * `star-aggregates` / `mw-aggregate`: the band is smooth low-frequency haze
+ * with no high-frequency detail, so a 1/5-res raymarch bilinearly upsampled
+ * into HDR is visually free while dropping fragment cost by the square of
+ * the divisor (5 → 1/25th). The curved "Zone of Avoidance" lettering does
+ * NOT ride this row — MSDF text needs crisp edges at any zoom, so it draws
+ * straight into full-res HDR from the upsample layer, after the band
+ * composites in. Clears to a=0 for the same additive-identity reason as its
+ * three siblings.
  *
  * ### Why the foreground row carries a depth texture
  *
@@ -125,52 +136,13 @@
  * producers whose colour attachment is provided by whoever opens the pass.
  */
 
+import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
-
-/**
- * Per-target first-touch clear values, consumed by the executor: the first
- * pass opened against a target in a frame clears to this colour; later
- * passes load. They live beside the target table (not on `RenderTargetSpec`
- * — that type is a locked cross-plan contract) because a clear value is a
- * property of the target, not of any layer drawing into it. `hdr` and
- * `swap` clear opaque black (a=1); `volume` clears to a=0 so the half-res
- * additive raymarch starts from zero coverage — the upsample's additive
- * blend then adds nothing for fragments the volumes didn't reach.
- * `foreground:0` clears transparent (a=0) so the later OVER composite leaves
- * every pixel the foreground did not draw unchanged — an empty foreground
- * frame composites to a no-op rather than a black wash over the background.
- * `star-aggregates` clears to a=0 for the same reason `volume` does — its
- * upsample composite adds nothing where no aggregate glow landed.
- *
- * The paired depth clear (the far-plane depth — `0.0` under the NEAR0
- * `foreground:0` row's reversed-Z convention) is NOT table data here — the
- * executor supplies each depth-bearing row's value via `depthClearValueFor`
- * when it opens the pass. See `executeFrame`.
- */
-export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
-  hdr: { r: 0, g: 0, b: 0, a: 1 },
-  volume: { r: 0, g: 0, b: 0, a: 0 },
-  'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
-  // Same reason as `volume` and `star-aggregates`: the Milky Way's star
-  // billboards draw additively into this row, so an untouched texel must
-  // contribute nothing when the upsample composites it back into HDR.
-  'mw-aggregate': { r: 0, g: 0, b: 0, a: 0 },
-  'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
-  // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
-  // additively (the upsample fold uses one/one blend), so an untouched texel
-  // must contribute nothing. The bright pass overwrites bloom0 outright, but
-  // the upsample folds add onto bloom0..3, and any level the fold does not
-  // cover has to start from zero coverage. Generated from BLOOM_LEVELS (the
-  // shared pyramid-depth home) so the clear table can never fall out of step
-  // with the `bloomN` spec rows below.
-  ...Object.fromEntries(
-    Array.from({ length: BLOOM_LEVELS }, (_unused, n) => [`bloom${n}`, { r: 0, g: 0, b: 0, a: 0 }]),
-  ),
-  swap: { r: 0, g: 0, b: 0, a: 1 },
-};
+import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
+import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -181,39 +153,109 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
 const STAR_AGGREGATE_DIVISOR = 2;
 
 /**
- * Build the concrete target table for this frame configuration. A function
- * (not a module constant) because two rows are runtime-decided: the swap row's
- * format is the runtime swap-chain format (`bgra8unorm` on macOS, `rgba8unorm`
- * elsewhere), and the `mw-aggregate` row's divisor is a live tuning knob (see
- * the module header). Rows per the renderer-unification design's concrete
- * target table; the pick rows arrive in a later plan phase.
+ * Downsample divisor for the reduced-res `zoa` row — total fragment
+ * reduction is its square (5 → 1/25th the fragments). Named here for the
+ * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
  */
-function buildSpecs(
-  swapFormat: GPUTextureFormat,
-  mwAggregateDivisor: number,
-): readonly RenderTargetSpec[] {
+const ZONE_OF_AVOIDANCE_DIVISOR = 5;
+
+/** A row's divisor for this state — constant rows ignore the state entirely. */
+function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
+  return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
+}
+
+/**
+ * The declared render-target table for this frame configuration. A function
+ * (not a module constant) because the swap row's format is runtime-decided —
+ * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
+ * Rows per the renderer-unification design's concrete target table; the pick
+ * rows arrive in a later plan phase. Exported so `targetParity.test.ts` can
+ * cross-check its ids against `CONTENT_LAYERS` and `frameProgram` without a
+ * GPU device — see that file's header for why those checks matter.
+ */
+export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
   return [
-    { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-    { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-    { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
-    { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: mwAggregateDivisor },
-    { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
+    // hdr and swap clear opaque black (a=1); every other row clears to a=0 so
+    // its upsample/composite adds nothing for a fragment it didn't reach —
+    // WebGPU defaults an omitted clearValue to {0,0,0,0}, so dropping either
+    // a=1 row here would be a silent visual change.
+    {
+      id: 'hdr',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+    // Half-res additive raymarch starts from zero coverage.
+    {
+      id: 'volume',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 3,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Zone-of-avoidance band raymarch — same reason as `volume`.
+    {
+      id: 'zoa',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: ZONE_OF_AVOIDANCE_DIVISOR,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Same reason as `volume`.
+    {
+      id: 'star-aggregates',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: STAR_AGGREGATE_DIVISOR,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Same reason as `volume` and `star-aggregates`: the Milky Way's star
+    // billboards draw additively into this row.
+    {
+      id: 'mw-aggregate',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: (state) => state.settings.milkyWay.aggregateDivisor,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // Transparent (a=0) so the later OVER composite leaves every pixel the
+    // foreground did not draw unchanged — an empty foreground frame
+    // composites to a no-op rather than a black wash over the background.
+    {
+      id: 'foreground:0',
+      format: HDR_TARGET_FORMAT,
+      depth: FOREGROUND_DEPTH_FORMAT,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
     // Bloom mip pyramid: an ever-wider glow. rgba16float mirrors the HDR
     // precision so the additive fold keeps its dynamic range. No depth: these
-    // are fullscreen post passes, not depth-tested geometry. Both the depth and
-    // the per-level divisor come from `bloomConstants` (the shared pyramid-shape
-    // home) so adding a level or respacing the pyramid is a one-line edit that
-    // stays consistent with the uniform arrays and pass loops deriving from it.
+    // are fullscreen post passes, not depth-tested geometry. The depth, the
+    // per-level divisor, AND the clear (a=0 — the pyramid accumulates
+    // additively, so an untouched texel must contribute nothing) all come
+    // from `bloomConstants`/this one generator so a pyramid level can never
+    // fall out of step with its row. bloom0 keeps a=0 too even though the
+    // bright pass overwrites it outright: the upsample folds add onto
+    // bloom0..3, and any level the fold doesn't cover has to start from zero
+    // coverage.
     ...Array.from(
       { length: BLOOM_LEVELS },
       (_unused, n): RenderTargetSpec => ({
         id: `bloom${n}`,
-        format: 'rgba16float',
+        format: HDR_TARGET_FORMAT,
         depth: null,
         scale: bloomScale(n),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
       }),
     ),
-    { id: 'swap', format: swapFormat, depth: null, scale: 1 },
+    {
+      id: 'swap',
+      format: swapFormat,
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
   ];
 }
 
@@ -221,11 +263,11 @@ export function createRenderTargets(
   device: GPUDevice,
   swapFormat: GPUTextureFormat,
   size: Size,
-  mwAggregateDivisor: number,
+  state: EngineState,
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = buildSpecs(swapFormat, mwAggregateDivisor);
+  let specs = renderTargetRows(swapFormat);
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.
@@ -240,14 +282,13 @@ export function createRenderTargets(
   const views = new Map<string, GPUTextureView>();
   const depthTextures = new Map<string, GPUTexture>();
   const depthViews = new Map<string, GPUTextureView>();
+  // Recorded beside `textures`/`views` so `sizeOf` never reads a texture's
+  // width directly — test doubles for `RenderTargets` stub textures without
+  // real dimensions (see `renderTargets.test.ts`'s `mockDevice`).
+  const sizes = new Map<string, Size>();
 
-  function allocate(spec: RenderTargetSpec, s: Size): void {
-    // floor(size / scale), min 1 px — see the module header on why floor
-    // (upsample uv semantics) and why the clamp (0 is an illegal texture
-    // dimension on tiny canvases). The depth texture, when present, shares
-    // these dimensions exactly so its samples line up with the colour target.
-    const width = Math.max(1, Math.floor(s.width / spec.scale));
-    const height = Math.max(1, Math.floor(s.height / spec.scale));
+  function allocate(spec: RenderTargetSpec, width: number, height: number): void {
+    sizes.set(spec.id, { width, height });
 
     textures.get(spec.id)?.destroy();
     const texture = device.createTexture({
@@ -282,13 +323,46 @@ export function createRenderTargets(
     }
   }
 
-  for (const spec of offscreenSpecs) allocate(spec, size);
+  // Keyed on the size the row was allocated at, never on a remembered divisor:
+  // the texture is the authoritative record of what it was built at, so a canvas
+  // resize and a settings-driven divisor move reduce to one question. Two
+  // divisors that floor to the same pixels genuinely need no reallocation — the
+  // surviving texture is the one every consumer's `viewOf` already resolves.
+  // (`reducedTargetSize` is the shared sizing rule; see its docblock.)
+  function reconcile(s: EngineState, canvas: Size): void {
+    for (const spec of offscreenSpecs) {
+      const [width, height] = reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
+      const held = sizes.get(spec.id);
+      if (held !== undefined && held.width === width && held.height === height) continue;
+      allocate(spec, width, height);
+    }
+  }
+
+  // Boot takes the same path a frame does: nothing is allocated yet, so every
+  // offscreen row misses and gets its first texture.
+  reconcile(state, size);
 
   return {
     // A getter, not a captured value: setSwapFormat reassigns `specs`, and
     // callers must observe the replacement through the same handle.
     get specs() {
       return specs;
+    },
+    specOf(id: string): RenderTargetSpec {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec) {
+        throw new Error(`renderTargets: no spec row for target '${id}'`);
+      }
+      return spec;
+    },
+    sizeOf(id: string): Size {
+      const size = sizes.get(id);
+      if (!size) {
+        // Covers 'swap' (no allocated texture), unknown ids, and
+        // use-after-destroy — the same loud-failure discipline as `viewOf`.
+        throw new Error(`renderTargets: no allocated size for target '${id}'`);
+      }
+      return size;
     },
     viewOf(id: string): GPUTextureView {
       const view = views.get(id);
@@ -309,9 +383,7 @@ export function createRenderTargets(
       }
       return view;
     },
-    resize(s: Size): void {
-      for (const spec of offscreenSpecs) allocate(spec, s);
-    },
+    reconcile,
     setSwapFormat(next: GPUTextureFormat): void {
       specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
     },
@@ -322,6 +394,7 @@ export function createRenderTargets(
       views.clear();
       depthTextures.clear();
       depthViews.clear();
+      sizes.clear();
     },
   };
 }

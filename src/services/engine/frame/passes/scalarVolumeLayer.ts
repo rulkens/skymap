@@ -14,12 +14,10 @@
  * ### Why the downscaled viewport (not the canvas viewport)
  *
  * `volumeFieldRenderer.draw` takes `viewportPx` to normalise its per-fragment
- * jitter-dither spatial frequency. The volume target is `1 / scale` of the
- * canvas (the `'volume'` row's `scale` in the render-target table), so passing
- * the canvas size would shift the dither frequency and make it appear finer on
- * the upsampled output. We compute the downscaled size inline (min 1 px for
- * tiny canvases, mirroring the table's allocation formula) so the "viewport ==
- * offscreen texture size" invariant is obvious at the draw site.
+ * jitter-dither spatial frequency. The volume target is smaller than the
+ * canvas (`ctx.renderTargets.sizeOf('volume')`), so passing the canvas size
+ * would shift the dither frequency and make it appear finer on the upsampled
+ * output.
  *
  * ### Why `deriveVolumeLiveness` is re-derived in `draw`
  *
@@ -54,13 +52,10 @@ export const scalarVolumeLayer: ContentLayer = {
     const renderer = state.gpu.volumeFieldRenderer;
     if (renderer === null) return;
 
-    // Viewport matches the volume target's texture size: same
-    // floor(canvas / scale), min 1 px formula `renderTargets` allocates
-    // with, reading the SAME `scale` off the 'volume' spec row — so the
-    // divisor has one home and viewport == texture by construction.
-    const scale = ctx.renderTargets.specs.find((s) => s.id === 'volume')!.scale;
-    const vw = Math.max(1, Math.floor(ctx.canvasSize.width / scale));
-    const vh = Math.max(1, Math.floor(ctx.canvasSize.height / scale));
+    // Viewport is the volume target's allocated size (see `sizeOf`) — the
+    // same floor(canvas / scale), min 1 px formula `renderTargets` uses to
+    // allocate it, so viewport == texture by construction.
+    const { width: vw, height: vh } = ctx.renderTargets.sizeOf('volume');
     // Tangent of one pixel's FULL angular width at the volume target,
     // mirroring `drawPxPerRad`'s shape (frameContext.ts:177) but against
     // the downscaled `vh` above rather than the canvas height: half the

@@ -1,25 +1,13 @@
 /**
- * `RAW_DATA` — single source of truth for every catalog raw-data file the
- * build pipeline consumes. Keyed by dotted-lowercase `<catalog>.<artifact>`
- * (`'2mrs.table3'`, `'cf4.table2'`, …); consumers call `rawDataPath(key)`
- * rather than hand-writing `data/raw/...` strings, so a file move is a
- * one-line edit here. `RawDataKey` gives compile-time key checking.
+ * `RAW_DATA` — single source of truth for every raw-data file the build pipeline
+ * consumes, keyed dotted-lowercase `<catalog>.<artifact>`. Consumers call
+ * `rawDataPath(key)` rather than hand-writing `data/raw/...`, so a file move is
+ * a one-line edit here and `RawDataKey` rejects a bad key at compile time.
  *
- * ## Conventions
- *
- * - **Keys**: `<catalog>.<artifact>`. First segment = catalog/producer
- *   (`2mrs`, `glade`, `hyperleda`, `sdss`, `famous`, `cf4`, `mcpm`,
- *   `milliquas`, `mcxc`, `mscc`, `desi`, `gaia`, `textures`, `fonts`,
- *   `starnet`, `filaments`).
- * - **`source`**: `'committed'` = in git; `'gitignored'` = fetcher output.
- *   A missing gitignored file → run the fetcher; a missing committed file
- *   → the repo is broken.
- * - **`kind`**: `'file'` or `'directory'`. Directories appear when the
- *   filename is dynamic (chunk files, tier variants); consumers `join()`.
- * - **`upstream`/`fetcher`/`readme`**: optional provenance documentation.
- *
- * Build artefacts (`public/data/*.bin`) are outputs, not inputs — they are
- * not registered here.
+ * `source`: `'committed'` = in git, so a missing file means a broken repo;
+ * `'gitignored'` = fetcher output, so a missing file means "run the fetcher".
+ * `kind: 'directory'` covers dynamic filenames (chunks, tier variants) —
+ * consumers `join()`. Build artefacts are outputs; they are not registered.
  */
 
 import { resolve } from 'node:path';
@@ -276,6 +264,16 @@ export const RAW_DATA = {
     source: 'gitignored',
     description:
       'MCPM-extracted SDSS Cosmic Web tiers — `mcpm_sdss_d{2,4,8}.npy`. Produced once per VAC release by the Python extractor; mirrored to R2.',
+  },
+
+  // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
+
+  'polyphorm.dir': {
+    path: 'data/raw/polyphorm',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py, consumed by buildRhizomeVolume.ts.',
   },
 
   // ─── Milliquas (AGN/quasar compilation) ───────────────────────────────
@@ -805,6 +803,62 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.usgsPluto': {
+    path: 'data/raw/textures/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Pluto global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~296 MB.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsCharon': {
+    path: 'data/raw/textures/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~77 MB.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  // ─── Pluto derived colour — chroma source + calibration reference ─────
+  //
+  // PIA11707 carries NO colour-type label of its own. That it is enhanced
+  // rather than natural colour is inferred from its product family (Olkin+
+  // 2017, AJ 154 258, of their own three-broadband-filter renderings: "These
+  // images are enhanced color (not natural color as perceived by the human
+  // eye)" — the paper never mentions PIA11707) and measured directly by the
+  // fit against the true-colour reference below. Registered ONLY as a chroma
+  // source whose stretch that fitted calibration inverts — never wire
+  // PIA11707 into a runtime texture raw.
+
+  'textures.nasaPlutoColor': {
+    path: 'data/raw/textures/PIA11707.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JHUAPL/SwRI New Horizons MVIC global colour map of Pluto (PIA11707), 5926x2963, 3-channel 8-bit sRGB, equirectangular 0-360 lon / +-90 lat, ~29 MB. NASA calls it only "based on a series of three color filter images obtained by the Ralph/Multispectral Visual Imaging Camera" — NOT natural colour; see the block comment above for how the enhancement is established. Used solely as a chroma source: a fitted calibration against `textures.nasaPlutoTrueColorRef` inverts the stretch before any of this reaches a runtime texture. Verified live 2026-08-17: HTTP 200, image/tiff, content-length 30,681,324 bytes, at the assets.science.nasa.gov "dam" path (the old photojournal.jpl.nasa.gov path now serves HTML, not a TIFF).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia11/pia11707/PIA11707.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaPlutoTrueColorRef': {
+    path: 'data/raw/textures/BIG_P_COLOR_2_TRUE_COLOR1.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JHUAPL/SwRI/Alex Parker "True Colors of Pluto" (P_COLOR_2_TRUE_COLOR) — natural-colour New Horizons MVIC disc view, of which NASA says "The processing creates images that would approximate the colors that the human eye would perceive"; single hemisphere, 8000x8000 PNG, ~57 MB. Not a build input: this is the calibration REFERENCE the PIA11707 chroma-inversion fit is derived against and re-checked against, so it rides the full pull like every other raw rather than being curl-ed by hand. Verified live 2026-08-17: HTTP 200, image/png, content-length 57,098,975 bytes — the "Download Original" target on science.nasa.gov/resource/true-colors-of-pluto/. Pin THIS dam path, not the 1980-px `dynamicimage` transform the page embeds: that endpoint resamples, re-encodes and crops by a content-dependent rule, so its bytes are not a stable reference.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/b/BIG_P_COLOR_2_TRUE_COLOR1.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
   'textures.dir': {
     path: 'data/raw/textures',
     kind: 'directory',

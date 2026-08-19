@@ -37,6 +37,8 @@ import {
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_GALAXY_PROVENANCE,
   DEFAULT_ORBIT_TRAILS_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
@@ -89,9 +91,9 @@ export function buildInitialSettings(): EngineSettingsState {
     // stays the default's single source of truth (mirroring `tonemap.curve` ←
     // `DEFAULT_TONE_MAP_CURVE`).
     orientation: DEFAULT_ORIENTATION,
-    // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
-    // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
-    // registry entries so the seed can't drift from the galaxy catalog set — and,
+    // Galaxy catalog layer: shared billboard appearance knobs + one item row
+    // per galaxy catalog. Rows are DERIVED from the galaxy-catalog registry
+    // entries so the seed can't drift from the galaxy catalog set — and,
     // critically, each row's `enabled` is seeded from that entry's `visible`
     // field, making SOURCE_REGISTRY the single source of truth for default
     // visibility. The alternative — hardcoding `enabled: true` — silently
@@ -101,7 +103,6 @@ export function buildInitialSettings(): EngineSettingsState {
     // catalog except famousGalaxy (the only one that renders a name label) —
     // seeded uniformly true.
     galaxyCatalogs: {
-      enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
@@ -154,6 +155,13 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: DEFAULT_MILKY_WAY_ENABLED,
       labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
       ...MILKY_WAY_TUNING_DEFAULTS,
+    },
+    // Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
+    // visibility toggle (band + lettering) plus the band's look knobs, seeded
+    // from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
+    zoneOfAvoidance: {
+      enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+      ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
@@ -274,12 +282,11 @@ export function buildInitialSettings(): EngineSettingsState {
         },
       },
     },
-    // Structure overlay: master gate on + one item row per category, each
-    // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`
-    // so the seed can't drift from the structure-id set (famous galaxies bear no
-    // ring and so have no row here).
+    // Structure overlay: one item row per category, each ring + label
+    // default-on. Keys are DERIVED from `STRUCTURE_IDS` so the seed can't
+    // drift from the structure-id set (famous galaxies bear no ring and so
+    // have no row here).
     structures: {
-      enabled: true,
       items: Object.fromEntries(
         STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
       ) as Record<StructureId, StructureItemSettings>,

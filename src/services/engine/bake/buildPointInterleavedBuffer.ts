@@ -19,7 +19,7 @@
  * Structured-clone of a `GalaxyCatalog` with a `BigUint64Array` of object IDs
  * *cannot* be transferred wholesale — the spec only allows ArrayBuffer +
  * ImageBitmap + a few others, and BigInt typed arrays are not on the list.
- * The caller (`pointRenderer.defaultWorkerRunner`) slices each typed
+ * The caller (`galaxyPointRenderer.defaultWorkerRunner`) slices each typed
  * array's underlying buffer to produce an owned copy and transfers those
  * slices via `postMessage`'s transfer list — a one-shot ~50 ms memcpy
  * versus a multi-second structured clone of the whole cloud.  See that
@@ -34,7 +34,7 @@
  * ### Layout invariants
  *
  * The `interleaved` Float32Array MUST match the byte layout described in
- * `pointRenderer.ts`'s `SLOTS_PER_POINT` doc.  Slot indices used here are
+ * `galaxyPointRenderer.ts`'s `SLOTS_PER_GALAXY_POINT` doc.  Slot indices used here are
  * the same offsets the GPU vertex pipeline reads.  Changing either side
  * without the other corrupts every billboard.
  *
@@ -56,10 +56,10 @@ import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/Bu
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 
 /**
- * Number of f32 slots packed per point.  Mirrors `SLOTS_PER_POINT` in
- * `pointRenderer.ts`; the renderer's vertex pipeline declares the matching
+ * Number of f32 slots packed per point.  Mirrors `SLOTS_PER_GALAXY_POINT` in
+ * `galaxyPointRenderer.ts`; the renderer's vertex pipeline declares the matching
  * 48-byte arrayStride.  Kept duplicated rather than imported to avoid
- * `pointRenderer.ts` (which pulls in WebGPU globals via `?raw` shaders) from
+ * `galaxyPointRenderer.ts` (which pulls in WebGPU globals via `?raw` shaders) from
  * landing in the worker bundle — the worker should only need pure math.
  *
  * ### Layout
@@ -110,7 +110,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * once here is the classic space-for-ALU trade — +8 bytes/row against the
  * hottest per-frame loop in the app.
  */
-const SLOTS_PER_POINT = 14;
+const SLOTS_PER_GALAXY_POINT = 14;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
@@ -139,7 +139,7 @@ export function buildPointInterleavedBuffer(
   // an f32 from the GPU's perspective; the single bit of "is this row a
   // fallback orientation?" rides on the sign bit of `axisRatio` (slot 5) —
   // see that slot's writer below for the encoding.
-  const arrayBuffer = new ArrayBuffer(cloud.count * SLOTS_PER_POINT * 4);
+  const arrayBuffer = new ArrayBuffer(cloud.count * SLOTS_PER_GALAXY_POINT * 4);
   const interleaved = new Float32Array(arrayBuffer);
 
   // ── Per-galaxy catalog magnitude normalisation ───────────────────────────────────
@@ -229,7 +229,7 @@ export function buildPointInterleavedBuffer(
   const isFallbackArr = cloud.orientationIsFallback.slice();
 
   for (let i = 0; i < cloud.count; i++) {
-    const o = i * SLOTS_PER_POINT;
+    const o = i * SLOTS_PER_GALAXY_POINT;
 
     // Copy the three position components from the SoA positions array.
     interleaved[o + 0] = cloud.positions[i * 3 + 0]!;
@@ -325,7 +325,7 @@ export function buildPointInterleavedBuffer(
     // mode 4).  Default-write 1.0 (multiplicative identity) so the
     // shader's `select(1.0, angularDensityWeight, biasMode == 4u)`
     // produces no change in the other modes.  The lazy bake path
-    // (`pointRenderer.setBiasMode(BiasMode.AngularReweight)`) splices
+    // (`galaxyPointRenderer.setBiasMode(BiasMode.AngularReweight)`) splices
     // real per-galaxy weights in and re-uploads when the user toggles
     // into mode 4.
     interleaved[o + 11] = 1.0;

@@ -1,18 +1,10 @@
 /**
- * scenePlanets — planet + moon seeds at their real J2000 mean positions,
- * DERIVED from `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed
- * literals.
- *
- * The seven non-Earth major planets are heliocentric (`heliocentricPlanet`);
- * the Moon and the planets' major moons are geocentric (`satelliteBody`),
- * riding their parent by construction. Each body sits exactly on the ellipse
- * its trail draws, both reading the one element table.
- *
- * `radiusKm` stays in kilometres — the body's native unit — and is resolved into
- * a draw-space sphere at render time, so the authored number remains the one a
- * reader recognises (Jupiter's 69911 km, the Moon's 1737 km). Albedos are
- * plausible flat linear-RGB colours (no textures yet); they stay INLINE because
- * each is per-body data read once at its seed site, not a shared palette.
+ * scenePlanets — planet + moon seeds at their real J2000 mean positions, DERIVED
+ * from `ORBITAL_ELEMENTS` via `keplerianPositionMpc`, so a body sits exactly on the
+ * ellipse its trail draws. `radiusKm` stays in kilometres, the body's native unit,
+ * and is resolved into a draw-space sphere at render time. Albedos are plausible
+ * flat linear-RGB colours, inline rather than in `palette.ts` because each is
+ * per-body data read once at its seed site.
  */
 
 import { heliocentricPlanet } from './makers/heliocentricPlanet';
@@ -56,4 +48,19 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   satelliteBody({ id: 'rhea', label: 'Rhea', radiusKm: 764, albedo: [0.7, 0.71, 0.71] }),
   satelliteBody({ id: 'titan', label: 'Titan', radiusKm: 2575, albedo: [0.8, 0.6, 0.35] }),
   satelliteBody({ id: 'iapetus', label: 'Iapetus', radiusKm: 735, albedo: [0.4, 0.37, 0.32] }),
+  // Appended after Iapetus rather than filed with the other heliocentric bodies:
+  // SCENE_PLANETS is append-only, because a pick decodes to a body by array
+  // position (see the `body` arm of `resolvePickTable.ts`).
+  heliocentricPlanet({
+    id: 'pluto',
+    label: 'Pluto',
+    radiusKm: 1188.3, // WGCCRE 2015 (Archinal+18), from New Horizons (Nimmo+17).
+    albedo: [0.55, 0.5, 0.42],
+  }),
+  satelliteBody({
+    id: 'charon',
+    label: 'Charon',
+    radiusKm: 606, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
+    albedo: [0.4, 0.39, 0.38],
+  }),
 ];

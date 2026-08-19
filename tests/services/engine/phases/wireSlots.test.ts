@@ -33,9 +33,11 @@
  * machines, easy to drive); fetchers are mocked so loads don't network;
  * thumbnail-subsystem factory is mocked so no real GPU device is needed;
  * load-progress emitter factory is spied so we can intercept the `allSlots`
- * Map. Per-source point slots are injected via a fake-slot helper — wireSlots
- * reads them off `state.assetSlots.points` (initGpu mints them in production),
- * which is the seam that makes the demand loop's loads observable.
+ * Map. Per-source point slots are injected via a fake-slot helper — the
+ * `galaxyCatalogSourceRegistry` module is mocked (see below) so wireSlots's
+ * own mint loop is a no-op and the test's pre-seeded `state.assetSlots.points`
+ * fakes survive untouched, which is the seam that makes the demand loop's
+ * loads observable.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -220,6 +222,25 @@ vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () =>
   })),
 }));
 
+// wireSlots now mints the per-source point slots directly (moved from
+// initGpu). This suite injects its OWN fake slots into `state.assetSlots.points`
+// (see `bootPointSlots` / per-test `points` maps below) and drives them by
+// hand, so `wireGalaxyCatalogSourceSlot` is stubbed to a no-op here —
+// otherwise it would overwrite those fakes with real slots (whose commits hit
+// the real fetchers, unmocked in this file) before the demand loop ever runs.
+// `GALAXY_CATALOG_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` stay real
+// (via importOriginal) since `createSyntheticFallback` reads them to know
+// which sources to subscribe to.
+vi.mock(
+  '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry')
+    >()),
+    wireGalaxyCatalogSourceSlot: vi.fn(),
+  }),
+);
+
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
 // moment wireSlots hands the registry off.
@@ -395,6 +416,9 @@ function makeState(
       bias: { mode: 'off', absMagLimit: -18 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true, labelEnabled: true },
+      // seedFades registers the zone-of-avoidance band handle too; pulled
+      // from the real seed like flow/constellations below.
+      zoneOfAvoidance: seed.zoneOfAvoidance,
       filaments: { enabled: false, intensity: 1.0 },
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
@@ -426,8 +450,8 @@ function makeState(
       // optional-chain through them.  Filament renderer is set so the
       // filaments slot's commit doesn't bail early; the scalar volume
       // renderer is stubbed so CF-4 and synthetic commits can land.
-      renderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
-      pickRenderer: null,
+      galaxyPointRenderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
+      galaxyPickRenderer: null,
       renderTargets: null,
       filamentRenderer: {
         upload: vi.fn(async () => {}),
@@ -743,7 +767,7 @@ describe('wireSlots', () => {
 
   it('fires `ready` status with a running total each time a galaxy catalog arrives', async () => {
     // Semantic (b): on each per-source `ready` with count > 0, emit
-    // `kind: 'ready'` with the running total from renderer.totalCount().
+    // `kind: 'ready'` with the running total from galaxyPointRenderer.totalCount().
     // The status bar's job here is "the data is appearing" — not "boot
     // is done" — so emissions repeat.
     const sdssSlot = makeFakeSlot('sdss-points');
@@ -754,8 +778,8 @@ describe('wireSlots', () => {
     ]);
     const state = makeState({ points });
     let total = 0;
-    // Drive the renderer.totalCount() through the fake slot ready firings.
-    state.gpu.renderer = {
+    // Drive the galaxyPointRenderer.totalCount() through the fake slot ready firings.
+    state.gpu.galaxyPointRenderer = {
       totalCount: () => total,
       loadedSources: () => [] as unknown[],
     } as never;

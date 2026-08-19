@@ -23,7 +23,7 @@
  *
  * Cloning without transferring freezes the main thread for ~5 s on a
  * 100 MB SDSS+GLADE upload, blocking the `engineSourceCountReported` dispatch.  The
- * caller (`pointRenderer.defaultWorkerRunner`) therefore slices each
+ * caller (`galaxyPointRenderer.defaultWorkerRunner`) therefore slices each
  * typed array's buffer to produce an owned copy and transfers those
  * slices via the `postMessage` transfer list — a one-shot ~50 ms memcpy
  * instead of a multi-second structured clone.
@@ -36,7 +36,7 @@
  *
  * One message in, one message out, then the caller calls `worker.terminate()`
  * to free the JS context.  No long-running state here — every upload spawns
- * a fresh worker.  See `pointRenderer.upload()` for why.
+ * a fresh worker.  See `galaxyPointRenderer.upload()` for why.
  *
  * @module
  */

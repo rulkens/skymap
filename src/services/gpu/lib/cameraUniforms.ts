@@ -14,7 +14,7 @@
  * a dozen places is drift waiting to happen — and a drifted `viewportPx`
  * offset is exactly the class of bug that silently drops whole frames on
  * iOS (see CLAUDE.md's "things that have bitten us").  Mirroring the
- * single-source-of-truth pattern `utils/gpu/packPointUniforms.ts` set for
+ * single-source-of-truth pattern `utils/gpu/packGalaxyPointUniforms.ts` set for
  * the point pipeline's full struct, this module owns the prefix write so
  * the float indices live next to the byte-layout documentation.
  *

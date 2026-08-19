@@ -9,7 +9,7 @@ Selection/picking GPU resources should migrate into their own subsystem, paralle
 
 ## Current state (verified 2026-06-29)
 
-Not done. ADRs only go to 0007; none covers selection/picking. ADR 0001 explicitly carves this out as future work (lines 188-192: "Selection / picking GPU resources … deserves its own ADR if we go there"). There is no picking subsystem under `src/services/engine/subsystems/`; `pickRenderer.ts` still owns its per-camera pick texture/resources directly, orchestrated through `interaction/{clickHandler,hoverPickDriver}.ts`.
+Not done. ADRs only go to 0007; none covers selection/picking. ADR 0001 explicitly carves this out as future work (lines 188-192: "Selection / picking GPU resources … deserves its own ADR if we go there"). There is no picking subsystem under `src/services/engine/subsystems/`; `galaxyPickRenderer.ts` still owns its per-camera pick texture/resources directly, orchestrated through `interaction/{clickHandler,hoverPickDriver}.ts`.
 
 ## Notes
 

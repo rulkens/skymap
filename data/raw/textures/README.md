@@ -229,9 +229,15 @@ directly). Full pull only — no dev variant. Base:
 | Ganymede | `Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif` | 11520×5760 | RGB   | —                                                                    |
 | Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
 
-**Titan is intentionally absent** — its only global map is a 938 nm surface
-mosaic, not Titan's visual haze appearance, so Titan renders through the flat
-path like the irregular moons (spec §3, Q13).
+**Titan is intentionally absent, and the search is closed.** Re-checked
+2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or
+radar), the NASA Photojournal (every true-colour Titan is a small
+single-hemisphere perspective image, never map-projected), Björn Jónsson's map
+set and Solar System Scope (neither carries Titan): no visible-light global
+mosaic exists to register. Titan therefore renders through the flat path
+(spec §3, Q13) — but since 2026-08-18 it also carries an `ATMOSPHERE_PARAMS`
+row, so absent-from-this-table no longer means visually plain: the haze shell
+supplies the limb, the colour and the twilight.
 
 ## Attribution
 

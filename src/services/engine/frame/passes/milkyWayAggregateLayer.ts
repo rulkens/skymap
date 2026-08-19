@@ -19,9 +19,7 @@
  * Viewport is the DOWNSCALED size, not the canvas: `stars.wesl` clamps each
  * sprite's half-extent to `[starPxMin, starPxMax]` pixels OF THE TARGET BEING
  * RENDERED, so the canvas size would make every clamped sprite `scale` times
- * too big once upsampled. Computed with the same `floor(canvas / scale)`,
- * min-1-px formula `renderTargets` uses, reading the SAME `scale` off the
- * `'mw-aggregate'` spec row.
+ * too big once upsampled — read via `ctx.renderTargets.sizeOf('mw-aggregate')`.
  *
  * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc, but the
  * disc's near edge sits ~9.5 kpc out, so that plane would slice the cloud
@@ -62,12 +60,10 @@ export const milkyWayAggregateLayer: ContentLayer = {
     const cloudRenderer = state.gpu.milkyWayCloudRenderer;
     if (cloudRenderer === null) return;
 
-    // Viewport matches the mw-aggregate target's texture size — see the module
-    // header on why the px sprite clamp makes this load-bearing rather than
-    // cosmetic. Reading the divisor off the spec row keeps it single-homed.
-    const scale = ctx.renderTargets.specs.find((s) => s.id === 'mw-aggregate')!.scale;
-    const vw = Math.max(1, Math.floor(ctx.canvasSize.width / scale));
-    const vh = Math.max(1, Math.floor(ctx.canvasSize.height / scale));
+    // Viewport is the mw-aggregate target's allocated size (see `sizeOf`) —
+    // see the module header on why the px sprite clamp makes this
+    // load-bearing rather than cosmetic.
+    const { width: vw, height: vh } = ctx.renderTargets.sizeOf('mw-aggregate');
 
     const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
 

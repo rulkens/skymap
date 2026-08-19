@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFlowFieldRenderer } from '../../../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
 import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
+import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
+import { HEAD_SPEED_SCALE } from '../../../../../src/data/flow/flowFieldConstants';
 
 /**
  * Minimal GPUDevice mock for renderer-construction tests.
@@ -90,5 +92,53 @@ describe('createFlowFieldRenderer', () => {
     const renderer = createFlowFieldRenderer({ device: mockDevice(), targetFormat: 'rgba16float' });
     expect(() => renderer.upload(mockCube())).not.toThrow();
     expect(renderer.fieldLoaded()).toBe(true);
+  });
+
+  it('encodeCompute packs dt and headStep from real elapsed time, not a fixed per-frame step', () => {
+    // Pins the whole point of this change: dt/headStep must track wall-clock
+    // gaps between calls, not a hardcoded per-frame constant. Would fail if
+    // someone reinstated `DT = 0.016`.
+    const device = mockDevice();
+    const renderer = createFlowFieldRenderer({ device, targetFormat: 'rgba16float' });
+    renderer.upload(mockCube());
+
+    const mockPass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      dispatchWorkgroups: vi.fn(),
+      end: vi.fn(),
+    };
+    const encoder = {
+      beginComputePass: vi.fn(() => mockPass),
+    } as unknown as GPUCommandEncoder;
+
+    const flow: FlowSettings = {
+      enabled: true,
+      mode: 'advect',
+      intensity: 0.7,
+      count: 1000,
+      trail: 0.003,
+      flowSpeed: 0.06,
+      densityBias: 1,
+      wander: 0.15,
+      boundaryFadeWidth: 0.1,
+    };
+
+    // First call has no prior timestamp, so dt is 0 regardless of nowMs.
+    renderer.encodeCompute(encoder, flow, 1000);
+    // Second call, 20 ms later (within MAX_FRAME_DELTA_SEC) — the renderer's
+    // own scratch buffer is reused each write, so the typed array must be
+    // COPIED out of writeBuffer's argument here, or every capture below
+    // aliases the same (final) values.
+    renderer.encodeCompute(encoder, flow, 1020);
+
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    expect(writeBuffer).toHaveBeenCalledTimes(2);
+    const secondArg = writeBuffer.mock.calls[1]![2] as Float32Array;
+    const f32 = new Float32Array(secondArg.buffer.slice(0));
+
+    const expectedDtSec = 0.02;
+    expect(f32[0]).toBeCloseTo(expectedDtSec, 6);
+    expect(f32[2]).toBeCloseTo(flow.flowSpeed * HEAD_SPEED_SCALE * expectedDtSec, 6);
   });
 });

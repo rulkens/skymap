@@ -67,4 +67,5 @@ export type VisibilityLayerKey =
   | 'flow'
   | 'constellations'
   | 'orbitTrails'
-  | 'volumeField';
+  | 'volumeField'
+  | 'zoneOfAvoidance';

@@ -6,7 +6,7 @@
  * life-cycle — upload / replace / unload, the draw-order iterators, the
  * counts, and the bias-splice byte semantics — none of which touch a
  * pipeline. That is precisely why the store is separable from
- * `pointRenderer`: the questions asked below ("does a parallel rebake stomp
+ * `galaxyPointRenderer`: the questions asked below ("does a parallel rebake stomp
  * the fresh buffer?") can be answered without standing up a stub pipeline.
  *
  * ### Why a stub `GPUDevice`
@@ -455,7 +455,7 @@ describe('catalogStore.spliceSchechterRatios', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // SLOTS_PER_POINT = 14; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
+    // SLOTS_PER_GALAXY_POINT = 14; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
     expect(f32[0 * 14 + 10]).toBeCloseTo(0.25);
     expect(f32[1 * 14 + 10]).toBeCloseTo(0.5);
     expect(f32[2 * 14 + 10]).toBeCloseTo(0.75);

@@ -88,6 +88,9 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
+      // zoneOfAvoidance mirrors milkyWay's `enabled` axis; no test below
+      // exercises it yet, so it defaults on like the live scene.
+      zoneOfAvoidance: { enabled: true },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
@@ -471,7 +474,7 @@ describe('FADE_LAYERS intent subset', () => {
     // whose .bin is still downloading must not burn its fade window.
     const row = rowFor('survey');
     const state = {
-      gpu: { renderer: { hasCatalog: (id: string) => id === '2mrs' } },
+      gpu: { galaxyPointRenderer: { hasCatalog: (id: string) => id === '2mrs' } },
     } as unknown as EngineState;
     expect(row.guard?.(state, 'sdss')).toBe(false);
     expect(row.guard?.(state, '2mrs')).toBe(true);

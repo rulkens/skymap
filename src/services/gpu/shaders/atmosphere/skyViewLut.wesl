@@ -46,8 +46,6 @@
 
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::scattering::sampleMedium;
-import package::atmosphere::scattering::rayleighPhase;
-import package::atmosphere::scattering::miePhase;
 import package::atmosphere::scattering::sampleTransmittanceToTop;
 import package::atmosphere::scattering::sampleMultiScatter;
 import package::atmosphere::scattering::skyViewLutUvToParams;
@@ -124,8 +122,6 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
   let dt = (tFar - tNear) / SKY_VIEW_STEPS;
 
   let cosTheta = dot(dir, sunDir);
-  let rp = rayleighPhase(cosTheta);
-  let mp = miePhase(cosTheta, params.miePhaseG);
 
   var L = vec3<f32>(0.0);
   var throughput = vec3<f32>(1.0);
@@ -139,14 +135,14 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     let up = pos / r;
     let sunCosZenith = dot(up, sunDir);
 
-    let m = sampleMedium(params, pos);
+    let m = sampleMedium(params, pos, cosTheta);
     let sampleTransmittance = exp(-m.extinction * dt);
     let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, topRadius, r, sunCosZenith);
     let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, r, sunCosZenith);
 
     // Phase-weighted single-scatter source + isotropic multi-scatter source.
-    let scatterPhased = m.scatterR * rp + vec3<f32>(m.scatterM * mp);
-    let scatterTotal = m.scatterR + vec3<f32>(m.scatterM);
+    let scatterPhased = m.scatterPhased;
+    let scatterTotal = m.scatterTotal;
     // twilightSoftness: fade the WHOLE in-scatter source (single + multi) across the
     // terminator so deep planet shadow goes black instead of clamping to the LUTs'
     // grazing-edge rows. 'muHorizon' is the sun-zenith cosine at which the sun grazes

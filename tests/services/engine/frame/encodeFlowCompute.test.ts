@@ -57,29 +57,31 @@ function stateStub(init: {
 
 const encoder = {} as unknown as GPUCommandEncoder;
 
+const NOW_MS = 12345;
+
 describe('encodeFlowCompute', () => {
   it('skips when the renderer is null', () => {
     // No renderer to call — must not throw, just return.
-    expect(() => encodeFlowCompute(encoder, stateStub({ renderer: null }))).not.toThrow();
+    expect(() => encodeFlowCompute(encoder, stateStub({ renderer: null }), NOW_MS)).not.toThrow();
   });
 
   it('skips when flow.enabled is false', () => {
     const renderer = spyRenderer();
-    encodeFlowCompute(encoder, stateStub({ renderer, flow: { enabled: false } }));
+    encodeFlowCompute(encoder, stateStub({ renderer, flow: { enabled: false } }), NOW_MS);
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
   it('skips when the cube is not loaded', () => {
     const renderer = spyRenderer();
-    encodeFlowCompute(encoder, stateStub({ renderer, slot: null }));
+    encodeFlowCompute(encoder, stateStub({ renderer, slot: null }), NOW_MS);
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
-  it('delegates to encodeCompute when enabled + loaded', () => {
+  it('delegates to encodeCompute when enabled + loaded, forwarding nowMs', () => {
     const renderer = spyRenderer();
     const state = stateStub({ renderer, flow: { enabled: true } });
-    encodeFlowCompute(encoder, state);
+    encodeFlowCompute(encoder, state, NOW_MS);
     expect(renderer.encodeCompute).toHaveBeenCalledTimes(1);
-    expect(renderer.encodeCompute).toHaveBeenCalledWith(encoder, state.settings.flow);
+    expect(renderer.encodeCompute).toHaveBeenCalledWith(encoder, state.settings.flow, NOW_MS);
   });
 });

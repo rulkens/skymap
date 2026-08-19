@@ -18,7 +18,7 @@
  * One message in, one message out, then the caller terminates.  No long-
  * running state — the renderer spawns one worker per loaded source on
  * mode-select, awaits all of them, and reuses the cached ratios on subsequent
- * toggles (see `pointRenderer.setBiasMode`'s Schechter bake path).
+ * toggles (see `galaxyPointRenderer.setBiasMode`'s Schechter bake path).
  *
  * @module
  */

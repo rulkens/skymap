@@ -223,7 +223,7 @@ export const FADE_LAYERS = [
     // .bin download doesn't burn the fade window invisibly. The slot commit's
     // per-item re-sync (syncVisibilityFadeItem) runs after upload, so the
     // guard is already true there.
-    guard: (state, id) => state.gpu.renderer?.hasCatalog(id) ?? false,
+    guard: (state, id) => state.gpu.galaxyPointRenderer?.hasCatalog(id) ?? false,
     // No `post`: the draw/pick bitmasks are derived per-frame in `runFrame`
     // (and fresh at click time), so a toggle needs no eager mask recompute here.
   }),
@@ -265,6 +265,16 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'orbitTrails' }),
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
+  }),
+  // zone-of-avoidance band — settings-derived seed, like milkyWayDisk (a
+  // compile-time overlay with no asset slot, so no demand-loaded guard). One
+  // toggle drives both the band and its lettering — see zoneOfAvoidanceLayer.ts.
+  layer({
+    key: 'zoneOfAvoidance',
+    expand: () => [undefined],
+    handle: () => ({ kind: 'zoneOfAvoidance' }),
+    seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0),
+    intent: (s) => s.zoneOfAvoidance.enabled,
   }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({

@@ -6,7 +6,7 @@ Read this before touching `tools/` parsers, catalog builders, or fetchers, or an
 
 ```
 data/raw/*  ─parsers─▶ ParsedRecord[] ─crossMatch─▶ GalaxyCatalog ─encode─▶ public/data/*.bin
-  ─fetch─▶ decodeGalaxyCatalog ─▶ GPU vertex/index buffers ─pointRenderer─▶ WGSL ─▶ canvas
+  ─fetch─▶ decodeGalaxyCatalog ─▶ GPU vertex/index buffers ─galaxyPointRenderer─▶ WGSL ─▶ canvas
 ```
 
 Binary format is in `src/data/galaxyCatalog/galaxyCatalogFormat.ts` — currently v9, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`; the `magic + version + count` header makes old bins fail loudly. (The PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
@@ -23,7 +23,7 @@ never pair mismatched code and bytes:
 | `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`     | `galaxyCatalogFormat.ts` (9)    |
 | `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                          | `starCatalogFormat.ts` (1)      |
 | `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair) | `structureCatalogFormat.ts` (1) |
-| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*` `.scfd`                              | `scalarFieldFormat.ts` (3)      |
+| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*` `.scfd`          | `scalarFieldFormat.ts` (3)      |
 | `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
 
 Some family-folder residents are deliberately untracked and stay at their
@@ -85,6 +85,10 @@ Earth's whole-globe base texture and its surface tile pyramid are two publicatio
 ### MCPM Cosmic Web volume
 
 The SDSS DR17 Cosmic Slime VAC cube ships as three tiered SCFDs (`mcpm-{small,medium,large}.scfd`). The Python + pyslime extract happens once per VAC release; contributors curl the pre-extracted `.npy` tiers from R2 and run `npm run build-mcpm` locally. The runtime fetches `mcpm-<tier>.scfd` per the tier dropdown (`state.sources.tier`). See `docs/superpowers/specs/2026-05-11-mcpm-cosmic-web-volume-design.md`.
+
+### Polyphorm volume exports (polyphorm-2mrs)
+
+A locally-run Polyphorm (native MCPM app) export — `bin/export/<timestamp>/` with raw `trace.bin` (headerless f16, z-slowest/x-fastest) + `export_metadata.txt` — is converted by `tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>` into d8/d4/d2 `.npy` + `polyphy-trace` v1 sidecars under `data/raw/polyphorm/` (registry key `polyphorm.dir`, gitignored). Each tier is then imported with `npx tsx tools/volumes/buildRhizomeVolume.ts <npy> --out public/data/scalar-field/v3/polyphorm-2mrs-{small,medium,large}.scfd` (small=d8, medium=d4, large=d2, mirroring MCPM's tiering) followed by `npm run build-data-manifest`. Registered as source `polyphorm-2mrs` (`Source.Polyphorm2MRS`), tiered like MCPM, hidden by default. Current dataset: the 2026-08-13 2MRS run (34,974 galaxies, 4M agents, grid 1200×752×960, ~1.22 Mpc native voxels, equatorial-cartesian frame).
 
 ## Catalog gotchas
 

@@ -75,6 +75,26 @@ function makeEncoder() {
 
 // ── Mock ctx / state / timing ────────────────────────────────────────────────
 
+// hdr clears a=1 (opaque black); every bloom mip clears a=0, matching
+// production — the pyramid accumulates additively, so an untouched texel
+// must contribute nothing (see `renderTargets.ts`'s `renderTargetRows`).
+const BLOOM_SPECS = [
+  {
+    id: 'hdr',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+  ...[2, 4, 8, 16, 32].map((scale, n) => ({
+    id: `bloom${n}`,
+    format: 'rgba16float' as const,
+    depth: null,
+    scale,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  })),
+];
+
 function makeCtx(): ReadyFrameContext {
   // A view whose `id` echoes the target — the pyramid recorder reads it back to
   // prove which level each draw sampled.
@@ -83,14 +103,23 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 1920, height: 1080 },
     renderTargets: {
       viewOf,
-      specs: [
-        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-        { id: 'bloom0', format: 'rgba16float', depth: null, scale: 2 },
-        { id: 'bloom1', format: 'rgba16float', depth: null, scale: 4 },
-        { id: 'bloom2', format: 'rgba16float', depth: null, scale: 8 },
-        { id: 'bloom3', format: 'rgba16float', depth: null, scale: 16 },
-        { id: 'bloom4', format: 'rgba16float', depth: null, scale: 32 },
-      ],
+      specs: BLOOM_SPECS,
+      specOf: (id: string) => {
+        const spec = BLOOM_SPECS.find((s) => s.id === id);
+        if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+        return spec;
+      },
+      // `bloomSrcTexelSize` reads the ALLOCATED size of the source level, so
+      // every pass in the sequence throws without this — the fixture mirrors
+      // production's `floor(canvas / scale)` over the table declared above.
+      sizeOf: (id: string) => {
+        const spec = BLOOM_SPECS.find((s) => s.id === id);
+        if (!spec) throw new Error(`mock renderTargets: no size for '${id}'`);
+        return {
+          width: Math.max(1, Math.floor(1920 / spec.scale)),
+          height: Math.max(1, Math.floor(1080 / spec.scale)),
+        };
+      },
     },
   } as unknown as ReadyFrameContext;
 }

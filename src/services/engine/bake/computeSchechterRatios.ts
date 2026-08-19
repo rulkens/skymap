@@ -80,12 +80,12 @@ import { expectedNumberDensity } from '../../../utils/math';
  * Compute per-galaxy Schechter density-correction ratios for one cloud.
  *
  * The result is a tightly-packed `Float32Array` (length = cloud.count) — NOT
- * an interleaved vertex slice.  The caller (`pointRenderer.bakeSchechterRatios`,
+ * an interleaved vertex slice.  The caller (`galaxyPointRenderer.bakeSchechterRatios`,
  * invoked via the public `setBiasMode(BiasMode.Schechter)` entry point)
  * folds these into the appropriate slot of the live mirror Float32Array
  * before re-uploading the whole vertex buffer in a single
  * `device.queue.writeBuffer` call.  See the long comment in
- * `pointRenderer.bakeSchechterRatios` for why we pay the full re-upload
+ * `galaxyPointRenderer.bakeSchechterRatios` for why we pay the full re-upload
  * cost rather than issuing N sparse writes.
  */
 export function computeSchechterRatios(input: ComputeSchechterRatiosInput): Float32Array {

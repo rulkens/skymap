@@ -12,7 +12,7 @@ Every field on `EngineGpuHandles` is `Renderer | null` because `createEngine` re
 
 Four access styles coexist for the same kind of thing:
 
-1. **ctx-narrowed** — `renderer`/`postProcess`/`volumeOffscreen`/`texturedDisks` narrowed once via `isEngineReady`/`ReadyFrameContext` (`frameContext.ts:57-72`), read as `ctx.renderer`.
+1. **ctx-narrowed** — `galaxyPointRenderer`/`postProcess`/`volumeOffscreen`/`texturedDisks` narrowed once via `isEngineReady`/`ReadyFrameContext` (`frameContext.ts:57-72`), read as `ctx.galaxyPointRenderer`.
 2. **`!`-asserted** at point of use (`pointSpritesPass.ts:98` `state.gpu.focusUniform!`).
 3. **null-checked** at point of use (~15 renderers).
 4. **always-non-null null-object** (`timingService`'s no-op stub — the better pattern, already in the tree).

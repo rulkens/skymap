@@ -47,9 +47,9 @@ const LAST_SIM_DAYS = 2460000.0;
 function makeState(
   overrides: {
     cam?: OrbitCamera | null;
-    renderer?: unknown;
+    galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
-    pickRenderer?: unknown;
+    galaxyPickRenderer?: unknown;
     compositor?: unknown;
     texturedDisks?: unknown;
     enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
@@ -65,11 +65,12 @@ function makeState(
           position: new Float32Array(3),
         } as unknown as OrbitCamera)
       : overrides.cam;
-  const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
+  const galaxyPointRenderer =
+    overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
     overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
-  const pickRenderer =
-    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const galaxyPickRenderer =
+    overrides.galaxyPickRenderer === undefined ? ({} as unknown) : overrides.galaxyPickRenderer;
   const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
@@ -84,7 +85,7 @@ function makeState(
 
   return {
     cam,
-    gpu: { renderer, renderTargets, pickRenderer, compositor },
+    gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
       // Fully faded by default; pick mask is driven by `enabled` alone anyway.
@@ -108,8 +109,8 @@ describe('pickFrameContext', () => {
     // Any missing bootstrap-gate handle → `deriveFrameContext` reports
     // not-ready → `pickFrameContext` returns null (not a not-ready context).
     expect(pickFrameContext(makeState({ cam: null }), makeCanvas())).toBeNull();
-    expect(pickFrameContext(makeState({ renderer: null }), makeCanvas())).toBeNull();
-    expect(pickFrameContext(makeState({ pickRenderer: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ galaxyPointRenderer: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ galaxyPickRenderer: null }), makeCanvas())).toBeNull();
   });
 
   it('reproduces the frame’s camera from lastPose + projection', () => {

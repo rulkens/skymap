@@ -2,8 +2,9 @@
  * installLoadProgress — build the flat slot registry and wire the
  * load-progress emitter over it.
  *
- * Runs AFTER every slot is installed (point slots from `initGpu`, sidecars
- * from `installSlots`, the DEV synthetic-volume record from the orchestrator).
+ * Runs AFTER every slot is installed (point + body-texture slots minted
+ * directly earlier in `wireSlots`, sidecars from `installSlots`, the DEV
+ * synthetic-volume record from the orchestrator).
  * It populates `deps.allSlots` — keyed by `slot.name` — from all of those, then
  * hands the same Map to `createLoadProgressEmitter` and subscribes the emitter
  * to each slot.
@@ -36,7 +37,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export function installLoadProgress(state: EngineState, deps: BootstrapDeps): void {
   const { cb, allSlots } = deps;
 
-  // Point slots (minted in initGpu, keyed by Source in the points map).
+  // Point slots (minted earlier in wireSlots, keyed by Source in the points map).
   for (const [, slot] of state.assetSlots.points) {
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
@@ -52,7 +53,7 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
 
-  // Body-texture slots (minted in initGpu, keyed in the bodyTextures map like
+  // Body-texture slots (minted in wireSlots, keyed in the bodyTextures map like
   // points/starCatalogs). Their ASSET_WIRING rows carry string keys but live in
   // this keyed map rather than a named field, so they are gathered here and
   // skipped in the string-keyed sidecar walk below.

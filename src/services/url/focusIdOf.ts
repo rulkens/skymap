@@ -60,6 +60,10 @@ const ENCODE: EncodeTable = {
   // it back to `{ type: 'milkyWay' }`.
   milkyWay: () => MILKY_WAY_FOCUS_ID,
 
+  // No deep link: the band has no position to fly to (spec's Non-goals), so
+  // there is nothing for a `#focus=` hash to name — mirrors urlHashFor's row.
+  zoneOfAvoidance: () => null,
+
   // Scene body → its seed id under the shared prefix (`body-earth`);
   // resolveFocusId strips the prefix and validates against SCENE_BODIES.
   body: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,

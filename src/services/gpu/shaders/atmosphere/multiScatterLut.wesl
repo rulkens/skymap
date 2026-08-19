@@ -38,7 +38,7 @@
 // Comments single-quoted, never backticks. Literal 'package::' imports.
 
 import package::atmosphere::scattering::ScatteringParams;
-import package::atmosphere::scattering::sampleMedium;
+import package::atmosphere::scattering::sampleMediumIsotropic;
 import package::atmosphere::scattering::marchDistance;
 import package::atmosphere::scattering::sampleTransmittanceToTop;
 import package::atmosphere::scattering::UNIFORM_PHASE;
@@ -89,13 +89,13 @@ fn integrateRay(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayContribu
     let up = pos / r;
     let sunCosZenith = dot(up, sunDir);
 
-    let m = sampleMedium(params, pos);
+    let m = sampleMediumIsotropic(params, pos);
     let sampleTransmittance = exp(-m.extinction * dt);
     let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, top, r, sunCosZenith);
 
-    // Total scattering coefficient at this point (Rayleigh per-channel + grey
-    // Mie). Higher orders are treated as isotropic, so no phase weighting.
-    let scattering = m.scatterR + vec3<f32>(m.scatterM);
+    // Total scattering coefficient at this point, summed over constituents.
+    // Higher orders are treated as isotropic, so no phase weighting.
+    let scattering = m.scatterTotal;
 
     // Second-order source: sun light reaching this point, scattered with the
     // isotropic phase. Integrated analytically across the step via the standard

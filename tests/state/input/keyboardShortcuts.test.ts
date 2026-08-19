@@ -10,9 +10,14 @@ import { describe, it, expect } from 'vitest';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
 import { goHome } from '../../../src/state/selection/goHome';
 import { clearSelection, updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
-import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../../../src/state/ui/uiSlice';
+import {
+  setPaletteOpen,
+  toggleDebugPanelOpen,
+  toggleUiHidden,
+} from '../../../src/state/ui/uiSlice';
 import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
 import { exitTour, advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
+import { stopClip } from '../../../src/state/camera/clipActions';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { UiState } from '../../../src/@types/ui/UiState';
@@ -63,9 +68,9 @@ const tour = (active: boolean): TourRuntimeState => ({
 });
 
 describe('KEYBOARD_SHORTCUTS', () => {
-  it('Esc returns clearSelection and exitTour', () => {
+  it('Esc returns clearSelection, exitTour, and stopClip', () => {
     const run = byKeys('escape').run;
-    expect(run(stateWith({}))).toEqual([clearSelection(), exitTour()]);
+    expect(run(stateWith({}))).toEqual([clearSelection(), exitTour(), stopClip()]);
   });
 
   it('/ opens palette only when closed', () => {

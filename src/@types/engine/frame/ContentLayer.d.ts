@@ -114,7 +114,7 @@ export type ContentLayer = {
    * a prior row (point-sprites) left there. A row that binds its OWN slot-0
    * uniform (the procedural-disk pick binds the disk camera) MUST restore
    * the shared prefix before returning — via
-   * `state.gpu.pickRenderer.bindCamera(pass)` — so the ring fold-ins drawn
+   * `state.gpu.galaxyPickRenderer.bindCamera(pass)` — so the ring fold-ins drawn
    * after it don't read the wrong buffer. A row alone in its slab's pick
    * pass (the Milky-Way on NEAR0) has no shared prefix to inherit or
    * preserve — it binds its own complete slot-0 camera instead.

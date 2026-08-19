@@ -7,14 +7,16 @@ import type { MilkyWaySourceEntry } from './milkyWay/MilkyWaySourceEntry';
 import type { FlowSourceEntry } from './flow/FlowSourceEntry';
 import type { BodySourceEntry } from './body/BodySourceEntry';
 import type { StarCatalogSourceEntry } from './starCatalog/StarCatalogSourceEntry';
+import type { ZoneOfAvoidanceSourceEntry } from './zoneOfAvoidance/ZoneOfAvoidanceSourceEntry';
 
 /**
  * One row of the SOURCE_REGISTRY — discriminated by the `type` field
- * across nine kinds: per-point galaxy catalogs, marker-ring structures, the
+ * across ten kinds: per-point galaxy catalogs, marker-ring structures, the
  * filament skeleton, the constellation figures, scalar-volume cubes, the
  * Milky-Way disk overlay, the peculiar-velocity flow field, star catalogs
- * (the survey-wide Gaia bin and the curated famous-star map), and near-field
- * bodies (Earth, the Solar-System planets, the Sun).
+ * (the survey-wide Gaia bin and the curated famous-star map), near-field
+ * bodies (Earth, the Solar-System planets, the Sun), and the zone-of-avoidance
+ * guide band.
  */
 export type SourceEntry =
   | GalaxyCatalogSourceEntry
@@ -25,4 +27,5 @@ export type SourceEntry =
   | MilkyWaySourceEntry
   | FlowSourceEntry
   | StarCatalogSourceEntry
-  | BodySourceEntry;
+  | BodySourceEntry
+  | ZoneOfAvoidanceSourceEntry;

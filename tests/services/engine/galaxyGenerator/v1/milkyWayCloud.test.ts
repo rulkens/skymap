@@ -8,7 +8,7 @@
  * in the visual gate).
  *
  * Mock pattern follows the renderer factory tests (instancedQuadRenderer,
- * pickRenderer): a stub `GPUDevice` whose methods are `vi.fn()` spies, so we
+ * galaxyPickRenderer): a stub `GPUDevice` whose methods are `vi.fn()` spies, so we
  * can introspect the descriptors and calls the factory made. WebGPU usage-flag
  * globals (`GPUBufferUsage`) come from `tests/setup/webgpuGlobals.ts`.
  *

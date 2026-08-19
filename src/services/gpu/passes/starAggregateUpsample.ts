@@ -75,7 +75,7 @@ export function createStarAggregateUpsample(
   return {
     draw(pass: GPURenderPassEncoder, halfResView: GPUTextureView): void {
       // Bind group rebuilt per draw because the half-res view is recreated on
-      // every renderTargets.resize(). One alloc per frame is negligible against
+      // every renderTargets.reconcile(). One alloc per frame is negligible against
       // the fullscreen composite it carries.
       const bindGroup = device.createBindGroup({
         label: 'starAggregateUpsample-bg',

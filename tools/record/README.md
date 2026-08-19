@@ -22,8 +22,11 @@ full design and the spike's findings.
 
 - **ffmpeg (+ ffprobe)** on `PATH` — a host prerequisite, not an npm
   dependency. macOS: `brew install ffmpeg`.
-- **A running dev server**: `npm run dev` (default `http://localhost:5173`).
-  The recorder loads `<url>/?cinema`, a mode that skips the splash and mounts
+- **A running dev server** (default), or `--serve` to have the recorder host
+  its own production build instead — see [Serving a production build
+  (`--serve`)](#serving-a-production-build---serve) below. With the default,
+  run `npm run dev` (default `http://localhost:5173`) first. Either way the
+  recorder loads `<url>/?cinema`, a mode that skips the splash and mounts
   only the canvas + tour captions.
 - **A GPU, and the Playwright `chromium` channel installed.** The recorder
   launches Playwright's `channel: 'chromium'` (the full Chromium build, not
@@ -48,17 +51,19 @@ Flags (all optional; positional `tour id` defaults to `grandTour`). `--clip`
 switches the take to a standalone clip and is mutually exclusive with the
 positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 
-| Flag         | Default                                             | Notes                                                                                                                                                   |
-| ------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--clip`     | none — the take is a tour                           | clip id, must exist in `clipRegistry`; the take plays whole (`--beats` is rejected alongside it)                                                        |
-| `--beats`    | full tour (`0..lastBeat`)                           | `a..b`, inclusive, 0-based; tour-only, rejected alongside `--clip`                                                                                      |
-| `--sim-time` | now, resolved once at take start                    | ISO 8601 instant (e.g. `2026-07-31T12:00:00.000Z`); pins the sim clock — see [Reproducibility](#reproducibility)                                        |
-| `--fps`      | `60`                                                | positive integer                                                                                                                                        |
-| `--size`     | `3840x2160`                                         | `WIDTHxHEIGHT` — the OUTPUT film resolution                                                                                                             |
-| `--dpr`      | `2`                                                 | viewport = size/dpr; `1` for CSS-px-native capture                                                                                                      |
-| `--out`      | `recordings/<take>-<size>-<fps>fps-<timestamp>.mp4` | never overwrites a previous take; pass `--out` for a fixed name (dir auto-created); `<take>` is the tour or clip id                                     |
-| `--url`      | `http://localhost:5173`                             | trailing slash stripped; must carry NO query or hash of its own — the harness appends `?cinema#t=<ISO>` itself and throws if `--url` already has either |
-| positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                      |
+| Flag         | Default                                             | Notes                                                                                                                                                                                 |
+| ------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--clip`     | none — the take is a tour                           | clip id, must exist in `clipRegistry`; the take plays whole (`--beats` is rejected alongside it)                                                                                      |
+| `--beats`    | full tour (`0..lastBeat`)                           | `a..b`, inclusive, 0-based; tour-only, rejected alongside `--clip`                                                                                                                    |
+| `--sim-time` | now, resolved once at take start                    | ISO 8601 instant (e.g. `2026-07-31T12:00:00.000Z`); pins the sim clock — see [Reproducibility](#reproducibility)                                                                      |
+| `--fps`      | `60`                                                | positive integer                                                                                                                                                                      |
+| `--size`     | `3840x2160`                                         | `WIDTHxHEIGHT` — the OUTPUT film resolution                                                                                                                                           |
+| `--dpr`      | `2`                                                 | viewport = size/dpr; `1` for CSS-px-native capture                                                                                                                                    |
+| `--out`      | `recordings/<take>-<size>-<fps>fps-<timestamp>.mp4` | never overwrites a previous take; pass `--out` for a fixed name (dir auto-created); `<take>` is the tour or clip id                                                                   |
+| `--url`      | `http://localhost:5173`                             | trailing slash stripped; must carry NO query or hash of its own — the harness appends `?cinema#t=<ISO>` itself and throws if `--url` already has either; rejected alongside `--serve` |
+| `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                       |
+| `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                    |
+| positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                                                    |
 
 `--size` always means the pixels that land in the mp4; `--dpr` only chooses
 how they are produced. At the default `--dpr 2` the page runs in a size/2
@@ -92,6 +97,35 @@ the harness throws those frames away so the film's first captured frame is
 already stable. A full take (starting at beat 0) has no fold to settle and
 skips this.
 
+## Serving a production build (`--serve`)
+
+```bash
+npm run record-tour -- --serve
+npm run record-clip -- earthUniverseLoop --serve
+```
+
+The default dev server is fine for a quick iteration take, but for anything
+long enough to run for hours (a full 4K/60 tour) prefer `--serve`: it builds
+skymap for production into `tools/record/.build/` with `VITE_DATA_BASE_URL`
+blanked (so the built app fetches the catalog over `/data/` instead of R2 —
+see docs/DEPLOY.md for the normal R2 path), replaces vite's one-time copy of
+`public/data/` with a symlink back to it (so a reused build still serves
+whatever the catalog currently is, and a rebuild doesn't double ~100 MB on
+disk), serves the result with `vite preview`, and records against that
+instead of `--url`. The dev client's hot-reload websocket was the root cause
+behind two takes silently reloading mid-recording on this branch; a
+production build ships no HMR client at all, so `--serve` is immune by
+construction rather than one more patch over the same failure mode.
+`--serve` and `--url` are mutually exclusive — the recorder always knows
+which server it's pointed at.
+
+The build is reused across takes; pass `--rebuild` to force a fresh one after
+changing the app. Building and serving both shell out to `npx vite`, logged
+the same way the rest of the recorder logs its ffmpeg/Chromium steps; the
+served URL is read back from `vite preview`'s own stdout banner rather than
+assumed, since `vite preview --port` bumps to the next free port when the
+requested one is busy.
+
 ## Clip takes
 
 ```bash
@@ -118,6 +152,23 @@ synchronous call (`resetState()` in
 flag before granting the next frame, so the frame captured on the completing
 grant already shows the reset. This is pre-existing engine behaviour, not
 something the harness can settle around.
+
+### Looping clips (`ClipData.loop: true`, e.g. `earthUniverseLoop`)
+
+A looping clip's clip-end promise never resolves — `clipPlayer.tick()`
+rewinds the clock instead of dispatching `clipEnded()` — so the recorder
+detects `loop: true` on the compiled clip and switches its stop condition
+automatically: no flag, nothing to remember. It records exactly
+`round(durationSec × fps)` frames and stops, logging `looping clip —
+recording one seamless cycle (N frames)`. The artifact is exactly one cycle,
+frames `[0, duration)` — the closing frame is deliberately excluded because a
+looping clip is authored so `pose(duration) ≡ pose(0)` (the seam contract;
+see `src/data/animation/clips/earthUniverseLoop.ts`), and including it would
+duplicate a frame at the mp4's loop splice. If `durationSec × fps` is not a
+whole number the recorder rounds to the nearest frame and logs a notice —
+the resulting sub-frame seam offset is imperceptible at these camera speeds,
+never an error. Full rationale:
+`docs/grill-sessions/record-clip-looping-clips-2026-08-16.md`.
 
 ## Reproducibility
 

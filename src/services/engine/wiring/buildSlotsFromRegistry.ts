@@ -9,14 +9,14 @@
  *
  * ### Why `built: 'external'` rows are skipped
  *
- * The seven point slots (6 galaxy catalogs + Synthetic) are minted in `initGpu` by
- * `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
- * into — they self-install into `state.assetSlots.points` before this phase
- * runs. Building them here would double-register their commit subscriber and
- * fade handle. Their rows exist only so the demand loop can trigger the
- * already-minted slots; their `factory` is a throwing guard. Skipping the
- * `'external'` marker keeps construction and demand on one table without the
- * builder ever touching that guard.
+ * The seven point slots (6 galaxy catalogs + Synthetic) are minted directly in
+ * `wireSlots` by `wireGalaxyCatalogSourceSlot`, alongside the keyed
+ * `bodyTextures` family — they self-install into `state.assetSlots.points`
+ * before this construction pass runs. Building them here would double-register
+ * their commit subscriber and fade handle. Their rows exist only so the demand
+ * loop can trigger the already-minted slots; their `factory` is a throwing
+ * guard. Skipping the `'external'` marker keeps construction and demand on one
+ * table without the builder ever touching that guard.
  */
 
 import type { AssetKey } from '../../../@types/loading/AssetKey';

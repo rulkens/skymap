@@ -1,63 +1,12 @@
 /**
- * Engine — the imperative WebGPU core, decoupled from any UI framework.
- *
- * This module is responsible for everything that touches the GPU, the camera,
- * and the raw browser input events. It knows nothing about React — it receives
- * simple callback functions and calls them when state changes.
- *
- * The boundary is deliberate:
- *
- *   Engine (engine.ts)            React (App.tsx, components/)
- *   ─────────────────────         ─────────────────────────────
- *   WebGPU device / buffers   ←→  status bar text
- *   requestAnimationFrame     ←→  info card fields
- *   pointer / keyboard events ←→  scale bar label + width
- *   orbit camera math
- *   GPU pick readback
- *
- * All observable engine state (lifecycle status, scale, source counts, load
- * progress, selection) is dispatched directly to the Redux store; React reads
- * via `useAppSelector` selectors. `EngineCallbacks` carries only the injected
- * `store` and `setSagaContext` — there are no event callback clusters.
- *
- * ### Module layout
- *
- * The pure / leaf concerns and the cohesive subsystems live in sibling
- * modules so this file can stay focused on the imperative orchestration:
- *
- *   Pure helpers:
- *   - `galaxyFocusDistance.ts` / `structureFocusDistance.ts` — framing-distance helpers
- *   - `buildGalaxyInfo.ts`     — buildGalaxyInfo (per-source GalaxyInfo formatter)
- *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
- *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
- *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
- *
- *   Subsystems (closure-returning factories with internal state):
- *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
- *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
- *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
- *
- *   Bootstrap phases (the async IIFE, lifted out of this file):
- *   - `phases/initGpu.ts`      — device + every renderer + point-source slots
- *   - `phases/wireSlots.ts`    — sidecar slots + thumbnails + parallel load
- *   - `phases/wireInput.ts`    — pickRenderer + camera + orbit-controls + click
- *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
- *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
- *
- * Hover/select/focus state lives in the Redux `selection` slice
- * (`state/selection/selectionSlice.ts`).  The public handle and the
- * forward-declared `frameRef` / `detachControlsRef` / `handleRef` boxes
- * stay inline here because the bootstrap phases (sibling modules) write
- * them via the `{current}` ref pattern.
- *
- * ### Usage
- *
- * ```ts
- * const handle = createEngine(canvas, { store, setSagaContext });
- *
- * // later (e.g. React cleanup):
- * handle.destroy();
- * ```
+ * Engine — the imperative WebGPU core. It owns the device, the camera and the raw
+ * browser input, and knows nothing about React: every observable piece of state
+ * (lifecycle, scale, counts, load progress, selection) is dispatched straight to the
+ * Redux store, and `EngineCallbacks` carries only the injected `store` +
+ * `setSagaContext` — no event-callback clusters. Leaf helpers and cohesive
+ * subsystems live in sibling modules; the async bootstrap runs as the `phases/`
+ * sequence. The public handle and the `frameRef` / `detachControlsRef` / `handleRef`
+ * boxes stay inline because those phases write them through the `{current}` pattern.
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
@@ -75,6 +24,8 @@ import { CONST_J2000 } from '../../data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
+import { SCENE_STARS } from '../../data/bodies/sceneStars';
+import { Source } from '../../data/source';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
@@ -87,7 +38,7 @@ import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
-import { engineStatusChanged } from '../../state/engine/engineSlice';
+import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -97,6 +48,8 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
+import { destroyGpuHandles } from './gpuHandles/destroyGpuHandles';
+import { GPU_HANDLE_ROWS } from './gpuHandles/gpuHandleRegistry';
 import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
@@ -233,6 +186,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // directly, with no parallel mirror to drift.
   const store = cb.store;
 
+  // Famous stars are seeded at construction (createEngineData →
+  // SCENE_STARS), not fetched, so there is no async slot commit to carry the
+  // usual `engineSourceCountReported` pulse. Report it here instead — the
+  // same action the survey star/galaxy catalogs' slots dispatch on load — so
+  // the Stars panel's count chip lights up for the curated row too.
+  const engineData = createEngineData();
+  store.dispatch(
+    engineSourceCountReported({ source: Source.FamousStar, count: SCENE_STARS.length }),
+  );
+
   const state: EngineState = {
     // `state.settings` delegates to the injected store. Reads hand back
     // `store.getState().settings`; the write path dispatches through the
@@ -263,8 +226,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get famousGalaxiesMeta() {
       return selectFamousGalaxiesMeta(store.getState());
     },
-    // Per-type data stores. Empty at construction; slot commits fill them.
-    data: createEngineData(),
+    // Per-type data stores. Galaxies/structures are empty at construction and
+    // fill via slot commits; bodies (incl. the famous-star seed) are filled
+    // synchronously inside `createEngineData` itself — see its header.
+    data: engineData,
     picking: {
       // Per-frame pick-throttle state. Hover / select live on the
       // Redux `selection` slice; see `EnginePickingState.d.ts`.
@@ -278,8 +243,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // All GPU handles populate during the async IIFE below and
       // release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
       // for the null-until-init lifecycle rationale.
-      renderer: null,
-      pickRenderer: null,
+      galaxyPointRenderer: null,
+      galaxyPickRenderer: null,
       pickProgram: null,
       milkyWayPickRenderer: null,
       // Canonical fade + source + focus bind-group layouts. Built once in
@@ -329,6 +294,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
+      // Galactic-plane dust-band guide. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
+      zoneOfAvoidanceRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
@@ -337,6 +305,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady —
       // milkyWayUpsampleLayer null-checks it in draw, so a null no-ops.
       milkyWayAggregateUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
+      // zoneOfAvoidanceUpsampleLayer null-checks it in draw, so a null no-ops.
+      zoneOfAvoidanceUpsample: null,
       // null until initGpu; excluded from isEngineReady —
       // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
@@ -349,9 +320,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickDebugOverlay: null,
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
-      // constructs it + mints its 'earth' texture slot in the bodyTextures
-      // family (proximity-demanded, commits via setMap); excluded from
-      // isEngineReady, null-checked at use by earthLayer.
+      // constructs it; its 'earth' texture slot in the bodyTextures family
+      // (proximity-demanded, commits via setMap) is minted later, in wireSlots.
+      // Excluded from isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
       // (the Sun), one instanced planet renderer drawing every seeded
@@ -359,9 +330,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // excluded from isEngineReady, null-checked at use by their layers.
       starRenderer: null,
       planetRenderer: null,
-      // Shared textured-sphere renderer for the twelve non-Earth textured bodies
-      // (planets + Moon + Galilean moons). null until initGpu; excluded from
-      // isEngineReady, null-checked at use by texturedBodiesLayer; the
+      // Shared textured-sphere renderer for every non-Earth textured body; the
       // bodyTextures family's commit/onRelease call its setMap/clearMap.
       texturedBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn
@@ -373,10 +342,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // group. null until initGpu; excluded from isEngineReady, null-checked at
       // use by cloudShellLayer.
       cloudShellRenderer: null,
-      // Earth's in-scatter atmosphere — the outermost translucent shell, drawn
-      // LAST in the (foreground:0, NEAR0) group. null until initGpu; excluded
-      // from isEngineReady, null-checked at use by atmosphereShellLayer and the
-      // atmosphereSkyView compute step.
+      // The in-scatter atmosphere — the outermost translucent shell, drawn LAST in
+      // the (foreground:0, NEAR0) group and also read by the atmosphereSkyView step.
       atmosphereShellRenderer: null,
       starPointRenderer: null,
       // Sub-pixel bodies (the glints branch of the body partition) as
@@ -503,7 +470,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
       // The rest land later in the IIFE once their deps (GPU device,
-      // pickRenderer, scheduler) exist.
+      // galaxyPickRenderer, scheduler) exist.
       clickResolver: null,
       inputBindings: null,
       // Download-progress aggregator — built inside the IIFE so the
@@ -519,16 +486,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Each slot is a race-checked fetch→commit pipeline (see
     // `services/loading/AssetSlot.ts`).  The Map is declared up-front so
     // consumers can `state.assetSlots.points.get(source)?.load(...)` without
-    // a null check, but the slots are minted inside the GPU init IIFE: they
-    // close over GPU handles (renderer, filamentRenderer,
-    // volumeFieldRenderer) for their commit step, all null until initGpu
-    // resolves.  Minting them all in one IIFE pass keeps the lifecycle
-    // uniform — even the GPU-handle-free slots (famousGalaxiesMeta, pgcAlias) are
-    // born there.
+    // a null check, but the slots are minted in `wireSlots`: their commit
+    // closures re-read GPU handles (renderer, filamentRenderer,
+    // volumeFieldRenderer) at call time and null-guard, rather than assuming
+    // `initGpu` already assigned them — the same destroy-race posture the
+    // keyed `bodyTextures` family below uses.
     assetSlots: {
       points: new Map(),
-      // Per-source star catalogs — registry-built (wireSlots), unlike points'
-      // initGpu minting; the star slot's commit null-guards the renderer.
+      // Per-source star catalogs — registry-built (wireSlots), like points;
+      // the star slot's commit null-guards the renderer the same way.
       starCatalogs: new Map(),
       filaments: null,
       famousGalaxiesMeta: null,
@@ -540,11 +506,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Default-off 2MRS Polyphorm density volume; tier-aware like mcpm.
+      polyphorm2Mrs: null,
       // Constellation stick-figure artifact; demand-loaded on its master gate.
       constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
-      // minted in initGpu beside the body renderers. Empty map at construction —
-      // proximity-demanded + released per body (mirrors the `points` map).
+      // minted in wireSlots. Empty map at construction — proximity-demanded +
+      // released per body (mirrors the `points` map).
       bodyTextures: new Map(),
       // The all-bodies low-res atlas: one boot fetch seeding every body's
       // placeholder, so no body ever draws untextured while its own map loads.
@@ -836,101 +804,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.loadProgress = null;
 
     // 4. GPU renderers.  WebGPU buffers/textures don't release via JS GC, so
-    //    destroy() is mandatory.  The point renderer owns the largest
-    //    allocations (per-source vertex buffers, ~14 MB GPU + CPU mirror per
-    //    SDSS deck).
-    state.gpu.pickRenderer?.destroy();
-    state.gpu.pickRenderer = null;
-    state.gpu.pickProgram?.destroy();
-    state.gpu.pickProgram = null;
-    state.gpu.milkyWayPickRenderer?.destroy();
-    state.gpu.milkyWayPickRenderer = null;
-    state.gpu.renderTargets?.destroy();
-    state.gpu.renderTargets = null;
-    state.gpu.compositor?.destroy();
-    state.gpu.compositor = null;
-    state.gpu.filamentRenderer?.destroy();
-    state.gpu.filamentRenderer = null;
-    state.gpu.constellationRenderer?.destroy();
-    state.gpu.constellationRenderer = null;
-    // No GPU resource of their own (decoded atlas data / raw device+context+
-    // canvas refs) — re-nulled for lifecycle symmetry, not released.
+    //    destroy() is mandatory.  One reverse walk over GPU_HANDLE_ROWS covers
+    //    every registry-owned handle: declaration order is construction order
+    //    (`focusUniform` first, `pickProgram`/`galaxyPickRenderer` last —
+    //    see gpuHandleRegistry.ts), so the reversed walk destroys the two
+    //    pick rows first and `focusUniform` last, after the pick renderer
+    //    that captures its bind group at construction.
+    destroyGpuHandles(GPU_HANDLE_ROWS, state);
+    // The 6 registry exclusions keep their own teardown. fontAtlases/uiCtx
+    // own no GPU resource (decoded atlas data / raw device+context+canvas
+    // refs) — re-nulled for lifecycle symmetry, not released.
     state.gpu.fontAtlases = null;
     state.gpu.uiCtx = null;
-    state.gpu.labelRenderer?.destroy();
-    state.gpu.labelRenderer = null;
-    state.gpu.foregroundLabelRenderer?.destroy();
-    state.gpu.foregroundLabelRenderer = null;
-    state.gpu.foregroundMarkerLineRenderer?.destroy();
-    state.gpu.foregroundMarkerLineRenderer = null;
-    state.gpu.markerLineRenderer?.destroy();
-    state.gpu.markerLineRenderer = null;
-    state.gpu.debugLineRenderer?.destroy();
-    state.gpu.debugLineRenderer = null;
-    state.gpu.selectionRingRenderer?.destroy();
-    state.gpu.selectionRingRenderer = null;
-    state.gpu.structureMarkerRenderer?.destroy();
-    state.gpu.structureMarkerRenderer = null;
-    state.gpu.texturedDiskRenderer?.destroy();
-    state.gpu.texturedDiskRenderer = null;
-    state.gpu.proceduralDiskRenderer?.destroy();
-    state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayCloud?.destroy();
-    state.gpu.milkyWayCloud = null;
-    state.gpu.milkyWayCloudRenderer?.destroy();
-    state.gpu.milkyWayCloudRenderer = null;
-    state.gpu.horizonShellRenderer?.destroy();
-    state.gpu.horizonShellRenderer = null;
-    state.gpu.volumeFieldRenderer?.destroy();
-    state.gpu.volumeFieldRenderer = null;
-    state.gpu.flowFieldRenderer?.destroy();
-    state.gpu.flowFieldRenderer = null;
-    state.gpu.volumeUpsample?.destroy();
-    state.gpu.volumeUpsample = null;
-    state.gpu.milkyWayAggregateUpsample?.destroy();
-    state.gpu.milkyWayAggregateUpsample = null;
-    state.gpu.starAggregateUpsample?.destroy();
-    state.gpu.starAggregateUpsample = null;
-    state.gpu.bloomPyramid?.destroy();
-    state.gpu.bloomPyramid = null;
-    state.gpu.pickDebugOverlay?.destroy();
-    state.gpu.pickDebugOverlay = null;
-    state.gpu.diskRadiusRing?.destroy();
-    state.gpu.diskRadiusRing = null;
-    state.gpu.earthRenderer?.destroy();
-    state.gpu.earthRenderer = null;
-    state.gpu.starRenderer?.destroy();
-    state.gpu.starRenderer = null;
-    state.gpu.planetRenderer?.destroy();
-    state.gpu.planetRenderer = null;
-    state.gpu.texturedBodyRenderer?.destroy();
-    state.gpu.texturedBodyRenderer = null;
-    state.gpu.ringRenderer?.destroy();
-    state.gpu.ringRenderer = null;
-    state.gpu.cloudShellRenderer?.destroy();
-    state.gpu.cloudShellRenderer = null;
-    state.gpu.atmosphereShellRenderer?.destroy();
-    state.gpu.atmosphereShellRenderer = null;
-    state.gpu.starPointRenderer?.destroy();
-    state.gpu.starPointRenderer = null;
-    state.gpu.bodyGlintRenderer?.destroy();
-    state.gpu.bodyGlintRenderer = null;
-    state.gpu.starCatalogRenderer?.destroy();
-    state.gpu.starCatalogRenderer = null;
-    state.gpu.starCatalogPickRenderer?.destroy();
-    state.gpu.starCatalogPickRenderer = null;
-    state.gpu.bodyPickRenderer?.destroy();
-    state.gpu.bodyPickRenderer = null;
-    state.gpu.orbitTrailRenderer?.destroy();
-    state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
-    state.gpu.renderer?.destroy();
-    state.gpu.renderer = null;
-    // Shared cluster-focus uniform — released after the renderers that bind
-    // its group (points/disks/pick already destroyed above).
-    state.gpu.focusUniform?.destroy();
-    state.gpu.focusUniform = null;
 
     // 5. Drop remaining strong references to aid GC.
     for (const source of [...state.data.galaxies.catalogs.keys()]) {

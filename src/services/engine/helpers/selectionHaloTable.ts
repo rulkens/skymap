@@ -52,16 +52,19 @@ export type SelectionHalo = {
 };
 
 type MilkyWayRow = { readonly type: 'milkyWay' };
+type ZoneOfAvoidanceRow = { readonly type: 'zoneOfAvoidance' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 type StarRow = Extract<SelectionRow, { type: 'star' }>;
 
 // Table keyed on the SelectionRow union tag. Each arm receives the narrowed row
-// and returns a descriptor (or null for the structure arm, which uses the
-// cluster marker pass instead).
+// and returns a descriptor (or null for the structure/zoneOfAvoidance arms,
+// which have no ring center — a structure uses the cluster marker pass
+// instead, and the band is a line-of-sight effect with no point to ring).
 const SELECTION_HALO_TABLE: {
   galaxyCatalog: (row: GalaxyRow) => SelectionHalo;
   milkyWay: (row: MilkyWayRow) => SelectionHalo;
   structure: (row: StructureInfo) => null;
+  zoneOfAvoidance: (row: ZoneOfAvoidanceRow) => null;
   body: (row: BodyRow) => SelectionHalo;
   star: (row: StarRow) => SelectionHalo;
 } = {
@@ -81,6 +84,9 @@ const SELECTION_HALO_TABLE: {
   }),
   // Structures render their ring through the cluster marker pass.
   structure: (_row) => null,
+  // The band has no ring center — it's a line-of-sight effect along the whole
+  // galactic plane, not a point selection.
+  zoneOfAvoidance: (_row) => null,
   // A scene body (planet / famous star / Earth) is drawn as a real sphere, so
   // its ring rides its true physical radius — `radiusKm` → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away

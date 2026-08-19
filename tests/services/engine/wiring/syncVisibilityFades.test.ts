@@ -211,6 +211,7 @@ function makeBridgeState(): {
     bodies: { items: bodyItems },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
+    zoneOfAvoidance: { enabled: true },
     // Empty volume items: the volumeField intent reads items[id]?.enabled (→
     // false here) and its post no-ops because assetSlots.syntheticVolumes is
     // absent — neither throws, which is all this fixture needs.
@@ -225,7 +226,7 @@ function makeBridgeState(): {
     // Demand-loaded renderers report their assets committed so every guarded
     // row (survey / flow / filaments / volumeField) passes and its fade fires.
     gpu: {
-      renderer: { hasCatalog: () => true },
+      galaxyPointRenderer: { hasCatalog: () => true },
       flowFieldRenderer: { fieldLoaded: () => true },
       filamentRenderer: { hasCloud: () => true },
       volumeFieldRenderer: { listIds: () => [] },

@@ -85,6 +85,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.Filaments:
     case Source.Cf4Density:
     case Source.Mcpm:
+    case Source.Polyphorm2MRS:
     case Source.DebugGaussian:
     case Source.DebugCartesian:
     case Source.DebugSpherical:
@@ -98,6 +99,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.SStar:
     case Source.GaiaStars:
     case Source.Constellations:
+    case Source.ZoneOfAvoidance:
       // Non-galaxy catalog sources have no galaxy type. Most (structure
       // markers, filaments, volumes, the Milky-Way + flow overlays, and body
       // sources like the planets, Earth and the Sun) carry no per-record photometry

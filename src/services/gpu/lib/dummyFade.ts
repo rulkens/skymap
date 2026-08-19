@@ -26,7 +26,7 @@
  *
  * ## Why one helper instead of three inline copies
  *
- * `pickRenderer`, `milkyWayPickRenderer`, and `structureMarkerRenderer` each
+ * `galaxyPickRenderer`, `milkyWayPickRenderer`, and `structureMarkerRenderer` each
  * carried a byte-identical create-buffer + create-bind-group pair.  Three
  * copies of the same size/usage/binding quartet are three chances for a
  * silent drift — bump the size on one and only that picker's group stops

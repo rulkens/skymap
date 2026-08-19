@@ -83,6 +83,7 @@ const VISIBILITY_KEY_BY_KIND = {
   flow: 'flow',
   constellations: 'constellations',
   orbitTrails: 'orbitTrails',
+  zoneOfAvoidance: 'zoneOfAvoidance',
   // Always-on GPU overlays (`proceduralDisks`, `texturedDisks`) have a
   // VisibilityLayerKey address, but reaching it needs the `id` discriminator,
   // and a tour cue targets those keys directly instead of arriving through a

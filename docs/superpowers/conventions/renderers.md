@@ -66,9 +66,9 @@ feeder subsystem, a shared data table — never along subject-matter kinship.
 ```
 renderers/
   galaxyCatalog/    the LOD chain of one "draw a galaxy catalog" renderer:
-                    pointRenderer → proceduralDiskRenderer → texturedDiskRenderer,
+                    galaxyPointRenderer → proceduralDiskRenderer → texturedDiskRenderer,
                     plus instancedQuadRenderer (the shared quad pipeline the two
-                    disk stages wrap), pickRenderer, pointVertexLayout, catalogStore
+                    disk stages wrap), galaxyPickRenderer, galaxyPointVertexLayout, catalogStore
   bodies/           the true-scale solar-system foreground: earth, planet, star,
                     starPoint, orbitTrail
   milkyWay/         cloud + pick — the pick footprint must match the cloud
@@ -194,7 +194,7 @@ plus an optional per-renderer config object. Positional `(device, format, ...)` 
 every new dependency reorders the call site and reviewers can't tell `(device, format)`
 from `(format, device)` at a glance.
 
-Three older renderers (`pickRenderer`, `filamentRenderer`, `volumeFieldRenderer`) still use
+Three older renderers (`galaxyPickRenderer`, `filamentRenderer`, `volumeFieldRenderer`) still use
 the positional style. Don't extend them with more positional args — convert to a named bag
 if you need a new dependency.
 
@@ -344,7 +344,7 @@ A renderer is "multi-handle" when it manages multiple independent instances of
 the same conceptual thing, each with its own lifecycle. `volumeFieldRenderer` is the
 canonical one — it owns a `Map<VolumeFieldId, FieldEntry>` where each field has its own
 volume texture, palette LUT, uniform buffer, and bind group. (`catalogStore` — the
-per-catalog GPU-buffer index `pointRenderer` composes — is the same pattern keyed by
+per-catalog GPU-buffer index `galaxyPointRenderer` composes — is the same pattern keyed by
 galaxy-catalog id.)
 
 The shape:
@@ -416,10 +416,10 @@ up as a separate field on `state.gpu`.
 These pre-date the convention. Don't model new code on them; clean up incidentally
 when you're already editing the file.
 
-- **Positional factory args.** `createPickRenderer`, `createFilamentRenderer` and
+- **Positional factory args.** `createGalaxyPickRenderer`, `createFilamentRenderer` and
   `createVolumeFieldRenderer` take `(device, format, …)` instead of a context bag. Convert
   when you next need to add a constructor arg — that's the occasion the conversion pays for
-  itself, and `createPointRenderer`'s named-bag conversion is the worked precedent.
+  itself, and `createGalaxyPointRenderer`'s named-bag conversion is the worked precedent.
 - **Methods inline in the return literal.** `flowFieldRenderer` and `volumeFieldRenderer`
   define their public methods inside the returned object rather than as named functions
   above it. Normalize on next touch (see "File anatomy").

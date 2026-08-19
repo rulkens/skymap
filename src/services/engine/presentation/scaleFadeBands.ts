@@ -67,7 +67,7 @@ export const SCALE_FADE_BANDS = {
   // rides its own deeper `milkyWayApproach` row below, dissolving against
   // the Gaia starfield rather than with the surveys. Consumers: the survey
   // point clouds
-  // (pointSpritesLayer, draw + pick — the famous catalog is exempt, its
+  // (galaxyPointSpritesLayer, draw + pick — the famous catalog is exempt, its
   // galaxies stay visible as deep-zoom reference points), the structure
   // marker rings + halos and their pick (structureMarkersLayer), the
   // structure labels (produceStructureLabels — famous labels are exempt
@@ -193,6 +193,32 @@ export const SCALE_FADE_BANDS = {
     fullAt: CONSTELLATIONS_FULL_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
     goneAt: CONSTELLATIONS_GONE_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
   },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `constellations`). Consumer: the zone-of-avoidance overlay
+  // (band + label, via `zoneOfAvoidanceLayerOpacity`). Derived off the Milky
+  // Way's own size (`MILKY_WAY_RADIUS_MPC`, the same posture `sgrAStarCaption`
+  // takes off `SGR_A_STAR_R0_MPC`), not a fixed Local-Group-framing distance:
+  // `goneAt` = 2 radii (one disc diameter out, so the veil is already fading in
+  // by the moment the galaxy has framed up as a whole object) and `fullAt` = 10
+  // radii (full veil well before Local-Group framing). An APPROACH fade — full
+  // at the large-distance edge — the opposite direction from `constellations`,
+  // since this band explains a COSMIC-scale catalog gap rather than a near-field
+  // sky figure. The multiples (2 / 10) are chosen for that feel, not derived
+  // from any further physical constant.
+  zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `zoneOfAvoidance`, above). Consumer: the zone-of-avoidance
+  // overlay, composed with `zoneOfAvoidance` into a visibility WINDOW — the
+  // band is a Milky-Way-context guide, and once the Local Group itself becomes
+  // the subject the guide has done its job and should recede. No
+  // `local-group` row exists yet in `BODY_REGIONS` to derive this from (only
+  // `solar-system`, `solar-neighbourhood`, `galactic-centre` are seeded), so
+  // these are LITERAL Mpc values chosen for that feel: full within 2 Mpc,
+  // gone by 6 Mpc. A recede band — full at the small-distance edge, the same
+  // shape as `constellations`.
+  zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
 
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at

@@ -114,7 +114,11 @@ export type AtmosphereShellRenderer = Renderer & {
 
   /**
    * Draw body `bodyId`'s atmosphere-top proxy sphere (both walls) into the open
-   * foreground pass. `uniforms` is the 112-byte `AtmosphereUniforms` record from
+   * foreground pass, as TWO draws of the same geometry: MULTIPLY (per-channel
+   * extinction of the destination) then ADD (the exposed in-scatter). The order is
+   * load-bearing — see the renderer's `draw`.
+   *
+   * `uniforms` is the 112-byte `AtmosphereUniforms` record from
    * `packAtmosphereUniforms` (MVP + body-local sun dir + bottomRadius +
    * camPosLocal + sunIrradiance + exposure + ring ratios). THROWS on an unknown
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
