@@ -1,4 +1,4 @@
-import type { LonLatBox } from './LonLatBox';
+import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
  * EarthImagerySource — the one seam between `buildEarthTiles` and wherever
@@ -32,5 +32,5 @@ export type EarthImagerySource = {
   /** Sample a lon/lat box into an RGBA raster of exactly widthPx x heightPx, graded and
    *  sRGB-encoded, alpha 0 where the source has no land data. Null when the box is
    *  entirely outside coverage, so the caller emits no tile at all. */
-  readBox(box: LonLatBox, widthPx: number, heightPx: number): Promise<Uint8Array | null>;
+  readBox(box: LonLatBounds, widthPx: number, heightPx: number): Promise<Uint8Array | null>;
 };

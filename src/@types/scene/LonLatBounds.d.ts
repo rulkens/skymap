@@ -12,7 +12,7 @@
  * source needs a wrap case (that exists once, in the runtime's page-table
  * arithmetic).
  */
-export type LonLatBox = {
+export type LonLatBounds = {
   /** Western edge, degrees in [-180, 180]. Always strictly less than `east`. */
   readonly west: number;
   /** Eastern edge, degrees in [-180, 180]. */

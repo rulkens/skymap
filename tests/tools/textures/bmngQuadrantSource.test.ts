@@ -28,7 +28,7 @@ import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { bmngQuadrantSource, type BmngQuadrant } from '../../../tools/textures/bmngQuadrantSource';
-import type { LonLatBox } from '../../../tools/textures/LonLatBox';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 const QUADRANT_EDGE_PX = 1024;
 
@@ -111,7 +111,7 @@ describe('quadrant selection', () => {
     // seam, boxes just north and just south of the equator, and — the case a
     // `floor`/`ceil` slip actually breaks — boxes whose edge sits exactly ON a
     // seam: a box ENDING at -90 belongs to A, one STARTING at -90 belongs to B.
-    const cases: readonly (readonly [LonLatBox, BmngQuadrant])[] = [
+    const cases: readonly (readonly [LonLatBounds, BmngQuadrant])[] = [
       [{ west: -90.5, east: -90.1, north: 60, south: 59 }, 'A1'],
       [{ west: -89.9, east: -89.5, north: 60, south: 59 }, 'B1'],
       [{ west: -135, east: -90, north: 90, south: 45 }, 'A1'],
@@ -185,7 +185,7 @@ describe('raster contract', () => {
 
 describe('band cache', () => {
   /** Tile `x` of a 32-column level (11.25 degrees), in tile row `y`. */
-  function tile(x: number, y: number): LonLatBox {
+  function tile(x: number, y: number): LonLatBounds {
     return {
       west: -180 + x * 11.25,
       east: -180 + (x + 1) * 11.25,

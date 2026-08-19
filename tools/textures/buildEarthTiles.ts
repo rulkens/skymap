@@ -46,7 +46,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
-import type { LonLatBox } from './LonLatBox';
+import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
  *  that doubles as the land mask. */
@@ -82,7 +82,7 @@ export const TILE_PREFIX = `${TILE_ROOT}/v1`;
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
-function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBox {
+function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBounds {
   const columns = earthTileColumns(z, tilePx);
   const rows = columns / 2;
   const lonStep = 360 / columns;

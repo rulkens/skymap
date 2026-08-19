@@ -35,7 +35,7 @@ import sharp from 'sharp';
 
 import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
 import type { EarthImagerySource } from './EarthImagerySource';
-import type { LonLatBox } from './LonLatBox';
+import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */
 const QUADRANT_SPAN_DEG = 90;
@@ -92,7 +92,7 @@ function soleBandIndex(nearDeg: number, farDeg: number, bands: number): number |
 /** The quadrant containing `box`, or a throw naming it if it spans two (or
  *  falls off the grid — a caller bug for a globally-covering source, not a
  *  no-coverage answer). */
-function quadrantForBox(box: LonLatBox): QuadrantPlacement {
+function quadrantForBox(box: LonLatBounds): QuadrantPlacement {
   const column = soleBandIndex(box.west + 180, box.east + 180, QUADRANT_COLUMNS.length);
   const row = soleBandIndex(90 - box.north, 90 - box.south, QUADRANT_ROWS.length);
   if (column === null || row === null) {
