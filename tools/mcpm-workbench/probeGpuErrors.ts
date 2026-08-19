@@ -130,11 +130,12 @@ async function launchChromium(headed: boolean): Promise<Browser> {
 }
 
 /**
- * The load-bearing hook, installed before a single page script runs: the harness
- * creates its device internally (createMcpmHarness's `initGpu`), so patching
- * `GPUAdapter.prototype` is the only way to reach it. `uncapturederror` is WHERE
- * WebGPU validation failures surface — un-listened-to they are a console line
- * nobody reads.
+ * The load-bearing hook, installed before a single page script runs: the page
+ * bundle acquires its device via `Viewport`'s own `initGpu` call (task R5 moved
+ * that call out of `createMcpmHarness`), so patching `GPUAdapter.prototype` is
+ * the only way to reach it regardless of which module calls it. `uncapturederror`
+ * is WHERE WebGPU validation failures surface — un-listened-to they are a
+ * console line nobody reads.
  *
  * A `device.lost` with reason 'destroyed' is Viewport's own `disposeHarness`
  * (every rebuild tears down the old device) and is deliberately dropped; any

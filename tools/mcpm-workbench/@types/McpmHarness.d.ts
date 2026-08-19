@@ -16,11 +16,12 @@ export type McpmHarness = {
   readonly element: GridElement;
   readonly box: GridBox;
   /**
-   * The device the harness allocated via `initGpu`. T10's render passes and
-   * T11's viewport must consume this rather than calling `initGpu` again on
-   * the same canvas — a second call reconfigures the swap chain and would
-   * hand the render passes a device without the compute limits the kernels
-   * need (see task-T9-review.md concern 4).
+   * The GpuContext the caller acquired via `initGpu` and handed in (task R5 —
+   * the harness never calls `initGpu` itself). T10's render passes and T11's
+   * viewport must consume this rather than calling `initGpu` again on the same
+   * canvas — a second call reconfigures the swap chain and would hand the
+   * render passes a device without the compute limits the kernels need (see
+   * task-T9-review.md concern 4).
    */
   readonly gpu: GpuContext;
   /**

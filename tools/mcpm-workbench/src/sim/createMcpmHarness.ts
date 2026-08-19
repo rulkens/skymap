@@ -15,7 +15,7 @@ import type { GridElement } from '../../@types/GridElement';
 import type { HistogramReadback } from '../../@types/HistogramReadback';
 import type { McpmHarness } from '../../@types/McpmHarness';
 import type { McpmParams } from '../../@types/McpmParams';
-import { initGpu } from '../../../../src/services/gpu/device';
+import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate.wesl?static';
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
@@ -59,7 +59,12 @@ const uniformLayoutFor = (device: GPUDevice, label: string): GPUBindGroupLayout 
   });
 
 export async function createMcpmHarness(opts: {
-  readonly canvas: HTMLCanvasElement;
+  // Task R5: the caller owns "how do you get a GPUDevice" (a canvas/browser
+  // concern, one call site) — this function only builds/steps the sim on top of
+  // it. Callers ask initGpu for shader-f16 and the propagate kernel's compute
+  // limits themselves; see Viewport.tsx's buildFromPoints for the request shape
+  // this harness needs.
+  readonly gpu: GpuContext;
   readonly points: CatalogPoints;
   readonly weights: AgentWeights;
   readonly box: GridBox;
@@ -102,14 +107,7 @@ export async function createMcpmHarness(opts: {
   // buffers it feeds are built below once `device` exists.
   const overlayCatalog = buildOverlayCatalog(opts.points, opts.weights, opts.box);
 
-  const gpu = await initGpu(opts.canvas, {
-    requiredFeatures: ['shader-f16'],
-    requiredLimits: {
-      maxComputeInvocationsPerWorkgroup: 1024, // propagate's 10x10x10 = 1000
-      maxBufferSize: Number.MAX_SAFE_INTEGER, // clamped to the adapter's max by initGpu
-      maxStorageBufferBindingSize: Number.MAX_SAFE_INTEGER,
-    },
-  });
+  const { gpu } = opts;
   const { device } = gpu;
 
   // The device's own answer picks the element, so the flag and the device can

@@ -2,9 +2,10 @@
  * Viewport — owns the <canvas>, the McpmHarness, the render graph and the RAF
  * loop; bridges pointer/wheel input into the view slice's orbit camera.
  *
- * `createMcpmHarness` is the ONLY caller of `initGpu` (it asks for shader-f16 and
- * the kernels' compute limits); a second call here would race another device onto
- * the same canvas. Every rebuild — catalog reload or structural — goes through
+ * Viewport is the ONLY caller of `initGpu` (task R5 — it asks for shader-f16 and
+ * the kernels' compute limits, then hands the result to `createMcpmHarness`); a
+ * second call here would race another device onto the same canvas. Every
+ * rebuild — catalog reload or structural — goes through
  * `requestBuild`, which serialises on `buildGeneration`: one in flight, latest
  * config wins, a request arriving mid-build served on completion, not dropped.
  * Only structural changes are debounced; params, run tokens and camera are live.
@@ -21,7 +22,7 @@ import type { Ray } from '../../@types/Ray';
 import type { Store } from '../../@types/Store';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
-import { resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
+import { initGpu, resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { downloadStem } from '../export/downloadStem';
 import { emitTraceSidecar } from '../export/emitTraceSidecar';
@@ -563,8 +564,20 @@ function Viewport({ store }: ViewportProps): ReactNode {
       disposeHarness();
       if (disposed) return;
 
+      // Task R5: moved here verbatim from createMcpmHarness — device acquisition
+      // is a canvas/browser concern this component already owns; the harness only
+      // needs the resulting GpuContext. Still fresh per rebuild, same as before.
+      const gpu = await initGpu(canvas, {
+        requiredFeatures: ['shader-f16'],
+        requiredLimits: {
+          maxComputeInvocationsPerWorkgroup: 1024, // propagate's 10x10x10 = 1000
+          maxBufferSize: Number.MAX_SAFE_INTEGER, // clamped to the adapter's max by initGpu
+          maxStorageBufferBindingSize: Number.MAX_SAFE_INTEGER,
+        },
+      });
+
       const h = await createMcpmHarness({
-        canvas,
+        gpu,
         points: pts,
         weights,
         box,
