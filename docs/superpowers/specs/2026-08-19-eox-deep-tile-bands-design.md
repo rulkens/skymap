@@ -461,6 +461,56 @@ uniforms, shaders, deploy collectors.
 - A self-hosted EOX mirror, if bulk access or rate limits make live-fetch
   harvesting impractical at wider scale.
 
+## 10. Band fallback semantics (post-visual-pass ruling)
+
+The user's visual pass (§7) surfaced a gap this spec didn't anticipate. A z8
+EOX tile spans ~1.4° of ground against the Copenhagen patch's ~0.5°, so most
+z8–z12 EOX tiles only partially overlap the harvest; the uncovered margin
+baked transparent (§4's "missing quadrants transparent" bookkeeping,
+inherited from the coastal-sparse case the global band already handled).
+The runtime page table names the finest **resident** tile per cell with no
+concept of "resident but partially empty," so it handed the fragment shader
+that transparent-margined EOX tile instead of falling back to the BMNG z7
+ancestor beneath it — the fragment then blended the transparent texels
+against the whole-globe BASE texture, visibly showing the base through the
+patch edges instead of BMNG.
+
+**Ruling (user-confirmed), chosen over teaching the runtime page table to
+layer bands:** a baked tile is always fully opaque; "no coverage" only ever
+shows up as an absent file. A 404 at read time already falls back down the
+resident-ancestor chain, and that chain crosses band boundaries correctly
+(EOX z8 missing → BMNG z7) — so the fix is to stop emitting partially-empty
+tiles from the bake, not to teach the runtime to distinguish "empty" from
+"absent."
+
+Mechanically: `underfillImagerySource(primary, filler)`
+(`tools/textures/underfillImagerySource.ts`) wraps a regional band's source
+so any transparent margin in its raster is composited over a global filler
+source's pixels at bake time, before the tile is ever written — the filler
+is read only when the primary has *something* for the box; a primary decline
+still yields no tile at all. `bakeAll`'s band entries take an optional
+`underfill` source, and `main()` wires Copenhagen's EOX band with BMNG as
+its underfill (the same BMNG instance also serves as the global band, so
+there's no second read of the source). Every level of a regional band is
+now filled this way: partial 2×2 blocks at the deepest baked level (z13, one
+to three of the four EOX children present) and missing quadrants at every
+coarser level down to the band's `minLevel`.
+
+Side effect: baking partial deepest-level blocks (rather than declining
+them) grew the Copenhagen z13 tile count from 84 to 96 — the harvest's odd
+15th row of EOX z13 tiles, previously discarded because it couldn't fill a
+whole 2×2 block on its own, now bakes underfilled instead of being dropped.
+
+**Two camera-side consequences also shipped on this branch**, both driven by
+the same z13 floor this feature bakes to. `SURFACE_STANDOFF_RADII`
+(`src/utils/camera/clampDistance.ts`) moved 1.02 → 1.00015 — the old 2%
+standoff was tuned for the z7-era ~127 km floor and is now sized for z13's
+~1 km floor instead. That lower floor then broke the near-field frustum:
+`MIN_NEAR_MPC` (`src/utils/camera/foregroundFrustum.ts`) moved 1e-19 → 1e-21
+because the old floor (3.09 km) sat *above* the new ~1 km camera altitude —
+the near plane was clipping the entire visible ground, so Earth vanished at
+max zoom until the floor dropped below it.
+
 ## References
 
 - [Earth surface virtual texture — design](completed/2026-07-28-earth-surface-virtual-texture.md) — the pyramid, planner and subsystem this spec reshapes
