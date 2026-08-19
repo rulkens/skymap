@@ -146,5 +146,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // one rAF.  The `onFrame: () => frameRef.current()` closure picks up
   // the just-assigned real frame body.  After that single frame, the
   // loop sleeps until a channel mouth wakes it.
+  // Boot ignition: kept regardless of whether `goLiveNowAction` above joins a
+  // wake-vote route — that dispatch covers the clock, not the first frame (D8).
   state.subsystems.scheduler.requestRender();
 }
