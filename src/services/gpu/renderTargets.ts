@@ -43,6 +43,13 @@
  * layer's dither-frequency viewport) read it via `sizeOf`, so the two sites
  * cannot drift.
  *
+ * Don't drop this to `scale: 2` without remeasuring: tried it (2026-08-19,
+ * paired A/B against shipped defaults — tier medium, MCPM field on), and
+ * `volume-inside` regressed TOTAL merged by ~1.3 ms over 6 stable rounds —
+ * over the acceleration stack's 1 ms budget. That pose sits inside the
+ * field with no empty space for the skip/cone-LOD march to exploit, so the
+ * extra fragments aren't "spent savings," they're pure added cost.
+ *
  * ### Why the star-aggregate row renders at half scale
  *
  * The survey (Gaia bin) star pass splits into two streams. Leaf stars (real
