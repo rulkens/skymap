@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -356,6 +356,144 @@ describe('bakeAll', () => {
     const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
     expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX));
     expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX));
+  });
+
+  describe('--only', () => {
+    /** Same shape as `stubSource`, plus a call counter — needed to prove a
+     *  skipped band's `readBox` never runs. */
+    function countingStub(
+      id: string,
+      coverage: LonLatBounds,
+      rgba: readonly [number, number, number, number],
+    ): EarthImagerySource & { readBoxCalls: number } {
+      const stub = {
+        id,
+        attribution: `${id} attribution`,
+        provenance: { sourceId: id, attribution: `${id} attribution`, vintage: 'stub-vintage' },
+        maxLevel: STUB_Z,
+        coverage: [coverage],
+        readBoxCalls: 0,
+        async readBox(box: LonLatBounds, widthPx: number, heightPx: number) {
+          stub.readBoxCalls++;
+          if (box.west !== coverage.west) return null;
+          const raster = new Uint8Array(widthPx * heightPx * 4);
+          for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
+          return raster;
+        },
+      };
+      return stub;
+    }
+
+    it('writes a per-band index for every band on a full bake', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+
+      await bakeAll(
+        [
+          { source: west, minLevel: STUB_Z },
+          { source: east, minLevel: STUB_Z },
+        ],
+        dir,
+      );
+
+      const westIndex = readFileSync(join(dir, 'earth-tiles/index-stub-west.txt'), 'utf8');
+      const eastIndex = readFileSync(join(dir, 'earth-tiles/index-stub-east.txt'), 'utf8');
+      expect(westIndex).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      );
+      expect(eastIndex).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+    });
+
+    it('skips a band --only does not name: no readBox calls, its tile untouched, merged index and manifest still carry it', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      const bands = [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ];
+      await bakeAll(bands, dir);
+      const eastTilePath = join(
+        dir,
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+      const beforeMtime = statSync(eastTilePath).mtimeMs;
+      east.readBoxCalls = 0;
+
+      await bakeAll(bands, dir, { only: 'stub-west' });
+
+      expect(east.readBoxCalls).toBe(0);
+      expect(statSync(eastTilePath).mtimeMs).toBe(beforeMtime);
+
+      const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
+      expect(index).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      );
+      expect(index).toContain(
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+
+      const manifest = JSON.parse(
+        readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+      ) as EarthTileManifest;
+      expect(manifest.levels.surface).toHaveLength(2);
+    });
+
+    it('throws naming the band when a stitched tile has been deleted from disk', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      const bands = [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ];
+      await bakeAll(bands, dir);
+      const eastTilePath = join(
+        dir,
+        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      );
+      rmSync(eastTilePath);
+
+      await expect(bakeAll(bands, dir, { only: 'stub-west' })).rejects.toThrow(/stub-east/);
+    });
+
+    it('throws naming the band when its minLevel drifted since the prior index', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      await bakeAll(
+        [
+          { source: west, minLevel: STUB_Z },
+          { source: east, minLevel: STUB_Z },
+        ],
+        dir,
+      );
+
+      // Same band, now claiming a deeper floor than the run that wrote its
+      // stitched index — that index still only has z1 lines, not z0.
+      await expect(
+        bakeAll(
+          [
+            { source: west, minLevel: STUB_Z },
+            { source: east, minLevel: STUB_Z - 1 },
+          ],
+          dir,
+          { only: 'stub-west' },
+        ),
+      ).rejects.toThrow(/stub-east/);
+    });
+
+    it('throws listing available ids when --only names an unknown band', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+
+      await expect(
+        bakeAll([{ source: west, minLevel: STUB_Z }], dir, { only: 'does-not-exist' }),
+      ).rejects.toThrow(/stub-west/);
+    });
   });
 });
 
