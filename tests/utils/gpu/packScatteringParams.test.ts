@@ -3,94 +3,111 @@
  *
  * The WGSL `struct ScatteringParams` in `shaders/atmosphere/scattering.wesl` and
  * the CPU-side `packScatteringParams` must agree byte-for-byte: a mismatch
- * produces no GPU error, just a wrong (or, on iOS, silently dropped) frame. This
- * is the `testing.md` keep-rule for uniform layouts — it fails on a real drift no
- * compiler check catches. It was the only atmosphere byte mirror WITHOUT a parity
- * test before this file (the extraction from `atmosphereShellRenderer.ts`).
+ * produces no GPU error, just a wrong (or, on iOS, silently dropped) frame.
  *
- * The test drives the real packer with a distinct dyadic sentinel in every field
- * (no two equal, so a swapped pair of fields is caught; dyadic ⇒ exactly float32-
- * representable so `toBe` stays exact) and pins every returned slot index against
- * the WESL struct field order:
- *
- *   0..2 rayleighScatter  3 rayleighScaleHeightKm  4..6 ozoneAbsorption
- *   7 mieScaleHeightKm  8..10 groundAlbedo  11 miePhaseG  12..14 mieScatter
- *   15 mieAbsorption  16 ozoneCenterKm  17 ozoneWidthKm  18 planetRadiusKm
- *   19 atmosphereTopKm
- *
- * `mieScatter` is a `vec3<f32>` (per-channel — see `AtmosphereParams.d.ts`'s
- * header) whose offset (slot 12) already lands on a 16-byte boundary, so the
- * struct stays a dense 80 bytes / 20 f32 with no trailing pad.
- *
- * `twilightSoftness` is NOT packed here — it rides the per-frame `SkyViewParams`
- * so the Earth slider tunes it live — so it is grouped with the other row fields
- * this physics packer ignores.
+ * Every field gets a distinct dyadic sentinel (k/16 — exactly float32-
+ * representable, so `toBe` stays exact; pairwise distinct, so a swapped pair is
+ * caught). The two constituents differ in BOTH tags, which is what pins the
+ * `u32` tag words: a packer writing them as floats, or into the wrong word,
+ * fails here rather than on someone's screen.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
   packScatteringParams,
-  SCATTERING_PARAMS_FLOATS,
+  SCATTERING_PARAMS_BYTES,
+  MAX_CONSTITUENTS,
 } from '../../../src/utils/gpu/packScatteringParams';
 import type { AtmosphereParams } from '../../../src/@types/scene/AtmosphereParams';
+import type { AtmosphereConstituent } from '../../../src/@types/scene/AtmosphereConstituent';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
-// One distinct dyadic sentinel per field — k/16 for k = 1..19, all exactly
-// float32-representable and pairwise distinct, so a swap or a mis-slotted field
-// perturbs a slot this test pins.
-const PARAMS: AtmosphereParams = {
-  rayleighScatter: [1 / 16, 2 / 16, 3 / 16], // slots 0..2
-  rayleighScaleHeightKm: 4 / 16, //             slot 3
-  ozoneAbsorption: [5 / 16, 6 / 16, 7 / 16], //  slots 4..6
-  mieScaleHeightKm: 8 / 16, //                   slot 7
-  groundAlbedo: [9 / 16, 10 / 16, 11 / 16], //   slots 8..10
-  miePhaseG: 12 / 16, //                         slot 11
-  mieScatter: [13 / 16, 14 / 16, 15 / 16], //    slots 12..14
-  mieAbsorption: 16 / 16, //                     slot 15
-  ozoneCenterKm: 17 / 16, //                     slot 16
-  ozoneWidthKm: 18 / 16, //                      slot 17
-  planetRadiusKm: 19 / 16, //                    slot 18
-  atmosphereTopKm: 20 / 16, //                   slot 19
-  // Row fields NOT part of ScatteringParams — this physics packer ignores them,
-  // so they occupy no slot and any value serves. `twilightSoftness` +
-  // `twilightIntensity` ride the per-frame SkyViewParams; the two look dials ride
-  // AtmosphereUniforms.
-  twilightSoftness: 21 / 16,
-  twilightIntensity: 22 / 16,
-  sunIrradiance: 23 / 16,
-  exposure: 24 / 16,
-};
+// Exponential profile + Henyey-Greenstein phase — tags (0, 1).
+const AEROSOL = {
+  scatter: [6 / 16, 7 / 16, 8 / 16] as Vec3,
+  absorb: [9 / 16, 10 / 16, 11 / 16] as Vec3,
+  profile: { kind: 'exponential', scaleHeightKm: 12 / 16 },
+  phase: { kind: 'henyeyGreenstein', g: 13 / 16 },
+} satisfies AtmosphereConstituent;
+
+// Tent profile + Rayleigh phase — tags (1, 0), the opposite corner.
+const LAYER = {
+  scatter: [14 / 16, 15 / 16, 16 / 16] as Vec3,
+  absorb: [17 / 16, 18 / 16, 19 / 16] as Vec3,
+  profile: { kind: 'tent', centerKm: 20 / 16, widthKm: 21 / 16 },
+  phase: { kind: 'rayleigh' },
+} satisfies AtmosphereConstituent;
+
+// Only the four fields the packer reads — the look dials and the twilight knobs
+// ride other buffers, and the narrowed parameter type says so.
+const PARAMS = {
+  planetRadiusKm: 1 / 16,
+  atmosphereTopKm: 2 / 16,
+  groundAlbedo: [3 / 16, 4 / 16, 5 / 16] as Vec3,
+  constituents: [AEROSOL, LAYER],
+} satisfies Pick<
+  AtmosphereParams,
+  'planetRadiusKm' | 'atmosphereTopKm' | 'groundAlbedo' | 'constituents'
+>;
 
 describe('ScatteringParams byte offsets', () => {
-  it('packs an 80-byte / 20-f32 record in the WESL struct field order', () => {
-    const rec = packScatteringParams(PARAMS);
-    expect(rec.length).toBe(SCATTERING_PARAMS_FLOATS);
-    expect(rec.length).toBe(20); // 80 bytes
-    expect(rec.byteLength).toBe(80);
+  it('packs a 224-byte record in the WESL struct field order', () => {
+    const buf = packScatteringParams(PARAMS);
+    expect(buf.byteLength).toBe(SCATTERING_PARAMS_BYTES);
+    expect(buf.byteLength).toBe(224);
 
-    // rayleighScatter vec3 @ 0 (its tail slot 3 holds the next scalar).
-    expect(rec[0]).toBe(PARAMS.rayleighScatter[0]);
-    expect(rec[1]).toBe(PARAMS.rayleighScatter[1]);
-    expect(rec[2]).toBe(PARAMS.rayleighScatter[2]);
-    expect(rec[3]).toBe(PARAMS.rayleighScaleHeightKm);
-    // ozoneAbsorption vec3 @ 4, mieScaleHeightKm in its tail.
-    expect(rec[4]).toBe(PARAMS.ozoneAbsorption[0]);
-    expect(rec[5]).toBe(PARAMS.ozoneAbsorption[1]);
-    expect(rec[6]).toBe(PARAMS.ozoneAbsorption[2]);
-    expect(rec[7]).toBe(PARAMS.mieScaleHeightKm);
-    // groundAlbedo vec3 @ 8, miePhaseG in its tail.
-    expect(rec[8]).toBe(PARAMS.groundAlbedo[0]);
-    expect(rec[9]).toBe(PARAMS.groundAlbedo[1]);
-    expect(rec[10]).toBe(PARAMS.groundAlbedo[2]);
-    expect(rec[11]).toBe(PARAMS.miePhaseG);
-    // mieScatter vec3 @ 12 (16-byte aligned already; its tail slot 15 holds
-    // mieAbsorption), then the ozone tent and the two radii.
-    expect(rec[12]).toBe(PARAMS.mieScatter[0]);
-    expect(rec[13]).toBe(PARAMS.mieScatter[1]);
-    expect(rec[14]).toBe(PARAMS.mieScatter[2]);
-    expect(rec[15]).toBe(PARAMS.mieAbsorption);
-    expect(rec[16]).toBe(PARAMS.ozoneCenterKm);
-    expect(rec[17]).toBe(PARAMS.ozoneWidthKm);
-    expect(rec[18]).toBe(PARAMS.planetRadiusKm);
-    expect(rec[19]).toBe(PARAMS.atmosphereTopKm);
+    const f = new Float32Array(buf);
+    const u = new Uint32Array(buf);
+
+    // Header: groundAlbedo vec3 @ 0, its tail slot 3 filled by planetRadiusKm.
+    expect(f[0]).toBe(PARAMS.groundAlbedo[0]);
+    expect(f[1]).toBe(PARAMS.groundAlbedo[1]);
+    expect(f[2]).toBe(PARAMS.groundAlbedo[2]);
+    expect(f[3]).toBe(PARAMS.planetRadiusKm);
+    expect(f[4]).toBe(PARAMS.atmosphereTopKm);
+    expect(u[5]).toBe(2); // constituentCount
+
+    // Constituent 0 at byte 32 (f32 slot 8); stride 48 B = 12 f32.
+    expect(f[8]).toBe(AEROSOL.scatter[0]);
+    expect(f[9]).toBe(AEROSOL.scatter[1]);
+    expect(f[10]).toBe(AEROSOL.scatter[2]);
+    expect(f[11]).toBe(AEROSOL.phase.g);
+    expect(f[12]).toBe(AEROSOL.absorb[0]);
+    expect(f[13]).toBe(AEROSOL.absorb[1]);
+    expect(f[14]).toBe(AEROSOL.absorb[2]);
+    expect(f[15]).toBe(AEROSOL.profile.scaleHeightKm);
+    expect(f[16]).toBe(0); // centerKm — an exponential profile has none
+    expect(f[17]).toBe(0); // widthKm
+    expect(u[18]).toBe(0); // profileKind: exponential
+    expect(u[19]).toBe(1); // phaseKind: henyeyGreenstein
+
+    // Constituent 1 at byte 80 (f32 slot 20).
+    expect(f[20]).toBe(LAYER.scatter[0]);
+    expect(f[21]).toBe(LAYER.scatter[1]);
+    expect(f[22]).toBe(LAYER.scatter[2]);
+    expect(f[23]).toBe(0); // phaseG — the Rayleigh phase takes no parameter
+    expect(f[24]).toBe(LAYER.absorb[0]);
+    expect(f[25]).toBe(LAYER.absorb[1]);
+    expect(f[26]).toBe(LAYER.absorb[2]);
+    // A tent packs a FINITE scale height it never reads — see the packer header.
+    expect(f[27]).toBe(1);
+    expect(f[28]).toBe(LAYER.profile.centerKm);
+    expect(f[29]).toBe(LAYER.profile.widthKm);
+    expect(u[30]).toBe(1); // profileKind: tent
+    expect(u[31]).toBe(0); // phaseKind: rayleigh
+
+    // Unused slots stay zero — the shader loop bounds on constituentCount and
+    // never reads them, but a non-zero here would mean a stride error.
+    for (let i = 32; i < SCATTERING_PARAMS_BYTES / 4; i++) {
+      expect(f[i]).toBe(0);
+    }
+  });
+
+  it('rejects a row carrying more constituents than the uniform holds', () => {
+    const tooMany = {
+      ...PARAMS,
+      constituents: Array.from({ length: MAX_CONSTITUENTS + 1 }, () => LAYER),
+    };
+    expect(() => packScatteringParams(tooMany)).toThrow(/MAX_CONSTITUENTS/);
   });
 });

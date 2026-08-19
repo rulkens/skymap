@@ -65,7 +65,6 @@ import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
-import { createRenderTargets } from '../../gpu/renderTargets';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
@@ -186,99 +185,32 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const masks = deriveSourceMasks(state);
   reevaluateDemand(state);
 
-  // ── Resize → projection Resource ─────────────────────────────────────────
+  // ── Resize → projection Resource, then reconcile the offscreen table ─────
   //
-  // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so we
-  // patch `cameraRuntime.projection.aspect` + the offscreen target table only
-  // in that branch. The HDR row is sized 1:1 with the swap chain, so a stale
-  // target after resize would smear pixels or render off-canvas; the tone-map
-  // composite rebuilds its bind group each frame so it picks up the new view.
-  // One `renderTargets.resize` reallocates every offscreen row at its own
-  // size/scale — the frame body never enumerates targets by hand.
-  //
-  // Aspect lives on `projection` (the engine Resource), NOT on `state.cam`.
-  // `state.cam` is the drag register; its `aspect` field is set at bootstrap
-  // and is never read for the rendered frame — `assembleOrbitCamera` merges the
+  // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so
+  // `cameraRuntime.projection.aspect` is patched only in that branch. Aspect
+  // lives on `projection` (the engine Resource), NOT on `state.cam`:
+  // `state.cam` is the drag register, and `assembleOrbitCamera` merges the
   // projection Resource's aspect onto every produced pose instead.
   //
-  // Resize can run pre-bootstrap (the canvas can change size before the first
-  // cloud lands) — `projection` is always non-null, so no guard is needed.
+  // `reconcile` runs UNCONDITIONALLY — one seam answering two inputs, the
+  // canvas size and every state-driven `scale` (the `mw-aggregate` divisor is
+  // a live slider). It reallocates only the rows whose pixel size actually
+  // moved, so a steady-state frame allocates nothing. Both can run
+  // pre-bootstrap; `renderTargets` is null until initGpu, hence the `?.`.
   if (resizeCanvasToDisplay(deps.canvas)) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
-    state.gpu.renderTargets?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
-
-  // ── Milky-Way aggregate divisor → offscreen table rebuild ────────────────
-  //
-  // The `mw-aggregate` row's downsample divisor is a live tuning knob (the
-  // strongest perf lever the star cloud has — its fragment cost falls as the
-  // square — and it trades against the `starPxMin` / `starPxMax` clamps, which
-  // are already sliders). A texture's dimensions are fixed at creation, so a
-  // change is answered by rebuilding the table, not by resizing it; this sits
-  // beside the resize branch because it is the same "the targets no longer
-  // match what the frame wants" question, asked about a different input.
-  //
-  // The divisor in force is read back off the spec row, and the swap format off
-  // the old table's `swap` row. Both are already carried there, so the targets
-  // themselves ARE the record of what was applied — a 'last applied' mirror
-  // beside them could only ever drift from the textures it describes.
-  //
-  // Destroying textures an in-flight command buffer may still reference is the
-  // hazard `resize` already takes every time it reallocates, so this needs no
-  // synchronisation the resize path doesn't. Nothing caches a view across
-  // frames either: every consumer resolves through `viewOf` at draw time, and
-  // the upsample passes rebuild their bind group per draw.
-  const targets = state.gpu.renderTargets;
-  if (targets) {
-    const applied = targets.specs.find((s) => s.id === 'mw-aggregate')!.scale;
-    const wanted = state.settings.milkyWay.aggregateDivisor;
-    if (applied !== wanted) {
-      const swapFormat = targets.specs.find((s) => s.id === 'swap')!.format;
-      targets.destroy();
-      state.gpu.renderTargets = createRenderTargets(
-        deps.device,
-        swapFormat,
-        { width: deps.canvas.width, height: deps.canvas.height },
-        wanted,
-      );
-    }
-  }
+  state.gpu.renderTargets?.reconcile(state, {
+    width: deps.canvas.width,
+    height: deps.canvas.height,
+  });
 
   // ── Milky-Way star count → cloud regeneration ───────────────────────────
   //
-  // starCount is a DebugPanel slider like every other `settings.milkyWay`
-  // knob, but unlike them it doesn't ride a uniform or a render target — it
-  // feeds GENERATION directly (`milkyWayCloud.generate` carves the star/dust
-  // layouts from it), so the only way a drag reaches the screen is this
-  // branch noticing the live setting has outrun the buffers currently on
-  // screen and regenerating. Same shape as the mw-aggregate branch just
-  // above — "the targets/buffers no longer match what the frame wants" —
-  // asked about generated data instead of a texture. It also picks up a tier
-  // change: `watchTierSaga` re-seeds `starCount` from the new tier's budget
-  // on every explicit tier switch, so a tier flip surfaces here as an
-  // ordinary mismatch too — `makeRunTierTransition` does not call
-  // `regenerate` itself, to avoid two paths racing to regenerate the same
-  // cloud.
-  //
-  // The comparison is against `cloud.starCount()`, the count the CURRENT
-  // buffers were actually generated with, not a runFrame-side shadow copy:
-  // the generator is the one place that fact is produced, and a second copy
-  // here could only ever drift from the buffers it describes.
-  //
-  // Cost note: `DebugSlider` fires on every input event, so dragging this
-  // knob regenerates the cloud once per tick — a full destroy + allocate +
-  // compute dispatch, far heavier than a uniform write. That is accepted
-  // deliberately for a dev-only knob; if it ever needs production-grade
-  // smoothness, the fix is coalescing to the drag's trailing edge (e.g. a
-  // debounce on the DebugPanel side), not gating the knob back out of the
-  // panel.
-  const cloud = state.gpu.milkyWayCloud;
-  if (cloud) {
-    const wantedCount = state.settings.milkyWay.starCount;
-    if (cloud.starCount() !== wantedCount) {
-      cloud.regenerate(wantedCount);
-    }
-  }
+  // Unconditional like `renderTargets.reconcile` above; the mismatch check
+  // and regeneration rationale live on `MilkyWayCloud.reconcile` itself.
+  state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
   //

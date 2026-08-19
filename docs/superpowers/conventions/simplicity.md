@@ -345,7 +345,7 @@ has more. Don't model new code on them.
 - **`pickRenderer` shares `pointRenderer.uniformBuffer`** (`renderers.md`) — the only
   cross-renderer shared mutable resource; load-bearing today, but the clean home is a
   selection-pack module (#5).
-- **Positional factory args** on `pointRenderer` / `pickRenderer` / `filamentRenderer` /
+- **Positional factory args** on `galaxyPointRenderer` / `galaxyPickRenderer` / `filamentRenderer` /
   `scalarVolumeRenderer` (`renderers.md`) — `(device, format, …)` braids argument _order_ into
   every call site; convert to a named bag when you next add an arg (#3; #6, _what/how_).
 - **`render` vs `draw` naming** on `labelRenderer` / `markerLineRenderer` (`renderers.md`) — a

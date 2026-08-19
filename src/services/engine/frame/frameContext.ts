@@ -56,7 +56,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
+ * `state.gpu.galaxyPointRenderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
  * are all part of the 5-way bootstrap gate. Once the gate passes, downstream
  * code wants to use those handles without re-checking they're non-null — but if
  * we left them on `state.gpu.*` and `state.subsystems.*`, every consumer would
@@ -65,7 +65,7 @@
  *
  * Forwarding the narrowed handles onto `ReadyFrameContext` carries the narrowing
  * across the function boundary. A pass implementation can read
- * `ctx.renderer.draw(...)` directly, no `!` needed.
+ * `ctx.galaxyPointRenderer.draw(...)` directly, no `!` needed.
  *
  * The trade-off is mild type duplication: `ReadyFrameContext` lists fields that
  * also live on `EngineState`. We accept it because the win at the call site (no
@@ -150,7 +150,7 @@ export function deriveFrameContext(
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
-  const renderer = state.gpu.renderer;
+  const galaxyPointRenderer = state.gpu.galaxyPointRenderer;
   const renderTargets = state.gpu.renderTargets;
   const texturedDisks = state.subsystems.texturedDisks;
 
@@ -207,7 +207,7 @@ export function deriveFrameContext(
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,
-    renderer,
+    galaxyPointRenderer,
     renderTargets,
     // A fresh empty Set per frame — the executor populates it as it opens the
     // first pass against each target, and a later pass sampling an earlier

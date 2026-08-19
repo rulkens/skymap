@@ -195,7 +195,7 @@ export type StarCatalogDrawArgs = {
  * The GPU resources the sibling `starCatalogPickRenderer` must SHARE with the
  * visual star renderer so its own r32uint pick pipeline stays bind-group
  * compatible — the star analogue of the galaxy points pipeline handing its
- * canonical `sourceBgl` to the point `PickRenderer`.
+ * canonical `sourceBgl` to the point `GalaxyPickRenderer`.
  *
  * Two things are shared:
  *

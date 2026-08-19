@@ -30,7 +30,7 @@
 // Comments single-quoted, never backticks. Literal 'package::' imports.
 
 import package::atmosphere::scattering::ScatteringParams;
-import package::atmosphere::scattering::sampleMedium;
+import package::atmosphere::scattering::sampleMediumIsotropic;
 import package::atmosphere::scattering::distanceToTop;
 import package::atmosphere::scattering::transmittanceLutUvToParams;
 
@@ -62,7 +62,7 @@ fn opticalDepthToTop(r: f32, mu: f32) -> vec3<f32> {
     if (f32(i) >= TRANSMITTANCE_STEPS) { break; }
     let t = (f32(i) + 0.5) * dt;
     let pos = p0 + dir * t;
-    let m = sampleMedium(params, pos);
+    let m = sampleMediumIsotropic(params, pos);
     opticalDepth = opticalDepth + m.extinction * dt;
     i = i + 1u;
   }

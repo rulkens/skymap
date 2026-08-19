@@ -18,7 +18,7 @@
  *     galaxy catalog from a populated one. This gate watches each slot's `ready` value
  *     and only treats `count > 0` as success.
  *   - **the running total.** The per-arrival status emission reports
- *     `state.gpu.renderer.totalCount()`, which the ctx layer also can't reach.
+ *     `state.gpu.galaxyPointRenderer.totalCount()`, which the ctx layer also can't reach.
  *
  * So the precise gate runs here, at the slot-subscription level where the
  * count is visible. When it concludes the fallback is warranted it ARMS the
@@ -76,7 +76,7 @@ import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
  * subscriber is a long-lived per-arrival echo — so there is no handle for a
  * caller to dispose. An `engine.destroy()` before all galaxy catalogs settle leaves
  * those galaxy catalog subscriptions open until the slot is GC'd; the optional chains
- * on `state.gpu.renderer` tolerate a torn-down renderer, so this is benign.
+ * on `state.gpu.galaxyPointRenderer` tolerate a torn-down renderer, so this is benign.
  */
 export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks): void {
   // Only `survey`-category sources count toward the gate; curated Famous is
@@ -107,7 +107,7 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
       if (s.kind === 'ready' && s.value.count > 0) {
         const readyStatus = {
           kind: 'ready' as const,
-          count: state.gpu.renderer?.totalCount() ?? 0,
+          count: state.gpu.galaxyPointRenderer?.totalCount() ?? 0,
           source,
         };
         cb.store.dispatch(engineStatusChanged(readyStatus));
@@ -143,7 +143,7 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
         cb.store.dispatch(
           engineStatusChanged({
             kind: 'ready',
-            count: state.gpu.renderer?.totalCount() ?? 0,
+            count: state.gpu.galaxyPointRenderer?.totalCount() ?? 0,
             source: Source.Synthetic,
           }),
         );

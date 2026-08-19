@@ -17,7 +17,7 @@
  * ### Texture lifecycle
  *
  * The Blue Marble bitmap is fetched by the proximity-gated `bodyTextures` slot
- * family under key `'earth:surface'` (minted in `initGpu`,
+ * family under key `'earth:surface'` (minted in `wireSlots`,
  * `bodyTextureSlotRegistry`), whose commit dispatches to `setMap('surface', …)`.
  * Until it lands the renderer draws a plain mid-blue sphere sampled from a 1×1
  * placeholder texture created at construction — the geometry is visible-but-plain

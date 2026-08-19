@@ -10,7 +10,7 @@
  *
  * Testing only these slices keeps the test cheap: we don't need a GPU device
  * or any of the rendering subsystems.  The frame body is structured so every
- * "do something" GPU path is gated on a state field (`state.gpu.renderer`,
+ * "do something" GPU path is gated on a state field (`state.gpu.galaxyPointRenderer`,
  * …) — leaving them all null short-circuits the body before any of the GPU
  * work runs.  See the early-return at `if (!vp || !rendererRef || …) return`
  * inside runFrame for the bail-out that makes this possible.
@@ -79,7 +79,6 @@ import { buildCameraDrivers } from '../../../../src/services/engine/camera/camer
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { createRenderTargets } from '../../../../src/services/gpu/renderTargets';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import {
   startCameraTween,
@@ -142,11 +141,11 @@ function makeState(): EngineState {
       tonemap: { exposure: 1, curve: 'linear' },
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
-      // aggregateDivisor is read every frame by the offscreen-rebuild branch
-      // (whenever renderTargets is non-null), and starCount likewise by the
+      // aggregateDivisor is what the `mw-aggregate` row's `scale` function
+      // resolves on every reconcile, and starCount is read every frame by the
       // cloud-regenerate branch (whenever milkyWayCloud is non-null), so the
-      // fixture carries both boot values rather than leaving either branch to
-      // compare against undefined.
+      // fixture carries both boot values rather than leaving either reader to
+      // resolve undefined.
       milkyWay: { enabled: false, aggregateDivisor: 2, starCount: 150000 },
       filaments: { enabled: false, intensity: 1 },
       volumes: { enabled: false },
@@ -156,8 +155,8 @@ function makeState(): EngineState {
       pointerDown: false,
     },
     gpu: {
-      renderer: null,
-      pickRenderer: null,
+      galaxyPointRenderer: null,
+      galaxyPickRenderer: null,
       renderTargets: null,
       filamentRenderer: null,
     },
@@ -700,22 +699,22 @@ describe('runFrame — sim clock (Task 8)', () => {
 });
 
 describe('runFrame — hover-pick removed from frame body', () => {
-  it('does not call pickRenderer.pick inside the frame body', () => {
+  it('does not call galaxyPickRenderer.pick inside the frame body', () => {
     // The hover-pick block was removed from runFrame. Hover picking is now
     // fully pointer-driven via hoverPickDriver (wired in wireInput.ts).
-    // This test pins that invariant: even with a non-null pickRenderer and a
+    // This test pins that invariant: even with a non-null galaxyPickRenderer and a
     // non-null latestMouseCss-equivalent, runFrame must NEVER call
-    // pickRenderer.pick itself. If the block is accidentally re-added,
+    // galaxyPickRenderer.pick itself. If the block is accidentally re-added,
     // this assertion catches it.
     //
-    // The fixture leaves state.gpu.renderer=null so the frame bails before
+    // The fixture leaves state.gpu.galaxyPointRenderer=null so the frame bails before
     // the GPU-dispatch section — we only need to confirm pick is not called
     // during the camera + demand pre-pass (where the old block lived).
     const store = makeStore();
     const state = makeState();
     const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    // Seed a non-null pickRenderer so the old guard would have let through.
-    (state.gpu as any).pickRenderer = {
+    // Seed a non-null galaxyPickRenderer so the old guard would have let through.
+    (state.gpu as any).galaxyPickRenderer = {
       pick: pickSpy,
       renderForDebug: vi.fn<() => null>(),
       destroy: vi.fn<() => void>(),
@@ -725,49 +724,38 @@ describe('runFrame — hover-pick removed from frame body', () => {
 
     runFrame(state, deps, 1000);
 
-    // The frame body must never call pickRenderer.pick — hover picks are
+    // The frame body must never call galaxyPickRenderer.pick — hover picks are
     // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
   });
 });
 
-describe('runFrame — mw-aggregate divisor', () => {
-  it('rebuilds the offscreen table when the divisor setting moves, and leaves it alone when it does not', () => {
-    // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
-    // at creation — so the only way a drag reaches the screen is the frame
-    // loop noticing the mismatch and rebuilding the table. Without that branch
-    // the slider would move a number nothing ever reads. The second half
-    // matters just as much: comparing against the spec row (rather than a
-    // 'last applied' field) has to settle, or every steady-state frame would
-    // throw away and re-allocate every offscreen target.
+describe('runFrame — render-target reconcile', () => {
+  it('runFrame reconciles the render targets against the live canvas size every frame', () => {
+    // The one seam that answers BOTH a canvas resize and a state-driven scale
+    // move (the mw-aggregate divisor slider). It is deliberately unconditional:
+    // `resizeCanvasToDisplay` is stubbed false for this suite, so a call that
+    // only fired inside the resize branch would never happen here. Whether a
+    // given row then reallocates is `reconcile`'s own decision, pinned in
+    // `renderTargets.test.ts`.
     const store = makeStore();
     const state = makeState();
-    // A device whose createTexture returns the minimum renderTargets touches.
-    const device = {
-      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
-    } as unknown as GPUDevice;
-    const deps: RunFrameDeps = { ...makeDeps(store), device };
+    const reconcile = vi.fn<(s: EngineState, size: { width: number; height: number }) => void>();
+    state.gpu.renderTargets = { reconcile } as unknown as EngineState['gpu']['renderTargets'];
+    const deps: RunFrameDeps = {
+      ...makeDeps(store),
+      canvas: {
+        width: 800,
+        height: 600,
+        clientWidth: 800,
+        clientHeight: 600,
+      } as unknown as HTMLCanvasElement,
+    };
 
-    state.gpu.renderTargets = createRenderTargets(
-      device,
-      'bgra8unorm',
-      { width: 800, height: 600 },
-      2,
-    );
-    const built = state.gpu.renderTargets;
-
-    state.settings.milkyWay.aggregateDivisor = 4;
     runFrame(state, deps, 0);
 
-    const rebuilt = state.gpu.renderTargets!;
-    expect(rebuilt).not.toBe(built);
-    expect(rebuilt.specs.find((s) => s.id === 'mw-aggregate')!.scale).toBe(4);
-    // The rebuild carried the swap format over from the table it replaced.
-    expect(rebuilt.specs.find((s) => s.id === 'swap')!.format).toBe('bgra8unorm');
-
-    // A frame with the setting unchanged must not rebuild again.
-    runFrame(state, deps, 16);
-    expect(state.gpu.renderTargets).toBe(rebuilt);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(reconcile).toHaveBeenCalledWith(state, { width: 800, height: 600 });
   });
 });
 
@@ -775,11 +763,11 @@ describe('runFrame — milky-way star count', () => {
   it('regenerates the cloud when starCount moves, and leaves it alone when it does not', () => {
     // starCount feeds generation, not a uniform or a render target — a
     // texture-rebuild-shaped fix doesn't apply here, so the only way a drag
-    // reaches the screen is the frame loop noticing the setting has outrun
-    // the buffers on screen and calling regenerate. A knob with no branch
-    // wired to it would silently do nothing, which is the failure this test
-    // exists to catch. The steady-state half matters just as much as the
-    // mw-aggregate divisor test's: comparing against `cloud.starCount()`
+    // reaches the screen is runFrame's per-frame `reconcile` call: the cloud
+    // notices the setting has outrun the buffers and calls regenerate. A knob
+    // with no branch wired to it would silently do nothing, which is the failure
+    // this test exists to catch. The steady-state half matters just as much as
+    // the mw-aggregate divisor test's: comparing against `cloud.starCount()`
     // (what the CURRENT buffers were generated with) has to settle once the
     // regenerate lands, or every frame after a drag would regenerate again.
     const store = makeStore();
@@ -794,6 +782,11 @@ describe('runFrame — milky-way star count', () => {
       buffers: vi.fn(),
       starCount: () => currentCount,
       regenerate,
+      reconcile: (wantedCount: number) => {
+        if (currentCount !== wantedCount) {
+          regenerate(wantedCount);
+        }
+      },
       destroy: vi.fn(),
     } as unknown as EngineState['gpu']['milkyWayCloud'];
 

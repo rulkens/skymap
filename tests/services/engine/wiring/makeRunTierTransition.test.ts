@@ -70,6 +70,7 @@ function makeFixture(opts?: {
   const pointSlots = new Map<number, SlotStub>();
   for (const s of GALAXY_CATALOG_SOURCES) pointSlots.set(s, { load: vi.fn() });
   const mcpm: SlotStub = { load: vi.fn() };
+  const polyphorm2Mrs: SlotStub = { load: vi.fn() };
   // Star-catalog slot stub carries `state()` because the runner's idle-guard
   // reads it (a never-demanded catalog must not fetch on a tier flip).
   const gaiaStars = {
@@ -86,15 +87,16 @@ function makeFixture(opts?: {
       points: pointSlots,
       starCatalogs,
       mcpm,
+      polyphorm2Mrs,
       // famous companion sidecar — loadCompanionAssets fires `.load` on it.
       famousGalaxiesMeta: { load: vi.fn() } as SlotStub,
     },
     gpu: {
       texturedDiskRenderer: opts?.texturedDiskRenderer ?? null,
       // No milkyWayCloud stub: this runner no longer calls `.regenerate`
-      // itself (see makeRunTierTransition.ts's comment) — the Milky-Way
-      // star count reaches the tier swap via `watchTierSaga`'s re-seed +
-      // `runFrame`'s mismatch check, neither of which this runner touches.
+      // itself (see makeRunTierTransition.ts's comment) — the saga re-seeds
+      // `settings.milkyWay.starCount`; the cloud's own `reconcile` notices
+      // next frame, neither of which this runner touches.
       milkyWayCloud: null,
     },
     subsystems: {
@@ -106,7 +108,7 @@ function makeFixture(opts?: {
     phaseLocals: opts?.device ? { device: opts.device } : undefined,
   } as unknown as BootstrapDeps;
 
-  return { state, store, pointSlots, mcpm, gaiaStars, bootstrapDeps };
+  return { state, store, pointSlots, mcpm, polyphorm2Mrs, gaiaStars, bootstrapDeps };
 }
 
 describe('makeRunTierTransition', () => {
@@ -158,6 +160,15 @@ describe('makeRunTierTransition', () => {
 
     expect(fx.mcpm.load).toHaveBeenCalledTimes(1);
     expect(fx.mcpm.load).toHaveBeenCalledWith({ tier: 'medium' });
+  });
+
+  it('reloads Polyphorm2MRS at the next tier', () => {
+    const fx = makeFixture();
+    const run = makeRunTierTransition(fx.state, fx.bootstrapDeps);
+    run('small', 'medium');
+
+    expect(fx.polyphorm2Mrs.load).toHaveBeenCalledTimes(1);
+    expect(fx.polyphorm2Mrs.load).toHaveBeenCalledWith({ tier: 'medium' });
   });
 
   it('reloads a loaded star catalog at the next tier (per-source request)', () => {

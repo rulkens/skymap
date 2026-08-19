@@ -75,6 +75,7 @@ import { FILAMENTS_ENTRY } from './sources/filaments';
 import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
+import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
 import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
 import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
@@ -158,6 +159,7 @@ export const SOURCE_REGISTRY = {
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
   [Source.SStar]: S_STAR_ENTRY,
   [Source.ZoneOfAvoidance]: ZONE_OF_AVOIDANCE_ENTRY,
+  [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

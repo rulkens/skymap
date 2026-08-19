@@ -3,9 +3,11 @@
  * then rebuild the renderers baking that format, in that order. No-ops when
  * `desired` already matches live (repeated dispatch must not rebuild eight
  * pipelines) — and also before `renderTargets`/`uiCtx`/`fontAtlases` exist:
- * initGpu builds them in that order, so a boot-time or leaked-listener call
- * can land between them, and `buildSwapRenderers` dereferences `fontAtlases`
- * non-null.
+ * initGpu builds `uiCtx`/`fontAtlases` before `renderTargets` (a
+ * `GPU_HANDLE_ROWS` row), so a boot-time or leaked-listener call can land
+ * between them regardless of which order they're built in — the guard is a
+ * conjunction of all three, and `buildSwapRenderers` dereferences
+ * `fontAtlases` non-null.
  */
 
 import { buildSwapRenderers } from './buildSwapRenderers';
@@ -17,7 +19,7 @@ export function applySwapFormat(state: EngineState, desired: GPUTextureFormat): 
   if (state.gpu.fontAtlases === null) return;
 
   const renderTargets = state.gpu.renderTargets;
-  const live = renderTargets.specs.find((spec) => spec.id === 'swap')!.format;
+  const live = renderTargets.specOf('swap').format;
   if (live === desired) return;
 
   const { device, context } = state.gpu.uiCtx;

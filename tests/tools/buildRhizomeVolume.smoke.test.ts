@@ -10,7 +10,7 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buildRhizomeVolume, isQuickLookOutput } from '../../tools/volumes/buildRhizomeVolume';
+import { buildRhizomeVolume } from '../../tools/volumes/buildRhizomeVolume';
 import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
 import { f16BitsToFloat } from '../../tools/utils/math/f16BitsToFloat';
@@ -67,21 +67,6 @@ function writeSidecar(
   };
   writeFileSync(path, JSON.stringify(sidecar));
 }
-
-describe('isQuickLookOutput', () => {
-  // Pure path comparison — no fs I/O, so it's safe to exercise directly
-  // against the real 'public/data/...' string without ever touching the
-  // filesystem.
-  it('matches only the resolved MCPM large-tier path under the epoch folder', () => {
-    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('./public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-medium.scfd')).toBe(false);
-    expect(isQuickLookOutput('/tmp/somewhere/cube.scfd')).toBe(false);
-    // The pre-v9 root path is dead — guarding it again would re-strand
-    // quick-look on a file the manifest-driven viewer never fetches.
-    expect(isQuickLookOutput('public/data/mcpm-large.scfd')).toBe(false);
-  });
-});
 
 describe('buildRhizomeVolume (smoke)', () => {
   let dir: string;
@@ -256,5 +241,45 @@ describe('buildRhizomeVolume (smoke)', () => {
     writeSidecar(join(dir, 'cube.json'), { dims: [2, 3, 4] });
 
     await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/expected 3D cube/);
+  });
+
+  it('--clamp zeroes below-threshold voxels and leaves above-threshold voxels bit-identical', async () => {
+    // Raw ramp 0..63 normalises (log(1+v)/log(64)) to a spread of packed
+    // values below and above any mid-range threshold, so the clamped and
+    // unclamped builds diverge on some voxels and agree on others.
+    const values = Array.from({ length: 64 }, (_, i) => i);
+    writeF32Npy(npyPath, values, dims);
+    writeSidecar(join(dir, 'cube.json'), { dims });
+
+    const clampedOutPath = join(dir, 'clamped.scfd');
+    await buildRhizomeVolume({ npyPath, outPath });
+    await buildRhizomeVolume({ npyPath, outPath: clampedOutPath, clamp: 0.2 });
+
+    const plainBuf = readFileSync(outPath);
+    const clampedBuf = readFileSync(clampedOutPath);
+    const plainCube = decodeScalarField(
+      plainBuf.buffer.slice(plainBuf.byteOffset, plainBuf.byteOffset + plainBuf.byteLength),
+    );
+    const clampedCube = decodeScalarField(
+      clampedBuf.buffer.slice(clampedBuf.byteOffset, clampedBuf.byteOffset + clampedBuf.byteLength),
+    );
+
+    const thresholdBits = f32ToF16Bits(0.2);
+    let sawZeroed = false;
+    let sawPreserved = false;
+    for (let i = 0; i < plainCube.voxels.length; i++) {
+      const plainVoxel = plainCube.voxels[i]!;
+      const clampedVoxel = clampedCube.voxels[i]!;
+      if (plainVoxel < thresholdBits) {
+        expect(clampedVoxel).toBe(0);
+        if (plainVoxel !== 0) sawZeroed = true;
+      } else {
+        // At/above threshold: bit-identical, not just numerically close.
+        expect(clampedVoxel).toBe(plainVoxel);
+        sawPreserved = true;
+      }
+    }
+    expect(sawZeroed).toBe(true);
+    expect(sawPreserved).toBe(true);
   });
 });

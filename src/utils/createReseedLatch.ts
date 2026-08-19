@@ -15,6 +15,10 @@
  * reading as `if (reseed.consume()) { ...seed pass... }` — the intent is legible
  * at the call site, and the off-by-one (re-seeding every frame, or never
  * seeding) lives behind one tested boundary instead of scattered booleans.
+ *
+ * `MilkyWayCloud.reconcile` answers the same question with a self-healing
+ * compare; this stays a one-shot latch because the reseed can't be recorded
+ * at compare time — it's encoded only when the render path runs (D4).
  */
 
 import type { ReseedLatch } from '../@types/rendering/ReseedLatch';

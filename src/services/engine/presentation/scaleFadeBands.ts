@@ -67,7 +67,7 @@ export const SCALE_FADE_BANDS = {
   // rides its own deeper `milkyWayApproach` row below, dissolving against
   // the Gaia starfield rather than with the surveys. Consumers: the survey
   // point clouds
-  // (pointSpritesLayer, draw + pick — the famous catalog is exempt, its
+  // (galaxyPointSpritesLayer, draw + pick — the famous catalog is exempt, its
   // galaxies stay visible as deep-zoom reference points), the structure
   // marker rings + halos and their pick (structureMarkersLayer), the
   // structure labels (produceStructureLabels — famous labels are exempt

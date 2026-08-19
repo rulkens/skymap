@@ -5,28 +5,35 @@
  * flag; a mismatched cube/sidecar pair is a provenance bug the tool
  * refuses to make expressible (spec Decision 2).
  *
- * Reuses `packLogTraceVoxels` (shared with `buildMcpmVolume.ts`) so the
- * calibration quick-look and the shipped MCPM reference render under
- * identical normalisation (spec Decision 1). CLI usage: see `printUsage()`.
+ * Reuses `packLogTraceVoxels` (shared with `buildMcpmVolume.ts`) so this
+ * importer and the shipped MCPM reference render under identical
+ * normalisation (spec Decision 1). CLI usage: see `printUsage()`.
  *
  * Spec: docs/superpowers/specs/2026-08-10-rhizome-scfd-importer-design.md
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, extname, join, resolve } from 'node:path';
-import { buildDataManifest } from '../deploy/buildDataManifest';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, dirname, extname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
+import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
 import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
-import { quickLookSentinelPath } from '../utils/volume/quickLookSentinelPath';
-import { MCPM_TIER_FILENAME } from './buildMcpmVolume';
-import {
-  encodeScalarField,
-  SCALAR_FIELD_DATA_PREFIX,
-} from '../../src/data/volume/scalarFieldFormat';
+import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+
+// Rhizome-only, so it lives here rather than as a packLogTraceVoxels param —
+// buildMcpmVolume shares that function and has no clamp need. f16 bit
+// patterns order like their values for non-negative inputs, so comparing
+// packed bits against the threshold's own f16 encoding needs no per-voxel
+// decode.
+function zeroBelowThreshold(voxels: Uint16Array, threshold: number): void {
+  const thresholdBits = f32ToF16Bits(threshold);
+  for (let i = 0; i < voxels.length; i++) {
+    if (voxels[i]! < thresholdBits) voxels[i] = 0;
+  }
+}
 
 function sidecarPathFor(npyPath: string): string {
   return join(dirname(npyPath), basename(npyPath, extname(npyPath)) + '.json');
@@ -42,20 +49,18 @@ function squeezeTrailingSingleton(shape: readonly number[]): readonly number[] {
   return shape.length === 4 && shape[3] === 1 ? shape.slice(0, 3) : shape;
 }
 
-// Pure path comparison, split out of buildRhizomeVolume() so the R2-guard
-// branch (item below) is pinnable by a test without touching the real
-// public/data directory.
-export function isQuickLookOutput(outPath: string): boolean {
-  return (
-    resolve(outPath) === resolve('public/data', SCALAR_FIELD_DATA_PREFIX, MCPM_TIER_FILENAME[2])
-  );
-}
-
 export async function buildRhizomeVolume(args: {
   npyPath: string;
   outPath: string;
+  /**
+   * Zero packed voxels whose f16 value falls below this threshold (in the
+   * [0,1] log-normalised domain packLogTraceVoxels produces). Below the
+   * renderer's default-settings visibility deadband, voxels are invisible
+   * fog that costs disproportionate wire bytes — see docs/DATA.md.
+   */
+  clamp?: number;
 }): Promise<void> {
-  const { npyPath, outPath } = args;
+  const { npyPath, outPath, clamp } = args;
 
   // ── 1. Sidecar (rule 1; rules 2-5 are parsePolyphyTraceSidecar's job) ──
   const sidecarPath = sidecarPathFor(npyPath);
@@ -133,25 +138,11 @@ export async function buildRhizomeVolume(args: {
   }
   const voxelSize = meanVoxelSize;
 
-  // ── 4. Quick-look R2 guard — checked here, not just in the CLI's
-  // --quick-look branch, so --out pointed at the same path is covered too
-  // (both modes converge on this one call). Sentinel BEFORE the reference
-  // write, not after: writeFileSync isn't atomic, so a mid-write failure
-  // (ENOSPC, EIO) can leave outPath truncated. Setting early over-blocks
-  // sync-r2 on an ordinary validation failure (annoying, recoverable with
-  // build-mcpm); setting late would let a truncated reference ship with no
-  // sentinel to catch it (dangerous, silent).
-  if (isQuickLookOutput(outPath)) {
-    mkdirSync(dirname(outPath), { recursive: true });
-    writeFileSync(
-      quickLookSentinelPath('public/data'),
-      `quick-look cube written by buildRhizomeVolume from ${npyPath}; ` +
-        `run "npm run build-mcpm" to restore the shipped reference and clear this sentinel.\n`,
-    );
-  }
-
-  // ── 5. Pack (shared with buildMcpmVolume.ts) ──
+  // ── 4. Pack (shared with buildMcpmVolume.ts) ──
   const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, dims);
+  if (clamp !== undefined) {
+    zeroBelowThreshold(voxels, clamp);
+  }
 
   const cube: ScalarCube = {
     dims,
@@ -176,39 +167,26 @@ export async function buildRhizomeVolume(args: {
       `min=${valueMin.toFixed(3)}, max=${valueMax.toFixed(3)}, ` +
       `${out.byteLength} bytes)`,
   );
-
-  // The viewer resolves every data path through manifest.json, so a
-  // quick-look write is invisible until the post-pass hashes it into
-  // place and repoints the manifest entry (docs/DATA.md, "Content hash +
-  // manifest"). Same isQuickLookOutput gate as the sentinel: only the
-  // real guarded path triggers it — --out to a scratch dir never sweeps
-  // public/data.
-  if (isQuickLookOutput(outPath)) {
-    buildDataManifest(resolve('public/data'));
-  }
 }
 
 const SHELL_NAMES = ['inner', 'middle', 'outer'] as const;
 
 function printUsage(): void {
   console.error(
-    'usage: tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --out <path.scfd>\n' +
-      '       tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --quick-look\n' +
+    'usage: tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --out <path.scfd> [--clamp <threshold>]\n' +
       '       tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner|middle|outer',
   );
 }
 
 // ── CLI wrapper ────────────────────────────────────────────────────
-// Exactly one of --out / --quick-look / --shell (Decision 4) — scan for
-// all three rather than just the first flag, so "both --out and
-// --quick-look" is caught as a usage error instead of silently taking
-// whichever came first.
+// Exactly one of --out / --shell — scan both rather than just the first
+// flag, so "both --out and --shell" is caught as a usage error instead of
+// silently taking whichever came first.
 async function main(): Promise<void> {
   const [npyPath, ...rest] = process.argv.slice(2);
   const outIndex = rest.indexOf('--out');
-  const hasQuickLook = rest.includes('--quick-look');
   const shellIndex = rest.indexOf('--shell');
-  const modeCount = [outIndex !== -1, hasQuickLook, shellIndex !== -1].filter(Boolean).length;
+  const modeCount = [outIndex !== -1, shellIndex !== -1].filter(Boolean).length;
 
   if (!npyPath || modeCount !== 1) {
     printUsage();
@@ -221,26 +199,16 @@ async function main(): Promise<void> {
       printUsage();
       process.exit(1);
     }
-    await buildRhizomeVolume({ npyPath, outPath });
-    return;
-  }
-
-  if (hasQuickLook) {
-    // Composed from the imported tier map, never a restated literal —
-    // the filename has exactly one home (quickLookSentinelPath.ts). The
-    // sentinel write itself lives in buildRhizomeVolume() (keyed off
-    // outPath), so --out targeting this same path is guarded too.
-    const outPath = `public/data/${SCALAR_FIELD_DATA_PREFIX}/${MCPM_TIER_FILENAME[2]}`;
-    await buildRhizomeVolume({ npyPath, outPath });
-    console.log(
-      `[buildRhizomeVolume] quick-look cube is only visible with the MCPM tier set to ` +
-        `large — the viewer fetches mcpm-<tier>.scfd per the tier setting. Reload the ` +
-        `viewer: the manifest is fetched at boot.`,
-    );
-    console.log(
-      `[buildRhizomeVolume] run "npm run build-mcpm" to restore the shipped reference ` +
-        `and clear the quick-look sentinel.`,
-    );
+    const clampIndex = rest.indexOf('--clamp');
+    let clamp: number | undefined;
+    if (clampIndex !== -1) {
+      clamp = Number(rest[clampIndex + 1]);
+      if (!Number.isFinite(clamp)) {
+        printUsage();
+        process.exit(1);
+      }
+    }
+    await buildRhizomeVolume({ npyPath, outPath, clamp });
     return;
   }
 

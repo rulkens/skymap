@@ -4,7 +4,7 @@
  * 2.5 px floor → ~9 px with padding) gets a comfortable click target without
  * inflating what the user sees. Additive, so it scales with the size slider.
  *
- * Lives in its own pure data module (not `pickRenderer.ts`) so
+ * Lives in its own pure data module (not `galaxyPickRenderer.ts`) so
  * `pickUniformBytesOf` — a GPU-free value packer — can read it without
  * importing a renderer module and dragging WESL shader imports into its
  * plain-value world. `structureMarker/ringPick` and `milkyWay/pick` bake the

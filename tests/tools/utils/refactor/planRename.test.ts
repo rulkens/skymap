@@ -56,6 +56,26 @@ describe('planRename', () => {
     );
   });
 
+  it('renames a .d.ts declaration file, whose basename hides behind a two-part extension', () => {
+    const project = projectWith({
+      '/src/@types/rendering/Foo.d.ts': 'export type Foo = { a: number };',
+      '/src/app.ts':
+        "import type { Foo } from './@types/rendering/Foo';\nexport const f: Foo = { a: 1 };",
+    });
+    const resolved = resolveSymbol(project, {
+      file: '/src/@types/rendering/Foo.d.ts',
+      symbol: 'Foo',
+    });
+
+    planRename(project, resolved, 'Bar', true);
+
+    expect(project.getSourceFile('/src/@types/rendering/Foo.d.ts')).toBeUndefined();
+    expect(project.getSourceFile('/src/@types/rendering/Bar.d.ts')).toBeDefined();
+    expect(project.getSourceFileOrThrow('/src/app.ts').getText()).toContain(
+      "from './@types/rendering/Bar'",
+    );
+  });
+
   it('leaves the file name when renameFile is false', () => {
     const project = projectWith({
       '/src/utils/x/foo.ts': 'export const foo = 1;',

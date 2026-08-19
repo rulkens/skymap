@@ -492,7 +492,7 @@ export async function createGalaxyEngine(
   // both link the runtime's shaders (symlinked into this tool's WESL root).
   // Nothing about the glow or the tone curve is re-implemented here.
   const bloomPyramid = createBloomPyramid(device, HDR);
-  const compositor = createCompositor({ device, swapFormat: format, hdrFormat: HDR });
+  const compositor = createCompositor({ device });
 
   // ---- the one tool-only post pipeline: `createGradePipeline.ts` ----
   const { gradePipe, gradeSampler } = createGradePipeline({

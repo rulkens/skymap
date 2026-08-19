@@ -1,0 +1,694 @@
+diff --git a/src/@types/rendering/PointDrawSettings.d.ts b/src/@types/rendering/PointDrawSettings.d.ts
+index 0b736c1e1..1f6e4c981 100644
+--- a/src/@types/rendering/PointDrawSettings.d.ts
++++ b/src/@types/rendering/PointDrawSettings.d.ts
+@@ -34,6 +34,18 @@ export type PointDrawSettings = {
+   absMagLimit: number;
+   /** Whether the points pass applies depth-based alpha fade. */
+   depthFadeEnabled: boolean;
++  /**
++   * SPIKE (throwaway A/B): limiting-magnitude intensity curve, packed into
++   * the repurposed reserved uniform slots (bytes 136..152).  All optional and
++   * default to 0 in `packPointUniforms`, so the pick path (which omits them)
++   * and any caller that doesn't set them leave the spike disabled — the legacy
++   * intensity path runs unchanged.  Live-tuned from the dev-only spike panel.
++   */
++  limitingMagEnabled?: number;
++  limitingMagDepth?: number;
++  limitingMagSoftness?: number;
++  limitingMagK?: number;
++  limitingMagSparseOffset?: number;
+   /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */
+   pxFadeStart: number;
+   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
+diff --git a/src/components/App/App.tsx b/src/components/App/App.tsx
+index 43283e7e6..04c61b873 100644
+--- a/src/components/App/App.tsx
++++ b/src/components/App/App.tsx
+@@ -55,6 +55,9 @@ import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/sel
+ import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
+ import { refOf } from '../../services/engine/helpers/refOf';
+ import DebugPanelContainer from '../containers/DebugPanelContainer';
++// SPIKE (throwaway A/B): dev-only limiting-magnitude tuning overlay. Mounted
++// only under import.meta.env.DEV below. Remove together with the spike.
++import LimitingMagSpikePanel from '../LimitingMagSpikePanel/LimitingMagSpikePanel';
+ import TourOverlayContainer from '../containers/TourOverlayContainer';
+ import TourBeatRailContainer from '../containers/TourBeatRailContainer';
+ import TourDebugPillContainer from '../containers/TourDebugPillContainer';
+@@ -290,6 +293,10 @@ export function App(): React.ReactElement {
+           chrome, so the cinema branch (captions-only film frames) omits it
+           just like TourNav and the beat counter. */}
+       {tourActive && <TourBeatRailContainer />}
++      {/* SPIKE (throwaway A/B): dev-only limiting-magnitude tuner, outside the
++          HUD stack so the Tab-hide fade doesn't affect it. Stripped from
++          production builds by the import.meta.env.DEV guard. */}
++      {import.meta.env.DEV && <LimitingMagSpikePanel />}
+       <SplashContainer />
+     </>
+   );
+diff --git a/src/components/LimitingMagSpikePanel/LimitingMagSpikePanel.module.css b/src/components/LimitingMagSpikePanel/LimitingMagSpikePanel.module.css
+new file mode 100644
+index 000000000..42fc830ca
+--- /dev/null
++++ b/src/components/LimitingMagSpikePanel/LimitingMagSpikePanel.module.css
+@@ -0,0 +1,103 @@
++/*
++ * LimitingMagSpikePanel.module.css — SPIKE (throwaway A/B), dev-only overlay.
++ *
++ * Fixed bottom-left so it never overlaps the right-hand settings panel.
++ * Deliberately plain; not worth tokenising for a throwaway.
++ */
++
++.root {
++  position: fixed;
++  bottom: var(--corner-offset, 16px);
++  left: var(--corner-offset, 16px);
++  z-index: 50;
++  width: 220px;
++  padding: 10px 12px;
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++
++  background: rgba(10, 14, 22, 0.82);
++  border: 1px solid rgba(160, 200, 255, 0.2);
++  border-radius: 8px;
++  color: #dce6ff;
++  font: 12px / 1.3 var(--font-family-mono, monospace);
++  user-select: none;
++}
++
++.title {
++  font-weight: 600;
++  letter-spacing: 0.04em;
++  margin-bottom: 2px;
++  color: #9fc8ff;
++}
++
++.checkRow {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  cursor: pointer;
++}
++
++.row {
++  display: grid;
++  grid-template-columns: 72px 1fr 40px;
++  align-items: center;
++  gap: 6px;
++}
++
++.row input[type='range'] {
++  width: 100%;
++}
++
++.value {
++  text-align: right;
++  font-variant-numeric: tabular-nums;
++  color: #9fc8ff;
++}
++
++.anchors {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.btnRow {
++  display: flex;
++  gap: 4px;
++}
++
++.btnRow button {
++  flex: 1;
++  padding: 3px 4px;
++  font: inherit;
++  font-size: 11px;
++  color: #dce6ff;
++  background: rgba(160, 200, 255, 0.12);
++  border: 1px solid rgba(160, 200, 255, 0.25);
++  border-radius: 4px;
++  cursor: pointer;
++}
++
++.btnRow button:hover {
++  background: rgba(160, 200, 255, 0.22);
++}
++
++.readouts {
++  display: flex;
++  flex-direction: column;
++  gap: 2px;
++  margin-top: 2px;
++  border-top: 1px solid rgba(160, 200, 255, 0.15);
++  padding-top: 4px;
++}
++
++.readout {
++  font-size: 11px;
++  font-variant-numeric: tabular-nums;
++  color: #9fc8ff;
++}
++
++.hint {
++  font-size: 11px;
++  color: #ffb37a;
++}
+diff --git a/src/components/LimitingMagSpikePanel/LimitingMagSpikePanel.tsx b/src/components/LimitingMagSpikePanel/LimitingMagSpikePanel.tsx
+new file mode 100644
+index 000000000..86050e08a
+--- /dev/null
++++ b/src/components/LimitingMagSpikePanel/LimitingMagSpikePanel.tsx
+@@ -0,0 +1,210 @@
++/**
++ * LimitingMagSpikePanel — SPIKE (throwaway A/B), dev-only.
++ *
++ * A tiny fixed-position overlay (bottom-left, clear of the right-hand settings
++ * panel) that live-tunes the experimental limiting-magnitude intensity curve in
++ * `points/vertex.wesl`. It writes through `setLimitingMagSpikeParams`, which
++ * mutates the module singleton the points layer reads each frame and pokes the
++ * render scheduler so the change shows immediately.
++ *
++ * ### Perception reparameterization
++ *
++ * Raw (depth, k) are miserable to tune by hand: the shader forms
++ * `mLim = depth + k * log10(sceneScale)`, so the two knobs are coupled through
++ * the live camera distance. Instead the panel drives them via what the eye
++ * actually judges:
++ *
++ *   - 'Limit here' sets the EFFECTIVE limiting mag at the current zoom
++ *     (`mLimHere = depth + k * log10(sceneScale)`); dragging back-solves
++ *     `depth = mLimHere - k * log10(sceneScale)` with k held fixed. The
++ *     slider's shown value is derived from live (depth, k, sceneScale), not
++ *     stored — so it tracks as you fly.
++ *   - The A/B anchor workflow captures two (log10 distance, mLimHere) points
++ *     at two zooms, then fits the line through them: `k = Δy/Δx`,
++ *     `depth = yA - k·xA`. That lets you say "this bright here, that faint out
++ *     there" and have the slope fall out.
++ *
++ * `sceneScale` is published engine → panel via `limitingMagSpikeParams
++ * .sceneScaleMpc` (written every frame by the points layer, no wake); the
++ * panel polls it on a cheap 250 ms interval so readouts + the 'Limit here'
++ * value stay live as the camera moves.
++ *
++ * Mounted only under `import.meta.env.DEV` (see App.tsx). Deliberately minimal
++ * and self-contained — it is expected to be deleted once the design is
++ * validated and a real settings-backed implementation lands.
++ */
++
++import { useEffect, useState } from 'react';
++import {
++  limitingMagSpikeParams,
++  setLimitingMagSpikeParams,
++} from '../../services/engine/spike/limitingMagSpikeParams';
++import { formatDistance } from '../../utils/format/formatDistance';
++import styles from './LimitingMagSpikePanel.module.css';
++
++// SPIKE: a captured (log10 distance, effective mLim) sample for the A/B fit.
++type Anchor = { x: number; y: number };
++
++function LimitingMagSpikePanel() {
++  // Local mirror of the tunable singleton fields so the controls are
++  // controlled; each change also writes through + wakes the render loop.
++  const [enabled, setEnabled] = useState(limitingMagSpikeParams.enabled);
++  const [softness, setSoftness] = useState(limitingMagSpikeParams.softness);
++  const [sparseOffset, setSparseOffset] = useState(limitingMagSpikeParams.sparseOffset);
++  // depth + k are now DERIVED (back-solved from 'Limit here' / the A/B fit),
++  // not slider-driven — we mirror them so the readouts + slider math re-render.
++  const [depth, setDepth] = useState(limitingMagSpikeParams.depth);
++  const [k, setK] = useState(limitingMagSpikeParams.k);
++
++  // Live scene-scale, polled from the singleton (engine writes it each frame,
++  // no wake). Drives the 'Limit here' value + distance readout as we fly.
++  const [sceneScaleMpc, setSceneScaleMpc] = useState(limitingMagSpikeParams.sceneScaleMpc);
++  useEffect(() => {
++    const id = setInterval(() => {
++      setSceneScaleMpc(limitingMagSpikeParams.sceneScaleMpc);
++    }, 250);
++    return () => clearInterval(id);
++  }, []);
++
++  const [anchorA, setAnchorA] = useState<Anchor | null>(null);
++  const [anchorB, setAnchorB] = useState<Anchor | null>(null);
++
++  // sceneScaleMpc is >= 1 from the engine, so log10 >= 0.
++  const logScale = Math.log10(sceneScaleMpc);
++  const mLimHere = depth + k * logScale;
++
++  // A/B fit: when both anchors are set and their x's are far enough apart,
++  // fit the line through them and write (depth, k) to the singleton.
++  const bothAnchors = anchorA !== null && anchorB !== null;
++  const anchorsTooClose =
++    bothAnchors && Math.abs((anchorB as Anchor).x - (anchorA as Anchor).x) <= 0.05;
++  useEffect(() => {
++    if (anchorA === null || anchorB === null) return;
++    const dx = anchorB.x - anchorA.x;
++    if (Math.abs(dx) <= 0.05) return; // too close; render shows a hint instead
++    const rawK = (anchorB.y - anchorA.y) / dx;
++    const solvedDepth = anchorA.y - rawK * anchorA.x;
++    const clampedK = Math.min(12, Math.max(0, rawK));
++    setK(clampedK);
++    setDepth(solvedDepth);
++    setLimitingMagSpikeParams({ k: clampedK, depth: solvedDepth });
++  }, [anchorA, anchorB]);
++
++  const captureAnchor = (set: (a: Anchor) => void) => {
++    set({ x: logScale, y: mLimHere });
++  };
++
++  return (
++    <div className={styles.root}>
++      <div className={styles.title}>Limiting-mag spike</div>
++
++      <label className={styles.checkRow}>
++        <input
++          type="checkbox"
++          checked={enabled}
++          onChange={(e) => {
++            setEnabled(e.target.checked);
++            setLimitingMagSpikeParams({ enabled: e.target.checked });
++          }}
++        />
++        enabled
++      </label>
++
++      <label className={styles.row}>
++        <span>limit here</span>
++        <input
++          type="range"
++          min={5}
++          max={30}
++          step={0.1}
++          value={Math.min(30, Math.max(5, mLimHere))}
++          onChange={(e) => {
++            const target = Number(e.target.value);
++            // Back-solve depth so the effective mLim equals the slider, k held.
++            const newDepth = target - k * logScale;
++            setDepth(newDepth);
++            setLimitingMagSpikeParams({ depth: newDepth });
++          }}
++        />
++        <span className={styles.value}>{mLimHere.toFixed(1)}</span>
++      </label>
++
++      <div className={styles.anchors}>
++        <div className={styles.btnRow}>
++          <button type="button" onClick={() => captureAnchor(setAnchorA)}>
++            Set anchor A
++          </button>
++          <button type="button" onClick={() => captureAnchor(setAnchorB)}>
++            Set anchor B
++          </button>
++          <button
++            type="button"
++            onClick={() => {
++              setAnchorA(null);
++              setAnchorB(null);
++            }}
++          >
++            Clear
++          </button>
++        </div>
++        {anchorA !== null && (
++          <div className={styles.readout}>
++            A: {formatDistance(10 ** anchorA.x)} → m {anchorA.y.toFixed(2)}
++          </div>
++        )}
++        {anchorB !== null && (
++          <div className={styles.readout}>
++            B: {formatDistance(10 ** anchorB.x)} → m {anchorB.y.toFixed(2)}
++          </div>
++        )}
++        {anchorsTooClose && (
++          <div className={styles.hint}>anchors too close — fly further out/in</div>
++        )}
++      </div>
++
++      <label className={styles.row}>
++        <span>softness</span>
++        <input
++          type="range"
++          min={0.25}
++          max={4}
++          step={0.05}
++          value={softness}
++          onChange={(e) => {
++            const v = Number(e.target.value);
++            setSoftness(v);
++            setLimitingMagSpikeParams({ softness: v });
++          }}
++        />
++        <span className={styles.value}>{softness.toFixed(2)}</span>
++      </label>
++
++      <label className={styles.row}>
++        <span>sparseOffset</span>
++        <input
++          type="range"
++          min={-15}
++          max={0}
++          step={0.5}
++          value={sparseOffset}
++          onChange={(e) => {
++            const v = Number(e.target.value);
++            setSparseOffset(v);
++            setLimitingMagSpikeParams({ sparseOffset: v });
++          }}
++        />
++        <span className={styles.value}>{sparseOffset.toFixed(1)}</span>
++      </label>
++
++      <div className={styles.readouts}>
++        <div className={styles.readout}>cam {formatDistance(sceneScaleMpc)}</div>
++        <div className={styles.readout}>m_lim {mLimHere.toFixed(2)}</div>
++        <div className={styles.readout}>
++          depth {depth.toFixed(2)} · k {k.toFixed(2)}
++        </div>
++      </div>
++    </div>
++  );
++}
++
++export default LimitingMagSpikePanel;
+diff --git a/src/services/engine/frame/passes/pointSpritesLayer.ts b/src/services/engine/frame/passes/pointSpritesLayer.ts
+index a930f80bd..9b9aafaeb 100644
+--- a/src/services/engine/frame/passes/pointSpritesLayer.ts
++++ b/src/services/engine/frame/passes/pointSpritesLayer.ts
+@@ -58,6 +58,9 @@ import {
+   PROCEDURAL_DISK_FADE_START_PX,
+   PROCEDURAL_DISK_FADE_END_PX,
+ } from '../../../../data/galaxyLodBands';
++// SPIKE (throwaway A/B): live params for the experimental limiting-magnitude
++// intensity curve, tuned from the dev-only panel. Additive; remove with spike.
++import { limitingMagSpikeParams } from '../../spike/limitingMagSpikeParams';
+ 
+ export const pointSpritesLayer: ContentLayer = {
+   name: 'point-sprites',
+@@ -89,6 +92,14 @@ export const pointSpritesLayer: ContentLayer = {
+     const nowMs = ctx.nowMs;
+     const fades = state.subsystems.fades;
+ 
++    // SPIKE (throwaway A/B): stash the live scene-scale (Mpc) — the same
++    // quantity the shader forms as max(length(camPosWorld), 1) — into the spike
++    // singleton so the dev panel can back-solve (depth, k) around the perceived
++    // limiting mag at the current zoom. Plain field write, NO wake: this must
++    // not schedule renders (it runs every frame, and the panel polls it).
++    const cp = view.camPos;
++    limitingMagSpikeParams.sceneScaleMpc = Math.max(Math.hypot(cp[0], cp[1], cp[2]), 1);
++
+     renderer.draw(pass, view.vp, view.viewportPx, {
+       pointSizePx: state.settings.galaxyCatalogs.sizePx,
+       brightness: state.settings.galaxyCatalogs.brightness,
+@@ -101,6 +112,14 @@ export const pointSpritesLayer: ContentLayer = {
+       biasMode: state.settings.bias.mode,
+       absMagLimit: state.settings.bias.absMagLimit,
+       depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
++      // SPIKE (throwaway A/B): experimental limiting-magnitude curve, read
++      // from the dev-panel singleton. Disabled by default (enabled=false),
++      // so the legacy intensity path renders unchanged out of the box.
++      limitingMagEnabled: limitingMagSpikeParams.enabled ? 1 : 0,
++      limitingMagDepth: limitingMagSpikeParams.depth,
++      limitingMagSoftness: limitingMagSpikeParams.softness,
++      limitingMagK: limitingMagSpikeParams.k,
++      limitingMagSparseOffset: limitingMagSpikeParams.sparseOffset,
+       // The points-layer fragment fades alpha to zero across the same
+       // apparent-pixel-size band the procedural-disk layer fades IN over.
+       // Both thresholds come from one source of truth so they can't drift
+diff --git a/src/services/engine/phases/startLoop.ts b/src/services/engine/phases/startLoop.ts
+index 3c7a0b6c6..bd17eb4cd 100644
+--- a/src/services/engine/phases/startLoop.ts
++++ b/src/services/engine/phases/startLoop.ts
+@@ -61,6 +61,9 @@
+ 
+ import { runFrame } from '../frame/runFrame';
+ import { buildCameraDrivers } from '../camera/cameraDrivers';
++// SPIKE (throwaway A/B): let the dev-only limiting-mag panel wake the
++// render-on-demand loop when its params change. Additive; remove with the spike.
++import { registerLimitingMagSpikeWake } from '../spike/limitingMagSpikeParams';
+ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
+ 
+ import type { EngineState } from '../../../@types/engine/state/EngineState';
+@@ -139,4 +142,8 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
+   // the just-assigned real frame body.  After that single frame, the
+   // loop sleeps until a channel mouth wakes it.
+   state.subsystems.scheduler.requestRender();
++
++  // SPIKE (throwaway A/B): wire the dev limiting-mag panel to this engine's
++  // scheduler so slider tweaks re-render an otherwise-idle loop immediately.
++  registerLimitingMagSpikeWake(() => state.subsystems.scheduler.requestRender());
+ }
+diff --git a/src/services/engine/spike/limitingMagSpikeParams.ts b/src/services/engine/spike/limitingMagSpikeParams.ts
+new file mode 100644
+index 000000000..0bb2edb5c
+--- /dev/null
++++ b/src/services/engine/spike/limitingMagSpikeParams.ts
+@@ -0,0 +1,65 @@
++/**
++ * limitingMagSpikeParams — SPIKE (throwaway A/B), do NOT build on this.
++ *
++ * A module-level mutable record holding the live-tunable parameters for the
++ * experimental limiting-magnitude intensity curve in `points/vertex.wesl`.
++ * It exists only so a dev-only overlay panel can A/B the new look against the
++ * legacy intensity path in the browser without any Redux/settings plumbing —
++ * the whole feature is expected to be replaced by a real settings-backed
++ * implementation once the design (docs/superpowers/specs/2026-07-10-
++ * distant-galaxy-fading-design.md) is validated. Everything here is additive
++ * and marked SPIKE.
++ *
++ * `pointSpritesLayer` reads `limitingMagSpikeParams` every frame while
++ * assembling `PointDrawSettings`. The panel mutates the record in place and
++ * calls `setLimitingMagSpikeParams`, which pokes the render scheduler so the
++ * change is visible immediately on an otherwise-idle (render-on-demand) loop.
++ *
++ * The render-on-demand scheduler is created per-engine, not a global, so the
++ * engine registers its `requestRender` here at startup via
++ * `registerLimitingMagSpikeWake`. Until it does, mutations still land in the
++ * record; they simply won't force a frame (harmless — the next real wake picks
++ * them up).
++ */
++
++/** SPIKE: live parameters for the limiting-magnitude intensity curve. */
++export type LimitingMagSpikeParams = {
++  enabled: boolean;
++  depth: number;
++  softness: number;
++  k: number;
++  sparseOffset: number;
++  // SPIKE: live camera scene-scale (Mpc), written each frame by the points
++  // layer as a plain field (NO wake — it must not trigger renders). The panel
++  // reads it to reparameterize (depth, k) around the perceived limiting mag at
++  // the current zoom. Not a tunable; a one-way readout from engine → panel.
++  sceneScaleMpc: number;
++};
++
++/** SPIKE: the single mutable record read by the points layer each frame. */
++export const limitingMagSpikeParams: LimitingMagSpikeParams = {
++  enabled: false,
++  depth: 8,
++  softness: 1.5,
++  k: 5,
++  sparseOffset: -8,
++  sceneScaleMpc: 1,
++};
++
++// SPIKE: the engine's per-frame render request, registered at startup. Null
++// until the engine wires it (see startLoop.ts).
++let wake: (() => void) | null = null;
++
++/** SPIKE: engine hook — register the render scheduler's requestRender. */
++export function registerLimitingMagSpikeWake(fn: (() => void) | null): void {
++  wake = fn;
++}
++
++/**
++ * SPIKE: apply a partial update to the live params and request a render so the
++ * change shows immediately on the render-on-demand loop.
++ */
++export function setLimitingMagSpikeParams(patch: Partial<LimitingMagSpikeParams>): void {
++  Object.assign(limitingMagSpikeParams, patch);
++  wake?.();
++}
+diff --git a/src/services/gpu/renderers/pointRenderer.ts b/src/services/gpu/renderers/pointRenderer.ts
+index 6395bb5e4..86d954927 100644
+--- a/src/services/gpu/renderers/pointRenderer.ts
++++ b/src/services/gpu/renderers/pointRenderer.ts
+@@ -199,11 +199,11 @@ export const PICK_PASS_BYTE_OFFSET = 168;
+  *   bytes 124..127: _pad4             u32          (written as 0)
+  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
+  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
+- *   bytes 136..139: apparentMagLimit  f32          (reserved, unwritten) } 32 bytes
+- *   bytes 140..143: schechterMStar    f32          (reserved, unwritten) }  (two vec4 slots)
+- *   bytes 144..147: schechterAlpha    f32          (reserved, unwritten) }
+- *   bytes 148..151: schechterMLim     f32          (reserved, unwritten) }
+- *   bytes 152..155: schechterNRef     f32          (reserved, unwritten) }
++ *   bytes 136..139: limitingMagEnabled     f32   (SPIKE, was apparentMagLimit) } 32 bytes
++ *   bytes 140..143: limitingMagDepth       f32   (SPIKE, was schechterMStar)   }  (two vec4 slots)
++ *   bytes 144..147: limitingMagSoftness    f32   (SPIKE, was schechterAlpha)   }
++ *   bytes 148..151: limitingMagK           f32   (SPIKE, was schechterMLim)    }
++ *   bytes 152..155: limitingMagSparseOffset f32  (SPIKE, was schechterNRef)    }
+  *   bytes 156..159: _pad5             u32          (written as 0)        }
+  *   bytes 160..163: pxFadeStart       f32          (procedural-disk band low)  }
+  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
+diff --git a/src/services/gpu/shaders/points/io.wesl b/src/services/gpu/shaders/points/io.wesl
+index 3b159a412..355fa7482 100644
+--- a/src/services/gpu/shaders/points/io.wesl
++++ b/src/services/gpu/shaders/points/io.wesl
+@@ -152,19 +152,27 @@ struct Uniforms {
+   //   3 = Schechter    — reweight by the expected Schechter LF.
+   //   4 = AngularReweight — re-weight by HEALPix angular completeness.
+   //
+-  // Only 'biasMode' + 'absMagLimit' are live. The 'apparentMagLimit' /
+-  // 'schechter*' fields are reserved-but-unread: the Schechter / 1-over-Vmax
+-  // modes read their per-galaxy weights from the per-vertex 'schechterRatio'
+-  // + angular slots (spliced in by biasCorrectionSubsystem on the CPU), not
+-  // these uniforms. They stay declared only to keep 'pickPass's byte offset
+-  // stable; nothing writes them, no shader reads them.
++  // Only 'biasMode' + 'absMagLimit' are live for the legacy intensity path.
++  //
++  // SPIKE (throwaway A/B): the five formerly reserved f32 slots
++  // (apparentMagLimit / schechterMStar / schechterAlpha / schechterMLim /
++  // schechterNRef) are repurposed HERE to drive the experimental
++  // limiting-magnitude intensity curve in vertex.wesl. Byte offsets are
++  // UNCHANGED (five sequential f32s at 136/140/144/148/152) — only the field
++  // names + meanings change. When 'limitingMagEnabled' is 0 the legacy path
++  // runs exactly as before, so this is purely additive.
++  //   136 limitingMagEnabled     — 0 = legacy path, 1 = spike curve
++  //   140 limitingMagDepth       — base limiting magnitude at unit scene scale
++  //   144 limitingMagSoftness    — mag-width of the soft fade window
++  //   148 limitingMagK           — log10(sceneScale) coefficient
++  //   152 limitingMagSparseOffset— per-source boost for sparse far-field cats
+   biasMode: u32,
+   absMagLimit: f32,
+-  apparentMagLimit: f32,
+-  schechterMStar: f32,
+-  schechterAlpha: f32,
+-  schechterMLim: f32,
+-  schechterNRef: f32,
++  limitingMagEnabled: f32,
++  limitingMagDepth: f32,
++  limitingMagSoftness: f32,
++  limitingMagK: f32,
++  limitingMagSparseOffset: f32,
+   _pad5: u32,
+ 
+   // ── Procedural-disk crossfade-OUT band ──────────────────────────────
+diff --git a/src/services/gpu/shaders/points/vertex.wesl b/src/services/gpu/shaders/points/vertex.wesl
+index ab357db0c..eeb4d9d18 100644
+--- a/src/services/gpu/shaders/points/vertex.wesl
++++ b/src/services/gpu/shaders/points/vertex.wesl
+@@ -221,12 +221,50 @@ fn vs(
+   // non-member that drops under the perceptibility floor is culled rather
+   // than left to pile up additively in a dense field.
+   let focusMult = focusAlphaMultiplier(p.position, focus);
+-  let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
++
++  // ── SPIKE (throwaway A/B): limiting-magnitude intensity curve ────────────
++  //
++  // When 'u.limitingMagEnabled == 1.0', the '(22 - mag)/8' ramp AND the
++  // depth-fade multiplier below are replaced by 'window * flux' — a true
++  // camera-relative apparent-magnitude flux curve with a soft cutoff at an
++  // adaptive limiting magnitude. Every OTHER multiplier (brightness, vMax,
++  // schechter, angular, crossfadeOut, focusMult) is untouched, as is the
++  // INVISIBILITY_THRESHOLD cull + pick-pass exemption below. When disabled
++  // the legacy product runs exactly as before. See
++  // docs/superpowers/specs/2026-07-10-distant-galaxy-fading-design.md (S3/S5).
++  //
++  // WGSL has only natural log; log10(x) = log(x) * 0.4342944819.
++  let spikeEnabled = u.limitingMagEnabled == 1.0;
++  let dCam = max(distanceMpc, 1e-6);
++  let sceneScale = max(length(u.camPosWorld), 1.0);
++  let mLim = u.limitingMagDepth + u.limitingMagK * (log(sceneScale) * 0.4342944819);
++  // Per-source offset: sparse far-field catalogs are identified by their
++  // huge falloffHalfMpc sentinel (1e30); bulk catalogs get 0.
++  let srcOffset = select(0.0, u.limitingMagSparseOffset, source.falloffHalfMpc > 1e20);
++  // Famous rows can carry non-finite absMag; NaN comparisons are unreliable
++  // in WGSL, so use a magnitude-range validity check (real absMag is +-35).
++  let absMagValid = abs(p.absMag) < 90.0;
++  let spikeSoftness = max(u.limitingMagSoftness, 1e-3);
++  let knee = mLim - spikeSoftness;
++  let mEffRaw = p.absMag + 5.0 * (log(dCam) * 0.4342944819) + 25.0 + srcOffset;
++  // Invalid rows sit at the knee (bright edge of the window).
++  let mEff = select(knee, mEffRaw, absMagValid);
++  let flux = min(1.0, pow(10.0, -0.4 * (mEff - knee)));
++  let tWin = clamp((mLim - mEff) / spikeSoftness, 0.0, 1.0);
++  let spikeWindow = tWin * tWin * (3.0 - 2.0 * tWin);
++  let spikeFactor = spikeWindow * flux;
++
++  // Legacy ramp x depthFade product; the spike swaps in 'spikeFactor' for
++  // exactly these two factors, leaving the rest of the product intact.
++  let legacyRampDepth =
++    clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0) * depthFadeMult;
++  let rampDepthFactor = select(legacyRampDepth, spikeFactor, spikeEnabled);
++
++  let intensity = rampDepthFactor
+     * u.brightness
+     * vMaxAlpha
+     * schechterMult
+     * angularMult
+-    * depthFadeMult
+     * crossfadeOut
+     * focusMult;
+ 
+diff --git a/src/utils/gpu/packPointUniforms.ts b/src/utils/gpu/packPointUniforms.ts
+index 6f9a605a4..7de728972 100644
+--- a/src/utils/gpu/packPointUniforms.ts
++++ b/src/utils/gpu/packPointUniforms.ts
+@@ -72,6 +72,14 @@ export function packPointUniforms(
+     depthFadeEnabled,
+     pxFadeStart,
+     pxFadeEnd,
++    // SPIKE (throwaway A/B): repurposed reserved slots at bytes 136..152.
++    // Default 0 so the pick path (which omits them) and the legacy visual
++    // path both leave the spike disabled.
++    limitingMagEnabled = 0,
++    limitingMagDepth = 0,
++    limitingMagSoftness = 0,
++    limitingMagK = 0,
++    limitingMagSparseOffset = 0,
+   } = settings;
+ 
+   // Pad slots are zero-initialised by `new ArrayBuffer` and never written.
+@@ -102,13 +110,14 @@ export function packPointUniforms(
+   // alias the same ArrayBuffer.
+   u32[32] = biasMode >>> 0; // byte 128
+   f32[33] = absMagLimit; // byte 132
+-  // f32[34..38] (apparentMagLimit / schechterMStar / schechterAlpha /
+-  // schechterMLim / schechterNRef) + u32[39] (_pad5) stay zero.  The
+-  // Schechter / 1-over-Vmax modes read their per-galaxy weights from the
+-  // per-vertex `schechterRatio` + angular slots (spliced in by
+-  // `biasCorrectionSubsystem`), so these uniform slots carry nothing —
+-  // left reserved rather than removed to keep the struct's byte offsets
+-  // (incl. `pickPass`) stable.
++  // SPIKE (throwaway A/B): f32[34..38] were the reserved apparentMagLimit /
++  // schechter* slots; repurposed here to drive the limiting-magnitude curve
++  // in vertex.wesl.  Byte offsets unchanged; u32[39] (_pad5) stays zero.
++  f32[34] = limitingMagEnabled; // byte 136  SPIKE
++  f32[35] = limitingMagDepth; // byte 140  SPIKE
++  f32[36] = limitingMagSoftness; // byte 144  SPIKE
++  f32[37] = limitingMagK; // byte 148  SPIKE
++  f32[38] = limitingMagSparseOffset; // byte 152  SPIKE
+ 
+   // Procedural-disk crossfade band.  Slot 42 is `pickPass` (u32) — 0 for the
+   // visual pass, 1 when `pickUniformBytesOf` packs the pick image directly.
+diff --git a/tests/utils/gpu/packPointUniforms.test.ts b/tests/utils/gpu/packPointUniforms.test.ts
+index 43036b294..de39a5eb4 100644
+--- a/tests/utils/gpu/packPointUniforms.test.ts
++++ b/tests/utils/gpu/packPointUniforms.test.ts
+@@ -204,10 +204,12 @@ describe('packPointUniforms — Malmquist-bias state (bytes 128..159)', () => {
+     expect(f32[33]).toBeCloseTo(SETTINGS.absMagLimit);
+   });
+ 
+-  it('leaves reserved Schechter floats + _pad5 (bytes 136..159, indices 34..39) as zero', () => {
+-    // These slots (apparentMagLimit, schechterMStar, schechterAlpha,
+-    // schechterMLim, schechterNRef, _pad5) are reserved-but-unwritten: the
+-    // WGSL struct declares them to keep pickPass at a stable offset.
++  it('leaves the limiting-mag SPIKE floats + _pad5 (bytes 136..159, indices 34..39) as zero when unset', () => {
++    // SPIKE (throwaway A/B): bytes 136..152 (indices 34..38) were the reserved
++    // apparentMagLimit / schechter* slots and are now the limitingMag* curve
++    // params; they default to 0 when the caller (like this SETTINGS fixture)
++    // omits them, so the spike is off and the legacy path is unchanged. _pad5
++    // (index 39) stays zero unconditionally.
+     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+     const f32 = new Float32Array(buf);
+     for (let i = 34; i <= 39; i++) {

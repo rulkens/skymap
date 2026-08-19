@@ -98,7 +98,7 @@ export const filamentsLayer: ContentLayer = {
 
     // Hoist the frame clock to a local — only one consumer here
     // (filaments is single-instance, not per-source), but the pattern
-    // matches pointSpritesLayer.ts so future readers can copy-paste.
+    // matches galaxyPointSpritesLayer.ts so future readers can copy-paste.
     const nowMs = ctx.nowMs;
     state.gpu.filamentRenderer.draw(
       pass,

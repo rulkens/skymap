@@ -193,3 +193,9 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 .design-sync/dist/
+
+# Powers-of-Ten planning-page example imagery.  Deterministic build artifacts
+# of docs/powers-of-ten/fetch-images.mjs (fetched from open-licensed archives);
+# ~300 MB, regenerable on demand — same rationale as the .bin catalogs.  The
+# generator + the images.js manifest stay tracked so the page is reproducible.
+docs/powers-of-ten/images/

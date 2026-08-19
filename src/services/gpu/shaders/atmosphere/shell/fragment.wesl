@@ -3,8 +3,8 @@
 // Per fragment of the atmosphere-top proxy sphere (BOTH walls rasterise —
 // 'cullMode:\'none\''), this reconstructs the view ray, finds the segment of it
 // inside the atmosphere shell (the analytic march bound), looks up the
-// in-scattered sky radiance from the per-frame sky-view LUT, and emits it with a
-// premultiplied-OVER alpha so the limb glows, the sunset arc reddens, AND the
+// in-scattered sky radiance from the per-frame sky-view LUT, and emits it in TWO
+// blend passes so the limb glows, the sunset arc reddens, AND the
 // lit disc gains over-disc aerial perspective (haze). There is NO per-pixel
 // march here -- the march lives in the LUT bakes; this stage is a couple of
 // texture samples + the analytic intersection (spec §11).
@@ -46,12 +46,11 @@
 //
 //   - Sky-view LUT (per-frame): indexed by (view-zenith, azimuth-relative-to-sun)
 //     at the camera altitude, it returns the in-scattered radiance directly --
-//     the reddening at the terminator is baked per-channel into it, which is why
-//     v1's scalar alpha suffices (see below).
+//     the reddening at the terminator is baked per-channel into it.
 //   - Transmittance LUT (startup): sampled at the near + far endpoints of the
 //     bound; the RATIO of the two transmittance-to-top lookups is the
-//     transmittance of the segment itself (the Bruneton ratio identity). Its
-//     luminance drives the scalar background-opacity. For the FAR wall's limb +
+//     transmittance of the segment itself (the Bruneton ratio identity), which is
+//     the multiply pass's per-channel blend factor. For the FAR wall's limb +
 //     sky rays (which continue to the top) the ratio 'T(near)/T(far)' reads with
 //     (r, mu) as-is. For the NEAR wall's ground-hitting rays the endpoints look
 //     DOWN, off the LUT's covered domain (its d-range ends at the horizon-grazing
@@ -64,19 +63,19 @@
 // atmosphere-top units) and gets the same uv the km-baked LUT was written with.
 // That is why the fragment needs neither 'ScatteringParams' nor the km radii.
 //
-// ## Premultiplied-OVER output (spec §8.3, v1)
+// ## Two draws: MULTIPLY then ADD (spec §8.3)
 //
-// The pipeline blends 'blend:\'over\'' with srcFactor 'one', dstFactor
-// 'one-minus-src-alpha': out = src.rgb + dst*(1 - src.a). We emit
-// 'vec4(inScatter * u.exposure, opacity)', opacity = 1 - luminance(segment
-// transmittance) -- exactly the spec's 'out = inScatter + dst*(1 - opacity)'.
-// The visible sunset reddening rides the PER-CHANNEL 'inScatter'; the scalar
-// alpha attenuates the background. Behind the LIMB that background is space
-// (dst ~ 0), so a scalar there is invisible; over the DISC the background is the
-// lit planet, and the scalar alpha is exactly the over-disc aerial-perspective
-// haze that greys the surface with distance. A per-channel/dual-source alpha (so
-// the haze reddens per wavelength like the limb) is the deferred upgrade. A ray
-// that never enters the atmosphere, or falls on the wrong wall, discards.
+// Extinction is per-channel and a colour attachment has ONE alpha, so the shell
+// draws the same geometry twice rather than folding both into a premultiplied
+// OVER. 'fsMultiply' ('zero'/'src') scales the destination by the segment
+// transmittance; 'fsAdd' ('one'/'one') adds the exposed in-scatter. A single
+// luminance alpha attenuated the disc achromatically while adding chromatic
+// in-scatter, so a lambda^-4 Rayleigh ramp gained blue without losing blue and
+// washed the disc cyan. The ALPHA channel stays luminance-collapsed on purpose
+// -- it is the compositor's single background weight, and the two passes'
+// factors reproduce the old 'a + dst.a*(1-a)' exactly (algebra at the entry
+// points). A ray that never enters the atmosphere, or falls on the wrong wall,
+// discards -- in BOTH passes, from the same predicate, or the limb double-counts.
 //
 // Comments single-quoted, never backticks. Literal 'package::' imports.
 //
@@ -104,8 +103,10 @@ import package::atmosphere::scattering::skyViewLutParamsToUv;
 // The atmosphere top is the unit sphere in this mesh's local frame.
 const TOP_RADIUS: f32 = 1.0;
 const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
-// Rec. 709 luminance weights, for collapsing the per-channel segment
-// transmittance to the scalar background-opacity (v1).
+// Rec. 709 luminance weights, for the ALPHA channel only (the rgb path is
+// per-channel). They sum to exactly 1.0, which is what makes
+// 'dot(mix(vec3(1), T, ringVis), LUMINANCE)' equal 'mix(1, luminance(T),
+// ringVis)' -- i.e. the coverage below is the old scalar opacity, unchanged.
 const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
 
 struct FsIn {
@@ -117,8 +118,30 @@ struct FsIn {
   @builtin(front_facing) frontFacing: bool,
 };
 
-@fragment
-fn fs(in: FsIn) -> @location(0) vec4<f32> {
+// Everything both passes need, from ONE evaluation of the shared geometry + LUT
+// work. 'hit' false means this fragment is off the shell or on the wrong wall;
+// both entry points discard on it, so the two draws cover identical pixels.
+struct ShellSample {
+  // Per-channel background multiplier: the segment transmittance, ring-blended.
+  transmit: vec3<f32>,
+  // In-scattered radiance to ADD, already exposed and ring-scaled.
+  emission: vec3<f32>,
+  // 1 - luminance(transmit) — the compositor's single background weight.
+  coverage: f32,
+  hit: bool,
+};
+
+fn sampleShell(in: FsIn) -> ShellSample {
+  // Off-shell / wrong-wall default, returned early below: the caller owns the
+  // discard, and the LUT work never runs on a ray that missed. The values are
+  // each blend's IDENTITY (multiply by 1, add 0), so a fragment that somehow
+  // survives its discard is a no-op rather than a white or black hole.
+  var out: ShellSample;
+  out.transmit = vec3<f32>(1.0);
+  out.emission = vec3<f32>(0.0);
+  out.coverage = 0.0;
+  out.hit = false;
+
   // View ray in the local frame. Renormalize AFTER the implicit model transform
   // (the proxy is a scaled sphere) -- the house trap; an un-normalized dir
   // breaks every dot product below.
@@ -129,7 +152,7 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   let top = raySphere(ro, dir, PLANET_CENTER, TOP_RADIUS);
   // Miss the top sphere, or the whole shell behind the camera -> nothing.
   if (top.y < 0.0) {
-    discard;
+    return out;
   }
   let tNear = max(0.0, top.x);
   var tFar = top.y;
@@ -151,10 +174,10 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   // the near-wall guard the limb would double-count -- both walls pass the depth
   // test past the limb.
   if (in.frontFacing && !intersectsGround) {
-    discard;
+    return out;
   }
   if (!in.frontFacing && intersectsGround) {
-    discard;
+    return out;
   }
 
   // ── Sky-view LUT lookup for the in-scattered radiance ──────────────
@@ -178,7 +201,7 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   let skyUv = skyViewLutParamsToUv(u.bottomRadius, viewHeight, viewZenithCos, lightViewCos, intersectsGround);
   let inScatter = textureSampleLevel(skyViewLut, lutSamp, skyUv, 0.0).rgb;
 
-  // ── Transmittance of the shell segment -> scalar background-opacity ─
+  // ── Per-channel transmittance of the shell segment ─────────────────
   let nearPos = ro + dir * tNear;
   let rNear = length(nearPos);
   let muNear = dot(dir, nearPos / rNear);
@@ -206,22 +229,23 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
     let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rFar, muFar);
     segTransmittance = clamp(tToTopNear / max(tToTopFar, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
   }
-  let opacity = 1.0 - dot(segTransmittance, LUMINANCE);
 
   // ── Ring-in-front occlusion ─────────────────────────────────────────
   //
   // The ring draws BEFORE this shell and writes no depth, so ring pixels are in
-  // dst and a plain premultiplied-OVER would attenuate them by (1 - opacity) --
-  // haze darkening a ring that is physically in FRONT of the atmosphere. The
+  // dst and the multiply pass would attenuate them by the segment transmittance
+  // -- haze darkening a ring that is physically in FRONT of the atmosphere. The
   // annulus never intersects the shell (Saturn's ring inner edge sits well
   // outside the atmosphere top), so along any view ray the ring-plane crossing
   // is either wholly in front of the segment ('tRing < tNear') or wholly behind
   // it. When in front, the ring blocks a 'ringBlock' fraction (its strip alpha)
-  // of this fragment's view of the atmosphere: scale BOTH the emitted in-scatter
-  // and the opacity by the complement. An opaque band in front fully masks the
-  // shell (dst rides through untouched); a gap ('alpha ~ 0') leaves the haze
-  // intact; a ring BEHIND the segment keeps full haze over it, as it should.
-  // 'ringOuterRatio == 0' (every ringless body) short-circuits.
+  // of this fragment's view of the atmosphere: the in-scatter scales by the
+  // complement, and the transmittance MIXES toward 1 (not multiplies by
+  // 'ringVis' — that would drive the multiply pass to black where the ring is
+  // opaque, the exact inverse of masking the shell off). An opaque band in front
+  // fully masks the shell (dst rides through untouched); a gap ('alpha ~ 0')
+  // leaves the haze intact; a ring BEHIND the segment keeps full haze over it, as
+  // it should. 'ringOuterRatio == 0' (every ringless body) short-circuits.
   var ringBlock = 0.0;
   if (u.ringOuterRatio > 0.0 && abs(dir.z) > 1e-6) {
     let tRing = -ro.z / dir.z;
@@ -236,9 +260,34 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   }
   let ringVis = 1.0 - ringBlock;
 
-  // Premultiplied-OVER: rgb is the added in-scatter, alpha attenuates the
-  // background (space behind the limb) -- both scaled by the ring-in-front
-  // visibility so a ring band between the camera and the atmosphere keeps its
-  // own brightness.
-  return vec4<f32>(inScatter * u.exposure * ringVis, opacity * ringVis);
+  out.transmit = mix(vec3<f32>(1.0), segTransmittance, ringVis);
+  out.emission = inScatter * u.exposure * ringVis;
+  out.coverage = 1.0 - dot(out.transmit, LUMINANCE);
+  out.hit = true;
+  return out;
+}
+
+// Pass 1 — blend 'zero'/'src' on BOTH components: dst *= src. rgb attenuates the
+// destination per channel; alpha carries the luminance complement of the same
+// factor, so 'dst.a *= 1 - coverage'.
+@fragment
+fn fsMultiply(in: FsIn) -> @location(0) vec4<f32> {
+  let s = sampleShell(in);
+  if (!s.hit) {
+    discard;
+  }
+  return vec4<f32>(s.transmit, 1.0 - s.coverage);
+}
+
+// Pass 2 — blend 'one'/'one' on both components: dst += src. Together with pass
+// 1 the alpha lands on the old 'coverage + dst.a * (1 - coverage)', which the
+// compositor still reads as the single background weight; only the rgb path
+// gained its per-channel extinction.
+@fragment
+fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
+  let s = sampleShell(in);
+  if (!s.hit) {
+    discard;
+  }
+  return vec4<f32>(s.emission, s.coverage);
 }

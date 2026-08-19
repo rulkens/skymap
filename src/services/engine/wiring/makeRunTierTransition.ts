@@ -8,9 +8,9 @@
  * change, packaged as a `RunTierTransition` the root saga calls through its
  * injected `SagaContext`. The saga owns the WRITE (it dispatched the `tier`
  * slice action and computed `prev`/`next`); this runner owns the EFFECT
- * (cancel + re-fetch each source's `.bin`, reload MCPM, rebuild the hi-res
- * famous texture). No dispatch here, and no `selectTier` read — prev/next
- * arrive as params so the saga is the single source of the diff.
+ * (cancel + re-fetch each source's `.bin`, reload MCPM + Polyphorm2MRS, rebuild
+ * the hi-res famous texture). No dispatch here, and no `selectTier` read —
+ * prev/next arrive as params so the saga is the single source of the diff.
  *
  * ## Why a factory closing over EngineState
  *
@@ -71,6 +71,10 @@ export function makeRunTierTransition(
     // AssetSlot machinery.
     void state.assetSlots.mcpm?.load({ tier: nextTier });
 
+    // Polyphorm2MRS is tier-aware like MCPM (same physical quantity, same
+    // per-tier `.scfd` variants), so it gets the same per-tier reload.
+    void state.assetSlots.polyphorm2Mrs?.load({ tier: nextTier });
+
     // Star catalogs are tier-aware like MCPM, but per-source and demand-loaded.
     // This runner (not reevaluateDemand, whose idle-guard deliberately leaves
     // non-idle slots alone) is the tier-reload path, so each loaded catalog
@@ -84,16 +88,12 @@ export function makeRunTierTransition(
       void slot.load({ source, tier: nextTier });
     }
 
-    // No direct Milky-Way regenerate call here, deliberately — this runner
-    // used to carry one when the cloud's star count was tier-derived, but
-    // `watchTierSaga` now re-seeds `settings.milkyWay.starCount` from the new
-    // tier's budget as part of the same tier change (see that saga), and
-    // `runFrame`'s per-frame mismatch check (`cloud.starCount()` vs. the live
-    // setting) already regenerates the cloud whenever they disagree — which a
-    // re-seed reliably produces. Calling `regenerate` here too would race
-    // that check: both would try to answer the same tier change, and the
-    // cloud no longer needs to know `Tier` at all (see `MilkyWayCloud`'s
-    // docblock) to do so.
+    // No direct Milky-Way regenerate call here, deliberately — `watchTierSaga`
+    // re-seeds `settings.milkyWay.starCount` from the new tier's budget (see
+    // that saga), and the cloud's own `reconcile` already regenerates
+    // whenever that setting disagrees with the buffers on screen. Calling
+    // `regenerate` here too would just race the single writer (see
+    // `MilkyWayCloud`'s docblock).
 
     // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
     // WebGPU textures are immutable in shape, so a tier flip destroys + recreates
