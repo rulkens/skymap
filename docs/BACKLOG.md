@@ -59,6 +59,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
+- [ ] **`createTieredScfdFetcher` factory** `ready` — the Edenhofer dust fetcher will be the third hand-copied tiered-SCFD fetcher (after `mcpmFetcher` and polyphorm's); collapse the three into one `createTieredScfdFetcher(baseName)` factory on next touch.
 
 ## Rendering
 
@@ -89,7 +90,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Incremental band re-bake** `needs-design` — `build-earth-tiles` always bakes every band, costing ~10 min of byte-identical BMNG work per EOX-only iteration. → [details](backlog/2026-08-19-incremental-band-bake.md)
 - [ ] **Multi-region EOX coverage** `needs-design` — `eoxTileSource` supports one contiguous patch only; a second `fetch-eox` region needs its coverage boxes decomposed per connected component. → [details](backlog/2026-08-19-multi-region-eox-coverage.md)
 - [ ] **Cloud deck PBR + live coverage** `deferred` — deck is Lambert-lit with no thickness channel (alpha = luminance of RGB); analytic multiple-scattering phase term is cheap, real τ / live GIBS clouds are separable data-layer efforts. → [details](backlog/2026-07-19-cloud-deck-pbr.md)
-- [ ] **Local interstellar-dust volume (Edenhofer 2024)** `ready` — Sun-centered extinction cube as an SCFD field (MCPM-clone, CC-BY 4.0 verified); design researched 2026-08-19: NEAR0 slab, multiplicative fold, per-field fade band as prep; sequence after raymarch-acceleration. → [details](backlog/2026-07-18-local-dust-volume.md)
 - [ ] **Earth-sky extinction panorama** `needs-design` — bake Edenhofer's native HEALPix into a 2D all-sky integrated-extinction texture multiplied over the sky at planetary zoom; the crisp from-Earth dark-lane view the cartesian dust cube can't give. → [details](backlog/2026-08-19-earth-sky-extinction-panorama.md)
 - [ ] **Perf-harness findings: measured hotspots** `needs-design` — large tier ≈ 3× medium (blows 60fps alone), small slower than medium (unexplained), solar-system 16.9 ms with vertex-bound hdr·NEAR0 at 60%. → [details](backlog/2026-07-21-perf-harness-findings.md)
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.

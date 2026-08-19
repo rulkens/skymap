@@ -14,7 +14,7 @@ mismatch this item is built on no longer exists. That spec also already
 considered and **rejected** a new slab for this class of problem ("permanent
 machinery to manage the constraint"). The Edenhofer dust volume likewise
 lands on NEAR0 with no new slab (see
-[`2026-07-18-local-dust-volume.md`](2026-07-18-local-dust-volume.md)).
+[`../superpowers/specs/2026-08-20-edenhofer-dust-volume.md`](../superpowers/specs/2026-08-20-edenhofer-dust-volume.md)).
 
 What remains of this item:
 
