@@ -1,5 +1,6 @@
 import type { HistogramSlice } from '../../../@types/HistogramSlice';
 import { HISTOGRAM_BINS } from '../../sim/createGridBuffers';
+import { meanLogTraceAtPoints } from '../../sim/meanLogTraceAtPoints';
 
 // Caps the convergence plot's x-axis span rather than growing it unbounded over a
 // long-running sim — HistogramPlot draws the tail, not the whole run.
@@ -14,15 +15,10 @@ export const defaultHistogramSlice: HistogramSlice = {
 
 /**
  * recordHistogramSample — installs one throttled `readHistogram()` result.
- * `meanLogTraceAtPoints` is `mean(log1p(max(density, 0)))` over the IN-GRID
- * densities only, divided by `sampledCount` (histogram.wesl's own in-grid
- * counter) — the SAME definition `dataPointHistogram.ts`'s CLI statistic
- * uses (spec section 9): points outside the grid box are excluded from both
- * the sum and the divisor there, and `-1` here is `histogram.wesl`'s sentinel
- * for that same exclusion (a real density is never negative). Kept in sync
- * by convention rather than shared code: that function bundles voxel-lookup
- * + binning + the mean into one pass over a full readback cube, so there is
- * no separable "just the mean" call to share — see task-T20-report.md.
+ * The mean-log-trace fold itself lives in `meanLogTraceAtPoints` — the SAME
+ * home `dataPointHistogram.ts`'s CLI statistic composes from (spec section
+ * 9), so this and the CLI number are guaranteed to agree rather than kept
+ * in sync by convention.
  */
 export function recordHistogramSample(
   prev: HistogramSlice,
@@ -31,15 +27,12 @@ export function recordHistogramSample(
   densities: Float32Array,
   stepCount: number,
 ): HistogramSlice {
-  let sum = 0;
-  for (let i = 0; i < densities.length; i++) {
-    const density = densities[i]!;
-    if (density < 0) continue; // histogram.wesl's out-of-grid sentinel
-    sum += Math.log1p(Math.max(density, 0));
-  }
-  const meanLogTraceAtPoints = sampledCount > 0 ? sum / sampledCount : NaN;
-  const history = [...prev.history, { stepCount, meanLogTraceAtPoints }].slice(-MAX_HISTORY);
-  return { ...prev, counts, meanLogTraceAtPoints, history };
+  const meanLogTraceAtPointsValue = meanLogTraceAtPoints(densities, sampledCount);
+  const history = [
+    ...prev.history,
+    { stepCount, meanLogTraceAtPoints: meanLogTraceAtPointsValue },
+  ].slice(-MAX_HISTORY);
+  return { ...prev, counts, meanLogTraceAtPoints: meanLogTraceAtPointsValue, history };
 }
 
 export function setSampleRandomly(prev: HistogramSlice, sampleRandomly: boolean): HistogramSlice {
