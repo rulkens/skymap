@@ -1,25 +1,14 @@
 #!/usr/bin/env node
 /**
- * fetchEoxTiles — polite, resumable harvester for EOX's `s2cloudless` WMTS
- * tile service, over a caller-supplied lon/lat bbox at a single zoom level
- * (default 13). See `data/raw/eox/README.md` for the licence, tile-index
- * convention, and `docs/superpowers/specs/2026-08-19-eox-deep-tile-bands-design.md`
- * §4 for why: EOX's WGS84 TMS grid (`columns = 2^(z+1)`, `rows = 2^z`) is the
- * same ladder as skymap's own `earthTileColumns` (`512 << z) / tilePx` at
- * `tilePx = 256`) — `earthTileColumns(13, 256) === 16384 === 2^14`, so z13
- * tiles composite straight into skymap's bake pyramid with no re-numbering.
+ * fetchEoxTiles — resumable harvester for EOX's `s2cloudless` WMTS tile
+ * service over a caller-supplied bbox (grid math, throttle/backoff shape,
+ * and resume model are in `data/raw/eox/README.md`).
  *
- * **Layer is hardcoded to `s2cloudless` (the 2016 edition)** — the only
- * CC BY 4.0 vintage; 2018+ is CC BY-NC-SA (ShareAlike, rejected outright for
- * this JOSS-bound repo) and 2017 is broken upstream. No CLI flag selects a
- * different layer.
- *
- * Backoff/retry (`isRetryable`, `fetchTileWithRetry`) is the same shape as
- * `fetchDesi.ts`'s `fetchChunkWithRetry` (`fetchDesi.ts:167-197`), adapted
- * from range-chunk retries to whole-tile-fetch retries — EOX serves whole
- * 256px JPEGs, no `Range:`/byte-resume machinery needed. Resume is by tile
- * file existence on disk, not a chunk-state sidecar: a tile is either fully
- * there or it isn't, so there is nothing partial to resume within one file.
+ * Layer is hardcoded to `s2cloudless` 2016 — the only CC BY 4.0 vintage
+ * (2018+ is CC BY-NC-SA, prohibited for this repo); no CLI flag selects a
+ * different layer. URL path is `{z}/{row}/{col}` — row before col. A
+ * non-image response (a throttled origin serving HTML) throws and stops
+ * the run rather than writing HTML bytes to disk as a `.jpg`.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -214,8 +203,26 @@ const httpTileTransport: EoxTileTransport = async (url) => {
   return new Uint8Array(await res.arrayBuffer());
 };
 
-function parseCliArgs(argv: string[]): { bbox: EoxBbox; level: number } {
-  const positional = argv.filter((a) => !a.startsWith('--'));
+/**
+ * A single left-to-right pass, not a `filter` + separate `indexOf('--level')`
+ * lookup: `--level`'s VALUE token (e.g. `'13'`) doesn't start with `--`, so a
+ * filter-based split misclassified it as a positional bbox arg whenever
+ * `--level` preceded the bbox on the command line, shifting every
+ * west/south/east/north by one. Consuming the flag and its value together,
+ * in argv order, makes bbox/flag ordering irrelevant.
+ */
+export function parseCliArgs(argv: string[]): { bbox: EoxBbox; level: number } {
+  const positional: string[] = [];
+  let level = 13;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--level') {
+      level = Number(argv[++i]);
+      continue;
+    }
+    if (arg !== undefined) positional.push(arg);
+  }
+
   const west = Number(positional[0]);
   const south = Number(positional[1]);
   const east = Number(positional[2]);
@@ -230,8 +237,6 @@ function parseCliArgs(argv: string[]): { bbox: EoxBbox; level: number } {
       'usage: fetchEoxTiles <west> <south> <east> <north> [--level N] (level defaults to 13)',
     );
   }
-  const levelFlagIdx = argv.indexOf('--level');
-  const level = levelFlagIdx !== -1 ? Number(argv[levelFlagIdx + 1]) : 13;
   if (!Number.isFinite(level)) {
     throw new Error('--level must be a number');
   }

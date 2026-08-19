@@ -16,6 +16,7 @@ import {
   eoxTileIndicesForBbox,
   eoxResponseIsImage,
   harvestEoxTiles,
+  parseCliArgs,
   type EoxTileTransport,
 } from '../../../tools/fetch/fetchEoxTiles';
 
@@ -60,6 +61,14 @@ describe('eoxTileIndicesForBbox', () => {
     expect(new Set(cols)).toEqual(new Set([0, 1, 2, 3]));
     expect(new Set(rows)).toEqual(new Set([0]));
     expect(indices).toHaveLength(4);
+  });
+});
+
+describe('parseCliArgs', () => {
+  it('parses the bbox correctly regardless of whether --level precedes or follows it', () => {
+    const expected = { bbox: { west: 10, south: 20, east: 30, north: 40 }, level: 9 };
+    expect(parseCliArgs(['--level', '9', '10', '20', '30', '40'])).toEqual(expected);
+    expect(parseCliArgs(['10', '20', '30', '40', '--level', '9'])).toEqual(expected);
   });
 });
 
