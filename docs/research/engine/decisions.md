@@ -93,9 +93,10 @@ the deep tuning surface.
    ~~generated-artifact staleness helper (`stalenessKey` + `regenerate`; migrate
    the ~8 hand sites starting with MW `starCount`)~~ **REFINED by #13
    (2026-08-19)** — the premise is refined, not dropped: 7 true sites surveyed,
-   6 already resource-owned, **1 relocated into its own resource**
-   (`MilkyWayCloud.reconcile`), and **no helper exists** — the registry question
-   re-opens at rung 4 only under #13's condition; **4** volume-ingest
+   5 already resource-owned, **1 relocated into its own resource**
+   (`MilkyWayCloud.reconcile`), 1 deferred to rung 4, and **no helper exists** —
+   the registry question re-opens at rung 4 only under #13's condition;
+   **4** volume-ingest
    consolidation (3 copies → 1 fn; imperative side-door's fate decided here),
    **5** wake-vote fold, **6** debug derivation, **7** the
    `FADE_ROW`/`VISIBILITY_ACTION_ROW` derivation decision. Rungs 1 and 3 get
