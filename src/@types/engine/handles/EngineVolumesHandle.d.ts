@@ -11,7 +11,7 @@ import type { VolumeFieldId } from '../../data/volume/VolumeFieldId';
  *
  * `add`/`remove` are the entry point for runtime-supplied cubes the demand
  * system cannot express (no URL, not in the registry); they execute the
- * SAME `uploadVolumeField`/`unloadVolumeField` the volume slot commits do,
+ * _same_ `uploadVolumeField`/`unloadVolumeField` the volume slot commits do,
  * so there is no second ingest path.
  *
  * The spherical envelope is per-cube static presentation config, read

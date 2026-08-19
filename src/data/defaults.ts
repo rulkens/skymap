@@ -397,7 +397,7 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
  *
  * The overlay renders additively into the same HDR offscreen target as the
  * galaxy points pass.  At startup no fields are registered yet (the caller
- * must call `addVolumeField` to load a cube), so this default has no visual
+ * must call `uploadVolumeField` to load a cube), so this default has no visual
  * effect until the first field arrives.  Defaulting to `true` means the
  * overlay is ready to render as soon as the first field is added — the user
  * doesn't have to hunt for a master toggle to see anything.
