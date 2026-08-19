@@ -30,6 +30,7 @@ import { exportScfd } from '../export/exportScfd';
 import { previewPackedTrace } from '../export/previewPackedTrace';
 import { triggerDownload } from '../export/triggerDownload';
 import { widenTrace } from '../export/widenTrace';
+import { boxAxesFor } from '../field/boxAxesFor';
 import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { deriveGridBox } from '../field/deriveGridBox';
@@ -43,7 +44,6 @@ import { gizmoArrowLengthMpc } from '../gizmo/gizmoArrowLengthMpc';
 import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { screenToRay } from '../gizmo/screenToRay';
-import { boxBasisVectors } from '../field/boxBasisVectors';
 import { cameraBasis } from '../render/cameraBasis';
 import { effectiveVolpathDivisor } from '../render/effectiveVolpathDivisor';
 import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
@@ -168,14 +168,6 @@ type AxisDragState = Extract<
 >;
 function isAxisDrag(drag: GizmoDragState): drag is AxisDragState {
   return drag.handle.kind !== 'rotate';
-}
-
-/** boxBasisVectors' named triplet, reshaped into gizmoHandleGeometry's `axes` tuple — F2.5's
- *  axes swap: every gizmo call site feeds the box's OWN rotated axes now, not world UNIT_AXES,
- *  so arrows/crosses/rings all rotate with the box (same reshape boxPreviewPass.ts applies). */
-function axesFor(rotation: Readonly<Vec4>): readonly [Vec3, Vec3, Vec3] {
-  const basis = boxBasisVectors(rotation);
-  return [basis.x, basis.y, basis.z];
 }
 
 /** A unit vector ⊥ `axisDir` — the rotate ring's 0°-angle reference for `dragRotate`. Same
@@ -846,7 +838,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const pendingBox = deriveGridBox(s.grid);
         const ray = rayFromPointer(e, s);
         const arrowLengthMpc = arrowLengthMpcFor(s, pendingBox.centerMpc);
-        const axes = axesFor(pendingBox.rotation);
+        const axes = boxAxesFor(pendingBox.rotation);
         const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, axes, arrowLengthMpc));
         if (hit && hit.kind === 'rotate') {
           const axisDir = axes[hit.axis];
@@ -889,7 +881,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (gizmoDragging) {
         if (isAxisDrag(gizmoDragging)) {
           const drag = gizmoDragging;
-          const axisDir = axesFor(drag.anchorBox.rotation)[drag.handle.axis];
+          const axisDir = boxAxesFor(drag.anchorBox.rotation)[drag.handle.axis];
           const ray = rayFromPointer(e, s);
           const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
           const deltaMpc = param - drag.anchorAxisParam;
@@ -919,7 +911,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           // drag never writes it, so there is no re-derive feedback loop to guard against
           // (drag.anchorBox's whole reason to exist for THAT pair).
           const drag = gizmoDragging;
-          const axisDir = axesFor(drag.anchorRotation)[drag.handle.axis];
+          const axisDir = boxAxesFor(drag.anchorRotation)[drag.handle.axis];
           const referenceDir = ringReferenceDirFor(axisDir);
           const centerMpc = deriveGridBox(s.grid).centerMpc;
           const ray = rayFromPointer(e, s);
@@ -942,7 +934,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           const arrowLengthMpc = arrowLengthMpcFor(s, box.centerMpc);
           hoverHandle = pickGizmoHandle(
             ray,
-            gizmoHandleGeometry(box, axesFor(box.rotation), arrowLengthMpc),
+            gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc),
           );
         } else {
           hoverHandle = null;

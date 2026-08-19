@@ -8,7 +8,7 @@
  *
  * `builtBox` (the camera's own voxel frame) and `pendingBox` (what's previewed, in world Mpc,
  * converted host-side) are deliberately different GridBoxes — glyph geometry comes from
- * `pendingBox`'s own `gizmoHandleGeometry(box, axesFor(box.rotation), arrowLengthMpc)` (F2.5's
+ * `pendingBox`'s own `gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc)` (F2.5's
  * axes swap: arrows/crosses/rings all rotate with the box). `arrowLengthMpc` is derived from
  * `view` each draw via gizmoArrowLengthMpc — the SAME formula Viewport.tsx's pick/hover path
  * uses, or grabbing an arrow would miss where it's drawn.
@@ -21,6 +21,7 @@ import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByQuat } from '../../../../src/utils/math/rotateVec3ByQuat';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { GridBox } from '../../@types/GridBox';
+import { boxAxesFor } from '../field/boxAxesFor';
 import { boxBasisVectors } from '../field/boxBasisVectors';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 import { worldToVoxel } from '../field/worldToVoxel';
@@ -116,14 +117,6 @@ function ringPoint(
   ];
 }
 
-/** boxBasisVectors' named triplet, reshaped into gizmoHandleGeometry's `axes` tuple — F2.5's
- *  axes swap: the glyph build feeds the box's OWN rotated axes now, not world UNIT_AXES, so
- *  arrows/crosses/rings all rotate with the box (same reshape Viewport.tsx applies). */
-function axesFor(rotation: Readonly<Vec4>): readonly [Vec3, Vec3, Vec3] {
-  const basis = boxBasisVectors(rotation);
-  return [basis.x, basis.y, basis.z];
-}
-
 /**
  * Translate arrows: a constant-width shaft (center -> cone base) plus one tapered segment
  * (cone base -> the handle's own tip, base width -> tip width) that vsGlyph expands into a
@@ -134,7 +127,7 @@ function axesFor(rotation: Readonly<Vec4>): readonly [Vec3, Vec3, Vec3] {
 function buildGlyphSegments(box: GridBox, arrowLengthMpc: number): GlyphSegment[] {
   const half = boxHalfExtentMpc(box.sizeMpc);
   const crossArmMpc = CROSS_ARM_FRACTION * Math.min(half[0], half[1], half[2]);
-  const geometry = gizmoHandleGeometry(box, axesFor(box.rotation), arrowLengthMpc);
+  const geometry = gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc);
   const segs: GlyphSegment[] = [];
 
   for (const handle of geometry.translate) {
