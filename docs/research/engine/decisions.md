@@ -251,12 +251,16 @@ type SubsystemBundle = {
 
 ## Ground preparation (verdicts in engine-composition-map §4 + sweep misfits)
 
-- **P1** Bundle contract + engine-core walkers (targets/handles/staleness/frame
+- **P1** Bundle contract + engine-core walkers (targets/handles/~~staleness~~/frame
   assembly/derived debug incl. PASS_GROUP_TITLES + TIMED_SLOTS) + adapter wrapping
-  the legacy hand-wired style. Behaviour-neutral.
+  the legacy hand-wired style. Behaviour-neutral. **SUPERSEDED by #13 (2026-08-19)**
+  — no staleness walker; the compare stays resource-owned (rung 3).
 - **P2** Migrate provers: volumes, star catalog, MW v1-as-is, plus filaments and
-  constellations (confirmed clean fits). Deletes `mwAggregateDivisor` param, both
-  `runFrame.ts:211-281` mismatch branches, hand-maintained debug maps.
+  constellations (confirmed clean fits). ~~Deletes `mwAggregateDivisor` param, both
+  `runFrame.ts:211-281` mismatch branches~~, hand-maintained debug maps.
+  **SUPERSEDED by #13 (2026-08-19)** — rungs 2 (`RenderTargets.reconcile`) and 3
+  (`MilkyWayCloud.reconcile`) already deleted both branches; the debug-maps
+  deletion is still open.
 - **P3** Extract field/ISM orchestration from `tools/galaxy-renderer/src/engine/`
   into `src/services/gpu/renderers/galaxyField/` (instantiable per galaxy); tool
   consumes it. Tool-neutral (probe gates it).

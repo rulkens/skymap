@@ -1,6 +1,6 @@
 # Current engine composition — contracts and how they compose
 
-Snapshot 2026-08-17, branch `worktree-land-milky-way-refactor` (base `e509f0096`).
+Snapshot 2026-08-19, branch `worktree-land-milky-way-refactor` (base `e509f0096`).
 [decisions.md](decisions.md) records what we decided; this file records **what
 exists today**, with `file:line` evidence. §7 maps each surface onto the
 subsystem-bundle spec; §8 lists gaps the spec does not cover.
@@ -93,7 +93,6 @@ flowchart LR
 | 🔴  | Target formats **hand-matched** at construction, unenforced                                 | `initGpu.ts:426-428`                                   |
 | 🟠  | No check that `layer.target ∈ specs`; no unique-name check (tests only)                     | `frameProgram.test.ts`, `passes.test.ts:376`           |
 | ⚪  | Pick targets allocated **outside** `RenderTargets` (documented divergence)                  | `pickProgram.ts:37-106`, `RenderTargetSpec.d.ts:16-17` |
-| 🔴  | `mw-aggregate` divisor rebuild is a bespoke branch **inside runFrame**                      | `runFrame.ts:231-245`                                  |
 
 ### Cost of one new subsystem (constellations worked example)
 
@@ -136,13 +135,13 @@ flowchart LR
 
 ### Loose spots
 
-| ⬤   | issue                                                                                                                                                                                      | evidence                                                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| 🔴  | Registry covers **1 of 5 lifecycles** — generated / streamed / baked / imperative are all bespoke                                                                                          | `runFrame.ts:275-281`, `wireSlots.ts:116-119`, `addVolumeField.ts`              |
-| ⚪  | Staleness idiom ("compare live setting vs fact on the resource, then regenerate") appears **7×** — 5 already resource-owned by design, 1 relocated into its resource, 1 deferred to rung 4 | decisions.md #13; `milkyWayCloud.ts` `reconcile`                                |
-| 🔴  | Volume ingest exists **3×**; `handle.volumes.add` has 0 callers                                                                                                                            | `mcpmSlot.ts:35-46`, `syntheticVolumeSlots.ts:78-99`, `addVolumeField.ts:25-38` |
-| 🔴  | Teardown = **~46 hand-written pairs**, ordering encoded only by position (was ~44; zone-of-avoidance added 2: `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`)                        | `engine.ts:747-908`                                                             |
-| 🟠  | Swap-format rebuild = a **hand-picked list of 8** renderers                                                                                                                                | `buildSwapRenderers.ts:23`                                                      |
+| ⬤   | issue                                                                                                                                                                                      | evidence                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| 🔴  | Registry covers **1 of 5 lifecycles** — generated / streamed / baked / imperative are all bespoke                                                                                          | `milkyWayCloud.ts` `reconcile` (called `runFrame.ts:213`), `wireSlots.ts:116-119`, `addVolumeField.ts` |
+| ⚪  | Staleness idiom ("compare live setting vs fact on the resource, then regenerate") appears **7×** — 5 already resource-owned by design, 1 relocated into its resource, 1 deferred to rung 4 | decisions.md #13; `milkyWayCloud.ts` `reconcile`                                                       |
+| 🔴  | Volume ingest exists **3×**; `handle.volumes.add` has 0 callers                                                                                                                            | `mcpmSlot.ts:35-46`, `syntheticVolumeSlots.ts:78-99`, `addVolumeField.ts:25-38`                        |
+| 🔴  | Teardown = **~46 hand-written pairs**, ordering encoded only by position (was ~44; zone-of-avoidance added 2: `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`)                        | `engine.ts:747-908`                                                                                    |
+| 🟠  | Swap-format rebuild = a **hand-picked list of 8** renderers                                                                                                                                | `buildSwapRenderers.ts:23`                                                                             |
 
 ### Cost of one new fetched asset (volume field worked example)
 

@@ -92,9 +92,9 @@ function makeFixture(opts?: {
     gpu: {
       texturedDiskRenderer: opts?.texturedDiskRenderer ?? null,
       // No milkyWayCloud stub: this runner no longer calls `.regenerate`
-      // itself (see makeRunTierTransition.ts's comment) — the Milky-Way
-      // star count reaches the tier swap via `watchTierSaga`'s re-seed +
-      // `runFrame`'s mismatch check, neither of which this runner touches.
+      // itself (see makeRunTierTransition.ts's comment) — the saga re-seeds
+      // `settings.milkyWay.starCount`; the cloud's own `reconcile` notices
+      // next frame, neither of which this runner touches.
       milkyWayCloud: null,
     },
     subsystems: {
