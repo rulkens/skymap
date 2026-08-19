@@ -164,8 +164,10 @@ Files: `passes/starCatalogLayer.ts`, `passes/starAggregatesLayer.ts`,
   asymmetry a plain blit would leave).
 - **Wake**: `anyNodeFading` (a per-node LOD-fade vote) surfaces from
   `prepareStarCut`'s result and feeds `shouldKeepTicking` explicitly
-  (`runFrame.ts:776-779`) — the one layer family with its own dedicated wake
-  term, because its fades are per-node, not per-layer.
+  (`runFrame.ts:709-713`) — not the only layer family with a dedicated wake
+  term any more: the label director's producers/envelope vote (rung 5, #15)
+  joined the `anim` bag beside it. Star-cut's stays per-node rather than
+  per-layer.
 
 ### B. Scalar volume (raymarch + upsample)
 

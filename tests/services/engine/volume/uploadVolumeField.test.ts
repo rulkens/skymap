@@ -81,6 +81,5 @@ describe('uploadVolumeField', () => {
 
     expect(store.dispatch).not.toHaveBeenCalled();
     expect(bridge).not.toHaveBeenCalled();
-    expect(state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 });

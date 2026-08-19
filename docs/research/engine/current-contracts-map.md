@@ -22,7 +22,7 @@ central file rather than contributing a row.
 | 🔴  | handles/teardown | `EngineGpuHandles` (~50 nullable fields)                   | 4 hand-edits per handle                                    |
 | 🟢  | fades/visibility | `FadeLayer` rows + `FadeId`/`VisibilityLayerKey` unions    | row-shaped — plus 🟠 2 hand-kept inverse maps              |
 | 🟠  | presentation     | `LabelProducer` · marker path · caption layer              | three mechanisms, one registered                           |
-| 🟠  | wake/liveness    | `shouldKeepTicking` disjunction + `anim` bag               | hand-added terms (9)                                       |
+| 🟠  | wake/liveness    | `shouldKeepTicking` disjunction + `anim` bag               | hand-added terms (10)                                       |
 
 ⚪ Seventh, parallel surface: **pick/selection** (~10–17 files per focusable
 kind) — out of bundle scope →
@@ -163,7 +163,7 @@ flowchart LR
     COMMITS["slot commits (8 sites) +<br/>applySceneEffect"] --> SYNC
     REG -->|"opacityOf × focusRecession × clipFactor"| RLO["resolveLayerOpacity"]
     RLO --> CONS["layers · label producers ·<br/>liveness derivations"]
-    REG -->|"isAnyAnimating"| WAKE["shouldKeepTicking<br/>(9-term disjunction + anim bag)"]
+    REG -->|"isAnyAnimating"| WAKE["shouldKeepTicking<br/>(10-term disjunction + anim bag)"]
     VAR["VISIBILITY_ACTION_ROW<br/>(inverse of FADE_ROW)"] -.->|"tours/intents dispatch"| ACT
     classDef good fill:#1a7f37,stroke:#116329,color:#ffffff
     classDef warn fill:#bf8700,stroke:#9a6700,color:#ffffff
@@ -177,8 +177,8 @@ flowchart LR
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `FadeLayer`                     | 🟢 `{key, expand, handle, seed, intent?, post?, guard?}` — 18 rows, healthy (zone-of-avoidance added a row, fully wired: fade handle + FADE_ROW + VISIBILITY_ACTION_ROW + a live `resolveLayerOpacity` consumer — no gap left behind) | `FadeLayer.d.ts:51-60`, `fadeLayers.ts:97-317`                 |
 | `FadeId` / `VisibilityLayerKey` | 12 kinds vs 18 keys — ⚪ deliberately different grain; both type-level unions                                                                                                                                                         | `FadeId.d.ts:80-96`, `VisibilityLayerKey.d.ts:53-71`           |
-| wake                            | 🟠 9-term disjunction + explicit `anim` bag fed by planners                                                                                                                                                                           | `shouldKeepTicking.ts:112-129`                                 |
-| `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:441-481` |
+| wake                            | 🟠 10-term disjunction + explicit `anim` bag (3 fields) fed by planners                                                                                                                                                               | `shouldKeepTicking.ts:117-135`                                 |
+| `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:438-476` |
 | debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers                                                                                                                                                                      | `frameProgram.ts:233-384`                                      |
 
 ### Loose spots
@@ -187,10 +187,10 @@ flowchart LR
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | 🟠  | `FADE_ROW` ↔ `VISIBILITY_ACTION_ROW` are **hand-maintained inverses** — a drift pair (zone-of-avoidance added a correctly-mirrored row to both, growing the pair, not narrowing it) | `watchFadesSaga.ts:60-78`, `visibilityActionRow.ts:79` |
 | 🔴  | **2 fade rows have no consumer** (union-totality artifacts)                                                                                                                         | `fadeLayers.ts:150-185`                                |
-| 🔴  | Marker path is a **shadow producer** — driven from runFrame, unregistered, no wake vote                                                                                             | `runFrame.ts:731-734`                                  |
+| 🔴  | Marker path is a **shadow producer** — driven from runFrame, unregistered. The "no wake vote" half is closed (rung 5, #15 D10): its ramps ride `fades.isAnyAnimating` and camera motion via `fades.opacityOf`, no gap. Still unregistered/shadow. | `runFrame.ts:664-667`                                  |
 | 🔴  | Caption layer bypasses the director **and** the fade handles                                                                                                                        | `foregroundLabelsLayer`                                |
 | 🟠  | Producers registered inline in engine.ts                                                                                                                                            | `engine.ts:576-587`                                    |
-| 🟠  | Wake terms accrete by hand (each = a signature edit)                                                                                                                                | `shouldKeepTicking.ts:19-29`                           |
+| 🟠  | Wake terms accrete by hand (each = a signature edit) — ruled ACCEPTED, not open (rung 5, #15 D4): the signature edit is the compile-time gate against a dropped vote | `shouldKeepTicking.ts:19-30`                           |
 | 🟠  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed                                                                                                               | `DebugPanel.tsx:79-90`, `frameProgram.ts:209-224`      |
 
 ## 5. Pick / selection (⚪ parallel surface, out of scope)
@@ -208,7 +208,7 @@ flowchart LR
 | 3   | 🟠  | **Off-registry lifecycles** — generated/streamed still invent their own wiring; imperative no longer does (ingest ×5 → 1 fn, #14). Staleness settled resource-owned (#13); site 4 ruled with no code change, its tier-response residue re-handed to the umbrella reassessment (#14) |
 | 4   | 🟠  | **Inverse-map drift pairs** — FADE_ROW↔VISIBILITY_ACTION_ROW; specs↔clear values                                                                                                                                                                                                    |
 | 5   | 🟠  | **Hand-listed UI** — DebugPanel JSX, group titles                                                                                                                                                                                                                                   |
-| 6   | 🟠  | **Wake accretion** — every animator edits a signature                                                                                                                                                                                                                               |
+| 6   | 🟠  | **Wake accretion** — every animator edits a signature. Ruled a recorded acceptance, not an open item for the rungs (rung 5, #15 D4): a required `anim` bag field is the compile-time gate a closure-bearing row table could not be; re-deferred to the umbrella reassessment, not another rung |
 | 7   | 🔴  | **Unvalidated cross-file contracts** — blend/format parity, target∈specs                                                                                                                                                                                                            |
 
 🟢 **Do not regress** (already right): the `(target, slab)` data pin ·
@@ -230,7 +230,7 @@ flowchart TD
     B -. no sweep (#13) .- W4["staleness stays<br/>resource-owned"]
     B --> W5["frame-assembly validation<br/>(layers ↔ program steps coverage)"]
     B --> W6["derived debug<br/>(groups PASS_GROUP_TITLES + sliders + sections)"]
-    B --> W7["wake fold<br/>(votes into the anim bag)"]
+    B --> W7["wake fold<br/>(votes into the anim bag — rung 5 folded the label director by hand, #15; the manifest/walker question stays deferred to the umbrella, #15 D4)"]
     B --> W8["fade-manifest derivation<br/>(concat bundle.fades + legacy rows)"]
     FPX["frameProgram step list"] -. stays hand-authored .- B
     PICKX["pick/selection kind tables"] -. stays out (backlog) .- B
@@ -253,7 +253,7 @@ flowchart TD
 | `COMPUTE` record row                                | `computes`                                                                                                                                              | the record edit                   |
 | runFrame CPU planner block                          | `planner` (memoised on ctx)                                                                                                                             | inline planner calls              |
 | `deriveXLiveness` conventions                       | `liveness`                                                                                                                                              | nothing — formalized              |
-| `anim` bag / disjunction terms                      | `wake` vote fold                                                                                                                                        | the signature change              |
+| `anim` bag / disjunction terms                      | 🟢 done, no bundle field needed: one field (`labelsAnimating`) + two deletions shipped directly (rung 5, #15) — no walker, the bag itself is the seam    | the signature change              |
 | `FADE_LAYERS` row                                   | `fades` (manifest = concatenation)                                                                                                                      | the central manifest              |
 | inline producer registration                        | `labelProducers` / `markerProducers`                                                                                                                    | inline registration + shadow path |
 | group titles + sliders + DebugPanel JSX             | `debug` + derived-debug walker                                                                                                                          | the JSX list                      |

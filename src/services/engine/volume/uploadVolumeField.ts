@@ -2,9 +2,7 @@
  * The ONE volume-field ingest path: every volume slot commit and the public
  * `handle.volumes.add` call this. Order is load-bearing — the settings row must
  * exist before the fade reads its intent, and the cube must be resident before
- * the fade's guard reads `listIds()`. The trailing `requestRender()` is
- * redundant with the settings wake route (`watchWakeSaga`) and kept local until
- * rung 5 accounts for the wake owners. Flow's cube (`flowFieldSlot.ts`) skips
+ * the fade's guard reads `listIds()`. Flow's cube (`flowFieldSlot.ts`) skips
  * this path deliberately — different renderer/arity/fade key; see decision #14.
  */
 
@@ -27,5 +25,5 @@ export function uploadVolumeField(
   store.dispatch(addVolumeField(id));
   renderer.upload(id, cube);
   syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-  state.subsystems.scheduler.requestRender();
+  // Wake rides the settings-row dispatch; watchWakeSaga's route table renders it (#14 D2).
 }

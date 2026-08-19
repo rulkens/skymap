@@ -59,6 +59,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
+- [ ] **Fades pop instead of ramping after the render loop idles** `ready` — `fadeRegistry.fadeTo` stamps the ramp's start from the stale last-*rendered*-frame time, not a live clock. → [details](backlog/2026-08-20-fade-pop-after-idle.md)
 - [ ] **`createTieredScfdFetcher` factory** `ready` — the Edenhofer dust fetcher will be the third hand-copied tiered-SCFD fetcher (after `mcpmFetcher` and polyphorm's); collapse the three into one `createTieredScfdFetcher(baseName)` factory on next touch.
 
 ## Rendering

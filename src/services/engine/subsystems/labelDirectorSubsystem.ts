@@ -18,12 +18,9 @@
  *
  * ### Awake aggregation
  *
- * If any producer returns `awake: true`, or any appear/disappear
- * envelope (below) is mid-ramp, the director calls
- * `state.subsystems.scheduler.requestRender()` once.  This is the only
- * loop-wake mechanism for animations driven by label state (e.g. the
- * Milky Way label's fade band crossing); other systems wake the loop on
- * their own.
+ * `runFrame` returns `true` when any producer reports `awake: true`, or any
+ * appear/disappear envelope (below) is mid-ramp — the caller folds this vote
+ * into `shouldKeepTicking`. The director never wakes the loop itself.
  *
  * ### Appear/disappear envelope
  *
@@ -438,8 +435,8 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     return { labels: outLabels, lines: outLines, anyRamping };
   }
 
-  function runFrame(state: EngineState, ctx: ReadyFrameContext): void {
-    if (!labelRenderer || !lineRenderer) return;
+  function runFrame(state: EngineState, ctx: ReadyFrameContext): boolean {
+    if (!labelRenderer || !lineRenderer) return false;
 
     // Collect outputs.  Producers are pure of state, so we just call
     // each and concatenate.  The director does NOT cache per-producer
@@ -475,9 +472,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
       prevSignature = sig;
     }
 
-    if (anyAwake || anyRamping) {
-      state.subsystems.scheduler.requestRender();
-    }
+    return anyAwake || anyRamping;
   }
 
   // Built as a `const` (rather than returned inline) so we can attach

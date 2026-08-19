@@ -8,12 +8,12 @@ import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeState(requestRender: () => void = () => {}): EngineState {
+function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
   // the stub keeps a `fades.fadeTo` spy so tests can assert the director
   // never calls it.
   return {
-    subsystems: { scheduler: { requestRender }, fades: { fadeTo: vi.fn() } },
+    subsystems: { fades: { fadeTo: vi.fn() } },
   } as unknown as EngineState;
 }
 
@@ -131,16 +131,14 @@ describe('labelDirectorSubsystem', () => {
     expect(lineStub.setLines).toHaveBeenCalledTimes(2);
   });
 
-  it('calls scheduler.requestRender when any producer is awake', () => {
+  it('reports the vote when any producer is awake', () => {
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
     dir.registerProducer(makeProducer('p', [], [], true));
 
-    const requestRender = vi.fn();
-    dir.runFrame(makeState(requestRender), makeCtx());
-    expect(requestRender).toHaveBeenCalledTimes(1);
+    expect(dir.runFrame(makeState(), makeCtx())).toBe(true);
   });
 
   it('re-uploads when a label or line fadeAlpha changes (smooth fade transitions)', () => {
@@ -510,22 +508,16 @@ describe('labelDirectorSubsystem', () => {
       dir.attachRenderers(labelStub as never, lineStub as never);
 
       let labels: Label[] = [SAMPLE_LABEL];
-      // Producer is never awake — every wake below comes from the envelope.
+      // Producer is never awake — every vote below comes from the envelope.
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
 
-      const requestRender = vi.fn();
-      dir.runFrame(makeState(requestRender), makeCtx(0));
-      expect(requestRender).toHaveBeenCalledTimes(1); // fade-in in flight
-      dir.runFrame(makeState(requestRender), makeCtx(150));
-      expect(requestRender).toHaveBeenCalledTimes(2); // still ramping
-      dir.runFrame(makeState(requestRender), makeCtx(300));
-      expect(requestRender).toHaveBeenCalledTimes(2); // settled → quiet
+      expect(dir.runFrame(makeState(), makeCtx(0))).toBe(true); // fade-in in flight
+      expect(dir.runFrame(makeState(), makeCtx(150))).toBe(true); // still ramping
+      expect(dir.runFrame(makeState(), makeCtx(300))).toBe(false); // settled → quiet
 
       labels = [];
-      dir.runFrame(makeState(requestRender), makeCtx(400));
-      expect(requestRender).toHaveBeenCalledTimes(3); // fade-out tail in flight
-      dir.runFrame(makeState(requestRender), makeCtx(700));
-      expect(requestRender).toHaveBeenCalledTimes(3); // tail complete → quiet again
+      expect(dir.runFrame(makeState(), makeCtx(400))).toBe(true); // fade-out tail in flight
+      expect(dir.runFrame(makeState(), makeCtx(700))).toBe(false); // tail complete → quiet again
     });
 
     it('resumes from the current alpha when a label reappears mid-fade-out (no pop either way)', () => {
