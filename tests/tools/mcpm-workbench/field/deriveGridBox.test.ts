@@ -3,7 +3,8 @@
  * dims readout must never disagree on. Derivation is always the manual path
  * (S13.5: "auto fit" is a one-shot action that writes manualCenterMpc/
  * manualSizeMpc, not a persistent mode this function branches on) — covers
- * manual center+size and the divisor scaling the long axis.
+ * manual center+size and manualVoxelSizeMpc, stored directly (V1: grid-voxel-
+ * size-currency decision record).
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -12,14 +13,13 @@ import { deriveGridBox } from '../../../../tools/mcpm-workbench/src/field/derive
 import { defaultGridSlice } from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
 
 describe('deriveGridBox', () => {
-  it('derives from manualCenterMpc/manualSizeMpc at the panel divisor', () => {
+  it('derives from manualCenterMpc/manualSizeMpc at the panel manualVoxelSizeMpc', () => {
     const manualCenterMpc: Vec3 = [10, -5, 20];
     const manualSizeMpc: Vec3 = [40, 24, 16];
     const grid = {
       ...defaultGridSlice,
-      // Same fixture as autoFitGridBox's manual-override test, resolution=32:
-      // 256/8 = 32.
-      divisor: 8,
+      // Same fixture as autoFitGridBox's manual-override test.
+      manualVoxelSizeMpc: 1.25,
       manualCenterMpc,
       manualSizeMpc,
     };
@@ -29,11 +29,10 @@ describe('deriveGridBox', () => {
     expect(box.sizeMpc).toEqual([40, 30, 20]);
   });
 
-  it('a smaller divisor yields a longer (finer) long axis, a bigger one a shorter (coarser) one', () => {
-    const fine = deriveGridBox({ ...defaultGridSlice, divisor: 0.75 });
-    const coarse = deriveGridBox({ ...defaultGridSlice, divisor: 3 });
-    const longAxis = (b: typeof fine): number => Math.max(...b.dims);
-    expect(longAxis(fine)).toBeGreaterThan(longAxis(coarse));
+  it('boot default: 200 Mpc box at 0.75 Mpc/vox — dims 272³, voxelSizeMpc exact (Q4)', () => {
+    const box = deriveGridBox(defaultGridSlice);
+    expect(box.dims).toEqual([272, 272, 272]);
+    expect(box.voxelSizeMpc).toBe(0.75);
   });
 
   it('derives rotation from grid.manualRotation — autoFitGridBox itself always returns identity', () => {

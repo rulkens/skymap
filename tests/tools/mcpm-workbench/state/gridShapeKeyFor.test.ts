@@ -20,4 +20,19 @@ describe('gridShapeKeyFor', () => {
 
     expect(JSON.stringify(gridShapeKeyFor(rotated))).not.toBe(JSON.stringify(before));
   });
+
+  // V1: manualVoxelSizeMpc replaced divisor as one of the five shape fields —
+  // a missed swap here means a resolution edit stops restarting the preview timer.
+  it('differs when only grid.manualVoxelSizeMpc changes', () => {
+    const before = gridShapeKeyFor(defaultAppState);
+    const resized = {
+      ...defaultAppState,
+      grid: {
+        ...defaultAppState.grid,
+        manualVoxelSizeMpc: defaultAppState.grid.manualVoxelSizeMpc + 1,
+      },
+    };
+
+    expect(JSON.stringify(gridShapeKeyFor(resized))).not.toBe(JSON.stringify(before));
+  });
 });

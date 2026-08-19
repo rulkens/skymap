@@ -8,13 +8,13 @@ import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 /**
  * defaultGridSlice — the manual 200 Mpc origin-centred cube is the boot
  * view (an auto-fit-on-boot box would stretch to the catalog's outliers
- * until the local volume is a sliver of it). `divisor: 1` is
- * `deriveGridBox`'s BASE_LONG_AXIS (256) unscaled; divisor 0.75 covers
- * Phase 1's "a ≥300-class grid runs continuously" exit criterion at 341
- * (S12 added a finer 0.5 notch above it, 512 long axis).
+ * until the local volume is a sliver of it). `manualVoxelSizeMpc: 0.75`
+ * is a deliberate quality bump over the old divisor-1 default's implicit
+ * 0.78125 Mpc/vox — boot dims become 272³ instead of 256³ (decision record,
+ * Q4).
  */
 export const defaultGridSlice: GridSlice = {
-  divisor: 1,
+  manualVoxelSizeMpc: 0.75,
   paddingMpc: 5,
   manualCenterMpc: [0, 0, 0],
   manualSizeMpc: [200, 200, 200],
@@ -30,8 +30,8 @@ export const defaultGridSlice: GridSlice = {
 // clears `importedBox` — a loaded preset's box wins until the user steers
 // the controls again, then the override has to die (setResolvedGrid, below,
 // is NOT one of these: it records a completed build, not a user edit).
-export function setDivisor(prev: GridSlice, divisor: number): GridSlice {
-  return { ...prev, divisor, importedBox: null };
+export function setVoxelSizeMpc(prev: GridSlice, manualVoxelSizeMpc: number): GridSlice {
+  return { ...prev, manualVoxelSizeMpc, importedBox: null };
 }
 
 export function setPaddingMpc(prev: GridSlice, paddingMpc: number): GridSlice {
@@ -63,7 +63,9 @@ export function setRotation(prev: GridSlice, rotation: Readonly<Vec4>): GridSlic
  * resize/rotate drag — which falls onto the manual path by clearing
  * importedBox — continues FROM the imported box's orientation instead of
  * snapping to identity. importedBox still wins in deriveGridBox until a
- * later edit clears it.
+ * later edit clears it. manualVoxelSizeMpc syncs the same way (formula-free:
+ * the box's own voxelSizeMpc, verbatim) so the voxel-size slider shows the
+ * loaded value instead of a stale one.
  */
 export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
   return {
@@ -72,6 +74,7 @@ export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridS
     manualCenterMpc: importedBox.centerMpc,
     manualSizeMpc: importedBox.sizeMpc,
     manualRotation: importedBox.rotation,
+    manualVoxelSizeMpc: importedBox.voxelSizeMpc,
   };
 }
 

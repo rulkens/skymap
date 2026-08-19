@@ -11,7 +11,7 @@ export type ToggleProps = {
   readonly onToggle: () => void;
   /**
    * Overrides the accessible name (default: the visible "{label}: on/off"
-   * text). A row of value pills (e.g. grid divisor) wants a name that says
+   * text). A row of value pills (e.g. render layers) wants a name that says
    * what the row IS, not just the bare number, so a screen reader or probe
    * selector doesn't have to infer it from neighbouring buttons.
    */

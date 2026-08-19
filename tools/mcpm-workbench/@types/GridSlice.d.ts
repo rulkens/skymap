@@ -9,8 +9,11 @@ import type { GridElement } from './GridElement';
  * RESOLVED box (what the sim actually runs on). `box`/`resolvedElement`/
  * `byteBudget` are null until the first successful build — the panel can be
  * open before any catalog has loaded. Derivation is always the manual path:
- * center + size + a long-axis resolution, never free dims (`autoFitGridBox`'s
- * own contract) — `divisor` is the one resolution lever (see `deriveGridBox`).
+ * center + size + a directly-stored voxel size, never free dims
+ * (`autoFitGridBox`'s own contract) — `manualVoxelSizeMpc` is the one
+ * resolution lever (see `deriveGridBox`), a physical Mpc size rather than a
+ * scale factor so physical resolution stays stable under box resize/refit
+ * (grid-voxel-size-currency decision record, Q1/Q2).
  *
  * "Auto fit" is a one-shot ACTION (`fitBoxToCatalog`, gridSlice.ts), not a
  * persistent mode: it snapshots the current catalog bounds straight into
@@ -21,7 +24,7 @@ import type { GridElement } from './GridElement';
  *
  * `importedBox` is V3's load-side override: `deriveGridBox` returns it
  * VERBATIM when set, so a loaded preset reloads to a bit-identical box
- * regardless of divisor/manual bounds. Every setter below that represents a
+ * regardless of voxel size/manual bounds. Every setter below that represents a
  * user editing the grid controls (including `fitBoxToCatalog`) clears it
  * back to null — the override exists only until the user starts steering
  * again.
@@ -42,7 +45,7 @@ import type { GridElement } from './GridElement';
  * manual path.
  */
 export type GridSlice = {
-  readonly divisor: number;
+  readonly manualVoxelSizeMpc: number;
   readonly paddingMpc: number;
   readonly manualCenterMpc: Vec3;
   readonly manualSizeMpc: Vec3;

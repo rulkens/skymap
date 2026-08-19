@@ -3,7 +3,7 @@
  * back to null (V3's ruling): a preset reloads to a bit-identical box only
  * until the user starts steering the grid controls again, at which point
  * the override has to die so deriveGridBox goes back to computing from
- * divisor/manual bounds. `fitBoxToCatalog` ("auto fit", S13.5) counts as one
+ * voxel size/manual bounds. `fitBoxToCatalog` ("auto fit", S13.5) counts as one
  * of these edits too — it writes manualCenterMpc/manualSizeMpc directly,
  * same as a hand-dragged slider.
  */
@@ -15,11 +15,11 @@ import {
   defaultGridSlice,
   fitBoxToCatalog,
   installImportedBox,
-  setDivisor,
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
   setRotation,
+  setVoxelSizeMpc,
 } from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
 
 // centerMpc/sizeMpc/rotation deliberately differ from defaultGridSlice's manual
@@ -38,8 +38,8 @@ const IMPORTED_BOX: GridBox = {
 const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };
 
 describe('gridSlice setters clear importedBox on any user edit', () => {
-  it('setDivisor clears it', () => {
-    expect(setDivisor(withImportedBox, 2).importedBox).toBeNull();
+  it('setVoxelSizeMpc clears it', () => {
+    expect(setVoxelSizeMpc(withImportedBox, 2).importedBox).toBeNull();
   });
 
   it('setPaddingMpc clears it', () => {
@@ -66,12 +66,13 @@ describe('gridSlice setters clear importedBox on any user edit', () => {
 });
 
 describe('installImportedBox', () => {
-  it('syncs manualCenterMpc/manualSizeMpc/manualRotation to the imported box while installing it (S17, F2.5)', () => {
+  it('syncs manualCenterMpc/manualSizeMpc/manualRotation/manualVoxelSizeMpc to the imported box while installing it (S17, F2.5, V1)', () => {
     const next = installImportedBox(defaultGridSlice, IMPORTED_BOX);
     expect(next.importedBox).toEqual(IMPORTED_BOX);
     expect(next.manualCenterMpc).toEqual(IMPORTED_BOX.centerMpc);
     expect(next.manualSizeMpc).toEqual(IMPORTED_BOX.sizeMpc);
     expect(next.manualRotation).toEqual(IMPORTED_BOX.rotation);
+    expect(next.manualVoxelSizeMpc).toEqual(IMPORTED_BOX.voxelSizeMpc);
   });
 
   it('a subsequent setManualSizeMpc still clears importedBox (V3 ruling stays green)', () => {

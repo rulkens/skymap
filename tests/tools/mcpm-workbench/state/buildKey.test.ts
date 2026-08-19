@@ -22,4 +22,19 @@ describe('buildKey', () => {
 
     expect(JSON.stringify(buildKey(rotated))).not.toBe(JSON.stringify(before));
   });
+
+  // V1: manualVoxelSizeMpc replaced divisor as the resolution field — a missed
+  // swap in this list means a resolution edit stops triggering a sim rebuild.
+  it('differs when only grid.manualVoxelSizeMpc changes', () => {
+    const before = buildKey(defaultAppState);
+    const resized = {
+      ...defaultAppState,
+      grid: {
+        ...defaultAppState.grid,
+        manualVoxelSizeMpc: defaultAppState.grid.manualVoxelSizeMpc + 1,
+      },
+    };
+
+    expect(JSON.stringify(buildKey(resized))).not.toBe(JSON.stringify(before));
+  });
 });

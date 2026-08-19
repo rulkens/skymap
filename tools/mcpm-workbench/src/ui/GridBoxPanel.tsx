@@ -1,5 +1,5 @@
 /**
- * GridBoxPanel — grid-box configuration. Both modes share ONE divisor
+ * GridBoxPanel — grid-box configuration. Both modes share ONE voxel size
  * (never free dims): Viewport and this panel's dims readout both call
  * `deriveGridBox`, so they can't disagree. This panel holds no catalog
  * data, so the readout reads the cached `catalog.catalogBoundsMpc` instead
@@ -19,24 +19,40 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import Button from '../../../../src/components/common/Button/Button';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import { deriveGridBox } from '../field/deriveGridBox';
+import { BYTES_PER_ELEMENT } from '../sim/createGridBuffers';
 import { useStore } from '../state/useStore';
 import {
   fitBoxToCatalog,
-  setDivisor,
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
   setShowGridBox,
+  setVoxelSizeMpc,
 } from '../state/slices/gridSlice';
 import { useAppStore } from './storeContext';
+import { formatBytes } from './formatBytes';
 import ToggleRow from './ToggleRow';
 import styles from './GridBoxPanel.module.css';
 
-// User-specified stepping: finer than 1 in quarter steps, coarser in half
-// steps — a discrete list, not a uniform-step range, so Slider (fixed step)
-// can't drive it; a <select> (like this row) can. 0.5 = 512 long axis, the
-// finest notch below the S10-era 0.75.
-const DIVISOR_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
+// Range and log-scale intent per the grid-voxel-size-currency decision record
+// (Q3): ParamSlider/Slider have no log-scale mode (checked — neither takes a
+// `scale` prop), so this is linear with a fine-ish fixed step instead.
+const VOXEL_SIZE_MIN_MPC = 0.25;
+const VOXEL_SIZE_MAX_MPC = 4;
+const VOXEL_SIZE_STEP_MPC = 0.05;
+
+// Estimated bytes for the three storage-backed grids the sim allocates
+// (depositA/depositB/trace — createGridBuffers.ts); mirrors planGridBudget's
+// `3 * gridBytes` term but skips the agent-lane term, which scales with
+// agentCount, not box resolution, and stays tiny at any real grid size — a
+// live per-drag estimate has no cheap access to the resolved GPUSupportedLimits
+// planGridBudget needs anyway. `resolvedElement` only changes with hardware
+// capability, not box edits, so this doesn't go stale mid-drag the way
+// `grid.byteBudget` (last COMPLETED build) would.
+function estimateGridBytes(dims: Vec3, element: 'f16' | 'f32' | null): number {
+  const voxels = dims[0] * dims[1] * dims[2];
+  return 3 * voxels * BYTES_PER_ELEMENT[element ?? 'f32'];
+}
 
 // Literal-typed axis index (not a `.map` callback index, which noUncheckedIndexedAccess
 // would widen to `number` and turn every `vec[axis]` read into `number | undefined`).
@@ -61,34 +77,6 @@ const dimsReadoutStyle: CSSProperties = {
   fontFamily: 'var(--font-family-mono)',
   fontSize: 'var(--font-size-sm)',
   color: 'var(--color-fg-muted)',
-};
-
-// Row chrome matches the ParamSlider rows above it (mono label left, control
-// right); the select itself models the main app's GalaxiesSection
-// `styles.modeSelect` chip — this tool has no shared select style of its own.
-const divisorRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 'var(--space-3)',
-};
-
-const divisorLabelStyle: CSSProperties = {
-  fontFamily: 'var(--font-family-mono)',
-  fontSize: 'var(--font-size-sm)',
-  color: 'var(--color-fg-label)',
-};
-
-const divisorSelectStyle: CSSProperties = {
-  flexShrink: 0,
-  padding: 'var(--space-1) var(--space-3)',
-  border: '1px solid var(--border-control)',
-  borderRadius: 'var(--radius-md)',
-  background: 'var(--surface-control)',
-  color: 'var(--color-fg-base)',
-  fontFamily: 'var(--font-family-mono)',
-  fontSize: 'var(--font-size-md)',
-  cursor: 'pointer',
 };
 
 function withAxis(vec: Vec3, axis: number, value: number): Vec3 {
@@ -129,29 +117,9 @@ function GridBoxPanel(): ReactNode {
       >
         auto fit
       </Button>
-      <div>
-        <div style={divisorRowStyle}>
-          <label htmlFor="grid-divisor" style={divisorLabelStyle}>
-            grid divisor
-          </label>
-          <select
-            id="grid-divisor"
-            style={divisorSelectStyle}
-            value={grid.divisor}
-            onChange={(e) =>
-              store.setState((s) => ({ ...s, grid: setDivisor(s.grid, Number(e.target.value)) }))
-            }
-          >
-            {DIVISOR_OPTIONS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={dimsReadoutStyle}>
-          {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox
-        </div>
+      <div style={dimsReadoutStyle}>
+        {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox ·{' '}
+        {formatBytes(estimateGridBytes(box.dims, grid.resolvedElement))}
       </div>
       <label>
         padding (Mpc)
@@ -167,9 +135,20 @@ function GridBoxPanel(): ReactNode {
           }
         />
       </label>
-      {/* One wrapper for all six sliders: consecutive ParamSliders space by their
+      {/* One wrapper for all seven sliders: consecutive ParamSliders space by their
           own margin (like every other panel); the root grid's gap would double it. */}
       <div>
+        <ParamSlider
+          label="voxel size"
+          value={grid.manualVoxelSizeMpc}
+          min={VOXEL_SIZE_MIN_MPC}
+          max={VOXEL_SIZE_MAX_MPC}
+          step={VOXEL_SIZE_STEP_MPC}
+          format={(v) => v.toFixed(2)}
+          info="Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit."
+          onChange={(v) => store.setState((s) => ({ ...s, grid: setVoxelSizeMpc(s.grid, v) }))}
+          path="grid.manualVoxelSizeMpc"
+        />
         {AXES.map(({ axis, label }) => (
           <ParamSlider
             key={`center-${label}`}

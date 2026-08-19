@@ -10,7 +10,7 @@ export function gridShapeKeyFor(s: AppState): unknown[] {
     s.grid.manualCenterMpc,
     s.grid.manualSizeMpc,
     s.grid.manualRotation,
-    s.grid.divisor,
+    s.grid.manualVoxelSizeMpc,
     s.grid.paddingMpc,
   ];
 }

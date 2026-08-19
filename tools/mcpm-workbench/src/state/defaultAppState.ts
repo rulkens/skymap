@@ -10,10 +10,12 @@ import { defaultViewSlice } from './slices/viewSlice';
 // respect ruling R11's quantum floor — 100_000 sits BELOW the panel's own
 // Slider min of 1M (see ControlsPanel.tsx), which only clamps user drags,
 // never this seed value, so the harness sees it untouched.
-// PROBE_GRID_DIVISOR=4 -> round(256/4)=64 long axis (<=128, still >8 for
-// decay's /8 dispatch) — outside the UI's 7-notch pill list on purpose,
-// same as PROBE_AGENT_COUNT sitting below the Slider's own min.
-const PROBE_GRID_DIVISOR = 4;
+// PROBE_VOXEL_SIZE_MPC=3.125 -> ceil8(200/3.125)=64 long axis on the default
+// 200 Mpc manual box (<=128, still >8 for decay's /8 dispatch) — the exact
+// value the old PROBE_GRID_DIVISOR=4 (round(256/4)=64) produced, so the probe
+// grid's size is unchanged by the currency swap; same as PROBE_AGENT_COUNT
+// sitting below the Slider's own min.
+const PROBE_VOXEL_SIZE_MPC = 3.125;
 const PROBE_AGENT_COUNT = 100_000;
 
 /** defaultAppState — the store's seed value, one slice default per field. */
@@ -21,10 +23,10 @@ export const defaultAppState: AppState = hasUrlGate('probe')
   ? {
       catalog: defaultCatalogSlice,
       // Grid derivation is always the manual path ("auto fit" is a one-shot
-      // action, not a mode — gridSlice.ts's fitBoxToCatalog) — PROBE_GRID_DIVISOR
+      // action, not a mode — gridSlice.ts's fitBoxToCatalog) — PROBE_VOXEL_SIZE_MPC
       // alone is what keeps the probe grid small; the default manual box's own
-      // 256 long axis would otherwise ship unscaled.
-      grid: { ...defaultGridSlice, divisor: PROBE_GRID_DIVISOR },
+      // 0.75 Mpc voxel size would otherwise ship unscaled (272³).
+      grid: { ...defaultGridSlice, manualVoxelSizeMpc: PROBE_VOXEL_SIZE_MPC },
       sim: { ...defaultSimSlice, agentCount: PROBE_AGENT_COUNT },
       view: defaultViewSlice,
       histogram: defaultHistogramSlice,

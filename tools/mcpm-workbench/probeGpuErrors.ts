@@ -325,7 +325,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // download, fed straight back into the hidden file input importParams
       // reads. The GPU-relevant half is what installImportedBox provokes: it
       // lands in buildKey (Viewport.tsx), so this is the only step that exercises a
-      // harness rebuild triggered by a grid-box change with none of divisor /
+      // harness rebuild triggered by a grid-box change with none of voxel size /
       // manual bounds moving.
       name: 'params:save-load',
       run: async (page) => {
@@ -402,7 +402,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // feeding it back through the file input. installImportedBox (gridSlice.ts)
       // then makes deriveGridBox return that box VERBATIM, rotation included.
       // grid.showGridBox defaults true (gridSlice.ts), so the wireframe is already
-      // drawn every frame regardless of the 200ms preview timer — no divisor/manual-
+      // drawn every frame regardless of the 200ms preview timer — no voxel-size/manual-
       // bounds nudge needed to make this rotated box actually render.
       name: 'gizmo:rotated-box',
       run: async (page) => {
@@ -426,24 +426,32 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     },
     {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
-      // of gridShapeKeyFor's four fields (Viewport.tsx) — no other step here ever touches
+      // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this was the only render layer no gate exercised at all (final-review.md
       // §A/X3). The "Grid box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's
       // `gridBoxOpen` starts false) and its body doesn't exist in the DOM until opened —
-      // the fold button's accessible name is its title text, not an aria-label. S10: the
-      // grid divisor select is deriveGridBox's one resolution lever regardless of how
-      // the box's center/size got set (S13.5: "auto fit" is a one-shot action now, not
-      // a mode), so option '2' reaches the same long axis (128) the old "long-axis
-      // target" select's '128' option did. S12 swapped the pill row for a <select> —
-      // its accessible name is still distinct from the raymarch preview's own
-      // "divisor" slider (see raymarch:divisor below), a role="combobox" vs
-      // role="slider" AND a different name, so no probe selector or screen-reader name
-      // collides. BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames comfortably
-      // outlasts it.
+      // the fold button's accessible name is its title text, not an aria-label.
+      // grid-voxel-size-currency: the divisor <select> died with the currency swap —
+      // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever
+      // now, regardless of how the box's center/size got set (S13.5: "auto fit" is a
+      // one-shot action, not a mode). Its accessible name is still distinct from the
+      // raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
+      // role="slider" with a different name, so no probe selector or screen-reader name
+      // collides. 'End' jumps the slider to its max (Slider.tsx's keyDown handling),
+      // away from the probe boot's 3.125 Mpc (PROBE_VOXEL_SIZE_MPC, defaultAppState.ts) —
+      // read before/after (F1.6 lesson: a step that can silently degrade to a no-op drive
+      // must FAIL, not just run). BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames
+      // comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
         await page.getByRole('button', { name: 'Grid box', exact: true }).click();
-        await page.getByRole('combobox', { name: 'grid divisor', exact: true }).selectOption('2');
+        const voxelSize = page.getByRole('slider', { name: 'voxel size', exact: true });
+        const before = await voxelSize.getAttribute('aria-valuenow');
+        await pressSlider(page, 'voxel size', ['End']);
+        const after = await voxelSize.getAttribute('aria-valuenow');
+        if (after === before) {
+          throw new Error('grid:box-preview voxel-size slider did not move — aim stale');
+        }
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -453,7 +461,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // drag starts, so drawBoxPreview's glyph shader runs the highlight branch for
       // both uniforms under error capture. Target: the +Y translate arrow tip,
       // precomputed off cameraBasis/screenToRay's own formulas against the boot box
-      // (defaultGridSlice's 200 Mpc origin-centred cube — PROBE_GRID_DIVISOR only
+      // (defaultGridSlice's 200 Mpc origin-centred cube — PROBE_VOXEL_SIZE_MPC only
       // coarsens resolution, sizeMpc stays exactly 200) and camera (defaultViewSlice:
       // yaw 0.6, pitch 0.35, distance 600) at this probe's 1280x800 viewport —
       // isolated on-screen from every other handle by 60+ px. gizmoDragging !== null

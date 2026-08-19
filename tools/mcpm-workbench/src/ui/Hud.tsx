@@ -9,13 +9,8 @@
 import type { ReactNode } from 'react';
 import { useStore } from '../state/useStore';
 import { useAppStore } from './storeContext';
+import { formatBytes } from './formatBytes';
 import styles from './Hud.module.css';
-
-const formatBytes = (bytes: number): string => {
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
-};
 
 function Hud(): ReactNode {
   const store = useAppStore();
