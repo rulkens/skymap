@@ -13,6 +13,8 @@ import type { Store } from '../../@types/Store';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
 import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
+import { exponentialZoomDistance } from '../../../utils/camera/exponentialZoomDistance';
+import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
 import { boxAxesFor } from '../field/boxAxesFor';
 import { deriveGridBox } from '../field/deriveGridBox';
 import { applyResizeDrag } from '../gizmo/applyResizeDrag';
@@ -210,13 +212,10 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
       });
       return;
     }
+    const { dYaw, dPitch } = orbitDragDelta(dx, dy, DRAG_SPEED);
     store.setState((s) => ({
       ...s,
-      view: setCameraYawPitch(
-        s.view,
-        s.view.camera.yaw - dx * DRAG_SPEED,
-        s.view.camera.pitch + dy * DRAG_SPEED,
-      ),
+      view: setCameraYawPitch(s.view, s.view.camera.yaw - dYaw, s.view.camera.pitch + dPitch),
     }));
   };
 
@@ -225,7 +224,10 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     e.preventDefault();
     store.setState((s) => ({
       ...s,
-      view: setCameraDistance(s.view, s.view.camera.distance * Math.exp(e.deltaY * ZOOM_SPEED)),
+      view: setCameraDistance(
+        s.view,
+        exponentialZoomDistance(s.view.camera.distance, e.deltaY, ZOOM_SPEED),
+      ),
     }));
   };
 

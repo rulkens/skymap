@@ -14,6 +14,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Store } from '../../../@types/state/Store';
 import type { AppState } from '../../../@types/state/AppState';
+import { orbitDragDelta } from '../../../../utils/camera/orbitDragDelta';
 import { createFlowHarness, type FlowHarness } from '../../createFlowHarness';
 import { setCameraDistance, setCameraYawPitch } from '../../state/slices/cameraSlice';
 import styles from './Viewport.module.css';
@@ -62,26 +63,22 @@ function Viewport({ store }: ViewportProps): ReactNode {
     };
     const onPointerMove = (e: PointerEvent): void => {
       if (!dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
+      const { dYaw, dPitch } = orbitDragDelta(e.clientX - lastX, e.clientY - lastY, DRAG_SPEED);
       lastX = e.clientX;
       lastY = e.clientY;
-      store.setState((s) =>
-        ({
-          ...s,
-          camera: setCameraYawPitch(
-            s.camera,
-            s.camera.yaw + dx * DRAG_SPEED,
-            s.camera.pitch + dy * DRAG_SPEED,
-          ),
-        }),
-      );
+      store.setState((s) => ({
+        ...s,
+        camera: setCameraYawPitch(s.camera, s.camera.yaw + dYaw, s.camera.pitch + dPitch),
+      }));
     };
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
       store.setState((s) => ({
         ...s,
-        camera: setCameraDistance(s.camera, s.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP)),
+        camera: setCameraDistance(
+          s.camera,
+          s.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP),
+        ),
       }));
     };
 

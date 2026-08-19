@@ -11,6 +11,8 @@
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { ViewPose } from '../../../@types/engine/ViewPose';
 
+import { exponentialZoomDistance } from '../../../../utils/camera/exponentialZoomDistance';
+import { orbitDragDelta } from '../../../../utils/camera/orbitDragDelta';
 import { lensShift } from './lensShift';
 import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
@@ -74,8 +76,9 @@ export function createOrbitCameraInput(
       const dy = (e.clientY - ly) * s;
       for (let i = 0; i < 3; i++) cam.target[i] = cam.target[i]! + (-right[i]! * dx + up[i]! * dy);
     } else {
-      cam.az += (e.clientX - lx) * 0.006;
-      cam.el += (e.clientY - ly) * 0.006;
+      const { dYaw, dPitch } = orbitDragDelta(e.clientX - lx, e.clientY - ly, 0.006);
+      cam.az += dYaw;
+      cam.el += dPitch;
       cam.el = Math.max(-1.5, Math.min(1.5, cam.el));
     }
     lx = e.clientX;
@@ -93,7 +96,7 @@ export function createOrbitCameraInput(
     // the same at 3000 units out and at 0.02. The rate is up from the old
     // short-range value to keep a full traverse a similar number of notches now
     // that the range spans five decades instead of two.
-    cam.dist *= Math.exp(e.deltaY * 0.0018);
+    cam.dist = exponentialZoomDistance(cam.dist, e.deltaY, 0.0018);
     // The floor is deep inside the disc, where sprites resolve into individual
     // billboards — the regime the app hits on descent and the one worth tuning
     // against. It works only because the near plane tracks `dist`.
