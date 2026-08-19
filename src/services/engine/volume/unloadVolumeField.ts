@@ -22,5 +22,5 @@ export function unloadVolumeField(
 ): void {
   state.gpu.volumeFieldRenderer?.unload(id);
   store.dispatch(removeVolumeField(id));
-  // Wake rides the settings dispatch above; watchWakeSaga's route table renders it (#14 D2).
+  // Wake rides the settings-row dispatch; watchWakeSaga's route table renders it (#14 D2).
 }
