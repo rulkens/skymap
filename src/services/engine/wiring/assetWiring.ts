@@ -237,6 +237,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   },
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
+  // mcpm/cf4Density/polyphorm2Mrs are load-once and deliberately declare no
+  // `release`: adding one requires wiring `onRelease` to `unloadVolumeField`, or the
+  // four GPU resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
   // Optional-chained because `settings.volumes.items` has no entry for a field
   // until it is seeded.
   {
