@@ -101,7 +101,10 @@ the deep tuning surface.
    three, folded into one `uploadVolumeField`; the imperative side-door is
    **kept and folded**, not deleted; #13's re-open condition is checked and
    **fails**, so there is no table to expect; site 4 closes with a ruling, not a
-   patch; **5** wake-vote fold, **6** debug derivation, **7** the
+   patch; **5** ~~wake-vote fold~~ **REFINED by #15 (2026-08-20)** — one
+   `anim` bag field (`labelsAnimating`) plus two deletions, no table; a
+   reader of #9 alone should not expect a wake registry, see #15; **6** debug
+   derivation, **7** the
    `FADE_ROW`/`VISIBILITY_ACTION_ROW` derivation decision. Rungs 1 and 3 get
    mini-plans; the rest are bounded changes. Track B is unchanged and
    parallel; **Track C gates on B + rungs 1–3 only**, so the MW landing gets
@@ -378,6 +381,179 @@ the deep tuning surface.
     already looking, plus this rung's tests over the release half, which land
     before it has a caller. Evidence + the rejected generic:
     [rung-4 plan](../../superpowers/plans/2026-08-19-volume-ingest.md).
+
+15. **The wake-vote fold is one bag field, two deletions, and seven rulings —
+    no registry** (2026-08-20, ruled in rung 5 — refines #9's rung-5 clause):
+    #7 named a fold "into the anim bag" and #14 D2 handed rung 5 a deletion.
+    Both were right, and both were small. A census of every genuine
+    `requestRender()` call site in `src/` (dependency-wiring sites that only
+    thread a `requestRender` closure through a factory are plumbing, not
+    invocations, and are excluded) found **28**, none uncounted:
+
+    | class              | count | outcome                                            |
+    | ------------------- | ----- | --------------------------------------------------- |
+    | MECHANISM           | 3     | untouched — `watchWakeSaga.ts:54`, `watchSelectionWakeSaga.ts:26`, `runFrame.ts:716` |
+    | ESSENTIAL            | 15    | untouched                                          |
+    | REDUNDANT-COVERED    | 5     | 2 deleted (volume pair, D7), 3 kept (D8)           |
+    | VOTE/PREDICATE       | 2     | 1 folded (label director, D5), 1 handed to rung 8 (D6) |
+    | MIXED / uncertain    | 3     | all kept; 1 reclassified ESSENTIAL (D8, D9)        |
+    | **total**            | **28**| **1 folded · 2 deleted · 7 kept · 18 untouched**   |
+
+    The five class counts sum to 28, and the outcome split (1 folded, 2
+    deleted, 7 kept, 18 untouched) sums to 28 too; check both before trusting
+    either. (The source survey labelled ESSENTIAL "14"
+    while listing fifteen sites — corrected here; #15, not the survey, is what
+    rungs 6–8 read as ground truth.) The recurring smell: a "ramp needs another
+    frame" wake fired from three independent places — one already folded into
+    the bag before this rung (`runFrame.ts:649-652`, the star-cut LOD fade),
+    one this rung folds (the label director), one this rung hands to rung 8
+    (`foregroundLabelsLayer.ts:810`'s caption ramp).
+
+    - **D1 — the fold is one `anim` bag field plus two deletions; no table.**
+      After the census the fold has exactly one genuine contributor (the label
+      director) and the deletion exactly two lines. Rung 3's precedent applies
+      unchanged (`decisions.md:198`, "No registry, no walker, no row type was
+      built") — the bag **is** the seam, and extending it is growth.
+    - **D2 — a "vote" is an `anim` bag entry, and that is the rung's
+      boundary.** `shouldKeepTicking.ts:19-29` draws the line itself: every
+      term but `anim` is read off `(state, s, nowMs)`; `anim` is an explicit
+      bag of in-frame votes computed as a side effect of per-frame work
+      already running, with no resting-state home to read from instead. The
+      other seven `shouldKeepTicking` disjuncts (`selectCameraActive`,
+      `texturedDisks.hasInFlightWork`, `fades.isAnyAnimating`,
+      `structureFocus.isAwake`, the flow clause, `selectIsManualPlaying`,
+      `followApproachEaseActive`) fail that test — they are selector or
+      resource reads, already correct, and out of scope. Scope is the bag's
+      contributors, not the disjunction.
+    - **D3 — of the three wake owners #14 D2 named, two stay.**
+      `watchWakeSaga.ts:24-49` is a route table whose per-action alternative
+      is deliberate (`:41-46` — route-level wake would net
+      `updateSelectionHover`, which must stay wake-free);
+      `installSlotReadyWake.ts:26-35` is already one subscription over every
+      slot (`allSlots`), i.e. this rung's own "N scattered calls → 1
+      subscription" fold, done in advance (its header says so at `:8-11`).
+      Neither is a scattered call; both stay. The deletion is the third owner
+      alone.
+    - **D4 — no `WAKE_LAYERS` manifest; the accretion cost is ACCEPTED.**
+      `current-contracts-map.md:193,211` flag "wake terms accrete by hand
+      (each = a signature edit)" as a loose spot. Ruled: the signature edit is
+      the feature — a vote is reachable only while the planner computing it is
+      already running, so a **required** bag field is the compile-time gate
+      against a dropped vote. A manifest of rows would have to carry closures
+      over per-frame planner output, which #14 D4's standing form forbids
+      (plain data, never closures). Three fields, three producers, no shared
+      row shape — #13's clauses fail exactly as they did for staleness. The
+      "hand-maintained disjunction" observation is re-deferred to the
+      **umbrella reassessment**, not to another rung.
+    - **D5 — the label director's vote folds into the bag; the rung's one
+      structural change.** `labelDirectorSubsystem.runFrame` used to call
+      `state.subsystems.scheduler.requestRender()` from inside per-frame
+      producer polling — the exact pattern `runFrame.ts:649-652` already
+      documents as eliminated elsewhere. It folds cleanly because the ordering
+      permits it: the director runs at `runFrame.ts:640`, the frame body's
+      only early return sits at `:475` (well above it), and the
+      `shouldKeepTicking` call sits at `:709-713` — so the vote is always
+      computed before the decision point, in the same frame, with nothing
+      between them that can return. No frame can be skipped. `runFrame` is the
+      director's single caller (grep-confirmed), so the signature change
+      (`runFrame(state, ctx): boolean`) has one call site. Landed: the
+      director carries no `state.subsystems.scheduler` reference anywhere in
+      the file; its `### Awake aggregation` header (`labelDirectorSubsystem.ts:19-23`)
+      now describes the vote instead of the call; `shouldKeepTicking`'s `anim`
+      parameter carries the required `labelsAnimating` field
+      (`shouldKeepTicking.ts:120`) alongside `starFadeAnimating` and
+      `earthTilesAnimating`, and the disjunction is ten terms, not nine
+      (`shouldKeepTicking.ts:122-133`).
+    - **D6 — `foregroundLabelsLayer.ts:810`'s caption wake is rung 8's, and
+      the split is clean.** Four reasons: (1) no return channel exists — the
+      label director is invoked directly and can return a vote,
+      `foregroundLabelsLayer.draw` is invoked deep inside `executeFrame`'s
+      program walk, and folding it needs a new mechanism for exactly one row,
+      which #10 and #13/#14's method both forbid; (2) a remembered flag is a
+      behaviour risk in a behaviour-neutral PR — any frame where the row's
+      `enabled()` gate is false leaves the last frame's ramp flag stale in
+      either direction, a failure mode today's in-pass call does not have; (3)
+      it deepens the exact outlier rung 8 exists to fix
+      (`renderer-layer-outliers.md:59` already flags `draw` writing module
+      state its own `enabled` reads back); (4) rung 8 dissolves the site
+      rather than folding it — once `foregroundLabelsLayer`'s captions are
+      `LabelProducer`s, their ramp rides the vote this rung minted, so
+      building a parallel channel now is work rung 8 would delete. Rung 8's
+      author inherits this finding rather than re-deriving it.
+    - **D7 — the two volume-ingest wakes are deleted, discharging #14 D2.**
+      #14 kept them "so the ingest path's wake does not depend on saga wiring
+      order" and handed the deletion here. The hedge is answered: each
+      function dispatches its **own covering** settings action —
+      `uploadVolumeField.ts:25` dispatches `settings/addVolumeField`,
+      `unloadVolumeField.ts:24` dispatches `settings/removeVolumeField`, both
+      `settingsRoute` members `watchWakeSaga.ts:47-49` wakes on
+      unconditionally. Coverage is internal to the function, so no caller and
+      no wiring order can break it — if `watchWakeSaga` were ever unwired the
+      symptom would be the entire settings surface going dark, not a silent
+      volume-only miss. The upload path is covered three times over (the
+      dispatch, `syncVisibilityFades`'s own wake via `fadeTo` at
+      `fadeRegistry.ts:131`, and the slot's ready transition via
+      `installSlotReadyWake`). Neither deleted line was pinned by a positive
+      test, which is why rung 4 could relabel them without touching one and
+      why this rung could delete them the same way; one negative assertion
+      about the deleted call (`uploadVolumeField.test.ts:84`) went with it,
+      per [`testing.md`](../superpowers/conventions/testing.md) — it could no
+      longer fail on a real bug once the call it asserted against was gone.
+      Both files carry one line naming the dispatch above as the wake.
+    - **D8 — the internal-coverage test, stated once because it recurs, and
+      the sites that turn on its second clause.** Rule: **delete a redundant
+      `requestRender()` only where the same function performs a dispatch that
+      covers the same fact.** Both clauses are load-bearing — a same-body
+      dispatch about a *different* fact is not coverage, and neither is
+      coverage that depends on who called. The second clause is what
+      separates the two volume functions (D7, whose dispatch **is** the state
+      change the wake announces) from three kept sites where it fails:
+      `biasCorrectionSubsystem.ts:277` (`setMode`'s entry wake — dispatches
+      nothing itself; its comment, `:272-276`, gained the missing clause — the
+      wake is redundant with the settings route today, but coverage is the
+      caller's job, not this function's); `startLoop.ts:151` — **the rule's
+      worked exception, and the reason the second clause exists**: its
+      neighbouring `goLiveNowAction()` dispatch (`:142`) is a `time/`-route
+      write in the *same function body*, so clause one alone would predict
+      DELETE, but it covers a different fact (a clock snap) — the ignition
+      must not depend on the clock snap's route membership, one added comment
+      (`startLoop.ts:149-150`) records why; `syncVisibilityFadeItem.ts`'s
+      production-dead `animate:false` branch, which fails the test for a
+      third reason — it exists to mirror a sibling's wake policy the test
+      does not reach at all — and is recorded here as **rung 7's**: it is
+      dead-branch hygiene on the FADE_LAYERS bridge (#11: "rung 7 widens to
+      full fade-path canonicalization"), not this rung's family.
+    - **D9 — the three MIXED sites all keep, and one reclassifies.**
+      `wireInput.ts:382` (`onZoom`'s wake, comment at `:378-381`) moves
+      ESSENTIAL, not mixed: the census
+      read the unconditional wake beside a conditional dispatch as "zoom
+      clamped to a no-op," which is false —
+      `applyWheelZoom.ts:72-74`'s follow branch mutates
+      `clock.followDistanceTarget` **and returns `null`**, so a wheel tick
+      while following a body changes real state and dispatches nothing, and
+      steady follow after saturation does not itself keep the loop ticking
+      (`shouldKeepTicking.ts:129`, deliberately). Without the wake, zooming a
+      followed planet from a resting camera would not repaint until something
+      else woke the loop. `syncVisibilityFades.ts:152` (batch snap wake) and
+      `clipPlayer.ts:206` (fade cue) stay untouched — the first is the paired
+      half of a stated contract (the snap path deliberately does not wake, so
+      the batch caller wakes once for the batch), the second is a
+      continuation vote, not route coverage, and either could turn essential
+      again under a future caller shape without anyone noticing today.
+    - **D10 — site 6 (#13's earth-tile hand-off) is already the reference
+      shape; nothing to build.** `earthTileSubsystem.ts` has no
+      `requestRender()` for the staleness fact #13 handed here —
+      `isAnimating()` is a pull-vote read at `runFrame.ts:629`, threaded into
+      the bag, which is the model D5 measured the label director against.
+      Also closes the "no wake vote" half of `current-contracts-map.md:190`'s
+      marker-path 🔴: `produceStructureMarkers.ts:57,75` reads
+      `fades.opacityOf`, so its ramps ride `fades.isAnyAnimating` and its
+      apparent-size fades ride camera motion — there is no gap. The
+      shadow-producer/registration half of that 🔴 stays open, unowned by this
+      rung.
+
+    **No `WAKE_LAYERS` manifest, row type or walker was built.** Evidence +
+    the full accounting: [rung-5 plan](../../superpowers/plans/2026-08-19-wake-vote-fold.md).
 
 ## The contract (settled sketch)
 
