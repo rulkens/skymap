@@ -1,4 +1,4 @@
-import type { EarthTileBand } from '../../@types/scene/EarthTilePlannerParams';
+import type { EarthTileBand } from '../../@types/scene/EarthTileBand';
 
 /**
  * earthTileBandRequestAllowed — true when some band overlapping this tile's

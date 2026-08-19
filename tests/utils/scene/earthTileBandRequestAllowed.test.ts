@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { earthTileBandRequestAllowed } from '../../../src/utils/scene/earthTileBandRequestAllowed';
-import type { EarthTileBand } from '../../../src/@types/scene/EarthTilePlannerParams';
+import type { EarthTileBand } from '../../../src/@types/scene/EarthTileBand';
 
 const uv = (u0: number, u1: number, v0: number, v1: number) => ({ u0, u1, v0, v1 });
 

@@ -1,5 +1,5 @@
 import type { EarthTileKind } from '../../@types/data/EarthTileKind';
-import type { EarthTileBand } from '../../@types/scene/EarthTilePlannerParams';
+import type { EarthTileBand } from '../../@types/scene/EarthTileBand';
 import type { EarthTilePlan } from '../../@types/scene/EarthTilePlan';
 import type { EarthTileRequest } from '../../@types/scene/EarthTileRequest';
 import type { Vec2 } from '../../@types/math/Vec2';

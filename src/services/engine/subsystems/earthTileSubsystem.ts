@@ -18,11 +18,9 @@ import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { EarthTileManifest } from '../../../@types/scene/EarthTileManifest';
 import type { EarthResidentTile } from '../../../@types/scene/EarthResidentTile';
+import type { EarthTileBand } from '../../../@types/scene/EarthTileBand';
 import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
-import type {
-  EarthTileBand,
-  EarthTilePlannerParams,
-} from '../../../@types/scene/EarthTilePlannerParams';
+import type { EarthTilePlannerParams } from '../../../@types/scene/EarthTilePlannerParams';
 import type { EarthTileSubsystem } from '../../../@types/engine/subsystems/EarthTileSubsystem';
 import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
