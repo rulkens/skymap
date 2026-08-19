@@ -18,8 +18,10 @@ import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { EarthTileManifest } from '../../../@types/scene/EarthTileManifest';
 import type { EarthResidentTile } from '../../../@types/scene/EarthResidentTile';
+import type { EarthTileBand } from '../../../@types/scene/EarthTileBand';
 import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
 import type { EarthTilePlannerParams } from '../../../@types/scene/EarthTilePlannerParams';
+import type { EarthTileRequest } from '../../../@types/scene/EarthTileRequest';
 import type { EarthTileSubsystem } from '../../../@types/engine/subsystems/EarthTileSubsystem';
 import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -112,19 +114,35 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     tier: Tier,
   ): EarthTilePlannerParams | null {
     const levels = fetched.levels?.[TILED_KIND];
-    if (!levels) return null;
+    if (!levels || levels.length === 0) return null;
     const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
     const baseLevel = earthBaseLevelForTier(tier);
-    // Deeper of manifest-min and base+1: at/above base would re-download detail.
-    const minTileLevel = Math.max(levels.min, baseLevel + 1);
-    if (!(levels.max >= minTileLevel)) return null;
+    const bands: EarthTileBand[] = [];
+    for (const level of levels) {
+      // A structurally-wrong manifest entry (missing/malformed `bounds`)
+      // degrades by skipping it, matching this function's whole stance —
+      // never throw out of `refreshParams` over one bad band.
+      if (typeof level?.bounds?.west !== 'number') continue;
+      // Deeper of the band's own min and base+1: at/above base would
+      // re-download detail the whole-globe base already delivers.
+      const min = Math.max(level.min, baseLevel + 1);
+      // A band clamped past its own depth at this tier bakes nothing usable.
+      if (!(level.max >= min)) continue;
+      bands.push({
+        uBounds: [(level.bounds.west + 180) / 360, (level.bounds.east + 180) / 360],
+        // South-first: matches the mesh's v (v = 0 at the south pole).
+        vBounds: [(level.bounds.south + 90) / 180, (level.bounds.north + 90) / 180],
+        min,
+        max: level.max,
+      });
+    }
+    if (bands.length === 0) return null;
     return {
       kind: TILED_KIND,
       tilePx,
       baseLevel,
-      minTileLevel,
-      maxTileLevel: levels.max,
+      bands,
       windowSide: EARTH_TILE_WINDOW_SIDE,
       lodBias: EARTH_TILE_LOD_BIAS,
     };
@@ -265,17 +283,27 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     frameCounter++;
 
-    // Requests arrive largest-on-screen-first: decides slot priority AND fetch order.
+    // Requests arrive largest-on-screen-first: decides slot priority AND fetch
+    // order. Two passes, not one: a single allocating pass let a new,
+    // higher-priority request evict a resident this same plan would have
+    // touched moments later — it still carried last frame's LRU stamp, so it
+    // looked stale (and losing its pixels cascaded into evicting the next
+    // untouched one). Pass 1 stamps every resident first; only genuine misses
+    // reach pass 2's allocator.
+    const misses: EarthTileRequest[] = [];
     for (const request of plan.requests) {
       const key = earthTilePath(request.tile, prefix);
-
-      // Checked BEFORE allocating: an allocated failed key would keep its LRU
+      // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
       if (atlas.isFailed(key)) continue;
+      if (atlas.touch(key, frameCounter) === null) misses.push(request);
+    }
+
+    for (const request of misses) {
+      const key = earthTilePath(request.tile, prefix);
 
       // Null means the atlas is already full this frame.
       if (atlas.allocate(key, frameCounter) === null) continue;
-      if (atlas.isLoaded(key)) continue;
 
       atlas.enqueueFetch({
         key,

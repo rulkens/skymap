@@ -64,8 +64,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     viewProjLocal,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    minTileLevel: MIN_TILE_LEVEL,
-    maxTileLevel: 13,
+    bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 13 }],
     windowSide: EARTH_TILE_WINDOW_SIDE,
     tilePx: EARTH_TILE_PX,
     // Fixture default is the 1:1 point, not the shipped `EARTH_TILE_LOD_BIAS`,
@@ -149,8 +148,14 @@ describe('planEarthTiles', () => {
     // never fires and no tile is ever fetched.
     const shipped = {
       baseLevel: BASE_LEVEL,
-      minTileLevel: MIN_TILE_LEVEL,
-      maxTileLevel: MIN_TILE_LEVEL,
+      bands: [
+        {
+          uBounds: [0, 1] as const,
+          vBounds: [0, 1] as const,
+          min: MIN_TILE_LEVEL,
+          max: MIN_TILE_LEVEL,
+        },
+      ],
     };
 
     const close = planEarthTiles({ ...nadirAt(1000), ...shipped });
@@ -171,7 +176,10 @@ describe('planEarthTiles', () => {
   it('never exceeds maxTileLevel, however close the camera gets', () => {
     // A camera low enough to want z11 against a pyramid baked only to z5 — the
     // development-pyramid case, and the one that would otherwise 404-storm.
-    const plan = planEarthTiles({ ...nadirAt(125), maxTileLevel: 5 });
+    const plan = planEarthTiles({
+      ...nadirAt(125),
+      bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 5 }],
+    });
     expect(plan.zWin).toBe(5);
     expect(plan.requests.every((r) => r.tile.z <= 5)).toBe(true);
     expect(plan.requests.length).toBeGreaterThan(0);
@@ -186,7 +194,10 @@ describe('planEarthTiles', () => {
     // can remove one. With the shipped floor they would all be dropped for
     // having no file, and the cull under test would have nothing to show.
     const z = BASE_LEVEL;
-    const plan = planEarthTiles({ ...nadirAt(20_000), minTileLevel: z });
+    const plan = planEarthTiles({
+      ...nadirAt(20_000),
+      bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: z, max: 13 }],
+    });
     expect(plan.zWin).toBe(z);
 
     const keys = new Set(plan.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`));

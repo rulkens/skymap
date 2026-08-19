@@ -60,6 +60,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
 - [ ] **Fades pop instead of ramping after the render loop idles** `ready` — `fadeRegistry.fadeTo` stamps the ramp's start from the stale last-*rendered*-frame time, not a live clock. → [details](backlog/2026-08-20-fade-pop-after-idle.md)
+- [ ] **`createTieredScfdFetcher` factory** `ready` — the Edenhofer dust fetcher will be the third hand-copied tiered-SCFD fetcher (after `mcpmFetcher` and polyphorm's); collapse the three into one `createTieredScfdFetcher(baseName)` factory on next touch.
 
 ## Rendering
 
@@ -86,8 +87,11 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`TextureAtlas` eviction is flat LRU** `needs-design` — van Waveren's finest-mip-first-then-LRU would let coarse, widely-depended-on pages survive over finer ones instead of evicting by recency alone.
 - [ ] **Earth tile `tilePx` can only ever hold one value** `ready` — `derivePlannerParams` refuses any manifest value but the constant, yet it's threaded through six functions and three docstrings promise a re-bake at a different edge is "a data change."
 - [ ] **Earth page table re-derives the atlas's slot-to-cell decode** `ready` — `TextureAtlas.slotsPerRow` is private; `buildEarthPageTable` and `earthTileSubsystem` each recompute it independently.
+- [ ] **`EarthImagerySource` carries identity twice** `ready` — `id`/`attribution` duplicate `provenance.sourceId`/`provenance.attribution`; collapse to `provenance` only on next touch, `id` read as `provenance.sourceId` at its ~4 call sites.
+- [ ] **Incremental band re-bake** `needs-design` — `build-earth-tiles` always bakes every band, costing ~10 min of byte-identical BMNG work per EOX-only iteration. → [details](backlog/2026-08-19-incremental-band-bake.md)
+- [ ] **Multi-region EOX coverage** `needs-design` — `eoxTileSource` supports one contiguous patch only; a second `fetch-eox` region needs its coverage boxes decomposed per connected component. → [details](backlog/2026-08-19-multi-region-eox-coverage.md)
 - [ ] **Cloud deck PBR + live coverage** `deferred` — deck is Lambert-lit with no thickness channel (alpha = luminance of RGB); analytic multiple-scattering phase term is cheap, real τ / live GIBS clouds are separable data-layer efforts. → [details](backlog/2026-07-19-cloud-deck-pbr.md)
-- [ ] **Local interstellar-dust volume (Edenhofer 2024)** `ready` — Sun-centered extinction cube as an SCFD field (MCPM-clone, CC-BY 4.0 verified); design researched 2026-08-19: NEAR0 slab, multiplicative fold, per-field fade band as prep; sequence after raymarch-acceleration. → [details](backlog/2026-07-18-local-dust-volume.md)
+- [ ] **Earth-sky extinction panorama** `needs-design` — bake Edenhofer's native HEALPix into a 2D all-sky integrated-extinction texture multiplied over the sky at planetary zoom; the crisp from-Earth dark-lane view the cartesian dust cube can't give. → [details](backlog/2026-08-19-earth-sky-extinction-panorama.md)
 - [ ] **Perf-harness findings: measured hotspots** `needs-design` — large tier ≈ 3× medium (blows 60fps alone), small slower than medium (unexplained), solar-system 16.9 ms with vertex-bound hdr·NEAR0 at 60%. → [details](backlog/2026-07-21-perf-harness-findings.md)
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
 - [ ] **Bloom perf — instrument first** `needs-design` — bloom is ~5 ms / 23% on solar-system; THREE levers now measured-dead (5→3, bloom0 1/3, fold-into-tonemap — the last a wash on a clean interleaved A/B, spikes 2026-07-22), and the whole pyramid is one timing slot so the cost is unlocalised. Split the slot per-sub-pass before any more attempts. → [details](backlog/2026-07-21-bloom-mip-count-perf.md)
@@ -162,6 +166,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Surface-directed zoom** `needs-design` — zoom dollies toward the body centre, so you cannot zoom toward the point under the cursor. → [details](backlog/2026-07-30-surface-directed-zoom.md)
 - [ ] **Cursor-anchored orbit drag** `needs-design` — the ground follows the cursor only at the screen centre, and yaw dies near the poles; same raycast prerequisite as surface-directed zoom. → [details](backlog/2026-07-30-cursor-anchored-orbit-drag.md)
+- [ ] **Surface-fixed camera follow** `needs-design` — at the new ~1 km standoff, Earth's rotation under a LIVE clock reads as camera drift under the centre-pivoted orbit; follow the body's rotating frame near the surface. → [details](backlog/2026-08-19-surface-fixed-camera-follow.md)
 
 ## Docs & process
 

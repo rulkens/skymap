@@ -1,12 +1,15 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
+import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
 import { earthTilePath } from '../../../src/utils/scene/earthTilePath';
+import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
+import type { EarthTileManifest } from '../../../src/@types/scene/EarthTileManifest';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 const TILE_PX = 512;
 
@@ -133,6 +136,194 @@ describe('bakeCoarserLevel', () => {
 
     expect(nw[3]).toBeLessThanOrEqual(CHANNEL_TOLERANCE); // NW quadrant: transparent, no child there
     expectPixelNear(se, WHITE);
+  });
+
+  // The Fix-1 "always opaque" invariant: a partial parent must not leave a
+  // transparent hole once an underfill source is given.
+  const ORANGE = [255, 128, 0, 255] as const;
+
+  /** A stub `EarthImagerySource` whose `readBox` always returns a solid colour. */
+  function stubFillerSource(rgba: readonly [number, number, number, number]): EarthImagerySource & {
+    readBoxCalls: number;
+  } {
+    const stub = {
+      id: 'stub-filler',
+      attribution: 'stub-filler attribution',
+      provenance: {
+        sourceId: 'stub-filler',
+        attribution: 'stub-filler attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 20,
+      coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
+      readBoxCalls: 0,
+      async readBox(_box: LonLatBounds, widthPx: number, heightPx: number) {
+        stub.readBoxCalls++;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
+        return raster;
+      },
+    };
+    return stub;
+  }
+
+  it('fills a missing quadrant from the underfill source instead of leaving it transparent', async () => {
+    const dir = tmpDir();
+    await writeChild(dir, 2, 1, 1, WHITE); // SE only — NW/NE/SW absent
+    const filler = stubFillerSource(ORANGE);
+
+    await bakeCoarserLevel(1, TILE_PX, dir, filler);
+
+    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
+    const { data } = await sharp(parentPath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const nw = pixelAt(data, TILE_PX, 128, 128);
+    const se = pixelAt(data, TILE_PX, 384, 384);
+
+    expectPixelNear(nw, ORANGE); // filled by the underfill source, fully opaque
+    expectPixelNear(se, WHITE); // the present child, untouched
+    expect(filler.readBoxCalls).toBe(1);
+  });
+
+  it('does not call the underfill source when all four children are present', async () => {
+    const dir = tmpDir();
+    await writeChild(dir, 2, 0, 0, RED);
+    await writeChild(dir, 2, 1, 0, GREEN);
+    await writeChild(dir, 2, 0, 1, BLUE);
+    await writeChild(dir, 2, 1, 1, WHITE);
+    const filler = stubFillerSource(ORANGE);
+
+    await bakeCoarserLevel(1, TILE_PX, dir, filler);
+
+    expect(filler.readBoxCalls).toBe(0);
+  });
+});
+
+describe('bakeAll', () => {
+  // z=1 at TILE_PX=512 is the shallowest real grid (2 columns x 1 row) — the
+  // smallest fixture that still exercises two disjoint one-tile-wide bands.
+  const STUB_Z = 1;
+  const BOX_WEST: LonLatBounds = { west: -180, east: 0, south: -90, north: 90 };
+  const BOX_EAST: LonLatBounds = { west: 0, east: 180, south: -90, north: 90 };
+
+  /** A minimal `EarthImagerySource` that answers only its own tile box —
+   *  the other stub's box is outside its coverage, same as a real source. */
+  function stubSource(
+    id: string,
+    coverage: LonLatBounds,
+    rgba: readonly [number, number, number, number],
+  ): EarthImagerySource {
+    return {
+      id,
+      attribution: `${id} attribution`,
+      provenance: { sourceId: id, attribution: `${id} attribution`, vintage: 'stub-vintage' },
+      maxLevel: STUB_Z,
+      coverage: [coverage],
+      async readBox(box, widthPx, heightPx) {
+        if (box.west !== coverage.west) return null;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
+        return raster;
+      },
+    };
+  }
+
+  // The Fix-1 "always opaque" invariant, exercised through `bakeAll` itself
+  // rather than `underfillImagerySource`/`bakeCoarserLevel` in isolation —
+  // pins the `effective = underfillImagerySource(source, underfill)` wiring
+  // at the DEEPEST level (buildEarthTiles.ts's `bakeDeepestLevel` call),
+  // which the two halves' own tests don't reach.
+  const ORANGE = [255, 128, 0, 255] as const;
+
+  it('fills a partial deepest-level primary read from the underfill source, fully opaque', async () => {
+    const dir = tmpDir();
+    // Primary answers only its own half of every tile's box (see the raster
+    // below); the rest of each tile stays transparent unless underfilled.
+    const primary: EarthImagerySource = {
+      id: 'stub-primary',
+      attribution: 'stub-primary attribution',
+      provenance: {
+        sourceId: 'stub-primary',
+        attribution: 'stub-primary attribution',
+        vintage: 'stub',
+      },
+      maxLevel: STUB_Z,
+      coverage: [BOX_WEST],
+      async readBox(box, widthPx, heightPx) {
+        if (box.west !== BOX_WEST.west) return null;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        // Opaque red in the left half only — the right half stays [0,0,0,0].
+        for (let y = 0; y < heightPx; y++) {
+          for (let x = 0; x < widthPx / 2; x++) {
+            const i = (y * widthPx + x) * 4;
+            raster.set([255, 0, 0, 255], i);
+          }
+        }
+        return raster;
+      },
+    };
+    const underfill = stubSource('stub-underfill', BOX_WEST, ORANGE);
+
+    await bakeAll([{ source: primary, minLevel: STUB_Z, underfill }], dir);
+
+    const tilePath = join(
+      dir,
+      earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    const { data, info } = await sharp(tilePath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const left = pixelAt(
+      data,
+      info.width,
+      Math.floor(info.width * 0.25),
+      Math.floor(info.height / 2),
+    );
+    const right = pixelAt(
+      data,
+      info.width,
+      Math.floor(info.width * 0.75),
+      Math.floor(info.height / 2),
+    );
+
+    expectPixelNear(left, [255, 0, 0, 255]); // primary, untouched
+    expectPixelNear(right, ORANGE); // underfilled, fully opaque
+  });
+
+  it('writes two manifest entries and both sources tiles, in band order', async () => {
+    const dir = tmpDir();
+    const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
+    const east = stubSource('stub-east', BOX_EAST, [0, 0, 255, 255]);
+
+    await bakeAll(
+      [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ],
+      dir,
+    );
+
+    const manifest = JSON.parse(
+      readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+    ) as EarthTileManifest;
+    const bands = manifest.levels.surface;
+    expect(bands).toHaveLength(2);
+    expect(bands?.[0]?.bounds).toEqual(BOX_WEST);
+    // Each band's builtFrom is ITS OWN source's provenance, not a shared
+    // module-level assumption — the bug this pins would stamp both bands
+    // with whichever source's vintage happened to be hardcoded.
+    expect(bands?.[0]?.builtFrom).toEqual(west.provenance);
+    expect(bands?.[1]?.bounds).toEqual(BOX_EAST);
+    expect(bands?.[1]?.builtFrom).toEqual(east.provenance);
+
+    const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
+    expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX));
+    expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX));
   });
 });
 

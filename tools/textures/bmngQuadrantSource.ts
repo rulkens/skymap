@@ -35,7 +35,7 @@ import sharp from 'sharp';
 
 import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
 import type { EarthImagerySource } from './EarthImagerySource';
-import type { LonLatBox } from './LonLatBox';
+import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */
 const QUADRANT_SPAN_DEG = 90;
@@ -92,7 +92,7 @@ function soleBandIndex(nearDeg: number, farDeg: number, bands: number): number |
 /** The quadrant containing `box`, or a throw naming it if it spans two (or
  *  falls off the grid — a caller bug for a globally-covering source, not a
  *  no-coverage answer). */
-function quadrantForBox(box: LonLatBox): QuadrantPlacement {
+function quadrantForBox(box: LonLatBounds): QuadrantPlacement {
   const column = soleBandIndex(box.west + 180, box.east + 180, QUADRANT_COLUMNS.length);
   const row = soleBandIndex(90 - box.north, 90 - box.south, QUADRANT_ROWS.length);
   if (column === null || row === null) {
@@ -113,6 +113,8 @@ export async function bmngQuadrantSource(source: {
   readonly id: string;
   /** Verbatim attribution the licence requires. */
   readonly attribution: string;
+  /** Human-readable vintage, folded with `id`/`attribution` into `provenance`. */
+  readonly vintage: string;
   /** Absolute path per quadrant — paths rather than registry keys because the
    *  eight files are one raster whose VINTAGE is the caller's choice, same as
    *  `equirectFileSource`. Keying on the quadrant union makes a forgotten file
@@ -205,6 +207,8 @@ export async function bmngQuadrantSource(source: {
     id: source.id,
     attribution: source.attribution,
     maxLevel: earthLevelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
+    coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
+    provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 
     async readBox(box, widthPx, heightPx) {
       const placement = quadrantForBox(box);
