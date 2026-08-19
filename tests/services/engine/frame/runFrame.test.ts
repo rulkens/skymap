@@ -782,6 +782,11 @@ describe('runFrame — milky-way star count', () => {
       buffers: vi.fn(),
       starCount: () => currentCount,
       regenerate,
+      reconcile: (wantedCount: number) => {
+        if (currentCount !== wantedCount) {
+          regenerate(wantedCount);
+        }
+      },
       destroy: vi.fn(),
     } as unknown as EngineState['gpu']['milkyWayCloud'];
 
