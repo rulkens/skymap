@@ -58,6 +58,7 @@ import {
 } from '../state/slices/catalogSlice';
 import { buildKey } from '../state/buildKey';
 import { gridShapeKeyFor } from '../state/gridShapeKeyFor';
+import { createTokenWatcher } from '../state/tokenWatcher';
 import {
   setManualCenterMpc,
   setManualSizeMpc,
@@ -209,10 +210,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let requestedBuildKey = JSON.stringify(buildKey(store.getSnapshot()));
     let buildGeneration = 0;
     let building = false;
-    let lastResetToken = store.getSnapshot().sim.resetToken;
-    let lastClearToken = store.getSnapshot().sim.clearTraceToken;
-    let lastExportToken = store.getSnapshot().sim.exportToken;
-    let lastScfdToken = store.getSnapshot().sim.scfdToken;
+    const resetTokenWatcher = createTokenWatcher(store.getSnapshot().sim.resetToken);
+    const clearTraceTokenWatcher = createTokenWatcher(store.getSnapshot().sim.clearTraceToken);
+    const exportTokenWatcher = createTokenWatcher(store.getSnapshot().sim.exportToken);
+    const scfdTokenWatcher = createTokenWatcher(store.getSnapshot().sim.scfdToken);
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
     let boxPreviewUntil = 0;
     // T18 preview-export view: a second TracePass over a packed-cube buffer,
@@ -577,10 +578,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
       }
       harness = h;
       latestWeights = weights;
-      lastResetToken = store.getSnapshot().sim.resetToken;
-      lastClearToken = store.getSnapshot().sim.clearTraceToken;
-      lastExportToken = store.getSnapshot().sim.exportToken;
-      lastScfdToken = store.getSnapshot().sim.scfdToken;
+      resetTokenWatcher.sync(store.getSnapshot().sim.resetToken);
+      clearTraceTokenWatcher.sync(store.getSnapshot().sim.clearTraceToken);
+      exportTokenWatcher.sync(store.getSnapshot().sim.exportToken);
+      scfdTokenWatcher.sync(store.getSnapshot().sim.scfdToken);
       // disposeHarness() (above, via disposePreview()) already freed the old
       // preview pass/buffer; forcing the edge low re-packs against the fresh
       // harness on the subscriber's next tick, IF the toggle was left on.
@@ -729,8 +730,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       }
 
       if (harness) {
-        if (s.sim.resetToken !== lastResetToken) {
-          lastResetToken = s.sim.resetToken;
+        if (resetTokenWatcher.changed(s.sim.resetToken)) {
           harness.reset(s.sim.initMode, s.sim.seed);
           // Old history entries would otherwise show larger step counts than the
           // freshly zeroed HUD counter — a convergence plot that looks like it jumped
@@ -745,16 +745,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
             view: { ...st.view, camera: defaultViewSlice.camera },
           }));
         }
-        if (s.sim.clearTraceToken !== lastClearToken) {
-          lastClearToken = s.sim.clearTraceToken;
+        if (clearTraceTokenWatcher.changed(s.sim.clearTraceToken)) {
           harness.clearTrace();
         }
-        if (s.sim.exportToken !== lastExportToken) {
-          lastExportToken = s.sim.exportToken;
+        if (exportTokenWatcher.changed(s.sim.exportToken)) {
           void runExport();
         }
-        if (s.sim.scfdToken !== lastScfdToken) {
-          lastScfdToken = s.sim.scfdToken;
+        if (scfdTokenWatcher.changed(s.sim.scfdToken)) {
           void runScfdExport();
         }
         // T20: jittered-position samples and data-point samples are differently-defined
