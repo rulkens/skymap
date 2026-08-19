@@ -41,9 +41,10 @@ function distanceToSegment(
  * far that in-plane point sits from the circle itself (`||hit − center| − radius|` — exact,
  * since the plane hit is already coplanar with the ring). A ray near-parallel to the plane has
  * no clean hit; distance-to-center-point is the fallback (same shape as the resize handles'
- * own point test below), good enough for the rare edge-on case.
+ * own point test below), good enough for the rare edge-on case. Exported for
+ * pickGizmoHandle.test.ts, which pins that branch by hand.
  */
-function distanceToRing(ray: Ray, ring: RingHandle): number {
+export function distanceToRing(ray: Ray, ring: RingHandle): number {
   const hit = rayPlaneIntersect(ray, ring.centerMpc, ring.axisDir);
   if (!hit) return distanceToRay(ray, ring.centerMpc);
   const dx = hit[0] - ring.centerMpc[0];

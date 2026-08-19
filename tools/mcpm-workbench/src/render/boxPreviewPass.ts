@@ -68,7 +68,8 @@ const GLYPH_SEGMENT_COUNT = 3 * 2 + 6 * 2 + 3 * RING_SEGMENTS;
 const GLYPH_VERTEX_COUNT = GLYPH_SEGMENT_COUNT * VERTICES_PER_SEGMENT;
 const GLYPH_STORAGE_BYTES = GLYPH_SEGMENT_COUNT * GLYPH_SEGMENT_FLOATS * 4;
 // GizmoUniform: hoverHandle i32 + activeHandle i32 + 8 bytes pad.
-const GIZMO_UNIFORM_BYTES = 16;
+// Exported for gizmoUniform.parity.test.ts.
+export const GIZMO_UNIFORM_BYTES = 16;
 
 // Rendering-only sizing (screen-space pixel widths, world-space cone/cross proportions) — none
 // of this feeds pickGizmoHandle, which hit-tests handle.positionMpc against PICK_TOLERANCE_

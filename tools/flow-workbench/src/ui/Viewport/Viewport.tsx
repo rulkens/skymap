@@ -71,6 +71,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         camera: setCameraYawPitch(s.camera, s.camera.yaw + dYaw, s.camera.pitch + dPitch),
       }));
     };
+    // Linear step, not exponentialZoomDistance's ratio — deliberately not adopted here (R8).
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
       store.setState((s) => ({

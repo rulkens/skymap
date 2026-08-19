@@ -437,7 +437,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           // second, redundant reset exactly 200ms after every interaction, on top of
           // the resize the accumulator was always going to do on its own.
           const volpathKey = JSON.stringify([
-            camJson,
+            cam,
             s.view.pathTracer,
             s.sim.clearTraceToken,
             s.sim.resetToken,

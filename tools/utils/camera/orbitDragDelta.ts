@@ -1,10 +1,10 @@
 /**
- * orbitDragDelta — pointer-drag delta, scaled to a yaw/pitch rotation. The one
+ * orbitDragDelta — pointer-drag delta scaled to a yaw/pitch rotation, the one
  * piece of orbit-camera drag math identical across galaxy-renderer,
- * flow-workbench and mcpm-workbench's hand-rolled input handlers. Everything
- * downstream of this multiply differs per tool on purpose (which axis calls
- * itself "az" vs "yaw", the sign a rightward drag applies, pitch clamping) —
- * this function stays sign-agnostic so each caller keeps its own convention.
+ * flow-workbench and mcpm-workbench's hand-rolled input handlers; sign and
+ * axis-naming stay each caller's own convention. Per-tool drag speed also
+ * deliberately differs, not a value to converge: 0.006 rad/px galaxy-renderer
+ * vs 0.005 flow-workbench/mcpm-workbench.
  */
 export type OrbitDragDelta = {
   readonly dYaw: number;

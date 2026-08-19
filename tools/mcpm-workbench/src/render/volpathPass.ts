@@ -284,6 +284,17 @@ export function createVolpathPass(opts: {
     pendingClear = true;
   }
 
+  // V3 review finding 1: the divisor<=1 branch used to leave reducedTex allocated but idle
+  // rather than freeing it, so this is the drop-back-to-1 leg's own cleanup, not dispose()'s.
+  function freeReducedTex(): void {
+    reducedTex?.destroy();
+    reducedTex = null;
+    reducedTexView = null;
+    reducedTexWidth = 0;
+    reducedTexHeight = 0;
+    upsampleBindGroup = null;
+  }
+
   function ensureReducedTex(width: number, height: number): void {
     if (width === reducedTexWidth && height === reducedTexHeight && reducedTex) return;
     reducedTexWidth = width;
@@ -382,6 +393,7 @@ export function createVolpathPass(opts: {
         blit.setBindGroup(0, blitBindGroup);
         blit.draw(3);
         blit.end();
+        freeReducedTex();
         return;
       }
 
@@ -417,9 +429,7 @@ export function createVolpathPass(opts: {
     dispose(): void {
       accumBuffer?.destroy();
       accumBuffer = null;
-      reducedTex?.destroy();
-      reducedTex = null;
-      reducedTexView = null;
+      freeReducedTex();
       palette.destroy();
       camBuffer.destroy();
       paramsBuffer.destroy();

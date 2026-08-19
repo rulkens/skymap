@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import type { Ray } from '../../../../tools/mcpm-workbench/@types/Ray';
+import type { RingHandle } from '../../../../tools/mcpm-workbench/@types/RingHandle';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { gizmoHandleGeometry } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
-import { pickGizmoHandle } from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
+import {
+  distanceToRing,
+  pickGizmoHandle,
+} from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
 
 const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
   [1, 0, 0],
@@ -134,5 +138,22 @@ describe('pickGizmoHandle', () => {
     const ray: Ray = { origin: [-0.4, -0.4, -10], dir: [0, 0, 1] };
 
     expect(pickGizmoHandle(ray, geometry)).toBeNull();
+  });
+
+  it('falls back to center-point distance when the ray is parallel to the ring plane', () => {
+    // ring.axisDir=[0,0,1] (plane z=0); ray.dir=[1,0,0] is exactly perpendicular to axisDir
+    // (dot=0), so rayPlaneIntersect returns null and distanceToRing falls back to
+    // distanceToRay(ray, ring.centerMpc). Hand-computed: p = center-origin = [10,-3,-2],
+    // t = dot(p,dir) = 10 (>=0, unclamped), closest = origin + dir*10 = [0,3,2],
+    // distance = hypot(0-0, 0-3, 0-2) = sqrt(9+4) = sqrt(13).
+    const ring: RingHandle = {
+      id: { kind: 'rotate', axis: 2 },
+      centerMpc: [0, 0, 0],
+      axisDir: [0, 0, 1],
+      radiusMpc: 5,
+    };
+    const ray: Ray = { origin: [-10, 3, 2], dir: [1, 0, 0] };
+
+    expect(distanceToRing(ray, ring)).toBeCloseTo(Math.sqrt(13), 10);
   });
 });
