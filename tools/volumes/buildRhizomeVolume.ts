@@ -17,9 +17,22 @@ import { basename, dirname, extname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
 import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+
+// Rhizome-only, so it lives here rather than as a packLogTraceVoxels param —
+// buildMcpmVolume shares that function and has no clamp need. f16 bit
+// patterns order like their values for non-negative inputs, so comparing
+// packed bits against the threshold's own f16 encoding needs no per-voxel
+// decode.
+function zeroBelowThreshold(voxels: Uint16Array, threshold: number): void {
+  const thresholdBits = f32ToF16Bits(threshold);
+  for (let i = 0; i < voxels.length; i++) {
+    if (voxels[i]! < thresholdBits) voxels[i] = 0;
+  }
+}
 
 function sidecarPathFor(npyPath: string): string {
   return join(dirname(npyPath), basename(npyPath, extname(npyPath)) + '.json');
@@ -38,8 +51,15 @@ function squeezeTrailingSingleton(shape: readonly number[]): readonly number[] {
 export async function buildRhizomeVolume(args: {
   npyPath: string;
   outPath: string;
+  /**
+   * Zero packed voxels whose f16 value falls below this threshold (in the
+   * [0,1] log-normalised domain packLogTraceVoxels produces). Below the
+   * renderer's default-settings visibility deadband, voxels are invisible
+   * fog that costs disproportionate wire bytes — see docs/DATA.md.
+   */
+  clamp?: number;
 }): Promise<void> {
-  const { npyPath, outPath } = args;
+  const { npyPath, outPath, clamp } = args;
 
   // ── 1. Sidecar (rule 1; rules 2-5 are parsePolyphyTraceSidecar's job) ──
   const sidecarPath = sidecarPathFor(npyPath);
@@ -113,6 +133,9 @@ export async function buildRhizomeVolume(args: {
 
   // ── 4. Pack (shared with buildMcpmVolume.ts) ──
   const { voxels, valueMin, valueMax } = packLogTraceVoxels(values, dims);
+  if (clamp !== undefined) {
+    zeroBelowThreshold(voxels, clamp);
+  }
 
   const cube: ScalarCube = {
     dims,
@@ -143,7 +166,7 @@ const SHELL_NAMES = ['inner', 'middle', 'outer'] as const;
 
 function printUsage(): void {
   console.error(
-    'usage: tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --out <path.scfd>\n' +
+    'usage: tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --out <path.scfd> [--clamp <threshold>]\n' +
       '       tsx tools/volumes/buildRhizomeVolume.ts <cube.npy> --shell inner|middle|outer',
   );
 }
@@ -169,7 +192,16 @@ async function main(): Promise<void> {
       printUsage();
       process.exit(1);
     }
-    await buildRhizomeVolume({ npyPath, outPath });
+    const clampIndex = rest.indexOf('--clamp');
+    let clamp: number | undefined;
+    if (clampIndex !== -1) {
+      clamp = Number(rest[clampIndex + 1]);
+      if (!Number.isFinite(clamp)) {
+        printUsage();
+        process.exit(1);
+      }
+    }
+    await buildRhizomeVolume({ npyPath, outPath, clamp });
     return;
   }
 
