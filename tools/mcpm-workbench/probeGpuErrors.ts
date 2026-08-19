@@ -594,6 +594,23 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         await setLayers(page, { 'Path tracer': true });
         await settleFrames(page, SETTLE_FRAMES);
+        // V3: opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
+        // ensureReducedTex) — the layer's own toggle above doesn't expand the section,
+        // CollapsibleSection unmounts its body while folded (grid:box-preview's own
+        // note above). Named 'path tracer divisor', not 'divisor', to stay distinct
+        // from the raymarch section's own slider of that name — both sections are open
+        // simultaneously from here on, so a shared name would be an ambiguous locator.
+        await page.getByRole('button', { name: 'Path tracer', exact: true }).click();
+        const divisor = page.getByRole('slider', { name: 'path tracer divisor', exact: true });
+        const before = await divisor.getAttribute('aria-valuenow');
+        await pressSlider(page, 'path tracer divisor', ['End']);
+        const after = await divisor.getAttribute('aria-valuenow');
+        if (after === before) {
+          throw new Error('layers:path-tracer-on divisor slider did not move — aim stale');
+        }
+        await settleFrames(page, SETTLE_FRAMES);
+        await pressSlider(page, 'path tracer divisor', ['Home']);
+        await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {

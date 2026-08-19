@@ -98,8 +98,17 @@ export type RenderGraph = {
    * pass attached before.
    */
   attachVolpath(source: TraceSource): void;
-  /** Accumulate one path-traced sample per pixel and resolve. Throws if none is attached. */
-  drawVolpath(encoder: GPUCommandEncoder, view: McpmCameraView, params: VolpathParams): void;
+  /**
+   * Accumulate one path-traced sample per pixel and resolve, at `divisor` (view.pathTracer's
+   * EFFECTIVE divisor — see effectiveVolpathDivisor.ts, Viewport's own concern, not this
+   * graph's). Throws if none is attached.
+   */
+  drawVolpath(
+    encoder: GPUCommandEncoder,
+    view: McpmCameraView,
+    params: VolpathParams,
+    divisor: number,
+  ): void;
   /** Drop the path tracer's accumulated samples; a no-op before `attachVolpath`. */
   resetVolpath(): void;
   /**
@@ -393,11 +402,12 @@ export function createRenderGraph(
     encoder: GPUCommandEncoder,
     view: McpmCameraView,
     params: VolpathParams,
+    divisor: number,
   ): void {
     if (!volpathPass) {
       throw new Error('RenderGraph.drawVolpath: call attachVolpath() before drawing');
     }
-    volpathPass.draw(encoder, accumView(), view, params);
+    volpathPass.draw(encoder, accumView(), view, params, divisor);
   }
 
   function resetVolpath(): void {

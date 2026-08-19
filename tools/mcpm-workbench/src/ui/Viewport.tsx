@@ -45,6 +45,7 @@ import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { screenToRay } from '../gizmo/screenToRay';
 import { boxBasisVectors } from '../field/boxBasisVectors';
 import { cameraBasis } from '../render/cameraBasis';
+import { effectiveVolpathDivisor } from '../render/effectiveVolpathDivisor';
 import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
 import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
@@ -239,6 +240,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
     let lastVolpathKey: string | null = null;
+    // V3 interaction boost: `cam`'s own serialization (volpathKey's first element)
+    // doubles as the camera-changed signal, so no second comparator walks yaw/pitch/
+    // distance/target by hand. 0 so the very first frame reads as "just changed".
+    let lastVolpathCamJson: string | null = null;
+    let lastVolpathCameraChangeMs = 0;
     // -1 sentinel: skips the first frame's delta, which spans the async catalog
     // load + harness build and would otherwise seed the EMA with a huge bogus dt.
     let lastFrameTime = -1;
@@ -486,25 +492,44 @@ function Viewport({ store }: ViewportProps): ReactNode {
         }
         if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
         if (layers.pathTracer) {
-          // Reset on any camera move, any pathTracer param change, or an explicit
-          // clear-trace/reset command — `cam` is the SAME serialized object already
-          // computed above, so this can't drift from what actually drew. Deliberately
-          // NOT keyed on `sim.stepCount`: an earlier version floored a step term in here
-          // so a running sim wiped the accumulator every 16 steps instead of every
-          // frame — still a periodic full-wipe, visible as never converging. The field
-          // drifts slowly enough (same reasoning that justified the 16-step floor) that
-          // letting samples ride across steps indefinitely is fine; a box change that
-          // actually invalidates the grid reaches here through a harness rebuild instead
-          // (buildFromPoints resets `lastVolpathKey` to null there).
+          // V3: `cam`'s own JSON *IS* the camera-changed signal — no second comparator
+          // walks yaw/pitch/distance/target by hand. A change starts (or restarts) the
+          // boost window; effectiveVolpathDivisor decays it back to the user's own
+          // setting SETTLE_MS after the last one.
+          const camJson = JSON.stringify(cam);
+          if (camJson !== lastVolpathCamJson) {
+            lastVolpathCamJson = camJson;
+            lastVolpathCameraChangeMs = now;
+          }
+          const effectiveDivisor = effectiveVolpathDivisor(
+            s.view.pathTracer.divisor,
+            now - lastVolpathCameraChangeMs,
+          );
+          // Reset on any camera move, any pathTracer param change (divisor included —
+          // s.view.pathTracer is the whole object), or an explicit clear-trace/reset
+          // command — `cam` is the SAME serialized object already computed above, so
+          // this can't drift from what actually drew. Deliberately NOT keyed on
+          // `sim.stepCount`: an earlier version floored a step term in here so a running
+          // sim wiped the accumulator every 16 steps instead of every frame — still a
+          // periodic full-wipe, visible as never converging. The field drifts slowly
+          // enough (same reasoning that justified the 16-step floor) that letting
+          // samples ride across steps indefinitely is fine; a box change that actually
+          // invalidates the grid reaches here through a harness rebuild instead
+          // (buildFromPoints resets `lastVolpathKey` to null there). Deliberately NOT
+          // keyed on `effectiveDivisor` either: VolpathPass's own accumulator already
+          // resizes (and so self-resets) the moment ITS size changes, which tracks
+          // effectiveDivisor directly — keying this string on it too would only add a
+          // second, redundant reset exactly 200ms after every interaction, on top of
+          // the resize the accumulator was always going to do on its own.
           const volpathKey = JSON.stringify([
-            cam,
+            camJson,
             s.view.pathTracer,
             s.sim.clearTraceToken,
             s.sim.resetToken,
           ]);
           if (volpathKey !== lastVolpathKey) graph.resetVolpath();
           lastVolpathKey = volpathKey;
-          graph.drawVolpath(encoder, cam, s.view.pathTracer);
+          graph.drawVolpath(encoder, cam, s.view.pathTracer, effectiveDivisor);
         } else {
           lastVolpathKey = null;
         }
@@ -613,8 +638,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
       renderGraph = graph;
       // A fresh accumulator already clears on its own first draw (VolpathPass's
       // `pendingClear` starts true) — this just keeps the reset-tracking key from
-      // outliving the harness it was computed against.
+      // outliving the harness it was computed against. Clearing lastVolpathCamJson too
+      // makes the very next frame read as "camera changed" regardless of `now` (unknown
+      // here), which is what actually arms the boost — see the frame loop.
       lastVolpathKey = null;
+      lastVolpathCamJson = null;
       startLoop();
       if (hasUrlGate('probe')) (window as unknown as ProbeWindow).__mcpmProbeReady = true;
     }

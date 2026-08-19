@@ -101,5 +101,13 @@ export type ViewSlice = {
     readonly compressive: boolean;
     readonly trimDensity: number;
     readonly sampleWeight: number;
+    /**
+     * Integer 1-4, default 2 — sibling to `raymarch.divisor`: the accumulator
+     * sizes to `floor(size/divisor)` and the resolve bilinear-upsamples it in.
+     * The EFFECTIVE divisor drawn each frame also boosts to 4 while the camera
+     * moves (Viewport.tsx, effectiveVolpathDivisor.ts) — this field is always
+     * the user's own setting, never the boosted value.
+     */
+    readonly divisor: number;
   };
 };

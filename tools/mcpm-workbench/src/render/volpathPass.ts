@@ -1,21 +1,25 @@
 /**
  * createVolpathPass — Polyphorm's volumetric path tracer: one compute dispatch traces a
  * single jittered sample per pixel into a `vec4<f32>` accumulator (mcpm/volpath.wesl),
- * then a fullscreen fragment resolves the mean into the HDR target, LOADing and blending
- * one/one like every other layer (mcpm/volpathBlit.wesl).
+ * sized to `floor(viewportPx/divisor)` (reducedTraceSize — see draw()'s doc for the
+ * divisor>1 upsample leg), then a fullscreen fragment resolves the mean, LOADing and
+ * blending one/one like every other layer (mcpm/volpathBlit.wesl).
  *
- * The image is only correct while the accumulator agrees with the camera and parameters
- * that produced it: the caller MUST `reset()` on any change to either (a viewport change
- * resets itself, the buffer being rebuilt). Layouts are explicit, never 'auto'; the trace
- * grid binds read-only here rather than through io.wesl's read_write contract.
+ * The image is only correct while the accumulator agrees with the camera, parameters and
+ * divisor that produced it: the caller MUST `reset()` on any change to any of those (a
+ * viewport OR divisor change resets itself, the buffer being rebuilt). Layouts are
+ * explicit, never 'auto'; the trace grid binds read-only here rather than through
+ * io.wesl's read_write contract.
  */
 import type { TraceSource } from './tracePass';
+import { reducedTraceSize } from './reducedTraceSize';
 import { specializeGridElement } from '../sim/specializeGridElement';
 import { uploadPaletteLut } from './uploadPaletteLut';
 import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from './writeMcpmCamera';
 import vertexWgsl from '../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
 import volpathWgsl from '../../../../src/services/gpu/shaders/mcpm/volpath.wesl?static';
 import volpathBlitWgsl from '../../../../src/services/gpu/shaders/mcpm/volpathBlit.wesl?static';
+import traceUpsampleWgsl from '../../../../src/services/gpu/shaders/mcpm/traceUpsample.wesl?static';
 
 /**
  * The tracer's knobs. The first nine are spec §7's set; `trimDensity` and `sampleWeight`
@@ -50,13 +54,17 @@ export type VolpathParams = {
 export type VolpathPass = {
   /**
    * Accumulate one sample per pixel and resolve. Sizes its own accumulator from
-   * `view.viewportPx` — there is no separate resize step to forget.
+   * `view.viewportPx` and `divisor` — there is no separate resize step to forget.
+   * `divisor <= 1` resolves straight into `target`; `divisor > 1` resolves into a
+   * private `floor(viewportPx/divisor)` texture first and bilinear-upsamples that
+   * into `target`, same shape as RenderGraph's raymarch-preview upsample.
    */
   draw(
     encoder: GPUCommandEncoder,
     target: GPUTextureView,
     view: McpmCameraView,
     params: VolpathParams,
+    divisor: number,
   ): void;
   /** Drop every accumulated sample; the clear rides the next `draw`'s encoder. */
   reset(): void;
@@ -92,6 +100,7 @@ export function createVolpathPass(opts: {
   );
   const vertexModule = opts.makeShader(vertexWgsl, 'mcpm-volpath-vertex');
   const blitModule = opts.makeShader(volpathBlitWgsl, 'mcpm-volpath-blit');
+  const upsampleModule = opts.makeShader(traceUpsampleWgsl, 'mcpm-volpath-upsample');
 
   const frameLayout = device.createBindGroupLayout({
     label: 'mcpm-volpath-frame-layout',
@@ -114,6 +123,16 @@ export function createVolpathPass(opts: {
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+    ],
+  });
+  // divisor > 1 only: the private reduced texture's own layout, mirroring RenderGraph's
+  // traceUpsampleLayout — a bilinear sampler wants a texture binding, and the blit's
+  // storage buffer can't be sampled directly.
+  const upsampleLayout = device.createBindGroupLayout({
+    label: 'mcpm-volpath-upsample-layout',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     ],
   });
 
@@ -144,6 +163,28 @@ export function createVolpathPass(opts: {
       ],
     },
     primitive: { topology: 'triangle-list' },
+  });
+  // Built eagerly, like blitPipeline above: it needs no accumulator to compile, so a
+  // broken traceUpsample.wesl link fails at construction rather than the first time the
+  // divisor slider crosses 1.
+  const upsamplePipeline = device.createRenderPipeline({
+    label: 'mcpm-volpath-upsample',
+    layout: device.createPipelineLayout({
+      label: 'mcpm-volpath-upsample-layout',
+      bindGroupLayouts: [upsampleLayout],
+    }),
+    vertex: { module: vertexModule, entryPoint: 'vs' },
+    fragment: {
+      module: upsampleModule,
+      entryPoint: 'fs',
+      targets: [{ format: opts.targetFormat, blend: opts.blend }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+  const upsampleSampler = device.createSampler({
+    label: 'mcpm-volpath-upsample-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
   });
 
   const camBuffer = device.createBuffer({
@@ -197,7 +238,17 @@ export function createVolpathPass(opts: {
   let frameBindGroup: GPUBindGroup | null = null;
   let blitBindGroup: GPUBindGroup | null = null;
   let pendingClear = true;
+  // divisor > 1 only — the blit's private resolve target, upsampled into `target` after.
+  // Lazy like RenderGraph's own reduced trace target: never allocated for divisor <= 1.
+  let reducedTex: GPUTexture | null = null;
+  let reducedTexView: GPUTextureView | null = null;
+  let reducedTexWidth = 0;
+  let reducedTexHeight = 0;
+  let upsampleBindGroup: GPUBindGroup | null = null;
 
+  // `width`/`height` here are ALREADY the reduced ones (reducedTraceSize's output) — the
+  // accumulator and the blit's storage-index math must agree on that same pair, whatever
+  // divisor produced it.
   function ensureAccumulator(width: number, height: number): void {
     if (width === curWidth && height === curHeight && accumBuffer) return;
     curWidth = width;
@@ -233,6 +284,29 @@ export function createVolpathPass(opts: {
     pendingClear = true;
   }
 
+  function ensureReducedTex(width: number, height: number): void {
+    if (width === reducedTexWidth && height === reducedTexHeight && reducedTex) return;
+    reducedTexWidth = width;
+    reducedTexHeight = height;
+
+    reducedTex?.destroy();
+    reducedTex = device.createTexture({
+      label: 'mcpm-volpath-reduced',
+      size: { width, height },
+      format: opts.targetFormat,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    reducedTexView = reducedTex.createView();
+    upsampleBindGroup = device.createBindGroup({
+      label: 'mcpm-volpath-upsample',
+      layout: upsampleLayout,
+      entries: [
+        { binding: 0, resource: reducedTexView },
+        { binding: 1, resource: upsampleSampler },
+      ],
+    });
+  }
+
   function writeParams(params: VolpathParams): void {
     // volpath.wesl's VolpathParams, byte for byte:
     //   +0  i32 gridWidth   +4  i32 gridHeight  +8  i32 gridDepth  +12 f32 sigmaT
@@ -262,9 +336,11 @@ export function createVolpathPass(opts: {
       target: GPUTextureView,
       view: McpmCameraView,
       params: VolpathParams,
+      divisor: number,
     ): void {
-      const width = Math.max(1, Math.floor(view.viewportPx[0]));
-      const height = Math.max(1, Math.floor(view.viewportPx[1]));
+      const fullWidth = Math.max(1, Math.floor(view.viewportPx[0]));
+      const fullHeight = Math.max(1, Math.floor(view.viewportPx[1]));
+      const { width, height } = reducedTraceSize(fullWidth, fullHeight, divisor);
       ensureAccumulator(width, height);
       if (!accumBuffer || !frameBindGroup || !blitBindGroup) {
         throw new Error('VolpathPass.draw: the accumulator was not created');
@@ -277,6 +353,9 @@ export function createVolpathPass(opts: {
       device.queue.writeBuffer(camBuffer, 0, camF32);
       writeParams(params);
       // VolpathBlit: +0 u32 screenWidth, +4 f32 exposure, +8 u32 compressive, +12 pad.
+      // screenWidth is the REDUCED width — the blit's own render target below is that
+      // same size, whether it's `target` directly (divisor <= 1) or the private resolve
+      // texture (divisor > 1).
       blitU32[0] = width;
       blitF32[1] = params.exposure;
       blitU32[2] = params.compressive ? 1 : 0;
@@ -294,14 +373,43 @@ export function createVolpathPass(opts: {
       trace.dispatchWorkgroups(Math.ceil(width / VOLPATH_WG), Math.ceil(height / VOLPATH_WG));
       trace.end();
 
+      if (divisor <= 1) {
+        const blit = encoder.beginRenderPass({
+          label: 'mcpm-volpath-blit',
+          colorAttachments: [{ view: target, loadOp: 'load', storeOp: 'store' }],
+        });
+        blit.setPipeline(blitPipeline);
+        blit.setBindGroup(0, blitBindGroup);
+        blit.draw(3);
+        blit.end();
+        return;
+      }
+
+      ensureReducedTex(width, height);
+      if (!reducedTexView || !upsampleBindGroup) {
+        throw new Error('VolpathPass.draw: the reduced target was not built');
+      }
+      // Cleared right here (not LOADed): a private single-writer texture, unlike `target`,
+      // which the graph clears once and every layer LOADs onto across the whole frame.
       const blit = encoder.beginRenderPass({
         label: 'mcpm-volpath-blit',
-        colorAttachments: [{ view: target, loadOp: 'load', storeOp: 'store' }],
+        colorAttachments: [
+          { view: reducedTexView, loadOp: 'clear', clearValue: [0, 0, 0, 0], storeOp: 'store' },
+        ],
       });
       blit.setPipeline(blitPipeline);
       blit.setBindGroup(0, blitBindGroup);
       blit.draw(3);
       blit.end();
+
+      const upsample = encoder.beginRenderPass({
+        label: 'mcpm-volpath-upsample',
+        colorAttachments: [{ view: target, loadOp: 'load', storeOp: 'store' }],
+      });
+      upsample.setPipeline(upsamplePipeline);
+      upsample.setBindGroup(0, upsampleBindGroup);
+      upsample.draw(3);
+      upsample.end();
     },
     reset(): void {
       pendingClear = true;
@@ -309,6 +417,9 @@ export function createVolpathPass(opts: {
     dispose(): void {
       accumBuffer?.destroy();
       accumBuffer = null;
+      reducedTex?.destroy();
+      reducedTex = null;
+      reducedTexView = null;
       palette.destroy();
       camBuffer.destroy();
       paramsBuffer.destroy();

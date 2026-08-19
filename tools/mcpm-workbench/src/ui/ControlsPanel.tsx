@@ -53,6 +53,7 @@ import {
   setLayerEnabled,
   setOpticalThickness,
   setPathTracerCompressive,
+  setPathTracerDivisor,
   setPathTracerParam,
   setPreviewPacked,
   setSampleWeight,
@@ -211,7 +212,9 @@ const RAYMARCH_SETTERS: {
   stepVoxels: setStepVoxels,
 };
 
-type PathTracerSliderKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive'>;
+// 'divisor' gets its own dedicated ParamSlider below (the "Preview" group,
+// mirroring the raymarch layer's own), not the generic log-mapped physics list.
+type PathTracerSliderKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive' | 'divisor'>;
 
 type PathTracerSliderSpec = {
   readonly key: PathTracerSliderKey;
@@ -700,6 +703,21 @@ function ControlsPanel(): ReactNode {
                 path={`view.pathTracer.${spec.key}`}
               />
             ))}
+          </SliderGroup>
+          <SliderGroup title="Preview">
+            <ParamSlider
+              label="path tracer divisor"
+              value={view.pathTracer.divisor}
+              min={1}
+              max={4}
+              step={1}
+              format={(v) => v.toFixed(0)}
+              info="Accumulates into floor(size/divisor), samples/sec up with divisor². Auto-boosts to 4 while the camera moves."
+              onChange={(v) =>
+                store.setState((s) => ({ ...s, view: setPathTracerDivisor(s.view, v) }))
+              }
+              path="view.pathTracer.divisor"
+            />
           </SliderGroup>
           <ToggleRow
             label="compressive"

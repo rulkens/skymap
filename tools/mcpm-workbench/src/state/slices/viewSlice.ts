@@ -54,6 +54,9 @@ export const defaultViewSlice: ViewSlice = {
     compressive: false,
     trimDensity: 1e-5,
     sampleWeight: 0.01,
+    // Half the raymarch layer's default 3 — the compute-bound path tracer feels the
+    // divisor's quadratic win harder, so a lower default still lands interactive.
+    divisor: 2,
   },
 };
 
@@ -140,7 +143,9 @@ export function setPreviewPacked(prev: ViewSlice, previewPacked: boolean): ViewS
   return { ...prev, raymarch: { ...prev.raymarch, previewPacked } };
 }
 
-type PathTracerNumericKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive'>;
+// 'divisor' gets its own setter (setPathTracerDivisor, below), sibling-shaped to
+// the raymarch layer's setDivisor — excluded here the same way 'compressive' is.
+type PathTracerNumericKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive' | 'divisor'>;
 
 export function setPathTracerParam(
   prev: ViewSlice,
@@ -152,4 +157,8 @@ export function setPathTracerParam(
 
 export function setPathTracerCompressive(prev: ViewSlice, compressive: boolean): ViewSlice {
   return { ...prev, pathTracer: { ...prev.pathTracer, compressive } };
+}
+
+export function setPathTracerDivisor(prev: ViewSlice, divisor: number): ViewSlice {
+  return { ...prev, pathTracer: { ...prev.pathTracer, divisor } };
 }
