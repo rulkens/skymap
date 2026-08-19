@@ -12,17 +12,17 @@
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { AppStore } from '../../../store/types';
-import { addVolumeField as addVolumeFieldAction } from '../../../state/settings/settingsSlice';
+import { addVolumeField } from '../../../state/settings/settingsSlice';
 import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
-export function addVolumeField(
+export function uploadVolumeField(
   state: ApplyIntentState,
   store: AppStore,
   fieldId: VolumeFieldId,
   cube: ScalarCube,
 ): void {
-  store.dispatch(addVolumeFieldAction(fieldId));
+  store.dispatch(addVolumeField(fieldId));
   // Upload to the renderer; a silent no-op if it isn't ready yet (re-add once
   // booted).
   state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
