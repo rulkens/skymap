@@ -37,6 +37,10 @@ const GROWTH_ITERATIONS = 64;
  * (a bigger voxel never grows any axis's dim), so bisection needs no ad hoc
  * pad to stay conservative — it only ever narrows toward a value it has
  * already confirmed fits, and returns that value, never an unverified guess.
+ *
+ * Returns `Infinity`, not a throw, when NO voxel size fits (`maxBufferBytes`
+ * below the 8³-voxel floor itself) — this runs from GridBoxPanel's render
+ * path; both call sites guard with `Number.isFinite` and fail open.
  */
 export function minFeasibleVoxelSizeMpc(
   extentMpc: Readonly<Vec3>,
@@ -51,6 +55,7 @@ export function minFeasibleVoxelSizeMpc(
   ) {
     hi *= 2;
   }
+  if (!fits(extentMpc, hi, elementBytes, maxBufferBytes)) return Infinity;
   let lo = 0;
   for (let i = 0; i < BISECTION_ITERATIONS; i++) {
     const mid = (lo + hi) / 2;

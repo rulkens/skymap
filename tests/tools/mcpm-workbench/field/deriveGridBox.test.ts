@@ -118,4 +118,20 @@ describe('deriveGridBox — V2 allocation-aware voxel-size floor', () => {
     const box = deriveGridBox(grid);
     expect(box.voxelSizeMpc).toBeCloseTo(1500 / 1024, 9);
   });
+
+  it('fix round 1: an infeasible (Infinity) floor is treated as no usable floor, not an infinite voxel size', () => {
+    // maxBufferBytes below the 8-voxel-per-axis minimum (2048 bytes at f32) — no voxel
+    // size fits any extent, so minFeasibleVoxelSizeMpc returns Infinity; the clamp must
+    // fail OPEN here (manual value passes through) rather than poisoning the box.
+    const grid = {
+      ...defaultGridSlice,
+      manualSizeMpc: [500, 500, 500] as Vec3,
+      manualVoxelSizeMpc: 0.75,
+      resolvedElement: 'f32' as const,
+      maxBufferBytes: 2047,
+    };
+    const box = deriveGridBox(grid);
+    expect(box.voxelSizeMpc).toBe(0.75);
+    expect(Number.isFinite(box.dims[0])).toBe(true);
+  });
 });

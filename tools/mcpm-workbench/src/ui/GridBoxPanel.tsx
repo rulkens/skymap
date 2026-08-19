@@ -93,7 +93,9 @@ function GridBoxPanel(): ReactNode {
   // V2: the live floor for THIS box's extent — same clamp deriveGridBox applies, computed
   // here only to drive the slider's `min` (the readout above already reflects the clamp,
   // since `box` came from deriveGridBox). Static 0.25 fallback pre-init / on a coarse box.
-  const liveFloorMpc =
+  // Fix round 1: `Infinity` (no voxel size fits — see minFeasibleVoxelSizeMpc's doc comment)
+  // is treated as "no usable floor" too, same as null, so it never becomes the slider's min.
+  const rawLiveFloorMpc =
     grid.maxBufferBytes === null
       ? null
       : minFeasibleVoxelSizeMpc(
@@ -101,6 +103,8 @@ function GridBoxPanel(): ReactNode {
           BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'],
           grid.maxBufferBytes,
         );
+  const liveFloorMpc =
+    rawLiveFloorMpc !== null && Number.isFinite(rawLiveFloorMpc) ? rawLiveFloorMpc : null;
   const voxelSizeMinMpc =
     liveFloorMpc === null || liveFloorMpc < VOXEL_SIZE_MIN_MPC ? VOXEL_SIZE_MIN_MPC : liveFloorMpc;
   const voxelSizeInfo =
@@ -157,7 +161,11 @@ function GridBoxPanel(): ReactNode {
       <div>
         <ParamSlider
           label="voxel size"
-          value={grid.manualVoxelSizeMpc}
+          // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
+          // whenever the floor isn't active) rather than the raw manual value — otherwise,
+          // below the floor, the pill's number disagreed with the dims readout above and
+          // arrow-key nudges silently ticked a value the display never moved for.
+          value={box.voxelSizeMpc}
           min={voxelSizeMinMpc}
           max={VOXEL_SIZE_MAX_MPC}
           step={VOXEL_SIZE_STEP_MPC}

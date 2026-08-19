@@ -48,4 +48,12 @@ describe('minFeasibleVoxelSizeMpc', () => {
       expect(bytes).toBeLessThanOrEqual(maxBufferBytes);
     }
   });
+
+  it('fix round 1: below the 8-voxel-per-axis floor (no voxel size fits any extent), returns Infinity rather than a huge non-fitting value', () => {
+    // 8^3 * 4 bytes = 2048, the smallest a grid buffer can ever be (ceil8 floors every
+    // axis at 8) — one byte under that is infeasible no matter how large the voxel size.
+    const extent: Vec3 = [500, 500, 500];
+    const floor = minFeasibleVoxelSizeMpc(extent, 4, 2047);
+    expect(floor).toBe(Infinity);
+  });
 });
