@@ -1,9 +1,12 @@
 import type { EarthTileKind } from '../../@types/data/EarthTileKind';
+import type { EarthTileBand } from '../../@types/scene/EarthTilePlannerParams';
 import type { EarthTilePlan } from '../../@types/scene/EarthTilePlan';
 import type { EarthTileRequest } from '../../@types/scene/EarthTileRequest';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { earthTileColumns } from './earthTileColumns';
+import { earthTileBandRefineAllowed } from './earthTileBandRefineAllowed';
+import { earthTileBandRequestAllowed } from './earthTileBandRequestAllowed';
 import { equirectUvToDirection } from '../math/equirectUvToDirection';
 
 /**
@@ -18,10 +21,10 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
  * every leaf beneath it, the fallback `buildEarthPageTable` needs while a
  * finer descendant is in flight.
  *
- * The walk roots at `baseLevel`, not the deeper `minTileLevel`, so "the base
- * is enough here" comes out as `zWin === baseLevel` with nothing to fetch.
- * Rooting at `minTileLevel` would make `zWin >= minTileLevel` always true,
- * leaving the engage gate unsatisfiable.
+ * The walk roots at `baseLevel`, not a band's deeper `min`, so "the base is
+ * enough here" comes out as `zWin === baseLevel` with nothing to fetch.
+ * Rooting any deeper would make `zWin >= min` true by construction, leaving
+ * the engage gate unsatisfiable.
  *
  * Both rejection tests below err toward KEEPING a patch: the horizon test
  * compares angular radius rather than corners (a cap can lie entirely inside
@@ -39,11 +42,9 @@ export function planEarthTiles(input: {
   readonly viewportPx: Readonly<Vec2>;
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
-  /** The manifest's shallowest baked level for this kind; leaves above it have
-   *  no file and are not requested. */
-  readonly minTileLevel: number;
-  /** The manifest's deepest baked level for this kind. */
-  readonly maxTileLevel: number;
+  /** The manifest's geographic depth bands for this kind; a leaf outside every
+   *  overlapping band's `[min, max]` has no file and is not requested. */
+  readonly bands: readonly EarthTileBand[];
   /** Page-table window edge, in tiles at the finest level. */
   readonly windowSide: number;
   readonly tilePx: number;
@@ -57,8 +58,7 @@ export function planEarthTiles(input: {
     viewProjLocal,
     viewportPx,
     baseLevel,
-    minTileLevel,
-    maxTileLevel,
+    bands,
     windowSide,
     tilePx,
     lodBias,
@@ -70,6 +70,10 @@ export function planEarthTiles(input: {
   const camDir: Vec3 = [camPosLocal[0] / camLen, camPosLocal[1] / camLen, camPosLocal[2] / camLen];
   // Horizon lies acos(1/d) from the sub-camera point on the unit sphere.
   const capAngle = Math.acos(1 / camLen);
+  // The deepest level any band bakes: bounds `required` below so a huge
+  // screen-space extent can't ask the walk to descend past every band's max.
+  let maxTileLevel = baseLevel;
+  for (const band of bands) if (band.max > maxTileLevel) maxTileLevel = band.max;
 
   // Hoisted out of the walk; the z row is never touched.
   const mx0 = viewProjLocal[0]!;
@@ -109,6 +113,8 @@ export function planEarthTiles(input: {
     const vSouth = 1 - (y + 1) / rows;
     const uMid = (u0 + u1) / 2;
     const vMid = (vNorth + vSouth) / 2;
+    // `v0`/`v1` are min/max, so `vSouth` (mesh-v increases north) is `v0`.
+    const uv = { u0, u1, v0: vSouth, v1: vNorth };
 
     const centre = equirectUvToDirection([uMid, vMid]);
     // Angular radius of the patch, to its corners (farthest from centre).
@@ -167,10 +173,11 @@ export function planEarthTiles(input: {
       maxTileLevel,
       Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
     );
-    if (required > z && z < maxTileLevel) {
-      // Same `minTileLevel` floor as the leaf branch: a would-be ancestor at
-      // or above the base level has no file to fetch either.
-      if (z >= minTileLevel) requests.push({ tile: { kind, z, x, y }, screenPx });
+    if (required > z && earthTileBandRefineAllowed(bands, z, uv)) {
+      // Same band-request gate as the leaf branch: a would-be ancestor no
+      // band bakes at this z has no file to fetch either.
+      if (earthTileBandRequestAllowed(bands, z, uv))
+        requests.push({ tile: { kind, z, x, y }, screenPx });
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
       stack.push(z + 1, x * 2, y * 2 + 1);
@@ -181,7 +188,7 @@ export function planEarthTiles(input: {
     // covers, regardless of which files happen to exist.
     if (z > zWin) zWin = z;
     // Served by the base texture, but has no file to fetch.
-    if (z < minTileLevel) continue;
+    if (!earthTileBandRequestAllowed(bands, z, uv)) continue;
     requests.push({ tile: { kind, z, x, y }, screenPx });
   }
 
