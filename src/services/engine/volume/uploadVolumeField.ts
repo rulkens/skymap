@@ -1,13 +1,12 @@
-// ── Volume field registration ───────────────────────────────────────────────
-//
-// Module-scope so the `createEngine` literal delegates here (mirroring the other
-// `handles/` setters) and so it's testable without a full GPU engine.
-//
-// Ensure a settings row exists before the GPU upload. Re-registering a field
-// preserves its tuned values (identity no-op in the reducer); a brand-new handle
-// seeds from registry defaults. Shippable volumes already have a construction
-// seed, so this only seeds for a dynamically-added handle. React reads the
-// per-field rows via `selectVolumeFieldItems`.
+/**
+ * The ONE volume-field ingest path: every volume slot commit and the public
+ * `handle.volumes.add` call this. Order is load-bearing — the settings row must
+ * exist before the fade reads its intent, and the cube must be resident before
+ * the fade's guard reads `listIds()`. The trailing `requestRender()` is
+ * redundant with the settings wake route (`watchWakeSaga`) and kept local until
+ * rung 5 accounts for the wake owners. Flow's cube (`flowFieldSlot.ts`) skips
+ * this path deliberately — different renderer/arity/fade key; see decision #14.
+ */
 
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
@@ -19,21 +18,14 @@ import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 export function uploadVolumeField(
   state: ApplyIntentState,
   store: AppStore,
-  fieldId: VolumeFieldId,
+  id: VolumeFieldId,
   cube: ScalarCube,
 ): void {
-  store.dispatch(addVolumeField(fieldId));
-  // Upload to the renderer; a silent no-op if it isn't ready yet (re-add once
-  // booted).
-  state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
-  // Drive the first-load fade through the intent → fade bridge; the volumeField
-  // row's intent gate (reads settings.volumes.items[id].enabled) decides, so a
-  // disabled add leaves the handle at the 0 seeded by the fade manifest
-  // (`seedFades`) at construction (the draw loop's `(!enabled && opacity <= 0)`
-  // skip keeps it invisible until toggled on).
+  // Race guard, re-read per call — do not hoist into a closure (engine.ts:490-492).
+  const renderer = state.gpu.volumeFieldRenderer;
+  if (!renderer) return;
+  store.dispatch(addVolumeField(id));
+  renderer.upload(id, cube);
   syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-  // Essential wake: the bridge's fade is intent-gated — a disabled add fires no
-  // fade, yet still changes the renderer's field set and settings row, so wake
-  // regardless.
   state.subsystems.scheduler.requestRender();
 }
