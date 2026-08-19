@@ -176,6 +176,56 @@ COSMO slab — `frameProgram.ts:98` — with `COSMO_NEAR_MPC = 0.01`; the
 Milky Way impostor's move to NEAR0 is the precedent, per the comment in
 `slabs.ts`. The scalar-volume fragment pass is still emissive-additive only.)
 
+## Ground preparation (refactor-ground checkpoint, 2026-08-19 — awaiting user sign-off)
+
+Ideal shape: one `VolumeSourceEntry` row (`edenhofer-dust`, NEAR0-rendered,
+`absorptive: true`), with `VolumeFieldDefaults` growing two optional fields —
+`absorptive?: boolean` (drives the dormant palette-slot conditional in
+`VolumeFieldRow.tsx:214`) and `fadeBands?: readonly FadeBand[]` (default
+`[surveyDeepZoom]`) — and `VolumeFieldSettings` growing `bands` seeded from it,
+so band edges are generically tunable via `writeVolumeField` (discharges grill
+Q8 "tunable" with zero dust-special code). `settings.dust = { rv, targetScale }`
+mirrors the MilkyWaySettings/`MILKY_WAY_SLIDER_FIELDS` debug-section pattern.
+Target row uses the live-scale precedent
+(`scale: (s) => s.settings.dust.targetScale`, mw-aggregate style).
+
+Verdicts: everything is growth at existing seams EXCEPT two missing joints →
+**Prep 1** per-field fade bands (`volumeLiveness.ts` applies `surveyDeepZoom`
+unconditionally; own PR, first — grill Q10); **Prep 2** extract the raymarch
+skeleton (`intersectUnitAabb` + ray reconstruction + `sphericalEnvelope`,
+inline in `scalarVolume/fragment.wesl`) to `shaders/lib/` — second-consumer
+trigger; MUST sequence after the volume-raymarch-acceleration work settles
+(NOTE 2026-08-19: that effort is PARKED, PR #556 closed — the file is free).
+Growth-via-sibling (feature commits, not prep): `createMultiplyUpsample`
+(the additive fold factories bake their blend by documented design; `Blend`
+already has `'multiply'`, `DUST_BLEND` in `milkyWayCloudRenderer.ts:104` is
+the pipeline precedent) and a `dustVolumeRenderer` sibling (shared additive
+pipeline bakes blend + palette LUT).
+
+Adjacent finding (default: backlog line, promotion is the user's call): the
+dust fetcher would be the THIRD hand-copied tiered-SCFD fetcher
+(`mcpmFetcher`, polyphorm's) — a `createTieredScfdFetcher(baseName)` factory
+would collapse them.
+
+Open asks at the checkpoint: (1) shape sign-off; (2) Prep-2 packaging — own
+tiny PR vs first commit of the renderer-slice PR; (3) promote the fetcher
+factory or leave as backlog.
+
+## Data on disk (2026-08-19)
+
+Fetched to MAIN checkout `data/raw/edenhofer/` (provenance README there):
+`mean_and_std_healpix.fits` (3.25 GB, bake input), `samples_healpix.fits`
+(19.5 GB, insurance), 2 kpc `mean_and_std` (4.12 GB), `interp2box.py` /
+`interp2lbd.py` (verified: interpolates `np.log(data)`, exponentiates — line
+318) + upstream readme as `zenodo_readme.md` (case-collision rename). `.md5`
+sidecars = Zenodo's checksums. FITS payloads byte-identical v1.0→v1.0.2.
+Bonus: the FITS carry "mean/std of integrated inner density" HDUs — the
+inner-69 pc patch ships inside the files (option (c) fill data available).
+NOT fetched: xyz/lbd pre-interpolations (re-derivable), stellar catalogs,
+2 kpc samples (24.7 GB). The fetch script lives beside the data as
+`data/raw/edenhofer/fetch_edenhofer.sh` — resumable (`curl -C -`), md5-verifies
+everything; re-run it if any file is missing or truncated.
+
 ## References
 
 - `docs/powers-of-ten/data.js` — the 10¹⁹ rung this completes
