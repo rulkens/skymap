@@ -763,11 +763,11 @@ describe('runFrame — milky-way star count', () => {
   it('regenerates the cloud when starCount moves, and leaves it alone when it does not', () => {
     // starCount feeds generation, not a uniform or a render target — a
     // texture-rebuild-shaped fix doesn't apply here, so the only way a drag
-    // reaches the screen is the frame loop noticing the setting has outrun
-    // the buffers on screen and calling regenerate. A knob with no branch
-    // wired to it would silently do nothing, which is the failure this test
-    // exists to catch. The steady-state half matters just as much as the
-    // mw-aggregate divisor test's: comparing against `cloud.starCount()`
+    // reaches the screen is runFrame's per-frame `reconcile` call: the cloud
+    // notices the setting has outrun the buffers and calls regenerate. A knob
+    // with no branch wired to it would silently do nothing, which is the failure
+    // this test exists to catch. The steady-state half matters just as much as
+    // the mw-aggregate divisor test's: comparing against `cloud.starCount()`
     // (what the CURRENT buffers were generated with) has to settle once the
     // regenerate lands, or every frame after a drag would regenerate again.
     const store = makeStore();
@@ -782,6 +782,11 @@ describe('runFrame — milky-way star count', () => {
       buffers: vi.fn(),
       starCount: () => currentCount,
       regenerate,
+      reconcile: (wantedCount: number) => {
+        if (currentCount !== wantedCount) {
+          regenerate(wantedCount);
+        }
+      },
       destroy: vi.fn(),
     } as unknown as EngineState['gpu']['milkyWayCloud'];
 
