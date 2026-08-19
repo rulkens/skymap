@@ -112,6 +112,9 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
     allocate(key, atFrame) {
       return atlas.allocate(key, atFrame);
     },
+    touch(key, atFrame) {
+      return atlas.touch(key, atFrame);
+    },
     slotUv(slot) {
       return atlas.slotUv(slot);
     },

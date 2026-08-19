@@ -81,6 +81,57 @@ describe('buildEarthPageTable', () => {
     expect(cellAt(table, 5, 2)).toEqual([0, 0, 0, 0]);
   });
 
+  it('keeps a saturated ancestor until a fading finer tile finishes', () => {
+    // Same geometry as the fill-order test above: z5 tile (1,1) covers X 4..7,
+    // Y 4..7 at z7; its z6 child (2,2) covers the NW quarter, X 4..5, Y 4..5.
+    const plan: EarthTilePlan = { zWin: 7, winX0: 126, winY0: 2, requests: [] };
+    const overlap: ReadonlyArray<readonly [number, number]> = [
+      [6, 2],
+      [7, 3],
+    ];
+
+    const fading: readonly EarthResidentTile[] = [
+      { tile: tile(5, 1, 1), slot: 5, weight: 1 },
+      { tile: tile(6, 2, 2), slot: 12, weight: 0.3 },
+    ];
+    const fadingTable = buildEarthPageTable({
+      resident: fading,
+      plan,
+      slotsPerRow: SLOTS_PER_ROW,
+      windowSide: WINDOW_SIDE,
+      tilePx: EARTH_TILE_PX,
+    });
+    // The child's own alpha (~76) would read as "mostly base" — the ancestor,
+    // still fully opaque, must keep the cell instead.
+    for (const [dx, dy] of overlap) expect(cellAt(fadingTable, dx, dy)).toEqual([5, 0, 5, 255]);
+
+    const saturated: readonly EarthResidentTile[] = [
+      { tile: tile(5, 1, 1), slot: 5, weight: 1 },
+      { tile: tile(6, 2, 2), slot: 12, weight: 1 },
+    ];
+    const saturatedTable = buildEarthPageTable({
+      resident: saturated,
+      plan,
+      slotsPerRow: SLOTS_PER_ROW,
+      windowSide: WINDOW_SIDE,
+      tilePx: EARTH_TILE_PX,
+    });
+    // Equal alpha: the finer entry, written second, wins — the child takes over.
+    for (const [dx, dy] of overlap) expect(cellAt(saturatedTable, dx, dy)).toEqual([4, 1, 6, 255]);
+  });
+
+  it('still fades a lone tile up from base with no resident ancestor', () => {
+    const table = buildEarthPageTable({
+      resident: [{ tile: tile(7, 0, 0), slot: 3, weight: 0.3 }],
+      plan: { zWin: 7, winX0: 0, winY0: 0, requests: [] },
+      slotsPerRow: SLOTS_PER_ROW,
+      windowSide: WINDOW_SIDE,
+      tilePx: EARTH_TILE_PX,
+    });
+
+    expect(cellAt(table, 0, 0)).toEqual([3, 0, 7, 77]);
+  });
+
   it('never names an evicted slot after a rebuild', () => {
     // A real atlas with the Earth geometry — 4096 / 512 = 8 slots per row, 64
     // slots. No initTexture(), so no GPU device is needed.

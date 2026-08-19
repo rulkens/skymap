@@ -14,7 +14,8 @@
  *
  *     Gpc · Mpc · kpc · pc   (parsec family, ≥ 1 pc)
  *     AU                     (solar-system scale, 1 AU … 1 pc)
- *     km                     (planetary surface, < 1 AU)
+ *     km                     (planetary surface, 1 km … 1 AU)
+ *     m                      (ground level, < 1 km)
  *
  * In the parsec family the light-year conversion uses the same decade so
  * the two sides of the slash agree — pc↔ly, kpc↔kly, Mpc↔Mly, Gpc↔Gly —
@@ -59,5 +60,9 @@ export function formatDistance(mpc: number): string {
   if (mpc >= SCALE_UNITS.AU_TO_MPC) {
     return `${formatScalar(mpc / SCALE_UNITS.AU_TO_MPC)} AU`;
   }
-  return `${formatScalar(mpc / SCALE_UNITS.KM_TO_MPC)} km`;
+  if (mpc >= SCALE_UNITS.KM_TO_MPC) {
+    return `${formatScalar(mpc / SCALE_UNITS.KM_TO_MPC)} km`;
+  }
+  // No M_TO_MPC constant: metres is a leaf unit, not reused elsewhere.
+  return `${formatScalar((mpc / SCALE_UNITS.KM_TO_MPC) * 1000)} m`;
 }

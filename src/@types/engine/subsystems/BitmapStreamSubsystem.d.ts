@@ -51,6 +51,14 @@ export type BitmapStreamSubsystem = Destroyable & {
   allocate(key: string, atFrame: number): number | null;
 
   /**
+   * Refresh a resident key's LRU stamp without allocating. Returns its slot,
+   * or `null` if `key` holds no slot — callers use that to collect the plan's
+   * misses for a second pass, so a miss elsewhere in the same plan can never
+   * evict a resident this call would otherwise have kept alive.
+   */
+  touch(key: string, atFrame: number): number | null;
+
+  /**
    * UV rect `[u0, v0, u1, v1]` for a slot — feeds the renderer instance
    * buffer.
    */

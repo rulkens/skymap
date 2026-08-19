@@ -35,4 +35,11 @@ describe('formatDistance', () => {
   it('switches to a bare km value below 1 AU (planetary surface)', () => {
     expect(formatDistance(1500 * SCALE_UNITS.KM_TO_MPC)).toBe('1,500 km');
   });
+  it('switches to a bare metres value below 1 km (ground level)', () => {
+    expect(formatDistance(0.5 * SCALE_UNITS.KM_TO_MPC)).toBe('500 m');
+    expect(formatDistance(0.999 * SCALE_UNITS.KM_TO_MPC)).toBe('999 m');
+  });
+  it('stays in km at exactly 1 km (boundary)', () => {
+    expect(formatDistance(SCALE_UNITS.KM_TO_MPC)).toBe('1.00 km');
+  });
 });
