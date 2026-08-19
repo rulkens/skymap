@@ -56,7 +56,7 @@ where ≥2 layers share a gate.
 | ⬤   | finding                                                                                                                                                           | evidence                    |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
 | 🔴  | `fieldStarSphereLayer` runs the nearest-star query in `enabled()` and stores it for `draw`/`drawPick`                                                             | `:217-238`                  |
-| 🔴  | `foregroundLabelsLayer` inverts it — `draw` writes caption envelope state its own `enabled` reads back, plus calls `scheduler.requestRender()` from inside `draw` | `:597-634` → `:275`, `:810` |
+| 🔴  | `foregroundLabelsLayer` inverts it — `draw` writes caption envelope state its own `enabled` reads back, plus calls `scheduler.requestRender()` from inside `draw`. Rung 5 (#15 D6) examined the `:810` wake and ruled it **rung 8's**: the label director's fold pattern doesn't reach it without minting a new per-frame vote channel for exactly one row, which rung 8 dissolves instead by making these captions `LabelProducer`s. | `:597-634` → `:275`, `:810` |
 
 **Uploads inside `draw`**
 
@@ -72,7 +72,7 @@ where ≥2 layers share a gate.
 | ⬤   | finding                                                                                                                                                             | evidence |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | 🔴  | `starCatalogLayer` 983 LoC — owns `starCatalogVisible`, `prepareStarCut`, stream SoA; two sibling layers import their `enabled` from it (a layer importing a layer) | —        |
-| 🔴  | `foregroundLabelsLayer` 812 LoC — a private re-implementation of the label director: production, declutter, envelope, wake, two renderers                           | —        |
+| 🔴  | `foregroundLabelsLayer` 812 LoC — a private re-implementation of the label director: production, declutter, envelope, wake, two renderers. Assigned to rung 8, not unowned — rung 5 (#15 D6) examined its wake half and handed it there rather than folding it now. | —        |
 
 **Copied gates**
 
