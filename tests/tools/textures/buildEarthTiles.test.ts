@@ -327,6 +327,70 @@ describe('bakeAll', () => {
     expect(readBoxCalls).toBe(1);
   });
 
+  // Every OTHER bakeAll test uses minLevel === maxLevel, so the coarser-level
+  // loop never runs and can't catch bakeAll dropping `source.coverage` off
+  // its bakeCoarserLevel call. This one bakes a real coarser level and counts
+  // underfill reads, the only observable side effect bakeCoarserLevel has.
+  it('clamps the coarser-level bake to the band coverage too, not just the deepest level', async () => {
+    const dir = tmpDir();
+    // z3 (8x4) is the deepest level, z2 (4x2) the one coarser level baked.
+    // This box is exactly z3 tile (x=3, y=1)'s span, whose z2 parent is
+    // (x=1, y=0) (same lonStep/latStep=45/90 arithmetic as
+    // earthTileIndicesForBounds's own tests).
+    const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
+    let underfillCalls = 0;
+    const underfill: EarthImagerySource = {
+      id: 'stub-underfill-2',
+      attribution: 'stub-underfill-2 attribution',
+      provenance: {
+        sourceId: 'stub-underfill-2',
+        attribution: 'stub-underfill-2 attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [{ west: -180, east: 180, north: 90, south: -90 }],
+      async readBox(_box, widthPx, heightPx) {
+        underfillCalls++;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        raster.fill(200);
+        return raster;
+      },
+    };
+    const regional: EarthImagerySource = {
+      id: 'stub-regional-2',
+      attribution: 'stub-regional-2 attribution',
+      provenance: {
+        sourceId: 'stub-regional-2',
+        attribution: 'stub-regional-2 attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [coverageBox],
+      async readBox(_box, widthPx, heightPx) {
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        raster.fill(255);
+        return raster;
+      },
+    };
+
+    // Orphan left over from an earlier, differently-shaped bake: a z3 child
+    // at (0, 0), whose z2 parent (0, 0) sits OUTSIDE this band's coverage
+    // (which clamps to parent (1, 0)). A coverage-clamped coarser loop never
+    // visits parent (0, 0); an unclamped (full 4x2 z2 grid) loop would find
+    // its one present child and call the underfill source to fill the rest.
+    await writeChild(dir, 3, 0, 0, [9, 9, 9, 255]);
+
+    await bakeAll([{ source: regional, minLevel: 2, underfill }], dir);
+
+    // 1 underfill call from the deepest level's own clamped tile (z3, x=3,
+    // y=1) + 1 from the coarser level's one clamped parent (z2, x=1, y=0).
+    // Dropping `source.coverage` from bakeAll's bakeCoarserLevel call would
+    // walk the full z2 grid instead, pick up the orphan's partial parent
+    // too, and this becomes 3 — verified by temporarily making that drop
+    // (see the report for the sabotage-run evidence).
+    expect(underfillCalls).toBe(2);
+  });
+
   it('writes two manifest entries and both sources tiles, in band order', async () => {
     const dir = tmpDir();
     const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);

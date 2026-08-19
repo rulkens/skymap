@@ -294,11 +294,9 @@ function zFromTilePath(relPath: string): number {
 
 /**
  * Read back a band's own prior index and hand its lines to the merged index
- * unbaked — the `--only` fast path. Trusting a stale index outright is the
- * named failure mode (see `docs/backlog/2026-08-19-incremental-band-bake.md`):
- * a manually deleted tile, or a level range that drifted since the index was
- * written, would otherwise ship a manifest promising tiles that 404. Both are
- * checked before a single line is trusted.
+ * unbaked — the `--only` fast path. Verified before trust: a manually deleted
+ * tile, or a level range that drifted since the index was written, would
+ * otherwise ship a manifest promising tiles that 404.
  */
 function stitchBandIndex(
   outDir: string,
