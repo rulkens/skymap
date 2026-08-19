@@ -137,6 +137,65 @@ describe('bakeCoarserLevel', () => {
     expect(nw[3]).toBeLessThanOrEqual(CHANNEL_TOLERANCE); // NW quadrant: transparent, no child there
     expectPixelNear(se, WHITE);
   });
+
+  // The Fix-1 "always opaque" invariant: a partial parent must not leave a
+  // transparent hole once an underfill source is given.
+  const ORANGE = [255, 128, 0, 255] as const;
+
+  /** A stub `EarthImagerySource` whose `readBox` always returns a solid colour. */
+  function stubFillerSource(rgba: readonly [number, number, number, number]): EarthImagerySource & {
+    readBoxCalls: number;
+  } {
+    const stub = {
+      id: 'stub-filler',
+      attribution: 'stub-filler attribution',
+      provenance: { sourceId: 'stub-filler', attribution: 'stub-filler attribution', vintage: 'stub' },
+      maxLevel: 20,
+      coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
+      readBoxCalls: 0,
+      async readBox(_box: LonLatBounds, widthPx: number, heightPx: number) {
+        stub.readBoxCalls++;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
+        return raster;
+      },
+    };
+    return stub;
+  }
+
+  it('fills a missing quadrant from the underfill source instead of leaving it transparent', async () => {
+    const dir = tmpDir();
+    await writeChild(dir, 2, 1, 1, WHITE); // SE only — NW/NE/SW absent
+    const filler = stubFillerSource(ORANGE);
+
+    await bakeCoarserLevel(1, TILE_PX, dir, filler);
+
+    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
+    const { data } = await sharp(parentPath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const nw = pixelAt(data, TILE_PX, 128, 128);
+    const se = pixelAt(data, TILE_PX, 384, 384);
+
+    expectPixelNear(nw, ORANGE); // filled by the underfill source, fully opaque
+    expectPixelNear(se, WHITE); // the present child, untouched
+    expect(filler.readBoxCalls).toBe(1);
+  });
+
+  it('does not call the underfill source when all four children are present', async () => {
+    const dir = tmpDir();
+    await writeChild(dir, 2, 0, 0, RED);
+    await writeChild(dir, 2, 1, 0, GREEN);
+    await writeChild(dir, 2, 0, 1, BLUE);
+    await writeChild(dir, 2, 1, 1, WHITE);
+    const filler = stubFillerSource(ORANGE);
+
+    await bakeCoarserLevel(1, TILE_PX, dir, filler);
+
+    expect(filler.readBoxCalls).toBe(0);
+  });
 });
 
 describe('bakeAll', () => {

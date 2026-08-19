@@ -146,17 +146,19 @@ export async function eoxTileSource(opts: {
         path: eoxTilePath(opts.coverageDir, EOX_MAX_LEVEL, child.row, child.col),
       }));
 
-      // A decline, not a partial tile: unlike `bakeCoarserLevel`'s coastal
-      // "missing quadrants transparent" tolerance, a SOURCE with a gap in
-      // its own 2x2 block has nothing real to offer this box at all.
-      if (children.some((child) => !existsSync(child.path))) return null;
+      // A decline only when the block is EMPTY: a source with SOME coverage
+      // has something real to offer, and `underfillImagerySource` fills the
+      // missing quadrants from the global band rather than this source
+      // returning a partial-but-transparent tile itself.
+      const present = children.filter((child) => existsSync(child.path));
+      if (present.length === 0) return null;
 
       // Per-child read only — already native size, so a resize here would be
       // a no-op today; compositing them straight in (never resizing the
       // canvas AFTER `.composite()` — see `buildEarthTiles.ts:150-160`)
       // matches `bakeCoarserLevel`'s pipeline shape for the same libvips reason.
       const quadrants = await Promise.all(
-        children.map(async (child) => ({
+        present.map(async (child) => ({
           input: await sharp(child.path).ensureAlpha().raw().toBuffer(),
           raw: { width: EOX_TILE_PX, height: EOX_TILE_PX, channels: 4 as const },
           left: child.i * EOX_TILE_PX,

@@ -47,6 +47,7 @@ import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import { eoxTileSource } from './eoxTileSource';
+import { underfillImagerySource } from './underfillImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
@@ -168,14 +169,18 @@ async function bakeDeepestLevel(
  * the assembled mosaic only because the halving is exact — libvips's integer
  * block shrink never lets a 2x2 group straddle a child boundary.
  *
- * A parent with no children is not written; one with SOME children is
- * written with the missing quadrants transparent, so the base texture
- * shows through everywhere a coastal tile has none.
+ * A parent with no children is not written. One with SOME children, and no
+ * `underfill` source, is written with the missing quadrants transparent, so
+ * the base texture shows through (the global band's own coarser levels, and
+ * the future coastal-sparse case). With `underfill`, the missing quadrants
+ * are filled from it instead — see `underfillImagerySource` for why a baked
+ * tile must always end up fully opaque.
  */
 export async function bakeCoarserLevel(
   z: number,
   tilePx: number,
   outDir: string,
+  underfill?: EarthImagerySource,
 ): Promise<string[]> {
   const columns = earthTileColumns(z, tilePx);
   const rows = columns / 2;
@@ -215,14 +220,26 @@ export async function bakeCoarserLevel(
       const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
       const outPath = join(outDir, relPath);
       mkdirSync(dirname(outPath), { recursive: true });
-      await sharp({
-        create: {
-          width: tilePx,
-          height: tilePx,
-          channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0 },
-        },
-      })
+
+      // Four children cover the whole canvas already — no filler read (the
+      // common interior case). A filler decline (never happens for BMNG in
+      // practice) falls back to the transparent canvas, no worse than today.
+      const fillerRaster =
+        underfill && childPaths.length < 4
+          ? await underfill.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx)
+          : null;
+      const canvas = fillerRaster
+        ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })
+        : sharp({
+            create: {
+              width: tilePx,
+              height: tilePx,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+          });
+
+      await canvas
         .composite(quadrants)
         .webp({ quality: WEBP_QUALITY })
         .toFile(outPath);
@@ -240,14 +257,21 @@ export async function bakeCoarserLevel(
  * BMNG; see `EarthTileManifest`).
  */
 export async function bakeAll(
-  bands: ReadonlyArray<{ readonly source: EarthImagerySource; readonly minLevel: number }>,
+  bands: ReadonlyArray<{
+    readonly source: EarthImagerySource;
+    readonly minLevel: number;
+    /** Global-band source to underfill this band's uncovered margins with,
+     *  at every level — see `underfillImagerySource` for why a regional
+     *  band's tiles must always come out fully opaque. */
+    readonly underfill?: EarthImagerySource;
+  }>,
   outDir: string,
 ): Promise<void> {
   const tilePx = EARTH_TILE_PX;
   const written: string[] = [];
   const bandEntries: NonNullable<EarthTileManifest['levels'][typeof KIND]>[number][] = [];
 
-  for (const { source, minLevel } of bands) {
+  for (const { source, minLevel, underfill } of bands) {
     const maxLevel = source.maxLevel;
 
     // A source that can't beat its own band floor has nothing to contribute
@@ -260,12 +284,13 @@ export async function bakeAll(
     }
 
     process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
-    const deepest = await bakeDeepestLevel(source, maxLevel, tilePx, outDir);
+    const effective = underfill ? underfillImagerySource(source, underfill) : source;
+    const deepest = await bakeDeepestLevel(effective, maxLevel, tilePx, outDir);
     written.push(...deepest);
     process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
 
     for (let z = maxLevel - 1; z >= minLevel; z--) {
-      const levelPaths = await bakeCoarserLevel(z, tilePx, outDir);
+      const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill);
       written.push(...levelPaths);
       process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
     }
@@ -341,10 +366,19 @@ async function main(): Promise<void> {
     // which `--dev` explicitly opts out of (see `devSource`).
     await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir);
   } else {
+    // Shared instance, not two separate `deepSource()` calls: reuses BMNG's
+    // band cache, and its `readBox` handles arbitrary small boxes (Copenhagen
+    // sits wholly inside quadrant C1, no seam risk) — the same source can
+    // serve both as the global band and as the EOX band's underfill.
+    const bmng = await deepSource();
     await bakeAll(
       [
-        { source: await deepSource(), minLevel: BAKE_MIN_LEVEL },
-        { source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }), minLevel: EOX_MIN_LEVEL },
+        { source: bmng, minLevel: BAKE_MIN_LEVEL },
+        {
+          source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+          minLevel: EOX_MIN_LEVEL,
+          underfill: bmng,
+        },
       ],
       outDir,
     );

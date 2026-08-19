@@ -111,7 +111,7 @@ describe('eoxTileSource', () => {
     expectPixelNear(se, [...WHITE, 255]);
   });
 
-  it('returns null for a box outside the harvested tiles', async () => {
+  it('returns null only when all four children of the block are missing', async () => {
     const coverageDir = tmpCoverageDir();
     await writeEoxTile(coverageDir, 100, 200, RED);
     await writeEoxTile(coverageDir, 100, 201, GREEN);
@@ -124,6 +124,27 @@ describe('eoxTileSource', () => {
     const rgba = await source.readBox(box, 512, 512);
 
     expect(rgba).toBeNull();
+  });
+
+  it('composites the present quadrants and leaves a missing one transparent', async () => {
+    const coverageDir = tmpCoverageDir();
+    const rowNW = 300;
+    const colNW = 400;
+    // SE (colNW + 1, rowNW + 1) is left unwritten — 3 of 4 present.
+    await writeEoxTile(coverageDir, rowNW, colNW, RED); // NW
+    await writeEoxTile(coverageDir, rowNW, colNW + 1, GREEN); // NE
+    await writeEoxTile(coverageDir, rowNW + 1, colNW, BLUE); // SW
+
+    const source = await eoxTileSource({ coverageDir });
+    const box = boxForBlock(rowNW, colNW);
+    const rgba = await source.readBox(box, 512, 512);
+    expect(rgba).not.toBeNull();
+
+    const nw = pixelAt(rgba!, 512, 128, 128);
+    const se = pixelAt(rgba!, 512, 384, 384);
+
+    expectPixelNear(nw, [...RED, 255]);
+    expect(se[3]).toBe(0); // missing SE quadrant: transparent, filled later by underfillImagerySource
   });
 
   it('derives coverage from the harvested row/col rectangle on disk', async () => {
