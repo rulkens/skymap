@@ -76,7 +76,7 @@ All refreshes share one 3-step shape: fetch, build, then `npm run sync-r2-secure
 | Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*`  |
 | DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)         |
 | Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`          |
-| Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB)    | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5) |
+| Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB) + `fetch-eox` (populates `data/raw/eox/`) | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5, skips the EOX band) |
 
 Raw files and built artefacts are gitignored; only provenance `README.md` + `.sha256` sidecars are committed. Full-res texture pull/build/sync runs post-merge from the main worktree.
 
@@ -88,7 +88,7 @@ The SDSS DR17 Cosmic Slime VAC cube ships as three tiered SCFDs (`mcpm-{small,me
 
 ### Polyphorm volume exports (polyphorm-2mrs)
 
-A locally-run Polyphorm (native MCPM app) export — `bin/export/<timestamp>/` with raw `trace.bin` (headerless f16, z-slowest/x-fastest) + `export_metadata.txt` — is converted by `tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>` into d8/d4/d2 `.npy` + `polyphy-trace` v1 sidecars under `data/raw/polyphorm/` (registry key `polyphorm.dir`, gitignored). Each tier is then imported with `npx tsx tools/volumes/buildRhizomeVolume.ts <npy> --out public/data/scalar-field/v3/polyphorm-2mrs-{small,medium,large}.scfd` (small=d8, medium=d4, large=d2, mirroring MCPM's tiering) followed by `npm run build-data-manifest`. Registered as source `polyphorm-2mrs` (`Source.Polyphorm2MRS`), tiered like MCPM, hidden by default. Current dataset: the 2026-08-13 2MRS run (34,974 galaxies, 4M agents, grid 1200×752×960, ~1.22 Mpc native voxels, equatorial-cartesian frame).
+A locally-run Polyphorm (native MCPM app) export — `bin/export/<timestamp>/` with raw `trace.bin` (headerless f16, z-slowest/x-fastest) + `export_metadata.txt` — is converted by `tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>` into d8/d4/d2 `.npy` + `polyphy-trace` v1 sidecars under `data/raw/polyphorm/` (registry key `polyphorm.dir`, gitignored). Each tier is then imported with `npx tsx tools/volumes/buildRhizomeVolume.ts <npy> --out public/data/scalar-field/v3/polyphorm-2mrs-{small,medium,large}.scfd --clamp 0.2` (small=d8, medium=d4, large=d2, mirroring MCPM's tiering) followed by `npm run build-data-manifest`. `--clamp` zeroes packed voxels below the given f16 threshold (in the [0,1] log-normalised domain); 0.2 sits below the renderer's default-settings visibility deadband (contrast 1.7/trim 0.3 → 0.41) and shrinks the gzipped large tier from 194 MB to 2.3 MB by turning 99.1% of voxels into exact zeros, at no visible cost. Registered as source `polyphorm-2mrs` (`Source.Polyphorm2MRS`), tiered like MCPM, hidden by default. Current dataset: the 2026-08-13 2MRS run (34,974 galaxies, 4M agents, grid 1200×752×960, ~1.22 Mpc native voxels, equatorial-cartesian frame).
 
 ## Catalog gotchas
 

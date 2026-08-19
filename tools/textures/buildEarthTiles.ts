@@ -46,7 +46,9 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
-import type { LonLatBox } from './LonLatBox';
+import { eoxTileSource } from './eoxTileSource';
+import { underfillImagerySource } from './underfillImagerySource';
+import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
  *  that doubles as the land mask. */
@@ -64,6 +66,14 @@ const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
  */
 const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
 
+/**
+ * Shallowest level the EOX regional band emits: one deeper than BMNG's OWN
+ * max (z7), not derived from `BAKE_MIN_LEVEL` — a regional band's floor is a
+ * different rule ("pick up where the global band stops"), not the global
+ * band's own tier-derived floor.
+ */
+const EOX_MIN_LEVEL = 8;
+
 /** The only kind this tool bakes — relief, clouds, night lights and the
  *  material map carry no fine structure worth streaming. */
 const KIND: EarthTileKind = 'surface';
@@ -78,11 +88,11 @@ const TILE_ROOT = 'earth-tiles';
  * manifest for up to a day — mismatched, not merely stale. A new version is
  * new keys, which cost nothing extra and need no purge.
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v1`;
+export const TILE_PREFIX = `${TILE_ROOT}/v2`;
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
-function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBox {
+function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBounds {
   const columns = earthTileColumns(z, tilePx);
   const rows = columns / 2;
   const lonStep = 360 / columns;
@@ -159,14 +169,18 @@ async function bakeDeepestLevel(
  * the assembled mosaic only because the halving is exact — libvips's integer
  * block shrink never lets a 2x2 group straddle a child boundary.
  *
- * A parent with no children is not written; one with SOME children is
- * written with the missing quadrants transparent, so the base texture
- * shows through everywhere a coastal tile has none.
+ * A parent with no children is not written. One with SOME children, and no
+ * `underfill` source, is written with the missing quadrants transparent, so
+ * the base texture shows through (the global band's own coarser levels, and
+ * the future coastal-sparse case). With `underfill`, the missing quadrants
+ * are filled from it instead — see `underfillImagerySource` for why a baked
+ * tile must always end up fully opaque.
  */
 export async function bakeCoarserLevel(
   z: number,
   tilePx: number,
   outDir: string,
+  underfill?: EarthImagerySource,
 ): Promise<string[]> {
   const columns = earthTileColumns(z, tilePx);
   const rows = columns / 2;
@@ -206,54 +220,91 @@ export async function bakeCoarserLevel(
       const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
       const outPath = join(outDir, relPath);
       mkdirSync(dirname(outPath), { recursive: true });
-      await sharp({
-        create: {
-          width: tilePx,
-          height: tilePx,
-          channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0 },
-        },
-      })
-        .composite(quadrants)
-        .webp({ quality: WEBP_QUALITY })
-        .toFile(outPath);
+
+      // Four children cover the whole canvas already — no filler read (the
+      // common interior case). A filler decline (never happens for BMNG in
+      // practice) falls back to the transparent canvas, no worse than today.
+      const fillerRaster =
+        underfill && childPaths.length < 4
+          ? await underfill.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx)
+          : null;
+      const canvas = fillerRaster
+        ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })
+        : sharp({
+            create: {
+              width: tilePx,
+              height: tilePx,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+          });
+
+      await canvas.composite(quadrants).webp({ quality: WEBP_QUALITY }).toFile(outPath);
       written.push(relPath);
     }
   }
   return written;
 }
 
-/** Bake every level from `source.maxLevel` down to `BAKE_MIN_LEVEL` into `outDir`. */
-export async function buildEarthTiles(source: EarthImagerySource, outDir: string): Promise<void> {
+/**
+ * Bake every band's levels (`source.maxLevel` down to that band's own
+ * `minLevel`) into `outDir`, then write ONE `index.txt` and ONE
+ * `manifest.json` covering all bands — several imagery sources can share a
+ * kind at different geographic footprints and depths (EOX deep tiles over
+ * BMNG; see `EarthTileManifest`).
+ */
+export async function bakeAll(
+  bands: ReadonlyArray<{
+    readonly source: EarthImagerySource;
+    readonly minLevel: number;
+    /** Global-band source to underfill this band's uncovered margins with,
+     *  at every level — see `underfillImagerySource` for why a regional
+     *  band's tiles must always come out fully opaque. */
+    readonly underfill?: EarthImagerySource;
+  }>,
+  outDir: string,
+): Promise<void> {
   const tilePx = EARTH_TILE_PX;
-  const minLevel = BAKE_MIN_LEVEL;
-  const maxLevel = source.maxLevel;
-
-  // A whole-globe texture already ships at or below the coarsest tier's base;
-  // a source that can't beat that has nothing to contribute.
-  if (maxLevel < minLevel) {
-    throw new Error(
-      `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the coarsest tier's whole-globe base at z${minLevel - 1} — nothing to bake`,
-    );
-  }
-
   const written: string[] = [];
+  const bandEntries: NonNullable<EarthTileManifest['levels'][typeof KIND]>[number][] = [];
 
-  process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
-  written.push(...(await bakeDeepestLevel(source, maxLevel, tilePx, outDir)));
-  process.stderr.write(`  z${maxLevel}: ${written.length} tiles\n`);
+  for (const { source, minLevel, underfill } of bands) {
+    const maxLevel = source.maxLevel;
 
-  for (let z = maxLevel - 1; z >= minLevel; z--) {
-    const levelPaths = await bakeCoarserLevel(z, tilePx, outDir);
-    written.push(...levelPaths);
-    process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
+    // A source that can't beat its own band floor has nothing to contribute
+    // — for the global band that floor is the coarsest tier's whole-globe
+    // base; for a regional band it's the deeper level a caller chose.
+    if (maxLevel < minLevel) {
+      throw new Error(
+        `bakeAll: source '${source.id}' reaches only z${maxLevel}, at or below its band floor z${minLevel} — nothing to bake`,
+      );
+    }
+
+    process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
+    const effective = underfill ? underfillImagerySource(source, underfill) : source;
+    const deepest = await bakeDeepestLevel(effective, maxLevel, tilePx, outDir);
+    written.push(...deepest);
+    process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
+
+    for (let z = maxLevel - 1; z >= minLevel; z--) {
+      const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill);
+      written.push(...levelPaths);
+      process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
+    }
+
+    // One entry per coverage box: a source spanning the antimeridian declares
+    // two boxes rather than one that wraps (see `LonLatBounds`). `builtFrom`
+    // is the source's OWN provenance — never a module-level assumption, or a
+    // second band's manifest entry would carry the first band's identity.
+    for (const bounds of source.coverage) {
+      bandEntries.push({ bounds, min: minLevel, max: maxLevel, builtFrom: source.provenance });
+    }
   }
 
   const manifest: EarthTileManifest = {
     prefix: TILE_PREFIX,
     tilePx,
-    levels: { [KIND]: { min: minLevel, max: maxLevel } },
-    builtFrom: { [KIND]: `${source.id} — ${source.attribution}` },
+    levels: { [KIND]: bandEntries },
   };
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a
@@ -281,6 +332,7 @@ async function deepSource(): Promise<EarthImagerySource> {
   return bmngQuadrantSource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
     attribution: BMNG_ATTRIBUTION,
+    vintage: BMNG_VINTAGE.label,
     quadrantPaths: Object.fromEntries(
       Object.entries(BMNG_QUADRANT_KEYS).map(([quadrant, key]) => [quadrant, rawDataPath(key)]),
     ) as Record<BmngQuadrant, string>,
@@ -298,15 +350,36 @@ async function devSource(): Promise<EarthImagerySource> {
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-equirect`,
     rawKey: 'textures.nasaBmng',
     attribution: BMNG_ATTRIBUTION,
+    vintage: BMNG_VINTAGE.label,
   });
 }
 
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const { '--dev': dev } = parseFlags(process.argv.slice(2), { '--dev': 'bool' });
-  const source = dev ? await devSource() : await deepSource();
-  process.stderr.write(`buildEarthTiles: ${source.id} -> ${join(outDir, 'earth-tiles')}\n`);
-  await buildEarthTiles(source, outDir);
+  process.stderr.write(`buildEarthTiles: -> ${join(outDir, 'earth-tiles')}\n`);
+  if (dev) {
+    // Whole-globe BMNG only — the EOX band needs the real harvest on disk,
+    // which `--dev` explicitly opts out of (see `devSource`).
+    await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir);
+  } else {
+    // Shared instance, not two separate `deepSource()` calls: reuses BMNG's
+    // band cache, and its `readBox` handles arbitrary small boxes (Copenhagen
+    // sits wholly inside quadrant C1, no seam risk) — the same source can
+    // serve both as the global band and as the EOX band's underfill.
+    const bmng = await deepSource();
+    await bakeAll(
+      [
+        { source: bmng, minLevel: BAKE_MIN_LEVEL },
+        {
+          source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+          minLevel: EOX_MIN_LEVEL,
+          underfill: bmng,
+        },
+      ],
+      outDir,
+    );
+  }
   process.stderr.write(`done; tiles under ${join(outDir, 'earth-tiles')}\n`);
 }
 

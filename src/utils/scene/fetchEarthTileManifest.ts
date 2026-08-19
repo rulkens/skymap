@@ -23,6 +23,13 @@ export async function fetchEarthTileManifest(): Promise<EarthTileManifest | null
     // every tile URL as "undefined/surface/…" and 404-storm. Folding it into
     // the null case degrades to base-only instead.
     if (typeof parsed?.prefix !== 'string' || parsed.prefix === '') return null;
+    // A v1 bake's `levels.surface` is a bare `{min, max}` object, not a band
+    // array — trusting it would hand `derivePlannerParams` a `.length` read
+    // on an object. An absent `surface` key is legitimately valid (staged
+    // rollout), so only a present-but-non-array value is rejected.
+    if (parsed.levels?.surface !== undefined && !Array.isArray(parsed.levels.surface)) {
+      return null;
+    }
     return parsed;
   } catch {
     return null;

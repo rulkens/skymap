@@ -53,12 +53,22 @@ const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 /** A manifest describing a usable surface pyramid, with `tilePx` left to the
  *  caller — `undefined` standing in for a bake that omitted the field. */
+const WORLD_BOUNDS = { west: -180, south: -90, east: 180, north: 90 };
+
 function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
   return {
     prefix: 'earth-tiles/v1',
     tilePx,
-    levels: { surface: { min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1 } },
-    builtFrom: { surface: 'test-fixture' },
+    levels: {
+      surface: [
+        {
+          bounds: WORLD_BOUNDS,
+          min: MIN_TILE_LEVEL,
+          max: MIN_TILE_LEVEL + 1,
+          builtFrom: { sourceId: 'test', attribution: 'test', vintage: 'test' },
+        },
+      ],
+    },
   } as unknown as EarthTileManifest;
 }
 
@@ -90,6 +100,22 @@ describe('earthTileSubsystem manifest validation', () => {
   it('refuses a bake cut at a different tile edge rather than adapting to it', async () => {
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX / 2))).toBeNull();
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX * 2))).toBeNull();
+  });
+
+  it('skips a structurally-malformed band entry and derives params from the good ones', async () => {
+    // A manifest a broken bake or a hand-edit could produce: one entry
+    // missing `bounds` entirely alongside one well-formed entry. Skipping
+    // the bad one — never throwing out of `refreshParams` — is the module's
+    // stated stance for any manifest shape this build can't address.
+    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const goodLevel = manifest.levels.surface![0]!;
+    manifest.levels.surface = [{ ...goodLevel, bounds: undefined as never }, goodLevel];
+
+    const params = await plannerParamsFor(manifest);
+
+    expect(params).not.toBeNull();
+    expect(params!.bands).toHaveLength(1);
+    expect(params!.bands[0]!.max).toBe(goodLevel.max);
   });
 });
 

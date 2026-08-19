@@ -208,39 +208,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Milky-Way star count → cloud regeneration ───────────────────────────
   //
-  // starCount is a DebugPanel slider like every other `settings.milkyWay`
-  // knob, but unlike them it doesn't ride a uniform or a render target — it
-  // feeds GENERATION directly (`milkyWayCloud.generate` carves the star/dust
-  // layouts from it), so the only way a drag reaches the screen is this
-  // branch noticing the live setting has outrun the buffers currently on
-  // screen and regenerating. Same shape as the `reconcile` call just above —
-  // "the targets/buffers no longer match what the frame wants" — asked about
-  // generated data instead of a texture. It also picks up a tier
-  // change: `watchTierSaga` re-seeds `starCount` from the new tier's budget
-  // on every explicit tier switch, so a tier flip surfaces here as an
-  // ordinary mismatch too — `makeRunTierTransition` does not call
-  // `regenerate` itself, to avoid two paths racing to regenerate the same
-  // cloud.
-  //
-  // The comparison is against `cloud.starCount()`, the count the CURRENT
-  // buffers were actually generated with, not a runFrame-side shadow copy:
-  // the generator is the one place that fact is produced, and a second copy
-  // here could only ever drift from the buffers it describes.
-  //
-  // Cost note: `DebugSlider` fires on every input event, so dragging this
-  // knob regenerates the cloud once per tick — a full destroy + allocate +
-  // compute dispatch, far heavier than a uniform write. That is accepted
-  // deliberately for a dev-only knob; if it ever needs production-grade
-  // smoothness, the fix is coalescing to the drag's trailing edge (e.g. a
-  // debounce on the DebugPanel side), not gating the knob back out of the
-  // panel.
-  const cloud = state.gpu.milkyWayCloud;
-  if (cloud) {
-    const wantedCount = state.settings.milkyWay.starCount;
-    if (cloud.starCount() !== wantedCount) {
-      cloud.regenerate(wantedCount);
-    }
-  }
+  // Unconditional like `renderTargets.reconcile` above; the mismatch check
+  // and regeneration rationale live on `MilkyWayCloud.reconcile` itself.
+  state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
   //

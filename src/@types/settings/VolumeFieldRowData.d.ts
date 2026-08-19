@@ -9,10 +9,9 @@
  * registry.  Also returned by `engineHandle.volumes.getState()` for one-shot
  * reads (dev console, tests).
  *
- * The `label` field defaults to the `id` string when the field was
- * registered without an explicit human-readable name.  A future
- * `addVolumeField({ id, label, ... })` API would populate it from
- * caller metadata.
+ * The `label` field defaults to the `id` string: `addVolumeField`'s payload
+ * is just the id, so no field is registered with an explicit human-readable
+ * name today.
  *
  * ### Why this lives in @types rather than the component folder
  *

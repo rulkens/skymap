@@ -68,6 +68,7 @@
     "fetch-2mass-xsc": "tsx tools/fetch/fetch2massXsc.ts",
     "fetch-cf4": "tsx tools/fetch/fetchCosmicflows4.ts",
     "fetch-desi": "tsx tools/fetch/fetchDesi.ts",
+    "fetch-eox": "tsx tools/fetch/fetchEoxTiles.ts",
     "fetch-structures": "tsx tools/fetch/fetchStructureCatalogs.ts",
     "fetch-famous-images": "tsx tools/famous/fetchFamousImages.ts",
     "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
