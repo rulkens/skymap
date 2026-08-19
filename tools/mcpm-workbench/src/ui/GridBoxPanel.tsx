@@ -19,6 +19,8 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import Button from '../../../../src/components/common/Button/Button';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import { deriveGridBox } from '../field/deriveGridBox';
+import { BYTES_PER_ELEMENT } from '../sim/createGridBuffers';
+import { minFeasibleVoxelSizeMpc } from '../sim/minFeasibleVoxelSizeMpc';
 import { estimateGridBudgetBytes } from '../sim/planGridBudget';
 import { useStore } from '../state/useStore';
 import {
@@ -88,6 +90,23 @@ function GridBoxPanel(): ReactNode {
     agentCount,
     grid.resolvedElement ?? 'f32',
   );
+  // V2: the live floor for THIS box's extent — same clamp deriveGridBox applies, computed
+  // here only to drive the slider's `min` (the readout above already reflects the clamp,
+  // since `box` came from deriveGridBox). Static 0.25 fallback pre-init / on a coarse box.
+  const liveFloorMpc =
+    grid.maxBufferBytes === null
+      ? null
+      : minFeasibleVoxelSizeMpc(
+          grid.manualSizeMpc,
+          BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'],
+          grid.maxBufferBytes,
+        );
+  const voxelSizeMinMpc =
+    liveFloorMpc === null || liveFloorMpc < VOXEL_SIZE_MIN_MPC ? VOXEL_SIZE_MIN_MPC : liveFloorMpc;
+  const voxelSizeInfo =
+    liveFloorMpc !== null && liveFloorMpc > VOXEL_SIZE_MIN_MPC
+      ? `Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit. Min for this box: ${liveFloorMpc.toFixed(2)} Mpc.`
+      : "Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit.";
 
   return (
     <div
@@ -139,11 +158,11 @@ function GridBoxPanel(): ReactNode {
         <ParamSlider
           label="voxel size"
           value={grid.manualVoxelSizeMpc}
-          min={VOXEL_SIZE_MIN_MPC}
+          min={voxelSizeMinMpc}
           max={VOXEL_SIZE_MAX_MPC}
           step={VOXEL_SIZE_STEP_MPC}
           format={(v) => v.toFixed(2)}
-          info="Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit."
+          info={voxelSizeInfo}
           onChange={(v) => store.setState((s) => ({ ...s, grid: setVoxelSizeMpc(s.grid, v) }))}
           path="grid.manualVoxelSizeMpc"
         />

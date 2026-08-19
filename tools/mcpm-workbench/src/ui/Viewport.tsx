@@ -60,6 +60,7 @@ import { gridShapeKeyFor } from '../state/gridShapeKeyFor';
 import {
   setManualCenterMpc,
   setManualSizeMpc,
+  setMaxBufferBytes,
   setResolvedGrid,
   setRotation,
 } from '../state/slices/gridSlice';
@@ -581,7 +582,14 @@ function Viewport({ store }: ViewportProps): ReactNode {
       );
       store.setState((st) => ({
         ...st,
-        grid: setResolvedGrid(st.grid, box, h.element, budget),
+        // V2: records the device's real per-buffer ceiling once a GPU exists — non-user,
+        // does not clear importedBox — so deriveGridBox can clamp every FUTURE derivation
+        // (this build's own `box` above was already derived, unclamped, against the prior
+        // value or null; that's fine, it either already fit or the refusal above caught it).
+        grid: setMaxBufferBytes(
+          setResolvedGrid(st.grid, box, h.element, budget),
+          h.gpu.device.limits.maxStorageBufferBindingSize,
+        ),
         sim: resetStepCount(st.sim),
         // A new grid box / catalog never continues the old convergence curve — same
         // reasoning as the resetToken path below, same one-line fix.

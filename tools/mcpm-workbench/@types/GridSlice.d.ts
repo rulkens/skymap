@@ -43,6 +43,13 @@ import type { GridElement } from './GridElement';
  * translate/resize drag on a loaded ROTATED box (which clears `importedBox`,
  * V3) doesn't snap the box back to identity the instant it falls onto the
  * manual path.
+ *
+ * `maxBufferBytes` (V2) is the device's real per-buffer allocation ceiling —
+ * null until Viewport's first successful GPU init, never a guessed constant.
+ * `deriveGridBox` clamps `manualVoxelSizeMpc` up to whatever floor keeps a
+ * grid buffer allocatable under it, so auto fit / box edits can no longer
+ * derive a refused grid. Set only by `setMaxBufferBytes`, which — like
+ * `setResolvedGrid` — is not a user edit and does NOT clear `importedBox`.
  */
 export type GridSlice = {
   readonly manualVoxelSizeMpc: number;
@@ -55,4 +62,5 @@ export type GridSlice = {
   readonly resolvedElement: GridElement | null;
   readonly byteBudget: GridBudget | null;
   readonly showGridBox: boolean;
+  readonly maxBufferBytes: number | null;
 };

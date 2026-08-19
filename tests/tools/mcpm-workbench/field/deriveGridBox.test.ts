@@ -52,4 +52,70 @@ describe('deriveGridBox', () => {
     const box = deriveGridBox({ ...defaultGridSlice, importedBox });
     expect(box).toEqual(importedBox);
   });
+
+  it('V2: importedBox stays verbatim (unclamped) even past a set maxBufferBytes floor', () => {
+    // A box that would itself blow a tiny limit if it were derived through the manual
+    // path — importedBox must return it untouched anyway (ruling in deriveGridBox.ts).
+    const importedBox = {
+      centerMpc: [0, 0, 0] as Vec3,
+      sizeMpc: [800, 800, 800] as Vec3,
+      dims: [1600, 1600, 1600] as Vec3,
+      voxelSizeMpc: 0.5,
+      rotation: [0, 0, 0, 1] as Vec4,
+    };
+    const box = deriveGridBox({ ...defaultGridSlice, importedBox, maxBufferBytes: 2048 });
+    expect(box).toEqual(importedBox);
+  });
+});
+
+describe('deriveGridBox — V2 allocation-aware voxel-size floor', () => {
+  it('maxBufferBytes null: manual voxel size passes through unclamped', () => {
+    const grid = {
+      ...defaultGridSlice,
+      manualSizeMpc: [1500, 1500, 1500] as Vec3,
+      manualVoxelSizeMpc: 0.1, // would need ~15000^3 voxels — refused on any real device
+      maxBufferBytes: null,
+    };
+    const box = deriveGridBox(grid);
+    expect(box.voxelSizeMpc).toBe(0.1);
+  });
+
+  it('manual voxel size above the floor: derived voxelSizeMpc is unchanged', () => {
+    const grid = {
+      ...defaultGridSlice,
+      manualSizeMpc: [200, 200, 200] as Vec3,
+      manualVoxelSizeMpc: 1, // dims 200^3 * 4 bytes = 32 MB, well under the limit below
+      resolvedElement: 'f32' as const,
+      maxBufferBytes: 4 * 1024 ** 3,
+    };
+    const box = deriveGridBox(grid);
+    expect(box.voxelSizeMpc).toBe(1);
+  });
+
+  it('manual voxel size below the floor: derived voxelSizeMpc is clamped up to the floor', () => {
+    // Same fixture minFeasibleVoxelSizeMpc.test.ts hand-computes: 1500 Mpc extent, f32,
+    // a 4 GiB limit floors at exactly 1500/1024 Mpc/vox (dims 1024^3 * 4 = 4 GiB exactly).
+    const grid = {
+      ...defaultGridSlice,
+      manualSizeMpc: [1500, 1500, 1500] as Vec3,
+      manualVoxelSizeMpc: 0.1,
+      resolvedElement: 'f32' as const,
+      maxBufferBytes: 4 * 1024 ** 3,
+    };
+    const box = deriveGridBox(grid);
+    expect(box.voxelSizeMpc).toBeCloseTo(1500 / 1024, 9);
+    expect(box.dims).toEqual([1024, 1024, 1024]);
+  });
+
+  it('resolvedElement null before a first build: floor computed at f32 (4 bytes), not f16', () => {
+    const grid = {
+      ...defaultGridSlice,
+      manualSizeMpc: [1500, 1500, 1500] as Vec3,
+      manualVoxelSizeMpc: 0.1,
+      resolvedElement: null,
+      maxBufferBytes: 4 * 1024 ** 3,
+    };
+    const box = deriveGridBox(grid);
+    expect(box.voxelSizeMpc).toBeCloseTo(1500 / 1024, 9);
+  });
 });

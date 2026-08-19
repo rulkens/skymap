@@ -15,6 +15,17 @@ const DIM_GRANULARITY = 8; // decay dispatches dims/8 with no bounds tail
 const BUFFER_NAMES = ['depositA', 'depositB', 'trace', 'agents'] as const;
 
 /**
+ * bufferBytesForDims — one grid buffer's byte count for a dims/element-size
+ * pair: the per-buffer term `estimateGridBudgetBytes` and `planGridBudget`'s
+ * refusal check both need, and the one `minFeasibleVoxelSizeMpc` shares too
+ * (it takes `elementBytes` raw, not `GridElement`, since it never resolves
+ * f16 vs f32 itself — that stays deriveGridBox's job).
+ */
+export function bufferBytesForDims(dims: Vec3, elementBytes: number): number {
+  return dims[0] * dims[1] * dims[2] * elementBytes;
+}
+
+/**
  * estimateGridBudgetBytes — the total-bytes half of `planGridBudget`'s
  * arithmetic (three storage grids + seven agent lanes), pulled out as its
  * own pure function so a live UI estimate (GridBoxPanel's dims/memory
@@ -28,8 +39,7 @@ export function estimateGridBudgetBytes(
   agentCount: number,
   element: GridElement,
 ): number {
-  const voxels = dims[0] * dims[1] * dims[2];
-  const gridBytes = voxels * BYTES_PER_ELEMENT[element];
+  const gridBytes = bufferBytesForDims(dims, BYTES_PER_ELEMENT[element]);
   const laneBytes = agentCount * BYTES_PER_AGENT_LANE_ENTRY;
   return 3 * gridBytes + AGENT_LANES * laneBytes;
 }
@@ -51,8 +61,7 @@ export function planGridBudget(
 ): GridBudget {
   const limitBytes = Math.min(limits.maxBufferSize, limits.maxStorageBufferBindingSize);
 
-  const voxels = box.dims[0] * box.dims[1] * box.dims[2];
-  const gridBytes = voxels * BYTES_PER_ELEMENT[element];
+  const gridBytes = bufferBytesForDims(box.dims, BYTES_PER_ELEMENT[element]);
   const laneBytes = agentCount * BYTES_PER_AGENT_LANE_ENTRY;
 
   const perBufferBytes = {

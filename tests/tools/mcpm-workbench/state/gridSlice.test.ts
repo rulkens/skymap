@@ -17,6 +17,7 @@ import {
   installImportedBox,
   setManualCenterMpc,
   setManualSizeMpc,
+  setMaxBufferBytes,
   setPaddingMpc,
   setRotation,
   setVoxelSizeMpc,
@@ -88,6 +89,14 @@ describe('installImportedBox', () => {
     const afterDrag = setManualCenterMpc(loaded, [20, 20, 20]);
     expect(afterDrag.importedBox).toBeNull();
     expect(afterDrag.manualRotation).toEqual(IMPORTED_BOX.rotation);
+  });
+});
+
+describe('setMaxBufferBytes', () => {
+  it('records the device limit without clearing importedBox — a hardware fact, not a user edit', () => {
+    const next = setMaxBufferBytes(withImportedBox, 4 * 1024 ** 3);
+    expect(next.maxBufferBytes).toBe(4 * 1024 ** 3);
+    expect(next.importedBox).toEqual(IMPORTED_BOX);
   });
 });
 
