@@ -113,7 +113,7 @@ describe('volume slot ingest', () => {
     expect(ingest).toHaveBeenCalledWith(state, cb.store, 'polyphorm-2mrs', cube);
   });
 
-  it('each synthetic fixture ingests its cube under its own debug- field id', async () => {
+  it('a synthetic fixture ingests its cube under its own debug- field id', async () => {
     const cube = fakeCube();
     mockSyntheticFetch.mockResolvedValue(cube);
     const state = fakeState();

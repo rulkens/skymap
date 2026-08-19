@@ -5,14 +5,13 @@ import type { VolumeFieldId } from '../../data/volume/VolumeFieldId';
 /**
  * EngineVolumesHandle — scalar-volume overlay registry.
  *
- * `add` / `remove` mint and unmint cube registrations.  Per-field tunable
- * writes (enabled, intensity, contrast, densityScale, trim, exposure, palette)
- * and the master enabled gate now dispatch directly through the store.
- *
- * `add`/`remove` are the entry point for runtime-supplied cubes the demand
- * system cannot express (no URL, not in the registry); they execute the
- * _same_ `uploadVolumeField`/`unloadVolumeField` the volume slot commits do,
- * so there is no second ingest path.
+ * `add` / `remove` mint and unmint cube registrations — the entry point for
+ * runtime-supplied cubes the demand system cannot express (no URL, not in
+ * the registry). They execute the _same_ `uploadVolumeField`/
+ * `unloadVolumeField` the volume slot commits do, so there is no second
+ * ingest path.  Per-field tunable writes (enabled, intensity, contrast,
+ * densityScale, trim, exposure, palette) and the master enabled gate now
+ * dispatch directly through the store.
  *
  * The spherical envelope is per-cube static presentation config, read
  * once from the registry by the renderer's `upload` — it is not a

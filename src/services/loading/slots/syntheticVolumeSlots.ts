@@ -1,19 +1,12 @@
 /**
- * syntheticVolumeSlots — factory for the three DEV-only synthetic
- * volume fixtures (Gaussian blob, Cartesian grid, spherical grid).
+ * syntheticVolumeSlots — factory for the three DEV-only synthetic volume
+ * fixtures (Gaussian blob, Cartesian grid, spherical grid), tree-shaken
+ * from prod via the caller's `import.meta.env.DEV` gate.
  *
- * Each fixture drives the same `volumeFieldRenderer` commit path as
- * the real CF-4 density slot but with procedurally-generated cube
- * data.  Routing the synthetic cubes through the slot system (rather
- * than a bespoke "synthetic shortcut") means they get the same
- * fade-in, `LoadingDevPanel` row, race-checked commit, and retry
- * semantics as every real volume fetch — without any branching in
- * the render loop.
- *
- * **DEV-only:** callers gate on `import.meta.env.DEV`.  These are
- * axis-verification fixtures, not science data — production users
- * would just see noise.  Vite tree-shakes the block from production
- * bundles because `import.meta.env.DEV` is a compile-time constant.
+ * Each commit hands its cube to `uploadVolumeField` — the real ingest path,
+ * not a bespoke shortcut, so fixtures get real fade-in and retry semantics.
+ * Debug ids are excluded from `seedVolumeFields`, so `uploadVolumeField`'s
+ * own dispatch self-seeds their settings row, unlike a real volume's.
  */
 
 import { createAssetSlot } from '../AssetSlot';
