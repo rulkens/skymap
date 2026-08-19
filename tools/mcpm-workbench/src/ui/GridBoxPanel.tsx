@@ -19,7 +19,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import Button from '../../../../src/components/common/Button/Button';
 import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
 import { deriveGridBox } from '../field/deriveGridBox';
-import { BYTES_PER_ELEMENT } from '../sim/createGridBuffers';
+import { estimateGridBudgetBytes } from '../sim/planGridBudget';
 import { useStore } from '../state/useStore';
 import {
   fitBoxToCatalog,
@@ -40,19 +40,6 @@ import styles from './GridBoxPanel.module.css';
 const VOXEL_SIZE_MIN_MPC = 0.25;
 const VOXEL_SIZE_MAX_MPC = 4;
 const VOXEL_SIZE_STEP_MPC = 0.05;
-
-// Estimated bytes for the three storage-backed grids the sim allocates
-// (depositA/depositB/trace — createGridBuffers.ts); mirrors planGridBudget's
-// `3 * gridBytes` term but skips the agent-lane term, which scales with
-// agentCount, not box resolution, and stays tiny at any real grid size — a
-// live per-drag estimate has no cheap access to the resolved GPUSupportedLimits
-// planGridBudget needs anyway. `resolvedElement` only changes with hardware
-// capability, not box edits, so this doesn't go stale mid-drag the way
-// `grid.byteBudget` (last COMPLETED build) would.
-function estimateGridBytes(dims: Vec3, element: 'f16' | 'f32' | null): number {
-  const voxels = dims[0] * dims[1] * dims[2];
-  return 3 * voxels * BYTES_PER_ELEMENT[element ?? 'f32'];
-}
 
 // Literal-typed axis index (not a `.map` callback index, which noUncheckedIndexedAccess
 // would widen to `number` and turn every `vec[axis]` read into `number | undefined`).
@@ -89,7 +76,18 @@ function GridBoxPanel(): ReactNode {
   const store = useAppStore();
   const grid = useStore(store, (s) => s.grid);
   const catalogBoundsMpc = useStore(store, (s) => s.catalog.catalogBoundsMpc);
+  const agentCount = useStore(store, (s) => s.sim.agentCount);
   const box = deriveGridBox(grid);
+  // Same total-bytes formula planGridBudget uses to refuse a build (one home,
+  // shared) — no device limits needed here since this is a live estimate, not
+  // a refusal check. `resolvedElement` only changes with hardware capability,
+  // not box/agent-count edits, so this can't go stale mid-drag the way
+  // `grid.byteBudget` (last COMPLETED build) would.
+  const estimatedBytes = estimateGridBudgetBytes(
+    box.dims,
+    agentCount,
+    grid.resolvedElement ?? 'f32',
+  );
 
   return (
     <div
@@ -119,7 +117,7 @@ function GridBoxPanel(): ReactNode {
       </Button>
       <div style={dimsReadoutStyle}>
         {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox ·{' '}
-        {formatBytes(estimateGridBytes(box.dims, grid.resolvedElement))}
+        {formatBytes(estimatedBytes)}
       </div>
       <label>
         padding (Mpc)

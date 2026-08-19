@@ -6,7 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
-import { planGridBudget } from '../../../../tools/mcpm-workbench/src/sim/planGridBudget';
+import {
+  estimateGridBudgetBytes,
+  planGridBudget,
+} from '../../../../tools/mcpm-workbench/src/sim/planGridBudget';
 
 const boxOf = (dims: Vec3): GridBox => ({
   centerMpc: [0, 0, 0],
@@ -64,5 +67,27 @@ describe('planGridBudget', () => {
       maxStorageBufferBindingSize: 268_435_456,
     });
     expect(budget.refusal?.maxLongAxis).toBe(400);
+  });
+});
+
+// V1 fix round 1: GridBoxPanel's live memory readout reuses this function
+// directly (rather than re-deriving the formula) specifically so it can't
+// silently drop the agent-lane term the way its first version did.
+describe('estimateGridBudgetBytes', () => {
+  it('sums the grid term and the agent term, hand-computed', () => {
+    // dims 8x8x8 = 512 voxels; f32 grid = 512*4 = 2048 bytes/grid, three
+    // grids = 6144. 7 agent lanes x 100 agents x 4 bytes/entry = 2800.
+    expect(estimateGridBudgetBytes([8, 8, 8], 100, 'f32')).toBe(6144 + 2800);
+  });
+
+  it('the agent term dominates at high agent count on a coarse grid', () => {
+    // A coarse 56^3 grid (reachable at the panel's own 4 Mpc max voxel size
+    // on the default 200 Mpc box) next to the agent slider's 10M max: the
+    // agent-lane term outweighs the grid term by two orders of magnitude —
+    // the exact case the old GridBoxPanel-local estimate silently dropped.
+    const gridOnly = estimateGridBudgetBytes([56, 56, 56], 0, 'f32');
+    const withMaxAgents = estimateGridBudgetBytes([56, 56, 56], 10_000_000, 'f32');
+    expect(withMaxAgents - gridOnly).toBe(7 * 10_000_000 * 4);
+    expect(withMaxAgents).toBeGreaterThan(gridOnly * 100);
   });
 });

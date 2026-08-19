@@ -1,6 +1,7 @@
 import type { GridBox } from '../../@types/GridBox';
 import type { GridBudget } from '../../@types/GridBudget';
 import type { GridElement } from '../../@types/GridElement';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { BYTES_PER_ELEMENT } from './createGridBuffers';
 
 // agentX/Y/Z/Phi/Theta/Weight (io.wesl slots 3..8) plus T20's `densities` lane
@@ -12,6 +13,26 @@ const DIM_GRANULARITY = 8; // decay dispatches dims/8 with no bounds tail
 
 // Named in allocation order so a refusal points at the first buffer that fails.
 const BUFFER_NAMES = ['depositA', 'depositB', 'trace', 'agents'] as const;
+
+/**
+ * estimateGridBudgetBytes — the total-bytes half of `planGridBudget`'s
+ * arithmetic (three storage grids + seven agent lanes), pulled out as its
+ * own pure function so a live UI estimate (GridBoxPanel's dims/memory
+ * readout) can reuse the EXACT formula instead of growing a second,
+ * driftable copy of it. No device limits here on purpose — this is a size
+ * estimate, not a refusal check; `planGridBudget` is still the one place
+ * that decides whether an allocation actually fits.
+ */
+export function estimateGridBudgetBytes(
+  dims: Vec3,
+  agentCount: number,
+  element: GridElement,
+): number {
+  const voxels = dims[0] * dims[1] * dims[2];
+  const gridBytes = voxels * BYTES_PER_ELEMENT[element];
+  const laneBytes = agentCount * BYTES_PER_AGENT_LANE_ENTRY;
+  return 3 * gridBytes + AGENT_LANES * laneBytes;
+}
 
 /**
  * planGridBudget — the pre-allocation verdict on a grid + agent configuration.
@@ -40,7 +61,7 @@ export function planGridBudget(
     trace: gridBytes,
     agents: laneBytes,
   };
-  const totalBytes = 3 * gridBytes + AGENT_LANES * laneBytes;
+  const totalBytes = estimateGridBudgetBytes(box.dims, agentCount, element);
 
   const offender = BUFFER_NAMES.find((name) => perBufferBytes[name] > limitBytes);
   if (offender === undefined) return { perBufferBytes, totalBytes, refusal: null };
