@@ -7,9 +7,10 @@ import { gizmoHandleGeometry } from '../../../../tools/mcpm-workbench/src/gizmo/
 import { pickGizmoHandle } from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
 import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
 
-// F2.3 review MAJOR: rayFromPointer (Viewport.tsx) is a closure, not exported, so this
-// pins the two primitives it composes — cameraBasis + screenToRay — at exactly the values
-// the fix and the pre-fix bug produce, rather than executing the closure itself.
+// F2.3 review MAJOR: pins the two primitives rayFromPointer.ts composes — cameraBasis +
+// screenToRay — at exactly the values the fix and the pre-fix bug produce. rayFromPointer
+// itself always passes the identity-rotation box (no branch to compare against), so this
+// still exercises the composition by hand rather than the function.
 
 const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
   [1, 0, 0],

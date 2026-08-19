@@ -1,6 +1,7 @@
 /**
  * Viewport — owns the <canvas>, the McpmHarness, the render graph and the RAF
- * loop; bridges pointer/wheel input into the view slice's orbit camera.
+ * loop; delegates pointer/wheel input to `createViewportInput` (../input),
+ * applying its hover/drag-handle state to the box-preview draw call.
  *
  * Viewport is the ONLY caller of `initGpu` (task R5 — it asks for shader-f16 and
  * the kernels' compute limits, then hands the result to `createMcpmHarness`); a
@@ -14,14 +15,9 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { AgentWeights } from '../../@types/AgentWeights';
 import type { AppState } from '../../@types/AppState';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GizmoDragState } from '../../@types/GizmoDragState';
-import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmHarness } from '../../@types/McpmHarness';
-import type { Ray } from '../../@types/Ray';
 import type { Store } from '../../@types/Store';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { initGpu, resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { downloadStem } from '../export/downloadStem';
@@ -31,21 +27,13 @@ import { exportScfd } from '../export/exportScfd';
 import { previewPackedTrace } from '../export/previewPackedTrace';
 import { triggerDownload } from '../export/triggerDownload';
 import { widenTrace } from '../export/widenTrace';
-import { boxAxesFor } from '../field/boxAxesFor';
 import { catalogBounds } from '../field/catalogBounds';
 import { deriveAgentWeights } from '../field/deriveAgentWeights';
 import { deriveGridBox } from '../field/deriveGridBox';
 import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
-import { applyResizeDrag } from '../gizmo/applyResizeDrag';
-import { applyTranslateDrag } from '../gizmo/applyTranslateDrag';
-import { closestPointOnRayToLine } from '../gizmo/closestPointOnRayToLine';
-import { dragRotate } from '../gizmo/dragRotate';
-import { gizmoArrowLengthMpc } from '../gizmo/gizmoArrowLengthMpc';
-import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
-import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
-import { screenToRay } from '../gizmo/screenToRay';
-import { cameraBasis } from '../render/cameraBasis';
+import { createViewportInput } from '../input/createViewportInput';
+import { cameraViewFor } from '../render/cameraViewFor';
 import { effectiveVolpathDivisor } from '../render/effectiveVolpathDivisor';
 import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
 import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
@@ -60,27 +48,10 @@ import {
 import { buildKey } from '../state/buildKey';
 import { gridShapeKeyFor } from '../state/gridShapeKeyFor';
 import { createTokenWatcher } from '../state/tokenWatcher';
-import {
-  setManualCenterMpc,
-  setManualSizeMpc,
-  setMaxBufferBytes,
-  setResolvedGrid,
-  setRotation,
-} from '../state/slices/gridSlice';
-import { cross3 } from '../../../../src/utils/math/cross3';
-import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
+import { setMaxBufferBytes, setResolvedGrid } from '../state/slices/gridSlice';
 import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
-import {
-  defaultViewSlice,
-  setCameraDistance,
-  setCameraTarget,
-  setCameraYawPitch,
-  setFps,
-  setPreviewPacked,
-} from '../state/slices/viewSlice';
+import { defaultViewSlice, setFps, setPreviewPacked } from '../state/slices/viewSlice';
 
 // The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
 // so exposure 2 reproduces it exactly through the blit.
@@ -96,14 +67,6 @@ const FPS_PUSH_INTERVAL_MS = 500;
 // host round trip, and every sim step already queues one GPU submission of its own.
 // Steps, not wall-clock, so the convergence plot's x-axis is exact step counts.
 const HISTOGRAM_INTERVAL_STEPS = 20;
-const DRAG_SPEED = 0.005;
-// Exponential in the raw wheel delta — galaxy-renderer's createOrbitCameraInput
-// constant, so both tools zoom with the same hand feel; a sign-only step ignores
-// delta magnitude and crawls on trackpads.
-const ZOOM_SPEED = 0.0018;
-const PAN_SPEED = 0.0016;
-const FOV_Y_RAD = Math.PI / 4;
-const CAMERA_UP: Vec3 = [0, 1, 0];
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
@@ -121,18 +84,6 @@ type ProbeWindow = { __mcpmProbeReady?: boolean };
  */
 function catalogKey(s: AppState): unknown[] {
   return [s.catalog.sources, s.catalog.tier, s.catalog.packedDropId, s.catalog.packedSourceName];
-}
-
-/** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
-function cameraViewFor(s: AppState, viewportPx: readonly [number, number]): McpmCameraView {
-  const { yaw, pitch, distance, targetMpc } = s.view.camera;
-  const cosPitch = Math.cos(pitch);
-  const eyeMpc: Vec3 = [
-    targetMpc[0] + distance * cosPitch * Math.sin(yaw),
-    targetMpc[1] + distance * Math.sin(pitch),
-    targetMpc[2] + distance * cosPitch * Math.cos(yaw),
-  ];
-  return { eyeMpc, targetMpc, upMpc: CAMERA_UP, fovYRad: FOV_Y_RAD, viewportPx };
 }
 
 function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView {
@@ -160,27 +111,6 @@ function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView
 export type ViewportProps = {
   readonly store: Store<AppState>;
 };
-
-/** Narrows away GizmoDragState's rotate variant — nested on `handle.kind`, one level past
- *  what TS's discriminated-union narrowing follows automatically, so an explicit predicate
- *  earns its place here rather than a cast at each call site. */
-type AxisDragState = Extract<
-  GizmoDragState,
-  { readonly handle: { readonly kind: 'translate' | 'resize' } }
->;
-function isAxisDrag(drag: GizmoDragState): drag is AxisDragState {
-  return drag.handle.kind !== 'rotate';
-}
-
-/** A unit vector ⊥ `axisDir` — the rotate ring's 0°-angle reference for `dragRotate`. Same
- *  "helper axis not near-parallel" fallback as cameraBasis.ts's right/up derivation and
- *  boxPreviewPass.ts's crossArmVectors — deterministic in axisDir alone, so calling it fresh at
- *  pointer-down and every pointer-move yields the SAME reference `dragRotate`'s absolute-angle
- *  anchor/current pair needs, with no state to carry between calls. */
-function ringReferenceDirFor(axisDir: Readonly<Vec3>): Vec3 {
-  const helper: Vec3 = Math.abs(axisDir[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
-  return normalize3(cross3(axisDir, helper));
-}
 
 function Viewport({ store }: ViewportProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -530,17 +460,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // The pending box leads the debounced harness rebuild by up to REBUILD_DEBOUNCE_MS —
         // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
         // the galaxy dots.
-        // gizmoDragging keeps the wireframe up through a drag even once the 200ms
-        // preview timer lapses — a continuous pointer signal is its own "still hot".
-        // showGridBox (F1.7) ORs in a persistent third reason; see boxWireframeVisible.
-        if (points && boxWireframeVisible(s, now)) {
+        // A drag in progress keeps the wireframe up even once the 200ms preview timer
+        // lapses — a continuous pointer signal is its own "still hot"; `input`'s own
+        // isWireframeVisible ORs that in on top of the showGridBox/flash pair below (F1.7).
+        if (points && input.isWireframeVisible(s, now)) {
           graph.drawBoxPreview(
             encoder,
             cam,
             h.box,
             deriveGridBox(s.grid),
-            hoverHandle,
-            gizmoDragging?.handle ?? null,
+            input.getHoverHandle(),
+            input.getDragHandleId(),
           );
         }
         graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
@@ -788,216 +718,21 @@ function Viewport({ store }: ViewportProps): ReactNode {
       lastPreviewPacked = s.view.raymarch.previewPacked;
     });
 
-    // ── Orbit input → view slice camera (a gizmo handle hit short-circuits it) ──
-    let dragging = false;
-    let panning = false;
-    let lastX = 0;
-    let lastY = 0;
-    // Closure-local, like dragging/panning above — not store fields (spec §5's "State
-    // flow"). gizmoDragging's anchor is captured once at pointer-down; hoverHandle is
-    // recomputed every non-dragging move, purely for drawBoxPreview's glyph highlight.
-    let gizmoDragging: GizmoDragState | null = null;
-    let hoverHandle: GizmoHandleId | null = null;
-
-    /**
-     * F1.7: the box wireframe (and therefore the gizmo, which draws with it)
-     * is visible for any of three independent reasons — the persistent
-     * toggle, the 200ms post-edit flash, or a drag in progress — and the
-     * gizmo hit-test/hover-pick below must agree with the draw call in
-     * frame() exactly, or picking an invisible handle would hijack an orbit
-     * click while the toggle is off.
-     */
-    function boxWireframeVisible(s: AppState, now: number): boolean {
-      return s.grid.showGridBox || now < boxPreviewUntil || gizmoDragging !== null;
-    }
-
-    // Identity copy of box.rotation, not [0,0,0,1] inline — cameraBasis(box) now rotates by
-    // R⁻¹ (F2.3) whenever box.rotation isn't identity, but this call site still needs the
-    // *unrotated* basis per spec §5: handle geometry and drag math are world-space, never
-    // voxel-space (F2.3 review MAJOR — a rotated box otherwise mis-picks every handle).
-    const IDENTITY_ROTATION: Vec4 = [0, 0, 0, 1];
-
-    /** World-space pick ray through the pointer, against the *unrotated* CameraBasis —
-     *  screenToRay's own contract: the gizmo picks world-space handle geometry, never
-     *  voxel space. */
-    function rayFromPointer(e: PointerEvent, s: AppState): Ray {
-      const rect = canvas.getBoundingClientRect();
-      const ndc: [number, number] = [
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -(((e.clientY - rect.top) / rect.height) * 2 - 1),
-      ];
-      const cam = cameraViewFor(s, [canvas.width, canvas.height]);
-      const basis = cameraBasis(cam.eyeMpc, cam.targetMpc, cam.upMpc, {
-        ...deriveGridBox(s.grid),
-        rotation: IDENTITY_ROTATION,
-      });
-      const aspect = cam.viewportPx[0] / cam.viewportPx[1];
-      return screenToRay(cam.eyeMpc, basis, cam.fovYRad, aspect, ndc);
-    }
-
-    /** Translate-arrow length for `box`, from the SAME camera formula boxPreviewPass draws
-     *  against — pick and draw must agree or grabbing an arrow will miss where it's drawn. */
-    function arrowLengthMpcFor(s: AppState, boxCenterMpc: Vec3): number {
-      const cam = cameraViewFor(s, [canvas.width, canvas.height]);
-      return gizmoArrowLengthMpc(cam.eyeMpc, boxCenterMpc, cam.fovYRad);
-    }
-
-    const onPointerDown = (e: PointerEvent): void => {
-      const s = store.getSnapshot();
-      if (boxWireframeVisible(s, performance.now())) {
-        const pendingBox = deriveGridBox(s.grid);
-        const ray = rayFromPointer(e, s);
-        const arrowLengthMpc = arrowLengthMpcFor(s, pendingBox.centerMpc);
-        const axes = boxAxesFor(pendingBox.rotation);
-        const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, axes, arrowLengthMpc));
-        if (hit && hit.kind === 'rotate') {
-          const axisDir = axes[hit.axis];
-          const referenceDir = ringReferenceDirFor(axisDir);
-          const anchorAngleRad = dragRotate(ray, pendingBox.centerMpc, axisDir, referenceDir);
-          // null only on a ray parallel to the ring's own plane — an edge-on view a real click
-          // on the visible ring can't produce in practice; falls through to orbit rather than
-          // starting an undefined-angle drag.
-          if (anchorAngleRad !== null) {
-            gizmoDragging = { handle: hit, anchorAngleRad, anchorRotation: pendingBox.rotation };
-            canvas.setPointerCapture(e.pointerId);
-            return;
-          }
-        } else if (hit) {
-          const anchorAxisParam = closestPointOnRayToLine(
-            ray,
-            pendingBox.centerMpc,
-            axes[hit.axis],
-          );
-          gizmoDragging = { handle: hit, anchorAxisParam, anchorBox: pendingBox };
-          canvas.setPointerCapture(e.pointerId);
-          return;
-        }
-      }
-
-      dragging = true;
-      panning = e.button === 2 || e.button === 1;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      canvas.setPointerCapture(e.pointerId);
-    };
-    const onPointerUp = (): void => {
-      dragging = false;
-      panning = false;
-      gizmoDragging = null;
-    };
-    const onPointerMove = (e: PointerEvent): void => {
-      const s = store.getSnapshot();
-
-      if (gizmoDragging) {
-        if (isAxisDrag(gizmoDragging)) {
-          const drag = gizmoDragging;
-          const axisDir = boxAxesFor(drag.anchorBox.rotation)[drag.handle.axis];
-          const ray = rayFromPointer(e, s);
-          const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
-          const deltaMpc = param - drag.anchorAxisParam;
-          if (drag.handle.kind === 'translate') {
-            const centerMpc = applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc);
-            store.setState((st) => ({ ...st, grid: setManualCenterMpc(st.grid, centerMpc) }));
-          } else {
-            const { centerMpc, sizeMpc } = applyResizeDrag(
-              drag.anchorBox,
-              drag.handle.axis,
-              axisDir,
-              drag.handle.sign,
-              deltaMpc,
-            );
-            store.setState((st) => ({
-              ...st,
-              grid: setManualSizeMpc(setManualCenterMpc(st.grid, centerMpc), sizeMpc),
-            }));
-          }
-        } else {
-          // Fixed-anchor recompute (spec §5): every pointermove recomputes rotation' from the
-          // SAME anchorRotation captured at pointerdown — no incremental accumulation onto the
-          // previous frame's rotation, no renormalize. axisDir is invariant under its own
-          // rotation (rotating about an axis never moves that axis), so deriving it from
-          // anchorRotation rather than the live (already-changing) box rotation is exact, not
-          // an approximation. centerMpc alone is read live: unlike translate/resize, a rotate
-          // drag never writes it, so there is no re-derive feedback loop to guard against
-          // (drag.anchorBox's whole reason to exist for THAT pair).
-          const drag = gizmoDragging;
-          const axisDir = boxAxesFor(drag.anchorRotation)[drag.handle.axis];
-          const referenceDir = ringReferenceDirFor(axisDir);
-          const centerMpc = deriveGridBox(s.grid).centerMpc;
-          const ray = rayFromPointer(e, s);
-          const angleNow = dragRotate(ray, centerMpc, axisDir, referenceDir);
-          if (angleNow !== null) {
-            const rotation = multiplyQuat(
-              quatFromAxisAngle(axisDir, angleNow - drag.anchorAngleRad),
-              drag.anchorRotation,
-            );
-            store.setState((st) => ({ ...st, grid: setRotation(st.grid, rotation) }));
-          }
-        }
-        return;
-      }
-
-      if (!dragging) {
-        if (boxWireframeVisible(s, performance.now())) {
-          const box = deriveGridBox(s.grid);
-          const ray = rayFromPointer(e, s);
-          const arrowLengthMpc = arrowLengthMpcFor(s, box.centerMpc);
-          hoverHandle = pickGizmoHandle(
-            ray,
-            gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc),
-          );
-        } else {
-          hoverHandle = null;
-        }
-        return;
-      }
-
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      if (panning) {
-        // Right/middle-drag pans the orbit target along the camera's right/up axes,
-        // grab-the-world signs and screen-constant dist*0.0016 px rate — both
-        // galaxy-renderer's createOrbitCameraInput, so the two tools share one hand feel.
-        store.setState((s) => {
-          const { yaw, pitch, distance, targetMpc } = s.view.camera;
-          const cosY = Math.cos(yaw);
-          const sinY = Math.sin(yaw);
-          const cosP = Math.cos(pitch);
-          const sinP = Math.sin(pitch);
-          const k = distance * PAN_SPEED;
-          const next: Vec3 = [
-            targetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
-            targetMpc[1] + cosP * dy * k,
-            targetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
-          ];
-          return { ...s, view: setCameraTarget(s.view, next) };
-        });
-        return;
-      }
-      store.setState((s) => ({
-        ...s,
-        view: setCameraYawPitch(
-          s.view,
-          s.view.camera.yaw - dx * DRAG_SPEED,
-          s.view.camera.pitch + dy * DRAG_SPEED,
-        ),
-      }));
-    };
-    const onContextMenu = (e: Event): void => e.preventDefault();
-    const onWheel = (e: WheelEvent): void => {
-      e.preventDefault();
-      store.setState((s) => ({
-        ...s,
-        view: setCameraDistance(s.view, s.view.camera.distance * Math.exp(e.deltaY * ZOOM_SPEED)),
-      }));
-    };
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    canvas.addEventListener('contextmenu', onContextMenu);
+    // Orbit input → view slice camera (a gizmo handle hit short-circuits it into a
+    // drag instead) — pointer/wheel interpretation, hover/pick state and drag
+    // mechanics all live in createViewportInput (task R6); this component only
+    // supplies the F1.7 preview-flash term (showGridBox/boxPreviewUntil) it can't
+    // see and reads back hover/drag-handle state for the box-preview draw call above.
+    const input = createViewportInput({
+      canvas,
+      store,
+      isPreviewVisible: (s, now) => s.grid.showGridBox || now < boxPreviewUntil,
+    });
+    canvas.addEventListener('pointerdown', input.onPointerDown);
+    canvas.addEventListener('pointerup', input.onPointerUp);
+    canvas.addEventListener('pointermove', input.onPointerMove);
+    canvas.addEventListener('wheel', input.onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', input.onContextMenu);
 
     return () => {
       disposed = true;
@@ -1005,11 +740,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (rafHandle) cancelAnimationFrame(rafHandle);
       unsubscribe();
       disposeHarness();
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('wheel', onWheel);
-      canvas.removeEventListener('contextmenu', onContextMenu);
+      canvas.removeEventListener('pointerdown', input.onPointerDown);
+      canvas.removeEventListener('pointerup', input.onPointerUp);
+      canvas.removeEventListener('pointermove', input.onPointerMove);
+      canvas.removeEventListener('wheel', input.onWheel);
+      canvas.removeEventListener('contextmenu', input.onContextMenu);
     };
   }, [store]);
 
