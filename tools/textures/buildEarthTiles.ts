@@ -35,6 +35,7 @@ import sharp from 'sharp';
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
 import type { Tier } from '../../src/@types/data/Tier';
 import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
+import type { EarthTileProvenance } from '../../src/@types/scene/EarthTileProvenance';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
@@ -223,51 +224,60 @@ export async function bakeCoarserLevel(
   return written;
 }
 
-/** Bake every level from `source.maxLevel` down to `BAKE_MIN_LEVEL` into `outDir`. */
-export async function buildEarthTiles(source: EarthImagerySource, outDir: string): Promise<void> {
+/**
+ * Bake every band's levels (`source.maxLevel` down to that band's own
+ * `minLevel`) into `outDir`, then write ONE `index.txt` and ONE
+ * `manifest.json` covering all bands — several imagery sources can share a
+ * kind at different geographic footprints and depths (EOX deep tiles over
+ * BMNG; see `EarthTileManifest`).
+ */
+export async function bakeAll(
+  bands: ReadonlyArray<{ readonly source: EarthImagerySource; readonly minLevel: number }>,
+  outDir: string,
+): Promise<void> {
   const tilePx = EARTH_TILE_PX;
-  const minLevel = BAKE_MIN_LEVEL;
-  const maxLevel = source.maxLevel;
-
-  // A whole-globe texture already ships at or below the coarsest tier's base;
-  // a source that can't beat that has nothing to contribute.
-  if (maxLevel < minLevel) {
-    throw new Error(
-      `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the coarsest tier's whole-globe base at z${minLevel - 1} — nothing to bake`,
-    );
-  }
-
   const written: string[] = [];
+  const bandEntries: NonNullable<EarthTileManifest['levels'][typeof KIND]>[number][] = [];
 
-  process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
-  written.push(...(await bakeDeepestLevel(source, maxLevel, tilePx, outDir)));
-  process.stderr.write(`  z${maxLevel}: ${written.length} tiles\n`);
+  for (const { source, minLevel } of bands) {
+    const maxLevel = source.maxLevel;
 
-  for (let z = maxLevel - 1; z >= minLevel; z--) {
-    const levelPaths = await bakeCoarserLevel(z, tilePx, outDir);
-    written.push(...levelPaths);
-    process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
+    // A source that can't beat its own band floor has nothing to contribute
+    // — for the global band that floor is the coarsest tier's whole-globe
+    // base; for a regional band it's the deeper level a caller chose.
+    if (maxLevel < minLevel) {
+      throw new Error(
+        `bakeAll: source '${source.id}' reaches only z${maxLevel}, at or below its band floor z${minLevel} — nothing to bake`,
+      );
+    }
+
+    process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
+    const deepest = await bakeDeepestLevel(source, maxLevel, tilePx, outDir);
+    written.push(...deepest);
+    process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
+
+    for (let z = maxLevel - 1; z >= minLevel; z--) {
+      const levelPaths = await bakeCoarserLevel(z, tilePx, outDir);
+      written.push(...levelPaths);
+      process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
+    }
+
+    const builtFrom: EarthTileProvenance = {
+      sourceId: source.id,
+      attribution: source.attribution,
+      vintage: BMNG_VINTAGE.label,
+    };
+    // One entry per coverage box: a source spanning the antimeridian declares
+    // two boxes rather than one that wraps (see `LonLatBounds`).
+    for (const bounds of source.coverage) {
+      bandEntries.push({ bounds, min: minLevel, max: maxLevel, builtFrom });
+    }
   }
 
-  // One world-spanning band today (BMNG); a source with partial coverage
-  // would need one entry per box, which is a later task's concern.
   const manifest: EarthTileManifest = {
     prefix: TILE_PREFIX,
     tilePx,
-    levels: {
-      [KIND]: [
-        {
-          bounds: source.coverage[0],
-          min: minLevel,
-          max: maxLevel,
-          builtFrom: {
-            sourceId: source.id,
-            attribution: source.attribution,
-            vintage: BMNG_VINTAGE.label,
-          },
-        },
-      ],
-    },
+    levels: { [KIND]: bandEntries },
   };
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a
@@ -320,7 +330,8 @@ async function main(): Promise<void> {
   const { '--dev': dev } = parseFlags(process.argv.slice(2), { '--dev': 'bool' });
   const source = dev ? await devSource() : await deepSource();
   process.stderr.write(`buildEarthTiles: ${source.id} -> ${join(outDir, 'earth-tiles')}\n`);
-  await buildEarthTiles(source, outDir);
+  // One band today (BMNG); the EOX band joins this list in a later task.
+  await bakeAll([{ source, minLevel: BAKE_MIN_LEVEL }], outDir);
   process.stderr.write(`done; tiles under ${join(outDir, 'earth-tiles')}\n`);
 }
 

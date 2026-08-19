@@ -1,12 +1,15 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
+import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
 import { earthTilePath } from '../../../src/utils/scene/earthTilePath';
+import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
+import type { EarthTileManifest } from '../../../src/@types/scene/EarthTileManifest';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 const TILE_PX = 512;
 
@@ -133,6 +136,63 @@ describe('bakeCoarserLevel', () => {
 
     expect(nw[3]).toBeLessThanOrEqual(CHANNEL_TOLERANCE); // NW quadrant: transparent, no child there
     expectPixelNear(se, WHITE);
+  });
+});
+
+describe('bakeAll', () => {
+  // z=1 at TILE_PX=512 is the shallowest real grid (2 columns x 1 row) — the
+  // smallest fixture that still exercises two disjoint one-tile-wide bands.
+  const STUB_Z = 1;
+  const BOX_WEST: LonLatBounds = { west: -180, east: 0, south: -90, north: 90 };
+  const BOX_EAST: LonLatBounds = { west: 0, east: 180, south: -90, north: 90 };
+
+  /** A minimal `EarthImagerySource` that answers only its own tile box —
+   *  the other stub's box is outside its coverage, same as a real source. */
+  function stubSource(
+    id: string,
+    coverage: LonLatBounds,
+    rgba: readonly [number, number, number, number],
+  ): EarthImagerySource {
+    return {
+      id,
+      attribution: `${id} attribution`,
+      maxLevel: STUB_Z,
+      coverage: [coverage],
+      async readBox(box, widthPx, heightPx) {
+        if (box.west !== coverage.west) return null;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
+        return raster;
+      },
+    };
+  }
+
+  it('writes two manifest entries and both sources tiles, in band order', async () => {
+    const dir = tmpDir();
+    const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
+    const east = stubSource('stub-east', BOX_EAST, [0, 0, 255, 255]);
+
+    await bakeAll(
+      [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ],
+      dir,
+    );
+
+    const manifest = JSON.parse(
+      readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+    ) as EarthTileManifest;
+    const bands = manifest.levels.surface;
+    expect(bands).toHaveLength(2);
+    expect(bands?.[0]?.bounds).toEqual(BOX_WEST);
+    expect(bands?.[0]?.builtFrom.sourceId).toBe('stub-west');
+    expect(bands?.[1]?.bounds).toEqual(BOX_EAST);
+    expect(bands?.[1]?.builtFrom.sourceId).toBe('stub-east');
+
+    const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
+    expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX));
+    expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX));
   });
 });
 
