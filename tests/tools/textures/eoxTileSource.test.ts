@@ -140,19 +140,19 @@ describe('eoxTileSource', () => {
 
     const source = await eoxTileSource({ coverageDir });
 
-    // Hand-computed from the WGS84 z13 grid formula (tileDeg = 180/8192),
-    // independent of the production `boundsForRowColRect` this exercises.
-    const expected: LonLatBounds = {
-      west: colMin * EOX_TILE_DEG - 180,
-      east: (colMax + 1) * EOX_TILE_DEG - 180,
-      north: 90 - rowMin * EOX_TILE_DEG,
-      south: 90 - (rowMax + 1) * EOX_TILE_DEG,
-    };
-
+    // Literal decimal expectations, NOT `colMin * EOX_TILE_DEG - 180` etc. —
+    // that would be the same formula `boundsForRowColRect` runs, token for
+    // token, and could never catch an off-by-one in it. At z13 the WGS84
+    // grid step is 180/8192 = 360/16384 = 0.02197265625 deg/tile, an exact
+    // binary fraction, so these are exact too (`toBe`, not `toBeCloseTo`):
+    //   west  = 8756 * 0.02197265625 - 180        = 12.392578125
+    //   east  = (8759 + 1) * 0.02197265625 - 180   = 12.48046875
+    //   north = 90 - 1556 * 0.02197265625          = 55.810546875
+    //   south = 90 - (1558 + 1) * 0.02197265625    = 55.74462890625
     expect(source.coverage).toHaveLength(1);
-    expect(source.coverage[0]!.west).toBeCloseTo(expected.west, 9);
-    expect(source.coverage[0]!.east).toBeCloseTo(expected.east, 9);
-    expect(source.coverage[0]!.north).toBeCloseTo(expected.north, 9);
-    expect(source.coverage[0]!.south).toBeCloseTo(expected.south, 9);
+    expect(source.coverage[0]!.west).toBe(12.392578125);
+    expect(source.coverage[0]!.east).toBe(12.48046875);
+    expect(source.coverage[0]!.north).toBe(55.810546875);
+    expect(source.coverage[0]!.south).toBe(55.74462890625);
   });
 });

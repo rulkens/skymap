@@ -5,9 +5,8 @@
  * (`earthTileColumns.ts`), so one skymap z13 box is always a 2x2 block of
  * EOX tiles at the SAME z — no ladder re-numbering, just a composite.
  * `coverage` is read off disk at startup (the harvest's own bounding
- * row/col rectangle, converted back to degrees), so a harvest that falls
- * short of its requested bbox edge shrinks the manifest entry instead of
- * silently claiming ground it doesn't have.
+ * row/col rectangle, converted to degrees), so a short harvest shrinks the
+ * manifest entry instead of silently claiming ground it doesn't have.
  */
 
 import { existsSync, readdirSync } from 'node:fs';
@@ -24,6 +23,10 @@ const EOX_MAX_LEVEL = 13;
 
 /** Native edge of one harvested EOX tile. */
 const EOX_TILE_PX = 256;
+
+/** Native edge of the 2x2-composited output — always `EARTH_TILE_PX`, by the
+ *  ladder identity in the module header. */
+const NATIVE_EDGE_PX = EOX_TILE_PX * 2;
 
 /** Verbatim from spec §4. `vintage` has no home yet: `EarthImagerySource`
  *  carries no vintage field (the gap Task 4 flagged for BMNG — every band's
@@ -122,6 +125,18 @@ export async function eoxTileSource(opts: {
     coverage,
 
     async readBox(box, widthPx, heightPx) {
+      // Checked first, before any disk read or compositing: the module
+      // header's ladder identity guarantees every real caller requests
+      // exactly `NATIVE_EDGE_PX`, so a mismatch means that identity broke
+      // (e.g. `EARTH_TILE_PX` moved off 512) — a loud, CHEAP failure, not a
+      // silently-added, silently-untested resize branch after the work.
+      if (widthPx !== NATIVE_EDGE_PX || heightPx !== NATIVE_EDGE_PX) {
+        throw new Error(
+          `eoxTileSource: readBox asked for ${widthPx}x${heightPx}, but the EOX/skymap z13 ladder ` +
+            `identity only produces ${NATIVE_EDGE_PX}x${NATIVE_EDGE_PX} composites`,
+        );
+      }
+
       const nw = eoxTileAt(box.west, box.north, EOX_MAX_LEVEL);
       const children = [
         { i: 0, j: 0, row: nw.row, col: nw.col },
@@ -151,11 +166,10 @@ export async function eoxTileSource(opts: {
         })),
       );
 
-      const nativeEdge = EOX_TILE_PX * 2;
       const composited = await sharp({
         create: {
-          width: nativeEdge,
-          height: nativeEdge,
+          width: NATIVE_EDGE_PX,
+          height: NATIVE_EDGE_PX,
           channels: 4,
           background: { r: 0, g: 0, b: 0, alpha: 0 },
         },
@@ -164,16 +178,6 @@ export async function eoxTileSource(opts: {
         .raw()
         .toBuffer();
 
-      // No resize path: the module header's ladder identity guarantees every
-      // real caller requests exactly `nativeEdge`, so a mismatch means that
-      // identity broke (e.g. `EARTH_TILE_PX` moved off 512) — worth a loud
-      // failure, not a silently-added, silently-untested resize branch.
-      if (widthPx !== nativeEdge || heightPx !== nativeEdge) {
-        throw new Error(
-          `eoxTileSource: readBox asked for ${widthPx}x${heightPx}, but the EOX/skymap z13 ladder ` +
-            `identity only produces ${nativeEdge}x${nativeEdge} composites`,
-        );
-      }
       return new Uint8Array(composited);
     },
   };
