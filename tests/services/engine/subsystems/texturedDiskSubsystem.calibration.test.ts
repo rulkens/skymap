@@ -125,6 +125,20 @@ function metaWithCalibration(idx: number, calibration: FamousCalibration): Famou
 }
 
 /**
+ * Resolved meta with an id but no calibration, covering `count` rows. The
+ * planner gates Famous rows on a resolved id (see texturedDiskSubsystem's
+ * onRow guard) even when the test's whole point is the no-calibration path.
+ */
+function metaWithoutCalibration(count: number): FamousGalaxyMetaEntry[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `g${i}`,
+    names: [],
+    description: '',
+    type: 'galaxy',
+  }));
+}
+
+/**
  * Runs the planner twice (enqueue → bitmap → emit) and returns the
  * single emitted DiskInstance.  The harness builds one calibrated row at
  * index 0 of a 1-row cloud so the sort order is unambiguous.
@@ -177,7 +191,11 @@ describe('texturedDiskSubsystem famous calibration', () => {
   });
 
   it('uncalibrated rows use catalog size and orientation', async () => {
-    const disks = await emitOne(Source.FamousGalaxy, makeDenseCloud(1, 0.7, 45), []);
+    const disks = await emitOne(
+      Source.FamousGalaxy,
+      makeDenseCloud(1, 0.7, 45),
+      metaWithoutCalibration(1),
+    );
     expect(disks.length).toBe(1);
     expect(disks[0]!.sizeWorld).toBeCloseTo(uncalibratedSize, 10);
     // Catalog 0.7 round-trips through the Float32Array store, so the
@@ -271,7 +289,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
     // catalog Float32 value bit-for-bit (toBe, not toBeCloseTo).
     const sentinel = fallbackOrientation(0n, 187.7, 12.4);
     const cloud = makeDenseCloud(1, sentinel.axisRatio, sentinel.positionAngleDeg);
-    const disks = await emitOne(Source.FamousGalaxy, cloud, []);
+    const disks = await emitOne(Source.FamousGalaxy, cloud, metaWithoutCalibration(1));
     expect(disks.length).toBe(1);
     const d = disks[0]!;
     expect(d.x).toBe(cloud.positions[0]);
