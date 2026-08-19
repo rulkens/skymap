@@ -16,8 +16,8 @@
  * to the tier automatically, so it's re-seeded here from
  * `MILKY_WAY_STARS_PER_TIER[tier]` on every confirmed tier change — otherwise
  * a device dropping to the small tier would keep whatever count a previous
- * DebugPanel session left dialled in. `runFrame`'s per-frame mismatch check
- * is what actually regenerates the cloud; this saga only owns the seed.
+ * DebugPanel session left dialled in. The cloud's own `reconcile` is what
+ * actually regenerates the cloud; this saga only owns the seed.
  *
  * A galaxy `SelectionRef` is POSITIONAL (source + index), so when a tier swap
  * evicts and reloads a source's cloud the same index points at a different
@@ -68,9 +68,9 @@ export function* watchTierSaga() {
     const run = yield* getContext<RunTierTransition>('runTierTransition');
     yield* put(setTier(action.payload));
     // Re-seed the Milky-Way star count from the new tier's budget — see the
-    // module header for why an absolute count needs this. `runFrame` picks up
-    // the write on its own next-frame mismatch check, so nothing here talks
-    // to the GPU cloud directly.
+    // module header for why an absolute count needs this. The cloud's own
+    // `reconcile` picks up the write on its own next-frame call, so nothing
+    // here talks to the GPU cloud directly.
     yield* put(setMilkyWayTuning({ starCount: MILKY_WAY_STARS_PER_TIER[action.payload] }));
     run?.(prev, action.payload); // eviction + reload starts (fire-and-forget)
 
