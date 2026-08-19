@@ -6,7 +6,17 @@
 | Licence      | CC BY 4.0 — [EOX Maps terms](https://maps.eox.at/#data)                              |
 | Upstream URL | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless/default/WGS84/{z}/{row}/{col}.jpg` |
 | Grid         | WGS84 TMS — `columns(z) = 2^(z+1)`, `rows(z) = 2^z`, 256px tiles                     |
-| Fetch date   | Harvested per region, on demand — see the run log for each patch                     |
+
+## Harvested regions
+
+One row per `npm run fetch-eox` invocation that has landed tiles in this tree.
+`eoxTileSource` supports exactly one contiguous patch today (see
+`docs/backlog/2026-08-19-multi-region-eox-coverage.md`), so this table doubles
+as a reminder of what a second row would break.
+
+| Region     | Bbox (west/south/east/north) | Harvested  | z13 tiles |
+| ---------- | ----------------------------- | ---------- | --------- |
+| Copenhagen | `12.4/55.5/12.9/55.8`          | 2026-08-19 | 24×15 = 360 |
 
 ## Layer year — hard constraint
 

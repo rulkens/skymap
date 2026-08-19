@@ -36,3 +36,15 @@ Once the EOX absorb grows past hand-picked regional patches
 open follow-ups) toward the full dataset, the fixed ~10 minute BMNG tax per
 iteration stops being a minor annoyance and starts being the dominant cost
 of every bake-and-check loop.
+
+## The cheaper half: clamp the probe loops to `source.coverage`
+
+`bakeDeepestLevel` and `bakeCoarserLevel` (`tools/textures/buildEarthTiles.ts`)
+walk the FULL globe grid at every level regardless of what the source actually
+covers — for the EOX band that's `existsSync`-probing all 33.5M z13 boxes
+(~134M calls) to emit 96 tiles, and it gets worse with band depth (a z14
+band doubles it again). `coverage` is read for the manifest already; clamping
+the `x`/`y` loop bounds to the tile range it implies is behaviour-preserving
+(`readBox` returning `null` outside coverage is already the contract) and
+costs nothing in the "skip the whole band" case above — it's the fix that
+pays off even without `--only`.

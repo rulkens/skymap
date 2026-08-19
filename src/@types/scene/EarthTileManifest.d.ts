@@ -17,7 +17,7 @@ import type { LonLatBounds } from './LonLatBounds';
 
 export type EarthTileManifest = {
   /**
-   * Key prefix the tiles hang off, e.g. `earth-tiles/v1`. Versioned, so a
+   * Key prefix the tiles hang off, e.g. `earth-tiles/v2`. Versioned, so a
    * re-bake writes new keys: the old ones keep serving whatever the CDN
    * already cached until this pointer flips, instead of a new manifest
    * naming levels that the edge is still answering with stale pixels.
