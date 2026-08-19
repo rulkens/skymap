@@ -33,10 +33,10 @@ import { specializeGridElement } from './specializeGridElement';
 
 // io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the T20
 // histogram pass a subset of propagate's — trace, agent positions, and the (dead-read)
-// weight lane — at 2, 3, 4, 5, 8.
-const PROPAGATE_SLOTS = [0, 2, 3, 4, 5, 6, 7, 8];
-const DECAY_SLOTS = [0, 1, 2];
-const HISTOGRAM_STORAGE_SLOTS = [2, 3, 4, 5, 8];
+// weight lane — at 2, 3, 4, 5, 8. Exported for dispatchSlots.parity.test.ts.
+export const PROPAGATE_SLOTS = [0, 2, 3, 4, 5, 6, 7, 8];
+export const DECAY_SLOTS = [0, 1, 2];
+export const HISTOGRAM_STORAGE_SLOTS = [2, 3, 4, 5, 8];
 
 const storageLayout = (
   device: GPUDevice,

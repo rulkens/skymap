@@ -51,13 +51,15 @@ export type BoxPreviewPass = {
 
 // BoxUniform: center, halfExtents, basisX, basisY, basisZ — each vec3+pad, 16-byte
 // aligned — boxLines.wesl's struct (plan contract §5's byte table), byte-for-byte.
-const BOX_UNIFORM_BYTES = 80;
+// Exported for boxUniform.parity.test.ts.
+export const BOX_UNIFORM_BYTES = 80;
 const LINE_VERTICES = 24; // boxLines.wesl's EDGE_CORNERS: 12 edges x 2 endpoints.
 
 // GlyphSegment{posA:vec3+widthA, posB:vec3+widthB, handleId:i32+12 pad} — 48 bytes / 12 floats,
 // boxLines.wesl's struct byte-for-byte. Each segment expands to a 2-triangle screen-space quad
 // (VERTICES_PER_SEGMENT) in vsGlyph, so the draw call's vertex count is a multiple of it.
-const GLYPH_SEGMENT_FLOATS = 12;
+// Exported for glyphSegment.parity.test.ts.
+export const GLYPH_SEGMENT_FLOATS = 12;
 const VERTICES_PER_SEGMENT = 6;
 const RING_SEGMENTS = 48; // per rotate ring, sampled evenly around the circle — closed polyline.
 // 3 translate arrows x (1 shaft + 1 tapered cone) + 6 resize crosses x 2 arms +
