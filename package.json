@@ -120,7 +120,7 @@
     "vitest": "4.1.5",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
-    "wrangler": "4.112.0"
+    "wrangler": "4.124.0"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
