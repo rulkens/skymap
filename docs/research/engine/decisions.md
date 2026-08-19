@@ -511,20 +511,20 @@ the deep tuning surface.
       `biasCorrectionSubsystem.ts:277` (`setMode`'s entry wake — dispatches
       nothing itself; its comment, `:272-276`, gained the missing clause — the
       wake is redundant with the settings route today, but coverage is the
-      caller's job, not this function's); `startLoop.ts:151` — **the rule's
+      caller's job, not this function's); `startLoop.ts:150` — **the rule's
       worked exception, and the reason the second clause exists**: its
       neighbouring `goLiveNowAction()` dispatch (`:142`) is a `time/`-route
       write in the *same function body*, so clause one alone would predict
       DELETE, but it covers a different fact (a clock snap) — the ignition
       must not depend on the clock snap's route membership, one added comment
-      (`startLoop.ts:149-150`) records why; `syncVisibilityFadeItem.ts`'s
+      (`startLoop.ts:149`) records why; `syncVisibilityFadeItem.ts`'s
       production-dead `animate:false` branch, which fails the test for a
       third reason — it exists to mirror a sibling's wake policy the test
       does not reach at all — and is recorded here as **rung 7's**: it is
       dead-branch hygiene on the FADE_LAYERS bridge (#11: "rung 7 widens to
       full fade-path canonicalization"), not this rung's family.
     - **D9 — the three MIXED sites all keep, and one reclassifies.**
-      `wireInput.ts:382` (`onZoom`'s wake, comment at `:378-381`) moves
+      `wireInput.ts:380` (`onZoom`'s wake, comment at `:378-379`) moves
       ESSENTIAL, not mixed: the census
       read the unconditional wake beside a conditional dispatch as "zoom
       clamped to a no-op," which is false —

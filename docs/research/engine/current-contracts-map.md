@@ -230,15 +230,15 @@ flowchart TD
     B -. no sweep (#13) .- W4["staleness stays<br/>resource-owned"]
     B --> W5["frame-assembly validation<br/>(layers ↔ program steps coverage)"]
     B --> W6["derived debug<br/>(groups PASS_GROUP_TITLES + sliders + sections)"]
-    B -. done outside a bundle field (#15) .- W7["wake fold<br/>(one bag field, two deletions — shipped, rung 5)"]
+    B --> W7["wake fold<br/>(votes into the anim bag — rung 5 folded the label director by hand, #15; the manifest/walker question stays deferred to the umbrella, #15 D4)"]
     B --> W8["fade-manifest derivation<br/>(concat bundle.fades + legacy rows)"]
     FPX["frameProgram step list"] -. stays hand-authored .- B
     PICKX["pick/selection kind tables"] -. stays out (backlog) .- B
     STOREX["store fade-free boundary"] -. unchanged .- B
     classDef good fill:#1a7f37,stroke:#116329,color:#ffffff
     classDef out fill:#6e7781,stroke:#57606a,color:#ffffff
-    class W1,W2,W3,W5,W6,W8 good
-    class W4,W7,FPX,PICKX,STOREX out
+    class W1,W2,W3,W5,W6,W7,W8 good
+    class W4,FPX,PICKX,STOREX out
 ```
 
 | surface today                                       | bundle field / walker                                                                                                                                   | a new subsystem stops touching    |
