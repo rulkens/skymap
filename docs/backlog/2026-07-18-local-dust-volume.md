@@ -27,7 +27,12 @@ from the Sun." Zenodo DOI [10.5281/zenodo.8187943](https://doi.org/10.5281/zenod
   Python package. `Edenhofer2023Query` samples at arbitrary `(l, b, distance)`
   with `mode='mean'`; `fetch()` pulls only **~3.2 GB** (mean+std HEALPix) once
   on a build machine. Sample it onto whatever cartesian grid we choose — no
-  15.7 GB download.
+  15.7 GB download. Better still: the Zenodo record ships the authors' own
+  `interp2box.py` (HEALPix → cartesian box at any chosen dims/extent, e.g.
+  `-b '(256,256,256)::((-1250,1250),(-1250,1250),(-1250,1250))'`) — it
+  interpolates in **log-density then exponentiates**, which is the correct
+  resampling for this log-normal field. Prefer it over a hand-rolled
+  resampler; the log radial spacing is exactly the aliasing trap it handles.
 
 **This is the MCPM pattern, exactly.** MCPM already documents a Python +
 domain-package extraction (`tools/volumes/extractMcpmCube.py`, "requires
@@ -39,9 +44,31 @@ A modest cube — 256³ at ~10 pc voxels (±1.25 kpc) — is **~32 MB as f16 SCF
 (384³ ≈ 108 MB), trivial next to `glade-large.bin` (130 MB). Tier it
 small/medium/large like MCPM.
 
-**Pre-spec verification (one fact):** confirm the Zenodo record's reuse
-licence before ingest — it is citable (Edenhofer et al. 2023) but the licence
-was not confirmed during this survey.
+**Licence: verified 2026-08-19 — CC-BY 4.0** (Zenodo API `license.id:
+cc-by-4.0`). Cite Edenhofer et al. 2024, A&A 685, A82
+(`10.1051/0004-6361/202347628`) + the dataset DOI. Published paper confirms
+the survey above: Nside 256 (14′), 516 log-spaced radial bins 69→1250 pc
+(widths 0.4→7 pc), quantity is **unitless ZGR23 extinction density per pc**
+(× 2.8 ≈ A_V). `mean_and_std_healpix.fits` is 3.25 GB exact.
+
+## Ingestion pitfalls (verified against the release readme + paper, 2026-08-19)
+
+- **Inner 69 pc hole.** The main product starts at the first radial bin
+  (69 pc); the innermost sphere ships only as a separate integrated-extinction
+  patch. A raymarched density cube gets a hole around the Sun — decide to
+  accept it (it IS the Local Bubble region, genuinely low-dust) or fill from
+  the auxiliary map. `dustmaps` re-adds it only for `integrated=True` queries.
+- **Mean ≠ typical realization.** The field is log-normal; the shipped mean is
+  systematically brighter than any single posterior sample, most visibly in
+  low-density regions. Fine for visualization, but don't stack tuning on top
+  of the inflated floor — consider the median-ish look of one sample if the
+  voids read hazy.
+- **2 kpc edition** (`validation_with_less_data_but_2kpc_*`) exists but the
+  authors explicitly caution against trusting small-scale structure at large
+  distances in it. Default to the 1.25 kpc primary product.
+- 256³ over ±1.25 kpc is ~9.8 pc voxels vs the map's 0.4–7 pc native radial
+  bins — we are the coarse side, so no oversampling concern; 384³ (~6.5 pc)
+  is the ceiling worth considering for the large tier.
 
 ## Rendering: most of the stack exists; one real engine gap
 
@@ -101,14 +128,53 @@ the stars _behind_ it (dark nebulae), not glow.
 
 ## Design questions
 
-1. Slab: re-home the volume target to NEAR0, or a new sub-kpc slab? Resolve
-   jointly with the star-field-own-slab item.
+1. Slab: **researched 2026-08-19 — answer: NEAR0, zero new slabs.** NEAR0 is
+   now infinite-far reversed-Z (`computeForegroundViewProj.ts:145`, zFar
+   omitted; spec `2026-07-20-reversed-z-near0-depth.md`), so its bracket is
+   ratio-unlimited: adaptive near (`dist·1e-4`, floor 1e-19) + no far clip
+   covers a Sun-centered ±1.25 kpc cube from every pose, and its
+   origin-relative f64 vp is ideal for a cube whose origin IS the render
+   origin. Precedent: the MW impostor made this exact move for the same
+   10 kpc COSMO near-plane reason. The raymarch is depthless (no depth
+   attachment on the volume target), so the depth convention doesn't bite.
+   The star-field-own-slab item's motivation (far-plane sweep clipping
+   anchors) was retired by reversed-Z, which post-dates it — that item
+   should be re-audited, not co-designed; its residual value is two
+   slab-independent refactors. Concrete shape: a `dust-volume` reduced-res
+   target + a `(dust-volume, NEAR0)` render step before the `(hdr, NEAR0)`
+   step, folded into HDR by a **multiplicative** upsample layer registered
+   after `milkyWayUpsampleLayer`/`star-catalog` — the exact
+   mw-aggregate→upsample pattern, with the blend state already shipping in
+   `milkyWayCloudRenderer.ts` (`DUST_BLEND`: `dst·src` per-channel
+   transmittance).
 2. Compositing: emissive glow (ship-fast) vs Beer–Lambert absorption
    (physical) — and if absorption, the dust pass's order relative to the
    star/Earth passes and the HDR composite.
 3. Cube resolution + tiers: 256³ vs 384³; voxel size vs the map's native
    ~2–10 pc effective resolution (don't oversample past the data).
 4. Extent: full 1.25 kpc, or a tighter Local-Bubble crop for the small tier?
+5. Seam with the procedural MW dust (2026-08-19, researched): the live app's
+   MW dust is the v1 sprite pass (`milkyWayLayer`, multiplicative, NEAR0);
+   the `ismMap/` shader tree is tool-only today but is the planned
+   replacement. The handoff answer is **fade-band choreography, not
+   geometry**: the MW impostor already dies on approach via
+   `milkyWayApproach` (full at 2 kpc, gone at 200 pc) while Gaia fades in
+   over 8–25 kpc. The dust field wants the inverse band — full inside
+   ~2 kpc, gone by ~15–25 kpc — meeting the procedural dust the same way
+   Gaia meets the procedural stars. **Blocker found:** `deriveVolumeLiveness`
+   applies the `surveyDeepZoom` band (gone at 2 kpc) to EVERY field, which
+   zeroes the dust cube exactly where it must live — fades must become
+   per-field (registry-driven band choice) before this ships.
+6. Sequencing vs the volume-raymarch-acceleration effort (in flight,
+   2026-08-13 plan): it is rewriting the same raymarch pass (empty-space
+   skipping via max-pyramid, LOD mips). A local dust cube is mostly empty —
+   it benefits directly — but land this after that work settles to avoid
+   editing a moving shader.
+
+(Engine-gap claims re-verified 2026-08-19: volume target still renders on the
+COSMO slab — `frameProgram.ts:98` — with `COSMO_NEAR_MPC = 0.01`; the
+Milky Way impostor's move to NEAR0 is the precedent, per the comment in
+`slabs.ts`. The scalar-volume fragment pass is still emissive-additive only.)
 
 ## References
 
