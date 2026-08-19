@@ -85,6 +85,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`TextureAtlas` eviction is flat LRU** `needs-design` — van Waveren's finest-mip-first-then-LRU would let coarse, widely-depended-on pages survive over finer ones instead of evicting by recency alone.
 - [ ] **Earth tile `tilePx` can only ever hold one value** `ready` — `derivePlannerParams` refuses any manifest value but the constant, yet it's threaded through six functions and three docstrings promise a re-bake at a different edge is "a data change."
 - [ ] **Earth page table re-derives the atlas's slot-to-cell decode** `ready` — `TextureAtlas.slotsPerRow` is private; `buildEarthPageTable` and `earthTileSubsystem` each recompute it independently.
+- [ ] **`EarthImagerySource` carries identity twice** `ready` — `id`/`attribution` duplicate `provenance.sourceId`/`provenance.attribution`; collapse to `provenance` only on next touch, `id` read as `provenance.sourceId` at its ~4 call sites.
+- [ ] **Incremental band re-bake** `needs-design` — `build-earth-tiles` always bakes every band, costing ~10 min of byte-identical BMNG work per EOX-only iteration. → [details](backlog/2026-08-19-incremental-band-bake.md)
+- [ ] **Multi-region EOX coverage** `needs-design` — `eoxTileSource` supports one contiguous patch only; a second `fetch-eox` region needs its coverage boxes decomposed per connected component. → [details](backlog/2026-08-19-multi-region-eox-coverage.md)
 - [ ] **Cloud deck PBR + live coverage** `deferred` — deck is Lambert-lit with no thickness channel (alpha = luminance of RGB); analytic multiple-scattering phase term is cheap, real τ / live GIBS clouds are separable data-layer efforts. → [details](backlog/2026-07-19-cloud-deck-pbr.md)
 - [ ] **Local interstellar-dust volume (Edenhofer 2024)** `ready` — Sun-centered extinction cube as an SCFD field (MCPM-clone, CC-BY 4.0 verified); design researched 2026-08-19: NEAR0 slab, multiplicative fold, per-field fade band as prep; sequence after raymarch-acceleration. → [details](backlog/2026-07-18-local-dust-volume.md)
 - [ ] **Perf-harness findings: measured hotspots** `needs-design` — large tier ≈ 3× medium (blows 60fps alone), small slower than medium (unexplained), solar-system 16.9 ms with vertex-bound hdr·NEAR0 at 60%. → [details](backlog/2026-07-21-perf-harness-findings.md)
@@ -161,6 +164,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Surface-directed zoom** `needs-design` — zoom dollies toward the body centre, so you cannot zoom toward the point under the cursor. → [details](backlog/2026-07-30-surface-directed-zoom.md)
 - [ ] **Cursor-anchored orbit drag** `needs-design` — the ground follows the cursor only at the screen centre, and yaw dies near the poles; same raycast prerequisite as surface-directed zoom. → [details](backlog/2026-07-30-cursor-anchored-orbit-drag.md)
+- [ ] **Surface-fixed camera follow** `needs-design` — at the new ~1 km standoff, Earth's rotation under a LIVE clock reads as camera drift under the centre-pivoted orbit; follow the body's rotating frame near the surface. → [details](backlog/2026-08-19-surface-fixed-camera-follow.md)
 
 ## Docs & process
 

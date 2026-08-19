@@ -76,7 +76,7 @@ All refreshes share one 3-step shape: fetch, build, then `npm run sync-r2-secure
 | Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*`  |
 | DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)         |
 | Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`          |
-| Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB)    | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5) |
+| Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB) + `fetch-eox` (populates `data/raw/eox/`) | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5, skips the EOX band) |
 
 Raw files and built artefacts are gitignored; only provenance `README.md` + `.sha256` sidecars are committed. Full-res texture pull/build/sync runs post-merge from the main worktree.
 

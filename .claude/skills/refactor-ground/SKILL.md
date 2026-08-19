@@ -43,17 +43,28 @@ because there was only ever one case). Decision ledger:
    already right: "a row in X, one new file Y, a variant of Z." Explore subagents do
    the legwork — trace the call graph and every dispatch site before assuming blast
    radius; the main thread does the thinking and holds the dialogue.
-3. **Verdict per touchpoint: growth or bolt-on.** Growth = an addition at an
+3. **Greenfield cross-check (adversarial).** The sketch's blind spot is inherited
+   shape: an existing type quietly treated as a constraint, then "extended
+   compatibly" — the sketcher cannot self-audit this, because the incumbent shape
+   is in their context. So hand a fresh subagent ONLY the feature's data
+   requirements — never the incumbent types — and have it derive the shapes
+   greenfield. Diff its answer against the sketch. Each divergence is either a
+   real constraint the sketch is defending (a paying external contract, a
+   migration cost, a cache-skew window — name it and its price) or inherited
+   shape masquerading as one. No divergence is resolved silently: real
+   constraints become priced option pairs at the checkpoint (item 2 below); the
+   rest reshape the sketch before verdicts are issued.
+4. **Verdict per touchpoint: growth or bolt-on.** Growth = an addition at an
    existing seam. Bolt-on = the current structure forces a special case: a second
    branch on a discriminant, a field only one case reads, a copied constant, edits
    at N dispatch sites, another hand-added term in a wake predicate or watcher list.
    Each bolt-on names a **missing joint**; the prep refactor is whatever creates
    that joint.
-4. **The second-special-case trigger.** If the ideal diff would add the _second_
+5. **The second-special-case trigger.** If the ideal diff would add the _second_
    hardcoded term/branch/entry anywhere, the prep is consolidating that seam — not
    adding a sibling. An existing special case is the trigger to un-braid, **never
    precedent to cite for adding another**.
-5. **Prep = exactly the delta.** Only joints the ideal diff actually needs. Nothing
+6. **Prep = exactly the delta.** Only joints the ideal diff actually needs. Nothing
    speculative.
 
 ## The checkpoint (required output)
@@ -63,16 +74,23 @@ order:
 
 1. **Ideal shape** — a compact code-shaped sketch (~20–50 lines: registry rows,
    type deltas, file list), data delta first.
-2. **Missing joints** — each with its growth/bolt-on verdict and the current
+2. **Shape options under compatibility tension** — wherever the greenfield
+   cross-check's shape and a compatibility-preserving shape diverge, present
+   BOTH, priced: what the break costs (migration, re-bake, cache-skew window,
+   external readers) vs what compat carries (the extra concept or asymmetry, and
+   for how long it lives). The user prices the break; backward compatibility is
+   never a silent default. "No tension found — greenfield and sketch agree" is
+   the item's null form, stated, not omitted.
+3. **Missing joints** — each with its growth/bolt-on verdict and the current
    blocker (`file:line`).
-3. **Prep list** — the refactors that create the joints; each is its **own
+4. **Prep list** — the refactors that create the joints; each is its **own
    diff, sequenced before the feature commits**. PR packaging (separate prep
    PR(s) vs everything riding one PR) is NOT decided here — it is part of the
    ask below, every time.
-4. **Adjacent findings** — knots seen but not required by the ideal diff. Default:
+5. **Adjacent findings** — knots seen but not required by the ideal diff. Default:
    a `docs/backlog/` detail file. The user may promote one to a separate cleanup PR
    — their call, at this checkpoint, never the agent's call mid-execution.
-5. **The ask** — sign-off on the shape, AND the PR-packaging question: "prep as
+6. **The ask** — sign-off on the shape, AND the PR-packaging question: "prep as
    separate PR(s), or everything on one PR?" Ask it explicitly every time —
    there is no default (`feedback_prep_rides_same_pr_ask`). When the shape has
    genuine decision branches, escalate to a `grill-me` session instead of a
@@ -104,6 +122,8 @@ paragraph, still checkpointed. Do not manufacture prep to look thorough.
 | "I'll note the refactor in the plan for later"                      | Later = never, and the spec would be written against the wrong shape. Prep lands first.                                                                                                                          |
 | "The prep is only ~15 lines — just fold it into the feature commit"| Don't conflate diffs. A refactor commit that also adds behaviour hides the strand being pulled (simplicity.md), regardless of size. Keep prep its own commit(s); PR packaging is the user's checkpoint call, not yours in either direction. |
 | "This adjacent cleanup is right there, fold it in"                  | Backlog by default, or its own cleanup PR if the user promotes it. Never folded into prep or feature diffs.                                                                                                      |
+| "The shape is deployed/persisted — extend it compatibly"            | Deployment is a cost input, not a decision. Run the greenfield cross-check, present both shapes priced (checkpoint item 2); the user chooses which cost to pay.                                                  |
+| "The cross-check will just re-derive what I sketched — skip it"     | The sketcher can't see their own inherited-shape concessions; that's the whole reason the check is a fresh subagent. Agreement is cheap to confirm and is the checkpoint's null form.                            |
 
 ## Red flags — STOP
 
@@ -112,6 +132,9 @@ paragraph, still checkpointed. Do not manufacture prep to look thorough.
 - You're about to hand-edit a wake predicate, watcher list, or dispatch chain to
   add the feature's entry.
 - The user hasn't seen the shape and you're about to lock it into a spec.
+- Your sketch preserves an existing type/format/API shape (an optional field, a
+  parallel map, a `deeper?`-style extension beside an incumbent) and the
+  checkpoint doesn't present the greenfield alternative beside it, priced.
 
 ## Common mistakes
 

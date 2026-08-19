@@ -883,6 +883,25 @@ export const RAW_DATA = {
       'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
   },
 
+  // ─── EOX s2cloudless (2016) — deep tile bands over regional patches ───
+
+  'eox.dir': {
+    path: 'data/raw/eox',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'EOX s2cloudless 2016 WMTS z13 tile harvest, one region per bbox pass — holds `<z>/<row>/<col>.jpg` under the WGS84 TMS grid. CC BY 4.0; the 2016 layer only (see README).',
+    fetcher: 'tools/fetch/fetchEoxTiles.ts',
+    readme: 'eox.readme',
+  },
+  'eox.readme': {
+    path: 'data/raw/eox/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the EOX s2cloudless harvest — upstream URL, tile-index convention, fetch date, licence.',
+  },
+
   // ─── Constellations (d3-celestial stick-figure lines) ─────────────────
 
   'constellations.lines': {
