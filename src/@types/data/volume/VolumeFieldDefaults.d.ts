@@ -13,6 +13,7 @@
  */
 
 import type { ScalarFieldPaletteId } from './ScalarFieldPaletteId';
+import type { FadeBand } from '../../math/FadeBand';
 
 export type VolumeFieldDefaults = {
   paletteId: ScalarFieldPaletteId;
@@ -119,4 +120,12 @@ export type VolumeFieldDefaults = {
   intensity?: number;
   /** Optional human-readable label override (renderer falls back to id). */
   label?: string;
+  /**
+   * Optional per-field scale-fade bands, seeded into `VolumeFieldSettings.bands`
+   * (`buildVolumeFieldSettings`). Omitted → `[SCALE_FADE_BANDS.surveyDeepZoom]`,
+   * today's one-size-fits-all deep-zoom fade. A field wanting a different
+   * choreography (e.g. full close-in, gone far out) declares its own bands here
+   * instead of hand-editing `deriveVolumeLiveness`.
+   */
+  fadeBands?: readonly FadeBand[];
 };

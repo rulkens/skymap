@@ -19,6 +19,7 @@
 
 import { SOURCE_REGISTRY } from '../sources';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../defaults';
+import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
 import type { SourceEntry } from '../../@types/data/SourceEntry';
 import type { VolumeFieldDefaults } from '../../@types/data/volume/VolumeFieldDefaults';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
@@ -74,6 +75,7 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
     paletteId: entry.paletteId,
     trim: entry.trim,
     exposure: entry.exposure,
+    bands: entry.fadeBands ?? [SCALE_FADE_BANDS.surveyDeepZoom],
   };
 }
 

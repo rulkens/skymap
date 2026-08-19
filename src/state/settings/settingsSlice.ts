@@ -27,7 +27,7 @@
  * unwrap the draft with `current()` first — see its docblock below.
  */
 
-import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
@@ -187,10 +187,7 @@ const settingsSlice = createSlice({
     },
     // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
     // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
-    setZoneOfAvoidanceTuning: (
-      settings,
-      action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,
-    ) => {
+    setZoneOfAvoidanceTuning: (settings, action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>) => {
       Object.assign(settings.zoneOfAvoidance, action.payload);
     },
 
@@ -314,7 +311,12 @@ const settingsSlice = createSlice({
       // existing row (and its tuned sliders) untouched. Only a genuinely-new id
       // seeds a fresh row from registry defaults.
       if (settings.volumes.items[action.payload]) return;
-      settings.volumes.items[action.payload] = buildVolumeFieldSettings(action.payload);
+      // Freshly built, stored as-is — sound to re-type as Immer's Draft (no
+      // clone needed), same posture as selectionRowsSlice's `setSelectionRow`.
+      // `bands`' readonly array is what trips the plain assignment.
+      settings.volumes.items[action.payload] = buildVolumeFieldSettings(
+        action.payload,
+      ) as Draft<VolumeFieldSettings>;
     },
     removeVolumeField: (settings, action: PayloadAction<VolumeFieldId>) => {
       delete settings.volumes.items[action.payload];
