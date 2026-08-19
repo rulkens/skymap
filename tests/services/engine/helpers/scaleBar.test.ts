@@ -160,7 +160,7 @@ describe('computeScaleInfo', () => {
       pivotRadiusMpc: earthRadiusMpc,
     });
     expect(result).not.toBeNull();
-    expect(result!.label).toBe('0.154 km');
+    expect(result!.label).toBe('154 m');
 
     // Same camera distance, but read as pivot-less (the old behavior): pins
     // at the centre-distance label instead of the ground-relative one.
