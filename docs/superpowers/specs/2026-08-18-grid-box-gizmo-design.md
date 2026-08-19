@@ -41,6 +41,7 @@ Produced by `refactor-ground`, approved by the user 2026-08-18. Carried verbatim
 [`gizmo-ground-prep.md`](../../../.superpowers/sdd/2026-08-18-mcpm-workbench/gizmo-ground-prep.md):
 
 > ### Approved shape (data delta first)
+>
 > - GridBox gains `rotation: Quat` (identity default). sizeMpc/dims/voxelSize invariants untouched.
 > - New transform pair in field/: worldToBoxLocal(box, p) / boxLocalToWorld(box, p) — THE home of R.
 >   worldToVoxel = worldToBoxLocal then /voxelSizeMpc; voxelToWorld the exact inverse.
@@ -55,6 +56,7 @@ Produced by `refactor-ground`, approved by the user 2026-08-18. Carried verbatim
 >   onPointerDown ahead of the orbit/pan branch (gizmoDragging short-circuits camera drags).
 >
 > ### Bolt-on inventory to fix in prep (explorer, file:line)
+>
 > - Origin math `center ± size/2` hand-rolled 4x: worldToVoxel.ts:10-14, voxelToWorld.ts:6-10,
 >   boxPreviewPass.ts:34-40 (worldBounds), deriveGridBox.ts:14-20 (manualBounds),
 >   emitTraceSidecar.ts:46-50.
@@ -67,6 +69,7 @@ Produced by `refactor-ground`, approved by the user 2026-08-18. Carried verbatim
 >   display-only style precedent.
 >
 > ### Sequencing (user-approved, rides PR #570)
+>
 > - Prep A (pure refactor, byte-identical): worldToBoxLocal/boxLocalToWorld pair; funnel all 4 origin
 >   duplicates.
 > - Prep B (pure refactor): cameraBasis routes directions through the affine with identity R.
@@ -92,7 +95,7 @@ outright in F2 by the corner/basis computation below, not merely refactored.
 the position transform. "Box-local" here means the same frame `worldToVoxel` already returns before
 the `/voxelSizeMpc` step: origin at the box's own corner `(0,0,0)`, range `[0, sizeMpc]` per axis —
 so `voxel = boxLocal / voxelSizeMpc` is a plain uniform scale, unaffected by rotation. Rotation, when
-F2 adds it, sits entirely in the step that maps a *centered* offset into that frame:
+F2 adds it, sits entirely in the step that maps a _centered_ offset into that frame:
 
 ```
 worldToBoxLocal(box, p) = R⁻¹·(p − centerMpc) + halfExtentMpc     // range [0, sizeMpc]
@@ -125,6 +128,11 @@ output cannot, because there is nothing to rotate by. F2 fills in the body: rota
 pass reaches the camera through `writeMcpmCamera` (`splatPass.ts:214`, `volpathPass.ts:276`,
 `galaxyOverlayPass.ts:127`), so F2 touches exactly two files for this leg.
 
+**Erratum (shipped):** the R6 extraction added a third `cameraBasis` caller,
+`rayFromPointer.ts` (gizmo pick ray). It deliberately passes an identity-rotation copy of the
+box — the gizmo picks against world-space handle geometry, never the rotated one — pinned by a
+regression test (commit `99589b52d`).
+
 ### Zero-shader-change argument
 
 `propagate.wesl`, `decay.wesl`, `histogram.wesl` never see camera or world coordinates — they walk
@@ -132,7 +140,7 @@ pass reaches the camera through `writeMcpmCamera` (`splatPass.ts:214`, `volpathP
 `camVoxel`/`camRight`/`camUp`/`camForward` from the shared `McpmCamera` uniform and treat them as
 **already voxel-space** — they always did, on the (previously true) assumption that world and voxel
 directions coincide after normalizing. That assumption becomes explicit rather than accidental: the
-host now *guarantees* it by applying `R⁻¹` before the uniform is written (§4 above), so the shader's
+host now _guarantees_ it by applying `R⁻¹` before the uniform is written (§4 above), so the shader's
 own math (`dir = normalize(camForward + camRight·ndc.x + camUp·ndc.y)`, the slab `intersectGrid`
 tests) is correct for any rotation with the exact same WGSL it has today. Nothing in
 `camera.wesl`/`fragment.wesl`/`volpath.wesl` changes for rotation.
@@ -158,16 +166,16 @@ already world Mpc), exercises the inverse leg of the pair that Prep A stands up 
 
 ### Handle set
 
-| Family    | Count | Geometry                                              | Edits                         | Phase |
-|-----------|-------|--------------------------------------------------------|--------------------------------|-------|
-| Translate | 3     | Arrow from box center along each local axis            | `manualCenterMpc`              | F1    |
-| Resize    | 6     | Small handle at each face center (±axis × halfExtent)  | `manualCenterMpc` + `manualSizeMpc` (opposite face anchored) | F1 |
-| Rotate    | 3     | Ring around the box center, normal = each local axis   | `rotation`                     | F2    |
+| Family    | Count | Geometry                                              | Edits                                                        | Phase |
+| --------- | ----- | ----------------------------------------------------- | ------------------------------------------------------------ | ----- |
+| Translate | 3     | Arrow from box center along each local axis           | `manualCenterMpc`                                            | F1    |
+| Resize    | 6     | Small handle at each face center (±axis × halfExtent) | `manualCenterMpc` + `manualSizeMpc` (opposite face anchored) | F1    |
+| Rotate    | 3     | Ring around the box center, normal = each local axis  | `rotation`                                                   | F2    |
 
 All three families are driven by the same three **world-space axis directions** — `[1,0,0]`,
 `[0,1,0]`, `[0,0,1]` before F2, `boxBasisVectors(box.rotation)`'s `x`/`y`/`z` after. The hit-test and
 drag functions below take that axis direction as an explicit parameter rather than hardcoding a
-coordinate axis internally, specifically so F2 only has to change what's *passed in* — not the
+coordinate axis internally, specifically so F2 only has to change what's _passed in_ — not the
 math itself. `gizmoHandleGeometry` is the one place that decides which axis set to pass, and is the
 only function this seam requires F2 to revisit (besides the rotate-ring additions, which are new
 code, not an edit).
@@ -179,15 +187,15 @@ export type Ray = { readonly origin: Readonly<Vec3>; readonly dir: Readonly<Vec3
 
 export function screenToRay(
   eyeMpc: Readonly<Vec3>,
-  basis: CameraBasis,       // world-space right/up/forward, same shape cameraBasis returns
+  basis: CameraBasis, // world-space right/up/forward, same shape cameraBasis returns
   fovYRad: number,
   aspect: number,
-  ndc: readonly [number, number],   // [-1,1], y-up
+  ndc: readonly [number, number], // [-1,1], y-up
 ): Ray;
 ```
 
 Mirrors `fragment.wesl`'s own `dir = normalize(camForward + camRight·ndc.x·tan(fovY/2)·aspect +
-camUp·ndc.y·tan(fovY/2))`, computed host-side in **world** space from the *unrotated* `CameraBasis`
+camUp·ndc.y·tan(fovY/2))`, computed host-side in **world** space from the _unrotated_ `CameraBasis`
 (the gizmo picks against world-space handle geometry, never voxel space) — basis-vector algebra, the
 same shape as `cameraGizmoLines.ts`'s existing local `add`/`sub`/`cross`/`norm` helpers, not a
 projection matrix inverse.
@@ -198,12 +206,12 @@ projection matrix inverse.
 export type GizmoHandleId =
   | { readonly kind: 'translate'; readonly axis: 0 | 1 | 2 }
   | { readonly kind: 'resize'; readonly axis: 0 | 1 | 2; readonly sign: 1 | -1 }
-  | { readonly kind: 'rotate'; readonly axis: 0 | 1 | 2 };            // F2 only
+  | { readonly kind: 'rotate'; readonly axis: 0 | 1 | 2 }; // F2 only
 
 export function gizmoHandleGeometry(
   box: GridBox,
-  axes: readonly [Readonly<Vec3>, Readonly<Vec3>, Readonly<Vec3>],   // world-space, unit
-): GizmoHandleGeometry;   // world-space positions/directions for every handle in §5's table
+  axes: readonly [Readonly<Vec3>, Readonly<Vec3>, Readonly<Vec3>], // world-space, unit
+): GizmoHandleGeometry; // world-space positions/directions for every handle in §5's table
 
 export function pickGizmoHandle(ray: Ray, geometry: GizmoHandleGeometry): GizmoHandleId | null;
 ```
@@ -223,6 +231,11 @@ frame while its controls are in use, and adding depth-based rescaling would be n
 a polish concern, not a correctness one. Listed as an open item (§9) if it proves annoying at very
 oblique zoom levels.
 
+**Erratum (shipped):** the rotate rings shipped sized off `arrowLengthMpc` (the translate
+arrows' own constant-screen-size length) rather than `halfExtentMpc` —
+`RING_RADIUS_FRACTION = 1.3 × arrowLengthMpc` (`gizmoHandleGeometry.ts`), placing rings outside
+the arrow tips per user directive during F2.5.
+
 `pickGizmoHandle` replaces GPU ID-buffer picking outright for this use — the ground prep is explicit
 that `resolvePick` (main-app picking) is not reusable for drag, and a per-pointer-move GPU readback
 would add a frame of latency a CPU ray test doesn't need. This mirrors `cameraGizmoLines.ts`'s
@@ -237,15 +250,15 @@ UNIT_AXES[axis]`; F2 passes `boxBasisVectors(box.rotation)[axis]` — no signatu
 ```ts
 export function applyTranslateDrag(
   box: GridBox,
-  axisDir: Readonly<Vec3>,   // world-space unit direction for this handle's axis
-  deltaMpc: number,          // signed distance along axisDir since the drag anchor
-): Vec3;                     // new centerMpc = box.centerMpc + axisDir * deltaMpc
+  axisDir: Readonly<Vec3>, // world-space unit direction for this handle's axis
+  deltaMpc: number, // signed distance along axisDir since the drag anchor
+): Vec3; // new centerMpc = box.centerMpc + axisDir * deltaMpc
 
 export function applyResizeDrag(
   box: GridBox,
   axis: 0 | 1 | 2,
   axisDir: Readonly<Vec3>,
-  sign: 1 | -1,               // which face — from the picked GizmoHandleId
+  sign: 1 | -1, // which face — from the picked GizmoHandleId
   deltaMpc: number,
 ): { readonly centerMpc: Vec3; readonly sizeMpc: Vec3 };
 ```
@@ -264,8 +277,8 @@ axisDir)` — a skew-line closest-point calculation, one pure function:
 export function closestPointOnRayToLine(
   ray: Ray,
   lineOrigin: Readonly<Vec3>,
-  lineDir: Readonly<Vec3>,     // unit
-): number;   // t such that lineOrigin + t*lineDir is nearest the ray
+  lineDir: Readonly<Vec3>, // unit
+): number; // t such that lineOrigin + t*lineDir is nearest the ray
 ```
 
 The caller (Viewport's drag state) captures `t` at pointer-down as the anchor, and feeds
@@ -282,22 +295,22 @@ ring's own plane (normal = the ring's axis direction, through the box center):
 export function rayPlaneIntersect(
   ray: Ray,
   planePoint: Readonly<Vec3>,
-  planeNormal: Readonly<Vec3>,   // unit
-): Vec3 | null;   // null when the ray is parallel to the plane
+  planeNormal: Readonly<Vec3>, // unit
+): Vec3 | null; // null when the ray is parallel to the plane
 
 export function dragRotate(
   ray: Ray,
   centerMpc: Readonly<Vec3>,
-  axisDir: Readonly<Vec3>,       // ring normal, world-space unit
+  axisDir: Readonly<Vec3>, // ring normal, world-space unit
   referenceDir: Readonly<Vec3>, // any unit vector ⊥ axisDir — the ring's own 0°-angle reference
-): number | null;   // absolute angle (radians) of the pick point around the ring, via atan2
+): number | null; // absolute angle (radians) of the pick point around the ring, via atan2
 ```
 
 The absolute-angle design matters: Viewport captures `angle_anchor` and `rotation_anchor =
 box.rotation` once at pointer-down, and on every subsequent pointer-move recomputes the full
 rotation from that **fixed** anchor — `rotation' = quatFromAxisAngle(axisDir, angle_now −
 angle_anchor) · rotation_anchor` — rather than accumulating a small quaternion multiply onto the
-*previous* frame's rotation. Composing from a fixed anchor every frame means a single-precision
+_previous_ frame's rotation. Composing from a fixed anchor every frame means a single-precision
 rounding error on frame 500 of a drag can't compound into frame 501's input the way a running
 multiply would; it also means no renormalization step is needed mid-drag, because each frame starts
 from the same unit-length `rotation_anchor` and multiplies by a freshly-constructed unit quaternion.
@@ -339,7 +352,7 @@ assertions; nothing GPU-shaped is unit-tested (the probe is the gate, per the pa
 testing strategy).
 
 - **`worldToBoxLocal`/`boxLocalToWorld` round trip.** `boxLocalToWorld(box, worldToBoxLocal(box, p))
-  === p` (within float epsilon) for several `p`, at identity rotation (Prep A) and at a
+=== p` (within float epsilon) for several `p`, at identity rotation (Prep A) and at a
   non-trivial rotation (F2) — the property the whole pair exists to guarantee, and the one a wrong
   sign on `R⁻¹` would break silently.
 - **`worldToVoxel`/`voxelToWorld` — hand-computed**, not a mirror of the pair: a point at a known
@@ -361,7 +374,7 @@ testing strategy).
 - **`applyTranslateDrag`/`applyResizeDrag`** — hand-computed: a `deltaMpc` of `+5` along
   `axisDir = [0,1,0]` moves `centerMpc.y` by exactly `5`; a resize with `sign = 1` on the same axis
   grows `sizeMpc.y` by `deltaMpc` and shifts `centerMpc.y` by `deltaMpc/2`, leaving the `y = center −
-  half` face unmoved (the anchored-opposite-face property, asserted directly by recomputing that
+half` face unmoved (the anchored-opposite-face property, asserted directly by recomputing that
   face's position before and after).
 - **`closestPointOnRayToLine`/`rayPlaneIntersect`** — hand-computed skew-line and plane cases
   (textbook geometry, independently derived, not copied from the implementation).
@@ -397,12 +410,12 @@ existing plain-array fields (`centerMpc`, `sizeMpc`, `dims`).
    A quaternion has no such ambiguity.
 2. **Cheap to validate, no drift to renormalize.** `importParams.ts`'s existing validator pattern
    (`num`, `vec3`) extends to a `vec4` check plus one scalar assertion, `|q| ≈ 1`. A hand-edited or
-   slightly-imprecise 3×3 basis needs a full orthonormality check — three unit-length columns *and*
+   slightly-imprecise 3×3 basis needs a full orthonormality check — three unit-length columns _and_
    three pairwise-zero dot products, six conditions — before it's safe to use; a quaternion needs
    one magnitude check. The same asymmetry applies at runtime: composing incremental rotations
    (§5's `dragRotate`) via quaternion multiply never needs a renormalization step because each drag
    frame recomputes from a fixed unit-length anchor (§5), whereas a 3×3 basis accumulated by
-   repeated small rotations *would* drift off-orthonormal without an explicit re-orthogonalization
+   repeated small rotations _would_ drift off-orthonormal without an explicit re-orthogonalization
    pass.
 3. **Already the codebase's convention for a stored orientation.** `matrixToQuaternion.ts` and
    `liveUpBasisQuat.ts` already store/pass orientation as `Vec4 (x, y, z, w)` elsewhere in the repo
