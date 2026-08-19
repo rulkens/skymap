@@ -35,8 +35,8 @@ import { syntheticCatalog } from '../field/syntheticCatalog';
 import { createViewportInput } from '../input/createViewportInput';
 import { cameraViewFor } from '../render/cameraViewFor';
 import { effectiveVolpathDivisor } from '../render/effectiveVolpathDivisor';
-import { createRenderGraph, LAYER_BLEND, type RenderGraph } from '../render/RenderGraph';
-import { createTracePass, type TracePass, type TraceView } from '../render/tracePass';
+import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
+import type { TraceView } from '../render/tracePass';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
@@ -147,12 +147,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
     const scfdTokenWatcher = createTokenWatcher(store.getSnapshot().sim.scfdToken);
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
     let boxPreviewUntil = 0;
-    // T18 preview-export view: a second TracePass over a packed-cube buffer,
+    // T18 preview-export view: a second TracePass over a packed-cube buffer, owned by
+    // RenderGraph (attachPreviewTrace/drawPreviewTrace/disposePreviewTrace — task R7),
     // built once per false→true edge of `view.raymarch.previewPacked` (see the
-    // subscriber below) rather than every frame. `previewPackedAtStep` is the
-    // `sim.stepCount` snapshot taken the moment the pack landed; frame() drops
-    // back to the live trace once `stepCount` moves past it (spec's "STALE").
-    let previewPass: TracePass | null = null;
+    // subscriber below) rather than every frame. Viewport keeps only the buffer (its
+    // own build against the harness) and the staleness snapshot: `previewPackedAtStep`
+    // is the `sim.stepCount` taken the moment the pack landed; frame() drops back to
+    // the live trace once `stepCount` moves past it (spec's "STALE").
     let previewBuffer: GPUBuffer | null = null;
     let previewPackedAtStep = -1;
     let lastPreviewPacked = store.getSnapshot().view.raymarch.previewPacked;
@@ -180,10 +181,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // the same expensive wait.
     let histogramInFlight = false;
 
-    /** Frees the T18 preview pass + its packed buffer. Idempotent. */
+    /** Frees the T18 preview pass (RenderGraph's own) + its packed buffer
+     * (Viewport's own). Idempotent. */
     function disposePreview(): void {
-      previewPass?.dispose();
-      previewPass = null;
+      renderGraph?.disposePreviewTrace();
       previewBuffer?.destroy();
       previewBuffer = null;
     }
@@ -255,16 +256,17 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     /**
      * T18: readback → widen → `previewPackedTrace` (the REAL packLogTraceVoxels,
-     * `runScfdExport`'s own call) → a second TracePass over the packed buffer,
-     * in place of RenderGraph's live one. Runs once per toggle-on; frame()
-     * below is what decides every frame whether the result is still fresh
-     * enough to draw. `harness !== h` guards the rebuild race the same way
-     * `buildFromPoints` guards `generation` — `readbackTrace` can outlive a
-     * catalog switch that starts mid-await. The `previewPacked` re-check
-     * guards a second race the token-diff style above doesn't: the user can
-     * uncheck before this lands, and only the flag at COMMIT time (not at
-     * call time) says whether the result is still wanted — skip installing
-     * rather than build-then-dispose, so nothing orphaned is ever created.
+     * `runScfdExport`'s own call) → `graph.attachPreviewTrace`, RenderGraph's own
+     * TracePass construction (task R7 — Viewport builds only the buffer, not the
+     * pass, now). Runs once per toggle-on; frame() below is what decides every
+     * frame whether the result is still fresh enough to draw. `harness !== h`
+     * guards the rebuild race the same way `buildFromPoints` guards `generation`
+     * — `readbackTrace` can outlive a catalog switch that starts mid-await. The
+     * `previewPacked` re-check guards a second race the token-diff style above
+     * doesn't: the user can uncheck before this lands, and only the flag at
+     * COMMIT time (not at call time) says whether the result is still wanted —
+     * skip installing rather than build-then-dispose, so nothing orphaned is
+     * ever created.
      */
     async function runPreviewPacked(): Promise<void> {
       const h = harness;
@@ -278,17 +280,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
         disposePreview();
         const packed = previewPackedTrace(h.gpu.device, values, h.box);
         previewBuffer = packed.buffer;
-        previewPass = createTracePass({
-          device: h.gpu.device,
-          targetFormat: graph.hdrFormat,
-          blend: LAYER_BLEND,
-          makeShader: (code, label) => h.gpu.device.createShaderModule({ code, label }),
-          source: {
-            traceBuffer: packed.buffer,
-            box: h.box,
-            element: packed.element,
-            paletteId: store.getSnapshot().view.raymarch.paletteId,
-          },
+        graph.attachPreviewTrace({
+          traceBuffer: packed.buffer,
+          box: h.box,
+          element: packed.element,
+          paletteId: store.getSnapshot().view.raymarch.paletteId,
         });
         previewPackedAtStep = store.getSnapshot().sim.stepCount;
       } catch (err) {
@@ -386,20 +382,15 @@ function Viewport({ store }: ViewportProps): ReactNode {
           // "STALE"), and the fallback IS the live trace, not a blank frame.
           if (
             s.view.raymarch.previewPacked &&
-            previewPass &&
+            graph.hasPreviewTrace() &&
             previewPackedAtStep === s.sim.stepCount
           ) {
-            // Routed through drawTracePass (not previewPass.draw directly) so the
-            // divisor preview applies identically here — same reduced target, same
-            // upsample, no special-casing for the packed source.
-            graph.drawTracePass(
-              encoder,
-              previewPass,
-              traceViewFor(s, h.box, cam),
-              s.view.raymarch.divisor,
-            );
+            // drawPreviewTrace routes through the same drawTracePass divisor path as
+            // drawTrace (RenderGraph owns both passes symmetrically — task R7) — same
+            // reduced target, same upsample, no special-casing for the packed source.
+            graph.drawPreviewTrace(encoder, traceViewFor(s, h.box, cam), s.view.raymarch.divisor);
           } else {
-            if (s.view.raymarch.previewPacked && previewPass) {
+            if (s.view.raymarch.previewPacked && graph.hasPreviewTrace()) {
               disposePreview();
               store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
             }

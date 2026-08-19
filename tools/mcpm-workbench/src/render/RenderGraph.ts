@@ -77,9 +77,9 @@ export type RenderGraph = {
    */
   drawTrace(encoder: GPUCommandEncoder, view: TraceView, divisor: number): void;
   /**
-   * March ANY `TracePass` — the attached live one, or T18's previewPass (which Viewport
-   * owns and draws directly, bypassing attachTrace/drawTrace) — through the same divisor
-   * path. `divisor` is a parameter, not a TraceView field: TraceView mirrors the fragment
+   * March ANY `TracePass` — the attached live one or the attached preview one — through
+   * the same divisor path (drawTrace/drawPreviewTrace are both thin wrappers over this).
+   * `divisor` is a parameter, not a TraceView field: TraceView mirrors the fragment
    * shader's own uniform byte-for-byte (VIEW_UNIFORM_BYTES), and the shader carries no
    * screen-size uniform to receive it. `divisor <= 1` draws straight into the accum
    * target; `divisor > 1` draws into a shared `floor(size/divisor)` target (reducedTraceSize),
@@ -92,6 +92,26 @@ export type RenderGraph = {
     view: TraceView,
     divisor: number,
   ): void;
+  /**
+   * T18's preview-export view: build a TracePass over a packed-cube buffer (task R7 —
+   * moved here from Viewport, which now only builds the buffer itself via
+   * `previewPackedTrace.ts` and owns its lifetime/disposal). Same shape as `attachTrace`;
+   * replaces and disposes any preview pass attached before.
+   */
+  attachPreviewTrace(source: TraceSource): void;
+  /** True once `attachPreviewTrace` has built a pass that hasn't since been disposed. */
+  hasPreviewTrace(): boolean;
+  /**
+   * March the attached preview pass through the same divisor path as `drawTrace`.
+   * Throws if none is attached — callers check `hasPreviewTrace()` first.
+   */
+  drawPreviewTrace(encoder: GPUCommandEncoder, view: TraceView, divisor: number): void;
+  /**
+   * Drop the preview pass early — toggle-off, staleness, or a failed rebuild — without
+   * waiting for the next `attachPreviewTrace` or a full graph `dispose()`; a no-op before
+   * `attachPreviewTrace`. `dispose()` also calls this.
+   */
+  disposePreviewTrace(): void;
   /**
    * Build the path tracer over `source` — the same `TraceSource` `attachTrace` takes, so
    * both passes are attached together in `attachTrace`'s caller. Replaces and disposes any
@@ -213,6 +233,11 @@ export function createRenderGraph(
   let accumTexView: GPUTextureView | null = null;
   let blitBindGroup: GPUBindGroup | null = null;
   let tracePass: TracePass | null = null;
+  // T18's preview-export pass (task R7): built by attachPreviewTrace over the packed-cube
+  // buffer Viewport hands in, disposed early on toggle-off/staleness (disposePreviewTrace)
+  // or wholesale with the rest of the graph (dispose()) — never both `tracePass` and this
+  // one drawn in the same frame (drawTracePass's own doc comment on `reducedTex` below).
+  let previewTracePass: TracePass | null = null;
   let volpathPass: VolpathPass | null = null;
   let splatPass: SplatPass | null = null;
   let galaxyOverlayPass: GalaxyOverlayPass | null = null;
@@ -387,6 +412,35 @@ export function createRenderGraph(
     upsample.end();
   }
 
+  function attachPreviewTrace(source: TraceSource): void {
+    previewTracePass?.dispose();
+    previewTracePass = createTracePass({
+      device,
+      targetFormat: HDR_FORMAT,
+      blend: LAYER_BLEND,
+      makeShader,
+      source,
+    });
+  }
+
+  function hasPreviewTrace(): boolean {
+    return previewTracePass !== null;
+  }
+
+  function drawPreviewTrace(encoder: GPUCommandEncoder, view: TraceView, divisor: number): void {
+    if (!previewTracePass) {
+      throw new Error(
+        'RenderGraph.drawPreviewTrace: call attachPreviewTrace() before drawing the preview',
+      );
+    }
+    drawTracePass(encoder, previewTracePass, view, divisor);
+  }
+
+  function disposePreviewTrace(): void {
+    previewTracePass?.dispose();
+    previewTracePass = null;
+  }
+
   function attachVolpath(source: TraceSource): void {
     volpathPass?.dispose();
     volpathPass = createVolpathPass({
@@ -491,6 +545,7 @@ export function createRenderGraph(
   function dispose(): void {
     tracePass?.dispose();
     tracePass = null;
+    disposePreviewTrace();
     volpathPass?.dispose();
     volpathPass = null;
     splatPass?.dispose();
@@ -520,6 +575,10 @@ export function createRenderGraph(
     attachTrace,
     drawTrace,
     drawTracePass,
+    attachPreviewTrace,
+    hasPreviewTrace,
+    drawPreviewTrace,
+    disposePreviewTrace,
     attachVolpath,
     drawVolpath,
     resetVolpath,
