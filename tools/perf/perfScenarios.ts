@@ -135,6 +135,18 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
     name: 'volume-inside',
     pose: { target: [-239.45, -16.5, 201.3], distance: 30, yaw: 0.5, pitch: 0.3, clearFocus: true },
   },
+  // Same MCPM cube, but a near-corner target (~80 Mpc margin from three
+  // walls) instead of the centroid — the far-octant "void-seeking" family
+  // task-1-report.md tried but didn't record exact coordinates for. Derived
+  // by decoding `mcpm-large.scfd` directly and sampling: this target reads
+  // 0% nonzero voxels along 5 of 6 axis rays out to 300 Mpc (vs. 50-88% from
+  // the centroid), i.e. genuinely skip-favorable — almost every ray from
+  // here stays below the transfer-function cutoff for its whole span, unlike
+  // `volume-inside` where a ray rarely gets the chance to early-exit.
+  {
+    name: 'void-inside',
+    pose: { target: [-437.6, -405.3, 405.7], distance: 30, yaw: 0.5, pitch: 0.3, clearFocus: true },
+  },
   {
     name: 'local-group',
     pose: { target: EARTH_TARGET, distance: 21.268361, yaw: 8.2811, pitch: 0.5612 },
