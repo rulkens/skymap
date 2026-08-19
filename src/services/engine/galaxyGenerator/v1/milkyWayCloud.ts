@@ -86,9 +86,9 @@ export function createMilkyWayCloud(device: GPUDevice, starCount: number): Milky
 
   // The two mutable cells: the current generation's buffers and the
   // starCount that produced them, both replaced wholesale on each regenerate
-  // rather than mutated field-by-field. `currentCount` is what lets `runFrame`
-  // detect a stale generation without keeping its own shadow copy of the
-  // value — the generator is the one place that fact is true.
+  // rather than mutated field-by-field. `currentCount` is what lets
+  // `reconcile` detect a stale generation without keeping its own shadow copy
+  // of the value — the generator is the one place that fact is true.
   let current = generate(starCount);
   let currentCount = starCount;
   let destroyed = false;
@@ -111,6 +111,10 @@ export function createMilkyWayCloud(device: GPUDevice, starCount: number): Milky
     currentCount = count;
   }
 
+  function reconcile(wantedCount: number): void {
+    if (currentCount !== wantedCount) regenerate(wantedCount);
+  }
+
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
@@ -119,5 +123,5 @@ export function createMilkyWayCloud(device: GPUDevice, starCount: number): Milky
     ubo.destroy();
   }
 
-  return { buffers, starCount: starCountOf, regenerate, destroy };
+  return { buffers, starCount: starCountOf, reconcile, regenerate, destroy };
 }

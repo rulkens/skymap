@@ -30,6 +30,17 @@ export type MilkyWayCloud = {
   readonly buffers: () => MilkyWayCloudBuffers;
   /** The starCount the CURRENT `buffers()` snapshot was generated with. */
   readonly starCount: () => number;
+  /**
+   * Regenerate iff the buffers on screen were generated at a different count.
+   * The compare lives here because the fact does: `starCount()` is produced by
+   * the generator, and a caller-side copy could only drift from the buffers it
+   * describes. Self-healing by construction — it answers a slider drag and a
+   * tier re-seed identically, with no second writer. Callers that fire on
+   * every UI input event (e.g. a drag-driven DebugSlider) pay a full
+   * destroy + allocate + dispatch per tick; that is accepted for a dev knob,
+   * coalesced at the caller if it ever needs production-grade smoothness.
+   */
+  readonly reconcile: (wantedCount: number) => void;
   /** carve -> destroy old VBs -> create new -> pack UBO -> encode both compute passes -> submit. */
   readonly regenerate: (starCount: number) => void;
   readonly destroy: () => void;

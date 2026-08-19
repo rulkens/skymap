@@ -189,6 +189,55 @@ describe('createMilkyWayCloud', () => {
     expect(cloud.starCount()).toBe(MILKY_WAY_STARS_PER_TIER.small);
   });
 
+  it('reconcile regenerates at the wanted count when it differs from the resident one', () => {
+    const { device, submit } = makeStubDevice();
+    const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
+
+    const before = cloud.buffers();
+    const oldStar = before.starBuf as StubBuffer;
+    const oldDust = before.dustBuf as StubBuffer;
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    cloud.reconcile(MILKY_WAY_STARS_PER_TIER.large);
+
+    expect(oldStar.destroy).toHaveBeenCalledTimes(1);
+    expect(oldDust.destroy).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(cloud.starCount()).toBe(MILKY_WAY_STARS_PER_TIER.large);
+  });
+
+  it('reconcile does nothing when the resident count already matches', () => {
+    const { device, submit } = makeStubDevice();
+    const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
+    const before = cloud.buffers();
+    const star = before.starBuf as StubBuffer;
+    const dust = before.dustBuf as StubBuffer;
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    cloud.reconcile(MILKY_WAY_STARS_PER_TIER.medium);
+
+    expect(star.destroy).not.toHaveBeenCalled();
+    expect(dust.destroy).not.toHaveBeenCalled();
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("reconcile regenerates again when the resident count is reset behind the caller's back", () => {
+    const { device, submit } = makeStubDevice();
+    const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
+
+    cloud.reconcile(MILKY_WAY_STARS_PER_TIER.large);
+    expect(submit).toHaveBeenCalledTimes(2);
+
+    // A direct regenerate back to the original count, bypassing reconcile —
+    // pins that there is no caller-side shadow copy to go stale against it.
+    cloud.regenerate(MILKY_WAY_STARS_PER_TIER.medium);
+    expect(submit).toHaveBeenCalledTimes(3);
+
+    cloud.reconcile(MILKY_WAY_STARS_PER_TIER.large);
+    expect(submit).toHaveBeenCalledTimes(4);
+    expect(cloud.starCount()).toBe(MILKY_WAY_STARS_PER_TIER.large);
+  });
+
   it('destroy releases buffers and UBO', () => {
     const { device, buffers } = makeStubDevice();
     const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
