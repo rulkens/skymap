@@ -1,5 +1,5 @@
 /**
- * LonLatBox — an axis-aligned geographic box in degrees: the sampling unit an
+ * LonLatBounds — an axis-aligned geographic box in degrees: the sampling unit an
  * `EarthImagerySource` is handed.
  *
  * Degrees, not radians, since every imagery source in play already addresses
