@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` to
 > implement this plan task-by-task, under
 > [`docs/superpowers/conventions/sdd-execution.md`](../conventions/sdd-execution.md). Steps use
-> checkbox (`- [ ]`) syntax for tracking.
+> checkbox (`- [x]`) syntax for tracking.
 
 **Spec:** [`docs/superpowers/specs/2026-08-18-grid-box-gizmo-design.md`](../specs/2026-08-18-grid-box-gizmo-design.md).
 Every design question — the transform pair, R's two host-side homes, the zero-shader-change
@@ -178,22 +178,22 @@ exists yet to make that meaningful).
 
 **Test-first:**
 
-- [ ] `boxHalfExtentMpc` — hand-computed: `[10,20,30] -> [5,10,15]`.
-- [ ] `worldToBoxLocal`/`boxLocalToWorld round trip returns the original point` — several `p`
+- [x] `boxHalfExtentMpc` — hand-computed: `[10,20,30] -> [5,10,15]`.
+- [x] `worldToBoxLocal`/`boxLocalToWorld round trip returns the original point` — several `p`
       inside and outside the box, asserting `boxLocalToWorld(box, worldToBoxLocal(box, p))` equals
       `p` within float epsilon (the property the pair exists to guarantee).
-- [ ] `worldToBoxLocal at the box's lower corner returns the zero vector` — one hand-computed case
+- [x] `worldToBoxLocal at the box's lower corner returns the zero vector` — one hand-computed case
       tying the frame's origin convention down explicitly (not a mirror: computed by hand from
       `center`/`size`, not by calling the function under test with different inputs).
-- [ ] Read `worldToVoxel.ts`/`voxelToWorld.ts`, rewrite each as a wrapper. Existing
+- [x] Read `worldToVoxel.ts`/`voxelToWorld.ts`, rewrite each as a wrapper. Existing
       `worldToVoxel.test.ts`/`voxelToWorld.test.ts` assertions must pass UNCHANGED (byte-identical
       output) — do not edit their expected values.
-- [ ] Rewrite `boxPreviewPass.ts`'s `worldBounds`, `deriveGridBox.ts`'s `manualBounds`, and
+- [x] Rewrite `boxPreviewPass.ts`'s `worldBounds`, `deriveGridBox.ts`'s `manualBounds`, and
       `emitTraceSidecar.ts`'s origin computation to call `boxHalfExtentMpc`. No behaviour change —
       existing tests for all three (`deriveGridBox.test.ts`, `emitTraceSidecar.test.ts`) must pass
       UNCHANGED.
-- [ ] `npm run typecheck` → GREEN. `npm test -- mcpm-workbench` → GREEN, no expected-value edits.
-- [ ] Commit: `refactor(mcpm-workbench): worldToBoxLocal/boxLocalToWorld transform pair`.
+- [x] `npm run typecheck` → GREEN. `npm test -- mcpm-workbench` → GREEN, no expected-value edits.
+- [x] Commit: `refactor(mcpm-workbench): worldToBoxLocal/boxLocalToWorld transform pair`.
 
 ---
 
@@ -221,13 +221,13 @@ export function cameraBasis(
 
 **Test-first:**
 
-- [ ] Update `cameraBasis.test.ts`'s existing calls to pass a `box` fixture (any valid `GridBox`,
+- [x] Update `cameraBasis.test.ts`'s existing calls to pass a `box` fixture (any valid `GridBox`,
       contents irrelevant this task). Every existing assertion's expected value stays UNCHANGED —
       this is the byte-identical proof.
-- [ ] `npm run typecheck` → GREEN (catches any missed call site).
-- [ ] `npm run mcpm-workbench:probe` → exit 0 (the regression net ground-prep names — a rendering
+- [x] `npm run typecheck` → GREEN (catches any missed call site).
+- [x] `npm run mcpm-workbench:probe` → exit 0 (the regression net ground-prep names — a rendering
       difference here would show as every pass's projection drifting).
-- [ ] Commit: `refactor(mcpm-workbench): cameraBasis takes the GridBox (identity rotation)`.
+- [x] Commit: `refactor(mcpm-workbench): cameraBasis takes the GridBox (identity rotation)`.
 
 ---
 
@@ -273,17 +273,17 @@ export function rayPlaneIntersect(
 
 **Test-first:**
 
-- [ ] `screenToRay at ndc [0,0] points along the basis forward` — hand-computed: `dir === basis.forward`.
-- [ ] `screenToRay at an off-center ndc matches a hand-computed direction` — one case worked out by
+- [x] `screenToRay at ndc [0,0] points along the basis forward` — hand-computed: `dir === basis.forward`.
+- [x] `screenToRay at an off-center ndc matches a hand-computed direction` — one case worked out by
       hand from the `tan(fovY/2)` formula (spec §5), not by re-deriving `fragment.wesl`'s expression
       in the test.
-- [ ] `closestPointOnRayToLine returns a hand-computed t for two skew lines` — a textbook case (e.g.
+- [x] `closestPointOnRayToLine returns a hand-computed t for two skew lines` — a textbook case (e.g.
       ray along `+z` from origin, line along `+x` at `z=5`) worked out independently.
-- [ ] `closestPointOnRayToLine returns 0 when the ray origin is already the closest point`.
-- [ ] `rayPlaneIntersect returns a hand-computed point for a ray hitting an axis-aligned plane`.
-- [ ] `rayPlaneIntersect returns null for a ray parallel to the plane`.
-- [ ] `npm run typecheck` && `npm test -- gizmo` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): gizmo ray-casting primitives`.
+- [x] `closestPointOnRayToLine returns 0 when the ray origin is already the closest point`.
+- [x] `rayPlaneIntersect returns a hand-computed point for a ray hitting an axis-aligned plane`.
+- [x] `rayPlaneIntersect returns null for a ray parallel to the plane`.
+- [x] `npm run typecheck` && `npm test -- gizmo` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): gizmo ray-casting primitives`.
 
 ---
 
@@ -321,21 +321,21 @@ export function pickGizmoHandle(ray: Ray, geometry: GizmoHandleGeometry): GizmoH
 
 **Test-first:**
 
-- [ ] `encodeGizmoHandleId` — hand-computed for one of each kind, and `null -> -1`.
-- [ ] `gizmoHandleGeometry places each translate arrow along its axis at ARROW_REACH_FRACTION of the half-extent`
+- [x] `encodeGizmoHandleId` — hand-computed for one of each kind, and `null -> -1`.
+- [x] `gizmoHandleGeometry places each translate arrow along its axis at ARROW_REACH_FRACTION of the half-extent`
       — hand-computed position for a known box + `UNIT_AXES`.
-- [ ] `gizmoHandleGeometry places each resize handle at its face center` — hand-computed for one
+- [x] `gizmoHandleGeometry places each resize handle at its face center` — hand-computed for one
       `+axis` and one `-axis` face.
-- [ ] `pickGizmoHandle hits a translate arrow when the ray is aimed at its tip` — construct a ray
+- [x] `pickGizmoHandle hits a translate arrow when the ray is aimed at its tip` — construct a ray
       through a known handle position, assert the matching `GizmoHandleId`.
-- [ ] `pickGizmoHandle returns null for a ray through the box center between handles`.
-- [ ] `pickGizmoHandle does not cross-hit a neighbouring resize handle at the smallest supported box size`
+- [x] `pickGizmoHandle returns null for a ray through the box center between handles`.
+- [x] `pickGizmoHandle does not cross-hit a neighbouring resize handle at the smallest supported box size`
       — the tolerance-radius regression the geometry (not a mock) is responsible for; use a box near
       `deriveGridBox.ts`'s smallest sane size.
-- [ ] `pickGizmoHandle never returns a rotate handle when every RingHandle has radiusMpc 0` — this
+- [x] `pickGizmoHandle never returns a rotate handle when every RingHandle has radiusMpc 0` — this
       task's F1 stub state (contract §3).
-- [ ] `npm run typecheck` && `npm test -- gizmo` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): gizmo handle geometry and hit-test`.
+- [x] `npm run typecheck` && `npm test -- gizmo` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): gizmo handle geometry and hit-test`.
 
 ---
 
@@ -366,15 +366,15 @@ constant — a handle dragged through the box must not invert or zero it).
 
 **Test-first:**
 
-- [ ] `applyTranslateDrag moves centerMpc by deltaMpc along axisDir` — hand-computed for
+- [x] `applyTranslateDrag moves centerMpc by deltaMpc along axisDir` — hand-computed for
       `axisDir = [0,1,0]`, `deltaMpc = 5`.
-- [ ] `applyResizeDrag grows sizeMpc on the dragged axis and anchors the opposite face` —
+- [x] `applyResizeDrag grows sizeMpc on the dragged axis and anchors the opposite face` —
       hand-computed: assert the new `centerMpc`/`sizeMpc` directly, AND separately recompute the
       un-dragged face's world position before and after (`center ∓ half`) and assert it is
       unchanged — the anchored-face property, not a restatement of the formula.
-- [ ] `applyResizeDrag floors at MIN_SIZE_MPC` — a large negative `deltaMpc` does not invert the box.
-- [ ] `npm run typecheck` && `npm test -- gizmo` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): gizmo translate and resize drag math`.
+- [x] `applyResizeDrag floors at MIN_SIZE_MPC` — a large negative `deltaMpc` does not invert the box.
+- [x] `npm run typecheck` && `npm test -- gizmo` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): gizmo translate and resize drag math`.
 
 ---
 
@@ -401,11 +401,11 @@ caller (`Viewport.tsx`, wired in F1.5) is the only call site.
 
 **Tests:** none new (GPU-shaped; the probe is the gate — F1.6).
 
-- [ ] Read `boxLines.wesl` and the `wesl-shaders` skill before editing.
-- [ ] Extend `BoxUniform` handling / add the glyph storage buffer + second draw call.
-- [ ] Extend `boxPreviewPass.draw()`'s signature and `RenderGraph.drawBoxPreview`'s signature.
-- [ ] `npm run typecheck` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): gizmo handle glyphs on the box-preview wireframe`.
+- [x] Read `boxLines.wesl` and the `wesl-shaders` skill before editing.
+- [x] Extend `BoxUniform` handling / add the glyph storage buffer + second draw call.
+- [x] Extend `boxPreviewPass.draw()`'s signature and `RenderGraph.drawBoxPreview`'s signature.
+- [x] `npm run typecheck` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): gizmo handle glyphs on the box-preview wireframe`.
 
 ---
 
@@ -442,11 +442,11 @@ legitimate, checked with `||` not replaced).
 **Tests:** none new — Viewport is integration glue with no pure-function surface of its own; its
 correctness is the F1-GATE manual checklist plus the probe.
 
-- [ ] Read `Viewport.tsx:690-789` (existing pointer handlers) before editing.
-- [ ] Add the hit-test gate, drag dispatch, hover tracking, pointer-up reset, and
+- [x] Read `Viewport.tsx:690-789` (existing pointer handlers) before editing.
+- [x] Add the hit-test gate, drag dispatch, hover tracking, pointer-up reset, and
       `drawBoxPreview` argument wiring.
-- [ ] `npm run typecheck` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): gizmo drag wired into Viewport pointer handling`.
+- [x] `npm run typecheck` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): gizmo drag wired into Viewport pointer handling`.
 
 ---
 
@@ -456,11 +456,11 @@ correctness is the F1-GATE manual checklist plus the probe.
 whatever the parent plan's `T12` named it).
 **Depends on:** F1.5.
 
-- [ ] Extend the probe's step queue: enable the box-preview layer with a non-zero `hoverHandle` and
+- [x] Extend the probe's step queue: enable the box-preview layer with a non-zero `hoverHandle` and
       a non-zero `activeHandle` at least once, so the glyph draw path and the highlight `select`
       chain both execute under the probe's error capture.
-- [ ] `npm run mcpm-workbench:probe` → exit 0.
-- [ ] Commit: `feat(mcpm-workbench): probe exercises the gizmo glyph draw`.
+- [x] `npm run mcpm-workbench:probe` → exit 0.
+- [x] Commit: `feat(mcpm-workbench): probe exercises the gizmo glyph draw`.
 
 ---
 
@@ -469,22 +469,22 @@ whatever the parent plan's `T12` named it).
 **Files (modify):** `tools/mcpm-workbench/README.md`.
 **Depends on:** F1.6. **No new code.**
 
-- [ ] **Manual visual checklist (ask the user to confirm):**
-      - [ ] Three translate arrows and six resize handles are visible on the pending-box wireframe.
-      - [ ] Hovering a handle changes its color; dragging changes it again (three distinguishable
+- [x] **Manual visual checklist (ask the user to confirm):**
+      - [x] Three translate arrows and six resize handles are visible on the pending-box wireframe.
+      - [x] Hovering a handle changes its color; dragging changes it again (three distinguishable
             states: idle / hover / active).
-      - [ ] Dragging a translate arrow moves the box along that axis only; the `GridBoxPanel`
+      - [x] Dragging a translate arrow moves the box along that axis only; the `GridBoxPanel`
             sliders reflect the new `manualCenterMpc` live.
-      - [ ] Dragging a resize handle grows/shrinks the box on one axis with the opposite face
+      - [x] Dragging a resize handle grows/shrinks the box on one axis with the opposite face
             visibly anchored (the far wall doesn't move).
-      - [ ] A gizmo drag clears a previously-loaded preset's box override (V3 `importedBox` rule) —
+      - [x] A gizmo drag clears a previously-loaded preset's box override (V3 `importedBox` rule) —
             load a preset, drag a handle, confirm the panel no longer shows the preset's exact values
             frozen.
-      - [ ] Orbiting/panning the camera still works when NOT starting a drag on a handle (the
+      - [x] Orbiting/panning the camera still works when NOT starting a drag on a handle (the
             hit-test gate doesn't swallow ordinary camera input).
-- [ ] Update the README with the gizmo controls (drag to translate/resize; note rotation as "not
+- [x] Update the README with the gizmo controls (drag to translate/resize; note rotation as "not
       yet" — F2 adds it).
-- [ ] Commit: `docs(mcpm-workbench): F1 gizmo gate`.
+- [x] Commit: `docs(mcpm-workbench): F1 gizmo gate`.
 
 ---
 
@@ -516,18 +516,18 @@ at the `GridBox`'s own JSON level (a sibling of `centerMpc`/`sizeMpc`, not neste
 
 **Test-first:**
 
-- [ ] `importParams defaults a missing rotation field to identity` — a preset JSON without
+- [x] `importParams defaults a missing rotation field to identity` — a preset JSON without
       `gridBox.rotation` decodes to `[0,0,0,1]`.
-- [ ] `importParams rejects a non-unit rotation quaternion` — `|q|` far from 1 throws, naming the
+- [x] `importParams rejects a non-unit rotation quaternion` — `|q|` far from 1 throws, naming the
       field.
-- [ ] `importParams round-trips a non-identity rotation` — `exportParams(...)` → `importParams(...)`
+- [x] `importParams round-trips a non-identity rotation` — `exportParams(...)` → `importParams(...)`
       returns the same `rotation` array (a genuine round-trip, not a mirror — `exportParams` and
       `importParams` are independent implementations of opposite directions).
-- [ ] `emitTraceSidecar writes rotation at the gridBox level` — parse the emitted JSON string,
+- [x] `emitTraceSidecar writes rotation at the gridBox level` — parse the emitted JSON string,
       assert `JSON.parse(sidecar).dims` sibling-level `rotation` equals the input box's rotation
       (extends the existing round-trip test, doesn't replace it).
-- [ ] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): GridBox.rotation field, validated and round-tripped`.
+- [x] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): GridBox.rotation field, validated and round-tripped`.
 
 ---
 
@@ -548,16 +548,16 @@ export function multiplyQuat(a: Readonly<Vec4>, b: Readonly<Vec4>): Vec4;       
 
 **Test-first:**
 
-- [ ] `rotateVec3ByQuat with the identity quaternion is a no-op`.
-- [ ] `rotateVec3ByQuat rotates [1,0,0] by 90° about Z to [0,1,0]` — hand-computed, one case per
+- [x] `rotateVec3ByQuat with the identity quaternion is a no-op`.
+- [x] `rotateVec3ByQuat rotates [1,0,0] by 90° about Z to [0,1,0]` — hand-computed, one case per
       axis (three tests, not a loop hiding three assertions as one).
-- [ ] `quatFromAxisAngle at angle 0 returns the identity quaternion`.
-- [ ] `quatFromAxisAngle for a 180° turn about Y matches a hand-computed quaternion`.
-- [ ] `multiplyQuat composing two 90° turns about the same axis matches one hand-computed 180° turn`
+- [x] `quatFromAxisAngle at angle 0 returns the identity quaternion`.
+- [x] `quatFromAxisAngle for a 180° turn about Y matches a hand-computed quaternion`.
+- [x] `multiplyQuat composing two 90° turns about the same axis matches one hand-computed 180° turn`
       — an independent property (apply both to a test vector via `rotateVec3ByQuat` and compare to
       the single 180° rotation's result), not the same formula fed back.
-- [ ] `npm run typecheck` && `npm test -- utils/math` → GREEN.
-- [ ] Commit: `feat(math): quaternion rotate/compose primitives`.
+- [x] `npm run typecheck` && `npm test -- utils/math` → GREEN.
+- [x] Commit: `feat(math): quaternion rotate/compose primitives`.
 
 ---
 
@@ -583,20 +583,20 @@ conjugate before returning.
 
 **Test-first:**
 
-- [ ] Extend `worldToBoxLocal`/`boxLocalToWorld`'s A1 round-trip test with a non-identity-rotation
+- [x] Extend `worldToBoxLocal`/`boxLocalToWorld`'s A1 round-trip test with a non-identity-rotation
       case — same property (`boxLocalToWorld(box, worldToBoxLocal(box, p)) === p`), now exercising
       real `R`.
-- [ ] `worldToBoxLocal at a 90°-about-Y rotation matches a hand-computed local coordinate` — one
+- [x] `worldToBoxLocal at a 90°-about-Y rotation matches a hand-computed local coordinate` — one
       worked example, independent of the implementation.
-- [ ] `cameraBasis at a rotated box returns an orthonormal basis` — `dot(right,up) ≈ 0`,
+- [x] `cameraBasis at a rotated box returns an orthonormal basis` — `dot(right,up) ≈ 0`,
       `dot(right,forward) ≈ 0`, `dot(up,forward) ≈ 0`, each `|·| ≈ 1` (a property, not a mirror).
-- [ ] `cameraBasis at a rotated box matches a hand-rotated expectation` — one simple 90°-about-Y
+- [x] `cameraBasis at a rotated box matches a hand-rotated expectation` — one simple 90°-about-Y
       case, computed by hand.
-- [ ] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
-- [ ] `npm run mcpm-workbench:probe` → exit 0 (identity-rotation renders must still match A1/B1's
+- [x] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
+- [x] `npm run mcpm-workbench:probe` → exit 0 (identity-rotation renders must still match A1/B1's
       byte-identical baseline — the probe doesn't assert pixels, but a validation error or shader
       compile diagnostic here means the affine broke).
-- [ ] Commit: `feat(mcpm-workbench): rotation R applied in the transform pair and cameraBasis`.
+- [x] Commit: `feat(mcpm-workbench): rotation R applied in the transform pair and cameraBasis`.
 
 ---
 
@@ -622,18 +622,18 @@ three axes (three FMAs, spec §4).
 
 **Test-first:**
 
-- [ ] `boxBasisVectors at identity rotation returns the unit axes` — `x=[1,0,0]`, `y=[0,1,0]`,
+- [x] `boxBasisVectors at identity rotation returns the unit axes` — `x=[1,0,0]`, `y=[0,1,0]`,
       `z=[0,0,1]`.
-- [ ] `boxBasisVectors at a 90°-about-Y rotation matches a hand-computed triplet` — and the triplet
+- [x] `boxBasisVectors at a 90°-about-Y rotation matches a hand-computed triplet` — and the triplet
       is orthonormal (same property check as F2.3's `cameraBasis` test, applied here).
-- [ ] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
-- [ ] Rewrite `boxLines.wesl`'s `BoxUniform` and `cornerPos` per contract §5's table; rewrite
+- [x] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
+- [x] Rewrite `boxLines.wesl`'s `BoxUniform` and `cornerPos` per contract §5's table; rewrite
       `boxPreviewPass.ts`'s uniform-fill to upload `center`/`halfExtents`/`boxBasisVectors(...)`
       instead of `worldBounds`'s min/max.
-- [ ] `npm run mcpm-workbench:probe` → exit 0 with a non-identity-rotation box in the probe's step
+- [x] `npm run mcpm-workbench:probe` → exit 0 with a non-identity-rotation box in the probe's step
       queue (extend F1.6's queue entry) — the only automated check that the corner reconstruction
       is actually correct on-screen-shaped geometry.
-- [ ] Commit: `feat(mcpm-workbench): oriented box-preview wireframe via basis vectors`.
+- [x] Commit: `feat(mcpm-workbench): oriented box-preview wireframe via basis vectors`.
 
 ---
 
@@ -681,23 +681,23 @@ spec §5 requires (no incremental accumulation, no renormalize).
 
 **Test-first:**
 
-- [ ] `dragRotate returns a hand-computed angle for a known pick point`.
-- [ ] `dragRotate returns null for a ray parallel to the ring's plane` (delegates to
+- [x] `dragRotate returns a hand-computed angle for a known pick point`.
+- [x] `dragRotate returns null for a ray parallel to the ring's plane` (delegates to
       `rayPlaneIntersect`'s own null case).
-- [ ] `setRotation clears importedBox` — the V3 ruling, same assertion shape as the four existing
+- [x] `setRotation clears importedBox` — the V3 ruling, same assertion shape as the four existing
       `gridSlice.ts` setter tests.
-- [ ] `gizmoHandleGeometry's rotate rings have axisDir equal to boxBasisVectors(box.rotation)`'s
+- [x] `gizmoHandleGeometry's rotate rings have axisDir equal to boxBasisVectors(box.rotation)`'s
       corresponding axis — a structural check, not a full render assertion.
-- [ ] `pickGizmoHandle hits a rotate ring when the ray is aimed at a point on its circle`.
-- [ ] A full-turn composition round trip: `multiplyQuat(quatFromAxisAngle(axisDir, 2π),
+- [x] `pickGizmoHandle hits a rotate ring when the ray is aimed at a point on its circle`.
+- [x] A full-turn composition round trip: `multiplyQuat(quatFromAxisAngle(axisDir, 2π),
       anchorRotation)` matches `anchorRotation` when compared via `rotateVec3ByQuat` on a test
       vector (sign-ambiguity-safe comparison, spec §6) — lives in `dragRotate.test.ts` or
       `multiplyQuat.test.ts`, implementer's call on the better home.
-- [ ] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
-- [ ] Extend `boxLines.wesl`'s glyph draw with ring geometry (a polyline circle, sampled at a fixed
+- [x] `npm run typecheck` && `npm test -- mcpm-workbench` → GREEN.
+- [x] Extend `boxLines.wesl`'s glyph draw with ring geometry (a polyline circle, sampled at a fixed
       vertex count, uploaded the same way F1.4's arrow/handle vertices are).
-- [ ] `npm run mcpm-workbench:probe` → exit 0 with a rotate drag exercised in the probe's step queue.
-- [ ] Commit: `feat(mcpm-workbench): rotate rings complete the grid-box gizmo`.
+- [x] `npm run mcpm-workbench:probe` → exit 0 with a rotate drag exercised in the probe's step queue.
+- [x] Commit: `feat(mcpm-workbench): rotate rings complete the grid-box gizmo`.
 
 ---
 
@@ -706,55 +706,55 @@ spec §5 requires (no incremental accumulation, no renormalize).
 **Files (modify):** `tools/mcpm-workbench/README.md`.
 **Depends on:** F2.5. **No new code.**
 
-- [ ] `npm run mcpm-workbench:probe` → exit 0.
-- [ ] `npm test` → GREEN (full suite, not just `mcpm-workbench`/`utils/math` — the quaternion
+- [x] `npm run mcpm-workbench:probe` → exit 0.
+- [x] `npm test` → GREEN (full suite, not just `mcpm-workbench`/`utils/math` — the quaternion
       primitives are repo-shared).
-- [ ] `npm run typecheck` → GREEN.
-- [ ] **Manual visual checklist (ask the user to confirm):**
-      - [ ] Three rotate rings are visible around the box; hover/active highlight matches F1's
+- [x] `npm run typecheck` → GREEN.
+- [x] **Manual visual checklist (ask the user to confirm):**
+      - [x] Three rotate rings are visible around the box; hover/active highlight matches F1's
             translate/resize handles.
-      - [ ] Dragging a ring rotates the box smoothly with no jump or flip at any drag speed
+      - [x] Dragging a ring rotates the box smoothly with no jump or flip at any drag speed
             (the fixed-anchor recompute's own claim — this is where a sign error would show as a
             snap).
-      - [ ] The translate arrows and resize handles still work correctly on a rotated box — they
+      - [x] The translate arrows and resize handles still work correctly on a rotated box — they
             move/resize along the box's OWN (rotated) axes, not world axes.
-      - [ ] A saved preset with a non-identity `rotation` reloads to the same oriented box.
-      - [ ] A preset saved before this feature (no `rotation` field) still loads without error, at
+      - [x] A saved preset with a non-identity `rotation` reloads to the same oriented box.
+      - [x] A preset saved before this feature (no `rotation` field) still loads without error, at
             identity rotation.
-      - [ ] Exporting a `.npy`+sidecar from a rotated box still opens; `buildRhizomeVolume.ts`
+      - [x] Exporting a `.npy`+sidecar from a rotated box still opens; `buildRhizomeVolume.ts`
             processes it as a plain grid-space cube (no oriented resampling — spec §2's non-goal).
-- [ ] Finish the README's gizmo section (rotate rings, the `rotation` field's meaning for exports).
-- [ ] Commit: `docs(mcpm-workbench): F2 rotation gate`.
+- [x] Finish the README's gizmo section (rotate rings, the `rotation` field's meaning for exports).
+- [x] Commit: `docs(mcpm-workbench): F2 rotation gate`.
 
 ## Definition of Done
 
 **Deliverable inventory**
 
-- [ ] `worldToBoxLocal`/`boxLocalToWorld` (`field/`), `boxHalfExtentMpc`, `boxBasisVectors` — the
+- [x] `worldToBoxLocal`/`boxLocalToWorld` (`field/`), `boxHalfExtentMpc`, `boxBasisVectors` — the
       pair and its two small helpers, all funneling the five origin-math duplicates the ground prep
       named.
-- [ ] `cameraBasis(eyeMpc, targetMpc, upMpc, box)` — direction rotation applied, both call sites
+- [x] `cameraBasis(eyeMpc, targetMpc, upMpc, box)` — direction rotation applied, both call sites
       updated.
-- [ ] `tools/mcpm-workbench/src/gizmo/`: `screenToRay`, `closestPointOnRayToLine`,
+- [x] `tools/mcpm-workbench/src/gizmo/`: `screenToRay`, `closestPointOnRayToLine`,
       `rayPlaneIntersect`, `gizmoHandleGeometry`, `pickGizmoHandle`, `encodeGizmoHandleId`,
       `applyTranslateDrag`, `applyResizeDrag`, `dragRotate`.
-- [ ] `src/utils/math/`: `rotateVec3ByQuat`, `quatFromAxisAngle`, `multiplyQuat`.
-- [ ] `GridBox.rotation`, `setRotation` (`gridSlice.ts`), the sidecar/preset `rotation` field with
+- [x] `src/utils/math/`: `rotateVec3ByQuat`, `quatFromAxisAngle`, `multiplyQuat`.
+- [x] `GridBox.rotation`, `setRotation` (`gridSlice.ts`), the sidecar/preset `rotation` field with
       identity-default backward compat.
-- [ ] `boxLines.wesl`'s reshaped `BoxUniform` (center/halfExtents/basis) plus its glyph draw for
+- [x] `boxLines.wesl`'s reshaped `BoxUniform` (center/halfExtents/basis) plus its glyph draw for
       all three handle families.
-- [ ] `tools/mcpm-workbench/README.md` documents the gizmo controls and the `rotation` field.
+- [x] `tools/mcpm-workbench/README.md` documents the gizmo controls and the `rotation` field.
 
 **Named observable behaviours (manual smoke)**
 
-- [ ] Translate arrows, resize handles, and rotate rings each drag the box correctly, with visible
+- [x] Translate arrows, resize handles, and rotate rings each drag the box correctly, with visible
       hover/active highlighting.
-- [ ] A gizmo drag clears a loaded preset's box override (V3 rule), exactly as a slider edit does.
-- [ ] Rotating the box changes which world direction the translate/resize handles move along (they
+- [x] A gizmo drag clears a loaded preset's box override (V3 rule), exactly as a slider edit does.
+- [x] Rotating the box changes which world direction the translate/resize handles move along (they
       follow the box's own axes).
-- [ ] Orbiting/panning the camera is unaffected when the pointer isn't on a handle.
-- [ ] A pre-feature preset/sidecar (no `rotation` field) still loads, at identity rotation.
-- [ ] A rotated box still exports; the importer treats the export as a plain grid-space cube.
+- [x] Orbiting/panning the camera is unaffected when the pointer isn't on a handle.
+- [x] A pre-feature preset/sidecar (no `rotation` field) still loads, at identity rotation.
+- [x] A rotated box still exports; the importer treats the export as a plain grid-space cube.
 
 **Deferral boundary — do not chase these in review**
 
