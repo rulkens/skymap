@@ -197,8 +197,8 @@ order coincidence.
 
 **Derived acceptance band (3× the corrected full-resolution floor — n=2,
 first approximation):** logHistogram TV ≤ 0.0003 (3× the table's rounded
-0.0001 floor above; 3× the exact 6.5e-5 floor is 0.0002 — this is the
-number the Phase 4 sweep below actually applied), dataPointHistogram TV ≤
+0.0001 floor above — this is the number the Phase 4 sweep below actually
+applied; 3× the exact 6.5e-5 floor is 0.0002), dataPointHistogram TV ≤
 0.0084, marginal max rel. dev. ≤ 0.245, meanLogTraceAtPoints rel. diff. ≤
 0.0054%. **The picture is no longer a uniform three-orders-of-magnitude
 miss**: logHistogram TV misses by ~372×, dataPointHistogram TV by ~79×, and
