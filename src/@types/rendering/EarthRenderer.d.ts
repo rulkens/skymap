@@ -78,17 +78,13 @@ export type EarthRenderer = Renderer & {
    */
   setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void;
   /**
-   * Bind the surface virtual texture's page table and tile atlas — the views
-   * `earthTileSubsystem.getTileResources()` publishes once engaged — in place
-   * of the 1x1 stand-ins bound from construction, and rebuild the fragment
-   * bind group. A zero page-table weight means "sample the base", so an
-   * un-called renderer draws exactly the no-feature picture.
-   *
-   * Call on the null-to-non-null transition, NOT every frame: the two views
-   * are identity-stable once created. Views stay owned by the subsystem —
-   * this renderer's teardown releases only its own stand-ins.
+   * A fresh view of `kind`'s current layer (committed map if `setMap` has
+   * landed one, else the placeholder) — how `earthSurfaceTileRenderer`
+   * shares this renderer's material/night/normal/cloud maps, since it owns
+   * none of them itself. This renderer stays the sole owner; the caller
+   * must never destroy the returned view's texture.
    */
-  setTileResources(pageTable: GPUTextureView, atlas: GPUTextureView): void;
+  getMapView(kind: TextureKind): GPUTextureView;
   /**
    * Draw the Earth into the current pass. `uniforms` is a length-32 Float32Array
    * (the 128-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):

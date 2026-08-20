@@ -281,23 +281,16 @@ struct RingUniforms {
 // the seed / documentation home (and any future non-Earth water), this slot
 // carries Earth's. So the fragment reads 'u.oceanRoughness', not the const.
 //
-// ## The page-table window fills that row's remaining three slots
+// ## No page-table window (Task 5)
 //
-// 'zWin' (pyramid level) and 'winX0'/'winY0' (the window's origin tile at that
-// level) let the fragment turn a surface uv into a page-table cell, and they
-// fill the three slots 'oceanRoughness's row already rounded over -- no struct
-// growth needed. They are integers carried as 'f32' (a 'u32' field would force
-// a second typed-array view at the CPU pack site -- a fresh drift risk for no
-// gain). All-zero is the identity: every cell reads 'no tile'.
-//
-// ## 'debugLodOverlay' opens a fresh row -- no slot was left to reuse
-//
-// That row was the struct's last free byte (see 'earthLayer.ts's "KNOWN
-// OMISSION" note), so the DebugPanel's 'earth-lod-overlay' toggle
-// (packed 0.0/1.0, read '> 0.5') grows the struct by 16 bytes rather than
-// filling a pad. Gates the Earth fragment's false-colour LOD tint (see its
-// header) over the page table's own B (level) / A (weight) channels this
-// struct already carries -- no new binding needed.
+// This struct used to carry the page-table window ('zWin'/'winX0'/'winY0')
+// and a debug LOD-tint toggle in the row 'oceanRoughness' opened. Both died
+// with the page table itself: tile detail now draws in a separate pass
+// ('earthSurfaceTileRenderer', over this base globe) that carries its own
+// per-tile addressing, and the LOD-tint debug view has no per-fragment
+// residency source left in THIS shader to visualise. The struct is back to
+// its pre-virtual-texture 128 bytes, with two trailing pad floats rather
+// than growing a fourth row.
 //
 // ## Byte layout (uniform address space)
 //
@@ -311,14 +304,10 @@ struct RingUniforms {
 //   offset 104..107: cloudShellRadius    (f32 -- unit-sphere shell radius; unused in A)
 //   offset 108..111: ambientLight        (f32 -- night-side floor; Earth-scoped)
 //   offset 112..115: oceanRoughness      (f32 -- open-water GGX roughness; Earth-scoped)
-//   offset 116..119: zWin                (f32 -- page-table window level; read as u32)
-//   offset 120..123: winX0               (f32 -- window west column at zWin; as u32)
-//   offset 124..127: winY0               (f32 -- window north row at zWin; as u32)
-//   offset 128..131: debugLodOverlay     (f32 -- LOD-tint debug toggle, 0.0/1.0)
-//   offset 132..143: _pad0/_pad1/_pad2   (f32 x3 -- zeroed, rounds to 144 / 16-byte)
-//   total: 144 bytes.
+//   offset 116..123: _pad0/_pad1         (f32 x2 -- zeroed, rounds to 128 / 16-byte)
+//   total: 128 bytes.
 //
-// The CPU side uploads 36 f32s. The single source of truth for that packing is
+// The CPU side uploads 32 f32s. The single source of truth for that packing is
 // 'utils/gpu/packEarthSurfaceUniforms.ts', which reuses 'packLitBodyUniforms'
 // for the shared 80-byte prefix.
 
@@ -333,13 +322,8 @@ struct EarthSurfaceUniforms {
   cloudShellRadius: f32,
   ambientLight: f32,
   oceanRoughness: f32,
-  zWin: f32,
-  winX0: f32,
-  winY0: f32,
-  debugLodOverlay: f32,
   _pad0: f32,
   _pad1: f32,
-  _pad2: f32,
 };
 
 // ── CloudShellUniforms ───────────────────────────────────────────────

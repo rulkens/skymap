@@ -73,7 +73,7 @@ import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
 import { prepareEarthFrame, earthLayer } from './passes/earthLayer';
 import { NEAR0, slabViewOf } from './slabs';
-import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
+import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -593,24 +593,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // guard's reasoning to satisfy the type checker.
       const prepared = prepareEarthFrame(state, ctx, view);
       if (prepared !== null) {
-        const plan = planEarthTiles({
+        // The single walk: `cut` is what earthLayer.draw draws this frame,
+        // `requests` is what update()'s fetch loop drives — see
+        // cutSurfaceTiles's header for why one walk produces both rather
+        // than two independently re-deriving the same horizon/frustum logic.
+        const { cut, requests } = cutSurfaceTiles({
           ...params,
           camPosLocal: prepared.camLocal,
           viewProjLocal: prepared.mvpLocal,
           viewportPx: view.viewportPx,
+          residentSlot: earthTiles.residentSlot,
         });
-        // Unconditional: engaging/disengaging is the subsystem's own decision
-        // from this plan. `getTileResources()` either side of `update` IS the
-        // null-to-non-null transition, so the renderer's bind group rebuilds
-        // exactly once, at that moment.
-        const engagedBefore = earthTiles.getTileResources() !== null;
-        earthTiles.update({ plan, nowMs: ctx.nowMs });
-        if (!engagedBefore) {
-          const tiles = earthTiles.getTileResources();
-          if (tiles !== null) {
-            state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
-          }
-        }
+        earthTiles.update({ plan: requests, nowMs: ctx.nowMs });
+        earthTiles.setLastCut(cut);
       }
     }
   }

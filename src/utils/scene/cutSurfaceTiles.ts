@@ -19,13 +19,13 @@ type ResidentLookupResult = {
 
 /**
  * cutSurfaceTiles — `planEarthTiles`'s walk, superseding it: one quadtree
- * walk, two products. `requests` is what to fetch (today's plan, minus the
+ * walk, two products. `requests` is what to fetch (the plan, minus the
  * page-table window clip — gone with the page table it sized, Task 5).
  * `cut` is what to draw: each leaf resolved in the same pass via the
  * injected `residentSlot` ancestor-fallback lookup. Two walks re-deriving
  * the same horizon/frustum/refine logic would eventually desync; one walk
- * can't. `requests`'s `Omit<EarthTilePlan, 'winX0' | 'winY0'>` is a
- * temporary seam — those fields are Task 5's to drop from `EarthTilePlan`.
+ * can't. `requests` IS an `EarthTilePlan` — Task 5 dropped the page-table
+ * window fields from that type, so no reshaping seam is needed here.
  */
 export function cutSurfaceTiles(input: {
   readonly kind: EarthTileKind;
@@ -55,7 +55,7 @@ export function cutSurfaceTiles(input: {
   readonly residentSlot: (tile: EarthTileId) => ResidentLookupResult;
 }): {
   readonly cut: readonly SurfaceCutTile[];
-  readonly requests: Omit<EarthTilePlan, 'winX0' | 'winY0'>;
+  readonly requests: EarthTilePlan;
 } {
   const {
     kind,

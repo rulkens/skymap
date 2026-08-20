@@ -1,48 +1,45 @@
 /**
  * earthTileSubsystem — the residency half of Earth's surface virtual texture.
- * `planEarthTiles` (pure, tested) decides which tiles a frame wants;
- * `bitmapStreamSubsystem` owns the atlas, LRU clock and fetch queue. This
- * file turns a plan into allocations and fetches, and projects whatever is
- * resident into the page table the fragment reads.
+ * `cutSurfaceTiles` (pure, tested) decides which tiles a frame wants and
+ * resolves each visible leaf's atlas residency; `bitmapStreamSubsystem` owns
+ * the atlas, LRU clock and fetch queue. This file turns a fetch demand
+ * (`update()`) into allocations and fetches, answers per-tile residency
+ * queries (`residentSlot`, the callback `cutSurfaceTiles` resolves through),
+ * and carries the frame's resolved cut (`setLastCut`/`getLastCut`) from
+ * `runFrame`'s planning block to `earthLayer.draw`.
  *
  * `update()` owns both sides of engagement (`plan.zWin > baseLevel`), not
- * just a caller's `if` — a drive-site `if` once left a stale page table bound
- * after the camera pulled back out, painting ground from wherever it used to
- * be. Allocation is lazy: the 67 MB atlas and page table are created by the
- * first engaged `update()`. Standing down uploads an all-zero table and keeps
- * everything else resident, so a camera that returns finds its tiles intact.
+ * just a caller's `if` — a drive-site `if` once left stale tiles drawing
+ * after the camera pulled back out. Allocation is lazy: the 67 MB atlas is
+ * created by the first engaged `update()`.
  */
 
 import type { EarthTileId } from '../../../@types/data/EarthTileId';
 import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { EarthTileManifest } from '../../../@types/scene/EarthTileManifest';
-import type { EarthResidentTile } from '../../../@types/scene/EarthResidentTile';
 import type { EarthTileBand } from '../../../@types/scene/EarthTileBand';
 import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
 import type { EarthTilePlannerParams } from '../../../@types/scene/EarthTilePlannerParams';
 import type { EarthTileRequest } from '../../../@types/scene/EarthTileRequest';
 import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
+import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { EarthTileSubsystem } from '../../../@types/engine/subsystems/EarthTileSubsystem';
 import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
-import { buildEarthPageTable } from '../../../utils/scene/buildEarthPageTable';
 import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
 import { earthTilePath } from '../../../utils/scene/earthTilePath';
 import { fetchEarthTileManifest } from '../../../utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../utils/network/fetchEarthTileBitmap';
-import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
 import { directionToLonLatDeg } from '../../../utils/scene/directionToLonLatDeg';
 import { deepestBandLevelAt } from '../../../utils/scene/deepestBandLevelAt';
 import {
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_CONCURRENCY,
-  EARTH_TILE_FADE_MS,
   EARTH_TILE_LOD_BIAS,
   EARTH_TILE_PX,
-  EARTH_TILE_WINDOW_SIDE,
 } from '../../../data/bodies/earthTileParams';
 
 // The one kind this subsystem pages today; tiling relief too would need a
@@ -66,11 +63,10 @@ export const EMPTY_EARTH_TILE_DEBUG_SNAPSHOT: EarthTileDebugSnapshot = {
   subCamera: null,
 };
 
-/** One atlas-resident tile: which tile, which slot, when its bitmap landed. */
+/** One atlas-resident tile: which tile, which slot. */
 type ResidentTile = {
   readonly tile: EarthTileId;
   readonly slot: number;
-  readonly readyMs: number;
 };
 
 export type EarthTileDeps = {
@@ -88,15 +84,16 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   let manifestRequested = false;
   let manifestPending = false;
   let manifest: EarthTileManifest | null = null;
-  // Cached with the tier it was derived at, so a swap can't be answered stale.
-  let params: EarthTilePlannerParams | null = null;
-  let paramsTier: Tier | null = null;
 
-  let stream: BitmapStreamSubsystem | null = null;
-  let pageTable: GPUTexture | null = null;
-  let resources: { readonly pageTable: GPUTextureView; readonly atlas: GPUTextureView } | null =
-    null;
-  let slotsPerRow = 0;
+  // The one writer is `refreshParams` — keeping the pair in one record means
+  // the two can never describe different tiers (see its doc comment).
+  let paramsState: { readonly params: EarthTilePlannerParams | null; readonly tier: Tier | null } =
+    { params: null, tier: null };
+
+  // Set together by `engage()`, cleared together by `destroy()` — the atlas
+  // and its row geometry have one lifecycle, so one nullable record replaces
+  // the `stream`/`slotsPerRow` pair a null check used to have to keep in sync.
+  let atlas: { readonly stream: BitmapStreamSubsystem; readonly slotsPerRow: number } | null = null;
 
   const resident = new Map<string, ResidentTile>();
   // key -> z, for the debug snapshot's per-level pending counts. Written when a
@@ -112,21 +109,13 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   } | null = null;
 
   let frameCounter = 0;
-  // Frame's stamped clock, so `readyMs` stays deterministic under a stepped clock.
-  let lastFrameNowMs = 0;
-  let residencyDirty = false;
-  // What the page table IN GPU MEMORY holds. `saturated` checks recorded
-  // weights rather than the clock: `loadFadeAlpha` reaches 1 exactly on the
-  // frame the fade completes, so a clock check would skip that frame's
-  // rebuild and park the table just under full weight forever.
-  let uploaded: {
-    readonly window: {
-      readonly zWin: number;
-      readonly winX0: number;
-      readonly winY0: number;
-    };
-    readonly saturated: boolean;
-  } | null = null;
+
+  // This frame's (or the last engaged frame's) `cutSurfaceTiles` cut, for
+  // `earthLayer.draw` to read — the "compute in runFrame, consume in draw"
+  // seam `plannerParams`/`update` already use, one field further. Written
+  // unconditionally by `runFrame`'s tile-planning block (empty on a
+  // disengaged frame), so a stale cut can never survive a camera pull-back.
+  let lastCut: readonly SurfaceCutTile[] = [];
 
   let destroyed = false;
 
@@ -134,9 +123,9 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
    * Turn a fetched manifest plus the bound tier into planner inputs, or null
    * if the bake is one this build cannot address — every rejection degrades
    * to base-only, cheaper to reason about than silently adapting to wrong
-   * pixels. `tilePx` is a validated ASSERTION: the fragment derives the
-   * window level's column count from `zWin` alone, an identity that holds
-   * only at the shipped 512 px edge.
+   * pixels. `tilePx` is a validated ASSERTION: `residentSlot` derives the
+   * atlas's `slotsPerRow` from `EARTH_TILE_ATLAS_SIDE / tilePx` alone, an
+   * identity that holds only at the shipped 512 px edge.
    */
   function derivePlannerParams(
     fetched: EarthTileManifest,
@@ -172,16 +161,14 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       tilePx,
       baseLevel,
       bands,
-      windowSide: EARTH_TILE_WINDOW_SIDE,
       lodBias: EARTH_TILE_LOD_BIAS,
     };
   }
 
-  /** The one writer of the `(params, paramsTier)` pair, so the two can't
-   *  describe different tiers. */
+  /** The one writer of `paramsState`, so `params`/`tier` can't describe
+   *  different tiers. */
   function refreshParams(tier: Tier): void {
-    paramsTier = tier;
-    params = manifest === null ? null : derivePlannerParams(manifest, tier);
+    paramsState = { tier, params: manifest === null ? null : derivePlannerParams(manifest, tier) };
   }
 
   function plannerParams(tier: Tier): EarthTilePlannerParams | null {
@@ -193,20 +180,20 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
         if (destroyed || fetched === null) return;
         manifest = fetched;
         // Derived here so `update()` has params ready the same frame.
-        refreshParams(paramsTier ?? tier);
+        refreshParams(paramsState.tier ?? tier);
       });
     }
-    if (paramsTier !== tier) refreshParams(tier);
-    return params;
+    if (paramsState.tier !== tier) refreshParams(tier);
+    return paramsState.params;
   }
 
   /**
-   * Allocate the atlas and the page table. Called by the first engaged frame
-   * and never again — `slotSide` comes from the manifest's tile edge, so a
-   * re-bake at a different edge stays a data change.
+   * Allocate the atlas. Called by the first engaged frame and never again —
+   * `slotSide` comes from the manifest's tile edge, so a re-bake at a
+   * different edge stays a data change.
    */
   function engage(tilePx: number): BitmapStreamSubsystem {
-    slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
+    const slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
     const created = createBitmapStreamSubsystem({
       device,
       requestRender,
@@ -216,100 +203,30 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       label: `earth-${TILED_KIND}-tiles`,
       concurrency: EARTH_TILE_CONCURRENCY,
     });
-    created.setEvictHandler((key) => {
-      // Recycled slot; drop so the page table stays a pure projection of residency.
-      if (resident.delete(key)) residencyDirty = true;
-    });
-
-    pageTable = device.createTexture({
-      label: `earth-${TILED_KIND}-page-table`,
-      size: [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
-      // Integer channels: slot column, slot row, level, blend weight.
-      format: 'rgba8uint',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-    });
-
-    resources = {
-      pageTable: pageTable.createView({ label: `earth-${TILED_KIND}-page-table-view` }),
-      atlas: created.getTextureView(),
-    };
-    stream = created;
+    // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
+    created.setEvictHandler((key) => resident.delete(key));
+    atlas = { stream: created, slotsPerRow };
     return created;
-  }
-
-  /** Whether the table owes an upload unrelated to camera position: residency
-   *  changed, or its weights are mid-fade (window movement is `update`'s own
-   *  concern below). */
-  function rebuildOwed(): boolean {
-    return uploaded !== null && (residencyDirty || !uploaded.saturated);
-  }
-
-  function uploadPageTable(plan: EarthTilePlan, tilePx: number, nowMs: number): void {
-    if (pageTable === null) return;
-    const projected: EarthResidentTile[] = [];
-    // An empty resident set is saturated vacuously: no fade left to finish.
-    let saturated = true;
-    for (const entry of resident.values()) {
-      const weight = loadFadeAlpha(entry.readyMs, nowMs, EARTH_TILE_FADE_MS);
-      if (weight < 1) saturated = false;
-      projected.push({ tile: entry.tile, slot: entry.slot, weight });
-    }
-    const table = buildEarthPageTable({
-      resident: projected,
-      plan,
-      slotsPerRow,
-      windowSide: EARTH_TILE_WINDOW_SIDE,
-      tilePx,
-    });
-    device.queue.writeTexture(
-      { texture: pageTable },
-      table,
-      { bytesPerRow: EARTH_TILE_WINDOW_SIDE * 4, rowsPerImage: EARTH_TILE_WINDOW_SIDE },
-      [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
-    );
-    residencyDirty = false;
-    uploaded = {
-      window: { zWin: plan.zWin, winX0: plan.winX0, winY0: plan.winY0 },
-      saturated,
-    };
-  }
-
-  /** Leave the virtual texture showing nothing, once, when the engage rule
-   *  goes false. All-zero is the identity (alpha = blend weight); nothing is
-   *  freed — the LRU handles real capacity pressure. */
-  function standDown(): void {
-    // Never allocated ⇒ nothing to stand down.
-    if (pageTable === null || uploaded === null) return;
-    device.queue.writeTexture(
-      { texture: pageTable },
-      new Uint8Array(EARTH_TILE_WINDOW_SIDE * EARTH_TILE_WINDOW_SIDE * 4),
-      { bytesPerRow: EARTH_TILE_WINDOW_SIDE * 4, rowsPerImage: EARTH_TILE_WINDOW_SIDE },
-      [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
-    );
-    // Re-arms the rebuild: the next engaged frame reads this as a moved window.
-    uploaded = null;
   }
 
   function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
     if (destroyed) return;
-    const active = params;
-    // `refreshParams` is the sole writer of both, and only ever derives params
-    // from a non-null manifest — reasserting it here keeps the tile prefix a
-    // read of the manifest rather than a second copy that could go stale.
+    const active = paramsState.params;
+    // `refreshParams` is the sole writer of `paramsState`, and only ever
+    // derives params from a non-null manifest — reasserting it here keeps
+    // the tile prefix a read of the manifest rather than a second copy that
+    // could go stale.
     if (active === null || manifest === null) return;
     const prefix = manifest.prefix;
 
-    const { plan, nowMs } = input;
-    // Stamped on disengaged frames too, so a landing tile still fades from now.
-    lastFrameNowMs = nowMs;
+    const { plan } = input;
 
     if (!(plan.zWin > active.baseLevel)) {
       lastEngaged = null;
-      standDown();
       return;
     }
 
-    const atlas = stream ?? engage(active.tilePx);
+    const stream = atlas?.stream ?? engage(active.tilePx);
 
     frameCounter++;
 
@@ -329,8 +246,8 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       if (!resident.has(key)) notResidentCount++;
       // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
-      if (atlas.isFailed(key)) continue;
-      if (atlas.touch(key, frameCounter) === null) misses.push(request);
+      if (stream.isFailed(key)) continue;
+      if (stream.touch(key, frameCounter) === null) misses.push(request);
     }
 
     let droppedAllocations = 0;
@@ -338,13 +255,13 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       const key = earthTilePath(request.tile, prefix);
 
       // Null means the atlas is already full this frame.
-      if (atlas.allocate(key, frameCounter) === null) {
+      if (stream.allocate(key, frameCounter) === null) {
         droppedAllocations++;
         continue;
       }
 
       pendingLevelOf.set(key, request.tile.z);
-      atlas.enqueueFetch({
+      stream.enqueueFetch({
         key,
         // Highest-priority-first queue.
         priority: request.screenPx,
@@ -356,12 +273,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
             return;
           }
           // Resolved from the key now, not carried: may have been evicted mid-flight.
-          const slot = atlas.uploadBitmap(key, bitmap);
+          const slot = stream.uploadBitmap(key, bitmap);
           pendingLevelOf.delete(key);
           bitmap.close();
           if (slot === null) return;
-          resident.set(key, { tile: request.tile, slot, readyMs: lastFrameNowMs });
-          residencyDirty = true;
+          resident.set(key, { tile: request.tile, slot });
         },
       });
     }
@@ -371,28 +287,35 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       droppedAllocations,
       subCameraDirLocal: plan.subCameraDirLocal,
     };
+  }
 
-    const windowMoved =
-      uploaded === null ||
-      uploaded.window.zWin !== plan.zWin ||
-      uploaded.window.winX0 !== plan.winX0 ||
-      uploaded.window.winY0 !== plan.winY0;
-    // Rebuilt every frame until the last arrival ramps to full weight.
-    if (windowMoved || rebuildOwed()) {
-      uploadPageTable(plan, active.tilePx, nowMs);
-    }
+  /**
+   * Resolve one exact tile's atlas residency — the callback `cutSurfaceTiles`
+   * walks ancestors through. Reuses `TextureAtlas.slotUv` (via the stream's
+   * own `slotUv`) rather than re-deriving the slot-rect math.
+   */
+  function residentSlot(tile: EarthTileId): {
+    slot: number;
+    atlasUvOrigin: readonly [number, number];
+    atlasUvScale: readonly [number, number];
+  } | null {
+    if (manifest === null || atlas === null) return null;
+    const key = earthTilePath(tile, manifest.prefix);
+    const entry = resident.get(key);
+    if (entry === undefined) return null;
+    const [u0, v0, u1, v1] = atlas.stream.slotUv(entry.slot);
+    return { slot: entry.slot, atlasUvOrigin: [u0, v0], atlasUvScale: [u1 - u0, v1 - v0] };
   }
 
   function isAnimating(): boolean {
     if (manifestPending) return true;
-    if (stream !== null && stream.inFlightCount() > 0) return true;
-    return rebuildOwed();
+    return atlas !== null && atlas.stream.inFlightCount() > 0;
   }
 
   /** See `EarthTileDebugSnapshot`. Built on demand for a low-rate DebugPanel
    *  poll — never called from a render path, so an O(resident) scan is fine. */
   function getDebugSnapshot(): EarthTileDebugSnapshot {
-    if (stream === null) return EMPTY_EARTH_TILE_DEBUG_SNAPSHOT;
+    if (atlas === null) return EMPTY_EARTH_TILE_DEBUG_SNAPSHOT;
 
     const byLevel = new Map<number, { resident: number; pending: number }>();
     const rowFor = (z: number) => {
@@ -416,18 +339,21 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       deepestLevelKeys.push(`${entry.tile.x},${entry.tile.y}`);
     }
 
-    // `params` (the last tier's bands) is set together with `lastEngaged` by
-    // `refreshParams`.
+    // `paramsState.params` (the last tier's bands) is set together with
+    // `lastEngaged` by `refreshParams`/`update`.
     let subCamera: EarthTileDebugSnapshot['subCamera'] = null;
-    if (lastEngaged !== null && params !== null) {
+    if (lastEngaged !== null && paramsState.params !== null) {
       const lonLat = directionToLonLatDeg(lastEngaged.subCameraDirLocal);
-      subCamera = { ...lonLat, coveredMaxLevel: deepestBandLevelAt(params.bands, lonLat) };
+      subCamera = {
+        ...lonLat,
+        coveredMaxLevel: deepestBandLevelAt(paramsState.params.bands, lonLat),
+      };
     }
 
     return {
       engaged: true,
-      capacity: slotsPerRow * slotsPerRow,
-      used: stream.occupiedCount(),
+      capacity: atlas.slotsPerRow * atlas.slotsPerRow,
+      used: atlas.stream.occupiedCount(),
       levels,
       plan: lastEngaged?.plan ?? null,
       droppedAllocations: lastEngaged?.droppedAllocations ?? 0,
@@ -438,25 +364,25 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
   function destroy(): void {
     destroyed = true;
-    stream?.destroy();
-    stream = null;
-    pageTable?.destroy();
-    pageTable = null;
-    resources = null;
+    atlas?.stream.destroy();
+    atlas = null;
     resident.clear();
     pendingLevelOf.clear();
     lastEngaged = null;
     manifest = null;
-    params = null;
-    paramsTier = null;
-    uploaded = null;
+    paramsState = { params: null, tier: null };
+    lastCut = [];
   }
 
   const subsystem: EarthTileSubsystem = {
     plannerParams,
     update,
-    getTileResources: () => resources,
-    getUploadedWindow: () => uploaded?.window ?? null,
+    residentSlot,
+    setLastCut: (cut) => {
+      lastCut = cut;
+    },
+    getLastCut: () => lastCut,
+    getAtlasView: () => atlas?.stream.getTextureView() ?? null,
     isAnimating,
     getDebugSnapshot,
     destroy,

@@ -45,6 +45,7 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { EarthSurfaceTileDrawArgs } from '../../../../../src/@types/rendering/EarthSurfaceTileRenderer';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
 // object identity and (b) hand the renderer a recognisable Float32Array. The
@@ -172,9 +173,36 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
-      // The Earth LOD overlay debug toggle earthLayer.draw now reads each
-      // frame — off by default, like the fixture's other DEBUG_OVERLAY_ROWS entries.
-      debug: { overlays: { 'earth-lod-overlay': false } },
+    },
+  } as unknown as EngineState;
+}
+
+/**
+ * `makeState`'s tile-draw variant: adds the `earthSurfaceTileRenderer` GPU
+ * handle and an `earthTiles` subsystem stub whose `getLastCut`/`getAtlasView`
+ * are caller-controlled — the instanced-draw gate's three inputs
+ * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`, `getLastCut()`).
+ */
+function makeTileDrawState(input: {
+  readonly tileRenderer: unknown;
+  readonly cut: readonly unknown[];
+  readonly atlasView: GPUTextureView | null;
+}): EngineState {
+  const base = makeState(
+    { draw: vi.fn(), getMapView: vi.fn(() => ({}) as GPUTextureView) },
+    SEEDED_EARTH,
+  );
+  return {
+    ...base,
+    gpu: {
+      ...(base as unknown as { gpu: object }).gpu,
+      earthSurfaceTileRenderer: input.tileRenderer,
+    },
+    subsystems: {
+      earthTiles: {
+        getLastCut: () => input.cut,
+        getAtlasView: () => input.atlasView,
+      },
     },
   } as unknown as EngineState;
 }
@@ -331,16 +359,15 @@ describe('earthLayer.draw', () => {
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SEEDED_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-36 EarthSurfaceUniforms
+    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
     // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
-    // oceanRoughness + zWin/winX0/winY0 + debugLodOverlay + 2 pad), not the bare
-    // 16-float MVP.
+    // oceanRoughness + 3 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(36);
+    expect(uniforms).toHaveLength(32);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -361,7 +388,7 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(36);
+    expect(uniforms).toHaveLength(32);
     const expected = sunDirLocal(
       SEEDED_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
@@ -391,7 +418,7 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(36);
+    expect(uniforms).toHaveLength(32);
 
     // Independent recompute of the camera-in-local-frame vector. The fixture camera
     // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
@@ -423,30 +450,6 @@ describe('earthLayer.draw', () => {
     // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
     expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
     expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
-  });
-
-  it("packs the live debug.overlays['earth-lod-overlay'] toggle at slot 32", () => {
-    // The DebugPanel toggle must reach the GPU uniform every draw, not just on
-    // change — the fixture's two states below stand in for a checkbox flip
-    // between frames.
-    const drawSpy = vi.fn<(...args: unknown[]) => void>();
-    const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
-    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
-      'earth-lod-overlay'
-    ] = true;
-
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
-
-    const [, uniformsOn] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniformsOn[32]).toBe(1);
-
-    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
-      'earth-lod-overlay'
-    ] = false;
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
-    const [, uniformsOff] = drawSpy.mock.calls[1]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniformsOff[32]).toBe(0);
   });
 
   it('scales cloudShadowStrength by the descent fade as the camera nears the surface', () => {
@@ -490,5 +493,87 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: vi.fn() }, null);
     expect(() => earthLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+describe('earthLayer.draw — detail tiles', () => {
+  // A minimal stand-in for `SurfaceCutTile` — `earthLayer.draw` forwards it
+  // opaquely to `earthSurfaceTileRenderer.draw`, never reading its fields.
+  const STUB_CUT = [
+    {
+      id: { z: 8, x: 1, y: 1 },
+      originLocal: [1, 0, 0],
+      resident: {
+        slot: 0,
+        atlasUvOrigin: [0, 0],
+        atlasUvScale: [0.1, 0.1],
+        levelDelta: 0,
+        quadrantOffset: [0, 0],
+      },
+    },
+  ];
+  const ATLAS_VIEW = {} as GPUTextureView;
+
+  it('draws the tile renderer AFTER the base globe when the cut is non-empty and the atlas is live', () => {
+    const order: string[] = [];
+    const baseDraw = vi.fn(() => order.push('base'));
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs) => void>(
+      () => order.push('tiles'),
+    );
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    (state.gpu as unknown as { earthRenderer: { draw: typeof baseDraw } }).earthRenderer.draw =
+      baseDraw;
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(baseDraw).toHaveBeenCalledTimes(1);
+    expect(tileDraw).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['base', 'tiles']);
+
+    const [pass, args] = tileDraw.mock.calls[0]!;
+    expect(pass).toBe(PASS_STUB);
+    expect(args.tiles).toBe(STUB_CUT);
+    expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
+    expect(typeof args.frame).toBe('number');
+  });
+
+  it('does not draw the tile renderer when the cut is empty (nothing resident yet)', () => {
+    const tileDraw = vi.fn();
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: [],
+      atlasView: ATLAS_VIEW,
+    });
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(tileDraw).not.toHaveBeenCalled();
+  });
+
+  it('does not draw the tile renderer when the atlas has not engaged yet', () => {
+    const tileDraw = vi.fn();
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: null,
+    });
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(tileDraw).not.toHaveBeenCalled();
+  });
+
+  it('does not draw when the earthSurfaceTileRenderer GPU handle is null (pre-bootstrap)', () => {
+    const view = makeNear0View();
+    const state = makeTileDrawState({ tileRenderer: null, cut: STUB_CUT, atlasView: ATLAS_VIEW });
+
+    expect(() => earthLayer.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
   });
 });
