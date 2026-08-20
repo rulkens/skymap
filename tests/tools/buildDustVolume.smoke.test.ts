@@ -73,7 +73,12 @@ describe('buildDustVolume (smoke)', () => {
 
     expect(cube.dims).toEqual(dims);
     expect(cube.channels).toBe(1);
-    expect(cube.frameKind).toBe('equatorial-cartesian');
+    // Native frame is galactic (Edenhofer's HEALPix maps + interp2box.py's
+    // box are both galactic) — this is the assertion that catches a
+    // frame-id transcription slip in the header (e.g. an accidental
+    // 'equatorial-cartesian', which the SCFD id table would encode/decode
+    // silently as a *different*, wrong frame rather than erroring).
+    expect(cube.frameKind).toBe('galactic');
     expect(cube.voxelSize).toBeCloseTo(overrideVoxelSize, 10);
     expect(cube.origin[0]).toBeCloseTo(overrideOrigin[0], 6);
     expect(cube.origin[1]).toBeCloseTo(overrideOrigin[1], 6);
