@@ -11,8 +11,8 @@ export type FrameNeedsRenderInputs = {
   readonly dirty: boolean;
   readonly simRunning: boolean;
   readonly pathTracerOn: boolean;
-  /** Progressive accumulator sample count vs. its cap — see PATH_TRACER_SAMPLE_CAP in
-   *  Viewport.tsx for the convergence rationale. */
+  /** Progressive accumulator sample count vs. its cap — see ViewSlice.d.ts's
+   *  pathTracer.sampleCap doc comment for the convergence rationale. */
   readonly pathTracerSampleCount: number;
   readonly pathTracerSampleCap: number;
   /** The latest deadline any time-based visual window is still holding open (e.g. the

@@ -208,7 +208,10 @@ const RAYMARCH_SETTERS: {
 
 // 'divisor' gets its own dedicated ParamSlider below (the "Preview" group,
 // mirroring the raymarch layer's own), not the generic log-mapped physics list.
-type PathTracerSliderKey = Exclude<keyof ViewSlice['pathTracer'], 'compressive' | 'divisor'>;
+type PathTracerSliderKey = Exclude<
+  keyof ViewSlice['pathTracer'],
+  'compressive' | 'divisor' | 'sampleCap'
+>;
 
 type PathTracerSliderSpec = {
   readonly key: PathTracerSliderKey;

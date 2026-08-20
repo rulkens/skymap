@@ -199,7 +199,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let dirty = true;
     let lastDirtyCheckState = store.getSnapshot();
     // Reset alongside the accumulator itself (same volpathKey edge, below) — see
-    // PATH_TRACER_SAMPLE_CAP.
+    // ViewSlice.d.ts's pathTracer.sampleCap doc comment.
     let volpathSampleCount = 0;
     // Cadence throttle's own frame counter — only meaningful while sim.running; not
     // reset on rebuild, since "every Nth frame" doesn't care where N last landed.
