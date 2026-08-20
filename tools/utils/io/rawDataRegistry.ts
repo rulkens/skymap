@@ -276,6 +276,23 @@ export const RAW_DATA = {
       'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py, consumed by buildRhizomeVolume.ts.',
   },
 
+  // ─── MCPM workbench (promoted dev-tool exports) ───────────────────────
+
+  'mcpm-workbench.dir': {
+    path: 'data/raw/mcpm-workbench',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Browser-downloaded polyphy-trace .npy+.json pairs exported from the MCPM workbench dev tool. The operator drops a pair here; tools/volumes/promoteWorkbenchExport.ts promotes one to public/data/scalar-field/v3/mcpm-workbench.scfd.',
+  },
+  'mcpm-workbench.promoted': {
+    path: 'data/seeds/mcpm_workbench_promoted.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "Committed pointer copy of the promoted export's polyphy-trace sidecar (mirrors famous.curated) — records exactly which workbench run/params produced the live mcpm-workbench.scfd cube.",
+  },
+
   // ─── Milliquas (AGN/quasar compilation) ───────────────────────────────
 
   'milliquas.txt': {

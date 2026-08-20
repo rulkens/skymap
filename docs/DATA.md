@@ -18,13 +18,13 @@ module, with that family's **current** format version as an epoch segment —
 a bumped family moves to a new folder, so a stale browser/CDN cache can
 never pair mismatched code and bytes:
 
-| folder                  | files                                                                     | format module (version)         |
-| ----------------------- | ------------------------------------------------------------------------- | ------------------------------- |
-| `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`     | `galaxyCatalogFormat.ts` (9)    |
-| `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                          | `starCatalogFormat.ts` (1)      |
-| `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair) | `structureCatalogFormat.ts` (1) |
-| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*` `.scfd`          | `scalarFieldFormat.ts` (3)      |
-| `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
+| folder                  | files                                                                              | format module (version)         |
+| ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+| `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`              | `galaxyCatalogFormat.ts` (9)    |
+| `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                                   | `starCatalogFormat.ts` (1)      |
+| `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair)          | `structureCatalogFormat.ts` (1) |
+| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `mcpm-workbench` `.scfd` | `scalarFieldFormat.ts` (3)      |
+| `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                                     | `filamentBinaryFormat.ts` (1)   |
 
 Some family-folder residents are deliberately untracked and stay at their
 logical name forever — `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`)
@@ -89,6 +89,10 @@ The SDSS DR17 Cosmic Slime VAC cube ships as three tiered SCFDs (`mcpm-{small,me
 ### Polyphorm volume exports (polyphorm-2mrs)
 
 A locally-run Polyphorm (native MCPM app) export — `bin/export/<timestamp>/` with raw `trace.bin` (headerless f16, z-slowest/x-fastest) + `export_metadata.txt` — is converted by `tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>` into d8/d4/d2 `.npy` + `polyphy-trace` v1 sidecars under `data/raw/polyphorm/` (registry key `polyphorm.dir`, gitignored). Each tier is then imported with `npx tsx tools/volumes/buildRhizomeVolume.ts <npy> --out public/data/scalar-field/v3/polyphorm-2mrs-{small,medium,large}.scfd --clamp 0.2` (small=d8, medium=d4, large=d2, mirroring MCPM's tiering) followed by `npm run build-data-manifest`. `--clamp` zeroes packed voxels below the given f16 threshold (in the [0,1] log-normalised domain); 0.2 sits below the renderer's default-settings visibility deadband (contrast 1.7/trim 0.3 → 0.41) and shrinks the gzipped large tier from 194 MB to 2.3 MB by turning 99.1% of voxels into exact zeros, at no visible cost. Registered as source `polyphorm-2mrs` (`Source.Polyphorm2MRS`), tiered like MCPM, hidden by default. Current dataset: the 2026-08-13 2MRS run (34,974 galaxies, 4M agents, grid 1200×752×960, ~1.22 Mpc native voxels, equatorial-cartesian frame).
+
+### MCPM workbench promotion (mcpm-workbench)
+
+A durable, dedicated home for cubes promoted from the MCPM workbench dev tool (`tools/mcpm-workbench/`), separate from the one-off polyphorm-2mrs test field above. Operator steps: export a run in the workbench UI (writes a `polyphy-trace` v1 `.npy`+`.json` pair via `emitTraceSidecar.ts`, `provenance.producer: 'mcpm-workbench'`); move the pair into `data/raw/mcpm-workbench/` (registry key `mcpm-workbench.dir`, gitignored); run `npm run promote-mcpm-workbench -- --stem <stem>`, which validates the sidecar's provenance, imports it via the shared `buildRhizomeVolume()` to `public/data/scalar-field/v3/mcpm-workbench.scfd`, copies the sidecar to the committed pointer `data/seeds/mcpm_workbench_promoted.json` (registry key `mcpm-workbench.promoted` — mirrors the `famous.curated` precedent, so git history records exactly which run/params produced the live cube), and rebuilds the data manifest; then `npm run sync-r2-secure`. Registered as source `mcpm-workbench` (`Source.McpmWorkbench`), untiered (one cube per run, no d8/d4/d2 triple), **hidden** (`visible: false`) until Phase 4 validation clears — no UI toggle ships with the registry row.
 
 ## Catalog gotchas
 

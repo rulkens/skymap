@@ -86,6 +86,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.Cf4Density:
     case Source.Mcpm:
     case Source.Polyphorm2MRS:
+    case Source.McpmWorkbench:
     case Source.DebugGaussian:
     case Source.DebugCartesian:
     case Source.DebugSpherical:
