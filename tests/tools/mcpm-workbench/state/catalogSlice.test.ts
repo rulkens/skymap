@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultCatalogSlice,
+  setCatalogBuildError,
   setCatalogLoaded,
   setCatalogStatusMessage,
   setPackedCatalog,
@@ -49,6 +50,28 @@ describe('catalogSlice zero-point status', () => {
 
     const loaded = setCatalogLoaded(stale, 1, 0, null);
 
+    expect(loaded.statusMessage).toBeNull();
+  });
+});
+
+describe('catalogSlice setCatalogBuildError', () => {
+  it('routes the thrown error message into statusMessage verbatim, marked error', () => {
+    const refusalMessage =
+      "createMcpmHarness: trace needs 900000000 bytes, over this device's " +
+      '268435456-byte limit. Largest long axis that fits: 512.';
+
+    const next = setCatalogBuildError(defaultCatalogSlice, refusalMessage);
+
+    expect(next.loadStatus).toBe('error');
+    expect(next.statusMessage).toBe(refusalMessage);
+  });
+
+  it('a later successful load clears it, same as any other statusMessage', () => {
+    const failed = setCatalogBuildError(defaultCatalogSlice, 'over budget');
+
+    const loaded = setCatalogLoaded(failed, 5, 0, null);
+
+    expect(loaded.loadStatus).toBe('loaded');
     expect(loaded.statusMessage).toBeNull();
   });
 });

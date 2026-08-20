@@ -38,6 +38,7 @@ import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
 import {
+  setCatalogBuildError,
   setCatalogLoadStatus,
   setCatalogLoaded,
   setCatalogStatusMessage,
@@ -626,7 +627,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
       } catch (err) {
         console.error('mcpm-workbench: build failed', err);
         if (!disposed) {
-          store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'error') }));
+          store.setState((st) => ({
+            ...st,
+            catalog: setCatalogBuildError(st.catalog, (err as Error).message),
+          }));
         }
       }
     }

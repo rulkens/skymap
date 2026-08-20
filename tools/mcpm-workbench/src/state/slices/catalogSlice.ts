@@ -107,6 +107,17 @@ export function setCatalogStatusMessage(
   return { ...prev, statusMessage };
 }
 
+/**
+ * Records a failed build (e.g. `planGridBudget`'s over-budget refusal,
+ * already naming buffer/bytes/limit) as 'error' PLUS the thrown error's own
+ * message routed into `statusMessage`, so App.tsx's status line shows WHAT
+ * failed instead of the message dead-ending in the console. No new copy —
+ * the caller passes the caught error's `.message` straight through.
+ */
+export function setCatalogBuildError(prev: CatalogSlice, message: string): CatalogSlice {
+  return { ...setCatalogLoadStatus(prev, 'error'), statusMessage: message };
+}
+
 export function setWeightMode(
   prev: CatalogSlice,
   weightMode: CatalogSlice['weightMode'],
