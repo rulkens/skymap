@@ -1,3 +1,4 @@
+import type { SliderField } from '../SliderField';
 import type { ZoneOfAvoidanceSliderKey } from './ZoneOfAvoidanceSliderKey';
 
 /**
@@ -6,17 +7,4 @@ import type { ZoneOfAvoidanceSliderKey } from './ZoneOfAvoidanceSliderKey';
  * `FlowSliderField`): every one of these knobs is dev-only, so there is
  * exactly one surface.
  */
-export type ZoneOfAvoidanceSliderField = {
-  key: ZoneOfAvoidanceSliderKey;
-  label: string;
-  /** Inclusive min for the range input. */
-  min: number;
-  /** Inclusive max — the UI owns the visible ceiling (single source of truth). */
-  max: number;
-  /** Slider granularity. */
-  step: number;
-  /** Pre-format the current value for the readout. */
-  format: (value: number) => string;
-  /** Optional hover tooltip. */
-  title?: string;
-};
+export type ZoneOfAvoidanceSliderField = SliderField<ZoneOfAvoidanceSliderKey>;
