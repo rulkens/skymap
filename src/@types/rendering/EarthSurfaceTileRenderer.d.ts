@@ -36,6 +36,13 @@ export type EarthSurfaceTileDrawArgs = {
   readonly oceanRoughness: number;
   readonly cloudShadowStrength: number;
   readonly cloudShellRadius: number;
+  /** The `earth-lod-overlay` DebugPanel toggle (`debug.overlays['earth-lod-overlay']`) —
+   *  tints each drawn fragment by how many pyramid levels its resolved atlas
+   *  rect fell back from the leaf it's shading. Read live each frame, not
+   *  cached: the fragment derives the level delta itself from
+   *  `atlasUvScale` (see fragment.wesl), so this is the only new fact the
+   *  overlay needs. */
+  readonly debugLodOverlay: boolean;
   /** The earthTileSubsystem atlas view -- resident high-res patches, sampled at each tile's resolved rect. Not owned by this renderer. */
   readonly surfaceAtlasView: GPUTextureView;
   /** The SAME whole-globe maps `earthRenderer` binds -- not owned by this renderer. */

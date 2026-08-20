@@ -235,6 +235,9 @@ export const earthLayer: ContentLayer = {
         oceanRoughness: state.settings.earth.oceanRoughness,
         cloudShadowStrength,
         cloudShellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
+        // DebugPanel's Earth LOD overlay toggle — read live each frame from the
+        // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
+        debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
         surfaceAtlasView,
         materialView: renderer.getMapView('material'),
         nightView: renderer.getMapView('night'),

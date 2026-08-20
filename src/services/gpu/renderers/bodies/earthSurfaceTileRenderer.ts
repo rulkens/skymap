@@ -227,6 +227,7 @@ export function createEarthSurfaceTileRenderer(
       oceanRoughness,
       cloudShadowStrength,
       cloudShellRadius,
+      debugLodOverlay,
       surfaceAtlasView,
       materialView,
       nightView,
@@ -311,6 +312,7 @@ export function createEarthSurfaceTileRenderer(
       oceanRoughness,
       cloudShadowStrength,
       cloudShellRadius,
+      debugLodOverlay,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 

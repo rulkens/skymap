@@ -42,6 +42,14 @@ import package::lib::math::TAU;
 const EARTH_TILE_ATLAS_SIDE: f32 = 8192.0;
 const EARTH_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_ATLAS_SIDE;
 
+// Mirrored from 'EARTH_TILE_PX' (earthTileParams.ts) -- parity-tested
+// alongside EARTH_TILE_ATLAS_SIDE above. 'TILE_SLOT_SCALE' is the atlas-uv
+// width of a tile drawn from ITS OWN slot (no ancestor fallback); the
+// LOD-overlay tint below divides a resolved rect's actual width into this
+// to recover how many pyramid levels the fallback walked.
+const EARTH_TILE_PX: f32 = 512.0;
+const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
+
 // Inverse of 'equirectUvToDirection', bakeSurfaceTileMesh.ts's CPU twin --
 // duplicated from earth/fragment.wesl rather than imported: it lives
 // inline there, not in 'lib/', and this task creates new files only.
@@ -49,6 +57,23 @@ fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
   let u_uv = fract(atan2(dir.y, dir.x) / TAU + 0.5);
   let v_uv = asin(clamp(dir.z, -1.0, 1.0)) / PI + 0.5;
   return vec2<f32>(u_uv, v_uv);
+}
+
+// earthLodOverlayColor -- the 'earth-lod-overlay' toggle's ladder: green =
+// this fragment's own leaf tile is resident, yellow/orange/red = 1/2/3+
+// levels coarser (an ancestor's atlas slot stood in for it). Flat per-band
+// rather than an interpolated ramp: the ask is "how many levels", a small
+// integer a reader should be able to name at a glance, not a continuous
+// quantity.
+fn earthLodOverlayColor(levelDelta: u32) -> vec3<f32> {
+  if (levelDelta == 0u) {
+    return vec3<f32>(0.10, 0.75, 0.15); // green
+  } else if (levelDelta == 1u) {
+    return vec3<f32>(0.95, 0.85, 0.05); // yellow
+  } else if (levelDelta == 2u) {
+    return vec3<f32>(0.95, 0.55, 0.05); // orange
+  }
+  return vec3<f32>(0.90, 0.10, 0.05); // red, 3+
 }
 
 @fragment
@@ -95,5 +120,19 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let cloudAlphaHere = textureSample(cloudTexture, baseSampler, equirectUv).a;
   let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
 
-  return vec4<f32>(colour + emissive, 1.0);
+  var finalColour = colour + emissive;
+  // Earth LOD overlay ('u.debugLodOverlay' > 0.5) -- a runtime, not
+  // compile-time, lens, so it stays live rather than compiling to dead code.
+  // 'atlasUvScale.x' is this fragment's resolved rect width; TILE_SLOT_SCALE
+  // is what that width would be with NO ancestor fallback, so their ratio is
+  // '2^levelDelta' by construction (resolveCutResidency halves the rect per
+  // level walked) -- see the module header and SurfaceCutTile's doc comment
+  // for why levelDelta itself is never carried as its own field.
+  if (u.debugLodOverlay > 0.5) {
+    let levelDelta = u32(round(log2(max(TILE_SLOT_SCALE / in.atlasUvScale.x, 1.0))));
+    let overlayColour = earthLodOverlayColor(levelDelta);
+    finalColour = mix(finalColour, overlayColour, 0.6);
+  }
+
+  return vec4<f32>(finalColour, 1.0);
 }

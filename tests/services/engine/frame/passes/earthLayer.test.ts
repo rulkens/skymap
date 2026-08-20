@@ -173,6 +173,10 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
+      // The Earth LOD overlay debug toggle earthLayer.draw now reads each
+      // frame (forwarded into the tile draw args) — off by default, like the
+      // fixture's other DEBUG_OVERLAY_ROWS entries.
+      debug: { overlays: { 'earth-lod-overlay': false } },
     },
   } as unknown as EngineState;
 }
@@ -538,6 +542,28 @@ describe('earthLayer.draw — detail tiles', () => {
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
     expect(typeof args.frame).toBe('number');
+  });
+
+  it("packs the live debug.overlays['earth-lod-overlay'] toggle into the tile draw args", () => {
+    // The DebugPanel toggle must reach the tile renderer every draw, not just
+    // on change — the fixture's two states below stand in for a checkbox
+    // flip between frames.
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs) => void>();
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
+
+    (
+      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
+    ).debug.overlays['earth-lod-overlay'] = true;
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
   });
 
   it('does not draw the tile renderer when the cut is empty (nothing resident yet)', () => {

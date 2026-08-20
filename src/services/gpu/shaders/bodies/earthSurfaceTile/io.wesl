@@ -101,11 +101,15 @@ struct VSOut {
 //   offset 148..151: oceanRoughness      f32
 //   offset 152..155: cloudShadowStrength f32
 //   offset 156..159: cloudShellRadius    f32
-//   total: 160 bytes (already 16-byte aligned).
+//   offset 160..163: debugLodOverlay     f32
+//   offset 164..175: padding (true padding -- struct rounds to the mat4x4's
+//                     16-byte alignment; nothing writes these bytes)
+//   total: 176 bytes.
 //
-// The CPU side uploads 40 f32 words via a mixed Float32Array/Uint32Array
-// DataView (only 'vertsPerTile', word 23, is written as a u32). The single
-// source of truth for that packing is 'writeSurfaceTileUniforms' in
+// The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
+// DataView (only 'vertsPerTile', word 23, is written as a u32; words 41..43
+// are left as the scratch ArrayBuffer's zero fill). The single source of
+// truth for that packing is 'writeSurfaceTileUniforms' in
 // 'earthSurfaceTileLayout.ts'.
 struct SurfaceTileUniforms {
   vp: mat4x4<f32>,
@@ -123,4 +127,8 @@ struct SurfaceTileUniforms {
   oceanRoughness: f32,
   cloudShadowStrength: f32,
   cloudShellRadius: f32,
+  // The 'earth-lod-overlay' DebugPanel toggle (0.0/1.0; the fragment reads
+  // it with '> 0.5') -- a fresh field rather than a reused pad slot, since
+  // the struct had none left (see the byte table above).
+  debugLodOverlay: f32,
 };

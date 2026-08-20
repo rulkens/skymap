@@ -95,7 +95,7 @@ export function writeTileVertex(
  * comment on that struct for the full field-by-field byte table this
  * constant and `writeSurfaceTileUniforms` are the CPU statement of.
  */
-export const SURFACE_TILE_UNIFORM_BYTES = 160;
+export const SURFACE_TILE_UNIFORM_BYTES = 176;
 
 /**
  * Pack the singleton `SurfaceTileUniforms` block, in the field order the
@@ -121,6 +121,7 @@ export function writeSurfaceTileUniforms(
   oceanRoughness: number,
   cloudShadowStrength: number,
   cloudShellRadius: number,
+  debugLodOverlay: boolean,
 ): void {
   view.setFloat32(0, vp[0]!, true);
   view.setFloat32(4, vp[1]!, true);
@@ -162,4 +163,6 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(148, oceanRoughness, true);
   view.setFloat32(152, cloudShadowStrength, true);
   view.setFloat32(156, cloudShellRadius, true);
+  view.setFloat32(160, debugLodOverlay ? 1.0 : 0.0, true);
+  // Bytes 164..175 stay the scratch ArrayBuffer's zero fill (true padding).
 }

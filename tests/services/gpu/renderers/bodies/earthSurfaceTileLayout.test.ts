@@ -136,6 +136,7 @@ function fieldForExpr(expr: string): string {
   if (/^oceanRoughness$/.test(expr)) return 'oceanRoughness';
   if (/^cloudShadowStrength$/.test(expr)) return 'cloudShadowStrength';
   if (/^cloudShellRadius$/.test(expr)) return 'cloudShellRadius';
+  if (/^debugLodOverlay/.test(expr)) return 'debugLodOverlay';
   throw new Error(`writer expression maps to no known field: '${expr}'`);
 }
 
