@@ -106,7 +106,7 @@ struct VsOut {
   // focused structure (and for everything at rest), 0.08 for non-members, ramped
   // by the focus blend. Computed once per instance in the vertex stage.
   @location(4) @interpolate(flat) focusDim: f32,
-  // CPU-packed pick identity: '(sourceCode << 27) | localIdx', stored as
+  // CPU-packed pick identity: '(sourceCode << 26) | localIdx', stored as
   // raw bits in instance slot 6 (orientation.z) and recovered here via
   // bitcast. Flat because every fragment of one quad shares the same galaxy
   // identity. Only the pick fragment declares and reads 'pickId'; the visual

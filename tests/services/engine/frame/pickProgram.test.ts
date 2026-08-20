@@ -26,7 +26,10 @@ vi.mock('../../../../src/services/engine/helpers/pickFrameContext', () => ({
 import { createPickProgram } from '../../../../src/services/engine/frame/pickProgram';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
-import { PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
+import {
+  PICK_SENTINEL_OFFSET,
+  SELECTION_SOURCE_SHIFT,
+} from '../../../../src/data/selectionEncoding';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -269,9 +272,9 @@ describe('createPickProgram', () => {
   });
 
   it('decodes the cosmo texel readback via unpackPick', async () => {
-    // raw = (sourceCode << 27) | (localIdx + PICK_SENTINEL_OFFSET); unpackPick
-    // strips the offset and splits the fields.
-    const raw = ((3 << 27) | (42 + PICK_SENTINEL_OFFSET)) >>> 0;
+    // raw = (sourceCode << SELECTION_SOURCE_SHIFT) | (localIdx + PICK_SENTINEL_OFFSET);
+    // unpackPick strips the offset and splits the fields.
+    const raw = ((3 << SELECTION_SOURCE_SHIFT) | (42 + PICK_SENTINEL_OFFSET)) >>> 0;
     const { device } = makeDevice({ stagingValueForLabel: () => raw });
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
@@ -290,8 +293,8 @@ describe('createPickProgram', () => {
     // Two pickable layers on two slabs; both textures hit. Because slabs fold
     // near→far and index 0 (NEAR0) is nearest, the near hit claims the pixel
     // even though the cosmological slab also drew something under the cursor.
-    const nearRaw = ((5 << 27) | (10 + PICK_SENTINEL_OFFSET)) >>> 0;
-    const cosmoRaw = ((2 << 27) | (7 + PICK_SENTINEL_OFFSET)) >>> 0;
+    const nearRaw = ((5 << SELECTION_SOURCE_SHIFT) | (10 + PICK_SENTINEL_OFFSET)) >>> 0;
+    const cosmoRaw = ((2 << SELECTION_SOURCE_SHIFT) | (7 + PICK_SENTINEL_OFFSET)) >>> 0;
     const { device } = makeDevice({
       stagingValueForLabel: (label) => (label.includes('near0') ? nearRaw : cosmoRaw),
     });

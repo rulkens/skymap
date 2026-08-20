@@ -62,7 +62,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // Per-source bind groups dodge the 'queue.writeBuffer' race entirely
 // (different uniform buffers per source means writes to one don't
 // race against draws against another). The vertex stage reads
-// 'source.sourceCode' to compose '(sourceCode << 27u) | instance_index'
+// 'source.sourceCode' to compose '(sourceCode << 26u) | instance_index'
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
@@ -109,7 +109,7 @@ fn vs(
   // the gated triangle land at NDC (2,2,2) and the GPU drops the primitive.
 
   // Recover the per-instance packed identity for the pick path. Bits
-  // 27..31 = 5-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
+  // 26..31 = 6-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
   // source via the @group(2) bind group); bits 0..26 = the GPU's
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);

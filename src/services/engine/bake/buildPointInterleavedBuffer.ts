@@ -80,7 +80,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * the per-row layout: the K-correction kPerZ lives in the per-galaxy-catalog
  * `SourceUniforms` uniform (k is constant per galaxy catalog, so paying for it
  * per-row would be waste), and instance identity is composed per draw
- * as `(sourceCode << 27) | localIdx + 1` rather than baked per-vertex.
+ * as `(sourceCode << 26) | localIdx + 1` rather than baked per-vertex.
  *
  * The fallback-orientation flag rides on the sign bit of `axisRatio`.
  * Real measurements have axisRatio in (0, 1]; we negate the value when

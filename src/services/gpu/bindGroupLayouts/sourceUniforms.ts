@@ -9,7 +9,7 @@
  * bind groups don't cross pipelines" for the underlying rationale.
  *
  * Vertex-stage visibility because the points vertex stage reads
- * `source.sourceCode` to compose '(sourceCode << 27u) | instance_index'.
+ * `source.sourceCode` to compose '(sourceCode << 26u) | instance_index'.
  * The fragment stages (color + pick) don't read this binding directly,
  * but the pipeline layout must list every binding the shader modules
  * declare — the pick fragment relies on the vertex's packSelection

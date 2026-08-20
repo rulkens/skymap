@@ -28,7 +28,7 @@
  *    vMaxWeight, schechterRatio, angularDensityWeight, absMag, sbAmp]
  *
  * Every slot is f32; the fallback-orientation bit rides on the sign of
- * axisRatio.  Identity comes from `(sourceCode << 27) | instance_index`
+ * axisRatio.  Identity comes from `(sourceCode << 26) | instance_index`
  * in the shader — no per-vertex global ID needed.
  *
  * paCos/paSin and absMag are galaxy-static values baked at upload so the
@@ -155,8 +155,8 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 64..71  : cam.viewportPx    vec2<f32>    (2 floats)              } prefix from
  *   bytes 72..75  : cam._pad0         f32          (alignment slack)       } lib/camera.wesl
  *   bytes 76..79  : cam._pad1         f32          (alignment slack)       } (80 B total)
- *   bytes 80..83  : selectedPacked    u32          ← (selectedSource << 27) | selectedLocalIdx, or 0xFFFFFFFF
- *   bytes 84..87  : sourceCode        u32          ← per-draw source tag (5 bits used)
+ *   bytes 80..83  : selectedPacked    u32          ← (selectedSource << 26) | selectedLocalIdx, or 0xFFFFFFFF
+ *   bytes 84..87  : sourceCode        u32          ← per-draw source tag (6 bits used)
  *   bytes 88..91  : pointSizePx       f32
  *   bytes 92..95  : brightness        f32
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)

@@ -2,7 +2,7 @@
  * GalaxyPickRenderer — the point-pick draw provider for the pick program.
  *
  * Records the galaxy point-billboard draw into an already-begun r32uint
- * pick pass, where each fragment encodes `(sourceCode << 27) | localIdx + 1`
+ * pick pass, where each fragment encodes `(sourceCode << 26) | localIdx + 1`
  * (see `pickFragment.wesl`). It owns no pass, no texture, and no readback:
  * the pick program (`pickProgram.ts`) begins the pass, drives the readback,
  * and folds results across slabs. This renderer is one `drawPick` provider
