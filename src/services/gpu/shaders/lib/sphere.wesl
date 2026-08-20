@@ -290,6 +290,15 @@ struct RingUniforms {
 // a second typed-array view at the CPU pack site -- a fresh drift risk for no
 // gain). All-zero is the identity: every cell reads 'no tile'.
 //
+// ## 'debugLodOverlay' opens a fresh row -- no slot was left to reuse
+//
+// That row was the struct's last free byte (see 'earthLayer.ts's "KNOWN
+// OMISSION" note), so the DebugPanel's 'earth-lod-overlay' toggle
+// (packed 0.0/1.0, read '> 0.5') grows the struct by 16 bytes rather than
+// filling a pad. Gates the Earth fragment's false-colour LOD tint (see its
+// header) over the page table's own B (level) / A (weight) channels this
+// struct already carries -- no new binding needed.
+//
 // ## Byte layout (uniform address space)
 //
 //   offset   0..63:  mvp                 (mat4x4<f32>, column-major, 64 bytes)
@@ -305,9 +314,11 @@ struct RingUniforms {
 //   offset 116..119: zWin                (f32 -- page-table window level; read as u32)
 //   offset 120..123: winX0               (f32 -- window west column at zWin; as u32)
 //   offset 124..127: winY0               (f32 -- window north row at zWin; as u32)
-//   total: 128 bytes.
+//   offset 128..131: debugLodOverlay     (f32 -- LOD-tint debug toggle, 0.0/1.0)
+//   offset 132..143: _pad0/_pad1/_pad2   (f32 x3 -- zeroed, rounds to 144 / 16-byte)
+//   total: 144 bytes.
 //
-// The CPU side uploads 32 f32s. The single source of truth for that packing is
+// The CPU side uploads 36 f32s. The single source of truth for that packing is
 // 'utils/gpu/packEarthSurfaceUniforms.ts', which reuses 'packLitBodyUniforms'
 // for the shared 80-byte prefix.
 
@@ -325,6 +336,10 @@ struct EarthSurfaceUniforms {
   zWin: f32,
   winX0: f32,
   winY0: f32,
+  debugLodOverlay: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
 };
 
 // ── CloudShellUniforms ───────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import type { EarthTileRequest } from './EarthTileRequest';
+import type { Vec3 } from '../math/Vec3';
 
 /**
  * EarthTilePlan — one frame's answer to "which tiles should be resident,
@@ -17,4 +18,9 @@ export type EarthTilePlan = {
   /** Window origin tile at `zWin`: north row. */
   readonly winY0: number;
   readonly requests: readonly EarthTileRequest[];
+  /** Unit direction from the body centre to the camera, in the body's LOCAL
+   *  frame — what the walk itself culls and centres the window against.
+   *  Carried on the plan (rather than recomputed) so a debug readout can turn
+   *  it into geodetic lon/lat without threading `camPosLocal` past the planner. */
+  readonly subCameraDirLocal: Vec3;
 };

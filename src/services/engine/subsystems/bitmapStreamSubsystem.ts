@@ -168,6 +168,9 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
     inFlightCount() {
       return queue.inFlightCount();
     },
+    occupiedCount() {
+      return atlas.occupiedCount();
+    },
     getTextureView() {
       return atlas.getTextureView();
     },
