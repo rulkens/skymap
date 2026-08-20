@@ -360,3 +360,28 @@ no direct mass measurement. Re-testable by reverting that hunk and
 re-running `computeTraceMass.ts`; the deletion itself is still correct
 under the plan's inside-band rule, so this is a follow-up measurement, not
 a reason to restore the flag.
+
+### Phase 4 — energy smoke test in the probe (T25)
+
+2026-08-20, HEAD `d23ad70dd` (post-T24 strip). `npm run mcpm-workbench:probe`
+grew a `sim:energy-smoke` step: right after `command:reset` (fresh agents,
+fresh trace, `stepCount` 0, still the `?probe` boot box/catalog — nothing
+earlier in the queue has touched the grid box yet), it settles 100 sim steps
+(5× `HISTOGRAM_INTERVAL_STEPS`) plus the usual readback margin, then asserts
+`meanLogTraceAtPoints` — read via a probe-only getter Viewport installs on
+`window`, not scraped from the HUD — lands in a band.
+
+This step's catalog has no fork export to compare against (T12's tiny
+synthetic clusters, not the VAC anchor), so — unlike § Floor's fork-vs-
+workbench band above — the center and spread here come from 5 repeated
+measurements of THIS step at THIS HEAD, not from a two-sided comparison:
+4.969708, 4.986995, 4.956796, 4.991052, 4.985401 (mean 4.977991, max abs
+deviation from the mean 0.021194, on run 3). Band = mean ± 6× that spread,
+rounded up: **4.97799 ± 0.13**. The racy float `addDeposit`/`addTrace`
+accumulation (grid.wesl — non-atomic on both D3D11 and WebGPU, called out
+in its own doc comment as permanently racy, not a quirk) is the noise
+source the spread absorbs; `npm run mcpm-workbench:probe` passed 3
+consecutive times at this band, and doubling `addTrace`'s deposit locally
+(reverted before commit) moved the mean to 5.6705 — 5.3× the half-width
+outside the band, confirming the step actually catches an energy-scale
+regression rather than passing unconditionally.

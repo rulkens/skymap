@@ -25,6 +25,22 @@ const SETTLE_FRAMES = 6;
 // mapAsync round trip needs a longer settle to guarantee it fires at least once.
 const HISTOGRAM_SETTLE_FRAMES = 21;
 const BOOT_TIMEOUT_MS = 60_000;
+// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (Viewport.tsx) so 'sim:energy-smoke'
+// below rides 5 periodic histogram readbacks, not just the first noisy one.
+const ENERGY_SMOKE_STEPS = 100;
+// Same margin as HISTOGRAM_SETTLE_FRAMES: settling only ENERGY_SMOKE_STEPS frames
+// races the LAST periodic readback's own mapAsync round trip.
+const ENERGY_SMOKE_SETTLE_FRAMES = ENERGY_SMOKE_STEPS + HISTOGRAM_SETTLE_FRAMES;
+// Band derivation (task-T25-brief.md's controller ruling — the tiny synthetic
+// catalog has no fork reference, so center/spread come from measurement at THIS
+// HEAD, post-T24 strip, not from T23's fork-vs-workbench floor). 5 consecutive
+// `npx tsx tools/mcpm-workbench/probeGpuErrors.ts` runs at commit d23ad70dd, each
+// a fresh reset -> 100 steps: 4.969708, 4.986995, 4.956796, 4.991052, 4.985401
+// (mean 4.977991, max abs deviation from mean 0.021194 — run 3). Width = 6x that
+// spread (0.12717), rounded up to 0.13 for headroom; a 2x shift (~2.49 away) is
+// ~19x the half-width, comfortably caught.
+const ENERGY_SMOKE_CENTER = 4.97799;
+const ENERGY_SMOKE_HALF_WIDTH = 0.13;
 
 /** One `uncapturederror` / device-loss entry, tagged with the step that provoked it. */
 type GpuErrorEntry = { kind: string; message: string; step: string };
@@ -311,6 +327,39 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         await page.getByRole('button', { name: 'reset', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // T25 (spec §12): the energy smoke test — asserts the sim's actual output
+      // MAGNITUDE, not just that it ran error-free (every other step here only
+      // checks for GPU/console errors). Placed right after 'command:reset' so the
+      // box/catalog are still exactly the `?probe` boot defaults (nothing before
+      // this point in the queue has touched the grid box yet) and agents/trace/
+      // stepCount are freshly reseeded from `sim.seed` — the same deterministic
+      // starting point every run of this step gets. Racy float deposits (parallel
+      // atomic accumulation, not a quirk — see constants.wesl's own note) still
+      // make the result NONdeterministic run-to-run, which is exactly why this can
+      // only ever be a band assertion; see the constants' own derivation comment.
+      name: 'sim:energy-smoke',
+      run: async (page) => {
+        await settleFrames(page, ENERGY_SMOKE_SETTLE_FRAMES);
+        const mean = await page.evaluate(() =>
+          (
+            globalThis as unknown as { __mcpmProbeMeanLogTraceAtPoints?: () => number }
+          ).__mcpmProbeMeanLogTraceAtPoints?.(),
+        );
+        if (mean === undefined || Number.isNaN(mean)) {
+          throw new Error(
+            `sim:energy-smoke: meanLogTraceAtPoints unavailable (probe hook returned ${mean})`,
+          );
+        }
+        console.error(`    meanLogTraceAtPoints=${mean}`);
+        if (Math.abs(mean - ENERGY_SMOKE_CENTER) > ENERGY_SMOKE_HALF_WIDTH) {
+          throw new Error(
+            `sim:energy-smoke: meanLogTraceAtPoints ${mean} outside band ` +
+              `${ENERGY_SMOKE_CENTER} ± ${ENERGY_SMOKE_HALF_WIDTH} — possible energy-scale regression`,
+          );
+        }
       },
     },
     {

@@ -67,8 +67,16 @@ const HISTOGRAM_INTERVAL_STEPS = 20;
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
-/** `?probe`-gated boot signal: probeGpuErrors.ts has no React tree to observe, so it polls this instead of racing the HUD's own text. */
-type ProbeWindow = { __mcpmProbeReady?: boolean };
+/**
+ * `?probe`-gated boot signal: probeGpuErrors.ts has no React tree to observe, so it
+ * polls `__mcpmProbeReady` instead of racing the HUD's own text. T25: the same probe
+ * calls `__mcpmProbeMeanLogTraceAtPoints()` for the energy smoke test — a getter, not
+ * a snapshot value, so every call reads whatever the store holds at that instant.
+ */
+type ProbeWindow = {
+  __mcpmProbeReady?: boolean;
+  __mcpmProbeMeanLogTraceAtPoints?: () => number;
+};
 
 /**
  * `packedDropId`/`packedSourceName` stand in for the dropped catalog's
@@ -177,6 +185,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // throttle boundary on a slow device, and stacking calls would only queue more of
     // the same expensive wait.
     let histogramInFlight = false;
+
+    // T25: `store` is the App.tsx-memoized instance for this component's whole
+    // lifetime, so installing the getter once here (rather than per-build) is enough.
+    if (hasUrlGate('probe')) {
+      (window as unknown as ProbeWindow).__mcpmProbeMeanLogTraceAtPoints = () =>
+        store.getSnapshot().histogram.meanLogTraceAtPoints;
+    }
 
     /** Frees the T18 preview pass (RenderGraph's own) + its packed buffer
      * (Viewport's own). Idempotent. */
