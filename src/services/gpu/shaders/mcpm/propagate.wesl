@@ -10,7 +10,6 @@ import package::mcpm::constants::PROPAGATE_WG_X;
 import package::mcpm::constants::PROPAGATE_WG_Y;
 import package::mcpm::constants::PROPAGATE_WG_Z;
 import package::mcpm::constants::QUIRK_INT3_TRUNCATED_SENSING;
-import package::mcpm::constants::QUIRK_DEAD_CURRENT_DEPOSIT_READ;
 import package::mcpm::io::sim;
 import package::mcpm::io::agentX;
 import package::mcpm::io::agentY;
@@ -112,12 +111,8 @@ fn cs(
 
   let p = vec3<i32>(vec3<f32>(x, y, z));
 
-  if (QUIRK_DEAD_CURRENT_DEPOSIT_READ) {
-    // HLSL:138 loads a value HLSL:230 overwrites before its only read. The result is
-    // dead; this statement ports the fork's dead read site verbatim. Whether Tint elides
-    // it is irrelevant to fidelity.
-    _ = loadDeposit(p);
-  }
+  // HLSL:138 loads a value HLSL:230 overwrites before its only read — provably dead
+  // (T24 swept its removal and confirmed zero statistical effect), so the read is gone.
 
   // Sensing does NOT wrap, unlike movement below: an offset leaving the grid falls to
   // loadDeposit's zero, which is what D3D11 returned for an out-of-range typed-UAV load.

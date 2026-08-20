@@ -25,25 +25,22 @@ override HISTOGRAM_WG_X: u32 = 10u;  // cs_density_histo.wgsl's own WG_X/Y/Z ove
 override HISTOGRAM_WG_Y: u32 = 10u;  // (10,10,10) shape as propagate's; the histogram dispatch
 override HISTOGRAM_WG_Z: u32 = 10u;  // reuses propagate's gridZ (main.cpp: identical formula).
 
-// cs_agents_propagate.hlsl:44 guards m_w where it means m_z: a zero m_z is never repaired.
-override QUIRK_RNG_SEED_GUARD_TYPO: bool = true;
-
 // Dispatch truncation (main.cpp:1121) is a HOST-side quirk — the harness's dispatch math, not this kernel.
 // The propagate kernel always bounds-guards its agent index, bitwise identical under the fork's truncating
 // dispatch, which prevents an out-of-range index being CLAMPED onto a real agent under a covering dispatch.
 
-// cs_field_decay.hlsl:71-73 wrap the 27-tap with integer '%' (sign of dividend): the
-// deposit field is periodic across the high faces, absorbing and darkened across zero.
-override QUIRK_NONPERIODIC_LOW_BOUNDARY: bool = true;
-
 // cs_agents_propagate.hlsl:140/145 truncate the float sensing offsets toward zero with int3(); off = round instead.
+// T24 sweep: off shifts every vs-fork stat far past the noise floor (meanLogTraceAtPoints -2.16%, ~1200x floor) — load-bearing.
 override QUIRK_INT3_TRUNCATED_SENSING: bool = true;
 
-// cs_agents_propagate.hlsl:138 loads a value that is overwritten before its only read; off = skip the dead load.
-override QUIRK_DEAD_CURRENT_DEPOSIT_READ: bool = true;
-
 // cs_field_decay.hlsl:69's all() bug: 19 of the 27 taps (centre + faces + EDGES) weigh 1.0, only the 8 corners get the falloff; off = intended centre-only 1.0 with 1/sqrt falloff elsewhere.
+// T24 sweep: off shifts meanLogTraceAtPoints +0.148% (~82x floor); histogram/marginals unmoved — load-bearing.
 override QUIRK_DECAY_WEIGHT_ALL_INT3: bool = true;
 
 // cs_field_decay.hlsl:93 trace decay is 0.985 + 0.01 * rand; off = the commented-out flat 0.99 (NOT 1.0).
+// T24 sweep: off shifts meanLogTraceAtPoints -0.84% (~466x floor) and widens the fork mass ratio 9.28x -> 10.11x — load-bearing.
 override QUIRK_DITHERED_TRACE_DECAY: bool = true;
+
+// QUIRK_RNG_SEED_GUARD_TYPO, QUIRK_NONPERIODIC_LOW_BOUNDARY and QUIRK_DEAD_CURRENT_DEPOSIT_READ
+// were struck by the T24 sweep — each OFF variant matched the fork default within noise, so
+// that default is now unconditional (rng.wesl, decay.wesl, propagate.wesl).

@@ -4,11 +4,8 @@
 //
 // Every constant, shift and evaluation order is the fork's, and the number and ORDER of
 // draws in a kernel is part of the simulation's identity — a "better" generator, or a
-// draw hoisted out of a branch, is a different simulation. The seed guard carries an
-// upstream typo behind QUIRK_RNG_SEED_GUARD_TYPO. Fork spellings: wang_hash, set_seed,
-// random_uint, random_float -> wangHash, rngSetSeed, rngNextUint, rngNextFloat.
-
-import package::mcpm::constants::QUIRK_RNG_SEED_GUARD_TYPO;
+// draw hoisted out of a branch, is a different simulation. Fork spellings: wang_hash,
+// set_seed, random_uint, random_float -> wangHash, rngSetSeed, rngNextUint, rngNextFloat.
 
 const RNG_BAD_W: u32 = 0x464fffffu;
 const RNG_BAD_Z: u32 = 0x9068ffffu;
@@ -32,13 +29,11 @@ fn rngSetSeed(rng: ptr<function, Rng>, seed1: u32, seed2: u32) {
   (*rng).mW = seed1;
   (*rng).mZ = seed2;
   if ((*rng).mW == 0u || (*rng).mW == RNG_BAD_W) { (*rng).mW = (*rng).mW + 1u; }
-  if (QUIRK_RNG_SEED_GUARD_TYPO) {
-    // HLSL:44 verbatim: it tests mW where it plainly means mZ, so a zero mZ is never
-    // repaired and the mW half is dead — the guard above already made mW non-zero.
-    if ((*rng).mW == 0u || (*rng).mZ == RNG_BAD_Z) { (*rng).mZ = (*rng).mZ + 1u; }
-  } else {
-    if ((*rng).mZ == 0u || (*rng).mZ == RNG_BAD_Z) { (*rng).mZ = (*rng).mZ + 1u; }
-  }
+  // HLSL:44 verbatim: it tests mW where it plainly means mZ, so a zero mZ is never
+  // repaired and the mW half is dead — the guard above already made mW non-zero. T24 swept
+  // this bug's OFF variant (repair mZ==0u too) and found no measurable statistical
+  // difference, so the toggle is gone; the fork's own line stands unconditionally.
+  if ((*rng).mW == 0u || (*rng).mZ == RNG_BAD_Z) { (*rng).mZ = (*rng).mZ + 1u; }
 }
 
 fn rngNextUint(rng: ptr<function, Rng>) -> u32 {

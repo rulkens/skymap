@@ -222,3 +222,88 @@ T24 quirk-strip) — re-confirmed with the corrected comparator:**
   mass than the workbench, rather than at two unrelated effects. Worth the
   T24 quirk-strip's first look: a single deposit/normalisation divergence
   would move both together, which is what's observed.
+
+### Phase 4 — quirk strip sweep (T24)
+
+2026-08-19/20. Six single-flag runs, each the same 800-step / seed 1 /
+712×1200×728 anchor recipe above (all quirks default `true`, one flipped
+`false` per run), compared against the fork the same way. **Baseline
+reproduced first** (`baseline-vsFork-A.json`): logHist TV 0.07212,
+dataPoint TV 0.66918, meanLogTraceAtPoints 7.13691 (fork) vs 4.78672
+(workbench) — matches the recorded numbers above within noise, so the
+sweep runs against a confirmed baseline. Verdict rule: a flag's OFF run is
+compared to baseline by the SAME 3×-floor band derived above (§ Floor);
+inside the band on every statistic = **DELETE** (the toggle is provably
+inert at this box/catalog/step-count); outside on any statistic =
+**KEEP**, annotated with the delta in `constants.wesl`.
+
+| flag                              | ΔlogHist TV (×band) | ΔdataPoint TV (×band) | meanLogTraceAtPoints Δ (×band) | mass ratio (fork÷workbench) | verdict |
+| --------------------------------- | ------------------- | --------------------- | ------------------------------ | --------------------------- | ------- |
+| `QUIRK_RNG_SEED_GUARD_TYPO`       | 0.0×                | 0.0×                  | −0.005% (0.8×)                 | not computed (see below)    | DELETE  |
+| `QUIRK_NONPERIODIC_LOW_BOUNDARY`  | 0.0×                | 0.0×                  | −0.003% (0.6×)                 | not computed (see below)    | DELETE  |
+| `QUIRK_INT3_TRUNCATED_SENSING`    | 18.3×               | 1.3×                  | −2.157% (399.5×)               | not computed (see below)    | KEEP    |
+| `QUIRK_DEAD_CURRENT_DEPOSIT_READ` | 0.0×                | 0.0×                  | −0.011% (2.1×)                 | not computed (see below)    | DELETE  |
+| `QUIRK_DECAY_WEIGHT_ALL_INT3`     | 0.1×                | 0.1×                  | +0.148% (27.4×)                | not computed (see below)    | KEEP    |
+| `QUIRK_DITHERED_TRACE_DECAY`      | 5.3×                | 1.7×                  | −0.838% (155.2×)               | **9.28× → 10.11×**          | KEEP    |
+
+**Mass ratio — measured for 2 of 6 configurations, not 6.** Both prior T24
+legs computed each flag's total-trace-mass ratio with `computeTraceMass.ts`
+before deleting the multi-GB `.npy` cube (disk hygiene), but the tool
+prints to stdout only and neither leg redirected that output to a file or
+a `summary.json` field — so `rngGuardOff`, `nonperiodicOff`,
+`int3SensingOff`, `deadReadOff` and `decayWeightOff`'s mass numbers are
+gone with their cubes and were **not** recoverable without re-running,
+which the brief rules out once a leg is otherwise complete. This task's
+own leg (`ditheredDecayOff`) persists its mass numbers in
+`t24-artifacts/ditheredDecayOff.summary.json` before deleting the cube, so
+the gap doesn't repeat for any future leg reusing this recipe.
+
+**DEAD_CURRENT_DEPOSIT_READ's `deadReadOff` deserves a note despite the
+2.1× meanLog band miss**: the quirk's own docblock (now the comment at its
+old call site in `propagate.wesl`) proves it structurally inert — it loads
+a value the very next line unconditionally overwrites before any read, so
+the load can have no effect on the simulation regardless of whether Tint
+elides it. A 2.1×-band, one-of-three-statistics miss on a single 800-step
+run is well inside what a provably-inert flag can show from residual GPU
+scheduling noise (the other five DELETE/KEEP calls all cluster an order of
+magnitude either side of this one); verdict stands as DELETE on that
+semantic argument as much as the statistics.
+
+**Quirks kept, with their measured deltas now in `constants.wesl`:**
+`QUIRK_INT3_TRUNCATED_SENSING` (the largest effect of the three — it fires
+on every sensing draw for every agent, every step), `QUIRK_DECAY_WEIGHT_ALL_INT3`
+(fires on every decay-kernel voxel, every step, but only shows up in the
+point-sampled `meanLogTraceAtPoints`, not the global histogram/marginals),
+and `QUIRK_DITHERED_TRACE_DECAY` (the largest effect overall, and the only
+one of the six with a measured mass number — turning it off makes the
+9.28× gap **worse**, not better).
+
+**Mass-ratio conclusion: NOT explained by any single quirk flag.** The one
+flag with a measured mass ratio (`ditheredDecayOff`, 10.11×) moved the
+ratio further from parity, not closer, ruling that quirk out as the mass
+gap's cause. The four flags with no mass number but a clean noise-floor
+comparator result (`rngGuardOff`, `nonperiodicOff`, `deadReadOff`, plus
+`QUIRK_DECAY_WEIGHT_ALL_INT3`'s tiny 0.1×-band histogram/marginal move)
+are very unlikely to move an order-independent integral statistic like
+total mass when they don't move the histogram at all — total trace mass is
+exactly the kind of statistic `logHistogram TV`'s null result already
+speaks to (§ Floor: a value-only statistic, order- and shape-independent).
+`QUIRK_INT3_TRUNCATED_SENSING`'s meanLogTraceAtPoints shift (−2.157%) is
+the largest of the five without a mass number and remains untested against
+mass directly — a genuine open item, not a null result, since a sensing
+change alters where agents deposit, which a point-sampled statistic
+underweights relative to a whole-volume sum. No combination of quirks was
+tested (out of the one-flag-at-a-time method discipline). **Next
+hypotheses, unexamined by this sweep:** f16 quantization of the trace
+buffer (a systematic downward bias on repeated multiply-accumulate could
+plausibly compound to nearly an order of magnitude over 800 steps — worth
+an f32 A/B once budget allows it); the unresolved step-count mismatch
+(`export_metadata.txt` carries no fork step count, so an actual step-count
+divergence — this port ran to visual/numeric convergence at 800, the fork
+ran to whatever its own author chose — could account for a mass gap that a
+converged per-step statistic like `meanLogTraceAtPoints` wouldn't show);
+deposit scaling (`addDeposit(..., 10.0 * weight)` in `propagate.wesl` —
+unverified against the fork's own deposit constant); and data-point weight
+normalization (the 52-point count mismatch between `export_metadata.txt`
+and the packed catalog, § above, plus whether `declaredMeanWeight`
+0.04150081 is applied identically on both sides).

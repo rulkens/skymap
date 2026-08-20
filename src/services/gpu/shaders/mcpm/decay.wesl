@@ -12,7 +12,6 @@ import package::mcpm::constants::DECAY_WG_X;
 import package::mcpm::constants::DECAY_WG_Y;
 import package::mcpm::constants::DECAY_WG_Z;
 import package::mcpm::constants::QUIRK_DECAY_WEIGHT_ALL_INT3;
-import package::mcpm::constants::QUIRK_NONPERIODIC_LOW_BOUNDARY;
 import package::mcpm::constants::QUIRK_DITHERED_TRACE_DECAY;
 import package::mcpm::io::sim;
 import package::mcpm::grid::loadDeposit;
@@ -58,17 +57,13 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
         // Sign-of-dividend '%': at p == 0 a dx == -1 tap stays -1 instead of wrapping to
         // the far face, and loadDeposit reads it as 0. Mass leaks out of the x/y/z = 0
-        // faces, and w still sums the full 23.6188021, so those faces darken on top.
+        // faces, and w still sums the full 23.6188021, so those faces darken on top. T24
+        // swept the periodic-wrap OFF variant and found no measurable statistical
+        // difference (the packed catalog sits well inside the box), so the toggle is gone.
         var tap = p + vec3<i32>(dx, dy, dz);
-        if (QUIRK_NONPERIODIC_LOW_BOUNDARY) {
-          tap.x = tap.x % sim.worldWidth;
-          tap.y = tap.y % sim.worldHeight;
-          tap.z = tap.z % sim.worldDepth;
-        } else {
-          tap.x = (tap.x % sim.worldWidth + sim.worldWidth) % sim.worldWidth;
-          tap.y = (tap.y % sim.worldHeight + sim.worldHeight) % sim.worldHeight;
-          tap.z = (tap.z % sim.worldDepth + sim.worldDepth) % sim.worldDepth;
-        }
+        tap.x = tap.x % sim.worldWidth;
+        tap.y = tap.y % sim.worldHeight;
+        tap.z = tap.z % sim.worldDepth;
 
         v = v + weight * loadDeposit(tap);
         w = w + weight;
