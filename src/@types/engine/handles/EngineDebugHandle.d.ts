@@ -89,8 +89,9 @@ export type EngineDebugHandle = {
    * Debug instrument for the Earth Tile Atlas panel: snap the camera so its
    * sub-camera point (the readout `earthTiles()` reports) lands exactly at
    * `(lonDeg, latDeg)`, at the CURRENT altitude, target re-centred on Earth.
-   * A no-op before Earth's body seed lands. See `flyToLonLatFn`'s header in
-   * `engine.ts` for the pose-commit seam and the follow-driver interaction.
+   * A no-op before Earth's body seed lands. See `flyToLonLatPose`'s header in
+   * `services/engine/helpers/flyToLonLatPose.ts` for the pose-commit seam and
+   * the follow-driver interaction.
    */
   readonly flyToLonLat: (lonDeg: number, latDeg: number) => void;
 };
