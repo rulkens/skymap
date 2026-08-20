@@ -62,10 +62,12 @@ the deep tuning surface.
    - Bundle handles are shared across the bundle's own layers; the selection-halo
      slab-partition invariant becomes a named pattern.
    - ~~`devOnly` flag on debug layers.~~ **REFINED by #16 (2026-08-20)** —
-     rejected: no reader exists for it (`grep -rn devOnly src/` empty);
-     dev-only-ness lives in `DEBUG_OVERLAY_ROWS` membership instead (D3). Pick
-     ownership may span rows (planetsLayer picks for textured bodies;
-     caption-only anchors draw nothing).
+     rejected: no `devOnly` field exists and no reader would exist for one
+     (`grep -rn devOnly src/` finds one comment, `DebugOverlayRow.d.ts:4`,
+     naming the rejection — no field); dev-only-ness lives in
+     `DEBUG_OVERLAY_ROWS` membership instead (D3). Pick ownership may span
+     rows (planetsLayer picks for textured bodies; caption-only anchors draw
+     nothing).
    - Planner-hoist (memoised on ctx, `prepareStarCut` style) is the norm; the four
      solar-system derivations recomputed per call site migrate to it (long tail).
    - Liveness: both incumbent forms first-class (`deriveXLiveness` file where
@@ -151,7 +153,8 @@ the deep tuning surface.
     so there is no baked format to go stale; confirmed also by a clean
     HDR-toggle visual smoke; ~~fieldStarSphere missing the FOREGROUND_MAX
     gate~~ **RESOLVED NEGATIVE** (2026-08-20) — self-gated on camera POSITION
-    at ~1.81 AU, ~8 orders tighter than the 0.23 Mpc cut; `enabled()` measured
+    at ~1.45 AU (7.04e-12 Mpc), ~10.5 orders of magnitude tighter than the
+    0.23 Mpc cut; `enabled()` measured
     `false` at cosmic zoom; the only divergent pose is unreachable, and current
     behaviour would be correct there anyway (#16 D6). Residual cited, not
     fixed, at `docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md`.
@@ -617,8 +620,10 @@ the deep tuning surface.
       the real program × the real `CONTENT_LAYERS`, so a renamed or deleted
       `(target, slab)` step already fails today; the only drift that misses
       (a dead title key matching no emitted group) is inert data, not a bug.
-    - **D3 — no `devOnly` field; dev-only-ness moves domains.** `grep -rn
-      devOnly src/` is empty — the token exists only in this file. Asked
+    - **D3 — no `devOnly` field; dev-only-ness moves domains.** No
+      `devOnly` field exists (`grep -rn devOnly src/` finds one comment,
+      `DebugOverlayRow.d.ts:4`, that itself names this rejection — no
+      field). Asked
       what would carry it (two `ContentLayer` rows could) and what would
       read it (nothing — no build-time strip gates `ContentLayer`/
       `frameProgram`/`GPU_HANDLE_ROWS`, and the DebugPanel ships in
@@ -697,13 +702,17 @@ the deep tuning surface.
       no such gate — read as an omission. **Verified 2026-08-20 and
       RESOLVED NEGATIVE, no gate added.** The layer self-gates on camera
       **POSITION**: `enabled()` requires a catalogued Gaia star within the
-      resolve-radius hysteresis band of `ctx.drawCamPos`, measured **~1.81
-      AU** (7.04e-12 Mpc at the 4 px ON threshold) — roughly **eight orders
-      of magnitude** tighter than the 0.23 Mpc `FOREGROUND_MAX_DISTANCE_MPC`
-      cut. A runtime probe against the real octree + catalog confirmed
+      resolve-radius hysteresis band of `ctx.drawCamPos`, measured **~1.45
+      AU** (7.04e-12 Mpc at the `STAR_RESOLVE_PX`=4px ON threshold, via
+      `resolveDistanceMpc` — `diameterKpc × pxPerRad / (thresholdPx × 1000)`
+      at a 720px/60° reference — `fieldStarSphereLayer.ts:165-172`; AU
+      conversion via `SCALE_UNITS.AU_TO_MPC ≈ 4.848e-12`,
+      `scaleUnits.ts:38`) — roughly **10.5 orders of magnitude** tighter
+      than the 0.23 Mpc `FOREGROUND_MAX_DISTANCE_MPC` cut (`0.23 / 7.04e-12
+      ≈ 3.27×10¹⁰`). A runtime probe against the real octree + catalog confirmed
       `enabled()` is already `false` at cosmic zoom (camera 0.5 Mpc from the
       Sun). The one pose where the missing gate would matter — camera within
-      1.8 AU of a star while `cam.distance` ≥ 0.23 Mpc — needs an orbit
+      ~1.5 AU of a star while `cam.distance` ≥ 0.23 Mpc — needs an orbit
       target ≥230 kpc from a camera standing at a star, which no tween or
       resting base produces, and were it reachable, today's behaviour (a
       sphere for the star the camera is parked at) is the correct one
@@ -732,12 +741,14 @@ the deep tuning surface.
       dressed as a dedupe.
     - **D7 — the §2/§4 resolution.** `current-contracts-map.md:100,182` (§2,
       Frame assembly) rates debug 🟢 "0 edits for timing slots + debug
-      toggles — derived"; `:194,210` (§4, Cross-cutting registries) rates it
-      🟠 "slider tables + DebugPanel sections + `PASS_GROUP_TITLES`
-      hand-listed". Both are about the same file; §2 is right and §4 is
-      stale on two of its three counts — the slider tables are already
-      registries (D2), and `PASS_GROUP_TITLES` + the DebugPanel sections are
-      deliberately hand-authored (D2), not debt. Task 7 sweeps both maps.
+      toggles — derived"; `:194` (§4, Cross-cutting registries) and `:210`
+      (§6, Assessment, restating the same finding in its ranked summary)
+      rate it 🟠 "slider tables + DebugPanel sections + `PASS_GROUP_TITLES`
+      hand-listed". All three are about the same file; §2 is right and
+      §4/§6 are stale on two of the three counts — the slider tables are
+      already registries (D2), and `PASS_GROUP_TITLES` + the DebugPanel
+      sections are deliberately hand-authored (D2), not debt. Task 7 sweeps
+      all three references.
     - **D8 — the DEV volume fixtures and the infra knobs stay out.** The
       three `debug-*` synthetic cubes are an asset-supply concern gated by
       `import.meta.env.DEV` and `settings.volumes.items[id].enabled`, not

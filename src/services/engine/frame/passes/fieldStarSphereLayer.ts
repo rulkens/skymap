@@ -27,7 +27,7 @@
  * close-range geometry and the camera has not moved.
  *
  * No `FOREGROUND_MAX_DISTANCE_MPC` cut applies here: the proximity test above
- * already subsumes it by ~8 orders of magnitude (decision #16 D6).
+ * already subsumes it by ~10.5 orders of magnitude (decision #16 D6).
  *
  * ### The presence hysteresis band — killing the threshold strobe
  *
