@@ -3,13 +3,11 @@
  * single jittered sample per pixel into a `vec4<f32>` accumulator (mcpm/volpath.wesl),
  * sized to `floor(viewportPx/divisor)` (reducedTraceSize — see draw()'s doc for the
  * divisor>1 upsample leg), then a fullscreen fragment resolves the mean, LOADing and
- * blending one/one like every other layer (mcpm/volpathBlit.wesl).
- *
- * The image is only correct while the accumulator agrees with the camera, parameters and
- * divisor that produced it: the caller MUST `reset()` on any change to any of those (a
- * viewport OR divisor change resets itself, the buffer being rebuilt). Layouts are
- * explicit, never 'auto'; the trace grid binds read-only here rather than through
- * io.wesl's read_write contract.
+ * blending one/one like every other layer (mcpm/volpathBlit.wesl). The image is only
+ * correct while the accumulator agrees with the camera, parameters and divisor that
+ * produced it: the caller MUST `reset()` on any change to any of those (a viewport OR
+ * divisor change resets itself). Layouts are explicit, never 'auto'; the trace grid
+ * binds read-only here rather than through io.wesl's read_write contract.
  */
 import type { TraceSource } from './tracePass';
 import { reducedTraceSize } from './reducedTraceSize';
@@ -284,8 +282,8 @@ export function createVolpathPass(opts: {
     pendingClear = true;
   }
 
-  // V3 review finding 1: the divisor<=1 branch used to leave reducedTex allocated but idle
-  // rather than freeing it, so this is the drop-back-to-1 leg's own cleanup, not dispose()'s.
+  // The divisor<=1 branch must free reducedTex rather than leaving it allocated but idle,
+  // so this is the drop-back-to-1 leg's own cleanup, not dispose()'s.
   function freeReducedTex(): void {
     reducedTex?.destroy();
     reducedTex = null;

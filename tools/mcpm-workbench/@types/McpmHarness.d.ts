@@ -16,12 +16,10 @@ export type McpmHarness = {
   readonly element: GridElement;
   readonly box: GridBox;
   /**
-   * The GpuContext the caller acquired via `initGpu` and handed in (task R5 —
-   * the harness never calls `initGpu` itself). T10's render passes and T11's
-   * viewport must consume this rather than calling `initGpu` again on the same
-   * canvas — a second call reconfigures the swap chain and would hand the
-   * render passes a device without the compute limits the kernels need (see
-   * task-T9-review.md concern 4).
+   * The GpuContext the caller acquired via `initGpu` and handed in — the
+   * harness never calls `initGpu` itself. Consumers must reuse this rather
+   * than calling `initGpu` again on the same canvas: a second call
+   * reconfigures the swap chain and drops the compute limits the kernels need.
    */
   readonly gpu: GpuContext;
   /**
@@ -36,10 +34,10 @@ export type McpmHarness = {
    */
   readonly agents: AgentBuffers;
   /**
-   * The Galaxies overlay's OWN lanes (task S16) — every point that survived source/tier
-   * load, in-box or not, weighted mean-1 over that same RAW population. A preview layer,
-   * not the sim's readout: `nDataPoints === count` here, no free-agent suffix, and no
-   * compute kernel ever writes them. Same ownership rule as `traceBuffer`.
+   * The Galaxies overlay's own lanes — every point that survived source/tier load, in-box
+   * or not, weighted mean-1 over that same raw population. A preview layer, not the sim's
+   * readout: `nDataPoints === count` here, and no compute kernel ever writes them. Same
+   * ownership rule as `traceBuffer`.
    */
   readonly overlayAgents: AgentBuffers;
   /**

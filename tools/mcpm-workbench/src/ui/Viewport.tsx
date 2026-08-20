@@ -1,15 +1,12 @@
 /**
  * Viewport — owns the <canvas>, the McpmHarness, the render graph and the RAF
  * loop; delegates pointer/wheel input to `createViewportInput` (../input),
- * applying its hover/drag-handle state to the box-preview draw call.
- *
- * Viewport is the ONLY caller of `initGpu` (task R5 — it asks for shader-f16 and
- * the kernels' compute limits, then hands the result to `createMcpmHarness`); a
- * second call here would race another device onto the same canvas. Every
- * rebuild — catalog reload or structural — goes through
- * `requestBuild`, which serialises on `buildGeneration`: one in flight, latest
- * config wins, a request arriving mid-build served on completion, not dropped.
- * Only structural changes are debounced; params, run tokens and camera are live.
+ * applying its hover/drag-handle state to the box-preview draw call. Viewport
+ * is the ONLY caller of `initGpu` — a second call here would race another
+ * device onto the same canvas. Every rebuild goes through `requestBuild`,
+ * which serialises on `buildGeneration`: one in flight, latest config wins, a
+ * request arriving mid-build served on completion. Only structural changes
+ * are debounced; params/run tokens/camera are live.
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { AgentWeights } from '../../@types/AgentWeights';
@@ -257,8 +254,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
     /**
      * T18: readback → widen → `previewPackedTrace` (the REAL packLogTraceVoxels,
      * `runScfdExport`'s own call) → `graph.attachPreviewTrace`, RenderGraph's own
-     * TracePass construction (task R7 — Viewport builds only the buffer, not the
-     * pass, now). Runs once per toggle-on; frame() below is what decides every
+     * TracePass construction — Viewport builds only the buffer, not the pass.
+     * Runs once per toggle-on; frame() below is what decides every
      * frame whether the result is still fresh enough to draw. `harness !== h`
      * guards the rebuild race the same way `buildFromPoints` guards `generation`
      * — `readbackTrace` can outlive a catalog switch that starts mid-await. The
@@ -485,9 +482,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
       disposeHarness();
       if (disposed) return;
 
-      // Task R5: moved here verbatim from createMcpmHarness — device acquisition
-      // is a canvas/browser concern this component already owns; the harness only
-      // needs the resulting GpuContext. Still fresh per rebuild, same as before.
+      // Device acquisition is a canvas/browser concern this component owns; the
+      // harness only needs the resulting GpuContext, freshly acquired per rebuild.
       const gpu = await initGpu(canvas, {
         requiredFeatures: ['shader-f16'],
         requiredLimits: {
@@ -666,16 +662,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (harness) {
         if (resetTokenWatcher.changed(s.sim.resetToken)) {
           harness.reset(s.sim.initMode, s.sim.seed);
-          // Old history entries would otherwise show larger step counts than the
-          // freshly zeroed HUD counter — a convergence plot that looks like it jumped
-          // backward in time.
           store.setState((st) => ({
             ...st,
             sim: resetStepCount(st.sim),
             histogram: resetHistogram(st.histogram),
             // Reset restores framing too, deliberately: the orbit target is absolute
-            // world Mpc now (no longer box-relative), so nothing else recenters the
-            // camera onto the box — this is the one recovery path for "camera drifted".
+            // world Mpc, not box-relative, so nothing else recenters the camera onto
+            // the box — this is the one recovery path for "camera drifted".
             view: { ...st.view, camera: defaultViewSlice.camera },
           }));
         }

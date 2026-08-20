@@ -3,15 +3,11 @@
  * tools/flow-workbench's): it owns the shared `rgba16float` accum texture every
  * MCPM layer draws into and the fullscreen tonemap that resolves it to the
  * swap-chain. No layer clears: `clear()` opens the frame, then any subset of
- * `drawTrace` / `drawSplat` / `drawGalaxyOverlay` / `drawVolpath` loads and
- * blends one/one onto it, in that order. A pass constructed but never
- * registered here is silently never opened.
- *
- * `accumView()` is a method, not a field: the texture is recreated on resize, so
- * a cached view would dangle, and the blit's `layout:'auto'` bind group is
- * rebuilt alongside it. The blit uniform write order is `[exposure, contrast]`.
- * Draw order: `drawTrace` / `drawSplat` / `drawGalaxyOverlay` / `drawVolpath` /
- * `drawBoxPreview`, last so its wireframe sits over the galaxy dots.
+ * `drawTrace` / `drawSplat` / `drawGalaxyOverlay` / `drawVolpath` / `drawBoxPreview`
+ * (last, so its wireframe sits over the galaxy dots) loads and blends one/one onto
+ * it, in that order. A pass constructed but never registered here is silently
+ * never opened. `accumView()` is a method, not a field — the texture is rebuilt on
+ * resize, so a cached view would dangle.
  */
 import type { AgentBuffers } from '../../@types/AgentBuffers';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
@@ -93,10 +89,9 @@ export type RenderGraph = {
     divisor: number,
   ): void;
   /**
-   * T18's preview-export view: build a TracePass over a packed-cube buffer (task R7 —
-   * moved here from Viewport, which now only builds the buffer itself via
-   * `previewPackedTrace.ts` and owns its lifetime/disposal). Same shape as `attachTrace`;
-   * replaces and disposes any preview pass attached before.
+   * The T18 preview-export view: builds a TracePass over a packed-cube buffer. Viewport
+   * builds the buffer itself via `previewPackedTrace.ts` and owns its lifetime/disposal.
+   * Same shape as `attachTrace`; replaces and disposes any preview pass attached before.
    */
   attachPreviewTrace(source: TraceSource): void;
   /** True once `attachPreviewTrace` has built a pass that hasn't since been disposed. */

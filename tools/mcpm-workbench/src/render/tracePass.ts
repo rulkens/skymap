@@ -1,12 +1,11 @@
 /**
  * createTracePass — the trace-grid raymarch: the sim's storage buffer straight to the
- * HDR accum target through Polyphorm's transfer function (mcpm/fragment.wesl).
- *
- * Bind groups follow io.wesl's contract so the fragment can call grid.wesl's
- * `sampleTrace` unchanged — group(0) is a `McpmUniforms`-shaped buffer, group(1) slot 2
- * the trace grid, group(2) this pass's camera and palette. The pass owns its group(0)
- * buffer rather than sharing the sim's: it reads only the three dims (both sides derive
- * them from the same `GridBox`), and the sim's bind group is COMPUTE-visibility, which a
+ * HDR accum target through Polyphorm's transfer function (mcpm/fragment.wesl). Bind
+ * groups follow io.wesl's contract so the fragment can call grid.wesl's `sampleTrace`
+ * unchanged — group(0) is a `McpmUniforms`-shaped buffer, group(1) slot 2 the trace
+ * grid, group(2) this pass's camera and palette. The pass owns its group(0) buffer
+ * rather than sharing the sim's: it reads only the three dims (both sides derive them
+ * from the same `GridBox`), and the sim's bind group is COMPUTE-visibility, which a
  * render pipeline cannot accept. Layouts are explicit, never 'auto'.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

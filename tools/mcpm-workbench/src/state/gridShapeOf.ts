@@ -13,9 +13,9 @@ export type GridShape = Pick<
 /**
  * gridShapeOf — the single home for "which GridSlice fields shape the box," so `buildKey`
  * (rebuild trigger) and `gridShapeKeyFor` (preview timer) both serialize from this Pick instead
- * of hand-spelling the field list twice. F2.5's rotate-drag bug happened because
+ * of hand-spelling the field list twice — a rotate-drag bug once shipped because
  * `manualRotation` was added to one hand-spelled list and missed in the other; adding a field
- * here is now the one edit both consumers pick up (see buildKey.ts's docstring for the incident).
+ * here is the one edit both consumers pick up.
  */
 export function gridShapeOf(grid: GridSlice): GridShape {
   return {

@@ -70,9 +70,9 @@ describe('planGridBudget', () => {
   });
 });
 
-// V1 fix round 1: GridBoxPanel's live memory readout reuses this function
-// directly (rather than re-deriving the formula) specifically so it can't
-// silently drop the agent-lane term the way its first version did.
+// GridBoxPanel's live memory readout reuses this function directly (rather than
+// re-deriving the formula) so it can't silently drop the agent-lane term the
+// way an earlier version did.
 describe('estimateGridBudgetBytes', () => {
   it('sums the grid term and the agent term, hand-computed', () => {
     // dims 8x8x8 = 512 voxels; f32 grid = 512*4 = 2048 bytes/grid, three
@@ -83,8 +83,7 @@ describe('estimateGridBudgetBytes', () => {
   it('the agent term dominates at high agent count on a coarse grid', () => {
     // A coarse 56^3 grid (reachable at the panel's own 4 Mpc max voxel size
     // on the default 200 Mpc box) next to the agent slider's 10M max: the
-    // agent-lane term outweighs the grid term by two orders of magnitude —
-    // the exact case the old GridBoxPanel-local estimate silently dropped.
+    // agent-lane term outweighs the grid term by two orders of magnitude.
     const gridOnly = estimateGridBudgetBytes([56, 56, 56], 0, 'f32');
     const withMaxAgents = estimateGridBudgetBytes([56, 56, 56], 10_000_000, 'f32');
     expect(withMaxAgents - gridOnly).toBe(7 * 10_000_000 * 4);

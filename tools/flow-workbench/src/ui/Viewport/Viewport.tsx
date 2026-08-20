@@ -1,15 +1,12 @@
 /**
  * Viewport — owns the <canvas>, boots the flow harness, and bridges orbit input.
- *
  * On mount it creates the WebGPU flow harness against the canvas and starts the
  * loop; on unmount it disposes it. Orbit input is bridged into the STORE rather
  * than mutating the harness camera directly (the harness reads the camera slice
  * each frame): drag dispatches setCameraYawPitch, wheel dispatches
- * setCameraDistance. This keeps the store the single source of truth and avoids
- * sharing a mutable camera object across the React/harness boundary.
- *
- * createFlowHarness is async; if it rejects (no WebGPU adapter, field fetch
- * failure) we surface it rather than leaving a silently dead canvas.
+ * setCameraDistance — keeping the store the single source of truth. createFlowHarness
+ * is async; if it rejects (no WebGPU adapter, field fetch failure) we surface it
+ * rather than leaving a silently dead canvas.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Store } from '../../../@types/state/Store';

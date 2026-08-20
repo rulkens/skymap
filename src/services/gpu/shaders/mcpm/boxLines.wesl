@@ -1,17 +1,13 @@
-// mcpm/boxLines.wesl — a 12-edge wireframe of an oriented box, drawn over every other
-// layer to preview the PENDING grid box while its sliders/gizmo drag. Vertex-pulled: 24
-// vertices, line-list, no vertex buffers — corners are reconstructed from BoxUniform's
-// center/halfExtents/three basis vectors, already converted to the BUILT box's voxel
-// space on the host (worldToVoxel + basis rotation), through the same shared camera
-// (package::mcpm::camera) as every other layer.
-//
+// mcpm/boxLines.wesl — a 12-edge wireframe of an oriented box, drawn over every other layer
+// to preview the PENDING grid box while its sliders/gizmo drag. Vertex-pulled: 24 vertices,
+// line-list, no vertex buffers — corners are reconstructed from BoxUniform's
+// center/halfExtents/three basis vectors, already converted to the BUILT box's voxel space on
+// the host, through the same shared camera (package::mcpm::camera) as every other layer.
 // A second vertex-pulled draw (vsGlyph/fsGlyph) renders the gizmo handle glyphs: per-axis
-// colored translate arrows with cone tips, resize crosses, and rotate rings (a closed polyline
-// of segments sampled around each ring's circle). Each glyph is a list of GlyphSegments (the
-// host rebuilds the buffer from gizmoHandleGeometry every frame); vsGlyph expands each into a
-// screen-space quad (2 triangles, constant pixel width) rather than drawing 1px line-list
-// hairlines — the same GlyphSegment shape serves all three handle families, no new geometry
-// kind needed for rings.
+// colored translate arrows with cone tips, resize crosses, and rotate rings, each a list of
+// GlyphSegments the host rebuilds every frame from gizmoHandleGeometry; vsGlyph expands each
+// into a screen-space quad (2 triangles, constant pixel width) rather than 1px line-list
+// hairlines — the same GlyphSegment shape serves all three handle families.
 
 import package::mcpm::camera::McpmCamera;
 import package::mcpm::camera::voxelToNdc;

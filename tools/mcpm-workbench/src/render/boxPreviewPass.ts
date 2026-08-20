@@ -1,17 +1,12 @@
 /**
- * createBoxPreviewPass — a transient wireframe of the PENDING grid box (mcpm/boxLines.wesl),
+ * createBoxPreviewPass — a transient wireframe of the PENDING grid box (mcpm/boxLines.wesl)
  * plus its gizmo handle glyphs (translate arrows, resize crosses, rotate rings). Vertex-pulled,
- * no vertex buffers — corners and glyph positions are rewritten into small buffers every draw
- * call, so unlike the agent-fed passes this needs neither the harness nor a box at construction;
- * RenderGraph builds it EAGERLY, so a shader compile error surfaces at graph construction, not
- * on the first drag.
- *
- * `builtBox` (the camera's own voxel frame) and `pendingBox` (what's previewed, in world Mpc,
- * converted host-side) are deliberately different GridBoxes — glyph geometry comes from
- * `pendingBox`'s own `gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc)` (F2.5's
- * axes swap: arrows/crosses/rings all rotate with the box). `arrowLengthMpc` is derived from
- * `view` each draw via gizmoArrowLengthMpc — the SAME formula Viewport.tsx's pick/hover path
- * uses, or grabbing an arrow would miss where it's drawn.
+ * no vertex buffers: corners/glyph positions rewrite into small buffers every draw call, so
+ * unlike the agent-fed passes this needs neither harness nor box at construction — RenderGraph
+ * builds it EAGERLY so a shader compile error surfaces at graph construction. `builtBox` (camera
+ * voxel frame) and `pendingBox` (world Mpc) are deliberately different GridBoxes: glyph geometry
+ * comes from `pendingBox`'s own rotated axes. `arrowLengthMpc` comes from `view` each draw via
+ * gizmoArrowLengthMpc — the SAME formula Viewport.tsx's pick/hover path uses.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';

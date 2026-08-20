@@ -69,24 +69,20 @@ export type ViewSlice = {
      */
     readonly divisor: number;
     /**
-     * On demand, never per frame: true means the raymarch layer marches the
-     * PACKED export cube (the real `packLogTraceVoxels`, same call as the
-     * `.scfd` leg) instead of the live trace buffer — a structure check for a
-     * transpose/shift regression, not a brightness match (packed values are
-     * log-transfer). Viewport packs once on the false→true edge and flips
-     * this back to `false` itself once `sim.stepCount` moves past the
-     * snapshot it packed, rather than repacking automatically.
+     * On demand, never per frame: true marches the packed export cube (the real
+     * `packLogTraceVoxels`, same call as the `.scfd` leg) instead of the live trace
+     * buffer — a structure check for a transpose/shift regression, not a brightness
+     * match (packed values are log-transfer). Viewport packs once on the false→true
+     * edge and flips this back once `sim.stepCount` moves past the packed snapshot.
      */
     readonly previewPacked: boolean;
   };
   /**
    * The volumetric path tracer's own knobs — field names match `VolpathParams`
-   * (volpathPass.ts) verbatim so a slice snapshot can be passed straight to
-   * `draw()` with no remapping. `trimDensity`/`sampleWeight` duplicate the
-   * raymarch layer's own pair rather than sharing them (both layers must
-   * agree on Polyphorm's trace→density transfer, but are independently
-   * tunable here) — keep the spelling identical to the raymarch layer's so a
-   * future "same transfer for both layers" toggle stays possible.
+   * (volpathPass.ts) verbatim so a slice snapshot can be passed straight to `draw()`
+   * with no remapping. `trimDensity`/`sampleWeight` duplicate the raymarch layer's own
+   * pair rather than sharing them: both layers must agree on the trace→density
+   * transfer, but are independently tunable here.
    */
   readonly pathTracer: {
     readonly sigmaT: number;

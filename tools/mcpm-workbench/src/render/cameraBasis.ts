@@ -17,9 +17,9 @@ export type CameraBasis = {
  * agent splat and the galaxy overlay cannot drift apart on screen.
  *
  * Built in world space, then rotated into box-local by R⁻¹ (conjugate of box.rotation) —
- * the same leg worldToBoxLocal applies to positions, since GridBox voxels are cubic by
- * construction and a rotated box's directions need R⁻¹ too (rotation doesn't commute with
- * the uniform-scale shortcut this used to rely on).
+ * the same leg worldToBoxLocal applies to positions. GridBox voxels being cubic does NOT
+ * make this optional: rotation doesn't commute with a uniform scale, so a rotated box's
+ * directions need R⁻¹ just as its positions do.
  */
 export function cameraBasis(
   eyeMpc: Readonly<Vec3>,

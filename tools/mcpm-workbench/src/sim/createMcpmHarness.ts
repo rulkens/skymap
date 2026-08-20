@@ -148,7 +148,7 @@ export async function createMcpmHarness(opts: {
   const decayLayout = storageLayout(device, 'mcpm-decay-layout', DECAY_SLOTS);
   // histogram.wesl's own group(1)/group(2): group(0) is McpmUniforms, reused as-is — a
   // second @group(0)@binding(0) uniform does not link (histogram.wesl's header). group(2)
-  // is its own new resources: the sampleRandomly flag plus the histogram-counts/densities
+  // is its own set of resources: the sampleRandomly flag plus the histogram-counts/densities
   // buffers — never io.wesl's group(1) contract.
   const histogramStorageLayout = storageLayout(
     device,

@@ -3,9 +3,8 @@
  * mode toggles, and the embedded GridBoxPanel. Every slider writes straight
  * to the sim slice; the harness reads `params` fresh each step, so these
  * are live with no rebuild. Agent count / weight mode / init mode / grid
- * box are structural — Viewport watches them and rebuilds the harness.
- *
- * The Raymarch / Agents / Galaxies / Path tracer sections are the four render
+ * box are structural — Viewport watches them and rebuilds the harness. The
+ * Raymarch / Agents / Galaxies / Path tracer sections are the four render
  * layers: each section's header pill IS its layer's on/off switch, and any
  * subset may be on.
  */
@@ -347,8 +346,8 @@ function ControlsPanel(): ReactNode {
 
   const onSaveParams = (): void => {
     const s = store.getSnapshot();
-    // deriveGridBox is never null now that grid derivation is always the
-    // manual path (S13.5) — manualCenterMpc/manualSizeMpc always have a value.
+    // deriveGridBox is never null: grid derivation is always the manual path
+    // (S13.5), and manualCenterMpc/manualSizeMpc always have a value.
     const json = exportParams({
       params: s.sim.params,
       agentCount: s.sim.agentCount,

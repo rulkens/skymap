@@ -8,10 +8,9 @@ import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 /**
  * defaultGridSlice — the manual 200 Mpc origin-centred cube is the boot
  * view (an auto-fit-on-boot box would stretch to the catalog's outliers
- * until the local volume is a sliver of it). `manualVoxelSizeMpc: 0.75`
- * is a deliberate quality bump over the old divisor-1 default's implicit
- * 0.78125 Mpc/vox — boot dims become 272³ instead of 256³ (decision record,
- * Q4).
+ * until the local volume is a sliver of it). `manualVoxelSizeMpc: 0.75` is
+ * a deliberate choice, denser than a divisor-1 default's implicit 0.78125
+ * Mpc/vox: boot dims come out 272³ (decision record, Q4).
  */
 export const defaultGridSlice: GridSlice = {
   manualVoxelSizeMpc: 0.75,
@@ -57,16 +56,12 @@ export function setRotation(prev: GridSlice, rotation: Readonly<Vec4>): GridSlic
 }
 
 /**
- * installImportedBox — V3's load-side setter: installs a preset's grid box
- * verbatim AND syncs the manual center/size/rotation fields to match, so the
- * sliders (which read manualCenterMpc/manualSizeMpc directly, not importedBox)
- * show the loaded values instead of stale ones (S17), and a later translate/
- * resize/rotate drag — which falls onto the manual path by clearing
- * importedBox — continues FROM the imported box's orientation instead of
- * snapping to identity. importedBox still wins in deriveGridBox until a
- * later edit clears it. manualVoxelSizeMpc syncs the same way (formula-free:
- * the box's own voxelSizeMpc, verbatim) so the voxel-size slider shows the
- * loaded value instead of a stale one.
+ * installImportedBox — the load-side setter: installs a preset's grid box verbatim AND
+ * syncs the manual center/size/rotation/voxel-size fields to match, so the sliders (which
+ * read those fields directly, not importedBox) show the loaded values, and a later
+ * translate/resize/rotate drag — which clears importedBox onto the manual path — continues
+ * from the imported orientation instead of snapping to identity. importedBox still wins in
+ * deriveGridBox until that later edit clears it.
  */
 export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
   return {

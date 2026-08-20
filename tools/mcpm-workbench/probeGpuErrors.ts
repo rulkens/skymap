@@ -428,21 +428,18 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
-      // one, so this was the only render layer no gate exercised at all (final-review.md
-      // §A/X3). The "Grid box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's
-      // `gridBoxOpen` starts false) and its body doesn't exist in the DOM until opened —
-      // the fold button's accessible name is its title text, not an aria-label.
-      // grid-voxel-size-currency: the divisor <select> died with the currency swap —
-      // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever
-      // now, regardless of how the box's center/size got set (S13.5: "auto fit" is a
-      // one-shot action, not a mode). Its accessible name is still distinct from the
-      // raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
-      // role="slider" with a different name, so no probe selector or screen-reader name
-      // collides. 'End' jumps the slider to its max (Slider.tsx's keyDown handling),
-      // away from the probe boot's 3.125 Mpc (PROBE_VOXEL_SIZE_MPC, defaultAppState.ts) —
-      // read before/after (F1.6 lesson: a step that can silently degrade to a no-op drive
-      // must FAIL, not just run). BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth of frames
-      // comfortably outlasts it.
+      // one, so this is the only render layer none of the other gates exercise. The "Grid
+      // box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's `gridBoxOpen` starts
+      // false) and its body doesn't exist in the DOM until opened — the fold button's
+      // accessible name is its title text, not an aria-label. GridBoxPanel's "voxel size"
+      // ParamSlider is deriveGridBox's one resolution lever, regardless of how the box's
+      // center/size got set. Its accessible name is distinct from the raymarch preview's
+      // own "divisor" slider (see raymarch:divisor below) — a role="slider" with a
+      // different name, so no probe selector or screen-reader name collides. 'End' jumps
+      // the slider to its max, away from the probe boot's 3.125 Mpc (PROBE_VOXEL_SIZE_MPC,
+      // defaultAppState.ts) — read before/after, since a step that can silently degrade to
+      // a no-op drive must FAIL, not just run. BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth
+      // of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
         await page.getByRole('button', { name: 'Grid box', exact: true }).click();
@@ -525,12 +522,12 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // S9: divisor > 1 opens RenderGraph's offscreen path — reduced-target allocation,
-      // the clear pass, and the bilinear upsample blit. S10 changed the shipped default
-      // to 3 (main-app volume-row parity), so every step above already exercises that
-      // offscreen path from boot; this step is what now covers the OTHER extreme. 'End'
-      // jumps the slider to its max (8, Slider.tsx's keyDown handling); 'Home' drops it
-      // to 1, exercising the straight-into-accum path for the first time.
+      // divisor > 1 opens RenderGraph's offscreen path — reduced-target allocation, the
+      // clear pass, and the bilinear upsample blit. The shipped default is 3 (main-app
+      // volume-row parity), so every step above already exercises that offscreen path
+      // from boot; this step covers the OTHER extreme. 'End' jumps the slider to its max
+      // (8); 'Home' drops it to 1, exercising the straight-into-accum path for the first
+      // time.
       name: 'raymarch:divisor',
       run: async (page) => {
         await pressSlider(page, 'divisor', ['End']);

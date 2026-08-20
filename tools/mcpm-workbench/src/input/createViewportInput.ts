@@ -3,8 +3,8 @@
  * pan/zoom AND the gizmo hover/pick/drag state machine share these handlers (a gizmo hit
  * short-circuits the orbit drag), so they move together rather than split across two
  * modules. Viewport owns DOM subscription and the render-loop's `points`/`box` state;
- * this module owns the hover/drag closures and applies drag deltas through the same
- * grid/view setters Viewport used to call inline.
+ * this module owns the hover/drag closures and applies drag deltas through the grid/view
+ * setters.
  */
 import type { AppState } from '../../@types/AppState';
 import type { GizmoDragState } from '../../@types/GizmoDragState';

@@ -79,7 +79,7 @@ describe('pickGizmoHandle', () => {
 
   it('returns null for a ray through the box interior that misses every handle', () => {
     const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
-    // Every translate shaft now starts AT the box center [1,2,3] and reaches only in its own
+    // Every translate shaft starts AT the box center [1,2,3] and reaches only in its own
     // +axis direction, so a ray through the exact center would graze all three shafts at once
     // (distance 0) — that's the accepted "pick near center chooses some arrow" tradeoff, not an
     // empty-click case, so this test is re-aimed off-center rather than through it. [-1,0,z] sits
@@ -122,7 +122,7 @@ describe('pickGizmoHandle', () => {
 
   it('returns null for a ray that misses every ring circle (aimed at empty space near the box)', () => {
     const geometry = gizmoHandleGeometry(SMALL_BOX, UNIT_AXES, SMALL_ARROW_LENGTH_MPC);
-    // Every rotate ring is centered at the box center [0,0,0], which is now also where every
+    // Every rotate ring is centered at the box center [0,0,0], which is also where every
     // translate shaft starts — a ray through the exact center would graze a shaft (distance 0)
     // before ever reaching rotate-ring logic, so this is re-aimed off-center rather than through
     // it (same reasoning as the box-interior null test above). [-0.4,-0.4,z] is offset

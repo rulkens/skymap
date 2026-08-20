@@ -1,18 +1,13 @@
 /**
- * GridBoxPanel — grid-box configuration. Both modes share ONE voxel size
- * (never free dims): Viewport and this panel's dims readout both call
- * `deriveGridBox`, so they can't disagree. This panel holds no catalog
- * data, so the readout reads the cached `catalog.catalogBoundsMpc` instead
- * of re-deriving from raw positions.
- *
- * "Auto fit" is a one-shot ACTION (`fitBoxToCatalog`, gridSlice.ts), not a
- * persistent mode: clicking it snapshots the current catalog bounds into
- * the manual center/size fields below, `paddingMpc` baked in at click
- * time — the padding slider is an input to the NEXT fit, not a live
- * modifier of whatever box is already showing. After the click the box is
- * an ordinary manual one, editable the same as any hand-tuned box; the
- * manual sliders also feed Viewport's box-preview timer, which watches the
- * same store fields directly — no wiring needed here.
+ * GridBoxPanel — grid-box configuration. Both modes share ONE voxel size:
+ * Viewport and this panel's dims readout both call `deriveGridBox`, so they
+ * can't disagree. This panel holds no catalog data, so the readout reads the
+ * cached `catalog.catalogBoundsMpc` rather than re-deriving from raw positions.
+ * "Auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot ACTION, not a
+ * mode: it snapshots the catalog bounds into the manual center/size fields
+ * once, `paddingMpc` baked in at click time. After that it's an ordinary
+ * manual box — the manual sliders already feed Viewport's box-preview timer,
+ * so no extra wiring is needed here.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

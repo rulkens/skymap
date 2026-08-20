@@ -93,9 +93,8 @@ export function createOrbitCameraInput(
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
     // Exponential, so a notch is a constant RATIO — the only zoom that behaves
-    // the same at 3000 units out and at 0.02. The rate is up from the old
-    // short-range value to keep a full traverse a similar number of notches now
-    // that the range spans five decades instead of two.
+    // the same at 3000 units out and at 0.02. The rate keeps a full traverse a
+    // similar number of notches across the full five-decade range (0.02 to 8000).
     cam.dist = exponentialZoomDistance(cam.dist, e.deltaY, 0.0018);
     // The floor is deep inside the disc, where sprites resolve into individual
     // billboards — the regime the app hits on descent and the one worth tuning
