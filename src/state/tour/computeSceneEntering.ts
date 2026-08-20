@@ -54,7 +54,7 @@ function actionsOf(effect: Effect, settings: EngineSettingsState): readonly Acti
     case 'hide': {
       const on = effect.kind === 'show';
       return [
-        ...effect.layers.flatMap((layer) => VISIBILITY_ACTION_ROW[layer](on, settings)),
+        ...effect.layers.flatMap((layer) => VISIBILITY_ACTION_ROW[layer].actions(on, settings)),
         ...(effect.scoped ?? []).flatMap((arg) => scopedVisibilityActions(arg, on, settings)),
       ];
     }

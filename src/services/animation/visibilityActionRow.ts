@@ -1,17 +1,10 @@
 /**
- * visibilityActionRow — the inverse of FADE_ROW: a DATA TABLE mapping every
- * VisibilityLayerKey to a per-item factory that returns the settings actions
- * needed to flip that layer's visibility intent.
- *
- * ### Why this is FADE_ROW's inverse
- *
- * `FADE_ROW` (watchFadesSaga.ts) maps action.type → VisibilityLayerKey,
- * answering "which layer does this write affect?" `VISIBILITY_ACTION_ROW`
- * inverts that question: given a layer and a desired on/off state, which
- * settings actions should be dispatched? These two tables are the two
- * directions of the same intent ↔ action correspondence; keeping them
- * both as flat DATA TABLES (not branch chains) is the simplicity.md §7
- * convention.
+ * visibilityActionRow — a DATA TABLE mapping every VisibilityLayerKey to the
+ * settings write it drives (`writes`, `null` for registration-only layers)
+ * and the per-item factory that computes that write's actions (`actions`).
+ * `FADE_ROW` (watchFadesSaga's action.type → VisibilityLayerKey lookup) is
+ * derived below from `writes` — see its own comment for why it isn't
+ * derived from `actions` instead.
  *
  * ### Why (on, settings) => Action[] instead of (on) => SettingsAction
  *
@@ -67,84 +60,130 @@ import {
   setZoneOfAvoidanceEnabled,
 } from '../../state/settings/settingsSlice';
 
+type VisibilityActionRow = {
+  /** The settings creator this layer writes; `null` for registration-only layers. */
+  readonly writes: { readonly type: string } | null;
+  readonly actions: (on: boolean, settings: EngineSettingsState) => readonly Action[];
+};
+
 /**
- * VISIBILITY_ACTION_ROW — total record mapping every VisibilityLayerKey to a
- * factory `(on, settings) => readonly Action[]`.
+ * VISIBILITY_ACTION_ROW — total record mapping every VisibilityLayerKey to
+ * its `writes` creator and its `actions` factory `(on, settings) => readonly
+ * Action[]`.
  *
  * Callers (applySceneEffect's show/hide arms) iterate the effect's layers,
  * look up each layer's factory, and dispatch every returned action. The bridge
  * (`syncVisibilityFades`) is called after all actions are dispatched so the
  * fade reflects the new intent.
  */
-export const VISIBILITY_ACTION_ROW: Record<
-  VisibilityLayerKey,
-  (on: boolean, settings: EngineSettingsState) => readonly Action[]
-> = {
+export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionRow> = {
   // ── Gate-backed layers (single boolean action) ─────────────────────────
   // These layers have a scalar `enabled` field in settings; one action suffices.
 
-  milkyWayDisk: (on) => [setMilkyWayEnabled(on)],
-  milkyWayLabel: (on) => [setMilkyWayLabelEnabled(on)],
-  filaments: (on) => [setFilamentsEnabled(on)],
-  orbitTrails: (on) => [setOrbitTrailsEnabled(on)],
-  volumesMaster: (on) => [setVolumesEnabled(on)],
-  flow: (on) => [setFlowEnabled(on)],
-  constellations: (on) => [setConstellationsEnabled(on)],
-  zoneOfAvoidance: (on) => [setZoneOfAvoidanceEnabled(on)],
+  milkyWayDisk: { writes: setMilkyWayEnabled, actions: (on) => [setMilkyWayEnabled(on)] },
+  milkyWayLabel: {
+    writes: setMilkyWayLabelEnabled,
+    actions: (on) => [setMilkyWayLabelEnabled(on)],
+  },
+  filaments: { writes: setFilamentsEnabled, actions: (on) => [setFilamentsEnabled(on)] },
+  orbitTrails: { writes: setOrbitTrailsEnabled, actions: (on) => [setOrbitTrailsEnabled(on)] },
+  volumesMaster: { writes: setVolumesEnabled, actions: (on) => [setVolumesEnabled(on)] },
+  flow: { writes: setFlowEnabled, actions: (on) => [setFlowEnabled(on)] },
+  constellations: {
+    writes: setConstellationsEnabled,
+    actions: (on) => [setConstellationsEnabled(on)],
+  },
+  zoneOfAvoidance: {
+    writes: setZoneOfAvoidanceEnabled,
+    actions: (on) => [setZoneOfAvoidanceEnabled(on)],
+  },
 
   // ── Per-item layers (one action per registered item) ────────────────────
   // These layers fan out across a `settings.<cluster>.items` record. The factory
   // reads the current item ids from settings so the action list always reflects
   // the live catalog set — no hardcoded id list to keep in sync.
 
-  survey: (on, settings) =>
-    Object.keys(settings.galaxyCatalogs.items).map((id) =>
-      setGalaxyCatalogVisible({ id: id as GalaxyCatalogId, enabled: on }),
-    ),
+  survey: {
+    writes: setGalaxyCatalogVisible,
+    actions: (on, settings) =>
+      Object.keys(settings.galaxyCatalogs.items).map((id) =>
+        setGalaxyCatalogVisible({ id: id as GalaxyCatalogId, enabled: on }),
+      ),
+  },
 
-  surveyLabel: (on, settings) =>
-    Object.keys(settings.galaxyCatalogs.items).map((id) =>
-      setGalaxyCatalogLabelEnabled({ id: id as GalaxyCatalogId, enabled: on }),
-    ),
+  surveyLabel: {
+    writes: setGalaxyCatalogLabelEnabled,
+    actions: (on, settings) =>
+      Object.keys(settings.galaxyCatalogs.items).map((id) =>
+        setGalaxyCatalogLabelEnabled({ id: id as GalaxyCatalogId, enabled: on }),
+      ),
+  },
 
-  starCatalogLabel: (on, settings) =>
-    Object.keys(settings.starCatalogs.items).map((id) =>
-      setStarCatalogLabelEnabled({ id: id as StarCatalogId, enabled: on }),
-    ),
+  starCatalogLabel: {
+    writes: setStarCatalogLabelEnabled,
+    actions: (on, settings) =>
+      Object.keys(settings.starCatalogs.items).map((id) =>
+        setStarCatalogLabelEnabled({ id: id as StarCatalogId, enabled: on }),
+      ),
+  },
 
-  bodyLabel: (on, settings) =>
-    Object.keys(settings.bodies.items).map((id) =>
-      setBodyLabelEnabled({ id: id as BodyId, enabled: on }),
-    ),
+  bodyLabel: {
+    writes: setBodyLabelEnabled,
+    actions: (on, settings) =>
+      Object.keys(settings.bodies.items).map((id) =>
+        setBodyLabelEnabled({ id: id as BodyId, enabled: on }),
+      ),
+  },
 
-  structureRing: (on, settings) =>
-    Object.keys(settings.structures.items).map((id) =>
-      setStructureItemEnabled({ id: id as StructureId, enabled: on }),
-    ),
+  structureRing: {
+    writes: setStructureItemEnabled,
+    actions: (on, settings) =>
+      Object.keys(settings.structures.items).map((id) =>
+        setStructureItemEnabled({ id: id as StructureId, enabled: on }),
+      ),
+  },
 
-  structureLabel: (on, settings) =>
-    Object.keys(settings.structures.items).map((id) =>
-      setStructureLabelEnabled({ id: id as StructureId, enabled: on }),
-    ),
+  structureLabel: {
+    writes: setStructureLabelEnabled,
+    actions: (on, settings) =>
+      Object.keys(settings.structures.items).map((id) =>
+        setStructureLabelEnabled({ id: id as StructureId, enabled: on }),
+      ),
+  },
 
-  // volumeField uses `writeVolumeField` with a `{ enabled }` patch — the same
-  // action FADE_ROW maps from `writeVolumeField.type` to `'volumeField'`. The
+  // volumeField uses `writeVolumeField` with a `{ enabled }` patch. The
   // `enabled` field is `DataItemSettings.enabled`, the per-item visibility axis
   // shared by all source-type clusters. `items` is a Partial record (fields may
   // be absent until the volume's slot commits), so only present ids are emitted.
-  volumeField: (on, settings) =>
-    Object.keys(settings.volumes.items).map((id) =>
-      writeVolumeField({ id: id as VolumeFieldId, patch: { enabled: on } }),
-    ),
+  volumeField: {
+    writes: writeVolumeField,
+    actions: (on, settings) =>
+      Object.keys(settings.volumes.items).map((id) =>
+        writeVolumeField({ id: id as VolumeFieldId, patch: { enabled: on } }),
+      ),
+  },
 
   // ── Registration-only layers (no settings action) ───────────────────────
   // proceduralDisks, texturedDisks, and scaleBar are always-on overlays (or
   // React-owned). Their visibility is not controlled by settings actions, so the
   // factory returns [] — a no-op. The table stays TOTAL: every key resolves to
-  // a function; the show/hide loop dispatches nothing for these layers, which is
+  // a row; the show/hide loop dispatches nothing for these layers, which is
   // the correct behaviour.
 
-  proceduralDisks: () => [],
-  texturedDisks: () => [],
-  scaleBar: () => [],
+  proceduralDisks: { writes: null, actions: () => [] },
+  texturedDisks: { writes: null, actions: () => [] },
+  scaleBar: { writes: null, actions: () => [] },
 };
+
+/**
+ * FADE_ROW — derived inverse of VISIBILITY_ACTION_ROW: write-action type
+ * string → the VisibilityLayerKey it drives. watchFadesSaga looks this up by
+ * action.type to fire `syncFades` for the one affected layer.
+ */
+export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = Object.fromEntries(
+  Object.entries(VISIBILITY_ACTION_ROW)
+    .filter((entry): entry is [VisibilityLayerKey, VisibilityActionRow & { writes: { type: string } }] =>
+      entry[1].writes !== null,
+    )
+    .map(([key, row]) => [row.writes.type, key]),
+);

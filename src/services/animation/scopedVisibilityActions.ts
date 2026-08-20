@@ -38,9 +38,9 @@ const LABEL_SLICES: Record<
   string,
   (on: boolean, settings: EngineSettingsState) => readonly Action[]
 > = {
-  milkyWay: (on, settings) => VISIBILITY_ACTION_ROW.milkyWayLabel(on, settings),
-  survey: (on, settings) => VISIBILITY_ACTION_ROW.surveyLabel(on, settings),
-  structure: (on, settings) => VISIBILITY_ACTION_ROW.structureLabel(on, settings),
+  milkyWay: (on, settings) => VISIBILITY_ACTION_ROW.milkyWayLabel.actions(on, settings),
+  survey: (on, settings) => VISIBILITY_ACTION_ROW.surveyLabel.actions(on, settings),
+  structure: (on, settings) => VISIBILITY_ACTION_ROW.structureLabel.actions(on, settings),
 };
 
 const FAMILIES: Record<'survey' | 'structureRing' | 'label', ScopeHandler> = {

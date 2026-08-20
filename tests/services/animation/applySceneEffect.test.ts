@@ -491,7 +491,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
       (k) => !REGISTRATION_ONLY.includes(k),
     );
     for (const key of gateBacked) {
-      const actions = VISIBILITY_ACTION_ROW[key](true, settings);
+      const actions = VISIBILITY_ACTION_ROW[key].actions(true, settings);
       expect(Array.isArray(actions), `key '${key}' must return an array`).toBe(true);
       // All non-registration-only keys have at least one item in the settings fixture
       // (survey and structureRing etc. have one id each, volumeField has zero items
@@ -508,15 +508,15 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   it('registration-only layers return []', () => {
     for (const key of REGISTRATION_ONLY) {
-      const actionsOn = VISIBILITY_ACTION_ROW[key](true, settings);
-      const actionsOff = VISIBILITY_ACTION_ROW[key](false, settings);
+      const actionsOn = VISIBILITY_ACTION_ROW[key].actions(true, settings);
+      const actionsOff = VISIBILITY_ACTION_ROW[key].actions(false, settings);
       expect(actionsOn, `${key}(true) must be []`).toEqual([]);
       expect(actionsOff, `${key}(false) must be []`).toEqual([]);
     }
   });
 
   it('surveyLabel factory emits one setGalaxyCatalogLabelEnabled per catalog id', () => {
-    const actions = VISIBILITY_ACTION_ROW['surveyLabel'](false, settings) as ReturnType<
+    const actions = VISIBILITY_ACTION_ROW['surveyLabel'].actions(false, settings) as ReturnType<
       typeof setGalaxyCatalogLabelEnabled
     >[];
     expect(actions).toHaveLength(1);
@@ -524,7 +524,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
   });
 
   it('structureLabel factory emits one setStructureLabelEnabled per structure id', () => {
-    const actions = VISIBILITY_ACTION_ROW['structureLabel'](true, settings) as ReturnType<
+    const actions = VISIBILITY_ACTION_ROW['structureLabel'].actions(true, settings) as ReturnType<
       typeof setStructureLabelEnabled
     >[];
     expect(actions).toHaveLength(1);
@@ -533,7 +533,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   it('volumeField factory emits one writeVolumeField({ id, patch:{enabled} }) per volume item', () => {
     const settingsWithVolume = makeSettings({ volumeFieldIds: ['cf4-density'] });
-    const actions = VISIBILITY_ACTION_ROW['volumeField'](true, settingsWithVolume) as ReturnType<
+    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(true, settingsWithVolume) as ReturnType<
       typeof writeVolumeField
     >[];
     expect(actions).toHaveLength(1);
@@ -542,7 +542,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   it('volumeField factory returns [] when volumes.items is empty', () => {
     // Default settings fixture has no volume items.
-    const actions = VISIBILITY_ACTION_ROW['volumeField'](true, settings);
+    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(true, settings);
     expect(actions).toEqual([]);
   });
 });

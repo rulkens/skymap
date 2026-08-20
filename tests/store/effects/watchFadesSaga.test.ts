@@ -19,6 +19,10 @@ import {
   setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
+import {
+  VISIBILITY_ACTION_ROW,
+  FADE_ROW,
+} from '../../../src/services/animation/visibilityActionRow';
 
 describe('watchFadesSaga', () => {
   let store: ReturnType<typeof buildStore>['store'];
@@ -111,5 +115,16 @@ describe('watchFadesSaga', () => {
 
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
+  });
+
+  // ── FADE_ROW is VISIBILITY_ACTION_ROW's derived inverse ─────────────────
+  // Fails when two rows declare the same writer: the derivation is
+  // last-write-wins, so a colliding second row would silently take over the
+  // first row's FADE_ROW entry and this assertion would catch it failing.
+
+  it('every FADE_ROW entry maps to the layer whose row declares that writer', () => {
+    for (const [key, row] of Object.entries(VISIBILITY_ACTION_ROW)) {
+      expect(row.writes === null || FADE_ROW[row.writes.type] === key).toBe(true);
+    }
   });
 });

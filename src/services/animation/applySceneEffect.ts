@@ -89,7 +89,7 @@ export function applySceneEffect(
       // action instead — the reactive settings→fade bridge animates those, so
       // they take no part in the explicit sync below.
       for (const layer of effect.layers) {
-        for (const action of VISIBILITY_ACTION_ROW[layer](true, state.settings)) {
+        for (const action of VISIBILITY_ACTION_ROW[layer].actions(true, state.settings)) {
           store.dispatch(action);
         }
       }
@@ -109,7 +109,7 @@ export function applySceneEffect(
     case 'hide': {
       // Mirror of show: dispatch visibility-off actions, then sync the bridge.
       for (const layer of effect.layers) {
-        for (const action of VISIBILITY_ACTION_ROW[layer](false, state.settings)) {
+        for (const action of VISIBILITY_ACTION_ROW[layer].actions(false, state.settings)) {
           store.dispatch(action);
         }
       }
