@@ -1,23 +1,11 @@
 /**
- * syncVisibilityFades — unit tests for the private per-row `applyIntent` AND
- * the public batch bridge `syncVisibilityFades`.
+ * syncVisibilityFades — the private per-row `applyIntent` and the public batch
+ * bridge.
  *
- * `applyIntent` is the fades-ONLY primitive of the intent → fade bridge. Its
- * tests isolate its four obligations:
- *
- *   1. Animated: read intent, `fadeTo` the handle to 1 (FADE_IN) or 0 (FADE_OUT).
- *   2. Non-animated: `setImmediate` instead, never `fadeTo`.
- *   3. An explicit `guard() === false` skips the whole op — no fade, no post.
- *   4. `post` runs after the fade, with `(state, item)`.
- *
- * Strategy: a stubbed fades registry with typed spies, plus hand-built FadeLayer
- * rows whose intent/guard/post/handle the test controls. Driving these isolates
- * one behaviour per test without standing up the real FADE_LAYERS or a GPU.
- *
- * The `syncVisibilityFades` tests, by contrast, drive the REAL `FADE_LAYERS`
- * through the public bridge: they cover the intent-subset walk (with/without an
- * `only` filter), the asymmetric batch wake, and the fades-only / no-settings
- * contract.
+ * `applyIntent` is driven against hand-built FadeLayer rows whose
+ * intent/guard/post/handle the test controls, isolating one obligation per test.
+ * The bridge tests instead drive the REAL `FADE_LAYERS`, so the intent-subset walk
+ * and the asymmetric batch wake are exercised against the production manifest.
  */
 
 import { describe, it, expect, vi } from 'vitest';

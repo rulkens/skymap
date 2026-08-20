@@ -1,14 +1,10 @@
 /**
  * milkyWayLayer — the one registry row whose pick set is NARROWER than its draw
- * set.
- *
- * The impostor's hit target is a single disc sized from the galaxy's physical
- * radius, so its screen footprint grows without bound as the camera closes.
- * Combined with the cross-slab pick fold — which is SLAB-ordered, so any NEAR0
- * hit beats every COSMO galaxy and structure marker regardless of depth — a
- * screen-filling backdrop swallows every click made from inside the disc. The
- * gate closing earlier than `enabled` is what stops that, and nothing else in
- * the suite would notice its removal: the disc still draws either way.
+ * set. Its hit target is a disc sized from the galaxy's physical radius, so the
+ * footprint grows without bound as the camera closes; with the pick fold being
+ * SLAB-ordered (any NEAR0 hit beats every COSMO one regardless of depth), a
+ * screen-filling backdrop would swallow every click made from inside the disc.
+ * Nothing else in the suite notices the gate's removal — the disc still draws.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -20,18 +16,13 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-/**
- * Toggle on and fully faded in — so both gates reduce to the camera distance.
- *
- * `opacityOf` is a MULTIPLIER in `deriveMilkyWayCloudAlpha`, not a fade-tail
- * fallback OR'd against the toggle, so 0 here would zero the whole gate and
- * make every case below vacuously unpickable.
- */
+// Toggle on and fully faded in, so both gates reduce to camera distance.
+// `opacityOf` is a MULTIPLIER in `deriveMilkyWayCloudAlpha`, not a fade-tail
+// fallback OR'd against the toggle: 0 here makes every case vacuously unpickable.
 const STATE = {
   settings: { milkyWay: { enabled: true } },
   subsystems: {
     fades: { opacityOf: vi.fn(() => 1) },
-    // resolveLayerOpacity's clip factor; no clip plays in this fixture.
     clipPlayer: { clipOpacityOf: () => 1 },
   },
 } as unknown as EngineState;
@@ -52,9 +43,8 @@ function makeCtx(camDistMpc: number): ReadyFrameContext {
 
 describe('milkyWayLayer pick vs draw', () => {
   it('keeps drawing but stops taking clicks once the camera is inside the disc', () => {
-    // Well inside the impostor, and still an order of magnitude outside the
-    // 2 kpc approach fade — so this is squarely a frame where the disc is
-    // DRAWN at full strength and must nonetheless be unpickable.
+    // Well inside the impostor, still an order of magnitude outside the 2 kpc
+    // approach fade: the disc is DRAWN at full strength here.
     const inside = makeCtx(0.02);
     expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproach.fullAt);
     expect(milkyWayLayer.enabled(STATE, inside)).toBe(true);
@@ -67,9 +57,8 @@ describe('milkyWayLayer pick vs draw', () => {
   });
 
   it('stays unpickable wherever it is invisible — pick is a strict subset of draw', () => {
-    // Deep in the approach fade the disc has dissolved against the Gaia
-    // starfield. `pickEnabled` composes over `enabled` rather than restating
-    // its terms, so an invisible disc cannot come back as a click target.
+    // `pickEnabled` composes over `enabled` rather than restating its terms, so an
+    // invisible disc cannot come back as a click target.
     const dissolved = makeCtx(SCALE_FADE_BANDS.milkyWayApproach.goneAt / 2);
     expect(milkyWayLayer.enabled(STATE, dissolved)).toBe(false);
     expect(milkyWayLayer.pickEnabled!(STATE, dissolved)).toBe(false);

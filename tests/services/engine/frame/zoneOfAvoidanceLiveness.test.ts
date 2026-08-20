@@ -1,14 +1,7 @@
 /**
- * deriveZoneOfAvoidanceLiveness — the single per-frame projection both
- * zone-of-avoidance layers (the reduced-res band raymarch and the
- * hdr-composite + full-res lettering) consume to decide whether the band is
- * live this frame, and at what opacity.
- *
- * These tests pin the ONE derivation both layers share — the composed
- * opacity (`zoneOfAvoidanceLayerOpacity(camDist, resolveLayerOpacity(...))`)
- * so producer and consumer can't disagree, including the
- * `volumeLiveness.ts`-mirroring gate on `state.gpu.zoneOfAvoidanceRenderer`
- * (no empty pass opens pre-bootstrap).
+ * deriveZoneOfAvoidanceLiveness — the one projection the band's producer and
+ * consumer share, so they cannot disagree, including the renderer-null gate that
+ * keeps an empty pass from opening pre-bootstrap.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -40,7 +33,6 @@ function makeState({
     gpu: { zoneOfAvoidanceRenderer: renderer },
     subsystems: {
       fades: { opacityOf: vi.fn(() => toggleOpacity) },
-      // Always-1 stub — no clip plays in these fixtures; the clip factor is neutral.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;

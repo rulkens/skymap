@@ -51,7 +51,6 @@ function makeState(
       fades: {
         opacityOf: () => layerOpacity,
       },
-      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;

@@ -1,27 +1,12 @@
 /**
- * foregroundLabelsLayer — unit tests for the near-field caption row.
+ * foregroundLabelsLayer — two load-bearing properties of the caption row.
  *
- * Two things are load-bearing here:
+ * The `enabled` gate must read DEMAND, never `renderer.glyphCount()`: once every
+ * target hits 0, `setLabels([])` zeroes it and the gate latches false forever.
  *
- *   1. The `enabled` gate reads DEMAND, never the artifact of the last draw:
- *      a non-null second label renderer, the distance gates, AND at least one
- *      settings switch (or fade-registry opacity, or a still-fading caption)
- *      that could put a caption on screen this frame. It must NEVER read
- *      `renderer.glyphCount()` — a prior version did, and once every
- *      caption's fade target hit 0 in the same frame (the labels master
- *      toggle switching off) `draw`'s `setLabels([])` zeroed the glyph count
- *      and the gate latched false forever, un-fixable by re-enabling the
- *      toggle. The regression test below pins a renderer whose LAST set was
- *      empty returning `enabled() === true` once settings demand it.
- *
- *   2. `draw` feeds the renderer the f64-DERIVED data, mirroring the sphere-body
- *      layers' `composeBodyMvp` seam. The caption anchors sit ~1 AU from the
- *      render origin, where the NEAR0 vp's view translation nearly cancels them
- *      in f32 — so the layer rebases both operands into the camera-relative
- *      frame before the f32 upload: anchors become `pos − camPos`, and the vp
- *      is folded via `rebaseViewProj(view.slab.vp, camPos)` (the slab's f64
- *      `vp`, NOT the f32-narrowed `view.vp`). Consuming `view.vp` would resolve
- *      the cancellation after the low-order bits are already gone.
+ * `draw` must feed the renderer f64-DERIVED data — anchors as `pos − camPos`, vp
+ * folded from the slab's f64 `vp`, NOT the narrowed `view.vp`, which resolves the
+ * ~1 AU cancellation only after the low-order bits are gone.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -264,7 +249,6 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     subsystems: {
       scheduler: { requestRender: vi.fn<() => void>() },
       fades: { opacityOf: () => opts.layerFade },
-      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;

@@ -1,23 +1,10 @@
 /**
- * volumeUpsampleLayer tests — gate predicate (five enabled() cases) and
- * draw behaviour (the call to volumeUpsample.draw + the defensive null-
- * guard).
+ * volumeUpsampleLayer — the gate predicate and the draw call, against cast stubs
+ * rather than a real GPUDevice.
  *
- * These tests deliberately do not stand up a real GPUDevice — all
- * GPU-typed values are cast stubs.  The split between `enabled` and
- * `draw` (from the `ContentLayer` interface) lets us assert the gate
- * predicate independently from the actual draw commands, which is the
- * main reason the interface exists.  See `ContentLayer.d.ts` for the
- * rationale.
- *
- * `draw`'s second argument is a `SlabView`, but `volumeUpsampleLayer`
- * doesn't read it — the upsample is a screen-space blit of an
- * already-rendered offscreen target, not a re-projected draw — so the
- * fixture below is an opaque placeholder.
- *
- * The implementation reads `ctx.renderTargets.viewOf('volume')` — the
- * half-res row of the offscreen target table — and the draw assertion
- * checks `drawSpy.mock.calls[0]![1]` equals that view.
+ * `draw`'s `SlabView` argument is an opaque placeholder here: the upsample is a
+ * screen-space blit of an already-rendered offscreen, not a re-projected draw, so
+ * the layer never reads it.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { volumeUpsampleLayer } from '../../../../../src/services/engine/frame/passes/volumeUpsampleLayer';
@@ -133,7 +120,6 @@ function livenessState(init: {
     },
     subsystems: {
       fades: { opacityOf: () => init.masterOpacity ?? 1 },
-      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
     settings: { volumes: { enabled: init.volumesEnabled ?? true, items: {} } },

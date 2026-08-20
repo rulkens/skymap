@@ -1,13 +1,7 @@
 /**
- * zoneOfAvoidanceLayer tests — the reduced-resolution zone-of-avoidance band
- * raymarch as a ContentLayer (`target: 'zoa'`, `slab: COSMO`, `blend:
- * 'additive'`), the reduced-res producer half (the upsample layer is the
- * consumer).
- *
- * The executor owns the pass + the additive-identity `(0, 0, 0, 0)` clear;
- * this layer only draws. These tests pin the draw-arg contract (the
- * downsampled viewport threaded to `zoneOfAvoidanceRenderer.draw`, the
- * placeholder shape constants, the opacity arg) and the `enabled` gate
+ * zoneOfAvoidanceLayer — the reduced-res producer half of the band (the upsample
+ * layer is the consumer). The executor owns the pass and the additive-identity
+ * clear, so what is pinned here is the draw-arg contract and the `enabled` gate
  * tracking `deriveZoneOfAvoidanceLiveness`.
  */
 
@@ -75,7 +69,6 @@ function liveState(
     settings: { zoneOfAvoidance: { color: [1, 1, 1], intensity: 1, edgeSharpness: 1 } },
     subsystems: {
       fades: { opacityOf: () => 1 },
-      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;

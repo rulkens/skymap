@@ -1,17 +1,12 @@
 /**
- * scopedVisibilityActions — resolve one `'family:scope'` show/hide entry to
- * its targeted settings action(s).
+ * scopedVisibilityActions — one `'family:scope'` show/hide entry to its targeted
+ * settings action(s). The per-item counterpart of `VISIBILITY_ACTION_ROW`: where a
+ * row factory fans a bare layer key over EVERY registered item, a scoped entry
+ * names one. Both dispatch the creators the UI does, so the reactive settings→fade
+ * bridge animates the change like a panel toggle.
  *
- * The per-item counterpart of `VISIBILITY_ACTION_ROW`: where a row factory
- * fans a bare layer key out over EVERY registered item, a scoped entry names
- * one item (or one named slice) and gets exactly the action(s) for it. Both
- * dispatch the same settings creators the UI does, so the reactive
- * settings→fade bridge animates the change identically to a panel toggle.
- *
- * Families and label scopes are DATA TABLES (not predicate chains) — adding a
- * family or a label scope is one row. The `label:` table's miss arm is the
- * per-category case: any scope that isn't a named slice is a `StructureId`
- * (the template-literal type admits nothing else).
+ * The `label:` table's miss arm is the per-category case: any scope that is not a
+ * named slice is a `StructureId` — the template-literal type admits nothing else.
  */
 
 import type { Action } from '@reduxjs/toolkit';

@@ -1,24 +1,12 @@
 /**
- * applySceneEffect + VISIBILITY_ACTION_ROW — unit tests.
+ * applySceneEffect + VISIBILITY_ACTION_ROW.
  *
- * ### Strategy
+ * The simple arms run against a spy `dispatch`; the show/hide arms need a real
+ * store, so both the visibility actions and `syncVisibilityFades` exercise a real
+ * state shape without deep mocking.
  *
- * `applySceneEffect` is a thin dispatch table: each arm either dispatches to
- * the store or calls `syncVisibilityFades`. Tests use:
- *
- *   - A spy `dispatch` (vi.fn) so action payloads can be inspected without
- *     running a real store for the simple arms.
- *   - A real store (`createAppStore`) for the show/hide arms, so both the
- *     dispatched visibility actions AND `syncVisibilityFades` can run against
- *     a real state shape without deep mocking.
- *   - A `vi.mock` replacement for the syncVisibilityFades module to assert bridge calls.
- *
- * ### VISIBILITY_ACTION_ROW total-record tests
- *
- * The last describe block iterates every VisibilityLayerKey and asserts that
- * its factory returns an Array. Gate-backed layers must return length ≥ 1 (given
- * a minimal settings fixture); registration-only layers must return []. This is
- * the "total record" guard that prevents a missing key from silently no-oping.
+ * The total-record block is the guard against a missing key silently no-oping:
+ * gate-backed layers must return at least one action, registration-only rows [].
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

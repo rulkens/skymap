@@ -1,22 +1,10 @@
 /**
- * fadeLayers — unit tests for the fade-ownership manifest + the generic
- * `seedFades` construction seed (relocated from the old registerOverlayFades).
+ * fadeLayers — the manifest's seed values, the load-bearing pair being that a
+ * default-off session must not flash its layer on frame 1 and that demand-loaded
+ * rows seed at 0 so their first-load `fadeTo(1)` still fades in.
  *
- * Invariants targeted:
- *
- *   1. The overlay/milkyWay handles seed at their settings-derived or fixed
- *      opacities. milkyWay is the load-bearing case: a default-off session must
- *      not flash the Milky Way on frame 1.
- *   2. The volumesMaster handle seeds at `settings.volumes.enabled`.
- *   3. The label-layer handles seed correctly: milkyWay from
- *      `settings.milkyWay.labelEnabled`, galaxy + scaleBar at 1.
- *   4. Each structure ring + label seeds from its per-category settings row.
- *   5. The demand-loaded sets (galaxy catalogs, filament, flow, volume fields)
- *      seed at 0 so their first-load `fadeTo(1)` still fades them in.
- *
- * Strategy: build a minimal `EngineState` carrying a REAL fade registry (so we
- * can assert via `opacityOf`, not just count `register` spy calls) plus the
- * settings paths `seedFades` reads. `seedFades` touches nothing else — no GPU.
+ * The fixture carries a REAL fade registry, so the assertions read `opacityOf`
+ * rather than counting `register` spy calls.
  */
 
 import { describe, it, expect, vi, expectTypeOf } from 'vitest';

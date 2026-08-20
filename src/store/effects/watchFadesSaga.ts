@@ -1,28 +1,11 @@
 /**
- * watchFadesSaga — drive the intent→fade bridge off settings writes. Two arms:
+ * watchFadesSaga — settings write → fade. Per-leaf writes route through FADE_ROW,
+ * so adding a fade-triggering layer is one `writes` entry in VISIBILITY_ACTION_ROW
+ * and this saga never changes. The `mergeSnapshot` arm re-fades every row, which
+ * is why a tour scene-restore needs NO restore-specific engine effect —
+ * `restoreSceneSaga` just puts the snapshot.
  *
- *   1. Per-leaf writes in FADE_ROW → fade the one affected layer.
- *   2. `mergeSnapshot` (a bulk settings write) → fade EVERY row.
- *
- * FADE_ROW (imported from visibilityActionRow.ts, derived from its `writes`
- * field) is the flat 1:1 action→VisibilityLayerKey registry that replaces a
- * chain of near-identical setter bodies (simplicity.md §7 — data-table, not
- * a branch chain). Adding a new fade-triggering layer is one `writes` entry
- * in VISIBILITY_ACTION_ROW; this saga never changes.
- *
- * The `mergeSnapshot` arm is why a tour scene-restore needs NO restore-specific
- * engine effect: `restoreSceneSaga` simply `put`s `mergeSnapshot(settings)`, and
- * this arm reacts by re-fading every layer to the restored intent — the same
- * "settings write → fade" rule the per-leaf arm applies, just over the whole set.
- * `mergeSnapshot` is the only bulk write, so a full pass (`syncFades()` with no
- * rows) is the right scope; the bridge's no-op-if-unchanged guard makes re-fading
- * untouched rows free.
- *
- * The worker reaches the engine via getContext — the ReconcileEffects closure
- * registered by the engine after construction. This keeps the store layer free
- * of engine imports while still letting the saga trigger the fade effect.
- * (visibilityActionRow.ts imports only @types + settingsSlice, no engine/GPU,
- * so that constraint holds for this import too.)
+ * The engine is reached via getContext so the store layer keeps no engine imports.
  */
 
 import { takeEvery, getContext } from 'typed-redux-saga';
@@ -33,7 +16,6 @@ import { FADE_ROW } from '../../services/animation/visibilityActionRow';
 import type { ReconcileEffects } from './ReconcileEffects';
 
 export function* watchFadesSaga() {
-  // Arm 1 — per-leaf writes: fade the single affected layer.
   yield* takeEvery(
     (a: Action) => a.type in FADE_ROW,
     function* (action: Action) {
@@ -42,7 +24,6 @@ export function* watchFadesSaga() {
     },
   );
 
-  // Arm 2 — bulk restore: a mergeSnapshot re-fades every row to the merged intent.
   yield* takeEvery(mergeSnapshot, function* () {
     const fx = yield* getContext<ReconcileEffects>('reconcile');
     fx.syncFades();

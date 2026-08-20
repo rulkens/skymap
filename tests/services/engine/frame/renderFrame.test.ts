@@ -1,18 +1,8 @@
 /**
- * renderFrame — unit tests for the per-frame WebGPU command-encoder
- * dispatcher.  We mock the GPU device, the command encoder, the render
- * pass, and every renderer/subsystem the function calls, so the test
- * runs without a real WebGPU context.
- *
- * Coverage focus:
- *   - encoder lifecycle: createCommandEncoder + finish + submit happen
- *     exactly once each, in the right order
- *   - HDR render-pass colour attachment uses the render-target table's
- *     `viewOf('hdr')` (HDR offscreen texture)
- *   - galaxyPointRenderer.draw is called with the canonical settings record
- *     (selectedIndex sentinel translation included)
- *   - the hdr→swap composite runs after pass.end with the correct
- *     exposure + curve tone
+ * renderFrame — the per-frame command-encoder dispatcher: encoder lifecycle and
+ * ordering, the HDR attachment coming from the render-target table, and the
+ * hdr→swap composite running after `pass.end`. The device, encoder, pass and every
+ * renderer are mocked, so nothing here needs a real WebGPU context.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -580,7 +570,6 @@ function makeInput(
           // layer alive through fade-out tails. A minimal opacityOf stub
           // keeps the gate from crashing.
           fades: { opacityOf: () => 1 },
-          // resolveLayerOpacity's clip factor; no clip plays in this fixture.
           clipPlayer: { clipOpacityOf: () => 1 },
         },
       } as never,

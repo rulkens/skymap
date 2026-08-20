@@ -1,25 +1,13 @@
 /**
- * Visual baseline — renderFrame's draw-command sequence, independent of how
- * many `beginRenderPass` blocks host those draws. A pass-split refactor that
- * changes pass boundaries but not renderer dispatch must still produce a
- * byte-identical hash here.
+ * Visual baseline — renderFrame's draw-command sequence, independent of how many
+ * `beginRenderPass` blocks host those draws, so a pass-split refactor must still
+ * hash byte-identically. Boundaries are excluded on purpose: a split changes their
+ * count, which would fail the baseline by definition.
  *
- * The hash excludes `beginRenderPass` boundaries on purpose: a pass split
- * intentionally changes their count, so including them would fail the
- * baseline by definition. It captures the per-renderer draw payload instead
- * (renderer name + argument shape).
- *
- * Recorded at the renderer-mock entry point (`galaxyPointRenderer.draw`,
- * `milkyWayCloudRenderer.drawStars`/`.drawDust`, etc.), not `pass.draw` on
- * the GPU encoder — the mocks short-circuit before the encoder ever sees
- * `draw`, so "what did the orchestrator dispatch?" is the only granularity
- * observable here.
- *
- * Every HDR pass's `enabled` gate is wired true so the fixture exercises one
- * renderer-draw entry per layer plus the hdr→swap composite. The horizon
- * shell is excluded: its fade band is the mirror image of the Milky Way's,
- * so the two never co-exist in one frame (covered separately in
- * `passes.test.ts` and `horizonShellFadeAlpha`).
+ * Recorded at the renderer-mock entry point, not `pass.draw` on the encoder — the
+ * mocks short-circuit first, so "what did the orchestrator dispatch?" is the only
+ * observable granularity. The horizon shell is excluded: its fade band mirrors the
+ * Milky Way's, so the two never co-exist in one frame.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -516,7 +504,6 @@ describe('renderFrame visual baseline', () => {
             destroy: vi.fn(),
             label: 'fadeRegistry',
           },
-          // resolveLayerOpacity's clip factor; no clip plays in this fixture.
           clipPlayer: { clipOpacityOf: () => 1 },
         },
       } as never,

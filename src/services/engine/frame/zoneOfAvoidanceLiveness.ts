@@ -1,12 +1,9 @@
 /**
- * zoneOfAvoidanceLiveness — single derivation of "is the ZoA guide band live
- * this frame, and at what opacity?", shared by producer
- * (`zoneOfAvoidanceLayer`) and consumer (`zoneOfAvoidanceUpsampleLayer`) so
- * their gates can't disagree about which offscreen has live content this
- * frame — mirrors `volumeLiveness.ts`, including its renderer-null gate.
- *
- * Returns `null` rather than 0 for "not live" so callers can gate on
- * `!== null` without risking `if (opacity)` on a legitimate zero.
+ * zoneOfAvoidanceLiveness — one derivation of "is the ZoA guide band live this
+ * frame, and at what opacity?", shared by producer (`zoneOfAvoidanceLayer`) and
+ * consumer (`zoneOfAvoidanceUpsampleLayer`) so their gates can't disagree about
+ * which offscreen has live content. `null` rather than 0 for "not live", so a
+ * caller can gate on `!== null` without risking `if (opacity)` on a real zero.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

@@ -79,7 +79,6 @@ function makeState(
     },
     subsystems: {
       fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },
-      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
     gpu: { flowFieldRenderer: over.flowFieldRenderer ?? null },

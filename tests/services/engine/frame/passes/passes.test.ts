@@ -1,20 +1,10 @@
 /**
- * passes — unit tests for the per-layer `enabled` gates and the
- * `CONTENT_LAYERS` migration-table shape.
+ * passes — the per-layer `enabled` gates and the `CONTENT_LAYERS` table shape,
+ * against stub state + ctx with no GPU device. The spot-checked `draw` calls pin
+ * that a layer threads the resolved `SlabView`'s `vp`/`viewportPx` rather than
+ * reading `ctx.vp`/`ctx.canvasSize` directly.
  *
- * Test surface:
- *   - Each layer's `enabled(state, ctx)` predicate flips correctly for
- *     its gate, with stub state + ctx (no GPU device).
- *   - `CONTENT_LAYERS` holds every hdr-group layer with the migration
- *     table's `{slab, target, blend}` fields.
- *   - A few `draw` calls verified end-to-end with stub renderers,
- *     confirming which renderer method fires and with which args,
- *     including that `draw` threads the resolved `SlabView`'s
- *     `vp`/`viewportPx` rather than reading `ctx.vp`/`ctx.canvasSize`
- *     directly.
- *
- * Encoder command sequencing and the post-process tone-map running
- * outside the HDR pass are covered by `renderFrame.test.ts`.
+ * Encoder sequencing and the post-process chain live in `renderFrame.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -159,7 +149,6 @@ const STATE_STUB = {
       opacityOf: () => 1,
       isAnyAnimating: () => false,
     },
-    // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
     clipPlayer: { clipOpacityOf: () => 1 },
   },
   // The Milky-Way rows' `draw` now goes through the same

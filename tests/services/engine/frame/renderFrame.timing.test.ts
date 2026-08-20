@@ -1,31 +1,11 @@
 /**
- * renderFrame — verify timing service is consulted per pass.
+ * renderFrame — the timing service is consulted per pass.
  *
- * Stubs renderFrame's dependencies, attaches a mock timingService, runs one
- * frame, then asserts:
- *
- *   1. `beginFrame` was called once.
- *   2. `descriptorFor(pass.name)` was called once per enabled layer — in
- *      this fixture point-sprites and the Milky-Way cloud's three rows
- *      (milky-way-aggregate, milky-way-upsample, milky-way); the rest are
- *      gated off via null subsystems / null optional renderers.
- *   3. The descriptor lands on `timestampWrites` of the corresponding
- *      `beginRenderPass` call — the orchestrator's
- *      `...(timestampWrites ? { ... } : {})` spread must materialise the
- *      field when the service is active.
- *   4. `endFrame` was called once with the encoder.
- *   5. With `state.gpu.timingService` null (the common case), none of
- *      `beginFrame`/`descriptorFor`/`endFrame` fire and the encoder
- *      commands stay byte-identical to the pre-timing path — the
- *      byte-identical claim itself is a snapshot in
- *      `renderFrameSplitBaseline.test.ts`; this test asserts the
- *      structural "no-call" invariant.
- *
- * The fixture stays local rather than importing `renderFrame.test.ts`'s
- * helper; its shape mirrors `renderFrameSplitBaseline.test.ts`'s
- * `makeMinimalInput` — encoder + pass stubs that record their call args,
- * renderers that no-op, and a `state` that gates every optional pass off so
- * the trace stays focused on the always-on passes.
+ * The fixture gates every optional pass off through null subsystems / null
+ * optional renderers, so the trace covers only point-sprites and the Milky-Way
+ * cloud's three rows. The byte-identical claim for the service-null path lives as
+ * a snapshot in `renderFrameSplitBaseline.test.ts`; this file pins the structural
+ * no-call invariant instead.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -396,7 +376,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // (opacity 0 ⇒ no render). Production seeds that fade from
         // `settings.milkyWay.enabled`, which is true here, hence 1.
         fades: { opacityOf: (id: { kind: string }) => (id.kind === 'milkyWay' ? 1 : 0) },
-        // resolveLayerOpacity's clip factor; no clip plays in this fixture.
         clipPlayer: { clipOpacityOf: () => 1 },
       },
     } as never,

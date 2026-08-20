@@ -96,7 +96,6 @@ function liveState(
     settings: { volumes: { enabled: true, items: {} } },
     subsystems: {
       fades: { opacityOf: () => 1 },
-      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
       clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
