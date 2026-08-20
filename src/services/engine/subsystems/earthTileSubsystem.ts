@@ -104,12 +104,12 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   // handle its resolution (declined or uploaded), so there's no third path to
   // keep in sync.
   const pendingLevelOf = new Map<string, number>();
-  let lastPlan: EarthTileDebugSnapshot['plan'] = null;
-  let lastDroppedAllocations = 0;
-  // The direction the last engaged plan was computed around — same lifecycle
-  // as `lastPlan` (set together, cleared together), so the debug snapshot's
-  // sub-camera readout never outlives the plan it describes.
-  let lastSubCameraDirLocal: Vec3 | null = null;
+  // Debug-snapshot readout of the last engaged plan; null exactly while disengaged.
+  let lastEngaged: {
+    readonly plan: NonNullable<EarthTileDebugSnapshot['plan']>;
+    readonly droppedAllocations: number;
+    readonly subCameraDirLocal: Vec3;
+  } | null = null;
 
   let frameCounter = 0;
   // Frame's stamped clock, so `readyMs` stays deterministic under a stepped clock.
@@ -304,10 +304,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     lastFrameNowMs = nowMs;
 
     if (!(plan.zWin > active.baseLevel)) {
-      // Disengaging: the last plan's shape stops being current information.
-      lastPlan = null;
-      lastDroppedAllocations = 0;
-      lastSubCameraDirLocal = null;
+      lastEngaged = null;
       standDown();
       return;
     }
@@ -369,9 +366,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       });
     }
 
-    lastPlan = { requestCount: plan.requests.length, zWin: plan.zWin, misses: notResidentCount };
-    lastDroppedAllocations = droppedAllocations;
-    lastSubCameraDirLocal = plan.subCameraDirLocal;
+    lastEngaged = {
+      plan: { requestCount: plan.requests.length, zWin: plan.zWin, misses: notResidentCount },
+      droppedAllocations,
+      subCameraDirLocal: plan.subCameraDirLocal,
+    };
 
     const windowMoved =
       uploaded === null ||
@@ -417,11 +416,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       deepestLevelKeys.push(`${entry.tile.x},${entry.tile.y}`);
     }
 
-    // `lastSubCameraDirLocal` is null exactly while disengaged, and `params`
-    // (the last tier's bands) is set together with it by `refreshParams`.
+    // `params` (the last tier's bands) is set together with `lastEngaged` by
+    // `refreshParams`.
     let subCamera: EarthTileDebugSnapshot['subCamera'] = null;
-    if (lastSubCameraDirLocal !== null && params !== null) {
-      const lonLat = directionToLonLatDeg(lastSubCameraDirLocal);
+    if (lastEngaged !== null && params !== null) {
+      const lonLat = directionToLonLatDeg(lastEngaged.subCameraDirLocal);
       subCamera = { ...lonLat, coveredMaxLevel: deepestBandLevelAt(params.bands, lonLat) };
     }
 
@@ -430,8 +429,8 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       capacity: slotsPerRow * slotsPerRow,
       used: stream.occupiedCount(),
       levels,
-      plan: lastPlan,
-      droppedAllocations: lastDroppedAllocations,
+      plan: lastEngaged?.plan ?? null,
+      droppedAllocations: lastEngaged?.droppedAllocations ?? 0,
       deepestLevelKeys,
       subCamera,
     };
@@ -446,9 +445,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     resources = null;
     resident.clear();
     pendingLevelOf.clear();
-    lastPlan = null;
-    lastDroppedAllocations = 0;
-    lastSubCameraDirLocal = null;
+    lastEngaged = null;
     manifest = null;
     params = null;
     paramsTier = null;
