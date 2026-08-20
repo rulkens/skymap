@@ -62,8 +62,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ancestor's own image, still correct data -- clamping there just insets
   // by a fraction of a texel, harmlessly).
   let atlasUvRaw = in.atlasUvOrigin + in.uv * in.atlasUvScale;
-  let atlasUvMin = in.atlasUvOrigin + vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL);
-  let atlasUvMax = in.atlasUvOrigin + in.atlasUvScale - vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL);
+  // A deep ancestor fallback (levelDelta >= ~7) can flatten the rect to under one atlas
+  // texel wide; the raw half-texel inset would then push min past max, which clamp()
+  // leaves indeterminate -- cap the inset at half the rect itself.
+  let atlasUvInset = min(vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL), 0.5 * in.atlasUvScale);
+  let atlasUvMin = in.atlasUvOrigin + atlasUvInset;
+  let atlasUvMax = in.atlasUvOrigin + in.atlasUvScale - atlasUvInset;
   let atlasUv = clamp(atlasUvRaw, atlasUvMin, atlasUvMax);
   let baseAlbedo = textureSampleLevel(surfaceTexture, atlasSampler, atlasUv, 0.0).rgb;
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;

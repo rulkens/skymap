@@ -160,7 +160,10 @@ describe('cutSurfaceTiles', () => {
       const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const ancX = x >> levelDelta;
       const ancY = y >> levelDelta;
-      const ancestorRect = { atlasUvOrigin: [0.25, 0.5] as const, atlasUvScale: [0.5, 0.5] as const };
+      const ancestorRect = {
+        atlasUvOrigin: [0.25, 0.5] as const,
+        atlasUvScale: [0.5, 0.5] as const,
+      };
       const residentSlot = (tile: EarthTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
           ? { slot: 3, ...ancestorRect }

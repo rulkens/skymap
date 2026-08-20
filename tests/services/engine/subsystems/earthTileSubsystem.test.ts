@@ -287,7 +287,11 @@ describe('earthTileSubsystem debug snapshot', () => {
     // diverge whenever ancestor fallback drops a leaf from `cut` (see
     // cutSurfaceTiles.ts) but still requests its file.
     subsystem.setLastCut([
-      { id: { z: MIN_TILE_LEVEL, x: 0, y: 0 }, originLocal: [1, 0, 0], resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1] } },
+      {
+        id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
+        originLocal: [1, 0, 0],
+        resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1] },
+      },
     ]);
     expect(subsystem.getDebugSnapshot().plan?.cutCount).toBe(1);
     expect(snap.droppedAllocations).toBe(0);

@@ -111,7 +111,10 @@ function EarthTileAtlasSection({
       </div>
 
       {snap.plan && (
-        <div className={styles.readout} title="Leaves in the last frame's drawn cut — unbounded, a growth watch">
+        <div
+          className={styles.readout}
+          title="Leaves in the last frame's drawn cut — unbounded, a growth watch"
+        >
           cut: {snap.plan.cutCount} tiles drawn
         </div>
       )}
