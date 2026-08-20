@@ -6,7 +6,7 @@ become bundle-declared, decide whether key totality still forces the dead
 rows." `ORPHAN` in the 2026-08-20 carry-forward audit: a distinct
 forward-looking question about the not-yet-built bundle-declared fades
 mechanism, not the same as rung 7's near-term dead-handle cleanup (a
-different, currently-live finding — see below), and not named in
+different finding, since discharged — see below), and not named in
 `decisions.md` #17's carried-forward list.
 
 ## What it is
@@ -15,12 +15,13 @@ Today, `FadeLayer` rows are a flat manifest and `FadeId`/
 `VisibilityLayerKey` are type-level unions that must stay total — every
 member of the union needs a row, even ones with no live consumer. The
 current-contracts-map's loose-spots table (`:189`) already names the present
-cost of that totality requirement: "2 fade rows have no consumer (union-
-totality artifacts)," `fadeLayers.ts:150-185`. (Widened by
-`renderer-layer-outliers.md` §3 to 5 registered handles with no consumer —
-proceduralDisks, texturedDisks, structureRing, starCatalogLabel, bodyLabel —
-2 of which are already tracked at
-[`docs/backlog/2026-07-29-unread-caption-fade-handles.md`](2026-07-29-unread-caption-fade-handles.md).)
+cost of that totality requirement. Rung 7 corrected the count and ruled on
+every member (`decisions.md` #18): the no-consumer set is 5 —
+`proceduralDisks`, `texturedDisks`, `scaleBar`, `starCatalogLabel`,
+`bodyLabel` (`structureRing` was listed in error; `scaleBar` was missing).
+The three registration-only rows are ACCEPTED (#18 D13) and the two label
+rows are rung 8's wire (#18 D12), which discharged the separate cleanup item
+that used to be tracked here.
 
 **This item is not that cleanup.** It's the forward-looking design question
 for after fades become bundle-declared: decisions.md #7 settles that
@@ -53,8 +54,8 @@ to answer this question in isolation from that reassessment — the shape of
 `fades?: readonly FadeLayer[]` on a bundle needs to exist first before "does
 totality still apply" has a concrete mechanism to be asked about. When the
 umbrella reassessment happens, fold this question in as one of the design
-choices for the bundle-declared fades sub-contract, alongside deciding
-whether `FADE_ROW`/`VISIBILITY_ACTION_ROW`'s hand-maintained inverse-map
-derivation (rung 7's explicit charter, decisions.md #9) shares an answer
-with it — both are "how total does a bundle-declared union need to stay"
-questions about the same fades machinery.
+choices for the bundle-declared fades sub-contract. The neighbouring
+inverse-map half of rung 7's charter is already answered and does not come
+with it: `FADE_ROW` derives from `VISIBILITY_ACTION_ROW`'s required `writes`
+field (#18 D2, `visibilityActionRow.ts:131-141`). What remains open here is
+only "how total does a bundle-declared union need to stay".

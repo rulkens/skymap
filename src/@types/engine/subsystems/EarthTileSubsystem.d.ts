@@ -11,6 +11,7 @@
 
 import type { EarthTilePlan } from '../../scene/EarthTilePlan';
 import type { EarthTilePlannerParams } from '../../scene/EarthTilePlannerParams';
+import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { Tier } from '../../data/Tier';
 
@@ -61,4 +62,11 @@ export type EarthTileSubsystem = Destroyable & {
    * keep-ticking predicate, never a wake; read even while disengaged.
    */
   isAnimating(): boolean;
+
+  /**
+   * A fresh, cheap-to-build snapshot of atlas residency for the DebugPanel —
+   * see `EarthTileDebugSnapshot`. Never call this from a render path; it
+   * exists for a low-rate poll, not the frame loop.
+   */
+  getDebugSnapshot(): EarthTileDebugSnapshot;
 };

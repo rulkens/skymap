@@ -75,7 +75,10 @@ function makeState(
           : over.renderer,
     },
     settings: { zoneOfAvoidance: { labelColor: [1, 1, 1], intensity: 1 } },
-    subsystems: { fades: { opacityOf: () => 1 } },
+    subsystems: {
+      fades: { opacityOf: () => 1 },
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
   } as unknown as EngineState;
 }
 

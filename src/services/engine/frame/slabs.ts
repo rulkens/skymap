@@ -131,15 +131,26 @@ const COSMO_FAR_MPC = 50000;
  * widened the same way. Because f32→f64 widening is exact, narrowing back
  * (`Float32Array.from(slab.vp)`) round-trips byte-equal to the original f32
  * matrix — which is why `slabViewOf` needs no COSMO special case below.
+ *
+ * `pivotRadiusMpc` (default `null`) is the orbit pivot's physical radius when
+ * one is focused — see `foregroundFrustum`'s near-plane bracket for why the
+ * near-field row keys off ALTITUDE above the pivot, not raw `cam.distance`,
+ * once a pivot is known.
  */
-export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
-  // The near-field slab's near/far are adaptive, sized from the camera's orbit
-  // distance by `foregroundFrustum` so depth precision holds from galaxy scale
-  // down to Earth's surface (and its far floor keeps the seeded orbit rings
-  // inside the frustum). This is unlike the COSMO row's fixed
+export function deriveSlabs(
+  cam: OrbitCamera,
+  cosmoVp: Mat4,
+  pivotRadiusMpc: number | null = null,
+): readonly Slab[] {
+  // The near-field slab's near/far are adaptive, sized from the camera's
+  // ALTITUDE above a known pivot (else raw orbit distance) by
+  // `foregroundFrustum`, so depth precision holds from galaxy scale down to
+  // standing on a body's surface — a large body's radius no longer dominates
+  // the bracket the way raw distance did. This is unlike the COSMO row's fixed
   // `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`: the cosmological scene's depth doesn't
   // change as the user zooms, only the near-field's does.
-  const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);
+  const altitudeMpc = pivotRadiusMpc !== null ? cam.distance - pivotRadiusMpc : cam.distance;
+  const { near: nearMpc, far: farMpc } = foregroundFrustum(altitudeMpc);
   // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
   // is exactly the frame pole (`frameUp(cam.upBasis)`; world +Y absent a
   // basis), so this tracks the cosmological slab's up through the one seam.

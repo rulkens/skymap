@@ -8,14 +8,16 @@
  * (the Milky-Way star cloud's look knobs),
  * `ZoneOfAvoidanceTuningSectionContainer` (the galactic-plane guide band's
  * look knobs), `DebugOverlaysSectionContainer`
- * (pick-buffer / disk-radius-ring toggles), `GalaxyProvenanceSectionContainer`
+ * (pick-buffer / disk-radius-ring toggles), `EarthTileAtlasSectionContainer`
+ * (textual atlas-residency readout — slot pressure, per-level resident/pending
+ * counts, last plan shape), `GalaxyProvenanceSectionContainer`
  * (a per-axis table of missing / highlight / show controls over measured-vs-
  * estimated tallies), and `ClipTriggersSectionContainer` (play/stop a registered clip
  * + launch a guided tour) / `ClipPathInspectorSectionContainer` (precompute +
  * scrub a clip's debug camera path) — every section that touches the store
  * owns its own container, so DebugPanel itself receives only the engine-handle
- * props (`slots`, `timingService`, `frameStats`, `passNames`) that App reads
- * off `handleRef`. Mount is owned by `App.tsx` (toggled by the `d` keyboard
+ * props (`slots`, `timingService`, `frameStats`, `passNames`, `engineHandleRef`)
+ * that App reads off `handleRef`. Mount is owned by `App.tsx` (toggled by the `d` keyboard
  * shortcut); when this component renders, all sections always render —
  * section-level visibility (e.g. "GPU timings unavailable") is each section's
  * own concern.
@@ -38,12 +40,15 @@
  */
 
 import { memo } from 'react';
+import type { RefObject } from 'react';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
+import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
+import EarthTileAtlasSectionContainer from '../containers/EarthTileAtlasSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
@@ -67,6 +72,8 @@ export type DebugPanelProps = {
    * the async bootstrap long after the handle is built.
    */
   assetPriorities: () => ReadonlyMap<string, number>;
+  /** Engine-handle ref, threaded to `EarthTileAtlasSectionContainer` for its `debug.earthTiles` / `debug.flyToLonLat` reach. */
+  engineHandleRef: RefObject<EngineHandle | null>;
 };
 
 function DebugPanel({
@@ -75,6 +82,7 @@ function DebugPanel({
   frameStats,
   passNames,
   assetPriorities,
+  engineHandleRef,
 }: DebugPanelProps) {
   return (
     <div className={styles.root}>
@@ -89,6 +97,7 @@ function DebugPanel({
       <MilkyWayTuningSectionContainer />
       <ZoneOfAvoidanceTuningSectionContainer />
       <DebugOverlaysSectionContainer />
+      <EarthTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
       <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />

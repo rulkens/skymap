@@ -164,6 +164,9 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
+      // The Earth LOD overlay debug toggle earthLayer.draw now reads each
+      // frame — off by default, like the fixture's other DEBUG_OVERLAY_ROWS entries.
+      debug: { overlays: { 'earth-lod-overlay': false } },
     },
   } as unknown as EngineState;
 }
@@ -283,15 +286,16 @@ describe('earthLayer.draw', () => {
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SEEDED_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
+    // The renderer receives the pass + the packed length-36 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
     // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
-    // oceanRoughness + 3 pad), not the bare 16-float MVP.
+    // oceanRoughness + zWin/winX0/winY0 + debugLodOverlay + 2 pad), not the bare
+    // 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(32);
+    expect(uniforms).toHaveLength(36);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -310,7 +314,7 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(32);
+    expect(uniforms).toHaveLength(36);
     const expected = sunDirLocal(
       SEEDED_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
@@ -339,7 +343,7 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(32);
+    expect(uniforms).toHaveLength(36);
 
     // Independent recompute of the camera-in-local-frame vector. The fixture camera
     // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
@@ -371,6 +375,30 @@ describe('earthLayer.draw', () => {
     // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
     expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
     expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
+  });
+
+  it("packs the live debug.overlays['earth-lod-overlay'] toggle at slot 32", () => {
+    // The DebugPanel toggle must reach the GPU uniform every draw, not just on
+    // change — the fixture's two states below stand in for a checkbox flip
+    // between frames.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
+    (
+      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
+    ).debug.overlays['earth-lod-overlay'] = true;
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    const [, uniformsOn] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniformsOn[32]).toBe(1);
+
+    (
+      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
+    ).debug.overlays['earth-lod-overlay'] = false;
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    const [, uniformsOff] = drawSpy.mock.calls[1]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniformsOff[32]).toBe(0);
   });
 
   it('scales cloudShadowStrength by the descent fade as the camera nears the surface', () => {

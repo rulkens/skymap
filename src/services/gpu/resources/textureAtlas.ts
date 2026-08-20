@@ -282,6 +282,12 @@ export class TextureAtlas {
     return idx === undefined ? undefined : this.slots[idx]!.lastSeenFrame;
   }
 
+  /** Number of slots currently claimed by a key — a debug-readout convenience,
+   *  not read by any render path. */
+  occupiedCount(): number {
+    return this.keyToSlot.size;
+  }
+
   /**
    * UV rectangle [u0, v0, u1, v1] for a slot, in [0,1] texture coords.
    * Slots are laid out row-major: slot N is at column (N % slotsPerRow),

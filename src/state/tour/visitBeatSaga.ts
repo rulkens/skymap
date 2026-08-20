@@ -56,6 +56,8 @@ import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci
 import { compileClip } from '../../services/engine/animation/compileClip';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
+import { selectTimeState } from '../time/selectors';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { BeatOutcome } from './pausableDwellSaga';
 import type { SagaContext } from '../../store/types';
@@ -97,11 +99,15 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
     // id pins the clip's frame for its whole run (see playClip's `frame` arg).
     const orientation = yield* select(selectOrientation);
     const frameBasis = ORIENTATION_FRAMES[orientation];
+    // Off-frame resolve — live sim instant, same derivation as watchGoHomeSaga,
+    // so an id-bearing cue targeting a scene body frames on where it is now.
+    const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
     const enterClip = resolveClipFoci(
       beat.enterClip,
       resolveDeps(),
       rt.fovYRad,
       rt.from,
+      simDays,
       frameBasis,
     );
     const winner = yield* race({
@@ -121,7 +127,15 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   const rt = cameraRuntime()!;
   const dwellOrientation = yield* select(selectOrientation);
   const dwellBasis = ORIENTATION_FRAMES[dwellOrientation];
-  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from, dwellBasis);
+  const dwellSimDays = deriveSimDays(yield* select(selectTimeState), performance.now());
+  const dwellClip = resolveClipFoci(
+    beat.dwellClip,
+    resolveDeps(),
+    rt.fovYRad,
+    rt.from,
+    dwellSimDays,
+    dwellBasis,
+  );
   const dwellSec = compileClip(dwellClip).durationSec;
   yield* put(dwellStarted({ dwellSec }));
 

@@ -1,39 +1,13 @@
 /**
- * computeSceneEntering — the scene state entering beat K, as a pure function.
+ * computeSceneEntering — the scene entering beat K, RECONSTRUCTED rather than
+ * tracked: the tour-start baseline folded through every scene cue of beats 0..K-1,
+ * so a mid-fly skip or a Prev is jump-to-index with no path-dependence. The fold
+ * runs cues through the tables `applySceneEffect` dispatches from and through the
+ * REAL settings reducer, so it cannot drift from playback.
  *
- * Tour beats mutate the scene through cues embedded at arbitrary offsets in
- * their clips, so navigation that doesn't play a beat to completion (a mid-fly
- * skip) or revisits an earlier one (Prev) would otherwise leave the scene in a
- * state no forward playthrough can produce — a survey revealed by a skipped
- * cue missing, or a later beat's volume still lit two beats back. Rather than
- * track deltas per navigation kind, the scene entering beat K is RECONSTRUCTED:
- * the tour-start baseline folded through every scene cue of beats 0..K-1.
- * Navigation becomes jump-to-index; there is no path-dependence to get wrong.
- *
- * The fold reuses the production machinery end to end: cues map to settings
- * actions through the same tables `applySceneEffect` dispatches from
- * (`VISIBILITY_ACTION_ROW`, `scopedVisibilityActions`), and each action is
- * applied through the REAL settings reducer. Nothing is reimplemented, so the
- * fold cannot drift from what playback actually does.
- *
- * Cues are collected in tree order (a `seq`/`all`/`fork` nesting walk), which
- * matches compile order. Only `show` / `hide` / `scene` participate: `focus`
- * is beat-local (each beat's enter clip establishes its own subject), `fade`
- * is transient clip opacity that resets at clip end, and the camera-motion
- * arms don't touch settings at all. `frameTo` is deliberately excluded too,
- * even though it DOES write a setting (`orientation`, via `setOrientation`):
- * `orientation` lives on `SceneSnapshot`, not `SettingsSnapshot` (this
- * function's return type — see that type's header for why), so nothing this
- * fold could produce would ever fit the return shape. The tour's authored
- * pole is carried forward live instead — a beat's `frameTo` cue sets it once
- * when it actually plays, and no later beat-entry reconstruction touches it
- * again. Dwell-clip cues count too — a dwell that reveals a layer is part of
- * the beat's contribution.
- *
- * `base` is a FULL settings state (the guided tour builds it by merging its
- * captured baseline onto the live state) because the reducer operates on full
- * state and per-item fan-outs enumerate `items` records from it. The return is
- * snapshot-shaped — exactly what `mergeSnapshot` accepts.
+ * Only `show` / `hide` / `scene` participate. `frameTo` is excluded even though it
+ * DOES write a setting: `orientation` lives on `SceneSnapshot`, not the returned
+ * `SettingsSnapshot`, so the authored pole is carried forward live instead.
  */
 
 import settingsReducer from '../settings/settingsSlice';
@@ -54,7 +28,7 @@ function actionsOf(effect: Effect, settings: EngineSettingsState): readonly Acti
     case 'hide': {
       const on = effect.kind === 'show';
       return [
-        ...effect.layers.flatMap((layer) => VISIBILITY_ACTION_ROW[layer](on, settings)),
+        ...effect.layers.flatMap((layer) => VISIBILITY_ACTION_ROW[layer].actions(on, settings)),
         ...(effect.scoped ?? []).flatMap((arg) => scopedVisibilityActions(arg, on, settings)),
       ];
     }

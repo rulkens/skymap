@@ -56,6 +56,8 @@ import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
 import { selectOrientation } from '../settings/selectors';
+import { selectTimeState } from '../time/selectors';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -73,14 +75,28 @@ export function* watchFocusTweenSaga() {
       // (row null with the catalog present) falls through to the no-op rather
       // than waiting forever. `takeLatest` discards this waiter if a newer focus
       // supersedes it.
-      let row = extractSelectionRow(action.payload, resolveDeps());
+      // Off-frame resolve — same `deriveSimDays(time, nowMs)` derivation
+      // `watchGoHomeSaga` uses, so a body row's position matches where the
+      // render path draws it. Re-derived on each retry below: the wait can
+      // span real time (a star catalog landing), so a stale sample would only
+      // matter for the (currently impossible) case of a body ref racing a
+      // catalog — re-selecting keeps it correct regardless.
+      let row = extractSelectionRow(
+        action.payload,
+        resolveDeps(),
+        deriveSimDays(yield* select(selectTimeState), performance.now()),
+      );
       while (
         row === null &&
         action.payload?.type === 'star' &&
         resolveDeps().stars.current() === null
       ) {
         yield* take(engineSourceCountReported);
-        row = extractSelectionRow(action.payload, resolveDeps());
+        row = extractSelectionRow(
+          action.payload,
+          resolveDeps(),
+          deriveSimDays(yield* select(selectTimeState), performance.now()),
+        );
       }
       if (row === null) return;
 

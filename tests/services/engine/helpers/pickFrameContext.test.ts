@@ -92,6 +92,9 @@ function makeState(
       fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
     },
     settings: { galaxyCatalogs: { items }, orientation: 'equatorial' },
+    // No focused pivot in this fixture — see frameContext.test.ts's makeState
+    // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
+    selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: {
       lastPose: { current: LAST_POSE },
       projection: PROJECTION,

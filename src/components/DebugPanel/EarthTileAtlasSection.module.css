@@ -1,0 +1,59 @@
+/*
+ * EarthTileAtlasSection — three-column resident/pending grid (same "cells
+ * as direct grid children" trick GalaxyProvenanceSection uses) plus two
+ * plain readout lines below it.
+ */
+
+.notice {
+  color: var(--color-fg-tertiary);
+}
+
+.flyToRow {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* Composes .button's surface/border rather than re-typing them (they're
+   identical values) — only the input-specific bits are overridden. */
+.input {
+  composes: button from './debugSection.module.css';
+  color: inherit;
+  cursor: text;
+  padding: var(--space-1) var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.button {
+  composes: button from './debugSection.module.css';
+}
+
+.levels {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  column-gap: var(--space-6);
+  row-gap: var(--space-1);
+}
+
+.head {
+  color: var(--color-fg-dim);
+  text-align: right;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  composes: number;
+  border-top: 1px solid var(--border-divider);
+  padding-top: var(--space-1);
+  font-weight: bold;
+}
+
+.readout {
+  composes: readout from './debugSection.module.css';
+  margin-top: var(--space-2);
+}

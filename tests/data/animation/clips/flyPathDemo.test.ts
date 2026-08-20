@@ -23,6 +23,8 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
 const FOV_Y = 0.8;
 const TEST_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
+// Arbitrary — no waypoint here resolves a body ref, only structures.
+const SIM_DAYS = 2451545;
 
 /** Reconstruct the eye position from a pose via the orbit convention. */
 function eyeOf(p: CameraPose): [number, number, number] {
@@ -78,7 +80,7 @@ const DEPS: ResolveDeps = {
 
 /** Resolve foci + live start, then compile — the play-time pipeline. */
 function prepared() {
-  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y, TEST_POSE);
+  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y, TEST_POSE, SIM_DAYS);
   return resolveClipStart(foci, TEST_POSE);
 }
 

@@ -154,6 +154,7 @@ export function App(): React.ReactElement {
             frameStats={handleRef.current.debug.frameStats}
             passNames={handleRef.current.debug.passOverrides.allNames}
             assetPriorities={handleRef.current.debug.assetPriorities}
+            engineHandleRef={handleRef}
           />
         )}
       </div>

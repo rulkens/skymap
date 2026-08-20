@@ -1,12 +1,9 @@
 /**
- * watchFadesSaga tests — verifies that every action in FADE_ROW drives
- * syncFades([key]) through the fade bridge.
- *
  * Runs under the shared reconcileSagaHarness (all four reconcile watchers).
  *
  * The synchronous-notify test pins a load-bearing invariant: RTK dispatch is
- * synchronous and the `takeEvery` worker runs AFTER the reducer, so when
- * syncFades fires it observes the POST-write settings value, not the stale one.
+ * synchronous and the `takeEvery` worker runs AFTER the reducer, so when syncFades
+ * fires it observes the POST-write settings value, not the stale one.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -19,6 +16,10 @@ import {
   setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
+import {
+  VISIBILITY_ACTION_ROW,
+  FADE_ROW,
+} from '../../../src/services/animation/visibilityActionRow';
 
 describe('watchFadesSaga', () => {
   let store: ReturnType<typeof buildStore>['store'];
@@ -30,8 +31,6 @@ describe('watchFadesSaga', () => {
     reconcile = built.reconcile;
   });
 
-  // ── setMilkyWayEnabled ─────────────────────────────────────────────────────
-
   it('setMilkyWayEnabled(true) → syncFades(["milkyWayDisk"]) called', () => {
     store.dispatch(setMilkyWayEnabled(true));
 
@@ -39,13 +38,8 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledWith(['milkyWayDisk']);
   });
 
-  // ── synchronous-notify invariant: saga worker sees post-dispatch state ───────
-  // RTK dispatch is synchronous; the saga `takeEvery` worker runs AFTER the
-  // reducer. This confirms that when syncFades fires inside watchFadesSaga, it
-  // observes the flipped `milkyWay.enabled` value, not the pre-dispatch stale
-  // value. An assertion that only lives INSIDE the spy passes silently if the
-  // spy is never called; the call-count check outside makes it fail loudly if
-  // the worker never fires (preventing vacuous passes).
+  // An assertion living only INSIDE the spy passes silently when the spy is never
+  // called; the call-count check outside is what makes a dead worker fail loudly.
 
   it('synchronous-notify: when watchFadesSaga fires, store.getState() sees POST-WRITE settings', () => {
     const before = store.getState().settings.milkyWay.enabled;
@@ -59,12 +53,9 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
   });
 
-  // ── writeVolumeField — row-driven: fires regardless of what changed ────────
-
   it('writeVolumeField contrast patch → syncFades(["volumeField"]) fired', () => {
-    // 'cf4-density' is a production volume seeded by buildInitialSettings. Any
-    // patch (here contrast-only) triggers the row-driven sync; the no-op guard
-    // lives in the fade bridge, not this saga.
+    // Any patch triggers the row-driven sync — the no-op guard lives in the fade
+    // bridge, not this saga.
     store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
 
     expect(reconcile.syncFades).toHaveBeenCalledWith(['volumeField']);
@@ -74,14 +65,10 @@ describe('watchFadesSaga', () => {
     store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
     store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
 
-    // Saga is row-driven; it fires on every dispatch. The bridge's own tests
-    // cover the no-op-if-unchanged guard.
     expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
     expect(reconcile.syncFades).toHaveBeenNthCalledWith(1, ['volumeField']);
     expect(reconcile.syncFades).toHaveBeenNthCalledWith(2, ['volumeField']);
   });
-
-  // ── setFlowEnabled — fade fires when the master gate flips ─────────────────
 
   it('setFlowEnabled(true) → syncFades(["flow"]) called', () => {
     store.dispatch(setFlowEnabled(true));
@@ -89,11 +76,8 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
   });
 
-  // ── setZoneOfAvoidanceEnabled — the single band+label toggle ───────────────
-  // Regression coverage for the dead-toggle defect: fadeLayers.ts can carry
-  // fade rows with no matching FADE_ROW entry, so toggling writes the store
-  // and nothing ever calls syncFades. This is the test that would have
-  // caught it.
+  // The dead-toggle defect: a fade row with no matching FADE_ROW entry writes the
+  // store and never calls syncFades.
 
   it('setZoneOfAvoidanceEnabled(true) → syncFades(["zoneOfAvoidance"]) called', () => {
     store.dispatch(setZoneOfAvoidanceEnabled(true));
@@ -101,15 +85,22 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledWith(['zoneOfAvoidance']);
   });
 
-  // ── mergeSnapshot — bulk restore arm: re-fades every row (full pass) ────────
-  // The tour scene-restore puts mergeSnapshot; this arm reacts with a full
-  // syncFades() (no rows) so every layer re-fades to the merged intent — no
-  // restore-specific engine effect needed.
+  // The full pass is what lets a tour scene-restore need no bespoke engine effect.
 
   it('mergeSnapshot → syncFades() called with no rows (full pass)', () => {
     store.dispatch(mergeSnapshot({}));
 
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
+  });
+
+  // Fails when two rows declare the same writer: the derivation is
+  // last-write-wins, so a colliding second row would silently take over the
+  // first row's FADE_ROW entry and this assertion would catch it failing.
+
+  it('every FADE_ROW entry maps to the layer whose row declares that writer', () => {
+    for (const [key, row] of Object.entries(VISIBILITY_ACTION_ROW)) {
+      expect(row.writes === null || FADE_ROW[row.writes.type] === key).toBe(true);
+    }
   });
 });
