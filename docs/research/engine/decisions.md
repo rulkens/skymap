@@ -431,7 +431,7 @@ the deep tuning surface.
     - **D1 — the fold is one `anim` bag field plus two deletions; no table.**
       After the census the fold has exactly one genuine contributor (the label
       director) and the deletion exactly two lines. Rung 3's precedent applies
-      unchanged (`decisions.md:198`, "No registry, no walker, no row type was
+      unchanged (`decisions.md:220`, "No registry, no walker, no row type was
       built") — the bag **is** the seam, and extending it is growth.
     - **D2 — a "vote" is an `anim` bag entry, and that is the rung's
       boundary.** `shouldKeepTicking.ts:19-30` draws the line itself: every
@@ -592,7 +592,7 @@ the deep tuning surface.
     chain** behind `showPickBuffer` / `showDiskRadiusRing` /
     `showOrbitTrailImpostor` — nine touchpoints apiece, three hand-rolled
     copies of one shape, sitting one field away from `disabledPasses`'s own
-    open-world-record pattern (`EngineSettingsState.d.ts:420-430`). Rung 6
+    open-world-record pattern (`EngineSettingsState.d.ts:409-421`). Rung 6
     joins that mechanism: one `overlays: Record<DebugOverlayKey, boolean>`
     seeded from `DEBUG_OVERLAY_ROWS` (`src/data/debug/debugOverlayRows.ts`,
     three rows — `pick-buffer`, `disk-radius-ring`, `orbit-trail-impostor`),
@@ -697,7 +697,7 @@ the deep tuning surface.
       `FOREGROUND_MAX_DISTANCE_MPC` cut at all. The hoist keeps its existing
       home, `renderer-layer-outliers.md:204`, re-pointed by Task 7 at the
       frame-step work alone (rung 2 shipped without it). Separately,
-      `fieldStarSphereLayer` was flagged (`decisions.md:141`,
+      `fieldStarSphereLayer` was flagged (`decisions.md:154`,
       `renderer-layer-outliers.md:165`) as the one `foreground:0` row with
       no such gate — read as an omission. **Verified 2026-08-20 and
       RESOLVED NEGATIVE, no gate added.** The layer self-gates on camera

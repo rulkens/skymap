@@ -179,7 +179,7 @@ flowchart LR
 | `FadeId` / `VisibilityLayerKey` | 12 kinds vs 18 keys — ⚪ deliberately different grain; both type-level unions                                                                                                                                                         | `FadeId.d.ts:80-96`, `VisibilityLayerKey.d.ts:53-71`           |
 | wake                            | 🟠 10-term disjunction + explicit `anim` bag (3 fields) fed by planners                                                                                                                                                               | `shouldKeepTicking.ts:117-135`                                 |
 | `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:438-476` |
-| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers; settings half: one `overlays: Record<DebugOverlayKey, boolean>` seeded from `DEBUG_OVERLAY_ROWS`, one reducer, one selector (rung 6, #16)                          | `frameProgram.ts:233-384`, `src/data/debug/debugOverlayRows.ts` |
+| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers; settings half: one `overlays: Record<DebugOverlayKey, boolean>` seeded from `DEBUG_OVERLAY_ROWS`, one reducer, one selector (rung 6, #16)                          | `frameProgram.ts:233-384`, `data/debug/debugOverlayRows.ts` |
 
 ### Loose spots
 
