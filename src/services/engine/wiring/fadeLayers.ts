@@ -148,21 +148,7 @@ export const FADE_LAYERS = [
   // settings-derived seed (the seed is in code, not demand-loaded, so there is
   // no guard and the seed follows the toggle).
   //
-  // This handle's opacity has NO CONSUMER. The layer that actually draws these
-  // captions, `foregroundLabelsLayer`, reads `starCatalogs.items[id].labelEnabled`
-  // straight off settings and runs its own declutter + temporal envelope; it
-  // never calls `resolveLayerOpacity` (the only production reader of a fade
-  // registry opacity via `fadeIdToVisibilityKey`) for this key. The row is
-  // registered anyway because `starCatalogLabel` must be a real
-  // `VisibilityLayerKey` — the type-level test over FADE_LAYERS' keys, the
-  // `VISIBILITY_ACTION_ROW` factory, and `LAYER_GROUPS.labels`'s clip address
-  // space all need the key to exist independent of whether anything reads its
-  // fade. So `hide(['starCatalogLabel'])` still works end to end — its settings
-  // write (`setStarCatalogLabelEnabled`, via `VISIBILITY_ACTION_ROW`) is what
-  // the caption layer reads — but `fade(['starCatalogLabel'], …)` type-checks,
-  // registers, and animates a controller nothing multiplies into a drawn pixel.
-  // Finishing that wire (multiplying this handle's opacity into the caption's
-  // fade target) is a separate piece of work, not attempted here.
+  // LANDMINE: this handle's opacity has no reader, so `fade(['starCatalogLabel'], …)` animates nothing — but the intent path (hide/show via VISIBILITY_ACTION_ROW) works; rung 8 owns the fade wire, per decision #17 (docs/research/engine/decisions.md).
   layer({
     key: 'starCatalogLabel',
     expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
@@ -175,12 +161,7 @@ export const FADE_LAYERS = [
   // captions itself: the S-stars draw 39 dots and no names, and a handle for a
   // caption that cannot exist would be worse than the unread ones below.
   //
-  // Same no-consumer gap as `starCatalogLabel` above: `foregroundLabelsLayer`
-  // reads `bodies.items[id].labelEnabled` directly for Earth/planet/Sun
-  // captions and never resolves this handle's opacity. Registered for the same
-  // reason — the key set that `FADE_LAYERS`, `VISIBILITY_ACTION_ROW`, and the
-  // clip address space share must stay total — not because anything reads the
-  // fade it drives.
+  // LANDMINE: same no-reader gap as `starCatalogLabel` above — `fade()` animates nothing but the intent path works; rung 8 owns the fade wire, per decision #17 (docs/research/engine/decisions.md).
   layer({
     key: 'bodyLabel',
     expand: () => LABEL_BEARING_BODY_IDS,
