@@ -409,14 +409,14 @@ the deep tuning surface.
     thread a `requestRender` closure through a factory are plumbing, not
     invocations, and are excluded) found **28**, none uncounted:
 
-    | class              | count | outcome                                            |
-    | ------------------- | ----- | --------------------------------------------------- |
-    | MECHANISM           | 3     | untouched — `watchWakeSaga.ts:54`, `watchSelectionWakeSaga.ts:26`, `runFrame.ts:716` |
-    | ESSENTIAL            | 15    | untouched                                          |
-    | REDUNDANT-COVERED    | 5     | 2 deleted (volume pair, D7), 3 kept (D8)           |
-    | VOTE/PREDICATE       | 2     | 1 folded (label director, D5), 1 handed to rung 8 (D6) |
-    | MIXED / uncertain    | 3     | all kept; 1 reclassified ESSENTIAL (D8, D9)        |
-    | **total**            | **28**| **1 folded · 2 deleted · 7 kept · 18 untouched**   |
+    | class             | count  | outcome                                                                              |
+    | ----------------- | ------ | ------------------------------------------------------------------------------------ |
+    | MECHANISM         | 3      | untouched — `watchWakeSaga.ts:54`, `watchSelectionWakeSaga.ts:26`, `runFrame.ts:716` |
+    | ESSENTIAL         | 15     | untouched                                                                            |
+    | REDUNDANT-COVERED | 5      | 2 deleted (volume pair, D7), 3 kept (D8)                                             |
+    | VOTE/PREDICATE    | 2      | 1 folded (label director, D5), 1 handed to rung 8 (D6)                               |
+    | MIXED / uncertain | 3      | all kept; 1 reclassified ESSENTIAL (D8, D9)                                          |
+    | **total**         | **28** | **1 folded · 2 deleted · 7 kept · 18 untouched**                                     |
 
     The five class counts sum to 28, and the outcome split (1 folded, 2
     deleted, 7 kept, 18 untouched) sums to 28 too; check both before trusting
@@ -427,7 +427,6 @@ the deep tuning surface.
     the bag before this rung (`runFrame.ts:650-653`, the star-cut LOD fade),
     one this rung folds (the label director), one this rung hands to rung 8
     (`foregroundLabelsLayer.ts:810`'s caption ramp).
-
     - **D1 — the fold is one `anim` bag field plus two deletions; no table.**
       After the census the fold has exactly one genuine contributor (the label
       director) and the deletion exactly two lines. Rung 3's precedent applies
@@ -523,7 +522,7 @@ the deep tuning surface.
       the sites that turn on its second clause.** Rule: **delete a redundant
       `requestRender()` only where the same function performs a dispatch that
       covers the same fact.** Both clauses are load-bearing — a same-body
-      dispatch about a *different* fact is not coverage, and neither is
+      dispatch about a _different_ fact is not coverage, and neither is
       coverage that depends on who called. The second clause is what
       separates the two volume functions (D7, whose dispatch **is** the state
       change the wake announces) from three kept sites where it fails:
@@ -533,7 +532,7 @@ the deep tuning surface.
       caller's job, not this function's); `startLoop.ts:150` — **the rule's
       worked exception, and the reason the second clause exists**: its
       neighbouring `goLiveNowAction()` dispatch (`:142`) is a `time/`-route
-      write in the *same function body*, so clause one alone would predict
+      write in the _same function body_, so clause one alone would predict
       DELETE, but it covers a different fact (a clock snap) — the ignition
       must not depend on the clock snap's route membership, one added comment
       (`startLoop.ts:149`) records why; `syncVisibilityFades.ts:192`'s
@@ -600,7 +599,6 @@ the deep tuning surface.
     row-driven `DebugOverlaysSection`, one shared `SliderField<K>` type, and
     one generic `DebugTuningSection`. Full accounting:
     [rung-6 plan](../../superpowers/plans/2026-08-20-debug-derivation.md).
-
     - **D1–D2 — the derivation line is data-vs-JSX; `PASS_GROUP_TITLES`
       stays hand-listed, permanently.** #4 admits "derived debug" and rejects
       "Level 4 schema-generated settings UI" in the same sentence without
@@ -709,7 +707,7 @@ the deep tuning surface.
       conversion via `SCALE_UNITS.AU_TO_MPC ≈ 4.848e-12`,
       `scaleUnits.ts:38`) — roughly **10.5 orders of magnitude** tighter
       than the 0.23 Mpc `FOREGROUND_MAX_DISTANCE_MPC` cut (`0.23 / 7.04e-12
-      ≈ 3.27×10¹⁰`). A runtime probe against the real octree + catalog confirmed
+≈ 3.27×10¹⁰`). A runtime probe against the real octree + catalog confirmed
       `enabled()` is already `false` at cosmic zoom (camera 0.5 Mpc from the
       Sun). The one pose where the missing gate would matter — camera within
       ~1.5 AU of a star while `cam.distance` ≥ 0.23 Mpc — needs an orbit
@@ -733,7 +731,7 @@ the deep tuning surface.
       caller instantiates with its own data, the same relationship
       `DebugSlider` already has to its three callers. What is banned is
       generated JSX, not shared JSX. `src/components/SettingsPanel/
-      FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
+FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       **out**: its `'panel'`-surface rows live in a different component with
       a `disabled` prop and pill-`Slider` chrome the dev panel has no
       analogue for; instantiating the shared component there too would
@@ -771,6 +769,69 @@ the deep tuning surface.
     shipping two rows and needing hand-sync with it — the exact artifact
     #13 and #15 rejected twice, and a debug overlay defaulting on in
     production the moment the same-fact test is skipped.
+
+17. **Umbrella reassessment: `SubsystemBundle` stays deferred, re-put after
+    rungs 7 and 8** (2026-08-20 — the reassessment decision #9 promised once
+    the rungs land). Rungs 1–6's own outcomes (#12–#16) are the evidence,
+    reviewed rung by rung: a registry was minted only where rows genuinely
+    repeat — rung 1's `GPU_HANDLE_ROWS` (handle construct/teardown, PR #571),
+    rung 2's render-target contribution rows (PR #575), rung 6's
+    `DEBUG_OVERLAY_ROWS` (PR #598) — and explicitly declined everywhere a
+    census found too few members: rung 3's staleness idiom (7 sites,
+    resource-owned, PR #579 — #13), rung 4's ingest fold (5 copies → 1
+    function, no row table, PR #583 — #14 D4), rung 5's wake-vote fold (1
+    `anim`-bag field, no `WAKE_LAYERS` manifest, PR #591 — #15 D1/D4). Six
+    rungs in, no cross-family `SubsystemBundle`-shaped type was ever needed to
+    ship any of them — each rung's family found its own row shape in its own
+    domain, per #12.
+
+    **USER RULING — the commit/close call is DEFERRED again.** Not decided
+    now: whether `SubsystemBundle` (the "## The contract (settled sketch)"
+    block below) ever gets built, stays reference-only, or is formally
+    dropped. Re-put after rung 7 (fade rows) and rung 8 (label unification)
+    land — the two rungs #9's ladder didn't yet have outcomes for when this
+    reassessment ran. #12's discipline stands unchanged as the working
+    umbrella in the meantime: rows are keyed in their own domain (rung 1's
+    `EngineGpuHandles` field name, rung 2's `RenderTargetSpec.id`, …),
+    subsystem attribution rides the contributing bundle, never the row. Its
+    reopen condition: a consumer needing cross-family enumeration of one
+    subsystem's rows reopens the umbrella question early, ahead of rungs
+    7/8 landing.
+
+    **USER RULING — sequencing.** Rung 7 next, then rung 8. The Track B plan
+    (galaxy-field-renderer extraction, spec already written at
+    `docs/superpowers/specs/2026-08-17-galaxy-field-renderer-extraction-design.md`)
+    follows. Track C (the analytic Milky Way landing) stays blocked on Track
+    B alone — #9's "Track C gates on B + rungs 1–3 only" is unchanged by this
+    reassessment; rungs 7/8 are not a Track C gate. Rung 9 (the pick-program
+    parallel-frame-program fold — #16 D5's design target, priced
+    SAFE-WITH-CONDITIONS at
+    `docs/backlog/2026-08-20-pick-debug-overlay-off-program.md`) sequences at
+    convenience — no dependency forces it before or after Track B/C.
+
+    **Carried forward, re-put alongside the umbrella call after rungs 7/8:**
+    - The `generated`-kind `stalenessKey` + optional `budget` clause (#7,
+      re-deferred by #13 and again by #14 D4): the family has exactly one
+      member today (the MW cloud, `MilkyWayCloud.reconcile`). Track C's field
+      renderer may be the second genuine keyed `generated` artifact — #13's
+      own reopen condition — which is the tripwire to watch, not a rung to
+      schedule pre-emptively.
+    - Tier-response duplication (#14 D5): `makeRunTierTransition.ts:56-88`
+      and `reevaluateDemand.ts:102` hand-encode the same "does this family
+      respond to a tier change" test twice, neither derivable from
+      `ASSET_WIRING`. Recommended disposition: a backlog capture, not a
+      rung — no third instance has appeared to make it a family yet.
+    - The wake hand-maintained-disjunction question (#15 D4): three fields,
+      three producers, no shared row shape today; #13's clauses fail for
+      wake exactly as they did for staleness. Stays hand-folded. Reopens on
+      a second vote-shaped wake (a new `anim`-bag contributor whose vote is
+      itself computed from a per-frame planner, the same shape as the label
+      director's fold) — not before.
+
+    No code changed by this decision. Evidence: rungs 1–6's own decisions
+    (#12–#16) and their linked plans; `current-contracts-map.md` and
+    `renderer-layer-outliers.md` re-swept 2026-08-20 confirm no rung produced
+    an unrecorded umbrella-shaped artifact.
 
 ## The contract (settled sketch)
 
