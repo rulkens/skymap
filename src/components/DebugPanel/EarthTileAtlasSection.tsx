@@ -110,6 +110,12 @@ function EarthTileAtlasSection({
         {snap.droppedAllocations > 0 && ` · ${snap.droppedAllocations} alloc dropped`}
       </div>
 
+      {snap.plan && (
+        <div className={styles.readout} title="Leaves in the last frame's drawn cut — unbounded, a growth watch">
+          cut: {snap.plan.cutCount} tiles drawn
+        </div>
+      )}
+
       {deepestZ !== undefined && (
         <div className={styles.readout} title="Resident x,y at the deepest active level">
           z{deepestZ} resident: {snap.deepestLevelKeys.join(', ') || '—'}

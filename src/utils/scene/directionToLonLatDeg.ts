@@ -6,9 +6,10 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * direction in a body's LOCAL frame. Exact inverse of
  * `equirectUvToDirection`'s `x = cosLat·cos(lon), y = cosLat·sin(lon),
  * z = sin(lat)` (east-positive longitude, local-Z the polar axis) — the same
- * convention `planEarthTiles`'s `subUv` and `derivePlannerParams`'s band uv
- * both encode. Confirmed consistent, not assumed: `TEXTURE_PRIME_MERIDIAN_U`
- * is exactly 0.5, which cancels planEarthTiles's `atan2(...)/(2π) + 0.5`
+ * convention `cutSurfaceTiles` (via `equirectUvToDirection`) and
+ * `derivePlannerParams`'s band uv both encode. Confirmed consistent, not
+ * assumed: `TEXTURE_PRIME_MERIDIAN_U` is exactly 0.5, which cancels
+ * `dirToEquirectUv`'s (the fragment shaders' inverse) `atan2(...)/(2π) + 0.5`
  * down to the same `lon/(2π) + 0.5` the bands use.
  */
 export function directionToLonLatDeg(dirLocal: Readonly<Vec3>): LonLatDeg {

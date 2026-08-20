@@ -202,12 +202,12 @@ async function engagedSubsystem() {
   subsystem.plannerParams('large');
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  subsystem.update({ plan: ENGAGED, nowMs: 0 });
+  subsystem.update({ plan: ENGAGED });
   await new Promise((resolve) => setTimeout(resolve, 0));
   // A second frame of the SAME plan: the tile lands async during the first
   // call's fetch, so `notResidentCount`/`lastEngaged.plan.misses` only reads
   // 0 on the frame AFTER the bitmap resolves.
-  subsystem.update({ plan: ENGAGED, nowMs: 16 });
+  subsystem.update({ plan: ENGAGED });
 
   return subsystem;
 }
@@ -225,7 +225,7 @@ async function engagesAt(plan: EarthTilePlan, tier: Tier): Promise<boolean> {
   });
   subsystem.plannerParams(tier);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  subsystem.update({ plan, nowMs: 0 });
+  subsystem.update({ plan });
   return subsystem.getAtlasView() !== null;
 }
 
@@ -252,8 +252,8 @@ describe('earthTileSubsystem engage gate', () => {
     const subsystem = await engagedSubsystem();
     const fetchesAfterFirstLand = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
 
-    subsystem.update({ plan: DISENGAGED, nowMs: 16 });
-    subsystem.update({ plan: ENGAGED, nowMs: 32 });
+    subsystem.update({ plan: DISENGAGED });
+    subsystem.update({ plan: ENGAGED });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length).toBe(fetchesAfterFirstLand);
@@ -282,7 +282,14 @@ describe('earthTileSubsystem debug snapshot', () => {
     expect(snap.capacity).toBe((EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2);
     expect(snap.used).toBe(1);
     expect(snap.levels).toEqual([{ z: MIN_TILE_LEVEL, resident: 1, pending: 0 }]);
-    expect(snap.plan).toEqual({ requestCount: 1, zWin: ENGAGED.zWin, misses: 0 });
+    expect(snap.plan).toEqual({ requestCount: 1, zWin: ENGAGED.zWin, misses: 0, cutCount: 0 });
+    // cutCount tracks `lastCut`, not `update()`'s own request count — the two
+    // diverge whenever ancestor fallback drops a leaf from `cut` (see
+    // cutSurfaceTiles.ts) but still requests its file.
+    subsystem.setLastCut([
+      { id: { z: MIN_TILE_LEVEL, x: 0, y: 0 }, originLocal: [1, 0, 0], resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1] } },
+    ]);
+    expect(subsystem.getDebugSnapshot().plan?.cutCount).toBe(1);
     expect(snap.droppedAllocations).toBe(0);
     expect(snap.deepestLevelKeys).toEqual(['0,0']);
     // ENGAGED's subCameraDirLocal is the equator/prime-meridian direction, and
@@ -296,7 +303,7 @@ describe('earthTileSubsystem debug snapshot', () => {
     const subsystem = await engagedSubsystem();
     expect(subsystem.getDebugSnapshot().subCamera).not.toBeNull();
 
-    subsystem.update({ plan: DISENGAGED, nowMs: 16 });
+    subsystem.update({ plan: DISENGAGED });
     expect(subsystem.getDebugSnapshot().subCamera).toBeNull();
   });
 });
@@ -358,7 +365,6 @@ describe('earthTileSubsystem residentSlot', () => {
         requests: filling,
         subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
       },
-      nowMs: 16,
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -405,7 +411,7 @@ describe('earthTileSubsystem stand-down', () => {
     subsystem.plannerParams('large');
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let frame = 0; frame < 3; frame++) {
-      subsystem.update({ plan: DISENGAGED, nowMs: frame * 16 });
+      subsystem.update({ plan: DISENGAGED });
     }
 
     // Not one property of the device read: no atlas, no upload. 67 MB rides on
@@ -438,7 +444,7 @@ describe('earthTileSubsystem stand-down', () => {
     // anyway: engaged frames against a null-manifest session must still be inert.
     expect(subsystem.plannerParams('large')).toBeNull();
     for (let frame = 0; frame < 3; frame++) {
-      subsystem.update({ plan: ENGAGED, nowMs: frame * 16 });
+      subsystem.update({ plan: ENGAGED });
     }
 
     expect(touched).toBe(false);
@@ -499,7 +505,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     };
 
     const callsBeforeFill = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
-    subsystem.update({ plan: fillPlan, nowMs: 0 });
+    subsystem.update({ plan: fillPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
     // The atlas is now genuinely full — every one of its slots resident.
     expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeFill).toBe(SLOT_COUNT);
@@ -515,7 +521,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     };
 
     const callsBeforeNext = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
-    subsystem.update({ plan: nextPlan, nowMs: 16 });
+    subsystem.update({ plan: nextPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Nothing resident got evicted-and-refetched, and the full atlas made the

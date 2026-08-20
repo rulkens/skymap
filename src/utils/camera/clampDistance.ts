@@ -31,7 +31,7 @@ export const MIN_DISTANCE_MPC = 1e-17;
  * unit-sphere local frame, so this is a near-cancellation whose headroom gets
  * thin below ~10 m of altitude — no depth-buffer floor to raise, an f32
  * subtraction floor. Must stay strictly above 1.0: the standoff needs a
- * horizon — `planEarthTiles` returns an empty plan at or below 1.0 radii,
+ * horizon — `cutSurfaceTiles` returns an empty plan at or below 1.0 radii,
  * where there is none to plan against.
  *
  * The near plane no longer couples to this ratio directly: `deriveSlabs`

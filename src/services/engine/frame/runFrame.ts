@@ -54,6 +54,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
+import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
@@ -582,6 +583,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // app-wide request, so a tier swap in flight can't make the planner believe
     // in detail that isn't on the GPU yet. Null until the manifest lands.
     const params = earthTiles.plannerParams(earthSurfaceTier(state));
+    // Empty by default: overwritten below only on the path that actually
+    // resolves a fresh cut. `setLastCut` runs unconditionally at the bottom
+    // of this block so a null-params/null-prepared frame (a tier swap in
+    // flight) draws nothing stale rather than last frame's cut.
+    let cut: readonly SurfaceCutTile[] = [];
     if (params !== null) {
       // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
       // module header), so the tiles the planner asks for never drift from the
@@ -597,17 +603,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // `requests` is what update()'s fetch loop drives — see
         // cutSurfaceTiles's header for why one walk produces both rather
         // than two independently re-deriving the same horizon/frustum logic.
-        const { cut, requests } = cutSurfaceTiles({
+        const result = cutSurfaceTiles({
           ...params,
           camPosLocal: prepared.camLocal,
           viewProjLocal: prepared.mvpLocal,
           viewportPx: view.viewportPx,
           residentSlot: earthTiles.residentSlot,
         });
-        earthTiles.update({ plan: requests, nowMs: ctx.nowMs });
-        earthTiles.setLastCut(cut);
+        cut = result.cut;
+        earthTiles.update({ plan: result.requests });
       }
     }
+    earthTiles.setLastCut(cut);
   }
 
   // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is

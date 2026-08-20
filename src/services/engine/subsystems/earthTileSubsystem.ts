@@ -102,8 +102,10 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   // keep in sync.
   const pendingLevelOf = new Map<string, number>();
   // Debug-snapshot readout of the last engaged plan; null exactly while disengaged.
+  // `plan` omits `cutCount`: `getDebugSnapshot` fills that in from `lastCut`
+  // at READ time (see its own comment for why `update()` time is too early).
   let lastEngaged: {
-    readonly plan: NonNullable<EarthTileDebugSnapshot['plan']>;
+    readonly plan: Omit<NonNullable<EarthTileDebugSnapshot['plan']>, 'cutCount'>;
     readonly droppedAllocations: number;
     readonly subCameraDirLocal: Vec3;
   } | null = null;
@@ -209,7 +211,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     return created;
   }
 
-  function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
+  function update(input: { readonly plan: EarthTilePlan }): void {
     if (destroyed) return;
     const active = paramsState.params;
     // `refreshParams` is the sole writer of `paramsState`, and only ever
@@ -350,12 +352,18 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       };
     }
 
+    // `cutCount` reads `lastCut` here, at snapshot-build time, rather than
+    // being folded into `lastEngaged.plan` at `update()` time: `setLastCut`
+    // runs AFTER `update()` in `runFrame`'s tile-planning block, so an
+    // update()-time read would report the PREVIOUS frame's cut size.
+    const plan = lastEngaged === null ? null : { ...lastEngaged.plan, cutCount: lastCut.length };
+
     return {
       engaged: true,
       capacity: atlas.slotsPerRow * atlas.slotsPerRow,
       used: atlas.stream.occupiedCount(),
       levels,
-      plan: lastEngaged?.plan ?? null,
+      plan,
       droppedAllocations: lastEngaged?.droppedAllocations ?? 0,
       deepestLevelKeys,
       subCamera,

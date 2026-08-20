@@ -32,7 +32,7 @@ export type EarthTileSubsystem = Destroyable & {
    * LRU-touches every planned tile largest-first, enqueues anything missing
    * — allocating the atlas on first engage.
    */
-  update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void;
+  update(input: { readonly plan: EarthTilePlan }): void;
 
   /**
    * Resolve one exact tile's atlas residency, or `null` if it is not
