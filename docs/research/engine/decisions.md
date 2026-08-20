@@ -833,7 +833,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     `renderer-layer-outliers.md` re-swept 2026-08-20 confirm no rung produced
     an unrecorded umbrella-shaped artifact.
 
-18. **Fade rows: one derivation, one contract narrowing, seven canonical
+18. **Fade rows: one derivation, one contract narrowing, seven gated canonical
     migrations — no fade registry** (2026-08-20, ruled in rung 7 — refines
     #9's rung-7 clause as widened by #11 `:143-145`, and takes the item #15 D8
     handed here). Both counts the research record carried into this rung were
@@ -849,10 +849,11 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     not a dead one — and `scaleBar` was missing. The correct set, zero
     production readers of the registered opacity: `proceduralDisks`,
     `texturedDisks`, `scaleBar`, `starCatalogLabel`, `bodyLabel`
-    (`fadeLayers.ts:108,115,153,166,174`). **Method**, recorded so the next
-    rung re-runs it instead of re-guessing: enumerate every `opacityOf(` and
-    `resolveLayerOpacity(` call site under `src/` and match against the 18
-    `FADE_LAYERS` rows (`fadeLayers.ts:97-317`); these five have no match.
+    (`fadeLayers.ts:108,115,174,153,166` — key order, not line order).
+    **Method**, recorded so the next rung re-runs it instead of re-guessing:
+    enumerate every `opacityOf(` and `resolveLayerOpacity(` call site under
+    `src/` and match against the 18 `FADE_LAYERS` rows
+    (`fadeLayers.ts:97-317`); these five have no match.
     `current-contracts-map.md:189`'s "**2** fade rows have no consumer" was
     incomplete rather than wrong — it counted only `fadeLayers.ts`'s two
     self-admissions.
@@ -870,9 +871,11 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     `surveyLabel`, `structureRing`, `structureLabel` (the producers).
     **Inert, 11:** six whose only reader is a raw `opacityOf` —
     `milkyWayDisk`, `milkyWayLabel`, `survey`, `constellations`, `flow`,
-    `volumeField` — plus the five dead-set keys above. D8 moves the six
-    raw-reader keys across, taking `fade()` from 7 keys to **13**; the five
-    dead-set keys stay inert by ruling (D12, D13).
+    `volumeField` — plus the five dead-set keys above. D8's migration would
+    move the six raw-reader keys across, taking `fade()` from 7 keys to
+    **13** — that is the rung's one gated commit (D9), so read the 13 as what
+    the migration buys, not as shipped state. The five dead-set keys stay inert
+    by ruling either way (D12, D13).
 
     That is not abstract. `src/data/animation/clips/cosmicFlows.ts` — shipped,
     in the clip registry (`clipRegistry.ts:61`, `grandTour.ts:125`) — scripts
@@ -1058,8 +1061,8 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       loop and multiply it in alongside a focused-instance exemption — the
       split `focusRecession.ts:164-166` documents as the per-instance contract.
       Routing them through the private `clipFactorFor` would mean synthesizing
-      a representative `FadeId` for a whole category (`{kind:'structure',
-id: <which?>}`) to recover a key the producer already knows, or moving
+      a representative `FadeId` for a whole category — `{kind:'structure'}` with
+      _which_ id? — to recover a key the producer already knows, or moving
       the call back inside the loop. Three literals, adjacent to the
       `opacityOf` calls that share their key, are the cheaper truth.
     - **D11 — `syncVisibilityFadeItem` loses its `animate` parameter, which

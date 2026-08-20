@@ -6,7 +6,7 @@ become bundle-declared, decide whether key totality still forces the dead
 rows." `ORPHAN` in the 2026-08-20 carry-forward audit: a distinct
 forward-looking question about the not-yet-built bundle-declared fades
 mechanism, not the same as rung 7's near-term dead-handle cleanup (a
-different, currently-live finding — see below), and not named in
+different finding, since discharged — see below), and not named in
 `decisions.md` #17's carried-forward list.
 
 ## What it is
@@ -54,8 +54,8 @@ to answer this question in isolation from that reassessment — the shape of
 `fades?: readonly FadeLayer[]` on a bundle needs to exist first before "does
 totality still apply" has a concrete mechanism to be asked about. When the
 umbrella reassessment happens, fold this question in as one of the design
-choices for the bundle-declared fades sub-contract, alongside deciding
-whether `FADE_ROW`/`VISIBILITY_ACTION_ROW`'s hand-maintained inverse-map
-derivation (rung 7's explicit charter, decisions.md #9) shares an answer
-with it — both are "how total does a bundle-declared union need to stay"
-questions about the same fades machinery.
+choices for the bundle-declared fades sub-contract. The neighbouring
+inverse-map half of rung 7's charter is already answered and does not come
+with it: `FADE_ROW` derives from `VISIBILITY_ACTION_ROW`'s required `writes`
+field (#18 D2, `visibilityActionRow.ts:183-189`). What remains open here is
+only "how total does a bundle-declared union need to stay".
