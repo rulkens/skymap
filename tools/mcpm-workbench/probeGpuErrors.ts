@@ -37,8 +37,8 @@ const ENERGY_SMOKE_SETTLE_FRAMES = ENERGY_SMOKE_STEPS + HISTOGRAM_SETTLE_FRAMES;
 // `npx tsx tools/mcpm-workbench/probeGpuErrors.ts` runs at commit d23ad70dd, each
 // a fresh reset -> 100 steps: 4.969708, 4.986995, 4.956796, 4.991052, 4.985401
 // (mean 4.977991, max abs deviation from mean 0.021194 — run 3). Width = 6x that
-// spread (0.12717), rounded up to 0.13 for headroom; a 2x shift (~2.49 away) is
-// ~19x the half-width, comfortably caught.
+// spread (0.12717), rounded up to 0.13 for headroom; a 2x shift (0.6925 away) is
+// ~5.3x the half-width, comfortably caught.
 const ENERGY_SMOKE_CENTER = 4.97799;
 const ENERGY_SMOKE_HALF_WIDTH = 0.13;
 
