@@ -62,6 +62,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
 - [ ] **Fades pop instead of ramping after the render loop idles** `ready` — `fadeRegistry.fadeTo` stamps the ramp's start from the stale last-_rendered_-frame time, not a live clock. → [details](backlog/2026-08-20-fade-pop-after-idle.md)
+- [ ] **Liveness guards accept `undefined`; `NaN` alpha class in fixtures** `ready` — `zoneOfAvoidanceLiveness.ts`'s `=== null` guard lets `undefined` slip through, and `focusBlend`-omitting fixtures produce silent `NaN` alphas. → [details](backlog/2026-08-20-liveness-undefined-guards.md)
 - [ ] **`createTieredScfdFetcher` factory** `ready` — the Edenhofer dust fetcher will be the third hand-copied tiered-SCFD fetcher (after `mcpmFetcher` and polyphorm's); collapse the three into one `createTieredScfdFetcher(baseName)` factory on next touch.
 
 ## Rendering
@@ -169,6 +170,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
 - [ ] **Grand tour: Earth start + scale rungs** `needs-design` — open at Earth and climb solar system → local neighbourhood → Milky Way stars before the existing galactic beats. → [details](backlog/2026-07-22-grand-tour-earth-start.md)
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
+- [ ] **`cosmicFlows` beat D never plays** `ready` — its `fade()` cue lands exactly on the compiled clip duration and is wiped by the completion-tick reset one frame later. → [details](backlog/2026-08-20-cosmicflows-beat-d-unreachable.md)
 - [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
