@@ -1,17 +1,19 @@
 /**
- * earthSurfaceTile layout parity — the CPU packer and the WESL storage
- * structs must agree byte-for-byte, the `NodeParams` case
- * `nodeParamsLayout.test.ts` guards for the star pipeline, adapted here for
- * `earthSurfaceTileLayout.ts`'s two structs (`NodeParams`, `TileVertex`).
+ * earthSurfaceTile layout parity — the CPU packer and the WESL structs must
+ * agree byte-for-byte, the `NodeParams` case `nodeParamsLayout.test.ts`
+ * guards for the star pipeline, adapted here for `earthSurfaceTileLayout.ts`'s
+ * three structs (`NodeParams`, `TileVertex`, `SurfaceTileUniforms`).
  *
- * The WESL `struct NodeParams` / `struct TileVertex`
+ * The WESL `struct NodeParams` / `TileVertex` / `SurfaceTileUniforms`
  * (`shaders/bodies/earthSurfaceTile/io.wesl`) declare the field order + types
  * the GPU uses to address bytes; `earthSurfaceTileLayout.ts`'s
- * `writeSurfaceTileNodeParams` / `writeTileVertex` restate those same
- * offsets as hand-literal `view.set{Float32,Uint32}(base + N, expr, true)`
- * calls. Nothing but this test cross-checks the two: a WGSL field reorder
- * without a matching TS move would silently scramble every drawn tile's
- * origin/uv/addressing with no compiler signal.
+ * `writeSurfaceTileNodeParams` / `writeTileVertex` / `writeSurfaceTileUniforms`
+ * restate those same offsets as hand-literal `view.set{Float32,Uint32}(N,
+ * expr, true)` calls (array-element writers add a `base +`; the singleton
+ * uniform writer doesn't). Nothing but this test cross-checks the two: a
+ * WGSL field reorder without a matching TS move would silently scramble
+ * every drawn tile's origin/uv/addressing, or its shading uniforms, with no
+ * compiler signal.
  *
  * We read both files as TEXT (rather than importing the linked `?static`
  * WGSL) because the layout contract lives in the WESL struct's DECLARATION
@@ -26,6 +28,8 @@ import { dirname, resolve } from 'node:path';
 import {
   NODE_PARAMS_BYTES,
   TILE_VERTEX_BYTES,
+  SURFACE_TILE_UNIFORM_BYTES,
+  writeSurfaceTileUniforms,
 } from '../../../../../src/services/gpu/renderers/bodies/earthSurfaceTileLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -36,12 +40,13 @@ const layoutPath = resolve(repoRoot, 'src/services/gpu/renderers/bodies/earthSur
 /** WGSL scalar kind a field's bytes carry -- the only distinction the writer makes. */
 type Kind = 'float' | 'uint';
 
-/** std140/std430 alignment + byte size for the subset these two structs use. */
+/** std140/std430 alignment + byte size for the subset these three structs use. */
 const WESL_TYPES: Record<string, { align: number; size: number; kind: Kind; lanes: number }> = {
   f32: { align: 4, size: 4, kind: 'float', lanes: 1 },
   u32: { align: 4, size: 4, kind: 'uint', lanes: 1 },
   'vec2<f32>': { align: 8, size: 8, kind: 'float', lanes: 2 },
   'vec3<f32>': { align: 16, size: 12, kind: 'float', lanes: 3 },
+  'mat4x4<f32>': { align: 16, size: 64, kind: 'float', lanes: 16 },
 };
 
 /** One scalar write the layout demands: a byte offset + the kind stored there + owning field. */
@@ -100,7 +105,13 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
   return { writes, structSize: roundUp(cursor, maxAlign) };
 }
 
-/** Which struct field a writer parameter name feeds -- the sole cross-language glue. */
+/**
+ * Which struct field a writer parameter expression feeds -- the sole
+ * cross-language glue. `orientation[N]` is index-aware (N < 3 is column 0's
+ * lane, etc) because `writeSurfaceTileUniforms` reads the SAME `orientation`
+ * array for all three `rotCol0/1/2` fields -- the expression text alone
+ * (`orientation[N]`) can't distinguish them without the index.
+ */
 function fieldForExpr(expr: string): string {
   if (/originRelCamMpc/.test(expr)) return 'originRelCamMpc';
   if (/vertexBase/.test(expr)) return 'vertexBase';
@@ -109,17 +120,41 @@ function fieldForExpr(expr: string): string {
   if (/^position[XYZ]$/.test(expr)) return 'position';
   if (/^uv[XY]$/.test(expr)) return 'uv';
   if (/^tangent[XYZ]$/.test(expr)) return 'tangent';
+  if (/^vp\[/.test(expr)) return 'vp';
+  const orientationIndex = expr.match(/^orientation\[(\d+)\]/);
+  if (orientationIndex) {
+    const idx = Number(orientationIndex[1]);
+    return idx < 3 ? 'rotCol0' : idx < 6 ? 'rotCol1' : 'rotCol2';
+  }
+  if (/^radiusMpc$/.test(expr)) return 'radiusMpc';
+  if (/^vertsPerTile\b/.test(expr)) return 'vertsPerTile';
+  if (/^roughnessBase$/.test(expr)) return 'roughnessBase';
+  if (/^camPosRelBodyMpc\[/.test(expr)) return 'camPosRelBodyMpc';
+  if (/^f0$/.test(expr)) return 'f0';
+  if (/^camPosLocal\[/.test(expr)) return 'camPosLocal';
+  if (/^sunIrradiance$/.test(expr)) return 'sunIrradiance';
+  if (/^sunDirLocal\[/.test(expr)) return 'sunDirLocal';
+  if (/^ambientLight$/.test(expr)) return 'ambientLight';
+  if (/^oceanRoughness$/.test(expr)) return 'oceanRoughness';
+  if (/^cloudShadowStrength$/.test(expr)) return 'cloudShadowStrength';
+  if (/^cloudShellRadius$/.test(expr)) return 'cloudShellRadius';
   throw new Error(`writer expression maps to no known field: '${expr}'`);
 }
 
-/** Parse a writer function body's `view.set{Float32,Uint32}(base + N, expr, ...)` calls, in order. */
+/**
+ * Parse a writer function body's `view.set{Float32,Uint32}(N, expr, ...)`
+ * calls, in order. Array-element writers (`writeSurfaceTileNodeParams`,
+ * `writeTileVertex`) offset by `base + N`; the singleton
+ * `writeSurfaceTileUniforms` writes bare literal `N` (no array to stride
+ * over) -- the `(?:base \+ )?` group covers both without two regexes.
+ */
 function writerLayout(source: string, fnName: string): ScalarWrite[] {
   const fnBody = source.match(
     new RegExp(`function ${fnName}\\([^)]*\\)[^{]*\\{([\\s\\S]*?)\\n\\}`),
   )?.[1];
   if (!fnBody) throw new Error(`function ${fnName} not found in earthSurfaceTileLayout.ts`);
   const calls = fnBody.matchAll(
-    /view\.set(Float32|Uint32)\(\s*base \+ (\d+),\s*([^,]*),\s*true\s*\)/g,
+    /view\.set(Float32|Uint32)\(\s*(?:base \+ )?(\d+),\s*([^,]*),\s*true\s*\)/g,
   );
   const writes: ScalarWrite[] = [];
   for (const [, setter, offset, expr] of calls) {
@@ -164,5 +199,90 @@ describe('TileVertex CPU/WESL layout parity', () => {
   it('TILE_VERTEX_BYTES stride equals the struct size', () => {
     const { structSize } = structLayout(structFields(ioWesl, 'TileVertex'));
     expect(TILE_VERTEX_BYTES).toBe(structSize);
+  });
+});
+
+describe('SurfaceTileUniforms CPU/WESL layout parity', () => {
+  const ioWesl = readFileSync(ioWeslPath, 'utf8');
+  const layout = readFileSync(layoutPath, 'utf8');
+
+  it('writer offsets + kinds match the struct layout, field by field', () => {
+    const { writes: expected } = structLayout(structFields(ioWesl, 'SurfaceTileUniforms'));
+    const actual = writerLayout(layout, 'writeSurfaceTileUniforms');
+    expect([...actual].sort(byOffset)).toEqual([...expected].sort(byOffset));
+  });
+
+  it('SURFACE_TILE_UNIFORM_BYTES stride equals the struct size', () => {
+    const { structSize } = structLayout(structFields(ioWesl, 'SurfaceTileUniforms'));
+    expect(SURFACE_TILE_UNIFORM_BYTES).toBe(structSize);
+  });
+
+  it('round-trips a full record through the same DataView at the documented offsets', () => {
+    const buffer = new ArrayBuffer(SURFACE_TILE_UNIFORM_BYTES);
+    const view = new DataView(buffer);
+    const vp = Float32Array.from({ length: 16 }, (_, i) => i + 1); // 1..16
+    const orientation = [17, 18, 19, 20, 21, 22, 23, 24, 25] as const;
+    const camPosRelBodyMpc = [26, 27, 28] as const;
+    const camPosLocal = [29, 30, 31] as const;
+    const sunDirLocal = [32, 33, 34] as const;
+
+    writeSurfaceTileUniforms(
+      view,
+      vp,
+      orientation,
+      /* radiusMpc */ 35,
+      /* vertsPerTile */ 36,
+      camPosRelBodyMpc,
+      camPosLocal,
+      sunDirLocal,
+      /* roughnessBase */ 37,
+      /* f0 */ 38,
+      /* sunIrradiance */ 39,
+      /* ambientLight */ 40,
+      /* oceanRoughness */ 41,
+      /* cloudShadowStrength */ 42,
+      /* cloudShellRadius */ 43,
+    );
+
+    for (let i = 0; i < 16; i++) expect(view.getFloat32(i * 4, true)).toBe(vp[i]);
+    expect([
+      view.getFloat32(64, true),
+      view.getFloat32(68, true),
+      view.getFloat32(72, true),
+    ]).toEqual(orientation.slice(0, 3));
+    expect(view.getFloat32(76, true)).toBe(35); // radiusMpc
+    expect([
+      view.getFloat32(80, true),
+      view.getFloat32(84, true),
+      view.getFloat32(88, true),
+    ]).toEqual(orientation.slice(3, 6));
+    expect(view.getUint32(92, true)).toBe(36); // vertsPerTile
+    expect([
+      view.getFloat32(96, true),
+      view.getFloat32(100, true),
+      view.getFloat32(104, true),
+    ]).toEqual(orientation.slice(6, 9));
+    expect(view.getFloat32(108, true)).toBe(37); // roughnessBase
+    expect([
+      view.getFloat32(112, true),
+      view.getFloat32(116, true),
+      view.getFloat32(120, true),
+    ]).toEqual(camPosRelBodyMpc);
+    expect(view.getFloat32(124, true)).toBe(38); // f0
+    expect([
+      view.getFloat32(128, true),
+      view.getFloat32(132, true),
+      view.getFloat32(136, true),
+    ]).toEqual(camPosLocal);
+    expect(view.getFloat32(140, true)).toBe(39); // sunIrradiance
+    expect([
+      view.getFloat32(144, true),
+      view.getFloat32(148, true),
+      view.getFloat32(152, true),
+    ]).toEqual(sunDirLocal);
+    expect(view.getFloat32(156, true)).toBe(40); // ambientLight
+    expect(view.getFloat32(160, true)).toBe(41); // oceanRoughness
+    expect(view.getFloat32(164, true)).toBe(42); // cloudShadowStrength
+    expect(view.getFloat32(168, true)).toBe(43); // cloudShellRadius
   });
 });

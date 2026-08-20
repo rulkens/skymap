@@ -48,6 +48,12 @@ fn vs(@builtin(vertex_index) vertexIndex: u32) -> VSOut {
   var out: VSOut;
   out.clip = u.vp * vec4<f32>(worldPosRelCam, 1.0);
   out.uv = tv.uv;
+  // f32-safe ONLY because a tile exists here at all implies the camera is
+  // near Earth (the tile subsystem that produces 'nodeParams' only engages
+  // at low altitude -- see the renderer's draw() comment). A far camera
+  // would make 'camPosRelBodyMpc' AU-scale again, and this sum would
+  // collapse toward 'camPosRelBodyMpc' alone -- every drawn tile's normal
+  // flattening to the same direction (uniform flat shading, not a crash).
   let toCentreLocal = worldPosRelCam + u.camPosRelBodyMpc;
   out.normalLocal = vec3<f32>(
     dot(u.rotCol0, toCentreLocal),

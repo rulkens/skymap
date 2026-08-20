@@ -39,87 +39,28 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { SurfaceTileMeshCache } from '../../resources/surfaceTileMeshCache';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
+import { rotateVec3ByTightMat3 } from '../../../../utils/math/rotateVec3ByTightMat3';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/earthSurfaceTile/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earthSurfaceTile/fragment.wesl?static';
 import {
   NODE_PARAMS_BYTES,
   TILE_VERTEX_BYTES,
+  SURFACE_TILE_UNIFORM_BYTES,
   writeSurfaceTileNodeParams,
   writeTileVertex,
+  writeSurfaceTileUniforms,
 } from './earthSurfaceTileLayout';
 
-/** `SurfaceTileUniforms`' byte size — see `io.wesl`'s doc comment for the field table. */
-const UNIFORM_BYTES = 176;
-
-/** Rotate a local-frame vector by `m`'s columns (`m[c*3+r]` — `Mat3`'s convention). */
-function rotateByMat3(m: Readonly<Mat3>, v: Readonly<Vec3>): Vec3 {
-  return [
-    m[0] * v[0] + m[3] * v[1] + m[6] * v[2],
-    m[1] * v[0] + m[4] * v[1] + m[7] * v[2],
-    m[2] * v[0] + m[5] * v[1] + m[8] * v[2],
-  ];
-}
-
-/** Rotate by `m`'s TRANSPOSE — valid as `m`'s inverse because it's a rotation. */
+/** Rotate by `m`'s TRANSPOSE — valid as `m`'s inverse because it's a rotation.
+ *  (The forward direction reuses the existing `rotateVec3ByTightMat3`; this
+ *  transpose has no existing counterpart.) */
 function inverseRotateByMat3(m: Readonly<Mat3>, v: Readonly<Vec3>): Vec3 {
   return [
     m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
     m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
     m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
   ];
-}
-
-/**
- * Pack the per-draw `SurfaceTileUniforms` block. Field order + offsets
- * mirror `io.wesl`'s doc comment exactly — see that comment for the byte
- * table this function is the single CPU-side statement of.
- */
-function writeSurfaceTileUniforms(
-  view: DataView,
-  vp: Float32Array,
-  orientation: Readonly<Mat3>,
-  radiusMpc: number,
-  vertsPerTile: number,
-  camPosRelBodyMpc: Readonly<Vec3>,
-  camPosLocal: Readonly<Vec3>,
-  sunDirLocal: Readonly<Vec3>,
-  roughnessBase: number,
-  f0: number,
-  sunIrradiance: number,
-  ambientLight: number,
-  oceanRoughness: number,
-  cloudShadowStrength: number,
-  cloudShellRadius: number,
-): void {
-  for (let i = 0; i < 16; i++) view.setFloat32(i * 4, vp[i]!, true);
-  view.setFloat32(64, orientation[0], true);
-  view.setFloat32(68, orientation[1], true);
-  view.setFloat32(72, orientation[2], true);
-  view.setFloat32(76, radiusMpc, true);
-  view.setFloat32(80, orientation[3], true);
-  view.setFloat32(84, orientation[4], true);
-  view.setFloat32(88, orientation[5], true);
-  view.setUint32(92, vertsPerTile >>> 0, true);
-  view.setFloat32(96, orientation[6], true);
-  view.setFloat32(100, orientation[7], true);
-  view.setFloat32(104, orientation[8], true);
-  view.setFloat32(108, roughnessBase, true);
-  view.setFloat32(112, camPosRelBodyMpc[0], true);
-  view.setFloat32(116, camPosRelBodyMpc[1], true);
-  view.setFloat32(120, camPosRelBodyMpc[2], true);
-  view.setFloat32(124, f0, true);
-  view.setFloat32(128, camPosLocal[0], true);
-  view.setFloat32(132, camPosLocal[1], true);
-  view.setFloat32(136, camPosLocal[2], true);
-  view.setFloat32(140, sunIrradiance, true);
-  view.setFloat32(144, sunDirLocal[0], true);
-  view.setFloat32(148, sunDirLocal[1], true);
-  view.setFloat32(152, sunDirLocal[2], true);
-  view.setFloat32(156, ambientLight, true);
-  view.setFloat32(160, oceanRoughness, true);
-  view.setFloat32(164, cloudShadowStrength, true);
-  view.setFloat32(168, cloudShellRadius, true);
 }
 
 /**
@@ -224,10 +165,10 @@ export function createEarthSurfaceTileRenderer(
   // ── Uniform buffer (one record per draw call) ────────────────────────
   const uniformBuffer = device.createBuffer({
     label: 'earth-surface-tile-uniform-buffer',
-    size: UNIFORM_BYTES,
+    size: SURFACE_TILE_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const uniformScratch = new ArrayBuffer(UNIFORM_BYTES);
+  const uniformScratch = new ArrayBuffer(SURFACE_TILE_UNIFORM_BYTES);
   const uniformView = new DataView(uniformScratch);
 
   // ── Per-frame storage buffers (grow-only capacity, in TILE count) ────
@@ -271,6 +212,14 @@ export function createEarthSurfaceTileRenderer(
     }
   }
 
+  /**
+   * Caller invariant this pipeline relies on but does not assert: `tiles`
+   * is only ever non-empty while the tile subsystem is engaged, which is
+   * altitude-gated (near Earth). The vertex shader's local-normal
+   * reconstruction (`vertex.wesl`'s `toCentreLocal`) is f32-safe only
+   * under that invariant — a far-camera call would silently flatten every
+   * drawn tile's shading normal toward one direction rather than error.
+   */
   function draw(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs): void {
     const {
       tiles,
@@ -318,7 +267,7 @@ export function createEarthSurfaceTileRenderer(
       const mesh = meshCache.get(tile.id, frame);
       const vertexBase = i * vertsPerTile;
 
-      const rotatedOrigin = rotateByMat3(orientation, tile.originLocal);
+      const rotatedOrigin = rotateVec3ByTightMat3(tile.originLocal, orientation);
       writeSurfaceTileNodeParams(
         nodeScratchView,
         i * NODE_PARAMS_BYTES,
