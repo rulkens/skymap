@@ -6,7 +6,7 @@
  * Membership is `satisfies Record<K, number | undefined>`, not a `switch` —
  * this tsconfig lacks `noImplicitReturns`, so a default-less switch has no
  * exhaustiveness guarantee; the table forces every kind to state its stance.
- * Raw-vs-canonical `opacityOf` rule: decision #17, docs/research/engine/decisions.md.
+ * Raw-vs-canonical `opacityOf` rule: decision #18, docs/research/engine/decisions.md.
  */
 
 import type { FadeId } from '../../../@types/animation/FadeId';

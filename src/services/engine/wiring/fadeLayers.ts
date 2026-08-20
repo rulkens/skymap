@@ -148,7 +148,7 @@ export const FADE_LAYERS = [
   // settings-derived seed (the seed is in code, not demand-loaded, so there is
   // no guard and the seed follows the toggle).
   //
-  // LANDMINE: this handle's opacity has no reader, so `fade(['starCatalogLabel'], …)` animates nothing — but the intent path (hide/show via VISIBILITY_ACTION_ROW) works; rung 8 owns the fade wire, per decision #17 (docs/research/engine/decisions.md).
+  // LANDMINE: this handle's opacity has no reader, so `fade(['starCatalogLabel'], …)` animates nothing — but the intent path (hide/show via VISIBILITY_ACTION_ROW) works; rung 8 owns the fade wire, per decision #18 (docs/research/engine/decisions.md).
   layer({
     key: 'starCatalogLabel',
     expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
@@ -161,7 +161,7 @@ export const FADE_LAYERS = [
   // captions itself: the S-stars draw 39 dots and no names, and a handle for a
   // caption that cannot exist would be worse than the unread ones below.
   //
-  // LANDMINE: same no-reader gap as `starCatalogLabel` above — `fade()` animates nothing but the intent path works; rung 8 owns the fade wire, per decision #17 (docs/research/engine/decisions.md).
+  // LANDMINE: same no-reader gap as `starCatalogLabel` above — `fade()` animates nothing but the intent path works; rung 8 owns the fade wire, per decision #18 (docs/research/engine/decisions.md).
   layer({
     key: 'bodyLabel',
     expand: () => LABEL_BEARING_BODY_IDS,
