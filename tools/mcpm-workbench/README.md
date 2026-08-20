@@ -31,6 +31,36 @@ The tool links against the runtime's canonical shader tree
 identically in both apps. It keeps exactly one shader of its own,
 `src/render/shaders/blit.wesl`, the HDR→swapchain tonemap resolve.
 
+## Grid-box gizmo
+
+The wireframe box drawn over the sim volume carries three handle families,
+each pickable by dragging directly on the glyph:
+
+- **Arrows — translate.** Hold a constant screen size (they don't scale with
+  the box, so they stay grabbable on a huge box and visible on a tiny one).
+- **Crosses — resize.** Scale with the box's own half-extent.
+- **Rings — rotate.** Radius = 1.3× the arrow length, sitting outside the
+  arrow tips for visual separation from the translate handles.
+
+**Reachability.** The handles are only drawn (and pickable) while the
+wireframe itself is visible: the "show box" toggle in the grid panel keeps
+them on screen. A drag in progress keeps the wireframe visible even if "show
+box" is off, so a gesture that starts with the box shown never gets stranded
+mid-drag if the toggle changes underneath it.
+
+**`rotation` semantics.** The gizmo's ring drag writes a unit quaternion to
+`GridBox.rotation`, applied **about the box's center** — `worldToBoxLocal`
+(the box's own world→local transform) subtracts `centerMpc` first, rotates
+by the quaternion's conjugate, then adds the half-extent, so the pivot is
+always the center, never a corner. Exports carry this quaternion as honest
+metadata, not as an instruction either producer applies to the voxel array:
+`.scfd`'s header rotation slot and the `.npy` sidecar's `rotation` field both
+write `box.rotation` verbatim, while the array itself stays in the box's own
+unrotated grid-space layout. `origin_mpc` (sidecar) / `origin` (`.scfd`) is
+always the corner of the **un-rotated** axis-aligned box (`centerMpc −
+half-extent`) — a downstream consumer that wants the cube in world axes must
+apply `rotation` about `centerMpc`, not `origin_mpc`.
+
 ## Export verification (Phase 2 gate)
 
 2026-08-18, HEAD `05556bd02`. Headless run (`?probe` synthetic catalog,
