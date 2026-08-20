@@ -268,6 +268,6 @@ describe('eoxTileSource', () => {
     // mistaken for a region — leaving zero actual regions here.
     writeFileSync(join(coverageDir, 'README.md'), 'provenance notes');
 
-    await expect(eoxTileSource({ coverageDir })).rejects.toThrow();
+    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/no region subdirectories/);
   });
 });
