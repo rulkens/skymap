@@ -478,13 +478,16 @@ union or table itself changes shape.
    magic constant. Not wrong (well-justified in-line), but it is a
    precedent-free special case a reviewer of an analytic-field pick pass
    has nothing else to pattern-match against.
-6. **`PASS_GROUP_TITLES`** (`frameProgram.ts:209-224`) — a hand-maintained
+6. **`PASS_GROUP_TITLES`** (`frameProgram.ts:222-238`) — a hand-maintained
    groupKey-to-title map for the DebugPanel; a new `(target, slab)` pair
    that should visually bucket with an existing group (e.g. a new MW
    sub-target joining "Volumes & aggregates") needs its own manual entry or
    silently gets its own fallback group. Degrades safely (never crashes),
    but is a second place — beyond the render-target table and the frame
-   program — that has to be told about a new target's identity.
+   program — that has to be told about a new target's identity. Ruled
+   **permanently hand-authored, not debt** (decisions.md #16 D1–D2): it
+   carries two facts (title merge + display order) at the frame-STEP
+   granularity, deliberately not derived.
 7. **`MilkyWaySettings = { enabled, labelEnabled }` intersected with
    `MilkyWayTuning`** (`MilkyWaySettings.d.ts:21-26`) — the two visibility
    axes that fit the singleton-overlay convention are flattened together

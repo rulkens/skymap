@@ -476,17 +476,6 @@ export const DEFAULT_FLOW: FlowSettings = {
   boundaryFadeWidth: SOURCE_REGISTRY[Source.Flow].boundaryFadeWidth,
 };
 
-// ── Debug overlays ─────────────────────────────────────────────────────────
-
-/** Pick-buffer debug overlay starts off.  See `EngineSettingsState.debug.showPickBuffer`. */
-export const DEFAULT_SHOW_PICK_BUFFER = false;
-
-/** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
-export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
-
-/** Orbit-trail impostor overlay starts off.  See `EngineSettingsState.debug.showOrbitTrailImpostor`. */
-export const DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR = false;
-
 // ── Camera orientation frame ─────────────────────────────────────────────────
 
 /**

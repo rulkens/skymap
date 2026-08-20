@@ -142,6 +142,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Zone-of-avoidance shape constants scattered + four positional args** `needs-design` — `bulgeDeg`/`anticenterDeg` are swappable with a plausible-looking wrong result; one re-narration of the numbers already drifted. → [details](backlog/2026-08-17-zone-of-avoidance-shape-constants.md)
 - [ ] **Third copy of the reduced-res viewport formula** `ready` — `Math.max(1, Math.floor(size / scale))` in `renderTargets.ts`, `scalarVolumeLayer.ts`, `zoneOfAvoidanceLayer.ts`; consolidate into `renderTargets.sizeOf(target)`.
 - [ ] **Disabling a producer layer in the DebugPanel freezes its overlay** `ready` — `zone-of-avoidance`/`star-aggregates`/`mw-aggregate` stop re-clearing while their upsample consumers keep compositing, so the last frame smears in screen space as the camera moves. → [details](backlog/2026-08-17-debugpanel-producer-toggle-freezes-overlay.md)
+- [ ] **Pick-debug overlay is off `frameProgram`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
 
 ## UI & UX
 
@@ -152,6 +153,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Earth caption stamp out-picks occluders** `ready` — the forced-band 18 px Earth pick point punches through a transiting Moon. → [details](backlog/2026-07-29-earth-caption-stamp-outpicks-occluders.md)
 - [ ] **Touch picking selects the wrong galaxy** `needs-design` — the pick pad is in device px, so the clickable disc halves on retina/phone. → [details](backlog/2026-07-29-touch-pick-accuracy.md)
 - [ ] **Windows touchscreen pinch-zoom dead** `needs-repro` — works on mobile; gesture code is platform-uniform PointerEvents, so event delivery on Windows is the suspect; needs an on-device event log. → [details](backlog/2026-08-16-windows-touchscreen-pinch-zoom.md)
+- [ ] **Autorotate + mouse-move jitter** `needs-repro` — intermittent frame jitter seen on `refactor/debug-derivation`, diff-clean per investigation; falsify against base commit from a second worktree. → [details](backlog/2026-08-20-autorotate-mousemove-jitter.md)
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; 2.3k lines of hand-coded text-only rows today. → [details](backlog/2026-07-22-settings-panel-polish.md)
 - [ ] **Schema-driven slider rows** `needs-design` — a scalar knob costs ~9 hand-edited sites (default, type, seed, reducer, export, selector, container ×3, props, JSX, fixtures); VolumeFieldRow has 7, Display 6. → [details](backlog/2026-07-29-schema-driven-slider-rows.md)

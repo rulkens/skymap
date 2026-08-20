@@ -1,7 +1,7 @@
 /**
  * PickDebugOverlay — fullscreen pass that samples the r32uint pick
  * texture and colour-maps it over the tone-mapped swap chain.  Toggled
- * by the `debug.showPickBuffer` setting; off by default.
+ * by the `debug.overlays['pick-buffer']` setting; off by default.
  *
  * ### Why it exists
  *

@@ -98,7 +98,7 @@ flowchart LR
 
 - 🟠 **9 file-edits** for the render slice: layer file · 3 edits in `passes/index.ts` (import, load-bearing ordinal, re-export) · handle field · null literal · destroy pair · `initGpu` construct.
 - 🟢 **0 edits** for timing slots + debug toggles — derived. This is the model that works.
-- 🟠 Own render target? **+4 more**: spec row, clear value, positioned program step, `PASS_GROUP_TITLES` row.
+- 🟠 Own render target? **+2 more**: spec row (clear value rides it now, rung 2 — no longer a separate edit), positioned program step. `PASS_GROUP_TITLES` needs an entry only when the new step wants its own display group — a new `(target, slab)` step, not a new subsystem.
 
 ## 3. Asset & handle lifecycles
 
@@ -179,7 +179,7 @@ flowchart LR
 | `FadeId` / `VisibilityLayerKey` | 12 kinds vs 18 keys — ⚪ deliberately different grain; both type-level unions                                                                                                                                                         | `FadeId.d.ts:80-96`, `VisibilityLayerKey.d.ts:53-71`           |
 | wake                            | 🟠 10-term disjunction + explicit `anim` bag (3 fields) fed by planners                                                                                                                                                               | `shouldKeepTicking.ts:117-135`                                 |
 | `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:438-476` |
-| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers                                                                                                                                                                      | `frameProgram.ts:233-384`                                      |
+| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers; settings half: one `overlays: Record<DebugOverlayKey, boolean>` seeded from `DEBUG_OVERLAY_ROWS`, one reducer, one selector (rung 6, #16)                          | `frameProgram.ts:233-384`, `data/debug/debugOverlayRows.ts` |
 
 ### Loose spots
 
@@ -191,7 +191,7 @@ flowchart LR
 | 🔴  | Caption layer bypasses the director **and** the fade handles                                                                                                                        | `foregroundLabelsLayer`                                |
 | 🟠  | Producers registered inline in engine.ts                                                                                                                                            | `engine.ts:576-587`                                    |
 | 🟠  | Wake terms accrete by hand (each = a signature edit) — ruled ACCEPTED, not open (rung 5, #15 D4): the signature edit is the compile-time gate against a dropped vote | `shouldKeepTicking.ts:19-30`                           |
-| 🟠  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed                                                                                                               | `DebugPanel.tsx:79-90`, `frameProgram.ts:209-224`      |
+| ⚪  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed — split by rung 6's census (#16 D7): slider tables were **stale** (already registries, D2/D9, before this rung even ran); the DebugPanel section list is **deliberate** (hand-authored by ruling, D2); `PASS_GROUP_TITLES` is **deliberate** and additionally **test-pinned** (`frameProgram.test.ts:404-455` already pins its title list, so drift already fails a test) | `DebugPanel.tsx:82-94`, `frameProgram.ts:222-238`      |
 
 ## 5. Pick / selection (⚪ parallel surface, out of scope)
 
@@ -207,7 +207,7 @@ flowchart LR
 | 2   | 🟠  | **Layer ordinal** — draw order within a group = array position + prose                                                                                                                                                                                                              |
 | 3   | 🟠  | **Off-registry lifecycles** — generated/streamed still invent their own wiring; imperative no longer does (ingest ×5 → 1 fn, #14). Staleness settled resource-owned (#13); site 4 ruled with no code change, its tier-response residue re-handed to the umbrella reassessment (#14) |
 | 4   | 🟠  | **Inverse-map drift pairs** — FADE_ROW↔VISIBILITY_ACTION_ROW; specs↔clear values                                                                                                                                                                                                    |
-| 5   | 🟠  | **Hand-listed UI** — DebugPanel JSX, group titles                                                                                                                                                                                                                                   |
+| 5   | ⚪  | **Hand-listed UI** — DebugPanel JSX, group titles. Ruled **deliberate**, not debt (rung 6, #16 D1–D2): a walker may derive DATA a hand-written component maps over, never emit the component tree itself                                                                          |
 | 6   | 🟠  | **Wake accretion** — every animator edits a signature. Ruled a recorded acceptance, not an open item for the rungs (rung 5, #15 D4): a required `anim` bag field is the compile-time gate a closure-bearing row table could not be; re-deferred to the umbrella reassessment, not another rung |
 | 7   | 🔴  | **Unvalidated cross-file contracts** — blend/format parity, target∈specs                                                                                                                                                                                                            |
 
@@ -229,7 +229,7 @@ flowchart TD
     B --> W3["teardown walker<br/>(replaces ~44 destroy/null pairs)"]
     B -. no sweep (#13) .- W4["staleness stays<br/>resource-owned"]
     B --> W5["frame-assembly validation<br/>(layers ↔ program steps coverage)"]
-    B --> W6["derived debug<br/>(groups PASS_GROUP_TITLES + sliders + sections)"]
+    B --> W6["debug settings chain<br/>(one `overlays` record + `DEBUG_OVERLAY_ROWS` rows table, no walker — rung 6, #16)"]
     B --> W7["wake fold<br/>(votes into the anim bag — rung 5 folded the label director by hand, #15; the manifest/walker question stays deferred to the umbrella, #15 D4)"]
     B --> W8["fade-manifest derivation<br/>(concat bundle.fades + legacy rows)"]
     FPX["frameProgram step list"] -. stays hand-authored .- B
@@ -256,7 +256,7 @@ flowchart TD
 | `anim` bag / disjunction terms                      | 🟢 done, no bundle field needed: one field (`labelsAnimating`) + two deletions shipped directly (rung 5, #15) — no walker, the bag itself is the seam    | the signature change              |
 | `FADE_LAYERS` row                                   | `fades` (manifest = concatenation)                                                                                                                      | the central manifest              |
 | inline producer registration                        | `labelProducers` / `markerProducers`                                                                                                                    | inline registration + shadow path |
-| group titles + sliders + DebugPanel JSX             | `debug` + derived-debug walker                                                                                                                          | the JSX list                      |
+| overlay settings chain (3 booleans × 9 touchpoints)  | 🟢 done, no walker: one `overlays` record seeded from `DEBUG_OVERLAY_ROWS` (rung 6, #16) — group titles, sliders and DebugPanel JSX stay hand-authored by ruling, not debt (D2)                                                                                                    | the three-chain settings copy     |
 | settings slice + defaults                           | `settings` contribution                                                                                                                                 | nothing structural                |
 
 ⚪ **Deliberately unchanged**: hand-authored `frameProgram` (#4) · pick kind

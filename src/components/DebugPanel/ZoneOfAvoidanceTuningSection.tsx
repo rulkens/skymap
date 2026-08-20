@@ -17,8 +17,7 @@ import {
   zoneOfAvoidanceSliderPatch,
 } from '../../data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
 import CopyButton from '../common/CopyButton/CopyButton';
-import DebugSection from './DebugSection';
-import DebugSlider from './DebugSlider';
+import DebugTuningSection from './DebugTuningSection';
 import sliderStyles from './DebugSlider.module.css';
 
 export type ZoneOfAvoidanceTuningSectionProps = {
@@ -31,20 +30,12 @@ export function ZoneOfAvoidanceTuningSection({
   onChange,
 }: ZoneOfAvoidanceTuningSectionProps): ReactElement {
   return (
-    <DebugSection title="Zone of Avoidance tuning">
-      {ZONE_OF_AVOIDANCE_SLIDER_FIELDS.map((f) => (
-        <DebugSlider
-          key={f.key}
-          label={f.label}
-          value={zoneOfAvoidance[f.key]}
-          min={f.min}
-          max={f.max}
-          step={f.step}
-          readout={f.format(zoneOfAvoidance[f.key])}
-          title={f.title}
-          onChange={(v) => onChange(zoneOfAvoidanceSliderPatch(f.key, v))}
-        />
-      ))}
+    <DebugTuningSection
+      title="Zone of Avoidance tuning"
+      fields={ZONE_OF_AVOIDANCE_SLIDER_FIELDS}
+      values={zoneOfAvoidance}
+      onSliderChange={(k, v) => onChange(zoneOfAvoidanceSliderPatch(k, v))}
+    >
       <div className={sliderStyles.root} title="Veil tint, linear RGB (picker speaks sRGB).">
         <span className={sliderStyles.label}>color</span>
         <span className={sliderStyles.readout}>{linearRgbToHex(zoneOfAvoidance.color)}</span>
@@ -79,6 +70,6 @@ export function ZoneOfAvoidanceTuningSection({
         label="Copy current defaults"
         title="Paste into DEFAULT_ZONE_OF_AVOIDANCE_TUNING in data/defaults.ts"
       />
-    </DebugSection>
+    </DebugTuningSection>
   );
 }

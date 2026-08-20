@@ -58,6 +58,7 @@ import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
+import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
@@ -225,14 +226,8 @@ export const selectFlow = (state: RootState): FlowSettings => selectSettings(sta
 
 // --- debug cluster ------------------------------------------------------------
 
-export const selectShowPickBuffer = (state: RootState): boolean =>
-  selectSettings(state).debug.showPickBuffer;
-
-export const selectShowDiskRadiusRing = (state: RootState): boolean =>
-  selectSettings(state).debug.showDiskRadiusRing;
-
-export const selectShowOrbitTrailImpostor = (state: RootState): boolean =>
-  selectSettings(state).debug.showOrbitTrailImpostor;
+export const selectDebugOverlays = (state: RootState): Record<DebugOverlayKey, boolean> =>
+  selectSettings(state).debug.overlays;
 
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;

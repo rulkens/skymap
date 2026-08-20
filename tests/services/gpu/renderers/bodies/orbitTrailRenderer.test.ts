@@ -230,7 +230,7 @@ describe('createOrbitTrailRenderer', () => {
   });
 
   it('the impostor overlay draws the ribbon hull only when enabled', () => {
-    // debug.showOrbitTrailImpostor: the debug pipeline builds LAZILY on
+    // debug.overlays['orbit-trail-impostor']: the debug pipeline builds LAZILY on
     // first `true` (production pays nothing while the flag stays false), and
     // the extra draw reuses the SAME vertex count as the production draw —
     // the overlay is a lens over the real geometry, not an independently-

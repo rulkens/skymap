@@ -67,9 +67,6 @@ import {
   DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_POINT_SIZE_PX,
-  DEFAULT_SHOW_DISK_RADIUS_RING,
-  DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
-  DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_EXPOSURE_NEAR_X,
@@ -84,8 +81,10 @@ import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/st
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
+import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
+import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
@@ -176,9 +175,10 @@ export function makeSettingsFixture(
     flow: { ...DEFAULT_FLOW },
     labels: { focusedOnly: false },
     debug: {
-      showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
-      showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
-      showOrbitTrailImpostor: DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
+      overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
+        DebugOverlayKey,
+        boolean
+      >,
       disabledPasses: {},
       renderStrategy: 'auto',
       clipPathInspect: {

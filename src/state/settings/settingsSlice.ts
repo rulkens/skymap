@@ -52,6 +52,7 @@ import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
+import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
 // tier is NOT a settings field — it lives in its own root slice (seeded via the
@@ -351,14 +352,13 @@ const settingsSlice = createSlice({
     },
 
     // ── debug ───────────────────────────────────────────────────────────────
-    setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
-      settings.debug.showPickBuffer = action.payload;
-    },
-    setShowDiskRadiusRing: (settings, action: PayloadAction<boolean>) => {
-      settings.debug.showDiskRadiusRing = action.payload;
-    },
-    setShowOrbitTrailImpostor: (settings, action: PayloadAction<boolean>) => {
-      settings.debug.showOrbitTrailImpostor = action.payload;
+    // One reducer for every DEBUG_OVERLAY_ROWS toggle — writes one entry
+    // in-place (like setPassDisabled below), never the whole record.
+    setDebugOverlay: (
+      settings,
+      action: PayloadAction<{ key: DebugOverlayKey; enabled: boolean }>,
+    ) => {
+      settings.debug.overlays[action.payload.key] = action.payload.enabled;
     },
     setPassDisabled: (settings, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
@@ -537,9 +537,7 @@ export const {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
-  setShowPickBuffer,
-  setShowDiskRadiusRing,
-  setShowOrbitTrailImpostor,
+  setDebugOverlay,
   setPassDisabled,
   setRenderStrategy,
   inspectClipPath,

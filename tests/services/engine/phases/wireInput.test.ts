@@ -136,8 +136,7 @@ function makeState(): EngineState {
         },
       },
       debug: {
-        showPickBuffer: false,
-        showDiskRadiusRing: false,
+        overlays: { 'pick-buffer': false, 'disk-radius-ring': false },
         disabledPasses: {},
         renderStrategy: 'auto',
       },

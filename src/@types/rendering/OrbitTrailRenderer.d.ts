@@ -28,8 +28,9 @@ export type OrbitTrailRenderer = Renderer & {
    * `instances.length / 34` — the renderer throws rather than read past the
    * caller's array; `count` may be 0, which is a no-op.
    *
-   * `showImpostor` (default `false`, the `debug.showOrbitTrailImpostor`
-   * toggle) issues one ADDITIONAL debug draw — the ribbon hull's flat fill —
+   * `showImpostor` (default `false`, the
+   * `debug.overlays['orbit-trail-impostor']` toggle) issues one ADDITIONAL
+   * debug draw — the ribbon hull's flat fill —
    * with the SAME vertex count as the production draw, so the overlay lands
    * exactly on the real geometry as a lens over it, never a replacement. The
    * debug pipeline builds lazily on first `true`, so leaving the flag off
