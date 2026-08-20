@@ -88,7 +88,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Earth tile polar refinement clamp** `deferred` — plate-carrée refinement over-selects near the poles (~17x vs equator in one simulation); masked until Phase E deepens the pyramid. → [details](backlog/2026-07-30-earth-tile-polar-refinement-clamp.md)
 - [ ] **Earth tile uv-conversion functions have no production caller** `needs-design` — `earthTileXyForUv`/`earthTileCentreUv` are referenced only by each other's test; the flip and wrap are re-implemented inline at six live sites instead. → [details](backlog/2026-07-30-earth-tile-uv-conversion-dead-home.md)
 - [ ] **`EarthTileKind`'s plumbing assumes there is only one kind** `needs-design` — bake, planner, decode and the uniform window all silently break or double up the moment a second kind (normal maps) is added. → [details](backlog/2026-07-30-earth-tile-kind-singularity.md)
-- [ ] **Earth's local frame is derived twice per frame** `needs-design` — `runFrame.ts` and `earthLayer.ts` independently recompute the same MVP/camPosLocal for the tile plan vs the uniforms; nothing keeps them in agreement. → [details](backlog/2026-07-30-earth-frame-derived-twice.md)
 - [ ] **`TextureAtlas` eviction is flat LRU** `needs-design` — van Waveren's finest-mip-first-then-LRU would let coarse, widely-depended-on pages survive over finer ones instead of evicting by recency alone.
 - [ ] **Earth tile `tilePx` can only ever hold one value** `ready` — `derivePlannerParams` refuses any manifest value but the constant, yet it's threaded through six functions and three docstrings promise a re-bake at a different edge is "a data change."
 - [ ] **Earth page table re-derives the atlas's slot-to-cell decode** `ready` — `TextureAtlas.slotsPerRow` is private; `buildEarthPageTable` and `earthTileSubsystem` each recompute it independently.
@@ -174,9 +173,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
-- [ ] **Surface-directed zoom** `needs-design` — zoom dollies toward the body centre, so you cannot zoom toward the point under the cursor. → [details](backlog/2026-07-30-surface-directed-zoom.md)
-- [ ] **Cursor-anchored orbit drag** `needs-design` — the ground follows the cursor only at the screen centre, and yaw dies near the poles; same raycast prerequisite as surface-directed zoom. → [details](backlog/2026-07-30-cursor-anchored-orbit-drag.md)
-- [ ] **Surface-fixed camera follow** `needs-design` — at the new ~1 km standoff, Earth's rotation under a LIVE clock reads as camera drift under the centre-pivoted orbit; follow the body's rotating frame near the surface. → [details](backlog/2026-08-19-surface-fixed-camera-follow.md)
 
 ## Docs & process
 
