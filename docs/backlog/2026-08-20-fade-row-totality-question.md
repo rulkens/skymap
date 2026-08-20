@@ -15,12 +15,13 @@ Today, `FadeLayer` rows are a flat manifest and `FadeId`/
 `VisibilityLayerKey` are type-level unions that must stay total — every
 member of the union needs a row, even ones with no live consumer. The
 current-contracts-map's loose-spots table (`:189`) already names the present
-cost of that totality requirement: "2 fade rows have no consumer (union-
-totality artifacts)," `fadeLayers.ts:150-185`. (Widened by
-`renderer-layer-outliers.md` §3 to 5 registered handles with no consumer —
-proceduralDisks, texturedDisks, structureRing, starCatalogLabel, bodyLabel —
-2 of which are already tracked at
-[`docs/backlog/2026-07-29-unread-caption-fade-handles.md`](2026-07-29-unread-caption-fade-handles.md).)
+cost of that totality requirement. Rung 7 corrected the count and ruled on
+every member (`decisions.md` #18): the no-consumer set is 5 —
+`proceduralDisks`, `texturedDisks`, `scaleBar`, `starCatalogLabel`,
+`bodyLabel` (`structureRing` was listed in error; `scaleBar` was missing).
+The three registration-only rows are ACCEPTED (#18 D13) and the two label
+rows are rung 8's wire (#18 D12), which discharged the separate cleanup item
+that used to be tracked here.
 
 **This item is not that cleanup.** It's the forward-looking design question
 for after fades become bundle-declared: decisions.md #7 settles that
