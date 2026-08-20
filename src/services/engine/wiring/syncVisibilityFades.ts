@@ -82,10 +82,9 @@ export function syncVisibilityFadeItem(
   state: ApplyIntentState,
   key: VisibilityLayerKey,
   item: unknown,
-  opts: { durationMs?: number },
 ): void {
   const row = FADE_LAYERS.find((r) => r.key === key);
   if (row === undefined || row.intent === undefined) return;
 
-  applyIntent(state, row, item, { ...opts, animate: true });
+  applyIntent(state, row, item, { animate: true });
 }

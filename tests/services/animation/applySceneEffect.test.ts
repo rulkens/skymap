@@ -521,9 +521,10 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   it('volumeField factory emits one writeVolumeField({ id, patch:{enabled} }) per volume item', () => {
     const settingsWithVolume = makeSettings({ volumeFieldIds: ['cf4-density'] });
-    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(true, settingsWithVolume) as ReturnType<
-      typeof writeVolumeField
-    >[];
+    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(
+      true,
+      settingsWithVolume,
+    ) as ReturnType<typeof writeVolumeField>[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'cf4-density', patch: { enabled: true } });
   });

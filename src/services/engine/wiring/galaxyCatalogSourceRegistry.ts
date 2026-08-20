@@ -158,7 +158,7 @@ export function wireGalaxyCatalogSourceSlot(
       // source reloads concurrently, and a sweep would have this commit re-drive
       // the others' in-flight fades. Fire-and-forget, so the slot reaches `ready`
       // without waiting on the smoothstep.
-      syncVisibilityFadeItem(state, 'survey', catalogId, {});
+      syncVisibilityFadeItem(state, 'survey', catalogId);
 
       const dtMs = Math.round(performance.now() - t0);
       // If this disagrees with `cloud.count`, a concurrent upload overwrote.

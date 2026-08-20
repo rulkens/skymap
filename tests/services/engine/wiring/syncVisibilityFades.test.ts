@@ -373,7 +373,7 @@ describe('syncVisibilityFadeItem', () => {
     const idA = STRUCTURE_IDS[0]!;
     const idB = STRUCTURE_IDS[1]!;
 
-    syncVisibilityFadeItem(state, 'structureRing', idA, {});
+    syncVisibilityFadeItem(state, 'structureRing', idA);
 
     // Exactly one fade, on idA's handle, to the intent target (enabled → 1).
     expect(fadeTo).toHaveBeenCalledTimes(1);

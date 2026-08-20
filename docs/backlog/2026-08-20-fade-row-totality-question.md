@@ -57,5 +57,5 @@ umbrella reassessment happens, fold this question in as one of the design
 choices for the bundle-declared fades sub-contract. The neighbouring
 inverse-map half of rung 7's charter is already answered and does not come
 with it: `FADE_ROW` derives from `VISIBILITY_ACTION_ROW`'s required `writes`
-field (#18 D2, `visibilityActionRow.ts:183-189`). What remains open here is
+field (#18 D2, `visibilityActionRow.ts:131-141`). What remains open here is
 only "how total does a bundle-declared union need to stay".

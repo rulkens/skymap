@@ -134,8 +134,9 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
  */
 export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = Object.fromEntries(
   Object.entries(VISIBILITY_ACTION_ROW)
-    .filter((entry): entry is [VisibilityLayerKey, VisibilityActionRow & { writes: { type: string } }] =>
-      entry[1].writes !== null,
+    .filter(
+      (entry): entry is [VisibilityLayerKey, VisibilityActionRow & { writes: { type: string } }] =>
+        entry[1].writes !== null,
     )
     .map(([key, row]) => [row.writes.type, key]),
 );

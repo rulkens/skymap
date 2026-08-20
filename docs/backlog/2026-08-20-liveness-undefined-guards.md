@@ -6,7 +6,7 @@ Surfaced by rung 7's T7 review (`.superpowers/sdd/2026-08-20-fade-rows/task-7-re
 findings 2 and 4, adjudicated concern 2), two related "fixtures escape the
 type system at an `as unknown as` seam" gaps:
 
-**Null-vs-undefined guard drift.** `zoneOfAvoidanceLiveness.ts:22` guards
+**Null-vs-undefined guard drift.** `zoneOfAvoidanceLiveness.ts:18` guards
 `state.gpu.zoneOfAvoidanceRenderer === null`, so a state object (typically a
 test fixture built via `as unknown as EngineState`) with the field simply
 absent — `undefined`, not `null` — slips past the "not live" gate instead of

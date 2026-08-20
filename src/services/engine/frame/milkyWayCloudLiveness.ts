@@ -26,8 +26,7 @@ export function deriveMilkyWayCloudAlpha(
   }
 
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  // Near-side approach fade, orthogonal to the far-side band above: shuts only
-  // deep inside the disc, once the Gaia star catalog has taken over.
+  // Near-side approach fade: shuts only deep inside the disc, once the Gaia star catalog has taken over.
   const approach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc);
   if (approach <= 0) return null;
 

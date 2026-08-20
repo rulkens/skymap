@@ -849,11 +849,11 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     not a dead one — and `scaleBar` was missing. The correct set, zero
     production readers of the registered opacity: `proceduralDisks`,
     `texturedDisks`, `scaleBar`, `starCatalogLabel`, `bodyLabel`
-    (`fadeLayers.ts:108,115,174,153,166` — key order, not line order).
+    (`fadeLayers.ts:75,81,133,113,126` — key order, not line order).
     **Method**, recorded so the next rung re-runs it instead of re-guessing:
     enumerate every `opacityOf(` and `resolveLayerOpacity(` call site under
     `src/` and match against the 18 `FADE_LAYERS` rows
-    (`fadeLayers.ts:97-317`); these five have no match.
+    (`fadeLayers.ts:66-231`); these five have no match.
     `current-contracts-map.md:189`'s "**2** fade rows have no consumer" was
     incomplete rather than wrong — it counted only `fadeLayers.ts`'s two
     self-admissions.
@@ -863,9 +863,10 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     key with no reader and a key whose only reader skips the clip channel are
     both keys a tour author addresses and gets nothing from. `fade()` writes
     only the `clipOpacity` channel (`effectHelpers.ts:387-393`,
-    `applySceneEffect.ts:165-172`, `clipPlayer.ts:198-206`), and that channel
+    `clipPlayer.ts:198-206` — `applySceneEffect.ts`'s `'fade'` case throws
+    rather than duplicate the write, `:106-112`), and that channel
     reaches pixels through exactly two doors — `clipFactorFor` inside
-    `resolveLayerOpacity` (`focusRecession.ts:149-152`), and three hand-rolled
+    `resolveLayerOpacity` (`focusRecession.ts:75-78`), and three hand-rolled
     producer calls (D10). **Reachable, 7:** `filaments`, `orbitTrails`,
     `volumesMaster`, `zoneOfAvoidance` (the canonical consumers) plus
     `surveyLabel`, `structureRing`, `structureLabel` (the producers).
@@ -900,7 +901,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       a new key must state its stance — the discipline
       `fadeIdToVisibilityKey`'s `satisfies Record<…>` already uses), the
       inverse falls out: `FADE_ROW` is now derived in place
-      (`visibilityActionRow.ts:183-189`) and `watchFadesSaga.ts` imports it.
+      (`visibilityActionRow.ts:131-141`) and `watchFadesSaga.ts` imports it.
       Not the per-row exception #10 bans — 15 of 18 rows carry it, so it names
       a capability the family shares. **Rejected: deriving `actions` from
       `writes` too.** It needs a payload taxonomy — 8 rows are `creator(on)`, 6
@@ -923,7 +924,8 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       JUSTIFY.** Both are keyed by `VisibilityLayerKey` and their
       registration-only subsets coincide exactly, which invites a merge. Two
       facts refuse it. **Layering:** `FADE_LAYERS` rows close over
-      `EngineState` (`fadeLayers.ts:226,242,290,306-315`), so merging drags the
+      `EngineState` (`fadeLayers.ts` — the `survey` row's `guard` at `:162`,
+      `flow`'s at `:210`, `volumeField`'s `guard`/`post` at `:221-229`), so merging drags the
       engine into the store's saga graph — the one constraint D2 just
       preserved. **Item domains differ:** `FADE_LAYERS.survey.expand` yields
       the compile-time `GALAXY_CATALOG_IDS`, `VISIBILITY_ACTION_ROW.survey`
@@ -939,7 +941,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       `VISIBILITY_KEY_BY_KIND.overlay` is deliberately `undefined`
       (`fadeIdToVisibilityKey.ts:87-92`) while `FADE_LAYERS` _does_ map
       `{kind:'overlay',id}` to `proceduralDisks`/`texturedDisks`
-      (`fadeLayers.ts:106-119`). That divergence is the hand table's whole
+      (`fadeLayers.ts:74-85`). That divergence is the hand table's whole
       point: `:87-92` is a stance — "no clip cue addresses the always-on disk
       overlays" — and a derived inverse would silently overwrite it. **The cost
       is armed, not present.** Those two handles have zero readers today, so no
@@ -950,13 +952,14 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       re-opened as "it costs nothing".
     - **D5 — the four `FadeId`-keyed presentation tables stay four tables.
       JUSTIFY.** `fadeIdToVisibilityKey.ts:54-94` and
-      `focusRecession.ts:77-116` are structurally identical — same two key
+      `focusRecession.ts:28-63` are structurally identical — same two key
       domains, same `satisfies Record<…>` guard, same two-way branch,
       duplicated verbatim. Merging them into one `{ clipKey, recession }` row
       deletes ~8 lines of skeleton and braids two concerns that vary
       independently: the clip key is an _address in the tour vocabulary_, the
-      recession target is a _visually tuned number_ (`focusRecession.ts:66-72`
-      marks them as not-final placeholders). Under `simplicity.md` that is
+      recession target is a _visually tuned number_ (`focusRecession.ts:66-72`,
+      historical — pre-audit lines; the "not-final placeholders" wording was
+      later replaced by "Eye-tuned" at `:21-22`). Under `simplicity.md` that is
       complecting for a skeleton saving.
     - **D6 — `scopedVisibilityActions` keeps its two tables. JUSTIFY.** (The
       survey's "1 row so far" was also wrong: `LABEL_SLICES` has three rows and
@@ -1024,7 +1027,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
         the deep-zoom band `surveyFade` — stays in the expression.
 
       Recession is provably `1` at all seven migrated sites: `RECESSION_BY_KIND`
-      and `RECESSION_BY_LABEL_LAYER` (`focusRecession.ts:77-116`) give
+      and `RECESSION_BY_LABEL_LAYER` (`focusRecession.ts:28-63`) give
       `undefined` for every kind they read, so outside a playing clip the
       migration is a no-op by construction rather than by inspection. **That
       scoping does not generalize, and rung 8 must not inherit "raw ⇒ recession
@@ -1059,7 +1062,8 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       `produceStructureLabels.ts:91` and `produceFamousLabels.ts:218` each
       hoist a single `clipOpacityOf(<literal key>)` _out of_ their per-instance
       loop and multiply it in alongside a focused-instance exemption — the
-      split `focusRecession.ts:164-166` documents as the per-instance contract.
+      split `focusRecession.ts:81-84` (the `resolveLayerOpacity` doc comment)
+      documents as the per-instance contract.
       Routing them through the private `clipFactorFor` would mean synthesizing
       a representative `FadeId` for a whole category — `{kind:'structure'}` with
       _which_ id? — to recover a key the producer already knows, or moving
@@ -1071,7 +1075,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       the `setImmediate` path reachable and now silently wake-less, a
       starvation bug planted for a future caller. Per #10 the fix is at the
       contract — the entry's sole production caller passes `{ animate: true }`
-      (`galaxyCatalogSourceRegistry.ts:233`), so the parameter goes and the
+      (`galaxyCatalogSourceRegistry.ts:161`), so the parameter goes and the
       entry passes that literal on to `applyIntent`, whose `opts` does not
       narrow with it. Neutrality is explicit, not inferred. The batch bridge
       `syncVisibilityFades` **keeps** `animate`: it has real snap-path callers
@@ -1091,7 +1095,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       promise is totality over the label keys, so removing either breaks
       `hide(['labels'])`. Their intent path already works end to end —
       `VISIBILITY_ACTION_ROW.starCatalogLabel` → `setStarCatalogLabelEnabled` →
-      `foregroundLabelsLayer.ts:376-377` reads the settings leaf — so only the
+      `foregroundLabelsLayer.ts:131-132` reads the settings leaf — so only the
       fade _animation_ goes nowhere. The live question is who finishes it, and
       the answer is rung 8, for four reasons: (1) finishing means teaching
       `foregroundLabelsLayer` — 812 lines rung 8 is chartered to dissolve into
@@ -1102,7 +1106,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       the captions run a private declutter + temporal envelope and a naive
       multiply would double-count against a dimming authority the layer already
       owns — the same argument `RECESSION_BY_LABEL_LAYER`'s
-      `starCatalog`/`body: undefined` rows record (`focusRecession.ts:88-97`);
+      `starCatalog`/`body: undefined` rows record (`focusRecession.ts:39-48`);
       (4) leaving them costs zero LOC and zero risk, so there is no "fix it now
       while we're here" saving to weigh against the rework. What rung 7 did
       instead, two things: deleted the 22 lines of research narrative and TODO
@@ -1173,7 +1177,7 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     migration — so it is filed as a backlog item rather than fixed in a rung
     whose scope is the read side. The integration test's `milkyWayDisk`
     assertion drives a clip stub for exactly this reason
-    (`tour.integration.test.ts:423`).
+    (`tour.integration.test.ts:291`).
 
     **The pick asymmetry the review surfaced, recorded so it does not read as an
     oversight.** `milkyWayLayer.ts:95-99` composes `pickEnabled` over

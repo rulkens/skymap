@@ -86,8 +86,9 @@ export const galaxyPointSpritesLayer: ContentLayer = {
   // running first, and calling `drawPoints` even on an empty list, is load-bearing.
   //
   // `ctx.visibleSourceMask` is the PICK mask here (`deriveSourceMasks(state).pick`),
-  // and the opacity filter extends it: invisible → unpickable, so a survey source
-  // faded to exactly 0 stops claiming hits. Famous is exempt, mirroring the draw.
+  // and the opacity filter extends the mask on the INTENT fade only — picking
+  // follows intent, not pixels (`deriveSourceMasks.ts:25-27`, #18 D8), so a clip
+  // `fade()` dims these points without revoking their click target.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.galaxyPickRenderer === null) return;
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);

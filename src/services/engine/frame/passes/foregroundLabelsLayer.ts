@@ -139,8 +139,8 @@ export const foregroundLabelsLayer: ContentLayer = {
       sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0;
     // The constellation band reaches PAST the body caption gate (0 at 0.01 Mpc vs
     // the ~9.2e-3 Mpc gate), so this term is ORed in or the figure names get cut
-    // mid-band. It rides the same product `draw` uses for their fade target —
-    // band × toggle — so the summary can't claim a caption the draw zeroes.
+    // mid-band. Reads the raw intent opacity by ruling (#18 D8): a clip fade
+    // dims the captions through the envelope without stopping the row — that's the point.
     const slot = state.assetSlots.constellations;
     const constellationDemand =
       slot !== null &&
