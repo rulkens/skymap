@@ -52,12 +52,20 @@ the deep tuning surface.
    - Cross-subsystem ambient state (structureFocus → ctx.focus/focusBlend →
      shared focus uniform): engine-core `ctx` state; rule = bundles read ctx,
      never write it.
-   - Step-level gates: `FOREGROUND_MAX_DISTANCE_MPC` moves from ~9 layers'
-     `enabled()` to a gate on the frame step itself.
+   - Step-level gates: ~~`FOREGROUND_MAX_DISTANCE_MPC` moves from ~9 layers'
+     `enabled()` to a gate on the frame step itself.~~ **REFINED by #16
+     (2026-08-20)** — not rung 6's; re-pointed at the frame-step work alone
+     (`renderer-layer-outliers.md:204`). **10** layers gate on it, not ~9,
+     spanning **three** frame steps (`foreground:0·NEAR0`, `hdr·NEAR0`,
+     `swap·NEAR0`), so one step-level gate cannot host it as written — four
+     would over-gate every other layer sharing those steps.
    - Bundle handles are shared across the bundle's own layers; the selection-halo
      slab-partition invariant becomes a named pattern.
-   - `devOnly` flag on debug layers. Pick ownership may span rows (planetsLayer
-     picks for textured bodies; caption-only anchors draw nothing).
+   - ~~`devOnly` flag on debug layers.~~ **REFINED by #16 (2026-08-20)** —
+     rejected: no reader exists for it (`grep -rn devOnly src/` empty);
+     dev-only-ness lives in `DEBUG_OVERLAY_ROWS` membership instead (D3). Pick
+     ownership may span rows (planetsLayer picks for textured bodies;
+     caption-only anchors draw nothing).
    - Planner-hoist (memoised on ctx, `prepareStarCut` style) is the norm; the four
      solar-system derivations recomputed per call site migrate to it (long tail).
    - Liveness: both incumbent forms first-class (`deriveXLiveness` file where
@@ -103,8 +111,11 @@ the deep tuning surface.
    **fails**, so there is no table to expect; site 4 closes with a ruling, not a
    patch; **5** ~~wake-vote fold~~ **REFINED by #15 (2026-08-20)** — one
    `anim` bag field (`labelsAnimating`) plus two deletions, no table; a
-   reader of #9 alone should not expect a wake registry, see #15; **6** debug
-   derivation, **7** the
+   reader of #9 alone should not expect a wake registry, see #15; **6** ~~debug
+   derivation~~ **REFINED by #16 (2026-08-20)** — a settings-mechanism
+   consolidation (one `DEBUG_OVERLAY_ROWS` record, one `SliderField<K>`, one
+   generic `DebugTuningSection`); no walker, no layer registry, no `devOnly`
+   field — see #16; **7** the
    `FADE_ROW`/`VISIBILITY_ACTION_ROW` derivation decision. Rungs 1 and 3 get
    mini-plans; the rest are bounded changes. Track B is unchanged and
    parallel; **Track C gates on B + rungs 1–3 only**, so the MW landing gets
@@ -138,7 +149,12 @@ the deep tuning surface.
     RESOLVED NEGATIVE — `compositor.ts:178-190` documents `swapFormat`/
     `hdrFormat` as unused, pipelines cache on the live per-frame `dstFormat`,
     so there is no baked format to go stale; confirmed also by a clean
-    HDR-toggle visual smoke; fieldStarSphere missing the FOREGROUND_MAX gate.
+    HDR-toggle visual smoke; ~~fieldStarSphere missing the FOREGROUND_MAX
+    gate~~ **RESOLVED NEGATIVE** (2026-08-20) — self-gated on camera POSITION
+    at ~1.81 AU, ~8 orders tighter than the 0.23 Mpc cut; `enabled()` measured
+    `false` at cosmic zoom; the only divergent pose is unreachable, and current
+    behaviour would be correct there anyway (#16 D6). Residual cited, not
+    fixed, at `docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md`.
 12. **How family rows are keyed** (2026-08-18, ruled in rung 2 — refines #9's
     anti-drift sentence): a row is identified **in its own domain** — the handle
     row by its `EngineGpuHandles` field name, the target row by its
@@ -555,6 +571,196 @@ the deep tuning surface.
     **No `WAKE_LAYERS` manifest, row type or walker was built.** Evidence +
     the full accounting: [rung-5 plan](../../superpowers/plans/2026-08-19-wake-vote-fold.md).
 
+16. **Debug derivation is a settings-mechanism consolidation, not a walker —
+    ten rulings, no registry** (2026-08-20, ruled in rung 6 — refines #9's
+    rung-6 clause, #7's `devOnly` and step-gate clauses, and P1's
+    derived-debug deliverable). The W6 sketch
+    (`current-contracts-map.md:232`) asked for "derived debug (groups
+    PASS_GROUP_TITLES + sliders + sections)". A census of the eight debug
+    surfaces in `src/services/engine/`, `src/services/gpu/` and `src/state/`
+    found the request already half true and half mis-aimed: the timing
+    slots, group buckets and render-toggle list have been a pure projection
+    of `(frameProgram × CONTENT_LAYERS)` since renderer unification
+    (`frameProgram.ts:247-293`) and a new layer joins all three for zero
+    edits; the slider tables (`MILKY_WAY_SLIDER_FIELDS` etc.) are already
+    registries their sections `.map()` over. What is genuinely
+    O(n)-hand-maintained is the one thing neither the sketch nor
+    `current-contracts-map.md`'s loose-spot table named: the **settings
+    chain** behind `showPickBuffer` / `showDiskRadiusRing` /
+    `showOrbitTrailImpostor` — nine touchpoints apiece, three hand-rolled
+    copies of one shape, sitting one field away from `disabledPasses`'s own
+    open-world-record pattern (`EngineSettingsState.d.ts:420-430`). Rung 6
+    joins that mechanism: one `overlays: Record<DebugOverlayKey, boolean>`
+    seeded from `DEBUG_OVERLAY_ROWS` (`src/data/debug/debugOverlayRows.ts`,
+    three rows — `pick-buffer`, `disk-radius-ring`, `orbit-trail-impostor`),
+    one `setDebugOverlay` reducer, one `selectDebugOverlays` selector, a
+    row-driven `DebugOverlaysSection`, one shared `SliderField<K>` type, and
+    one generic `DebugTuningSection`. Full accounting:
+    [rung-6 plan](../../superpowers/plans/2026-08-20-debug-derivation.md).
+
+    - **D1–D2 — the derivation line is data-vs-JSX; `PASS_GROUP_TITLES`
+      stays hand-listed, permanently.** #4 admits "derived debug" and rejects
+      "Level 4 schema-generated settings UI" in the same sentence without
+      drawing the boundary. Drawn here: a walker may derive DATA a
+      hand-written component maps over; it may not emit the component tree.
+      `DEBUG_OVERLAY_ROWS` and the existing `timedSlotRowsOf` walk sit on the
+      legal side; the DebugPanel's own eleven-child section list sits on the
+      illegal side (no row shape — four children take distinct props, seven
+      are prop-less containers — so per #10 there is nothing to table).
+      `PASS_GROUP_TITLES` (`frameProgram.ts:222-238`) is a third case: it
+      carries two facts (a many-to-one title merge AND the display ORDER,
+      which is not step order) at the granularity of a frame STEP, not a
+      layer or a subsystem, and it is the one artifact #4 keeps
+      hand-authored on purpose. It stays as-is, and **no new test was
+      added** for it — `frameProgram.test.ts:404-455` already pins the full
+      `TIMED_SLOT_GROUPS` title list and four groups' row lists, built from
+      the real program × the real `CONTENT_LAYERS`, so a renamed or deleted
+      `(target, slab)` step already fails today; the only drift that misses
+      (a dead title key matching no emitted group) is inert data, not a bug.
+    - **D3 — no `devOnly` field; dev-only-ness moves domains.** `grep -rn
+      devOnly src/` is empty — the token exists only in this file. Asked
+      what would carry it (two `ContentLayer` rows could) and what would
+      read it (nothing — no build-time strip gates `ContentLayer`/
+      `frameProgram`/`GPU_HANDLE_ROWS`, and the DebugPanel ships in
+      production behind the `d` key), the answer is: a `devOnly` flag would
+      be an optional field one row reads for one polarity, the per-row
+      exception #10 bans by name. Discharged instead by **membership in
+      `DEBUG_OVERLAY_ROWS`**, keyed in its own domain per #12 — absence of a
+      row means "not a dev toggle".
+    - **D4 — all three booleans keep their capability; the same-fact test
+      applied to each contradicts the census's premise.** Rung 5's D8 rule
+      (delete a redundant mechanism only where it covers the same FACT, not
+      just the same default) fails for all three: `disabledPasses` is a
+      one-way override that can only HIDE a layer whose `enabled()` already
+      returned true, seeded `{}` = everything on — collapsing
+      `showDiskRadiusRing` onto it would ring every selected galaxy in
+      production, the opposite of what the census's "fully redundant" claim
+      assumed. `showOrbitTrailImpostor` is a draw-time ARGUMENT selecting a
+      second pipeline inside a production layer, not a layer at all — the
+      generic mechanism would delete the orbit trails entirely, a different
+      fact. `showPickBuffer` gates a surface `disabledPasses` cannot reach
+      (D5). The consolidation is on the settings CHAIN all three share, not
+      on their `enabled()` gates, which differ for essential reasons (a live
+      selection, a computed snapshot, a draw-time branch) — a shared "debug
+      gate" combinator over those is the fake-unified registry #6 forbids.
+    - **D5 — `pickDebugOverlay`'s off-program encoder stays; the deferral
+      gets the user's design target and a priced audit.** The layer is
+      re-keyed onto `overlays['pick-buffer']` and nothing else about it
+      changes: it stays outside `frameProgram`, its own encoder + submit,
+      called post-`renderFrame()` at `runFrame.ts:697`
+      (`drawPickDebugOverlay.ts`). The reason is a writeBuffer hazard, not a
+      style choice: `renderForDebug()` records every pickable layer's
+      `drawPick` and submits on its OWN encoder
+      (`pickProgram.ts:304-338`), and a `queue.writeBuffer` issued there
+      lands on the GPU **before** the outer frame's already-recorded
+      commands execute — the same trap `bodyPickRenderer.ts` documents for
+      the real pick path. **`pickProgram.ts:317-322`'s "the passes share no
+      mutable buffer — no writeBuffer/submit ordering hazard from batching
+      them" is scoped to batching slabs WITHIN `renderForDebug`, not the
+      outer frame**, and must not be read as refuting the deferral. The
+      user's design target for it: pick execution adopts the frame-program
+      shape — a **parallel program instance**, the same executor and
+      `(target, slab)` vocabulary, different rows and different targets —
+      sequenced as a **new ladder rung at the umbrella reassessment** (#9).
+      The 2026-08-20 audit that prices it: **SAFE-WITH-CONDITIONS**, eleven
+      of twelve pickable rows clean, one **blocker** —
+      `zoneOfAvoidanceRenderer.ts:70`'s single `uniformBuffer`, written by
+      both `draw` and `drawPick` through one `writeUniforms` with different
+      values (reduced viewport + live tweened `upBasis` vs. full canvas +
+      `ORIENTATION_FRAMES`), so a naive fold would snap the visible band to
+      the destination roll through an orientation transition — the fix
+      (~10 lines, `galaxyPickRenderer.ts:161`'s own-buffer pattern) is a
+      valid prep refactor on its own merits regardless of the fold. Two of
+      the deferral's own founding premises are corrected by the audit: pick
+      texture completeness is a non-issue (`submit(E2)` precedes
+      `submit(E)`), and the `frustumScratch` re-entrancy worry is
+      placement-contingent, not fatal — it does not bite provided the folded
+      row sits at `(swap, NEAR0)` immediately before `clipPathDebugLayer`.
+      Home: `docs/backlog/2026-08-20-pick-debug-overlay-off-program.md`
+      (new).
+    - **D6 — the `FOREGROUND_MAX_DISTANCE_MPC` hoist is not this rung's, and
+      the fieldStarSphere suspect closes RESOLVED NEGATIVE.** #7 groups the
+      hoist with `devOnly` in one bullet, but it is not a debug surface: the
+      premise ("~9 layers' `enabled()`") undercounts and mislocates it.
+      **10** layers actually gate on it (not ~9, not the outliers sweep's
+      "×8" — that counted `foreground:0` ROWS, of which only 6 gate
+      explicitly), spanning **three** frame steps
+      (`foreground:0·NEAR0`, `hdr·NEAR0`, `swap·NEAR0`) — one step-level gate
+      cannot host it as written. `starCatalogLayer.ts:68` is the
+      counter-example that proves the cut is a choice, not a default: it
+      declares in its own header that it takes **no**
+      `FOREGROUND_MAX_DISTANCE_MPC` cut at all. The hoist keeps its existing
+      home, `renderer-layer-outliers.md:204`, re-pointed by Task 7 at the
+      frame-step work alone (rung 2 shipped without it). Separately,
+      `fieldStarSphereLayer` was flagged (`decisions.md:141`,
+      `renderer-layer-outliers.md:165`) as the one `foreground:0` row with
+      no such gate — read as an omission. **Verified 2026-08-20 and
+      RESOLVED NEGATIVE, no gate added.** The layer self-gates on camera
+      **POSITION**: `enabled()` requires a catalogued Gaia star within the
+      resolve-radius hysteresis band of `ctx.drawCamPos`, measured **~1.81
+      AU** (7.04e-12 Mpc at the 4 px ON threshold) — roughly **eight orders
+      of magnitude** tighter than the 0.23 Mpc `FOREGROUND_MAX_DISTANCE_MPC`
+      cut. A runtime probe against the real octree + catalog confirmed
+      `enabled()` is already `false` at cosmic zoom (camera 0.5 Mpc from the
+      Sun). The one pose where the missing gate would matter — camera within
+      1.8 AU of a star while `cam.distance` ≥ 0.23 Mpc — needs an orbit
+      target ≥230 kpc from a camera standing at a star, which no tween or
+      resting base produces, and were it reachable, today's behaviour (a
+      sphere for the star the camera is parked at) is the correct one
+      anyway — the field star's sprite is distance-retired in-shader at
+      close range, so the sphere is its only geometry. This is the
+      `foreground:0` row whose predicate is already keyed on camera
+      POSITION, so it is the standing backlog item
+      `docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md`'s
+      "the permissive reading is what we want" case, reached by
+      construction — that file is cited, not modified, by this rung.
+    - **D10 — one generic `DebugTuningSection`, user-ruled in, and it sits on
+      D2's legal side.** `MilkyWayTuningSection`, `FlowTuningSection` and
+      `ZoneOfAvoidanceTuningSection` spelled the same `DebugSection` shell +
+      `DebugSlider` `.map()` three times, differing only in registry, values
+      and patch fn — D9's `SliderField<K>` argument one level up. Folding
+      them does not cross D2's line: D2 bans a walker EMITTING a component
+      tree from a schema; this is a hand-written component a hand-written
+      caller instantiates with its own data, the same relationship
+      `DebugSlider` already has to its three callers. What is banned is
+      generated JSX, not shared JSX. `src/components/SettingsPanel/
+      FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
+      **out**: its `'panel'`-surface rows live in a different component with
+      a `disabled` prop and pill-`Slider` chrome the dev panel has no
+      analogue for; instantiating the shared component there too would
+      render the explorer panel in dev-panel chrome, a visible regression
+      dressed as a dedupe.
+    - **D7 — the §2/§4 resolution.** `current-contracts-map.md:100,182` (§2,
+      Frame assembly) rates debug 🟢 "0 edits for timing slots + debug
+      toggles — derived"; `:194,210` (§4, Cross-cutting registries) rates it
+      🟠 "slider tables + DebugPanel sections + `PASS_GROUP_TITLES`
+      hand-listed". Both are about the same file; §2 is right and §4 is
+      stale on two of its three counts — the slider tables are already
+      registries (D2), and `PASS_GROUP_TITLES` + the DebugPanel sections are
+      deliberately hand-authored (D2), not debt. Task 7 sweeps both maps.
+    - **D8 — the DEV volume fixtures and the infra knobs stay out.** The
+      three `debug-*` synthetic cubes are an asset-supply concern gated by
+      `import.meta.env.DEV` and `settings.volumes.items[id].enabled`, not
+      `settings.debug` — #14 D4 already ruled them out of the `generated`
+      family, and nothing about a debug-toggle record changes that.
+      `disabledPasses` and `renderStrategy` are the two mechanisms this
+      rung's record is modelled on, not a problem to fold in.
+    - **D9 — one `SliderField<K>`.** `MilkyWaySliderField`,
+      `ZoneOfAvoidanceSliderField` and `FlowSliderField` were identical
+      field-for-field bar the key type and flow's extra `surface`
+      discriminator — three instances past the second-special-case trigger,
+      and the contract sketch already names a single `SliderField`. The
+      three become one-line aliases over it; `surface` stays on the flow
+      alias alone, since it is one registry's discriminator, not a shared
+      capability.
+
+    **No walker, no layer registry, no `devOnly` field was built.** Rungs 7+
+    read this as ground truth, superseding #7's and #9's earlier promises.
+    _Cost if wrong:_ a `DEBUG_LAYERS` registry parallel to `CONTENT_LAYERS`
+    shipping two rows and needing hand-sync with it — the exact artifact
+    #13 and #15 rejected twice, and a debug overlay defaulting on in
+    production the moment the same-fact test is skipped.
+
 ## The contract (settled sketch)
 
 ```ts
@@ -579,15 +785,18 @@ type SubsystemBundle = {
 ## Ground preparation (verdicts in engine-composition-map §4 + sweep misfits)
 
 - **P1** Bundle contract + engine-core walkers (targets/handles/~~staleness~~/frame
-  assembly/derived debug incl. PASS_GROUP_TITLES + TIMED_SLOTS) + adapter wrapping
-  the legacy hand-wired style. Behaviour-neutral. **SUPERSEDED by #13 (2026-08-19)**
-  — no staleness walker; the compare stays resource-owned (rung 3).
+  assembly/derived debug incl. ~~PASS_GROUP_TITLES~~ + TIMED_SLOTS) + adapter
+  wrapping the legacy hand-wired style. Behaviour-neutral. **SUPERSEDED by #13
+  (2026-08-19)** — no staleness walker; the compare stays resource-owned (rung 3).
+  **REFINED by #16 (2026-08-20)** — `PASS_GROUP_TITLES` stays hand-listed, ruled
+  permanently (D2); `TIMED_SLOTS` shipped (rung 6, `frameProgram.ts:247-293`).
 - **P2** Migrate provers: volumes, star catalog, MW v1-as-is, plus filaments and
   constellations (confirmed clean fits). ~~Deletes `mwAggregateDivisor` param, both
   `runFrame.ts:211-281` mismatch branches~~, hand-maintained debug maps.
   **SUPERSEDED by #13 (2026-08-19)** — rungs 2 (`RenderTargets.reconcile`) and 3
   (`MilkyWayCloud.reconcile`) already deleted both branches; the debug-maps
-  deletion is still open.
+  deletion **CLOSED by #16 (2026-08-20)** — the maps (`PASS_GROUP_TITLES`, the
+  DebugPanel section list) stay hand-authored (D2).
 - **P3** Extract field/ISM orchestration from `tools/galaxy-renderer/src/engine/`
   into `src/services/gpu/renderers/galaxyField/` (instantiable per galaxy); tool
   consumes it. Tool-neutral (probe gates it).

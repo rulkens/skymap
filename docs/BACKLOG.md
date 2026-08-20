@@ -143,6 +143,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Zone-of-avoidance shape constants scattered + four positional args** `needs-design` — `bulgeDeg`/`anticenterDeg` are swappable with a plausible-looking wrong result; one re-narration of the numbers already drifted. → [details](backlog/2026-08-17-zone-of-avoidance-shape-constants.md)
 - [ ] **Third copy of the reduced-res viewport formula** `ready` — `Math.max(1, Math.floor(size / scale))` in `renderTargets.ts`, `scalarVolumeLayer.ts`, `zoneOfAvoidanceLayer.ts`; consolidate into `renderTargets.sizeOf(target)`.
 - [ ] **Disabling a producer layer in the DebugPanel freezes its overlay** `ready` — `zone-of-avoidance`/`star-aggregates`/`mw-aggregate` stop re-clearing while their upsample consumers keep compositing, so the last frame smears in screen space as the camera moves. → [details](backlog/2026-08-17-debugpanel-producer-toggle-freezes-overlay.md)
+- [ ] **Pick-debug overlay is off `frameProgram`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
 
 ## UI & UX
 
