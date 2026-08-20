@@ -28,8 +28,9 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
  *
  * Both rejection tests below err toward KEEPING a patch: the horizon test
  * compares angular radius rather than corners (a cap can lie entirely inside
- * a patch whose corners sit outside it), and the frustum test samples nine
- * points so large patches with corners behind the camera still register.
+ * a patch whose corners sit outside it), and the frustum test's nine-sample
+ * bbox is trusted only when every sample is in front of the camera — a
+ * patch straddling the near plane is kept and forced to refine instead.
  */
 export function planEarthTiles(input: {
   readonly kind: EarthTileKind;
@@ -141,7 +142,7 @@ export function planEarthTiles(input: {
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-    let anyInFront = false;
+    let nInFront = 0;
     for (let i = 0; i < 9; i++) {
       // Corners, edge midpoints and the centre.
       const su = u0 + ((i % 3) / 2) * (u1 - u0);
@@ -149,7 +150,7 @@ export function planEarthTiles(input: {
       const p = equirectUvToDirection([su, sv]);
       const w = mw0 * p[0] + mw1 * p[1] + mw2 * p[2] + mw3;
       if (w <= 0) continue;
-      anyInFront = true;
+      nInFront++;
       const ndcX = (mx0 * p[0] + mx1 * p[1] + mx2 * p[2] + mx3) / w;
       const ndcY = (my0 * p[0] + my1 * p[1] + my2 * p[2] + my3) / w;
       if (ndcX < minX) minX = ndcX;
@@ -157,23 +158,32 @@ export function planEarthTiles(input: {
       if (ndcY < minY) minY = ndcY;
       if (ndcY > maxY) maxY = ndcY;
     }
-    if (!anyInFront) continue;
-    if (maxX < -1 || minX > 1 || maxY < -1 || minY > 1) continue;
+    if (nInFront === 0) continue;
+    // A sample past the near plane is dropped before it can corrupt the
+    // bbox, but a STRADDLING patch's bbox is still meaningless: the true
+    // footprint sweeps toward infinity as a sample nears w=0, so the
+    // surviving corners alone can land anywhere, including a false reject
+    // that prunes the whole subtree. Trust the bbox only when nothing was
+    // dropped; otherwise treat the patch as screen-filling and force it to
+    // the deepest level any band offers here.
+    const straddlesNearPlane = nInFront < 9;
+    if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) continue;
 
     // NDC spans 2 units across the viewport, hence the halving.
-    const screenPx = Math.max(
-      ((maxX - minX) / 2) * viewportPx[0],
-      ((maxY - minY) / 2) * viewportPx[1],
-    );
+    const screenPx = straddlesNearPlane
+      ? Math.max(viewportPx[0], viewportPx[1])
+      : Math.max(((maxX - minX) / 2) * viewportPx[0], ((maxY - minY) / 2) * viewportPx[1]);
     if (!(screenPx > 0)) continue;
 
     // 3 & 4. Refine or emit
     // `lodBias` is subtracted AFTER the ceil, not folded into the log
     // argument: for an integer bias `ceil(x) - bias === ceil(x - bias)`.
-    const required = Math.min(
-      maxTileLevel,
-      Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
-    );
+    const required = straddlesNearPlane
+      ? maxTileLevel
+      : Math.min(
+          maxTileLevel,
+          Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
+        );
     if (required > z && earthTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
       // Same band-request gate as the leaf branch: a would-be ancestor no
       // band bakes at this z has no file to fetch either.

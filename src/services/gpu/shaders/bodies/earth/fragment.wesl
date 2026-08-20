@@ -94,7 +94,7 @@ import package::lib::math::TAU;
 // injection) -- see 'earthTileConstants.parity.test.ts'.
 const EARTH_TILE_WINDOW_SIDE: u32 = 128u;
 const EARTH_TILE_PX: f32 = 512.0;
-const EARTH_TILE_ATLAS_SIDE: f32 = 4096.0;
+const EARTH_TILE_ATLAS_SIDE: f32 = 8192.0;
 
 // Derived rather than written out, so the atlas geometry has one home here too.
 // 'TILE_SLOT_SCALE' turns slot-relative coordinates into atlas uv;
