@@ -578,7 +578,7 @@ Tasks 6–7 close.
 `src/state/settings/selectors.ts` (modify);
 `tests/state/settings/makeSettingsFixture.ts` (modify)
 
-- [ ] Write the failing test first in
+- [x] Write the failing test first in
       `tests/state/settings/settingsSlice.test.ts` (or the nearest existing debug
       case): dispatching `setDebugOverlay({ key: 'pick-buffer', enabled: true })`
       flips exactly that entry and leaves the other two false. This is the one
@@ -586,13 +586,13 @@ Tasks 6–7 close.
       replaces the record instead of writing one entry, the Immer in-place trap
       from `project_landmines_state`). No test is added for the selector or the
       seed: both are derivations that cannot drift (`testing.md`).
-- [ ] Create the three files: `DEBUG_OVERLAY_ROWS` holds exactly three rows —
+- [x] Create the three files: `DEBUG_OVERLAY_ROWS` holds exactly three rows —
       `{key:'pick-buffer', label:'Show pick buffer'}`,
       `{key:'disk-radius-ring', label:'Show disk radius ring'}`,
       `{key:'orbit-trail-impostor', label:'Show orbit-trail impostor'}` — the
       labels copied verbatim from `DebugOverlaysSection.tsx:41,49,57`, declared
       `as const satisfies readonly DebugOverlayRow[]` so the key union derives.
-- [ ] `EngineSettingsState.d.ts`: replace `:432-434` with the single `overlays`
+- [x] `EngineSettingsState.d.ts`: replace `:432-434` with the single `overlays`
       field, and fold the three per-field doc paragraphs (`:406-419`) into ≤4
       lines that point at `DEBUG_OVERLAY_ROWS` for the roster. The
       `disabledPasses` paragraph (`:420-430`) is untouched — it is the doc that
@@ -601,25 +601,25 @@ Tasks 6–7 close.
       AND share the token `'disk-radius-ring'`, which is a `ContentLayer.name`
       (`diskRadiusRingLayer.ts:38`) in `disabledPasses` and an overlay key here,
       absent-means-shown there vs `false`-means-hidden here.
-- [ ] Delete `DEFAULT_SHOW_PICK_BUFFER` / `DEFAULT_SHOW_DISK_RADIUS_RING` /
+- [x] Delete `DEFAULT_SHOW_PICK_BUFFER` / `DEFAULT_SHOW_DISK_RADIUS_RING` /
       `DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR` (`defaults.ts:482-488`, with their doc
       lines) — the seed derives `false` per row, so a constant per toggle has no
       job left.
-- [ ] `initialState.ts:250-252` → one line seeding from the rows, inline
+- [x] `initialState.ts:250-252` → one line seeding from the rows, inline
       `Object.fromEntries(...)` with the cast, matching `bodies.items`'
       registry-derived seed twenty-one lines above (`:229-236`).
-- [ ] `settingsSlice.ts:352-360` → one `setDebugOverlay` reducer writing
+- [x] `settingsSlice.ts:352-360` → one `setDebugOverlay` reducer writing
       `settings.debug.overlays[action.payload.key] = action.payload.enabled`
       (in-place, like `setPassDisabled` directly below it). Update the three
       export entries at `:538-540` — collapsing the reducers first shifts them
       up by two, so re-locate by name, not by line.
-- [ ] `selectors.ts:228-235` → one `selectDebugOverlays` returning the record,
+- [x] `selectors.ts:228-235` → one `selectDebugOverlays` returning the record,
       placed beside `selectDisabledPasses` (`:237-238`).
-- [ ] `makeSettingsFixture.ts:179-181` → the derived seed.
-- [ ] `npm run typecheck` will fail at the three read sites and the container —
+- [x] `makeSettingsFixture.ts:179-181` → the derived seed.
+- [x] `npm run typecheck` will fail at the three read sites and the container —
       that is expected and Task 2/3 close it (see the binding execution order).
       Do **not** patch them here beyond what compiles; keep the commit boundary.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2 — Re-key the three engine read sites + the prose that names them
 
@@ -648,27 +648,27 @@ arg assertion is unchanged, the state builder's field moves).
 `orbitTrailRenderer.test.ts:233` names the old path in a comment. Both must move
 or the zero-hits gate below cannot pass.
 
-- [ ] `diskRadiusRingLayer.ts:49` → `overlays['disk-radius-ring']`; the header's
+- [x] `diskRadiusRingLayer.ts:49` → `overlays['disk-radius-ring']`; the header's
       "Gated on `state.settings.debug.showDiskRadiusRing`" line (`:7-9`) moves
       with it. The three ANDed conditions stay as they are (D4).
-- [ ] `drawPickDebugOverlay.ts:76` → `overlays['pick-buffer']`; the two docblock
+- [x] `drawPickDebugOverlay.ts:76` → `overlays['pick-buffer']`; the two docblock
       mentions (`:7`, `:61-66`) move with it. **Nothing else in this file
       changes** — the encoder stays (D5).
-- [ ] `orbitTrailsLayer.ts:326` → `overlays['orbit-trail-impostor']` as the
+- [x] `orbitTrailsLayer.ts:326` → `overlays['orbit-trail-impostor']` as the
       fourth positional argument, unchanged in kind.
-- [ ] The four prose sites in finding 2, plus the `.wesl` comment line, name the
+- [x] The four prose sites in finding 2, plus the `.wesl` comment line, name the
       new path; so do `orbitTrailRenderer.test.ts:233`'s comment and
       `drawPickDebugOverlay.test.ts`'s local option name and its header
       (`:6,103`).
-- [ ] `grep -rn "showPickBuffer\|showDiskRadiusRing\|showOrbitTrailImpostor" src/ tests/`
+- [x] `grep -rn "showPickBuffer\|showDiskRadiusRing\|showOrbitTrailImpostor" src/ tests/`
       → hits remain in **exactly three files**, all Task 3's:
       `DebugOverlaysSection.tsx`, `DebugOverlaysSectionContainer.tsx`,
       `DebugPanel.test.ts`. Anything else surviving is either a missed read site
       (a dev toggle silently dead) or a doc pointing at a deleted field. Task 3
       takes this to zero.
-- [ ] `npm run typecheck` + `npm test -- drawPickDebugOverlay orbitTrail wireInput applySceneEffect`
+- [x] `npm run typecheck` + `npm test -- drawPickDebugOverlay orbitTrail wireInput applySceneEffect`
       (the `orbitTrail` prefix picks up both the layer and the renderer test).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3 — Row-drive the DebugPanel section + collapse its container
 
@@ -680,7 +680,7 @@ Load the `create-component` skill before editing either file. The section stays
 a hand-written component with hand-written chrome — only its ROWS come from data
 (D2), the same shape `MilkyWayTuningSection.tsx:43-55` uses for sliders.
 
-- [ ] Rewrite **both** DebugPanel overlay cases against the new dispatch and
+- [x] Rewrite **both** DebugPanel overlay cases against the new dispatch and
       selector, keeping the same checkbox label and the same assertions — same
       bugs caught, new plumbing. The two cases are
       `reflects showPickBuffer from the store` (`:82-94`, store → checkbox) and
@@ -688,20 +688,20 @@ a hand-written component with hand-written chrome — only its ROWS come from da
       store, asserting via `selectShowPickBuffer`). Their imports (`:29,33`) and
       the file header's two bullets (`:8-9`) name the old symbols and move with
       them. Run them first and watch them fail.
-- [ ] `DebugOverlaysSection.tsx`: props become
+- [x] `DebugOverlaysSection.tsx`: props become
       `{ overlays: Record<DebugOverlayKey, boolean>; onToggle: (key: DebugOverlayKey, enabled: boolean) => void }`;
       the three `<label>` blocks (`:35-58`) become one `.map()` over
       `DEBUG_OVERLAY_ROWS` keyed by `row.key`. The header's three-sentence
       description of what each toggle does moves to the rows table (one
       comment), leaving the header ≤6 lines. The `.module.css` is untouched.
-- [ ] `DebugOverlaysSectionContainer.tsx`: one `useAppSelector` +
+- [x] `DebugOverlaysSectionContainer.tsx`: one `useAppSelector` +
       one `useCallback`, replacing `:12-51`. ~57 lines → ~30.
-- [ ] `grep -rn "showPickBuffer\|showDiskRadiusRing\|showOrbitTrailImpostor" src/ tests/`
+- [x] `grep -rn "showPickBuffer\|showDiskRadiusRing\|showOrbitTrailImpostor" src/ tests/`
       → **zero hits** now, including doc comments, test-local identifiers and the
       `.wesl` line. `docs/` is deliberately excluded — decisions.md and this plan
       record the old names as history.
-- [ ] `npm run typecheck` + `npm test -- DebugPanel`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test -- DebugPanel`.
+- [x] Commit.
 
 ### Task 4 — One `SliderField<K>` (type dedupe, typecheck-gated)
 
@@ -715,7 +715,7 @@ it would be the runtime type test `testing.md` bans. `npm run typecheck` is the
 gate — the three data registries and the four consuming components must compile
 untouched, which is the whole claim.
 
-- [ ] Create `SliderField<K extends string>` carrying the six shared fields +
+- [x] Create `SliderField<K extends string>` carrying the six shared fields +
       optional `title`, with the doc lines the three copies already share
       (min/max/step/title wording lifted verbatim — identical today). One
       discrepancy to settle rather than stall on: `format`'s doc differs —
@@ -723,16 +723,16 @@ untouched, which is the whole claim.
       (`MilkyWaySliderField.d.ts:17`, `ZoneOfAvoidanceSliderField.d.ts:18`) and
       flow adds an example (`FlowSliderField.d.ts:15`). Take the **flow**
       wording: it is a superset and true of all three.
-- [ ] The three types become one-line aliases:
+- [x] The three types become one-line aliases:
       `MilkyWaySliderField = SliderField<MilkyWaySliderKey>`,
       `ZoneOfAvoidanceSliderField = SliderField<ZoneOfAvoidanceSliderKey>`,
       `FlowSliderField = SliderField<FlowSliderKey> & { surface: FlowSliderSurface }`.
       Each keeps its file and its exported name (one type per file); each keeps
       only the doc line that is true of IT and not of the shared shape.
-- [ ] `npm run typecheck` (both tsconfigs) — **no other file changes**. Any
+- [x] `npm run typecheck` (both tsconfigs) — **no other file changes**. Any
       required edit in `src/data/*` or `src/components/*` means the shapes were
       not identical and the finding belongs in decision #16 before proceeding.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5 — One generic `DebugTuningSection` (D10, behaviour-neutral)
 
@@ -755,14 +755,14 @@ DOM can be identical).
 **No test file moves** (finding 8: none of the three sections has one). The three
 containers, their props types and `DebugPanel.tsx:88-90` are untouched.
 
-- [ ] **Capture the neutrality baseline first**: render each of the three
+- [x] **Capture the neutrality baseline first**: render each of the three
       sections with a fixed props fixture and save the `outerHTML` of each to the
       scratchpad (not the repo). This is the gate the task is judged on — after
       the refactor the three re-renders must diff **empty**: same tag order, same
       `className`s, same `aria-label`/`title`/`value`/`min`/`max`/`step`, same
       `<details>`/`<summary>` nesting, same position of MW's copy button and
       ZoA's two colour rows relative to the slider rows.
-- [ ] Write the failing test in `tests/components/DebugPanel/DebugTuningSection.test.ts`
+- [x] Write the failing test in `tests/components/DebugPanel/DebugTuningSection.test.ts`
       against a **two-row fixture registry**, never a real one. Two cases, both
       of which fail on a real bug no compiler check catches: (1) moving the
       SECOND row's range input calls `onSliderChange` with **that** row's key and
@@ -771,33 +771,33 @@ containers, their props types and `DebugPanel.tsx:88-90` are untouched.
       `children` render **after** the last slider row — ZoA's colour pickers and
       copy button must not float above the sliders. Nothing asserts the shape or
       contents of `MILKY_WAY_SLIDER_FIELDS` et al. (registry mirror, banned).
-- [ ] Create `DebugTuningSection.tsx` to the contract sketch above: one
+- [x] Create `DebugTuningSection.tsx` to the contract sketch above: one
       `DebugSection title` wrapping `fields.map(...)` → `DebugSlider` with
       `key`/`label`/`value=values[f.key]`/`min`/`max`/`step`/
       `readout=f.format(values[f.key])`/`title`, then `{children}`. Header ≤6
       lines: why it exists (three identical boards), and the one non-obvious
       thing — `children` land after the rows, and the SettingsPanel's flow
       sliders are deliberately NOT hosted here (D10).
-- [ ] `MilkyWayTuningSection.tsx` → the `diff` line plus one
+- [x] `MilkyWayTuningSection.tsx` → the `diff` line plus one
       `DebugTuningSection` element: title `Milky Way tuning`, fields
       `MILKY_WAY_SLIDER_FIELDS`, values `milkyWay`, and
       `onSliderChange={(k, v) => onChange(milkyWaySliderPatch(k, v))}`, with the
       existing `CopyButton` as its child. The header loses the
       rows-driven-from-the-registry paragraph (now the shared component's fact)
       and keeps the copy-button paragraph.
-- [ ] `ZoneOfAvoidanceTuningSection.tsx` → the same, title
+- [x] `ZoneOfAvoidanceTuningSection.tsx` → the same, title
       `Zone of Avoidance tuning`, fields `ZONE_OF_AVOIDANCE_SLIDER_FIELDS`, with
       the two colour rows **and** the `CopyButton` as children, in that order,
       markup and `sliderStyles` classNames unchanged.
-- [ ] `FlowTuningSection.tsx` → one instantiation, title `Flow tuning`, fields
+- [x] `FlowTuningSection.tsx` → one instantiation, title `Flow tuning`, fields
       `DEBUG_SLIDERS` (the existing module-level `surface === 'debug'` filter
       stays where it is), no children. **`SettingsPanel/FlowRow.tsx` is
       NOT touched** — D10's flow ruling; a second instantiation there would
       render the explorer panel in dev-panel chrome.
-- [ ] Re-render the three sections and diff against the saved baseline —
+- [x] Re-render the three sections and diff against the saved baseline —
       **empty diff, or the task is not done**. Then `npm run typecheck` +
       `npm test -- DebugTuningSection DebugPanel`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6 — decision #16, the D5 backlog file, and the fieldStar closure
 
@@ -817,23 +817,23 @@ amendments from the bottom up, then insert #16 last, or target by anchor text.
 `:59`/`:55`, so the P-bullets must be done before it and the #7/#9/#11 clauses
 after it — or use anchor text and stop counting.)
 
-- [ ] **P2** (`decisions.md:585-590`): close the "the debug-maps deletion is
+- [x] **P2** (`decisions.md:585-590`): close the "the debug-maps deletion is
       still open" clause — #16 is what closes it (the maps stay; D2 rules why).
-- [ ] **P1** (`decisions.md:581-582`): the deliverable reads "derived debug incl.
+- [x] **P1** (`decisions.md:581-582`): the deliverable reads "derived debug incl.
       PASS_GROUP_TITLES + TIMED_SLOTS". `TIMED_SLOTS` already shipped;
       `PASS_GROUP_TITLES` is ruled permanently hand-listed. Strike that half in
       place with a "**REFINED by #16 (2026-08-20)**" marker, in the same idiom
       the bullet's existing "**SUPERSEDED by #13**" uses.
-- [ ] **#9's rung-6 clause** (`decisions.md:106-107`): amend in place in the
+- [x] **#9's rung-6 clause** (`decisions.md:106-107`): amend in place in the
       style #13/#14/#15 use ("**6** ~~debug derivation~~ **REFINED by #16
       (2026-08-20)** — …"), so a reader of #9 alone does not expect a
       derived-debug walker.
-- [ ] **#7's `devOnly` clause** (`decisions.md:59-60`) and **#7's step-gate
+- [x] **#7's `devOnly` clause** (`decisions.md:59-60`) and **#7's step-gate
       clause** (`decisions.md:55-56`): both promise what D3 and D6 reject. Mark
       each "**REFINED by #16 (2026-08-20)**" in place — `devOnly` rejected with
       its reason, the `FOREGROUND_MAX` hoist re-pointed at the frame-step work
       with its corrected span. A reader of #7 alone must not still expect them.
-- [ ] **#11's bug-suspect list** (`decisions.md:141`): "fieldStarSphere missing
+- [x] **#11's bug-suspect list** (`decisions.md:141`): "fieldStarSphere missing
       the FOREGROUND_MAX gate" becomes **RESOLVED NEGATIVE**, struck and
       annotated in the exact idiom the compositor suspect above it uses
       (`:137-139`) — self-gated on camera POSITION at ~1.81 AU, ~8 orders tighter
@@ -842,14 +842,14 @@ after it — or use anchor text and stop counting.)
       correct one there anyway. Cite the residual as the standing backlog item
       `2026-07-30-camera-target-vs-origin-distance-gates.md` (cite only — **do
       not edit that file**).
-- [ ] `fieldStarSphereLayer.ts`: **≤2 comment lines** at the end of the
+- [x] `fieldStarSphereLayer.ts`: **≤2 comment lines** at the end of the
       "Presence is PROXIMITY, not selection" header section (after `:27`) —
       that the layer takes no `FOREGROUND_MAX_DISTANCE_MPC` cut because the
       resolve-radius proximity test on `ctx.drawCamPos` already subsumes it by
       ~8 orders of magnitude. Same purpose as `starCatalogLayer.ts:68`'s note,
       which is the precedent for documenting a deliberate absence. **No `enabled()`
       change, no import added** — the diff is comment-only.
-- [ ] Add **decision #16** (before `## The contract`, `decisions.md:558`)
+- [x] Add **decision #16** (before `## The contract`, `decisions.md:558`)
       recording D1–D10 with their citations: the census table, the data-vs-JSX
       line and why `PASS_GROUP_TITLES` stays (both facts it carries, and that
       `frameProgram.test.ts:404-455` already pins it — **no new test was
@@ -872,7 +872,7 @@ after it — or use anchor text and stop counting.)
       SettingsPanel's flow sliders stay out), the §2/§4 resolution, and the
       closing line rungs 7+ read: **no walker, no layer registry, no `devOnly`
       field was built.**
-- [ ] New backlog detail file for D5 — **it carries the design target, not just
+- [x] New backlog detail file for D5 — **it carries the design target, not just
       the deferral**: (a) the user's target shape — pick execution adopts the
       frame-program shape, a parallel program instance, same executor and
       `(target, slab)` vocabulary, different rows and different targets — as a
@@ -898,7 +898,7 @@ after it — or use anchor text and stop counting.)
       one clause + the details link, nothing more (backlog hygiene). D6 gets
       **no** backlog file: its assignment already exists at
       `renderer-layer-outliers.md:204` and Task 7 re-points it.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7 — Doc sweep + full gate + visual smoke
 
@@ -906,7 +906,7 @@ after it — or use anchor text and stop counting.)
 `docs/research/engine/engine-composition-map.md`,
 `docs/research/engine/renderer-layer-outliers.md` (modify as the sweep finds)
 
-- [ ] `current-contracts-map.md`, **edited in descending line order** (each edit
+- [x] `current-contracts-map.md`, **edited in descending line order** (each edit
       shifts the lines below it): §7's table row (`:259`) and W6 node (`:232`)
       record the ruling — one settings record + one rows table, no walker — and
       the "a new subsystem stops touching" column becomes "the three-chain
@@ -919,14 +919,14 @@ after it — or use anchor text and stop counting.)
       (`:101`) drops the clear-value entry rung 2 already deleted and re-points
       the `PASS_GROUP_TITLES` entry at "a new (target, slab) step, not a new
       subsystem".
-- [ ] `renderer-layer-outliers.md`, **descending order — `:204` before `:165`**:
+- [x] `renderer-layer-outliers.md`, **descending order — `:204` before `:165`**:
       the 🟢 "`foreground:0` gate ×8" row (`:204`) re-points "rides rung 2 or the
       eventual frame-step work" at the frame-step work alone — rung 2 shipped
       without it — and corrects the count per D6 (8 is the `foreground:0` ROW
       count; **6** of those gate explicitly, 10 layers gate across three steps,
       and `fieldStarSphereLayer` gates not at all, **by design — see `:165`**).
       This row is D6's home; no backlog file is created for it.
-- [ ] `renderer-layer-outliers.md:165` (the 🔴 "`fieldStarSphereLayer` has no
+- [x] `renderer-layer-outliers.md:165` (the 🔴 "`fieldStarSphereLayer` has no
       `FOREGROUND_MAX` gate" suspect): **closed RESOLVED NEGATIVE**, matching
       `decisions.md:141`'s wording from Task 6 — the layer self-gates on camera
       POSITION at ~1.81 AU, ~8 orders tighter than the 0.23 Mpc cut, and
@@ -938,16 +938,16 @@ after it — or use anchor text and stop counting.)
       compositor row is still 🔴 here although `decisions.md:137-139` closed it,
       and the stale-shader-docs row is untouched by this rung; neither is a
       claim this rung made stale.
-- [ ] Grep the other two maps for debug/slider/`PASS_GROUP_TITLES` claims this
+- [x] Grep the other two maps for debug/slider/`PASS_GROUP_TITLES` claims this
       rung makes stale and fix them in the same edit; leave rows this rung did
       not touch alone. Note the grep tokens do **not** reach the
       `renderer-layer-outliers.md:204` row — that edit is the bullet above, not
       a sweep find.
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
-- [ ] `npm run build` — the DebugPanel section/container edits and the four
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` — green, no skips added.
+- [x] `npm run build` — the DebugPanel section/container edits and the four
       tuning-section files are the only React churn; a Vite build catches an
       unresolved import the unit tests would not.
-- [ ] Dev-server smoke, **with the user's eyes** (press `d` for the panel):
+- [x] Dev-server smoke, **with the user's eyes** (press `d` for the panel):
   1. **Debug Overlays** shows exactly three checkboxes, same labels, same order,
      all unchecked on a fresh load.
   2. **Show pick buffer** on → the colour-mapped pick overlay paints over the
@@ -974,7 +974,7 @@ after it — or use anchor text and stop counting.)
      the two surfaces stayed two components.
   8. Nothing else in the panel changed: no new rows, no missing section.
 
-- [ ] Commit (if any smoke-driven fixes were needed).
+- [x] Commit (if any smoke-driven fixes were needed).
 
 ## Global Constraints
 
@@ -1089,36 +1089,36 @@ after it — or use anchor text and stop counting.)
 
 ## Definition of Done
 
-- [ ] `grep -rn "showPickBuffer\|showDiskRadiusRing\|showOrbitTrailImpostor" src/ tests/`
+- [x] `grep -rn "showPickBuffer\|showDiskRadiusRing\|showOrbitTrailImpostor" src/ tests/`
       → **zero hits**, including doc comments and the `.wesl` line. The rename is
       total or it is a landmine.
-- [ ] `settings.debug` carries **one** `overlays` record beside `disabledPasses`,
+- [x] `settings.debug` carries **one** `overlays` record beside `disabledPasses`,
       with **one** reducer and **one** selector; `defaults.ts` carries **no**
       `DEFAULT_SHOW_*` constant; and `DEBUG_OVERLAY_ROWS` has a live reader for
       every one of its three rows.
-- [ ] `DebugOverlaysSection.tsx` contains **no per-toggle prop and no per-toggle
+- [x] `DebugOverlaysSection.tsx` contains **no per-toggle prop and no per-toggle
       `<label>`** — one map over the rows — and its container has one
       `useAppSelector` and one `useCallback`.
-- [ ] **No `devOnly` field exists** (`grep -rn devOnly src/` → empty, as today),
+- [x] **No `devOnly` field exists** (`grep -rn devOnly src/` → empty, as today),
       **no `DEBUG_LAYERS` registry, row type or walker was built**, and
       `CONTENT_LAYERS`, `frameProgram`, `executeFrame` and `GPU_HANDLE_ROWS` are
       **byte-identical** to `0b4ce84c0`. A reviewer expecting "debug derivation"
       to have touched the frame program must find that explained in #16.
-- [ ] `drawPickDebugOverlay.ts` differs from `0b4ce84c0` **only** in the settings
+- [x] `drawPickDebugOverlay.ts` differs from `0b4ce84c0` **only** in the settings
       path and the prose naming it — same encoder, same `loadOp`, same call site
       (D5).
-- [ ] The three slider row types are aliases over one `SliderField<K>`, `surface`
+- [x] The three slider row types are aliases over one `SliderField<K>`, `surface`
       lives on the flow alias alone, and **no `src/data/` or `src/components/`
       file changed in Task 4's commit** to make that compile (D9's claim; Task
       5's component edits are D10's, and land separately).
-- [ ] **One `DebugTuningSection`, three instantiations** (D10): neither
+- [x] **One `DebugTuningSection`, three instantiations** (D10): neither
       `MilkyWayTuningSection.tsx` nor `ZoneOfAvoidanceTuningSection.tsx` nor
       `FlowTuningSection.tsx` still contains a `DebugSection` element or a
       `DebugSlider` `.map()` — each is one instantiation plus its own extras as
       children — and the three sections' rendered DOM is **identical** to
       `0b4ce84c0` (the Task 5 baseline diff is empty). `SettingsPanel/FlowRow.tsx`
       and the three containers are unchanged.
-- [ ] **The fieldStarSphere suspect is closed, not fixed** (D6):
+- [x] **The fieldStarSphere suspect is closed, not fixed** (D6):
       `fieldStarSphereLayer.ts` differs from `0b4ce84c0` by **comment lines
       only** — no gate, no new import — and `decisions.md:141` +
       `renderer-layer-outliers.md:165` both read RESOLVED NEGATIVE with the
@@ -1126,21 +1126,21 @@ after it — or use anchor text and stop counting.)
       false at cosmic zoom), pointing at
       `docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md` for the
       residual. **That backlog file is unmodified.**
-- [ ] The D5 backlog file carries the **design target** (pick execution as a
+- [x] The D5 backlog file carries the **design target** (pick execution as a
       parallel frame-program instance — a new ladder rung at the umbrella
       reassessment), **and** the audit as evidence: SAFE-WITH-CONDITIONS, the
       `zoneOfAvoidanceRenderer.ts:70` shared-uniform blocker with its ~10-line
       own-buffer fix named as a standalone-valid prep refactor, the placement
       condition, the Dawn runtime check, and the gizmo-stacking acceptance. A
       reader picking that rung up needs nothing from this plan file.
-- [ ] `PASS_GROUP_TITLES`, `timedSlotsGroupKeys.test.ts` and
+- [x] `PASS_GROUP_TITLES`, `timedSlotsGroupKeys.test.ts` and
       `frameProgram.test.ts` are **unchanged**: D2's ruling rests on the pins
       that already exist (`frameProgram.test.ts:404-455`, real program × real
       registry), and the only drift they miss — a dead key whose empty bucket
       `groupRows` silently drops (`frameProgram.ts:325-328`) — is inert data, so
       no parity test was added.
-- [ ] `npm run build` is green — the one gate `/feature-done` does not run.
-- [ ] `decisions.md` ships in this PR with decision #16 (the census, the
+- [x] `npm run build` is green — the one gate `/feature-done` does not run.
+- [x] `decisions.md` ships in this PR with decision #16 (the census, the
       data-vs-JSX line, the `devOnly` rejection, the same-fact rulings on all
       three booleans, the pick-overlay deferral with its real reason, its
       user-set design target and the audit that priced it, the `FOREGROUND_MAX`
@@ -1152,19 +1152,19 @@ after it — or use anchor text and stop counting.)
       pointing at #16. Rung 7's author reads the north star from decisions.md
       alone, without this plan file — and a reader of #7, #11 or P1 alone is not
       left expecting what this rung rejected.
-- [ ] The doc sweep is done: `current-contracts-map.md` no longer claims slider
+- [x] The doc sweep is done: `current-contracts-map.md` no longer claims slider
       tables are hand-listed, no longer ranks the debug UI 🟠 without the
       reason, and §7's W6 row records "no walker";
       `renderer-layer-outliers.md:204` no longer says the `FOREGROUND_MAX` hoist
       "rides rung 2" and no longer miscounts the gate; `:165`'s 🔴 is closed.
-- [ ] Named observable behaviours confirmed by the user: three checkboxes, same
+- [x] Named observable behaviours confirmed by the user: three checkboxes, same
       labels, all off on load; pick-buffer overlay paints and clears; the disk
       ring appears only with a galaxy selected and is off again after reload;
       the impostor tint toggles; Renderer-Toggle group titles and order
       unchanged; GPU-timing groups still end with **Composites & pick**; and all
       three tuning sections look and behave exactly as before, the explorer
       panel's flow Intensity slider included.
-- [ ] Deferral boundary — a reviewer should NOT expect to find, in this PR: a
+- [x] Deferral boundary — a reviewer should NOT expect to find, in this PR: a
       `ContentLayer.devOnly` field (D3); `pickDebugOverlay` inside
       `CONTENT_LAYERS`, or the `zoneOfAvoidanceRenderer` pick-uniform split its
       fold would need (D5); any `FOREGROUND_MAX_DISTANCE_MPC` move, and no gate
