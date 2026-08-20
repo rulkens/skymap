@@ -510,6 +510,8 @@ describe('renderFrame visual baseline', () => {
             destroy: vi.fn(),
             label: 'fadeRegistry',
           },
+          // resolveLayerOpacity's clip factor; no clip plays in this fixture.
+          clipPlayer: { clipOpacityOf: () => 1 },
         },
       } as never,
       device,

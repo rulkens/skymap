@@ -230,13 +230,7 @@ export const orbitTrailsLayer: ContentLayer = {
     // this near-field layer, × the clip-owned channel). Multiplied into every
     // orbit's apparent-size alpha below so the layer dissolves on hide rather than
     // popping. Mirrors filamentsLayer's `resolveLayerOpacity` call.
-    const layerOpacity = resolveLayerOpacity(
-      state.subsystems.fades,
-      { kind: 'orbitTrails' },
-      ctx.focusBlend,
-      ctx.nowMs,
-      state.subsystems.clipPlayer,
-    );
+    const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
 
     // Pack one 34-float instance record per VISIBLE conic (byte offsets mirror
     // the renderer's INSTANCE_ATTRIBUTES):

@@ -73,7 +73,11 @@ function liveState(
       },
     },
     settings: { zoneOfAvoidance: { color: [1, 1, 1], intensity: 1, edgeSharpness: 1 } },
-    subsystems: { fades: { opacityOf: () => 1 } },
+    subsystems: {
+      fades: { opacityOf: () => 1 },
+      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
   } as unknown as EngineState;
 }
 

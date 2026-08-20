@@ -40,7 +40,8 @@ function makeState({
     gpu: { zoneOfAvoidanceRenderer: renderer },
     subsystems: {
       fades: { opacityOf: vi.fn(() => toggleOpacity) },
-      // clipPlayer omitted → resolveLayerOpacity's clip factor defaults to 1.
+      // Always-1 stub — no clip plays in these fixtures; the clip factor is neutral.
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }

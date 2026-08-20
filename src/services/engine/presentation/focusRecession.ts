@@ -1,62 +1,19 @@
 /**
  * focusRecession — the pure recession strand of the focus-fade interface.
  *
- * ### Compose, don't braid
- *
- * Every fadeable layer's final on-screen opacity is two independent
- * concerns multiplied together:
- *
- *   final = opacityOf(id)        // the toggle / load-in / tier-swap fade
- *         × focusRecession(id)   // how far this layer recedes under focus
- *
- * Those two strands have separate authoritative homes and must stay
- * separate. `opacityOf` lives in the FadeRegistry — its sole job is fade
- * *controllers* (load-in, tier swap, category on/off). The recession
- * factor lives HERE, as a stateless function of the id and the focus
- * `blend`. We deliberately do NOT fold recession into the registry
- * (no `setFocusBlend`, no `toggle × recession` baked into `opacityOf`):
- * the blend's authoritative home is `structureFocusSubsystem`
- * (`FocusUniformsValue.blend`), and caching it in the registry would be a
- * value×place mirror (the stale-mirror bug class). Toggle fade and focus
- * recession vary independently, so they are *composed* at the consumer,
- * never braided into one stateful place.
- *
- * Orthogonality also makes the composition correct: recession multiplies
- * *on top of* the toggle fade. A layer toggled off (0) stays off
- * (`0 × anything = 0`); a half-faded layer recedes from where it is. And
- * galaxy catalog ("points") ids simply never get a recession target — the
- * separation is structural, not a defensive runtime guard.
- *
- * ### Recession membership is two exhaustive tables
- *
- * Recession is *selective*: structure / galaxy-name labels and the diffuse
- * filament/volume fields recede under focus, but the YOU-ARE-HERE pin and
- * the scale bar must not. Membership is constant per kind, so it lives in
- * data: one table keyed by `FadeId['kind']`, one by `LabelLayerId` (the
- * only kind whose sub-discriminator changes the answer), and a single
- * two-way branch to pick between them.
- *
- * `satisfies Record<K, number | undefined>` is what makes membership a
- * *choice* rather than an inheritance. A `Record` cannot be satisfied by
- * omission, so a new `FadeId` kind or a new `LabelLayerId` is a compile
- * error until someone writes its row — including the rows that say
- * `undefined`. A switch over `FadeId['kind']` could not promise that at
- * the outer level: this repo's tsconfig has no `noImplicitReturns`, so a
- * switch with no `default` arm gives no exhaustiveness guarantee at all —
- * a kind missing an arm falls through and returns `undefined` silently,
- * indistinguishable from a deliberate "does not recede". The table form
- * surfaces such a gap at build time instead of leaving it unstated.
- *
- * A predicate (`layer === 'structure' || layer === 'galaxy'`) reads more
- * compactly than the label-layer table but makes "does not recede" the
- * silent default for every layer added later — the stance a caption layer
- * would inherit without anyone choosing it. The table forces the choice.
+ * NOT folded into FadeRegistry (no `setFocusBlend`): the blend's home is
+ * `structureFocusSubsystem`; caching it here is the stale-mirror bug class.
+ * Membership is `satisfies Record<K, number | undefined>`, not a `switch` —
+ * this tsconfig lacks `noImplicitReturns`, so a default-less switch has no
+ * exhaustiveness guarantee; the table forces every kind to state its stance.
+ * Raw-vs-canonical `opacityOf` rule: decision #17, docs/research/engine/decisions.md.
  */
 
 import type { FadeId } from '../../../@types/animation/FadeId';
-import type { FadeRegistry } from '../../../@types/animation/FadeRegistry';
 import type { LabelLayerId } from '../../../@types/animation/LabelLayerId';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { lerp } from '../../../utils/math/lerp';
 import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 
@@ -153,24 +110,23 @@ function clipFactorFor(clip: ClipPlayer, h: FadeId, now: number): number {
 
 /**
  * Composition sugar for whole-layer consumers: the id's toggle opacity
- * times its recession factor times the clip-owned transient opacity.
- *
- * The optional `clip` arg adds a THIRD factor: when a cinematic clip is
- * playing it can independently dim a layer (e.g. fade to black, spotlight
- * one catalog). Callers that omit `clip` (or pass `undefined`) get factor
- * 1 by default — the clip channel is behaviour-neutral when no clip plays
- * and `ClipPlayer.clipOpacityOf` returns 1 for any untouched layer.
+ * times its recession factor times the clip-owned transient opacity. Takes
+ * the engine's own state/ctx bags (narrowed via `Pick`) rather than the four
+ * loose scalars every call site was unpacking by hand, so the canonical
+ * fade path is one line at the call site instead of seven.
  *
  * Per-instance consumers (markers / labels with a focused-instance
  * exemption) take the three parts separately and combine them themselves.
  */
 export function resolveLayerOpacity(
-  fades: FadeRegistry,
+  state: Pick<EngineState, 'subsystems'>,
+  ctx: Pick<ReadyFrameContext, 'focusBlend' | 'nowMs'>,
   h: FadeId,
-  blend: number,
-  now: number,
-  clip?: ClipPlayer,
 ): number {
-  const clipFactor = clip === undefined ? 1 : clipFactorFor(clip, h, now);
-  return fades.opacityOf(h, now) * focusRecession(h, blend) * clipFactor;
+  const { fades, clipPlayer } = state.subsystems;
+  return (
+    fades.opacityOf(h, ctx.nowMs) *
+    focusRecession(h, ctx.focusBlend) *
+    clipFactorFor(clipPlayer, h, ctx.nowMs)
+  );
 }

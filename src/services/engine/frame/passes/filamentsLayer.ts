@@ -96,10 +96,6 @@ export const filamentsLayer: ContentLayer = {
     // invariant robust against a future `state.gpu` shape change.
     if (state.gpu.filamentRenderer === null) return;
 
-    // Hoist the frame clock to a local — only one consumer here
-    // (filaments is single-instance, not per-source), but the pattern
-    // matches galaxyPointSpritesLayer.ts so future readers can copy-paste.
-    const nowMs = ctx.nowMs;
     state.gpu.filamentRenderer.draw(
       pass,
       view.vp,
@@ -109,13 +105,7 @@ export const filamentsLayer: ContentLayer = {
       // Focus recession is applied HERE (on the drawn opacity), not on the
       // `enabled` gate above: recession ∈ [FILAMENT_RECESSION, 1] can never
       // zero the layer, so the gate keeps reading the pure toggle opacity.
-      resolveLayerOpacity(
-        state.subsystems.fades,
-        { kind: 'filament' },
-        ctx.focusBlend,
-        nowMs,
-        state.subsystems.clipPlayer,
-      ),
+      resolveLayerOpacity(state, ctx, { kind: 'filament' }),
       FILAMENT_BASE_TINT,
       FILAMENT_HOT_TINT,
     );

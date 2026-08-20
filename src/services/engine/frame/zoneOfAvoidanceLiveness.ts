@@ -23,13 +23,7 @@ export function deriveZoneOfAvoidanceLiveness(
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const opacity = zoneOfAvoidanceLayerOpacity(
     camDistMpc,
-    resolveLayerOpacity(
-      state.subsystems.fades,
-      { kind: 'zoneOfAvoidance' },
-      ctx.focusBlend,
-      ctx.nowMs,
-      state.subsystems.clipPlayer,
-    ),
+    resolveLayerOpacity(state, ctx, { kind: 'zoneOfAvoidance' }),
   );
   return opacity > 0 ? opacity : null;
 }

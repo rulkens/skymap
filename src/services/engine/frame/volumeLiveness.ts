@@ -90,13 +90,7 @@ export function deriveVolumeLiveness(
   // Focus recession dims the whole volume subsystem in lockstep with the
   // filament overlay; applied to the master multiplier only (see the module
   // header). The clip channel is behaviour-neutral when no clip is playing.
-  const recessedMaster = resolveLayerOpacity(
-    state.subsystems.fades,
-    { kind: 'volumesMaster' },
-    ctx.focusBlend,
-    nowMs,
-    state.subsystems.clipPlayer,
-  );
+  const recessedMaster = resolveLayerOpacity(state, ctx, { kind: 'volumesMaster' });
   // Camera distance from the heliocentric render origin (`ctx.drawCamPos`,
   // the same quantity the point sprites key on) — the shared key every
   // field's `bands` are measured against (see the module header).

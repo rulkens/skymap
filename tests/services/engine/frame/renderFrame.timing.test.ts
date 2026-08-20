@@ -393,6 +393,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // (opacity 0 ⇒ no render). Production seeds that fade from
         // `settings.milkyWay.enabled`, which is true here, hence 1.
         fades: { opacityOf: (id: { kind: string }) => (id.kind === 'milkyWay' ? 1 : 0) },
+        // resolveLayerOpacity's clip factor; no clip plays in this fixture.
+        clipPlayer: { clipOpacityOf: () => 1 },
       },
     } as never,
     device,

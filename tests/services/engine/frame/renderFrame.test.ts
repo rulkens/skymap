@@ -580,6 +580,8 @@ function makeInput(
           // layer alive through fade-out tails. A minimal opacityOf stub
           // keeps the gate from crashing.
           fades: { opacityOf: () => 1 },
+          // resolveLayerOpacity's clip factor; no clip plays in this fixture.
+          clipPlayer: { clipOpacityOf: () => 1 },
         },
       } as never,
       device,

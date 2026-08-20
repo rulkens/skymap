@@ -159,6 +159,8 @@ const STATE_STUB = {
       opacityOf: () => 1,
       isAnyAnimating: () => false,
     },
+    // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
+    clipPlayer: { clipOpacityOf: () => 1 },
   },
   // The Milky-Way rows' `draw` now goes through the same
   // `deriveMilkyWayCloudAlpha` gate their `enabled` does (one liveness

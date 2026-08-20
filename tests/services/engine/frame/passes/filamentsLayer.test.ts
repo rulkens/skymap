@@ -79,7 +79,7 @@ function makeState(
   filamentRenderer: unknown = null,
 ): EngineState {
   return {
-    subsystems: { fades: { opacityOf: () => opacity } },
+    subsystems: { fades: { opacityOf: () => opacity }, clipPlayer: { clipOpacityOf: () => 1 } },
     settings: {
       filaments: {
         enabled: true,

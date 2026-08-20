@@ -131,7 +131,11 @@ function livenessState(init: {
       volumeFieldRenderer: renderer,
       volumeUpsample: init.volumeUpsample ?? { draw: vi.fn(), destroy: vi.fn() },
     },
-    subsystems: { fades: { opacityOf: () => init.masterOpacity ?? 1 } },
+    subsystems: {
+      fades: { opacityOf: () => init.masterOpacity ?? 1 },
+      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
     settings: { volumes: { enabled: init.volumesEnabled ?? true, items: {} } },
   } as unknown as EngineState;
 }

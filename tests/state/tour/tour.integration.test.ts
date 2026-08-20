@@ -83,6 +83,19 @@ function makeClipStub(factor: number): ClipPlayer {
   };
 }
 
+/**
+ * Minimal `Pick<EngineState, 'subsystems'>` fixture for `resolveLayerOpacity` —
+ * only the two fields it reads. Cast through `unknown` since the two-field
+ * literal doesn't structurally satisfy the full `EngineSubsystemHandles` the
+ * picked type still demands.
+ */
+function makeResolveOpacityState(
+  fades: ReturnType<typeof createFadeRegistry>,
+  clipPlayer: ClipPlayer,
+): Pick<EngineState, 'subsystems'> {
+  return { subsystems: { fades, clipPlayer } } as unknown as Pick<EngineState, 'subsystems'>;
+}
+
 // ---------------------------------------------------------------------------
 // Template 2 helpers — real clipPlayer harness
 // (Mirrors the fixture style in playClipFlyout.integration.test.ts.)
@@ -133,20 +146,21 @@ describe('three-way opacity product: intent × focus × clip', () => {
     fades.register(handle, 1); // flow fully visible (intent=1)
 
     const clipAtZero = makeClipStub(0);
+    const stateAtZero = makeResolveOpacityState(fades, clipAtZero);
     // 1 (intent) × 1 (no focus recession for flow) × 0 (clip) = 0
-    expect(resolveLayerOpacity(fades, handle, 0, 0, clipAtZero)).toBe(0);
+    expect(resolveLayerOpacity(stateAtZero, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
   });
 
-  it('a clip factor of 1 leaves composed alpha unchanged from the no-clip baseline', () => {
+  it('a clip factor of 1 is neutral — composed alpha is the bare intent × recession product', () => {
     const fades = createFadeRegistry({ requestRender: () => {} });
     const handle: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
     fades.register(handle, 0);
     fades.fadeTo(handle, 0.8, 0, 0); // intent = 0.8
 
     const clipAtOne = makeClipStub(1);
-    const baseline = resolveLayerOpacity(fades, handle, 0, 0); // no clip
-    const withClip = resolveLayerOpacity(fades, handle, 0, 0, clipAtOne);
-    expect(withClip).toBe(baseline);
+    const state = makeResolveOpacityState(fades, clipAtOne);
+    // Hand-computed: intent 0.8 × recession 1 (galaxyCatalog never recedes) × clip 1 = 0.8.
+    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.8);
   });
 });
 
@@ -301,7 +315,8 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     fades.fadeTo(flowHandle, 1, 0, 0); // intent = 1
 
     const clipAtOne = makeClipStub(1); // factor 1 = clip is gone
-    const composed = resolveLayerOpacity(fades, flowHandle, 0, 0, clipAtOne);
+    const state = makeResolveOpacityState(fades, clipAtOne);
+    const composed = resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, flowHandle);
     // 1 (intent) × 1 (no recession for flow) × 1 (clip gone) = 1
     expect(composed).toBe(1);
 
