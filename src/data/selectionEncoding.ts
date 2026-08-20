@@ -1,42 +1,11 @@
 /**
  * selectionEncoding — single source of truth for the
- * `(sourceCode << 26) | localIdx` packed-identity encoding.
+ * `(sourceCode << 26) | localIdx` packed identity in the GPU pick
+ * texture (r32uint). `selectionEncoding.wesl` mirrors these constants;
+ * the parity test in `selectionEncoding.test.ts` keeps them in lockstep.
  *
- * ### Why this module exists
- *
- * skymap encodes a per-galaxy identity into one 32-bit unsigned integer
- * so the GPU pick texture (r32uint) can carry it as a single fragment
- * write. The encoding's magic numbers (the 26-bit shift, the 0x03ffffff
- * localIdx mask, the 0xFFFFFFFF "no selection" sentinel, the +1 pick
- * offset) are consumed from both TS and WESL. Open-coding them at each
- * use site leaves no compile-time or test-time guard against drift
- * between the two languages — bump the shift on the TS side, forget
- * the matching WESL change, and the symptom is "the wrong galaxy
- * highlights when you click".
- *
- * This module exports the canonical TS values plus encode/decode
- * helpers. A sister `selectionEncoding.wesl` mirrors the same constants
- * for the shader side; the parity test in
- * `tests/data/selectionEncoding.test.ts` asserts the two stay in
- * lockstep.
- *
- * ### The encoding
- *
- *   bits 26..31  →  sourceCode      (6 bits, 0..63 — source code 63 is
- *                                   intentionally unallocated to keep
- *                                   the all-ones sentinel disjoint)
- *   bits  0..25  →  localIdx        (26 bits, 0..67M per source)
- *
- * Widened 5→6 bits (shift 27→26) in the mcpm-workbench prep task: the
- * 5-bit space (codes 0..30 + sentinel 31) was fully allocated, and this
- * change is byte-behavior-identical for every source that existed
- * before it — see `SELECTION_NONE_SENTINEL`'s docstring for why the
- * literal sentinel value itself didn't need to change.
- *
- * The pick fragment writes `packed + PICK_SENTINEL_OFFSET` rather than
- * `packed` directly, so the cleared-to-zero pick texture remains
- * distinguishable from a legitimate (source=0, localIdx=0) hit. The
- * decode in `unpackPick` reverses the offset.
+ *   bits 26..31  sourceCode  (6 bits; 63 reserved for the all-ones sentinel)
+ *   bits  0..25  localIdx    (26 bits, 0..67M per source)
  */
 
 import type { SourceType } from '../@types/data/SourceType';

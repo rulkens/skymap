@@ -156,7 +156,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 72..75  : cam._pad0         f32          (alignment slack)       } lib/camera.wesl
  *   bytes 76..79  : cam._pad1         f32          (alignment slack)       } (80 B total)
  *   bytes 80..83  : selectedPacked    u32          ← (selectedSource << 26) | selectedLocalIdx, or 0xFFFFFFFF
- *   bytes 84..87  : sourceCode        u32          ← per-draw source tag (5 bits used)
+ *   bytes 84..87  : sourceCode        u32          ← per-draw source tag (6 bits used)
  *   bytes 88..91  : pointSizePx       f32
  *   bytes 92..95  : brightness        f32
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)

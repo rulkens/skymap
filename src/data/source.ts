@@ -6,7 +6,7 @@
  * as a registry key for filament + volume assets.
  *
  * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
- * file format AND packed into the pick texture's upper 5 bits. Treat
+ * file format AND packed into the pick texture's upper 6 bits. Treat
  * them like API version numbers — append, never renumber. Recycling a
  * code silently breaks every `.bin` ever written and every saved
  * selection URL.
@@ -214,18 +214,18 @@ export const Source = {
    * famous star. The star layers draw both sets and stamp whichever code the
    * star's table dictates (`starPickId`). Not persisted. Appended at 28.
    *
-   * BUDGET: the pick texture's source field is 5 bits with 31 reserved as the
-   * all-ones sentinel (`selectionEncoding.ts`), so after this row only 29 and
-   * 30 remained. `zoneOfAvoidance` (29, below) spent one; only 30 is left
-   * before the next pickable source needs a wider field.
+   * BUDGET: the pick texture's source field is 6 bits with 63 reserved as the
+   * all-ones sentinel (`selectionEncoding.ts`), so after this row codes
+   * 29..62 remain. `zoneOfAvoidance` (29, below) spends one, leaving
+   * 30..62 for future pickable sources.
    */
   SStar: 28,
   /**
    * Zone-of-avoidance guide band — the additively-blended wedge along the
    * galactic plane annotating the dust-obscured hole every optical/near-IR
    * catalog shares. Pickable (clicking the band opens its InfoCard), so it
-   * spends one of the two codes the SStar docblock's budget note reserved.
-   * Appended at 29 — after this row, only 30 remains before the 5-bit pick
+   * spends one of the codes the SStar docblock's budget note reserved.
+   * Appended at 29 — after this row, codes 30..62 remain before the pick
    * field needs a wider layout.
    */
   ZoneOfAvoidance: 29,

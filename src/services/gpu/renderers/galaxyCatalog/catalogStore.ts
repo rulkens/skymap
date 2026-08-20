@@ -5,7 +5,7 @@
  * interleaved vertex buffer, the CPU mirror of those bytes (so the
  * bias-correction subsystem can splice two slots and re-upload), the
  * per-source FadeUniforms buffer + bind group, and the per-source
- * SourceUniforms buffer + bind group carrying the 5-bit GPU identity.
+ * SourceUniforms buffer + bind group carrying the 6-bit GPU identity.
  * They are created together at upload, destroyed together at unload, and
  * every one of them outlives the frame that drew them.
  *
@@ -106,7 +106,7 @@ export type BuildRunner = (
 // ─── Source code ↔ catalog id resolution ──────────────────────────────────────
 //
 // The public key is the string `GalaxyCatalogId`, but the GPU-facing
-// identity (the 5-bit `sourceCode` packed into the pick texture) and the
+// identity (the 6-bit `sourceCode` packed into the pick texture) and the
 // draw order (`GALAXY_CATALOG_SOURCES`) are numeric.  Both maps are derived
 // from `SOURCE_REGISTRY` so the catalog set + codes stay defined in exactly
 // one place — adding a galaxy catalog there extends both without a hardcoded

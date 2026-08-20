@@ -37,7 +37,7 @@
 //             fade bind group at slot 1).  This shader never reads it; a
 //             dummy zeroed group is bound at draw time.
 //   @group(2) MilkyWayPickUniforms — carries the world-space galactic
-//             centre, the 5-bit source code, and the disc's world
+//             centre, the 6-bit source code, and the disc's world
 //             radius; all written once at construction.
 
 import package::lib::camera::CameraUniforms;

@@ -2,9 +2,8 @@
  * Tests for the (sourceCode << 26) | localIdx packed-identity encoding.
  *
  * These cover round-trip correctness, the cleared-pick-texture sentinel
- * convention, and bounds (6-bit source, 26-bit localIdx — widened from
- * 5/27 in the mcpm-workbench prep task). The TS↔WESL parity test lives
- * at the bottom.
+ * convention, and bounds (6-bit source, 26-bit localIdx). The TS↔WESL
+ * parity test lives at the bottom.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -68,6 +67,13 @@ describe('selectionEncoding', () => {
       [1, 0],
       [4, 42],
       [4, SELECTION_LOCAL_IDX_MASK - 1],
+      // localIdx caps at MASK - 1, not MASK: the picker's +1 offset on a
+      // bare MASK carries out of the 26-bit localIdx field and corrupts
+      // sourceCode, so MASK itself is never a recoverable value for any
+      // source (not specific to 30). Hand-computed: (30 << 26) |
+      // 0x03fffffe = 0x78000000 | 0x03fffffe = 0x7bfffffe; +1 offset =
+      // 0x7bffffff.
+      [30, SELECTION_LOCAL_IDX_MASK - 1],
       // Hand-computed: source=62 is the new top allocatable code the
       // 6-bit widening exists to free up. (62 << 26) | 12345, +1 offset.
       [62, 12345],

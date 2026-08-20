@@ -24,7 +24,7 @@
  * delegations, not implementations.
  *
  * An engine-supplied bitmask decides which catalogs draw each frame.
- * Each catalog's `@group(2)` SourceUniforms carries a 5-bit `sourceCode`
+ * Each catalog's `@group(2)` SourceUniforms carries a 6-bit `sourceCode`
  * that the vertex stage composes with `@builtin(instance_index)` into the
  * fragment's packed identity for `fsPick` to write into the r32uint pick
  * texture.

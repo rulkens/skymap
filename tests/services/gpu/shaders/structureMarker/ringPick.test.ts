@@ -41,11 +41,10 @@ describe('ringPick.wesl', () => {
   });
 
   it('imports SELECTION_SOURCE_SHIFT from the canonical lib path', () => {
-    // Was a hardcoded `<< 27u` literal until the mcpm-workbench prep task
-    // (found by the P2 scout as the one production shader that bypassed
-    // the shared module). Asserting on the import — not a re-inlined
-    // literal — is what stops this file from going stale again the next
-    // time the shift changes.
+    // Asserting on the import — not a re-inlined literal — is what stops
+    // this file from going stale the next time the shift changes: this
+    // fragment composes the packed identity from the shift directly, so
+    // it must never bypass the shared module for its own copy.
     expect(ringPickCode).toContain(
       'import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT',
     );
