@@ -9,14 +9,29 @@
 
 ## Harvested regions
 
-One row per `npm run fetch-eox` invocation that has landed tiles in this tree.
-`eoxTileSource` supports exactly one contiguous patch today (see
-`docs/backlog/2026-08-19-multi-region-eox-coverage.md`), so this table doubles
-as a reminder of what a second row would break.
+Bboxes are no longer recorded here — `tools/fetch/eoxRegions.ts` is the
+single source of truth for every region name → bbox. This table only records
+what has actually been harvested and when, one row per `npm run fetch-eox
+-- --region <name>` run that has landed tiles in this tree.
 
-| Region     | Bbox (west/south/east/north) | Harvested  | z13 tiles |
-| ---------- | ----------------------------- | ---------- | --------- |
-| Copenhagen | `12.4/55.5/12.9/55.8`          | 2026-08-19 | 24×15 = 360 |
+The 2026-08-20 multi-region harvest supersedes the earlier flat, single-patch
+tree (`data/raw/eox/13/…`, no region subdirectory) — see "Per-region layout"
+below. Copenhagen's row predates the move; no other region's harvest date is
+recorded here yet.
+
+| Region     | Harvested  | z13 tiles   |
+| ---------- | ---------- | ----------- |
+| Copenhagen | 2026-08-19 | 24×15 = 360 |
+
+## Per-region layout
+
+Tiles land at `data/raw/eox/<region>/<z>/<row>/<col>.jpg`, one subdirectory
+per registry region — `<region>` is the exact kebab-case key from
+`tools/fetch/eoxRegions.ts`, which also doubles as the harvest's directory
+name. `eoxTileSource` (`tools/textures/eoxTileSource.ts`) treats every
+subdirectory of the coverage dir holding a `13/` tree as one region and
+declares one `coverage` box per region; a region's own harvest tree must
+still be one contiguous rectangle of tiles (no gaps within it).
 
 ## Layer year — hard constraint
 
@@ -42,20 +57,20 @@ skymap's own bake pyramid with no re-numbering.
 
 This harvest fetches **z13 tiles only** — coarser levels (z8-z12) are derived
 at bake time by the existing 2x2 average, exactly as BMNG's deepest level is
-today. Local tile files land at `data/raw/eox/<z>/<row>/<col>.jpg` (currently
-always `<z> = 13`).
+today (`<z>` in the per-region layout above is currently always `13`).
 
 ## How to obtain
 
 ```
-npm run fetch-eox -- <west> <south> <east> <north> [--level 13]
+npm run fetch-eox -- --region <name> [--level 13]
 ```
 
-Sequential, throttled to ~2 requests/second, with exponential backoff on
-retryable failures (429/503/5xx or a network error) — same backoff shape as
-`tools/fetch/fetchDesi.ts`. Resumable by tile-file existence: re-running the
-same bbox/level skips every tile already on disk, no separate chunk-state
-sidecar (a tile is atomically whole-or-absent). A non-image response (a
-throttled EOX origin serving an HTML page instead of a JPEG) throws and stops
-the run rather than writing HTML bytes into the tile tree under a `.jpg`
-name.
+`<name>` must be a key in `tools/fetch/eoxRegions.ts`; an unknown or missing
+`--region` throws listing the available names. Sequential, throttled to ~2
+requests/second, with exponential backoff on retryable failures (429/503/5xx
+or a network error) — same backoff shape as `tools/fetch/fetchDesi.ts`.
+Resumable by tile-file existence: re-running the same region/level skips
+every tile already on disk, no separate chunk-state sidecar (a tile is
+atomically whole-or-absent). A non-image response (a throttled EOX origin
+serving an HTML page instead of a JPEG) throws and stops the run rather than
+writing HTML bytes into the tile tree under a `.jpg` name.
