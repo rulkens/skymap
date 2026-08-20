@@ -34,6 +34,7 @@ import { cameraViewFor } from '../render/cameraViewFor';
 import { effectiveVolpathDivisor, SETTLE_MS } from '../render/effectiveVolpathDivisor';
 import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
 import type { TraceView } from '../render/tracePass';
+import { volpathKeyFor } from '../render/volpathKeyFor';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
 import { createMcpmHarness } from '../sim/createMcpmHarness';
 import { planGridBudget } from '../sim/planGridBudget';
@@ -67,12 +68,6 @@ const FPS_PUSH_INTERVAL_MS = 500;
 // host round trip, and every sim step already queues one GPU submission of its own.
 // Steps, not wall-clock, so the convergence plot's x-axis is exact step counts.
 const HISTOGRAM_INTERVAL_STEPS = 20;
-// Task FLE: once the path tracer's progressive accumulator reaches this many samples
-// it stops forcing a render on its own (frameNeedsRender.ts) — Monte Carlo noise falls
-// as 1/sqrt(N), and 512 samples (~23x the 1-sample noise floor) reads as converged at
-// the tool's default divisor; a `volpathKey` change (camera/param/reset) restarts the
-// count at 0 the same way it already restarts the accumulator itself.
-const PATH_TRACER_SAMPLE_CAP = 512;
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
@@ -422,7 +417,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           simRunning: s.sim.running,
           pathTracerOn: s.view.layers.pathTracer,
           pathTracerSampleCount: volpathSampleCount,
-          pathTracerSampleCap: PATH_TRACER_SAMPLE_CAP,
+          pathTracerSampleCap: s.view.pathTracer.sampleCap,
           holdUntilMs,
           nowMs: now,
         });
@@ -502,8 +497,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
             s.view.pathTracer.divisor,
             now - lastInteractionMs,
           );
-          // Reset on any camera move, any pathTracer param change (divisor included —
-          // s.view.pathTracer is the whole object), or an explicit clear-trace/reset
+          // Reset on any camera move, any pathTracer param change (divisor included,
+          // sampleCap excluded — see volpathKeyFor.ts), or an explicit clear-trace/reset
           // command — `cam` is the SAME serialized object already computed above, so
           // this can't drift from what actually drew. Deliberately NOT keyed on
           // `sim.stepCount`: an earlier version floored a step term in here so a running
@@ -518,12 +513,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
           // effectiveDivisor directly — keying this string on it too would only add a
           // second, redundant reset exactly 200ms after every interaction, on top of
           // the resize the accumulator was always going to do on its own.
-          const volpathKey = JSON.stringify([
-            cam,
-            s.view.pathTracer,
-            s.sim.clearTraceToken,
-            s.sim.resetToken,
-          ]);
+          const volpathKey = JSON.stringify(
+            volpathKeyFor(cam, s.view.pathTracer, s.sim.clearTraceToken, s.sim.resetToken),
+          );
           if (volpathKey !== lastVolpathKey) {
             graph.resetVolpath();
             volpathSampleCount = 0;

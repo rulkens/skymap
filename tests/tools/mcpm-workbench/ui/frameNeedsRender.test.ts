@@ -34,6 +34,30 @@ describe('frameNeedsRender', () => {
     );
   });
 
+  // CAPSLIDER: the cap is a live setting now, not a constant — raising/lowering it
+  // must take effect on the SAME accumulated count, with no reset in between.
+  it('raising the cap while capped wakes the loop, without resetting the count', () => {
+    expect(
+      frameNeedsRender({
+        ...BASE,
+        pathTracerOn: true,
+        pathTracerSampleCount: 10,
+        pathTracerSampleCap: 20,
+      }),
+    ).toBe(true);
+  });
+
+  it('lowering the cap below the current count goes clean, without resetting the count', () => {
+    expect(
+      frameNeedsRender({
+        ...BASE,
+        pathTracerOn: true,
+        pathTracerSampleCount: 10,
+        pathTracerSampleCap: 5,
+      }),
+    ).toBe(false);
+  });
+
   it('a capped path tracer that is OFF never forces a render', () => {
     expect(frameNeedsRender({ ...BASE, pathTracerOn: false, pathTracerSampleCount: 0 })).toBe(
       false,

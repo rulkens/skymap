@@ -105,5 +105,14 @@ export type ViewSlice = {
      * the user's own setting, never the boosted value.
      */
     readonly divisor: number;
+    /**
+     * Task FLE→CAPSLIDER: once the progressive accumulator reaches this many
+     * samples, frameNeedsRender.ts stops forcing a render on its own — Monte
+     * Carlo noise falls as 1/sqrt(N), and 512 samples (~23x the 1-sample noise
+     * floor) reads as converged at the tool's default divisor. Deliberately
+     * excluded from `volpathKeyFor` — raising it wakes the loop and RESUMES
+     * accumulation, lowering it just goes clean; neither resets the count.
+     */
+    readonly sampleCap: number;
   };
 };

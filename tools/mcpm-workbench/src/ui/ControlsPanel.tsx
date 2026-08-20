@@ -54,6 +54,7 @@ import {
   setPathTracerCompressive,
   setPathTracerDivisor,
   setPathTracerParam,
+  setPathTracerSampleCap,
   setPreviewPacked,
   setSampleWeight,
   setStepVoxels,
@@ -713,6 +714,19 @@ function ControlsPanel(): ReactNode {
                 store.setState((s) => ({ ...s, view: setPathTracerDivisor(s.view, v) }))
               }
               path="view.pathTracer.divisor"
+            />
+            <ParamSlider
+              label="sample cap"
+              value={view.pathTracer.sampleCap}
+              min={64}
+              max={4096}
+              step={64}
+              format={(v) => v.toFixed(0)}
+              info="Progressive accumulator stops forcing a render past this many samples (Monte Carlo noise falls as 1/sqrt(N)). Raising it while capped resumes accumulation without a reset; lowering it just goes idle sooner."
+              onChange={(v) =>
+                store.setState((s) => ({ ...s, view: setPathTracerSampleCap(s.view, v) }))
+              }
+              path="view.pathTracer.sampleCap"
             />
           </SliderGroup>
           <ToggleRow
