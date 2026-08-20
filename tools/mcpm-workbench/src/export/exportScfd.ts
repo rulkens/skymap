@@ -6,10 +6,6 @@ import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat
 import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 
-// FRAME_TO_WORLD already applies the frame rotation at render time
-// (buildRhizomeVolume.ts precedent) — writing it again here would compound it.
-const IDENTITY_ROTATION: Vec4 = [0, 0, 0, 1];
-
 /**
  * exportScfd — `packLogTraceVoxels` → `encodeScalarField`, the SAME packing
  * code `buildRhizomeVolume.ts` runs on the offline leg, so the two outputs
@@ -34,7 +30,12 @@ export function exportScfd(values: Float32Array, box: GridBox): ArrayBuffer {
     frameKind: 'equatorial-cartesian',
     origin,
     voxelSize: box.voxelSizeMpc,
-    rotation: IDENTITY_ROTATION,
+    // Box tilt, not frame conversion — frameKind is 'equatorial-cartesian'
+    // (FRAME_TO_WORLD identity), so buildCubeModelMatrix composes box.rotation
+    // on top of nothing. This is the field's documented per-cube-tilt use
+    // (buildCf4Density.ts:197-207); shipping identity here would silently
+    // axis-align every rotated box on import.
+    rotation: [box.rotation[0], box.rotation[1], box.rotation[2], box.rotation[3]] as Vec4,
     valueMin,
     valueMax,
   };
