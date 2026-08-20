@@ -36,7 +36,7 @@ describe('the S-star source row', () => {
 
   it('every registry code fits the pick texture’s source field, uniquely', () => {
     // The packed identity gives the source code `32 - SELECTION_SOURCE_SHIFT`
-    // bits with the all-ones value reserved as the no-hit sentinel, so 30 is the
+    // bits with the all-ones value reserved as the no-hit sentinel, so 62 is the
     // last usable code. Nothing else checks the ceiling, and overflowing it would
     // corrupt `localIdx` rather than fail: the OR would carry into the index.
     const codes = Object.values(SOURCE_REGISTRY).map((entry) => entry.code);
