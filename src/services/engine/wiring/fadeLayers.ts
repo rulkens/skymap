@@ -16,7 +16,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
-import { BODY_IDS } from '../../../data/bodies/bodyIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
