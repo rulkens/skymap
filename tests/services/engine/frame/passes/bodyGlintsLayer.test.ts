@@ -442,13 +442,13 @@ describe('bodyGlintsLayer.drawPick', () => {
     // Both seeded bodies survive within the caption gate; only UNKNOWN is dropped.
     expect(args.points).toHaveLength(2);
 
-    // Jupiter's packed id, hand-computed: (Source.Planet=22 << 27) | (seedIndex 3 +
-    // PICK_SENTINEL_OFFSET 1) = 2952790016 | 4 = 2952790020.
+    // Jupiter's packed id, hand-computed: (Source.Planet=22 << 26) | (seedIndex 3 +
+    // PICK_SENTINEL_OFFSET 1) = 1476395008 | 4 = 1476395012.
     const jupiter = args.points.find(
       (p) => p.packedId === packSelection(Source.Planet, 3 + PICK_SENTINEL_OFFSET),
     )!;
     expect(jupiter).toBeDefined();
-    expect(jupiter.packedId).toBe(2_952_790_020);
+    expect(jupiter.packedId).toBe(1_476_395_012);
     // A heliocentric planet carries the PLANET priority class (1) — the datum the
     // glint variant maps to its own depth band so Jupiter out-picks its moons.
     expect(jupiter.bandClass).toBe(1);

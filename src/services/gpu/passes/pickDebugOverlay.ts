@@ -9,7 +9,7 @@
  * source — galaxy catalog, structure ring, Gaia star, famous star, planet,
  * Earth — reads as its own stable, well-separated colour with no
  * hand-maintained palette to keep in step with `Source`. A hash of the
- * 27-bit `localIdx` modulates brightness (HSV value) so adjacent instances
+ * 26-bit `localIdx` modulates brightness (HSV value) so adjacent instances
  * of the same source stay individually distinguishable. See
  * `shaders/pickDebugOverlay/fragment.wesl` for the full rationale.
  *

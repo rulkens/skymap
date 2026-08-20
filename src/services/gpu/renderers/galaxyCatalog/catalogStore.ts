@@ -151,7 +151,7 @@ type LoadedSource = {
   /** Per-source FadeUniforms (opacity + pad) written once per frame. */
   fadeBuffer: GPUBuffer;
   fadeBindGroup: GPUBindGroup;
-  /** Per-source SourceUniforms (5-bit sourceCode + pad) written once at upload. */
+  /** Per-source SourceUniforms (6-bit sourceCode + pad) written once at upload. */
   sourceBuffer: GPUBuffer;
   sourceBindGroup: GPUBindGroup;
 };
@@ -331,7 +331,7 @@ export function createCatalogStore(init: {
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
-    // SourceUniforms: 5-bit sourceCode + per-source sbBoost +
+    // SourceUniforms: 6-bit sourceCode + per-source sbBoost +
     // per-source falloffHalfMpc + 4 B pad.  Written once here; the
     // values are constant per source so per-frame writes would be
     // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout

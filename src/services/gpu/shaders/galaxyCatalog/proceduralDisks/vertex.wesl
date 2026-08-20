@@ -147,7 +147,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // (constant across the quad's corners). At rest (blend=0) this is 1.0.
   out.focusDim = focusAlphaMultiplier(pos, focus);
   // Slot 6 carries the CPU-packed pick id as raw f32 bits; bitcast
-  // recovers the original u32 '(sourceCode << 27) | localIdx' written by
+  // recovers the original u32 '(sourceCode << 26) | localIdx' written by
   // the TS side in slot 6 = orientation.z. The visual fragment ignores this
   // varying; the pick fragment reads it to write the r32uint pick texture.
   out.pickId = bitcast<u32>(instance.orientation.z);

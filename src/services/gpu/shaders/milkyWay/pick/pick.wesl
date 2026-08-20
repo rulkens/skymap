@@ -4,7 +4,7 @@
 // Sister to points/pickFragment.wesl and structureMarker/ringPick.wesl:
 // it writes the packed Milky-Way identity into the integer pick texture.
 // The identity was composed in the vertex stage (milkyWay/pick/vertex.wesl)
-// as '(sourceCode << 27) | (0 + PICK_SENTINEL_OFFSET)' and forwarded
+// as '(sourceCode << 26) | (0 + PICK_SENTINEL_OFFSET)' and forwarded
 // flat-interpolated, so the fragment only has to clip the billboard to a
 // round hit area and emit the value.
 //

@@ -103,7 +103,7 @@ struct Uniforms {
   // specific scalars live AFTER this 80-byte block.
   cam: CameraUniforms,
 
-  // The currently-selected point packed as '(sourceCode << 27) | localIdx',
+  // The currently-selected point packed as '(sourceCode << 26) | localIdx',
   // or '0xFFFFFFFFu' when nothing is selected. The points pipeline does
   // not read this field — the selection ring is drawn by the dedicated
   // selectionRingLayer — but the picker mutates the slot in place to

@@ -43,13 +43,14 @@
  * ### Selection-packed encoding
  *
  * The shader expects a single u32 in the form
- * `(sourceCode << 27) | localIdx` to identify the selected galaxy
+ * `(sourceCode << 26) | localIdx` to identify the selected galaxy
  * (or `0xFFFFFFFF` for "nothing selected").  Settings carries the
  * structured `{ source, localIdx } | null` shape; we translate to
  * the packed u32 here so settings stays in plain-TS-land and the
  * shader sees a single integer.  `0xFFFFFFFF` is the sentinel: the
- * max u32, well outside any realistic packed identity (the top 5
- * bits would have to encode source code 31, which we don't allocate).
+ * max u32, well outside any realistic packed identity (the top 6
+ * bits would have to encode the reserved sourceCode, which we don't
+ * allocate).
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -90,7 +91,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
     const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
     // Pack the galaxy selection into the u32 the shader compares
-    // against per-vertex `(sourceCode << 27u) | instance_index`.
+    // against per-vertex `(sourceCode << 26u) | instance_index`.
     // Structure targets don't light up galaxy halos, so they map to the
     // "nothing selected" sentinel.
     const selected = state.selection.select;
@@ -148,7 +149,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
 
   // Pick aspect — the point half of the pick pass. Re-runs the SAME
   // instanced billboard geometry through the r32uint pick pipeline, which
-  // writes a packed hit id `(sourceCode << 27) | localIdx` instead of
+  // writes a packed hit id `(sourceCode << 26) | localIdx` instead of
   // colour. Delegates to `galaxyPickRenderer.drawPoints`; the pick camera is
   // rebuilt as a value by `pickUniformBytesOf` (same byte layout as the
   // visual pack, minus the selection identity — the pick fragment writes

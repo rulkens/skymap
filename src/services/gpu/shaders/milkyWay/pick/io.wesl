@@ -110,7 +110,7 @@ struct VsOut {
   // Unit-quad corner in [-1, +1]², used by the fragment for the
   // distance-from-centre disk test.
   @location(0) uv: vec2<f32>,
-  // Pre-packed '(sourceCode << 27) | (0 + PICK_SENTINEL_OFFSET)'
+  // Pre-packed '(sourceCode << 26) | (0 + PICK_SENTINEL_OFFSET)'
   // identity.  Flat-interpolated — integers can't be linearly
   // interpolated and all six vertices share the value.
   @location(1) @interpolate(flat) packedPick: u32,

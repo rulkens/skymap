@@ -6,7 +6,7 @@
  * (cluster / supercluster / void / group).  Per-category source-code
  * differentiation happens inside the renderer (one pre-built per-source
  * bind group each) so the pick path gets the correct
- * (sourceCode << 27) | structureIndex packing for free.
+ * (sourceCode << 26) | structureIndex packing for free.
  */
 
 import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
