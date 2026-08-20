@@ -16,6 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { delay } from '../utils/async/delay';
+import { EOX_REGIONS, type EoxRegionName } from './eoxRegions';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const DEFAULT_MAX_ATTEMPTS = 8;
@@ -206,49 +207,50 @@ const httpTileTransport: EoxTileTransport = async (url) => {
 /**
  * A single left-to-right pass, not a `filter` + separate `indexOf('--level')`
  * lookup: `--level`'s VALUE token (e.g. `'13'`) doesn't start with `--`, so a
- * filter-based split misclassified it as a positional bbox arg whenever
- * `--level` preceded the bbox on the command line, shifting every
- * west/south/east/north by one. Consuming the flag and its value together,
- * in argv order, makes bbox/flag ordering irrelevant.
+ * filter-based split would misread it as `--region`'s value whenever
+ * `--level` preceded `--region` on the command line. Consuming each flag and
+ * its value together, in argv order, makes flag ordering irrelevant.
  */
-export function parseCliArgs(argv: string[]): { bbox: EoxBbox; level: number } {
-  const positional: string[] = [];
+export function parseCliArgs(argv: string[]): {
+  region: EoxRegionName;
+  bbox: EoxBbox;
+  level: number;
+} {
+  let region: string | undefined;
   let level = 13;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    if (arg === '--region') {
+      region = argv[++i];
+      continue;
+    }
     if (arg === '--level') {
       level = Number(argv[++i]);
       continue;
     }
-    if (arg !== undefined) positional.push(arg);
   }
 
-  const west = Number(positional[0]);
-  const south = Number(positional[1]);
-  const east = Number(positional[2]);
-  const north = Number(positional[3]);
-  if (
-    !Number.isFinite(west) ||
-    !Number.isFinite(south) ||
-    !Number.isFinite(east) ||
-    !Number.isFinite(north)
-  ) {
+  if (region === undefined || !(region in EOX_REGIONS)) {
+    const names = Object.keys(EOX_REGIONS).join(', ');
     throw new Error(
-      'usage: fetchEoxTiles <west> <south> <east> <north> [--level N] (level defaults to 13)',
+      region === undefined
+        ? `usage: fetchEoxTiles --region <name> [--level N] — available regions: ${names}`
+        : `unknown --region "${region}" — available regions: ${names}`,
     );
   }
   if (!Number.isFinite(level)) {
     throw new Error('--level must be a number');
   }
-  return { bbox: { west, south, east, north }, level };
+  const resolvedRegion = region as EoxRegionName;
+  return { region: resolvedRegion, bbox: EOX_REGIONS[resolvedRegion], level };
 }
 
 async function main(): Promise<void> {
-  const { bbox, level } = parseCliArgs(process.argv.slice(2));
-  const outDir = rawDataPath('eox.dir');
+  const { region, bbox, level } = parseCliArgs(process.argv.slice(2));
+  const outDir = join(rawDataPath('eox.dir'), region);
   const indices = eoxTileIndicesForBbox(bbox, level);
   process.stderr.write(
-    `fetchEoxTiles: z${level}, bbox ${JSON.stringify(bbox)}, ${indices.length} tile(s) → ${outDir}\n`,
+    `fetchEoxTiles: region ${region}, z${level}, bbox ${JSON.stringify(bbox)}, ${indices.length} tile(s) → ${outDir}\n`,
   );
 
   const result = await harvestEoxTiles({ bbox, level, outDir, transport: httpTileTransport });

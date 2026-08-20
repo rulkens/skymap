@@ -19,6 +19,7 @@ import {
   parseCliArgs,
   type EoxTileTransport,
 } from '../../../tools/fetch/fetchEoxTiles';
+import { EOX_REGIONS } from '../../../tools/fetch/eoxRegions';
 
 describe('eoxTileIndicesForBbox', () => {
   it('enumerates the correct row/col range for the Copenhagen bbox at z13', () => {
@@ -65,10 +66,26 @@ describe('eoxTileIndicesForBbox', () => {
 });
 
 describe('parseCliArgs', () => {
-  it('parses the bbox correctly regardless of whether --level precedes or follows it', () => {
-    const expected = { bbox: { west: 10, south: 20, east: 30, north: 40 }, level: 9 };
-    expect(parseCliArgs(['--level', '9', '10', '20', '30', '40'])).toEqual(expected);
-    expect(parseCliArgs(['10', '20', '30', '40', '--level', '9'])).toEqual(expected);
+  it('resolves a known --region to its registry bbox, level defaulting to 13', () => {
+    expect(parseCliArgs(['--region', 'copenhagen'])).toEqual({
+      region: 'copenhagen',
+      bbox: EOX_REGIONS.copenhagen,
+      level: 13,
+    });
+  });
+
+  it('parses --level regardless of whether it precedes or follows --region', () => {
+    const expected = { region: 'amsterdam', bbox: EOX_REGIONS.amsterdam, level: 9 };
+    expect(parseCliArgs(['--level', '9', '--region', 'amsterdam'])).toEqual(expected);
+    expect(parseCliArgs(['--region', 'amsterdam', '--level', '9'])).toEqual(expected);
+  });
+
+  it('throws listing the available region names for an unknown --region', () => {
+    expect(() => parseCliArgs(['--region', 'atlantis'])).toThrow(/copenhagen/);
+  });
+
+  it('throws when --region is missing', () => {
+    expect(() => parseCliArgs([])).toThrow(/--region/);
   });
 });
 
