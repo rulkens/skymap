@@ -210,6 +210,73 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.requests.length).toBeGreaterThan(0);
     });
 
+    it('draws a band-edge leaf outside every band\'s request range from a resident ancestor rect', () => {
+      // Reproduces the "hole ring" bug: a global band caps at z7, a deep band
+      // only bakes z8-13 over a small bbox, and the z7 parent straddles that
+      // bbox's edge — `earthTileBandRefineAllowed` lets it refine (the deep
+      // band overlaps SOME of it), but three of its four z8 children land
+      // OUTSIDE the deep band's bbox with no band requestable at z8 there.
+      const z7 = 7;
+      const z8 = 8;
+      const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
+      const [z7x, z7y] = earthTileXyForUv(subUv, z7, EARTH_TILE_PX);
+      const [z8x, z8y] = earthTileXyForUv(subUv, z8, EARTH_TILE_PX);
+
+      const tileBounds = (z: number, x: number, y: number) => {
+        const cols = earthTileColumns(z, EARTH_TILE_PX);
+        const rows = cols / 2;
+        return {
+          uBounds: [x / cols, (x + 1) / cols] as const,
+          vBounds: [1 - (y + 1) / rows, 1 - y / rows] as const,
+        };
+      };
+
+      const bands = [
+        { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: z7 },
+        { ...tileBounds(z8, z8x, z8y), min: z8, max: 13 },
+      ];
+
+      const ancestorRect = {
+        atlasUvOrigin: [0.25, 0.5] as const,
+        atlasUvScale: [0.5, 0.5] as const,
+      };
+      const residentSlot = (tile: EarthTileId) =>
+        tile.z === z7 && tile.x === z7x && tile.y === z7y ? { slot: 3, ...ancestorRect } : null;
+
+      const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
+
+      // A sibling of the in-band child: same z7 parent, a different quadrant —
+      // outside the deep band's bbox, and the global band tops out at z7.
+      const otherX = z8x === z7x * 2 ? z7x * 2 + 1 : z7x * 2;
+      const otherY = z8y;
+
+      expect(
+        result.requests.requests.some(
+          (r) => r.tile.z === z8 && r.tile.x === otherX && r.tile.y === otherY,
+        ),
+        'skipped leaf must not be requested — no band bakes a file for it',
+      ).toBe(false);
+
+      const entry = result.cut.find(
+        (c) => c.id.z === z8 && c.id.x === otherX && c.id.y === otherY,
+      );
+      expect(entry, `cut entry for ${z8}/${otherX}/${otherY}`).toBeDefined();
+
+      const span = 2;
+      const offsetU = (otherX - z7x * span) / span;
+      const offsetV = (otherY - z7y * span) / span;
+      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(
+        ancestorRect.atlasUvOrigin[0] + offsetU * ancestorRect.atlasUvScale[0],
+        12,
+      );
+      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(
+        ancestorRect.atlasUvOrigin[1] + offsetV * ancestorRect.atlasUvScale[1],
+        12,
+      );
+      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(ancestorRect.atlasUvScale[0] / span, 12);
+      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(ancestorRect.atlasUvScale[1] / span, 12);
+    });
+
     it('the near-plane-straddler fallback carries over, in both products', () => {
       // 500 m up, tilted 2 degrees off nadir: see `planEarthTiles.test.ts`'s
       // `tiltedAt` doc for why this pins the false-negative near-plane cull

@@ -209,17 +209,19 @@ export function cutSurfaceTiles(input: {
     // `zWin` is the finest level the walk REACHED, counting leaves no bake
     // covers, regardless of which files happen to exist.
     if (z > zWin) zWin = z;
-    // Served by the base texture, but has no file to fetch — and, since no
-    // atlas tile was ever requested for this leaf, none to draw either.
-    if (!earthTileBandRequestAllowed(bands, z, u0, u1, v0, v1)) continue;
-    requests.push({ tile: { kind, z, x, y }, screenPx });
+    // Requestable and drawable are different questions: a leaf can sit past
+    // every overlapping band's max (e.g. just outside a deep band's bbox,
+    // under a shallower global band) with no file of its OWN to fetch, yet
+    // still have a resident ANCESTOR to draw — skip only the fetch, not the
+    // residency lookup below, or a band-edge ring never gets ancestor pixels.
+    if (earthTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
+      requests.push({ tile: { kind, z, x, y }, screenPx });
 
     // Ancestor-fallback residency: the leaf's own tile if resident, else the
     // nearest resident ancestor strictly deeper than `baseLevel` (that level
     // and shallower is the base globe's, never atlas-resident — see
     // `resolveCutResidency`). No resident tile anywhere in the chain drops
-    // the leaf from `cut` entirely; the base globe (Task 5) already covers
-    // that ground.
+    // the leaf from `cut`; the base globe fills in for THAT case instead.
     const resolved = resolveCutResidency({ kind, z, x, y, baseLevel, residentSlot });
     if (resolved !== null) {
       cut.push({
