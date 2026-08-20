@@ -50,7 +50,14 @@ export type ViewportInputDeps = {
 export type ViewportInput = {
   readonly onPointerDown: (e: PointerEvent) => void;
   readonly onPointerUp: () => void;
+  /** A cancelled sequence (OS gesture takeover, tab switch, stylus lift) gets the exact
+   *  same end-of-drag treatment as pointerup — otherwise gizmoDragging stays set and every
+   *  later pointermove keeps mutating the grid box with a capture that no longer exists. */
+  readonly onPointerCancel: () => void;
   readonly onPointerMove: (e: PointerEvent) => void;
+  /** Clears the hover highlight when the pointer leaves the canvas — it is not otherwise
+   *  recomputed once the pointer stops moving over the canvas. */
+  readonly onPointerLeave: () => void;
   readonly onWheel: (e: WheelEvent) => void;
   readonly onContextMenu: (e: Event) => void;
   /** F1.7's hover glyph highlight — recomputed every non-dragging pointermove. */
@@ -115,10 +122,16 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     canvas.setPointerCapture(e.pointerId);
   };
 
-  const onPointerUp = (): void => {
+  const endDragState = (): void => {
     dragging = false;
     panning = false;
     gizmoDragging = null;
+  };
+  const onPointerUp = endDragState;
+  const onPointerCancel = endDragState;
+
+  const onPointerLeave = (): void => {
+    hoverHandle = null;
   };
 
   const onPointerMove = (e: PointerEvent): void => {
@@ -234,7 +247,9 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   return {
     onPointerDown,
     onPointerUp,
+    onPointerCancel,
     onPointerMove,
+    onPointerLeave,
     onWheel,
     onContextMenu,
     getHoverHandle: () => hoverHandle,

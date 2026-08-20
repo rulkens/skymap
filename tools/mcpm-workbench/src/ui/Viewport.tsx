@@ -721,7 +721,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
     });
     canvas.addEventListener('pointerdown', input.onPointerDown);
     canvas.addEventListener('pointerup', input.onPointerUp);
+    canvas.addEventListener('pointercancel', input.onPointerCancel);
     canvas.addEventListener('pointermove', input.onPointerMove);
+    canvas.addEventListener('pointerleave', input.onPointerLeave);
     canvas.addEventListener('wheel', input.onWheel, { passive: false });
     canvas.addEventListener('contextmenu', input.onContextMenu);
 
@@ -733,7 +735,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
       disposeHarness();
       canvas.removeEventListener('pointerdown', input.onPointerDown);
       canvas.removeEventListener('pointerup', input.onPointerUp);
+      canvas.removeEventListener('pointercancel', input.onPointerCancel);
       canvas.removeEventListener('pointermove', input.onPointerMove);
+      canvas.removeEventListener('pointerleave', input.onPointerLeave);
       canvas.removeEventListener('wheel', input.onWheel);
       canvas.removeEventListener('contextmenu', input.onContextMenu);
     };

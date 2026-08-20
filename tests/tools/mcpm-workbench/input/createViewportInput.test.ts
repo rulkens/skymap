@@ -99,4 +99,33 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
     expect(grid.manualCenterMpc[2]).toBeCloseTo(0, 6);
     expect(grid.importedBox).toBeNull();
   });
+
+  it('pointercancel ends a gizmo drag exactly as pointerup does (minor 7)', () => {
+    const arrowLengthMpc = gizmoArrowLengthMpc([0, 0, DISTANCE], [0, 0, 0], FOV_Y_RAD);
+    const state: AppState = {
+      ...defaultAppState,
+      view: {
+        ...defaultAppState.view,
+        camera: { yaw: 0, pitch: 0, distance: DISTANCE, autoRotate: false, targetMpc: [0, 0, 0] },
+      },
+    };
+    const store = createStore(state);
+    const input = createViewportInput({
+      canvas: fakeCanvas(),
+      store,
+      isPreviewVisible: (s) => s.grid.showGridBox,
+    });
+
+    input.onPointerDown(pointerEvent(clientXFor(ndcXForWorldX(arrowLengthMpc))));
+    expect(input.getDragHandleId()).toEqual({ kind: 'translate', axis: 0 });
+
+    input.onPointerCancel();
+    expect(input.getDragHandleId()).toBeNull();
+
+    const centerAfterCancel = store.getSnapshot().grid.manualCenterMpc;
+    // A cancelled sequence's later pointermove must fall to the un-captured branch (hover
+    // recompute only) rather than the drag branch — nothing should mutate the grid box.
+    input.onPointerMove(pointerEvent(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
+    expect(store.getSnapshot().grid.manualCenterMpc).toEqual(centerAfterCancel);
+  });
 });
