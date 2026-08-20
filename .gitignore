@@ -136,6 +136,12 @@ public/images/famous-curated/*/.tmp/
 # .claude/` would otherwise try to vacuum entire checkouts into the tree).
 .claude/worktrees/
 
+# `.claude/rps/` holds restart prompts written by the `rp` skill when a session
+# is handed off (context summaries, in-flight branch state).  They're scratch
+# for one developer's session — dense with paths and half-finished reasoning
+# that goes stale the moment the work lands.
+.claude/rps/
+
 # ── Source video recordings under docs/screenshots/ ─────────────────────────
 # QuickTime / CleanShot drops a .mov per recording.  We commit the encoded
 # `.gif` and `.png` artefacts (referenced from README.md) but never the raw
