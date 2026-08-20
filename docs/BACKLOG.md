@@ -67,6 +67,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **`dirToEquirectUv` lives twice in WESL** `ready` — copied verbatim from `earth/fragment.wesl` into `earthSurfaceTile/fragment.wesl` (both load-bearing); extract to `shaders/lib/`.
 - [ ] **Layer blend is declared twice** `needs-design` — `ContentLayer.blend` and the pipeline's `GPUBlendState` restate each other with nothing tying them; parity wants `blendStateOf` threaded through every renderer. → [details](backlog/2026-07-31-layer-blend-declared-twice.md)
 - [ ] **Frame-assembly walker needs blend-legality + target-format-parity validation** `needs-design` — `ContentLayer.blend` is advisory and render-target formats are hand-matched at construction; neither is checked against the baked pipeline. → [details](backlog/2026-08-20-frame-assembly-blend-format-validation.md)
 - [ ] **`MilkyWayTuning` is one flat bag** `needs-design` — eight sprite knobs shared by consumers that ignore nearly all of them; a third radiance contributor is the second special case. → [details](backlog/2026-07-31-milkyway-tuning-is-one-flat-bag.md)
