@@ -50,6 +50,8 @@ import { setMaxBufferBytes, setResolvedGrid } from '../state/slices/gridSlice';
 import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../state/slices/simSlice';
 import { defaultViewSlice, setFps, setPreviewPacked } from '../state/slices/viewSlice';
+import { storeWriteIsDirty } from '../state/storeWriteIsDirty';
+import { frameNeedsRender } from './frameNeedsRender';
 
 // The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
 // so exposure 2 reproduces it exactly through the blit.
@@ -65,6 +67,12 @@ const FPS_PUSH_INTERVAL_MS = 500;
 // host round trip, and every sim step already queues one GPU submission of its own.
 // Steps, not wall-clock, so the convergence plot's x-axis is exact step counts.
 const HISTOGRAM_INTERVAL_STEPS = 20;
+// Task FLE: once the path tracer's progressive accumulator reaches this many samples
+// it stops forcing a render on its own (frameNeedsRender.ts) — Monte Carlo noise falls
+// as 1/sqrt(N), and 512 samples (~23x the 1-sample noise floor) reads as converged at
+// the tool's default divisor; a `volpathKey` change (camera/param/reset) restarts the
+// count at 0 the same way it already restarts the accumulator itself.
+const PATH_TRACER_SAMPLE_CAP = 512;
 
 const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
 
@@ -188,6 +196,15 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let fpsEma = 0;
     let lastFpsPushTime = 0;
     let lastPushedFps = 0;
+    // Task FLE: render-on-demand. Set by the store subscriber (storeWriteIsDirty,
+    // fps-write excluded) and by pointer/wheel events on the canvas below; consumed
+    // and cleared once per frame() tick. Starts true so a freshly (re)built harness
+    // always draws its first frame.
+    let dirty = true;
+    let lastDirtyCheckState = store.getSnapshot();
+    // Reset alongside the accumulator itself (same volpathKey edge, below) — see
+    // PATH_TRACER_SAMPLE_CAP.
+    let volpathSampleCount = 0;
     // Guards against overlapping readbacks: a mapAsync round trip can outlive the next
     // throttle boundary on a slow device, and stacking calls would only queue more of
     // the same expensive wait.
@@ -351,6 +368,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
       fpsEma = 0;
       lastFpsPushTime = 0;
       lastPushedFps = 0;
+      // Task FLE: a fresh harness (this is every rebuild, not just first boot) always
+      // needs its first frame drawn, regardless of what the dirty flag last held.
+      dirty = true;
       const frame = (): void => {
         if (disposed || !harness || !renderGraph) return;
         rafHandle = requestAnimationFrame(frame);
@@ -366,6 +386,38 @@ function Viewport({ store }: ViewportProps): ReactNode {
         }
 
         const now = performance.now();
+
+        const gridShapeKey = JSON.stringify(gridShapeKeyFor(s));
+        if (gridShapeKey !== lastGridShapeKey) {
+          lastGridShapeKey = gridShapeKey;
+          boxPreviewUntil = now + BOX_PREVIEW_MS;
+        }
+
+        // Task FLE: the DOM read has to run every tick, idle or not — it's the only
+        // place a pure window resize (no store write) would ever get noticed.
+        // graph.resize (the expensive half, reallocating GPU targets) waits below for
+        // an actual render; it no-ops on an unchanged size anyway (RenderGraph.ts).
+        if (resizeCanvasToDisplay(canvas)) dirty = true;
+        const frameDirty = dirty;
+        dirty = false;
+        const needsRender = frameNeedsRender({
+          dirty: frameDirty,
+          simRunning: s.sim.running,
+          pathTracerOn: s.view.layers.pathTracer,
+          pathTracerSampleCount: volpathSampleCount,
+          pathTracerSampleCap: PATH_TRACER_SAMPLE_CAP,
+          holdUntilMs: boxPreviewUntil,
+          nowMs: now,
+        });
+        if (!needsRender) {
+          // Idle: reseed the EMA sentinel so the next LIVE frame's delta doesn't fold
+          // this gap in as a bogus multi-second frame time — same idiom startLoop uses
+          // on a fresh rebuild. The FPS badge itself is untouched: it keeps showing the
+          // last live reading rather than decaying toward zero while idle.
+          lastFrameTime = -1;
+          return;
+        }
+
         if (lastFrameTime >= 0) {
           const dt = now - lastFrameTime;
           fpsEma = fpsEma === 0 ? dt : fpsEma * 0.9 + dt * 0.1;
@@ -380,13 +432,6 @@ function Viewport({ store }: ViewportProps): ReactNode {
         }
         lastFrameTime = now;
 
-        const gridShapeKey = JSON.stringify(gridShapeKeyFor(s));
-        if (gridShapeKey !== lastGridShapeKey) {
-          lastGridShapeKey = gridShapeKey;
-          boxPreviewUntil = now + BOX_PREVIEW_MS;
-        }
-
-        resizeCanvasToDisplay(canvas);
         graph.resize(canvas.width, canvas.height);
 
         const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
@@ -461,9 +506,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
             s.sim.clearTraceToken,
             s.sim.resetToken,
           ]);
-          if (volpathKey !== lastVolpathKey) graph.resetVolpath();
+          if (volpathKey !== lastVolpathKey) {
+            graph.resetVolpath();
+            volpathSampleCount = 0;
+          }
           lastVolpathKey = volpathKey;
           graph.drawVolpath(encoder, cam, s.view.pathTracer, effectiveDivisor);
+          volpathSampleCount += 1;
         } else {
           lastVolpathKey = null;
         }
@@ -687,6 +736,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (disposed) return;
       const s = store.getSnapshot();
 
+      // Task FLE: render-on-demand's dirty flag — the fps-only write is excluded
+      // inside storeWriteIsDirty itself, not here, so this stays a single call.
+      if (storeWriteIsDirty(lastDirtyCheckState, s)) dirty = true;
+      lastDirtyCheckState = s;
+
       const ck = JSON.stringify(catalogKey(s));
       const bk = JSON.stringify(buildKey(s));
       if (ck !== requestedCatalogKey) {
@@ -762,6 +816,19 @@ function Viewport({ store }: ViewportProps): ReactNode {
     canvas.addEventListener('pointerleave', input.onPointerLeave);
     canvas.addEventListener('wheel', input.onWheel, { passive: false });
     canvas.addEventListener('contextmenu', input.onContextMenu);
+    // Task FLE: render-on-demand's OTHER dirty source, alongside the store
+    // subscriber above — a separate listener per event rather than folding into
+    // `input`'s own handlers, so createViewportInput stays unaware the render loop
+    // is on-demand at all. Not `contextmenu`: it only ever preventDefault()s.
+    const markDirty = (): void => {
+      dirty = true;
+    };
+    canvas.addEventListener('pointerdown', markDirty);
+    canvas.addEventListener('pointerup', markDirty);
+    canvas.addEventListener('pointercancel', markDirty);
+    canvas.addEventListener('pointermove', markDirty);
+    canvas.addEventListener('pointerleave', markDirty);
+    canvas.addEventListener('wheel', markDirty);
 
     return () => {
       disposed = true;
@@ -776,6 +843,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
       canvas.removeEventListener('pointerleave', input.onPointerLeave);
       canvas.removeEventListener('wheel', input.onWheel);
       canvas.removeEventListener('contextmenu', input.onContextMenu);
+      canvas.removeEventListener('pointerdown', markDirty);
+      canvas.removeEventListener('pointerup', markDirty);
+      canvas.removeEventListener('pointercancel', markDirty);
+      canvas.removeEventListener('pointermove', markDirty);
+      canvas.removeEventListener('pointerleave', markDirty);
+      canvas.removeEventListener('wheel', markDirty);
     };
   }, [store]);
 

@@ -155,7 +155,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **mcpm-workbench: `PathTracerSliderSpec` duplicates `RaymarchSliderSpec` field-for-field** `ready` — one shared spec type covers both tables.
 - [ ] **mcpm-workbench: `compareTraceCubes.test.ts`'s hand-rolled `.npy` writer is supersedable by `writeNpy`** `ready` — pre-existing test-helper duplication.
 - [ ] **mcpm-workbench: `HistogramSlice.d.ts` exports two types** `ready` — the only file in the tool's `@types/` that does; `HistogramSample` wants its own file.
-- [ ] **mcpm-workbench: frame-loop economy** `needs-design` — render-on-demand + interaction-priority quality window for `Viewport.tsx`'s `startLoop`. → [details](backlog/2026-08-19-mcpm-workbench-frame-loop-economy.md)
 
 ## UI & UX
 
