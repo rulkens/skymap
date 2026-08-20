@@ -1159,6 +1159,31 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     row carries an `intent` with `writes: null` — which is exactly what D3's
     structural test fails on.
 
+    **D9's checkpoint: the user ruled LAND (2026-08-20).** The migration ships.
+    Two of the three `cosmicFlows` moments are live from this commit: the
+    pre-roll `fade(['flow'], 0, 0)` load mask (`cosmicFlows.ts:78`) now masks,
+    and beat A's crossfade (`:86`) is an actual crossfade.
+
+    **Beat D does not fire, for a reason independent of this rung, and the fix
+    is NOT here.** `compileClip(cosmicFlows.data)` yields `durationSec = 20`
+    with beat D's cue at `atSec = 20`: `fade` cues contribute zero awaited
+    seconds, so the 26 s-authored timeline compiles to 20 s and the cue lands on
+    the completion tick, wiped by the clip-opacity reset one tick later. That is
+    a clip-authoring defect — the cue was always dead, before and after D8's
+    migration — so it is filed as a backlog item rather than fixed in a rung
+    whose scope is the read side. The integration test's `milkyWayDisk`
+    assertion drives a clip stub for exactly this reason
+    (`tour.integration.test.ts:423`).
+
+    **The pick asymmetry the review surfaced, recorded so it does not read as an
+    oversight.** `milkyWayLayer.ts:95-99` composes `pickEnabled` over
+    `deriveMilkyWayCloudAlpha`, which now carries the clip factor — so a
+    `milkyWayDisk` `fade()` suspends Milky-Way pick, while survey pick survives
+    beat A untouched because `galaxyPointSpritesLayer.ts:191` stays raw (D8).
+    Both follow the same rule: the MW gate is derived from the drawn value
+    (bucket 1), the survey pick filter answers "does this source claim a hit"
+    (bucket 2).
+
 ## The contract (settled sketch)
 
 ```ts

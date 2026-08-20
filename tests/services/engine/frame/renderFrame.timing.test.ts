@@ -275,6 +275,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
+    // resolveLayerOpacity's recession factor lerps on this; production seeds it
+    // to 0 in frameContext, and an absent one yields NaN alphas here.
+    focusBlend: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
     galaxyPointRenderer,
     renderTargets,

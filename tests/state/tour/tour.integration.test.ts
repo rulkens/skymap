@@ -56,12 +56,17 @@ import { resolveLayerOpacity } from '../../../src/services/engine/presentation/f
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { galaxyPointSpritesLayer } from '../../../src/services/engine/frame/passes/galaxyPointSpritesLayer';
+import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
+import { Source } from '../../../src/data/sources';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { FadeId } from '../../../src/@types/animation/FadeId';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 
 // ---------------------------------------------------------------------------
 // Template 1 helper — three-way-product composition stub
@@ -321,5 +326,119 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     expect(composed).toBe(1);
 
     clipPlayer.destroy();
+  });
+
+  // ── Assertion 4 — the clip factor reaches the DRAWN alpha ─────────────────
+  //
+  // Assertions 1-3 prove the clip channel carries the cue. These two prove the
+  // renderer READS it: a cue that moves `clipOpacityOf` but not the value the
+  // layer hands the GPU is a silently-inert cue, which is exactly what the
+  // seven raw `opacityOf` draw sites made of every `fade()` in this clip.
+
+  // Two camera distances, each chosen so its site's OWN scale band reads
+  // exactly 1 — the drawn alpha then starts at the intent value and any drop is
+  // attributable to the clip channel alone. 5 Mpc clears surveyDeepZoom's full
+  // edge (~0.23 Mpc); 1 Mpc keeps the Milky-Way disc above its 12-px
+  // apparent-size edge, which 5 Mpc would not.
+  const SURVEY_CAM_POS = [0, 0, 5] as Readonly<[number, number, number]>;
+  const MW_CAM_POS = [0, 0, 1] as Readonly<[number, number, number]>;
+  const FOV_Y_RAD = (60 * Math.PI) / 180;
+  const CANVAS = { width: 1280, height: 720 };
+
+  /** Frame context carrying only the fields these two sites read. */
+  function makeDrawCtx(
+    nowMs: number,
+    camPos: Readonly<[number, number, number]>,
+    drawSpy: ReturnType<typeof vi.fn>,
+  ): ReadyFrameContext {
+    return {
+      nowMs,
+      focusBlend: 0,
+      drawCamPos: camPos,
+      fovYRad: FOV_Y_RAD,
+      canvasSize: CANVAS,
+      drawPxPerRad: CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2)),
+      visibleSourceMask: 0xffffffff,
+      galaxyPointRenderer: { draw: drawSpy },
+    } as unknown as ReadyFrameContext;
+  }
+
+  /** Engine state carrying only the fields these two sites read. */
+  function makeDrawState(
+    fades: ReturnType<typeof createFadeRegistry>,
+    clipPlayer: ClipPlayer,
+  ): EngineState {
+    return {
+      subsystems: { fades, clipPlayer },
+      settings: {
+        milkyWay: { enabled: true },
+        galaxyCatalogs: {},
+        bias: {},
+      },
+      selection: { select: null, hover: null, focus: null },
+      gpu: { focusUniform: { bindGroup: {} } },
+    } as unknown as EngineState;
+  }
+
+  /**
+   * The opacity `galaxyPointSpritesLayer.draw` hands the renderer for a SURVEY
+   * source — captured off the `fadeOpacityOf` callback in the draw settings,
+   * which is the value the shader multiplies into every point's alpha.
+   */
+  function drawnSurveyOpacity(state: EngineState, nowMs: number): number {
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS, drawSpy);
+    const view = {
+      vp: new Float32Array(16),
+      viewportPx: [CANVAS.width, CANVAS.height],
+      camPos: SURVEY_CAM_POS,
+    } as unknown as SlabView;
+    galaxyPointSpritesLayer.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
+    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
+    return settings.fadeOpacityOf(Source.SDSS);
+  }
+
+  it('a playing fade([survey], 0, …) cue reduces the drawn survey point opacity', () => {
+    const { clipPlayer } = setupClip();
+    // Unregistered handles read 1.0 from the registry, so intent is pinned at
+    // full for the whole run — the clip channel is the only moving part.
+    const fades = createFadeRegistry({ requestRender: () => {} });
+    const state = makeDrawState(fades, clipPlayer);
+
+    clipPlayer.tick(0);
+    clipPlayer.tick(2_000); // mask + scene cues fire; survey untouched
+    const beforeCue = drawnSurveyOpacity(state, 2_000);
+    expect(beforeCue).toBe(1);
+
+    clipPlayer.tick(4_000); // beat A crossfade fires: fade(['survey'], 0, 3)
+    clipPlayer.tick(7_000); // the 3-second dim completes
+
+    const afterCue = drawnSurveyOpacity(state, 7_000);
+    expect(afterCue).toBeLessThan(beforeCue);
+    expect(afterCue).toBe(0);
+
+    clipPlayer.destroy();
+  });
+
+  it('a milkyWayDisk clip factor of 0.4 scales the drawn Milky-Way cloud alpha', () => {
+    // The mirror of the assertion above for the cloud's own site. Driven by the
+    // ClipPlayer STUB rather than cosmicFlows: `fade` cues contribute zero
+    // awaited seconds, so that 26 s-authored timeline compiles to durationSec 20
+    // with beat D's `milkyWayDisk` cue at atSec 20 — it fires on the completion
+    // tick and the reset wipes it one tick later. A clip-authoring bug, filed;
+    // no played cue can reach this site until it is fixed.
+    const fades = createFadeRegistry({ requestRender: () => {} });
+
+    const unmasked = deriveMilkyWayCloudAlpha(
+      makeDrawState(fades, makeClipStub(1)),
+      makeDrawCtx(0, MW_CAM_POS, vi.fn()),
+    );
+    expect(unmasked).toBe(1);
+
+    const masked = deriveMilkyWayCloudAlpha(
+      makeDrawState(fades, makeClipStub(0.4)),
+      makeDrawCtx(0, MW_CAM_POS, vi.fn()),
+    );
+    expect(masked).toBeCloseTo(0.4, 6);
   });
 });

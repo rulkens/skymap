@@ -64,6 +64,7 @@ import {
 } from '../../../../data/galaxyLodBands';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const galaxyPointSpritesLayer: ContentLayer = {
   name: 'point-sprites',
@@ -99,11 +100,6 @@ export const galaxyPointSpritesLayer: ContentLayer = {
         ? packSelection(selected.source, selected.index)
         : SELECTION_NONE_SENTINEL;
 
-    // Capture the fade registry + the frame clock once so the per-source
-    // closure below reads a single shared timestamp.
-    const nowMs = ctx.nowMs;
-    const fades = state.subsystems.fades;
-
     galaxyPointRenderer.draw(pass, view.vp, view.viewportPx, {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
@@ -128,10 +124,10 @@ export const galaxyPointSpritesLayer: ContentLayer = {
       // single focus buffer (written once per frame in renderFrame); we
       // bind its group. At rest (blend 0) the shader multiplier is 1.0.
       focusBindGroup: state.gpu.focusUniform!.bindGroup,
-      // Look up the FadeRegistry opacity for each source at this frame's
-      // timestamp. The renderer calls back with the numeric source code of
-      // each loaded catalog; resolve it to the catalog's string id (the
-      // registry's fade-id discriminator). The registry returns 1.0 for
+      // Resolve each source's layer opacity (toggle × focus recession × clip)
+      // at this frame's timestamp. The renderer calls back with the numeric
+      // source code of each loaded catalog; resolve it to the catalog's string
+      // id (the registry's fade-id discriminator). The registry returns 1.0 for
       // unregistered handles — a safe fallback so a source that hasn't
       // registered yet renders at full opacity rather than disappearing.
       // The frame-wide deep-zoom survey fade (hoisted above) multiplies in
@@ -141,7 +137,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
       // and near Earth as reference points, so the deep zoom keeps its
       // landmarks while the millions of survey points yield.
       fadeOpacityOf: (source) =>
-        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs) *
+        resolveLayerOpacity(state, ctx, { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }) *
         (source === Source.FamousGalaxy ? 1 : surveyFade),
     });
   },

@@ -24,10 +24,11 @@
  * projected once the camera is inside the cosmological near plane — see the
  * deep-zoom cull note in `produceMilkyWayLabel`. Both are pure functions of
  * where the camera is, not a layer-machinery concept. Keeping the two bands
- * here and multiplying them by the layer opacity (`fadeAlpha = distAlpha ×
- * deepZoomFade × layerOpacity`) composes them cleanly without the fade registry
- * learning a Milky-Way special case. The layer opacity carries the user toggle;
- * the distance alphas carry the orientation-usefulness gate.
+ * here and multiplying them by the resolved layer opacity (`fadeAlpha =
+ * distAlpha × deepZoomFade × resolveLayerOpacity(…)`) composes them cleanly
+ * without the fade registry learning a Milky-Way special case. The layer
+ * opacity carries the user toggle; the distance alphas carry the
+ * orientation-usefulness gate.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -42,6 +43,7 @@ import { liftedLabelPlacement } from './liftedLabelPlacement';
 import { milkyWayLabelAlpha } from '../../gpu/labelLayout/milkyWayLabelVisibility';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
+import { resolveLayerOpacity } from './focusRecession';
 
 /**
  * Physical diameter driving the label's proportional screen-space lift. The
@@ -66,14 +68,18 @@ export function produceMilkyWayLabel(
   const fades = state.subsystems.fades;
   const now = ctx.nowMs;
 
-  const layerOpacity = fades.opacityOf(LAYER_ID, now);
+  // Two reads of the same row, because they answer different questions (D8):
+  // the RAW intent opacity decides whether the producer emits at all, so a clip
+  // fade to 0 cannot truncate a disabled label's fade-out tail; the RESOLVED
+  // opacity is what the viewer sees.
+  const intentOpacity = fades.opacityOf(LAYER_ID, now);
   const labelEnabled = state.settings.milkyWay.labelEnabled;
 
   // All-or-nothing skip: a label that is both DISABLED and fully faded out
   // contributes nothing. A still-fading disabled label (opacity > 0) keeps
   // emitting so its fade-out tail draws to completion — same gate the
   // structure producer uses.
-  if (!labelEnabled && layerOpacity === 0) return { labels: [], lines: [], awake: false };
+  if (!labelEnabled && intentOpacity === 0) return { labels: [], lines: [], awake: false };
 
   // focusedOnly mode: this label only draws while the Milky Way is the
   // focused subject — same hard suppression the other producers apply.
@@ -103,7 +109,7 @@ export function produceMilkyWayLabel(
   // The distance fade composes with the layer opacity (the user toggle, driven
   // by the visibility bridge) and the deep-zoom band. Applied to BOTH the label
   // and the stem so they fade in lock-step.
-  const fadeAlpha = distAlpha * deepZoomFade * layerOpacity;
+  const fadeAlpha = distAlpha * deepZoomFade * resolveLayerOpacity(state, ctx, LAYER_ID);
 
   const style = MILKY_WAY_LABEL_STYLE;
 

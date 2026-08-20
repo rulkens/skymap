@@ -29,7 +29,11 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
  */
 const STATE = {
   settings: { milkyWay: { enabled: true } },
-  subsystems: { fades: { opacityOf: vi.fn(() => 1) } },
+  subsystems: {
+    fades: { opacityOf: vi.fn(() => 1) },
+    // resolveLayerOpacity's clip factor; no clip plays in this fixture.
+    clipPlayer: { clipOpacityOf: () => 1 },
+  },
 } as unknown as EngineState;
 
 function makeCtx(camDistMpc: number): ReadyFrameContext {
@@ -40,6 +44,9 @@ function makeCtx(camDistMpc: number): ReadyFrameContext {
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
     nowMs: 0,
+    // resolveLayerOpacity lerps its recession factor on this; an absent one
+    // makes the composed alpha NaN.
+    focusBlend: 0,
   } as unknown as ReadyFrameContext;
 }
 

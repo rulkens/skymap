@@ -105,9 +105,7 @@ export function deriveVolumeLiveness(
     const bands = settingsOf(id)?.bands ?? [SCALE_FADE_BANDS.surveyDeepZoom];
     const bandFactor = bands.reduce((factor, band) => factor * fadeBand(band, camDistMpc), 1);
     return (
-      state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) *
-      recessedMaster *
-      bandFactor
+      resolveLayerOpacity(state, ctx, { kind: 'volumeField', id }) * recessedMaster * bandFactor
     );
   };
 

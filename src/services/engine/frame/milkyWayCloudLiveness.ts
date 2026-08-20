@@ -13,7 +13,8 @@
  * apparent-size predicate): `milkyWayFadeAlpha` as a continuous ramp rather
  * than the boolean `milkyWayVisible` reduces it to, the near-side
  * `milkyWayApproach` fade band (closes at kpc range once Gaia takes over),
- * and the registry toggle opacity (so the layer survives its fade-out tail).
+ * and the resolved layer opacity (`resolveLayerOpacity`). The fade-out tail is
+ * kept alive by `milkyWayVisible`'s RAW toggle read, not by this product.
  * Returns `null` rather than 0 for "not live" so callers can gate on
  * `!== null` without risking `if (alpha)` on a legitimately-zero value.
  *
@@ -29,6 +30,7 @@ import { milkyWayVisible } from '../helpers/milkyWayVisible';
 import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { resolveLayerOpacity } from '../presentation/focusRecession';
 
 /**
  * The cloud's composited draw opacity this frame, or `null` when it should not
@@ -55,7 +57,7 @@ export function deriveMilkyWayCloudAlpha(
   const alpha =
     milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, ctx.canvasSize.height) *
     approach *
-    state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
+    resolveLayerOpacity(state, ctx, { kind: 'milkyWay' });
 
   return alpha > 0 ? alpha : null;
 }

@@ -51,6 +51,8 @@ function makeState(
       fades: {
         opacityOf: () => layerOpacity,
       },
+      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }
@@ -77,6 +79,9 @@ function makeCtx(
     canvasSize: { width, height },
     fovYRad,
     nowMs: 0,
+    // resolveLayerOpacity lerps its recession factor on this; an absent one
+    // makes the composed alpha NaN.
+    focusBlend: 0,
   } as unknown as ReadyFrameContext;
 }
 

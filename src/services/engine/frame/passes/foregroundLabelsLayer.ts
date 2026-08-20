@@ -208,6 +208,7 @@ import type { ForegroundCaption } from '../../presentation/foregroundCaption';
 import { sceneBodyLabels } from '../../presentation/sceneBodyLabels';
 import { constellationCaptions } from '../../presentation/constellationCaptions';
 import { constellationLayerOpacity } from '../../presentation/constellationLayerOpacity';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from '../../presentation/captionPriority';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -526,10 +527,7 @@ export const foregroundLabelsLayer: ContentLayer = {
     // without a constellation slot never reads the fade registry.
     const constellationCaps = constellationCaptionsFor(state.assetSlots.constellations);
     if (constellationCaps.length > 0) {
-      const constellationLayerFade = state.subsystems.fades.opacityOf(
-        { kind: 'constellations' },
-        ctx.nowMs,
-      );
+      const constellationLayerFade = resolveLayerOpacity(state, ctx, { kind: 'constellations' });
       // The ORIGIN distance, not the orbit distance the caption rules read —
       // `constellationsLayer.enabled` keys its band on the eye's heliocentric
       // distance, and the figure names must dissolve in lock-step with the lines.

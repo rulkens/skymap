@@ -122,6 +122,9 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
     simDays: CONST_J2000,
     renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
     renderedTargets: new Set(['foreground:0']),
+    // resolveLayerOpacity lerps its recession factor on this; an absent one
+    // makes the constellation caption target NaN.
+    focusBlend: 0,
   } as unknown as ReadyFrameContext;
 }
 
@@ -261,6 +264,8 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     subsystems: {
       scheduler: { requestRender: vi.fn<() => void>() },
       fades: { opacityOf: () => opts.layerFade },
+      // resolveLayerOpacity's clip factor; no clip plays in these fixtures.
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }

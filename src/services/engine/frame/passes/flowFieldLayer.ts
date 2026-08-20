@@ -32,6 +32,7 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
 import { slotReady } from '../../../loading/slotReady';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const flowFieldLayer: ContentLayer = {
   name: 'flow',
@@ -55,14 +56,12 @@ export const flowFieldLayer: ContentLayer = {
     // renderer's own `draw` also early-returns until a field is set, so
     // this is belt + suspenders against the bootstrap window.
     if (state.gpu.flowFieldRenderer === null) return;
-    // Hoist the frame clock to a local, matching filamentsLayer.
-    const nowMs = ctx.nowMs;
     state.gpu.flowFieldRenderer.draw(
       pass,
       view.vp,
       view.viewportPx,
       state.settings.flow,
-      state.subsystems.fades.opacityOf({ kind: 'flow' }, nowMs),
+      resolveLayerOpacity(state, ctx, { kind: 'flow' }),
     );
   },
 };

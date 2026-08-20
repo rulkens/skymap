@@ -377,6 +377,9 @@ describe('renderFrame visual baseline', () => {
       >,
       drawPxPerRad,
       nowMs: 0,
+      // resolveLayerOpacity's recession factor lerps on this; production seeds
+      // it to 0 in frameContext, and an absent one yields NaN alphas here.
+      focusBlend: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
       galaxyPointRenderer,
       // The executor resolves hdr/volume attachments — and volumeUpsampleLayer
@@ -415,6 +418,9 @@ describe('renderFrame visual baseline', () => {
           // Null so clipPathDebugLayer stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
+          // Null so the ZoA guide band stays out of the pinned sequence — it
+          // was held out only by the fixture's absent focusBlend before.
+          zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
           // Flow is CONTENT_LAYERS row 5 (see passes/index.ts); here it

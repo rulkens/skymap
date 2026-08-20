@@ -73,6 +73,7 @@ import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { constellationLayerOpacity } from '../../presentation/constellationLayerOpacity';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 /**
  * Line half-width in screen-space pixels — a ~1.5-2 px thin steel-blue stroke
@@ -127,7 +128,7 @@ export const constellationsLayer: ContentLayer = {
     // band. The same one home the label producer reads, so names track lines.
     const camPos = view.camPos;
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
-    const toggleFade = state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs);
+    const toggleFade = resolveLayerOpacity(state, ctx, { kind: 'constellations' });
     const layerOpacity = constellationLayerOpacity(camDistMpc, toggleFade);
 
     // Fold the eye offset into the vp in f64 so it pairs with the camera-relative
