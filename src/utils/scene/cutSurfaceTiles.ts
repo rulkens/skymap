@@ -131,14 +131,25 @@ export function cutSurfaceTiles(input: {
     const v1 = vNorth;
 
     const centre = equirectUvToDirection([uMid, vMid]);
-    // Angular radius of the patch, to its corners (farthest from centre).
-    const corner = equirectUvToDirection([u0, vNorth]);
-    const patchAngle = Math.acos(
-      Math.min(
-        1,
-        Math.max(-1, corner[0] * centre[0] + corner[1] * centre[1] + corner[2] * centre[2]),
-      ),
+    // Angular radius of the patch, to its corners (farthest from centre) —
+    // ALL FOUR, not just one: meridians converge toward the poles, so a
+    // plate-carrée patch is not angularly symmetric about its centre. A
+    // northern patch's north corners sit closer to centre than its south
+    // corners (mirrored south of the equator); measuring from a single
+    // corner (formerly the NW one) underestimated the radius whenever that
+    // corner happened to be the near-pole one, wrongly culling patches whose
+    // far-from-pole edge alone still reached into the horizon cap.
+    const cornerNW = equirectUvToDirection([u0, vNorth]);
+    const cornerNE = equirectUvToDirection([u1, vNorth]);
+    const cornerSW = equirectUvToDirection([u0, vSouth]);
+    const cornerSE = equirectUvToDirection([u1, vSouth]);
+    const minCornerDot = Math.min(
+      cornerNW[0] * centre[0] + cornerNW[1] * centre[1] + cornerNW[2] * centre[2],
+      cornerNE[0] * centre[0] + cornerNE[1] * centre[1] + cornerNE[2] * centre[2],
+      cornerSW[0] * centre[0] + cornerSW[1] * centre[1] + cornerSW[2] * centre[2],
+      cornerSE[0] * centre[0] + cornerSE[1] * centre[1] + cornerSE[2] * centre[2],
     );
+    const patchAngle = Math.acos(Math.min(1, Math.max(-1, minCornerDot)));
 
     // 1. Horizon
     const centreAngle = Math.acos(

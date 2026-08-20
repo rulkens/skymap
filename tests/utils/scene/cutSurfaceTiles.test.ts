@@ -19,6 +19,7 @@ import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelFo
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
 import { earthTileXyForUv } from '../../../src/utils/scene/earthTileXyForUv';
 import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
+import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import type { EarthTileId } from '../../../src/@types/data/EarthTileId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -117,7 +118,131 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   };
 }
 
+function angleBetween(a: Vec3, b: Vec3): number {
+  return Math.acos(Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+}
+
+/** Same u0/u1/vNorth/vSouth/centre construction the walk itself uses for
+ *  tile `z`/`x`/`y`, recomputed here so the horizon-cull fixture below
+ *  derives its numbers rather than hard-coding them. */
+function tileGeometry(z: number, x: number, y: number) {
+  const cols = earthTileColumns(z, EARTH_TILE_PX);
+  const rows = cols / 2;
+  const u0 = x / cols;
+  const u1 = (x + 1) / cols;
+  const vNorth = 1 - y / rows;
+  const vSouth = 1 - (y + 1) / rows;
+  const uMid = (u0 + u1) / 2;
+  const vMid = (vNorth + vSouth) / 2;
+  return {
+    centre: equirectUvToDirection([uMid, vMid]),
+    cornerNW: equirectUvToDirection([u0, vNorth]),
+    cornerNE: equirectUvToDirection([u1, vNorth]),
+    cornerSW: equirectUvToDirection([u0, vSouth]),
+    cornerSE: equirectUvToDirection([u1, vSouth]),
+  };
+}
+
+/** A camera at `camLatDeg`, `altitudeKm` up, aimed at `target` (a point on
+ *  the unit sphere) rather than straight down — needed to bring a
+ *  horizon-straddling patch into frustum at all. */
+function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: number) {
+  const d = 1 + altitudeKm / EARTH_RADIUS_KM;
+  const camDirUnit = equirectUvToDirection([0.5, camLatDeg / 180 + 0.5]);
+  const camPosLocal: Vec3 = [camDirUnit[0] * d, camDirUnit[1] * d, camDirUnit[2] * d];
+  const view = mat4.lookAt(camPosLocal, target, camDirUnit);
+  const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
+  const viewProjLocal = new Float32Array(mat4.multiply(proj, view));
+  return {
+    kind: 'surface' as const,
+    camPosLocal,
+    viewProjLocal,
+    viewportPx: VIEWPORT,
+    baseLevel: BASE_LEVEL,
+    bands: [
+      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: maxLevel },
+    ],
+    tilePx: EARTH_TILE_PX,
+    lodBias: 0,
+    residentSlot: NEVER_RESIDENT,
+  };
+}
+
 describe('cutSurfaceTiles', () => {
+  describe('horizon cull measures the patch radius from all four corners', () => {
+    // Meridians converge toward the poles, so a plate-carrée patch is NOT
+    // angularly symmetric about its own centre: a northern patch's north
+    // corners sit closer to centre than its south corners (mirrored south
+    // of the equator). z6/x32/y7 spans lat 45-50.625N; camLat 55N sees its
+    // NW corner (nearer the pole, nearer camera's own latitude) as the
+    // closest of the four, understating the patch's true angular radius,
+    // which is set by the farther SW/SE corners instead. `capAngle` is
+    // picked (and `altitudeKm` derived from it) to sit strictly between the
+    // one-corner and four-corner cull thresholds, so the two measurements
+    // disagree on whether this exact patch is inside the horizon cap.
+    const CAM_LAT_DEG = 55;
+    const Z = 6;
+    const X = 32;
+    const Y = 7;
+
+    function horizonFixture() {
+      const geo = tileGeometry(Z, X, Y);
+      const camDir = equirectUvToDirection([0.5, CAM_LAT_DEG / 180 + 0.5]);
+      const centreAngle = angleBetween(geo.centre, camDir);
+      const patchAngleOneCorner = angleBetween(geo.cornerNW, geo.centre);
+      const patchAngleFourCorner = Math.max(
+        angleBetween(geo.cornerNW, geo.centre),
+        angleBetween(geo.cornerNE, geo.centre),
+        angleBetween(geo.cornerSW, geo.centre),
+        angleBetween(geo.cornerSE, geo.centre),
+      );
+      // The asymmetry the bug relies on: the far-from-pole (south) corners
+      // are farther from the patch centre than the near-pole (NW) one.
+      expect(patchAngleFourCorner).toBeGreaterThan(patchAngleOneCorner);
+
+      const capAngle =
+        (centreAngle - patchAngleFourCorner + (centreAngle - patchAngleOneCorner)) / 2;
+      expect(capAngle, 'capAngle keeps the patch under the four-corner radius').toBeGreaterThan(
+        centreAngle - patchAngleFourCorner,
+      );
+      expect(capAngle, 'capAngle culls the patch under the one-corner radius').toBeLessThan(
+        centreAngle - patchAngleOneCorner,
+      );
+      const altitudeKm = EARTH_RADIUS_KM * (1 / Math.cos(capAngle) - 1);
+
+      // The patch's own centre sits past the horizon at this altitude —
+      // aim the camera at its near (south) edge instead, or nothing of the
+      // patch would land in frustum at all.
+      const target: Vec3 = [
+        (geo.cornerSW[0] + geo.cornerSE[0]) / 2,
+        (geo.cornerSW[1] + geo.cornerSE[1]) / 2,
+        (geo.cornerSW[2] + geo.cornerSE[2]) / 2,
+      ];
+      return { altitudeKm, target };
+    }
+
+    it('requests a patch whose four-corner radius keeps it in the horizon cap, dropped by the one-corner radius', () => {
+      const { altitudeKm, target } = horizonFixture();
+      const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
+      expect(
+        result.requests.requests.some((r) => r.tile.z === Z && r.tile.x === X && r.tile.y === Y),
+        `z${Z}/${X}/${Y} must be requested once the patch radius accounts for all four corners`,
+      ).toBe(true);
+    });
+
+    it('still culls a tile well beyond the horizon at the same pose (no regression to the cull itself)', () => {
+      const { altitudeKm, target } = horizonFixture();
+      const [antiX, antiY] = earthTileXyForUv([175 / 360 + 0.5, -55 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
+      expect(
+        result.requests.requests.some(
+          (r) => r.tile.z === Z && r.tile.x === antiX && r.tile.y === antiY,
+        ),
+        `z${Z}/${antiX}/${antiY} (antipodal-ish) must not be requested`,
+      ).toBe(false);
+    });
+  });
+
   describe('cut / requests divergence (ancestor-fallback residency)', () => {
     it('drops a leaf whose whole ancestor chain is non-resident', () => {
       const result = cutSurfaceTiles(nadirAt(1000));
@@ -159,8 +284,14 @@ describe('cutSurfaceTiles', () => {
       const parentZ = z - 1;
       const parentX = x >> 1;
       const parentY = y >> 1;
-      const leafRect = { atlasUvOrigin: [0.25, 0.5] as const, atlasUvScale: [0.125, 0.125] as const };
-      const parentRect = { atlasUvOrigin: [0.0, 0.25] as const, atlasUvScale: [0.25, 0.25] as const };
+      const leafRect = {
+        atlasUvOrigin: [0.25, 0.5] as const,
+        atlasUvScale: [0.125, 0.125] as const,
+      };
+      const parentRect = {
+        atlasUvOrigin: [0.0, 0.25] as const,
+        atlasUvScale: [0.25, 0.25] as const,
+      };
       const residentSlot = (tile: EarthTileId) => {
         if (tile.z === z && tile.x === x && tile.y === y)
           return { slot: 7, ...leafRect, readyAtMs: 5_000 };
@@ -269,7 +400,7 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.requests.length).toBeGreaterThan(0);
     });
 
-    it('draws a band-edge leaf outside every band\'s request range from a resident ancestor rect', () => {
+    it("draws a band-edge leaf outside every band's request range from a resident ancestor rect", () => {
       // Reproduces the "hole ring" bug: a global band caps at z7, a deep band
       // only bakes z8-13 over a small bbox, and the z7 parent straddles that
       // bbox's edge — `earthTileBandRefineAllowed` lets it refine (the deep
@@ -318,9 +449,7 @@ describe('cutSurfaceTiles', () => {
         'skipped leaf must not be requested — no band bakes a file for it',
       ).toBe(false);
 
-      const entry = result.cut.find(
-        (c) => c.id.z === z8 && c.id.x === otherX && c.id.y === otherY,
-      );
+      const entry = result.cut.find((c) => c.id.z === z8 && c.id.x === otherX && c.id.y === otherY);
       expect(entry, `cut entry for ${z8}/${otherX}/${otherY}`).toBeDefined();
 
       const span = 2;
