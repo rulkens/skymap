@@ -57,9 +57,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
         // Sign-of-dividend '%': at p == 0 a dx == -1 tap stays -1 instead of wrapping to
         // the far face, and loadDeposit reads it as 0. Mass leaks out of the x/y/z = 0
-        // faces, and w still sums the full 23.6188021, so those faces darken on top. T24
-        // swept the periodic-wrap OFF variant and found no measurable statistical
-        // difference (the packed catalog sits well inside the box), so the toggle is gone.
+        // faces, and w still sums the full 23.6188021, so those faces darken on top.
         var tap = p + vec3<i32>(dx, dy, dz);
         tap.x = tap.x % sim.worldWidth;
         tap.y = tap.y % sim.worldHeight;

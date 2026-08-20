@@ -30,9 +30,7 @@ fn rngSetSeed(rng: ptr<function, Rng>, seed1: u32, seed2: u32) {
   (*rng).mZ = seed2;
   if ((*rng).mW == 0u || (*rng).mW == RNG_BAD_W) { (*rng).mW = (*rng).mW + 1u; }
   // HLSL:44 verbatim: it tests mW where it plainly means mZ, so a zero mZ is never
-  // repaired and the mW half is dead — the guard above already made mW non-zero. T24 swept
-  // this bug's OFF variant (repair mZ==0u too) and found no measurable statistical
-  // difference, so the toggle is gone; the fork's own line stands unconditionally.
+  // repaired and the mW half is dead — the guard above already made mW non-zero.
   if ((*rng).mW == 0u || (*rng).mZ == RNG_BAD_Z) { (*rng).mZ = (*rng).mZ + 1u; }
 }
 

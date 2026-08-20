@@ -111,8 +111,8 @@ fn cs(
 
   let p = vec3<i32>(vec3<f32>(x, y, z));
 
-  // HLSL:138 loads a value HLSL:230 overwrites before its only read — provably dead
-  // (T24 swept its removal and confirmed zero statistical effect), so the read is gone.
+  // HLSL:138 loads a value HLSL:230 overwrites before its only read — provably dead,
+  // so it is not ported here.
 
   // Sensing does NOT wrap, unlike movement below: an offset leaving the grid falls to
   // loadDeposit's zero, which is what D3D11 returned for an out-of-range typed-UAV load.

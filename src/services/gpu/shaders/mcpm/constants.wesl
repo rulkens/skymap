@@ -40,7 +40,3 @@ override QUIRK_DECAY_WEIGHT_ALL_INT3: bool = true;
 // cs_field_decay.hlsl:93 trace decay is 0.985 + 0.01 * rand; off = the commented-out flat 0.99 (NOT 1.0).
 // T24 sweep: off shifts meanLogTraceAtPoints -0.84% (~466x floor) and widens the fork mass ratio 9.28x -> 10.11x — load-bearing.
 override QUIRK_DITHERED_TRACE_DECAY: bool = true;
-
-// QUIRK_RNG_SEED_GUARD_TYPO, QUIRK_NONPERIODIC_LOW_BOUNDARY and QUIRK_DEAD_CURRENT_DEPOSIT_READ
-// were struck by the T24 sweep — each OFF variant matched the fork default within noise, so
-// that default is now unconditional (rng.wesl, decay.wesl, propagate.wesl).

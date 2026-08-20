@@ -196,7 +196,9 @@ legitimate reason this time — see the diagnostic note below — not a byte-
 order coincidence.
 
 **Derived acceptance band (3× the corrected full-resolution floor — n=2,
-first approximation):** logHistogram TV ≤ 0.0002, dataPointHistogram TV ≤
+first approximation):** logHistogram TV ≤ 0.0003 (3× the table's rounded
+0.0001 floor above; 3× the exact 6.5e-5 floor is 0.0002 — this is the
+number the Phase 4 sweep below actually applied), dataPointHistogram TV ≤
 0.0084, marginal max rel. dev. ≤ 0.245, meanLogTraceAtPoints rel. diff. ≤
 0.0054%. **The picture is no longer a uniform three-orders-of-magnitude
 miss**: logHistogram TV misses by ~372×, dataPointHistogram TV by ~79×, and
@@ -257,15 +259,25 @@ T24 quirk-strip) — re-confirmed with the corrected comparator:**
 
 2026-08-19/20. Six single-flag runs, each the same 800-step / seed 1 /
 712×1200×728 anchor recipe above (all quirks default `true`, one flipped
-`false` per run), compared against the fork the same way. **Baseline
-reproduced first** (`baseline-vsFork-A.json`): logHist TV 0.07212,
-dataPoint TV 0.66918, meanLogTraceAtPoints 7.13691 (fork) vs 4.78672
-(workbench) — matches the recorded numbers above within noise, so the
-sweep runs against a confirmed baseline. Verdict rule: a flag's OFF run is
-compared to baseline by the SAME 3×-floor band derived above (§ Floor);
-inside the band on every statistic = **DELETE** (the toggle is provably
-inert at this box/catalog/step-count); outside on any statistic =
-**KEEP**, annotated with the delta in `constants.wesl`.
+`false` per run), compared against the fork the same way — seed 1 only,
+not § Floor's two-seed policy (n=1 per flag). The derived band above
+already encodes the seed-1-vs-2 spread, so a single seed against a
+single-seed baseline is a coherent protocol, but a second seed per flag is
+outstanding work, not yet run. **Baseline reproduced first**
+(`baseline-vsFork-A.json`): logHist TV 0.07212, dataPoint TV 0.66918,
+meanLogTraceAtPoints 7.13691 (fork) vs 4.78672 (workbench) — matches the
+recorded numbers above within noise, so the sweep runs against a confirmed
+baseline. `baseline-vsFork-A.json` is itself the comparator re-run over
+T23's own exported cube (byte-identical to T23's `vsFork-A-fixed.json`),
+so it attests the comparator at HEAD, not a fresh HEAD-side simulation
+run; HEAD-side sim equivalence instead rests on `deadReadOff`'s provably
+behavior-identical run (below), which reproduces this baseline to
+ΔlogHistTV 2e-6 and ΔmeanLog 0.011%. Verdict rule: a flag's OFF run is
+compared to baseline by the SAME 3×-floor band derived above (§ Floor,
+0.0003 on logHistogram TV — no verdict below flips at the exact-floor
+0.0002 either); inside the band on every statistic = **DELETE** (the
+toggle is provably inert at this box/catalog/step-count); outside on any
+statistic = **KEEP**, annotated with the delta in `constants.wesl`.
 
 | flag                              | ΔlogHist TV (×band) | ΔdataPoint TV (×band) | meanLogTraceAtPoints Δ (×band) | mass ratio (fork÷workbench) | verdict |
 | --------------------------------- | ------------------- | --------------------- | ------------------------------ | --------------------------- | ------- |
@@ -315,9 +327,13 @@ gap's cause. The four flags with no mass number but a clean noise-floor
 comparator result (`rngGuardOff`, `nonperiodicOff`, `deadReadOff`, plus
 `QUIRK_DECAY_WEIGHT_ALL_INT3`'s tiny 0.1×-band histogram/marginal move)
 are very unlikely to move an order-independent integral statistic like
-total mass when they don't move the histogram at all — total trace mass is
-exactly the kind of statistic `logHistogram TV`'s null result already
-speaks to (§ Floor: a value-only statistic, order- and shape-independent).
+total mass when they don't move the histogram at all — though that
+argument is weaker than it sounds: `logHistogram TV` bounds the fraction
+of voxels that moved bin in a normalised 64-bin histogram (§ Floor: a
+value-only, order- and shape-independent statistic), not the
+value-weighted, tail-dominated mass sum, so a near-zero TV does not by
+itself rule out a mass move concentrated in the small number of
+high-value voxels.
 `QUIRK_INT3_TRUNCATED_SENSING`'s meanLogTraceAtPoints shift (−2.157%) is
 the largest of the five without a mass number and remains untested against
 mass directly — a genuine open item, not a null result, since a sensing
@@ -333,7 +349,14 @@ divergence — this port ran to visual/numeric convergence at 800, the fork
 ran to whatever its own author chose — could account for a mass gap that a
 converged per-step statistic like `meanLogTraceAtPoints` wouldn't show);
 deposit scaling (`addDeposit(..., 10.0 * weight)` in `propagate.wesl` —
-unverified against the fork's own deposit constant); and data-point weight
+unverified against the fork's own deposit constant); data-point weight
 normalization (the 52-point count mismatch between `export_metadata.txt`
 and the packed catalog, § above, plus whether `declaredMeanWeight`
-0.04150081 is applied identically on both sides).
+0.04150081 is applied identically on both sides); and the x/y/z = 0
+boundary mass leak `QUIRK_NONPERIODIC_LOW_BOUNDARY` governed
+(`decay.wesl`) — it matches this README's own open edge-anomaly
+diagnostic above and was deleted on the TV argument just weakened, with
+no direct mass measurement. Re-testable by reverting that hunk and
+re-running `computeTraceMass.ts`; the deletion itself is still correct
+under the plan's inside-band rule, so this is a follow-up measurement, not
+a reason to restore the flag.
