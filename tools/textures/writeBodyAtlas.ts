@@ -44,7 +44,7 @@
 import { existsSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import sharp from 'sharp';
+import sharp, { type OverlayOptions } from 'sharp';
 
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import { atlasTileRect } from '../../src/utils/gpu/atlasTileRect';
@@ -151,7 +151,7 @@ export async function writeBodyAtlas(
   bodyIds: readonly BodyTextureId[],
 ): Promise<void> {
   const rows = Math.ceil(bodyIds.length / GRID.columns);
-  const tiles: sharp.OverlayOptions[] = [];
+  const tiles: OverlayOptions[] = [];
 
   for (const [index, bodyId] of bodyIds.entries()) {
     const srcPath = join(outDir, bodyTextureFilename(bodyId, 'surface', 'small'));

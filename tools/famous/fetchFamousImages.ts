@@ -114,7 +114,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import sharp from 'sharp';
+import sharp, { type OutputInfo } from 'sharp';
 import { parseFlags } from '../utils/cli/args';
 import { loadJsonCache } from '../utils/io/loadJsonCache';
 import { saveJsonCache } from '../utils/io/saveJsonCache';
@@ -345,7 +345,7 @@ export async function processWikipediaImageBuffer(input: Buffer): Promise<Buffer
   const w = scaledInfo.width;
   const h = scaledInfo.height;
   let squareData: Buffer;
-  let squareInfo: sharp.OutputInfo;
+  let squareInfo: OutputInfo;
   if (w === WORK_PX && h === WORK_PX) {
     squareData = scaledData;
     squareInfo = scaledInfo;
@@ -454,7 +454,7 @@ async function tryDesiLayer(e: FamousEntry, layer: string): Promise<DesiLayerAtt
 
   const jpegBuf = Buffer.from(await res.arrayBuffer());
   let data: Buffer;
-  let info: sharp.OutputInfo;
+  let info: OutputInfo;
   try {
     const out = await sharp(jpegBuf)
       .resize(DESI_FETCH_PX, DESI_FETCH_PX, { fit: 'cover' })

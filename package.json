@@ -113,16 +113,16 @@
     "jsdom": "27.0.1",
     "msdf-bmfont-xml": "2.8.0",
     "prettier": "3.8.3",
-    "sharp": "0.34.5",
+    "sharp": "0.35.3",
     "ts-morph": "28.0.0",
     "tsx": "4.21.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.65.0",
-    "vite": "8.0.10",
+    "vite": "8.2.1",
     "vitest": "4.1.5",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
-    "wrangler": "4.112.0"
+    "wrangler": "4.123.0"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
