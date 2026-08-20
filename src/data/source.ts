@@ -39,8 +39,8 @@ export const Source = {
   FamousGalaxy: 4,
   /**
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
-   * cluster's marker ring return source code 5 in the upper 5 bits of
-   * the packed identity; the 27-bit `localIdx` carries the structure's index
+   * cluster's marker ring return source code 5 in the upper 6 bits of
+   * the packed identity; the 26-bit `localIdx` carries the structure's index
    * into the cluster table. See `selectionEncoding.ts` for the layout.
    */
   Cluster: 5,
@@ -87,8 +87,8 @@ export const Source = {
   DebugSpherical: 14,
   /**
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
-   * against a group's marker ring return source code 15 in the upper 5
-   * bits of the packed identity; the 27-bit `localIdx` carries the structure's
+   * against a group's marker ring return source code 15 in the upper 6
+   * bits of the packed identity; the 26-bit `localIdx` carries the structure's
    * index into the structure store. Same encoding as Cluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
    * renumber the galaxy catalog codes 0–8 below it.

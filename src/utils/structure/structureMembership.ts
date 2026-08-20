@@ -2,7 +2,7 @@
  * structureMembership — pure cone-search over loaded galaxy catalogs.
  *
  * Given a set of in-memory catalogs, a 3D center, and a radius in Mpc,
- * returns the packed (sourceCode << 27 | localIdx) identities of every
+ * returns the packed (sourceCode << 26 | localIdx) identities of every
  * galaxy strictly inside the sphere — i.e. `distance(g, center) < radius`.
  *
  * ### Why a pure function (no caching here)?
@@ -66,7 +66,7 @@ export function structureMembership(
   const packedIds: number[] = [];
   for (const { source, catalog } of catalogs) {
     const { positions, count } = catalog;
-    // We could inline `(source << 27) | i` here to skip the
+    // We could inline `(source << 26) | i` here to skip the
     // packSelection call on each member, but the call only fires for
     // galaxies INSIDE the sphere (typically a few hundred per cluster
     // out of millions scanned), so the call overhead is in the noise

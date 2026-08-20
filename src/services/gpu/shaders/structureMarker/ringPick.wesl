@@ -31,8 +31,11 @@
 //
 // ## Pick encoding
 //
-// Same '(sourceCode << 27) | (structureIndex + PICK_SENTINEL_OFFSET)' packing
-// the galaxy path uses.  The per-category SourceUniforms block carries
+// Same '(sourceCode << SELECTION_SOURCE_SHIFT) | (structureIndex +
+// PICK_SENTINEL_OFFSET)' packing the galaxy path uses — imported from the
+// shared lib rather than hardcoded, so a future shift change can't leave
+// this one shader silently packing at the old width.  The per-category
+// SourceUniforms block carries
 // the source code (5/6/7/15 for cluster/supercluster/void/group — see
 // sources.ts and lib/selectionEncoding.wesl).  'structureIndex' is the
 // @builtin(instance_index) of this draw, populated in the vertex stage
@@ -50,6 +53,7 @@
 import package::structureMarker::io::VsOut;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
+import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 
 // Re-declare the per-source binding here so this module is self-
 // contained.  WESL has no global state — '@group(N) @binding(M)' is
@@ -97,6 +101,6 @@ fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
   // 'u32(@builtin(instance_index))'.  The shared VsOut carries it so
   // both the visible-ring fragment (which doesn't use it) and this
   // pick fragment can read from one interpolant set.
-  let packed: u32 = (source.sourceCode << 27u) | (in.structureIndex + PICK_SENTINEL_OFFSET);
+  let packed: u32 = (source.sourceCode << SELECTION_SOURCE_SHIFT) | (in.structureIndex + PICK_SENTINEL_OFFSET);
   return vec4<u32>(packed, 0u, 0u, 0u);
 }

@@ -4,7 +4,7 @@
 // Carries this draw's 5-bit Source enum value (Synthetic=0, SDSS=1,
 // TwoMRS=2, Glade=3, Famous=4). The points vertex stage reads
 // 'source.sourceCode' and composes each instance's packed identity as
-// '(sourceCode << 27u) | instance_index' for the selection-halo +
+// '(sourceCode << 26u) | instance_index' for the selection-halo +
 // pick-output paths.
 //
 // ## Why separated from FadeUniforms

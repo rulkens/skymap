@@ -14,6 +14,7 @@ import package::pickDebugOverlay::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 import package::lib::selectionEncoding::SELECTION_LOCAL_IDX_MASK;
+import package::lib::selectionEncoding::SELECTION_SOURCE_SENTINEL_CODE;
 import package::lib::selectionEncoding::SOURCE_GAIA_STARS;
 import package::lib::util::hueToRgb;
 
@@ -43,11 +44,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // judgments.
   let alpha = 0.65;
 
-  // Reserved all-ones sentinel band (source code 31 — see
+  // Reserved all-ones sentinel band (SELECTION_SOURCE_SENTINEL_CODE — see
   // 'selectionEncoding'). It never denotes a real hit, so it must stay
   // visually disjoint from every golden-angle hue: paint it near-black
   // so a stray sentinel texel reads as 'nothing here', not as a source.
-  if (srcCode == 31u) {
+  if (srcCode == SELECTION_SOURCE_SENTINEL_CODE) {
     return vec4<f32>(vec3<f32>(0.02) * alpha, alpha);
   }
 

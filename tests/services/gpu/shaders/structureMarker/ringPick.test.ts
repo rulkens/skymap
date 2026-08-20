@@ -21,7 +21,10 @@
 import { describe, it, expect } from 'vitest';
 // eslint-disable-next-line import/no-unresolved -- ?raw is a Vite query suffix
 import ringPickCode from '../../../../../src/services/gpu/shaders/structureMarker/ringPick.wesl?raw';
-import { PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import {
+  PICK_SENTINEL_OFFSET,
+  SELECTION_SOURCE_SHIFT,
+} from '../../../../../src/data/selectionEncoding';
 
 describe('ringPick.wesl', () => {
   it('imports PICK_SENTINEL_OFFSET from the canonical lib path', () => {
@@ -37,6 +40,18 @@ describe('ringPick.wesl', () => {
     expect(PICK_SENTINEL_OFFSET).toBe(1);
   });
 
+  it('imports SELECTION_SOURCE_SHIFT from the canonical lib path', () => {
+    // Was a hardcoded `<< 27u` literal until the mcpm-workbench prep task
+    // (found by the P2 scout as the one production shader that bypassed
+    // the shared module). Asserting on the import — not a re-inlined
+    // literal — is what stops this file from going stale again the next
+    // time the shift changes.
+    expect(ringPickCode).toContain(
+      'import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT',
+    );
+    expect(SELECTION_SOURCE_SHIFT).toBe(26);
+  });
+
   it('declares the SourceUniforms binding at @group(2) @binding(0)', () => {
     expect(ringPickCode).toMatch(
       /@group\(2\)\s+@binding\(0\)\s+var<uniform>\s+source\s*:\s*SourceUniforms/,
@@ -44,8 +59,8 @@ describe('ringPick.wesl', () => {
   });
 
   it('emits the canonical pick packing in the fragment body', () => {
-    // (source.sourceCode << 27u) | (structureIndex + PICK_SENTINEL_OFFSET)
-    expect(ringPickCode).toContain('source.sourceCode << 27u');
+    // (source.sourceCode << SELECTION_SOURCE_SHIFT) | (structureIndex + PICK_SENTINEL_OFFSET)
+    expect(ringPickCode).toContain('source.sourceCode << SELECTION_SOURCE_SHIFT');
     expect(ringPickCode).toContain('PICK_SENTINEL_OFFSET');
   });
 });

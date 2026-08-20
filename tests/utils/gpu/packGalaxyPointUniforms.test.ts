@@ -21,6 +21,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { GalaxyPointDrawSettings } from '../../../src/@types/rendering/GalaxyPointDrawSettings';
 import type { ProvenanceFilter } from '../../../src/@types/settings/ProvenanceFilter';
 import { PROVENANCE_FILTER_CODE } from '../../../src/data/provenanceFilter';
+import { packSelection } from '../../../src/data/selectionEncoding';
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────
 
@@ -39,8 +40,10 @@ const VIEW_PROJ = makeViewProj();
 const VIEWPORT_PX: readonly [number, number] = [1920, 1080];
 
 // A selection encoding that isn't the "no-selection" sentinel so we can
-// confirm the real value passes through unmodified.
-const SELECTED_PACKED = ((3 << 27) | 42) >>> 0;
+// confirm the real value passes through unmodified. Built from the shared
+// packSelection rather than an inlined shift — this function only cares
+// that the u32 round-trips through the byte offset, not the encoding.
+const SELECTED_PACKED = packSelection(3, 42);
 
 // Stub GPUBindGroup for focusBindGroup — packGalaxyPointUniforms doesn't touch it,
 // but GalaxyPointDrawSettings requires the field.

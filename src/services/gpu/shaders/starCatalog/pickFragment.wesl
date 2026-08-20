@@ -25,8 +25,8 @@
 // recordIdx + 1)'. The two are equivalent for decode (the offset lands in the
 // bottom bits either way, and 'unpackPick' subtracts it back off the masked
 // localIdx), and adding it pre-pack keeps the source-code bits pristine: a
-// Gaia bin never has enough records to carry 'recordIdx + 1' past the 27-bit
-// localIdx field into the source-code bits (the same 27-bit cap the galaxy
+// Gaia bin never has enough records to carry 'recordIdx + 1' past the 26-bit
+// localIdx field into the source-code bits (the same 26-bit cap the galaxy
 // catalogs already live under).
 //
 // ## Why this fragment is a plain unit-disc dot
@@ -50,7 +50,7 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // shape matches the round visual dot rather than the circumscribing triangle.
   if (dot(in.uv, in.uv) > 1.0) { discard; }
 
-  // Pack '(SOURCE_GAIA_STARS << 27) | (recordIdx + 1)'. The '+ 1' keeps 0 as the
+  // Pack '(SOURCE_GAIA_STARS << 26) | (recordIdx + 1)'. The '+ 1' keeps 0 as the
   // unambiguous 'no hit' sentinel (cleared-texture value); 'unpackPick' reverses
   // it and hands the bin-global record index to 'resolveStarRecord'. The g/b/a
   // channels are unused -- only the r channel is read back on the JS side -- so
