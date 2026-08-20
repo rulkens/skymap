@@ -21,6 +21,17 @@ describe('worldToVoxel', () => {
     // origin = [-8,-8,-8]; v = (p - origin) / 2.
     expect(worldToVoxel(box, [-2, -6, 2])).toEqual([3, 1, 5]);
   });
+
+  it('applies a non-identity rotation about the box centre (spec §6)', () => {
+    // 180deg about Y: quat = [0, sin(90deg), 0, cos(90deg)] = [0, 1, 0, 0]. A 180deg
+    // rotation is its own inverse, so both R and worldToBoxLocal's R⁻¹ map
+    // (x,y,z) -> (-x,y,-z). For the SAME p=[-2,-6,2] as the identity case above:
+    // centered (center=[0,0,0]) = [-2,-6,2]; rotated = [2,-6,-2]; local = rotated +
+    // half[8,8,8] = [10,2,6]; voxel = local / voxelSizeMpc(2) = [5,1,3] — x and z
+    // swap ends relative to the identity case's [3,1,5], y is untouched.
+    const rotatedBox: GridBox = { ...box, rotation: [0, 1, 0, 0] };
+    expect(worldToVoxel(rotatedBox, [-2, -6, 2])).toEqual([5, 1, 3]);
+  });
 });
 
 describe('voxelToWorld ∘ worldToVoxel', () => {

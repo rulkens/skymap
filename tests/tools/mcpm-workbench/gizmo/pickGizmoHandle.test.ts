@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { GizmoHandleGeometry } from '../../../../tools/mcpm-workbench/@types/GizmoHandleGeometry';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import type { Ray } from '../../../../tools/mcpm-workbench/@types/Ray';
-import type { RingHandle } from '../../../../tools/mcpm-workbench/@types/RingHandle';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { gizmoHandleGeometry } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
-import {
-  distanceToRing,
-  pickGizmoHandle,
-} from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
+import { pickGizmoHandle } from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
 
 const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
   [1, 0, 0],
@@ -111,7 +108,7 @@ describe('pickGizmoHandle', () => {
 
   it('hits a rotate ring when the ray is aimed at a point on its circle', () => {
     const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
-    // Ring radius: RING_RADIUS_FRACTION(1.3) * ARROW_LENGTH_MPC(2.4) = 3.12.
+    // Ring radius: RING_RADIUS_ARROW_MULTIPLE(1.3) * ARROW_LENGTH_MPC(2.4) = 3.12.
     // The axis2 ring (normal [0,0,1]) lies in the z=3 plane; pick a point on its circle at 45°
     // (not axis-aligned, so it doesn't coincide with any translate arrow's own shaft line):
     // [1 + 3.12·cos45°, 2 + 3.12·sin45°, 3]. A ray straight along +z through that (x,y) hits the
@@ -133,27 +130,64 @@ describe('pickGizmoHandle', () => {
     // translate/resize/ring-center point reduces to hypot(0.4,0.4)≈0.566 at best (axis0/axis1
     // shafts nearest at their t=0 center end; axis2's shaft and z-resize points have z cancelled
     // by the ray's free z) — outside the 0.06 translate/ring and 0.1 resize tolerances. Ring
-    // radius here is RING_RADIUS_FRACTION(1.3) * SMALL_ARROW_LENGTH_MPC(1.2) = 1.56, so the
+    // radius here is RING_RADIUS_ARROW_MULTIPLE(1.3) * SMALL_ARROW_LENGTH_MPC(1.2) = 1.56, so the
     // axis2 ring's plane-hit distance from its circle is |0.566 - 1.56| ≈ 0.994 — also a miss.
     const ray: Ray = { origin: [-0.4, -0.4, -10], dir: [0, 0, 1] };
 
     expect(pickGizmoHandle(ray, geometry)).toBeNull();
   });
 
-  it('falls back to center-point distance when the ray is parallel to the ring plane', () => {
+  it('falls back to center-point distance when the ray is parallel to the ring plane (minor 3)', () => {
+    // A ring-only fixture: every OTHER handle sits far from the ray (near [0,0,100], where
+    // the ray's fixed y=3/z=2 puts them ~98 Mpc away — outside any tolerance below), so only
+    // the axis2 ring (centerMpc=[0,0,0], the one under test) can register a hit. This proves
+    // pickGizmoHandle's near-parallel fallback branch is reachable AND correct, not just that
+    // distanceToRing computes the right number in isolation.
+    //
     // ring.axisDir=[0,0,1] (plane z=0); ray.dir=[1,0,0] is exactly perpendicular to axisDir
-    // (dot=0), so rayPlaneIntersect returns null and distanceToRing falls back to
-    // distanceToRay(ray, ring.centerMpc). Hand-computed: p = center-origin = [10,-3,-2],
-    // t = dot(p,dir) = 10 (>=0, unclamped), closest = origin + dir*10 = [0,3,2],
-    // distance = hypot(0-0, 0-3, 0-2) = sqrt(9+4) = sqrt(13).
-    const ring: RingHandle = {
-      id: { kind: 'rotate', axis: 2 },
-      centerMpc: [0, 0, 0],
-      axisDir: [0, 0, 1],
-      radiusMpc: 5,
-    };
+    // (dot=0), so rayPlaneIntersect returns null and the fallback is distanceToRay(ray,
+    // ring.centerMpc). Hand-computed: p = center-origin = [10,-3,-2], t = dot(p,dir) = 10
+    // (>=0, unclamped), closest = origin + dir*10 = [0,3,2], distance = hypot(0-0, 0-3, 0-2) =
+    // sqrt(9+4) = sqrt(13) ≈ 3.606. arrowTolerance = PICK_TOLERANCE_FRACTION(0.05) *
+    // arrowLength(100) = 5, so this is a hit. radiusMpc=100 makes the WRONG fallback
+    // (`|distanceToRay − radius|` ≈ 96.4) miss instead — the fixture only passes for the
+    // correct formula, not the near-miss alternative.
+    const FAR: Vec3 = [0, 0, 100];
     const ray: Ray = { origin: [-10, 3, 2], dir: [1, 0, 0] };
+    const geometry: GizmoHandleGeometry = {
+      translate: [
+        { id: { kind: 'translate', axis: 0 }, positionMpc: [100, 0, 100], axisDir: [1, 0, 0] },
+        { id: { kind: 'translate', axis: 1 }, positionMpc: [0, 100, 100], axisDir: [0, 1, 0] },
+        { id: { kind: 'translate', axis: 2 }, positionMpc: [0, 0, 200], axisDir: [0, 0, 1] },
+      ],
+      resize: [
+        { id: { kind: 'resize', axis: 0, sign: 1 }, positionMpc: [10, 0, 100], axisDir: [1, 0, 0] },
+        {
+          id: { kind: 'resize', axis: 0, sign: -1 },
+          positionMpc: [-10, 0, 100],
+          axisDir: [1, 0, 0],
+        },
+        { id: { kind: 'resize', axis: 1, sign: 1 }, positionMpc: [0, 10, 100], axisDir: [0, 1, 0] },
+        {
+          id: { kind: 'resize', axis: 1, sign: -1 },
+          positionMpc: [0, -10, 100],
+          axisDir: [0, 1, 0],
+        },
+        { id: { kind: 'resize', axis: 2, sign: 1 }, positionMpc: [0, 0, 110], axisDir: [0, 0, 1] },
+        { id: { kind: 'resize', axis: 2, sign: -1 }, positionMpc: [0, 0, 90], axisDir: [0, 0, 1] },
+      ],
+      rotate: [
+        { id: { kind: 'rotate', axis: 0 }, centerMpc: FAR, axisDir: [1, 0, 0], radiusMpc: 10 },
+        { id: { kind: 'rotate', axis: 1 }, centerMpc: FAR, axisDir: [0, 1, 0], radiusMpc: 10 },
+        {
+          id: { kind: 'rotate', axis: 2 },
+          centerMpc: [0, 0, 0],
+          axisDir: [0, 0, 1],
+          radiusMpc: 100,
+        },
+      ],
+    };
 
-    expect(distanceToRing(ray, ring)).toBeCloseTo(Math.sqrt(13), 10);
+    expect(pickGizmoHandle(ray, geometry)).toEqual({ kind: 'rotate', axis: 2 });
   });
 });

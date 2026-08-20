@@ -79,7 +79,11 @@ const CROSS_WIDTH_PX = 8;
 const ARROWHEAD_TIP_WIDTH_PX = 1;
 const ARROWHEAD_BASE_WIDTH_PX = 24;
 const ARROWHEAD_LENGTH_FRACTION = 0.15; // of the arrow's center-to-tip length
-const CROSS_ARM_FRACTION = 1.5 * PICK_TOLERANCE_FRACTION; // visually bigger than the (unchanged) pick radius
+// Deliberately derived, not independent: the drawn cross should always read as visually
+// bigger than its own pick zone, so retuning PICK_TOLERANCE_FRACTION for pick ergonomics
+// is meant to resize this too (the header note above is about direction — render never
+// feeds pick — not independence).
+const CROSS_ARM_FRACTION = 1.5 * PICK_TOLERANCE_FRACTION;
 const TWO_PI = Math.PI * 2;
 
 type GlyphSegment = {

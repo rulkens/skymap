@@ -55,9 +55,9 @@ describe('gizmoHandleGeometry', () => {
     expect(minusY?.positionMpc).toEqual([1, -2, 3]);
   });
 
-  it('places every rotate ring at RING_RADIUS_FRACTION · arrowLengthMpc, centered on the box', () => {
+  it('places every rotate ring at RING_RADIUS_ARROW_MULTIPLE · arrowLengthMpc, centered on the box', () => {
     const geometry = gizmoHandleGeometry(BOX, UNIT_AXES, ARROW_LENGTH_MPC);
-    // RING_RADIUS_FRACTION(1.3) * ARROW_LENGTH_MPC(42) = 54.6 — hand-computed from the
+    // RING_RADIUS_ARROW_MULTIPLE(1.3) * ARROW_LENGTH_MPC(42) = 54.6 — hand-computed from the
     // constant, not re-derived from the module under test.
     for (const ring of geometry.rotate) {
       expect(ring.radiusMpc).toBeCloseTo(54.6, 10);

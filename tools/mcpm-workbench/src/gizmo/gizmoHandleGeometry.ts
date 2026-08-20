@@ -17,7 +17,7 @@ export const PICK_TOLERANCE_FRACTION = 0.05;
  *  problem F1.11 fixed for the arrows. 1.3 (revised from an initial 0.8) sits the rings
  *  OUTSIDE the arrow tips — clear visual separation between the two handle families, at
  *  maintainer request. */
-export const RING_RADIUS_FRACTION = 1.3;
+export const RING_RADIUS_ARROW_MULTIPLE = 1.3;
 
 function addScaled(center: Readonly<Vec3>, dir: Readonly<Vec3>, scale: number): Vec3 {
   return [center[0] + dir[0] * scale, center[1] + dir[1] * scale, center[2] + dir[2] * scale];
@@ -70,7 +70,7 @@ function rotateHandle(
  * before the box has a rotation, `boxBasisVectors(box.rotation)` after (F2.5's axes swap) — this
  * function doesn't care which. `arrowLengthMpc` is the translate-arrow reach, computed by the
  * caller via gizmoArrowLengthMpc.ts so it holds a constant screen size instead of scaling with
- * the box; resize stays box-scaled, rotate rides arrowLengthMpc too (RING_RADIUS_FRACTION above).
+ * the box; resize stays box-scaled, rotate rides arrowLengthMpc too (RING_RADIUS_ARROW_MULTIPLE above).
  */
 export function gizmoHandleGeometry(
   box: GridBox,
@@ -79,7 +79,7 @@ export function gizmoHandleGeometry(
 ): GizmoHandleGeometry {
   const half = boxHalfExtentMpc(box.sizeMpc);
   const center = box.centerMpc;
-  const ringRadiusMpc = RING_RADIUS_FRACTION * arrowLengthMpc;
+  const ringRadiusMpc = RING_RADIUS_ARROW_MULTIPLE * arrowLengthMpc;
 
   return {
     translate: [

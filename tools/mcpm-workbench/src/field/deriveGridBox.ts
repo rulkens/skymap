@@ -27,6 +27,8 @@ function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
  */
 export function deriveGridBox(grid: GridSlice): GridBox {
   if (grid.importedBox) return grid.importedBox;
+  // `?? 'f32'` (pre-first-build fallback) must match GridBoxPanel.tsx's two copies of
+  // this same fallback, or the memory readout and the box the sim actually builds disagree.
   const rawFloorMpc =
     grid.maxBufferBytes === null
       ? 0
@@ -38,6 +40,8 @@ export function deriveGridBox(grid: GridSlice): GridBox {
   const floorMpc = Number.isFinite(rawFloorMpc) ? rawFloorMpc : 0;
   const effectiveVoxelSizeMpc = Math.max(grid.manualVoxelSizeMpc, floorMpc);
   const bounds = manualBounds(grid.manualCenterMpc, grid.manualSizeMpc);
+  // padding 0: fitBoxToCatalog already baked grid.paddingMpc into manualSizeMpc at fit
+  // time — re-adding it here would double-pad every derivation after that fit.
   const box = autoFitGridBox(bounds, effectiveVoxelSizeMpc, 0);
   return { ...box, rotation: grid.manualRotation };
 }

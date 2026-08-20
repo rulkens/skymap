@@ -85,6 +85,8 @@ function GridBoxPanel(): ReactNode {
   // a refusal check. `resolvedElement` only changes with hardware capability,
   // not box/agent-count edits, so this can't go stale mid-drag the way
   // `grid.byteBudget` (last COMPLETED build) would.
+  // `?? 'f32'` fallback — must stay in sync with the two other copies below and in
+  // deriveGridBox.ts, or this readout disagrees with the box the sim actually builds.
   const estimatedBytes = estimateGridBudgetBytes(
     box.dims,
     agentCount,
@@ -100,7 +102,7 @@ function GridBoxPanel(): ReactNode {
       ? null
       : minFeasibleVoxelSizeMpc(
           grid.manualSizeMpc,
-          BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'],
+          BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'], // same fallback contract as above
           grid.maxBufferBytes,
         );
   const liveFloorMpc =

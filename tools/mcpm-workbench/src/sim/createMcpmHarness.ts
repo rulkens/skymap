@@ -365,8 +365,9 @@ export async function createMcpmHarness(opts: {
       iteration = 0;
     },
     dispose(): void {
-      // The device stays alive: the harness shares the canvas context with the
-      // tool's render graph, which outlives a sim teardown.
+      // The device stays alive because the harness never acquired it — it only reads
+      // opts.gpu.device (post-R5). Viewport.disposeHarness() tears down the render graph
+      // and this harness together, so ownership isn't "outlives", it's "never owned".
       buffers.destroy();
       for (const buffer of Object.values(overlayBuffers)) buffer.destroy();
     },
