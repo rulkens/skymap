@@ -32,7 +32,10 @@ Usage:
 Verification:
     Prints shape + mean(mean)/mean(std) per tier. A near-zero mean(std)
     across every tier suggests interp2box.py's "Std." HDU lookup missed
-    (see write_tier's HDU-name check) rather than a real result.
+    (see write_tier's HDU-name check) rather than a real result. NaNs
+    outside the map's radial support are zero-filled before these means
+    are taken, so both are averaged over the whole cube (roughly half of
+    which sits outside the map's support).
 """
 import glob
 import os
@@ -107,6 +110,13 @@ def write_tier(res: int) -> None:
         # reversal.
         mean_xyz = np.ascontiguousarray(np.transpose(mean_zyx, (2, 1, 0)))
         std_xyz = np.ascontiguousarray(np.transpose(std_zyx, (2, 1, 0)))
+
+        # interp2box.py leaves NaN outside the map's 69-1250 pc radial
+        # support -- the inner hole and the corners of this +-1250 pc cube
+        # (reaching ~2165 pc), ~half the voxels. Zero is the correct fill
+        # for an extinction field: no data means no dust.
+        mean_xyz = np.nan_to_num(mean_xyz, nan=0.0)
+        std_xyz = np.nan_to_num(std_xyz, nan=0.0)
 
         os.makedirs(CACHE_DIR, exist_ok=True)
         mean_out = os.path.join(CACHE_DIR, f"edenhofer_mean_{res}.npy")
