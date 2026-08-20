@@ -55,8 +55,6 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
@@ -73,10 +71,8 @@ import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
-import { earthLayer } from './passes/earthLayer';
+import { prepareEarthFrame, earthLayer } from './passes/earthLayer';
 import { NEAR0, slabViewOf } from './slabs';
-import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
-import { camPosLocal } from '../../../utils/camera/camPosLocal';
 import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
@@ -591,35 +587,29 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // module header), so the tiles the planner asks for never drift from the
       // pixels the fragment samples them into.
       const view = slabViewOf(ctx, NEAR0);
-      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-      const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      const plan = planEarthTiles({
-        ...params,
-        camPosLocal: camPosLocal(
-          view.camPos,
-          earthState.positionMpc,
-          radiusMpc,
-          earthState.orientation,
-        ),
-        viewProjLocal: composeBodyMvp(
-          view.slab.vp,
-          earthState.positionMpc,
-          RENDER_ORIGIN_MPC,
-          radiusMpc,
-          earthState.orientation,
-        ),
-        viewportPx: view.viewportPx,
-      });
-      // Unconditional: engaging/disengaging is the subsystem's own decision
-      // from this plan. `getTileResources()` either side of `update` IS the
-      // null-to-non-null transition, so the renderer's bind group rebuilds
-      // exactly once, at that moment.
-      const engagedBefore = earthTiles.getTileResources() !== null;
-      earthTiles.update({ plan, nowMs: ctx.nowMs });
-      if (!engagedBefore) {
-        const tiles = earthTiles.getTileResources();
-        if (tiles !== null) {
-          state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
+      // Skip when Earth's frame derivation is null — mirrors the `earth !==
+      // null` guard above (prepareEarthFrame returns null on exactly that
+      // condition); kept explicit so this block doesn't lean on the outer
+      // guard's reasoning to satisfy the type checker.
+      const prepared = prepareEarthFrame(state, ctx, view);
+      if (prepared !== null) {
+        const plan = planEarthTiles({
+          ...params,
+          camPosLocal: prepared.camLocal,
+          viewProjLocal: prepared.mvpLocal,
+          viewportPx: view.viewportPx,
+        });
+        // Unconditional: engaging/disengaging is the subsystem's own decision
+        // from this plan. `getTileResources()` either side of `update` IS the
+        // null-to-non-null transition, so the renderer's bind group rebuilds
+        // exactly once, at that moment.
+        const engagedBefore = earthTiles.getTileResources() !== null;
+        earthTiles.update({ plan, nowMs: ctx.nowMs });
+        if (!engagedBefore) {
+          const tiles = earthTiles.getTileResources();
+          if (tiles !== null) {
+            state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
+          }
         }
       }
     }

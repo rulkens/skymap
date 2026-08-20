@@ -23,7 +23,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { earthLayer } from '../../../../../src/services/engine/frame/passes/earthLayer';
+import {
+  earthLayer,
+  prepareEarthFrame,
+} from '../../../../../src/services/engine/frame/passes/earthLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -116,7 +119,12 @@ function makeCtx(distance: number): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-// A camera comfortably inside the shared foreground gate.
+// A camera comfortably inside the shared foreground gate. Reused by reference
+// where safe; the first three `earthLayer.draw` tests below call `makeCtx`
+// fresh instead — `prepareEarthFrame`'s ctx-keyed memo would otherwise let
+// the second and third hit the cache the first one primed (same NEAR_CTX
+// object ⇒ same memo entry ⇒ composeBodyMvp not re-invoked, and the first
+// test's `toHaveBeenCalledTimes(1)` would misattribute the shared call).
 const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 
 /**
@@ -260,6 +268,41 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
   });
 });
 
+describe('prepareEarthFrame', () => {
+  it('returns null when bodies.earth is null', () => {
+    const state = makeState({ draw: vi.fn() }, null);
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    expect(prepareEarthFrame(state, ctx, makeNear0View())).toBeNull();
+  });
+
+  it('composes mvpLocal from the slab f64 vp, not the f32 vp', () => {
+    composeMock.mockClear();
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const view = makeNear0View();
+
+    prepareEarthFrame(state, ctx, view);
+
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    const call = composeMock.mock.calls[0]!;
+    expect(call[0]).toBe(view.slab.vp);
+    expect(call[0]).not.toBe(view.vp);
+  });
+
+  it('memoizes per ctx', () => {
+    composeMock.mockClear();
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const view = makeNear0View();
+
+    const first = prepareEarthFrame(state, ctx, view);
+    const second = prepareEarthFrame(state, ctx, view);
+
+    expect(second).toBe(first);
+    expect(composeMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('earthLayer.draw', () => {
   it('draws the seeded earth via composeBodyMvp with the slab f64 vp', () => {
     composeMock.mockClear();
@@ -267,11 +310,13 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    // NEAR_CTX, not the bare CTX_STUB: draw now also reads ctx.drawCamPos (the
-    // cloud-shadow descent fade), and NEAR_CTX's camera sits ~1e-13 Mpc from
-    // Earth's centre — hundreds of body radii up, well above the fade band — so
-    // the fade multiplier is 1 and every assertion below is unaffected by it.
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    // A camera comfortably inside the shared foreground gate, well above the
+    // cloud-shadow descent-fade band (see the note on NEAR_CTX). Fresh per
+    // this test, not the shared NEAR_CTX — this test's `toHaveBeenCalledTimes(1)`
+    // assertion needs its OWN `prepareEarthFrame` memo entry, not one another
+    // test using the same ctx object already primed.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
 
     // Exactly one MVP composed for the single Earth body.
     expect(composeMock).toHaveBeenCalledTimes(1);
@@ -309,9 +354,11 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
-    // note on the previous test).
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    // Fresh ctx (see the previous test's note): this test's own
+    // `toHaveBeenCalledTimes(1)` assertion needs its own `prepareEarthFrame`
+    // memo entry, not NEAR_CTX's shared one.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms).toHaveLength(36);
@@ -338,9 +385,10 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
-    // note on the first draw test).
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    // Fresh ctx (see the first draw test's note): keeps this test's own
+    // `prepareEarthFrame` memo entry separate from NEAR_CTX's.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms).toHaveLength(36);
@@ -384,18 +432,18 @@ describe('earthLayer.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
-    (
-      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
-    ).debug.overlays['earth-lod-overlay'] = true;
+    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
+      'earth-lod-overlay'
+    ] = true;
 
     earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     const [, uniformsOn] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniformsOn[32]).toBe(1);
 
-    (
-      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
-    ).debug.overlays['earth-lod-overlay'] = false;
+    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
+      'earth-lod-overlay'
+    ] = false;
     earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
     const [, uniformsOff] = drawSpy.mock.calls[1]! as [GPURenderPassEncoder, Float32Array];
     expect(uniformsOff[32]).toBe(0);

@@ -25,6 +25,9 @@
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { SlabView } from '../../../../@types/engine/frame/SlabView';
+import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -59,6 +62,64 @@ function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext):
   return Math.hypot(dx, dy, dz);
 }
 
+/**
+ * One Earth per-frame derivation, shared by `draw`, `drawPick`, and
+ * `runFrame`'s tile planner — the three sites that each used to
+ * independently look up `earthState` and (`draw`/the planner) recompute the
+ * same body-local MVP + camera. Memoised per `ctx` (mirrors `prepareStarCut`
+ * in `starCatalogLayer.ts`), so whichever call site reaches it first in a
+ * frame does the work and the rest read the cache. `view` must be
+ * `slabViewOf(ctx, NEAR0)` for the same `ctx` this is keyed on — a documented
+ * precondition, not enforced by types, true at both real call sites.
+ */
+export type PreparedEarthFrame = {
+  readonly earthState: BodyState;
+  readonly radiusMpc: number;
+  readonly mvpLocal: Float32Array;
+  readonly camLocal: Vec3;
+};
+
+const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedEarthFrame | null>();
+
+export function prepareEarthFrame(
+  state: EngineState,
+  ctx: ReadyFrameContext,
+  view: SlabView,
+): PreparedEarthFrame | null {
+  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+
+  const result = computeEarthFrame(state, ctx, view);
+  preparedByCtx.set(ctx, result);
+  return result;
+}
+
+function computeEarthFrame(
+  state: EngineState,
+  ctx: ReadyFrameContext,
+  view: SlabView,
+): PreparedEarthFrame | null {
+  const earth = state.data.bodies.earth;
+  if (earth === null) return null;
+
+  const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+  const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
+  const mvpLocal = composeBodyMvp(
+    view.slab.vp,
+    earthState.positionMpc,
+    RENDER_ORIGIN_MPC,
+    radiusMpc,
+    earthState.orientation,
+  );
+  const camLocal = camPosLocal(
+    view.camPos,
+    earthState.positionMpc,
+    radiusMpc,
+    earthState.orientation,
+  );
+  return { earthState, radiusMpc, mvpLocal, camLocal };
+}
+
 export const earthLayer: ContentLayer = {
   name: 'earth',
   slab: NEAR0,
@@ -90,30 +151,15 @@ export const earthLayer: ContentLayer = {
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.earthRenderer;
-    const earth = state.data.bodies.earth;
-    if (renderer === null || earth === null) return;
+    if (renderer === null) return;
 
-    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+    const prepared = prepareEarthFrame(state, ctx, view);
+    if (prepared === null) return;
+    const { earthState, radiusMpc, mvpLocal: mvp, camLocal } = prepared;
 
-    // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
-    const mvp = composeBodyMvp(
-      view.slab.vp,
-      earthState.positionMpc,
-      RENDER_ORIGIN_MPC,
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      earthState.orientation,
-    );
     // Sun direction rotated into Earth's local frame (orientation carries the
     // axial tilt), so the fragment's lighting stays a plain dot product.
     const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
-    // Camera in Earth's local frame — the view vector the PBR fragment needs
-    // for the view-dependent ocean glint.
-    const camLocal = camPosLocal(
-      view.camPos,
-      earthState.positionMpc,
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      earthState.orientation,
-    );
     // The window the fragment addresses tiles through, read from the tile
     // subsystem rather than this frame's plan: the subsystem reports the
     // window the page-table TEXTURE was actually built against, which lags a
@@ -130,10 +176,7 @@ export const earthLayer: ContentLayer = {
     // pad slots free (`packEarthSurfaceUniforms.ts`), so it no longer forces a
     // fresh 16-byte row — still deferred rather than paid for a night-side-only
     // artifact.
-    const cloudFade = cloudDeckFade(
-      earthCameraDistanceMpc(earthState.positionMpc, ctx),
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-    );
+    const cloudFade = cloudDeckFade(earthCameraDistanceMpc(earthState.positionMpc, ctx), radiusMpc);
     renderer.draw(
       pass,
       packEarthSurfaceUniforms(
@@ -169,17 +212,21 @@ export const earthLayer: ContentLayer = {
   // cleared-to-zero no-hit texel.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
-    const earth = state.data.bodies.earth;
-    if (pickRenderer === null || earth === null) return;
+    if (pickRenderer === null) return;
 
-    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+    const prepared = prepareEarthFrame(state, ctx, view);
+    if (prepared === null) return;
+    const { earthState, radiusMpc } = prepared;
 
     // Floor the pick radius (drawFlooredSpherePick) so a far-edge Earth
-    // projecting to a couple of pixels stays clickable.
+    // projecting to a couple of pixels stays clickable. Deliberately NOT
+    // `prepared.mvpLocal`/`camLocal` — those are composed against the true
+    // equatorial radius; drawFlooredSpherePick composes its own MVP/camPos
+    // internally against the floored pick radius.
     drawFlooredSpherePick(pickRenderer, pass, {
       vp: view.slab.vp,
       positionMpc: earthState.positionMpc,
-      radiusMpc: earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      radiusMpc,
       camPosMpc: view.camPos,
       drawPxPerRad: ctx.drawPxPerRad,
       orientation: earthState.orientation,
