@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
@@ -670,7 +671,8 @@ describe('renderFrame', () => {
   });
 
   it('packs (source, index) into the selectedPacked u32 sent to galaxyPointRenderer.draw', () => {
-    // SDSS = 1, index = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
+    // Expected value comes from the shared packSelection, not a re-inlined
+    // shift — see src/data/selectionEncoding.ts for the encoding.
     const fx2 = makeInput({
       settings: {
         selected: {
@@ -682,7 +684,7 @@ describe('renderFrame', () => {
     });
     renderFrame(fx2.input);
     const draw = fx2.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
-    const expected = ((Source.SDSS << 27) | 42) >>> 0;
+    const expected = packSelection(Source.SDSS, 42);
     const drawSettings = draw.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });

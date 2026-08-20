@@ -17,7 +17,7 @@ export type GalaxyPointDrawSettings = {
   pointSizePx: number;
   /** Global brightness multiplier in [0, 1]. */
   brightness: number;
-  /** Selected galaxy as `(source << 27) | localIdx`, or `0xFFFFFFFF` for "no selection". */
+  /** Selected galaxy as `(source << 26) | localIdx`, or `0xFFFFFFFF` for "no selection". */
   selectedPacked: number;
   /** Bitmask of `Source` values to draw (see `data/sources.ts`). */
   visibleSourceMask: number;

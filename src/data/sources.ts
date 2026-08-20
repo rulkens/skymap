@@ -9,7 +9,7 @@
  *                     into the `.bin` point-cloud format and packed into
  *                     the pick texture.
  *   'structure'     — galaxy-cluster / supercluster / void / group marker rings.
- *                     Codes are also packed into the pick texture (upper 5 bits).
+ *                     Codes are also packed into the pick texture (upper 6 bits).
  *   'filament'      — derived line-strip geometry (DisPerSE skeleton).
  *                     Single global asset; no per-record identity.
  *   'volume'        — scalar-field cubes (CF-4 DM density, MCPM cosmic web).

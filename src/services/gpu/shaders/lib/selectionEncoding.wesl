@@ -15,19 +15,24 @@
 //
 // ### Layout reminder
 //
-//   bits 27..31  →  sourceCode (5 bits, 0..31; 31 unallocated)
-//   bits  0..26  →  localIdx   (27 bits, ≤ 134M)
+//   bits 26..31  →  sourceCode (6 bits, 0..63; 63 unallocated)
+//   bits  0..25  →  localIdx   (26 bits, ≤ 67M)
 //
-// See the TS module's docstring for the full rationale.
+// See the TS module's docstring for the full rationale, including why
+// SELECTION_NONE_SENTINEL's literal value didn't change when the shift
+// widened from 27 to 26.
 
 /** Bit shift for the source code in the packed identity. */
-const SELECTION_SOURCE_SHIFT: u32 = 27u;
+const SELECTION_SOURCE_SHIFT: u32 = 26u;
 
-/** Mask for the localIdx bits (the bottom 27 bits). */
-const SELECTION_LOCAL_IDX_MASK: u32 = 0x07ffffffu;
+/** Mask for the localIdx bits (the bottom 26 bits). */
+const SELECTION_LOCAL_IDX_MASK: u32 = 0x03ffffffu;
 
-/** 'Nothing selected' sentinel — top 5 bits set, encoding unallocated source 31. */
+/** 'Nothing selected' sentinel — top bits set, encoding the unallocated sourceCode. */
 const SELECTION_NONE_SENTINEL: u32 = 0xffffffffu;
+
+/** Reserved all-ones sourceCode — mirror of TS SELECTION_SOURCE_SENTINEL_CODE. */
+const SELECTION_SOURCE_SENTINEL_CODE: u32 = 63u;
 
 /** Offset the pick fragment adds before writing into the r32uint texture. */
 const PICK_SENTINEL_OFFSET: u32 = 1u;
@@ -46,7 +51,7 @@ const SOURCE_CODE_GROUP: u32 = 15u;
 
 /**
  * Source code for the survey (Gaia bin) stars — see TS Source.GaiaStars (= 24).
- * The star pick fragment packs '(SOURCE_GAIA_STARS << 27) | recordIdx' so a
+ * The star pick fragment packs '(SOURCE_GAIA_STARS << 26) | recordIdx' so a
  * picked star's identity shares the one packed-encoding home instead of inlining
  * a bare 24u literal.
  */

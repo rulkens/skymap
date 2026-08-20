@@ -27,10 +27,11 @@ export const EARTH_TILE_PX = 512;
  *  full-grid table would be 537 MB at z13 against this 64 KB. (Design 2.) */
 export const EARTH_TILE_WINDOW_SIDE = 128;
 
-/** Physical atlas edge in pixels: 4096 / 512 = 8 slots per row, 64 slots, 67 MB.
- *  Against a working set of roughly 20 to 40 tiles, the headroom absorbs level
- *  transitions during motion. (Design 6.) */
-export const EARTH_TILE_ATLAS_SIDE = 4096;
+/** Physical atlas edge in pixels: 8192 / 512 = 16 slots per row, 256 slots,
+ *  268 MB. Deep z14–19 regional bands push the planner's pinned ancestor-chain
+ *  working set past the old 64-slot ceiling; 8192 is also WebGPU's baseline
+ *  maxTextureDimension2D, so no limit request is needed. (Design 6.) */
+export const EARTH_TILE_ATLAS_SIDE = 8192;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),

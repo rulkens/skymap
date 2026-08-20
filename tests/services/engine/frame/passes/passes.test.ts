@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
 import { Source } from '../../../../../src/data/sources';
+import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
@@ -798,7 +799,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
     // record).
-    const expected = ((Source.SDSS << 27) | 42) >>> 0;
+    const expected = packSelection(Source.SDSS, 42);
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });

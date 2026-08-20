@@ -41,7 +41,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
-    // The shader compares a packed `(sourceCode << 27u) | instance_index` per
+    // The shader compares a packed `(sourceCode << 26u) | instance_index` per
     // vertex; structure targets light no galaxy halo, so they take the sentinel.
     const selected = state.selection.select;
     const selectedPacked =

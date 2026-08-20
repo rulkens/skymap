@@ -23,6 +23,10 @@ import { TextureAtlas } from '../../../src/services/gpu/resources/textureAtlas';
 const WINDOW_SIDE = 16;
 const SLOTS_PER_ROW = 8;
 
+// buildEarthPageTable never reads this field — only zWin/winX0/winY0/requests
+// matter to it — so every fixture plan below shares one arbitrary direction.
+const SUB_CAMERA_DIR_LOCAL: EarthTilePlan['subCameraDirLocal'] = [1, 0, 0];
+
 const tile = (z: number, x: number, y: number): EarthTileId => ({
   kind: 'surface',
   z,
@@ -42,7 +46,13 @@ describe('buildEarthPageTable', () => {
     // three columns west of the antimeridian so the wrapping subtraction is
     // exercised too: dx = ((X - 126) + 128) % 128 = X + 2 for the columns below,
     // and dy = Y - 2.
-    const plan: EarthTilePlan = { zWin: 7, winX0: 126, winY0: 2, requests: [] };
+    const plan: EarthTilePlan = {
+      zWin: 7,
+      winX0: 126,
+      winY0: 2,
+      requests: [],
+      subCameraDirLocal: SUB_CAMERA_DIR_LOCAL,
+    };
 
     // Coarse: z5 tile (1, 1) spans 4 cells each way at z7 — X 4..7, Y 4..7.
     // Fine:   z6 tile (2, 2) spans 2 — X 4..5, Y 4..5, i.e. the north-west
@@ -84,7 +94,13 @@ describe('buildEarthPageTable', () => {
   it('keeps a saturated ancestor until a fading finer tile finishes', () => {
     // Same geometry as the fill-order test above: z5 tile (1,1) covers X 4..7,
     // Y 4..7 at z7; its z6 child (2,2) covers the NW quarter, X 4..5, Y 4..5.
-    const plan: EarthTilePlan = { zWin: 7, winX0: 126, winY0: 2, requests: [] };
+    const plan: EarthTilePlan = {
+      zWin: 7,
+      winX0: 126,
+      winY0: 2,
+      requests: [],
+      subCameraDirLocal: SUB_CAMERA_DIR_LOCAL,
+    };
     const overlap: ReadonlyArray<readonly [number, number]> = [
       [6, 2],
       [7, 3],
@@ -123,7 +139,13 @@ describe('buildEarthPageTable', () => {
   it('still fades a lone tile up from base with no resident ancestor', () => {
     const table = buildEarthPageTable({
       resident: [{ tile: tile(7, 0, 0), slot: 3, weight: 0.3 }],
-      plan: { zWin: 7, winX0: 0, winY0: 0, requests: [] },
+      plan: {
+        zWin: 7,
+        winX0: 0,
+        winY0: 0,
+        requests: [],
+        subCameraDirLocal: SUB_CAMERA_DIR_LOCAL,
+      },
       slotsPerRow: SLOTS_PER_ROW,
       windowSide: WINDOW_SIDE,
       tilePx: EARTH_TILE_PX,
@@ -178,7 +200,13 @@ describe('buildEarthPageTable', () => {
 
     const table = buildEarthPageTable({
       resident,
-      plan: { zWin: 7, winX0: 0, winY0: 0, requests: [] },
+      plan: {
+        zWin: 7,
+        winX0: 0,
+        winY0: 0,
+        requests: [],
+        subCameraDirLocal: SUB_CAMERA_DIR_LOCAL,
+      },
       slotsPerRow: SLOTS_PER_ROW,
       windowSide: WINDOW_SIDE,
       tilePx: EARTH_TILE_PX,
@@ -207,7 +235,13 @@ describe('buildEarthPageTable', () => {
     // collapse to exactly this.
     const table = buildEarthPageTable({
       resident: [],
-      plan: { zWin: 7, winX0: 0, winY0: 0, requests: [] },
+      plan: {
+        zWin: 7,
+        winX0: 0,
+        winY0: 0,
+        requests: [],
+        subCameraDirLocal: SUB_CAMERA_DIR_LOCAL,
+      },
       slotsPerRow: SLOTS_PER_ROW,
       windowSide: WINDOW_SIDE,
       tilePx: EARTH_TILE_PX,

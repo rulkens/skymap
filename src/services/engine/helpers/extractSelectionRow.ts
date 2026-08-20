@@ -5,9 +5,9 @@
  * index (null if the cloud isn't loaded yet — a deep link or a mid-flight tier
  * swap); the structure arm resolves the durable id to its already-serializable
  * record; the Milky Way arm is the static tag; the body arm resolves its seed
- * id against the static SCENE_BODIES table and its position from the J2000
- * body-state snapshot — no deps needed, both are compile-time imports, so a miss
- * is a garbage id rather than "not loaded yet".
+ * id against the static SCENE_BODIES table and its position from the live
+ * body-state snapshot at the caller's `simDays` — no deps needed, both are
+ * compile-time imports, so a miss is a garbage id rather than "not loaded yet".
  *
  * This is the ONE engine-side step in the selection read path — the reconciler
  * saga calls it via getContext('resolveDeps'). Everything downstream
@@ -17,7 +17,6 @@ import { extractGalaxyRow } from './extractGalaxyRow';
 import { resolveStarRecord } from './resolveStarRecord';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
-import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
@@ -27,6 +26,7 @@ const EXTRACT_ROW: {
   [K in SelectionRef['type']]: (
     ref: Extract<SelectionRef, { type: K }>,
     deps: ResolveDeps,
+    simDays: number,
   ) => SelectionRow | null;
 } = {
   galaxyCatalog: (ref, deps) =>
@@ -34,22 +34,25 @@ const EXTRACT_ROW: {
   structure: (ref, deps) => deps.structures.byId(ref.id),
   milkyWay: () => ({ type: 'milkyWay' as const }),
   zoneOfAvoidance: () => ({ type: 'zoneOfAvoidance' as const }),
-  // Every scene body reads its world position from the J2000 body-state
-  // snapshot — the same derive the render layers read — so a selected body's
-  // stored position tracks the one it is drawn at rather than a separately-baked
-  // seed field. The snapshot is derived DIRECTLY at the fixed epoch because this
-  // resolver runs OFF the frame path (the reconciler / focus-tween sagas and
-  // clip-foci resolution), with no (state, ctx) to route through the per-frame
-  // `sceneBodyStates` seam — the construction/resolve-time twin. The position is
-  // copied (not aliased) because the row lands in the RTK store, whose
-  // immutability middleware freezes state — freezing the shared anchor position
-  // would poison every other consumer of the constant.
-  body: (ref) => {
+  // Every scene body reads its world position from the body-state snapshot at
+  // the caller's live `simDays` — the same derive the render layers read — so a
+  // selected body's stored position tracks the one it is drawn at rather than a
+  // separately-baked seed field. This resolver runs OFF the frame path (the
+  // reconciler / focus-tween sagas and clip-foci resolution), so the caller
+  // must derive `simDays` itself (`deriveSimDays(time, nowMs)`) rather than
+  // routing through the per-frame `sceneBodyStates` seam. The position is a
+  // SNAPSHOT taken once at extraction time, not tracked live — a consumer that
+  // needs the position to stay current as the body moves must re-derive via
+  // `liveBodyPosition`, not re-read this row. It is copied (not aliased)
+  // because the row lands in the RTK store, whose immutability middleware
+  // freezes state — freezing the shared anchor position would poison every
+  // other consumer of the constant.
+  body: (ref, _deps, simDays) => {
     const body = SCENE_BODIES.find((b) => b.id === ref.id);
     if (!body) return null;
     // Total: a seed is either an `ORBITAL_ELEMENTS` row or a `SCENE_ANCHORS`
     // one, and the snapshot holds both.
-    const p = deriveBodyStates(CONST_J2000).get(body.id)!.positionMpc;
+    const p = deriveBodyStates(simDays).get(body.id)!.positionMpc;
     return {
       type: 'body' as const,
       id: body.id,
@@ -85,11 +88,11 @@ const EXTRACT_ROW: {
 export function extractSelectionRow(
   ref: SelectionRef | null,
   deps: ResolveDeps,
+  simDays: number,
 ): SelectionRow | null {
   if (ref === null) return null;
   // Narrow the dispatch through the ref tag; each arm receives its own ref shape.
-  return (EXTRACT_ROW[ref.type] as (r: SelectionRef, d: ResolveDeps) => SelectionRow | null)(
-    ref,
-    deps,
-  );
+  return (
+    EXTRACT_ROW[ref.type] as (r: SelectionRef, d: ResolveDeps, s: number) => SelectionRow | null
+  )(ref, deps, simDays);
 }

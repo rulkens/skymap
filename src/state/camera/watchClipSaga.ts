@@ -115,11 +115,15 @@ export function* watchClipSaga() {
           // `frame` arg).
           const orientation = yield* select(selectOrientation);
           const frameBasis = ORIENTATION_FRAMES[orientation];
+          // Reuse the frozen clip-start instant: the sim clock is paused for the
+          // clip's duration (see the module doc), so any body-targeting cue must
+          // resolve against the SAME instant the clip factory opened on.
           const resolved = resolveClipFoci(
             clip.data,
             resolveDeps(),
             rt.fovYRad,
             rt.from,
+            frozenSimDays,
             frameBasis,
           );
           yield* call(playClipSeam, resolved, orientation);

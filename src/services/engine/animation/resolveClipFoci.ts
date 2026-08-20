@@ -95,6 +95,11 @@ import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
  * measures its bearing from the same target and its yaw delta from `from.yaw`
  * — callers pass `cameraRuntime.from`).
  *
+ * `simDays` is the live sim instant, threaded into `extractSelectionRow`'s
+ * body arm so an id-bearing effect that targets a scene body (Earth, a planet,
+ * an S-star) resolves to where it is drawn NOW, not a fixed epoch — callers
+ * derive it the same way `runFrame`/`watchGoHomeSaga` do.
+ *
  * `frameBasis` is the STEADY orientation-frame basis
  * (`ORIENTATION_FRAMES[settings.orientation]`) resolved at this clip boundary.
  * A `lookAtId` bearing is encoded through it so the aim decodes back to the
@@ -114,11 +119,12 @@ export function resolveClipFoci(
   deps: ResolveDeps,
   fovYRad: number,
   from: CameraPose,
+  simDays: number,
   frameBasis?: Mat3,
 ): ClipData {
   return {
     ...data,
-    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, from, frameBasis)),
+    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, from, simDays, frameBasis)),
   };
 }
 
@@ -135,6 +141,7 @@ function walkEffect(
   deps: ResolveDeps,
   fovYRad: number,
   from: CameraPose,
+  simDays: number,
   frameBasis?: Mat3,
 ): Effect {
   switch (effect.kind) {
@@ -142,23 +149,26 @@ function walkEffect(
     case 'seq':
       return {
         kind: 'seq',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, frameBasis)),
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, simDays, frameBasis)),
       };
     case 'all':
       return {
         kind: 'all',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, frameBasis)),
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, simDays, frameBasis)),
       };
     case 'fork':
-      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad, from, frameBasis) };
+      return {
+        kind: 'fork',
+        child: walkEffect(effect.child, deps, fovYRad, from, simDays, frameBasis),
+      };
 
     // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
       return moveTarget(target, effect.over, effect.ease);
     }
     case 'dollyToId': {
-      const { distance } = resolveFraming(effect.id, deps, fovYRad);
+      const { distance } = resolveFraming(effect.id, deps, fovYRad, simDays);
       // `scale` multiplies the DERIVED framing distance — the author's
       // tighter/looser knob that survives framing-math and catalog changes.
       return dollyTo(distance * (effect.scale ?? 1), effect.over, effect.ease);
@@ -167,7 +177,7 @@ function walkEffect(
     // target — baked here, so a lookAtId is only valid before the target
     // moves (see the `lookAtId` helper docstring).
     case 'lookAtId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -193,7 +203,7 @@ function walkEffect(
     // the live camera distance, so the anchor slides ~byDeg degrees across the
     // frame regardless of scale.
     case 'strafeId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -224,7 +234,7 @@ function walkEffect(
     // `lerpAngleShortest`'s fold (its result at t=1 IS `from.yaw` plus the
     // shortest delta) avoids re-deriving the mod-2π formula a second time.
     case 'spinToId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -247,7 +257,7 @@ function walkEffect(
     case 'flyPath': {
       const waypoints = effect.waypoints.map((w) => {
         if (!('id' in w)) return w; // already concrete
-        const { target, distance, radius } = resolveFraming(w.id, deps, fovYRad);
+        const { target, distance, radius } = resolveFraming(w.id, deps, fovYRad, simDays);
         return {
           at: target,
           distance,
@@ -309,6 +319,7 @@ function resolveFraming(
   id: string,
   deps: ResolveDeps,
   fovYRad: number,
+  simDays: number,
 ): ReturnType<typeof focusFraming> {
   const ref = resolveFocusId(id, deps);
   if (ref === null) {
@@ -317,7 +328,7 @@ function resolveFraming(
         `Ensure the readiness gate (clipFociReady) cleared before calling resolveClipFoci.`,
     );
   }
-  const row = extractSelectionRow(ref, deps);
+  const row = extractSelectionRow(ref, deps, simDays);
   if (row === null) {
     throw new Error(
       `resolveClipFoci: id '${id}' resolved to a ref but extractSelectionRow returned null. ` +
