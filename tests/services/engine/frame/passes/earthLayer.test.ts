@@ -38,6 +38,10 @@ import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
+import {
+  EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM,
+  EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM,
+} from '../../../../../src/data/bodies/earthTileParams';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -559,9 +563,9 @@ describe('earthLayer.draw — detail tiles', () => {
     earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
 
-    (
-      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
-    ).debug.overlays['earth-lod-overlay'] = true;
+    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
+      'earth-lod-overlay'
+    ] = true;
     earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
   });
@@ -599,5 +603,103 @@ describe('earthLayer.draw — detail tiles', () => {
     const state = makeTileDrawState({ tileRenderer: null, cut: STUB_CUT, atlasView: ATLAS_VIEW });
 
     expect(() => earthLayer.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
+  });
+});
+
+describe('earthLayer.draw — base globe fade under the tile cut', () => {
+  // A minimal stand-in cut, reused from the detail-tiles suite above.
+  const STUB_CUT = [
+    {
+      id: { z: 8, x: 1, y: 1 },
+      originLocal: [1, 0, 0],
+      resident: {
+        slot: 0,
+        atlasUvOrigin: [0, 0],
+        atlasUvScale: [0.1, 0.1],
+      },
+    },
+  ];
+  const ATLAS_VIEW = {} as GPUTextureView;
+
+  /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along
+   *  +x — the shared fixture for the fade tests below. */
+  function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
+    const radiusMpc = SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
+    return {
+      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+      drawCamPos: [
+        SEEDED_EARTH.positionMpc[0] + radiusMpc + altitudeMpc,
+        SEEDED_EARTH.positionMpc[1],
+        SEEDED_EARTH.positionMpc[2],
+      ],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+  }
+
+  /** Installs a spy on `state.gpu.earthRenderer.draw`, replacing the
+   *  `vi.fn()` `makeTileDrawState` seeds it with. */
+  function spyOnBaseDraw(state: EngineState): ReturnType<typeof vi.fn> {
+    const baseDraw = vi.fn();
+    (state.gpu as unknown as { earthRenderer: { draw: typeof baseDraw } }).earthRenderer.draw =
+      baseDraw;
+    return baseDraw;
+  }
+
+  it('forwards alpha 1 when the cut is empty, regardless of altitude', () => {
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: vi.fn() },
+      cut: [],
+      atlasView: ATLAS_VIEW,
+    });
+    const baseDraw = spyOnBaseDraw(state);
+
+    // Deep inside what would be the alpha-0 band if the fade engaged — the
+    // empty cut must keep the base globe at the alpha-1 failure floor.
+    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(baseDraw).toHaveBeenCalledTimes(1);
+    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
+    expect(uniforms[29]).toBe(1);
+  });
+
+  it('skips the base-globe draw call at alpha 0 with a non-empty cut', () => {
+    const view = makeNear0View();
+    const tileDraw = vi.fn();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    const baseDraw = spyOnBaseDraw(state);
+
+    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(baseDraw).not.toHaveBeenCalled();
+    // The tiles cover the whole cap by now — they must still draw.
+    expect(tileDraw).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards a fractional alpha at the fade band midpoint', () => {
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: vi.fn() },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    const baseDraw = spyOnBaseDraw(state);
+
+    const midAltitudeKm =
+      (EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM + EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM) / 2;
+    earthLayer.draw(PASS_STUB, view, makeAltitudeCtx(midAltitudeKm), state);
+
+    expect(baseDraw).toHaveBeenCalledTimes(1);
+    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
+    expect(uniforms[29]).toBeGreaterThan(0);
+    expect(uniforms[29]).toBeLessThan(1);
   });
 });

@@ -43,6 +43,8 @@ const CLOUD_SHELL_RADIUS = 1.03;
 const AMBIENT_LIGHT = 0.03125;
 // Dyadic + distinct sentinel for the new 16-byte row's first slot (byte 112).
 const OCEAN_ROUGHNESS = 0.28125;
+// Dyadic + distinct sentinel for the descent-fade slot (byte 116).
+const BASE_GLOBE_ALPHA = 0.65625;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
   it('packs a 128-byte / 32-f32 record with roughnessBase filling the vec3 tail @76', () => {
@@ -57,6 +59,7 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       CLOUD_SHELL_RADIUS,
       AMBIENT_LIGHT,
       OCEAN_ROUGHNESS,
+      BASE_GLOBE_ALPHA,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
     expect(rec.length).toBe(32); // 128 bytes
@@ -103,10 +106,12 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     // dropped the 10th arg zeroes it and fails here. Dyadic sentinel ⇒ exact toBe.
     expect(rec[28]).toBe(OCEAN_ROUGHNESS); // byte 112
 
-    // Indices 29..31 (bytes 116..127) are true padding — the page-table
-    // window and the LOD-overlay debug toggle that used to fill this row
-    // were removed when Task 5 deleted the page table itself.
-    expect(rec[29]).toBe(0);
+    // baseGlobeAlpha — float index 29 (byte 116), the descent-fade
+    // multiplier the base-globe pass now carries. A packer that dropped the
+    // 11th arg zeroes it. Dyadic sentinel ⇒ exact toBe.
+    expect(rec[29]).toBe(BASE_GLOBE_ALPHA); // byte 116
+
+    // Indices 30..31 (bytes 120..127) are true padding.
     expect(rec[30]).toBe(0);
     expect(rec[31]).toBe(0);
   });

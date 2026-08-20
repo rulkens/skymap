@@ -350,8 +350,15 @@ export function createEarthRenderer(
       targets: [
         {
           format: targetFormat,
-          // No blend descriptor = opaque replace; the fragment emits alpha=1
-          // and the foreground composite blends the whole layer.
+          // Straight-alpha OVER (matches cloudShellRenderer): the fragment's
+          // alpha is `u.baseGlobeAlpha` (see packEarthSurfaceUniforms), 1
+          // outside the descent-fade band. At alpha 1 this reduces to the
+          // old opaque replace exactly (dst factor 1-1=0), so the fade is
+          // invisible until the camera actually enters the band.
+          blend: {
+            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          },
         },
       ],
     },

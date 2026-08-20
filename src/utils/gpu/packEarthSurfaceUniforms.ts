@@ -62,7 +62,8 @@
  *   f32 26     (byte 104..107): cloudShellRadius (unit-sphere shell radius)
  *   f32 27     (byte 108..111): ambientLight (night-side floor; Earth-scoped)
  *   f32 28     (byte 112..115): oceanRoughness (open-water GGX roughness; Earth-scoped)
- *   f32 29..31 (byte 116..127): padding (zeroed)
+ *   f32 29     (byte 116..119): baseGlobeAlpha (descent-fade multiplier under the tile cut)
+ *   f32 30..31 (byte 120..127): padding (zeroed)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
@@ -79,6 +80,10 @@
  * @param oceanRoughness      Open-water GGX perceptual roughness (the ocean
  *                            glint breadth); Earth-scoped override of the
  *                            `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`.
+ * @param baseGlobeAlpha      Base-globe descent-fade multiplier (see
+ *                            `baseGlobeFadeAlpha`) — 1 outside the fade band
+ *                            or before the tile path engages, dissolving to
+ *                            0 as the resident tile cut takes over the cap.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -99,6 +104,7 @@ export function packEarthSurfaceUniforms(
   cloudShellRadius: number,
   ambientLight: number,
   oceanRoughness: number,
+  baseGlobeAlpha: number,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -113,6 +119,7 @@ export function packEarthSurfaceUniforms(
   out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
   out[27] = ambientLight; // byte 108 — night-side floor, fills the former pad
   out[28] = oceanRoughness; // byte 112 — open-water GGX roughness, new 16-byte row
-  // Indices 29..31 stay the Float32Array's zero fill (true padding).
+  out[29] = baseGlobeAlpha; // byte 116 — descent-fade multiplier under the tile cut
+  // Indices 30..31 stay the Float32Array's zero fill (true padding).
   return out;
 }

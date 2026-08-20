@@ -11,11 +11,19 @@
  * `earthRenderer.draw` writes it into a single non-dynamic uniform buffer, so
  * this row must draw Earth's base globe AT MOST once per frame (see that
  * renderer's header for the `writeBuffer`-vs-`submit` race a second draw
- * would trigger). The detail-tile draw follows, gated on `earthTiles`'
- * last-cut being non-empty and its atlas view being live — an empty cut is a
- * legitimate "nothing resident yet, base globe alone" frame, not a bug — and
- * MUST come after the base globe so the tile renderer's `nearer-or-equal`
- * depth compare resolves ties in its favour.
+ * would trigger) — the fade below rides that same write, never a second one.
+ * The detail-tile draw follows, gated on `earthTiles`' last-cut being
+ * non-empty and its atlas view being live — an empty cut is a legitimate
+ * "nothing resident yet, base globe alone" frame, not a bug — and MUST come
+ * after the base globe so the tile renderer's `nearer-or-equal` depth compare
+ * resolves ties in its favour.
+ *
+ * Once that tile gate is live, the base globe's alpha dissolves through
+ * `baseGlobeFadeAlpha` (`EARTH_BASE_GLOBE_FADE_*_ALTITUDE_KM`) so the tile
+ * mesh — which fully covers the cap by then — stops fighting the base
+ * globe's non-RTC f32 depth for it at low altitude; the draw call itself is
+ * skipped at alpha 0. Outside that gate alpha is pinned to 1, the failure
+ * floor for every disengaged case (no manifest, empty cut, no atlas).
  *
  * Reads the slab's f64 `view.slab.vp`, not the f32-narrowed `view.vp`, like the
  * other near-field sphere layers: Earth sits ~4.85e-12 Mpc from the render
@@ -51,6 +59,7 @@ import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurface
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
+import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -185,41 +194,59 @@ export const earthLayer: ContentLayer = {
     // dimming (nightLights reads cloudAlphaHere with no strength scalar).
     // Fixing that needs one more uniform field — deferred rather than paid
     // for a night-side-only artifact.
-    const cloudFade = cloudDeckFade(earthCameraDistanceMpc(earthState.positionMpc, ctx), radiusMpc);
+    const cameraDistanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
+    const cloudFade = cloudDeckFade(cameraDistanceMpc, radiusMpc);
     const cloudShadowStrength = EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade;
-    renderer.draw(
-      pass,
-      packEarthSurfaceUniforms(
-        mvp,
-        sun,
-        camLocal,
-        EARTH_SURFACE_PARAMS.roughnessBase,
-        EARTH_SURFACE_PARAMS.f0,
-        EARTH_SURFACE_PARAMS.sunIrradiance,
-        cloudShadowStrength,
-        // Unit-sphere local radius of the SAME shell cloudShellLayer draws, so
-        // the cast shadow and the drawn deck agree by construction.
-        CLOUD_SHELL_PARAMS.radiusRatio,
-        // Live user settings, not the WESL consts (seeded from
-        // EARTH_SURFACE_PARAMS so the defaults match).
-        state.settings.earth.ambientLight,
-        state.settings.earth.oceanRoughness,
-      ),
-    );
 
-    // ── Detail tiles, drawn AFTER the base globe ──────────────────────────
+    // ── Detail tiles, resolved BEFORE the base globe draw ──────────────────
     //
-    // `nearer-or-equal` depth compare on the tile pipeline needs the base
-    // globe's depth already written — see the module header. An empty cut
-    // or a not-yet-engaged atlas is the ordinary pre-residency picture, not
-    // an error, so both null-check away to a no-op rather than throwing.
+    // The base-globe fade below needs to know whether the tile path is
+    // actually alive THIS frame: an empty cut or a not-yet-engaged atlas is
+    // the ordinary pre-residency picture, not an error, and the base globe
+    // MUST stay at its alpha-1 failure floor through it — fading with
+    // nothing covering the cap would punch a hole through to whatever is
+    // behind Earth.
     const tileRenderer = state.gpu.earthSurfaceTileRenderer;
     const earthTiles = state.subsystems.earthTiles;
     const tiles = earthTiles?.getLastCut() ?? [];
     const surfaceAtlasView = earthTiles?.getAtlasView() ?? null;
-    if (tileRenderer !== null && surfaceAtlasView !== null && tiles.length > 0) {
+    const tilesLive = tileRenderer !== null && surfaceAtlasView !== null && tiles.length > 0;
+    const globeAlpha = tilesLive ? baseGlobeFadeAlpha(cameraDistanceMpc, radiusMpc) : 1;
+
+    // Skip the draw call entirely at alpha 0 (the tiles cover the whole cap
+    // by then) — this rides the SAME per-frame uniform write as any other
+    // alpha, never a second `renderer.draw` (see earthRenderer's
+    // at-most-once-per-frame precondition).
+    if (globeAlpha > 0) {
+      renderer.draw(
+        pass,
+        packEarthSurfaceUniforms(
+          mvp,
+          sun,
+          camLocal,
+          EARTH_SURFACE_PARAMS.roughnessBase,
+          EARTH_SURFACE_PARAMS.f0,
+          EARTH_SURFACE_PARAMS.sunIrradiance,
+          cloudShadowStrength,
+          // Unit-sphere local radius of the SAME shell cloudShellLayer draws, so
+          // the cast shadow and the drawn deck agree by construction.
+          CLOUD_SHELL_PARAMS.radiusRatio,
+          // Live user settings, not the WESL consts (seeded from
+          // EARTH_SURFACE_PARAMS so the defaults match).
+          state.settings.earth.ambientLight,
+          state.settings.earth.oceanRoughness,
+          globeAlpha,
+        ),
+      );
+    }
+
+    // ── Detail tiles, drawn AFTER the base globe ──────────────────────────
+    //
+    // `nearer-or-equal` depth compare on the tile pipeline needs the base
+    // globe's depth already written — see the module header.
+    if (tilesLive) {
       const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
-      tileRenderer.draw(pass, {
+      tileRenderer!.draw(pass, {
         tiles,
         frame,
         camPosMpc: view.camPos,
@@ -238,7 +265,7 @@ export const earthLayer: ContentLayer = {
         // DebugPanel's Earth LOD overlay toggle — read live each frame from the
         // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
         debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
-        surfaceAtlasView,
+        surfaceAtlasView: surfaceAtlasView!,
         materialView: renderer.getMapView('material'),
         nightView: renderer.getMapView('night'),
         normalView: renderer.getMapView('normal'),

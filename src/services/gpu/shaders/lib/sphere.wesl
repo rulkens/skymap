@@ -288,9 +288,15 @@ struct RingUniforms {
 // with the page table itself: tile detail now draws in a separate pass
 // ('earthSurfaceTileRenderer', over this base globe) that carries its own
 // per-tile addressing, and the LOD-tint debug view has no per-fragment
-// residency source left in THIS shader to visualise. The struct is back to
-// its pre-virtual-texture 128 bytes, with two trailing pad floats rather
-// than growing a fourth row.
+// residency source left in THIS shader to visualise.
+//
+// 'baseGlobeAlpha' now fills what was the first of those two trailing pad
+// floats (byte 116): the base-globe descent-fade multiplier, 1 outside the
+// fade band or before the tile path engages, dissolving toward 0 as the
+// resident detail-tile cut takes over the visible cap (see
+// 'earthLayer.ts's module header for the depth-fight this resolves). The
+// fragment multiplies it into its output alpha; the pipeline blends
+// straight-alpha OVER so alpha 1 renders identically to the old opaque draw.
 //
 // ## Byte layout (uniform address space)
 //
@@ -304,7 +310,8 @@ struct RingUniforms {
 //   offset 104..107: cloudShellRadius    (f32 -- unit-sphere shell radius; unused in A)
 //   offset 108..111: ambientLight        (f32 -- night-side floor; Earth-scoped)
 //   offset 112..115: oceanRoughness      (f32 -- open-water GGX roughness; Earth-scoped)
-//   offset 116..123: _pad0/_pad1         (f32 x2 -- zeroed, rounds to 128 / 16-byte)
+//   offset 116..119: baseGlobeAlpha      (f32 -- descent-fade multiplier under the tile cut)
+//   offset 120..123: _pad1               (f32 -- zeroed, rounds to 128 / 16-byte)
 //   total: 128 bytes.
 //
 // The CPU side uploads 32 f32s. The single source of truth for that packing is
@@ -322,7 +329,7 @@ struct EarthSurfaceUniforms {
   cloudShellRadius: f32,
   ambientLight: f32,
   oceanRoughness: f32,
-  _pad0: f32,
+  baseGlobeAlpha: f32,
   _pad1: f32,
 };
 
