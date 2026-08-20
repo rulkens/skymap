@@ -31,8 +31,9 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { RotationElements } from '../../@types/scene/RotationElements';
 import { degToRad } from '../math/degToRad';
 import { multiply3x3 } from '../math/multiply3x3';
+import { rotXMat3 } from '../math/rotXMat3';
 
-// Column-major elementary rotations (cell row r, column c at m[c*3 + r]); each
+// Column-major elementary rotation (cell row r, column c at m[c*3 + r]); each
 // column is the world image of a body-fixed basis vector under an active,
 // right-handed (CCW) rotation of the given angle.
 function rotZ(rad: number): Mat3 {
@@ -41,18 +42,12 @@ function rotZ(rad: number): Mat3 {
   return [c, s, 0, -s, c, 0, 0, 0, 1];
 }
 
-function rotX(rad: number): Mat3 {
-  const c = Math.cos(rad);
-  const s = Math.sin(rad);
-  return [1, 0, 0, 0, c, s, 0, -s, c];
-}
-
 export function rotationFromIau(
   el: RotationElements,
   primeMeridianDeg: number = el.primeMeridianDeg,
 ): Mat3 {
   const spinAboutPole = rotZ(degToRad(primeMeridianDeg));
-  const tipToDec = rotX(degToRad(90 - el.poleDecDeg));
+  const tipToDec = rotXMat3(degToRad(90 - el.poleDecDeg));
   const swingToRa = rotZ(degToRad(90 + el.poleRaDeg));
 
   return multiply3x3(multiply3x3(swingToRa, tipToDec), spinAboutPole);

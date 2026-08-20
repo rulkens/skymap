@@ -13,41 +13,13 @@ import { directionToLonLatDeg } from '../../../src/utils/scene/directionToLonLat
 import { camPosLocal } from '../../../src/utils/camera/camPosLocal';
 import { yawPitchToDir } from '../../../src/utils/camera/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../src/utils/math/rotateVec3ByTightMat3';
+import { multiply3x3 } from '../../../src/utils/math/multiply3x3';
+import { rotXMat3 } from '../../../src/utils/math/rotXMat3';
+import { rotYMat3 } from '../../../src/utils/math/rotYMat3';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import type { LonLatDeg } from '../../../src/@types/scene/LonLatDeg';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-
-/** An exact (sin/cos-built, orthonormal to float64 precision) rotation about
- *  the world Y axis — a stand-in for a body's axial orientation / an
- *  orientation-frame basis that avoids the registry's ~1e-6 truncated
- *  literals, so this test can hold a tight tolerance. Column-major, matching
- *  the project's `Mat3` convention. */
-function rotY(rad: number): Mat3 {
-  const c = Math.cos(rad);
-  const s = Math.sin(rad);
-  return [c, 0, -s, 0, 1, 0, s, 0, c];
-}
-
-/** Same, about the world X axis — composed with `rotY` to build a
- *  non-degenerate two-axis tilt (a single-axis rotation would leave that
- *  axis's own component untested). */
-function rotX(rad: number): Mat3 {
-  const c = Math.cos(rad);
-  const s = Math.sin(rad);
-  return [1, 0, 0, 0, c, s, 0, -s, c];
-}
-
-function mulMat3(a: Mat3, b: Mat3): Mat3 {
-  const out = new Array(9).fill(0) as Mat3;
-  for (let col = 0; col < 3; col++) {
-    for (let row = 0; row < 3; row++) {
-      let sum = 0;
-      for (let k = 0; k < 3; k++) sum += a[k * 3 + row]! * b[col * 3 + k]!;
-      out[col * 3 + row] = sum;
-    }
-  }
-  return out;
-}
 
 /** Read back the sub-camera lon/lat the SAME way `earthTileSubsystem`'s
  *  `getDebugSnapshot` does: camera position in the body's local frame
@@ -90,8 +62,8 @@ describe('lonLatFocusPose', () => {
   ];
 
   it('composes a pose whose sub-camera readout matches the input lon/lat', () => {
-    const bodyOrientation = mulMat3(rotY(0.41), rotX(0.18)); // axial-tilt stand-in
-    const frameBasis = rotY(-0.92); // a non-identity orientation-frame basis
+    const bodyOrientation = multiply3x3(rotYMat3(0.41), rotXMat3(0.18)); // axial-tilt stand-in
+    const frameBasis = rotYMat3(-0.92); // a non-identity orientation-frame basis
 
     for (const point of points) {
       const pose = lonLatFocusPose(point, target, distance, bodyOrientation, frameBasis);
@@ -109,8 +81,8 @@ describe('lonLatFocusPose', () => {
   });
 
   it('preserves distance and re-centres the target on the body centre', () => {
-    const bodyOrientation = rotY(0.3);
-    const frameBasis = rotX(0.2);
+    const bodyOrientation = rotYMat3(0.3);
+    const frameBasis = rotXMat3(0.2);
     const pose = lonLatFocusPose(
       { lonDeg: 12.53, latDeg: 55.67 },
       target,
@@ -124,8 +96,13 @@ describe('lonLatFocusPose', () => {
   });
 
   it('is the identity map at (lon=0, lat=0) under identity bases: eye sits behind the target on world +Z', () => {
-    const identity: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    const pose = lonLatFocusPose({ lonDeg: 0, latDeg: 0 }, target, distance, identity, identity);
+    const pose = lonLatFocusPose(
+      { lonDeg: 0, latDeg: 0 },
+      target,
+      distance,
+      IDENTITY_MAT3,
+      IDENTITY_MAT3 as Mat3,
+    );
     const dir = yawPitchToDir(pose.yaw, pose.pitch);
     // Sub-camera at local +X (lon=0, lat=0) means the eye sits along world +X
     // from the target (identity body orientation) — dir_world = eye - target,
