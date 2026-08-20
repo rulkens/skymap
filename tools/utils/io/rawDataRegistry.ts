@@ -266,6 +266,23 @@ export const RAW_DATA = {
       'MCPM-extracted SDSS Cosmic Web tiers — `mcpm_sdss_d{2,4,8}.npy`. Produced once per VAC release by the Python extractor; mirrored to R2.',
   },
 
+  // ─── Edenhofer local dust volume ───────────────────────────────────────
+
+  'edenhofer.dir': {
+    path: 'data/raw/edenhofer',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Edenhofer et al. 2024 parsec-scale dust map raw-data directory — holds the 3.25 GB mean_and_std_healpix.fits plus the official interp2box.py/interp2lbd.py resamplers.',
+  },
+  'edenhofer.cache-dir': {
+    path: 'data/raw/edenhofer/cache',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Per-tier mean/std .npy cubes produced by tools/volumes/extractDustCube.py (edenhofer_{mean,std}_{128,256,384}.npy), consumed by tools/volumes/buildDustVolume.ts.',
+  },
+
   // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
 
   'polyphorm.dir': {
