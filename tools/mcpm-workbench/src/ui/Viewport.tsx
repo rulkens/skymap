@@ -134,6 +134,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let rebuildTimer = 0;
     let harness: McpmHarness | null = null;
     let renderGraph: RenderGraph | null = null;
+    // Task P34: identifies THIS rebuild's device to its own `device.lost` callback —
+    // reassigned the instant a NEWER rebuild acquires its device (before that
+    // rebuild's harness exists), so a stale device's loss can't clobber a working
+    // one's status. Mirrors the `harness !== h` staleness check the async read-back
+    // paths use, one step earlier in the build (device exists, harness doesn't yet).
+    let currentDevice: GPUDevice | null = null;
     let points: CatalogPoints | null = null;
     // The T16 export leg's other half of buildFromPoints' local `weights` —
     // held here so runExport (below) can reach the SAME weights the running
@@ -507,6 +513,24 @@ function Viewport({ store }: ViewportProps): ReactNode {
           maxBufferSize: Number.MAX_SAFE_INTEGER, // clamped to the adapter's max by initGpu
           maxStorageBufferBindingSize: Number.MAX_SAFE_INTEGER,
         },
+      });
+      // Task P34: wired here, the one call site a device ever comes from. 'destroyed'
+      // is an intentional device.destroy() (a future rebuild/dispose path, not one
+      // this codebase calls yet) — never a real loss, so it's excluded on top of the
+      // currentDevice staleness check. No auto-recreation: this only stops the loop
+      // and reports; the maintainer reloads.
+      currentDevice = gpu.device;
+      void gpu.device.lost.then((info) => {
+        if (disposed || currentDevice !== gpu.device || info.reason === 'destroyed') return;
+        if (rafHandle) cancelAnimationFrame(rafHandle);
+        rafHandle = 0;
+        store.setState((st) => ({
+          ...st,
+          catalog: setCatalogStatusMessage(
+            st.catalog,
+            `GPU device lost (${info.reason}) — reload the page`,
+          ),
+        }));
       });
 
       const h = await createMcpmHarness({
