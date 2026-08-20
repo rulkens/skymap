@@ -220,17 +220,7 @@ export function cutSurfaceTiles(input: {
     // `resolveCutResidency`). No resident tile anywhere in the chain drops
     // the leaf from `cut` entirely; the base globe (Task 5) already covers
     // that ground.
-    const resolved = resolveCutResidency({
-      kind,
-      z,
-      x,
-      y,
-      u0,
-      v0,
-      baseLevel,
-      tilePx,
-      residentSlot,
-    });
+    const resolved = resolveCutResidency({ kind, z, x, y, baseLevel, residentSlot });
     if (resolved !== null) {
       cut.push({
         id: { z, x, y },
@@ -251,46 +241,46 @@ export function cutSurfaceTiles(input: {
 
 /**
  * resolveCutResidency — walks from the leaf's own tile up toward (but not
- * including) `baseLevel`, returning the first resident hit. `quadrantOffset`
- * is `[u0, v0]`'s `[0,1)` fractional position inside the resolved ancestor's
- * footprint — the CPU-side, once-per-leaf twin of `earth/fragment.wesl`'s
- * per-fragment `cellCols`/`fract` math (lines ~241-245): `u0 * ancestorCols`
- * for x, `(1 - v0) * ancestorRows` for y (mesh `v` counts north, tile rows
- * count south, hence the flip). At `levelDelta` 0 this is exactly `[0, 0]`
- * by construction (`u0`/`v0` are already exact multiples of the leaf's own
- * tile grid).
+ * including) `baseLevel`, returning the first resident hit, FLATTENED into
+ * the leaf's own absolute atlas rect (never a raw ancestor rect + a
+ * fallback-depth field for the renderer to apply later — there is no later
+ * apply site, so an unflattened rect was silently wrong at every
+ * `levelDelta > 0` leaf; see the git history of this function for the bug).
+ * `[x, y]`'s low `levelDelta` bits give its position inside the resolved
+ * ancestor's `2^levelDelta x 2^levelDelta` block of leaf-level tiles —
+ * `x`'s directly (tile columns and atlas-uv `u` both increase east), `y`'s
+ * AS-IS too: tile rows count south from the north pole, which is exactly
+ * the atlas image's own top-to-bottom order (`TextureAtlas.slotUv`'s origin
+ * is a slot's NORTH/top row) — no flip needed, unlike mesh-`v`. At
+ * `levelDelta` 0 the block is `1x1` and the leaf's rect is the ancestor's
+ * own, unchanged.
  */
 function resolveCutResidency(input: {
   readonly kind: EarthTileKind;
   readonly z: number;
   readonly x: number;
   readonly y: number;
-  readonly u0: number;
-  readonly v0: number;
   readonly baseLevel: number;
-  readonly tilePx: number;
   readonly residentSlot: (tile: EarthTileId) => ResidentLookupResult;
 }): SurfaceCutTile['resident'] | null {
-  const { kind, z, x, y, u0, v0, baseLevel, tilePx, residentSlot } = input;
+  const { kind, z, x, y, baseLevel, residentSlot } = input;
 
   for (let levelDelta = 0; z - levelDelta > baseLevel; levelDelta++) {
     const ancestorZ = z - levelDelta;
-    const found = residentSlot({
-      kind,
-      z: ancestorZ,
-      x: x >> levelDelta,
-      y: y >> levelDelta,
-    });
+    const ancX = x >> levelDelta;
+    const ancY = y >> levelDelta;
+    const found = residentSlot({ kind, z: ancestorZ, x: ancX, y: ancY });
     if (found === null) continue;
-    const ancestorCols = earthTileColumns(ancestorZ, tilePx);
-    const ancestorRows = ancestorCols / 2;
-    const frac = (n: number) => n - Math.floor(n);
+    const span = 1 << levelDelta;
+    const offsetU = (x - ancX * span) / span;
+    const offsetV = (y - ancY * span) / span;
     return {
       slot: found.slot,
-      atlasUvOrigin: found.atlasUvOrigin,
-      atlasUvScale: found.atlasUvScale,
-      levelDelta,
-      quadrantOffset: [frac(u0 * ancestorCols), frac((1 - v0) * ancestorRows)],
+      atlasUvOrigin: [
+        found.atlasUvOrigin[0] + offsetU * found.atlasUvScale[0],
+        found.atlasUvOrigin[1] + offsetV * found.atlasUvScale[1],
+      ],
+      atlasUvScale: [found.atlasUvScale[0] / span, found.atlasUvScale[1] / span],
     };
   }
   return null;

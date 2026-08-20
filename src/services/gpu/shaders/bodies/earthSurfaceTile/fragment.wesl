@@ -31,6 +31,17 @@ import package::lib::math::TAU;
 @group(0) @binding(8) var normalTexture: texture_2d<f32>;
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
 
+// Mirrored from 'EARTH_TILE_ATLAS_SIDE' (earthTileParams.ts) -- parity-tested
+// in constants.parity.test.ts, ?static linking does no value injection. Half
+// an ATLAS texel, in atlas-uv units: the inset that keeps a bilinear tap at
+// a resolved rect's edge from crossing into a DIFFERENT slot's pixels. The
+// sampler's own 'clamp-to-edge' (see the renderer) only guards the ATLAS's
+// own edge, not a slot's -- this is the guard the old page-table shader's
+// 'TILE_HALF_TEXEL' clamp was, ported to a rect already expressed as
+// absolute atlas uv rather than slot-local uv + a separate cell offset.
+const EARTH_TILE_ATLAS_SIDE: f32 = 8192.0;
+const EARTH_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_ATLAS_SIDE;
+
 // Inverse of 'equirectUvToDirection', bakeSurfaceTileMesh.ts's CPU twin --
 // duplicated from earth/fragment.wesl rather than imported: it lives
 // inline there, not in 'lib/', and this task creates new files only.
@@ -45,13 +56,22 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let equirectUv = dirToEquirectUv(Ng);
 
-  let atlasUv = in.atlasUvOrigin + in.uv * in.atlasUvScale;
+  // Clamped to the rect's interior BEFORE sampling: the raw map can land a
+  // bilinear tap's footprint half a texel past a resolved rect's edge,
+  // which is a DIFFERENT slot's pixels (or, inside a levelDelta>0
+  // ancestor's own image, still correct data -- clamping there just insets
+  // by a fraction of a texel, harmlessly).
+  let atlasUvRaw = in.atlasUvOrigin + in.uv * in.atlasUvScale;
+  let atlasUvMin = in.atlasUvOrigin + vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL);
+  let atlasUvMax = in.atlasUvOrigin + in.atlasUvScale - vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL);
+  let atlasUv = clamp(atlasUvRaw, atlasUvMin, atlasUvMax);
   let baseAlbedo = textureSampleLevel(surfaceTexture, atlasSampler, atlasUv, 0.0).rgb;
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
   let nEnc = textureSample(normalTexture, baseSampler, equirectUv).rg;
   let n = perturbNormal(Ng, in.tangent, nEnc);
-  let v = normalize(u.camPosLocal - Ng);
+  // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
+  let v = normalize(in.viewDirLocal);
   let l = u.sunDirLocal;
 
   let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);

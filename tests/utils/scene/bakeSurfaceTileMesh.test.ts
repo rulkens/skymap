@@ -21,14 +21,16 @@ describe('bakeSurfaceTileMesh', () => {
     expect(mesh.indices.length).toBe(RESOLUTION * RESOLUTION * 6);
   });
 
-  it('corner uvs are exactly (0,0)/(1,0)/(0,1)/(1,1)', () => {
+  it('corner uvs are image-space: (0,1)/(1,1)/(0,0)/(1,0), v=0 at the NORTH edge', () => {
     const mesh = bakeSurfaceTileMesh(TILE_ID, RESOLUTION);
     const row = RESOLUTION + 1;
     const uvAt = (idx: number): [number, number] => [mesh.uvs[idx * 2]!, mesh.uvs[idx * 2 + 1]!];
-    expect(uvAt(0)).toEqual([0, 0]);
-    expect(uvAt(RESOLUTION)).toEqual([1, 0]);
-    expect(uvAt(RESOLUTION * row)).toEqual([0, 1]);
-    expect(uvAt(row * row - 1)).toEqual([1, 1]);
+    // j=0 is the tile's SOUTH edge (mesh-v min); image-space v is 1 there.
+    expect(uvAt(0)).toEqual([0, 1]);
+    expect(uvAt(RESOLUTION)).toEqual([1, 1]);
+    // j=RESOLUTION is the tile's NORTH edge (mesh-v max); image-space v is 0.
+    expect(uvAt(RESOLUTION * row)).toEqual([0, 0]);
+    expect(uvAt(row * row - 1)).toEqual([1, 0]);
   });
 
   it('positions are origin-relative: vertex 0 is exactly [0,0,0], every other vertex stays within a small multiple of the tile angular extent', () => {

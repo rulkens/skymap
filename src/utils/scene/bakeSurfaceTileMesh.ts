@@ -45,8 +45,12 @@ export function bakeSurfaceTileMesh(
       positions[vi * 3] = dir[0] - originDir[0];
       positions[vi * 3 + 1] = dir[1] - originDir[1];
       positions[vi * 3 + 2] = dir[2] - originDir[2];
+      // Image-space v (0 at the tile's NORTH edge, matching the atlas's own
+      // top-to-bottom row order) rather than mesh-v's south-up sense — the
+      // fragment maps this straight onto `atlasUvOrigin + uv * atlasUvScale`
+      // with no separate flip, so a mismatch here mirrors every tile.
       uvs[vi * 2] = i / resolution;
-      uvs[vi * 2 + 1] = j / resolution;
+      uvs[vi * 2 + 1] = 1 - j / resolution;
       // Same unit-east tangent as cubeSphereMesh/equirectUvToDirection's own
       // lon convention — latitude-independent, no pole special-case needed.
       const lon = (u - TEXTURE_PRIME_MERIDIAN_U) * 2 * Math.PI;

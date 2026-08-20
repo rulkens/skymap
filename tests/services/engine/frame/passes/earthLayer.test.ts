@@ -507,8 +507,6 @@ describe('earthLayer.draw — detail tiles', () => {
         slot: 0,
         atlasUvOrigin: [0, 0],
         atlasUvScale: [0.1, 0.1],
-        levelDelta: 0,
-        quadrantOffset: [0, 0],
       },
     },
   ];

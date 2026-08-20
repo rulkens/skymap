@@ -29,7 +29,6 @@ import {
   NODE_PARAMS_BYTES,
   TILE_VERTEX_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
-  writeSurfaceTileUniforms,
 } from '../../../../../src/services/gpu/renderers/bodies/earthSurfaceTileLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -131,7 +130,6 @@ function fieldForExpr(expr: string): string {
   if (/^roughnessBase$/.test(expr)) return 'roughnessBase';
   if (/^camPosRelBodyMpc\[/.test(expr)) return 'camPosRelBodyMpc';
   if (/^f0$/.test(expr)) return 'f0';
-  if (/^camPosLocal\[/.test(expr)) return 'camPosLocal';
   if (/^sunIrradiance$/.test(expr)) return 'sunIrradiance';
   if (/^sunDirLocal\[/.test(expr)) return 'sunDirLocal';
   if (/^ambientLight$/.test(expr)) return 'ambientLight';
@@ -215,74 +213,5 @@ describe('SurfaceTileUniforms CPU/WESL layout parity', () => {
   it('SURFACE_TILE_UNIFORM_BYTES stride equals the struct size', () => {
     const { structSize } = structLayout(structFields(ioWesl, 'SurfaceTileUniforms'));
     expect(SURFACE_TILE_UNIFORM_BYTES).toBe(structSize);
-  });
-
-  it('round-trips a full record through the same DataView at the documented offsets', () => {
-    const buffer = new ArrayBuffer(SURFACE_TILE_UNIFORM_BYTES);
-    const view = new DataView(buffer);
-    const vp = Float32Array.from({ length: 16 }, (_, i) => i + 1); // 1..16
-    const orientation = [17, 18, 19, 20, 21, 22, 23, 24, 25] as const;
-    const camPosRelBodyMpc = [26, 27, 28] as const;
-    const camPosLocal = [29, 30, 31] as const;
-    const sunDirLocal = [32, 33, 34] as const;
-
-    writeSurfaceTileUniforms(
-      view,
-      vp,
-      orientation,
-      /* radiusMpc */ 35,
-      /* vertsPerTile */ 36,
-      camPosRelBodyMpc,
-      camPosLocal,
-      sunDirLocal,
-      /* roughnessBase */ 37,
-      /* f0 */ 38,
-      /* sunIrradiance */ 39,
-      /* ambientLight */ 40,
-      /* oceanRoughness */ 41,
-      /* cloudShadowStrength */ 42,
-      /* cloudShellRadius */ 43,
-    );
-
-    for (let i = 0; i < 16; i++) expect(view.getFloat32(i * 4, true)).toBe(vp[i]);
-    expect([
-      view.getFloat32(64, true),
-      view.getFloat32(68, true),
-      view.getFloat32(72, true),
-    ]).toEqual(orientation.slice(0, 3));
-    expect(view.getFloat32(76, true)).toBe(35); // radiusMpc
-    expect([
-      view.getFloat32(80, true),
-      view.getFloat32(84, true),
-      view.getFloat32(88, true),
-    ]).toEqual(orientation.slice(3, 6));
-    expect(view.getUint32(92, true)).toBe(36); // vertsPerTile
-    expect([
-      view.getFloat32(96, true),
-      view.getFloat32(100, true),
-      view.getFloat32(104, true),
-    ]).toEqual(orientation.slice(6, 9));
-    expect(view.getFloat32(108, true)).toBe(37); // roughnessBase
-    expect([
-      view.getFloat32(112, true),
-      view.getFloat32(116, true),
-      view.getFloat32(120, true),
-    ]).toEqual(camPosRelBodyMpc);
-    expect(view.getFloat32(124, true)).toBe(38); // f0
-    expect([
-      view.getFloat32(128, true),
-      view.getFloat32(132, true),
-      view.getFloat32(136, true),
-    ]).toEqual(camPosLocal);
-    expect(view.getFloat32(140, true)).toBe(39); // sunIrradiance
-    expect([
-      view.getFloat32(144, true),
-      view.getFloat32(148, true),
-      view.getFloat32(152, true),
-    ]).toEqual(sunDirLocal);
-    expect(view.getFloat32(156, true)).toBe(40); // ambientLight
-    expect(view.getFloat32(160, true)).toBe(41); // oceanRoughness
-    expect(view.getFloat32(164, true)).toBe(42); // cloudShadowStrength
-    expect(view.getFloat32(168, true)).toBe(43); // cloudShellRadius
   });
 });

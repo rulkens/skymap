@@ -36,7 +36,6 @@ import type {
   EarthSurfaceTileDrawArgs,
 } from '../../../../@types/rendering/EarthSurfaceTileRenderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { SurfaceTileMeshCache } from '../../resources/surfaceTileMeshCache';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { rotateVec3ByTightMat3 } from '../../../../utils/math/rotateVec3ByTightMat3';
@@ -51,17 +50,6 @@ import {
   writeTileVertex,
   writeSurfaceTileUniforms,
 } from './earthSurfaceTileLayout';
-
-/** Rotate by `m`'s TRANSPOSE — valid as `m`'s inverse because it's a rotation.
- *  (The forward direction reuses the existing `rotateVec3ByTightMat3`; this
- *  transpose has no existing counterpart.) */
-function inverseRotateByMat3(m: Readonly<Mat3>, v: Readonly<Vec3>): Vec3 {
-  return [
-    m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
-    m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
-    m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
-  ];
-}
 
 /**
  * @param resolution The mesh grid resolution `meshCache` bakes at — MUST
@@ -93,8 +81,10 @@ export function createEarthSurfaceTileRenderer(
     addressModeU: 'repeat',
     addressModeV: 'clamp-to-edge',
   });
-  // atlasSampler mirrors earthRenderer's tileSampler: clamp both axes (a
-  // slot's neighbour texel belongs to an unrelated tile), single mip level.
+  // atlasSampler mirrors earthRenderer's tileSampler: clamp both axes (only
+  // guards the ATLAS TEXTURE's own edge — a resolved rect's edge, one slot
+  // away from an unrelated tile's pixels, is guarded separately by the
+  // fragment's own half-texel uv clamp, see fragment.wesl), single mip level.
   const atlasSampler = device.createSampler({
     label: 'earth-surface-tile-atlas-sampler',
     magFilter: 'linear',
@@ -255,12 +245,6 @@ export function createEarthSurfaceTileRenderer(
       camPosMpc[1] - bodyPositionMpc[1],
       camPosMpc[2] - bodyPositionMpc[2],
     ];
-    const camPosLocalRaw = inverseRotateByMat3(orientation, camPosRelBodyMpc);
-    const camPosLocal: Vec3 = [
-      camPosLocalRaw[0] / radiusMpc,
-      camPosLocalRaw[1] / radiusMpc,
-      camPosLocalRaw[2] / radiusMpc,
-    ];
 
     for (let i = 0; i < tileCount; i++) {
       const tile = tiles[i]!;
@@ -319,7 +303,6 @@ export function createEarthSurfaceTileRenderer(
       radiusMpc,
       vertsPerTile,
       camPosRelBodyMpc,
-      camPosLocal,
       sunDirLocal,
       roughnessBase,
       f0,

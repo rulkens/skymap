@@ -48,6 +48,11 @@ struct TileVertex {
 // per-tile CONSTANTS, '@interpolate(flat)' so every fragment of a triangle
 // reads the exact uploaded value rather than a barycentric restatement of
 // it (see the shader-work convention: every varying costs bandwidth).
+// 'viewDirLocal' is NOT flat: it is 'worldPosRelCam' (small, f64-composed
+// then narrowed once) rotated into the local frame per vertex, forwarded
+// raw for the fragment to normalize -- the cancellation-free replacement
+// for 'camPosLocal - Ng', which subtracts two near-unit f32 vectors and
+// degenerates at metre-scale altitude (see vertex.wesl).
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
   @location(0) uv: vec2<f32>,
@@ -55,6 +60,7 @@ struct VSOut {
   @location(2) tangent: vec3<f32>,
   @location(3) @interpolate(flat) atlasUvOrigin: vec2<f32>,
   @location(4) @interpolate(flat) atlasUvScale: vec2<f32>,
+  @location(5) viewDirLocal: vec3<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance
@@ -69,15 +75,16 @@ struct VSOut {
 // transpose.
 //
 // 'camPosRelBodyMpc' (Mpc, camera minus Earth-centre, f64-composed and
-// narrowed once) and 'camPosLocal' (dimensionless, body-radius units,
-// likewise) are BOTH camera-relative-to-Earth facts, kept as two fields
-// because they serve two different per-fragment reconstructions in two
-// different units -- see the renderer's module header for the derivation
-// of each.
+// narrowed once) is the one camera-relative-to-Earth fact left here --
+// 'camPosLocal' (dimensionless, body-radius units) is GONE: its only
+// reader was the fragment's ocean-glint view vector, which subtracted two
+// near-unit f32 vectors and degenerated at metre-scale altitude (see
+// vertex.wesl's 'viewDirLocal', VSOut's cancellation-free replacement).
 //
 // Byte layout (std140; the sibling-trick pattern 'lib/sphere.wesl' uses
 // throughout -- each vec3's trailing 4-byte pad is filled by the next
-// real scalar):
+// real scalar; 'sunDirLocal' is declared before 'sunIrradiance' so it
+// lands on a 16-byte boundary with no padding gap):
 //
 //   offset   0..63:  vp                  mat4x4<f32>
 //   offset  64..75:  rotCol0             vec3<f32>
@@ -88,19 +95,18 @@ struct VSOut {
 //   offset 108..111: roughnessBase       f32
 //   offset 112..123: camPosRelBodyMpc    vec3<f32>
 //   offset 124..127: f0                  f32
-//   offset 128..139: camPosLocal         vec3<f32>
+//   offset 128..139: sunDirLocal         vec3<f32>
 //   offset 140..143: sunIrradiance       f32
-//   offset 144..155: sunDirLocal         vec3<f32>
-//   offset 156..159: ambientLight        f32
-//   offset 160..163: oceanRoughness      f32
-//   offset 164..167: cloudShadowStrength f32
-//   offset 168..171: cloudShellRadius    f32
-//   total: 176 bytes (rounds to the 16-byte alignment).
+//   offset 144..147: ambientLight        f32
+//   offset 148..151: oceanRoughness      f32
+//   offset 152..155: cloudShadowStrength f32
+//   offset 156..159: cloudShellRadius    f32
+//   total: 160 bytes (already 16-byte aligned).
 //
-// The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
+// The CPU side uploads 40 f32 words via a mixed Float32Array/Uint32Array
 // DataView (only 'vertsPerTile', word 23, is written as a u32). The single
 // source of truth for that packing is 'writeSurfaceTileUniforms' in
-// 'earthSurfaceTileRenderer.ts'.
+// 'earthSurfaceTileLayout.ts'.
 struct SurfaceTileUniforms {
   vp: mat4x4<f32>,
   rotCol0: vec3<f32>,
@@ -111,9 +117,8 @@ struct SurfaceTileUniforms {
   roughnessBase: f32,
   camPosRelBodyMpc: vec3<f32>,
   f0: f32,
-  camPosLocal: vec3<f32>,
-  sunIrradiance: f32,
   sunDirLocal: vec3<f32>,
+  sunIrradiance: f32,
   ambientLight: f32,
   oceanRoughness: f32,
   cloudShadowStrength: f32,

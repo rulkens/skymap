@@ -127,7 +127,7 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.requests.length).toBeGreaterThan(0);
     });
 
-    it('resolves levelDelta: 0 for an exactly resident leaf', () => {
+    it('resolves an exactly resident leaf to the ancestor rect unchanged (levelDelta 0)', () => {
       const z = expectedLevel(1000);
       const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const residentSlot = (tile: EarthTileId) =>
@@ -139,40 +139,59 @@ describe('cutSurfaceTiles', () => {
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       expect(entry!.resident.slot).toBe(7);
-      expect(entry!.resident.levelDelta).toBe(0);
-      expect(entry!.resident.quadrantOffset[0]).toBeCloseTo(0, 12);
-      expect(entry!.resident.quadrantOffset[1]).toBeCloseTo(0, 12);
+      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(0.25, 12);
+      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(0.5, 12);
+      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(0.125, 12);
+      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(0.125, 12);
     });
 
-    it('falls back to a resident ancestor with the correct levelDelta and quadrantOffset', () => {
+    // The seam test C1 exists to pin: a levelDelta-2 leaf's FINAL resolved
+    // rect must be the correct north-anchored 1/16 sub-rect of the
+    // ancestor's own (non-trivial, non-identity) slot rect — catching both
+    // a forgotten flatten (rect left as the ancestor's raw 1x1) and a
+    // south-anchored quadrant math (wrapping to 0 for the southernmost
+    // child, M10). `ancestorRect` is deliberately NOT [0,0]-[1,1]: an
+    // identity rect can't distinguish "flattened correctly" from "origin/
+    // scale passed through untouched".
+    it('flattens a levelDelta-2 fallback to the correct north-anchored 1/16 sub-rect', () => {
       const z = expectedLevel(1000);
       const levelDelta = 2;
       const ancestorZ = z - levelDelta;
       const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const ancX = x >> levelDelta;
       const ancY = y >> levelDelta;
+      const ancestorRect = { atlasUvOrigin: [0.25, 0.5] as const, atlasUvScale: [0.5, 0.5] as const };
       const residentSlot = (tile: EarthTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
-          ? { slot: 3, atlasUvOrigin: [0, 0] as const, atlasUvScale: [1, 1] as const }
+          ? { slot: 3, ...ancestorRect }
           : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
-      expect(entry!.resident.levelDelta).toBe(levelDelta);
 
-      // Hand-computed via integer tile-block arithmetic — the leaf's position
-      // inside the ancestor's 2^levelDelta x 2^levelDelta block of leaf-level
-      // tiles — deliberately NOT the source's continuous-uv/fract formula.
-      // `x`'s low bits give the column fraction directly; the row fraction
-      // uses `y + 1` (the tile's SOUTH edge) because tile rows count south
-      // while the source's quadrantOffset is anchored at the uv-origin
-      // corner `[u0, v0]`, whose `v0` is the tile's south edge.
+      // Hand-computed via integer tile-block arithmetic, independent of the
+      // source's own formula: `[x, y]`'s low 2 bits give the leaf's position
+      // inside the ancestor's 4x4 block of leaf-level tiles. Both `x` (tile
+      // columns) and `y` (tile rows, counting south from the north pole)
+      // increase in the SAME direction as atlas-uv `u`/`v` (the atlas's
+      // origin is a slot's north row) — no north/south flip on either axis,
+      // unlike mesh-v.
       const span = 1 << levelDelta;
-      const expectedU = (x % span) / span;
-      const expectedV = ((y + 1) % span) / span;
-      expect(entry!.resident.quadrantOffset[0]).toBeCloseTo(expectedU, 12);
-      expect(entry!.resident.quadrantOffset[1]).toBeCloseTo(expectedV, 12);
+      const offsetU = (x % span) / span;
+      const offsetV = (y % span) / span;
+      const expectedOrigin: [number, number] = [
+        ancestorRect.atlasUvOrigin[0] + offsetU * ancestorRect.atlasUvScale[0],
+        ancestorRect.atlasUvOrigin[1] + offsetV * ancestorRect.atlasUvScale[1],
+      ];
+      const expectedScale: [number, number] = [
+        ancestorRect.atlasUvScale[0] / span,
+        ancestorRect.atlasUvScale[1] / span,
+      ];
+      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(expectedOrigin[0], 12);
+      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(expectedOrigin[1], 12);
+      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(expectedScale[0], 12);
+      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(expectedScale[1], 12);
     });
 
     it('never resolves an ancestor at or shallower than baseLevel', () => {

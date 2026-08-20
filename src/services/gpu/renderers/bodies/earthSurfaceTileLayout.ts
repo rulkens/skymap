@@ -4,7 +4,7 @@
  * arrays it vertex-pulls from (`array<NodeParams>`, one 32-byte record per
  * cut tile; `array<TileVertex>`, one 48-byte record per drawn CORNER — the
  * mesh is expanded, not indexed; see the renderer's module header) and the
- * 176-byte per-draw `SurfaceTileUniforms` uniform block. The authoritative
+ * 160-byte per-draw `SurfaceTileUniforms` uniform block. The authoritative
  * layout is each WESL struct in `shaders/earthSurfaceTile/io.wesl`; this
  * module is the CPU's single matching statement of all three, in the shape
  * `starCatalogLayout.ts` set for the star pipeline — see
@@ -95,7 +95,7 @@ export function writeTileVertex(
  * comment on that struct for the full field-by-field byte table this
  * constant and `writeSurfaceTileUniforms` are the CPU statement of.
  */
-export const SURFACE_TILE_UNIFORM_BYTES = 176;
+export const SURFACE_TILE_UNIFORM_BYTES = 160;
 
 /**
  * Pack the singleton `SurfaceTileUniforms` block, in the field order the
@@ -113,7 +113,6 @@ export function writeSurfaceTileUniforms(
   radiusMpc: number,
   vertsPerTile: number,
   camPosRelBodyMpc: Readonly<Vec3>,
-  camPosLocal: Readonly<Vec3>,
   sunDirLocal: Readonly<Vec3>,
   roughnessBase: number,
   f0: number,
@@ -155,15 +154,12 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(116, camPosRelBodyMpc[1], true);
   view.setFloat32(120, camPosRelBodyMpc[2], true);
   view.setFloat32(124, f0, true);
-  view.setFloat32(128, camPosLocal[0], true);
-  view.setFloat32(132, camPosLocal[1], true);
-  view.setFloat32(136, camPosLocal[2], true);
+  view.setFloat32(128, sunDirLocal[0], true);
+  view.setFloat32(132, sunDirLocal[1], true);
+  view.setFloat32(136, sunDirLocal[2], true);
   view.setFloat32(140, sunIrradiance, true);
-  view.setFloat32(144, sunDirLocal[0], true);
-  view.setFloat32(148, sunDirLocal[1], true);
-  view.setFloat32(152, sunDirLocal[2], true);
-  view.setFloat32(156, ambientLight, true);
-  view.setFloat32(160, oceanRoughness, true);
-  view.setFloat32(164, cloudShadowStrength, true);
-  view.setFloat32(168, cloudShellRadius, true);
+  view.setFloat32(144, ambientLight, true);
+  view.setFloat32(148, oceanRoughness, true);
+  view.setFloat32(152, cloudShadowStrength, true);
+  view.setFloat32(156, cloudShellRadius, true);
 }

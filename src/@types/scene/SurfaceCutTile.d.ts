@@ -14,14 +14,12 @@ export type SurfaceCutTile = {
   readonly originLocal: Vec3;
   readonly resident: {
     readonly slot: number;
+    /** This leaf's OWN atlas rect, already flattened by
+     *  `cutSurfaceTiles.ts`'s `resolveCutResidency` to the resolved
+     *  ancestor's `1 / 2^levelDelta` sub-rect — never the ancestor's raw
+     *  slot rect. There is no `levelDelta` to apply downstream; a
+     *  flattened rect is the only fact a consumer needs. */
     readonly atlasUvOrigin: readonly [number, number];
     readonly atlasUvScale: readonly [number, number];
-    /** Ancestor steps it took to find a resident tile; 0 = the leaf's own
-     *  exact tile. */
-    readonly levelDelta: number;
-    /** The uv-origin corner's `[0,1)` fractional position inside the
-     *  resolved ancestor's atlas rect — the CPU-side, once-per-leaf twin of
-     *  `earth/fragment.wesl`'s per-fragment `cellCols`/`fract` math. */
-    readonly quadrantOffset: readonly [number, number];
   };
 };

@@ -24,6 +24,14 @@
 // argument that makes 'originRelCamMpc' itself safe to narrow once.
 // Forwarded RAW/unnormalized, as earth/vertex.wesl forwards its local
 // position; the fragment renormalizes after interpolation.
+//
+// 'viewDirLocal' inverts the SAME rotation against '-worldPosRelCam'
+// (camera minus vertex, in world orientation) instead: 'worldPosRelCam' is
+// already small (metres to kilometres in Mpc units) and cancellation-free,
+// so this stays accurate at any altitude down to metre scale -- unlike
+// 'camPosLocal - Ng' (the fragment's old view vector, both near-unit f32
+// values, degenerating at a close surface camera). Forwarded raw for the
+// same reason as 'normalLocal'.
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::NodeParams;
@@ -63,5 +71,10 @@ fn vs(@builtin(vertex_index) vertexIndex: u32) -> VSOut {
   out.tangent = tv.tangent;
   out.atlasUvOrigin = node.atlasUvOrigin;
   out.atlasUvScale = node.atlasUvScale;
+  out.viewDirLocal = vec3<f32>(
+    -dot(u.rotCol0, worldPosRelCam),
+    -dot(u.rotCol1, worldPosRelCam),
+    -dot(u.rotCol2, worldPosRelCam),
+  );
   return out;
 }
