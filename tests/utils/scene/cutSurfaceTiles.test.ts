@@ -132,7 +132,12 @@ describe('cutSurfaceTiles', () => {
       const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const residentSlot = (tile: EarthTileId) =>
         tile.z === z && tile.x === x && tile.y === y
-          ? { slot: 7, atlasUvOrigin: [0.25, 0.5] as const, atlasUvScale: [0.125, 0.125] as const }
+          ? {
+              slot: 7,
+              atlasUvOrigin: [0.25, 0.5] as const,
+              atlasUvScale: [0.125, 0.125] as const,
+              readyAtMs: 42_000,
+            }
           : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
@@ -143,6 +148,53 @@ describe('cutSurfaceTiles', () => {
       expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(0.5, 12);
       expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(0.125, 12);
       expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(0.125, 12);
+      // No other resident ancestor anywhere in the chain: nothing to fade from.
+      expect(entry!.resident.readyAtMs).toBe(42_000);
+      expect(entry!.resident.fallback).toBeNull();
+    });
+
+    it("carries the z-1 ancestor's flattened rect as fallback, and the leaf's own readyAt, when both are resident", () => {
+      const z = expectedLevel(1000);
+      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const parentZ = z - 1;
+      const parentX = x >> 1;
+      const parentY = y >> 1;
+      const leafRect = { atlasUvOrigin: [0.25, 0.5] as const, atlasUvScale: [0.125, 0.125] as const };
+      const parentRect = { atlasUvOrigin: [0.0, 0.25] as const, atlasUvScale: [0.25, 0.25] as const };
+      const residentSlot = (tile: EarthTileId) => {
+        if (tile.z === z && tile.x === x && tile.y === y)
+          return { slot: 7, ...leafRect, readyAtMs: 5_000 };
+        if (tile.z === parentZ && tile.x === parentX && tile.y === parentY)
+          return { slot: 3, ...parentRect, readyAtMs: 1_000 };
+        return null;
+      };
+
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+      const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
+      expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
+      // readyAtMs is the RESOLVED (primary) tile's own timestamp, not the fallback's.
+      expect(entry!.resident.readyAtMs).toBe(5_000);
+      expect(entry!.resident.fallback).not.toBeNull();
+
+      const span = 2;
+      const offsetU = (x - parentX * span) / span;
+      const offsetV = (y - parentY * span) / span;
+      expect(entry!.resident.fallback!.atlasUvOrigin[0]).toBeCloseTo(
+        parentRect.atlasUvOrigin[0] + offsetU * parentRect.atlasUvScale[0],
+        12,
+      );
+      expect(entry!.resident.fallback!.atlasUvOrigin[1]).toBeCloseTo(
+        parentRect.atlasUvOrigin[1] + offsetV * parentRect.atlasUvScale[1],
+        12,
+      );
+      expect(entry!.resident.fallback!.atlasUvScale[0]).toBeCloseTo(
+        parentRect.atlasUvScale[0] / span,
+        12,
+      );
+      expect(entry!.resident.fallback!.atlasUvScale[1]).toBeCloseTo(
+        parentRect.atlasUvScale[1] / span,
+        12,
+      );
     });
 
     // The seam test C1 exists to pin: a levelDelta-2 leaf's FINAL resolved
@@ -166,12 +218,14 @@ describe('cutSurfaceTiles', () => {
       };
       const residentSlot = (tile: EarthTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
-          ? { slot: 3, ...ancestorRect }
+          ? { slot: 3, ...ancestorRect, readyAtMs: 9_000 }
           : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
+      // Only one resident ancestor anywhere in the chain: nothing shallower to fade from.
+      expect(entry!.resident.fallback).toBeNull();
 
       // Hand-computed via integer tile-block arithmetic, independent of the
       // source's own formula: `[x, y]`'s low 2 bits give the leaf's position
@@ -203,7 +257,12 @@ describe('cutSurfaceTiles', () => {
       // so `cut` must still come back empty.
       const residentSlot = (tile: EarthTileId) =>
         tile.z === BASE_LEVEL
-          ? { slot: 0, atlasUvOrigin: [0, 0] as const, atlasUvScale: [1, 1] as const }
+          ? {
+              slot: 0,
+              atlasUvOrigin: [0, 0] as const,
+              atlasUvScale: [1, 1] as const,
+              readyAtMs: 0,
+            }
           : null;
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       expect(result.cut).toEqual([]);
@@ -241,7 +300,9 @@ describe('cutSurfaceTiles', () => {
         atlasUvScale: [0.5, 0.5] as const,
       };
       const residentSlot = (tile: EarthTileId) =>
-        tile.z === z7 && tile.x === z7x && tile.y === z7y ? { slot: 3, ...ancestorRect } : null;
+        tile.z === z7 && tile.x === z7x && tile.y === z7y
+          ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
+          : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
 
@@ -291,7 +352,12 @@ describe('cutSurfaceTiles', () => {
 
       const residentSlot = (tile: EarthTileId) =>
         tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
-          ? { slot: 1, atlasUvOrigin: [0, 0] as const, atlasUvScale: [1, 1] as const }
+          ? {
+              slot: 1,
+              atlasUvOrigin: [0, 0] as const,
+              atlasUvScale: [1, 1] as const,
+              readyAtMs: 0,
+            }
           : null;
       const result = cutSurfaceTiles({ ...input, residentSlot });
       expect(result.requests.requests.some((r) => r.tile.z === maxLevel)).toBe(true);

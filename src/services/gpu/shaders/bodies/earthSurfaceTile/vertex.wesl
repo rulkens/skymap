@@ -71,6 +71,9 @@ fn vs(@builtin(vertex_index) vertexIndex: u32) -> VSOut {
   out.tangent = tv.tangent;
   out.atlasUvOrigin = node.atlasUvOrigin;
   out.atlasUvScale = node.atlasUvScale;
+  out.fallbackUvOrigin = node.fallbackUvOrigin;
+  out.fallbackUvScale = node.fallbackUvScale;
+  out.fadeWeight = node.fadeWeight;
   // Scaled into body-radius units: raw Mpc magnitudes at low altitude
   // (~1e-19 at 4 km) SQUARE into f32 denormal range in the fragment's
   // normalize(), which flush-to-zero GPUs collapse to 0 -> NaN -- the

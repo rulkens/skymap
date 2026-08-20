@@ -27,6 +27,18 @@ struct NodeParams {
   // Task 2's ancestor-fallback resolution) -- no page-table indirection.
   atlasUvOrigin: vec2<f32>,
   atlasUvScale: vec2<f32>,
+  // The next resident ancestor strictly above the resolved tile, flattened
+  // into this leaf's own sub-rect the same way -- the coarser imagery the
+  // fragment crossfades FROM. Equal to atlasUvOrigin/atlasUvScale (and
+  // fadeWeight forced to 1) when no deeper resident ancestor exists --
+  // `SurfaceCutTile.resident.fallback === null`'s CPU-side encoding, so the
+  // fragment always has a valid second rect to sample.
+  fallbackUvOrigin: vec2<f32>,
+  fallbackUvScale: vec2<f32>,
+  // clamp((nowMs - readyAtMs) / EARTH_TILE_CROSSFADE_MS, 0, 1), computed
+  // once per tile in earthSurfaceTileRenderer.ts's draw() (nowMs sampled
+  // once per frame, not per tile) -- 1.0 is the "no fade" fast path.
+  fadeWeight: f32,
 };
 
 struct TileVertex {
@@ -61,6 +73,11 @@ struct VSOut {
   @location(3) @interpolate(flat) atlasUvOrigin: vec2<f32>,
   @location(4) @interpolate(flat) atlasUvScale: vec2<f32>,
   @location(5) viewDirLocal: vec3<f32>,
+  // Crossfade fallback rect + blend weight -- flat for the same reason
+  // atlasUvOrigin/atlasUvScale are (per-tile constants, see above).
+  @location(6) @interpolate(flat) fallbackUvOrigin: vec2<f32>,
+  @location(7) @interpolate(flat) fallbackUvScale: vec2<f32>,
+  @location(8) @interpolate(flat) fadeWeight: f32,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance

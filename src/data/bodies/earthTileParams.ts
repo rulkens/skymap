@@ -79,3 +79,15 @@ export const EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM = 300;
 /** Lower edge (alpha 0) of the base-globe fade band — see
  *  `EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM`. */
 export const EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM = 150;
+
+/**
+ * Crossfade duration, in milliseconds of REAL time (`performance.now()`,
+ * never sim time -- a paused or scaled sim clock must not stall or distort
+ * the fade), a freshly-landed detail tile takes to blend in over the
+ * coarser ancestor imagery it replaces. Long enough to hide the graded-
+ * differently band boundaries (BMNG-derived z4-7, EOX z8-13, GeoDanmark
+ * z14-19) popping; short enough that a fast descent doesn't trail visible
+ * ghosting. See `earthSurfaceTileRenderer.ts`'s per-tile weight and
+ * `earthSurfaceTile/fragment.wesl`'s dual-sample mix.
+ */
+export const EARTH_TILE_CROSSFADE_MS = 400;

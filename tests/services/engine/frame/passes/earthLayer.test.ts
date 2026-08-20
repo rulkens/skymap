@@ -515,6 +515,8 @@ describe('earthLayer.draw — detail tiles', () => {
         slot: 0,
         atlasUvOrigin: [0, 0],
         atlasUvScale: [0.1, 0.1],
+        readyAtMs: 0,
+        fallback: null,
       },
     },
   ];
@@ -616,6 +618,8 @@ describe('earthLayer.draw — base globe fade under the tile cut', () => {
         slot: 0,
         atlasUvOrigin: [0, 0],
         atlasUvScale: [0.1, 0.1],
+        readyAtMs: 0,
+        fallback: null,
       },
     },
   ];

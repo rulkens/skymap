@@ -114,6 +114,9 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
 function fieldForExpr(expr: string): string {
   if (/originRelCamMpc/.test(expr)) return 'originRelCamMpc';
   if (/vertexBase/.test(expr)) return 'vertexBase';
+  if (/fallbackUvOrigin/.test(expr)) return 'fallbackUvOrigin';
+  if (/fallbackUvScale/.test(expr)) return 'fallbackUvScale';
+  if (/^fadeWeight$/.test(expr)) return 'fadeWeight';
   if (/atlasUvOrigin/.test(expr)) return 'atlasUvOrigin';
   if (/atlasUvScale/.test(expr)) return 'atlasUvScale';
   if (/^position[XYZ]$/.test(expr)) return 'position';

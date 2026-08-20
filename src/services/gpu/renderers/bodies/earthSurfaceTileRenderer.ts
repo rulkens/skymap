@@ -50,6 +50,7 @@ import {
   writeTileVertex,
   writeSurfaceTileUniforms,
 } from './earthSurfaceTileLayout';
+import { EARTH_TILE_CROSSFADE_MS } from '../../../../data/bodies/earthTileParams';
 
 /**
  * @param resolution The mesh grid resolution `meshCache` bakes at — MUST
@@ -247,10 +248,28 @@ export function createEarthSurfaceTileRenderer(
       camPosMpc[2] - bodyPositionMpc[2],
     ];
 
+    // Sampled ONCE per draw call (== once per frame; `earthLayer` calls
+    // `draw` at most once), never per tile — every tile's fade weight must
+    // read the same instant, or tiles that upload microseconds apart would
+    // visibly desync. REAL time: a fade must run even while the sim clock
+    // is paused or scaled (see `EARTH_TILE_CROSSFADE_MS`'s doc comment).
+    const nowMs = performance.now();
+
     for (let i = 0; i < tileCount; i++) {
       const tile = tiles[i]!;
       const mesh = meshCache.get(tile.id, frame);
       const vertexBase = i * vertsPerTile;
+
+      // `fallback === null` means no deeper resident ancestor: the CPU-side
+      // encoding is fadeWeight forced to 1 with the fallback rect aliased to
+      // the primary one (see io.wesl's `NodeParams` doc) — mix() at weight 1
+      // returns the primary sample exactly, so the fragment never needs to
+      // branch on "is there a fallback".
+      const fallback = tile.resident.fallback ?? tile.resident;
+      const fadeWeight =
+        tile.resident.fallback === null
+          ? 1
+          : Math.min(1, Math.max(0, (nowMs - tile.resident.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
       const rotatedOrigin = rotateVec3ByTightMat3(tile.originLocal, orientation);
       writeSurfaceTileNodeParams(
@@ -264,6 +283,11 @@ export function createEarthSurfaceTileRenderer(
         tile.resident.atlasUvOrigin[1],
         tile.resident.atlasUvScale[0],
         tile.resident.atlasUvScale[1],
+        fallback.atlasUvOrigin[0],
+        fallback.atlasUvOrigin[1],
+        fallback.atlasUvScale[0],
+        fallback.atlasUvScale[1],
+        fadeWeight,
       );
 
       // Expand the tile's indexed mesh into VERTS_PER_TILE per-corner

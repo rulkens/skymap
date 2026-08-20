@@ -1,7 +1,7 @@
 /**
  * earthSurfaceTileLayout — the CPU-side byte layout for every GPU-visible
  * record `earthSurfaceTileRenderer` writes: the two per-frame storage
- * arrays it vertex-pulls from (`array<NodeParams>`, one 32-byte record per
+ * arrays it vertex-pulls from (`array<NodeParams>`, one 64-byte record per
  * cut tile; `array<TileVertex>`, one 48-byte record per drawn CORNER — the
  * mesh is expanded, not indexed; see the renderer's module header) and the
  * 160-byte per-draw `SurfaceTileUniforms` uniform block. The authoritative
@@ -18,11 +18,12 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
  * Bytes of one `NodeParams` element: `originRelCamMpc` vec3 (0..11) +
- * `vertexBase` u32 (12..15) + `atlasUvOrigin` vec2 (16..23) +
- * `atlasUvScale` vec2 (24..31) — 16-byte vec3-aligned, mirroring
- * `starCatalogLayout.ts`'s `NODE_PARAMS_BYTES = 32` shape.
+ * `vertexBase` u32 (12..15) + `atlasUvOrigin` vec2 (16..23) + `atlasUvScale`
+ * vec2 (24..31) + `fallbackUvOrigin` vec2 (32..39) + `fallbackUvScale` vec2
+ * (40..47) + `fadeWeight` f32 (48..51), rounded up to the vec3's 16-byte
+ * alignment = 64 (bytes 52..63 are true padding).
  */
-export const NODE_PARAMS_BYTES = 32;
+export const NODE_PARAMS_BYTES = 64;
 
 /**
  * Bytes of one `TileVertex` element: `position` vec3 (0..11) + `uv` vec2
@@ -50,6 +51,11 @@ export function writeSurfaceTileNodeParams(
   atlasUvOriginY: number,
   atlasUvScaleX: number,
   atlasUvScaleY: number,
+  fallbackUvOriginX: number,
+  fallbackUvOriginY: number,
+  fallbackUvScaleX: number,
+  fallbackUvScaleY: number,
+  fadeWeight: number,
 ): void {
   view.setFloat32(base + 0, originRelCamMpcX, true);
   view.setFloat32(base + 4, originRelCamMpcY, true);
@@ -59,6 +65,11 @@ export function writeSurfaceTileNodeParams(
   view.setFloat32(base + 20, atlasUvOriginY, true);
   view.setFloat32(base + 24, atlasUvScaleX, true);
   view.setFloat32(base + 28, atlasUvScaleY, true);
+  view.setFloat32(base + 32, fallbackUvOriginX, true);
+  view.setFloat32(base + 36, fallbackUvOriginY, true);
+  view.setFloat32(base + 40, fallbackUvScaleX, true);
+  view.setFloat32(base + 44, fallbackUvScaleY, true);
+  view.setFloat32(base + 48, fadeWeight, true);
 }
 
 /**

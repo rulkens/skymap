@@ -290,7 +290,7 @@ describe('earthTileSubsystem debug snapshot', () => {
       {
         id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
         originLocal: [1, 0, 0],
-        resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1] },
+        resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1], readyAtMs: 0, fallback: null },
       },
     ]);
     expect(subsystem.getDebugSnapshot().plan?.cutCount).toBe(1);
@@ -309,6 +309,34 @@ describe('earthTileSubsystem debug snapshot', () => {
 
     subsystem.update({ plan: DISENGAGED });
     expect(subsystem.getDebugSnapshot().subCamera).toBeNull();
+  });
+});
+
+describe('earthTileSubsystem residency readiness', () => {
+  it('stamps a resident entry with the real-time moment its bitmap uploaded', async () => {
+    vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchEarthTileBitmap).mockResolvedValue({
+      close: () => {},
+    } as unknown as ImageBitmap);
+    // performance.now(), not Date.now()/a sim clock — real time, per the
+    // design contract, so a fade runs even while the sim clock is paused.
+    const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(54_321);
+
+    const subsystem = createEarthTileSubsystem({
+      device: recordingDevice(),
+      requestRender: () => {},
+    });
+    subsystem.plannerParams('large');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    subsystem.update({ plan: ENGAGED });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const resolved = subsystem.residentSlot(TILE);
+    expect(resolved).not.toBeNull();
+    expect(resolved!.readyAtMs).toBe(54_321);
+
+    nowSpy.mockRestore();
   });
 });
 
@@ -389,6 +417,8 @@ describe('earthTileSubsystem lastCut', () => {
           slot: 0,
           atlasUvOrigin: [0, 0],
           atlasUvScale: [0.1, 0.1],
+          readyAtMs: 0,
+          fallback: null,
         },
       },
     ];

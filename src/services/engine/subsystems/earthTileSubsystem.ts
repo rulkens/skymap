@@ -63,10 +63,12 @@ export const EMPTY_EARTH_TILE_DEBUG_SNAPSHOT: EarthTileDebugSnapshot = {
   subCamera: null,
 };
 
-/** One atlas-resident tile: which tile, which slot. */
+/** One atlas-resident tile: which tile, which slot, and when its bitmap
+ *  landed (REAL time — see `residentSlot`'s doc comment). */
 type ResidentTile = {
   readonly tile: EarthTileId;
   readonly slot: number;
+  readonly readyAtMs: number;
 };
 
 export type EarthTileDeps = {
@@ -276,10 +278,14 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
           }
           // Resolved from the key now, not carried: may have been evicted mid-flight.
           const slot = stream.uploadBitmap(key, bitmap);
+          // Stamped here, at the upload site — REAL time (`performance.now()`,
+          // never sim time), so `earthSurfaceTileRenderer`'s crossfade runs
+          // even while the sim clock is paused or scaled.
+          const readyAtMs = performance.now();
           pendingLevelOf.delete(key);
           bitmap.close();
           if (slot === null) return;
-          resident.set(key, { tile: request.tile, slot });
+          resident.set(key, { tile: request.tile, slot, readyAtMs });
         },
       });
     }
@@ -300,13 +306,19 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     slot: number;
     atlasUvOrigin: readonly [number, number];
     atlasUvScale: readonly [number, number];
+    readyAtMs: number;
   } | null {
     if (manifest === null || atlas === null) return null;
     const key = earthTilePath(tile, manifest.prefix);
     const entry = resident.get(key);
     if (entry === undefined) return null;
     const [u0, v0, u1, v1] = atlas.stream.slotUv(entry.slot);
-    return { slot: entry.slot, atlasUvOrigin: [u0, v0], atlasUvScale: [u1 - u0, v1 - v0] };
+    return {
+      slot: entry.slot,
+      atlasUvOrigin: [u0, v0],
+      atlasUvScale: [u1 - u0, v1 - v0],
+      readyAtMs: entry.readyAtMs,
+    };
   }
 
   function isAnimating(): boolean {

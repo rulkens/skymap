@@ -76,25 +76,34 @@ fn earthLodOverlayColor(levelDelta: u32) -> vec3<f32> {
   return vec3<f32>(0.90, 0.10, 0.05); // red, 3+
 }
 
+// Half-texel inset clamp shared by the primary and fallback rects (the
+// crossfade's two atlas samples) -- see the call sites for why: the raw
+// map can land a bilinear tap's footprint half a texel past a resolved
+// rect's edge, which is a DIFFERENT slot's pixels. A deep ancestor
+// fallback (levelDelta >= ~7) can flatten a rect to under one atlas texel
+// wide; the raw half-texel inset would then push min past max, which
+// clamp() leaves indeterminate -- cap the inset at half the rect itself.
+fn resolveTileAtlasUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
+  let raw = origin + uv * scale;
+  let inset = min(vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
+  return clamp(raw, origin + inset, origin + scale - inset);
+}
+
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let equirectUv = dirToEquirectUv(Ng);
 
-  // Clamped to the rect's interior BEFORE sampling: the raw map can land a
-  // bilinear tap's footprint half a texel past a resolved rect's edge,
-  // which is a DIFFERENT slot's pixels (or, inside a levelDelta>0
-  // ancestor's own image, still correct data -- clamping there just insets
-  // by a fraction of a texel, harmlessly).
-  let atlasUvRaw = in.atlasUvOrigin + in.uv * in.atlasUvScale;
-  // A deep ancestor fallback (levelDelta >= ~7) can flatten the rect to under one atlas
-  // texel wide; the raw half-texel inset would then push min past max, which clamp()
-  // leaves indeterminate -- cap the inset at half the rect itself.
-  let atlasUvInset = min(vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL), 0.5 * in.atlasUvScale);
-  let atlasUvMin = in.atlasUvOrigin + atlasUvInset;
-  let atlasUvMax = in.atlasUvOrigin + in.atlasUvScale - atlasUvInset;
-  let atlasUv = clamp(atlasUvRaw, atlasUvMin, atlasUvMax);
-  let baseAlbedo = textureSampleLevel(surfaceTexture, atlasSampler, atlasUv, 0.0).rgb;
+  // Crossfade: mix the freshly-landed primary tile in over the coarser
+  // fallback it's replacing. At fadeWeight 1 (the CPU-side encoding for
+  // both "fully faded in" and "no fallback resident" -- see io.wesl's
+  // NodeParams doc) mix() returns primaryAlbedo exactly, so this is
+  // pixel-identical to a single-sample path at that weight.
+  let primaryUv = resolveTileAtlasUv(in.atlasUvOrigin, in.atlasUvScale, in.uv);
+  let primaryAlbedo = textureSampleLevel(surfaceTexture, atlasSampler, primaryUv, 0.0).rgb;
+  let fallbackUv = resolveTileAtlasUv(in.fallbackUvOrigin, in.fallbackUvScale, in.uv);
+  let fallbackAlbedo = textureSampleLevel(surfaceTexture, atlasSampler, fallbackUv, 0.0).rgb;
+  let baseAlbedo = mix(fallbackAlbedo, primaryAlbedo, in.fadeWeight);
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
   let nEnc = textureSample(normalTexture, baseSampler, equirectUv).rg;

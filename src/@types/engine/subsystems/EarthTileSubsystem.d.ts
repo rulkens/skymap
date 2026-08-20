@@ -44,6 +44,9 @@ export type EarthTileSubsystem = Destroyable & {
     readonly slot: number;
     readonly atlasUvOrigin: readonly [number, number];
     readonly atlasUvScale: readonly [number, number];
+    /** `performance.now()` (REAL time) stamped when this slot's bitmap
+     *  uploaded — see `SurfaceCutTile.resident.readyAtMs`. */
+    readonly readyAtMs: number;
   } | null;
 
   /**

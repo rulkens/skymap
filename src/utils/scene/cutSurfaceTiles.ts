@@ -15,6 +15,7 @@ type ResidentLookupResult = {
   readonly slot: number;
   readonly atlasUvOrigin: readonly [number, number];
   readonly atlasUvScale: readonly [number, number];
+  readonly readyAtMs: number;
 } | null;
 
 /**
@@ -256,6 +257,13 @@ export function cutSurfaceTiles(input: {
  * is a slot's NORTH/top row) — no flip needed, unlike mesh-`v`. At
  * `levelDelta` 0 the block is `1x1` and the leaf's rect is the ancestor's
  * own, unchanged.
+ *
+ * The walk doesn't stop at the first hit: it keeps climbing to find a
+ * SECOND resident ancestor, strictly shallower than the first — the
+ * crossfade's `fallback`, flattened into the leaf's own sub-rect the exact
+ * same way. `readyAtMs` is only ever the first (resolved/primary) hit's own
+ * timestamp; a shallower fallback's own upload time is irrelevant to when
+ * the PRIMARY tile is fading in.
  */
 function resolveCutResidency(input: {
   readonly kind: EarthTileKind;
@@ -267,6 +275,13 @@ function resolveCutResidency(input: {
 }): SurfaceCutTile['resident'] | null {
   const { kind, z, x, y, baseLevel, residentSlot } = input;
 
+  let primary: {
+    slot: number;
+    atlasUvOrigin: readonly [number, number];
+    atlasUvScale: readonly [number, number];
+    readyAtMs: number;
+  } | null = null;
+
   for (let levelDelta = 0; z - levelDelta > baseLevel; levelDelta++) {
     const ancestorZ = z - levelDelta;
     const ancX = x >> levelDelta;
@@ -276,14 +291,23 @@ function resolveCutResidency(input: {
     const span = 1 << levelDelta;
     const offsetU = (x - ancX * span) / span;
     const offsetV = (y - ancY * span) / span;
-    return {
-      slot: found.slot,
-      atlasUvOrigin: [
+    const flattened: readonly [readonly [number, number], readonly [number, number]] = [
+      [
         found.atlasUvOrigin[0] + offsetU * found.atlasUvScale[0],
         found.atlasUvOrigin[1] + offsetV * found.atlasUvScale[1],
       ],
-      atlasUvScale: [found.atlasUvScale[0] / span, found.atlasUvScale[1] / span],
-    };
+      [found.atlasUvScale[0] / span, found.atlasUvScale[1] / span],
+    ];
+    if (primary === null) {
+      primary = {
+        slot: found.slot,
+        atlasUvOrigin: flattened[0],
+        atlasUvScale: flattened[1],
+        readyAtMs: found.readyAtMs,
+      };
+      continue;
+    }
+    return { ...primary, fallback: { atlasUvOrigin: flattened[0], atlasUvScale: flattened[1] } };
   }
-  return null;
+  return primary === null ? null : { ...primary, fallback: null };
 }
