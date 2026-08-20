@@ -890,7 +890,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'EOX s2cloudless 2016 WMTS z13 tile harvest, one region per bbox pass — holds `<z>/<row>/<col>.jpg` under the WGS84 TMS grid. CC BY 4.0; the 2016 layer only (see README).',
+      'EOX s2cloudless 2016 WMTS z13 tile harvest, one subdir per registry region (`tools/fetch/eoxRegions.ts`) — holds `<region>/<z>/<row>/<col>.jpg` under the WGS84 TMS grid. CC BY 4.0; the 2016 layer only (see README).',
     fetcher: 'tools/fetch/fetchEoxTiles.ts',
     readme: 'eox.readme',
   },

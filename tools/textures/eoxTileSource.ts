@@ -1,12 +1,14 @@
 /**
  * eoxTileSource — an `EarthImagerySource` over the EOX s2cloudless z13
- * harvest (`fetchEoxTiles.ts`'s output: `<z>/<row>/<col>.jpg`, 256 px tiles).
- * EOX's WGS84 TMS grid at z13 is exactly HALF skymap's own 512 px tile edge
- * (`earthTileColumns.ts`), so one skymap z13 box is always a 2x2 block of
- * EOX tiles at the SAME z — no ladder re-numbering, just a composite.
- * `coverage` is read off disk at startup (the harvest's own bounding
- * row/col rectangle, converted to degrees), so a short harvest shrinks the
- * manifest entry instead of silently claiming ground it doesn't have.
+ * harvest (`fetchEoxTiles.ts`'s output: `<region>/<z>/<row>/<col>.jpg`,
+ * 256 px tiles). EOX's WGS84 TMS grid at z13 is exactly HALF skymap's own
+ * 512 px tile edge (`earthTileColumns.ts`), so one skymap z13 box is always
+ * a 2x2 block of EOX tiles at the SAME z — no ladder re-numbering, just a
+ * composite. `coverageDir` holds one subdirectory per harvested region
+ * (`data/raw/eox/README.md`); `coverage` gets one box per region, read off
+ * disk at startup (each region's own bounding row/col rectangle, converted
+ * to degrees), so a short harvest shrinks its box instead of silently
+ * claiming ground it doesn't have.
  */
 
 import { existsSync, readdirSync } from 'node:fs';
@@ -125,26 +127,71 @@ function boundsForRowColRect(rect: {
   };
 }
 
+type RegionRect = {
+  readonly rowMin: number;
+  readonly rowMax: number;
+  readonly colMin: number;
+  readonly colMax: number;
+};
+
+/** Every child directory of `coverageDir` that holds a z13 tree — one entry
+ *  per harvested region, sorted by name so `coverage` order is deterministic.
+ *  A flat `<coverageDir>/13/` (the pre-migration layout) throws by name: it
+ *  has no region to own it, and silently treating it as "region ''" would
+ *  hide the migration rather than force it. */
+function discoverRegionDirs(coverageDir: string): string[] {
+  if (existsSync(join(coverageDir, String(EOX_MAX_LEVEL)))) {
+    throw new Error(
+      `eoxTileSource: found a flat z${EOX_MAX_LEVEL} tree directly under ${coverageDir} — ` +
+        `the current layout is per-region (<region>/${EOX_MAX_LEVEL}/<row>/<col>.jpg, see ` +
+        `data/raw/eox/README.md); move this harvest under its own region subdirectory.`,
+    );
+  }
+
+  const regions = readdirSync(coverageDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() && existsSync(join(coverageDir, entry.name, String(EOX_MAX_LEVEL))),
+    )
+    .map((entry) => entry.name)
+    .sort();
+
+  if (regions.length === 0) {
+    throw new Error(
+      `eoxTileSource: no region subdirectories with z${EOX_MAX_LEVEL} tiles found under ${coverageDir}`,
+    );
+  }
+  return regions;
+}
+
+function rectContains(rect: RegionRect, row: number, col: number): boolean {
+  return row >= rect.rowMin && row <= rect.rowMax && col >= rect.colMin && col <= rect.colMax;
+}
+
 export async function eoxTileSource(opts: {
   readonly coverageDir: string; // rawDataPath('eox.dir')
 }): Promise<EarthImagerySource> {
-  const rect = scanCoverage(opts.coverageDir);
-  // A cheap contiguity assertion, not a full connected-components check: this
-  // source declares exactly ONE coverage box (see the module header), so a
-  // rect whose area exceeds its file count means the harvest tree spans a gap
-  // — two disjoint `fetch-eox` regions sharing one flat `data/raw/eox/13/`
-  // tree — and this box would silently claim the ground between them.
-  // See docs/backlog/2026-08-19-multi-region-eox-coverage.md.
-  const rectArea = (rect.rowMax - rect.rowMin + 1) * (rect.colMax - rect.colMin + 1);
-  if (rectArea !== rect.fileCount) {
-    throw new Error(
-      `eoxTileSource: the harvest tree under ${opts.coverageDir} is incomplete or spans ` +
-        `multiple regions (${rect.fileCount} tiles found, ${rectArea} expected for one ` +
-        `contiguous patch) — this source supports exactly one contiguous patch; see ` +
-        `docs/backlog/2026-08-19-multi-region-eox-coverage.md`,
-    );
-  }
-  const coverage = [boundsForRowColRect(rect)];
+  // Regions sorted by name (see `discoverRegionDirs`), so `regions` below —
+  // and thus `coverage` and readBox's first-by-name-wins tile lookup — are
+  // both deterministic regardless of directory-read order.
+  const regions = discoverRegionDirs(opts.coverageDir).map((name) => {
+    const rect = scanCoverage(join(opts.coverageDir, name));
+    // A cheap per-region contiguity assertion, not a full connected-components
+    // check: this source declares one box PER REGION (see the module header),
+    // so a rect whose area exceeds its file count means that region's own
+    // harvest tree spans a gap — and this box would silently claim ground
+    // never actually harvested.
+    const rectArea = (rect.rowMax - rect.rowMin + 1) * (rect.colMax - rect.colMin + 1);
+    if (rectArea !== rect.fileCount) {
+      throw new Error(
+        `eoxTileSource: region "${name}" under ${opts.coverageDir} is incomplete or spans a gap ` +
+          `(${rect.fileCount} tiles found, ${rectArea} expected for one contiguous patch) — see ` +
+          `the per-region layout contract in data/raw/eox/README.md`,
+      );
+    }
+    return { name, rect };
+  });
+  const coverage = regions.map(({ rect }) => boundsForRowColRect(rect));
 
   return {
     id: EOX_PROVENANCE.sourceId,
@@ -172,16 +219,25 @@ export async function eoxTileSource(opts: {
         { i: 1, j: 0, row: nw.row, col: nw.col + 1 },
         { i: 0, j: 1, row: nw.row + 1, col: nw.col },
         { i: 1, j: 1, row: nw.row + 1, col: nw.col + 1 },
-      ].map((child) => ({
-        ...child,
-        path: eoxTilePath(opts.coverageDir, EOX_MAX_LEVEL, child.row, child.col),
-      }));
+      ].map((child) => {
+        // Regions are disjoint in practice; `find` (first-by-name) is the
+        // tie-break for the pathological case where two rects both claim a
+        // tile. `existsSync` below still gates the actual read, as today.
+        const owner = regions.find((region) => rectContains(region.rect, child.row, child.col));
+        const path = owner
+          ? eoxTilePath(join(opts.coverageDir, owner.name), EOX_MAX_LEVEL, child.row, child.col)
+          : null;
+        return { ...child, path };
+      });
 
       // A decline only when the block is EMPTY: a source with SOME coverage
       // has something real to offer, and `underfillImagerySource` fills the
       // missing quadrants from the global band rather than this source
       // returning a partial-but-transparent tile itself.
-      const present = children.filter((child) => existsSync(child.path));
+      const present = children.filter(
+        (child): child is (typeof children)[number] & { path: string } =>
+          child.path !== null && existsSync(child.path),
+      );
       if (present.length === 0) return null;
 
       // Per-child read only — already native size, so a resize here would be

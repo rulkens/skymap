@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -36,13 +36,28 @@ function boxForBlock(rowNW: number, colNW: number): LonLatBounds {
   return { west: nw.west, north: nw.north, east: se.east, south: se.south };
 }
 
+/** Bounds of an arbitrary `[rowMin, rowMax] x [colMin, colMax]` tile
+ *  rectangle — independent of `boundsForRowColRect` in the module under
+ *  test, for asserting per-region `coverage` boxes. */
+function boundsForRect(
+  rowMin: number,
+  rowMax: number,
+  colMin: number,
+  colMax: number,
+): LonLatBounds {
+  const nw = eoxTileBounds(rowMin, colMin);
+  const se = eoxTileBounds(rowMax, colMax);
+  return { west: nw.west, north: nw.north, east: se.east, south: se.south };
+}
+
 async function writeEoxTile(
   coverageDir: string,
+  region: string,
   row: number,
   col: number,
   rgb: readonly [number, number, number],
 ): Promise<void> {
-  const path = join(coverageDir, String(EOX_MAX_LEVEL), String(row), `${col}.jpg`);
+  const path = join(coverageDir, region, String(EOX_MAX_LEVEL), String(row), `${col}.jpg`);
   mkdirSync(dirname(path), { recursive: true });
   await sharp({
     create: {
@@ -90,10 +105,10 @@ describe('eoxTileSource', () => {
     const coverageDir = tmpCoverageDir();
     const rowNW = 100;
     const colNW = 200;
-    await writeEoxTile(coverageDir, rowNW, colNW, RED); // NW
-    await writeEoxTile(coverageDir, rowNW, colNW + 1, GREEN); // NE
-    await writeEoxTile(coverageDir, rowNW + 1, colNW, BLUE); // SW
-    await writeEoxTile(coverageDir, rowNW + 1, colNW + 1, WHITE); // SE
+    await writeEoxTile(coverageDir, 'testregion', rowNW, colNW, RED); // NW
+    await writeEoxTile(coverageDir, 'testregion', rowNW, colNW + 1, GREEN); // NE
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, BLUE); // SW
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
 
     const source = await eoxTileSource({ coverageDir });
     const box = boxForBlock(rowNW, colNW);
@@ -113,10 +128,10 @@ describe('eoxTileSource', () => {
 
   it('returns null only when all four children of the block are missing', async () => {
     const coverageDir = tmpCoverageDir();
-    await writeEoxTile(coverageDir, 100, 200, RED);
-    await writeEoxTile(coverageDir, 100, 201, GREEN);
-    await writeEoxTile(coverageDir, 101, 200, BLUE);
-    await writeEoxTile(coverageDir, 101, 201, WHITE);
+    await writeEoxTile(coverageDir, 'testregion', 100, 200, RED);
+    await writeEoxTile(coverageDir, 'testregion', 100, 201, GREEN);
+    await writeEoxTile(coverageDir, 'testregion', 101, 200, BLUE);
+    await writeEoxTile(coverageDir, 'testregion', 101, 201, WHITE);
 
     const source = await eoxTileSource({ coverageDir });
     // Nowhere near row 100/col 200 — none of this box's four children exist.
@@ -134,13 +149,15 @@ describe('eoxTileSource', () => {
     // (the coverage guard requires it); SE is then deleted so `readBox` — which
     // checks disk fresh, not a cached scan — sees the same 3-of-4 partial block
     // an interrupted-mid-fetch harvest would leave.
-    await writeEoxTile(coverageDir, rowNW, colNW, RED); // NW
-    await writeEoxTile(coverageDir, rowNW, colNW + 1, GREEN); // NE
-    await writeEoxTile(coverageDir, rowNW + 1, colNW, BLUE); // SW
-    await writeEoxTile(coverageDir, rowNW + 1, colNW + 1, WHITE); // SE
+    await writeEoxTile(coverageDir, 'testregion', rowNW, colNW, RED); // NW
+    await writeEoxTile(coverageDir, 'testregion', rowNW, colNW + 1, GREEN); // NE
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, BLUE); // SW
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
 
     const source = await eoxTileSource({ coverageDir });
-    rmSync(join(coverageDir, String(EOX_MAX_LEVEL), String(rowNW + 1), `${colNW + 1}.jpg`));
+    rmSync(
+      join(coverageDir, 'testregion', String(EOX_MAX_LEVEL), String(rowNW + 1), `${colNW + 1}.jpg`),
+    );
 
     const box = boxForBlock(rowNW, colNW);
     const rgba = await source.readBox(box, 512, 512);
@@ -153,18 +170,15 @@ describe('eoxTileSource', () => {
     expect(se[3]).toBe(0); // missing SE quadrant: transparent, filled later by underfillImagerySource
   });
 
-  it('throws at construction when the harvest tree spans two disjoint patches', async () => {
+  it('throws at construction when a gap inside one region breaks contiguity', async () => {
     const coverageDir = tmpCoverageDir();
-    // Two isolated single tiles, far enough apart that the naive bounding rect
-    // over both claims a huge span of ground never actually harvested —
-    // exactly the shape a second `fetch-eox` region leaves in the same flat
-    // `data/raw/eox/13/` tree.
-    await writeEoxTile(coverageDir, 100, 200, RED);
-    await writeEoxTile(coverageDir, 5000, 9000, GREEN);
+    // Two isolated single tiles in the SAME region subdir, far enough apart
+    // that the naive bounding rect over both claims a huge span of ground
+    // never actually harvested.
+    await writeEoxTile(coverageDir, 'testregion', 100, 200, RED);
+    await writeEoxTile(coverageDir, 'testregion', 5000, 9000, GREEN);
 
-    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(
-      /incomplete or spans multiple regions/,
-    );
+    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/incomplete|gap/);
   });
 
   it('derives coverage from the harvested row/col rectangle on disk', async () => {
@@ -175,7 +189,7 @@ describe('eoxTileSource', () => {
     const colMax = 8759;
     for (let row = rowMin; row <= rowMax; row++) {
       for (let col = colMin; col <= colMax; col++) {
-        await writeEoxTile(coverageDir, row, col, RED);
+        await writeEoxTile(coverageDir, 'testregion', row, col, RED);
       }
     }
 
@@ -195,5 +209,65 @@ describe('eoxTileSource', () => {
     expect(source.coverage[0]!.east).toBe(12.48046875);
     expect(source.coverage[0]!.north).toBe(55.810546875);
     expect(source.coverage[0]!.south).toBe(55.74462890625);
+  });
+
+  it('gives two disjoint regions their own coverage box each, sorted by region name', async () => {
+    const coverageDir = tmpCoverageDir();
+    // Written region "zulu" before "alpha", so a passing sort assertion can't
+    // be an accident of directory-read or insertion order.
+    await writeEoxTile(coverageDir, 'zulu', 100, 200, RED);
+    await writeEoxTile(coverageDir, 'zulu', 100, 201, RED);
+    await writeEoxTile(coverageDir, 'alpha', 5000, 9000, GREEN);
+    await writeEoxTile(coverageDir, 'alpha', 5001, 9000, GREEN);
+
+    const source = await eoxTileSource({ coverageDir });
+
+    // Sorted by region name ("alpha" < "zulu"), not insertion order — each
+    // box matches only its OWN region's rect, not a bounding box over both.
+    expect(source.coverage).toHaveLength(2);
+    expect(source.coverage[0]).toEqual(boundsForRect(5000, 5001, 9000, 9000)); // alpha
+    expect(source.coverage[1]).toEqual(boundsForRect(100, 100, 200, 201)); // zulu
+  });
+
+  it('reads tiles from the correct region for a box inside region B', async () => {
+    const coverageDir = tmpCoverageDir();
+    const aRowNW = 100;
+    const aColNW = 200;
+    const bRowNW = 5000;
+    const bColNW = 9000;
+    await writeEoxTile(coverageDir, 'region-a', aRowNW, aColNW, RED);
+    await writeEoxTile(coverageDir, 'region-a', aRowNW, aColNW + 1, RED);
+    await writeEoxTile(coverageDir, 'region-a', aRowNW + 1, aColNW, RED);
+    await writeEoxTile(coverageDir, 'region-a', aRowNW + 1, aColNW + 1, RED);
+    await writeEoxTile(coverageDir, 'region-b', bRowNW, bColNW, GREEN);
+    await writeEoxTile(coverageDir, 'region-b', bRowNW, bColNW + 1, GREEN);
+    await writeEoxTile(coverageDir, 'region-b', bRowNW + 1, bColNW, GREEN);
+    await writeEoxTile(coverageDir, 'region-b', bRowNW + 1, bColNW + 1, GREEN);
+
+    const source = await eoxTileSource({ coverageDir });
+    const box = boxForBlock(bRowNW, bColNW);
+    const rgba = await source.readBox(box, 512, 512);
+    expect(rgba).not.toBeNull();
+
+    const centre = pixelAt(rgba!, 512, 128, 128);
+    expectPixelNear(centre, [...GREEN, 255]);
+  });
+
+  it('throws naming the migration when a flat top-level z13 dir is found', async () => {
+    const coverageDir = tmpCoverageDir();
+    const flatPath = join(coverageDir, String(EOX_MAX_LEVEL), '100', '200.jpg');
+    mkdirSync(dirname(flatPath), { recursive: true });
+    writeFileSync(flatPath, 'not a real jpeg, just needs to exist');
+
+    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/README/);
+  });
+
+  it('throws when there are no region subdirectories at all', async () => {
+    const coverageDir = tmpCoverageDir();
+    // A plain file (like the committed README.md) must be ignored, not
+    // mistaken for a region — leaving zero actual regions here.
+    writeFileSync(join(coverageDir, 'README.md'), 'provenance notes');
+
+    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/no region subdirectories/);
   });
 });
