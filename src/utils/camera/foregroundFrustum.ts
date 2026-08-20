@@ -43,12 +43,18 @@
  * implied minimum (`1e-17·1e-4`, `clampDistance.ts: MIN_DISTANCE_MPC`), so the
  * ratio governs everywhere a body can actually be approached and the floor
  * only guards the perspective matrix against a zero near. It must stay BELOW
- * the camera's minimum altitude over a focused body: the old `1e-19` floor is
- * 3.09 km, which out-clipped the ground once `SURFACE_STANDOFF_RADII` let the
- * camera down to ~1 km — Earth vanished into the near plane at max zoom. At
- * Earth's floor the ratio gives ~637 m of near against ~956 m of altitude.
+ * the camera's minimum ALTITUDE over a focused body — `deriveSlabs` (`slabs.ts`)
+ * passes altitude (`cam.distance - pivotRadiusMpc`) here in place of raw
+ * distance once a pivot is known, so a large body's own radius no longer
+ * dominates the bracket. At Earth's ~15 m standoff floor
+ * (`clampDistance.ts: SURFACE_STANDOFF_RADII`) the ratio underflows and this
+ * floor governs: ~6 m of near against ~15 m of altitude — a wide margin is
+ * affordable because NEAR0 is reversed-Z with an infinite far plane
+ * (`SLAB_REVERSED_Z`, `slabs.ts`), which spreads depth precision
+ * near-uniformly regardless of how small near gets; nothing here is a
+ * depth-buffer constraint, only the degenerate-matrix guard above.
  */
-export const MIN_NEAR_MPC = 1e-21;
+export const MIN_NEAR_MPC = 2e-22;
 
 /**
  * Floor for the far plane, in Mpc. Sized to enclose the outermost seeded orbit

@@ -85,6 +85,10 @@ function makeState(
     cam,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: { texturedDisks },
+    // No focused pivot in these fixtures — `deriveSlabs` gets `pivotRadiusMpc:
+    // null`, reproducing the pre-feature (raw cam.distance) near-field bracket
+    // every arithmetic assertion below was written against.
+    selectionRows: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 

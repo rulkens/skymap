@@ -24,22 +24,27 @@ export const MIN_DISTANCE_MPC = 1e-17;
 
 /**
  * Where the camera stops relative to the pivot's surface, as a multiple of its
- * radius. Sized for Earth's z13 tile band (~9 m/texel); the old 2% floor
- * (127 km) was tuned for the z7-era pyramid. Must stay strictly above 1.0:
- * the standoff needs a horizon — `planEarthTiles` returns an empty plan at or
- * below 1.0 radii, where there is none to plan against. Must also stay ABOVE
- * `MIN_NEAR_MPC / NEAR_RATIO` scaled to the pivot (`foregroundFrustum.ts`):
- * at this ratio the near plane sits at 2/3 of nadir altitude, so lowering
- * this further re-opens the ground-clipping failure `20fed8e31` fixed
- * (Earth vanishing into the near plane at max zoom).
+ * radius. Sized for the 0.15 m/texel EOX imagery — ~15 m of altitude gets
+ * close enough to resolve it, while staying above the surface shading's own
+ * ~10 m hard limit: `earth/fragment.wesl`'s ocean-glint view vector is
+ * `u.camPosLocal - in.normalLocal`, both ~1.0-magnitude f32 values in the
+ * unit-sphere local frame, so this is a near-cancellation whose headroom gets
+ * thin below ~10 m of altitude — no depth-buffer floor to raise, an f32
+ * subtraction floor. Must stay strictly above 1.0: the standoff needs a
+ * horizon — `planEarthTiles` returns an empty plan at or below 1.0 radii,
+ * where there is none to plan against.
+ *
+ * The near plane no longer couples to this ratio directly: `deriveSlabs`
+ * (`slabs.ts`) now keys `foregroundFrustum`'s bracket off ALTITUDE
+ * (`cam.distance - pivotRadiusMpc`) rather than raw distance, so the floors
+ * compare directly — this must stay comfortably above `foregroundFrustum.ts:
+ * MIN_NEAR_MPC` (~6 m) or the near plane clips the ground, as `20fed8e31`
+ * found the hard way.
  *
  * A RATIO applies the same floor to every body, which was only validated
- * visually over Earth — the one body with a deep tile band. Every other
- * body (Moon, Sun, gas giants) now allows a 133×-closer approach than the
- * old 2% floor, against imagery several orders coarser than Earth's z13.
- * Revisit if a close Moon/Sun approach looks wrong.
+ * visually over Earth. Revisit if a close Moon/Sun approach looks wrong.
  */
-export const SURFACE_STANDOFF_RADII = 1.00015;
+export const SURFACE_STANDOFF_RADII = 1.0000024;
 
 /**
  * Maximum allowed `cam.distance` in Mpc.
