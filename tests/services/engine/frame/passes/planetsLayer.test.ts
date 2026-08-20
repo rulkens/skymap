@@ -39,10 +39,11 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
-// object identity and (b) hand each planet a recognisable Float32Array.
-// The real composition math is covered by composeBodyMvp's own tests.
+// object identity and (b) hand each planet a recognisable Float64Array — real
+// composeBodyMvp returns f64; the layer narrows its own copy into the staging
+// buffer. The real composition math is covered by composeBodyMvp's own tests.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 

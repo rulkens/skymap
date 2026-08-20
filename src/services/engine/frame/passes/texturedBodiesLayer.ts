@@ -70,6 +70,7 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
@@ -156,7 +157,16 @@ export const texturedBodiesLayer: ContentLayer = {
         body.radiusKm * SCALE_UNITS.KM_TO_MPC,
         bodyState.orientation,
       );
-      const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer, strength, exponent, cam);
+      // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+      const uniforms = packTexturedBodyUniforms(
+        narrowMat4(mvp),
+        sun,
+        inner,
+        outer,
+        strength,
+        exponent,
+        cam,
+      );
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
       // `textured`, so the string id IS a BodyTextureId the renderer accepts.
       renderer.draw(pass, body.id as BodyTextureId, uniforms);

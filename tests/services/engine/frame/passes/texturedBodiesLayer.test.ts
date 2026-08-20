@@ -44,10 +44,11 @@ import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { TextureKind } from '../../../../../src/@types/data/TextureKind';
 
 // Mock composeBodyMvp so the test can assert which vp it consumed by identity
-// and hand the renderer a recognisable Float32Array. The real composition math
-// is covered by composeBodyMvp's own tests.
+// and hand the layer a recognisable Float64Array — real composeBodyMvp returns
+// f64; the layer narrows its own copy at the GPU-upload boundary. The real
+// composition math is covered by composeBodyMvp's own tests.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
@@ -157,7 +158,9 @@ function makeState(renderer: unknown, bodies: readonly PlanetBody[]): EngineStat
 function makeRendererSpy(residentIds: readonly string[] = []) {
   return {
     draw: vi.fn<(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array) => void>(),
-    hasMap: vi.fn((id: string, kind: TextureKind) => kind === 'surface' && residentIds.includes(id)),
+    hasMap: vi.fn(
+      (id: string, kind: TextureKind) => kind === 'surface' && residentIds.includes(id),
+    ),
   };
 }
 

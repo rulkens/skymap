@@ -34,8 +34,11 @@ export function cutSurfaceTiles(input: {
    *  unit sphere). */
   readonly camPosLocal: Readonly<Vec3>;
   /** View-projection for that frame, column-major. Only x/y extent is read,
-   *  so the depth convention doesn't matter here. */
-  readonly viewProjLocal: Float32Array;
+   *  so the depth convention doesn't matter here. MUST stay `Float64Array` —
+   *  at low altitude the `w`-row cancels its own large terms down to ~1e-21,
+   *  so f32-rounding an element beforehand injects a ~1% relative error that
+   *  corrupts the bbox-cull test below (see `composeBodyMvp`'s header). */
+  readonly viewProjLocal: Float64Array;
   readonly viewportPx: Readonly<Vec2>;
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;

@@ -67,6 +67,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
@@ -158,7 +159,8 @@ export const planetsLayer: ContentLayer = {
       // vertex stage never went. Same call `texturedBodiesLayer` makes.
       const cam = camPosLocal(view.camPos, bodyState.positionMpc, radiusMpc, bodyState.orientation);
       const base = i * INSTANCE_FLOATS;
-      staging.set(mvp, base);
+      // Narrow here, at the staging-buffer write — composeBodyMvp returns f64.
+      staging.set(narrowMat4(mvp), base);
       staging[base + 16] = planet.albedo[0];
       staging[base + 17] = planet.albedo[1];
       staging[base + 18] = planet.albedo[2];

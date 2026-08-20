@@ -19,8 +19,14 @@ import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelFo
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
 import { earthTileXyForUv } from '../../../src/utils/scene/earthTileXyForUv';
 import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
+import { earthTileBandRequestAllowed } from '../../../src/utils/scene/earthTileBandRequestAllowed';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
+import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../src/utils/camera/foregroundFrustum';
 import type { EarthTileId } from '../../../src/@types/data/EarthTileId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
@@ -46,7 +52,10 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   ];
   const view = mat4.lookAt(camPosLocal, [0, 0, 0], [0, 0, 1]);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
-  const viewProjLocal = new Float32Array(mat4.multiply(proj, view));
+  // f64 param type (see cutSurfaceTiles's doc) — these fixtures sit at
+  // altitudes far above the low-altitude cancellation regime, so widening
+  // the f32 `mat4.multiply` result changes no test outcome here.
+  const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
     kind: 'surface' as const,
     camPosLocal,
@@ -100,7 +109,7 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   ];
   const view = mat4.lookAt(camPosLocal, target, up);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
-  const viewProjLocal = new Float32Array(mat4.multiply(proj, view));
+  const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   const maxLevel = 19;
   return {
     kind: 'surface' as const,
@@ -152,7 +161,7 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   const camPosLocal: Vec3 = [camDirUnit[0] * d, camDirUnit[1] * d, camDirUnit[2] * d];
   const view = mat4.lookAt(camPosLocal, target, camDirUnit);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
-  const viewProjLocal = new Float32Array(mat4.multiply(proj, view));
+  const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
     kind: 'surface' as const,
     camPosLocal,
@@ -630,6 +639,190 @@ describe('cutSurfaceTiles', () => {
         result.requests.requests.some((r) => xFrac(r.tile) > 0.9),
         'tile west of the seam',
       ).toBe(true);
+    });
+  });
+
+  describe('low-altitude planner input precision (the f64 seam)', () => {
+    // Reproduces the diagnosed bug: composeBodyMvp used to narrow its result to
+    // f32 before this walk ever saw it. At low altitude the matrix's own
+    // `w`-row cancels its radiusMpc-scale terms down to a tiny true value, so
+    // f32-rounding each element beforehand corrupts the per-node bbox-cull
+    // test — an ancestor that truly straddles the frustum edge gets WRONGLY
+    // rejected, dropping its whole (correctly-visible) subtree. See
+    // cut-replay-exact-report.md (2026-08-20-earth-rtc-surface-foundation) for
+    // the full diagnosis. This drives the REAL composeBodyMvp at Earth-orbit
+    // (1 AU) scale, with a deliberately GENERIC (non-axis-aligned) body
+    // position, sub-camera direction and camera-up — an axis-aligned nadir
+    // pose (tried first) has enough incidental symmetry that no bbox ever
+    // straddles the frustum edge, so the bug never flips a decision there;
+    // production poses are never that symmetric.
+    const RADIUS_KM = 6371;
+    const radiusMpc = RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    const bodyPosMpc: Vec3 = [
+      0.62 * SCALE_UNITS.AU_TO_MPC,
+      0.41 * SCALE_UNITS.AU_TO_MPC,
+      -0.73 * SCALE_UNITS.AU_TO_MPC,
+    ];
+    const renderOrigin: Vec3 = [0, 0, 0];
+
+    function cross3(a: Vec3, b: Vec3): Vec3 {
+      return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    }
+    function normalize3(a: Vec3): Vec3 {
+      const n = Math.hypot(a[0], a[1], a[2]) || 1;
+      return [a[0] / n, a[1] / n, a[2] / n];
+    }
+    function add3(a: Vec3, b: Vec3): Vec3 {
+      return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    }
+    function sub3(a: Vec3, b: Vec3): Vec3 {
+      return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    }
+    function scale3(a: Vec3, s: number): Vec3 {
+      return [a[0] * s, a[1] * s, a[2] * s];
+    }
+
+    const dirLocal0 = normalize3([0.31, 0.58, 0.75]);
+    const genericUp = normalize3([0.13, 0.92, 0.27]);
+    const subCamUv: [number, number] = [
+      Math.atan2(dirLocal0[1], dirLocal0[0]) / (2 * Math.PI) + 0.5,
+      Math.asin(Math.max(-1, Math.min(1, dirLocal0[2]))) / Math.PI + 0.5,
+    ];
+
+    // A deep band straddling the sub-camera point (like GeoDanmark's z14-19
+    // Søndermarken box) plus a shallow global band underneath it (like BMNG).
+    const bands = [
+      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 7 },
+      {
+        uBounds: [subCamUv[0] - 0.01, subCamUv[0] + 0.01] as const,
+        vBounds: [subCamUv[1] - 0.01, subCamUv[1] + 0.01] as const,
+        min: 14,
+        max: 19,
+      },
+    ];
+
+    function tileUvBounds(z: number, x: number, y: number) {
+      const cols = earthTileColumns(z, EARTH_TILE_PX);
+      const rows = cols / 2;
+      const vNorth = 1 - y / rows;
+      const vSouth = 1 - (y + 1) / rows;
+      return { u0: x / cols, u1: (x + 1) / cols, v0: vSouth, v1: vNorth };
+    }
+
+    // Full-residency mock: anything the walk is allowed to request resolves —
+    // isolates the walk's cull/refine logic (under test) from any residency-
+    // race concern (the exact-repro report's §1 already ruled that out).
+    function mockResidentSlot(tile: EarthTileId) {
+      const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
+      if (earthTileBandRequestAllowed(bands, tile.z, u0, u1, v0, v1)) {
+        return {
+          slot: 0,
+          atlasUvOrigin: [0, 0] as const,
+          atlasUvScale: [1, 1] as const,
+          readyAtMs: 0,
+        };
+      }
+      return null;
+    }
+
+    /** The exact production seam: `prepareEarthFrame`'s f64 `mvpLocal`, fed
+     *  straight into `cutSurfaceTiles` with no intermediate narrow. Camera
+     *  tilted off nadir (toward `genericUp`-derived axes) so the frustum
+     *  footprint reaches tiles whose bbox genuinely straddles the edge —
+     *  a pure nadir view's footprint is too well-conditioned to ever land
+     *  a bbox near that boundary (see the describe-block comment above). */
+    function buildInputs(altitudeM: number, tiltDeg: number, azDeg: number) {
+      const camLen = 1 + altitudeM / (RADIUS_KM * 1000);
+      const camPosLocal: Vec3 = scale3(dirLocal0, camLen);
+      const eyeMpc = add3(bodyPosMpc, scale3(camPosLocal, radiusMpc));
+      const nadirDir = normalize3(sub3(bodyPosMpc, eyeMpc));
+      const east = normalize3(cross3(nadirDir, genericUp));
+      const north = normalize3(cross3(east, nadirDir));
+      const tiltRad = (tiltDeg * Math.PI) / 180;
+      const azRad = (azDeg * Math.PI) / 180;
+      const tiltAxis = add3(scale3(east, Math.cos(azRad)), scale3(north, Math.sin(azRad)));
+      const forward = normalize3(
+        add3(scale3(nadirDir, Math.cos(tiltRad)), scale3(tiltAxis, Math.sin(tiltRad))),
+      );
+      const targetMpc = add3(eyeMpc, forward);
+
+      const altitudeMpc = camLen * radiusMpc - radiusMpc;
+      const { near, far } = foregroundFrustum(altitudeMpc);
+      const fovYRad = (60 * Math.PI) / 180;
+      const viewportPx: [number, number] = [3252, 2560]; // live dpr=2 viewport
+      const aspect = viewportPx[0] / viewportPx[1];
+
+      const foregroundVp = computeForegroundViewProj({
+        eyeMpc,
+        targetMpc,
+        up: genericUp,
+        renderOrigin,
+        fovYRad,
+        aspect,
+        near,
+        far,
+        reversedZ: true,
+      });
+      const viewProjLocal = composeBodyMvp(
+        foregroundVp,
+        bodyPosMpc,
+        renderOrigin,
+        radiusMpc,
+        IDENTITY_MAT3,
+      );
+
+      return { camPosLocal, viewProjLocal, viewportPx };
+    }
+
+    it('does not collapse the cut at ~50 m altitude over a deep-band point', () => {
+      const { camPosLocal, viewProjLocal, viewportPx } = buildInputs(50, 10, 0);
+
+      const result = cutSurfaceTiles({
+        kind: 'surface',
+        camPosLocal,
+        viewProjLocal,
+        viewportPx,
+        baseLevel: BASE_LEVEL,
+        bands,
+        tilePx: EARTH_TILE_PX,
+        lodBias: 1,
+        residentSlot: mockResidentSlot,
+      });
+
+      // A healthy walk resolves far more than a handful of tiles at this
+      // altitude/footprint (empirically ~1100 under the fixed f64 path).
+      expect(result.cut.length).toBeGreaterThan(200);
+
+      // Coverage invariant, the real one under test: two ancestor tiles (found
+      // by direct bbox comparison against the pre-fix f32-narrowed matrix —
+      // see this task's investigation notes) sit exactly on the frustum's edge
+      // at this pose. Under the precision bug their bbox is wrongly computed
+      // as fully outside [-1,1], bbox-culling their ENTIRE subtree before any
+      // z19 leaf under them is ever considered — so NONE of their descendants
+      // can appear in `cut`. Under the fix, at least one must.
+      const cutKeys = new Set(result.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
+      const knownEdgeAncestors: readonly {
+        readonly z: number;
+        readonly x: number;
+        readonly y: number;
+      }[] = [
+        { z: 17, x: 88112, y: 15063 },
+        { z: 18, x: 176154, y: 30057 },
+      ];
+      for (const anc of knownEdgeAncestors) {
+        const span = 1 << (19 - anc.z);
+        const x0 = anc.x * span;
+        const y0 = anc.y * span;
+        let coversAny = false;
+        for (let dx = 0; dx < span && !coversAny; dx++) {
+          for (let dy = 0; dy < span && !coversAny; dy++) {
+            if (cutKeys.has(`19/${x0 + dx}/${y0 + dy}`)) coversAny = true;
+          }
+        }
+        expect(coversAny, `some z19 descendant of ${anc.z}/${anc.x}/${anc.y} must be in cut`).toBe(
+          true,
+        );
+      }
     });
   });
 });

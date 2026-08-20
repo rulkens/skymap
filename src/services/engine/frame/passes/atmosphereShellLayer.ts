@@ -68,6 +68,7 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
 
 export const atmosphereShellLayer: ContentLayer = {
@@ -132,7 +133,8 @@ export const atmosphereShellLayer: ContentLayer = {
         pass,
         body.id,
         packAtmosphereUniforms(
-          mvp,
+          // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+          narrowMat4(mvp),
           sun,
           camLocal,
           bottomRadius,

@@ -67,6 +67,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
 import { starPickId } from './starPickId';
@@ -122,7 +123,8 @@ export const starSpheresLayer: ContentLayer = {
         IDENTITY_MAT3,
         star.oblateness,
       );
-      renderer.draw(pass, mvp, star.color);
+      // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
+      renderer.draw(pass, narrowMat4(mvp), star.color);
     }
   },
 

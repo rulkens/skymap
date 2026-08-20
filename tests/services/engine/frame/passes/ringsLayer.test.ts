@@ -35,9 +35,11 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
 // Mock composeBodyMvp so the test can assert which vp it consumed by identity.
-// The composition math is covered by composeBodyMvp's own tests.
+// Real composeBodyMvp returns f64; the layer narrows its own copy at the
+// GPU-upload boundary. The composition math is covered by composeBodyMvp's
+// own tests.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 

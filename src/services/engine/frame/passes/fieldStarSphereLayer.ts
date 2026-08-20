@@ -124,6 +124,7 @@ import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
@@ -258,7 +259,8 @@ export const fieldStarSphereLayer: ContentLayer = {
       SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC,
       IDENTITY_MAT3,
     );
-    renderer.draw(pass, mvp, starTintFromBpRp(present.bpRp));
+    // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
+    renderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp));
   },
 
   // Pick aspect — stamps the present star's identity into the NEAR0 r32uint pick

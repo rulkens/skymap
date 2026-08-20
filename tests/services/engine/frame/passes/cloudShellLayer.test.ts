@@ -30,10 +30,11 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 
-// Mock composeBodyMvp so draw() never touches the real f64→f32 composition —
-// covered by that util's own tests.
+// Mock composeBodyMvp so draw() never touches the real f64 composition —
+// covered by that util's own tests. Real composeBodyMvp returns f64; the
+// layer narrows its own copy at the GPU-upload boundary.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 
 // Stub the per-frame body-state snapshot to the seeded fixture's own

@@ -94,7 +94,11 @@ function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext):
 export type PreparedEarthFrame = {
   readonly earthState: BodyState;
   readonly radiusMpc: number;
-  readonly mvpLocal: Float32Array;
+  /** f64, NOT narrowed — `runFrame`'s tile planner feeds this straight into
+   *  `cutSurfaceTiles`, which re-cancels its own large terms at low altitude
+   *  (see `composeBodyMvp`'s header). `draw` narrows its own copy at the GPU
+   *  upload site below; never narrow this field in place. */
+  readonly mvpLocal: Float64Array;
   readonly camLocal: Vec3;
   /** Monotonic per-real-frame counter, forwarded to `earthSurfaceTileRenderer.draw`
    *  for its mesh cache's LRU stamp — an integer index rather than `ctx.nowMs`
@@ -181,7 +185,10 @@ export const earthLayer: ContentLayer = {
 
     const prepared = prepareEarthFrame(state, ctx, view);
     if (prepared === null) return;
-    const { earthState, radiusMpc, mvpLocal: mvp, camLocal, frame } = prepared;
+    const { earthState, radiusMpc, mvpLocal, camLocal, frame } = prepared;
+    // Narrow HERE, at the GPU-upload boundary — `prepared.mvpLocal` stays f64
+    // for the tile planner's own read of it (see PreparedEarthFrame's doc).
+    const mvp = narrowMat4(mvpLocal);
 
     // Sun direction rotated into Earth's local frame (orientation carries the
     // axial tilt), so the fragment's lighting stays a plain dot product.
