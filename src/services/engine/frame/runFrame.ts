@@ -60,6 +60,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
@@ -440,6 +441,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       cam: snap,
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
+      pivotRadiusMpc: pivotRadiusMpc(pivotFocus),
     });
     if (scaleInfo !== null) {
       deps.cb.store.dispatch(engineScaleChanged(scaleInfo));
@@ -635,8 +637,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // buffers. The director polls every registered `LabelProducer` (milkyWayLabel,
   // structures, ...), merges, change-detects via signature hash, and flushes
   // once; it null-checks its renderers, so this is safe before the atlas load
-  // completes.
-  state.subsystems.labelDirector.runFrame(state, ctx);
+  // completes. The return value is the label wake vote, folded into the
+  // keep-ticking bag below rather than the director calling requestRender.
+  const labelsAnimating = state.subsystems.labelDirector.runFrame(state, ctx);
 
   // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
   //
@@ -708,6 +711,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
     earthTilesAnimating,
+    labelsAnimating,
   });
 
   if (keepTicking) {

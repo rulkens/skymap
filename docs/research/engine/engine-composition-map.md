@@ -164,8 +164,10 @@ Files: `passes/starCatalogLayer.ts`, `passes/starAggregatesLayer.ts`,
   asymmetry a plain blit would leave).
 - **Wake**: `anyNodeFading` (a per-node LOD-fade vote) surfaces from
   `prepareStarCut`'s result and feeds `shouldKeepTicking` explicitly
-  (`runFrame.ts:776-779`) — the one layer family with its own dedicated wake
-  term, because its fades are per-node, not per-layer.
+  (`runFrame.ts:709-713`) — not the only layer family with a dedicated wake
+  term any more: the label director's producers/envelope vote (rung 5, #15)
+  joined the `anim` bag beside it. Star-cut's stays per-node rather than
+  per-layer.
 
 ### B. Scalar volume (raymarch + upsample)
 
@@ -174,8 +176,9 @@ Files: `passes/scalarVolumeLayer.ts`, `passes/volumeUpsampleLayer.ts`,
 
 - **Settings**: `settings.volumes.items[fieldId]` (per-field enabled,
   intensity, palette), the per-field-volume convention (not singleton).
-- **Engine wiring**: `handle.addVolumeField` (public API, not asset-slot
-  demand) uploads a 3D texture into `volumeFieldRenderer`.
+- **Engine wiring**: `handle.volumes.add` (public API, not asset-slot
+  demand) uploads a 3D texture into `volumeFieldRenderer` — through the same
+  `uploadVolumeField` the four volume slot commits call (decision #14).
 - **Renderer construction**: `state.gpu.volumeFieldRenderer` +
   `state.gpu.volumeUpsample` (`createAdditiveUpsample(device,'rgba16float')`,
   `initGpu.ts:381`), both unconditional at bootstrap.
@@ -337,7 +340,7 @@ on the render and wiring side, not the math side.
 - `src/services/engine/phases/initGpu.ts:327-348` — constructs
   `state.gpu.milkyWayCloud` (`createMilkyWayCloud`, seeded from
   `MILKY_WAY_TUNING_DEFAULTS.starCount`, NOT live settings — deliberate,
-  `runFrame`'s mismatch branch is the only regenerate path) and
+  `MilkyWayCloud.reconcile` is the only regenerate path since rung 3) and
   `state.gpu.milkyWayCloudRenderer`; `initGpu.ts:222-226` constructs
   `state.gpu.milkyWayPickRenderer`; `initGpu.ts:389` constructs
   `state.gpu.milkyWayAggregateUpsample`.
@@ -348,10 +351,14 @@ on the render and wiring side, not the math side.
   spec row (whose `scale` is the ONLY non-constant divisor in the whole
   table — threaded through `createRenderTargets`'s signature as a named
   `mwAggregateDivisor` parameter) and its clear-value entry.
-- `src/services/engine/frame/runFrame.ts:211-281` — the two MW-specific
+- ~~`src/services/engine/frame/runFrame.ts:211-281` — the two MW-specific
   per-frame mismatch branches (aggregate-divisor to target rebuild;
-  starCount to cloud regenerate), both inline in the generic per-frame body
-  (section 4 item 1).
+  starCount to cloud regenerate), both inline in the generic per-frame
+  body~~ — **both deleted**: rung 2 folded the divisor rebuild into
+  `RenderTargets.reconcile`, rung 3 the starCount compare into
+  `MilkyWayCloud.reconcile`. `runFrame` now makes two declarative calls;
+  what v1's deletion takes with it is the cloud resource, not a branch
+  (decision #13; section 4 item 1).
 
 ### The concept layer (survives independent of v1 vs v2)
 
@@ -421,7 +428,7 @@ union or table itself changes shape.
 
 ## 4. ACCRETION SITES
 
-1. **`runFrame.ts:211-281` — two hand-wired MW-specific mismatch branches
+1. ~~**`runFrame.ts:211-281` — two hand-wired MW-specific mismatch branches
    inline in the generic per-frame body.** The aggregate-divisor to
    target-rebuild branch (211-245) and the starCount to cloud-regenerate
    branch (247-281) are explicitly acknowledged by their own comments as
@@ -430,7 +437,14 @@ union or table itself changes shape.
    they are two near-identical bespoke `if` blocks sitting in the one
    function every layer's per-frame work funnels through. A distance-driven
    analytic MW field with its own live-tunable buffer size would be a
-   natural third copy of this shape unless generalized first.
+   natural third copy of this shape unless generalized first.~~
+   **SUPERSEDED (rungs 2 and 3, decision #13).** Both branches are gone, and
+   the generalization they seemed to ask for was the wrong answer: the
+   compare belongs **on the resource**, not in a shared helper.
+   `RenderTargets.reconcile` (rung 2) and `MilkyWayCloud.reconcile` (rung 3)
+   each own their own, and `runFrame` calls them declaratively. An analytic
+   field with a live-tunable buffer size becomes a third `reconcile`, not a
+   third `if` block.
 2. **`renderTargets.ts`'s `createRenderTargets(device, swapFormat, size,
    mwAggregateDivisor)` signature** (`renderTargets.ts:220-225`) — a
    supposedly generic target-table factory takes ONE named parameter for
@@ -464,13 +478,16 @@ union or table itself changes shape.
    magic constant. Not wrong (well-justified in-line), but it is a
    precedent-free special case a reviewer of an analytic-field pick pass
    has nothing else to pattern-match against.
-6. **`PASS_GROUP_TITLES`** (`frameProgram.ts:209-224`) — a hand-maintained
+6. **`PASS_GROUP_TITLES`** (`frameProgram.ts:222-238`) — a hand-maintained
    groupKey-to-title map for the DebugPanel; a new `(target, slab)` pair
    that should visually bucket with an existing group (e.g. a new MW
    sub-target joining "Volumes & aggregates") needs its own manual entry or
    silently gets its own fallback group. Degrades safely (never crashes),
    but is a second place — beyond the render-target table and the frame
-   program — that has to be told about a new target's identity.
+   program — that has to be told about a new target's identity. Ruled
+   **permanently hand-authored, not debt** (decisions.md #16 D1–D2): it
+   carries two facts (title merge + display order) at the frame-STEP
+   granularity, deliberately not derived.
 7. **`MilkyWaySettings = { enabled, labelEnabled }` intersected with
    `MilkyWayTuning`** (`MilkyWaySettings.d.ts:21-26`) — the two visibility
    axes that fit the singleton-overlay convention are flattened together

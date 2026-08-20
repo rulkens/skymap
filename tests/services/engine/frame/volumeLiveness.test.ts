@@ -17,6 +17,8 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { deriveVolumeLiveness } from '../../../../src/services/engine/frame/volumeLiveness';
 import { clampVolumeIntensity } from '../../../../src/utils/clampVolumeIntensity';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
@@ -24,7 +26,11 @@ import type { VolumeFieldSettings } from '../../../../src/@types/settings/Volume
 
 const FIELD_ID = 'mcpm' as VolumeFieldId;
 
-/** A raw (unclamped) VolumeFieldSettings whose intensity is out of range. */
+/**
+ * A raw (unclamped) VolumeFieldSettings whose intensity is out of range.
+ * Defaults `bands` to today's one-size-fits-all `surveyDeepZoom`, so tests
+ * that don't care about band choice keep the pre-Prep-1 behaviour.
+ */
 function rawSettings(over: Partial<VolumeFieldSettings> = {}): VolumeFieldSettings {
   return {
     enabled: true,
@@ -34,6 +40,7 @@ function rawSettings(over: Partial<VolumeFieldSettings> = {}): VolumeFieldSettin
     paletteId: 'viridis' as VolumeFieldSettings['paletteId'],
     trim: 0,
     exposure: 1,
+    bands: [SCALE_FADE_BANDS.surveyDeepZoom],
     ...over,
   };
 }
@@ -159,5 +166,55 @@ describe('deriveVolumeLiveness', () => {
     expect(deriveVolumeLiveness(state, deepCtx)).toBeNull();
     // Same state, far camera → live (proves the band, not the fixture).
     expect(deriveVolumeLiveness(state, makeCtx())).not.toBeNull();
+  });
+
+  it('a field with custom bands uses them, not surveyDeepZoom', () => {
+    // A recede band ("full close, gone far") — the shape the Edenhofer dust
+    // field's outer edge wants — full well inside surveyDeepZoom's goneAt
+    // edge (0.002 Mpc), where the default band would already read 0.
+    const outer = { fullAt: 0.001, goneAt: 0.01 };
+    const state = makeState({ items: { [FIELD_ID]: rawSettings({ bands: [outer] }) } });
+    const liveness = deriveVolumeLiveness(state, makeCtx({ drawCamPos: [0, 0, 0.0005] }))!;
+    expect(liveness.fadeOpacityOf(FIELD_ID)).toBeCloseTo(1, 6);
+  });
+
+  it('a field with no fadeBands entry behaves byte-identically to surveyDeepZoom today', () => {
+    // Deep inside surveyDeepZoom's goneAt edge with the default band → 0,
+    // exactly the pre-Prep-1 behaviour every existing field (MCPM, CF-4,
+    // polyphorm) still gets.
+    const state = makeState({ items: { [FIELD_ID]: rawSettings() } });
+    const liveness = deriveVolumeLiveness(state, makeCtx({ drawCamPos: [0, 0, 0.0005] }))!;
+    expect(liveness.fadeOpacityOf(FIELD_ID)).toBe(0);
+  });
+
+  it('multiple bands multiply (outer × inner trapezoid)', () => {
+    const outer = { fullAt: 0.01, goneAt: 0.03 }; // recede: full close, gone far
+    const inner = { fullAt: 0.001, goneAt: 0.0001 }; // approach: full far, gone close
+    const state = makeState({ items: { [FIELD_ID]: rawSettings({ bands: [outer, inner] }) } });
+
+    // Inside both full ranges → product 1.
+    const midLive = deriveVolumeLiveness(state, makeCtx({ drawCamPos: [0, 0, 0.005] }))!;
+    expect(midLive.fadeOpacityOf(FIELD_ID)).toBeCloseTo(1, 6);
+
+    // Past the outer band's fullAt (into its fractional ramp) but still past
+    // the inner band's fullAt → product equals the outer factor alone.
+    const rampCtx = makeCtx({ drawCamPos: [0, 0, 0.02] });
+    const rampLive = deriveVolumeLiveness(state, rampCtx)!;
+    const expectedOuter = fadeBand(outer, 0.02);
+    expect(expectedOuter).toBeGreaterThan(0);
+    expect(expectedOuter).toBeLessThan(1);
+    expect(rampLive.fadeOpacityOf(FIELD_ID)).toBeCloseTo(expectedOuter, 6);
+  });
+
+  it('a settings row missing bands (stale persisted state) falls back to surveyDeepZoom', () => {
+    // Simulates a row persisted before `bands` existed — present at runtime
+    // without it despite the type. Must dissolve like every other field
+    // rather than crash or read as always-on.
+    const stale = { ...rawSettings(), bands: undefined } as unknown as VolumeFieldSettings;
+    const state = makeState({ items: { [FIELD_ID]: stale } });
+    const deep = deriveVolumeLiveness(state, makeCtx({ drawCamPos: [0, 0, 0.0005] }))!;
+    expect(deep.fadeOpacityOf(FIELD_ID)).toBe(0);
+    const far = deriveVolumeLiveness(state, makeCtx())!;
+    expect(far.fadeOpacityOf(FIELD_ID)).toBeGreaterThan(0);
   });
 });

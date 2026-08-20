@@ -9,8 +9,13 @@ export type LabelDirectorSubsystem = {
   attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void;
   /** Register a producer.  Order of registration = order of merging. */
   registerProducer(producer: LabelProducer): void;
-  /** Per-frame entry point — poll producers, merge, flush. */
-  runFrame(state: EngineState, ctx: ReadyFrameContext): void;
+  /**
+   * Per-frame entry point — poll producers, merge, flush. Returns the wake
+   * vote (true while a producer or an appear/disappear envelope is still
+   * animating) for the caller to fold into `shouldKeepTicking`; the director
+   * never wakes the loop itself.
+   */
+  runFrame(state: EngineState, ctx: ReadyFrameContext): boolean;
   /**
    * Tear down the director.  No-op — the director holds renderer refs
    * and a producers list, but the renderers' lifecycle is the engine's

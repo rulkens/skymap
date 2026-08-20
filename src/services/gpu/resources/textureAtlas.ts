@@ -210,11 +210,8 @@ export class TextureAtlas {
    * genuinely stale and LRU recycles it as usual.
    */
   allocate(key: string, frame: number): number | null {
-    const existing = this.keyToSlot.get(key);
-    if (existing !== undefined) {
-      this.slots[existing]!.lastSeenFrame = frame;
-      return existing;
-    }
+    const touched = this.touch(key, frame);
+    if (touched !== null) return touched;
     // Find a free slot first.
     for (let i = 0; i < this.slotCount; i++) {
       if (this.slots[i] === undefined) {
@@ -256,10 +253,17 @@ export class TextureAtlas {
     return lruIdx;
   }
 
-  /** Update `lastSeenFrame` for a slot known to exist. No-op if key not present. */
-  touch(key: string, frame: number): void {
+  /**
+   * Refresh `lastSeenFrame` for a resident key and return its slot, or `null`
+   * without touching anything if `key` holds no slot. `allocate`'s existing-key
+   * branch delegates here; a caller that only wants to keep a resident alive
+   * (never allocate a new one) calls this directly.
+   */
+  touch(key: string, frame: number): number | null {
     const idx = this.keyToSlot.get(key);
-    if (idx !== undefined) this.slots[idx]!.lastSeenFrame = frame;
+    if (idx === undefined) return null;
+    this.slots[idx]!.lastSeenFrame = frame;
+    return idx;
   }
 
   /**

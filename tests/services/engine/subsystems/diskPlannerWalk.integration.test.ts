@@ -325,7 +325,14 @@ describe('diskPlannerWalk drives both bodies', () => {
       const catalogs = new Map<SourceType, GalaxyCatalog>([
         [source, makeSingletonCloud(rowX, diameterKpc)],
       ]);
-      runTexturedSolo(walk, tex, { ...makeInput(catalogs), famousGalaxiesMeta: [], nowMs: 0 });
+      runTexturedSolo(walk, tex, {
+        ...makeInput(catalogs),
+        // A resolved id at index 0 — the row this test targets — so the
+        // Famous case clears the meta-readiness gate (texturedDiskSubsystem's
+        // onRow guard) and reaches the assertions below.
+        famousGalaxiesMeta: [{ id: 'g0', names: [], description: '', type: 'galaxy' }],
+        nowMs: 0,
+      });
       await tick();
       return spy;
     }

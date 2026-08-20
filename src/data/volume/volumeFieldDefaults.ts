@@ -19,6 +19,7 @@
 
 import { SOURCE_REGISTRY } from '../sources';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../defaults';
+import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
 import type { SourceEntry } from '../../@types/data/SourceEntry';
 import type { VolumeFieldDefaults } from '../../@types/data/volume/VolumeFieldDefaults';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
@@ -53,10 +54,10 @@ export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
 
 /**
  * Build a complete per-field settings entry from a volume's registry
- * defaults. Single source of truth for the seed shape that the volume
- * slots, `addVolumeField`, and the engine's construction seed all need
- * — duplicating the literal across those sites is exactly the drift
- * this helper removes.
+ * defaults. Single source of truth for the seed shape that the
+ * `addVolumeField` reducer and the construction seed (`seedVolumeFields`
+ * below) both need — duplicating the literal across those sites is
+ * exactly the drift this helper removes.
  *
  * `enabled` comes from the registry `visible` flag so the construction
  * seed lands the on/off bit in pure state at boot, symmetric with how the
@@ -74,6 +75,7 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
     paletteId: entry.paletteId,
     trim: entry.trim,
     exposure: entry.exposure,
+    bands: entry.fadeBands ?? [SCALE_FADE_BANDS.surveyDeepZoom],
   };
 }
 

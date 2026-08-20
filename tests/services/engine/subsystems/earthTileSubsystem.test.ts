@@ -44,7 +44,11 @@ import { createEarthTileSubsystem } from '../../../../src/services/engine/subsys
 import { fetchEarthTileManifest } from '../../../../src/utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../../src/utils/network/fetchEarthTileBitmap';
 import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
-import { EARTH_TILE_FADE_MS, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
+import {
+  EARTH_TILE_ATLAS_SIDE,
+  EARTH_TILE_FADE_MS,
+  EARTH_TILE_PX,
+} from '../../../../src/data/bodies/earthTileParams';
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
  *  bake sits one level above. */
@@ -53,12 +57,22 @@ const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 /** A manifest describing a usable surface pyramid, with `tilePx` left to the
  *  caller — `undefined` standing in for a bake that omitted the field. */
+const WORLD_BOUNDS = { west: -180, south: -90, east: 180, north: 90 };
+
 function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
   return {
     prefix: 'earth-tiles/v1',
     tilePx,
-    levels: { surface: { min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1 } },
-    builtFrom: { surface: 'test-fixture' },
+    levels: {
+      surface: [
+        {
+          bounds: WORLD_BOUNDS,
+          min: MIN_TILE_LEVEL,
+          max: MIN_TILE_LEVEL + 1,
+          builtFrom: { sourceId: 'test', attribution: 'test', vintage: 'test' },
+        },
+      ],
+    },
   } as unknown as EarthTileManifest;
 }
 
@@ -90,6 +104,22 @@ describe('earthTileSubsystem manifest validation', () => {
   it('refuses a bake cut at a different tile edge rather than adapting to it', async () => {
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX / 2))).toBeNull();
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX * 2))).toBeNull();
+  });
+
+  it('skips a structurally-malformed band entry and derives params from the good ones', async () => {
+    // A manifest a broken bake or a hand-edit could produce: one entry
+    // missing `bounds` entirely alongside one well-formed entry. Skipping
+    // the bad one — never throwing out of `refreshParams` — is the module's
+    // stated stance for any manifest shape this build can't address.
+    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const goodLevel = manifest.levels.surface![0]!;
+    manifest.levels.surface = [{ ...goodLevel, bounds: undefined as never }, goodLevel];
+
+    const params = await plannerParamsFor(manifest);
+
+    expect(params).not.toBeNull();
+    expect(params!.bands).toHaveLength(1);
+    expect(params!.bands[0]!.max).toBe(goodLevel.max);
   });
 });
 
@@ -360,5 +390,81 @@ describe('earthTileSubsystem stand-down', () => {
     // The one property that actually regresses if this path breaks: a 404
     // must not re-arm and re-fetch on every subsequent frame.
     expect(fetchEarthTileManifest).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * The atlas-thrash bug: a single pass that allocates as it walks the plan lets
+ * a new, higher-priority request evict a resident the SAME plan would have
+ * touched a few iterations later, because the resident still carries last
+ * frame's LRU stamp when the new request is processed. The evicted tile then
+ * re-allocates (and re-fetches) a few iterations later, having lost its
+ * pixels — the flash-in/out symptom. Fixed by touching every present key
+ * first, so nothing is evicted mid-plan.
+ *
+ * `fetchEarthTileBitmap` call count is the observable: eviction clears the
+ * key's `bitmapReady` membership (see `bitmapStreamSubsystem`'s evict
+ * handler), so a resident tile coming back re-fetches. Snapshotting the count
+ * around each `update()` keeps the assertion independent of the file's shared
+ * (never-reset) mock call history.
+ */
+describe('earthTileSubsystem full-atlas allocation', () => {
+  const SLOT_COUNT = (EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2;
+
+  /** `SLOT_COUNT` distinct tiles on an 8x8 grid at the window level, exactly
+   *  filling the atlas — largest screenPx first, matching planner order. */
+  function fillingRequests() {
+    const side = EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX;
+    return Array.from({ length: SLOT_COUNT }, (_, i) => ({
+      tile: { kind: 'surface', z: MIN_TILE_LEVEL, x: i % side, y: Math.floor(i / side) } as const,
+      screenPx: SLOT_COUNT - i,
+    }));
+  }
+
+  it('does not evict a planned resident to make room for a new higher-priority tile', async () => {
+    vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchEarthTileBitmap).mockResolvedValue({
+      close: () => {},
+    } as unknown as ImageBitmap);
+
+    const subsystem = createEarthTileSubsystem({
+      device: recordingDevice([]),
+      requestRender: () => {},
+    });
+    subsystem.plannerParams('large');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const resident = fillingRequests();
+    const fillPlan: EarthTilePlan = {
+      zWin: MIN_TILE_LEVEL,
+      winX0: 0,
+      winY0: 0,
+      requests: resident,
+    };
+
+    const callsBeforeFill = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
+    subsystem.update({ plan: fillPlan, nowMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The atlas is now genuinely full — every one of its slots resident.
+    expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeFill).toBe(SLOT_COUNT);
+
+    // A new tile, off the 8x8 grid the fill used, sorted first (highest
+    // screenPx) — the priority order that let a single evicting pass reach
+    // it before the plan's own residents.
+    const newTile = { kind: 'surface', z: MIN_TILE_LEVEL, x: 99, y: 99 } as const;
+    const nextPlan: EarthTilePlan = {
+      zWin: MIN_TILE_LEVEL,
+      winX0: 0,
+      winY0: 0,
+      requests: [{ tile: newTile, screenPx: SLOT_COUNT + 1 }, ...resident],
+    };
+
+    const callsBeforeNext = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
+    subsystem.update({ plan: nextPlan, nowMs: 16 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Nothing resident got evicted-and-refetched, and the full atlas made the
+    // new tile wait rather than bump a resident out.
+    expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeNext).toBe(0);
   });
 });

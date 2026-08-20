@@ -54,8 +54,8 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import { addVolumeField } from './handles/addVolumeField';
-import { removeVolumeField } from './handles/removeVolumeField';
+import { uploadVolumeField } from './volume/uploadVolumeField';
+import { unloadVolumeField } from './volume/unloadVolumeField';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
@@ -846,8 +846,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       getStructures,
     },
     volumes: {
-      add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),
-      remove: (fieldId) => removeVolumeField(state, store, fieldId),
+      add: (fieldId, cube) => uploadVolumeField(state, store, fieldId, cube),
+      remove: (fieldId) => unloadVolumeField(state, store, fieldId),
       list: () => listVolumeFields(state),
       getState: () => getVolumeFieldsState(state),
     },

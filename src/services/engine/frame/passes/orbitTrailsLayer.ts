@@ -323,7 +323,7 @@ export const orbitTrailsLayer: ContentLayer = {
       staging[base + 33] = arc[1]; // visible arc eSpan → float 33
     }
     if (count > 0) {
-      renderer.draw(pass, staging, count, state.settings.debug.showOrbitTrailImpostor);
+      renderer.draw(pass, staging, count, state.settings.debug.overlays['orbit-trail-impostor']);
     }
   },
 };

@@ -5,8 +5,8 @@
  *
  * Verifies that the sections DebugPanel mounts (each via its own container)
  * round-trip through the store:
- *   - reads `showPickBuffer` out of the store and reflects it on the matching checkbox;
- *   - dispatches `setShowPickBuffer` when the checkbox is toggled;
+ *   - reads the `pick-buffer` overlay out of the store and reflects it on the matching checkbox;
+ *   - dispatches `setDebugOverlay({ key: 'pick-buffer', enabled })` when the checkbox is toggled;
  *   - routes a RenderTogglesSection checkbox click through `onTogglePass` → `setPassDisabled`;
  *   - routes the galaxy-provenance table's highlight checkbox and cull `<select>`
  *     through `setProvenanceHighlight` / `setProvenanceFilter`.
@@ -26,11 +26,11 @@ import { Provider } from 'react-redux';
 import DebugPanel from '../../../src/components/DebugPanel/DebugPanel';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
-  selectShowPickBuffer,
+  selectDebugOverlays,
   selectDisabledPasses,
   selectGalaxyProvenance,
 } from '../../../src/state/settings/selectors';
-import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
+import { setDebugOverlay } from '../../../src/state/settings/settingsSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
@@ -79,10 +79,10 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
 // ---------------------------------------------------------------------------
 
 describe('DebugPanel', () => {
-  it('reflects showPickBuffer from the store', () => {
+  it('reflects the pick-buffer overlay from the store', () => {
     const { store } = createAppStore();
-    // Seed showPickBuffer=true by dispatching before render.
-    store.dispatch(setShowPickBuffer(true));
+    // Seed pick-buffer=true by dispatching before render.
+    store.dispatch(setDebugOverlay({ key: 'pick-buffer', enabled: true }));
     const { container } = renderContainer(store);
     // The "Show pick buffer" label contains a checkbox.
     const labels = Array.from(container.querySelectorAll('label'));
@@ -93,16 +93,16 @@ describe('DebugPanel', () => {
     expect(box!.checked).toBe(true);
   });
 
-  it('dispatches setShowPickBuffer on checkbox toggle', () => {
+  it('dispatches setDebugOverlay on checkbox toggle', () => {
     const { store } = createAppStore();
-    // Default store has showPickBuffer=false.
-    expect(selectShowPickBuffer(store.getState())).toBe(false);
+    // Default store has pick-buffer=false.
+    expect(selectDebugOverlays(store.getState())['pick-buffer']).toBe(false);
     const { container } = renderContainer(store);
     const labels = Array.from(container.querySelectorAll('label'));
     const pickLabel = labels.find((l) => l.textContent?.includes('Show pick buffer'));
     const box = pickLabel!.querySelector<HTMLInputElement>('input[type=checkbox]')!;
     fireEvent.click(box);
-    expect(selectShowPickBuffer(store.getState())).toBe(true);
+    expect(selectDebugOverlays(store.getState())['pick-buffer']).toBe(true);
   });
 
   it('dispatches setPassDisabled(true) when a renderer-toggle box is unchecked', () => {

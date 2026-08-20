@@ -58,7 +58,7 @@ function rootWithCamera(
 const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
-const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false };
+const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false, labelsAnimating: false };
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
@@ -231,6 +231,15 @@ describe('shouldKeepTicking', () => {
     const state = makeState({});
     expect(
       shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, earthTilesAnimating: true }),
+    ).toBe(true);
+  });
+
+  it('a label envelope mid-ramp → true even with everything else at rest', () => {
+    // The label director's appear/disappear envelope used to fire its own
+    // requestRender; now it returns the vote and this predicate decides.
+    const state = makeState({});
+    expect(
+      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true }),
     ).toBe(true);
   });
 

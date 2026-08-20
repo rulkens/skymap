@@ -26,6 +26,9 @@
  * camera is parked at must keep its sphere, because that sphere is its only
  * close-range geometry and the camera has not moved.
  *
+ * No `FOREGROUND_MAX_DISTANCE_MPC` cut applies here: the proximity test above
+ * already subsumes it by ~10.5 orders of magnitude (decision #16 D6).
+ *
  * ### The presence hysteresis band — killing the threshold strobe
  *
  * A single distance threshold would strobe the sphere on and off under the

@@ -39,12 +39,16 @@
  */
 
 /**
- * Floor for the near plane, in Mpc. Strictly positive and comfortably above
- * the wheel-zoom distance floor's implied `1e-17·1e-4 = 1e-21`
- * (`clampDistance.ts: MIN_DISTANCE_MPC`), so the perspective matrix never
- * degenerates even at the tightest zoom.
+ * Floor for the near plane, in Mpc — the wheel-zoom distance floor's own
+ * implied minimum (`1e-17·1e-4`, `clampDistance.ts: MIN_DISTANCE_MPC`), so the
+ * ratio governs everywhere a body can actually be approached and the floor
+ * only guards the perspective matrix against a zero near. It must stay BELOW
+ * the camera's minimum altitude over a focused body: the old `1e-19` floor is
+ * 3.09 km, which out-clipped the ground once `SURFACE_STANDOFF_RADII` let the
+ * camera down to ~1 km — Earth vanished into the near plane at max zoom. At
+ * Earth's floor the ratio gives ~637 m of near against ~956 m of altitude.
  */
-export const MIN_NEAR_MPC = 1e-19;
+export const MIN_NEAR_MPC = 1e-21;
 
 /**
  * Floor for the far plane, in Mpc. Sized to enclose the outermost seeded orbit

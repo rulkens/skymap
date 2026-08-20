@@ -18,11 +18,11 @@ central file rather than contributing a row.
 | ⬤   | family           | core contract                                              | registration style                                         |
 | --- | ---------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
 | 🟠  | frame assembly   | `ContentLayer`, `FrameStep`, `RenderTargetSpec`, `COMPUTE` | hand-edit: ordinal, spec table, record                     |
-| 🟢  | assets           | `AssetWiringRow` → `AssetSlot`                             | row-shaped — but 5 sibling lifecycles live 🔴 off-registry |
+| 🟢  | assets           | `AssetWiringRow` → `AssetSlot`                             | row-shaped — but 3 sibling lifecycles live 🔴 off-registry |
 | 🔴  | handles/teardown | `EngineGpuHandles` (~50 nullable fields)                   | 4 hand-edits per handle                                    |
 | 🟢  | fades/visibility | `FadeLayer` rows + `FadeId`/`VisibilityLayerKey` unions    | row-shaped — plus 🟠 2 hand-kept inverse maps              |
 | 🟠  | presentation     | `LabelProducer` · marker path · caption layer              | three mechanisms, one registered                           |
-| 🟠  | wake/liveness    | `shouldKeepTicking` disjunction + `anim` bag               | hand-added terms (9)                                       |
+| 🟠  | wake/liveness    | `shouldKeepTicking` disjunction + `anim` bag               | hand-added terms (10)                                      |
 
 ⚪ Seventh, parallel surface: **pick/selection** (~10–17 files per focusable
 kind) — out of bundle scope →
@@ -98,7 +98,7 @@ flowchart LR
 
 - 🟠 **9 file-edits** for the render slice: layer file · 3 edits in `passes/index.ts` (import, load-bearing ordinal, re-export) · handle field · null literal · destroy pair · `initGpu` construct.
 - 🟢 **0 edits** for timing slots + debug toggles — derived. This is the model that works.
-- 🟠 Own render target? **+4 more**: spec row, clear value, positioned program step, `PASS_GROUP_TITLES` row.
+- 🟠 Own render target? **+2 more**: spec row (clear value rides it now, rung 2 — no longer a separate edit), positioned program step. `PASS_GROUP_TITLES` needs an entry only when the new step wants its own display group — a new `(target, slab)` step, not a new subsystem.
 
 ## 3. Asset & handle lifecycles
 
@@ -114,14 +114,16 @@ flowchart LR
     IG["initGpu"] -->|"constructs 30+"| GPU
     DTOR["engine.destroy()"] -->|"~44 hand-written<br/>destroy+null pairs"| GPU
     STR["streamed subsystems<br/>(earthTiles, bitmap LRU)"] -.off-registry.-> GPU
-    IMP["handle.volumes.add<br/>(imperative upload)"] -.off-registry.-> GPU
+    SLOT -->|"commit (volumes)"| ING["uploadVolumeField<br/>(the one ingest path, 5 callers)"]
+    IMP["handle.volumes.add<br/>(imperative entry point)"] --> ING
+    ING --> GPU
     GEN["generated (MW cloud;<br/>compare owned by the resource)"] -.off-registry.-> GPU
     classDef good fill:#1a7f37,stroke:#116329,color:#ffffff
     classDef warn fill:#bf8700,stroke:#9a6700,color:#ffffff
     classDef bad fill:#cf222e,stroke:#a40e26,color:#ffffff
-    class AW,SLOT,DEM good
+    class AW,SLOT,DEM,ING,IMP good
     class IG,GPU,GEN warn
-    class DTOR,STR,IMP bad
+    class DTOR,STR bad
 ```
 
 ### The contracts
@@ -135,13 +137,13 @@ flowchart LR
 
 ### Loose spots
 
-| ⬤   | issue                                                                                                                                                                                      | evidence                                                                                               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| 🔴  | Registry covers **1 of 5 lifecycles** — generated / streamed / baked / imperative are all bespoke                                                                                          | `milkyWayCloud.ts` `reconcile` (called `runFrame.ts:213`), `wireSlots.ts:116-119`, `addVolumeField.ts` |
-| ⚪  | Staleness idiom ("compare live setting vs fact on the resource, then regenerate") appears **7×** — 5 already resource-owned by design, 1 relocated into its resource, 1 deferred to rung 4 | decisions.md #13; `milkyWayCloud.ts` `reconcile`                                                       |
-| 🔴  | Volume ingest exists **3×**; `handle.volumes.add` has 0 callers                                                                                                                            | `mcpmSlot.ts:35-46`, `syntheticVolumeSlots.ts:78-99`, `addVolumeField.ts:25-38`                        |
-| 🔴  | Teardown = **~46 hand-written pairs**, ordering encoded only by position (was ~44; zone-of-avoidance added 2: `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`)                        | `engine.ts:747-908`                                                                                    |
-| 🟠  | Swap-format rebuild = a **hand-picked list of 8** renderers                                                                                                                                | `buildSwapRenderers.ts:23`                                                                             |
+| ⬤   | issue                                                                                                                                                                                                                                                                         | evidence                                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| 🔴  | Registry covers **1 of 4 lifecycles** — generated / streamed / baked are still bespoke (imperative is no longer one of them: it folded into the shared ingest path, #14)                                                                                                      | `milkyWayCloud.ts` `reconcile` (called `runFrame.ts:213`), `wireSlots.ts:116-119` |
+| ⚪  | Staleness idiom ("compare live setting vs fact on the resource, then regenerate") appears **7×** — 5 already resource-owned by design, 1 relocated into its resource, 1 (site 4) ruled in rung 4 with no code change: the fact is resource-owned, the policy loop-owned (#14) | decisions.md #13; `milkyWayCloud.ts` `reconcile`                                  |
+| 🟢  | Volume ingest was **5×** hand-written (not 3× — the survey found two more); now **one function**, called by the 4 slot-source sites plus `handle.volumes.add`, which is kept and folded                                                                                       | `uploadVolumeField.ts`, decisions.md #14                                          |
+| 🔴  | Teardown = **~46 hand-written pairs**, ordering encoded only by position (was ~44; zone-of-avoidance added 2: `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`)                                                                                                           | `engine.ts:747-908`                                                               |
+| 🟢  | ~~Swap-format rebuild = a hand-picked list of 8 renderers~~ — **RESOLVED (rung 1, PR #571)**: derives from `GPU_HANDLE_ROWS`'s `rebuildOnSwapFormat` flag, not a hand list                                                                                                    | `buildSwapRenderers.ts:23,44`, `gpuHandleRegistry.ts`                             |
 
 ### Cost of one new fetched asset (volume field worked example)
 
@@ -161,7 +163,7 @@ flowchart LR
     COMMITS["slot commits (8 sites) +<br/>applySceneEffect"] --> SYNC
     REG -->|"opacityOf × focusRecession × clipFactor"| RLO["resolveLayerOpacity"]
     RLO --> CONS["layers · label producers ·<br/>liveness derivations"]
-    REG -->|"isAnyAnimating"| WAKE["shouldKeepTicking<br/>(9-term disjunction + anim bag)"]
+    REG -->|"isAnyAnimating"| WAKE["shouldKeepTicking<br/>(10-term disjunction + anim bag)"]
     VAR["VISIBILITY_ACTION_ROW<br/>(inverse of FADE_ROW)"] -.->|"tours/intents dispatch"| ACT
     classDef good fill:#1a7f37,stroke:#116329,color:#ffffff
     classDef warn fill:#bf8700,stroke:#9a6700,color:#ffffff
@@ -175,21 +177,21 @@ flowchart LR
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `FadeLayer`                     | 🟢 `{key, expand, handle, seed, intent?, post?, guard?}` — 18 rows, healthy (zone-of-avoidance added a row, fully wired: fade handle + FADE_ROW + VISIBILITY_ACTION_ROW + a live `resolveLayerOpacity` consumer — no gap left behind) | `FadeLayer.d.ts:51-60`, `fadeLayers.ts:97-317`                 |
 | `FadeId` / `VisibilityLayerKey` | 12 kinds vs 18 keys — ⚪ deliberately different grain; both type-level unions                                                                                                                                                         | `FadeId.d.ts:80-96`, `VisibilityLayerKey.d.ts:53-71`           |
-| wake                            | 🟠 9-term disjunction + explicit `anim` bag fed by planners                                                                                                                                                                           | `shouldKeepTicking.ts:112-129`                                 |
-| `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:441-481` |
-| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers                                                                                                                                                                      | `frameProgram.ts:233-384`                                      |
+| wake                            | 🟠 10-term disjunction + explicit `anim` bag (3 fields) fed by planners                                                                                                                                                               | `shouldKeepTicking.ts:117-135`                                 |
+| `LabelProducer`                 | `{id, produceLabels(state, ctx)}` → director (declutter, envelope, change-detect)                                                                                                                                                     | `LabelProducer.d.ts:6-11`, `labelDirectorSubsystem.ts:438-476` |
+| debug                           | 🟢 timing slots/groups/toggles **derived** from program + layers; settings half: one `overlays: Record<DebugOverlayKey, boolean>` seeded from `DEBUG_OVERLAY_ROWS`, one reducer, one selector (rung 6, #16)                           | `frameProgram.ts:233-384`, `data/debug/debugOverlayRows.ts`    |
 
 ### Loose spots
 
-| ⬤   | issue                                                                                                                                                                               | evidence                                               |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 🟠  | `FADE_ROW` ↔ `VISIBILITY_ACTION_ROW` are **hand-maintained inverses** — a drift pair (zone-of-avoidance added a correctly-mirrored row to both, growing the pair, not narrowing it) | `watchFadesSaga.ts:60-78`, `visibilityActionRow.ts:79` |
-| 🔴  | **2 fade rows have no consumer** (union-totality artifacts)                                                                                                                         | `fadeLayers.ts:150-185`                                |
-| 🔴  | Marker path is a **shadow producer** — driven from runFrame, unregistered, no wake vote                                                                                             | `runFrame.ts:731-734`                                  |
-| 🔴  | Caption layer bypasses the director **and** the fade handles                                                                                                                        | `foregroundLabelsLayer`                                |
-| 🟠  | Producers registered inline in engine.ts                                                                                                                                            | `engine.ts:576-587`                                    |
-| 🟠  | Wake terms accrete by hand (each = a signature edit)                                                                                                                                | `shouldKeepTicking.ts:19-29`                           |
-| 🟠  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed                                                                                                               | `DebugPanel.tsx:79-90`, `frameProgram.ts:209-224`      |
+| ⬤   | issue                                                                                                                                                                                                                                                                                                                                                                                                                                           | evidence                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 🟠  | `FADE_ROW` ↔ `VISIBILITY_ACTION_ROW` are **hand-maintained inverses** — a drift pair (zone-of-avoidance added a correctly-mirrored row to both, growing the pair, not narrowing it)                                                                                                                                                                                                                                                             | `watchFadesSaga.ts:60-78`, `visibilityActionRow.ts:79` |
+| 🔴  | **2 fade rows have no consumer** (union-totality artifacts)                                                                                                                                                                                                                                                                                                                                                                                     | `fadeLayers.ts:150-185`                                |
+| 🔴  | Marker path is a **shadow producer** — driven from runFrame, unregistered. The "no wake vote" half is closed (rung 5, #15 D10): its ramps ride `fades.isAnyAnimating` and camera motion via `fades.opacityOf`, no gap. Still unregistered/shadow.                                                                                                                                                                                               | `runFrame.ts:664-667`                                  |
+| 🔴  | Caption layer bypasses the director **and** the fade handles                                                                                                                                                                                                                                                                                                                                                                                    | `foregroundLabelsLayer`                                |
+| 🟠  | Producers registered inline in engine.ts                                                                                                                                                                                                                                                                                                                                                                                                        | `engine.ts:576-587`                                    |
+| 🟠  | Wake terms accrete by hand (each = a signature edit) — ruled ACCEPTED, not open (rung 5, #15 D4): the signature edit is the compile-time gate against a dropped vote                                                                                                                                                                                                                                                                            | `shouldKeepTicking.ts:19-30`                           |
+| ⚪  | Slider tables + DebugPanel sections + `PASS_GROUP_TITLES` hand-listed — split by rung 6's census (#16 D7): slider tables were **stale** (already registries, D2/D9, before this rung even ran); the DebugPanel section list is **deliberate** (hand-authored by ruling, D2); `PASS_GROUP_TITLES` is **deliberate** and additionally **test-pinned** (`frameProgram.test.ts:404-455` already pins its title list, so drift already fails a test) | `DebugPanel.tsx:82-94`, `frameProgram.ts:222-238`      |
 
 ## 5. Pick / selection (⚪ parallel surface, out of scope)
 
@@ -199,15 +201,15 @@ flowchart LR
 
 ## 6. Assessment — ranked by cost-per-new-subsystem
 
-| #   | ⬤   | breakdown                                                                                                                                                                              |
-| --- | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 🔴  | **Handle lifecycle** — 4 hand-edits/renderer; 46-pair teardown enforced by a comment                                                                                                   |
-| 2   | 🟠  | **Layer ordinal** — draw order within a group = array position + prose                                                                                                                 |
-| 3   | 🟠  | **Off-registry lifecycles** — generated/streamed/imperative each invent wiring; ingest ×3 (staleness: 7 surveyed, 5 resource-owned, 1 relocated — settled except site 4 → rung 4, #13) |
-| 4   | 🟠  | **Inverse-map drift pairs** — FADE_ROW↔VISIBILITY_ACTION_ROW; specs↔clear values                                                                                                       |
-| 5   | 🟠  | **Hand-listed UI** — DebugPanel JSX, group titles                                                                                                                                      |
-| 6   | 🟠  | **Wake accretion** — every animator edits a signature                                                                                                                                  |
-| 7   | 🔴  | **Unvalidated cross-file contracts** — blend/format parity, target∈specs                                                                                                               |
+| #   | ⬤   | breakdown                                                                                                                                                                                                                                                                                      |
+| --- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 🔴  | **Handle lifecycle** — 4 hand-edits/renderer; 46-pair teardown enforced by a comment                                                                                                                                                                                                           |
+| 2   | 🟠  | **Layer ordinal** — draw order within a group = array position + prose                                                                                                                                                                                                                         |
+| 3   | 🟠  | **Off-registry lifecycles** — generated/streamed still invent their own wiring; imperative no longer does (ingest ×5 → 1 fn, #14). Staleness settled resource-owned (#13); site 4 ruled with no code change, its tier-response residue re-handed to the umbrella reassessment (#14)            |
+| 4   | 🟠  | **Inverse-map drift pairs** — FADE_ROW↔VISIBILITY_ACTION_ROW; specs↔clear values                                                                                                                                                                                                               |
+| 5   | ⚪  | **Hand-listed UI** — DebugPanel JSX, group titles. Ruled **deliberate**, not debt (rung 6, #16 D1–D2): a walker may derive DATA a hand-written component maps over, never emit the component tree itself                                                                                       |
+| 6   | 🟠  | **Wake accretion** — every animator edits a signature. Ruled a recorded acceptance, not an open item for the rungs (rung 5, #15 D4): a required `anim` bag field is the compile-time gate a closure-bearing row table could not be; re-deferred to the umbrella reassessment, not another rung |
+| 7   | 🔴  | **Unvalidated cross-file contracts** — blend/format parity, target∈specs                                                                                                                                                                                                                       |
 
 🟢 **Do not regress** (already right): the `(target, slab)` data pin ·
 `ASSET_WIRING` rows · `FadeLayer` rows + single `seedFades` walk · derived
@@ -222,13 +224,13 @@ row-bag per subsystem, walkers derive the central artifacts.
 ```mermaid
 flowchart TD
     B["SubsystemBundle<br/>key · settings · targets · artifacts · handles ·<br/>layers · computes · planner · liveness · wake ·<br/>fades · labelProducers · markerProducers · debug"]
-    B --> W1["target-allocation walker<br/>(replaces buildSpecs hand-table + divisor rebuild branch)"]
+    B --> W1["target-allocation walker<br/>(replaces the buildSpecs hand-table)"]
     B --> W2["handle-construction walker<br/>(replaces 30+ initGpu assignments)"]
     B --> W3["teardown walker<br/>(replaces ~44 destroy/null pairs)"]
     B -. no sweep (#13) .- W4["staleness stays<br/>resource-owned"]
     B --> W5["frame-assembly validation<br/>(layers ↔ program steps coverage)"]
-    B --> W6["derived debug<br/>(groups PASS_GROUP_TITLES + sliders + sections)"]
-    B --> W7["wake fold<br/>(votes into the anim bag)"]
+    B --> W6["debug settings chain<br/>(one `overlays` record + `DEBUG_OVERLAY_ROWS` rows table, no walker — rung 6, #16)"]
+    B --> W7["wake fold<br/>(votes into the anim bag — rung 5 folded the label director by hand, #15; the manifest/walker question stays deferred to the umbrella, #15 D4)"]
     B --> W8["fade-manifest derivation<br/>(concat bundle.fades + legacy rows)"]
     FPX["frameProgram step list"] -. stays hand-authored .- B
     PICKX["pick/selection kind tables"] -. stays out (backlog) .- B
@@ -239,23 +241,23 @@ flowchart TD
     class W4,FPX,PICKX,STOREX out
 ```
 
-| surface today                                       | bundle field / walker                                                                                                                | a new subsystem stops touching    |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
-| handle: type + literal + initGpu + destroy          | `handles` + construct/teardown walkers                                                                                               | all 4 edits                       |
-| `CONTENT_LAYERS` import/ordinal/re-export           | `layers` + validation walker                                                                                                         | the central array                 |
-| `ASSET_WIRING` row                                  | `artifacts: fetched`                                                                                                                 | nothing — already right           |
-| MW regen + divisor rebuild (ex-`runFrame` branches) | 🟢 done, no sweep: `RenderTargets.reconcile` (rung 2) + `MilkyWayCloud.reconcile` (rung 3) — the compare lives on the resource (#13) | both branches, deleted            |
-| ad-hoc streamed construction                        | `artifacts: streamed{engage/disengage}`                                                                                              | `wireSlots` special cases         |
-| `addVolumeField` + ingest ×3                        | folds into `generated`; one ingest fn                                                                                                | the imperative side-door          |
-| spec table + clear values + divisor param           | `targets` (`scale: n \| (state)=>n`)                                                                                                 | the positional param              |
-| `COMPUTE` record row                                | `computes`                                                                                                                           | the record edit                   |
-| runFrame CPU planner block                          | `planner` (memoised on ctx)                                                                                                          | inline planner calls              |
-| `deriveXLiveness` conventions                       | `liveness`                                                                                                                           | nothing — formalized              |
-| `anim` bag / disjunction terms                      | `wake` vote fold                                                                                                                     | the signature change              |
-| `FADE_LAYERS` row                                   | `fades` (manifest = concatenation)                                                                                                   | the central manifest              |
-| inline producer registration                        | `labelProducers` / `markerProducers`                                                                                                 | inline registration + shadow path |
-| group titles + sliders + DebugPanel JSX             | `debug` + derived-debug walker                                                                                                       | the JSX list                      |
-| settings slice + defaults                           | `settings` contribution                                                                                                              | nothing structural                |
+| surface today                                       | bundle field / walker                                                                                                                                                           | a new subsystem stops touching    |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| handle: type + literal + initGpu + destroy          | `handles` + construct/teardown walkers                                                                                                                                          | all 4 edits                       |
+| `CONTENT_LAYERS` import/ordinal/re-export           | `layers` + validation walker                                                                                                                                                    | the central array                 |
+| `ASSET_WIRING` row                                  | `artifacts: fetched`                                                                                                                                                            | nothing — already right           |
+| MW regen + divisor rebuild (ex-`runFrame` branches) | 🟢 done, no sweep: `RenderTargets.reconcile` (rung 2) + `MilkyWayCloud.reconcile` (rung 3) — the compare lives on the resource (#13)                                            | both branches, deleted            |
+| ad-hoc streamed construction                        | `artifacts: streamed{engage/disengage}`                                                                                                                                         | `wireSlots` special cases         |
+| `handle.volumes.add` + ingest ×5                    | 🟢 done, no bundle field needed: one `uploadVolumeField` with 5 callers. The door is an **ingest-contract entry point**, NOT a `generated` member (#14)                         | four hand-written commit bodies   |
+| spec table + clear values + divisor param           | `targets` (`scale: n \| (state)=>n`)                                                                                                                                            | the positional param              |
+| `COMPUTE` record row                                | `computes`                                                                                                                                                                      | the record edit                   |
+| runFrame CPU planner block                          | `planner` (memoised on ctx)                                                                                                                                                     | inline planner calls              |
+| `deriveXLiveness` conventions                       | `liveness`                                                                                                                                                                      | nothing — formalized              |
+| `anim` bag / disjunction terms                      | 🟢 done, no bundle field needed: one field (`labelsAnimating`) + two deletions shipped directly (rung 5, #15) — no walker, the bag itself is the seam                           | the signature change              |
+| `FADE_LAYERS` row                                   | `fades` (manifest = concatenation)                                                                                                                                              | the central manifest              |
+| inline producer registration                        | `labelProducers` / `markerProducers`                                                                                                                                            | inline registration + shadow path |
+| overlay settings chain (3 booleans × 9 touchpoints) | 🟢 done, no walker: one `overlays` record seeded from `DEBUG_OVERLAY_ROWS` (rung 6, #16) — group titles, sliders and DebugPanel JSX stay hand-authored by ruling, not debt (D2) | the three-chain settings copy     |
+| settings slice + defaults                           | `settings` contribution                                                                                                                                                         | nothing structural                |
 
 ⚪ **Deliberately unchanged**: hand-authored `frameProgram` (#4) · pick kind
 tables (backlog) · three named presentation mechanisms (#6) · store fade-free
@@ -266,5 +268,5 @@ boundary · engine-core accumulators/gates/ctx (#8).
 1. ~~**Clear values onto the target row** — kill the `TARGET_CLEAR_VALUES` drift pair; one source for `runBloom` too.~~ 🟢 **DONE (rung 2)** — `clearValue` rides each row in `renderTargetRows()`; `executeFrame` and `runBloom` both read it via `specOf(target).clearValue`.
 2. **`FADE_ROW` / `VISIBILITY_ACTION_ROW` derivation** — derive both inverse maps from the bundle's fade declaration, or record why they stay.
 3. **Validation depth** — add the acknowledged-unbuilt blend-legality + format-parity checks to the frame-assembly walker.
-4. **Swap-format subset** — replace `buildSwapRenderers`' hand list with a `rebuildOnSwapFormat` flag on the handle row.
+4. ~~**Swap-format subset** — replace `buildSwapRenderers`' hand list with a `rebuildOnSwapFormat` flag on the handle row.~~ 🟢 **DONE (rung 1, PR #571)** — `buildSwapRenderers.ts` derives the set from `GPU_HANDLE_ROWS`'s `rebuildOnSwapFormat` flag.
 5. **No-consumer fade rows** — when fades become bundle-declared, decide whether key totality still forces the dead rows.

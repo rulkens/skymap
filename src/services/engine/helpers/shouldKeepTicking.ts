@@ -20,7 +20,8 @@
  * the proof the predicate depends on nothing else. The one exception is `anim`,
  * an explicit bag of IN-FRAME animation votes collected by the planners runFrame
  * has already run this frame: the star LOD-fade `anyNodeFading` from
- * `prepareStarCut`, and the Earth tile subsystem's `isAnimating()`. It is
+ * `prepareStarCut`, the Earth tile subsystem's `isAnimating()`, and the label
+ * director's own runFrame vote. It is
  * threaded as a PARAMETER rather than read off EngineState precisely because it
  * is gathered per frame at the drive sites: passing it in keeps the predicate a
  * pure function of its inputs, and keeps the one wake authority here — a planner
@@ -62,6 +63,10 @@
  *     BEFORE the feature can engage, so runFrame reads this vote outside its
  *     engage gate — otherwise a camera that stops moving mid-fetch sleeps the
  *     loop and the tiles never appear.
+ *   - `anim.labelsAnimating`: the label director's own producers or its
+ *     appear/disappear envelope are mid-ramp — folded in from
+ *     `labelDirector.runFrame`'s return value rather than the director
+ *     calling `requestRender` itself.
  *   - manual clock playing: `selectIsManualPlaying(s)` — a manual sim clock that
  *     is advancing (not paused) moves every body every frame, so playback must
  *     be continuous. LIVE mode is deliberately absent: it advances at real-time
@@ -113,7 +118,7 @@ export function shouldKeepTicking(
   state: EngineState,
   s: RootState,
   nowMs: number,
-  anim: { starFadeAnimating: boolean; earthTilesAnimating: boolean },
+  anim: { starFadeAnimating: boolean; earthTilesAnimating: boolean; labelsAnimating: boolean },
 ): boolean {
   return (
     selectCameraActive(s) ||
@@ -124,6 +129,7 @@ export function shouldKeepTicking(
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state, nowMs) ||
     anim.starFadeAnimating ||
-    anim.earthTilesAnimating
+    anim.earthTilesAnimating ||
+    anim.labelsAnimating
   );
 }

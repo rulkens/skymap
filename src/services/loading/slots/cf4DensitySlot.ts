@@ -1,54 +1,31 @@
 /**
  * cf4DensitySlot — factory for the CF-4 DM density volume's asset slot.
  *
- * On commit, hands the decoded `ScalarCube` to
- * `volumeFieldRenderer.upload` under the id `'cf4-density'`.
- * The renderer reads per-cube static config (contrastCenter, envelope,
- * paletteId) from the registry and user-tunable knobs from
- * `state.settings.volumes.items` per frame — the commit replays no
- * renderer setter.
+ * On commit, hands the decoded `ScalarCube` to `uploadVolumeField` under the
+ * id `'cf4-density'` — the shared ingest path every volume slot commits
+ * through (settings-row seed, renderer upload, fade bridge).
  *
  * **Lazy fetch.**  CF-4 is registry-visible:false, so its construction
  * seed lands `enabled: false` and the slot stays idle at boot.
  * Toggling the field on dispatches `writeVolumeField`, which flips the
  * `enabled` bit and triggers a demand-reevaluation load — keeping
  * default-off CF-4 off the boot bandwidth budget.
- *
- * **Settings row.**  CF-4 is a shippable volume, so the construction
- * seed already created the entry in `state.settings.volumes.items`
- * before this commit fires.
  */
 
 import { createAssetSlot } from '../AssetSlot';
 import { cf4DensityFetcher } from '../fetchers/cf4DensityFetcher';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
+import { uploadVolumeField } from '../../engine/volume/uploadVolumeField';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, _cb) => {
+export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) => {
   const slot = createAssetSlot({
     name: 'cf4Density',
     fetch: cf4DensityFetcher,
     commit: async (cube) => {
-      const renderer = state.gpu.volumeFieldRenderer;
-      if (!renderer) return;
       const id = SOURCE_REGISTRY[Source.Cf4Density].id;
-      // Upload the cube; the renderer reads this field's per-cube static
-      // config (contrastCenter, envelope, palette) from the registry and
-      // its user-tunable knobs from `state.settings.volumes.items` per
-      // frame, so the commit replays no renderer setter.  CF-4 is a
-      // shippable volume, so its settings row already exists from the
-      // construction seed.
-      renderer.upload(id, cube);
-      // Drive the first-load fade through the intent → fade bridge; the
-      // volumeField row's intent gate (reads settings.volumes.items[id].enabled)
-      // decides, so a load that completes while the field is toggled off snaps to
-      // opacity 0 and never renders until the user enables it.
-      syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-      // No echo: React reads the per-field rows via `selectVolumeFieldItems` +
-      // a `useMemo` projection off the engine-owned settings store, so the
-      // commit's settings-row seed needs no callback fan-out.
+      uploadVolumeField(state, cb.store, id, cube);
     },
   });
   slot.subscribe((s) => {

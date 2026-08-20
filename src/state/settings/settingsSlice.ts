@@ -27,7 +27,7 @@
  * unwrap the draft with `current()` first — see its docblock below.
  */
 
-import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
@@ -52,6 +52,7 @@ import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
+import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
 // tier is NOT a settings field — it lives in its own root slice (seeded via the
@@ -187,10 +188,7 @@ const settingsSlice = createSlice({
     },
     // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
     // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
-    setZoneOfAvoidanceTuning: (
-      settings,
-      action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,
-    ) => {
+    setZoneOfAvoidanceTuning: (settings, action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>) => {
       Object.assign(settings.zoneOfAvoidance, action.payload);
     },
 
@@ -314,7 +312,12 @@ const settingsSlice = createSlice({
       // existing row (and its tuned sliders) untouched. Only a genuinely-new id
       // seeds a fresh row from registry defaults.
       if (settings.volumes.items[action.payload]) return;
-      settings.volumes.items[action.payload] = buildVolumeFieldSettings(action.payload);
+      // Freshly built, stored as-is — sound to re-type as Immer's Draft (no
+      // clone needed), same posture as selectionRowsSlice's `setSelectionRow`.
+      // `bands`' readonly array is what trips the plain assignment.
+      settings.volumes.items[action.payload] = buildVolumeFieldSettings(
+        action.payload,
+      ) as Draft<VolumeFieldSettings>;
     },
     removeVolumeField: (settings, action: PayloadAction<VolumeFieldId>) => {
       delete settings.volumes.items[action.payload];
@@ -323,8 +326,8 @@ const settingsSlice = createSlice({
       settings,
       action: PayloadAction<{ id: VolumeFieldId; patch: Partial<VolumeFieldSettings> }>,
     ) => {
-      // Shallow per-field merge, matching `writeVolumeFieldSetting`'s
-      // `{ ...cur, ...patch }`. An unknown id is a silent no-op.
+      // Shallow per-field merge via Immer's `Object.assign`. An unknown id
+      // is a silent no-op.
       const row = settings.volumes.items[action.payload.id];
       if (!row) return;
       Object.assign(row, action.payload.patch);
@@ -349,14 +352,13 @@ const settingsSlice = createSlice({
     },
 
     // ── debug ───────────────────────────────────────────────────────────────
-    setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
-      settings.debug.showPickBuffer = action.payload;
-    },
-    setShowDiskRadiusRing: (settings, action: PayloadAction<boolean>) => {
-      settings.debug.showDiskRadiusRing = action.payload;
-    },
-    setShowOrbitTrailImpostor: (settings, action: PayloadAction<boolean>) => {
-      settings.debug.showOrbitTrailImpostor = action.payload;
+    // One reducer for every DEBUG_OVERLAY_ROWS toggle — writes one entry
+    // in-place (like setPassDisabled below), never the whole record.
+    setDebugOverlay: (
+      settings,
+      action: PayloadAction<{ key: DebugOverlayKey; enabled: boolean }>,
+    ) => {
+      settings.debug.overlays[action.payload.key] = action.payload.enabled;
     },
     setPassDisabled: (settings, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
@@ -535,9 +537,7 @@ export const {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
-  setShowPickBuffer,
-  setShowDiskRadiusRing,
-  setShowOrbitTrailImpostor,
+  setDebugOverlay,
   setPassDisabled,
   setRenderStrategy,
   inspectClipPath,
