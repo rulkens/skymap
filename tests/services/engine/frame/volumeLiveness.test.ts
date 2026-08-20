@@ -1,15 +1,8 @@
 /**
- * deriveVolumeLiveness — the single per-frame projection both volume layers
- * (the half-res `scalar-volume` raymarch and the `volume-upsample` blit)
- * consume to decide whether volume work runs this frame, and with which
- * per-field read closures.
- *
- * Pre-unification the same fact lived in two hand-mirrored gates (one for
- * the raymarch, one for `volumeUpsampleLayer.enabled`) that could drift
- * on three axes (clamp, recession, the fade-tail check). These tests pin the
- * ONE derivation: null when there's no live volume work, otherwise the
- * `settingsOf` (clamped) + `fadeOpacityOf` (recessed-master-multiplied)
- * closures.
+ * deriveVolumeLiveness — the single projection both volume layers consume, pinned
+ * on the three axes a hand-mirrored pair of gates would drift on: the settings
+ * clamp, the recessed master, and the fade-tail check. Null means no live work;
+ * otherwise the two read closures come back together.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -88,7 +81,7 @@ function makeState(init: StateInit = {}): EngineState {
     },
     subsystems: {
       fades: { opacityOf: vi.fn(opacityOf) },
-      // clipPlayer omitted → resolveLayerOpacity's clip factor defaults to 1.
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }
