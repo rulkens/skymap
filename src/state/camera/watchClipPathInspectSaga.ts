@@ -51,6 +51,8 @@ import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
+import { selectTimeState } from '../time/selectors';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import type { SagaContext } from '../../store/types';
 import type { ClipId } from '../../@types/animation/ClipId';
 
@@ -72,7 +74,17 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const rt = cameraRuntime()!;
   const orientation = yield* select(selectOrientation);
   const frameBasis = ORIENTATION_FRAMES[orientation];
-  const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from, frameBasis);
+  // Off-frame resolve — live sim instant, same derivation as watchGoHomeSaga,
+  // so a body-targeting cue frames on where it is drawn now.
+  const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
+  const resolved = resolveClipFoci(
+    clip.data,
+    resolveDeps(),
+    rt.fovYRad,
+    rt.from,
+    simDays,
+    frameBasis,
+  );
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
   // overrides — while inactive knobs let the clip's own authored value through.
