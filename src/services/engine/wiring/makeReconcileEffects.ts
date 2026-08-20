@@ -20,9 +20,9 @@
  *   bakeBias       — kicks the bias-correction worker bake via fire-and-forget;
  *                    the `void` discards the Promise, matching setBiasMode's
  *                    intent not to await (mirrors setBiasMode's setMode call).
- *   logCameraState — prints the current orbit-camera pose via the logCameraState
- *                    helper (mirrors the engine's logCameraStateFn; the `l` key's
- *                    debug aid, now routed through an action).
+ *   logCameraState — prints the LIVE rendered pose + focus via logCameraState,
+ *                    assembled fresh (not from the stale `state.cam` drag
+ *                    register — mirrors the engine's logCameraStateFn).
  *   applySwapFormat — forwards straight to the `applySwapFormat` phase, which
  *                    owns the reconfigure-then-rebuild sequence and its own
  *                    already-live guard.
@@ -35,16 +35,30 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReconcileEffects } from '../../../store/effects/ReconcileEffects';
 import { logCameraState } from '../helpers/logCameraState';
+import { liveRenderCamera } from '../helpers/liveRenderCamera';
+import { liveFocusRow } from '../helpers/liveFocusRow';
 import { syncVisibilityFades } from './syncVisibilityFades';
 import { applySwapFormat } from '../phases/applySwapFormat';
 
-export function makeReconcileEffects(state: EngineState): ReconcileEffects {
+export function makeReconcileEffects(
+  state: EngineState,
+  canvas: HTMLCanvasElement,
+): ReconcileEffects {
   return {
     requestRender: () => state.subsystems.scheduler.requestRender(),
     syncFades: (rows) => syncVisibilityFades(state, { animate: true, only: rows }),
     reseedFlow: () => state.gpu.flowFieldRenderer?.maybeReseed(),
     bakeBias: (mode) => void state.subsystems.biasCorrection.setMode(mode),
-    logCameraState: () => logCameraState(state.cam),
+    logCameraState: () => {
+      const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+      logCameraState(
+        liveRenderCamera(state),
+        canvas,
+        liveFocusRow(state.selectionRows.focus, simDays),
+        simDays,
+        state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
+      );
+    },
     applySwapFormat: (desired) => applySwapFormat(state, desired),
   };
 }

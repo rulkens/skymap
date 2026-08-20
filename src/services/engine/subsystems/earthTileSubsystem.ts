@@ -22,9 +22,11 @@ import type { EarthTileBand } from '../../../@types/scene/EarthTileBand';
 import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
 import type { EarthTilePlannerParams } from '../../../@types/scene/EarthTilePlannerParams';
 import type { EarthTileRequest } from '../../../@types/scene/EarthTileRequest';
+import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
 import type { EarthTileSubsystem } from '../../../@types/engine/subsystems/EarthTileSubsystem';
 import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
 import { buildEarthPageTable } from '../../../utils/scene/buildEarthPageTable';
 import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
@@ -32,6 +34,8 @@ import { earthTilePath } from '../../../utils/scene/earthTilePath';
 import { fetchEarthTileManifest } from '../../../utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../utils/network/fetchEarthTileBitmap';
 import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
+import { directionToLonLatDeg } from '../../../utils/scene/directionToLonLatDeg';
+import { deepestBandLevelAt } from '../../../utils/scene/deepestBandLevelAt';
 import {
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_CONCURRENCY,
@@ -47,6 +51,20 @@ import {
 const TILED_KIND: EarthTileKind = 'surface';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
+
+/** The "nothing here yet" snapshot — atlas never allocated, or `state.subsystems.earthTiles`
+ *  itself is null. Exported so `engine.ts`'s debug handle shares this shape instead of
+ *  restating it. */
+export const EMPTY_EARTH_TILE_DEBUG_SNAPSHOT: EarthTileDebugSnapshot = {
+  engaged: false,
+  capacity: 0,
+  used: 0,
+  levels: [],
+  plan: null,
+  droppedAllocations: 0,
+  deepestLevelKeys: [],
+  subCamera: null,
+};
 
 /** One atlas-resident tile: which tile, which slot, when its bitmap landed. */
 type ResidentTile = {
@@ -81,6 +99,17 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   let slotsPerRow = 0;
 
   const resident = new Map<string, ResidentTile>();
+  // key -> z, for the debug snapshot's per-level pending counts. Written when a
+  // fetch is enqueued; cleared in the same `onResult` branches that already
+  // handle its resolution (declined or uploaded), so there's no third path to
+  // keep in sync.
+  const pendingLevelOf = new Map<string, number>();
+  // Debug-snapshot readout of the last engaged plan; null exactly while disengaged.
+  let lastEngaged: {
+    readonly plan: NonNullable<EarthTileDebugSnapshot['plan']>;
+    readonly droppedAllocations: number;
+    readonly subCameraDirLocal: Vec3;
+  } | null = null;
 
   let frameCounter = 0;
   // Frame's stamped clock, so `readyMs` stays deterministic under a stepped clock.
@@ -275,6 +304,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     lastFrameNowMs = nowMs;
 
     if (!(plan.zWin > active.baseLevel)) {
+      lastEngaged = null;
       standDown();
       return;
     }
@@ -291,20 +321,29 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     // untouched one). Pass 1 stamps every resident first; only genuine misses
     // reach pass 2's allocator.
     const misses: EarthTileRequest[] = [];
+    // Debug-only tally: planned tiles whose bitmap hasn't landed in `resident`
+    // yet, whatever the atlas's own slot state — see `EarthTileDebugSnapshot`.
+    let notResidentCount = 0;
     for (const request of plan.requests) {
       const key = earthTilePath(request.tile, prefix);
+      if (!resident.has(key)) notResidentCount++;
       // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
       if (atlas.isFailed(key)) continue;
       if (atlas.touch(key, frameCounter) === null) misses.push(request);
     }
 
+    let droppedAllocations = 0;
     for (const request of misses) {
       const key = earthTilePath(request.tile, prefix);
 
       // Null means the atlas is already full this frame.
-      if (atlas.allocate(key, frameCounter) === null) continue;
+      if (atlas.allocate(key, frameCounter) === null) {
+        droppedAllocations++;
+        continue;
+      }
 
+      pendingLevelOf.set(key, request.tile.z);
       atlas.enqueueFetch({
         key,
         // Highest-priority-first queue.
@@ -312,11 +351,13 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
         fetcher: () => fetchEarthTileBitmap(request.tile, prefix),
         onResult: (bitmap) => {
           if (destroyed || bitmap === null) {
+            pendingLevelOf.delete(key);
             bitmap?.close();
             return;
           }
           // Resolved from the key now, not carried: may have been evicted mid-flight.
           const slot = atlas.uploadBitmap(key, bitmap);
+          pendingLevelOf.delete(key);
           bitmap.close();
           if (slot === null) return;
           resident.set(key, { tile: request.tile, slot, readyMs: lastFrameNowMs });
@@ -324,6 +365,12 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
         },
       });
     }
+
+    lastEngaged = {
+      plan: { requestCount: plan.requests.length, zWin: plan.zWin, misses: notResidentCount },
+      droppedAllocations,
+      subCameraDirLocal: plan.subCameraDirLocal,
+    };
 
     const windowMoved =
       uploaded === null ||
@@ -342,6 +389,53 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     return rebuildOwed();
   }
 
+  /** See `EarthTileDebugSnapshot`. Built on demand for a low-rate DebugPanel
+   *  poll — never called from a render path, so an O(resident) scan is fine. */
+  function getDebugSnapshot(): EarthTileDebugSnapshot {
+    if (stream === null) return EMPTY_EARTH_TILE_DEBUG_SNAPSHOT;
+
+    const byLevel = new Map<number, { resident: number; pending: number }>();
+    const rowFor = (z: number) => {
+      let row = byLevel.get(z);
+      if (!row) {
+        row = { resident: 0, pending: 0 };
+        byLevel.set(z, row);
+      }
+      return row;
+    };
+    for (const entry of resident.values()) rowFor(entry.tile.z).resident++;
+    for (const z of pendingLevelOf.values()) rowFor(z).pending++;
+
+    const levels = [...byLevel.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([z, counts]) => ({ z, ...counts }));
+    const deepestZ = levels.length === 0 ? -1 : levels[levels.length - 1]!.z;
+    const deepestLevelKeys: string[] = [];
+    for (const entry of resident.values()) {
+      if (entry.tile.z !== deepestZ || deepestLevelKeys.length >= 16) continue;
+      deepestLevelKeys.push(`${entry.tile.x},${entry.tile.y}`);
+    }
+
+    // `params` (the last tier's bands) is set together with `lastEngaged` by
+    // `refreshParams`.
+    let subCamera: EarthTileDebugSnapshot['subCamera'] = null;
+    if (lastEngaged !== null && params !== null) {
+      const lonLat = directionToLonLatDeg(lastEngaged.subCameraDirLocal);
+      subCamera = { ...lonLat, coveredMaxLevel: deepestBandLevelAt(params.bands, lonLat) };
+    }
+
+    return {
+      engaged: true,
+      capacity: slotsPerRow * slotsPerRow,
+      used: stream.occupiedCount(),
+      levels,
+      plan: lastEngaged?.plan ?? null,
+      droppedAllocations: lastEngaged?.droppedAllocations ?? 0,
+      deepestLevelKeys,
+      subCamera,
+    };
+  }
+
   function destroy(): void {
     destroyed = true;
     stream?.destroy();
@@ -350,6 +444,8 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     pageTable = null;
     resources = null;
     resident.clear();
+    pendingLevelOf.clear();
+    lastEngaged = null;
     manifest = null;
     params = null;
     paramsTier = null;
@@ -362,6 +458,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     getTileResources: () => resources,
     getUploadedWindow: () => uploaded?.window ?? null,
     isAnimating,
+    getDebugSnapshot,
     destroy,
   };
   subsystem satisfies Destroyable;

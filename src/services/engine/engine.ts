@@ -38,6 +38,8 @@ import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
+import { liveRenderCamera } from './helpers/liveRenderCamera';
+import { liveFocusRow } from './helpers/liveFocusRow';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -54,6 +56,7 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
+import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from './subsystems/earthTileSubsystem';
 import { uploadVolumeField } from './volume/uploadVolumeField';
 import { unloadVolumeField } from './volume/unloadVolumeField';
 import { listVolumeFields } from './handles/listVolumeFields';
@@ -670,7 +673,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
-    reconcile: makeReconcileEffects(state),
+    reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
     // The live camera Resources the focus and orientation sagas read off the
     // frame loop: the visible from-pose (so a re-focus hands off from what the
@@ -721,7 +724,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // reference each by name — no forward references, no `!` assertions.
 
   function logCameraStateFn(): void {
-    logCameraState(state.cam);
+    const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+    logCameraState(
+      liveRenderCamera(state),
+      canvas,
+      liveFocusRow(state.selectionRows.focus, simDays),
+      simDays,
+      state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
+    );
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
@@ -881,6 +891,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Re-derived per call off the live state rather than snapshotted: the
       // slots this joins against are minted by the async IIFE below.
       assetPriorities: () => assetPriorityBySlotName(state),
+      // `state.subsystems.earthTiles` is null before Earth's slot wires (and
+      // again after destroy), so the fallback keeps the panel's read total.
+      earthTiles: () =>
+        state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
     },
 
     destroy,
