@@ -33,6 +33,7 @@ import type { VisibilityLayerKey } from '../../../../src/@types/animation/Visibi
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
+import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 
 // ── Drift guard ───────────────────────────────────────────────────────
 //
@@ -377,33 +378,17 @@ describe('seedFades', () => {
 // side effects.
 
 describe('FADE_LAYERS intent subset', () => {
-  const INTENT_KEYS: readonly VisibilityLayerKey[] = [
-    'survey',
-    'surveyLabel',
-    'structureRing',
-    'structureLabel',
-    'volumeField',
-    'volumesMaster',
-    'filaments',
-    'orbitTrails',
-    'milkyWayDisk',
-    'milkyWayLabel',
-    'flow',
-  ];
-  const REGISTRATION_ONLY_KEYS: readonly VisibilityLayerKey[] = [
-    'proceduralDisks',
-    'texturedDisks',
-    'scaleBar',
-  ];
-
-  it('every intent row exposes intent; register-only rows do not', () => {
-    for (const key of INTENT_KEYS) {
-      const row = rowFor(key);
-      expect(typeof row.intent, `${key}.intent`).toBe('function');
-    }
-    for (const key of REGISTRATION_ONLY_KEYS) {
-      const row = rowFor(key);
-      expect(row.intent, `${key}.intent`).toBeUndefined();
+  it('a row drives a fade iff its layer writes a setting', () => {
+    // FADE_LAYERS and VISIBILITY_ACTION_ROW deliberately don't merge (they
+    // close over different domains — EngineState vs settings-item id lists),
+    // but they agree on one thing: a row exposes `intent` exactly when its
+    // VISIBILITY_ACTION_ROW counterpart has a real settings write. Derived
+    // from both tables so a future row can't silently drift out of either
+    // list the way the old hand-listed INTENT_KEYS/REGISTRATION_ONLY_KEYS
+    // arrays did (they stopped covering four rows).
+    for (const row of FADE_LAYERS) {
+      const { writes } = VISIBILITY_ACTION_ROW[row.key];
+      expect(row.intent === undefined, `${row.key}: intent vs writes`).toBe(writes === null);
     }
   });
 
