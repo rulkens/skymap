@@ -29,6 +29,7 @@
 
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../FrameStats';
+import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
 
 /**
  * `passOverrides` — read-only pass-name list for the DebugPanel's
@@ -75,4 +76,21 @@ export type EngineDebugHandle = {
    * is built, so a Map captured at construction would be permanently empty.
    */
   readonly assetPriorities: () => ReadonlyMap<string, number>;
+  /**
+   * Earth surface tile atlas residency for the DebugPanel's "Earth tile atlas"
+   * section — a getter, not a snapshot, for the same reason as `frameStats`:
+   * `state.subsystems.earthTiles` is minted well after this handle is built,
+   * and stands down to `null` on destroy. Returns a quiet empty snapshot
+   * (`engaged: false`) rather than `null` so the panel never needs its own
+   * absent-subsystem branch.
+   */
+  readonly earthTiles: () => EarthTileDebugSnapshot;
+  /**
+   * Debug instrument for the Earth Tile Atlas panel: snap the camera so its
+   * sub-camera point (the readout `earthTiles()` reports) lands exactly at
+   * `(lonDeg, latDeg)`, at the CURRENT altitude, target re-centred on Earth.
+   * A no-op before Earth's body seed lands. See `flyToLonLatFn`'s header in
+   * `engine.ts` for the pose-commit seam and the follow-driver interaction.
+   */
+  readonly flyToLonLat: (lonDeg: number, latDeg: number) => void;
 };

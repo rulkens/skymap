@@ -98,6 +98,13 @@ export type BitmapStreamSubsystem = Destroyable & {
    */
   inFlightCount(): number;
 
+  /**
+   * Atlas slots currently claimed by a key (loaded or still in flight) — the
+   * atlas's own ground truth for a "used / capacity" debug readout, as
+   * opposed to a caller's parallel bookkeeping going stale under eviction.
+   */
+  occupiedCount(): number;
+
   /** Texture view bound by the LOD-2 renderers (called once at wireSlots). */
   getTextureView(): GPUTextureView;
 

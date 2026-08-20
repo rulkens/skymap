@@ -25,6 +25,8 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 
 const FOV_Y = 0.8;
+// Arbitrary — this chain resolves only structure refs, never a body.
+const SIM_DAYS = 2451545;
 const LG_POS: Vec3 = [0, 0, 0];
 // A subject placed off-axis (not on the arrival bearing), 3.6 Mpc out —
 // realistic scale for the M81 Group from the Local Group barycentre.
@@ -99,6 +101,7 @@ describe('neighbourhoodReveal lands the flythrough launch bearing, not localGrou
       DEPS,
       FOV_Y,
       fromEnteringLocalGroupDwell,
+      SIM_DAYS,
     );
     const yawAfterLocalGroupDwell = arrivalYaw + yawSpinBy(resolvedLocalGroupDwell);
 
@@ -121,7 +124,13 @@ describe('neighbourhoodReveal lands the flythrough launch bearing, not localGrou
       pitch: 0,
       distance: 5,
     };
-    const resolvedReveal = resolveClipFoci(neighbourhoodReveal, DEPS, FOV_Y, fromEnteringReveal);
+    const resolvedReveal = resolveClipFoci(
+      neighbourhoodReveal,
+      DEPS,
+      FOV_Y,
+      fromEnteringReveal,
+      SIM_DAYS,
+    );
     const yawAfterReveal = yawAfterLocalGroupDwell + yawSpinBy(resolvedReveal);
 
     const launchGapDeg = (Math.abs(wrapPi(yawAfterReveal - trueBearing)) * 180) / Math.PI;

@@ -102,7 +102,75 @@ function expectedLevel(altitudeKm: number): number {
   return z;
 }
 
+/**
+ * A close-flyover pose: `altitudeM` above (`lonDeg`, `latDeg`), aimed
+ * `tiltDeg` off nadir toward local north rather than straight down. At low
+ * altitude and a shallow band's `max`, a few tenths of a degree of tilt is
+ * enough for the near plane to slice through a root-level patch — some of
+ * its 9 samples land behind the camera, some in front.
+ */
+function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) {
+  const d = 1 + altitudeM / 1000 / EARTH_RADIUS_KM;
+  const lon = (lonDeg * Math.PI) / 180;
+  const lat = (latDeg * Math.PI) / 180;
+  const camPosLocal: Vec3 = [
+    d * Math.cos(lat) * Math.cos(lon),
+    d * Math.cos(lat) * Math.sin(lon),
+    d * Math.sin(lat),
+  ];
+  const up: Vec3 = [camPosLocal[0] / d, camPosLocal[1] / d, camPosLocal[2] / d];
+  const east: Vec3 = [-Math.sin(lon), Math.cos(lon), 0];
+  const north: Vec3 = [
+    up[1] * east[2] - up[2] * east[1],
+    up[2] * east[0] - up[0] * east[2],
+    up[0] * east[1] - up[1] * east[0],
+  ];
+  const tiltRad = (tiltDeg * Math.PI) / 180;
+  const forward: Vec3 = [
+    -up[0] * Math.cos(tiltRad) + north[0] * Math.sin(tiltRad),
+    -up[1] * Math.cos(tiltRad) + north[1] * Math.sin(tiltRad),
+    -up[2] * Math.cos(tiltRad) + north[2] * Math.sin(tiltRad),
+  ];
+  const target: Vec3 = [
+    camPosLocal[0] + forward[0],
+    camPosLocal[1] + forward[1],
+    camPosLocal[2] + forward[2],
+  ];
+  const view = mat4.lookAt(camPosLocal, target, up);
+  const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
+  const viewProjLocal = new Float32Array(mat4.multiply(proj, view));
+  const maxLevel = 19;
+  return {
+    kind: 'surface' as const,
+    camPosLocal,
+    viewProjLocal,
+    viewportPx: VIEWPORT,
+    baseLevel: BASE_LEVEL,
+    bands: [
+      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: maxLevel },
+    ],
+    windowSide: EARTH_TILE_WINDOW_SIDE,
+    tilePx: EARTH_TILE_PX,
+    lodBias: 0,
+    maxLevel,
+  };
+}
+
 describe('planEarthTiles', () => {
+  it('keeps the deep band alive when the near plane slices a root patch (off-nadir tilt)', () => {
+    // 500 m up, tilted 2 degrees off nadir: nowhere near the horizon, but
+    // enough for the near plane to cut through a root-level (z4) patch. The
+    // false-negative bug this pins closed rejects that one root ancestor on
+    // its garbage partial bbox and prunes its entire subtree, zeroing the
+    // whole plan (zWin stays at baseLevel, no requests at all) even though
+    // the ground directly under the camera is plainly on screen.
+    const { maxLevel, ...input } = tiltedAt(500, 2);
+    const plan = planEarthTiles(input);
+    expect(plan.requests.length).toBeGreaterThan(0);
+    expect(plan.requests.some((r) => r.tile.z === maxLevel)).toBe(true);
+  });
+
+
   it('reaches the level a hand-computed texel density calls for', () => {
     expect(expectedLevel(1000)).toBe(8); // guards the arithmetic in the comment above
     expect(planEarthTiles(nadirAt(1000)).zWin).toBe(8);
@@ -236,6 +304,21 @@ describe('planEarthTiles', () => {
   it('returns an empty plan rather than nonsense when the camera is on the surface', () => {
     const plan = planEarthTiles({ ...nadirAt(1000), camPosLocal: [1, 0, 0] });
     expect(plan.requests).toEqual([]);
+    // Still a meaningful sub-camera direction, not a zero vector NaN trap —
+    // the debug readout needs this even on the degenerate "no horizon" path.
+    expect(plan.subCameraDirLocal).toEqual([1, 0, 0]);
+  });
+
+  it('reports subCameraDirLocal as the normalised camPosLocal, not a recomputed one', () => {
+    // A nadir camera's direction is exactly its own position, normalised —
+    // this pins the plumbing (the value the debug readout will convert to
+    // lon/lat), independent of `directionToLonLatDeg`'s own unit tests.
+    const { camPosLocal } = nadirAt(1000);
+    const len = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
+    const plan = planEarthTiles(nadirAt(1000));
+    expect(plan.subCameraDirLocal[0]).toBeCloseTo(camPosLocal[0] / len, 12);
+    expect(plan.subCameraDirLocal[1]).toBeCloseTo(camPosLocal[1] / len, 12);
+    expect(plan.subCameraDirLocal[2]).toBeCloseTo(camPosLocal[2] / len, 12);
   });
 
   it('emits leaves on both sides of the antimeridian, all inside the wrapped window', () => {

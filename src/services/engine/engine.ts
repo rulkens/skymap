@@ -38,6 +38,11 @@ import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
+import { liveRenderCamera } from './helpers/liveRenderCamera';
+import { liveFocusRow } from './helpers/liveFocusRow';
+import { deriveBodyStates } from './frame/deriveBodyStates';
+import { lonLatFocusPose } from '../../utils/camera/lonLatFocusPose';
+import { commitCameraPose } from '../../state/camera/cameraSlice';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -54,6 +59,7 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
+import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from './subsystems/earthTileSubsystem';
 import { uploadVolumeField } from './volume/uploadVolumeField';
 import { unloadVolumeField } from './volume/unloadVolumeField';
 import { listVolumeFields } from './handles/listVolumeFields';
@@ -670,7 +676,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
-    reconcile: makeReconcileEffects(state),
+    reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
     // The live camera Resources the focus and orientation sagas read off the
     // frame loop: the visible from-pose (so a re-focus hands off from what the
@@ -721,7 +727,55 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // reference each by name — no forward references, no `!` assertions.
 
   function logCameraStateFn(): void {
-    logCameraState(state.cam);
+    const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+    logCameraState(
+      liveRenderCamera(state),
+      canvas,
+      liveFocusRow(state.selectionRows.focus, simDays),
+      simDays,
+      state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
+    );
+  }
+
+  /**
+   * flyToLonLat — debug instrument for the Earth Tile Atlas panel: snap the
+   * camera so its sub-camera point sits exactly at `(lonDeg, latDeg)` on
+   * Earth, at the CURRENT altitude, target re-centred on Earth.
+   *
+   * `lonLatFocusPose` is the exact inverse of the sub-camera readout
+   * (`earthTileSubsystem.getDebugSnapshot`'s `subCamera`), so a value typed
+   * here and the value the readout reports back should agree.
+   *
+   * Commits through `commitCameraPose` — the same INSTANT (non-tweened)
+   * write bootstrap and orbit-controls pointerup use to bake a resting pose
+   * into `camera.base` — rather than a tween, because the brief is a snap,
+   * not a fly. This composes cleanly with the follow driver: `followBody`
+   * only wins while idle and re-centres `target` on Earth's LIVE position
+   * every frame regardless of what `base.target` holds, and its yaw/pitch
+   * ease is already saturated (t=1) whenever Earth has been focused for
+   * more than one focus-tween duration — the overwhelmingly common case
+   * while poking at this panel — so the committed yaw/pitch/distance take
+   * effect on the very next frame with no fight and no visible re-approach.
+   */
+  function flyToLonLatFn(lonDeg: number, latDeg: number): void {
+    const earth = state.data.bodies.earth;
+    if (earth === null) return;
+    const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+    const earthState = deriveBodyStates(simDays).get(earth.id);
+    if (earthState === undefined) return;
+    // The live produced pose, not `state.cam` (refreshed only at boot + drag
+    // start — see liveRenderCamera's header): its `.distance` is the current
+    // altitude this instrument preserves.
+    const distance = state.cameraRuntime.lastPose.current.distance;
+    const frameBasis = ORIENTATION_FRAMES[state.settings.orientation];
+    const pose = lonLatFocusPose(
+      { lonDeg, latDeg },
+      earthState.positionMpc,
+      distance,
+      earthState.orientation,
+      frameBasis,
+    );
+    store.dispatch(commitCameraPose(pose));
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
@@ -881,6 +935,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Re-derived per call off the live state rather than snapshotted: the
       // slots this joins against are minted by the async IIFE below.
       assetPriorities: () => assetPriorityBySlotName(state),
+      // `state.subsystems.earthTiles` is null before Earth's slot wires (and
+      // again after destroy), so the fallback keeps the panel's read total.
+      earthTiles: () =>
+        state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+      flyToLonLat: flyToLonLatFn,
     },
 
     destroy,

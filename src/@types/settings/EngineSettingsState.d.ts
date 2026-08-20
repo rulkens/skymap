@@ -417,6 +417,14 @@ export type EngineSettingsState = {
    *     hull as a flat fill tint IN ADDITION to the real trails, so a
    *     developer can see whether the stroke pokes outside the ribbon (a
    *     coverage gap). Gated behind the DebugPanel.
+   *   - `showEarthLodOverlay` — tints each Earth surface pixel (50/50 over
+   *     the real imagery) by the pyramid level its page-table cell is
+   *     ACTUALLY sampling from the tile atlas: a discrete, monotonic
+   *     coarse→fine ramp (deep blue through green/yellow to red), magenta
+   *     wherever the cell has no resident tile (page-table alpha 0 or
+   *     outside the window — base texture only). Lets a developer see the
+   *     virtual texture's per-pixel LOD choice at a glance. Gated behind
+   *     the DebugPanel; reaches the fragment as `EarthSurfaceUniforms.debugLodOverlay`.
    *   - `disabledPasses` — content-layer names the developer has manually
    *     toggled off in the renderer-toggle section.  Membership is
    *     `[name] === true`; a name absent from the record (or mapped to
@@ -432,6 +440,7 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     showOrbitTrailImpostor: boolean;
+    showEarthLodOverlay: boolean;
     disabledPasses: Record<string, boolean>;
     /**
      * Render-strategy override — decouples the frame's pass SHAPE from whether

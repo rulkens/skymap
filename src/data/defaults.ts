@@ -487,6 +487,9 @@ export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
 /** Orbit-trail impostor overlay starts off.  See `EngineSettingsState.debug.showOrbitTrailImpostor`. */
 export const DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR = false;
 
+/** Earth LOD overlay starts off.  See `EngineSettingsState.debug.showEarthLodOverlay`. */
+export const DEFAULT_SHOW_EARTH_LOD_OVERLAY = false;
+
 // ── Camera orientation frame ─────────────────────────────────────────────────
 
 /**

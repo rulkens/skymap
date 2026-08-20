@@ -1,5 +1,5 @@
 /**
- * packEarthSurfaceUniforms — pure packer for the 128-byte `EarthSurfaceUniforms`
+ * packEarthSurfaceUniforms — pure packer for the 144-byte `EarthSurfaceUniforms`
  * struct (`shaders/lib/sphere.wesl`).
  *
  * The photoreal-Earth surface pass binds one per-draw uniform buffer carrying
@@ -51,7 +51,17 @@
  * passes zeros and draws exactly the picture Earth draws without the virtual
  * texture.
  *
- * ## Byte layout (uniform address space) — 128 bytes / 32 f32
+ * ## debugLodOverlay — a fresh 16-byte row, no free slot left to reuse
+ *
+ * Unlike `oceanRoughness` / the page-table window (which filled a row an
+ * earlier field had already rounded up to 16 bytes), the struct was exactly
+ * 128 bytes with nothing spare — `earthLayer.ts` even has a "KNOWN OMISSION"
+ * note recording that the last field left none free. `debugLodOverlay` (the
+ * `debug.showEarthLodOverlay` DebugPanel toggle, as 0.0/1.0) therefore opens a
+ * new row at byte 128; the fragment reads it with `> 0.5`. The row's other
+ * three slots are true padding — nothing else needed packing.
+ *
+ * ## Byte layout (uniform address space) — 144 bytes / 36 f32
  *
  *   f32 0..15  (byte  0..63):  mvp (column-major mat4x4)
  *   f32 16..18 (byte 64..75):  sunDirLocal (vec3, 16-byte aligned)
@@ -66,6 +76,8 @@
  *   f32 29     (byte 116..119): zWin (page-table window level; read as u32)
  *   f32 30     (byte 120..123): winX0 (window origin west column at zWin; as u32)
  *   f32 31     (byte 124..127): winY0 (window origin north row at zWin; as u32)
+ *   f32 32     (byte 128..131): debugLodOverlay (0.0/1.0; the LOD-tint debug toggle)
+ *   f32 33..35 (byte 132..143): padding (zeroed)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
@@ -85,14 +97,17 @@
  * @param zWin                Page-table window level (`EarthTilePlan.zWin`).
  * @param winX0               Window origin tile at `zWin`: west column.
  * @param winY0               Window origin tile at `zWin`: north row.
+ * @param debugLodOverlay     `debug.showEarthLodOverlay` toggle — packed as
+ *                            0.0/1.0, the fragment reads it with `> 0.5`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `EarthSurfaceUniforms` — 16 mvp + 4 (sun+rough) + 4 (cam+f0) + 4
- *  (irradiance/cloud/ambient) + 4 (oceanRoughness + the page-table window). */
-export const EARTH_SURFACE_UNIFORM_FLOATS = 32;
+ *  (irradiance/cloud/ambient) + 4 (oceanRoughness + the page-table window) + 4
+ *  (debugLodOverlay + 3 pad — no free slot left in the prior rows). */
+export const EARTH_SURFACE_UNIFORM_FLOATS = 36;
 
 export function packEarthSurfaceUniforms(
   mvp: Float32Array,
@@ -108,6 +123,7 @@ export function packEarthSurfaceUniforms(
   zWin: number,
   winX0: number,
   winY0: number,
+  debugLodOverlay: boolean,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -127,5 +143,8 @@ export function packEarthSurfaceUniforms(
   out[29] = zWin; // byte 116 — window level
   out[30] = winX0; // byte 120 — window origin west column at zWin
   out[31] = winY0; // byte 124 — window origin north row at zWin
+  // A fresh row — the struct had no free slot left (see the header). Indices
+  // 33..35 stay the Float32Array's zero fill (true padding).
+  out[32] = debugLodOverlay ? 1.0 : 0.0; // byte 128 — the LOD-tint debug toggle
   return out;
 }

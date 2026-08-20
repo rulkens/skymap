@@ -131,6 +131,9 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
   upBasisQuat: [0, 0, 0, 1],
 };
 
+// Arbitrary — both beats resolve only structure refs, never a body.
+const SIM_DAYS = 2451545;
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('webShowcase dive invariants', () => {
@@ -153,6 +156,7 @@ describe('webShowcase dive invariants', () => {
       DIVE_DEPS,
       CAMERA_RUNTIME.fovYRad,
       CAMERA_RUNTIME.from,
+      SIM_DAYS,
     );
 
     const nodes = collectNodes(resolved.timeline);
@@ -180,6 +184,7 @@ describe('webShowcase dive invariants', () => {
       DIVE_DEPS,
       CAMERA_RUNTIME.fovYRad,
       CAMERA_RUNTIME.from,
+      SIM_DAYS,
     );
 
     const nodes = collectNodes(resolved.timeline);

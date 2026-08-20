@@ -4,7 +4,7 @@
  *
  * Draws the single seeded `bodies.earth` record as a unit sphere scaled to its
  * radius and translated to its position in the `RENDER_ORIGIN_MPC`-relative
- * frame, packing the 128-byte `EarthSurfaceUniforms` record (MVP + sun
+ * frame, packing the 144-byte `EarthSurfaceUniforms` record (MVP + sun
  * direction + camera, all body-local, plus the PBR params including the
  * user-tunable `settings.earth.ambientLight` / `oceanRoughness` overrides).
  * `earthRenderer.draw` writes it into a single non-dynamic uniform buffer, so
@@ -126,8 +126,10 @@ export const earthLayer: ContentLayer = {
     //
     // KNOWN OMISSION: this fade does not reach the night-side city-lights
     // dimming (nightLights reads cloudAlphaHere with no strength scalar).
-    // Fixing that needs a 14th uniform field and packEarthSurfaceUniforms has
-    // none free; deferred rather than paid for a night-side-only artifact.
+    // Fixing that needs one more uniform field; `debugLodOverlay`'s row left two
+    // pad slots free (`packEarthSurfaceUniforms.ts`), so it no longer forces a
+    // fresh 16-byte row — still deferred rather than paid for a night-side-only
+    // artifact.
     const cloudFade = cloudDeckFade(
       earthCameraDistanceMpc(earthState.positionMpc, ctx),
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
@@ -154,6 +156,9 @@ export const earthLayer: ContentLayer = {
         tileWindow?.zWin ?? 0,
         tileWindow?.winX0 ?? 0,
         tileWindow?.winY0 ?? 0,
+        // DebugPanel's Earth LOD overlay toggle — read live each frame, same as
+        // the other `settings.debug.*` overlay flags.
+        state.settings.debug.showEarthLodOverlay,
       ),
     );
   },

@@ -20,9 +20,12 @@ import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
 
-// Earth's row position comes from the derived J2000 snapshot — the same source
-// the resolver's `body` arm reads (identity id/label/radius stay off the record).
-const EARTH_POS = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+// Earth's row position comes from the derived body-state snapshot at the
+// simDays passed in — the same source the resolver's `body` arm reads
+// (identity id/label/radius stay off the record). Non-body-focused tests pass
+// this same instant; its value is otherwise arbitrary for them.
+const SIM_DAYS = CONST_J2000;
+const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
 
 function makeCloud(): GalaxyCatalog {
   return makeGalaxyCatalog(1, {
@@ -71,10 +74,14 @@ async function makeStarCatalog(): Promise<StarCatalog> {
 
 describe('extractSelectionRow', () => {
   it('null ref → null', () => {
-    expect(extractSelectionRow(null, deps)).toBeNull();
+    expect(extractSelectionRow(null, deps, SIM_DAYS)).toBeNull();
   });
   it('galaxy ref → GalaxyRow', () => {
-    const row = extractSelectionRow({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }, deps);
+    const row = extractSelectionRow(
+      { type: 'galaxyCatalog', source: Source.SDSS, index: 0 },
+      deps,
+      SIM_DAYS,
+    );
     expect(row).toMatchObject({
       type: 'galaxyCatalog',
       source: Source.SDSS,
@@ -83,19 +90,27 @@ describe('extractSelectionRow', () => {
     });
   });
   it('structure ref → the StructureInfo by id', () => {
-    expect(extractSelectionRow({ type: 'structure', id: 'abell-2065' }, deps)).toBe(structure);
+    expect(extractSelectionRow({ type: 'structure', id: 'abell-2065' }, deps, SIM_DAYS)).toBe(
+      structure,
+    );
   });
   it('milkyWay ref → the milkyWay tag', () => {
-    expect(extractSelectionRow({ type: 'milkyWay' }, deps)).toEqual({ type: 'milkyWay' });
+    expect(extractSelectionRow({ type: 'milkyWay' }, deps, SIM_DAYS)).toEqual({
+      type: 'milkyWay',
+    });
   });
   it('galaxy ref to an unloaded cloud → null (deep-link / tier race)', () => {
     expect(
-      extractSelectionRow({ type: 'galaxyCatalog', source: Source.Glade, index: 0 }, deps),
+      extractSelectionRow(
+        { type: 'galaxyCatalog', source: Source.Glade, index: 0 },
+        deps,
+        SIM_DAYS,
+      ),
     ).toBeNull();
   });
 
   it('body ref → a self-contained body row from the static SCENE_BODIES seed', () => {
-    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps);
+    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps, SIM_DAYS);
     expect(row).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -105,27 +120,45 @@ describe('extractSelectionRow', () => {
     });
   });
 
+  it('body ref resolves the position at the PASSED simDays, not a fixed epoch', () => {
+    // The whole point of the fix: two different simDays for the same orbiting
+    // body must yield two different positions, sourced from deriveBodyStates at
+    // exactly the value passed in.
+    const laterSimDays = SIM_DAYS + 200; // ~200 days along Earth's orbit
+    const rowAtEpoch = extractSelectionRow({ type: 'body', id: 'earth' }, deps, SIM_DAYS);
+    const rowLater = extractSelectionRow({ type: 'body', id: 'earth' }, deps, laterSimDays);
+    const expectedLater = deriveBodyStates(laterSimDays).get('earth')!.positionMpc;
+
+    expect(rowAtEpoch !== null && rowAtEpoch.type === 'body' && rowAtEpoch.positionMpc).toEqual(
+      EARTH_POS,
+    );
+    expect(rowLater !== null && rowLater.type === 'body' && rowLater.positionMpc).toEqual([
+      ...expectedLater,
+    ]);
+    expect(rowLater).not.toEqual(rowAtEpoch);
+  });
+
   it('star body row position is copied, not aliased to the shared anchor', () => {
     // A star's snapshot position IS its `SCENE_ANCHORS` array, shared by
     // reference (an anchor never moves, so the derive never copies it). The row
     // must COPY that Vec3: it lands in the RTK store, whose immutability
     // middleware freezes state — an aliased Vec3 would freeze the shared anchor
     // in place, poisoning every other consumer of the constant.
-    const anchor = deriveBodyStates(CONST_J2000).get('sirius')!.positionMpc;
-    const row = extractSelectionRow({ type: 'body', id: 'sirius' }, deps);
+    const anchor = deriveBodyStates(SIM_DAYS).get('sirius')!.positionMpc;
+    const row = extractSelectionRow({ type: 'body', id: 'sirius' }, deps, SIM_DAYS);
     expect(row !== null && row.type === 'body' && row.positionMpc).toEqual([...anchor]);
     expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(anchor);
   });
 
   it('body ref with an unknown seed id → null (garbage, not "loading")', () => {
-    expect(extractSelectionRow({ type: 'body', id: 'krypton' }, deps)).toBeNull();
+    expect(extractSelectionRow({ type: 'body', id: 'krypton' }, deps, SIM_DAYS)).toBeNull();
   });
 
   it('star ref resolves against the loaded catalog (matches resolveStarRecord)', async () => {
     const catalog = await makeStarCatalog();
     const starDeps: ResolveDeps = { ...deps, stars: { current: () => catalog } };
     const record = resolveStarRecord(catalog, 1)!;
-    expect(extractSelectionRow({ type: 'star', index: 1 }, starDeps)).toEqual({
+    expect(extractSelectionRow({ type: 'star', index: 1 }, starDeps, SIM_DAYS)).toEqual({
       type: 'star',
       index: 1,
       positionMpc: record.positionMpc,
@@ -141,13 +174,13 @@ describe('extractSelectionRow', () => {
     // downstream framing/gating read for a field star that carries no measured one.
     const catalog = await makeStarCatalog();
     const starDeps: ResolveDeps = { ...deps, stars: { current: () => catalog } };
-    const row = extractSelectionRow({ type: 'star', index: 0 }, starDeps);
+    const row = extractSelectionRow({ type: 'star', index: 0 }, starDeps, SIM_DAYS);
     expect(row !== null && row.type === 'star' && row.radiusKm).toBe(SOLAR_RADIUS_KM);
   });
 
   it('star ref with no loaded catalog → null (cloud not loaded yet)', () => {
     // The shared deps' stars.current() returns null — a deep link / mid-load
     // race, not a garbage id, so the reconciler retries.
-    expect(extractSelectionRow({ type: 'star', index: 0 }, deps)).toBeNull();
+    expect(extractSelectionRow({ type: 'star', index: 0 }, deps, SIM_DAYS)).toBeNull();
   });
 });

@@ -234,6 +234,9 @@ export const selectShowDiskRadiusRing = (state: RootState): boolean =>
 export const selectShowOrbitTrailImpostor = (state: RootState): boolean =>
   selectSettings(state).debug.showOrbitTrailImpostor;
 
+export const selectShowEarthLodOverlay = (state: RootState): boolean =>
+  selectSettings(state).debug.showEarthLodOverlay;
+
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;
 

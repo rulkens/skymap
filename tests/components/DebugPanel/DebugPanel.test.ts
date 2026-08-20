@@ -34,6 +34,7 @@ import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
+import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/earthTileSubsystem';
 
 // ---------------------------------------------------------------------------
 // Stub engine props
@@ -69,6 +70,8 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
       frameStats: () => ({ fps: 0, cpuMs: 0, idle: true }),
       passNames: PASS_NAMES,
       assetPriorities: () => new Map<string, number>(),
+      earthTileDebug: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+      flyToLonLat: () => undefined,
     }),
     { wrapper: makeWrapper(store) },
   );

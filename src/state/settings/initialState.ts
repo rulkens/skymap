@@ -22,6 +22,7 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
+  DEFAULT_SHOW_EARTH_LOD_OVERLAY,
   DEFAULT_EXPOSURE,
   DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
@@ -250,6 +251,7 @@ export function buildInitialSettings(): EngineSettingsState {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       showOrbitTrailImpostor: DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
+      showEarthLodOverlay: DEFAULT_SHOW_EARTH_LOD_OVERLAY,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},

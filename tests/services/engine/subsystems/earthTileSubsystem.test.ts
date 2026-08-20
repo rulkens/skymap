@@ -40,7 +40,10 @@ vi.mock('../../../../src/utils/network/fetchEarthTileBitmap', () => ({
 import type { EarthTileManifest } from '../../../../src/@types/scene/EarthTileManifest';
 import type { EarthTilePlan } from '../../../../src/@types/scene/EarthTilePlan';
 import type { Tier } from '../../../../src/@types/data/Tier';
-import { createEarthTileSubsystem } from '../../../../src/services/engine/subsystems/earthTileSubsystem';
+import {
+  createEarthTileSubsystem,
+  EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+} from '../../../../src/services/engine/subsystems/earthTileSubsystem';
 import { fetchEarthTileManifest } from '../../../../src/utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../../src/utils/network/fetchEarthTileBitmap';
 import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
@@ -166,11 +169,15 @@ describe('earthTileSubsystem base level', () => {
  */
 
 const TILE = { kind: 'surface', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
+// Sub-camera on the prime meridian/equator — an arbitrary but exactly
+// predictable direction (lonDeg 0, latDeg 0) for the debug-snapshot test below.
+const SUB_CAMERA_EQUATOR_PRIME: EarthTilePlan['subCameraDirLocal'] = [1, 0, 0];
 const ENGAGED: EarthTilePlan = {
   zWin: MIN_TILE_LEVEL,
   winX0: 0,
   winY0: 0,
   requests: [{ tile: TILE, screenPx: EARTH_TILE_PX }],
+  subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
 /** At the `large` tier's base level exactly: the density that whole-globe
  *  texture already carries, so there is nothing a tile could add — and one level
@@ -181,6 +188,7 @@ const DISENGAGED: EarthTilePlan = {
   winX0: 0,
   winY0: 0,
   requests: [],
+  subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
 
 /** A device that records its page-table uploads and hands back the least it can
@@ -291,6 +299,51 @@ describe('earthTileSubsystem load fade', () => {
       Math.max(...weights),
       'the last page table uploaded carries a weight short of 255, so a parked camera blends its tiles at less than full strength against the base forever',
     ).toBe(255);
+  });
+});
+
+/**
+ * The DebugPanel's "Earth tile atlas" section reads `getDebugSnapshot()`
+ * straight off `resident` / `pendingLevelOf` / the last plan — the shape a
+ * mistake here (off-by-one level grouping, a miss count computed against the
+ * wrong map) would mislead a developer chasing a tile-residency bug rather
+ * than throw or fail a render.
+ */
+describe('earthTileSubsystem debug snapshot', () => {
+  it('is the quiet empty snapshot before the atlas ever engages', async () => {
+    const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    expect(subsystem.getDebugSnapshot()).toEqual(EMPTY_EARTH_TILE_DEBUG_SNAPSHOT);
+  });
+
+  it('reports resident counts, the last plan shape and the deepest keys once engaged', async () => {
+    const { subsystem } = await engagedSubsystem();
+    const snap = subsystem.getDebugSnapshot();
+
+    expect(snap.engaged).toBe(true);
+    expect(snap.capacity).toBe((EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2);
+    expect(snap.used).toBe(1);
+    expect(snap.levels).toEqual([{ z: MIN_TILE_LEVEL, resident: 1, pending: 0 }]);
+    // The fade landed on the last of the three `update()` calls `engagedSubsystem`
+    // runs, so the tile the plan asked for is resident by the time this reads.
+    expect(snap.plan).toEqual({ requestCount: 1, zWin: ENGAGED.zWin, misses: 0 });
+    expect(snap.droppedAllocations).toBe(0);
+    expect(snap.deepestLevelKeys).toEqual(['0,0']);
+    // ENGAGED's subCameraDirLocal is the equator/prime-meridian direction, and
+    // the manifest's one WORLD_BOUNDS band covers the whole globe to MIN_TILE_LEVEL+1.
+    expect(snap.subCamera?.lonDeg).toBeCloseTo(0, 9);
+    expect(snap.subCamera?.latDeg).toBeCloseTo(0, 9);
+    expect(snap.subCamera?.coveredMaxLevel).toBe(MIN_TILE_LEVEL + 1);
+  });
+
+  it('clears the sub-camera readout on the frame the camera pulls back out', async () => {
+    // Same lifecycle bug class the stand-down describe block above pins for the
+    // page table: a stale sub-camera reading left over from the last engaged
+    // frame would misdescribe where the (now pulled-back) camera is.
+    const { subsystem } = await engagedSubsystem();
+    expect(subsystem.getDebugSnapshot().subCamera).not.toBeNull();
+
+    subsystem.update({ plan: DISENGAGED, nowMs: EARTH_TILE_FADE_MS + 16 });
+    expect(subsystem.getDebugSnapshot().subCamera).toBeNull();
   });
 });
 
@@ -440,6 +493,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
       winX0: 0,
       winY0: 0,
       requests: resident,
+      subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
     };
 
     const callsBeforeFill = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
@@ -457,6 +511,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
       winX0: 0,
       winY0: 0,
       requests: [{ tile: newTile, screenPx: SLOT_COUNT + 1 }, ...resident],
+      subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
     };
 
     const callsBeforeNext = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
@@ -466,5 +521,8 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     // Nothing resident got evicted-and-refetched, and the full atlas made the
     // new tile wait rather than bump a resident out.
     expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeNext).toBe(0);
+    // The debug snapshot's other half of the same story: the refused
+    // allocation attempt is counted, not silently swallowed.
+    expect(subsystem.getDebugSnapshot().droppedAllocations).toBe(1);
   });
 });

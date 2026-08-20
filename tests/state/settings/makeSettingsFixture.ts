@@ -69,6 +69,7 @@ import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
+  DEFAULT_SHOW_EARTH_LOD_OVERLAY,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
@@ -179,6 +180,7 @@ export function makeSettingsFixture(
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       showOrbitTrailImpostor: DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
+      showEarthLodOverlay: DEFAULT_SHOW_EARTH_LOD_OVERLAY,
       disabledPasses: {},
       renderStrategy: 'auto',
       clipPathInspect: {

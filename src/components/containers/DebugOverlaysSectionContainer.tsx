@@ -2,8 +2,8 @@
 /**
  * DebugOverlaysSectionContainer — store boundary for the renderer's raw
  * debug overlay toggles (pick-buffer view, disk-radius ring, orbit-trail
- * impostor). All are simple RTK settings booleans with no derived read, so
- * each handler closes over nothing but `dispatch`.
+ * impostor, Earth LOD overlay). All are simple RTK settings booleans with no
+ * derived read, so each handler closes over nothing but `dispatch`.
  */
 
 import { memo, useCallback } from 'react';
@@ -13,11 +13,13 @@ import {
   selectShowPickBuffer,
   selectShowDiskRadiusRing,
   selectShowOrbitTrailImpostor,
+  selectShowEarthLodOverlay,
 } from '../../state/settings/selectors';
 import {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setShowOrbitTrailImpostor,
+  setShowEarthLodOverlay,
 } from '../../state/settings/settingsSlice';
 
 function DebugOverlaysSectionContainer(): React.ReactElement {
@@ -25,6 +27,7 @@ function DebugOverlaysSectionContainer(): React.ReactElement {
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
   const showOrbitTrailImpostor = useAppSelector(selectShowOrbitTrailImpostor);
+  const showEarthLodOverlay = useAppSelector(selectShowEarthLodOverlay);
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -41,6 +44,11 @@ function DebugOverlaysSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onShowEarthLodOverlayChange = useCallback(
+    (enabled: boolean) => dispatch(setShowEarthLodOverlay(enabled)),
+    [dispatch],
+  );
+
   return (
     <DebugOverlaysSection
       showPickBuffer={showPickBuffer}
@@ -49,6 +57,8 @@ function DebugOverlaysSectionContainer(): React.ReactElement {
       onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       showOrbitTrailImpostor={showOrbitTrailImpostor}
       onShowOrbitTrailImpostorChange={onShowOrbitTrailImpostorChange}
+      showEarthLodOverlay={showEarthLodOverlay}
+      onShowEarthLodOverlayChange={onShowEarthLodOverlayChange}
     />
   );
 }
