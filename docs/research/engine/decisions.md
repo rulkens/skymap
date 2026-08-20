@@ -833,6 +833,361 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     `renderer-layer-outliers.md` re-swept 2026-08-20 confirm no rung produced
     an unrecorded umbrella-shaped artifact.
 
+18. **Fade rows: one derivation, one contract narrowing, seven gated canonical
+    migrations — no fade registry** (2026-08-20, ruled in rung 7 — refines
+    #9's rung-7 clause as widened by #11 `:143-145`, and takes the item #15 D8
+    handed here). Both counts the research record carried into this rung were
+    wrong, and correcting them changed what the rung is about: the family's
+    defect is not row bookkeeping, it is that most of the keys a tour can
+    address reach no pixel.
+
+    **The dead set is five keys — not the five on record.**
+    `renderer-layer-outliers.md:100` listed `structureRing` among them. It has
+    two live production readers (`produceStructureMarkers.ts:75`,
+    `produceStructureLabels.ts:120`) and reads its clip channel at
+    `produceStructureMarkers.ts:65` — one of the best-wired keys in the family,
+    not a dead one — and `scaleBar` was missing. The correct set, zero
+    production readers of the registered opacity: `proceduralDisks`,
+    `texturedDisks`, `scaleBar`, `starCatalogLabel`, `bodyLabel`
+    (`fadeLayers.ts:75,81,133,113,126` — key order, not line order).
+    **Method**, recorded so the next rung re-runs it instead of re-guessing:
+    enumerate every `opacityOf(` and `resolveLayerOpacity(` call site under
+    `src/` and match against the 18 `FADE_LAYERS` rows
+    (`fadeLayers.ts:66-231`); these five have no match.
+    `current-contracts-map.md:189`'s "**2** fade rows have no consumer" was
+    incomplete rather than wrong — it counted only `fadeLayers.ts`'s two
+    self-admissions.
+
+    **`fade()` reached 7 of the 18 keys; 11 were inert.** Stated once and at
+    both scopes, because the dead rows and the bypassed rows are one defect: a
+    key with no reader and a key whose only reader skips the clip channel are
+    both keys a tour author addresses and gets nothing from. `fade()` writes
+    only the `clipOpacity` channel (`effectHelpers.ts:387-393`,
+    `clipPlayer.ts:198-206` — `applySceneEffect.ts`'s `'fade'` case throws
+    rather than duplicate the write, `:106-112`), and that channel
+    reaches pixels through exactly two doors — `clipFactorFor` inside
+    `resolveLayerOpacity` (`focusRecession.ts:75-78`), and three hand-rolled
+    producer calls (D10). **Reachable, 7:** `filaments`, `orbitTrails`,
+    `volumesMaster`, `zoneOfAvoidance` (the canonical consumers) plus
+    `surveyLabel`, `structureRing`, `structureLabel` (the producers).
+    **Inert, 11:** six whose only reader is a raw `opacityOf` —
+    `milkyWayDisk`, `milkyWayLabel`, `survey`, `constellations`, `flow`,
+    `volumeField` — plus the five dead-set keys above. D8's migration would
+    move the six raw-reader keys across, taking `fade()` from 7 keys to
+    **13** — that is the rung's one gated commit (D9), so read the 13 as what
+    the migration buys, not as shipped state. The five dead-set keys stay inert
+    by ruling either way (D12, D13).
+
+    That is not abstract. `src/data/animation/clips/cosmicFlows.ts` — shipped,
+    in the clip registry (`clipRegistry.ts:61`, `grandTour.ts:125`) — scripts
+    inert keys in three places: the pre-roll load mask `fade(['flow'], 0, 0)`
+    at `:78`, so the flow field pops in half-loaded instead of being revealed
+    behind it (the idiom the file's own header documents at `:21-30`); beat A's
+    crossfade at `:86`, where neither side moves; and beat D's fade-to-black at
+    `:96`, where only `structureRing` and `surveyLabel` obey while the flow
+    field and the Milky Way stay lit. The survey did not report this, and it is
+    why this rung is not a purely behaviour-neutral PR (D9).
+    - **D1 — the record is corrected in the branch that acts on it.**
+      `renderer-layer-outliers.md:98-101` and
+      `current-contracts-map.md:188-189,209,234` are cited by #11 and by rung
+      8's survey, so both are corrected here, with the enumeration method
+      attached, rather than left to drift into the next rung's premises.
+    - **D2 — `FADE_ROW` is DERIVED; `VISIBILITY_ACTION_ROW` rows grow a
+      `writes` field.** The pair is a true inverse — each of the 15 `FADE_ROW`
+      entries is `creator.type → key`, and each non-empty
+      `VISIBILITY_ACTION_ROW` row calls exactly one creator — hand-written in a
+      second file only because the creator was buried inside a closure. Lifted
+      to row data (`writes: { type } | null`, required rather than optional so
+      a new key must state its stance — the discipline
+      `fadeIdToVisibilityKey`'s `satisfies Record<…>` already uses), the
+      inverse falls out: `FADE_ROW` is now derived in place
+      (`visibilityActionRow.ts:131-141`) and `watchFadesSaga.ts` imports it.
+      Not the per-row exception #10 bans — 15 of 18 rows carry it, so it names
+      a capability the family shares. **Rejected: deriving `actions` from
+      `writes` too.** It needs a payload taxonomy — 8 rows are `creator(on)`, 6
+      map over `settings.X.items`, `volumeField` is
+      `writeVolumeField({ id, patch })` — a 3-arm tagged union over 15 rows to
+      save ~20 lines, and per #10 the misfit is in the _contract_
+      (`writeVolumeField`'s patch shape versus the others' flat shape), which
+      is a settings-slice change, not a behaviour-neutral rung. **Rejected:
+      deriving `writes` from `actions` at runtime**
+      (`actions(true, settings)[0]?.type`) — per-item factories return `[]`
+      over an empty settings record, so the derivation would be
+      seeded-state-dependent, and a silently missing `FADE_ROW` entry is the
+      exact failure this rung exists to remove. The new `src/store/` →
+      `src/services/animation/` import edge was checked, not assumed:
+      `visibilityActionRow.ts` imports only `@types` + `settingsSlice` — no
+      engine, no GPU — so the saga's stated "keeps the store layer free of
+      engine imports" constraint holds verbatim, and `settingsSlice` imports
+      nothing from `store/`, so there is no cycle.
+    - **D3 — `FADE_LAYERS` and `VISIBILITY_ACTION_ROW` do not merge.
+      JUSTIFY.** Both are keyed by `VisibilityLayerKey` and their
+      registration-only subsets coincide exactly, which invites a merge. Two
+      facts refuse it. **Layering:** `FADE_LAYERS` rows close over
+      `EngineState` (`fadeLayers.ts` — the `survey` row's `guard` at `:162`,
+      `flow`'s at `:210`, `volumeField`'s `guard`/`post` at `:221-229`), so merging drags the
+      engine into the store's saga graph — the one constraint D2 just
+      preserved. **Item domains differ:** `FADE_LAYERS.survey.expand` yields
+      the compile-time `GALAXY_CATALOG_IDS`, `VISIBILITY_ACTION_ROW.survey`
+      enumerates `settings.galaxyCatalogs.items` at dispatch time, so a merged
+      row must pick one and change behaviour for whichever loses. The
+      coincidence they _do_ share — `row.intent === undefined` ⟺
+      `row.writes === null` — is pinned by one structural test instead, which
+      also replaced a hand-listed key restatement that had already drifted: it
+      named 11 of the actual 15 intent keys, so four rows had silently stopped
+      being covered. Net: stronger coverage, fewer lines.
+    - **D4 — `fadeIdToVisibilityKey` is NOT derived from
+      `FADE_LAYERS.handle()`. JUSTIFY, refuted by a counterexample.**
+      `VISIBILITY_KEY_BY_KIND.overlay` is deliberately `undefined`
+      (`fadeIdToVisibilityKey.ts:87-92`) while `FADE_LAYERS` _does_ map
+      `{kind:'overlay',id}` to `proceduralDisks`/`texturedDisks`
+      (`fadeLayers.ts:74-85`). That divergence is the hand table's whole
+      point: `:87-92` is a stance — "no clip cue addresses the always-on disk
+      overlays" — and a derived inverse would silently overwrite it. **The cost
+      is armed, not present.** Those two handles have zero readers today, so no
+      `{kind:'overlay'}` `FadeId` ever reaches `resolveLayerOpacity`; the trap
+      springs the day a disk overlay gets wired up in some later rung, when a
+      derived inverse starts applying a clip factor to an always-on overlay and
+      nobody reviewing that rung is looking here. Recorded so it is not
+      re-opened as "it costs nothing".
+    - **D5 — the four `FadeId`-keyed presentation tables stay four tables.
+      JUSTIFY.** `fadeIdToVisibilityKey.ts:54-94` and
+      `focusRecession.ts:28-63` are structurally identical — same two key
+      domains, same `satisfies Record<…>` guard, same two-way branch,
+      duplicated verbatim. Merging them into one `{ clipKey, recession }` row
+      deletes ~8 lines of skeleton and braids two concerns that vary
+      independently: the clip key is an _address in the tour vocabulary_, the
+      recession target is a _visually tuned number_ (`focusRecession.ts:66-72`,
+      historical — pre-audit lines; the "not-final placeholders" wording was
+      later replaced by "Eye-tuned" at `:21-22`). Under `simplicity.md` that is
+      complecting for a skeleton saving.
+    - **D6 — `scopedVisibilityActions` keeps its two tables. JUSTIFY.** (The
+      survey's "1 row so far" was also wrong: `LABEL_SLICES` has three rows and
+      `FAMILIES` three.) Post-D2, `FAMILIES`' handlers could read
+      `VISIBILITY_ACTION_ROW.<key>.writes` instead of importing three creators
+      directly — but only by re-introducing the payload taxonomy D2 rejected.
+      Three imports is the cheaper truth. `LABEL_SLICES` already delegates to
+      `VISIBILITY_ACTION_ROW`, so it is not a duplicate at all; it is the
+      correct shape.
+    - **D7 — the canonical path costs one line:
+      `resolveLayerOpacity(state, ctx, h)`.** The #10 move — the row didn't
+      fit, so the contract changed, for all rows rather than one. Every
+      canonical call used to spell out five arguments, four of them the same
+      two ambient bags, at 7 formatted lines apiece; that cost is _why_ the raw
+      one-liner kept winning at new sites. The signature now takes
+      `Pick<EngineState, 'subsystems'>` and
+      `Pick<ReadyFrameContext, 'focusBlend' | 'nowMs'>` — `Pick` rather than
+      the full types, so it stays testable with two small literals and the
+      dependency stays honest — and `clip` stops being optional, since
+      `state.subsystems.clipPlayer` is always present, which also deleted the
+      `clip === undefined ? 1 : …` arm. `focusRecession` and
+      `recessionTargetFor` stay pure and unchanged; only the composition sugar
+      takes the bags, which is what it is for.
+    - **D8 — the raw-vs-canonical rule, stated once, here.** It classifies by
+      **what the site's answer controls**, not by the shape of the expression:
+
+      > `opacityOf` is the layer's **intent** fade — toggle, load-in, tier
+      > swap. Recession and clip are **presentation** factors: they dim a layer
+      > that is still fully enabled and fully resident. So:
+      >
+      > 1. **A value the viewer sees** — a drawn alpha, and any `> 0` /
+      >    `!== 0` skip derived from _that same drawn value_ — resolves through
+      >    `resolveLayerOpacity`.
+      > 2. **A value that decides whether the layer's work happens at all** —
+      >    does the pass run, does data stay resident, does the fade-out tail
+      >    keep drawing, does this source claim a hit — reads `opacityOf` raw.
+      >    Keying these on recession or clip would unload, stall or unclick a
+      >    layer that a focus tween or a clip cue merely _dimmed_.
+      > 3. **Per-instance producers** compose the three factors by hand,
+      >    because they apply a focused-instance exemption _between_ them
+      >    (D10).
+
+      The three buckets partition all **21** raw production `opacityOf` sites
+      under `src/` — **7 migrate, 9 stay raw, 5 are per-instance producers** —
+      against a record that said 5 sites skipping "recession and the clip
+      channel", wrong on the count and on both halves of the claim (D1). Two
+      sites the rule has to be right about, ruled explicitly:
+      - **`produceMilkyWayLabel.ts:69` splits in two**, and the site
+        legitimately grows by one line. One binding served both the gate
+        (`!labelEnabled && layerOpacity === 0` → emit nothing) and the drawn
+        alpha; those fall in different buckets. Merging them either way is
+        wrong — resolve the gate and a clip fade to 0 truncates a disabled
+        label's fade-out tail; leave the alpha raw and beat D's `milkyWayLabel`
+        cue stays inert.
+      - **`galaxyPointSpritesLayer.ts:191` stays raw**, and is not edited by
+        this rung. It is the `drawPick` pick filter, and the family already
+        rules that _picking follows intent, not pixels_
+        (`deriveSourceMasks.ts:25-27`) — which is why the pick mask reads
+        `enabled` alone and never consults a fade. A clip `fade()` is
+        explicitly not intent: `cosmicFlows.ts:34-40` states its crossfade
+        "does NOT dispatch `hide(['survey'])` — the intent store is untouched."
+        Resolving `:191` would let a clip cue silently revoke pick eligibility
+        from a layer the user still has enabled, contradicting both. The file's
+        own coherence claim survives untouched, because the term it is about —
+        the deep-zoom band `surveyFade` — stays in the expression.
+
+      Recession is provably `1` at all seven migrated sites: `RECESSION_BY_KIND`
+      and `RECESSION_BY_LABEL_LAYER` (`focusRecession.ts:28-63`) give
+      `undefined` for every kind they read, so outside a playing clip the
+      migration is a no-op by construction rather than by inspection. **That
+      scoping does not generalize, and rung 8 must not inherit "raw ⇒ recession
+      is 1" as a rule**: six other raw sites read ids that _do_ recede —
+      `{kind:'structure'}` and the label layers at 0.25,
+      `{volumesMaster}` at 0.15 — five of them the per-instance producers that
+      compose recession themselves (D10), the sixth a liveness gate that must
+      key on the bare toggle. Nothing is lost at any of the six; the general
+      statement is simply false.
+
+    - **D9 — un-breaking `cosmicFlows` is the rung's one behaviour change, and
+      it is user-gated.** D8's migration makes `fade()` reach `survey`, `flow`,
+      `milkyWayDisk`, `milkyWayLabel`, `constellations` and `volumeField` for
+      the first time, which changes three user-visible moments in a shipped
+      tour: the pre-roll mask starts masking (so the flow field stops popping
+      in half-loaded — the least tuned-around of the three, because nobody has
+      ever seen it work), beat A becomes an actual crossfade, and beat D takes
+      the flow field and the Milky Way disk toward black alongside the
+      structure rings and survey labels. The cues were authored to do exactly
+      this, so it is a fix — but the beats were tuned _with the no-op in
+      place_, which makes it a visual question, not a correctness one. Not in
+      the ask: pickability (D8). So the migration is the **last commit of the
+      branch**, with the checkpoint immediately before it: per `simplicity.md`'s
+      landing rule a "the beats look worse now" verdict **halts** the commit
+      rather than being argued past on process momentum, and a park ruling is a
+      one-commit drop — the neutral commits touch a disjoint file set, so
+      nothing is built on top of it. If it is parked, the finding above stands
+      recorded here and the cue-side fix — re-tuning or deleting the cues —
+      becomes a tour-authoring item.
+    - **D10 — the three per-instance producers keep their hand-written
+      `clipOpacityOf('literal')`. JUSTIFY.** `produceStructureMarkers.ts:65`,
+      `produceStructureLabels.ts:91` and `produceFamousLabels.ts:218` each
+      hoist a single `clipOpacityOf(<literal key>)` _out of_ their per-instance
+      loop and multiply it in alongside a focused-instance exemption — the
+      split `focusRecession.ts:81-84` (the `resolveLayerOpacity` doc comment)
+      documents as the per-instance contract.
+      Routing them through the private `clipFactorFor` would mean synthesizing
+      a representative `FadeId` for a whole category — `{kind:'structure'}` with
+      _which_ id? — to recover a key the producer already knows, or moving
+      the call back inside the loop. Three literals, adjacent to the
+      `opacityOf` calls that share their key, are the cheaper truth.
+    - **D11 — `syncVisibilityFadeItem` loses its `animate` parameter, which
+      discharges #15 D8.** DELETE by narrowing the contract, not by deleting a
+      line: dropping only the production-dead `animate: false` arm would leave
+      the `setImmediate` path reachable and now silently wake-less, a
+      starvation bug planted for a future caller. Per #10 the fix is at the
+      contract — the entry's sole production caller passes `{ animate: true }`
+      (`galaxyCatalogSourceRegistry.ts:161`), so the parameter goes and the
+      entry passes that literal on to `applyIntent`, whose `opts` does not
+      narrow with it. Neutrality is explicit, not inferred. The batch bridge
+      `syncVisibilityFades` **keeps** `animate`: it has real snap-path callers
+      and its own "why the wake is asymmetric" contract, which survives; only
+      the mirror comment went, and the test that drove the dead branch went
+      with it, per `testing.md`.
+    - **D12 — `starCatalogLabel` / `bodyLabel`: rung 8 owns the wire, and the
+      backlog item is discharged here. Addressed to rung 8's author.** Ruling:
+      **rung 7 does not finish the wire; the two rows stay exactly as they
+      are.** The alternative the backlog detail put on the table — "narrow the
+      fade manifest… that breaks the type-equality test on purpose" — is
+      **ruled against, not overlooked**: the key-set equality (`FADE_LAYERS`
+      keys ≡ `VisibilityLayerKey`) is what makes a newly minted key a build
+      failure until it gets a controller, the same invariant D13 keeps, and it
+      is not worth unpicking to delete two rows. Both keys are also members of
+      `LAYER_GROUPS.labels` (`expandVisibilityLayers.ts:34`), whose stated
+      promise is totality over the label keys, so removing either breaks
+      `hide(['labels'])`. Their intent path already works end to end —
+      `VISIBILITY_ACTION_ROW.starCatalogLabel` → `setStarCatalogLabelEnabled` →
+      `foregroundLabelsLayer.ts:131-132` reads the settings leaf — so only the
+      fade _animation_ goes nowhere. The live question is who finishes it, and
+      the answer is rung 8, for four reasons: (1) finishing means teaching
+      `foregroundLabelsLayer` — 812 lines rung 8 is chartered to dissolve into
+      `LabelProducer`s — to multiply the handle opacity into its caption
+      envelope, i.e. code rung 8 deletes; (2) all three existing
+      `LabelProducer`s already reach the registry, so the wire falls out of that
+      rewrite for free; (3) rung 7's own D8 migration cannot reach it, because
+      the captions run a private declutter + temporal envelope and a naive
+      multiply would double-count against a dimming authority the layer already
+      owns — the same argument `RECESSION_BY_LABEL_LAYER`'s
+      `starCatalog`/`body: undefined` rows record (`focusRecession.ts:39-48`);
+      (4) leaving them costs zero LOC and zero risk, so there is no "fix it now
+      while we're here" saving to weigh against the rework. What rung 7 did
+      instead, two things: deleted the 22 lines of research narrative and TODO
+      at `fadeLayers.ts:151-165,177-183` — `comments.md` bans both by name —
+      leaving one landmine line on each row naming the gap; and **discharged
+      the backlog item this rung picked up**. `docs/BACKLOG.md`'s "Two label
+      layers register fade handles nothing reads" index line and its detail
+      file `docs/backlog/2026-07-29-unread-caption-fade-handles.md` are deleted
+      in this branch per the backlog-hygiene convention, with this decision as
+      the source of truth. Not struck through, not re-filed; the completion
+      record is the git log plus this entry.
+    - **D13 — the three registration-only rows stay registered. JUSTIFY.**
+      `proceduralDisks`, `texturedDisks` and `scaleBar` register controllers
+      nothing reads and nothing drives (no `intent`, so `syncVisibilityFades`
+      skips them). Deleting them from `FADE_LAYERS` while keeping their
+      `VisibilityLayerKey` membership is safe in isolation — nothing calls
+      `fadeTo` on them, so the `FadeRegistry.fadeTo` throw is not a risk — but
+      it buys ~14 lines at the cost of the invariant that makes the family
+      safe: keys ≡ `VisibilityLayerKey` means a newly minted key is a
+      build/test failure until it gets a controller. Weakening that to a subset
+      relation to delete three inert rows is the wrong trade. This closes
+      `current-contracts-map.md:189`'s 🔴 as **ACCEPTED**, not open.
+    - **D14 — what rung 7 did not build.** No `FADE_ROW` walker, no fade
+      registry, no row type beyond the `writes` field on an existing table, no
+      umbrella `SubsystemBundle`, no `fades?: readonly FadeLayer[]` bundle
+      field. #7's bundle-concatenation shape is a Track C / umbrella concern;
+      this rung only ensures the rows it would concatenate are already derived
+      from one source where they can be. A reader of #9 alone should not expect
+      a registry here — cf. #13, #14, #15, #16, all of which shipped the same
+      verdict.
+    - **D15 — the D8 rule's home is this decision, not `focusRecession.ts`'s
+      header.** The obvious home was that module header. It stood at lines 1-54
+      against `comments.md`'s **≤10-line** budget over a file with ~45 lines of
+      code (whole-file ratio ≈ 98 comment lines to 45, against "≤ half the code
+      lines"); adding four more lines to a header 5× over budget fails the
+      convention twice and "code is liability" once. So the rule's full text
+      lives here — a plan/spec artifact is where `comments.md` puts
+      classification rationale — and the header was rewritten to ≤10 lines in
+      the same task that changed the signature (D7). What survived is the
+      material a reader cannot recover from the code: the compose-don't-braid
+      landmine (recession must NOT be folded into `FadeRegistry` — the blend's
+      authoritative home is `structureFocusSubsystem`, and caching it here is
+      the stale-mirror bug class); why membership is `satisfies Record<…>` and
+      not a `switch` (this tsconfig has no `noImplicitReturns`, so a
+      `default`-less switch gives no exhaustiveness guarantee at all); and a
+      one-line pointer here. ≈ −44 comment lines.
+      `RECESSION_BY_LABEL_LAYER`'s rationale at `:88-97` is a _row_ comment,
+      not header, and stays — D12 leans on it.
+
+    **No fade registry, no `FADE_ROW` walker and no bundle `fades` field was
+    built; one existing table grew one required field.** Evidence + the full
+    accounting: [rung-7 plan](../../superpowers/plans/2026-08-20-fade-rows.md).
+    _Cost if wrong:_ the derived `FADE_ROW` loses an entry the moment a future
+    row carries an `intent` with `writes: null` — which is exactly what D3's
+    structural test fails on.
+
+    **D9's checkpoint: the user ruled LAND (2026-08-20).** The migration ships.
+    Two of the three `cosmicFlows` moments are live from this commit: the
+    pre-roll `fade(['flow'], 0, 0)` load mask (`cosmicFlows.ts:78`) now masks,
+    and beat A's crossfade (`:86`) is an actual crossfade.
+
+    **Beat D does not fire, for a reason independent of this rung, and the fix
+    is NOT here.** `compileClip(cosmicFlows.data)` yields `durationSec = 20`
+    with beat D's cue at `atSec = 20`: `fade` cues contribute zero awaited
+    seconds, so the 26 s-authored timeline compiles to 20 s and the cue lands on
+    the completion tick, wiped by the clip-opacity reset one tick later. That is
+    a clip-authoring defect — the cue was always dead, before and after D8's
+    migration — so it is filed as a backlog item rather than fixed in a rung
+    whose scope is the read side. The integration test's `milkyWayDisk`
+    assertion drives a clip stub for exactly this reason
+    (`tour.integration.test.ts:291`).
+
+    **The pick asymmetry the review surfaced, recorded so it does not read as an
+    oversight.** `milkyWayLayer.ts:95-99` composes `pickEnabled` over
+    `deriveMilkyWayCloudAlpha`, which now carries the clip factor — so a
+    `milkyWayDisk` `fade()` suspends Milky-Way pick, while survey pick survives
+    beat A untouched because `galaxyPointSpritesLayer.ts:191` stays raw (D8).
+    Both follow the same rule: the MW gate is derived from the drawn value
+    (bucket 1), the survey pick filter answers "does this source claim a hit"
+    (bucket 2).
+
 ## The contract (settled sketch)
 
 ```ts

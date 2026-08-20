@@ -12,9 +12,21 @@ import { createFadeRegistry } from '../../../../src/services/animation/fadeRegis
 import { lerp } from '../../../../src/utils/math/lerp';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../../src/@types/animation/VisibilityLayerKey';
+import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });
+}
+
+/**
+ * Minimal `Pick<EngineState, 'subsystems'>` fixture — only the two fields
+ * `resolveLayerOpacity` reads. Cast through `unknown` since the two-field
+ * literal doesn't structurally satisfy the full `EngineSubsystemHandles`
+ * the picked type still demands.
+ */
+function makeState(fades: FadeRegistry, clipPlayer: ClipPlayer): Pick<EngineState, 'subsystems'> {
+  return { subsystems: { fades, clipPlayer } } as unknown as Pick<EngineState, 'subsystems'>;
 }
 
 /**
@@ -95,8 +107,11 @@ describe('resolveLayerOpacity', () => {
     fades.register(handle, 0);
     fades.fadeTo(handle, 0.5, 0, 0);
 
-    // toggle 0.5 × recession (full focus → FILAMENT_RECESSION).
-    expect(resolveLayerOpacity(fades, handle, 1, 0)).toBe(0.5 * FILAMENT_RECESSION);
+    const state = makeState(fades, makeClipPlayer(1));
+    // toggle 0.5 × recession (full focus → FILAMENT_RECESSION) × clip 1.
+    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(
+      0.5 * FILAMENT_RECESSION,
+    );
   });
 
   it('returns 0 when the toggle is 0 regardless of blend', () => {
@@ -104,57 +119,36 @@ describe('resolveLayerOpacity', () => {
     const handle = { kind: 'filament' } as const;
     fades.register(handle, 0); // toggle opacity 0
 
+    const state = makeState(fades, makeClipPlayer(1));
     // 0 × anything = 0, at any blend.
-    expect(resolveLayerOpacity(fades, handle, 0, 0)).toBe(0);
-    expect(resolveLayerOpacity(fades, handle, 1, 0)).toBe(0);
+    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
+    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(0);
   });
 
   // ── Clip factor tests (Task 12) ─────────────────────────────────────────
 
-  it('omitting the clip channel leaves opacity unchanged (back-compat)', () => {
-    // The clip arg is optional. All existing callers that omit it must
-    // see the exact same result as before — factor 1 is the default.
-    const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
-    fades.register(handle, 0);
-    fades.fadeTo(handle, 0.6, 0, 0);
-
-    // No clip arg: toggle × recession only.
-    const withoutClip = resolveLayerOpacity(fades, handle, 0.5, 0);
-    // Explicit clip that always returns 1 must give the same result.
-    const clipAtOne = makeClipPlayer(1);
-    const withClipOne = resolveLayerOpacity(fades, handle, 0.5, 0, clipAtOne);
-    expect(withClipOne).toBe(withoutClip);
-  });
-
-  it('includes the clip factor in the three-way product: intent × focus × clip', () => {
-    // A clip player that halves every layer's opacity should halve the result
-    // compared to omitting the clip channel.
+  it('multiplies the clip factor for a mapped id', () => {
     const fades = makeRegistry();
     const handle = { kind: 'filament' } as const;
     fades.register(handle, 0);
     fades.fadeTo(handle, 0.8, 0, 0); // toggle = 0.8
 
-    const clipHalf = makeClipPlayer(0.5);
-    // Expected: 0.8 × focusRecession({filament}, 0) × 0.5 = 0.8 × 1 × 0.5 = 0.4
-    const result = resolveLayerOpacity(fades, handle, 0, 0, clipHalf);
-    expect(result).toBeCloseTo(0.8 * 1 * 0.5);
+    const state = makeState(fades, makeClipPlayer(0.5));
+    // Hand-computed: toggle 0.8 × recession(filament, blend 0) 1 × clip 0.5 = 0.4.
+    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.4);
   });
 
-  it('uses factor 1 for a FadeId with no clip key even with a channel present', () => {
-    // `overlay` has no VisibilityLayerKey mapping — fadeIdToVisibilityKey returns
-    // undefined, and clipFactorFor returns 1. The clip player must NOT be called
-    // with an undefined key; the caller gates it.
+  it('returns the bare toggle opacity for an unmapped (overlay) id', () => {
+    // `overlay` has no VisibilityLayerKey mapping and no recession target —
+    // both factors are neutral, so the clip player's non-1 return must not
+    // leak through even though it is present and would answer any call.
     const fades = makeRegistry();
     const handle = { kind: 'overlay', id: 'proceduralDisks' } as const;
     fades.register(handle, 0);
-    fades.fadeTo(handle, 1.0, 0, 0);
+    fades.fadeTo(handle, 0.7, 0, 0);
 
-    const clipFactor = 0.3; // if the factor leaked through, the result would be 0.3
-    const clip = makeClipPlayer(clipFactor);
-    // overlay has no recession target (factor 1) and no clip key (factor 1).
-    // Result: 1.0 × 1 × 1 = 1.0.
-    const result = resolveLayerOpacity(fades, handle, 1, 0, clip);
-    expect(result).toBe(1);
+    const state = makeState(fades, makeClipPlayer(0.3));
+    // Hand-computed: toggle 0.7 × recession 1 × clip 1 (unmapped) = 0.7.
+    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(0.7);
   });
 });

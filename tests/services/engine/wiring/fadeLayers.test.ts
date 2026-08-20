@@ -1,22 +1,10 @@
 /**
- * fadeLayers — unit tests for the fade-ownership manifest + the generic
- * `seedFades` construction seed (relocated from the old registerOverlayFades).
+ * fadeLayers — the manifest's seed values, the load-bearing pair being that a
+ * default-off session must not flash its layer on frame 1 and that demand-loaded
+ * rows seed at 0 so their first-load `fadeTo(1)` still fades in.
  *
- * Invariants targeted:
- *
- *   1. The overlay/milkyWay handles seed at their settings-derived or fixed
- *      opacities. milkyWay is the load-bearing case: a default-off session must
- *      not flash the Milky Way on frame 1.
- *   2. The volumesMaster handle seeds at `settings.volumes.enabled`.
- *   3. The label-layer handles seed correctly: milkyWay from
- *      `settings.milkyWay.labelEnabled`, galaxy + scaleBar at 1.
- *   4. Each structure ring + label seeds from its per-category settings row.
- *   5. The demand-loaded sets (galaxy catalogs, filament, flow, volume fields)
- *      seed at 0 so their first-load `fadeTo(1)` still fades them in.
- *
- * Strategy: build a minimal `EngineState` carrying a REAL fade registry (so we
- * can assert via `opacityOf`, not just count `register` spy calls) plus the
- * settings paths `seedFades` reads. `seedFades` touches nothing else — no GPU.
+ * The fixture carries a REAL fade registry, so the assertions read `opacityOf`
+ * rather than counting `register` spy calls.
  */
 
 import { describe, it, expect, vi, expectTypeOf } from 'vitest';
@@ -33,6 +21,7 @@ import type { VisibilityLayerKey } from '../../../../src/@types/animation/Visibi
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
+import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 
 // ── Drift guard ───────────────────────────────────────────────────────
 //
@@ -377,33 +366,17 @@ describe('seedFades', () => {
 // side effects.
 
 describe('FADE_LAYERS intent subset', () => {
-  const INTENT_KEYS: readonly VisibilityLayerKey[] = [
-    'survey',
-    'surveyLabel',
-    'structureRing',
-    'structureLabel',
-    'volumeField',
-    'volumesMaster',
-    'filaments',
-    'orbitTrails',
-    'milkyWayDisk',
-    'milkyWayLabel',
-    'flow',
-  ];
-  const REGISTRATION_ONLY_KEYS: readonly VisibilityLayerKey[] = [
-    'proceduralDisks',
-    'texturedDisks',
-    'scaleBar',
-  ];
-
-  it('every intent row exposes intent; register-only rows do not', () => {
-    for (const key of INTENT_KEYS) {
-      const row = rowFor(key);
-      expect(typeof row.intent, `${key}.intent`).toBe('function');
-    }
-    for (const key of REGISTRATION_ONLY_KEYS) {
-      const row = rowFor(key);
-      expect(row.intent, `${key}.intent`).toBeUndefined();
+  it('a row drives a fade iff its layer writes a setting', () => {
+    // FADE_LAYERS and VISIBILITY_ACTION_ROW deliberately don't merge (they
+    // close over different domains — EngineState vs settings-item id lists),
+    // but they agree on one thing: a row exposes `intent` exactly when its
+    // VISIBILITY_ACTION_ROW counterpart has a real settings write. Derived
+    // from both tables so a future row can't silently drift out of either
+    // list the way the old hand-listed INTENT_KEYS/REGISTRATION_ONLY_KEYS
+    // arrays did (they stopped covering four rows).
+    for (const row of FADE_LAYERS) {
+      const { writes } = VISIBILITY_ACTION_ROW[row.key];
+      expect(row.intent === undefined, `${row.key}: intent vs writes`).toBe(writes === null);
     }
   });
 

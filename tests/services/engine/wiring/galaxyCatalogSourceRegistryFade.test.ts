@@ -1,22 +1,12 @@
 /**
- * galaxyCatalogSourceRegistry — fade-orchestration test.
+ * galaxyCatalogSourceRegistry — the dissolve / upload / fade-in choreography of a
+ * slot commit. The pre-replace dissolve fires only on the EXPLICIT
+ * `dissolvePrevious` flag, never inferred from data-store membership (a plain
+ * re-commit of a loaded source must NOT dissolve), and the fade-in goes through the
+ * SCOPED single-item bridge so a concurrent reload cannot re-drive another's fade.
  *
- * Sibling to galaxyCatalogSourceRegistry.test.ts; this file isolates
- * the sequential dissolve / upload / fade-in choreography of the slot's
- * commit step. The tier-swap dissolve is a transient pre-replace fade-OUT
- * (via `dissolveCatalogBuffer` → `fades.fadeTo`), fired only when the reload
- * request carries `dissolvePrevious` — an EXPLICIT flag set by `setTier`, not
- * inferred from data-store membership. The fade-IN routes through the SCOPED
- * single-item intent → fade bridge (`syncVisibilityFadeItem`) — driving ONLY
- * the catalog just uploaded, not every survey row, so a concurrent tier-swap
- * reload of another source can't re-drive (and race) this one's fade.
- *
- * The bridge is mocked to a typed spy so this test asserts the commit's
- * own contract: a plain load calls the scoped bridge once (after upload, no
- * dissolve); a `dissolvePrevious` load fires fadeTo(0, FADE_OUT_DURATION_MS)
- * BEFORE upload, then calls the bridge after; and a plain re-commit of an
- * already-loaded source does NOT dissolve (the old `isFirstLoad` proxy would
- * have). The bridge's per-row fade is covered by syncVisibilityFades.test.ts.
+ * The bridge itself is a typed spy here; its per-row fade is covered by
+ * syncVisibilityFades.test.ts.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -125,9 +115,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     // The fade-in routes through the scoped bridge, applying the survey row's
     // intent to ONLY this catalog (not every survey id).
     expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {
-      animate: true,
-    });
+    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS));
     // The fade-in bridge fires AFTER the renderer upload (commit order).
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
@@ -161,9 +149,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     // The fade-in still routes through the scoped bridge after upload, applying
     // the survey intent to ONLY this catalog.
     expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {
-      animate: true,
-    });
+    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS));
     // The fade-in bridge fires AFTER the renderer upload (commit order).
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,

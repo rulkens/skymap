@@ -79,6 +79,7 @@ function makeState(
     },
     subsystems: {
       fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
     gpu: { flowFieldRenderer: over.flowFieldRenderer ?? null },
   } as unknown as EngineState;

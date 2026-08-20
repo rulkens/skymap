@@ -1,24 +1,12 @@
 /**
- * applySceneEffect + VISIBILITY_ACTION_ROW — unit tests.
+ * applySceneEffect + VISIBILITY_ACTION_ROW.
  *
- * ### Strategy
+ * The simple arms run against a spy `dispatch`; the show/hide arms need a real
+ * store, so both the visibility actions and `syncVisibilityFades` exercise a real
+ * state shape without deep mocking.
  *
- * `applySceneEffect` is a thin dispatch table: each arm either dispatches to
- * the store or calls `syncVisibilityFades`. Tests use:
- *
- *   - A spy `dispatch` (vi.fn) so action payloads can be inspected without
- *     running a real store for the simple arms.
- *   - A real store (`createAppStore`) for the show/hide arms, so both the
- *     dispatched visibility actions AND `syncVisibilityFades` can run against
- *     a real state shape without deep mocking.
- *   - A `vi.mock` replacement for the syncVisibilityFades module to assert bridge calls.
- *
- * ### VISIBILITY_ACTION_ROW total-record tests
- *
- * The last describe block iterates every VisibilityLayerKey and asserts that
- * its factory returns an Array. Gate-backed layers must return length ≥ 1 (given
- * a minimal settings fixture); registration-only layers must return []. This is
- * the "total record" guard that prevents a missing key from silently no-oping.
+ * The total-record block is the guard against a missing key silently no-oping:
+ * gate-backed layers must return at least one action, registration-only rows [].
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -491,7 +479,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
       (k) => !REGISTRATION_ONLY.includes(k),
     );
     for (const key of gateBacked) {
-      const actions = VISIBILITY_ACTION_ROW[key](true, settings);
+      const actions = VISIBILITY_ACTION_ROW[key].actions(true, settings);
       expect(Array.isArray(actions), `key '${key}' must return an array`).toBe(true);
       // All non-registration-only keys have at least one item in the settings fixture
       // (survey and structureRing etc. have one id each, volumeField has zero items
@@ -508,15 +496,15 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   it('registration-only layers return []', () => {
     for (const key of REGISTRATION_ONLY) {
-      const actionsOn = VISIBILITY_ACTION_ROW[key](true, settings);
-      const actionsOff = VISIBILITY_ACTION_ROW[key](false, settings);
+      const actionsOn = VISIBILITY_ACTION_ROW[key].actions(true, settings);
+      const actionsOff = VISIBILITY_ACTION_ROW[key].actions(false, settings);
       expect(actionsOn, `${key}(true) must be []`).toEqual([]);
       expect(actionsOff, `${key}(false) must be []`).toEqual([]);
     }
   });
 
   it('surveyLabel factory emits one setGalaxyCatalogLabelEnabled per catalog id', () => {
-    const actions = VISIBILITY_ACTION_ROW['surveyLabel'](false, settings) as ReturnType<
+    const actions = VISIBILITY_ACTION_ROW['surveyLabel'].actions(false, settings) as ReturnType<
       typeof setGalaxyCatalogLabelEnabled
     >[];
     expect(actions).toHaveLength(1);
@@ -524,7 +512,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
   });
 
   it('structureLabel factory emits one setStructureLabelEnabled per structure id', () => {
-    const actions = VISIBILITY_ACTION_ROW['structureLabel'](true, settings) as ReturnType<
+    const actions = VISIBILITY_ACTION_ROW['structureLabel'].actions(true, settings) as ReturnType<
       typeof setStructureLabelEnabled
     >[];
     expect(actions).toHaveLength(1);
@@ -533,16 +521,17 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   it('volumeField factory emits one writeVolumeField({ id, patch:{enabled} }) per volume item', () => {
     const settingsWithVolume = makeSettings({ volumeFieldIds: ['cf4-density'] });
-    const actions = VISIBILITY_ACTION_ROW['volumeField'](true, settingsWithVolume) as ReturnType<
-      typeof writeVolumeField
-    >[];
+    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(
+      true,
+      settingsWithVolume,
+    ) as ReturnType<typeof writeVolumeField>[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'cf4-density', patch: { enabled: true } });
   });
 
   it('volumeField factory returns [] when volumes.items is empty', () => {
     // Default settings fixture has no volume items.
-    const actions = VISIBILITY_ACTION_ROW['volumeField'](true, settings);
+    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(true, settings);
     expect(actions).toEqual([]);
   });
 });
