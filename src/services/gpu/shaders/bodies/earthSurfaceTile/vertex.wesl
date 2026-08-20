@@ -71,7 +71,13 @@ fn vs(@builtin(vertex_index) vertexIndex: u32) -> VSOut {
   out.tangent = tv.tangent;
   out.atlasUvOrigin = node.atlasUvOrigin;
   out.atlasUvScale = node.atlasUvScale;
-  out.viewDirLocal = vec3<f32>(
+  // Scaled into body-radius units: raw Mpc magnitudes at low altitude
+  // (~1e-19 at 4 km) SQUARE into f32 denormal range in the fragment's
+  // normalize(), which flush-to-zero GPUs collapse to 0 -> NaN -- the
+  // failure tell is a camera-anchored black disc at the sub-camera point
+  // that grows on descent. A uniform positive scale changes nothing about
+  // the direction and keeps interpolation linear.
+  out.viewDirLocal = (1.0 / u.radiusMpc) * vec3<f32>(
     -dot(u.rotCol0, worldPosRelCam),
     -dot(u.rotCol1, worldPosRelCam),
     -dot(u.rotCol2, worldPosRelCam),
