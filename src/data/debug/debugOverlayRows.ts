@@ -1,9 +1,6 @@
-/**
- * DEBUG_OVERLAY_ROWS — the roster of DebugPanel "Debug Overlays" checkboxes.
- * Labels are copied verbatim from `DebugOverlaysSection.tsx`. This is the
- * single source of truth for the toggle set: `DebugOverlayKey` derives its
- * union from it and `settings.debug.overlays` seeds one entry per row.
- */
+// Single source of truth for the toggle set (labels verbatim from
+// DebugOverlaysSection.tsx); DebugOverlayKey and the settings seed both
+// derive from it.
 
 import type { DebugOverlayRow } from '../../@types/data/debug/DebugOverlayRow';
 
