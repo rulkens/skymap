@@ -40,8 +40,6 @@ import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveFocusRow } from './helpers/liveFocusRow';
-import { flyToLonLatPose } from './helpers/flyToLonLatPose';
-import { commitCameraPose } from '../../state/camera/cameraSlice';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -736,13 +734,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     );
   }
 
-  // flyToLonLat — debug instrument for the Earth Tile Atlas panel; the pose
-  // math and its landmine comments live in flyToLonLatPose's header.
-  function flyToLonLatFn(lonDeg: number, latDeg: number): void {
-    const pose = flyToLonLatPose(state, lonDeg, latDeg);
-    if (pose !== null) store.dispatch(commitCameraPose(pose));
-  }
-
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
     // Set the edge-triggered flag and wake the loop: the pgcAlias row demands
     // on `request('paletteOpened')`, so the next `reevaluateDemand` fires the
@@ -904,7 +895,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // again after destroy), so the fallback keeps the panel's read total.
       earthTiles: () =>
         state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
-      flyToLonLat: flyToLonLatFn,
     },
 
     destroy,
