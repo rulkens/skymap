@@ -385,25 +385,12 @@ describe('syncVisibilityFadeItem', () => {
     const idA = STRUCTURE_IDS[0]!;
     const idB = STRUCTURE_IDS[1]!;
 
-    syncVisibilityFadeItem(state, 'structureRing', idA, { animate: true });
+    syncVisibilityFadeItem(state, 'structureRing', idA, {});
 
     // Exactly one fade, on idA's handle, to the intent target (enabled → 1).
     expect(fadeTo).toHaveBeenCalledTimes(1);
     expect(fadeTo).toHaveBeenCalledWith({ kind: 'structure', id: idA }, 1, FADE_IN_DURATION_MS);
     // The sibling structure id was never touched.
     expect(fadedHandle(fadeTo, { kind: 'structure', id: idB })).toBe(false);
-  });
-
-  it('animate:false snaps via setImmediate and issues exactly one requestRender', () => {
-    const { state, fadeTo, setImmediate, requestRender } = makeBridgeState();
-    const idA = STRUCTURE_IDS[0]!;
-
-    syncVisibilityFadeItem(state, 'structureRing', idA, { animate: false });
-
-    expect(fadeTo).not.toHaveBeenCalled();
-    expect(setImmediate).toHaveBeenCalledTimes(1);
-    expect(setImmediate).toHaveBeenCalledWith({ kind: 'structure', id: idA }, 1);
-    // The snap path needs one explicit wake (setImmediate doesn't wake).
-    expect(requestRender).toHaveBeenCalledTimes(1);
   });
 });

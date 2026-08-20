@@ -178,16 +178,12 @@ export function syncVisibilityFadeItem(
   state: ApplyIntentState,
   key: VisibilityLayerKey,
   item: unknown,
-  opts: { animate: boolean; durationMs?: number },
+  opts: { durationMs?: number },
 ): void {
   const row = FADE_LAYERS.find((r) => r.key === key);
   // Registration-only keys have no intent to apply — skip, the same way the
   // batch loop skips intent-less rows. A non-intent key here is a caller bug.
   if (row === undefined || row.intent === undefined) return;
 
-  applyIntent(state, row, item, opts);
-
-  // Mirror the batch wake policy: the snap path needs one explicit render; the
-  // animated path rides fadeTo's own wake (see syncVisibilityFades).
-  if (!opts.animate) state.subsystems.scheduler.requestRender();
+  applyIntent(state, row, item, { ...opts, animate: true });
 }

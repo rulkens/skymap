@@ -230,7 +230,7 @@ export function wireGalaxyCatalogSourceSlot(
       // user interaction doesn't wait for the smoothstep to saturate. The
       // tier-swap fade-OUT above (`dissolveCatalogBuffer`) is a transient
       // pre-replace dissolve, not an intent toggle — hence the two are separate.
-      syncVisibilityFadeItem(state, 'survey', catalogId, { animate: true });
+      syncVisibilityFadeItem(state, 'survey', catalogId, {});
 
       const dtMs = Math.round(performance.now() - t0);
       // Dump what the GPU actually holds after upload.  If this

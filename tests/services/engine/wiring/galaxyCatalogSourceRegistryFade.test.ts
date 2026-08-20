@@ -125,9 +125,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     // The fade-in routes through the scoped bridge, applying the survey row's
     // intent to ONLY this catalog (not every survey id).
     expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {
-      animate: true,
-    });
+    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {});
     // The fade-in bridge fires AFTER the renderer upload (commit order).
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
@@ -161,9 +159,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     // The fade-in still routes through the scoped bridge after upload, applying
     // the survey intent to ONLY this catalog.
     expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {
-      animate: true,
-    });
+    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {});
     // The fade-in bridge fires AFTER the renderer upload (commit order).
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
