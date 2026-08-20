@@ -5,8 +5,8 @@
  * Lives among the swap-target layers (the `blend: 'over'` group within
  * `CONTENT_LAYERS`, drawn post-tone-map) like the selection ring: it is
  * screen overlay, not emissive scene content. Gated on
- * `state.settings.debug.showDiskRadiusRing` plus a galaxy selection, so a
- * default-off build pays one boolean per frame.
+ * `state.settings.debug.overlays['disk-radius-ring']` plus a galaxy
+ * selection, so a default-off build pays one boolean per frame.
  *
  * ## What it's for
  *
@@ -46,7 +46,7 @@ export const diskRadiusRingLayer: ContentLayer = {
     // constructed startup window (and partial test stubs) without
     // reaching for `state.settings`.
     if (!state.gpu.diskRadiusRing) return false;
-    if (!state.settings.debug.showDiskRadiusRing) return false;
+    if (!state.settings.debug.overlays['disk-radius-ring']) return false;
     const sel = state.selection.select;
     return sel !== null && sel.type === 'galaxyCatalog';
   },

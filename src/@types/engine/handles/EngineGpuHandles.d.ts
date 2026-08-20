@@ -394,7 +394,7 @@ export type EngineGpuHandles = {
    * pick texture over the tone-mapped frame.  Null until `initGpu`
    * constructs it.  Excluded from `isEngineReady`: it's a debug-only
    * pass, and the per-frame consumer null-checks the field along with
-   * the `state.settings.debug.showPickBuffer` toggle.  Stored here so
+   * the `state.settings.debug.overlays['pick-buffer']` toggle.  Stored here so
    * `destroy()` can release the pipeline + bind-group-layout via the
    * pass's no-op destroy method (symmetry with the other GPU-resource
    * owners).
@@ -405,7 +405,7 @@ export type EngineGpuHandles = {
    * plane around the selected galaxy at its catalog disk radius.  Null
    * until `initGpu` constructs it.  Excluded from `isEngineReady`: a
    * debug-only overlay, null-checked together with the
-   * `state.settings.debug.showDiskRadiusRing` toggle.  Unlike
+   * `state.settings.debug.overlays['disk-radius-ring']` toggle.  Unlike
    * `pickDebugOverlay` (which owns no GPU buffers), this pass owns two
    * uniform buffers, so the `destroy()` chain must release it.
    */

@@ -66,7 +66,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   return vec4<f32>(in.color * brightness * stroke * in.alpha, 1.0);
 }
 
-// Debug lens ('debug.showOrbitTrailImpostor'): fills the impostor with the orbit's own colour, ignoring fade alpha so a faded-but-drawn orbit still shows its hull.
+// Debug lens (debug.overlays['orbit-trail-impostor']): fills the impostor with the orbit's own colour, ignoring fade alpha so a faded-but-drawn orbit still shows its hull.
 @fragment
 fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
   return vec4<f32>(in.color * 0.2, 1.0); // dimmed so overlapping hulls read as layers

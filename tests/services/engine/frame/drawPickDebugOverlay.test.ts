@@ -3,7 +3,7 @@
  * helper.
  *
  * Coverage focus:
- *   - No-op when `showPickBuffer` is off.
+ *   - No-op when `overlays['pick-buffer']` is off.
  *   - No-op when `pickProgram` / `pickDebugOverlay` is null.
  *   - No-op when `pickProgram.renderForDebug()` returns an empty array (engine
  *     not ready to pick, or no slab has an enabled pickable layer).
@@ -100,16 +100,17 @@ function makeDeps(callLog: string[]): DrawPickDebugOverlayDeps {
 }
 
 /**
- * Build a minimal EngineState fragment. `showPickBuffer` gates the whole
- * helper; `pickProgram.renderForDebug()` returns the slab pick textures
- * far→near (empty for nothing to show); `pickDebugOverlay.draw` is the
- * composite step, invoked once per returned texture.
+ * Build a minimal EngineState fragment. `pickBufferOn` seeds
+ * `debug.overlays['pick-buffer']`, the toggle that gates the whole helper;
+ * `pickProgram.renderForDebug()` returns the slab pick textures far→near
+ * (empty for nothing to show); `pickDebugOverlay.draw` is the composite
+ * step, invoked once per returned texture.
  */
 function makeState({
-  showPickBuffer = true,
+  pickBufferOn = true,
   renderForDebugResult = [makePickTex()] as readonly GPUTexture[],
 }: {
-  showPickBuffer?: boolean;
+  pickBufferOn?: boolean;
   renderForDebugResult?: readonly GPUTexture[];
 } = {}) {
   const renderForDebug = vi.fn<() => readonly GPUTexture[]>(() => renderForDebugResult);
@@ -117,7 +118,7 @@ function makeState({
 
   return {
     settings: {
-      debug: { showPickBuffer, renderStrategy: 'auto' },
+      debug: { overlays: { 'pick-buffer': pickBufferOn }, renderStrategy: 'auto' },
     },
     gpu: {
       pickProgram: {
@@ -133,10 +134,10 @@ function makeState({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('drawPickDebugOverlay', () => {
-  it('is a no-op when showPickBuffer is false', () => {
+  it("is a no-op when overlays['pick-buffer'] is false", () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);
-    const state = makeState({ showPickBuffer: false });
+    const state = makeState({ pickBufferOn: false });
     drawPickDebugOverlay(state, deps);
     expect(callLog).toHaveLength(0);
     // renderForDebug must not even be consulted.
