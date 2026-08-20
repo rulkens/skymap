@@ -21,7 +21,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { createElement, type ReactNode, createRef } from 'react';
 import { Provider } from 'react-redux';
 import DebugPanel from '../../../src/components/DebugPanel/DebugPanel';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
@@ -34,6 +34,7 @@ import { setDebugOverlay } from '../../../src/state/settings/settingsSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
+import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/earthTileSubsystem';
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,17 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
+// Only `debug.earthTiles` / `debug.flyToLonLat` are reached (via
+// EarthTileAtlasSectionContainer) — the rest of EngineHandle is unused by
+// DebugPanel's tree, so it's cast rather than fully stubbed.
+const stubEngineHandleRef = createRef<EngineHandle | null>();
+stubEngineHandleRef.current = {
+  debug: {
+    earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+    flyToLonLat: () => undefined,
+  },
+} as unknown as EngineHandle;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -70,8 +82,7 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
       frameStats: () => ({ fps: 0, cpuMs: 0, idle: true }),
       passNames: PASS_NAMES,
       assetPriorities: () => new Map<string, number>(),
-      earthTileDebug: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
-      flyToLonLat: () => undefined,
+      engineHandleRef: stubEngineHandleRef,
     }),
     { wrapper: makeWrapper(store) },
   );
