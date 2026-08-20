@@ -154,6 +154,8 @@ export function App(): React.ReactElement {
             frameStats={handleRef.current.debug.frameStats}
             passNames={handleRef.current.debug.passOverrides.allNames}
             assetPriorities={handleRef.current.debug.assetPriorities}
+            earthTileDebug={handleRef.current.debug.earthTiles}
+            flyToLonLat={handleRef.current.debug.flyToLonLat}
           />
         )}
       </div>

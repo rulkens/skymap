@@ -170,6 +170,7 @@ describe('planEarthTiles', () => {
     expect(plan.requests.some((r) => r.tile.z === maxLevel)).toBe(true);
   });
 
+
   it('reaches the level a hand-computed texel density calls for', () => {
     expect(expectedLevel(1000)).toBe(8); // guards the arithmetic in the comment above
     expect(planEarthTiles(nadirAt(1000)).zWin).toBe(8);
@@ -303,6 +304,21 @@ describe('planEarthTiles', () => {
   it('returns an empty plan rather than nonsense when the camera is on the surface', () => {
     const plan = planEarthTiles({ ...nadirAt(1000), camPosLocal: [1, 0, 0] });
     expect(plan.requests).toEqual([]);
+    // Still a meaningful sub-camera direction, not a zero vector NaN trap —
+    // the debug readout needs this even on the degenerate "no horizon" path.
+    expect(plan.subCameraDirLocal).toEqual([1, 0, 0]);
+  });
+
+  it('reports subCameraDirLocal as the normalised camPosLocal, not a recomputed one', () => {
+    // A nadir camera's direction is exactly its own position, normalised —
+    // this pins the plumbing (the value the debug readout will convert to
+    // lon/lat), independent of `directionToLonLatDeg`'s own unit tests.
+    const { camPosLocal } = nadirAt(1000);
+    const len = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
+    const plan = planEarthTiles(nadirAt(1000));
+    expect(plan.subCameraDirLocal[0]).toBeCloseTo(camPosLocal[0] / len, 12);
+    expect(plan.subCameraDirLocal[1]).toBeCloseTo(camPosLocal[1] / len, 12);
+    expect(plan.subCameraDirLocal[2]).toBeCloseTo(camPosLocal[2] / len, 12);
   });
 
   it('emits leaves on both sides of the antimeridian, all inside the wrapped window', () => {

@@ -102,6 +102,11 @@ const EARTH_TILE_ATLAS_SIDE: f32 = 8192.0;
 const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
 const TILE_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_PX;
 
+// Finest pyramid level the LOD overlay's ramp is calibrated against (see
+// 'earthLodOverlayColor' below) -- the deepest regional bake level, not a
+// hard ceiling: a level beyond it just clamps to the same red as z19.
+const EARTH_LOD_OVERLAY_MAX_LEVEL: u32 = 19u;
+
 // TILE_DEBUG -- the tint probe, for a human to flip. A wrong window is INVISIBLE
 // in the final image (the base texture is a plausible picture of Earth at every
 // uv, so a misaddressed cell just looks like Earth) and obvious in false colour,
@@ -154,6 +159,34 @@ fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
 fn debugTileLevelTint(level: u32) -> vec3<f32> {
   let t = fract(f32(level) * 0.618034);
   return 0.5 + 0.5 * cos(TAU * (t + vec3<f32>(0.0, 0.33, 0.67)));
+}
+
+// earthLodOverlayColor -- the 'earth-lod-overlay' toggle's ramp:
+// MONOTONIC coarse-to-fine (unlike 'debugTileLevelTint's golden-ratio hue
+// scatter above, which deliberately keeps adjacent levels UNRELATED so no two
+// look alike at a glance). Here the ask is the opposite -- a reader should see
+// "further along the pyramid" as "further along the ramp" -- so a 4-segment
+// blue -> cyan -> green -> yellow -> red gradient is sampled at the integer
+// 'level' itself. No interpolation ever spans two different pixels' levels
+// (each pixel picks the single colour for ITS OWN integer level), which is
+// what gives neighbouring bands a hard edge rather than a smooth gradient.
+fn earthLodOverlayColor(level: u32) -> vec3<f32> {
+  let t = clamp(f32(level) / f32(EARTH_LOD_OVERLAY_MAX_LEVEL), 0.0, 1.0);
+  let seg = t * 4.0;
+  let blue = vec3<f32>(0.05, 0.05, 0.55);
+  let cyan = vec3<f32>(0.05, 0.60, 0.75);
+  let green = vec3<f32>(0.10, 0.75, 0.15);
+  let yellow = vec3<f32>(0.95, 0.85, 0.05);
+  let red = vec3<f32>(0.90, 0.10, 0.05);
+  if (seg < 1.0) {
+    return mix(blue, cyan, seg);
+  } else if (seg < 2.0) {
+    return mix(cyan, green, seg - 1.0);
+  } else if (seg < 3.0) {
+    return mix(green, yellow, seg - 2.0);
+  } else {
+    return mix(yellow, red, clamp(seg - 3.0, 0.0, 1.0));
+  }
 }
 
 @fragment
@@ -295,5 +328,21 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     return vec4<f32>(1.0 - probeWeight, probeWeight, 0.0, 1.0);
   }
 
-  return vec4<f32>(colour + emissive, 1.0);
+  // Earth LOD overlay (the DebugPanel's 'earth-lod-overlay' toggle,
+  // 'u.debugLodOverlay' > 0.5) -- a runtime, not compile-time, lens, so it
+  // stays live in the shipped shader rather than compiling to dead code like
+  // TILE_DEBUG's arms. 'cell.b' is the level THIS pixel is actually sampling
+  // (see the "may be COARSER than zWin" note above), never 'zWin' itself.
+  // "Not resident" -- no tile named at all ('cell.a == 0u', which is also the
+  // pre-engage/placeholder identity) OR outside the page-table window -- gets
+  // magenta rather than a ramp colour, since there is no real level to report;
+  // mixed 50/50 like the ramp so the underlying geography stays legible.
+  var finalColour = colour + emissive;
+  if (u.debugLodOverlay > 0.5) {
+    let notResident = cell.a == 0u || !inWindow;
+    let overlayColour = select(earthLodOverlayColor(cell.b), vec3<f32>(1.0, 0.0, 1.0), notResident);
+    finalColour = mix(finalColour, overlayColour, 0.5);
+  }
+
+  return vec4<f32>(finalColour, 1.0);
 }

@@ -50,7 +50,7 @@ const WIN_X0 = 341;
 const WIN_Y0 = 77;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
-  it('packs a 128-byte / 32-f32 record with roughnessBase filling the vec3 tail @76', () => {
+  it('packs a 144-byte / 36-f32 record with roughnessBase filling the vec3 tail @76', () => {
     const rec = packEarthSurfaceUniforms(
       MVP,
       SUN_DIR,
@@ -65,10 +65,11 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       Z_WIN,
       WIN_X0,
       WIN_Y0,
+      true, // debugLodOverlay
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
-    expect(rec.length).toBe(32); // 128 bytes
-    expect(rec.byteLength).toBe(128);
+    expect(rec.length).toBe(36); // 144 bytes
+    expect(rec.byteLength).toBe(144);
 
     // mvp — all 16 floats verbatim at bytes 0..63.
     for (let i = 0; i < 16; i++) expect(rec[i]).toBe(MVP[i]);
@@ -119,5 +120,31 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     expect(rec[29]).toBe(Z_WIN); // byte 116
     expect(rec[30]).toBe(WIN_X0); // byte 120
     expect(rec[31]).toBe(WIN_Y0); // byte 124
+
+    // debugLodOverlay — float index 32 (byte 128), a fresh row: the struct had
+    // no free slot left (unlike oceanRoughness / the window above, each of
+    // which filled a row an earlier field had already opened). Packed 0.0/1.0,
+    // never a raw boolean, since the whole struct is one Float32Array.
+    expect(rec[32]).toBe(1); // byte 128 — debugLodOverlay: true
+  });
+
+  it('packs debugLodOverlay: false as 0', () => {
+    const rec = packEarthSurfaceUniforms(
+      MVP,
+      SUN_DIR,
+      CAM_POS,
+      ROUGHNESS,
+      F0,
+      SUN_IRRADIANCE,
+      CLOUD_SHADOW,
+      CLOUD_SHELL_RADIUS,
+      AMBIENT_LIGHT,
+      OCEAN_ROUGHNESS,
+      Z_WIN,
+      WIN_X0,
+      WIN_Y0,
+      false,
+    );
+    expect(rec[32]).toBe(0);
   });
 });

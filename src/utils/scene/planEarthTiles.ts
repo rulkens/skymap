@@ -66,9 +66,15 @@ export function planEarthTiles(input: {
   } = input;
 
   const camLen = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
+  // Computed before the early return below so a degenerate/underground camera
+  // still reports a (best-effort) sub-camera direction rather than none.
+  const camDir: Vec3 =
+    camLen > 0
+      ? [camPosLocal[0] / camLen, camPosLocal[1] / camLen, camPosLocal[2] / camLen]
+      : [1, 0, 0];
   // Camera on or inside the surface: no horizon, nothing sensible to plan.
-  if (!(camLen > 1)) return { zWin: baseLevel, winX0: 0, winY0: 0, requests: [] };
-  const camDir: Vec3 = [camPosLocal[0] / camLen, camPosLocal[1] / camLen, camPosLocal[2] / camLen];
+  if (!(camLen > 1))
+    return { zWin: baseLevel, winX0: 0, winY0: 0, requests: [], subCameraDirLocal: camDir };
   // Horizon lies acos(1/d) from the sub-camera point on the unit sphere.
   const capAngle = Math.acos(1 / camLen);
   // The deepest level any band bakes: bounds `required` below so a huge
@@ -236,5 +242,5 @@ export function planEarthTiles(input: {
     return dx < windowSide || dx + span > winCols;
   });
 
-  return { zWin, winX0, winY0, requests: inWindow };
+  return { zWin, winX0, winY0, requests: inWindow, subCameraDirLocal: camDir };
 }
