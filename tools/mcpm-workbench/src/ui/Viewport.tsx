@@ -31,7 +31,7 @@ import { loadCatalogPoints } from '../field/loadCatalogPoints';
 import { syntheticCatalog } from '../field/syntheticCatalog';
 import { createViewportInput } from '../input/createViewportInput';
 import { cameraViewFor } from '../render/cameraViewFor';
-import { effectiveVolpathDivisor } from '../render/effectiveVolpathDivisor';
+import { effectiveVolpathDivisor, SETTLE_MS } from '../render/effectiveVolpathDivisor';
 import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
 import type { TraceView } from '../render/tracePass';
 import type { McpmCameraView } from '../render/writeMcpmCamera';
@@ -185,11 +185,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
     let lastVolpathKey: string | null = null;
-    // V3 interaction boost: `cam`'s own serialization (volpathKey's first element)
-    // doubles as the camera-changed signal, so no second comparator walks yaw/pitch/
-    // distance/target by hand. 0 so the very first frame reads as "just changed".
-    let lastVolpathCamJson: string | null = null;
-    let lastVolpathCameraChangeMs = 0;
+    // Task FLE: the interaction-priority boost trigger — was camera-only (a per-frame
+    // `cam` JSON comparison), now ANY UI store write (see the subscriber below), fanned
+    // out to the path tracer AND raymarch divisors and the sim step cadence, all through
+    // the same effectiveVolpathDivisor(userValue, msSinceInteraction) shape. -Infinity so
+    // boot never reads as "mid-interaction".
+    let lastInteractionMs = -Infinity;
     // -1 sentinel: skips the first frame's delta, which spans the async catalog
     // load + harness build and would otherwise seed the EMA with a huge bogus dt.
     let lastFrameTime = -1;
@@ -205,6 +206,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // Reset alongside the accumulator itself (same volpathKey edge, below) — see
     // PATH_TRACER_SAMPLE_CAP.
     let volpathSampleCount = 0;
+    // Cadence throttle's own frame counter — only meaningful while sim.running; not
+    // reset on rebuild, since "every Nth frame" doesn't care where N last landed.
+    let simFrameCounter = 0;
     // Guards against overlapping readbacks: a mapAsync round trip can outlive the next
     // throttle boundary on a slow device, and stacking calls would only queue more of
     // the same expensive wait.
@@ -378,14 +382,21 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const graph = renderGraph;
 
         const s = store.getSnapshot();
-        if (s.sim.running) {
-          h.step(s.sim.params, s.histogram.sampleRandomly);
-          const nextStepCount = s.sim.stepCount + 1;
-          store.setState((st) => ({ ...st, sim: incrementStep(st.sim) }));
-          if (nextStepCount % HISTOGRAM_INTERVAL_STEPS === 0) void runHistogram(h, nextStepCount);
-        }
-
         const now = performance.now();
+        if (s.sim.running) {
+          simFrameCounter += 1;
+          // Task FLE: the SAME boost-then-settle shape as the divisors below, applied
+          // to physics cadence via a synthetic "divisor 1" — step every frame once
+          // settled, only every BOOST_DIVISOR-th frame while an interaction is fresh,
+          // trading simulation rate for less GPU contention against the render passes.
+          const cadenceDivisor = effectiveVolpathDivisor(1, now - lastInteractionMs);
+          if (simFrameCounter % cadenceDivisor === 0) {
+            h.step(s.sim.params, s.histogram.sampleRandomly);
+            const nextStepCount = s.sim.stepCount + 1;
+            store.setState((st) => ({ ...st, sim: incrementStep(st.sim) }));
+            if (nextStepCount % HISTOGRAM_INTERVAL_STEPS === 0) void runHistogram(h, nextStepCount);
+          }
+        }
 
         const gridShapeKey = JSON.stringify(gridShapeKeyFor(s));
         if (gridShapeKey !== lastGridShapeKey) {
@@ -400,13 +411,19 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (resizeCanvasToDisplay(canvas)) dirty = true;
         const frameDirty = dirty;
         dirty = false;
+        // The interaction-boost settle deadline joins the hold term too: raymarch (below)
+        // has no accumulator of its own to keep re-drawing through the boost window the
+        // way the path tracer's sample-cap check does, so without this the LAST frame
+        // drawn while boosted — coarse divisor — would just stay on screen forever once
+        // no further UI write comes in to wake the loop back up.
+        const holdUntilMs = Math.max(boxPreviewUntil, lastInteractionMs + SETTLE_MS);
         const needsRender = frameNeedsRender({
           dirty: frameDirty,
           simRunning: s.sim.running,
           pathTracerOn: s.view.layers.pathTracer,
           pathTracerSampleCount: volpathSampleCount,
           pathTracerSampleCap: PATH_TRACER_SAMPLE_CAP,
-          holdUntilMs: boxPreviewUntil,
+          holdUntilMs,
           nowMs: now,
         });
         if (!needsRender) {
@@ -441,6 +458,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const { layers } = s.view;
         graph.clear(encoder);
         if (layers.raymarch) {
+          // Task FLE: same interaction boost as the path tracer below — coarser divisor
+          // while a UI write is fresh, the user's own setting once it settles.
+          const effectiveRaymarchDivisor = effectiveVolpathDivisor(
+            s.view.raymarch.divisor,
+            now - lastInteractionMs,
+          );
           // T18: previewPacked wants the packed cube, but only while it is still
           // the pack of THIS stepCount — a sim step invalidates it (spec's
           // "STALE"), and the fallback IS the live trace, not a blank frame.
@@ -452,13 +475,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
             // drawPreviewTrace routes through the same drawTracePass divisor path as
             // drawTrace (RenderGraph owns both passes symmetrically — task R7) — same
             // reduced target, same upsample, no special-casing for the packed source.
-            graph.drawPreviewTrace(encoder, traceViewFor(s, h.box, cam), s.view.raymarch.divisor);
+            graph.drawPreviewTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
           } else {
             if (s.view.raymarch.previewPacked && graph.hasPreviewTrace()) {
               disposePreview();
               store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
             }
-            graph.drawTrace(encoder, traceViewFor(s, h.box, cam), s.view.raymarch.divisor);
+            graph.drawTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
           }
         }
         if (layers.agents) {
@@ -471,18 +494,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
         }
         if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
         if (layers.pathTracer) {
-          // V3: `cam`'s own JSON *IS* the camera-changed signal — no second comparator
-          // walks yaw/pitch/distance/target by hand. A change starts (or restarts) the
-          // boost window; effectiveVolpathDivisor decays it back to the user's own
-          // setting SETTLE_MS after the last one.
-          const camJson = JSON.stringify(cam);
-          if (camJson !== lastVolpathCamJson) {
-            lastVolpathCamJson = camJson;
-            lastVolpathCameraChangeMs = now;
-          }
+          // Task FLE: boost trigger generalized to ANY UI store write (lastInteractionMs,
+          // set by the subscriber above) — was camera-only, a per-frame `cam` JSON
+          // comparison. effectiveVolpathDivisor decays it back to the user's own setting
+          // SETTLE_MS after the last one, same as raymarch's own use above.
           const effectiveDivisor = effectiveVolpathDivisor(
             s.view.pathTracer.divisor,
-            now - lastVolpathCameraChangeMs,
+            now - lastInteractionMs,
           );
           // Reset on any camera move, any pathTracer param change (divisor included —
           // s.view.pathTracer is the whole object), or an explicit clear-trace/reset
@@ -650,11 +668,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
       renderGraph = graph;
       // A fresh accumulator already clears on its own first draw (VolpathPass's
       // `pendingClear` starts true) — this just keeps the reset-tracking key from
-      // outliving the harness it was computed against. Clearing lastVolpathCamJson too
-      // makes the very next frame read as "camera changed" regardless of `now` (unknown
-      // here), which is what actually arms the boost — see the frame loop.
+      // outliving the harness it was computed against. Re-arming lastInteractionMs
+      // too treats a rebuild as its own interaction, arming the quality boost for
+      // the harness's first few frames the same way a real UI write would.
       lastVolpathKey = null;
-      lastVolpathCamJson = null;
+      lastInteractionMs = performance.now();
       startLoop();
       if (hasUrlGate('probe')) (window as unknown as ProbeWindow).__mcpmProbeReady = true;
     }
@@ -736,9 +754,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (disposed) return;
       const s = store.getSnapshot();
 
-      // Task FLE: render-on-demand's dirty flag — the fps-only write is excluded
-      // inside storeWriteIsDirty itself, not here, so this stays a single call.
-      if (storeWriteIsDirty(lastDirtyCheckState, s)) dirty = true;
+      // Task FLE: one check feeds both render-on-demand's dirty flag AND the
+      // interaction-priority boost trigger — the fps-only write is excluded inside
+      // storeWriteIsDirty itself, not here, so both stay a single call.
+      if (storeWriteIsDirty(lastDirtyCheckState, s)) {
+        dirty = true;
+        lastInteractionMs = performance.now();
+      }
       lastDirtyCheckState = s;
 
       const ck = JSON.stringify(catalogKey(s));

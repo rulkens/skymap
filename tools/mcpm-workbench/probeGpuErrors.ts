@@ -14,6 +14,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { SETTLE_MS } from './src/render/effectiveVolpathDivisor';
 
 const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so
@@ -342,6 +343,13 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // only ever be a band assertion; see the constants' own derivation comment.
       name: 'sim:energy-smoke',
       run: async (page) => {
+        // Task FLE: 'command:reset' (previous step) is a UI write — it arms Viewport's
+        // interaction-priority quality window, which now throttles the sim step cadence
+        // too (SETTLE_MS after the click). This step's step:frame ratio is exactly what
+        // ENERGY_SMOKE_CENTER was calibrated against, so wait the boost out in real wall
+        // time before the calibrated settle below, rather than let it silently eat some
+        // of the 100 steps the band assumes.
+        await page.waitForTimeout(SETTLE_MS);
         await settleFrames(page, ENERGY_SMOKE_SETTLE_FRAMES);
         const mean = await page.evaluate(() =>
           (
