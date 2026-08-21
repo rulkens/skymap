@@ -4,13 +4,15 @@
   composes: readout from './debugSection.module.css';
 }
 
+/* Composes the panel's shared button surface rather than re-typing it. */
+.copy {
+  composes: button from './debugSection.module.css';
+  margin-bottom: var(--space-2);
+}
+
 .group {
   color: var(--color-fg-dim);
   margin-top: var(--space-2);
-}
-
-.group:first-child {
-  margin-top: 0;
 }
 
 .row {

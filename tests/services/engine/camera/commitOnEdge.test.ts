@@ -61,6 +61,7 @@ import {
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
@@ -95,7 +96,7 @@ function makeEngineState(): {
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
-      debugZoomBiasMeters: 0,
+      debugZoomLateralMpc: [0, 0, 0] as Vec3,
       debugIdleTickMs: 0,
       controlsDebug: { dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 },
     },

@@ -11,7 +11,6 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
-import type { EnginePickingState } from './state/EnginePickingState';
 
 export type CameraDebugSnapshot = {
   readonly distanceMpc: number;
@@ -26,9 +25,17 @@ export type CameraDebugSnapshot = {
   /** Which pole the camera currently treats as "up" — `state.settings.orientation`. */
   readonly orientationMode: OrientationFrameId;
   readonly surfaceFollowEngaged: boolean;
-  readonly zoomBiasAnchor: EnginePickingState['zoomBiasAnchor'];
-  /** This frame's applied zoom-bias eye-correction magnitude, metres — 0 when inactive. */
-  readonly zoomBiasAppliedMeters: number;
+  /**
+   * EYE-based altitude above the focused pivot's surface, Mpc — `null` when
+   * nothing focused has a surface. Not `distance − pivotRadiusMpc`: the two
+   * diverge the moment the pivot strafes off the body centre, which is exactly
+   * what a zoom-to-cursor tick does (see `eyeAltitudeMpc`).
+   */
+  readonly altitudeMpc: number | null;
+  /** The pivot's accumulated world strafe (pan + zoom lateral), Mpc — `clock.followPanOffset`. */
+  readonly followPanOffsetMpc: Readonly<Vec3>;
+  /** Last zoom tick's lateral pivot shift, Mpc. */
+  readonly zoomLateralMpc: Readonly<Vec3>;
   /** Last computed `liveIdleTickMs` cadence, ms. */
   readonly idleTickMs: number;
 };

@@ -57,8 +57,8 @@ export function surfaceDragRotation(
   cursorCss: Readonly<{ x: number; y: number }>,
 ): { readonly yaw: number; readonly pitch: number } | null {
   // Fixed world position of the grabbed point. local→world: bodyOrientation's
-  // columns are local axes in world space (the convention `surfaceZoomBias`
-  // and `lonLatFocusPose` share) — this stays exact even as the body itself
+  // columns are local axes in world space (the convention `lonLatFocusPose`
+  // shares) — this stays exact even as the body itself
   // moves/rotates between ticks, since the caller re-derives orientation and
   // centre fresh every pointermove.
   const dirWorld = rotateVec3ByTightMat3(lonLatDegToDirection(grabbedPoint), bodyOrientation);

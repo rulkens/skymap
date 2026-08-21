@@ -100,7 +100,6 @@ let pickingState: {
   pickInFlight: boolean;
   pointerDown: boolean;
   hoveredSurfacePoint: null;
-  zoomBiasAnchor: null;
 };
 let dispatchSpy: ReturnType<typeof vi.fn<(action: unknown) => void>>;
 let deps: HoverPickDeps;
@@ -112,7 +111,6 @@ beforeEach(() => {
     pickInFlight: false,
     pointerDown: false,
     hoveredSurfacePoint: null,
-    zoomBiasAnchor: null,
   };
 
   dispatchSpy = vi.fn<(action: unknown) => void>();

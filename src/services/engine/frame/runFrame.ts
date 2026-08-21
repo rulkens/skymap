@@ -678,12 +678,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
-  // DebugPanel Camera section only (see `CameraRuntime.debugZoomBiasMeters`'s
-  // docblock) — mirrors ctx.focusBlend below: `ctx` is thrown away at the end
-  // of this function, so a value a getter polls later must land on the
-  // persistent `cameraRuntime` bag.
-  state.cameraRuntime.debugZoomBiasMeters = ctx.zoomBiasAppliedMeters ?? 0;
-
   // ── Structure-focus recession (computed ONCE, EARLY) ─────────────────────
   //
   // Focus mode fades non-member galaxies away when a cluster / supercluster /

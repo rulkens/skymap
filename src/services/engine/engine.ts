@@ -41,6 +41,8 @@ import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveFocusRow } from './helpers/liveFocusRow';
 import { pivotRadiusMpc } from './camera/pivotRadiusMpc';
+import { pivotCenterMpc } from './camera/pivotCenterMpc';
+import { eyeAltitudeMpc } from '../../utils/camera/eyeAltitudeMpc';
 import type { CameraDebugSnapshot } from '../../@types/engine/CameraDebugSnapshot';
 import type { OrbitControlsDebugSample } from '../../@types/camera/OrbitControlsDebugSample';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
@@ -184,7 +186,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
     // DebugPanel-only (Camera section) — see the type's docblock. Quiet zero
     // defaults until the first frame / gesture writes a real value.
-    debugZoomBiasMeters: 0,
+    debugZoomLateralMpc: [0, 0, 0],
     debugIdleTickMs: 0,
     controlsDebug: { dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 },
   };
@@ -253,7 +255,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickInFlight: false,
       pointerDown: false,
       hoveredSurfacePoint: null,
-      zoomBiasAnchor: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and
@@ -921,9 +922,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       camera: (): CameraDebugSnapshot | null => {
         const cam = liveRenderCamera(state);
         if (!cam) return null;
+        const focusRow = state.selectionRows.focus;
+        const radiusMpc = pivotRadiusMpc(focusRow);
+        const centreMpc =
+          radiusMpc === null
+            ? null
+            : pivotCenterMpc(focusRow, state.cameraRuntime.lastRenderedSimDays.current);
         return {
           distanceMpc: cam.distance,
-          pivotRadiusMpc: pivotRadiusMpc(state.selectionRows.focus),
+          pivotRadiusMpc: radiusMpc,
           yawRad: cam.yaw,
           pitchRad: cam.pitch,
           rollRad: state.cam?.roll ?? 0,
@@ -931,8 +938,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           positionMpc: cam.position,
           orientationMode: state.settings.orientation,
           surfaceFollowEngaged: state.cameraRuntime.surfaceFollow.engaged,
-          zoomBiasAnchor: state.picking.zoomBiasAnchor,
-          zoomBiasAppliedMeters: state.cameraRuntime.debugZoomBiasMeters,
+          altitudeMpc:
+            centreMpc === null || radiusMpc === null
+              ? null
+              : eyeAltitudeMpc(cam.position, centreMpc, radiusMpc),
+          followPanOffsetMpc: state.cameraRuntime.clock.followPanOffset,
+          zoomLateralMpc: state.cameraRuntime.debugZoomLateralMpc,
           idleTickMs: state.cameraRuntime.debugIdleTickMs,
         };
       },

@@ -59,25 +59,10 @@ export type EnginePickingState = {
    * `wireInput.ts`'s `onPointerMove` on a HIT only: a raycast miss (cursor
    * off-globe, or no body focused) leaves this at whatever it already was,
    * rather than being cleared to `null`. A stale entry from a
-   * since-changed focus is harmless because every consumer (the
-   * `zoomBiasAnchor` capture, the drag-grab capture) gates on `bodyId`
-   * matching the CURRENTLY focused body before reading `point` — so it is
-   * a read-time gate, not a write-time clear.
+   * since-changed focus is harmless because the one consumer (the drag-grab
+   * capture) gates on `bodyId` matching the CURRENTLY focused body before
+   * reading `point` — so it is a read-time gate, not a write-time clear.
+   * Zoom does NOT read this: it re-picks its own anchor every tick.
    */
   hoveredSurfacePoint: { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
-  /**
-   * The zoom-bias anchor (spec §4.2/§4.3): the surface point cursor-directed
-   * zoom converges toward, captured once at zoom-gesture start via
-   * `nextZoomBiasAnchor` (see `orbitControls.ts`'s wheel/pinch-start call
-   * sites) — not re-picked every wheel tick. Written only from
-   * `wireInput.ts`'s `onZoomBiasAnchor` callback.
-   *
-   * "Clears on focus change" (spec §4.3) is a READ-TIME gate, not a write:
-   * every consumer (`frameContext.ts`'s eye-bias hook) treats this as absent
-   * unless `bodyId` equals the CURRENTLY focused body's id, so a stale
-   * anchor for a no-longer-focused body is simply never read again — one
-   * write site instead of a second invalidation site that nulls this on
-   * every focus transition.
-   */
-  zoomBiasAnchor: { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
 };

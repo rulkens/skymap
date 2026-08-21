@@ -1,6 +1,7 @@
 /**
- * applyWheelZoom — route a discrete wheel-zoom factor to whichever owner
- * authors the camera distance this frame.
+ * applyWheelZoom — route an at-rest zoom tick to whichever owner authors the
+ * camera distance this frame (mid-gesture the drag register owns it, and the
+ * caller applies the tick there instead).
  *
  * Three distance owners, split by who wins the driver arbitration:
  *
@@ -45,37 +46,42 @@
  * drag path writes it via the recapture edge (a committed base.distance); this
  * function is the WHEEL half of 'any user zoom'.
  *
- * `pivotRadiusMpc` is the radius of whatever the camera orbits (see the helper
- * of the same name), forwarded to every arm's `zoomedDistance` call so the zoom
- * tapers into just off a focused body's surface instead of scaling raw distance
- * to the centre. All three arms need it: follow orbits the body by definition,
- * and the autoRotate / resting arms orbit it too whenever the frame loop's
- * pivot-pin is centring them on it.
+ * `step` is the tick already resolved against the camera on screen
+ * (`cursorZoomStep`): a distance SCALE plus a world-space lateral pivot shift.
+ * Only the follow arm drops the lateral — its slot is a scalar distance, and
+ * following implies a pivot-pinned body, whose lateral the caller has already
+ * routed into `clock.followPanOffset` (the only lateral channel the pin does
+ * not erase). `pivotRadiusMpc` reaches every arm as `clampDistance`'s backstop
+ * floor — see `zoomedPose` for why it is a backstop and not the surface stop.
  */
 
 import { autoRotateElapsed } from './cameraClock';
 import { spinAutoRotate } from './spinAutoRotate';
-import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
+import { clampDistance } from '../../../utils/camera/clampDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { ZoomStep } from '../../../@types/camera/ZoomStep';
 
 export function applyWheelZoom(
   clock: CameraClock,
   prevActiveId: string,
   base: CameraPose,
-  factor: number,
+  step: ZoomStep,
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
   pivotRadiusMpc: number | null,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivotRadiusMpc);
+    clock.followDistanceTarget = clampDistance(
+      clock.followDistanceTarget * step.distanceScale,
+      pivotRadiusMpc,
+    );
     return null;
   }
   if (prevActiveId === 'autoRotate') {
     const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor, pivotRadiusMpc);
+    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), step, pivotRadiusMpc);
   }
-  return zoomedPose(base, factor, pivotRadiusMpc);
+  return zoomedPose(base, step, pivotRadiusMpc);
 }

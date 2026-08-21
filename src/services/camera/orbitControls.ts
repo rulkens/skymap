@@ -63,20 +63,15 @@
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
 import { updatePosition } from '../../utils/camera/updatePosition';
-import { zoomedDistance } from '../../utils/camera/zoomedDistance';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { surfaceDragRotation } from '../../utils/camera/surfaceDragRotation';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
-import { nextZoomBiasAnchor } from '../../utils/camera/nextZoomBiasAnchor';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
-
-/** The zoom-bias anchor's shape — see `EnginePickingState.zoomBiasAnchor`'s docblock. */
-type ZoomBiasAnchor = { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -111,7 +106,7 @@ const PITCH_LIMIT = Math.PI / 2 - 0.01;
  *   - `pointerdown`  — start a drag, capture pointer
  *   - `pointerup`    — end a drag, release pointer
  *   - `pointermove`  — update yaw/pitch while dragging
- *   - `wheel`        — zoom in/out by changing `cam.distance`
+ *   - `wheel`        — hand the zoom factor + cursor to the engine (`onZoom`)
  *
  * After each mutation the function calls `updatePosition(cam)` to keep
  * `cam.position` in sync. The render loop (Task 11) then reads
@@ -200,31 +195,6 @@ export function attachOrbitControls(
     });
   };
 
-  // ── Zoom-bias anchor capture (spec §4.2/§4.3) ─────────────────────────────
-  //
-  // `zoomBiasAnchor` is the anchor itself; `zoomBiasAnchorSource` is the
-  // `hoveredSurfacePoint()` reference it was captured FROM — kept separate so
-  // `nextZoomBiasAnchor`'s reference-identity guard can tell "still the same
-  // hover" from "cursor moved since we last captured" without re-deriving it
-  // from the anchor's own (possibly since-mutated-by-value-but-not-by-
-  // reference) fields. See `nextZoomBiasAnchor.ts`'s module header for why
-  // reference identity — not a timer or a gesture-boundary event — is what
-  // makes "captured once, at gesture start" work here.
-  let zoomBiasAnchor: ZoomBiasAnchor = null;
-  let zoomBiasAnchorSource: ZoomBiasAnchor = null;
-
-  /** Re-run the capture and notify the engine, called at every capture site. */
-  const captureZoomBiasAnchor = (): void => {
-    const next = nextZoomBiasAnchor(
-      zoomBiasAnchor,
-      zoomBiasAnchorSource,
-      options?.hoveredSurfacePoint?.() ?? null,
-    );
-    zoomBiasAnchor = next.anchor;
-    zoomBiasAnchorSource = next.captureSource;
-    options?.onZoomBiasAnchor?.(zoomBiasAnchor);
-  };
-
   /** Euclidean distance between the first two active pointers, or 0 if <2. */
   const currentPinchDistance = (): number => {
     const ptrs = Array.from(activePointers.values());
@@ -232,6 +202,13 @@ export function attachOrbitControls(
     const dx = ptrs[0]!.x - ptrs[1]!.x;
     const dy = ptrs[0]!.y - ptrs[1]!.y;
     return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  /** Midpoint of the first two active pointers — a pinch's "cursor". */
+  const currentPinchMidpointCss = (): { x: number; y: number } => {
+    const ptrs = Array.from(activePointers.values());
+    if (ptrs.length < 2) return { x: 0, y: 0 };
+    return { x: (ptrs[0]!.x + ptrs[1]!.x) / 2, y: (ptrs[0]!.y + ptrs[1]!.y) / 2 };
   };
 
   // ── Click detection ────────────────────────────────────────────────────────
@@ -250,10 +227,10 @@ export function attachOrbitControls(
   /** Squared pixel distance between pointerdown and pointerup. */
   const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
 
-  // Both zoom paths below (pinch, and a wheel tick during a held gesture) need
-  // the focused body's radius to taper/floor `zoomedDistance` against — read
-  // live through the caller's getter rather than cached, since this module
-  // never sees the scene and focus can change while controls stay attached.
+  // The orbit-drag rate's ground-tracking denominator needs the focused body's
+  // radius — read live through the caller's getter rather than cached, since
+  // this module never sees the scene and focus can change while controls stay
+  // attached.
   const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
 
   // The pan and orbit-drag-rate sites below need EYE-based altitude, not
@@ -327,7 +304,6 @@ export function attachOrbitControls(
       // the orbit/pan branch in `onMove`.
       dragMode = 'pinch';
       lastPinchDist = currentPinchDistance();
-      captureZoomBiasAnchor();
     }
     // 3+ pointers: tracked in the map so they're consumed cleanly on
     // pointerup, but they don't change `dragMode` — pinch stays a
@@ -420,23 +396,21 @@ export function attachOrbitControls(
     if (dragMode === 'pinch') {
       // ── Pinch — multi-touch zoom ────────────────────────────────────
       //
-      // Use the ratio of last-distance to current-distance to scale
-      // `cam.distance` exponentially.  Pinch OUT (fingers move apart)
-      // grows current distance → ratio < 1 → camera distance shrinks →
-      // zoom IN.  Pinch IN does the inverse.  This matches the "grab
-      // the world and stretch" mental model that mobile users expect.
+      // Use the ratio of last-distance to current-distance to scale the zoom
+      // exponentially.  Pinch OUT (fingers move apart) grows current distance
+      // → ratio < 1 → camera distance shrinks → zoom IN.  Pinch IN does the
+      // inverse.  This matches the "grab the world and stretch" mental model
+      // that mobile users expect. Raw pixel ratio is naturally calibrated to
+      // the user's hand, so no separate sensitivity tuning.
       //
-      // Symmetric with the wheel zoom's exponential model — both feed the same
-      // ratio into `zoomedDistance` (see its module header). No need for a
-      // separate sensitivity tuning; raw pixel ratio is naturally calibrated
-      // to the user's hand.
+      // The pinch MIDPOINT is the gesture's cursor: `onZoom` anchors the zoom
+      // on whatever surface point sits under it, exactly as the wheel anchors
+      // on the pointer.
       if (activePointers.size < 2 || lastPinchDist === 0) return;
       const newDist = currentPinchDistance();
       if (newDist > 0) {
-        cam.distance = zoomedDistance(cam.distance, lastPinchDist / newDist, pivotRadius());
+        options?.onZoom?.(lastPinchDist / newDist, currentPinchMidpointCss());
         lastPinchDist = newDist;
-        updatePosition(cam);
-        options?.onChange?.();
       }
       return;
     }
@@ -629,37 +603,18 @@ export function attachOrbitControls(
     //   • Scroll down (positive deltaY) → factor > 1 → distance grows (zoom out).
     //   • Scroll up   (negative deltaY) → factor < 1 → distance shrinks (zoom in).
     //
-    // `zoomedDistance` applies that per-notch factor to altitude above a
-    // pivot's surface rather than raw distance (see its module header); the
-    // ceiling it still enforces via `clampDistance` prevents drifting off into
-    // the void beyond the deepest galaxy catalog, where the cloud collapses to
-    // a dot.
+    // The factor is a proportion of the eye's distance to whatever the cursor
+    // is over, not of raw distance to the orbit centre — see `cursorZoomStep`,
+    // which the engine applies on the other side of `onZoom`. This module
+    // deliberately owns none of that: the geometry it would need (body centre,
+    // radius, the pose actually on screen) all lives engine-side.
     const factor = Math.exp(e.deltaY * 0.001);
 
     lastWheelDeltaY = e.deltaY;
     lastWheelAtMs = performance.now();
     emitDebugSample();
 
-    // Recapture on every tick, in-gesture or discrete: the zoom-bias anchor
-    // does not care which driver ends up owning the resulting distance —
-    // only whether the cursor moved since the last capture (§4.2's ruling).
-    captureZoomBiasAnchor();
-
-    if (activePointers.size > 0) {
-      // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
-      // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
-      // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius());
-      updatePosition(cam);
-      options?.onChange?.();
-      return;
-    }
-
-    // Discrete wheel zoom with NO gesture in progress: `dragging` is false, so
-    // the `resting` driver renders the store `base`, not `cam` — a `cam`
-    // mutation would be invisible. Commit the zoom straight into `base` via the
-    // engine callback (which also wakes the loop).
-    options?.onZoom?.(factor);
+    options?.onZoom?.(factor, { x: e.clientX, y: e.clientY });
   };
 
   // ── Register listeners ─────────────────────────────────────────────────────

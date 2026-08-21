@@ -386,6 +386,24 @@ then keep zooming" silently drop the convergence the user had just been
 watching build, for no benefit over letting the bias simply keep applying
 through the drag.
 
+### 4.2/4.3 amendment — 2026-08-21: classic zoom-to-cursor replaces the eye bias
+
+The eye-bias mechanism above shipped and was **withdrawn at the T7 gate**. Held
+as a standing correction between the logical pose and the rendered eye, it made
+a second camera the user could not see, and all three reported symptoms came
+from that split: a drag moved the eye, which changed the pull vector, so
+dragging apparently zoomed; each wheel tick re-captured the anchor and swapped
+the pull vector discontinuously ("Earth pops"); and a standing ~848 km offset at
+21,216 km altitude snapped the pose the moment a drag handed the register back.
+
+The replacement is classic zoom-to-cursor as genuine pose motion: each tick
+re-picks the surface point under the cursor and scales the EYE's distance to it
+(`zoomedEyeStep`), decomposed into the pose's own terms — a distance scale plus
+a lateral pivot shift that rides `clock.followPanOffset`, the one lateral
+channel the per-frame pivot-pin does not erase. No anchor is remembered between
+ticks; there is no bias state and no second camera. Altitude is now EYE-based
+everywhere (`eyeAltitudeMpc`), and the standoff floor with it.
+
 ### 4.4 Cursor-anchored orbit-drag — exact rotation, not a damped rate
 
 `orbitRadPerPixel` is explicitly documented as "correct only at screen

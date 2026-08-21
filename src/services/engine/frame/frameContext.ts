@@ -96,10 +96,7 @@ import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { pivotCenterMpc } from '../camera/pivotCenterMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
-import { deriveBodyStates } from './deriveBodyStates';
-import { surfaceZoomBias } from '../../../utils/camera/surfaceZoomBias';
 import { eyeAltitudeMpc } from '../../../utils/camera/eyeAltitudeMpc';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -169,40 +166,7 @@ export function deriveFrameContext(
   // `state.cam` (the drag register) or any frozen store array.
   const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
 
-  // Cursor-directed zoom (spec §4.2/§4.3): an eye-position correction applied
-  // AFTER the orbit eye is otherwise computed, so `target`/`distance` (read
-  // by `pivotRadiusMpc` below and roughly a dozen NEAR0 content layers) keep
-  // their existing meaning — see `surfaceZoomBias.ts`'s header. Gated
-  // read-time on the anchor's `bodyId` matching the CURRENTLY focused body:
-  // the "clears on focus change" rule, realized without a second write site
-  // (see `EnginePickingState.zoomBiasAnchor`'s docblock). Applies on top of
-  // whatever driver produced `pose` — including mid-drag (spec §4.3).
-  // `zoomBiasAppliedMeters` rides along on `ReadyFrameContext` purely for the
-  // DebugPanel's Camera section (spec-free debug scaffolding, not read by any
-  // production consumer) — the "0 when no anchor / gate closed" default below
-  // covers both branches this block can skip.
   const focusRow = state.selectionRows.focus;
-  const zoomBiasAnchor = state.picking.zoomBiasAnchor;
-  let zoomBiasAppliedMeters = 0;
-  if (focusRow?.type === 'body' && zoomBiasAnchor?.bodyId === focusRow.id) {
-    const bodyState = deriveBodyStates(simDays).get(focusRow.id);
-    if (bodyState) {
-      const radiusMpc = focusRow.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      const delta = surfaceZoomBias(
-        zoomBiasAnchor.point,
-        bodyState.orientation,
-        bodyState.positionMpc,
-        radiusMpc,
-        cam.distance - radiusMpc,
-        cam.position,
-      );
-      cam.position[0] += delta[0];
-      cam.position[1] += delta[1];
-      cam.position[2] += delta[2];
-      zoomBiasAppliedMeters =
-        (Math.hypot(delta[0], delta[1], delta[2]) / SCALE_UNITS.KM_TO_MPC) * 1000;
-    }
-  }
 
   // Snapshot-derive everything the caller would otherwise compute locally.
   // `runFrame` and `renderFrame` both read these off `ctx`, so the two
@@ -214,8 +178,7 @@ export function deriveFrameContext(
   // module header's point 2 on why derived scalars must not be recomputed
   // in two places). The focused pivot's EYE-based altitude (or null) lets
   // the near-field row key its near plane off ALTITUDE rather than raw
-  // distance — see `slabs.ts: deriveSlabs`. `cam.position` here is the
-  // already zoom-bias-corrected eye (the block above runs first), and
+  // distance — see `slabs.ts: deriveSlabs`.
   // `pivotCenterMpc` resolves the pivot's live centre independently of
   // `cam.target` (which PIVOT-PIN / a pan may have moved off-centre) — see
   // `eyeAltitudeMpc`'s header for why `distance − radius` is not safe here.
@@ -258,7 +221,6 @@ export function deriveFrameContext(
     simDays,
     fovYRad: cam.fovYRad,
     focusBlend: 0,
-    zoomBiasAppliedMeters,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     galaxyPointRenderer,

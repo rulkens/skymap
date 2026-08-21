@@ -29,9 +29,14 @@
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
+import { zoomSourceCamera } from '../camera/zoomSourceCamera';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { pivotCenterMpc } from '../camera/pivotCenterMpc';
 import { eyeAltitudeMpc } from '../../../utils/camera/eyeAltitudeMpc';
+import { cursorZoomStep } from '../../../utils/camera/cursorZoomStep';
+import { clampDistance } from '../../../utils/camera/clampDistance';
+import { updatePosition } from '../../../utils/camera/updatePosition';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
@@ -45,9 +50,8 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { EARTH_REF } from '../../../data/selection/earthRef';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { cursorRayWorld } from '../../../utils/camera/cursorRayWorld';
+import { cursorRayFromCamera } from '../../../utils/camera/cursorRayFromCamera';
 import { cursorSurfaceHit } from '../../../utils/camera/cursorSurfaceHit';
-import { frameUp } from '../../../utils/camera/frameUp';
 import {
   commitCameraPose,
   beginDrag,
@@ -73,7 +77,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 /**
@@ -285,12 +288,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onPointerMove: (cssPx) => {
       hoverPickDriver.onPointerMove(cssPx);
 
-      // Cursor→surface hit against the FOCUSED body, feeding Task 2's
-      // zoomBiasAnchor capture and Task 3's drag-grab capture via
-      // `state.picking.hoveredSurfacePoint`. Recomputed here — on every
-      // pointer move, not every frame — mirroring hoverPickDriver's own
-      // pointer-driven (not frame-driven) cadence. `deriveBodyStates` reads
-      // orientation, which `liveBodyPosition` alone drops.
+      // Cursor→surface hit against the FOCUSED body, feeding the drag-grab
+      // capture (§4.4) via `state.picking.hoveredSurfacePoint`. Recomputed
+      // here — on every pointer move, not every frame — mirroring
+      // hoverPickDriver's own pointer-driven (not frame-driven) cadence.
+      // `deriveBodyStates` reads orientation, which `liveBodyPosition` alone
+      // drops.
       const focusRow = selectFocusRow(store.getState());
       const cam = state.cam;
       if (focusRow?.type === 'body' && cam) {
@@ -298,22 +301,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
           focusRow.id,
         );
         if (bodyState) {
-          const fx = cam.target[0] - cam.position[0];
-          const fy = cam.target[1] - cam.position[1];
-          const fz = cam.target[2] - cam.position[2];
-          const flen = Math.hypot(fx, fy, fz) || 1;
-          const forward: Vec3 = [fx / flen, fy / flen, fz / flen];
-
-          const ray = cursorRayWorld(
-            cssPx,
-            { width: canvas.clientWidth, height: canvas.clientHeight },
-            cam.position,
-            forward,
-            cam.roll ?? 0,
-            frameUp(cam.upBasis),
-            cam.fovYRad,
-            cam.aspect,
-          );
+          const ray = cursorRayFromCamera(cam, cssPx, {
+            width: canvas.clientWidth,
+            height: canvas.clientHeight,
+          });
           const point = cursorSurfaceHit(
             ray,
             bodyState.positionMpc,
@@ -419,8 +410,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     },
 
     // Live read of the cursor's last surface hit against the focused body —
-    // `orbitControls.ts` feeds this into `nextZoomBiasAnchor` at every wheel
-    // tick and pinch start; see that field's docblock.
+    // `orbitControls.ts` captures it as the drag-grab at gesture start (§4.4);
+    // see that field's docblock.
     hoveredSurfacePoint: () => state.picking.hoveredSurfacePoint,
 
     // The focused body's geometry `surfaceDragRotation` (§4.4) solves the
@@ -444,42 +435,77 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       };
     },
 
-    // Written on every `nextZoomBiasAnchor` capture (idempotent when
-    // unchanged). `frameContext.ts`'s eye-bias hook is the read-time
-    // consumer — see `EnginePickingState.zoomBiasAnchor`'s docblock for the
-    // "clears on focus change" read-time gate.
-    onZoomBiasAnchor: (anchor) => {
-      state.picking.zoomBiasAnchor = anchor;
-    },
-
-    // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
-    // driver owns the distance this frame: while a body is followed the
-    // followBody driver owns it (scale its distance target in place, so the
-    // zoom is not swallowed by the re-asserted framing distance); under an
-    // active auto-rotate the committed base folds in the accumulated spin so the
-    // elapsed reset is seamless; at rest the resting driver renders `base`, so
-    // commit the zoomed base. Reading `base` from the store (not the
-    // frame-lagged `lastPose` Resource) makes rapid wheel ticks accumulate
-    // correctly — each tick zooms from the prior tick's committed distance.
-    // `autoRotate` + `performance.now()` feed the auto-rotate branch's spin
-    // fold. See `applyWheelZoom` for the ownership split.
-    onZoom: (factor) => {
+    // Every zoom tick — wheel notch or pinch step. Classic zoom-to-cursor: the
+    // surface point under `cursorCss` is re-picked per tick and the eye's
+    // distance to it scales by `factor`, which `cursorZoomStep` splits into a
+    // distance scale plus a lateral pivot shift (see that util). The tick then
+    // lands in whichever register renders the camera this frame:
+    //
+    //   - mid-gesture — the drag register. `orbitDrag` (priority 80) renders
+    //     `poseOf(cam)`, so the zoom shows immediately and rides the
+    //     `onGestureEnd` commit; `accumulateFollowPan` picks the lateral off
+    //     the register's target delta on the next frame.
+    //   - at rest — `applyWheelZoom`'s three arms (follow slot / spun base /
+    //     base). Reading `base` from the store rather than the frame-lagged
+    //     `lastPose` keeps rapid ticks accumulating on the prior tick's commit.
+    //
+    // The LATERAL half has only one durable channel while the pivot-pin is in
+    // effect: `applyFocusedBodyPivot` SETS `target = bodyPosition +
+    // followPanOffset` every frame for a moving focus, so a lateral written
+    // into a committed pose is erased before it renders. A static focus (the
+    // Sun) is never pinned and never reads the offset, so it keeps its
+    // committed target instead.
+    onZoom: (factor, cursorCss) => {
       const root = store.getState();
-      const cam = root.camera;
-      const zoomed = applyWheelZoom(
-        state.cameraRuntime.clock,
-        state.cameraRuntime.prevActiveId.current,
-        cam.base,
+      const focusRow = selectFocusRow(root);
+      const radiusMpc = pivotRadiusMpc(focusRow);
+      const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+      const centreMpc = radiusMpc === null ? null : pivotCenterMpc(focusRow, simDays);
+      const dragging = root.camera.dragging;
+
+      const zoomCam = zoomSourceCamera(state, dragging, focusRow, simDays);
+      if (zoomCam === null) return;
+      const step = cursorZoomStep(
+        zoomCam,
+        cursorCss,
+        { width: canvas.clientWidth, height: canvas.clientHeight },
+        radiusMpc !== null && centreMpc !== null ? { centreMpc, radiusMpc } : null,
         factor,
-        cam.autoRotate,
-        performance.now(),
-        // Floors the zoom just off a focused body's surface for every arm of
-        // applyWheelZoom, not only the follow driver.
-        pivotRadiusMpc(selectFocusRow(root)),
       );
-      if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
-      // Unconditional — the follow branch (applyWheelZoom.ts:72-75) mutates followDistanceTarget
-      // and returns null; a followed-body wheel tick dispatches nothing (D9, finding 3).
+      state.cameraRuntime.debugZoomLateralMpc = step.lateralMpc;
+
+      const clock = state.cameraRuntime.clock;
+      if (dragging) {
+        const cam = state.cam;
+        if (cam) {
+          cam.distance = clampDistance(cam.distance * step.distanceScale, radiusMpc);
+          cam.target[0] += step.lateralMpc[0];
+          cam.target[1] += step.lateralMpc[1];
+          cam.target[2] += step.lateralMpc[2];
+          updatePosition(cam);
+        }
+      } else {
+        const pinned = bodyMovesThisFrame(focusRow);
+        if (pinned) {
+          clock.followPanOffset = [
+            clock.followPanOffset[0] + step.lateralMpc[0],
+            clock.followPanOffset[1] + step.lateralMpc[1],
+            clock.followPanOffset[2] + step.lateralMpc[2],
+          ];
+        }
+        const zoomed = applyWheelZoom(
+          clock,
+          state.cameraRuntime.prevActiveId.current,
+          root.camera.base,
+          pinned ? { distanceScale: step.distanceScale, lateralMpc: [0, 0, 0] } : step,
+          root.camera.autoRotate,
+          performance.now(),
+          radiusMpc,
+        );
+        if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
+      }
+      // Unconditional — the follow branch mutates `followDistanceTarget` and
+      // returns null, so a followed-body tick dispatches nothing (D9, finding 3).
       state.subsystems.scheduler.requestRender();
     },
 

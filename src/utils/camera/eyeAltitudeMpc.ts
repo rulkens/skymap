@@ -14,8 +14,8 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 
 export function eyeAltitudeMpc(
-  eyePosMpc: Vec3,
-  bodyCenterMpc: Vec3,
+  eyePosMpc: Readonly<Vec3>,
+  bodyCenterMpc: Readonly<Vec3>,
   bodyRadiusMpc: number,
 ): number {
   const dx = eyePosMpc[0] - bodyCenterMpc[0];

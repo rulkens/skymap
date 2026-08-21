@@ -18,12 +18,21 @@ import {
   autoRotateElapsed,
 } from '../../../../src/services/engine/camera/cameraClock';
 import { MAX_DISTANCE_MPC } from '../../../../src/utils/camera/clampDistance';
+import type { ZoomStep } from '../../../../src/@types/camera/ZoomStep';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
 const BASE: CameraPose = { target: [0, 0, 0], yaw: 1, pitch: 0.2, distance: 100 };
 const FRAME_MS = 1000 / 60;
 const SPIN_OFF = { active: false, rate: 0 };
+/** A centred tick — the lateral half is the caller's job to route (see wireInput). */
+const zoom = (
+  distanceScale: number,
+  lateralMpc: [number, number, number] = [0, 0, 0],
+): ZoomStep => ({
+  distanceScale,
+  lateralMpc,
+});
 /** Earth's mean radius (km → Mpc) — the pivot radius for the surface-floor case. */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 
@@ -36,7 +45,7 @@ describe('applyWheelZoom', () => {
     const clock = createCameraClock();
     clock.followDistanceTarget = 50;
 
-    const result = applyWheelZoom(clock, 'followBody', BASE, 1.2, SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'followBody', BASE, zoom(1.2), SPIN_OFF, 0, null);
 
     expect(result).toBeNull(); // nothing to commit into the store
     expect(clock.followDistanceTarget).toBeCloseTo(60, 9); // 50 * 1.2
@@ -45,7 +54,7 @@ describe('applyWheelZoom', () => {
   it('clamps the scaled follow target to the shared zoom envelope', () => {
     const clock = createCameraClock();
     clock.followDistanceTarget = MAX_DISTANCE_MPC;
-    applyWheelZoom(clock, 'followBody', BASE, 1000, SPIN_OFF, 0, null);
+    applyWheelZoom(clock, 'followBody', BASE, zoom(1000), SPIN_OFF, 0, null);
     expect(clock.followDistanceTarget).toBe(MAX_DISTANCE_MPC);
   });
 
@@ -57,7 +66,7 @@ describe('applyWheelZoom', () => {
     // standing between the camera and the mantle.
     const clock = createCameraClock();
     clock.followDistanceTarget = EARTH_RADIUS_MPC * 4;
-    applyWheelZoom(clock, 'followBody', BASE, 1e-6, SPIN_OFF, 0, EARTH_RADIUS_MPC);
+    applyWheelZoom(clock, 'followBody', BASE, zoom(1e-6), SPIN_OFF, 0, EARTH_RADIUS_MPC);
 
     const radii = clock.followDistanceTarget! / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
@@ -66,7 +75,7 @@ describe('applyWheelZoom', () => {
 
   it('commits the zoomed base when the resting driver owns the distance', () => {
     const clock = createCameraClock();
-    const result = applyWheelZoom(clock, 'resting', BASE, 2, SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'resting', BASE, zoom(2), SPIN_OFF, 0, null);
     expect(result).not.toBeNull();
     expect(result!.distance).toBeCloseTo(200, 9); // 100 * 2
     // The follow target is untouched — resting reads base, not the follow clock.
@@ -88,7 +97,7 @@ describe('applyWheelZoom', () => {
       clock,
       'autoRotate',
       BASE,
-      0.5,
+      zoom(0.5),
       { active: true, rate },
       500,
       null,
@@ -108,7 +117,7 @@ describe('applyWheelZoom', () => {
       clock,
       'autoRotate',
       BASE,
-      0.5,
+      zoom(0.5),
       { active: false, rate: 0.01 },
       500,
       null,
@@ -118,13 +127,34 @@ describe('applyWheelZoom', () => {
     expect(result!.distance).toBeCloseTo(50, 9); // 100 * 0.5
   });
 
+  it('carries the tick’s lateral onto the committed pose’s target (a static focus keeps it)', () => {
+    // Zoom-to-cursor moves the pivot sideways as well as in/out. For a pivot the
+    // frame loop does NOT pin (a static focus), the committed target is the only
+    // place that shift can live — the follow arm below drops it precisely
+    // because following implies a pinned body, whose lateral the caller has
+    // already put on `clock.followPanOffset`.
+    const clock = createCameraClock();
+    const result = applyWheelZoom(
+      clock,
+      'resting',
+      BASE,
+      zoom(0.5, [3, -4, 12]),
+      SPIN_OFF,
+      0,
+      null,
+    );
+    expect(result!.target).toEqual([3, -4, 12]);
+    expect(result!.yaw).toBe(BASE.yaw);
+    expect(result!.pitch).toBe(BASE.pitch);
+  });
+
   it('falls back to a base commit in the one-frame window before the follow target is seeded', () => {
     // prevActiveId says followBody but the driver has not run its pose yet to
     // seed the target (null). Committing base is harmless: the approach re-seeds
     // the framing distance on its first produce.
     const clock = createCameraClock();
     clock.followDistanceTarget = null;
-    const result = applyWheelZoom(clock, 'followBody', BASE, 1.1, SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'followBody', BASE, zoom(1.1), SPIN_OFF, 0, null);
     expect(result).not.toBeNull();
     expect(result!.distance).toBeCloseTo(110, 9);
   });

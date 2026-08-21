@@ -86,6 +86,7 @@ import type { CameraClock } from '../camera/CameraClock';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { CameraPose } from '../../camera/CameraPose';
 import type { Mat3 } from '../../math/Mat3';
+import type { Vec3 } from '../../math/Vec3';
 import type { OrbitControlsDebugSample } from '../../camera/OrbitControlsDebugSample';
 
 export type CameraRuntime = {
@@ -125,8 +126,8 @@ export type CameraRuntime = {
    * correctness depends on write timing; the DebugPanel simply polls whatever
    * is here.
    */
-  /** Last frame's applied zoom-bias eye-correction magnitude, metres. Written by `runFrame` from `ctx.zoomBiasAppliedMeters`. */
-  debugZoomBiasMeters: number;
+  /** Last zoom tick's lateral pivot shift, Mpc. Written by `wireInput`'s `onZoom`. */
+  debugZoomLateralMpc: Vec3;
   /** Last computed `liveIdleTickMs` cadence, ms. Written by `runFrame` only when the idle-tick heartbeat is armed. */
   debugIdleTickMs: number;
   /** Latest gesture/wheel sample pushed by `orbitControls.ts`'s `onDebugSample`. */

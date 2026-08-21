@@ -388,6 +388,66 @@ describe('wireInput', () => {
     expect(state.picking.hoveredSurfacePoint).toBe(seeded);
   });
 
+  it('routes a zoom tick over a followed body: distance to the follow slot, lateral to followPanOffset', async () => {
+    // The pivot-pin SETS `target = bodyPosition + followPanOffset` every frame
+    // for a moving focus, so the lateral half of a zoom-to-cursor tick survives
+    // only on that offset — a committed pose's target is erased before it
+    // renders. The distance half has its own slot while follow owns the pose.
+    const state = makeState();
+    const deps = makeDeps();
+    // The spy accumulates across this file's tests; clear it so the options
+    // below are the ones closing over THIS state.
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusKm: 6371,
+        },
+      }),
+    );
+
+    // The user's captured gate pose: 21,216 km of altitude over Earth, framed
+    // on the live body centre at the fixture's sim instant.
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    const distance = radiusMpc + 21216 * SCALE_UNITS.KM_TO_MPC;
+    state.cameraRuntime.projection = {
+      fovYRad: Math.PI / 3,
+      aspect: 800 / 600,
+      near: 1e-20,
+      far: 1,
+    };
+    state.cameraRuntime.lastPose.current = {
+      target: [...earth.positionMpc] as [number, number, number],
+      yaw: 0,
+      pitch: 0,
+      distance,
+    };
+    state.cameraRuntime.prevActiveId.current = 'followBody';
+    const clock = state.cameraRuntime.clock;
+    clock.followDistanceTarget = distance;
+
+    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
+    expect(options?.onZoom).toBeTypeOf('function');
+
+    // Cursor 60 px right of centre — inside the globe's ~133 px silhouette.
+    options!.onZoom!(0.9, { x: 460, y: 300 });
+
+    expect(clock.followDistanceTarget!).toBeLessThan(distance);
+    expect(Math.hypot(...clock.followPanOffset)).toBeGreaterThan(0);
+    // Nothing is committed while follow owns the distance — a base commit
+    // would be invisible and re-asserted away next frame.
+    expect(deps.cb.store.getState().camera.base.distance).not.toBe(clock.followDistanceTarget);
+  });
+
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {
     // The complement of initGpu's phase-split assertion: emptying or
     // narrowing wireInput's row filter must fail here.

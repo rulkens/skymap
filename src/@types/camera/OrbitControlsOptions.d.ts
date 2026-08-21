@@ -44,36 +44,39 @@ export type OrbitControlsOptions = {
    */
   onDoubleClick?: (xCss: number, yCss: number) => void;
   /**
-   * Called every time the camera state has been mutated by this module (any
-   * pointer drag, pan, or wheel zoom). The engine wires this to
-   * `scheduler.requestRender()` so a single user gesture wakes the render loop
-   * for one frame; `onGestureStart` / `onGestureEnd` carry the Redux
-   * bookkeeping around gesture boundaries.
+   * Called every time the camera state has been mutated by this module (an
+   * orbit or pan drag). The engine wires this to `scheduler.requestRender()` so
+   * a single user gesture wakes the render loop for one frame; `onZoom` wakes
+   * it for zoom ticks, which this module no longer applies itself, and
+   * `onGestureStart` / `onGestureEnd` carry the Redux bookkeeping around
+   * gesture boundaries.
    *
    * Fired AFTER `updatePosition(cam)` so the camera state is fully settled
    * before the engine reads it for the next frame.
    */
   onChange?: () => void;
   /**
-   * Called for a wheel zoom that occurs with NO pointer gesture in progress,
-   * with the multiplicative distance `factor` (e^(deltaY·k)). The engine commits
-   * the zoom straight into the store `base` — without a gesture, `dragging` is
-   * false, so the `resting` driver renders `base` and a mutation of the live
-   * `cam` register would be invisible. A wheel DURING a drag/pinch instead folds
-   * into `cam` (the `orbitDrag` driver renders it live) and rides the
-   * `onGestureEnd` commit, so it does not go through this callback.
+   * Called for EVERY zoom tick — wheel notch or pinch step — with the
+   * multiplicative factor (e^(deltaY·k) for a wheel, the pinch-distance ratio
+   * for a pinch) and the CSS-pixel cursor the tick is anchored on (the pinch
+   * midpoint for a pinch).
+   *
+   * The engine owns the whole zoom: it resolves the surface point under that
+   * cursor, converts the factor into pose motion (`cursorZoomStep`), and routes
+   * the result to whichever register renders the camera this frame — the drag
+   * register mid-gesture, the store `base` / follow slot at rest. This module
+   * cannot make that call: it sees neither the scene geometry the anchor needs
+   * nor the driver arbitration that decides which register is live.
    */
-  onZoom?: (factor: number) => void;
+  onZoom?: (factor: number, cursorCss: { readonly x: number; readonly y: number }) => void;
   /**
    * Physical radius (Mpc) of whatever the camera currently orbits, or `null`
-   * when the pivot has no surface. Read at the start of a pinch or
-   * wheel-during-gesture so `clampDistance` floors the distance just off
-   * that surface instead of at the absolute floor (~309 km, deep inside
-   * Earth).
+   * when the pivot has no surface. Feeds the orbit-drag rate's ground-tracking
+   * denominator (`orbitRadPerPixel`).
    *
    * A getter, not a cached value — this module holds no scene state; the
    * engine wires it to `pivotRadiusMpc(selectFocusRow(...))`. Omitted
-   * (tests, or no scene) ⇒ only the global floor applies.
+   * (tests, or no scene) ⇒ the flat rate applies.
    */
   pivotRadiusMpc?: () => number | null;
   /**
@@ -100,8 +103,8 @@ export type OrbitControlsOptions = {
    * hit / no body is focused. A getter, not a cached value — mirrors
    * `pivotRadiusMpc`'s shape: this module holds no scene state, so the
    * engine wires it to a live read of `state.picking.hoveredSurfacePoint`.
-   * Consumed by the zoom-bias anchor capture and the drag-grab capture (§4.4,
-   * `dragPivotFrame` below).
+   * Consumed by the drag-grab capture (§4.4, `dragPivotFrame` below); zoom
+   * re-picks its own anchor per tick and never reads this.
    */
   hoveredSurfacePoint?: () => { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
   /**
@@ -128,17 +131,6 @@ export type OrbitControlsOptions = {
     readonly bodyCentreMpc: Vec3;
     readonly radiusMpc: number;
   } | null;
-  /**
-   * Called whenever `nextZoomBiasAnchor` produces a value — every wheel tick
-   * and at pinch-start — with the resulting anchor (or `null`). Idempotent
-   * when the anchor is unchanged (the module re-fires the same reference
-   * rather than skipping the call). The engine wires this to
-   * `state.picking.zoomBiasAnchor`; see that field's docblock for the
-   * read-time "clears on focus change" gate downstream consumers apply.
-   */
-  onZoomBiasAnchor?: (
-    anchor: { readonly bodyId: BodyId; readonly point: LonLatDeg } | null,
-  ) => void;
   /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch

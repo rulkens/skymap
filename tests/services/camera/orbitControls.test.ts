@@ -34,11 +34,9 @@
  *   - `onGestureStart` fires exactly on the FIRST contact (not on a
  *     second finger promoting to pinch).
  *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
- *   - `onChange` fires after any orbit, pan, pinch, or in-gesture wheel change;
- *     a discrete wheel zoom (no gesture) fires `onZoom` instead.
- *   - `pivotRadiusMpc` reaches BOTH in-module clamp sites (pinch, and a wheel
- *     during a held gesture), so a zoom-in on a framed body stops just off its
- *     surface instead of passing through the centre.
+ *   - `onChange` fires after any orbit or pan change; every zoom tick (wheel
+ *     notch or pinch step) goes out through `onZoom` with its anchor cursor,
+ *     since the engine — not this module — owns zoom.
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -369,32 +367,38 @@ describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
     expect(onChange.mock.calls.length).toBeGreaterThan(countAfterDown);
   });
 
-  it('a discrete wheel zoom (no gesture) calls onZoom with the distance factor, not onChange', () => {
-    const onZoom = vi.fn<(factor: number) => void>();
-    const onChange = vi.fn<() => void>();
-    const { canvas, rec } = makeCanvas();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), { onZoom, onChange });
-
-    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-
-    // exp(100 * 0.001) = exp(0.1) ≈ 1.105 — zoom OUT (distance grows).
-    expect(onZoom).toHaveBeenCalledTimes(1);
-    expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(Math.exp(0.1), 6);
-    // With no gesture, `cam` is not the rendered pose; onZoom commits to `base`
-    // and wakes the loop itself, so the onChange wake path is NOT taken.
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('a wheel DURING a drag folds into the cam register and fires onChange (no onZoom)', () => {
-    const onZoom = vi.fn<(factor: number) => void>();
+  it('a wheel tick calls onZoom with the factor and the cursor it is anchored on', () => {
+    const onZoom = vi.fn<(factor: number, cursorCss: { x: number; y: number }) => void>();
     const onChange = vi.fn<() => void>();
     const cam = makeCamera();
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, { onZoom, onChange });
 
-    // Begin a gesture so activePointers.size > 0.
+    const before = cam.distance;
+    rec.fire('wheel', { deltaY: 100, clientX: 320, clientY: 240, preventDefault: vi.fn() });
+
+    // exp(100 * 0.001) = exp(0.1) ≈ 1.105 — zoom OUT (distance grows).
+    expect(onZoom).toHaveBeenCalledTimes(1);
+    expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(Math.exp(0.1), 6);
+    // The cursor is load-bearing: it is what the engine re-picks the zoom
+    // anchor from every tick.
+    expect(onZoom.mock.calls[0]?.[1]).toEqual({ x: 320, y: 240 });
+    // This module applies no zoom of its own — the engine routes it to whichever
+    // register renders the camera, and wakes the loop itself.
+    expect(cam.distance).toBe(before);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('a wheel DURING a drag goes out through the same onZoom path', () => {
+    // A mid-gesture tick still lands in the drag register — but engine-side,
+    // where the surface geometry the cursor anchor needs actually lives.
+    const onZoom = vi.fn<(factor: number, cursorCss: { x: number; y: number }) => void>();
+    const cam = makeCamera();
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, { onZoom });
+
     rec.fire('pointerdown', {
       pointerId: 1,
       pointerType: 'mouse',
@@ -402,31 +406,19 @@ describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
       clientX: 100,
       clientY: 100,
     });
-    const before = cam.distance;
-    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
+    rec.fire('wheel', { deltaY: 100, clientX: 100, clientY: 100, preventDefault: vi.fn() });
 
-    // Folded into the live register (orbitDrag renders it); rides onGestureEnd.
-    expect(cam.distance).toBeGreaterThan(before);
-    expect(onChange).toHaveBeenCalled();
-    expect(onZoom).not.toHaveBeenCalled();
+    expect(onZoom).toHaveBeenCalledTimes(1);
+    expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(Math.exp(0.1), 6);
   });
-});
 
-describe('attachOrbitControls — the zoom floor stops at a focused body’s surface', () => {
-  // Both in-module zoom paths dolly toward the orbit TARGET, which for a framed
-  // body is its CENTRE. The clamp's absolute floor is 0.048 Earth radii, so
-  // without the pivot radius reaching these two sites a zoom-in walks the camera
-  // thousands of km under the crust. Distances are asserted in body radii so the
-  // property reads as "outside the surface, close to it".
-
-  it('pinching in stops just outside the surface', () => {
-    const cam = makeCamera();
-    cam.distance = EARTH_RADIUS_MPC * 4;
+  it('a pinch step reports the finger-distance ratio and the pinch MIDPOINT as its cursor', () => {
+    // The midpoint is the pinch's cursor — the engine anchors the zoom on
+    // whatever surface point sits under it, exactly as it does for a wheel.
+    const onZoom = vi.fn<(factor: number, cursorCss: { x: number; y: number }) => void>();
     const { canvas, rec } = makeCanvas();
 
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-    });
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), { onZoom });
 
     rec.fire('pointerdown', {
       pointerId: 1,
@@ -439,43 +431,15 @@ describe('attachOrbitControls — the zoom floor stops at a focused body’s sur
       pointerId: 2,
       pointerType: 'touch',
       button: 0,
-      clientX: 10,
+      clientX: 100,
       clientY: 0,
     });
-    // Fingers spreading apart → zoom IN (distance × lastDist / newDist). Three
-    // ×100 steps would land at 4e-6 radii, deep inside the mantle.
-    for (const x of [1000, 100000, 10000000]) {
-      win.fire('pointermove', { pointerId: 2, clientX: x, clientY: 0 });
-    }
+    // Fingers spread 100 px → 200 px: zoom IN, factor = 100 / 200.
+    win.fire('pointermove', { pointerId: 2, clientX: 200, clientY: 0 });
 
-    const radii = cam.distance / EARTH_RADIUS_MPC;
-    expect(radii).toBeGreaterThan(1);
-    expect(radii).toBeLessThan(1.05);
-  });
-
-  it('a wheel tick during a held gesture stops just outside the surface', () => {
-    // The wheel-during-gesture path folds into the live `cam` register rather
-    // than going out through onZoom, so it needs its own floor.
-    const cam = makeCamera();
-    cam.distance = EARTH_RADIUS_MPC * 4;
-    const { canvas, rec } = makeCanvas();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-    });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'mouse',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    rec.fire('wheel', { deltaY: -20000, preventDefault: vi.fn() });
-
-    const radii = cam.distance / EARTH_RADIUS_MPC;
-    expect(radii).toBeGreaterThan(1);
-    expect(radii).toBeLessThan(1.05);
+    expect(onZoom).toHaveBeenCalledTimes(1);
+    expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(0.5, 9);
+    expect(onZoom.mock.calls[0]?.[1]).toEqual({ x: 100, y: 0 });
   });
 });
 

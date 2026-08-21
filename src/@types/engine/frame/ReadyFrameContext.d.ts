@@ -97,16 +97,6 @@ export type ReadyFrameContext = {
   fovYRad: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
-  /**
-   * Magnitude (metres) of this frame's cursor-directed zoom-bias eye
-   * correction (`surfaceZoomBias.ts`) — 0 whenever the anchor is absent or
-   * has cleared on focus change. Debug-only: read by the DebugPanel's Camera
-   * section, no production consumer. Optional (rather than required) so the
-   * many hand-built `ReadyFrameContext` test fixtures across `tests/` — none
-   * of which exercise the zoom-bias path — don't all need updating for a
-   * debug-only field; `runFrame` treats an absent value as 0.
-   */
-  zoomBiasAppliedMeters?: number;
   /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
   visibleSourceMask: number;
   /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */

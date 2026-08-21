@@ -95,13 +95,10 @@ function makeState(
     // No focused pivot in this fixture — see frameContext.test.ts's makeState
     // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
     selectionRows: { hover: null, select: null, focus: null },
-    // No zoom-bias anchor in this fixture — `deriveFrameContext`'s eye-bias
-    // hook reads `state.picking.zoomBiasAnchor` unconditionally.
     picking: {
       pickInFlight: false,
       pointerDown: false,
       hoveredSurfacePoint: null,
-      zoomBiasAnchor: null,
     },
     cameraRuntime: {
       lastPose: { current: LAST_POSE },
