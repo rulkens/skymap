@@ -1,28 +1,14 @@
 /**
- * produceSceneBodyCaptions — `Label2DProducer` for the true-scale foreground
- * bodies (Earth, the local star map, the planets, Sgr A*).
- *
- * Candidate math only: this computes each caption's camera-relative anchor,
- * apparent size, and fade TARGET, then hands the raw candidate to the NEAR0
- * `foregroundLabelDirector` — declutter, the temporal envelope, and the
- * screen-space lift all run in the director now (`label2DDirector.ts`), not
- * here. Every candidate is emitted, including a target of 0: the director's
- * `exponentialApproach` envelope drops a truly ABSENT id immediately but eases
- * an emitted-target-0 id smoothly toward invisible, so omitting a gated-off
- * caption here would make it pop instead of fade (spec §4.6).
- *
- * `worldPos` is emitted CAMERA-RELATIVE (`bodyWorldPos − ctx.drawCamPos`): the
- * NEAR0 director's `project` config rebases its vp about `ctx.drawCamPos` in
- * f64 before projecting (`near0LabelProjection.ts`), so every label it
- * receives must already sit in that frame — the same precision fix
- * `foregroundLabelsLayer` applied inline before this producer existed.
- *
- * `prominencePx` composes the declutter score every body caption has always
- * used: kind tier (`CAPTION_PRIORITY`) dominates, apparent size only breaks a
- * within-tier tie (`captionPriority.ts`). Sgr A*'s target falls out of the
- * ordinary per-kind loop below through `CAPTION_FADE_RULES.sgrAStar` — the
- * same number `sgrAStarCaptionTarget` computes for its OTHER call sites — so
- * there is no separate demand gate here, only the emitted candidate.
+ * produceSceneBodyCaptions — `Label2DProducer` candidate math for Earth, the
+ * local star map, the planets, and Sgr A*. Declutter, envelope, and lift run
+ * in `label2DDirector`; every candidate emits even at target 0 (the
+ * director's exponential envelope drops only genuinely absent ids, easing an
+ * emitted-0 id instead of popping it). `prominencePx` (composed declutter
+ * rank) and `lift.subjectSizePx` (raw apparent size) stay distinct facts.
+ * Sgr A*'s target falls out of the generic per-kind loop below, not a
+ * separate `sgrAStarCaptionTarget` call: both read the same `SCENE_ANCHORS`
+ * position by reference and the zero `RENDER_ORIGIN_MPC`, ending in the same
+ * `CAPTION_FADE_RULES.sgrAStar.fadeTarget` — identical by construction.
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
@@ -39,10 +25,8 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from './leaderLineStyle';
 
-// Memoized on the body-state snapshot: `deriveBodyStates` returns the SAME Map
-// by reference while `simDays` is unchanged, so this identity check is a free
-// change-detector — a paused clock never rebuilds the captions. Moved
-// verbatim from `foregroundLabelsLayer.ts`.
+// `deriveBodyStates` returns the SAME Map by reference while `simDays` is
+// unchanged, so this identity check is a free change-detector.
 let cachedStates: ReadonlyMap<string, BodyState> | undefined;
 let cachedLabels: ReturnType<typeof sceneBodyLabels> = [];
 
@@ -62,9 +46,8 @@ export function produceSceneBodyCaptions(
 ): Label2DProducerOutput {
   const settings = state.settings;
   const camPos = ctx.drawCamPos;
-  // Orbit distance, NOT `|camPos|`: it measures to the orbit TARGET, which is
-  // the bound the solar-system-reach kinds ride. The two diverge the moment
-  // the camera frames something off the origin.
+  // Orbit distance, NOT `|camPos|`: the bound the solar-system-reach kinds
+  // ride, which diverges from origin distance once focus leaves the origin.
   const camOrbitDistanceMpc = ctx.cam.distance;
   const viewportHeightPx = ctx.canvasSize.height;
   const fovYRad = ctx.fovYRad;
@@ -77,8 +60,7 @@ export function produceSceneBodyCaptions(
       label.worldPos[2] - camPos[2],
     ];
 
-    // `worldEmMpc` is the body's RADIUS in Mpc (`sceneBodyLabels`), so the
-    // apparent-size call takes `2 · worldEmMpc` as the diameter.
+    // `worldEmMpc` is the body's RADIUS in Mpc, hence the `2 ×` diameter.
     const distanceMpc = Math.hypot(anchor[0], anchor[1], anchor[2]);
     const subjectSizePx = apparentSizePx({
       diameterKpc: (2 * label.worldEmMpc) / SCALE_UNITS.KPC_TO_MPC,
@@ -87,9 +69,6 @@ export function produceSceneBodyCaptions(
       fovYRad,
     });
 
-    // Both gates must be open before the band is consulted; a closed one
-    // zeroes the target, which then eases out through the director's
-    // envelope rather than popping.
     const rule = CAPTION_FADE_RULES[label.kind];
     const fadeAlpha =
       rule.labelEnabled(settings) && rule.subjectVisible(settings)
@@ -107,8 +86,7 @@ export function produceSceneBodyCaptions(
       prominencePx,
       lift: {
         subjectSizePx,
-        // Apparent radius + gap, so the connector ends clear of the body's
-        // rim rather than at its centre.
+        // Apparent radius + gap: the connector ends clear of the body's rim.
         lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX,
       },
     });

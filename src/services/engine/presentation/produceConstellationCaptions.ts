@@ -1,18 +1,13 @@
 /**
- * produceConstellationCaptions — `Label2DProducer` for the true-3D
- * constellation stick-figure names.
- *
- * Candidate math only, mirroring `produceSceneBodyCaptions`: the NEAR0
- * `foregroundLabelDirector` owns declutter, the temporal envelope, and the
- * lift. Every figure shares ONE fade target this frame —
- * `constellationLayerOpacity`, the same home the stick-figure pass reads —
- * so the names dissolve in lock-step with the lines; the entries differ only
- * by anchor and text. Emitted even at target 0 (the zero-target landmine,
- * spec §4.6): only a genuinely unloaded artifact returns no candidates at
- * all.
- *
- * No `lift` field: the anchor is empty space at a figure centroid, not a
- * body, so there is nothing to float a caption above.
+ * produceConstellationCaptions — `Label2DProducer` candidate math for the
+ * true-3D constellation stick-figure names, mirroring
+ * `produceSceneBodyCaptions`: declutter, envelope, and lift run in
+ * `label2DDirector`. Every figure shares ONE fade target this frame
+ * (`constellationLayerOpacity`, the same home the stick-figure pass reads)
+ * and is emitted even at target 0 — only a genuinely unloaded artifact
+ * returns no candidates at all. No `lift` field: the anchor is empty space
+ * at a figure centroid, not a body, so there is nothing to float a caption
+ * above.
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
@@ -27,8 +22,7 @@ import { resolveLayerOpacity } from './focusRecession';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
 
 // Memoized on the artifact's identity (static once its slot lands); a
-// released slot drops the set to empty so the captions dissolve with the
-// producer. Moved verbatim from `foregroundLabelsLayer.ts`.
+// released slot drops the set to empty so the captions dissolve with it.
 let cachedArtifact: ConstellationsArtifact | undefined;
 let cachedCaptions: ReturnType<typeof constellationCaptions> = [];
 
@@ -47,10 +41,9 @@ function captionsFor(
   return cachedCaptions;
 }
 
-// Below every scene-body caption (spec §4.5's tier table): a figure name
-// always yields to a body caption in a screen-space collision. One constant
-// for every figure — their anchors carry no apparent size, so the composed
-// score has no within-tier tiebreak term (`Math.min(0, CAPTION_TIER_SCALE − 1)`).
+// Below every scene-body caption: a figure name always yields to a body
+// caption in a screen-space collision. One constant for every figure — their
+// anchors carry no apparent size, so there is no within-tier tiebreak term.
 const CONSTELLATION_PROMINENCE_PX = CAPTION_PRIORITY.constellation * CAPTION_TIER_SCALE;
 
 export function produceConstellationCaptions(
@@ -66,8 +59,7 @@ export function produceConstellationCaptions(
   const camPos = ctx.drawCamPos;
   const constellationLayerFade = resolveLayerOpacity(state, ctx, { kind: 'constellations' });
   // ORIGIN distance, not the per-anchor distance the body captions read:
-  // `constellationsLayer.enabled` keys its band on the eye's heliocentric
-  // one, so every figure shares this one target.
+  // every figure shares this one heliocentric-band target.
   const constellationCamDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
   const fadeAlpha = constellationLayerOpacity(constellationCamDistMpc, constellationLayerFade);
 
