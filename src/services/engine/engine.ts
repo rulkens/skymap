@@ -40,6 +40,9 @@ import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveFocusRow } from './helpers/liveFocusRow';
+import { pivotRadiusMpc } from './camera/pivotRadiusMpc';
+import type { CameraDebugSnapshot } from '../../@types/engine/CameraDebugSnapshot';
+import type { OrbitControlsDebugSample } from '../../@types/camera/OrbitControlsDebugSample';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -179,6 +182,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Disengaged at boot — no body is focused yet, so there is nothing to
     // follow. `runFrame` is the single writer from the first frame on.
     surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
+    // DebugPanel-only (Camera section) — see the type's docblock. Quiet zero
+    // defaults until the first frame / gesture writes a real value.
+    debugZoomBiasMeters: 0,
+    debugIdleTickMs: 0,
+    controlsDebug: { dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -905,6 +913,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // again after destroy), so the fallback keeps the panel's read total.
       earthTiles: () =>
         state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+      // Camera/navigation debug readout — see `EngineDebugHandle.camera`'s
+      // docblock. `liveRenderCamera` (not `state.cam`) matches
+      // `logCameraStateFn`'s existing precedent for "the rendered pose";
+      // `roll` is read off `state.cam` separately because the produced pose
+      // never carries it (see `CameraDebugSnapshot.rollRad`'s docblock).
+      camera: (): CameraDebugSnapshot | null => {
+        const cam = liveRenderCamera(state);
+        if (!cam) return null;
+        return {
+          distanceMpc: cam.distance,
+          pivotRadiusMpc: pivotRadiusMpc(state.selectionRows.focus),
+          yawRad: cam.yaw,
+          pitchRad: cam.pitch,
+          rollRad: state.cam?.roll ?? 0,
+          targetMpc: cam.target,
+          positionMpc: cam.position,
+          orientationMode: state.settings.orientation,
+          surfaceFollowEngaged: state.cameraRuntime.surfaceFollow.engaged,
+          zoomBiasAnchor: state.picking.zoomBiasAnchor,
+          zoomBiasAppliedMeters: state.cameraRuntime.debugZoomBiasMeters,
+          idleTickMs: state.cameraRuntime.debugIdleTickMs,
+        };
+      },
+      controls: (): OrbitControlsDebugSample => state.cameraRuntime.controlsDebug,
     },
 
     destroy,

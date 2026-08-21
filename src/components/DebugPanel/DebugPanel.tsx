@@ -8,7 +8,10 @@
  * (the Milky-Way star cloud's look knobs),
  * `ZoneOfAvoidanceTuningSectionContainer` (the galactic-plane guide band's
  * look knobs), `DebugOverlaysSectionContainer`
- * (pick-buffer / disk-radius-ring toggles), `EarthTileAtlasSectionContainer`
+ * (pick-buffer / disk-radius-ring toggles), `CameraSection` (read-only
+ * camera/navigation internals — pose, basis, zoom-bias, gestures — polled off
+ * `debug.camera()`/`debug.controls()`, no store reach so no container),
+ * `EarthTileAtlasSectionContainer`
  * (textual atlas-residency readout — slot pressure, per-level resident/pending
  * counts, last plan shape), `GalaxyProvenanceSectionContainer`
  * (a per-axis table of missing / highlight / show controls over measured-vs-
@@ -48,6 +51,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
+import CameraSection from './CameraSection';
 import EarthTileAtlasSectionContainer from '../containers/EarthTileAtlasSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
@@ -97,6 +101,7 @@ function DebugPanel({
       <MilkyWayTuningSectionContainer />
       <ZoneOfAvoidanceTuningSectionContainer />
       <DebugOverlaysSectionContainer />
+      <CameraSection engineHandleRef={engineHandleRef} />
       <EarthTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
       <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />

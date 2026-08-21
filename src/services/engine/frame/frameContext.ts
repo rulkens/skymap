@@ -175,8 +175,13 @@ export function deriveFrameContext(
   // the "clears on focus change" rule, realized without a second write site
   // (see `EnginePickingState.zoomBiasAnchor`'s docblock). Applies on top of
   // whatever driver produced `pose` — including mid-drag (spec §4.3).
+  // `zoomBiasAppliedMeters` rides along on `ReadyFrameContext` purely for the
+  // DebugPanel's Camera section (spec-free debug scaffolding, not read by any
+  // production consumer) — the "0 when no anchor / gate closed" default below
+  // covers both branches this block can skip.
   const focusRow = state.selectionRows.focus;
   const zoomBiasAnchor = state.picking.zoomBiasAnchor;
+  let zoomBiasAppliedMeters = 0;
   if (focusRow?.type === 'body' && zoomBiasAnchor?.bodyId === focusRow.id) {
     const bodyState = deriveBodyStates(simDays).get(focusRow.id);
     if (bodyState) {
@@ -192,6 +197,8 @@ export function deriveFrameContext(
       cam.position[0] += delta[0];
       cam.position[1] += delta[1];
       cam.position[2] += delta[2];
+      zoomBiasAppliedMeters =
+        (Math.hypot(delta[0], delta[1], delta[2]) / SCALE_UNITS.KM_TO_MPC) * 1000;
     }
   }
 
@@ -239,6 +246,7 @@ export function deriveFrameContext(
     simDays,
     fovYRad: cam.fovYRad,
     focusBlend: 0,
+    zoomBiasAppliedMeters,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     galaxyPointRenderer,

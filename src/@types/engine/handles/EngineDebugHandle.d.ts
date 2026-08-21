@@ -30,6 +30,8 @@
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../FrameStats';
 import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
+import type { CameraDebugSnapshot } from '../CameraDebugSnapshot';
+import type { OrbitControlsDebugSample } from '../../camera/OrbitControlsDebugSample';
 
 /**
  * `passOverrides` — read-only pass-name list for the DebugPanel's
@@ -85,4 +87,18 @@ export type EngineDebugHandle = {
    * absent-subsystem branch.
    */
   readonly earthTiles: () => EarthTileDebugSnapshot;
+  /**
+   * Camera/navigation internals for the DebugPanel's Camera section — a
+   * debugging aid for visually chasing the surface-camera zoom-bias/drag
+   * investigation, not a production surface. A getter, not a snapshot, for
+   * the same reason as `frameStats`; `null` before `wireInput` has produced
+   * a live camera.
+   */
+  readonly camera: () => CameraDebugSnapshot | null;
+  /**
+   * Latest gesture/wheel sample from `orbitControls.ts`'s closure —
+   * `dragMode` and `activePointers` have no other read surface. See
+   * `OrbitControlsDebugSample`.
+   */
+  readonly controls: () => OrbitControlsDebugSample;
 };

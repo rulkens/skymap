@@ -183,6 +183,23 @@ export function attachOrbitControls(
   let dragPointerId: number | null = null;
   let lastPinchDist = 0;
 
+  // ── Debug sample (DebugPanel Camera section) ──────────────────────────────
+  //
+  // `dragMode` and `activePointers` above have no other read surface outside
+  // this closure; `onDebugSample` is the minimal way out. Wheel fields are
+  // tracked here rather than reusing an existing variable because nothing else
+  // in this module needs the last wheel event past the tick that produced it.
+  let lastWheelDeltaY = 0;
+  let lastWheelAtMs = 0;
+  const emitDebugSample = (): void => {
+    options?.onDebugSample?.({
+      dragMode,
+      activePointers: activePointers.size,
+      wheelDeltaY: lastWheelDeltaY,
+      wheelAtMs: lastWheelAtMs,
+    });
+  };
+
   // ── Zoom-bias anchor capture (spec §4.2/§4.3) ─────────────────────────────
   //
   // `zoomBiasAnchor` is the anchor itself; `zoomBiasAnchorSource` is the
@@ -315,6 +332,7 @@ export function attachOrbitControls(
     // pointermove will fire the same callback.  Calling here too means
     // the click→hover-clear path also gets a frame.
     options?.onChange?.();
+    emitDebugSample();
   };
 
   // ── Pointer up — end drag (or click) ──────────────────────────────────────
@@ -367,6 +385,7 @@ export function attachOrbitControls(
       dragPointerId = null;
       lastPinchDist = 0;
     }
+    emitDebugSample();
   };
 
   // ── Pointer move — update orbit ────────────────────────────────────────────
@@ -609,6 +628,10 @@ export function attachOrbitControls(
     // the void beyond the deepest galaxy catalog, where the cloud collapses to
     // a dot.
     const factor = Math.exp(e.deltaY * 0.001);
+
+    lastWheelDeltaY = e.deltaY;
+    lastWheelAtMs = performance.now();
+    emitDebugSample();
 
     // Recapture on every tick, in-gesture or discrete: the zoom-bias anchor
     // does not care which driver ends up owning the resulting distance —

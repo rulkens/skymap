@@ -119,6 +119,9 @@ function makeEngineState(startDistance: number): {
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
+      debugZoomBiasMeters: 0,
+      debugIdleTickMs: 0,
+      controlsDebug: { dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 },
     },
   };
 

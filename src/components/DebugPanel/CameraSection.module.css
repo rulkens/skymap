@@ -1,0 +1,29 @@
+/* CameraSection — grouped label/value rows, fixed-width numerics. */
+
+.readout {
+  composes: readout from './debugSection.module.css';
+}
+
+.group {
+  color: var(--color-fg-dim);
+  margin-top: var(--space-2);
+}
+
+.group:first-child {
+  margin-top: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.label {
+  color: var(--color-fg-tertiary);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

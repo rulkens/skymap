@@ -489,6 +489,11 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       store.dispatch(endDrag());
     },
 
+    // DebugPanel Camera section only — see `OrbitControlsOptions.onDebugSample`.
+    onDebugSample: (sample) => {
+      state.cameraRuntime.controlsDebug = sample;
+    },
+
     onClick: (xCss, yCss) => {
       // Run a one-shot pick at the click position.  We don't use
       // the throttle guard here — clicks are infrequent and we

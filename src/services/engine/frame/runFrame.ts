@@ -630,6 +630,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
+  // DebugPanel Camera section only (see `CameraRuntime.debugZoomBiasMeters`'s
+  // docblock) — mirrors ctx.focusBlend below: `ctx` is thrown away at the end
+  // of this function, so a value a getter polls later must land on the
+  // persistent `cameraRuntime` bag.
+  state.cameraRuntime.debugZoomBiasMeters = ctx.zoomBiasAppliedMeters ?? 0;
+
   // ── Structure-focus recession (computed ONCE, EARLY) ─────────────────────
   //
   // Focus mode fades non-member galaxies away when a cluster / supercluster /
@@ -869,6 +875,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // heartbeat (see `liveIdleTickMs` above) so the terminator stays honest
     // without pinning the loop — the scheduler ignores this while a frame is
     // already queued and never stacks timers, so it can't fight the wake path.
-    state.subsystems.scheduler.requestIdleFrame(liveIdleTickMs(focusedPivotAltitudeMpc));
+    const idleTickMs = liveIdleTickMs(focusedPivotAltitudeMpc);
+    state.cameraRuntime.debugIdleTickMs = idleTickMs; // DebugPanel Camera section only
+    state.subsystems.scheduler.requestIdleFrame(idleTickMs);
   }
 }

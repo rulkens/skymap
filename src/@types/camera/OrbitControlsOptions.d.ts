@@ -9,6 +9,7 @@ import type { BodyId } from '../data/body/BodyId';
 import type { LonLatDeg } from '../scene/LonLatDeg';
 import type { Mat3 } from '../math/Mat3';
 import type { Vec3 } from '../math/Vec3';
+import type { OrbitControlsDebugSample } from './OrbitControlsDebugSample';
 
 export type OrbitControlsOptions = {
   /**
@@ -146,4 +147,13 @@ export type OrbitControlsOptions = {
    * snap-back to the pre-gesture base.
    */
   onGestureEnd?: () => void;
+  /**
+   * Called whenever `dragMode`, `activePointers`, or the last wheel event
+   * changes — DebugPanel-only scaffolding for the Camera section (the
+   * "dragging also zooms" investigation). Fires on pointerdown/up and every
+   * wheel tick, never on pointermove — the debug read doesn't need
+   * per-pixel resolution, and hooking a callback into that hot path isn't
+   * worth it for a debug-only consumer.
+   */
+  onDebugSample?: (sample: OrbitControlsDebugSample) => void;
 };

@@ -55,14 +55,16 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
-// Only `debug.earthTiles` is reached (via EarthTileAtlasSectionContainer) —
-// `flyToLonLat` now dispatches a store action rather than reading the handle
-// — the rest of EngineHandle is unused by DebugPanel's tree, so it's cast
-// rather than fully stubbed.
+// `debug.earthTiles` (via EarthTileAtlasSectionContainer) and
+// `debug.camera`/`debug.controls` (via CameraSection, rendered unconditionally
+// and read once at mount) are reached — the rest of EngineHandle is unused by
+// DebugPanel's tree, so it's cast rather than fully stubbed.
 const stubEngineHandleRef = createRef<EngineHandle | null>();
 stubEngineHandleRef.current = {
   debug: {
     earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+    camera: () => null,
+    controls: () => ({ dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 }),
   },
 } as unknown as EngineHandle;
 
