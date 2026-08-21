@@ -202,7 +202,7 @@ function DisplaySection({
         <Slider
           label="Field of view"
           value={fovDeg}
-          min={30}
+          min={5}
           max={100}
           step={1}
           onChange={onFovDegChange}
