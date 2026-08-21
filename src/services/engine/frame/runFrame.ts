@@ -66,6 +66,8 @@ import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { DEFAULT_FOV_DEG } from '../../../data/defaults';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
 import { surfaceFollowEngaged } from '../../../utils/camera/surfaceFollowEngaged';
 import { orientationWorldDelta } from '../../../utils/camera/orientationWorldDelta';
@@ -121,42 +123,49 @@ const SCALE_TARGET_PX = 120;
 const publishBodyDistanceGate = throttleByTime(250);
 
 /**
- * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
- * one sim day per real day, so the terminator sweeps `0.00417° * T` of ground
- * per tick of length T (seconds) — on screen that maps to pixels via
- * `2 * h * tan(fovY / 2)` (h = camera altitude) over the canvas's pixel
- * height.
+ * Idle-tick cadence for a LIVE sim clock: how long the render loop may sleep
+ * between heartbeat frames (the scheduling site below) before Earth's
+ * terminator drift becomes visible. A FUNCTION of the focused pivot's
+ * altitude, not a fixed value — a single constant can't serve both ends of
+ * the reachable range: honest at the ~61 m surface-follow disengage altitude
+ * (spec §4.6, Task 5) demands near-every-frame ticking, while that cadence
+ * is needless GPU burn once the camera is far from any surface.
  *
- * h is the surface-follow DISENGAGE altitude (spec §4.6,
- * `SURFACE_FOLLOW_DISENGAGE_STANDOFF_MULT` below) — the worst case where the
- * terminator can still visibly slide, since below the ENGAGE threshold
- * surface-fixed follow holds the ground steady (Task 5) and drift never
- * reaches the screen at all. Over Earth (radius 6371 km),
- * `SURFACE_STANDOFF_RADII` floors the standoff altitude at
- * (1.0000024 − 1) × 6371 km ≈ 15.3 m, and the disengage multiplier (4) puts
- * h ≈ 61.2 m — two orders of magnitude below the 127 km this comment used to
- * cite, a pre-Task-5 figure from before surface-follow existed to hold
- * low-altitude ground steady at all.
+ * Derivation, same formula throughout: live time advances one sim day per
+ * real day, so Earth's terminator sweeps `(360° / 86400 s) * T` of ground per
+ * tick of length T (seconds); on screen that maps to pixels via
+ * `2 * h * tan(fovY / 2)` (h = altitude) over the canvas's pixel height.
+ * Solving `drift_px = budget_px` for T gives a cadence LINEAR in h:
  *
- * At h ≈ 61.2 m and the 60° default FOV, viewport_span ≈ 2 × 61.2 m ×
- * tan(30°) ≈ 70.6 m. Solving the same 1.5 px / 900 px budget for T at that
- * span: required drift ≈ 0.118 m, ground speed ≈ 0.00417°/s × (2π × 6371 km /
- * 360°) ≈ 0.464 km/s, so T ≈ 0.118 m ÷ 464 m/s ≈ 0.25 ms — about 65× finer
- * than one 60 Hz frame (~16.7 ms). No discrete cadence this close to the
- * surface can hold the budget without ticking every frame, so this constant
- * is set to one frame's worth (16 ms) rather than the sub-millisecond
- * arithmetic minimum. That also collapses the idle-tick's whole point (skip
- * 60 fps for a rotation this slow) for as long as the camera sits in the
- * last ~60 m before surface-follow engages — a single global constant can't
- * tell that regime apart from a live clock ticking far from any surface,
- * where 16 ms is needless GPU burn. An altitude-adaptive tick length would
- * fix that; out of scope here.
+ *   T(h) = (budget_px / canvas_px) * 2 * tan(fovY / 2) / groundSpeed * h
+ *
+ * `IDLE_TICK_MS_PER_KM` below is exactly that slope, computed once from the
+ * named constants that follow (60° FOV, Earth's radius and rotation rate)
+ * instead of inlined as a magic float, so it stays checkable against this
+ * comment. Two reference points: at h ≈ 61.2 m — Earth's ~15.3 m
+ * `SURFACE_STANDOFF_RADII` floor × the disengage multiplier (4) — T ≈
+ * 0.25 ms, clamped up to the 16 ms floor (no discrete cadence holds 1.5 px
+ * this close to the surface, so "idle tick" and "render every frame" become
+ * the same request); at h ≈ 127 km, T ≈ 528 ms, clamped down to the 500 ms
+ * ceiling (the historical idle heartbeat, honest again above ~120 km).
+ *
+ * Calibrated to Earth's own rotation rate — the only body this feature
+ * streams near-surface tiles for — and reused verbatim for whatever body or
+ * survey star is the live focused pivot, via the same per-body/star altitude
+ * Task 5's `pivotRadiusMpc` already resolves (`focusedPivotAltitudeMpc`
+ * below). A slower-rotating focused body would tolerate a longer T than this
+ * formula grants it, so the result is a safe upper bound on tick frequency
+ * everywhere, not a per-body rotation model — generalizing the slope itself
+ * per body is out of scope here. No focused body/star pivot (or a volume
+ * target with no surface) → `focusedPivotAltitudeMpc` is `null` → MAX, the
+ * pre-adaptive far-camera behavior.
  *
  * Kept OUT of `shouldKeepTicking` regardless: pinning the loop at 60 fps for a
- * rotation this slow would burn the GPU for no visible gain, so instead we ask
- * the scheduler for ONE frame per tick — a heartbeat that keeps the terminator
- * honest while the loop sleeps in between. The React TimeBar readout runs its
- * own timer, so this heartbeat serves only the 3D scene.
+ * rotation this slow would burn the GPU for no visible gain outside the
+ * near-surface band above, so instead we ask the scheduler for ONE frame per
+ * tick — a heartbeat that keeps the terminator honest while the loop sleeps
+ * in between. The React TimeBar readout runs its own timer, so this
+ * heartbeat serves only the 3D scene.
  *
  * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
  * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
@@ -164,7 +173,25 @@ const publishBodyDistanceGate = throttleByTime(250);
  * single one-shot that self-cancels once fired and is ignored while a rAF frame
  * is already queued — so it only ever supplies the frames the busy loop didn't.
  */
-const LIVE_IDLE_TICK_MS = 16;
+const LIVE_IDLE_TICK_MIN_MS = 16; // one frame at 60 Hz — no finer cadence is meaningful
+const LIVE_IDLE_TICK_MAX_MS = 500; // historical idle heartbeat; honest above ~120 km (see above)
+
+const IDLE_TICK_DRIFT_BUDGET_PX = 1.5;
+const IDLE_TICK_CANVAS_HEIGHT_PX = 900;
+const IDLE_TICK_GROUND_SPEED_KM_PER_S =
+  (360 / 86_400) * ((2 * Math.PI * SCENE_EARTH.radiusKm) / 360); // ≈ 0.463 km/s
+const IDLE_TICK_MS_PER_KM =
+  (((IDLE_TICK_DRIFT_BUDGET_PX / IDLE_TICK_CANVAS_HEIGHT_PX) *
+    (2 * Math.tan((DEFAULT_FOV_DEG / 2) * (Math.PI / 180)))) /
+    IDLE_TICK_GROUND_SPEED_KM_PER_S) *
+  1000; // ≈ 4.15 ms per km of altitude
+
+function liveIdleTickMs(focusedPivotAltitudeMpc: number | null): number {
+  if (focusedPivotAltitudeMpc === null) return LIVE_IDLE_TICK_MAX_MS;
+  const altitudeKm = focusedPivotAltitudeMpc / SCALE_UNITS.KM_TO_MPC;
+  const budgetMs = IDLE_TICK_MS_PER_KM * altitudeKm;
+  return Math.min(LIVE_IDLE_TICK_MAX_MS, Math.max(LIVE_IDLE_TICK_MIN_MS, budgetMs));
+}
 
 /**
  * Surface-fixed follow's hysteresis band (spec §4.6), expressed as multiples
@@ -348,6 +375,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // orientation to hold the camera fixed against.
   const surfaceFollow = state.cameraRuntime.surfaceFollow;
   const surfaceFollowFocus = state.selectionRows.focus;
+  // Generic body/star altitude (unlike `surfaceFollowBodyId` below, not
+  // restricted to bodies) — feeds `liveIdleTickMs` at the idle-tick
+  // scheduling site further down; declared here so it's in scope there
+  // without threading it through a parameter.
+  const focusedPivotRadiusMpc = pivotRadiusMpc(surfaceFollowFocus);
+  const focusedPivotAltitudeMpc =
+    focusedPivotRadiusMpc === null ? null : pose.distance - focusedPivotRadiusMpc;
   const surfaceFollowBodyId = surfaceFollowFocus?.type === 'body' ? surfaceFollowFocus.id : null;
   if (surfaceFollowBodyId !== surfaceFollow.bodyId) {
     // The focused body changed (or was lost) since last frame: the snapshot
@@ -832,9 +866,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.scheduler.requestRender();
   } else if (selectIsLiveTicking(rootState)) {
     // The scene is otherwise at rest, but a live sim clock is advancing. Arm a
-    // coarse heartbeat (see LIVE_IDLE_TICK_MS) so the terminator stays honest
+    // heartbeat (see `liveIdleTickMs` above) so the terminator stays honest
     // without pinning the loop — the scheduler ignores this while a frame is
     // already queued and never stacks timers, so it can't fight the wake path.
-    state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
+    state.subsystems.scheduler.requestIdleFrame(liveIdleTickMs(focusedPivotAltitudeMpc));
   }
 }
