@@ -472,7 +472,8 @@ export function attachOrbitControls(
       // than canvas.height (backing-store pixels) keeps the gesture's
       // physical-feel consistent regardless of devicePixelRatio.
       const cssHeight = canvas.clientHeight || 1;
-      const pxToWorld = (2 * (cam.distance - (pivotRadius() ?? 0)) * Math.tan(cam.fovYRad / 2)) / cssHeight;
+      const pxToWorld =
+        (2 * (cam.distance - (pivotRadius() ?? 0)) * Math.tan(cam.fovYRad / 2)) / cssHeight;
 
       // Step 3: build the world-space translation.
       //   - dragging RIGHT  (+dx CSS) → world point should slide RIGHT  →
@@ -507,30 +508,42 @@ export function attachOrbitControls(
     if (grabbedPoint !== null) {
       const frame = options?.dragPivotFrame?.() ?? null;
       if (frame !== null && frame.bodyId === grabbedPoint.bodyId) {
+        // Screen basis: `cam.roll` / `frameUp(cam.upBasis)`, mirroring the
+        // pan branch's reads above — this is the basis `computeViewProj`
+        // actually renders with, NOT `poseBasis` (which only decodes where
+        // the eye sits). Reusing `upRefScratch` is safe: orbit and pan never
+        // run in the same `onMove` call.
         const solved = surfaceDragRotation(
           grabbedPoint.point,
           frame.bodyOrientation,
           frame.bodyCentreMpc,
           frame.radiusMpc,
           cam,
+          cam.roll ?? 0,
+          frameUp(cam.upBasis, upRefScratch),
           cam.fovYRad,
           cam.aspect,
           { width: canvas.clientWidth, height: canvas.clientHeight },
           { x: e.clientX, y: e.clientY },
         );
-        cam.yaw = solved.yaw;
-        // Same gimbal-lock guard the flat-rate path applies below (see
-        // PITCH_LIMIT's comment) — the exact solve can walk pitch to the
-        // pole just as easily as the flat rate can.
-        cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, solved.pitch));
-        updatePosition(cam);
-        options?.onChange?.();
-        return;
+        if (solved !== null) {
+          cam.yaw = solved.yaw;
+          // Same gimbal-lock guard the flat-rate path applies below (see
+          // PITCH_LIMIT's comment) — the exact solve can walk pitch to the
+          // pole just as easily as the flat rate can.
+          cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, solved.pitch));
+          updatePosition(cam);
+          options?.onChange?.();
+          return;
+        }
+        // Non-convergent or degenerate solve — fall through to the flat-rate
+        // miss branch below, same as an unmatched/absent grab.
       }
     }
 
-    // Miss branch — no grab captured, or the grabbed body is no longer
-    // focused: the pre-existing flat, altitude-damped rate, unchanged.
+    // Miss branch — no grab captured, the grabbed body is no longer focused,
+    // or the exact solve didn't converge: the pre-existing flat,
+    // altitude-damped rate, unchanged.
     //
     // Yaw (left / right): we *subtract* dx so that dragging right (positive
     // dx) decreases yaw, rotating the camera to the left around the scene —

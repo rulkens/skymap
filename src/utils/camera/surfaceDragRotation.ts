@@ -7,23 +7,25 @@
  * point back under THIS tick's cursor — exactly, not `orbitRadPerPixel`'s
  * altitude-damped rate (correct only at screen centre, per its own header).
  * `target`/`distance` are read, never written (§4.4's distance semantics
- * untouched).
+ * untouched). Returns `null` on a non-convergent or degenerate solve (grab
+ * behind the eye, near-singular Jacobian) — the caller treats that the same
+ * as a genuine miss and falls back to the flat rate.
  *
  * `projectCss(yaw, pitch)` is the closed-form inverse of `cursorRayWorld`'s
- * NDC→direction formula. Two-variable Newton drives its residual against
+ * NDC→direction formula, built from the SAME `roll`/`upRef` the caller feeds
+ * `cursorRayWorld` — the actually-rendered screen basis is `cam.roll` /
+ * `frameUp(cam.upBasis)` (see `computeViewProj.ts`), NOT `poseBasis`, which
+ * only governs the yaw/pitch DECODE (where the eye sits), never the screen
+ * plane. Two-variable Newton drives the projection's residual against
  * `cursorCss` to zero, with a FRESH finite-difference Jacobian every step —
  * full convergence inside one call, not a single linear step, so a big
  * cursor jump or a limb grab still lands exactly.
- *
- * `roll`/`upBasis` are out of scope (an orbit drag never rolls): assumes
- * roll = 0, screen-up = the frame pole (`frameUp(cam.poseBasis)`).
  */
 
 import { lonLatDegToDirection } from '../scene/lonLatDegToDirection';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 import { yawPitchToDir } from './yawPitchToDir';
 import { imagePlaneBasis } from './imagePlaneBasis';
-import { frameUp } from './frameUp';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -44,11 +46,16 @@ export function surfaceDragRotation(
     readonly distance: number;
     readonly poseBasis?: Mat3;
   }>,
+  // The rendered screen basis (see this module's header) — pass `cam.roll ??
+  // 0` and `frameUp(cam.upBasis)`, the same pair `cursorRayWorld` callers feed
+  // it, so the drag's screen projection agrees with what's actually on screen.
+  roll: number,
+  upRef: Readonly<Vec3>,
   fovYRad: number,
   aspect: number,
   canvasCssSize: Readonly<{ width: number; height: number }>,
   cursorCss: Readonly<{ x: number; y: number }>,
-): { readonly yaw: number; readonly pitch: number } {
+): { readonly yaw: number; readonly pitch: number } | null {
   // Fixed world position of the grabbed point. local→world: bodyOrientation's
   // columns are local axes in world space (the convention `surfaceZoomBias`
   // and `lonLatFocusPose` share) — this stays exact even as the body itself
@@ -62,7 +69,6 @@ export function surfaceDragRotation(
   ];
 
   const tanHalfFovY = Math.tan(fovYRad / 2);
-  const upRef = frameUp(cam.poseBasis);
 
   // Where would `grabbedWorld` land in CSS pixels for a trial (yaw, pitch)?
   // `null` when the point falls behind the eye (defensive — a live grab is
@@ -75,7 +81,7 @@ export function surfaceDragRotation(
       cam.target[2] + worldDir[2] * cam.distance,
     ];
     const forward: Vec3 = [-worldDir[0], -worldDir[1], -worldDir[2]];
-    const basis = imagePlaneBasis(forward, 0, upRef);
+    const basis = imagePlaneBasis(forward, roll, upRef);
 
     // Decompose (grabbedWorld - eye) into the orthonormal (forward, right,
     // up) basis: `depth` is how far along the view axis it sits, the other
@@ -103,14 +109,14 @@ export function surfaceDragRotation(
 
   for (let i = 0; i < MAX_NEWTON_ITERS; i++) {
     const p0 = projectCss(yaw, pitch);
-    if (p0 === null) break;
+    if (p0 === null) return null;
     const fx = p0.x - cursorCss.x;
     const fy = p0.y - cursorCss.y;
-    if (Math.abs(fx) < RESIDUAL_TOL_PX && Math.abs(fy) < RESIDUAL_TOL_PX) break;
+    if (Math.abs(fx) < RESIDUAL_TOL_PX && Math.abs(fy) < RESIDUAL_TOL_PX) return { yaw, pitch };
 
     const py = projectCss(yaw + FINITE_DIFF_EPS_RAD, pitch);
     const pp = projectCss(yaw, pitch + FINITE_DIFF_EPS_RAD);
-    if (py === null || pp === null) break;
+    if (py === null || pp === null) return null;
 
     const j00 = (py.x - p0.x) / FINITE_DIFF_EPS_RAD; // ∂x/∂yaw
     const j10 = (py.y - p0.y) / FINITE_DIFF_EPS_RAD; // ∂y/∂yaw
@@ -119,11 +125,11 @@ export function surfaceDragRotation(
 
     // Solve J·[dYaw, dPitch]ᵀ = -[fx, fy]ᵀ via Cramer's rule.
     const det = j00 * j11 - j01 * j10;
-    if (Math.abs(det) < 1e-12) break; // near-singular (e.g. straight down a pole) — bail with the best estimate so far
+    if (Math.abs(det) < 1e-12) return null; // near-singular (e.g. straight down a pole)
 
     yaw += (-fx * j11 + fy * j01) / det;
     pitch += (j10 * fx - j00 * fy) / det;
   }
 
-  return { yaw, pitch };
+  return null; // MAX_NEWTON_ITERS exhausted without meeting the residual tolerance
 }
