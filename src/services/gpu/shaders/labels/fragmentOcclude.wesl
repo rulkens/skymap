@@ -19,8 +19,8 @@
 //   body depth; any body depth written at this pixel occludes them.
 //
 // The shading itself is identical to the plain 'fs' entry in labels/fragment.wesl:
-// both entries reuse 'shadeMsdf' so glyph colour has one source of truth. These
-// entries only add the discard gate in front of it.
+// both entries reuse 'shadeMsdf' (lib/msdf.wesl) so glyph colour has one source
+// of truth. These entries only add the discard gate in front of it.
 //
 // ## Per-glyph, not per-pixel, occlusion
 //
@@ -36,18 +36,18 @@
 // framebuffer position: '.xy' is window pixels and '.z' is window-space depth.
 
 import package::labels::io::VsOut;
-import package::labels::fragment::shadeMsdf;
+import package::lib::msdf::shadeMsdf;
 import package::lib::sceneDepth::occludedByScene;
 import package::lib::sceneDepth::coveredByScene;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   if (occludedByScene(input.pos.xy, input.pos.z)) { discard; }
-  return shadeMsdf(input);
+  return shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
 }
 
 @fragment
 fn fsCoverage(input: VsOut) -> @location(0) vec4<f32> {
   if (coveredByScene(input.pos.xy)) { discard; }
-  return shadeMsdf(input);
+  return shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
 }

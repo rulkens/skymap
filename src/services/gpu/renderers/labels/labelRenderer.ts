@@ -68,7 +68,7 @@
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Label } from '../../../../@types/rendering/Label';
+import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LabelRenderer } from '../../../../@types/rendering/LabelRenderer';
 import type { FontMetrics } from '../../../../@types/rendering/FontMetrics';
 import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontAtlases';
@@ -260,7 +260,7 @@ export function createLabelRenderer(
   if (device) {
     // ── Bind group layout ────────────────────────────────────────────────
     //
-    // Four bindings matching the labels shaders (io.wesl + fragment.wesl):
+    // Four bindings matching the labels shaders (io.wesl + lib/msdf.wesl):
     //   0 → uniform buffer  (CameraUniforms, vertex-visible)
     //   1 → read-only storage buffer (LabelData[], vertex-visible)
     //   2 → atlas texture   (fragment-visible)
@@ -280,7 +280,7 @@ export function createLabelRenderer(
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
           // viewDimension '2d-array' matches the shader's
-          // `texture_2d_array<f32>` declaration in fragment.wesl.
+          // `texture_2d_array<f32>` declaration in lib/msdf.wesl.
           // Mismatching this with the shader-side binding type
           // triggers a pipeline-creation-time validation error.
           texture: { sampleType: 'float', viewDimension: '2d-array' },
@@ -484,7 +484,7 @@ export function createLabelRenderer(
 
   // ── public methods (closures over the locals above) ────────────────────
 
-  function setLabels(labels: readonly Label[]): void {
+  function setLabels(labels: readonly Label2D[]): void {
     currentGlyphCount = 0;
     currentLabelCount = 0;
 
@@ -667,7 +667,7 @@ export function createLabelRenderer(
   // steady-state cost is a Map lookup.  Unbounded by design: the key
   // space is the label catalog (~hundreds), not user input.
   const measureCache = new Map<string, LabelBBox | null>();
-  function measure(label: Label): LabelBBox | null {
+  function measure(label: Label2D): LabelBBox | null {
     const alignX = label.alignX ?? 'left';
     const alignY = label.alignY ?? 'baseline';
     const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
