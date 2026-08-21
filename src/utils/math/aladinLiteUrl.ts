@@ -16,8 +16,13 @@
  * @param fovArcmin Field of view (thumbnail framing) in arcminutes.
  */
 export function aladinLiteUrl(raDeg: number, decDeg: number, fovArcmin: number): string {
+  // DSS2 is only ~1 arcsec/px native, so a thumbnail-sized FOV (often a few
+  // arcmin) upscales far past native in a full-screen viewport and looks
+  // blurry. Floor the FOV so small galaxies open zoomed out near native
+  // resolution; larger framings pass through unchanged.
+  const MIN_FOV_ARCMIN = 30;
   // Aladin Lite wants `fov` in degrees; the thumbnail framing is arcmin.
-  const fovDeg = fovArcmin / 60;
+  const fovDeg = Math.max(fovArcmin, MIN_FOV_ARCMIN) / 60;
   return (
     `https://aladin.cds.unistra.fr/AladinLite/` +
     `?target=${raDeg}%20${decDeg}` +
