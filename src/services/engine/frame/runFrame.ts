@@ -123,14 +123,34 @@ const publishBodyDistanceGate = throttleByTime(250);
 /**
  * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
  * one sim day per real day, so the terminator sweeps `0.00417° * T` of ground
- * per tick of length T — on screen that maps to pixels via `2 * h * tan(fovY /
- * 2)` (h = camera altitude) over the canvas's pixel height.
+ * per tick of length T (seconds) — on screen that maps to pixels via
+ * `2 * h * tan(fovY / 2)` (h = camera altitude) over the canvas's pixel
+ * height.
  *
- * The altitude term is what makes the cadence tight: at the 127 km standoff
- * over streamed surface tiles the viewport spans only ~147 km vertically, so a
- * 3 s tick is a visible ~8 px jump on a ~900 px-tall canvas. 500 ms holds that
- * drift under 1.5 px at every reachable altitude — ground drift scales
- * linearly with tick length, screen-space drift inversely with altitude.
+ * h is the surface-follow DISENGAGE altitude (spec §4.6,
+ * `SURFACE_FOLLOW_DISENGAGE_STANDOFF_MULT` below) — the worst case where the
+ * terminator can still visibly slide, since below the ENGAGE threshold
+ * surface-fixed follow holds the ground steady (Task 5) and drift never
+ * reaches the screen at all. Over Earth (radius 6371 km),
+ * `SURFACE_STANDOFF_RADII` floors the standoff altitude at
+ * (1.0000024 − 1) × 6371 km ≈ 15.3 m, and the disengage multiplier (4) puts
+ * h ≈ 61.2 m — two orders of magnitude below the 127 km this comment used to
+ * cite, a pre-Task-5 figure from before surface-follow existed to hold
+ * low-altitude ground steady at all.
+ *
+ * At h ≈ 61.2 m and the 60° default FOV, viewport_span ≈ 2 × 61.2 m ×
+ * tan(30°) ≈ 70.6 m. Solving the same 1.5 px / 900 px budget for T at that
+ * span: required drift ≈ 0.118 m, ground speed ≈ 0.00417°/s × (2π × 6371 km /
+ * 360°) ≈ 0.464 km/s, so T ≈ 0.118 m ÷ 464 m/s ≈ 0.25 ms — about 65× finer
+ * than one 60 Hz frame (~16.7 ms). No discrete cadence this close to the
+ * surface can hold the budget without ticking every frame, so this constant
+ * is set to one frame's worth (16 ms) rather than the sub-millisecond
+ * arithmetic minimum. That also collapses the idle-tick's whole point (skip
+ * 60 fps for a rotation this slow) for as long as the camera sits in the
+ * last ~60 m before surface-follow engages — a single global constant can't
+ * tell that regime apart from a live clock ticking far from any surface,
+ * where 16 ms is needless GPU burn. An altitude-adaptive tick length would
+ * fix that; out of scope here.
  *
  * Kept OUT of `shouldKeepTicking` regardless: pinning the loop at 60 fps for a
  * rotation this slow would burn the GPU for no visible gain, so instead we ask
@@ -144,7 +164,7 @@ const publishBodyDistanceGate = throttleByTime(250);
  * single one-shot that self-cancels once fired and is ignored while a rAF frame
  * is already queued — so it only ever supplies the frames the busy loop didn't.
  */
-const LIVE_IDLE_TICK_MS = 500;
+const LIVE_IDLE_TICK_MS = 16;
 
 /**
  * Surface-fixed follow's hysteresis band (spec §4.6), expressed as multiples
