@@ -238,8 +238,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
   },
 
-  // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs ────────────
-  // All three are load-once and deliberately declare no `release`: adding one
+  // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs / mcpmWorkbench ──
+  // All four are load-once and deliberately declare no `release`: adding one
   // requires wiring `onRelease` to `unloadVolumeField`, or the four GPU
   // resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
   // Optional-chained `demand` because `settings.volumes.items` has no entry
@@ -277,9 +277,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── MCPM workbench promoted-export volume ─────────────────────────
   // Void request like CF-4: one cube, no tier variants. Hidden
-  // (`visible: false`) until Phase 4 clears — no UI toggle exists yet, so
-  // this demand predicate never fires in production, but it exists so the
-  // slot machinery is symmetric with every other shippable volume.
+  // (`visible: false`) pending a promotion decision — no UI toggle exists
+  // yet, so this demand predicate never fires in production, but it exists
+  // so the slot machinery is symmetric with every other shippable volume.
   {
     key: 'mcpmWorkbench',
     factory: (deps) => createMcpmWorkbenchSlot(deps.state, deps.cb),

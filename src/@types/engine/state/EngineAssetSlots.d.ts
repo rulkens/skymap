@@ -67,7 +67,7 @@ export type EngineAssetSlots = {
   /**
    * `mcpm-workbench.scfd` — cube promoted from the MCPM workbench dev tool via
    * `tools/volumes/promoteWorkbenchExport.ts`. Untiered like CF-4 (void
-   * request), default-off, hidden until Phase 4 validation clears.
+   * request), default-off, hidden pending a promotion decision.
    */
   mcpmWorkbench: AssetSlot<ScalarCube, void> | null;
   /**
