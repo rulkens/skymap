@@ -39,6 +39,7 @@ import {
   galaxyThumbnailFovArcmin,
   nedByNameUrl,
   nedNearPositionUrl,
+  PC_TO_LY,
 } from '../../../utils/math';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
@@ -198,6 +199,12 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   }
   const morphology = famousEntry?.type ? formatMorphology(famousEntry.type) : undefined;
 
+  // Blueshifted/zero-z Local Group members (peculiar velocity swamps the tiny
+  // Hubble-flow term at these distances) would otherwise feed a negative
+  // redshift into lookbackTimeGyr and yield negative lookback time; fall back
+  // to distance, since light-travel time is ~equal to distance at this range.
+  const lookbackGyr = redshift > 0 ? lookbackTimeGyr(redshift) : (distanceMpc * PC_TO_LY) / 1000;
+
   return {
     type: 'galaxyCatalog',
     index: row.index,
@@ -212,8 +219,8 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     redshift,
     distanceMpc,
     hubbleVelocityKmS: hubbleVelocityKmS(redshift),
-    lookbackGyr: lookbackTimeGyr(redshift),
-    earthEra: earthEraForLookback(lookbackTimeGyr(redshift)),
+    lookbackGyr,
+    earthEra: earthEraForLookback(lookbackGyr),
     magU,
     magG,
     magR,

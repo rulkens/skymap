@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatLookback } from '../../../utils/format/formatLookback';
 import CardRow from '../CardRow/CardRow';
 import styles from '../compactChrome.module.css';
 import local from './CompactCard.module.css';
@@ -25,7 +26,7 @@ function CompactCard({ info }: CompactCardProps): ReactNode {
         {info.displayName}
       </CardRow>
       <div className={styles.cardLookbackLine}>
-        Light left {info.lookbackGyr.toFixed(1)} Gyr ago
+        Light left {formatLookback(info.lookbackGyr)} ago
       </div>
       <div className={styles.cardLookbackEra}>— {info.earthEra}</div>
       <div className={styles.cardDistLine}>
