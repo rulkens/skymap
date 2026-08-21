@@ -1,9 +1,17 @@
 # MCPM Workbench (Polyphorm → browser WebGPU) — implementation plan
 
+> **Shipped 2026-08-21** via PR #570 (squash `fb7cb02a2`); the 6-bit pick
+> widening spun off early as PR #609. Executed with subagent-driven
+> development; deviations from the plan text (P2 promotion redesigned as a
+> hidden dedicated source after a revert, quirk-flag outcomes, the 9.28×
+> trace-mass ratio ruled a documented offset — see
+> `docs/research/mcpm-trace-mass-offset.md`) are recorded in the archived
+> ledger beside this plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` to
 > implement this plan task-by-task, under
 > [`docs/superpowers/conventions/sdd-execution.md`](../conventions/sdd-execution.md). Steps use
-> checkbox (`- [ ]`) syntax for tracking.
+> checkbox (`- [x]`) syntax for tracking.
 
 **Spec:** [`docs/superpowers/specs/2026-08-18-mcpm-workbench-design.md`](../specs/2026-08-18-mcpm-workbench-design.md).
 Every design question is settled there and in the grill session it cites
@@ -143,15 +151,15 @@ Both existing call sites — `src/services/engine/phases/initGpu.ts:91`,
 **Tests:** none. The clamp is a two-line map over an adapter object; a Vitest fake `GPUAdapter`
 would be testing the mock. The real gate is Task 9's preflight and the probe.
 
-- [ ] Read `device.ts:50-100` for the existing mirror pattern and its comment budget.
-- [ ] Add `InitGpuOptions` (one type, exported from `device.ts` beside `GpuContext` — this is a
+- [x] Read `device.ts:50-100` for the existing mirror pattern and its comment budget.
+- [x] Add `InitGpuOptions` (one type, exported from `device.ts` beside `GpuContext` — this is a
       service module, not `@types/`, so co-location is correct).
-- [ ] Widen `initGpu`'s signature; merge the caller's features into the existing `timestamp-query`
+- [x] Widen `initGpu`'s signature; merge the caller's features into the existing `timestamp-query`
       mirror; clamp each requested limit against `adapter.limits`.
-- [ ] Trim the existing Step-2 comment block rather than growing it — the file is already at its
+- [x] Trim the existing Step-2 comment block rather than growing it — the file is already at its
       comment budget.
-- [ ] `npm run typecheck` → GREEN, with neither call site touched.
-- [ ] Commit `src/services/gpu/device.ts`: `refactor(gpu): initGpu takes a device-request options parameter`.
+- [x] `npm run typecheck` → GREEN, with neither call site touched.
+- [x] Commit `src/services/gpu/device.ts`: `refactor(gpu): initGpu takes a device-request options parameter`.
 
 ---
 
@@ -179,12 +187,12 @@ npm run move-files -- tools/utils/math/f32ToF16Bits.ts src/utils/math/f32ToF16Bi
 (Note for the reviewer: `packLogTraceVoxels` has no test file today, contrary to spec §12's aside.
 Adding one is out of scope here — it is captured as a DoD backlog line.)
 
-- [ ] Run both moves with `--dry` first, read the reported import rewrites, then for real.
-- [ ] Grep the repo for the old paths afterwards — `move-files` does not rewrite string literals,
+- [x] Run both moves with `--dry` first, read the reported import rewrites, then for real.
+- [x] Grep the repo for the old paths afterwards — `move-files` does not rewrite string literals,
       `?static` / `?worker` suffixes, or `vi.mock` paths
       (`reference_move_files_blind_spots`). Fix any survivors by hand.
-- [ ] `npm run typecheck` → GREEN. `npm test -- f32ToF16Bits buildRhizomeVolume buildMcpmVolume` → GREEN.
-- [ ] Commit the moved files plus every rewritten importer:
+- [x] `npm run typecheck` → GREEN. `npm test -- f32ToF16Bits buildRhizomeVolume buildMcpmVolume` → GREEN.
+- [x] Commit the moved files plus every rewritten importer:
       `refactor(volume): packLogTraceVoxels moves into src/ for the browser tool`.
 
 ---
@@ -207,13 +215,13 @@ its message to name f16 as accepted. `readNpy` already returns `<f2` as raw f16 
 
 **Test-first** — `tests/tools/buildRhizomeVolume.smoke.test.ts`:
 
-- [ ] Add `builds an f16 .npy to the same .scfd values as its f32 equivalent, within f16 rounding` —
+- [x] Add `builds an f16 .npy to the same .scfd values as its f32 equivalent, within f16 rounding` —
       construct one value array, write it both ways through the fixture path the existing smoke test
       uses, build both, and compare decoded voxels within f16 epsilon. Confirm it FAILS on the
       current guard before implementing.
-- [ ] Implement the widening branch; leave the non-f16/f32/f64 rejection intact.
-- [ ] `npm test -- buildRhizomeVolume` → GREEN.
-- [ ] Commit both files: `feat(rhizome): buildRhizomeVolume accepts f16 .npy input`.
+- [x] Implement the widening branch; leave the non-f16/f32/f64 rejection intact.
+- [x] `npm test -- buildRhizomeVolume` → GREEN.
+- [x] Commit both files: `feat(rhizome): buildRhizomeVolume accepts f16 .npy input`.
 
 ---
 
@@ -256,13 +264,13 @@ do not demand.
 config typo that would make the npm script fail at import time, and the wesl plugin assertion is
 load-bearing (`?static` imports do not resolve without it).
 
-- [ ] Invoke the `wesl-shaders` skill before writing `blit.wesl`.
-- [ ] Write the smoke test `exports a config with port 5500 and react + wesl plugins`; watch it fail.
-- [ ] Scaffold the files above. The viewport clears to a colour through the RenderGraph's HDR target
+- [x] Invoke the `wesl-shaders` skill before writing `blit.wesl`.
+- [x] Write the smoke test `exports a config with port 5500 and react + wesl plugins`; watch it fail.
+- [x] Scaffold the files above. The viewport clears to a colour through the RenderGraph's HDR target
       + blit — no MCPM anything yet.
-- [ ] `npm run typecheck` → GREEN. `npm test -- mcpm-workbench` → GREEN.
-- [ ] Ask the user to open `npm run mcpm-workbench` (port 5500) and confirm a cleared canvas.
-- [ ] Commit: `feat(mcpm-workbench): scaffold the tool app, vite + wesl wiring`.
+- [x] `npm run typecheck` → GREEN. `npm test -- mcpm-workbench` → GREEN.
+- [x] Ask the user to open `npm run mcpm-workbench` (port 5500) and confirm a cleared canvas.
+- [x] Commit: `feat(mcpm-workbench): scaffold the tool app, vite + wesl wiring`.
 
 ---
 
@@ -290,15 +298,15 @@ conditional compilation — it buys exactly this at the cost of a runtime linker
 
 **Test-first** (input strings are small hand-written WGSL fragments, not real shaders):
 
-- [ ] `f32 specialisation returns the input unchanged` — assert byte identity.
-- [ ] `f16 specialisation rewrites the GridElem alias` — output contains `alias GridElem = f16;` and
+- [x] `f32 specialisation returns the input unchanged` — assert byte identity.
+- [x] `f16 specialisation rewrites the GridElem alias` — output contains `alias GridElem = f16;` and
       no `= f32;` alias survives.
-- [ ] `f16 specialisation enables f16 exactly once, ahead of every declaration` — one occurrence of
+- [x] `f16 specialisation enables f16 exactly once, ahead of every declaration` — one occurrence of
       `enable f16;`, at an index before the first `alias`/`struct`/`@group` token. (WGSL requires
       `enable` directives before all declarations; a shader that violates it fails only at
       `createShaderModule`, so this test is the cheap gate.)
-- [ ] Implement; `npm test -- specializeGridElement` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): specialise the linked WGSL grid element at module-create time`.
+- [x] Implement; `npm test -- specializeGridElement` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): specialise the linked WGSL grid element at module-create time`.
 
 ---
 
@@ -331,13 +339,13 @@ and `docs/superpowers/research/m2/m2b-carryovers.md`.
 **Tests:** none. Kernel numerics are validated statistically in Phase 3 (spec §12); a WGSL unit test
 would need a GPU and would be weaker than the comparator.
 
-- [ ] Invoke the `wesl-shaders` skill. Note the no-backticks rule and the literal `package::` path
+- [x] Invoke the `wesl-shaders` skill. Note the no-backticks rule and the literal `package::` path
       requirement — these files are imported as `package::mcpm::grid` from both apps.
-- [ ] Read the two fork kernels and the m2 translation notes; port the shared declarations.
-- [ ] Confirm the family is picked up by the root `wesl.toml` glob with zero app-build cost
+- [x] Read the two fork kernels and the m2 translation notes; port the shared declarations.
+- [x] Confirm the family is picked up by the root `wesl.toml` glob with zero app-build cost
       (`wesl-plugin` is import-driven; nothing imports these yet).
-- [ ] `npm run typecheck` → GREEN (no TS touched; this is the no-regression check).
-- [ ] Commit: `feat(mcpm): shader family base — grid addressing, io, rng, quirk overrides`.
+- [x] `npm run typecheck` → GREEN (no TS touched; this is the no-regression check).
+- [x] Commit: `feat(mcpm): shader family base — grid addressing, io, rng, quirk overrides`.
 
 ---
 
@@ -366,11 +374,11 @@ becomes a `grid.wesl` buffer index and **nothing else changes**. Specifically pr
 
 **Tests:** none (see T3).
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Read the fork kernel and its diary entry end to end before writing a line.
-- [ ] Port, re-addressing through `package::mcpm::grid`. Comment only the quirks and the addressing
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Read the fork kernel and its diary entry end to end before writing a line.
+- [x] Port, re-addressing through `package::mcpm::grid`. Comment only the quirks and the addressing
       transform.
-- [ ] Commit: `feat(mcpm): port the agent propagate kernel to storage-buffer addressing`.
+- [x] Commit: `feat(mcpm): port the agent propagate kernel to storage-buffer addressing`.
 
 ---
 
@@ -393,10 +401,10 @@ because the 27-tap reads neighbours; trace decays in place.
 
 **Tests:** none (see T3).
 
-- [ ] Invoke the `wesl-shaders` skill.
-- [ ] Read the fork kernel and diary entry.
-- [ ] Port; keep the explicit OOB guards from `grid.wesl` on every neighbour tap.
-- [ ] Commit: `feat(mcpm): port the field decay/diffusion kernel to storage-buffer addressing`.
+- [x] Invoke the `wesl-shaders` skill.
+- [x] Read the fork kernel and diary entry.
+- [x] Port; keep the explicit OOB guards from `grid.wesl` on every neighbour tap.
+- [x] Commit: `feat(mcpm): port the field decay/diffusion kernel to storage-buffer addressing`.
 
 ---
 
@@ -444,12 +452,12 @@ style of `src/utils/galaxy/galaxyMedianAbsMag.ts`.
 **Test-first** — `catalogBounds` only (`loadCatalogPoints` is network + decode plumbing over already
 tested seams; a fetch-mocked test would test the mock):
 
-- [ ] `catalogBounds returns per-axis min and max over interleaved xyz` — a hand-written 4-point
+- [x] `catalogBounds returns per-axis min and max over interleaved xyz` — a hand-written 4-point
       array whose min/max differ per axis, asserted against hand-computed values.
-- [ ] `catalogBounds ignores nothing — a single point yields min === max` (guards the reduce-seed
+- [x] `catalogBounds ignores nothing — a single point yields min === max` (guards the reduce-seed
       bug where an empty accumulator leaves ±Infinity in one axis).
-- [ ] Implement both files; `npm test -- catalogBounds` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): load v9 catalogs over the runtime boot path`.
+- [x] Implement both files; `npm test -- catalogBounds` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): load v9 catalogs over the runtime boot path`.
 
 ---
 
@@ -498,19 +506,19 @@ the same code path, not by widening the type.
 
 **Test-first:**
 
-- [ ] `auto-fit gives every axis a multiple-of-8 dimension` — an asymmetric bbox with hand-computed
+- [x] `auto-fit gives every axis a multiple-of-8 dimension` — an asymmetric bbox with hand-computed
       dims.
-- [ ] `auto-fit keeps the voxel size identical on all three axes` — `sizeMpc[i] / dims[i]` equal
+- [x] `auto-fit keeps the voxel size identical on all three axes` — `sizeMpc[i] / dims[i]` equal
       across i to exact float equality. This is the property the importer's spread assert depends on.
-- [ ] `auto-fit grows the box so sizeMpc equals dims × voxelSize` — assert both, hand-computed.
-- [ ] `the manual override at a long-axis resolution still yields cubic voxels` — a hand-picked
+- [x] `auto-fit grows the box so sizeMpc equals dims × voxelSize` — assert both, hand-computed.
+- [x] `the manual override at a long-axis resolution still yields cubic voxels` — a hand-picked
       centre/size/resolution triple.
-- [ ] `a point at a known Mpc position lands at a hand-computed voxel index` — pick a box whose
+- [x] `a point at a known Mpc position lands at a hand-computed voxel index` — pick a box whose
       origin and voxel size make the arithmetic checkable on paper.
-- [ ] `voxelToWorld ∘ worldToVoxel returns the original position at voxel centres` — round trip.
+- [x] `voxelToWorld ∘ worldToVoxel returns the original position at voxel centres` — round trip.
       (Round trip, not a mirror: the two functions are independent inverses, not the same formula.)
-- [ ] Implement; `npm test -- autoFitGridBox worldToVoxel` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): auto-fit a cubic-voxel grid box from the catalog bbox`.
+- [x] Implement; `npm test -- autoFitGridBox worldToVoxel` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): auto-fit a cubic-voxel grid box from the catalog bbox`.
 
 ---
 
@@ -548,15 +556,15 @@ what the fit stands on.
 
 **Test-first:**
 
-- [ ] `NaN masses take the finite median with an odd finite count` — hand-computed median.
-- [ ] `NaN masses take the finite median with an even finite count` — mean of the two middles.
-- [ ] `nanCount reports how many entries were filled`.
-- [ ] `weights average 1e6 / n after normalisation` — assert the mean of `weights`, hand-derived
+- [x] `NaN masses take the finite median with an odd finite count` — hand-computed median.
+- [x] `NaN masses take the finite median with an even finite count` — mean of the two middles.
+- [x] `nanCount reports how many entries were filled`.
+- [x] `weights average 1e6 / n after normalisation` — assert the mean of `weights`, hand-derived
       from the two-step normalisation, not recomputed with the source's expression.
-- [ ] `uniform mode ignores mass entirely` — an input with wildly varying finite masses and some
+- [x] `uniform mode ignores mass entirely` — an input with wildly varying finite masses and some
       NaN yields all-equal weights.
-- [ ] Implement; `npm test -- deriveAgentWeights` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): derive agent weights from v9 stellar mass with median fill`.
+- [x] Implement; `npm test -- deriveAgentWeights` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): derive agent weights from v9 stellar mass with median fill`.
 
 ---
 
@@ -664,14 +672,14 @@ export function createMcpmHarness(opts: {
 
 **Test-first** — `planGridBudget` only; the rest needs a GPU and is gated by the probe (T12):
 
-- [ ] `budgets a 712×1200×728 f16 grid at 1.24 GB per grid buffer` — hand-computed from
+- [x] `budgets a 712×1200×728 f16 grid at 1.24 GB per grid buffer` — hand-computed from
       `712·1200·728·2` bytes; the number the spec's §5 table states, recomputed independently.
-- [ ] `refuses by naming the first buffer that exceeds maxBufferSize` — assert `refusal.buffer` and
+- [x] `refuses by naming the first buffer that exceeds maxBufferSize` — assert `refusal.buffer` and
       `refusal.limitBytes` against a small fake limits object.
-- [ ] `reports the largest long-axis resolution that would fit` — hand-computed for a cube at a
+- [x] `reports the largest long-axis resolution that would fit` — hand-computed for a cube at a
       given limit.
-- [ ] Implement the whole harness. `npm run typecheck` → GREEN, `npm test -- planGridBudget` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): sim harness — specialised grid buffers, preflight, agent seeding`.
+- [x] Implement the whole harness. `npm run typecheck` → GREEN, `npm test -- planGridBudget` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): sim harness — specialised grid buffers, preflight, agent seeding`.
 
 ---
 
@@ -708,12 +716,12 @@ export function createMcpmHarness(opts: {
 
 **Tests:** none (visual). The gate is the probe (T12) plus the human check in T13.
 
-- [ ] Invoke the `wesl-shaders` skill. Read `input.pos` from the vertex-output struct — a duplicate
+- [x] Invoke the `wesl-shaders` skill. Read `input.pos` from the vertex-output struct — a duplicate
       `@builtin(position)` fails only at runtime (`project_wesl_duplicate_builtin_position_runtime_only`).
-- [ ] Read the fork's `ps_volume_trace.wgsl` before writing the transfer function.
-- [ ] Implement, register the pass in the RenderGraph, wire the palette upload.
-- [ ] Ask the user to look: with the sim stepping, the viewport shows a trace field that sharpens.
-- [ ] Commit: `feat(mcpm): raymarch the trace grid straight out of the storage buffer`.
+- [x] Read the fork's `ps_volume_trace.wgsl` before writing the transfer function.
+- [x] Implement, register the pass in the RenderGraph, wire the palette upload.
+- [x] Ask the user to look: with the sim stepping, the viewport shows a trace field that sharpens.
+- [x] Commit: `feat(mcpm): raymarch the trace grid straight out of the storage buffer`.
 
 ---
 
@@ -757,12 +765,12 @@ tool is outside `src/state`'s regime entirely.
 
 **Test-first** — the one slice behaviour a compiler cannot catch:
 
-- [ ] `setAgentCount snaps to the nearest 100k unit` — assert 1_050_000 → 1_000_000 and the clamp to
+- [x] `setAgentCount snaps to the nearest 100k unit` — assert 1_050_000 → 1_000_000 and the clamp to
       the 1M–10M range at both ends. (This is not a clamp-boundary test: the snap is a real
       transform whose absence would silently freeze a tail of the swarm.)
-- [ ] Implement store + UI; `npm test -- simSlice` → GREEN; `npm run typecheck` → GREEN.
-- [ ] Ask the user to look: sliders move, HUD numbers populate, pause/resume/reset/clear respond.
-- [ ] Commit: `feat(mcpm-workbench): store, parameter controls, and the diagnostic HUD`.
+- [x] Implement store + UI; `npm test -- simSlice` → GREEN; `npm run typecheck` → GREEN.
+- [x] Ask the user to look: sliders move, HUD numbers populate, pause/resume/reset/clear respond.
+- [x] Commit: `feat(mcpm-workbench): store, parameter controls, and the diagnostic HUD`.
 
 ---
 
@@ -788,10 +796,10 @@ time this task runs (Phase 1: raymarch only; Track V tasks each extend the queue
 
 **Tests:** the probe *is* the test.
 
-- [ ] Read the galaxy-renderer probe end to end; copy its structure, not its content.
-- [ ] Never edit a `.wesl` file while a probe is running (`feedback_probe_in_background`).
-- [ ] `npm run mcpm-workbench:probe` → exit 0 with no captured WebGPU errors.
-- [ ] Commit: `feat(mcpm-workbench): headless GPU error probe`.
+- [x] Read the galaxy-renderer probe end to end; copy its structure, not its content.
+- [x] Never edit a `.wesl` file while a probe is running (`feedback_probe_in_background`).
+- [x] `npm run mcpm-workbench:probe` → exit 0 with no captured WebGPU errors.
+- [x] Commit: `feat(mcpm-workbench): headless GPU error probe`.
 
 ---
 
@@ -800,20 +808,20 @@ time this task runs (Phase 1: raymarch only; Track V tasks each extend the queue
 **Files (modify):** `tools/mcpm-workbench/README.md`.
 **Depends on:** T1–T12. **No new code** — this is the spec §13 Phase 1 exit criteria, checked.
 
-- [ ] `npm run mcpm-workbench` serves on 5500; SDSS + 2MRS + GLADE v9 tiers load, and the HUD shows
+- [x] `npm run mcpm-workbench` serves on 5500; SDSS + 2MRS + GLADE v9 tiers load, and the HUD shows
       point count, NaN-fill count and fraction, resolved `GridElement`, and the summed byte budget.
-- [ ] Grid auto-fits from the catalog bbox; the manual override changes the box; an over-budget
+- [x] Grid auto-fits from the catalog bbox; the manual override changes the box; an over-budget
       configuration is refused **by name** rather than crashing the tab.
-- [ ] A ≥300-class grid runs continuously; the trace visibly sharpens into filaments over a few
+- [x] A ≥300-class grid runs continuously; the trace visibly sharpens into filaments over a few
       hundred steps, and sense distance / turn angle / persistence / sharpness each change the image
       in the expected direction. **Ask the user to confirm this visually** — it is the criterion no
       automated gate covers.
-- [ ] Pause, resume, reset, and trace-only clear behave; the agent-count control steps in 100k units.
-- [ ] `npm run mcpm-workbench:probe` exits 0.
-- [ ] `npm test -- mcpm-workbench` covers auto-fit, world↔grid, and weights, all GREEN.
-- [ ] Write the README: what the tool is, how to run it, the port, the probe, the known limits.
+- [x] Pause, resume, reset, and trace-only clear behave; the agent-count control steps in 100k units.
+- [x] `npm run mcpm-workbench:probe` exits 0.
+- [x] `npm test -- mcpm-workbench` covers auto-fit, world↔grid, and weights, all GREEN.
+- [x] Write the README: what the tool is, how to run it, the port, the probe, the known limits.
       Leave the validation-band section as a stub for T23.
-- [ ] Commit: `docs(mcpm-workbench): README and Phase 1 gate`.
+- [x] Commit: `docs(mcpm-workbench): README and Phase 1 gate`.
 
 ---
 
@@ -842,14 +850,14 @@ NumPy format v1.0 header, C-order, little-endian — the exact subset `readNpy` 
 
 **Test-first** (on-disk format contract — a keep-rule class under `testing.md`):
 
-- [ ] `writeNpy → readNpy round trips <f4 values through a non-cubic shape` — shape `[2, 3, 4]` so an
+- [x] `writeNpy → readNpy round trips <f4 values through a non-cubic shape` — shape `[2, 3, 4]` so an
       axis-order slip is visible.
-- [ ] `writeNpy → readNpy round trips <f2 bits` — a `Uint16Array` in, the same bits out.
-- [ ] `the v1.0 header pads the data start to a 64-byte boundary` — NumPy's own requirement; a
+- [x] `writeNpy → readNpy round trips <f2 bits` — a `Uint16Array` in, the same bits out.
+- [x] `the v1.0 header pads the data start to a 64-byte boundary` — NumPy's own requirement; a
       writer that ignores it produces files third-party readers reject even though `readNpy` accepts
       them. Assert the byte offset, hand-computed.
-- [ ] Implement; `npm test -- npyWriter` → GREEN.
-- [ ] Commit: `feat(parsers): writeNpy — NumPy v1.0 writer mirroring npyReader`.
+- [x] Implement; `npm test -- npyWriter` → GREEN.
+- [x] Commit: `feat(parsers): writeNpy — NumPy v1.0 writer mirroring npyReader`.
 
 ---
 
@@ -879,8 +887,8 @@ by-name message.
 
 **Tests:** none (GPU). Covered by the probe once T18 wires a preview step.
 
-- [ ] Implement; `npm run typecheck` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): read the trace grid back to the CPU`.
+- [x] Implement; `npm run typecheck` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): read the trace grid back to the CPU`.
 
 ---
 
@@ -945,15 +953,15 @@ provenance** — the browser cannot know it (§15 decision 10). Filenames defaul
 
 **Test-first:**
 
-- [ ] `emitTraceSidecar → parsePolyphyTraceSidecar round trips every field` — including the
+- [x] `emitTraceSidecar → parsePolyphyTraceSidecar round trips every field` — including the
       snake_case hop and the nested provenance.
-- [ ] `a sidecar built from an autoFitGridBox box passes the importer 0.5% voxel-size spread rule` —
+- [x] `a sidecar built from an autoFitGridBox box passes the importer 0.5% voxel-size spread rule` —
       feed a real `autoFitGridBox` output through `emitTraceSidecar` and `parsePolyphyTraceSidecar`.
       This is the cross-file contract T7's invariant exists for.
-- [ ] Implement; wire the download button to write `.npy` (via `writeNpy` on the readback) and
+- [x] Implement; wire the download button to write `.npy` (via `writeNpy` on the readback) and
       `.json` from one stem.
-- [ ] `npm test -- emitTraceSidecar` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): export the .npy + polyphy-trace sidecar pair`.
+- [x] `npm test -- emitTraceSidecar` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): export the .npy + polyphy-trace sidecar pair`.
 
 ---
 
@@ -980,9 +988,9 @@ voxels; measure before switching.
 **Tests:** none new. `packLogTraceVoxels` and `encodeScalarField` have their own coverage and the
 in-browser path adds no logic (spec §12). The gate is T19's decode comparison.
 
-- [ ] Implement `widenTrace` (one function, one file) and `exportScfd`.
-- [ ] `npm run typecheck` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): export .scfd directly from the browser`.
+- [x] Implement `widenTrace` (one function, one file) and `exportScfd`.
+- [x] `npm run typecheck` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): export .scfd directly from the browser`.
 
 ---
 
@@ -1001,8 +1009,8 @@ stale on the next sim step rather than repacking.
 
 **Tests:** none (visual). The probe gains a step that enters the mode once.
 
-- [ ] Implement; add the probe step; `npm run mcpm-workbench:probe` → exit 0.
-- [ ] Commit: `feat(mcpm-workbench): preview the packed export against the live trace`.
+- [x] Implement; add the probe step; `npm run mcpm-workbench:probe` → exit 0.
+- [x] Commit: `feat(mcpm-workbench): preview the packed export against the live trace`.
 
 ---
 
@@ -1010,15 +1018,15 @@ stale on the next sim step rather than repacking.
 
 **Files (modify):** `tools/mcpm-workbench/README.md`. **No new code** — spec §13 Phase 2 exit criteria.
 
-- [ ] The `.npy` + sidecar pair downloads, and
+- [x] The `.npy` + sidecar pair downloads, and
       `npx tsx tools/volumes/buildRhizomeVolume.ts <file>.npy --out /tmp/x.scfd` succeeds on it
       untouched apart from P3.
-- [ ] The in-browser `.scfd` decodes with `decodeScalarField` and agrees with the importer's output
+- [x] The in-browser `.scfd` decodes with `decodeScalarField` and agrees with the importer's output
       from the same run within f16 rounding. Record the observed max deviation in the README.
-- [ ] The preview-export view renders the packed cube and matches the live raymarch in structure
+- [x] The preview-export view renders the packed cube and matches the live raymarch in structure
       (ask the user to look).
-- [ ] `npm test -- npyWriter emitTraceSidecar buildRhizomeVolume` → GREEN.
-- [ ] Commit the README update: `docs(mcpm-workbench): Phase 2 gate — export legs verified`.
+- [x] `npm test -- npyWriter emitTraceSidecar buildRhizomeVolume` → GREEN.
+- [x] Commit the README update: `docs(mcpm-workbench): Phase 2 gate — export legs verified`.
 
 ---
 
@@ -1052,10 +1060,10 @@ and the comparator's statistic mean the same thing.
 
 **Tests:** none new (GPU kernel; spec §12 defers kernel numerics to the statistical validation).
 
-- [ ] Invoke the `wesl-shaders` skill; read the fork kernel.
-- [ ] Port; wire the readback into the `histogram` slice; draw the plot.
-- [ ] Add a probe step that runs the histogram pass; `npm run mcpm-workbench:probe` → exit 0.
-- [ ] Commit: `feat(mcpm): density histogram kernel and the live convergence plot`.
+- [x] Invoke the `wesl-shaders` skill; read the fork kernel.
+- [x] Port; wire the readback into the `histogram` slice; draw the plot.
+- [x] Add a probe step that runs the histogram pass; `npm run mcpm-workbench:probe` → exit 0.
+- [x] Commit: `feat(mcpm): density histogram kernel and the live convergence plot`.
 
 ---
 
@@ -1087,12 +1095,12 @@ same input the anchor had.
 
 **Test-first** (a parser against fixture bytes — a keep-rule class):
 
-- [ ] `parses a flat f32 [X, Y, Z, W] buffer into interleaved positions and weights` — a
+- [x] `parses a flat f32 [X, Y, Z, W] buffer into interleaved positions and weights` — a
       three-point hand-built `ArrayBuffer` with hand-computed expectations.
-- [ ] `rejects a buffer whose length disagrees with the metadata count` — the guard that catches a
+- [x] `rejects a buffer whose length disagrees with the metadata count` — the guard that catches a
       truncated download, which is otherwise a silently short catalog.
-- [ ] Implement; `npm test -- loadPackedCatalog` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): dev-only loader for the fork's packed catalogs`.
+- [x] Implement; `npm test -- loadPackedCatalog` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): dev-only loader for the fork's packed catalogs`.
 
 ---
 
@@ -1142,14 +1150,14 @@ nearly all empty. **Exact acceptance bands are not set here**; they are an outpu
 
 **Test-first** (constructed cubes, hand-computed expectations):
 
-- [ ] `total variation is 0 for identical histograms`.
-- [ ] `total variation is 1 for disjoint supports`.
-- [ ] `total variation on a two-bin case matches the hand-computed value` — e.g. `[0.7, 0.3]` vs
+- [x] `total variation is 0 for identical histograms`.
+- [x] `total variation is 1 for disjoint supports`.
+- [x] `total variation on a two-bin case matches the hand-computed value` — e.g. `[0.7, 0.3]` vs
       `[0.4, 0.6]` → `0.3`.
-- [ ] `axisMarginals put all mass in the hot plane's bin` — a cube with one non-zero plane.
-- [ ] `compareTraceCubes errors when a .npy shape disagrees with --dims` — assert the throw.
-- [ ] Implement; `npm test -- compareTraceCubes` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): trace-cube comparator CLI`.
+- [x] `axisMarginals put all mass in the hot plane's bin` — a cube with one non-zero plane.
+- [x] `compareTraceCubes errors when a .npy shape disagrees with --dims` — assert the throw.
+- [x] Implement; `npm test -- compareTraceCubes` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): trace-cube comparator CLI`.
 
 ---
 
@@ -1159,21 +1167,21 @@ nearly all empty. **Exact acceptance bands are not set here**; they are an outpu
 No new code — spec §13 Phase 3 exit criteria. This task is a **measurement**, and the temptation it
 must resist is picking a band that passes (spec §14).
 
-- [ ] Acquire `data/raw/mcpm/trace.bin` + `export_metadata.txt` and the fork's packed VAC catalog
+- [x] Acquire `data/raw/mcpm/trace.bin` + `export_metadata.txt` and the fork's packed VAC catalog
       per `data/raw/mcpm/README.md` (both gitignored; announce the sizes to the user first).
-- [ ] The dev-only packed loader ingests the fork's VAC catalog (324,901 points) and runs with the
+- [x] The dev-only packed loader ingests the fork's VAC catalog (324,901 points) and runs with the
       parameters transcribed from `export_metadata.txt`.
-- [ ] A 712×1200×728 run completes on the maintainer machine and exports. If it does not fit,
+- [x] A 712×1200×728 run completes on the maintainer machine and exports. If it does not fit,
       record the largest resolution that does — spec §14 names this as the headline risk and Phase 1
       deliberately only demanded a 300-class grid.
-- [ ] `npm run mcpm-workbench:compare` against `data/raw/mcpm/trace.bin` reports TV distances and
+- [x] `npm run mcpm-workbench:compare` against `data/raw/mcpm/trace.bin` reports TV distances and
       marginal deviations.
-- [ ] **Two independent workbench runs of the same configuration** establish the noise floor under
+- [x] **Two independent workbench runs of the same configuration** establish the noise floor under
       racy deposits. Record both numbers — floor and workbench-vs-fork — in
       `tools/mcpm-workbench/README.md`, with the accepted band derived from the floor, not chosen.
-- [ ] Any statistic the workbench-vs-fork comparison misses by more than the noise floor is either
+- [x] Any statistic the workbench-vs-fork comparison misses by more than the noise floor is either
       explained in the README or logged as an open item in `docs/BACKLOG.md` before Phase 4 starts.
-- [ ] Commit: `docs(mcpm-workbench): record the measured validation bands`.
+- [x] Commit: `docs(mcpm-workbench): record the measured validation bands`.
 
 ---
 
@@ -1194,11 +1202,11 @@ runs on.
 
 The plan accepts either outcome. Do not force the strip.
 
-- [ ] Invoke the `wesl-shaders` skill before touching any `.wesl`.
-- [ ] Sweep one flag at a time, comparator run per flag, results tabulated in the README.
-- [ ] Delete the clean flags; annotate the survivors with their deltas.
-- [ ] `npm run mcpm-workbench:probe` → exit 0.
-- [ ] Commit: `refactor(mcpm): strip the quirk flags the statistics do not need`.
+- [x] Invoke the `wesl-shaders` skill before touching any `.wesl`.
+- [x] Sweep one flag at a time, comparator run per flag, results tabulated in the README.
+- [x] Delete the clean flags; annotate the survivors with their deltas.
+- [x] `npm run mcpm-workbench:probe` → exit 0.
+- [x] Commit: `refactor(mcpm): strip the quirk flags the statistics do not need`.
 
 ---
 
@@ -1212,9 +1220,9 @@ and asserts `meanLogTraceAtPoints` lands in a band. Racy deposits make the resul
 so it can **only ever be a band** — and the band comes from T23's measured floor, never from a
 number invented here.
 
-- [ ] Add the step; run the probe several times to confirm the band holds across runs.
-- [ ] `npm run mcpm-workbench:probe` → exit 0, repeatedly.
-- [ ] Commit: `test(mcpm-workbench): energy smoke test in the GPU probe`.
+- [x] Add the step; run the probe several times to confirm the band holds across runs.
+- [x] `npm run mcpm-workbench:probe` → exit 0, repeatedly.
+- [x] Commit: `test(mcpm-workbench): energy smoke test in the GPU probe`.
 
 ---
 
@@ -1238,10 +1246,10 @@ mutually file-disjoint and may be reviewed in a pipeline.
 agents 10×**, then a tonemapping blit. Watching the swarm is half the diagnostic value: a fit that
 has collapsed or stalled shows there first.
 
-- [ ] Invoke the `wesl-shaders` skill; read both fork kernels and the m3 notes.
-- [ ] Port; register the pass; add the probe step.
-- [ ] Ask the user to look: the swarm is visible with data points clearly dominant.
-- [ ] Commit: `feat(mcpm): agent splat view`.
+- [x] Invoke the `wesl-shaders` skill; read both fork kernels and the m3 notes.
+- [x] Port; register the pass; add the probe step.
+- [x] Ask the user to look: the swarm is visible with data points clearly dominant.
+- [x] Commit: `feat(mcpm): agent splat view`.
 
 ---
 
@@ -1262,11 +1270,11 @@ ambient trace, bounces, trace_max, exposure, compressive toggle. **Accumulation 
 or parameter change** — a stale accumulator is the classic failure here
 (`project_renderer_frame_landmines`).
 
-- [ ] Invoke the `wesl-shaders` skill; read both fork kernels and the m4 design doc.
-- [ ] Port; register the pass; wire the nine parameters and the accumulation reset.
-- [ ] Add the probe step; `npm run mcpm-workbench:probe` → exit 0.
-- [ ] Ask the user to look: the image accumulates and resets correctly on camera and parameter moves.
-- [ ] Commit: `feat(mcpm): volumetric path tracer view`.
+- [x] Invoke the `wesl-shaders` skill; read both fork kernels and the m4 design doc.
+- [x] Port; register the pass; wire the nine parameters and the accumulation reset.
+- [x] Add the probe step; `npm run mcpm-workbench:probe` → exit 0.
+- [x] Ask the user to look: the image accumulates and resets correctly on camera and parameter moves.
+- [x] Commit: `feat(mcpm): volumetric path tracer view`.
 
 ---
 
@@ -1284,12 +1292,12 @@ the params object grow here.
 
 **Test-first:**
 
-- [ ] `importParams round trips an exportParams payload` — every field, including the nested
+- [x] `importParams round trips an exportParams payload` — every field, including the nested
       `GridBox`.
-- [ ] `importParams rejects a payload whose grid box has non-cubic voxels` — the invariant T7
+- [x] `importParams rejects a payload whose grid box has non-cubic voxels` — the invariant T7
       protects must survive a hand-edited JSON file, which is the whole point of allowing upload.
-- [ ] Implement; `npm test -- importParams` → GREEN.
-- [ ] Commit: `feat(mcpm-workbench): save and load parameter sets as JSON`.
+- [x] Implement; `npm test -- importParams` → GREEN.
+- [x] Commit: `feat(mcpm-workbench): save and load parameter sets as JSON`.
 
 ---
 
@@ -1297,39 +1305,39 @@ the params object grow here.
 
 **Deliverable inventory**
 
-- [ ] `npm run mcpm-workbench` (port 5500), `npm run mcpm-workbench:probe`,
+- [x] `npm run mcpm-workbench` (port 5500), `npm run mcpm-workbench:probe`,
       `npm run mcpm-workbench:compare` all exist and run.
-- [ ] Shader family `src/services/gpu/shaders/mcpm/`: `constants`, `io`, `grid`, `rng`, `propagate`,
+- [x] Shader family `src/services/gpu/shaders/mcpm/`: `constants`, `io`, `grid`, `rng`, `propagate`,
       `decay`, `histogram`, `splatTransform`, `splatBlit`, `volpath`, `volpathBlit`, `vertex`,
       `fragment` — all `.wesl`, all linked by both the runtime and the tool `wesl.toml`, zero app
       consumers.
-- [ ] `tools/parsers/npyWriter.ts` exporting `writeNpy`.
-- [ ] `src/utils/volume/packLogTraceVoxels.ts` and `src/utils/math/f32ToF16Bits.ts` (moved from
+- [x] `tools/parsers/npyWriter.ts` exporting `writeNpy`.
+- [x] `src/utils/volume/packLogTraceVoxels.ts` and `src/utils/math/f32ToF16Bits.ts` (moved from
       `tools/`), with every importer rewritten by `move-files`.
-- [ ] `initGpu(canvas, options?)` with `InitGpuOptions`; both existing call sites unedited.
-- [ ] `buildRhizomeVolume` accepts `<f2` `.npy`.
-- [ ] `tools/mcpm-workbench/README.md` records the measured noise floor, the accepted band, and the
+- [x] `initGpu(canvas, options?)` with `InitGpuOptions`; both existing call sites unedited.
+- [x] `buildRhizomeVolume` accepts `<f2` `.npy`.
+- [x] `tools/mcpm-workbench/README.md` records the measured noise floor, the accepted band, and the
       workbench-vs-fork numbers.
-- [ ] `docs/BACKLOG.md` gains the two items this PR deliberately deferred: the duplicate f16 decoder
+- [x] `docs/BACKLOG.md` gains the two items this PR deliberately deferred: the duplicate f16 decoder
       consolidation (spec §3 adjacent finding) and a `packLogTraceVoxels` test (it has none today,
       contrary to spec §12's aside).
 
 **Named observable behaviours (manual smoke)**
 
-- [ ] Catalog load → HUD shows point count, NaN-fill count **and fraction**, resolved `GridElement`,
+- [x] Catalog load → HUD shows point count, NaN-fill count **and fraction**, resolved `GridElement`,
       summed byte budget.
-- [ ] Auto-fit box → manual override changes it → an over-budget configuration is refused **by name**,
+- [x] Auto-fit box → manual override changes it → an over-budget configuration is refused **by name**,
       not by a crashed tab.
-- [ ] A running fit visibly sharpens into filaments; sense distance, turn angle, persistence and
+- [x] A running fit visibly sharpens into filaments; sense distance, turn angle, persistence and
       sharpness each move the image in the expected direction.
-- [ ] Pause, resume, reset, trace-only clear; agent count steps in 100k units.
-- [ ] Uniform-weight toggle changes the fit (if it does not, the fit is not using its weights).
-- [ ] View modes: trace raymarch, agent splat (data points visibly dominant), path tracer
+- [x] Pause, resume, reset, trace-only clear; agent count steps in 100k units.
+- [x] Uniform-weight toggle changes the fit (if it does not, the fit is not using its weights).
+- [x] View modes: trace raymarch, agent splat (data points visibly dominant), path tracer
       (accumulates, resets on camera/parameter change), preview export (matches the live raymarch in
       structure).
-- [ ] `.npy` + sidecar download → `buildRhizomeVolume` consumes it unmodified; the in-browser `.scfd`
+- [x] `.npy` + sidecar download → `buildRhizomeVolume` consumes it unmodified; the in-browser `.scfd`
       agrees with the importer's output within f16 rounding.
-- [ ] A saved parameter JSON reloads to a visually identical run.
+- [x] A saved parameter JSON reloads to a visually identical run.
 
 **Deferral boundary — do not chase these in review**
 
