@@ -8,11 +8,11 @@
  * Screen +Y points DOWN, matching the caption declutter's separation metric
  * (pure pixel distance, orientation-agnostic).
  *
- * Its two callers are the caption declutter and `starPointsLayer`'s pick, which
- * both ask the same question — "how many pixels apart are these two anchors on
- * screen?" — and must answer it identically: a pick footprint that disagreed
- * with the caption layout by even a few pixels would put the click target
- * somewhere other than where the name is.
+ * Its one caller is `starPointsLayer`'s pick. The caption declutter now runs
+ * through `label2DDirector`'s own `projectLabels` instead — a separate
+ * hand-rolled copy of the same forward projection (avoids a per-label
+ * allocation) — so the two must still agree on the arithmetic even though
+ * neither calls the other.
  */
 
 import type { Vec2 } from '../../@types/math/Vec2';

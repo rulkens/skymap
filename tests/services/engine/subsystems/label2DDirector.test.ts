@@ -8,6 +8,10 @@ import {
 } from '../../../../src/services/engine/engine';
 import { cosmoLabelProjection } from '../../../../src/services/engine/frame/cosmoLabelProjection';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
+import {
+  CAPTION_PRIORITY,
+  CAPTION_TIER_SCALE,
+} from '../../../../src/services/engine/presentation/captionPriority';
 import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
@@ -823,6 +827,84 @@ describe('label2DDirector', () => {
       expect(easingIn).not.toBeUndefined();
       expect(easingIn!).toBeGreaterThan(0);
       expect(easingIn!).toBeLessThan(1);
+    });
+
+    it('eases a producer-driven target drop to 0 (demand fading, not a declutter cull), and the wake vote goes quiet once settled', () => {
+      // Distinct from the cull case above: this label is NEVER contested —
+      // it always survives declutter — but the PRODUCER's own `fadeAlpha`
+      // falls to 0 (e.g. a caption's distance-band fade closing), moved from
+      // `foregroundLabelsLayer.ts`'s demand-drop tail
+      // (`declutterByScreenSeparationArm`'s target read is `label.fadeAlpha`
+      // when a label survives, so this exercises that branch rather than the
+      // `survivorIds`-driven one the cull test above pins). Must ease, not
+      // pop, and the render-loop wake vote must go quiet once settled.
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      let fadeAlpha = 1;
+      dir.registerProducer({
+        id: 'p',
+        produceLabels: () => ({ labels: [{ ...SAMPLE_LABEL, fadeAlpha }], awake: false }),
+      });
+
+      const lastAlphaOf = (): number | undefined =>
+        (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).find(
+          (l) => l.id === SAMPLE_LABEL.id,
+        )?.fadeAlpha;
+
+      // Frame 1: seeds AT target 1 — no ramp yet, so the wake vote is quiet.
+      expect(dir.runFrame(makeState(), makeNear0Ctx(0))).toBe(false);
+      expect(lastAlphaOf()).toBe(1);
+
+      // Demand drops: the producer's own fadeAlpha falls to 0, though the
+      // label is still emitted every frame. A short dt later the filter has
+      // only PARTLY eased down (strictly between 0 and 1), and the mid-ramp
+      // frame wakes the loop.
+      fadeAlpha = 0;
+      expect(dir.runFrame(makeState(), makeNear0Ctx(50))).toBe(true);
+      const mid = lastAlphaOf();
+      expect(mid).toBeGreaterThan(0);
+      expect(mid!).toBeLessThan(1);
+
+      // Far enough later the filter settles exactly on 0 — the label drops
+      // from the flush and the wake vote goes quiet again.
+      expect(dir.runFrame(makeState(), makeNear0Ctx(5050))).toBe(false);
+      expect(lastAlphaOf()).toBeUndefined();
+    });
+
+    it('the higher CAPTION_PRIORITY tier survives a screenSeparation collision', () => {
+      // Moved from `foregroundLabelsLayer.ts`'s declutter, now exercised at
+      // the director directly: `prominencePx` composed exactly as
+      // `produceSceneBodyCaptions`/`produceConstellationCaptions` do —
+      // `CAPTION_PRIORITY[kind] * CAPTION_TIER_SCALE` — so the tier ordering
+      // dominates the collision regardless of any within-tier size term
+      // (`captionPriority.ts`'s whole reason to exist).
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      const bodyLabel: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'planet',
+        prominencePx: CAPTION_PRIORITY.planet * CAPTION_TIER_SCALE,
+        fadeAlpha: 1,
+      };
+      const constellationLabel: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'orion',
+        prominencePx: CAPTION_PRIORITY.constellation * CAPTION_TIER_SCALE,
+        fadeAlpha: 1,
+      };
+      // Same anchor — guarantees the collision the tier ordering must resolve.
+      dir.registerProducer(makeProducer('p', [bodyLabel, constellationLabel]));
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+      const flushedIds = (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).map((l) => l.id);
+      expect(flushedIds).toContain('planet');
+      expect(flushedIds).not.toContain('orion');
     });
 
     it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {

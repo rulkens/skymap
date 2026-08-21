@@ -38,6 +38,8 @@ import type { Label2DDirectorConfig } from '../../@types/engine/subsystems/Label
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousGalaxyLabels } from './presentation/produceFamousGalaxyLabels';
+import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
+import { produceConstellationCaptions } from './presentation/produceConstellationCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -94,8 +96,6 @@ export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
 
 // Screen px: sized a little above the clamped caption height
 // (`FAMOUS_LABEL_STYLE.maxPixelSize`) so names de-collide rather than stack.
-// Moved verbatim from `foregroundLabelsLayer.ts` (spec §4.3) — the layer
-// keeps its own copy until Task 5 collapses its private path.
 const STAR_CAPTION_MIN_SEPARATION_PX = 48;
 
 // Envelope time constant (ms): ~95% of the gap closed within 3·tau (300 ms), the
@@ -471,11 +471,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Foreground label director ──────────────────────────────────
       // The NEAR0 sibling of `labelDirector` — same factory, `screenSeparation`
-      // + `exponentialApproach` + lift arms instead. Constructed, attached, and
-      // polled every frame from this task onward, but carries zero producers
-      // until Task 4 extracts them from `foregroundLabelsLayer`; its flush is
-      // an empty set in the meantime, which is harmless because the layer's
-      // own `setLabels`/`setLines` calls still run after it in `draw`.
+      // + `exponentialApproach` + lift arms instead. Owns the caption + leader-
+      // line upload for `produceSceneBodyCaptions` + `produceConstellationCaptions`
+      // (registered just after this literal); `foregroundLabelsLayer` only
+      // issues the draw calls against what this director already flushed.
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
       // ── Cluster focus-mode subsystem ─────────────────────────────
@@ -611,10 +610,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // this is synchronous before any frame.
   //
   // The constellation figure NAMES are deliberately NOT here: their anchors sit
-  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane the
-  // director projects through, so a director label for them could never draw.
-  // They route through `foregroundLabelsLayer` on the NEAR0 slab instead, beside
-  // the scene-body captions — see `constellationCaptions`.
+  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane this
+  // director projects through, so a label here could never draw. They register
+  // on `foregroundLabelDirector` (NEAR0) instead, just below.
   state.subsystems.labelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
@@ -626,6 +624,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   state.subsystems.labelDirector.registerProducer({
     id: 'famousLabels',
     produceLabels: produceFamousGalaxyLabels,
+  });
+
+  // The NEAR0 sibling registration: scene-body captions first, matching the
+  // COSMO order's "landmark before decoration" shape — body captions are
+  // navigation aids, the constellation figures a diffuse orientation overlay
+  // (`captionPriority.ts`'s own ranking) — so an equal-`prominencePx` tiebreak
+  // (rare) favours the body.
+  state.subsystems.foregroundLabelDirector.registerProducer({
+    id: 'sceneBodyCaptions',
+    produceLabels: produceSceneBodyCaptions,
+  });
+  state.subsystems.foregroundLabelDirector.registerProducer({
+    id: 'constellationCaptions',
+    produceLabels: produceConstellationCaptions,
   });
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
