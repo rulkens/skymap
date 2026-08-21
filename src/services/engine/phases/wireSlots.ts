@@ -145,7 +145,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // Wire the structure groups (static anchors + the bulk-cluster
   // subscription) into the structure store. Famous-galaxy labels are derived
-  // straight from galaxyStore by produceFamousLabels — not wired here.
+  // straight from galaxyStore by produceFamousGalaxyLabels — not wired here.
   wireStructureProjection(state, cb);
 
   // Arm the synthetic-fallback gate.  It subscribes to the galaxy catalog slots and

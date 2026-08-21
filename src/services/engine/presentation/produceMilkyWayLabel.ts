@@ -9,12 +9,12 @@
  * toggle, the distance alphas the orientation-usefulness gate.
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from './liftedLabelPlacement';
@@ -34,7 +34,7 @@ const LAYER_ID = { kind: 'labelLayer', layer: 'milkyWay' } as const;
 export function produceMilkyWayLabel(
   state: EngineState,
   ctx: ReadyFrameContext,
-): LabelProducerOutput {
+): Label2DProducerOutput {
   const fades = state.subsystems.fades;
   const now = ctx.nowMs;
 
@@ -69,7 +69,7 @@ export function produceMilkyWayLabel(
 
   // Built BEFORE its geometry so `measure` reads the same font / text / alignment
   // the final label carries; `worldPos` is provisional until the lift below.
-  const label: Label = {
+  const label: Label2D = {
     id: 'milkyWay',
     worldPos: [0, 0, 0],
     text: LABEL_TEXT,
@@ -111,7 +111,7 @@ export function produceMilkyWayLabel(
   // Origin behind the camera: the projection is undefined — emit nothing.
   if (placement === null) return { labels: [], lines: [], awake: false };
 
-  const labels: readonly Label[] = [{ ...label, worldPos: placement.labelWorldPos }];
+  const labels: readonly Label2D[] = [{ ...label, worldPos: placement.labelWorldPos }];
   const lines: readonly MarkerLine[] =
     placement.line !== null
       ? [

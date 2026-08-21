@@ -2,13 +2,13 @@ import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
 import type { EngineState } from '../state/EngineState';
-import type { LabelProducer } from './LabelProducer';
+import type { Label2DProducer } from './Label2DProducer';
 
 export type LabelDirectorSubsystem = {
   /** Wire in the renderers once initGpu has constructed them. Idempotent. */
   attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void;
   /** Register a producer.  Order of registration = order of merging. */
-  registerProducer(producer: LabelProducer): void;
+  registerProducer(producer: Label2DProducer): void;
   /**
    * Per-frame entry point — poll producers, merge, flush. Returns the wake
    * vote (true while a producer or an appear/disappear envelope is still

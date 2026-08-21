@@ -5,7 +5,7 @@
  * Reads `state.data.structures` and emits structure labels — applying the
  * marker close-approach / far-distance fades, the featured + visibility gates,
  * and the ring-centre anchor. Famous-galaxy labels come from
- * `produceFamousLabels` instead — a split that also carries the deep-zoom
+ * `produceFamousGalaxyLabels` instead — a split that also carries the deep-zoom
  * exemption: THIS producer rides the `surveyDeepZoom` band (structure labels
  * dissolve with their rings on the descent into the solar system), while
  * famous labels stay visible with the famous points they name. The exemption
@@ -46,10 +46,10 @@
  * being inspected (flicker).
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -60,8 +60,8 @@ import { SCALE_FADE_BANDS } from './scaleFadeBands';
 export function produceStructureLabels(
   state: EngineState,
   ctx: ReadyFrameContext,
-): LabelProducerOutput {
-  const labels: Label[] = [];
+): Label2DProducerOutput {
+  const labels: Label2D[] = [];
 
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;

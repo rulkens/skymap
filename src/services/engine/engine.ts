@@ -32,7 +32,7 @@ import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsys
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
-import { produceFamousLabels } from './presentation/produceFamousLabels';
+import { produceFamousGalaxyLabels } from './presentation/produceFamousGalaxyLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -402,7 +402,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // ── Label director ───────────────────────────────────────────
       // The director owns the `labelRenderer.setLabels` /
       // `markerLineRenderer.setLines` calls and declutters across all its
-      // `LabelProducer`s (the milkyWay + structure/famous label producers,
+      // `Label2DProducer`s (the milkyWay + structure/famous label producers,
       // registered just after this literal).  Renderers are wired in during
       // initGpu so the director sees everything before the first frame.
       labelDirector: createLabelDirectorSubsystem(),
@@ -536,7 +536,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // labels, then the famous-galaxy labels.  The director declutters across all
   // of them by `prominencePx`, so registration order only sets the tiebreak for
   // equal-prominence collisions (rare).  All producers are pure functions over
-  // the state; wrap each as a LabelProducer with a stable id.  All eager, so
+  // the state; wrap each as a Label2DProducer with a stable id.  All eager, so
   // this is synchronous before any frame.
   //
   // The constellation figure NAMES are deliberately NOT here: their anchors sit
@@ -554,7 +554,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   });
   state.subsystems.labelDirector.registerProducer({
     id: 'famousLabels',
-    produceLabels: produceFamousLabels,
+    produceLabels: produceFamousGalaxyLabels,
   });
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────

@@ -66,13 +66,13 @@
  */
 
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
+import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
@@ -118,14 +118,14 @@ type EnvelopeEntry = {
   startAlpha: number;
   target: 0 | 1;
   rampStartMs: number;
-  lastLabel: Label;
+  lastLabel: Label2D;
   lastOwnedLines: MarkerLine[];
 };
 
 export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
-  let producers: readonly LabelProducer[] = [];
+  let producers: readonly Label2DProducer[] = [];
   // Signature of the last flushed (labels, lines) tuple, or null on the
   // first frame.  Empty string is a valid signature (no labels, no lines)
   // and is distinct from null.
@@ -141,13 +141,13 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     prevSignature = null; // force the next frame to re-flush
   }
 
-  function registerProducer(producer: LabelProducer): void {
+  function registerProducer(producer: Label2DProducer): void {
     // Copy-on-write append — keeps the producers array immutable from
     // any caller's perspective.
     producers = [...producers, producer];
   }
 
-  function signatureOf(labels: readonly Label[], lines: readonly MarkerLine[]): string {
+  function signatureOf(labels: readonly Label2D[], lines: readonly MarkerLine[]): string {
     // Cheap stable signature: per-label `id:fadeAlpha:worldPos`, per-line
     // `id:fadeAlpha:toWorld`, joined.
     //
@@ -220,10 +220,10 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
    * fresh arrays in original input order (deterministic, sort-independent).
    */
   function declutter(
-    labels: readonly Label[],
+    labels: readonly Label2D[],
     lines: readonly MarkerLine[],
     ctx: ReadyFrameContext,
-  ): { labels: Label[]; lines: MarkerLine[] } {
+  ): { labels: Label2D[]; lines: MarkerLine[] } {
     type Projected = {
       readonly index: number;
       readonly prominencePx: number;
@@ -348,11 +348,11 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
    * under render-on-demand.
    */
   function applyEnvelope(
-    labels: readonly Label[],
+    labels: readonly Label2D[],
     lines: readonly MarkerLine[],
     nowMs: number,
-  ): { labels: Label[]; lines: MarkerLine[]; anyRamping: boolean } {
-    const outLabels: Label[] = [];
+  ): { labels: Label2D[]; lines: MarkerLine[]; anyRamping: boolean } {
+    const outLabels: Label2D[] = [];
     const outLines: MarkerLine[] = [];
     // Live label id → this frame's envelope alpha, for the lines walk.
     const liveAlpha = new Map<string, number>();
@@ -442,7 +442,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // each and concatenate.  The director does NOT cache per-producer
     // output between frames — change detection happens on the merged
     // arrays via signature.
-    const mergedLabels: Label[] = [];
+    const mergedLabels: Label2D[] = [];
     const mergedLines: MarkerLine[] = [];
     let anyAwake = false;
     for (const p of producers) {

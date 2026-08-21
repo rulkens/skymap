@@ -47,7 +47,7 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
-import type { Label } from '../../../../../src/@types/rendering/Label';
+import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
@@ -61,7 +61,7 @@ const J2000_STATES = deriveBodyStates(CONST_J2000);
 function makeRenderer(): LabelRenderer {
   return {
     label: 'foregroundLabelRenderer',
-    setLabels: vi.fn<(labels: readonly Label[]) => void>(),
+    setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
     measure: vi.fn<() => null>(() => null),
     glyphCount: () => 6,
@@ -178,9 +178,9 @@ function emittedLine(lineRenderer: MarkerLineRenderer, starId: string): MarkerLi
   const lines = spy.mock.calls.at(-1)![0] as MarkerLine[];
   return lines.find((l) => l.id === `${starId}-anchor`);
 }
-function emittedCaption(renderer: LabelRenderer, starId: string): Label | undefined {
+function emittedCaption(renderer: LabelRenderer, starId: string): Label2D | undefined {
   const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-  const labels = spy.mock.calls.at(-1)![0] as readonly Label[];
+  const labels = spy.mock.calls.at(-1)![0] as readonly Label2D[];
   return labels.find((l) => l.id === starId);
 }
 

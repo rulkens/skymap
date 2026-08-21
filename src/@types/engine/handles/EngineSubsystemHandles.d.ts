@@ -112,7 +112,7 @@ export type EngineSubsystemHandles = {
   biasCorrection: BiasCorrectionSubsystem;
   /**
    * Label director — owns `labelRenderer.setLabels` /
-   * `markerLineRenderer.setLines`, polls every registered `LabelProducer`
+   * `markerLineRenderer.setLines`, polls every registered `Label2DProducer`
    * each frame, merges outputs, and flushes once. Lets multiple overlays
    * (the Milky Way "you are here" pin, cluster structures, future
    * galaxy/void labels) coexist without stomping each other's full-set
