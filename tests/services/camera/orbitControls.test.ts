@@ -49,8 +49,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
+import { orbitRadPerPixel } from '../../../src/utils/camera/orbitRadPerPixel';
+import { cursorRayWorld } from '../../../src/utils/camera/cursorRayWorld';
+import { cursorSurfaceHit } from '../../../src/utils/camera/cursorSurfaceHit';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
+import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 /** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
@@ -101,10 +107,10 @@ function makeCanvas() {
   return { canvas, rec, setPointerCapture, releasePointerCapture };
 }
 
-function makeCamera(): OrbitCamera {
+function makeCamera(distance = 100): OrbitCamera {
   return createOrbitCamera({
     target: [0, 0, 0],
-    distance: 100,
+    distance,
     yaw: 0,
     pitch: 0,
     fovYRad: (Math.PI / 180) * 60,
@@ -543,5 +549,134 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
 
     expect(cam.yaw).toBeCloseTo(-50 * 0.005, 6);
+  });
+});
+
+describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)', () => {
+  // The exact solve needs `cam.position` to already reflect the drag's
+  // starting distance (it's read via `forwardOf`/`cursorRayWorld` below to
+  // construct a grab, not by `attachOrbitControls` itself) — `makeCamera`
+  // computes it via `createOrbitCamera`, so passing `distance` up front
+  // (rather than mutating `.distance` post-construction, as the damping
+  // tests above do) keeps it in sync.
+  const RADIUS_MPC = 10;
+  const CANVAS_SIZE = { width: 1000, height: 1000 };
+  const FOV_Y_RAD = (Math.PI / 180) * 60;
+
+  function forwardOf(cam: OrbitCamera): Vec3 {
+    const v: Vec3 = [
+      cam.target[0] - cam.position[0],
+      cam.target[1] - cam.position[1],
+      cam.target[2] - cam.position[2],
+    ];
+    const m = Math.hypot(v[0], v[1], v[2]) || 1;
+    return [v[0] / m, v[1] / m, v[2] / m];
+  }
+
+  /** The lon/lat under `cssPos` for `cam` — built via `cursorRayWorld` +
+   * `cursorSurfaceHit`, independent of `orbitControls`'s own drag math. */
+  function grabAtCss(cam: OrbitCamera, cssPos: { x: number; y: number }) {
+    const ray = cursorRayWorld(
+      cssPos,
+      CANVAS_SIZE,
+      cam.position,
+      forwardOf(cam),
+      0,
+      [0, 1, 0],
+      FOV_Y_RAD,
+      1,
+    );
+    const point = cursorSurfaceHit(ray, [0, 0, 0], RADIUS_MPC, IDENTITY_MAT3);
+    if (point === null) throw new Error('test fixture: ray misses the sphere');
+    return point;
+  }
+
+  it('a captured hit on the focused body diverges from the flat rate near the limb', () => {
+    // Off-centre, close orbit (h = 5 Mpc altitude on a 10 Mpc body) — the
+    // regime where `orbitRadPerPixel`'s isotropic rate (correct only at
+    // screen centre, see its header) should visibly disagree with the exact
+    // per-pixel solve `surfaceDragRotation` performs.
+    const cam = makeCamera(15);
+    const grabbedPoint = { bodyId: 'earth' as BodyId, point: grabAtCss(cam, { x: 850, y: 850 }) };
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      hoveredSurfacePoint: () => grabbedPoint,
+      dragPivotFrame: () => ({
+        bodyId: 'earth' as BodyId,
+        bodyOrientation: IDENTITY_MAT3 as unknown as [
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+        ],
+        bodyCentreMpc: [0, 0, 0],
+        radiusMpc: RADIUS_MPC,
+      }),
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 850,
+      clientY: 850,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 890, clientY: 890 });
+
+    const radPerPixel = orbitRadPerPixel(FOV_Y_RAD, 15, CANVAS_SIZE.height, RADIUS_MPC);
+    const expectedDYaw = -40 * radPerPixel;
+    const expectedDPitch = 40 * radPerPixel;
+    const yawOff = Math.abs((cam.yaw - expectedDYaw) / expectedDYaw);
+    const pitchOff = Math.abs((cam.pitch - expectedDPitch) / expectedDPitch);
+
+    expect(Math.max(yawOff, pitchOff)).toBeGreaterThan(0.2);
+  });
+
+  it('falls back to the flat rate when the grabbed body no longer matches dragPivotFrame', () => {
+    // The grab was captured against 'earth', but the live geometry getter now
+    // reports a DIFFERENT focused body (a focus swap mid-drag) — the orbit
+    // branch must fall back to the pre-existing flat rate exactly, not the
+    // exact solve, per the "Drag hit/miss coexistence" constraint.
+    const cam = makeCamera(15);
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      hoveredSurfacePoint: () => ({ bodyId: 'earth' as BodyId, point: { lonDeg: 0, latDeg: 90 } }),
+      dragPivotFrame: () => ({
+        bodyId: 'moon' as BodyId,
+        bodyOrientation: IDENTITY_MAT3 as unknown as [
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+        ],
+        bodyCentreMpc: [0, 0, 0],
+        radiusMpc: RADIUS_MPC,
+      }),
+      pivotRadiusMpc: () => RADIUS_MPC,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
+
+    const radPerPixel = orbitRadPerPixel(FOV_Y_RAD, 15, CANVAS_SIZE.height, RADIUS_MPC);
+    expect(cam.yaw).toBeCloseTo(-50 * radPerPixel, 10);
   });
 });

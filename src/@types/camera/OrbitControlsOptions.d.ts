@@ -7,6 +7,8 @@
 
 import type { BodyId } from '../data/body/BodyId';
 import type { LonLatDeg } from '../scene/LonLatDeg';
+import type { Mat3 } from '../math/Mat3';
+import type { Vec3 } from '../math/Vec3';
 
 export type OrbitControlsOptions = {
   /**
@@ -79,10 +81,34 @@ export type OrbitControlsOptions = {
    * hit / no body is focused. A getter, not a cached value — mirrors
    * `pivotRadiusMpc`'s shape: this module holds no scene state, so the
    * engine wires it to a live read of `state.picking.hoveredSurfacePoint`.
-   * Consumed by the zoom-bias anchor capture and the drag-grab capture —
-   * not yet read anywhere as of this field's introduction.
+   * Consumed by the zoom-bias anchor capture and the drag-grab capture (§4.4,
+   * `dragPivotFrame` below).
    */
   hoveredSurfacePoint?: () => { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
+  /**
+   * The focused body's geometry `surfaceDragRotation` (§4.4) needs to solve a
+   * cursor-anchored drag — `bodyOrientation`, `bodyCentreMpc`, `radiusMpc`,
+   * plus `bodyId` so the orbit branch can confirm the point grabbed at
+   * gesture start is still ON the currently focused body (focus can change
+   * mid-drag). `null` when no body is focused, mirroring `pivotRadiusMpc`'s
+   * null convention.
+   *
+   * A separate getter rather than folding this into `hoveredSurfacePoint`:
+   * the hover getter answers "where is the cursor NOW" (read every
+   * pointermove regardless of drag state), this answers "what body geometry
+   * is the live grab measured against" (read only inside an active orbit
+   * drag with a captured grab) — same "one getter per question" split
+   * `pivotRadiusMpc` vs `hoveredSurfacePoint` already established, and it
+   * keeps the identity check (`frame.bodyId === grabbedPoint.bodyId`)
+   * self-contained in the orbit branch rather than threading a second live
+   * read of `hoveredSurfacePoint` through it.
+   */
+  dragPivotFrame?: () => {
+    readonly bodyId: BodyId;
+    readonly bodyOrientation: Mat3;
+    readonly bodyCentreMpc: Vec3;
+    readonly radiusMpc: number;
+  } | null;
   /**
    * Called whenever `nextZoomBiasAnchor` produces a value — every wheel tick
    * and at pinch-start — with the resulting anchor (or `null`). Idempotent

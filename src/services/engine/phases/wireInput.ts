@@ -406,6 +406,27 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // tick and pinch start; see that field's docblock.
     hoveredSurfacePoint: () => state.picking.hoveredSurfacePoint,
 
+    // The focused body's geometry `surfaceDragRotation` (§4.4) solves the
+    // cursor-anchored drag against — same focus-row read `pivotRadiusMpc`
+    // above uses, plus `deriveBodyStates` for orientation/centre (mirroring
+    // the `onPointerMove` hover-hit derivation above). `null` for anything
+    // that isn't a body (a survey star has no `deriveBodyStates` entry).
+    dragPivotFrame: () => {
+      const focusRow = selectFocusRow(store.getState());
+      if (focusRow?.type !== 'body') return null;
+      const bodyState = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
+        focusRow.id,
+      );
+      const radiusMpc = pivotRadiusMpc(focusRow);
+      if (!bodyState || radiusMpc === null) return null;
+      return {
+        bodyId: focusRow.id as BodyId,
+        bodyOrientation: bodyState.orientation,
+        bodyCentreMpc: bodyState.positionMpc,
+        radiusMpc,
+      };
+    },
+
     // Written on every `nextZoomBiasAnchor` capture (idempotent when
     // unchanged). `frameContext.ts`'s eye-bias hook is the read-time
     // consumer — see `EnginePickingState.zoomBiasAnchor`'s docblock for the

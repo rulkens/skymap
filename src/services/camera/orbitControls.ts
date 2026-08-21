@@ -65,6 +65,7 @@ import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOpti
 import { updatePosition } from '../../utils/camera/updatePosition';
 import { zoomedDistance } from '../../utils/camera/zoomedDistance';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
+import { surfaceDragRotation } from '../../utils/camera/surfaceDragRotation';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
 import { nextZoomBiasAnchor } from '../../utils/camera/nextZoomBiasAnchor';
@@ -156,6 +157,14 @@ export function attachOrbitControls(
   let dragMode: DragMode | null = null;
   let lastX = 0; // client-space X of the previous pointermove event
   let lastY = 0; // client-space Y of the previous pointermove event
+
+  // The body-surface point grabbed at gesture start (spec §4.4), captured
+  // from `hoveredSurfacePoint()` on the FIRST contact — `null` until a hit
+  // has landed. The orbit branch solves the exact cursor-anchored rotation
+  // against this when it's still on the currently focused body; otherwise it
+  // falls back to `orbitRadPerPixel`'s flat rate (the "Drag hit/miss
+  // coexistence" constraint: hit and miss are branches of ONE drag path).
+  let grabbedPoint: { bodyId: BodyId; point: LonLatDeg } | null = null;
 
   // ── Multi-touch state ─────────────────────────────────────────────────────
   //
@@ -269,6 +278,12 @@ export function attachOrbitControls(
       downX = e.clientX;
       downY = e.clientY;
 
+      // Capture the drag-grab point (spec §4.4) — whatever the cursor was
+      // last hovering when this gesture began. `null` when nothing has ever
+      // hit (or the getter is absent), which the orbit branch reads as "use
+      // the flat-rate fallback".
+      grabbedPoint = options?.hoveredSurfacePoint?.() ?? null;
+
       // Notify the engine that a new gesture is starting. The engine uses this
       // to seed the drag register from the live produced pose (so a mid-tween
       // grab continues from where the animation left the camera, not from a
@@ -317,6 +332,7 @@ export function attachOrbitControls(
       dragMode = null;
       dragPointerId = null;
       lastPinchDist = 0;
+      grabbedPoint = null;
 
       // ── Click detection ──────────────────────────────────────────────
       // If the pointer barely moved between down and up, treat this as a
@@ -479,6 +495,42 @@ export function attachOrbitControls(
     }
 
     // ── Orbit (left button drag) ──────────────────────────────────────────
+    //
+    // Hit branch (spec §4.4): a body-surface point was grabbed at gesture
+    // start and it's still on the currently focused body (focus can change
+    // mid-drag) — solve the EXACT (yaw, pitch) that keeps that point under
+    // THIS tick's cursor, rather than the flat rate below (which
+    // `orbitRadPerPixel`'s header documents as correct only at screen
+    // centre). `dragPivotFrame` is read fresh every move, not cached from
+    // gesture start, so a body that itself orbits between ticks is handled
+    // correctly by construction.
+    if (grabbedPoint !== null) {
+      const frame = options?.dragPivotFrame?.() ?? null;
+      if (frame !== null && frame.bodyId === grabbedPoint.bodyId) {
+        const solved = surfaceDragRotation(
+          grabbedPoint.point,
+          frame.bodyOrientation,
+          frame.bodyCentreMpc,
+          frame.radiusMpc,
+          cam,
+          cam.fovYRad,
+          cam.aspect,
+          { width: canvas.clientWidth, height: canvas.clientHeight },
+          { x: e.clientX, y: e.clientY },
+        );
+        cam.yaw = solved.yaw;
+        // Same gimbal-lock guard the flat-rate path applies below (see
+        // PITCH_LIMIT's comment) — the exact solve can walk pitch to the
+        // pole just as easily as the flat rate can.
+        cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, solved.pitch));
+        updatePosition(cam);
+        options?.onChange?.();
+        return;
+      }
+    }
+
+    // Miss branch — no grab captured, or the grabbed body is no longer
+    // focused: the pre-existing flat, altitude-damped rate, unchanged.
     //
     // Yaw (left / right): we *subtract* dx so that dragging right (positive
     // dx) decreases yaw, rotating the camera to the left around the scene —
