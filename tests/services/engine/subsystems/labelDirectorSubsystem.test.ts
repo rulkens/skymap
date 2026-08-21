@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
-import type { LabelProducer } from '../../../../src/@types/engine/subsystems/LabelProducer';
-import type { Label } from '../../../../src/@types/rendering/Label';
+import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
+import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -37,10 +37,10 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
 
 function makeProducer(
   id: string,
-  labels: Label[],
+  labels: Label2D[],
   lines: MarkerLine[],
   awake = false,
-): LabelProducer {
+): Label2DProducer {
   return { id, produceLabels: () => ({ labels, lines, awake }) };
 }
 
@@ -54,7 +54,7 @@ function makeLabelStub() {
     // Default measure: a modest single-line box extending up from the
     // baseline anchor (text sits above `worldPos`), 20 atlas px per
     // character.  Rect-declutter tests override this per label.
-    measure: vi.fn<(label: Label) => { minX: number; minY: number; maxX: number; maxY: number }>(
+    measure: vi.fn<(label: Label2D) => { minX: number; minY: number; maxX: number; maxY: number }>(
       (label) => ({ minX: 0, minY: -30, maxX: 20 * label.text.length, maxY: 0 }),
     ),
   };
@@ -64,11 +64,11 @@ function makeLineStub() {
 }
 
 /** Every setLabels flush in call order — for asserting alpha trajectories. */
-function flushedLabels(stub: ReturnType<typeof makeLabelStub>): Label[][] {
-  return stub.setLabels.mock.calls.map((c) => c[0] as Label[]);
+function flushedLabels(stub: ReturnType<typeof makeLabelStub>): Label2D[][] {
+  return stub.setLabels.mock.calls.map((c) => c[0] as Label2D[]);
 }
 
-const SAMPLE_LABEL: Label = {
+const SAMPLE_LABEL: Label2D = {
   id: 'sample-label',
   worldPos: [0, 0, 0],
   text: 'x',
@@ -97,8 +97,8 @@ describe('labelDirectorSubsystem', () => {
     dir.attachRenderers(labelStub as never, lineStub as never);
 
     // Distinct world positions so the two anchors don't collide on screen.
-    const a: Label = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
-    const b: Label = { ...SAMPLE_LABEL, id: 'b', worldPos: [0.5, 0, 0] };
+    const a: Label2D = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
+    const b: Label2D = { ...SAMPLE_LABEL, id: 'b', worldPos: [0.5, 0, 0] };
     const la: MarkerLine = { ...SAMPLE_LINE, id: 'la' };
     const lb: MarkerLine = { ...SAMPLE_LINE, id: 'lb' };
     dir.registerProducer(makeProducer('pa', [a], [la]));
@@ -155,7 +155,7 @@ describe('labelDirectorSubsystem', () => {
     // Producer whose output flips fadeAlpha between calls but keeps
     // the same id (same scenario as youAreHere mid-fade).
     let alpha = 0.3;
-    const producer: LabelProducer = {
+    const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
         labels: [{ ...SAMPLE_LABEL, fadeAlpha: alpha }],
@@ -199,7 +199,7 @@ describe('labelDirectorSubsystem', () => {
     // Unowned line (bypasses the appear/disappear envelope) whose toWorld
     // the producer moves between frames — the camera-derived connector case.
     let tipY = 0.5;
-    const producer: LabelProducer = {
+    const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
         labels: [],
@@ -235,7 +235,7 @@ describe('labelDirectorSubsystem', () => {
     dir.attachRenderers(labelStub as never, lineStub as never);
 
     let anchorY = 0;
-    const producer: LabelProducer = {
+    const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
         labels: [{ ...SAMPLE_LABEL, worldPos: [0, anchorY, 0] }],
@@ -282,8 +282,8 @@ describe('labelDirectorSubsystem', () => {
     // Two labels at the same world point (both project to screen centre, so
     // within the 48 px margin). The higher-prominence one wins; the loser's
     // anchor line (ownerLabelId) is dropped with it.
-    const big: Label = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100 };
-    const small: Label = { ...SAMPLE_LABEL, id: 'small', prominencePx: 10 };
+    const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100 };
+    const small: Label2D = { ...SAMPLE_LABEL, id: 'small', prominencePx: 10 };
     const bigLine: MarkerLine = { ...SAMPLE_LINE, id: 'big-anchor', ownerLabelId: 'big' };
     const smallLine: MarkerLine = { ...SAMPLE_LINE, id: 'small-anchor', ownerLabelId: 'small' };
     dir.registerProducer(makeProducer('pbig', [big], [bigLine]));
@@ -301,7 +301,7 @@ describe('labelDirectorSubsystem', () => {
     // Both tests pin the projected em height to exactly ATLAS_FONT_SIZE
     // (min = max clamp), so measured atlas px map 1:1 to screen px and
     // the rects below can be reasoned about in plain pixels.
-    const RECT_LABEL: Label = {
+    const RECT_LABEL: Label2D = {
       ...SAMPLE_LABEL,
       minPixelSize: ATLAS_FONT_SIZE,
       maxPixelSize: ATLAS_FONT_SIZE,
@@ -320,8 +320,8 @@ describe('labelDirectorSubsystem', () => {
       // B sits 40 screen px BELOW A (screen y 500 → 540). Anchor distance is
       // inside the old 48 px point margin, but A's text occupies y∈[470,500]
       // and B's y∈[510,540] — visually clear. Neither may be culled.
-      const a: Label = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
-      const b: Label = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], prominencePx: 10 };
+      const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
+      const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], prominencePx: 10 };
       dir.registerProducer(makeProducer('p', [a, b], []));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -340,8 +340,8 @@ describe('labelDirectorSubsystem', () => {
 
       // B sits 100 screen px RIGHT of A (screen x 500 → 600) — outside the
       // old 48 px point margin, but the 300 px-wide rects overlap by 200 px.
-      const a: Label = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
-      const b: Label = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], prominencePx: 10 };
+      const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
+      const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], prominencePx: 10 };
       dir.registerProducer(makeProducer('p', [a, b], []));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -358,8 +358,8 @@ describe('labelDirectorSubsystem', () => {
 
     // On-screen low-prominence label + an off-screen label (|x| > 1 → outside
     // NDC). The off-screen one is accepted unconditionally and never blocks.
-    const onScreen: Label = { ...SAMPLE_LABEL, id: 'on', prominencePx: 1, worldPos: [0, 0, 0] };
-    const offScreen: Label = { ...SAMPLE_LABEL, id: 'off', prominencePx: 999, worldPos: [5, 0, 0] };
+    const onScreen: Label2D = { ...SAMPLE_LABEL, id: 'on', prominencePx: 1, worldPos: [0, 0, 0] };
+    const offScreen: Label2D = { ...SAMPLE_LABEL, id: 'off', prominencePx: 999, worldPos: [5, 0, 0] };
     dir.registerProducer(makeProducer('p', [onScreen, offScreen], []));
 
     dir.runFrame(makeState(), makeCtx(0));
@@ -391,13 +391,13 @@ describe('labelDirectorSubsystem', () => {
     // label at the same point → loses the overlap; its stem line drops with
     // it.  (The Milky Way "You are here" avoids this fate by declaring
     // prominencePx: Number.MAX_VALUE — see produceMilkyWayLabel.)
-    const anonymous: Label = { ...SAMPLE_LABEL, id: 'anonymous' };
+    const anonymous: Label2D = { ...SAMPLE_LABEL, id: 'anonymous' };
     const anonLine: MarkerLine = {
       ...SAMPLE_LINE,
       id: 'anonymous',
       ownerLabelId: 'anonymous',
     };
-    const structure: Label = { ...SAMPLE_LABEL, id: 'coma', prominencePx: 200 };
+    const structure: Label2D = { ...SAMPLE_LABEL, id: 'coma', prominencePx: 200 };
     dir.registerProducer(makeProducer('anon', [anonymous], [anonLine]));
     dir.registerProducer(makeProducer('struct', [structure], []));
 
@@ -435,7 +435,7 @@ describe('labelDirectorSubsystem', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
 
-      let labels: Label[] = [SAMPLE_LABEL];
+      let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -459,7 +459,7 @@ describe('labelDirectorSubsystem', () => {
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
-      const dimmed: Label = { ...SAMPLE_LABEL, fadeAlpha: 0.5 };
+      const dimmed: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.5 };
       dir.registerProducer(makeProducer('p', [dimmed], []));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -478,9 +478,9 @@ describe('labelDirectorSubsystem', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
 
-      const owner: Label = { ...SAMPLE_LABEL, id: 'owner' };
+      const owner: Label2D = { ...SAMPLE_LABEL, id: 'owner' };
       const stem: MarkerLine = { ...SAMPLE_LINE, id: 'stem', ownerLabelId: 'owner' };
-      let out: { labels: Label[]; lines: MarkerLine[] } = { labels: [owner], lines: [stem] };
+      let out: { labels: Label2D[]; lines: MarkerLine[] } = { labels: [owner], lines: [stem] };
       dir.registerProducer({ id: 'p', produceLabels: () => ({ ...out, awake: false }) });
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -507,7 +507,7 @@ describe('labelDirectorSubsystem', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
 
-      let labels: Label[] = [SAMPLE_LABEL];
+      let labels: Label2D[] = [SAMPLE_LABEL];
       // Producer is never awake — every vote below comes from the envelope.
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
 
@@ -526,7 +526,7 @@ describe('labelDirectorSubsystem', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
 
-      let labels: Label[] = [SAMPLE_LABEL];
+      let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
 
       dir.runFrame(makeState(), makeCtx(0));

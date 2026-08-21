@@ -18,7 +18,7 @@
  * single either/or it would be over-engineering (simplicity.md §7).
  *
  * The comparison is `>=`, so exactly-at-threshold resolves to a sphere. That
- * matches the famous-galaxy promotion gate (`produceFamousLabels.ts:221`, which
+ * matches the famous-galaxy promotion gate (`produceFamousGalaxyLabels.ts:221`, which
  * skips with `sizePx < threshold → continue`), keeping the two LOD gates'
  * boundary conventions identical.
  */

@@ -33,7 +33,7 @@
  * future floating origin moves.
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { CaptionKind } from './captionPriority';
@@ -92,7 +92,7 @@ const SGR_A_STAR_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
  * stops mattering. Everything else is far apart on the sky — default
  * baseline.
  */
-const BODY_ALIGN_Y: Readonly<Record<string, Label['alignY']>> = {
+const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
   sun: 'top',
   earth: 'bottom',
   moon: 'top',

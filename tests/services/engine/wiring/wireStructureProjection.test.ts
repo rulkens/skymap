@@ -12,7 +12,7 @@
  *   3. `onStructureCountsChange` fires after any group change with fresh
  *      per-category counts.
  *
- * Famous galaxies are NOT wired here anymore — `produceFamousLabels` derives
+ * Famous galaxies are NOT wired here anymore — `produceFamousGalaxyLabels` derives
  * them straight from `galaxyStore` per frame — so there is no famous-group
  * test in this suite.
  *

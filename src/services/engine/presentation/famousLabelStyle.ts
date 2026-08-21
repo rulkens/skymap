@@ -7,7 +7,7 @@
  * instead carry a per-entry apparent-size gate (`minApparentSizePx`) with a
  * `fadeBandPx` smoothstep, a connecting anchor `lineColor`, and a per-entry
  * `worldEmMpc` override (computed from the galaxy's diameter) — see
- * `produceFamousLabels`.
+ * `produceFamousGalaxyLabels`.
  */
 
 import type { Vec4 } from '../../../@types/math/Vec4';

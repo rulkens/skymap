@@ -56,6 +56,6 @@ export const starAggregatesLayer: ContentLayer = {
     // mutated: one `SlabView` is shared by every layer in the render step.
     const { width: vw, height: vh } = ctx.renderTargets.sizeOf('star-aggregates');
 
-    drawStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate');
+    drawStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate', ctx.fovYRad);
   },
 };

@@ -476,6 +476,14 @@ export const DEFAULT_FLOW: FlowSettings = {
   boundaryFadeWidth: SOURCE_REGISTRY[Source.Flow].boundaryFadeWidth,
 };
 
+// ── Camera lens ───────────────────────────────────────────────────────────────
+
+/**
+ * Default vertical field of view, in degrees — seeds `settings.camera.fovDeg`
+ * and, via `cameraFraming.ts`'s `DEFAULT_FOV_Y_RAD`, the bootstrap lens.
+ */
+export const DEFAULT_FOV_DEG = 60;
+
 // ── Camera orientation frame ─────────────────────────────────────────────────
 
 /**

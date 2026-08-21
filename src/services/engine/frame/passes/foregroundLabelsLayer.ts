@@ -10,7 +10,7 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import type { Label } from '../../../../@types/rendering/Label';
+import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -328,7 +328,7 @@ export const foregroundLabelsLayer: ContentLayer = {
     }
 
     // ── Pass 2: lift each survivor and emit its caption + connector ──
-    const liftedLabels: Label[] = [];
+    const liftedLabels: Label2D[] = [];
     const lines: MarkerLine[] = [];
     for (const { label, anchor, subjectSizePx, fadeAlpha } of toEmit) {
       // Constellation names anchor in empty space, so they skip the lift and emit

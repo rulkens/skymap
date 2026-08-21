@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
-import { produceFamousLabels } from '../../../../src/services/engine/presentation/produceFamousLabels';
+import { produceFamousGalaxyLabels } from '../../../../src/services/engine/presentation/produceFamousGalaxyLabels';
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import {
@@ -16,7 +16,7 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
-import type { Label } from '../../../../src/@types/rendering/Label';
+import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.
@@ -37,7 +37,7 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousLabels reads `state.famousGalaxiesMeta` for the sidecar records and
+// produceFamousGalaxyLabels reads `state.famousGalaxiesMeta` for the sidecar records and
 // `state.data.galaxies` for the positional catalog, `state.subsystems.fades`
 // for the `galaxy` layer opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
@@ -59,7 +59,7 @@ function makeState(
   return {
     data: createEngineData(),
     famousGalaxiesMeta: [],
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label) => LabelBBox>(() => bbox) } },
+    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades,
       // clipPlayer is non-nullable; return factor 1 so the clip channel is
@@ -148,7 +148,7 @@ function seed(
   state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
 }
 
-describe('produceFamousLabels', () => {
+describe('produceFamousGalaxyLabels', () => {
   it('emits a lifted label + anchor line for a galaxy above the size gate', () => {
     const state = makeState();
     // 120 kpc galaxy at 5 Mpc → ~22.4 px apparent size: comfortably above the
@@ -156,7 +156,7 @@ describe('produceFamousLabels', () => {
     // above the clearance-raised floor of 28 + ~4.3 px ink drop, so neither
     // floor bites in this test).
     seed(state, [{ id: 'm31', names: ['M31'] }], [5, 0, 0], [120]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
 
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     const label = out.labels[0]!;
@@ -194,7 +194,7 @@ describe('produceFamousLabels', () => {
     for (const distanceMpc of [5, 4]) {
       const state = makeState();
       seed(state, [{ id: 'm31', names: ['M31'] }], [distanceMpc, 0, 0], [120]);
-      const out = produceFamousLabels(state, makeCtx());
+      const out = produceFamousGalaxyLabels(state, makeCtx());
 
       const anchor = screenOf(out.labels[0]!.worldPos);
       const tip = screenOf(out.lines[0]!.toWorld);
@@ -216,7 +216,7 @@ describe('produceFamousLabels', () => {
     // floor too.
     const state = makeState();
     seed(state, [{ id: 'm110', names: ['M110'] }], [17, 0, 0], [120]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
 
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
@@ -237,7 +237,7 @@ describe('produceFamousLabels', () => {
     const inkDropPx = 70 * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
     const state = makeState({ bbox: { minX: -50, minY: -30, maxX: 50, maxY: 70 } });
     seed(state, [{ id: 'm31', names: ['M31'] }], [17, 0, 0], [120]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
 
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     const dot = screenOf([17, 0, 0]);
@@ -254,7 +254,7 @@ describe('produceFamousLabels', () => {
   it('skips a galaxy whose apparent size is below the threshold', () => {
     const state = makeState();
     seed(state, [{ id: 'far', names: ['Far'] }], [100000, 0, 0], [40]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels).toEqual([]);
     expect(out.lines).toEqual([]);
   });
@@ -269,7 +269,7 @@ describe('produceFamousLabels', () => {
     const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
-    expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
+    expect(produceFamousGalaxyLabels(state, makeCtx()).labels).toEqual([]);
   });
 
   it('keeps emitting while the galaxy-layer fade-out tail is non-zero (no pop on toggle-out)', () => {
@@ -282,7 +282,7 @@ describe('produceFamousLabels', () => {
     const fading = makeState({ fades: midFade });
     seed(fading, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     fading.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
-    const out = produceFamousLabels(fading, makeCtx());
+    const out = produceFamousGalaxyLabels(fading, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     // Emitted at the half opacity (full distance-fade alpha here is 1 × 0.5).
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
@@ -295,24 +295,24 @@ describe('produceFamousLabels', () => {
     const settled = makeState({ fades: done });
     seed(settled, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     settled.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
-    expect(produceFamousLabels(settled, makeCtx()).labels).toEqual([]);
+    expect(produceFamousGalaxyLabels(settled, makeCtx()).labels).toEqual([]);
   });
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {
     const noCatalog = makeState();
     setFamousGalaxiesMeta(noCatalog, [{ id: 'm31', names: ['M31'] }]);
-    expect(produceFamousLabels(noCatalog, makeCtx()).labels).toEqual([]);
+    expect(produceFamousGalaxyLabels(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();
     noMeta.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog([10, 0, 0], [120]));
-    expect(produceFamousLabels(noMeta, makeCtx()).labels).toEqual([]);
+    expect(produceFamousGalaxyLabels(noMeta, makeCtx()).labels).toEqual([]);
   });
 
   it('scales worldEmMpc with diameter (40 kpc anchors the category default)', () => {
     const state = makeState();
     // 40 kpc galaxy at 3 Mpc → ~12.5 px (full alpha); worldEm == reference.
     seed(state, [{ id: 'ref', names: ['Ref'] }], [3, 0, 0], [40]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.worldEmMpc).toBeCloseTo(0.0125, 6);
   });
 
@@ -320,7 +320,7 @@ describe('produceFamousLabels', () => {
     // At-rest (galaxy layer at 1) → full distance-fade alpha.
     const atRest = makeState();
     seed(atRest, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const atRestAlpha = produceFamousLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
+    const atRestAlpha = produceFamousGalaxyLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
 
     // galaxy layer at 0.5 → half the at-rest alpha for label AND its anchor line.
     const fades = makeRegistry();
@@ -328,7 +328,7 @@ describe('produceFamousLabels', () => {
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const dimmed = makeState({ fades });
     seed(dimmed, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousLabels(dimmed, makeCtx());
+    const out = produceFamousGalaxyLabels(dimmed, makeCtx());
 
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
@@ -339,11 +339,11 @@ describe('produceFamousLabels', () => {
     // at full blend (there is no focused-famous-structure path here).
     const atRest = makeState();
     seed(atRest, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const atRestAlpha = produceFamousLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
+    const atRestAlpha = produceFamousGalaxyLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
 
     const focused = makeState();
     seed(focused, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const recededAlpha = produceFamousLabels(focused, makeCtx({ focusBlend: 1 })).labels[0]!
+    const recededAlpha = produceFamousGalaxyLabels(focused, makeCtx({ focusBlend: 1 })).labels[0]!
       .fadeAlpha!;
 
     expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
@@ -357,7 +357,7 @@ describe('produceFamousLabels', () => {
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousLabels(state, makeCtx({ focusBlend: 1 }));
+    const out = produceFamousGalaxyLabels(state, makeCtx({ focusBlend: 1 }));
 
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(out.labels[0]!.fadeAlpha!, 6);
   });
@@ -379,7 +379,7 @@ describe('produceFamousLabels', () => {
       [10, 0, 0, 10, 1, 0],
       [120, 120],
     );
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m87']);
     expect(out.lines.map((m) => m.id)).toEqual(['famous-m87-anchor']);
   });
@@ -394,7 +394,7 @@ describe('produceFamousLabels', () => {
     for (const focus of cases) {
       const state = makeState({ focusedOnly: true, focus });
       seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-      expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
+      expect(produceFamousGalaxyLabels(state, makeCtx()).labels).toEqual([]);
     }
   });
 
@@ -403,7 +403,7 @@ describe('produceFamousLabels', () => {
     // emitted fadeAlpha equals the raw distance-fade value (1 here).
     const state = makeState();
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.fadeAlpha).toBe(1);
     expect(out.lines[0]!.fadeAlpha).toBe(1);
   });
@@ -415,7 +415,7 @@ describe('produceFamousLabels', () => {
     // view from inside the Milky Way.
     const state = makeState();
     seed(state, [{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBe(60);
   });
 
@@ -425,14 +425,14 @@ describe('produceFamousLabels', () => {
     // for far companions like M31 must not shrink.
     const state = makeState();
     seed(state, [{ id: 'm31', names: ['M31'] }], [3, 0, 0], [40]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBe(FAMOUS_LABEL_STYLE.maxPixelSize);
   });
 
   it('yields a strictly intermediate ceiling in the near-to-far ramp band', () => {
     const state = makeState();
     seed(state, [{ id: 'mid', names: ['Mid'] }], [0.5, 0, 0], [20]);
-    const out = produceFamousLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBeGreaterThan(60);
     expect(out.labels[0]!.maxPixelSize).toBeLessThan(FAMOUS_LABEL_STYLE.maxPixelSize);
   });

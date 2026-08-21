@@ -50,7 +50,7 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
-import type { Label } from '../../../../../src/@types/rendering/Label';
+import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
@@ -120,7 +120,7 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
 function makeRenderer(glyphCount: number): LabelRenderer {
   return {
     label: 'foregroundLabelRenderer',
-    setLabels: vi.fn<(labels: readonly Label[]) => void>(),
+    setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
     measure: vi.fn<() => null>(() => null),
     glyphCount: () => glyphCount,
@@ -425,7 +425,7 @@ describe('foregroundLabelsLayer.draw', () => {
     // caption hangs OFF the body).
     const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     expect(setSpy).toHaveBeenCalledTimes(1);
-    const rebasedLabels = setSpy.mock.calls[0]![0] as readonly Label[];
+    const rebasedLabels = setSpy.mock.calls[0]![0] as readonly Label2D[];
     const base = sceneBodyLabels(J2000_STATES);
     expect(rebasedLabels.length).toBeGreaterThan(0);
     for (const emitted of rebasedLabels) {
@@ -511,7 +511,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const onView = makeNear0View(camPos);
     foregroundLabelsLayer.draw(PASS_STUB, onView, makeCtx(5e-4), makeState(renderer, lineRenderer));
     const onSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
+    const onLabels = onSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
       true,
     );
@@ -530,7 +530,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(offRenderer, makeLineRenderer(), false),
     );
     const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
+    const offLabels = offSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
       false,
     );
@@ -558,7 +558,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(renderer, makeLineRenderer(), true, { earth: true, planet: true, sun: false }),
     );
     const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as readonly Label[];
+      .calls[0]![0] as readonly Label2D[];
     expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
     expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
   });
@@ -592,7 +592,7 @@ describe('foregroundLabelsLayer.draw', () => {
       ),
     );
     const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as readonly Label[];
+      .calls[0]![0] as readonly Label2D[];
     expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
     expect(drawn.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
   });
@@ -618,7 +618,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(onRenderer, makeLineRenderer(), true, true, true),
     );
     const onSpy = onRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
+    const onLabels = onSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
       true,
     );
@@ -633,7 +633,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(offRenderer, makeLineRenderer(), true, true, false),
     );
     const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
+    const offLabels = offSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
       false,
     );
@@ -668,7 +668,7 @@ describe('foregroundLabelsLayer.draw', () => {
       ),
     );
     const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as readonly Label[];
+      .calls[0]![0] as readonly Label2D[];
     expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(false);
     expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
     expect(drawn.some((l) => l.id === earthId)).toBe(true);
@@ -691,7 +691,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(renderer, makeLineRenderer(), true, { earth: true, planet: false }),
     );
     const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as readonly Label[];
+      .calls[0]![0] as readonly Label2D[];
     expect(drawn.some((l) => PLANET_LABEL_IDS.has(l.id))).toBe(false);
     expect(drawn.some((l) => l.id === earthId)).toBe(true);
   });
@@ -710,7 +710,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(renderer, makeLineRenderer(), true, { earth: false, planet: true }),
     );
     const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as readonly Label[];
+      .calls[0]![0] as readonly Label2D[];
     expect(drawn.some((l) => l.id === earthId)).toBe(false);
     expect(drawn.some((l) => PLANET_LABEL_IDS.has(l.id))).toBe(true);
   });
@@ -735,7 +735,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(onRenderer, makeLineRenderer()),
     );
     const onSpy = onRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
+    const onLabels = onSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(onLabels.some((l) => l.id === earthId)).toBe(true);
 
     // Toggle OFF (planet): no Earth/planet caption, but the star map still shows.
@@ -748,14 +748,14 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(offRenderer, makeLineRenderer(), true, false),
     );
     const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
+    const offLabels = offSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(offLabels.some((l) => l.id === earthId)).toBe(false);
     expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(true);
   });
 
   it('shows the local neighbourhood at full alpha from Earth and none beyond the neighbourhood', () => {
     const base = sceneBodyLabels(J2000_STATES);
-    const starLabels = (labels: readonly Label[]) =>
+    const starLabels = (labels: readonly Label2D[]) =>
       labels.filter((l) => SCENE_STAR_LABEL_IDS.has(l.id));
 
     // ── Camera at Earth: the LOCAL STAR MAP. The seed now mixes true
@@ -791,7 +791,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(nearRenderer, makeLineRenderer()),
     );
     const nearSpy = nearRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const nearLabels = nearSpy.mock.calls[0]![0] as readonly Label[];
+    const nearLabels = nearSpy.mock.calls[0]![0] as readonly Label2D[];
     const byId = new Map(starLabels(nearLabels).map((l) => [l.id, l]));
     for (const id of fullAlphaStarIds) {
       const emitted = byId.get(id);
@@ -811,7 +811,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(farRenderer, makeLineRenderer()),
     );
     const farSpy = farRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const farLabels = farSpy.mock.calls[0]![0] as readonly Label[];
+    const farLabels = farSpy.mock.calls[0]![0] as readonly Label2D[];
     expect(starLabels(farLabels)).toHaveLength(0);
   });
 
@@ -831,7 +831,7 @@ describe('foregroundLabelsLayer.draw', () => {
         makeState(renderer, makeLineRenderer()),
       );
       const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-      const labels = spy.mock.calls.at(-1)![0] as readonly Label[];
+      const labels = spy.mock.calls.at(-1)![0] as readonly Label2D[];
       return labels.find((l) => l.id === SUN_LABEL_ID)?.fadeAlpha;
     };
 
@@ -872,7 +872,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(renderer, makeLineRenderer()),
     );
     const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const labels = spy.mock.calls[0]![0] as readonly Label[];
+    const labels = spy.mock.calls[0]![0] as readonly Label2D[];
     expect(labels.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
     expect(labels.some((l) => l.id === proxima.id)).toBe(false);
   });
@@ -884,7 +884,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const renderer = makeRenderer(6);
     const lastLabels = () => {
       const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-      return spy.mock.calls.at(-1)![0] as readonly Label[];
+      return spy.mock.calls.at(-1)![0] as readonly Label2D[];
     };
     const wakeSpy = (state: EngineState) =>
       (
@@ -997,7 +997,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeState(renderer, makeLineRenderer(), true, false),
     );
     const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
-    const midAlpha = (setSpy.mock.calls.at(-1)![0] as readonly Label[]).find(
+    const midAlpha = (setSpy.mock.calls.at(-1)![0] as readonly Label2D[]).find(
       (l) => l.id === earthId,
     )?.fadeAlpha;
     expect(midAlpha).toBeGreaterThan(0);
@@ -1022,7 +1022,7 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const settledLabels = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock.calls.at(
       -1,
-    )![0] as readonly Label[];
+    )![0] as readonly Label2D[];
     expect(settledLabels.some((l) => l.id === earthId)).toBe(false);
 
     // Now that nothing is mid-fade AND settings demand nothing, the gate goes
@@ -1125,7 +1125,7 @@ describe('foregroundLabelsLayer — constellation captions', () => {
     foregroundLabelsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(5e-4), state);
 
     const emitted = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as readonly Label[];
+      .calls[0]![0] as readonly Label2D[];
     const orion = emitted.find((l) => l.id === 'Orion')!;
     expect(orion).toBeDefined();
     // Direct emit: the caption sits at its camera-relative centroid with NO

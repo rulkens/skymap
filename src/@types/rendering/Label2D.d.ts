@@ -22,7 +22,7 @@ import type { LabelAlignX } from './LabelAlignX';
 import type { LabelAlignY } from './LabelAlignY';
 import type { FontId } from '../data/FontId';
 
-export type Label = {
+export type Label2D = {
   readonly id: string;
   readonly worldPos: Vec3;
   readonly text: string;

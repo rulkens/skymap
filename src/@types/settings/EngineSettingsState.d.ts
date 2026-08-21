@@ -79,6 +79,17 @@ export type EngineSettingsState = {
   orientation: OrientationFrameId;
 
   /**
+   * Camera lens control — the vertical field of view in degrees. The engine
+   * converts this to radians and writes it onto `cameraRuntime.projection.fovYRad`
+   * once per frame (`runFrame`), which every downstream consumer (view-proj,
+   * screen-space pixel math, the WGSL camera uniform) already reads live off
+   * the projection Resource. Default `DEFAULT_FOV_DEG` (60°).
+   */
+  camera: {
+    fovDeg: number;
+  };
+
+  /**
    * Galaxy catalog point-billboard controls — the shared appearance knobs that
    * influence every galaxy catalog's `points.wgsl` draw, plus per-galaxy-catalog
    * items. Per-galaxy catalog state lives in `items` — one row per

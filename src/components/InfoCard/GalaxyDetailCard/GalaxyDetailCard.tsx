@@ -13,6 +13,7 @@ import cx from 'classnames';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { formatDiameterKpc } from '../../../utils/format/formatDiameterKpc';
+import { formatLookback } from '../../../utils/format/formatLookback';
 import Thumbnail from '../Thumbnail/Thumbnail';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
@@ -76,7 +77,7 @@ function GalaxyDetailCard({
         />
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
-            <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {info.lookbackGyr.toFixed(1)} Gyr ago
+            <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {formatLookback(info.lookbackGyr)} ago
           </div>
           <div className={styles.cardLookbackEra}>
             — <InfoTip {...TIPS.earthEra!}>{info.earthEra}</InfoTip>
