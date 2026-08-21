@@ -67,7 +67,7 @@ import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
+import { runMarkerProducers } from './runMarkerProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -674,8 +674,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // BEFORE the GPU dispatch so the instance buffer is uploaded before
   // `structureMarkersLayer` reads it. Null-checked for the pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
-    const markers = produceStructureMarkers(state, ctx);
-    state.gpu.structureMarkerRenderer.setMarkers(markers);
+    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
   }
 
   // ── GPU dispatch ──────────────────────────────────────────────────────────
