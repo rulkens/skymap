@@ -116,6 +116,9 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 // Real (unmocked) — the persistence-on-miss test needs Earth's actual
 // CONST_J2000 position to build a well-conditioned camera pose near it.
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { eyeAltitudeMpc } from '../../../../src/utils/camera/eyeAltitudeMpc';
+import { poseEyePositionMpc } from '../../../../src/utils/camera/poseEyePositionMpc';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/surfaceStandoffRadii';
 import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -447,6 +450,81 @@ describe('wireInput', () => {
     // Nothing is committed while follow owns the distance — a base commit
     // would be invisible and re-asserted away next frame.
     expect(deps.cb.store.getState().camera.base.distance).not.toBe(clock.followDistanceTarget);
+  });
+
+  it('fast ticks INSIDE the follow ease never walk the follow target below the surface', async () => {
+    // Mid-approach the follow driver renders `lerp(from, target, t)`, which on an
+    // approach is strictly FARTHER out than `followDistanceTarget` — so a step
+    // measured against the rendered camera is floored for an eye the user is not
+    // going to end up at, and the ease target it scales has no floor of its own.
+    // Nineteen fast ticks inside the 600 ms window then bury the target in the
+    // crust, and the camera renders from inside it until the ease lands.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusKm: 6371,
+        },
+      }),
+    );
+
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    state.cameraRuntime.projection = {
+      fovYRad: Math.PI / 3,
+      aspect: 800 / 600,
+      near: 1e-20,
+      far: 1,
+    };
+    // The ease at a small `t`: the eased pose still far out, the target already
+    // at Earth's screen-fill framing distance (~4.33 R).
+    state.cameraRuntime.lastPose.current = {
+      target: [...earth.positionMpc] as [number, number, number],
+      yaw: 0,
+      pitch: 0,
+      distance: radiusMpc * 30,
+    };
+    state.cameraRuntime.prevActiveId.current = 'followBody';
+    const clock = state.cameraRuntime.clock;
+    clock.followDistanceTarget = radiusMpc * 4.33;
+
+    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
+
+    // 25 notches — well past the ~19 that bury the target, and all inside the
+    // ease window, which no frame advances here.
+    const standoffAltitude = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
+    let minAltitude = Infinity;
+    for (let i = 0; i < 25; i++) {
+      options!.onZoom!(0.9, { x: 460, y: 300 });
+      // The eye the ease is heading for: the pinned pivot (body + strafe) plus
+      // the target distance, decoded exactly as the render path decodes a pose.
+      const pendingEye = poseEyePositionMpc(
+        {
+          target: [
+            earth.positionMpc[0] + clock.followPanOffset[0],
+            earth.positionMpc[1] + clock.followPanOffset[1],
+            earth.positionMpc[2] + clock.followPanOffset[2],
+          ],
+          yaw: 0,
+          pitch: 0,
+          distance: clock.followDistanceTarget!,
+        },
+        undefined,
+      );
+      minAltitude = Math.min(minAltitude, eyeAltitudeMpc(pendingEye, earth.positionMpc, radiusMpc));
+    }
+
+    expect(minAltitude / standoffAltitude).toBeGreaterThanOrEqual(1 - 1e-9);
   });
 
   it('a MID-GESTURE tick scales the drag register and still routes its lateral to followPanOffset', async () => {

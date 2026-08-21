@@ -14,7 +14,7 @@
 import { cursorRayFromCamera } from './cursorRayFromCamera';
 import { eyeAltitudeMpc } from './eyeAltitudeMpc';
 import { zoomedEyeStep } from './zoomedEyeStep';
-import { SURFACE_STANDOFF_RADII } from './clampDistance';
+import { SURFACE_STANDOFF_RADII } from './surfaceStandoffRadii';
 import { raySphereRoots } from '../math/raySphereRoots';
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';

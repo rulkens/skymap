@@ -949,9 +949,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             centreMpc === null || radiusMpc === null
               ? null
               : eyeAltitudeMpc(cam.position, centreMpc, radiusMpc),
-          // Copied: the clock's vector is mutated in place by the follow-pan
-          // and zoom paths, and a `Readonly<Vec3>` field that keeps changing
-          // under its reader is worse than no snapshot at all.
+          // Copied: every writer currently REPLACES the clock's array, but a
+          // snapshot that silently depends on that is one in-place `+=` away
+          // from a `Readonly<Vec3>` that mutates under its reader.
           followPanOffsetMpc: [...state.cameraRuntime.clock.followPanOffset] as Vec3,
           zoomLateralMpc: state.cameraRuntime.debugZoomLateralMpc,
           idleTickMs: state.cameraRuntime.debugIdleTickMs,

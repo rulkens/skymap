@@ -71,7 +71,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { DEFAULT_FOV_DEG } from '../../../data/defaults';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
-import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/surfaceStandoffRadii';
 import { surfaceFollowEngaged } from '../../../utils/camera/surfaceFollowEngaged';
 import { orientationWorldDelta } from '../../../utils/camera/orientationWorldDelta';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';

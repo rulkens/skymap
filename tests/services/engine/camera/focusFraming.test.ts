@@ -14,6 +14,7 @@ import { focusFraming } from '../../../../src/services/engine/camera/focusFramin
 import { galaxyFocusDistance } from '../../../../src/services/engine/camera/galaxyFocusDistance';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/surfaceStandoffRadii';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import {
@@ -128,6 +129,17 @@ describe('focusFraming', () => {
     const result = focusFraming(row, FOVY);
     expect(result.target).toEqual([4.8481e-12, 0, 0]);
     expect(result.distance).toBe(bodyFocusDistance(EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, FOVY));
+  });
+
+  it('body arm — a fresh focus lands OUTSIDE the standoff floor, never inside it', () => {
+    // Cross-check between two constants that have to stay ordered: the framing
+    // distance must sit outside the surface standoff, or every fresh body focus
+    // would start inside the floor sphere the zoom refuses to descend past —
+    // the camera would open a focus already clamped, unable to move in.
+    const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    expect(focusFraming(bodyRow(), FOVY).distance).toBeGreaterThan(
+      radiusMpc * SURFACE_STANDOFF_RADII,
+    );
   });
 
   it('body arm — distance is proportional to the physical radius (no clamp)', () => {

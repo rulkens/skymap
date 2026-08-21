@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { zoomedEyeStep } from '../../../src/utils/camera/zoomedEyeStep';
-import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/surfaceStandoffRadii';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 

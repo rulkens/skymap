@@ -79,7 +79,7 @@ import {
   SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT,
 } from '../../../../src/services/engine/frame/runFrame';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/surfaceStandoffRadii';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';

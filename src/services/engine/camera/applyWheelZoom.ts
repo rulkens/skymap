@@ -56,6 +56,7 @@
  */
 
 import { autoRotateElapsed } from './cameraClock';
+import { followOwnsDistance } from './followOwnsDistance';
 import { spinAutoRotate } from './spinAutoRotate';
 import { clampDistance } from '../../../utils/camera/clampDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
@@ -71,8 +72,8 @@ export function applyWheelZoom(
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
 ): CameraPose | null {
-  if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = clampDistance(clock.followDistanceTarget * step.distanceScale);
+  if (followOwnsDistance(clock, prevActiveId)) {
+    clock.followDistanceTarget = clampDistance(clock.followDistanceTarget! * step.distanceScale);
     return null;
   }
   if (prevActiveId === 'autoRotate') {

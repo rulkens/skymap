@@ -22,7 +22,7 @@ import { cursorRayWorld } from '../../../src/utils/camera/cursorRayWorld';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
-import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/surfaceStandoffRadii';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -201,13 +201,17 @@ describe('cursorZoomStep — descent through the real apply path', () => {
     // case punch tens of km below the surface.
     let pose: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: R + ALT };
     // 135 ticks of 0.9 cover 21,216 km → 15 m; the rest prove the floor HOLDS.
+    // Tracked per tick, not just at the end: a transient dip that a later tick
+    // climbed back out of is still a frame rendered from inside the crust.
+    let minAltitude = Infinity;
     for (let i = 0; i < 300; i++) {
       pose = zoomedPose(pose, cursorZoomStep(camOf(pose), CURSOR, CANVAS, PIVOT, 0.9));
+      minAltitude = Math.min(minAltitude, Math.hypot(...camOf(pose).position) - R);
     }
 
     const standoffAltitude = R * (SURFACE_STANDOFF_RADII - 1);
     const altitude = Math.hypot(...camOf(pose).position) - R;
-    expect(altitude).toBeGreaterThan(0);
+    expect(minAltitude / standoffAltitude).toBeGreaterThanOrEqual(1 - 1e-9);
     expect(altitude / standoffAltitude).toBeCloseTo(1, 9);
   });
 });
