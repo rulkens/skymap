@@ -62,8 +62,18 @@
  *                    and is its SINGLE writer — the one place that answers 'which
  *                    way is up this frame' for every reader.
  *
+ *   `surfaceFollow` — surface-fixed camera follow's hysteresis state (spec
+ *                    §4.6): `engaged` gates whether `runFrame` composes
+ *                    `orientationFlipCorrection` into `poseBasis`/`upBasis`
+ *                    this frame; `orientationAtFlip` is the focused body's
+ *                    orientation SNAPSHOTTED (copied, not aliased — the body's
+ *                    orientation keeps changing every frame) the instant
+ *                    `engaged` flips false→true, so the composed correction
+ *                    starts at identity and the engage frame introduces no
+ *                    pose jump. `runFrame` is the single writer.
+ *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
- * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
+ * of truth for all five Resources: `wireInput`, `startLoop`, `runFrame`, and the
  * focus handlers all read from `state.cameraRuntime`, so there is no duplication
  * and no 'which copy is live?' ambiguity.
  */
@@ -93,4 +103,13 @@ export type CameraRuntime = {
    * `runFrame` writes it, once per frame from `resolveFrameBasis`.
    */
   upBasis: { current: Mat3 };
+  /**
+   * Surface-fixed follow's hysteresis state (spec §4.6). Single-writer: only
+   * `runFrame` writes it, once per frame from `surfaceFollowEngaged`.
+   */
+  surfaceFollow: {
+    engaged: boolean;
+    /** Snapshotted the frame engagement flips false→true; null while disengaged. */
+    orientationAtFlip: Mat3 | null;
+  };
 };

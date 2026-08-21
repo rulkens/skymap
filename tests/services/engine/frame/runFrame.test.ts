@@ -74,7 +74,12 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
   };
 });
 
-import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import {
+  runFrame,
+  SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT,
+} from '../../../../src/services/engine/frame/runFrame';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
@@ -220,7 +225,15 @@ function makeState(): EngineState {
       // runFrame resolves B(t) once per frame and writes it here — the box must
       // exist for that assignment. Seeded with the ecliptic (default) basis.
       upBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
+      // Disengaged by default — the surface-follow block reads/writes this
+      // unconditionally (before the renderer-null bail-out), so the box must
+      // exist even for fixtures that never focus a body.
+      surfaceFollow: { engaged: false, orientationAtFlip: null },
     },
+    // The surface-follow block reads `selectionRows.focus` unconditionally,
+    // same reason as `cameraRuntime.surfaceFollow` above. No slot occupied by
+    // default; individual tests overwrite `focus` to exercise the follow path.
+    selectionRows: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 
@@ -590,6 +603,58 @@ describe('runFrame — orientation-frame roll', () => {
       const vp = computeViewProj(cam);
       for (const m of vp) expect(Number.isFinite(m)).toBe(true);
     }
+  });
+});
+
+describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
+  it('the engage frame introduces no pose jump: corrected poseBasis/upBasis are bit-identical to the uncorrected values', () => {
+    // Phobos carries no texture spec, so `orientationForBody` gives it
+    // IDENTITY_MAT3 (see `orientationForBody.ts`) rather than a baked-from-trig
+    // rotation. That makes `orientationFlipCorrection(orientationAtFlip,
+    // orientationAtFlip)` exact integer arithmetic (0s and 1s) instead of a
+    // near-but-not-exactly-orthonormal float matrix self-multiply — the
+    // fixture the "bit-identical" claim actually needs to hold to the letter,
+    // not just to within float noise.
+    const store = makeStore();
+    const state = makeCamState();
+    (state as { selectionRows: { focus: unknown } }).selectionRows.focus = {
+      type: 'body',
+      id: 'phobos',
+      label: 'Phobos',
+      positionMpc: [0, 0, 0],
+      radiusKm: 11,
+    };
+    const deps = makeCamDeps(state, store);
+
+    // Set `pose.distance` exactly at the engage threshold: the same
+    // 'radius + standoff-multiple' resolution `runFrame`'s surface-follow
+    // block performs, computed independently here so the fixture — not a
+    // re-derivation of the block under test — decides the trigger altitude.
+    const radiusMpc = 11 * SCALE_UNITS.KM_TO_MPC;
+    const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
+    const engageAtMpc = standoffAltitudeMpc * SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT;
+    const BASE: CameraPose = {
+      target: [0, 0, 0],
+      yaw: 0,
+      pitch: 0,
+      distance: radiusMpc + engageAtMpc,
+    };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
+
+    runFrame(state, deps, 0);
+
+    // Precondition: the fixture actually crossed into the engaged state this
+    // frame — otherwise the bases would trivially pass through unchanged for
+    // an unrelated reason (the block never running), and the test would
+    // prove nothing about the correction path.
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    const defaultBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    expect(state.cam!.poseBasis).toEqual(defaultBasis);
+    expect(state.cam!.upBasis).toEqual(defaultBasis);
   });
 });
 

@@ -55,6 +55,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
+import type { Mat3 } from '../../../@types/math/Mat3';
 
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
@@ -64,6 +65,11 @@ import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
+import { surfaceFollowEngaged } from '../../../utils/camera/surfaceFollowEngaged';
+import { orientationFlipCorrection } from '../../../utils/camera/orientationFlipCorrection';
+import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
@@ -139,6 +145,21 @@ const publishBodyDistanceGate = throttleByTime(250);
  * is already queued — so it only ever supplies the frames the busy loop didn't.
  */
 const LIVE_IDLE_TICK_MS = 500;
+
+/**
+ * Surface-fixed follow's hysteresis band (spec §4.6), expressed as multiples
+ * of the surface standoff floor's altitude (`SURFACE_STANDOFF_RADII`,
+ * `clampDistance.ts` — ~15 m over Earth). A single threshold would flicker
+ * the mode every frame for a camera parked exactly at the switch point
+ * (scroll noise, hand jitter); engaging at 2x that floor and disengaging only
+ * at 4x gives room to absorb it. Expressed as multiples of the PER-BODY
+ * standoff altitude (not a fixed Mpc constant) because the same absolute
+ * altitude means something very different on the Moon than on Earth — see
+ * `pivotRadiusMpc`. Starting points only; finalized against the dev-server
+ * visual pass (Task 7), the same posture `ORBIT_MAX_RAD_PER_PX` documents.
+ */
+export const SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT = 2;
+export const SURFACE_FOLLOW_DISENGAGE_STANDOFF_MULT = 4;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -296,11 +317,79 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
   );
   state.cameraRuntime.upBasis.current = upBasis;
+
+  // ── Surface-fixed follow: hysteresis + basis correction (spec §4.6) ──────
+  //
+  // Corrects the DECODE BASIS `poseBasis`/`upBasis`, not the pose itself, and
+  // NOT `cameraRuntime.upBasis.current` above — that box seeds the NEXT
+  // orientation-FRAME switch's `fromQuat` (its own docblock), a different
+  // concept this must not leak into. `type === 'body'` only: the derive map
+  // below carries scene bodies, not survey stars, which have no baked
+  // orientation to hold the camera fixed against.
+  const surfaceFollow = state.cameraRuntime.surfaceFollow;
+  const wasSurfaceFollowEngaged = surfaceFollow.engaged;
+  let surfaceFollowEngagedNow = false;
+  let liveBodyOrientation: Mat3 | null = null;
+  const surfaceFollowFocus = state.selectionRows.focus;
+  if (surfaceFollowFocus?.type === 'body') {
+    const bodyState = deriveBodyStates(simDays).get(surfaceFollowFocus.id);
+    if (bodyState) {
+      const radiusMpc = surfaceFollowFocus.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      // 'altitude = distance − radius', same idiom as clampDistance.ts's
+      // SURFACE_STANDOFF_RADII: `pose.distance` is already this frame's
+      // camera-to-target distance, and step 3b pins target to the body
+      // centre, so there's no need to wait for `cam.position`.
+      const altitudeMpc = pose.distance - radiusMpc;
+      const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
+      surfaceFollowEngagedNow = surfaceFollowEngaged(
+        wasSurfaceFollowEngaged,
+        altitudeMpc,
+        standoffAltitudeMpc * SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT,
+        standoffAltitudeMpc * SURFACE_FOLLOW_DISENGAGE_STANDOFF_MULT,
+      );
+      liveBodyOrientation = bodyState.orientation;
+    }
+  }
+  surfaceFollow.engaged = surfaceFollowEngagedNow;
+  if (surfaceFollowEngagedNow && !wasSurfaceFollowEngaged && liveBodyOrientation !== null) {
+    // Copy, not alias: `bodyState.orientation` keeps changing every frame, so
+    // the flip snapshot must not follow it.
+    surfaceFollow.orientationAtFlip = [...liveBodyOrientation] as Mat3;
+  } else if (!surfaceFollowEngagedNow) {
+    surfaceFollow.orientationAtFlip = null;
+  }
+
+  // Default: pass through unchanged; overridden only while engaged. At the
+  // engage frame `orientationAtFlip` was JUST snapshotted from
+  // `liveBodyOrientation` above, so the correction below is exactly identity
+  // — the "no pose jump" property this block exists to guarantee.
+  let decodePoseBasis = poseBasis;
+  let decodeUpBasis = upBasis;
+  if (
+    surfaceFollowEngagedNow &&
+    surfaceFollow.orientationAtFlip !== null &&
+    liveBodyOrientation !== null
+  ) {
+    const correction = orientationFlipCorrection(
+      surfaceFollow.orientationAtFlip,
+      liveBodyOrientation,
+    );
+    // Left-multiply: poseBasis/upBasis decode LOCAL orbit angles into WORLD
+    // directions (assembleOrbitCamera's `dir_world = poseBasis · dir_local`).
+    // Holding a body-local point fixed needs the SAME world-space rotation
+    // the body picked up: `(liveBodyOrientation · orientationAtFlip⁻¹) ·
+    // poseBasis`. A body's spin is single-axis, so that commutes with what
+    // `correction` computes (`orientationAtFlip⁻¹ · liveBodyOrientation`) —
+    // making `correction` exactly the left factor needed.
+    decodePoseBasis = multiply3x3(correction, poseBasis);
+    decodeUpBasis = multiply3x3(correction, upBasis);
+  }
+
   if (state.cam) {
     // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
     // controls, so there is no decode to keep in sync until then.
-    state.cam.poseBasis = poseBasis;
-    state.cam.upBasis = upBasis;
+    state.cam.poseBasis = decodePoseBasis;
+    state.cam.upBasis = decodeUpBasis;
   }
 
   // Clear a finished frame roll exactly once, mirroring the camera-tween
