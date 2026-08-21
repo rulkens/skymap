@@ -132,15 +132,18 @@ const COSMO_FAR_MPC = 50000;
  * (`Float32Array.from(slab.vp)`) round-trips byte-equal to the original f32
  * matrix — which is why `slabViewOf` needs no COSMO special case below.
  *
- * `pivotRadiusMpc` (default `null`) is the orbit pivot's physical radius when
- * one is focused — see `foregroundFrustum`'s near-plane bracket for why the
+ * `pivotAltitudeMpc` (default `null`) is the orbit pivot's EYE-based altitude
+ * when one is focused — the caller (`frameContext.ts`) resolves it via
+ * `eyeAltitudeMpc`, not a `distance − radius` shortcut, since `cam.target` is
+ * not guaranteed to sit at the pivot's centre (pan strafe, future zoom-to-
+ * cursor). See `foregroundFrustum`'s near-plane bracket for why the
  * near-field row keys off ALTITUDE above the pivot, not raw `cam.distance`,
  * once a pivot is known.
  */
 export function deriveSlabs(
   cam: OrbitCamera,
   cosmoVp: Mat4,
-  pivotRadiusMpc: number | null = null,
+  pivotAltitudeMpc: number | null = null,
 ): readonly Slab[] {
   // The near-field slab's near/far are adaptive, sized from the camera's
   // ALTITUDE above a known pivot (else raw orbit distance) by
@@ -149,7 +152,7 @@ export function deriveSlabs(
   // the bracket the way raw distance did. This is unlike the COSMO row's fixed
   // `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`: the cosmological scene's depth doesn't
   // change as the user zooms, only the near-field's does.
-  const altitudeMpc = pivotRadiusMpc !== null ? cam.distance - pivotRadiusMpc : cam.distance;
+  const altitudeMpc = pivotAltitudeMpc ?? cam.distance;
   const { near: nearMpc, far: farMpc } = foregroundFrustum(altitudeMpc);
   // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
   // is exactly the frame pole (`frameUp(cam.upBasis)`; world +Y absent a

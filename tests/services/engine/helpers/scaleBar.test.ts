@@ -24,7 +24,7 @@ describe('computeScaleInfo', () => {
       cam: { distance: 100, fovYRad: FOV },
       canvasSize: { width: 1280, height: 0 },
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(result).toBeNull();
   });
@@ -34,7 +34,7 @@ describe('computeScaleInfo', () => {
       cam: { distance: 0, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(result).toBeNull();
   });
@@ -44,7 +44,7 @@ describe('computeScaleInfo', () => {
       cam: { distance: -10, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(result).toBeNull();
   });
@@ -58,7 +58,7 @@ describe('computeScaleInfo', () => {
       cam: { distance: 100, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(result).not.toBeNull();
     expect(result!.label).toBe('20.0 Mpc / 65.2 Mly');
@@ -72,7 +72,7 @@ describe('computeScaleInfo', () => {
       cam: { distance: 5000, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(result).not.toBeNull();
     expect(result!.label).toBe('1.00 Gpc / 3.26 Gly');
@@ -84,7 +84,7 @@ describe('computeScaleInfo', () => {
       cam: { distance: 0.5, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(result).not.toBeNull();
     expect(result!.label).toBe('100 kpc / 326 kly');
@@ -98,7 +98,7 @@ describe('computeScaleInfo', () => {
         cam: { distance: d, fovYRad: FOV },
         canvasSize: CANVAS,
         targetPx: TARGET_PX,
-        pivotRadiusMpc: null,
+        pivotAltitudeMpc: null,
       });
       expect(result).not.toBeNull();
       expect(result!.widthPx).toBeLessThanOrEqual(TARGET_PX);
@@ -113,7 +113,7 @@ describe('computeScaleInfo', () => {
         cam: { distance: d, fovYRad: FOV },
         canvasSize: CANVAS,
         targetPx: TARGET_PX,
-        pivotRadiusMpc: null,
+        pivotAltitudeMpc: null,
       });
       expect(result).not.toBeNull();
       const leading = result!.label.match(/^([0-9]+)/)?.[1];
@@ -131,13 +131,13 @@ describe('computeScaleInfo', () => {
       cam: { distance: 100, fovYRad: FOV },
       canvasSize: { width: 1280, height: 720 },
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     const b = computeScaleInfo({
       cam: { distance: 100, fovYRad: FOV },
       canvasSize: { width: 1280, height: 1440 },
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(a).not.toBeNull();
     expect(b).not.toBeNull();
@@ -151,13 +151,16 @@ describe('computeScaleInfo', () => {
     // altitude above the surface (6371 km * 0.00015 ≈ 0.956 km). Reading
     // `cam.distance` directly (the pre-fix bug) saturates at ~1 Earth radius
     // and pins the bar at a fixed centre-distance label regardless of how
-    // close to the ground the camera actually is.
+    // close to the ground the camera actually is. The caller now resolves
+    // this EYE-based altitude itself (`eyeAltitudeMpc`); this pure helper
+    // just takes the resulting number.
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    const altitudeMpc = earthRadiusMpc * 0.00015;
     const result = computeScaleInfo({
       cam: { distance: earthRadiusMpc * 1.00015, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: earthRadiusMpc,
+      pivotAltitudeMpc: altitudeMpc,
     });
     expect(result).not.toBeNull();
     expect(result!.label).toBe('154 m');
@@ -168,18 +171,18 @@ describe('computeScaleInfo', () => {
       cam: { distance: earthRadiusMpc * 1.00015, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: null,
+      pivotAltitudeMpc: null,
     });
     expect(centreDistance).not.toBeNull();
     expect(centreDistance!.label).not.toBe(result!.label);
   });
 
-  it('returns null when the pivot radius meets or exceeds camera distance (effectiveDistance <= 0)', () => {
+  it('returns null when the pivot altitude is zero or negative (effectiveDistance <= 0)', () => {
     const result = computeScaleInfo({
       cam: { distance: 10, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
-      pivotRadiusMpc: 10,
+      pivotAltitudeMpc: 0,
     });
     expect(result).toBeNull();
   });

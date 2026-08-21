@@ -93,10 +93,12 @@ import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotCenterMpc } from '../camera/pivotCenterMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { surfaceZoomBias } from '../../../utils/camera/surfaceZoomBias';
+import { eyeAltitudeMpc } from '../../../utils/camera/eyeAltitudeMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 /**
@@ -210,10 +212,20 @@ export function deriveFrameContext(
   // deriveSlabs is called here — alongside vp, not from a separate site —
   // so there is exactly one per-frame derivation of the slab table (see the
   // module header's point 2 on why derived scalars must not be recomputed
-  // in two places). The focused pivot's radius (or null) lets the near-field
-  // row key its near plane off ALTITUDE rather than raw distance — see
-  // `slabs.ts: deriveSlabs`.
-  const slabs = deriveSlabs(cam, vp, pivotRadiusMpc(state.selectionRows.focus));
+  // in two places). The focused pivot's EYE-based altitude (or null) lets
+  // the near-field row key its near plane off ALTITUDE rather than raw
+  // distance — see `slabs.ts: deriveSlabs`. `cam.position` here is the
+  // already zoom-bias-corrected eye (the block above runs first), and
+  // `pivotCenterMpc` resolves the pivot's live centre independently of
+  // `cam.target` (which PIVOT-PIN / a pan may have moved off-centre) — see
+  // `eyeAltitudeMpc`'s header for why `distance − radius` is not safe here.
+  const pivotRadius = pivotRadiusMpc(focusRow);
+  const pivotCenter = pivotRadius !== null ? pivotCenterMpc(focusRow, simDays) : null;
+  const pivotAltitudeMpc =
+    pivotRadius !== null && pivotCenter !== null
+      ? eyeAltitudeMpc(cam.position, pivotCenter, pivotRadius)
+      : null;
+  const slabs = deriveSlabs(cam, vp, pivotAltitudeMpc);
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
 

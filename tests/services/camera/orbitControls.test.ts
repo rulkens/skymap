@@ -495,6 +495,10 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
     const { canvas: nearCanvas, rec: nearRec } = makeCanvas();
     attachOrbitControls(nearCanvas as unknown as HTMLCanvasElement, nearCam, {
       pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      // target === [0,0,0] === body centre in this fixture, so altitude ===
+      // distance − radius exactly — the regression floor the migration must
+      // reproduce bit-for-bit.
+      pivotAltitudeMpc: () => nearCam.distance - EARTH_RADIUS_MPC,
     });
 
     const farCam = makeCamera();
@@ -502,6 +506,7 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
     const { canvas: farCanvas, rec: farRec } = makeCanvas();
     attachOrbitControls(farCanvas as unknown as HTMLCanvasElement, farCam, {
       pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotAltitudeMpc: () => farCam.distance - EARTH_RADIUS_MPC,
     });
 
     // Identical drag (+50 px) on both, driven through the same window — each
@@ -574,6 +579,10 @@ describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
       pivotRadiusMpc: () => pivotRadius,
+      // target === [0,0,0] === pivot centre in this fixture, so altitude ===
+      // distance − radius exactly — the regression floor the migration must
+      // reproduce bit-for-bit.
+      pivotAltitudeMpc: () => cam.distance - pivotRadius,
     });
 
     // Start a pan (right/middle mouse button).
@@ -592,8 +601,7 @@ describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
     const cssHeight = 1000;
     const fovYRad = (Math.PI / 180) * 60;
     const altitude = cam.distance - pivotRadius;
-    const altitudePxToWorld =
-      (2 * altitude * Math.tan(fovYRad / 2)) / cssHeight;
+    const altitudePxToWorld = (2 * altitude * Math.tan(fovYRad / 2)) / cssHeight;
     const expectedAltitudeShift = -100 * altitudePxToWorld;
 
     // With the fix, cam.target[0] should match the altitude formula.
@@ -631,6 +639,54 @@ describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
 
     // Assert the target moved by the raw-distance formula (regression floor).
     expect(cam.target[0]).toBeCloseTo(expectedRawDistanceShift, 5);
+  });
+
+  it('keys pan on the caller-supplied EYE altitude, not distance − radius, once the two diverge (FW-A real-bug regression)', () => {
+    // A `distance − radius` shortcut assumes `cam.target` sits exactly at the
+    // pivot's centre. This fixture simulates the case that assumption breaks
+    // — a prior pan already strafed the target away from the body's centre
+    // (or, after FW-B, zoom-to-cursor moved the eye independently of the
+    // pivot) — by supplying a `pivotAltitudeMpc` the caller resolved
+    // independently (against the TRUE eye-to-surface distance) that
+    // disagrees sharply with what `cam.distance - pivotRadiusMpc` would say.
+    // Pre-migration `orbitControls.ts` computed `cam.distance -
+    // pivotRadius()` itself and never read `pivotAltitudeMpc` — reverting the
+    // pan site to that formula makes this test fail (see the divergence
+    // sanity check below for proof the two formulas actually disagree here).
+    const cam = makeCamera(102);
+    const pivotRadius = 100; // distance − radius = 2: the STALE, wrong reading
+    const trueEyeAltitudeMpc = 40; // the TRUE post-pan eye altitude
+    cam.target = [0, 0, 0];
+    updatePosition(cam);
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => pivotRadius,
+      pivotAltitudeMpc: () => trueEyeAltitudeMpc,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 2,
+      clientX: 500,
+      clientY: 500,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 600, clientY: 500 });
+
+    const cssHeight = 1000;
+    const fovYRad = (Math.PI / 180) * 60;
+    const eyeBasedShift = -100 * ((2 * trueEyeAltitudeMpc * Math.tan(fovYRad / 2)) / cssHeight);
+    const staleDistanceMinusRadiusShift =
+      -100 * ((2 * (cam.distance - pivotRadius) * Math.tan(fovYRad / 2)) / cssHeight);
+
+    // Sanity: the two formulas actually diverge here — otherwise a pass would
+    // prove nothing about which one the pan site reads.
+    expect(Math.abs(eyeBasedShift - staleDistanceMinusRadiusShift)).toBeGreaterThan(
+      Math.abs(eyeBasedShift) * 0.5,
+    );
+
+    expect(cam.target[0]).toBeCloseTo(eyeBasedShift, 5);
   });
 });
 
@@ -711,7 +767,12 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
     });
     win.fire('pointermove', { pointerId: 1, clientX: 890, clientY: 890 });
 
-    const radPerPixel = orbitRadPerPixel(FOV_Y_RAD, 15, CANVAS_SIZE.height, RADIUS_MPC);
+    const radPerPixel = orbitRadPerPixel(
+      FOV_Y_RAD,
+      15 - RADIUS_MPC,
+      CANVAS_SIZE.height,
+      RADIUS_MPC,
+    );
     const expectedDYaw = -40 * radPerPixel;
     const expectedDPitch = 40 * radPerPixel;
     const yawOff = Math.abs((cam.yaw - expectedDYaw) / expectedDYaw);
@@ -747,6 +808,7 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
         radiusMpc: RADIUS_MPC,
       }),
       pivotRadiusMpc: () => RADIUS_MPC,
+      pivotAltitudeMpc: () => cam.distance - RADIUS_MPC,
     });
 
     rec.fire('pointerdown', {
@@ -758,7 +820,12 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
     });
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
 
-    const radPerPixel = orbitRadPerPixel(FOV_Y_RAD, 15, CANVAS_SIZE.height, RADIUS_MPC);
+    const radPerPixel = orbitRadPerPixel(
+      FOV_Y_RAD,
+      15 - RADIUS_MPC,
+      CANVAS_SIZE.height,
+      RADIUS_MPC,
+    );
     expect(cam.yaw).toBeCloseTo(-50 * radPerPixel, 10);
   });
 });

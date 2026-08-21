@@ -77,6 +77,24 @@ export type OrbitControlsOptions = {
    */
   pivotRadiusMpc?: () => number | null;
   /**
+   * The camera's live EYE-based altitude (Mpc) above whatever it currently
+   * orbits, or `null` when the pivot has no surface — `eyeAltitudeMpc`, not a
+   * `distance − pivotRadiusMpc` shortcut (see that util's header for why the
+   * shortcut drifts once `cam.target` isn't pinned exactly to the pivot
+   * centre: a pan strafe, or a future zoom-to-cursor). Feeds the pan
+   * gesture's `pxToWorld` conversion and the orbit-drag rate's altitude term
+   * (`orbitRadPerPixel`) — the two READ sites this task migrates off
+   * `pivotRadiusMpc`; the zoom paths (pinch, wheel) keep reading
+   * `pivotRadiusMpc` above, unchanged.
+   *
+   * A getter, not a cached value — same shape as `pivotRadiusMpc`: this
+   * module holds no scene state, so the engine wires it to a live read of
+   * `cam.position` against the focused row's live centre. Omitted (tests, or
+   * no scene) ⇒ both READ sites fall back to their pre-fix flat/raw-distance
+   * formula.
+   */
+  pivotAltitudeMpc?: () => number | null;
+  /**
    * The cursor's current surface hit against the focused body — `{ bodyId,
    * point }` in that body's local lon/lat — or `null` when nothing has ever
    * hit / no body is focused. A getter, not a cached value — mirrors

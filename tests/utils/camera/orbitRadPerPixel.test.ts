@@ -15,6 +15,12 @@
  *
  * Not tested: the exact crossover altitude or a restatement of the formula
  * itself — those would just mirror the implementation.
+ *
+ * `altitudeMpc` is now taken directly (the caller resolves it via
+ * `eyeAltitudeMpc`, not `distance − pivotRadiusMpc`); these fixtures pass
+ * `distance - EARTH_RADIUS_MPC` where a real fixture needs one, reproducing
+ * the pre-migration numbers exactly since target-at-centre is where the two
+ * formulas agree.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -31,7 +37,12 @@ describe('orbitRadPerPixel', () => {
   it('damps well below the flat cap at a low-altitude standoff', () => {
     // 1.02 radii — ~127 km over Earth, well inside the damped regime.
     const distance = EARTH_RADIUS_MPC * 1.02;
-    const rate = orbitRadPerPixel(FOV_Y_RAD, distance, CSS_HEIGHT, EARTH_RADIUS_MPC);
+    const rate = orbitRadPerPixel(
+      FOV_Y_RAD,
+      distance - EARTH_RADIUS_MPC,
+      CSS_HEIGHT,
+      EARTH_RADIUS_MPC,
+    );
 
     // The flat rate at this altitude was ~350x too fast (see docstring); the
     // damped rate should be a small fraction of the cap, not just "less than".
@@ -40,7 +51,12 @@ describe('orbitRadPerPixel', () => {
 
   it('matches the flat cap far from the pivot (deep orbital feel is unchanged)', () => {
     const distance = EARTH_RADIUS_MPC * 1000;
-    const rate = orbitRadPerPixel(FOV_Y_RAD, distance, CSS_HEIGHT, EARTH_RADIUS_MPC);
+    const rate = orbitRadPerPixel(
+      FOV_Y_RAD,
+      distance - EARTH_RADIUS_MPC,
+      CSS_HEIGHT,
+      EARTH_RADIUS_MPC,
+    );
 
     expect(rate).toBeCloseTo(ORBIT_MAX_RAD_PER_PX, 6);
   });
@@ -50,11 +66,16 @@ describe('orbitRadPerPixel', () => {
     expect(rate).toBe(ORBIT_MAX_RAD_PER_PX);
   });
 
+  it('with no altitude (no pivot to measure against), returns the flat cap exactly', () => {
+    const rate = orbitRadPerPixel(FOV_Y_RAD, null, CSS_HEIGHT, EARTH_RADIUS_MPC);
+    expect(rate).toBe(ORBIT_MAX_RAD_PER_PX);
+  });
+
   it('never exceeds the cap across a range of altitudes', () => {
     for (const radii of [1.02, 1.5, 2, 5, 7, 10, 100, 1e6]) {
       const rate = orbitRadPerPixel(
         FOV_Y_RAD,
-        EARTH_RADIUS_MPC * radii,
+        EARTH_RADIUS_MPC * radii - EARTH_RADIUS_MPC,
         CSS_HEIGHT,
         EARTH_RADIUS_MPC,
       );
@@ -64,7 +85,12 @@ describe('orbitRadPerPixel', () => {
 
   it('rate grows monotonically with altitude (drag gets less damped further out)', () => {
     const rates = [1.02, 1.1, 1.5, 2, 4, 7].map((radii) =>
-      orbitRadPerPixel(FOV_Y_RAD, EARTH_RADIUS_MPC * radii, CSS_HEIGHT, EARTH_RADIUS_MPC),
+      orbitRadPerPixel(
+        FOV_Y_RAD,
+        EARTH_RADIUS_MPC * radii - EARTH_RADIUS_MPC,
+        CSS_HEIGHT,
+        EARTH_RADIUS_MPC,
+      ),
     );
     for (let i = 1; i < rates.length; i++) {
       expect(rates[i]!).toBeGreaterThan(rates[i - 1]!);

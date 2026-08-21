@@ -30,6 +30,8 @@ import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotCenterMpc } from '../camera/pivotCenterMpc';
+import { eyeAltitudeMpc } from '../../../utils/camera/eyeAltitudeMpc';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
@@ -400,6 +402,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // The zoom floor's input, read live off the resolved focus row — same
     // derivation the `onZoom` path below uses.
     pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
+
+    // The pan / orbit-drag-rate input (FW-A brief): EYE-based altitude, live
+    // off `cam.position` (the drag register `attachOrbitControls` mutates —
+    // the correct "eye" for an in-progress gesture) and the focused row's
+    // live centre (`pivotCenterMpc`, body via `deriveBodyStates` at the last
+    // rendered sim instant, star via its fixed catalog position). `null`
+    // whenever there's no focused surface, mirroring `pivotRadiusMpc` above.
+    pivotAltitudeMpc: () => {
+      const focusRow = selectFocusRow(store.getState());
+      const radiusMpc = pivotRadiusMpc(focusRow);
+      if (radiusMpc === null) return null;
+      const centerMpc = pivotCenterMpc(focusRow, state.cameraRuntime.lastRenderedSimDays.current);
+      if (centerMpc === null) return null;
+      return eyeAltitudeMpc(cam.position, centerMpc, radiusMpc);
+    },
 
     // Live read of the cursor's last surface hit against the focused body —
     // `orbitControls.ts` feeds this into `nextZoomBiasAnchor` at every wheel

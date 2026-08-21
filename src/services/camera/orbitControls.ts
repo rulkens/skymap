@@ -256,6 +256,11 @@ export function attachOrbitControls(
   // never sees the scene and focus can change while controls stay attached.
   const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
 
+  // The pan and orbit-drag-rate sites below need EYE-based altitude, not
+  // `distance − pivotRadius` — see `OrbitControlsOptions.pivotAltitudeMpc`'s
+  // docblock. Same live-getter shape as `pivotRadius` above.
+  const pivotAltitude = (): number | null => options?.pivotAltitudeMpc?.() ?? null;
+
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
@@ -489,10 +494,12 @@ export function attachOrbitControls(
       // world units along screen-up; the same factor applies to screen-right
       // because pixels are square.  Using clientHeight (CSS pixels) rather
       // than canvas.height (backing-store pixels) keeps the gesture's
-      // physical-feel consistent regardless of devicePixelRatio.
+      // physical-feel consistent regardless of devicePixelRatio. Near a
+      // focused pivot, `cam.distance` is replaced by the EYE-based altitude
+      // (`pivotAltitude()`) — see `OrbitControlsOptions.pivotAltitudeMpc`.
       const cssHeight = canvas.clientHeight || 1;
       const pxToWorld =
-        (2 * (cam.distance - (pivotRadius() ?? 0)) * Math.tan(cam.fovYRad / 2)) / cssHeight;
+        (2 * (pivotAltitude() ?? cam.distance) * Math.tan(cam.fovYRad / 2)) / cssHeight;
 
       // Step 3: build the world-space translation.
       //   - dragging RIGHT  (+dx CSS) → world point should slide RIGHT  →
@@ -577,7 +584,7 @@ export function attachOrbitControls(
     // focused body's surface so the ground under the cursor tracks the drag
     // (see the util's module header for the derivation and its limits).
     const cssHeight = canvas.clientHeight || 1;
-    const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivotRadius());
+    const radPerPixel = orbitRadPerPixel(cam.fovYRad, pivotAltitude(), cssHeight, pivotRadius());
 
     cam.yaw -= dx * radPerPixel;
 

@@ -62,6 +62,9 @@ import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import { poseEyePositionMpc } from '../../../utils/camera/poseEyePositionMpc';
+import { eyeAltitudeMpc } from '../../../utils/camera/eyeAltitudeMpc';
+import { pivotCenterMpc } from '../camera/pivotCenterMpc';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -375,13 +378,41 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // orientation to hold the camera fixed against.
   const surfaceFollow = state.cameraRuntime.surfaceFollow;
   const surfaceFollowFocus = state.selectionRows.focus;
+  // Pose-derived eye — NOT `ctx.cam.position`, which doesn't exist yet this
+  // early in the frame (`deriveFrameContext` hasn't run). `pose.target` alone
+  // is the wrong input for a MOVING focused body: it's the driver's raw
+  // (possibly frame-stale) target, corrected only later by step 3b's
+  // PIVOT-PIN. Rather than duplicate that correction's logic, run it here
+  // too — `applyFocusedBodyPivot` is pure, so an early + a late call is
+  // redundant arithmetic, not a hazard — to get the pose the render eye will
+  // actually use, THEN decode the eye from it (`updatePosition`'s math, via
+  // `poseEyePositionMpc`). A static focus (star, non-orbiting body) is never
+  // pivot-pinned, so this degenerates to `pose` unchanged.
+  const pivotEyePose = applyFocusedBodyPivot(
+    pose,
+    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
+    surfaceFollowFocus,
+    simDays,
+    state.cameraRuntime.clock.followPanOffset,
+  );
+  const poseEyeMpc = poseEyePositionMpc(pivotEyePose, poseBasis);
   // Generic body/star altitude (unlike `surfaceFollowBodyId` below, not
   // restricted to bodies) — feeds `liveIdleTickMs` at the idle-tick
-  // scheduling site further down; declared here so it's in scope there
-  // without threading it through a parameter.
-  const focusedPivotRadiusMpc = pivotRadiusMpc(surfaceFollowFocus);
-  const focusedPivotAltitudeMpc =
-    focusedPivotRadiusMpc === null ? null : pose.distance - focusedPivotRadiusMpc;
+  // scheduling site further down. EYE-based (`eyeAltitudeMpc`), not
+  // `distance − radius`: `pose.target` is not guaranteed to sit at the
+  // pivot's centre this early in the frame (PIVOT-PIN hasn't run yet, and a
+  // pan strafes it regardless of PIVOT-PIN) — see that util's header. The
+  // body case is filled in below, inside the `type === 'body'` branch,
+  // sharing the SAME eyeAltitudeMpc call the surface-follow hysteresis
+  // needs, rather than computing it twice.
+  let focusedPivotAltitudeMpc: number | null =
+    surfaceFollowFocus?.type === 'star'
+      ? eyeAltitudeMpc(
+          poseEyeMpc,
+          surfaceFollowFocus.positionMpc,
+          surfaceFollowFocus.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        )
+      : null;
   const surfaceFollowBodyId = surfaceFollowFocus?.type === 'body' ? surfaceFollowFocus.id : null;
   if (surfaceFollowBodyId !== surfaceFollow.bodyId) {
     // The focused body changed (or was lost) since last frame: the snapshot
@@ -400,11 +431,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const bodyState = deriveBodyStates(simDays).get(surfaceFollowFocus.id);
     if (bodyState) {
       const radiusMpc = surfaceFollowFocus.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      // 'altitude = distance − radius', same idiom as clampDistance.ts's
-      // SURFACE_STANDOFF_RADII: `pose.distance` is already this frame's
-      // camera-to-target distance, and step 3b pins target to the body
-      // centre, so there's no need to wait for `cam.position`.
-      const altitudeMpc = pose.distance - radiusMpc;
+      // EYE-based altitude (`poseEyeMpc` above, already run through the
+      // early PIVOT-PIN preview), not `distance − radius` — see
+      // `eyeAltitudeMpc`'s header. Shared with `focusedPivotAltitudeMpc`,
+      // which `liveIdleTickMs` reads further down — one call serves both.
+      const altitudeMpc = eyeAltitudeMpc(poseEyeMpc, bodyState.positionMpc, radiusMpc);
+      focusedPivotAltitudeMpc = altitudeMpc;
       const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
       surfaceFollowEngagedNow = surfaceFollowEngaged(
         wasSurfaceFollowEngaged,
@@ -590,11 +622,27 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       distance: lastPose.current.distance,
       fovYRad: state.cameraRuntime.projection.fovYRad,
     };
+    // EYE-based altitude (`eyeAltitudeMpc`), not `distance − radius`: at this
+    // point `lastPose.current` already reflects PIVOT-PIN (step 3b, above),
+    // but a pan can still have strafed the target off the pivot's centre —
+    // see that util's header. `ctx.cam.position` doesn't exist yet
+    // (`deriveFrameContext` hasn't run), so the eye is pose-derived here too.
+    const scalePivotRadiusMpc = pivotRadiusMpc(pivotFocus);
+    const scalePivotCenterMpc =
+      scalePivotRadiusMpc !== null ? pivotCenterMpc(pivotFocus, simDays) : null;
+    const scalePivotAltitudeMpc =
+      scalePivotRadiusMpc !== null && scalePivotCenterMpc !== null
+        ? eyeAltitudeMpc(
+            poseEyePositionMpc(lastPose.current, poseBasis),
+            scalePivotCenterMpc,
+            scalePivotRadiusMpc,
+          )
+        : null;
     const scaleInfo = computeScaleInfo({
       cam: snap,
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
-      pivotRadiusMpc: pivotRadiusMpc(pivotFocus),
+      pivotAltitudeMpc: scalePivotAltitudeMpc,
     });
     if (scaleInfo !== null) {
       deps.cb.store.dispatch(engineScaleChanged(scaleInfo));

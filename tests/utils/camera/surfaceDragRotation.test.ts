@@ -186,7 +186,12 @@ describe('surfaceDragRotation', () => {
     expect(solved).not.toBeNull();
     const { yaw, pitch } = solved!;
 
-    const radPerPixel = orbitRadPerPixel(FOV_Y_RAD, distance, CANVAS.height, RADIUS_MPC);
+    const radPerPixel = orbitRadPerPixel(
+      FOV_Y_RAD,
+      distance - RADIUS_MPC,
+      CANVAS.height,
+      RADIUS_MPC,
+    );
     // Same sign convention orbitControls.ts's flat-rate lines use: yaw -= dx*rate, pitch += dy*rate.
     const expectedDYaw = -dxCss * radPerPixel;
     const expectedDPitch = dyCss * radPerPixel;
@@ -228,7 +233,12 @@ describe('surfaceDragRotation', () => {
     expect(solved).not.toBeNull();
     const { yaw, pitch } = solved!;
 
-    const radPerPixel = orbitRadPerPixel(FOV_Y_RAD, distance, CANVAS.height, RADIUS_MPC);
+    const radPerPixel = orbitRadPerPixel(
+      FOV_Y_RAD,
+      distance - RADIUS_MPC,
+      CANVAS.height,
+      RADIUS_MPC,
+    );
     const expectedDYaw = -dxCss * radPerPixel;
     const expectedDPitch = dyCss * radPerPixel;
 

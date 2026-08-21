@@ -109,30 +109,29 @@ describe('deriveSlabs', () => {
     expect(Array.from(Float32Array.from(slabs[1]!.vp))).toEqual(Array.from(cosmoVp));
   });
 
-  it('with a pivot radius, keys the near-field bracket off ALTITUDE, not raw distance', () => {
-    // At a realistic close-approach altitude (50 m, comfortably above the
-    // ~15 m descent floor) the pivot's own radius utterly dominates raw
-    // `cam.distance`, so this is the actual regime the bug lived in: two very
-    // differently sized pivots at the SAME altitude must still get the same
-    // near/far.
+  it('given a pivot altitude, keys the near-field bracket off IT, not raw cam.distance', () => {
+    // A realistic close-approach altitude (50 m, comfortably above the ~15 m
+    // descent floor) is utterly dominated by a body-scale `cam.distance`
+    // (Earth's radius), so this is the actual regime the original bug lived
+    // in. The caller (`frameContext.ts`) now resolves this EYE-based altitude
+    // itself (`eyeAltitudeMpc`) and passes it straight through — `deriveSlabs`
+    // just has to key the bracket off the number it's given, not `cam.distance`.
     const altitudeMpc = 0.05 * SCALE_UNITS.KM_TO_MPC; // 50 m
-    const moonletRadiusMpc = 10 * SCALE_UNITS.KM_TO_MPC;
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
-    const a = deriveSlabs(makeCam(moonletRadiusMpc + altitudeMpc), makeCosmoVp(), moonletRadiusMpc);
-    const b = deriveSlabs(makeCam(earthRadiusMpc + altitudeMpc), makeCosmoVp(), earthRadiusMpc);
-    const relDiff = Math.abs(a[0]!.nearMpc - b[0]!.nearMpc) / a[0]!.nearMpc;
-    expect(relDiff).toBeLessThan(1e-9);
-    expect(a[0]!.farMpc).toBe(b[0]!.farMpc);
+    const distance = earthRadiusMpc + altitudeMpc;
+    const slabs = deriveSlabs(makeCam(distance), makeCosmoVp(), altitudeMpc);
+    const { near, far } = foregroundFrustum(altitudeMpc);
+    expect(slabs[0]!.nearMpc).toBe(near);
+    expect(slabs[0]!.farMpc).toBe(far);
 
-    // Without the fix (keying off raw `cam.distance`), Earth's pivot would get
-    // a near plane over an order of magnitude farther out than the
-    // altitude-keyed one — comfortably past the 50 m altitude, i.e. the
-    // ground-clipping bug.
-    const rawDistanceBracket = foregroundFrustum(earthRadiusMpc + altitudeMpc);
-    expect(rawDistanceBracket.near / b[0]!.nearMpc).toBeGreaterThan(10);
+    // Without the fix (keying off raw `cam.distance`), the near plane would
+    // sit over an order of magnitude farther out than the altitude-keyed one
+    // — comfortably past the 50 m altitude, i.e. the ground-clipping bug.
+    const rawDistanceBracket = foregroundFrustum(distance);
+    expect(rawDistanceBracket.near / near).toBeGreaterThan(10);
   });
 
-  it('with no pivot radius (default), behaves exactly as before — raw distance', () => {
+  it('with no pivot altitude (default), behaves exactly as before — raw distance', () => {
     const distance = 250;
     const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
     const { near, far } = foregroundFrustum(distance);

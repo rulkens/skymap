@@ -28,7 +28,10 @@
  * pixels at distance d.  We measure at the GROUND when the pivot is a body
  * or star — `cam.distance` is to its CENTRE, which saturates at ~1 radius
  * near the surface and would otherwise pin the legend there — and at the
- * pivot itself otherwise (empty space, galaxy, structure).
+ * pivot itself otherwise (empty space, galaxy, structure). The ground
+ * reading is the caller's EYE-based `pivotAltitudeMpc` (`eyeAltitudeMpc`),
+ * not a `distance − radius` shortcut — see that util's header for why the
+ * shortcut drifts once `cam.target` isn't pinned exactly to the pivot centre.
  *
  * Given a `targetPx` (the rough pixel width we'd like the legend to
  * occupy — currently 150 px), we want to render a "nice" round number
@@ -73,34 +76,34 @@ import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';
  *
  * Pure: no I/O, no mutation.
  *
- * @param cam             Camera state (only `distance` and `fovYRad` are read).
- * @param canvasSize      Viewport dimensions in CSS pixels.  Only `height` is
- *                        used by the math; `width` is accepted for symmetry
- *                        and possible future use (e.g. a horizontal-bar
- *                        variant).
- * @param targetPx        Desired legend bar width in CSS pixels.  The
- *                        returned `widthPx` will be ≤ `targetPx` thanks to
- *                        `niceRound`'s floor behaviour.
- * @param pivotRadiusMpc  Physical radius of whatever sits at the orbit pivot,
- *                        or `null` when it has no surface. Required, not
- *                        optional: an optional param lets a call site
- *                        silently fall back to measuring at the pivot.
+ * @param cam               Camera state (only `distance` and `fovYRad` are read).
+ * @param canvasSize        Viewport dimensions in CSS pixels.  Only `height` is
+ *                          used by the math; `width` is accepted for symmetry
+ *                          and possible future use (e.g. a horizontal-bar
+ *                          variant).
+ * @param targetPx          Desired legend bar width in CSS pixels.  The
+ *                          returned `widthPx` will be ≤ `targetPx` thanks to
+ *                          `niceRound`'s floor behaviour.
+ * @param pivotAltitudeMpc  EYE-based altitude above whatever sits at the orbit
+ *                          pivot, or `null` when it has no surface. Required,
+ *                          not optional: an optional param lets a call site
+ *                          silently fall back to measuring at the pivot.
  */
 export function computeScaleInfo({
   cam,
   canvasSize,
   targetPx,
-  pivotRadiusMpc,
+  pivotAltitudeMpc,
 }: {
   cam: ScaleBarCamera;
   canvasSize: { width: number; height: number };
   targetPx: number;
-  pivotRadiusMpc: number | null;
+  pivotAltitudeMpc: number | null;
 }): ScaleInfo | null {
   const viewportCssHeight = canvasSize.height;
   if (viewportCssHeight === 0) return null;
 
-  const effectiveDistance = cam.distance - (pivotRadiusMpc ?? 0);
+  const effectiveDistance = pivotAltitudeMpc ?? cam.distance;
   const pxPerMpc = viewportCssHeight / (2 * effectiveDistance * Math.tan(cam.fovYRad / 2));
   if (!isFinite(pxPerMpc) || pxPerMpc <= 0) return null;
 
