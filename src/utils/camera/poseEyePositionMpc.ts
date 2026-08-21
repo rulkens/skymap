@@ -17,7 +17,10 @@ import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
-export function poseEyePositionMpc(pose: CameraPose, poseBasis: Readonly<Mat3> | undefined): Vec3 {
+export function poseEyePositionMpc(
+  pose: Readonly<CameraPose>,
+  poseBasis: Readonly<Mat3> | undefined,
+): Vec3 {
   const dir = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), poseBasis);
   return [
     pose.target[0] + pose.distance * dir[0],

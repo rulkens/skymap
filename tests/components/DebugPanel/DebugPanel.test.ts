@@ -64,7 +64,13 @@ stubEngineHandleRef.current = {
   debug: {
     earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
     camera: () => null,
-    controls: () => ({ dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 }),
+    controls: () => ({
+      dragMode: null,
+      activePointers: 0,
+      wheelDeltaY: 0,
+      wheelAtMs: 0,
+      wheelDropped: false,
+    }),
   },
 } as unknown as EngineHandle;
 

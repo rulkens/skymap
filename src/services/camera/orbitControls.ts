@@ -96,6 +96,15 @@ import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
  */
 const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
+/**
+ * Gap (ms) above which a wheel tick starts a NEW gesture rather than
+ * continuing the current one. Trackpad/Magic Mouse momentum scroll keeps
+ * delivering ticks tens of ms apart after the fingers lift; 150 ms clears
+ * that inertial spacing while staying well under the pause between two
+ * separate, deliberate scrolls — see the mid-drag guard in `onWheel`.
+ */
+const WHEEL_GESTURE_GAP_MS = 150;
+
 // ─── Controls ─────────────────────────────────────────────────────────────────
 
 /**
@@ -186,12 +195,25 @@ export function attachOrbitControls(
   // in this module needs the last wheel event past the tick that produced it.
   let lastWheelDeltaY = 0;
   let lastWheelAtMs = 0;
+  let lastWheelDropped = false;
+
+  // Gesture-identity tracking for the inertial-momentum guard below.
+  // `wheelGestureTickTs` is DISTINCT from `lastWheelAtMs` (display-only,
+  // 0 ⇒ "never") — it starts at -Infinity so the very first-ever wheel tick
+  // unconditionally begins a new gesture regardless of the process's real
+  // uptime at that moment. `wheelGestureStartedMidDrag` is set only when a
+  // new gesture starts, then carried unchanged across that gesture's
+  // continuing ticks (gap ≤ WHEEL_GESTURE_GAP_MS).
+  let wheelGestureTickTs = -Infinity;
+  let wheelGestureStartedMidDrag = false;
+
   const emitDebugSample = (): void => {
     options?.onDebugSample?.({
       dragMode,
       activePointers: activePointers.size,
       wheelDeltaY: lastWheelDeltaY,
       wheelAtMs: lastWheelAtMs,
+      wheelDropped: lastWheelDropped,
     });
   };
 
@@ -610,9 +632,25 @@ export function attachOrbitControls(
     // radius, the pose actually on screen) all lives engine-side.
     const factor = Math.exp(e.deltaY * 0.001);
 
+    // Inherited-momentum guard: while a drag is active, only apply a wheel
+    // tick whose gesture STARTED during this drag. A momentum stream that
+    // was already coasting before the drag began must not fold into it —
+    // see fw-c-brief.md. A deliberate scroll begun mid-drag still works:
+    // its first tick has a big gap since the prior tick, so it reads as a
+    // new gesture and `wheelGestureStartedMidDrag` becomes true right here.
+    const now = performance.now();
+    if (now - wheelGestureTickTs > WHEEL_GESTURE_GAP_MS) {
+      wheelGestureStartedMidDrag = dragMode !== null;
+    }
+    wheelGestureTickTs = now;
+    const dropped = dragMode !== null && !wheelGestureStartedMidDrag;
+
     lastWheelDeltaY = e.deltaY;
-    lastWheelAtMs = performance.now();
+    lastWheelAtMs = now;
+    lastWheelDropped = dropped;
     emitDebugSample();
+
+    if (dropped) return;
 
     options?.onZoom?.(factor, { x: e.clientX, y: e.clientY });
   };

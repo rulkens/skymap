@@ -12,4 +12,6 @@ export type OrbitControlsDebugSample = {
   readonly wheelDeltaY: number;
   /** `performance.now()` when the last wheel event arrived — a reader computes "ms since". */
   readonly wheelAtMs: number;
+  /** Whether the last wheel tick was applied, or dropped as inherited mid-drag momentum. */
+  readonly wheelDropped: boolean;
 };

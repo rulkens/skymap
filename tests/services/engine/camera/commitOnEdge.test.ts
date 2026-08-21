@@ -98,7 +98,13 @@ function makeEngineState(): {
       surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
       debugZoomLateralMpc: [0, 0, 0] as Vec3,
       debugIdleTickMs: 0,
-      controlsDebug: { dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 },
+      controlsDebug: {
+        dragMode: null,
+        activePointers: 0,
+        wheelDeltaY: 0,
+        wheelAtMs: 0,
+        wheelDropped: false,
+      },
     },
   };
 

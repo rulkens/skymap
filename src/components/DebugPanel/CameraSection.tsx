@@ -35,6 +35,7 @@ const EMPTY_CONTROLS: OrbitControlsDebugSample = {
   activePointers: 0,
   wheelDeltaY: 0,
   wheelAtMs: 0,
+  wheelDropped: false,
 };
 
 type Sample = { camera: CameraDebugSnapshot | null; controls: OrbitControlsDebugSample };
@@ -141,7 +142,7 @@ function CameraSection({ engineHandleRef }: CameraSectionProps): ReactElement {
         value={
           wheelAgoMs === null
             ? '—'
-            : `Δ${controls.wheelDeltaY.toFixed(0)}, ${wheelAgoMs.toFixed(0)} ms ago`
+            : `Δ${controls.wheelDeltaY.toFixed(0)}, ${wheelAgoMs.toFixed(0)} ms ago${controls.wheelDropped ? ' (dropped)' : ''}`
         }
       />
 

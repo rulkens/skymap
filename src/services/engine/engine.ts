@@ -188,7 +188,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // defaults until the first frame / gesture writes a real value.
     debugZoomLateralMpc: [0, 0, 0],
     debugIdleTickMs: 0,
-    controlsDebug: { dragMode: null, activePointers: 0, wheelDeltaY: 0, wheelAtMs: 0 },
+    controlsDebug: {
+      dragMode: null,
+      activePointers: 0,
+      wheelDeltaY: 0,
+      wheelAtMs: 0,
+      wheelDropped: false,
+    },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────

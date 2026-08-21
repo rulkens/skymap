@@ -412,6 +412,79 @@ describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
     expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(Math.exp(0.1), 6);
   });
 
+  it('drops inherited inertial wheel ticks whose gesture started BEFORE the drag', () => {
+    // Momentum stream begins before any pointer contact (ticks 50 ms apart —
+    // well under WHEEL_GESTURE_GAP_MS's 150 ms, so they're one continuous
+    // gesture). Once a drag starts mid-stream, later ticks in that SAME
+    // gesture must be dropped — see fw-c-brief.md.
+    const onZoom = vi.fn<(factor: number, cursorCss: { x: number; y: number }) => void>();
+    const cam = makeCamera();
+    const { canvas, rec } = makeCanvas();
+    let t = 0;
+    const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => t);
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, { onZoom });
+
+    rec.fire('wheel', { deltaY: 10, clientX: 100, clientY: 100, preventDefault: vi.fn() });
+    t = 50;
+    rec.fire('wheel', { deltaY: 10, clientX: 100, clientY: 100, preventDefault: vi.fn() });
+    expect(onZoom).toHaveBeenCalledTimes(2);
+
+    // Drag starts mid-stream.
+    t = 100;
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    // The momentum stream continues into the drag — same gesture (50 ms gap).
+    t = 150;
+    rec.fire('wheel', { deltaY: 10, clientX: 100, clientY: 100, preventDefault: vi.fn() });
+    t = 200;
+    rec.fire('wheel', { deltaY: 10, clientX: 100, clientY: 100, preventDefault: vi.fn() });
+
+    // No new calls — both in-drag ticks were dropped.
+    expect(onZoom).toHaveBeenCalledTimes(2);
+
+    nowSpy.mockRestore();
+  });
+
+  it('applies a fresh wheel gesture begun mid-drag (big gap from the previous tick)', () => {
+    // A deliberate two-finger scroll started WHILE dragging still works: its
+    // first tick has a big gap since the previous wheel tick, so it reads as
+    // a NEW gesture that started during this drag — allowed.
+    const onZoom = vi.fn<(factor: number, cursorCss: { x: number; y: number }) => void>();
+    const cam = makeCamera();
+    const { canvas, rec } = makeCanvas();
+    let t = 0;
+    const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => t);
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, { onZoom });
+
+    // A stray momentum tick well before the drag.
+    rec.fire('wheel', { deltaY: 10, clientX: 100, clientY: 100, preventDefault: vi.fn() });
+    expect(onZoom).toHaveBeenCalledTimes(1);
+
+    t = 300;
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    // Gap from the last wheel tick is 300 ms — exceeds WHEEL_GESTURE_GAP_MS,
+    // so this starts a fresh gesture that began during the active drag.
+    rec.fire('wheel', { deltaY: 20, clientX: 100, clientY: 100, preventDefault: vi.fn() });
+    expect(onZoom).toHaveBeenCalledTimes(2);
+
+    nowSpy.mockRestore();
+  });
+
   it('a pinch step reports the finger-distance ratio and the pinch MIDPOINT as its cursor', () => {
     // The midpoint is the pinch's cursor — the engine anchors the zoom on
     // whatever surface point sits under it, exactly as it does for a wheel.
