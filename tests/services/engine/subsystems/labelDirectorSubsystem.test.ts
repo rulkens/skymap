@@ -4,7 +4,7 @@ import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
-import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
+import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
@@ -35,13 +35,8 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-function makeProducer(
-  id: string,
-  labels: Label2D[],
-  lines: MarkerLine[],
-  awake = false,
-): Label2DProducer {
-  return { id, produceLabels: () => ({ labels, lines, awake }) };
+function makeProducer(id: string, labels: Label2D[], awake = false): Label2DProducer {
+  return { id, produceLabels: () => ({ labels, awake }) };
 }
 
 function makeLabelStub() {
@@ -75,8 +70,7 @@ const SAMPLE_LABEL: Label2D = {
   font: 'cormorant',
   pixelSize: 10,
 };
-const SAMPLE_LINE: MarkerLine = {
-  id: 'sample-line',
+const SAMPLE_LEADER: Label2DLeader = {
   fromWorld: [0, 0, 0],
   toWorld: [1, 0, 0],
   pixelWidth: 1,
@@ -86,11 +80,11 @@ const SAMPLE_LINE: MarkerLine = {
 describe('labelDirectorSubsystem', () => {
   it('no-ops when renderers are not attached', () => {
     const dir = createLabelDirectorSubsystem();
-    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL], [SAMPLE_LINE]));
+    dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
     expect(() => dir.runFrame(makeState(), makeCtx())).not.toThrow();
   });
 
-  it('merges labels and lines from multiple producers', () => {
+  it('merges labels from multiple producers', () => {
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
@@ -99,19 +93,16 @@ describe('labelDirectorSubsystem', () => {
     // Distinct world positions so the two anchors don't collide on screen.
     const a: Label2D = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
     const b: Label2D = { ...SAMPLE_LABEL, id: 'b', worldPos: [0.5, 0, 0] };
-    const la: MarkerLine = { ...SAMPLE_LINE, id: 'la' };
-    const lb: MarkerLine = { ...SAMPLE_LINE, id: 'lb' };
-    dir.registerProducer(makeProducer('pa', [a], [la]));
-    dir.registerProducer(makeProducer('pb', [b], [lb]));
+    dir.registerProducer(makeProducer('pa', [a]));
+    dir.registerProducer(makeProducer('pb', [b]));
 
     // First frame enters at envelope alpha 0; run a second frame past the
     // 300 ms ramp so the flush carries the producers' labels at full alpha.
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(300));
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([a, b]);
-    // Lines without an ownerLabelId survive declutter unconditionally and
-    // bypass the envelope entirely.
-    expect(lineStub.setLines).toHaveBeenLastCalledWith([la, lb]);
+    // Neither label carries a leader, so no lines synthesize.
+    expect(lineStub.setLines).toHaveBeenLastCalledWith([]);
   });
 
   it('skips re-uploading the same merged set across frames once settled', () => {
@@ -119,7 +110,7 @@ describe('labelDirectorSubsystem', () => {
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
-    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL], [SAMPLE_LINE]));
+    dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
 
     // The envelope animates alpha during the first 300 ms, so flushes
     // legitimately repeat while ramping; the signature skip is asserted
@@ -136,17 +127,18 @@ describe('labelDirectorSubsystem', () => {
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
-    dir.registerProducer(makeProducer('p', [], [], true));
+    dir.registerProducer(makeProducer('p', [], true));
 
     expect(dir.runFrame(makeState(), makeCtx())).toBe(true);
   });
 
-  it('re-uploads when a label or line fadeAlpha changes (smooth fade transitions)', () => {
+  it('re-uploads when a label fadeAlpha changes (smooth fade transitions)', () => {
     // Regression test for the youAreHere fade band: the marker line
-    // and label share the same id across the fade band while fadeAlpha
-    // smoothly transitions.  If the signature only watched id+count,
-    // the GPU instance buffer would stay stuck at the first-frame
-    // fadeAlpha and the marker would appear at the wrong opacity.
+    // synthesizes from the label's own fadeAlpha, so a producer that flips
+    // fadeAlpha at a fixed id must re-upload both. If the signature only
+    // watched id+count, the GPU instance buffer would stay stuck at the
+    // first-frame fadeAlpha and the marker would appear at the wrong
+    // opacity.
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
@@ -158,8 +150,7 @@ describe('labelDirectorSubsystem', () => {
     const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
-        labels: [{ ...SAMPLE_LABEL, fadeAlpha: alpha }],
-        lines: [{ ...SAMPLE_LINE, fadeAlpha: alpha }],
+        labels: [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER, fadeAlpha: alpha }],
         awake: alpha > 0 && alpha < 1,
       }),
     };
@@ -185,48 +176,56 @@ describe('labelDirectorSubsystem', () => {
     expect(lineStub.setLines).toHaveBeenCalledTimes(3);
   });
 
-  it('re-uploads a marker line when its endpoints move', () => {
-    // Regression test for the famous-galaxy leader line: `labelLeaderLine`
-    // derives the connector's toWorld from the camera each frame, so the
-    // endpoints move while id and fadeAlpha stay constant.  If the signature
-    // ignored endpoints, the GPU buffer would freeze the connector at
-    // whatever geometry was uploaded the first visible frame.
+  it("re-flushes when a leader's toWorld moves at fixed id and alpha", () => {
+    // Pins the fold's landmine: signatureOf's separate line term collapsed
+    // onto the label term, but must still key the leader's `toWorld` — the
+    // camera-derived leader endpoint (`labelLeaderLine`) moves every frame
+    // the camera does while the label's id, worldPos, and fadeAlpha stay
+    // constant. Without this term the connector would freeze at whatever
+    // geometry was uploaded the first visible frame.
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
 
-    // Unowned line (bypasses the appear/disappear envelope) whose toWorld
-    // the producer moves between frames — the camera-derived connector case.
     let tipY = 0.5;
     const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
-        labels: [],
-        lines: [{ ...SAMPLE_LINE, toWorld: [0, tipY, 0] }],
+        labels: [{ ...SAMPLE_LABEL, leader: { ...SAMPLE_LEADER, toWorld: [0, tipY, 0] } }],
         awake: false,
       }),
     };
     dir.registerProducer(producer);
 
     dir.runFrame(makeState(), makeCtx(0));
-    expect(lineStub.setLines).toHaveBeenCalledTimes(1);
+    dir.runFrame(makeState(), makeCtx(300)); // settle
+    const settledCalls = lineStub.setLines.mock.calls.length;
 
-    dir.runFrame(makeState(), makeCtx(100)); // identical endpoints → skip
-    expect(lineStub.setLines).toHaveBeenCalledTimes(1);
+    dir.runFrame(makeState(), makeCtx(600)); // identical endpoints → skip
+    expect(lineStub.setLines.mock.calls.length).toBe(settledCalls);
 
-    tipY = 0.6; // camera moved: the lifted tip lands elsewhere in world space
-    dir.runFrame(makeState(), makeCtx(200));
-    expect(lineStub.setLines).toHaveBeenCalledTimes(2);
-    expect(lineStub.setLines).toHaveBeenLastCalledWith([{ ...SAMPLE_LINE, toWorld: [0, 0.6, 0] }]);
+    tipY = 0.6; // camera moved: the leader's tip lands elsewhere in world space
+    dir.runFrame(makeState(), makeCtx(900));
+    expect(lineStub.setLines.mock.calls.length).toBe(settledCalls + 1);
+    expect(lineStub.setLines).toHaveBeenLastCalledWith([
+      {
+        id: 'sample-label-anchor',
+        fromWorld: SAMPLE_LEADER.fromWorld,
+        toWorld: [0, 0.6, 0],
+        pixelWidth: SAMPLE_LEADER.pixelWidth,
+        color: SAMPLE_LEADER.color,
+        fadeAlpha: 1,
+      },
+    ]);
   });
 
-  it('re-uploads a label when its lifted anchor moves while its lines are absent', () => {
+  it('re-uploads a label when its lifted anchor moves while it carries no leader', () => {
     // Regression test for the suppressed-line gap: labels are placed by a
     // screen-space lift (`liftedLabelPlacement`), so a lifted label's anchor
     // is camera-derived and moves each frame while id and fadeAlpha stay
-    // constant.  When the lift SUPPRESSES the owned leader line (height ≤ 0)
-    // and no other line moves, nothing but the label's own `worldPos` keys
+    // constant. When the lift SUPPRESSES the leader (height ≤ 0) and no
+    // leader endpoint moves, nothing but the label's own `worldPos` keys
     // the motion — without it in the signature the anchor would freeze and
     // reproject/drift over the glyphs under orbit.
     const dir = createLabelDirectorSubsystem();
@@ -238,8 +237,7 @@ describe('labelDirectorSubsystem', () => {
     const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
-        labels: [{ ...SAMPLE_LABEL, worldPos: [0, anchorY, 0] }],
-        lines: [], // owned line suppressed — no line re-upload masks a stale anchor
+        labels: [{ ...SAMPLE_LABEL, worldPos: [0, anchorY, 0] }], // no leader — suppressed
         awake: false,
       }),
     };
@@ -280,21 +278,50 @@ describe('labelDirectorSubsystem', () => {
     dir.attachRenderers(labelStub as never, lineStub as never);
 
     // Two labels at the same world point (both project to screen centre, so
-    // within the 48 px margin). The higher-prominence one wins; the loser's
-    // anchor line (ownerLabelId) is dropped with it.
+    // within the 48 px margin). The higher-prominence one wins.
     const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100 };
     const small: Label2D = { ...SAMPLE_LABEL, id: 'small', prominencePx: 10 };
-    const bigLine: MarkerLine = { ...SAMPLE_LINE, id: 'big-anchor', ownerLabelId: 'big' };
-    const smallLine: MarkerLine = { ...SAMPLE_LINE, id: 'small-anchor', ownerLabelId: 'small' };
-    dir.registerProducer(makeProducer('pbig', [big], [bigLine]));
-    dir.registerProducer(makeProducer('psmall', [small], [smallLine]));
+    dir.registerProducer(makeProducer('pbig', [big]));
+    dir.registerProducer(makeProducer('psmall', [small]));
 
     // The culled label never enters the envelope (it sits below declutter),
     // so only the winner fades in; settle past the ramp and assert.
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(300));
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([big]);
-    expect(lineStub.setLines).toHaveBeenLastCalledWith([bigLine]);
+  });
+
+  it("drops a culled label's leader with it", () => {
+    // A culled label takes its leader with it BY CONSTRUCTION now that the
+    // leader lives on the label object — declutter no longer needs a
+    // separate line-filter pass.
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100, leader: SAMPLE_LEADER };
+    const small: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'small',
+      prominencePx: 10,
+      leader: SAMPLE_LEADER,
+    };
+    dir.registerProducer(makeProducer('pbig', [big]));
+    dir.registerProducer(makeProducer('psmall', [small]));
+
+    dir.runFrame(makeState(), makeCtx(0));
+    dir.runFrame(makeState(), makeCtx(300));
+    expect(lineStub.setLines).toHaveBeenLastCalledWith([
+      {
+        id: 'big-anchor',
+        fromWorld: SAMPLE_LEADER.fromWorld,
+        toWorld: SAMPLE_LEADER.toWorld,
+        pixelWidth: SAMPLE_LEADER.pixelWidth,
+        color: SAMPLE_LEADER.color,
+        fadeAlpha: 1,
+      },
+    ]);
   });
 
   describe('rect-based declutter geometry', () => {
@@ -322,7 +349,7 @@ describe('labelDirectorSubsystem', () => {
       // and B's y∈[510,540] — visually clear. Neither may be culled.
       const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
       const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], prominencePx: 10 };
-      dir.registerProducer(makeProducer('p', [a, b], []));
+      dir.registerProducer(makeProducer('p', [a, b]));
 
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(300));
@@ -342,7 +369,7 @@ describe('labelDirectorSubsystem', () => {
       // old 48 px point margin, but the 300 px-wide rects overlap by 200 px.
       const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
       const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], prominencePx: 10 };
-      dir.registerProducer(makeProducer('p', [a, b], []));
+      dir.registerProducer(makeProducer('p', [a, b]));
 
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(300));
@@ -359,8 +386,13 @@ describe('labelDirectorSubsystem', () => {
     // On-screen low-prominence label + an off-screen label (|x| > 1 → outside
     // NDC). The off-screen one is accepted unconditionally and never blocks.
     const onScreen: Label2D = { ...SAMPLE_LABEL, id: 'on', prominencePx: 1, worldPos: [0, 0, 0] };
-    const offScreen: Label2D = { ...SAMPLE_LABEL, id: 'off', prominencePx: 999, worldPos: [5, 0, 0] };
-    dir.registerProducer(makeProducer('p', [onScreen, offScreen], []));
+    const offScreen: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'off',
+      prominencePx: 999,
+      worldPos: [5, 0, 0],
+    };
+    dir.registerProducer(makeProducer('p', [onScreen, offScreen]));
 
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(300));
@@ -374,7 +406,7 @@ describe('labelDirectorSubsystem', () => {
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
-    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL], [SAMPLE_LINE]));
+    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
 
     const state = makeState();
     dir.runFrame(state, makeCtx());
@@ -388,18 +420,13 @@ describe('labelDirectorSubsystem', () => {
     dir.attachRenderers(labelStub as never, lineStub as never);
 
     // A label that omits prominencePx collides with a prominent structure
-    // label at the same point → loses the overlap; its stem line drops with
+    // label at the same point → loses the overlap; its leader drops with
     // it.  (The Milky Way "You are here" avoids this fate by declaring
     // prominencePx: Number.MAX_VALUE — see produceMilkyWayLabel.)
-    const anonymous: Label2D = { ...SAMPLE_LABEL, id: 'anonymous' };
-    const anonLine: MarkerLine = {
-      ...SAMPLE_LINE,
-      id: 'anonymous',
-      ownerLabelId: 'anonymous',
-    };
+    const anonymous: Label2D = { ...SAMPLE_LABEL, id: 'anonymous', leader: SAMPLE_LEADER };
     const structure: Label2D = { ...SAMPLE_LABEL, id: 'coma', prominencePx: 200 };
-    dir.registerProducer(makeProducer('anon', [anonymous], [anonLine]));
-    dir.registerProducer(makeProducer('struct', [structure], []));
+    dir.registerProducer(makeProducer('anon', [anonymous]));
+    dir.registerProducer(makeProducer('struct', [structure]));
 
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(300));
@@ -413,7 +440,7 @@ describe('labelDirectorSubsystem', () => {
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
-      dir.registerProducer(makeProducer('p', [SAMPLE_LABEL], []));
+      dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
 
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(150));
@@ -436,7 +463,7 @@ describe('labelDirectorSubsystem', () => {
       dir.attachRenderers(labelStub as never, lineStub as never);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
-      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
+      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
 
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(300)); // fully in
@@ -460,7 +487,7 @@ describe('labelDirectorSubsystem', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
       const dimmed: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.5 };
-      dir.registerProducer(makeProducer('p', [dimmed], []));
+      dir.registerProducer(makeProducer('p', [dimmed]));
 
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(150));
@@ -472,29 +499,65 @@ describe('labelDirectorSubsystem', () => {
       expect(flushes[2]![0]!.fadeAlpha).toBe(0.5); // 0.5 × 1 — producer value survives
     });
 
-    it('routes an owned marker line through its label envelope, including the fade-out tail', () => {
+    it("flushes a leader as a MarkerLine id'd `${label.id}-anchor` at the label's post-envelope alpha", () => {
+      // Also covers the fade-out tail: the remembered label carries its
+      // leader along, so the synthesized line fades out in lock-step
+      // without any separate "owned lines" bookkeeping.
       const dir = createLabelDirectorSubsystem();
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
 
-      const owner: Label2D = { ...SAMPLE_LABEL, id: 'owner' };
-      const stem: MarkerLine = { ...SAMPLE_LINE, id: 'stem', ownerLabelId: 'owner' };
-      let out: { labels: Label2D[]; lines: MarkerLine[] } = { labels: [owner], lines: [stem] };
+      // fadeAlpha: 0.8 so the flushed line's alpha (envelope × producer) is
+      // distinguishable from either factor alone.
+      const owner: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'owner',
+        leader: SAMPLE_LEADER,
+        fadeAlpha: 0.8,
+      };
+      let out: { labels: Label2D[] } = { labels: [owner] };
       dir.registerProducer({ id: 'p', produceLabels: () => ({ ...out, awake: false }) });
 
       dir.runFrame(makeState(), makeCtx(0));
-      dir.runFrame(makeState(), makeCtx(150)); // fade-in midpoint — line follows its label
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([{ ...stem, fadeAlpha: 0.5 }]);
+      dir.runFrame(makeState(), makeCtx(150)); // fade-in midpoint: envelope 0.5 × producer 0.8
+      expect(lineStub.setLines).toHaveBeenLastCalledWith([
+        {
+          id: 'owner-anchor',
+          fromWorld: SAMPLE_LEADER.fromWorld,
+          toWorld: SAMPLE_LEADER.toWorld,
+          pixelWidth: SAMPLE_LEADER.pixelWidth,
+          color: SAMPLE_LEADER.color,
+          fadeAlpha: 0.4,
+        },
+      ]);
 
-      dir.runFrame(makeState(), makeCtx(300)); // settled — line passes through untouched
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([stem]);
+      dir.runFrame(makeState(), makeCtx(300)); // settled — envelope 1 × producer 0.8
+      expect(lineStub.setLines).toHaveBeenLastCalledWith([
+        {
+          id: 'owner-anchor',
+          fromWorld: SAMPLE_LEADER.fromWorld,
+          toWorld: SAMPLE_LEADER.toWorld,
+          pixelWidth: SAMPLE_LEADER.pixelWidth,
+          color: SAMPLE_LEADER.color,
+          fadeAlpha: 0.8,
+        },
+      ]);
 
-      out = { labels: [], lines: [] }; // both disappear together
+      out = { labels: [] }; // label disappears — the fade-out tail takes over
       dir.runFrame(makeState(), makeCtx(450)); // tail begins from alpha 1
-      dir.runFrame(makeState(), makeCtx(600)); // halfway out — remembered line re-emitted
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([{ ...stem, fadeAlpha: 0.5 }]);
-      expect(labelStub.setLabels).toHaveBeenLastCalledWith([{ ...owner, fadeAlpha: 0.5 }]);
+      dir.runFrame(makeState(), makeCtx(600)); // halfway out — remembered leader re-emitted
+      expect(lineStub.setLines).toHaveBeenLastCalledWith([
+        {
+          id: 'owner-anchor',
+          fromWorld: SAMPLE_LEADER.fromWorld,
+          toWorld: SAMPLE_LEADER.toWorld,
+          pixelWidth: SAMPLE_LEADER.pixelWidth,
+          color: SAMPLE_LEADER.color,
+          fadeAlpha: 0.4,
+        },
+      ]);
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([{ ...owner, fadeAlpha: 0.4 }]);
 
       dir.runFrame(makeState(), makeCtx(750)); // tail complete → label and line drop together
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
@@ -509,7 +572,7 @@ describe('labelDirectorSubsystem', () => {
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       // Producer is never awake — every vote below comes from the envelope.
-      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
+      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
 
       expect(dir.runFrame(makeState(), makeCtx(0))).toBe(true); // fade-in in flight
       expect(dir.runFrame(makeState(), makeCtx(150))).toBe(true); // still ramping
@@ -527,7 +590,7 @@ describe('labelDirectorSubsystem', () => {
       dir.attachRenderers(labelStub as never, lineStub as never);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
-      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, lines: [], awake: false }) });
+      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
 
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(300)); // fully in (alpha 1)

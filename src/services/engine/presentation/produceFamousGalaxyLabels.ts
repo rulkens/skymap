@@ -58,7 +58,6 @@
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
@@ -167,7 +166,7 @@ export function produceFamousGalaxyLabels(
   const galaxies = state.data.galaxies;
   const fades = state.subsystems.fades;
   const now = ctx.nowMs;
-  const empty: Label2DProducerOutput = { labels: [], lines: [], awake: false };
+  const empty: Label2DProducerOutput = { labels: [], awake: false };
   // Render while the user wants famous labels OR the `galaxy` fade-out
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
   // popping (mirrors `filamentsLayer.enabled`). Once opacity hits 0 we stop.
@@ -194,7 +193,6 @@ export function produceFamousGalaxyLabels(
   if (inputs.length === 0) return empty;
 
   const labels: Label2D[] = [];
-  const lines: MarkerLine[] = [];
 
   const fovYRad = ctx.fovYRad;
   const [cx, cy, cz] = ctx.drawCamPos;
@@ -287,8 +285,8 @@ export function produceFamousGalaxyLabels(
     // line top derives from the measured text bottom minus the shared
     // padding, and the line vanishes when no room remains. The endpoints are
     // camera-derived per frame — safe because the labelDirector's re-upload
-    // signature keys on each line's `toWorld`, so moved geometry re-uploads
-    // instead of freezing at first-visible distance.
+    // signature keys on the label's `leader.toWorld`, so moved geometry
+    // re-uploads instead of freezing at first-visible distance.
     const placement = liftedLabelPlacement({
       anchorWorldPos: p.worldPos,
       vp,
@@ -302,21 +300,19 @@ export function produceFamousGalaxyLabels(
     // Behind the camera the projection is undefined — nothing visible to label.
     if (placement === null) continue;
 
-    labels.push({ ...label, worldPos: placement.labelWorldPos });
-    if (placement.line !== null) {
-      lines.push({
-        id: `${p.id}-anchor`,
-        fromWorld: placement.line.fromWorld,
-        toWorld: placement.line.toWorld,
-        pixelWidth: style.pixelWidth,
-        color: [...style.lineColor],
-        fadeAlpha: labelAlpha,
-        // Anchor for this label — the director drops the connector if the
-        // label loses an overlap during declutter.
-        ownerLabelId: p.id,
-      });
-    }
+    labels.push({
+      ...label,
+      worldPos: placement.labelWorldPos,
+      ...(placement.line !== null && {
+        leader: {
+          fromWorld: placement.line.fromWorld,
+          toWorld: placement.line.toWorld,
+          pixelWidth: style.pixelWidth,
+          color: [...style.lineColor],
+        },
+      }),
+    });
   }
 
-  return { labels, lines, awake: false };
+  return { labels, awake: false };
 }

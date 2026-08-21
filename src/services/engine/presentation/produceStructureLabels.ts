@@ -75,7 +75,7 @@ export function produceStructureLabels(
   // fade reaches 0 continuously before this skip engages, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
   const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
-  if (surveyFade === 0) return { labels: [], lines: [], awake: false };
+  if (surveyFade === 0) return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
@@ -216,7 +216,7 @@ export function produceStructureLabels(
     });
   }
 
-  // Structures emit no anchor lines (only lifted famous labels do). No
+  // Structures emit no leaders (only lifted famous labels do). No
   // declutter here — the director de-collides across all producers.
-  return { labels, lines: [], awake: false };
+  return { labels, awake: false };
 }

@@ -21,6 +21,8 @@ import type { Vec4 } from '../math/Vec4';
 import type { LabelAlignX } from './LabelAlignX';
 import type { LabelAlignY } from './LabelAlignY';
 import type { FontId } from '../data/FontId';
+import type { Label2DLeader } from './Label2DLeader';
+import type { Label2DLift } from './Label2DLift';
 
 export type Label2D = {
   readonly id: string;
@@ -112,4 +114,16 @@ export type Label2D = {
    * cross-producer declutter.  Absent → treated as 0 (lowest priority).
    */
   readonly prominencePx?: number;
+  /**
+   * Optional anchor line, drawn from the subject dot up to this label. The
+   * director synthesizes one `MarkerLine` per surviving leader-carrying
+   * label at flush time (id `` `${label.id}-anchor` ``) — producers never
+   * push a separate line.
+   */
+  readonly leader?: Label2DLeader;
+  /**
+   * Optional proportional-lift parameters. Minted alongside `leader` but
+   * unread until a later task wires it into the placement math.
+   */
+  readonly lift?: Label2DLift;
 };

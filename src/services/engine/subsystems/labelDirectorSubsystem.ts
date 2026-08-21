@@ -45,10 +45,22 @@
  * envelope MULTIPLIES the producer's own `fadeAlpha` (both continuous,
  * so the product is too; a first appearance therefore stacks with the
  * producer's layer load-in fade, which reads as one smooth reveal).  A
- * disappearing label keeps flushing its remembered last emission (and
- * its remembered owned lines) until the ramp reaches 0 — the text fades
- * out rather than popping — and a reappearance mid-fade reverses from
- * the current alpha, so neither direction jumps.
+ * disappearing label keeps flushing its remembered last emission —
+ * leader included, since the leader now lives on the label — until the
+ * ramp reaches 0 — the text fades out rather than popping — and a
+ * reappearance mid-fade reverses from the current alpha, so neither
+ * direction jumps.
+ *
+ * ### Leader lines are synthesized, not carried
+ *
+ * A `Label2D` may carry an optional `leader` (`Label2DLeader`) instead of
+ * producers emitting a sibling `MarkerLine[]`: since every anchor line is
+ * 1:1 owned by exactly one label, folding it onto the label makes that
+ * ownership structural rather than a string back-reference. `runFrame`
+ * synthesizes one `MarkerLine` per surviving leader-carrying label AFTER
+ * declutter and the envelope have resolved the final label set, so a
+ * culled or faded-out label's leader disappears with it by construction —
+ * no separate line-side bookkeeping needed.
  *
  * ### No layer load-in here — each producer owns its own
  *
@@ -110,8 +122,8 @@ const ENVELOPE_MS = 300;
  * Ramp record for one label id.  `startAlpha`/`target`/`rampStartMs`
  * define the alpha as a closed-form function of the frame clock (see
  * `envelopeAlpha`); flipping direction re-bases `startAlpha` at the
- * evaluated current value so reversals are continuous.  `lastLabel` and
- * `lastOwnedLines` remember the most recent live emission so the
+ * evaluated current value so reversals are continuous.  `lastLabel`
+ * (leader included) remembers the most recent live emission so the
  * fade-out tail has something to draw after the producer stops emitting.
  */
 type EnvelopeEntry = {
@@ -119,7 +131,6 @@ type EnvelopeEntry = {
   target: 0 | 1;
   rampStartMs: number;
   lastLabel: Label2D;
-  lastOwnedLines: MarkerLine[];
 };
 
 export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
@@ -147,9 +158,10 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     producers = [...producers, producer];
   }
 
-  function signatureOf(labels: readonly Label2D[], lines: readonly MarkerLine[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha:worldPos`, per-line
-    // `id:fadeAlpha:toWorld`, joined.
+  function signatureOf(labels: readonly Label2D[]): string {
+    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld]`,
+    // joined. A label's synthesized leader line (see `synthesizeLines`) carries
+    // no state of its own beyond what's keyed here, so one term covers both.
     //
     // Re-upload triggers when ids/count change OR when any entry's
     // `fadeAlpha` differs from the prior frame.  Including `fadeAlpha`
@@ -161,45 +173,70 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // appears at e.g. 0.1 alpha and never brightens as the camera
     // closes in.)
     //
-    // LABEL signatures include `worldPos` because labels are placed by a
-    // screen-space lift (`liftedLabelPlacement`): a lifted label's anchor is
+    // `worldPos` is included because labels are placed by a screen-space
+    // lift (`liftedLabelPlacement`): a lifted label's anchor is
     // camera-derived and moves every frame the camera does, while its `id`
     // and `fadeAlpha` stay constant.  Without this term the anchor would
     // freeze at whatever world point was uploaded the first visible frame,
     // and that fixed point would reproject and DRIFT over the glyphs as the
-    // camera orbits.  A moving owned leader line would mask the gap — its
-    // `toWorld` is in the signature, so a moved line already forces a
-    // re-flush of the whole set — but the lift SUPPRESSES the line when its
-    // height ≤ 0, and then nothing else keys the label's motion.  Keying the
-    // label's own position closes that gap: a camera-derived label
-    // re-uploads on its own, independent of whether its line is present.
-    // The glyph layout in `labelRenderer.setLabels` is cheap and label
-    // counts are tiny, so the per-orbit-frame re-upload this implies is the
-    // intended cost; static-position producers (structures) keep their
-    // positions stable and still benefit from the skip.  Colours are still
-    // excluded — no producer varies a label's colour at fixed id.
+    // camera orbits.  A moving leader would mask the gap — its `toWorld` is
+    // in the signature too, so a moved leader already forces a re-flush of
+    // the whole set — but the lift SUPPRESSES the leader when its height ≤ 0,
+    // and then nothing else keys the label's motion.  Keying the label's own
+    // position closes that gap: a camera-derived label re-uploads on its
+    // own, independent of whether its leader is present.  The glyph layout
+    // in `labelRenderer.setLabels` is cheap and label counts are tiny, so
+    // the per-orbit-frame re-upload this implies is the intended cost;
+    // static-position producers (structures) keep their positions stable
+    // and still benefit from the skip.  Colours are still excluded — no
+    // producer varies a label's colour at fixed id.
     //
-    // LINE signatures include `toWorld` for the same camera-derived reason:
-    // the leader lines (famous-galaxy connectors, the Milky Way stem) lift
-    // in screen space and un-project (`labelLeaderLine`), so their tips move
-    // with the camera while id and fadeAlpha stay constant — without this
-    // term a connector would freeze at whatever geometry was uploaded the
-    // first visible frame.  Endpoints only move while the camera does, so
-    // the skip still fires on every static frame — exactly when it pays.
+    // `leader.toWorld`, when present, is included for the same
+    // camera-derived reason: the leader lines (famous-galaxy connectors,
+    // the Milky Way stem) lift in screen space and un-project
+    // (`labelLeaderLine`), so their tips move with the camera while the
+    // owning label's id and fadeAlpha stay constant — without this term a
+    // connector would freeze at whatever geometry was uploaded the first
+    // visible frame.  Endpoints only move while the camera does, so the
+    // skip still fires on every static frame — exactly when it pays.
     //
     // Edge case: a producer mutating a label's `text` while keeping
     // the same `id` will NOT trigger re-upload.  No current producer
     // does this — the Milky Way label has constant text; structures derive text
     // from the structure name which is part of the id space.
     const lIds = labels
-      .map(
-        (l) => `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}`,
-      )
+      .map((l) => {
+        const leaderKey = l.leader
+          ? `:${l.leader.toWorld[0]},${l.leader.toWorld[1]},${l.leader.toWorld[2]}`
+          : '';
+        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}`;
+      })
       .join('|');
-    const mIds = lines
-      .map((m) => `${m.id}:${m.fadeAlpha ?? 1}:${m.toWorld[0]},${m.toWorld[1]},${m.toWorld[2]}`)
-      .join('|');
-    return `L:${labels.length}:${lIds};M:${lines.length}:${mIds}`;
+    return `L:${labels.length}:${lIds}`;
+  }
+
+  /**
+   * One `MarkerLine` per label carrying a `leader`, synthesized from the
+   * FINAL (post-declutter, post-envelope) label set — the flush contract in
+   * the module header. `id` is `` `${label.id}-anchor` ``; `fadeAlpha` is
+   * the label's own resolved alpha, so the connector fades in lock-step with
+   * its label with no separate multiplication to keep in sync.
+   */
+  function synthesizeLines(labels: readonly Label2D[]): MarkerLine[] {
+    const lines: MarkerLine[] = [];
+    for (const label of labels) {
+      const leader = label.leader;
+      if (!leader) continue;
+      lines.push({
+        id: `${label.id}-anchor`,
+        fromWorld: leader.fromWorld,
+        toWorld: leader.toWorld,
+        pixelWidth: leader.pixelWidth,
+        color: leader.color,
+        fadeAlpha: label.fadeAlpha ?? 1,
+      });
+    }
+    return lines;
   }
 
   /**
@@ -215,15 +252,12 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
    * sweeping past during an orbit yields, instead of culling-then-releasing
    * the structure being inspected (flicker).
    *
-   * A line whose `ownerLabelId` was culled is dropped with its label so no
-   * anchor stem outlives its text; lines without an owner survive.  Returns
-   * fresh arrays in original input order (deterministic, sort-independent).
+   * A culled label's leader is culled with it BY CONSTRUCTION — the leader
+   * lives on the label object, so there is no separate line-side filter to
+   * run.  Returns a fresh array in original input order (deterministic,
+   * sort-independent).
    */
-  function declutter(
-    labels: readonly Label2D[],
-    lines: readonly MarkerLine[],
-    ctx: ReadyFrameContext,
-  ): { labels: Label2D[]; lines: MarkerLine[] } {
+  function declutter(labels: readonly Label2D[], ctx: ReadyFrameContext): Label2D[] {
     type Projected = {
       readonly index: number;
       readonly prominencePx: number;
@@ -310,12 +344,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     }
 
     const acceptedIndices = new Set(accepted.map((c) => c.index));
-    const outLabels = labels.filter((_, i) => acceptedIndices.has(i));
-    const acceptedIds = new Set(outLabels.map((l) => l.id));
-    const outLines = lines.filter(
-      (line) => line.ownerLabelId === undefined || acceptedIds.has(line.ownerLabelId),
-    );
-    return { labels: outLabels, lines: outLines };
+    return labels.filter((_, i) => acceptedIndices.has(i));
   }
 
   /**
@@ -339,9 +368,8 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
    * (on the transition frame, re-based at the evaluated current alpha —
    * re-flipping every frame would freeze the fade at its start); an entry
    * whose →0 ramp completes is deleted.  During the fade-out tail the
-   * remembered last emission is re-flushed so the glyphs fade instead of
-   * popping.  Owned lines inherit their owner's envelope; declutter
-   * already guarantees every surviving owned line's owner is live.
+   * remembered last emission — leader included — is re-flushed so the
+   * glyphs (and any anchor) fade instead of popping.
    *
    * `anyRamping` is true while any entry's ramp is incomplete — the
    * caller keeps the render loop awake so the animation actually draws
@@ -349,25 +377,17 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
    */
   function applyEnvelope(
     labels: readonly Label2D[],
-    lines: readonly MarkerLine[],
     nowMs: number,
-  ): { labels: Label2D[]; lines: MarkerLine[]; anyRamping: boolean } {
+  ): { labels: Label2D[]; anyRamping: boolean } {
     const outLabels: Label2D[] = [];
-    const outLines: MarkerLine[] = [];
-    // Live label id → this frame's envelope alpha, for the lines walk.
-    const liveAlpha = new Map<string, number>();
+    const liveIds = new Set<string>();
 
     for (const label of labels) {
+      liveIds.add(label.id);
       const existing = envelopes.get(label.id);
       let entry: EnvelopeEntry;
       if (!existing) {
-        entry = {
-          startAlpha: 0,
-          target: 1,
-          rampStartMs: nowMs,
-          lastLabel: label,
-          lastOwnedLines: [],
-        };
+        entry = { startAlpha: 0, target: 1, rampStartMs: nowMs, lastLabel: label };
         envelopes.set(label.id, entry);
       } else {
         entry = existing;
@@ -379,23 +399,11 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
           entry.rampStartMs = nowMs;
         }
         entry.lastLabel = label;
-        entry.lastOwnedLines = []; // refilled by the lines walk below
       }
       const alpha = envelopeAlpha(entry, nowMs);
-      liveAlpha.set(label.id, alpha);
       // Fast path: a settled envelope is a no-op — pass the producer's
       // object through so the steady state allocates nothing.
       outLabels.push(alpha === 1 ? label : { ...label, fadeAlpha: (label.fadeAlpha ?? 1) * alpha });
-    }
-
-    for (const line of lines) {
-      if (line.ownerLabelId === undefined) {
-        outLines.push(line); // unowned lines bypass the envelope entirely
-        continue;
-      }
-      const alpha = liveAlpha.get(line.ownerLabelId) ?? 1;
-      envelopes.get(line.ownerLabelId)?.lastOwnedLines.push(line);
-      outLines.push(alpha === 1 ? line : { ...line, fadeAlpha: (line.fadeAlpha ?? 1) * alpha });
     }
 
     // Absent entries: flip to fade-out on the transition frame, re-emit
@@ -403,7 +411,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // (Deleting during for..of over a Map is spec-safe.)
     let anyRamping = false;
     for (const [id, entry] of envelopes) {
-      if (liveAlpha.has(id)) {
+      if (liveIds.has(id)) {
         if (nowMs - entry.rampStartMs < ENVELOPE_MS) anyRamping = true;
         continue;
       }
@@ -427,12 +435,9 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
       anyRamping = true;
       const label = entry.lastLabel;
       outLabels.push(alpha === 1 ? label : { ...label, fadeAlpha: (label.fadeAlpha ?? 1) * alpha });
-      for (const line of entry.lastOwnedLines) {
-        outLines.push(alpha === 1 ? line : { ...line, fadeAlpha: (line.fadeAlpha ?? 1) * alpha });
-      }
     }
 
-    return { labels: outLabels, lines: outLines, anyRamping };
+    return { labels: outLabels, anyRamping };
   }
 
   function runFrame(state: EngineState, ctx: ReadyFrameContext): boolean {
@@ -441,31 +446,30 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // Collect outputs.  Producers are pure of state, so we just call
     // each and concatenate.  The director does NOT cache per-producer
     // output between frames — change detection happens on the merged
-    // arrays via signature.
+    // array via signature.
     const mergedLabels: Label2D[] = [];
-    const mergedLines: MarkerLine[] = [];
     let anyAwake = false;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       for (const l of out.labels) mergedLabels.push(l);
-      for (const m of out.lines) mergedLines.push(m);
       if (out.awake) anyAwake = true;
     }
 
     // Cross-producer declutter — producers emit every candidate (no internal
-    // declutter); the director de-collides them together here.
-    const decluttered = declutter(mergedLabels, mergedLines, ctx);
+    // declutter); the director de-collides them together here. A culled
+    // label's leader is culled with it by construction.
+    const decluttered = declutter(mergedLabels, ctx);
 
     // Appear/disappear envelope over the decluttered result — animated
     // alphas feed `signatureOf` below, so mid-ramp frames re-upload and
     // settled frames skip, with no extra bookkeeping.
-    const { labels, lines, anyRamping } = applyEnvelope(
-      decluttered.labels,
-      decluttered.lines,
-      ctx.nowMs,
-    );
+    const { labels, anyRamping } = applyEnvelope(decluttered, ctx.nowMs);
 
-    const sig = signatureOf(labels, lines);
+    // Flush contract: one MarkerLine per surviving leader-carrying label,
+    // derived from the FINAL (post-declutter, post-envelope) set.
+    const lines = synthesizeLines(labels);
+
+    const sig = signatureOf(labels);
     if (sig !== prevSignature) {
       labelRenderer.setLabels(labels);
       lineRenderer.setLines(lines);
