@@ -45,6 +45,18 @@ vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
   deriveSourceMasks: vi.fn(() => ({ draw: 0, pick: 0 })),
 }));
 
+// The GPU dispatch and pick-overlay composite are real WebGPU calls against
+// `deps.device`/`deps.context` — no JSDOM stub can service them. Mocked out
+// so the wake-fold test below can drive `runFrame` all the way through a
+// READY frame (past the two label directors) without a real device. Neither
+// module is otherwise under test here.
+vi.mock('../../../../src/services/engine/frame/renderFrame', () => ({
+  renderFrame: vi.fn(),
+}));
+vi.mock('../../../../src/services/engine/frame/drawPickDebugOverlay', () => ({
+  drawPickDebugOverlay: vi.fn(),
+}));
+
 // resizeCanvasToDisplay reads window.devicePixelRatio; in this node test
 // environment window is undefined. The cam-bearing regression fixtures
 // reach the resize block (non-null cam), so stub it to a no-op false —
@@ -104,6 +116,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -871,5 +884,68 @@ describe('runFrame — engineScaleChanged dispatch', () => {
       return action?.type === engineScaleChanged.type;
     });
     expect(scaleCalls).toHaveLength(0);
+  });
+});
+
+describe('runFrame — the label-director wake fold', () => {
+  /**
+   * A fully READY fixture — every `isEngineReady` field non-null — so the
+   * frame body runs all the way past the two label-director `runFrame`
+   * calls (spec §8) instead of bailing at the `ctx.isReady` guard the other
+   * fixtures in this file rely on. Every per-frame planner BETWEEN the ready
+   * gate and the label directors (hiResFamous, the disk-planner walk, Earth
+   * tiles) is left null so its block is skipped by its own guard — none of
+   * their machinery is what this test pins. `renderFrame`/
+   * `drawPickDebugOverlay` are mocked at module scope (top of file) so the
+   * GPU dispatch past the directors never touches the fake `device`.
+   */
+  function makeReadyState(
+    cosmoRunFrame: () => boolean,
+    foregroundRunFrame: () => boolean,
+  ): EngineState {
+    const base = makeCamState();
+    return {
+      ...base,
+      settings: { ...base.settings, flow: { enabled: false } },
+      data: { bodies: { earth: null } },
+      selectionRows: { focus: null },
+      gpu: {
+        ...base.gpu,
+        galaxyPointRenderer: {},
+        galaxyPickRenderer: {},
+        renderTargets: { reconcile: vi.fn() },
+        compositor: {},
+        starCatalogRenderer: null,
+        structureMarkerRenderer: null,
+      },
+      subsystems: {
+        ...base.subsystems,
+        texturedDisks: { hasInFlightWork: () => false },
+        proceduralDisks: null,
+        diskPlannerWalk: null,
+        hiResFamous: null,
+        earthTiles: null,
+        structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
+        fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
+        labelDirector: { runFrame: vi.fn(cosmoRunFrame) },
+        foregroundLabelDirector: { runFrame: vi.fn(foregroundRunFrame) },
+      },
+    } as unknown as EngineState;
+  }
+
+  it("a director voting true does not prevent its sibling's flush", () => {
+    // spec §12's short-circuit trap: `a() || b()` would never call `b()`
+    // once `a()` returns true, silently dropping the second director's GPU
+    // flush the moment the first one votes to keep animating.
+    const state = makeReadyState(
+      () => true, // COSMO votes true — must NOT short-circuit the call below
+      () => false,
+    );
+    const deps = makeCamDeps(state);
+
+    runFrame(state, deps, 0);
+
+    expect(state.subsystems.labelDirector.runFrame).toHaveBeenCalledTimes(1);
+    expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
   });
 });

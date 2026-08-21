@@ -31,6 +31,9 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { cosmoLabelProjection } from './frame/cosmoLabelProjection';
+import { near0LabelProjection } from './frame/near0LabelProjection';
+import { NEAR0 } from './frame/slabs';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../utils/camera/foregroundFrustum';
 import type { Label2DDirectorConfig } from '../../@types/engine/subsystems/Label2DDirectorConfig';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
@@ -87,6 +90,44 @@ export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
   declutter: { mode: 'bboxOverlap', padPx: 8 },
   envelope: { mode: 'smoothstepRamp', durationMs: 300 },
   lift: null,
+};
+
+// Screen px: sized a little above the clamped caption height
+// (`FAMOUS_LABEL_STYLE.maxPixelSize`) so names de-collide rather than stack.
+// Moved verbatim from `foregroundLabelsLayer.ts` (spec §4.3) — the layer
+// keeps its own copy until Task 5 collapses its private path.
+const STAR_CAPTION_MIN_SEPARATION_PX = 48;
+
+// Envelope time constant (ms): ~95% of the gap closed within 3·tau (300 ms), the
+// COSMO director's smoothstep ramp duration. Exponential rather than
+// smoothstep because this target moves continuously with the distance band.
+const CAPTION_ENVELOPE_TAU_MS = 100;
+
+// Settle snap: landing EXACTLY on the target is load-bearing — a settled caption
+// compares equal frame-to-frame, so it stops waking the render loop.
+const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
+
+/**
+ * The NEAR0 slab's `Label2DDirector` config (spec §4.3). `screenSeparation`/
+ * 48 px is cheaper than COSMO's measured-rect overlap — appropriate for
+ * scene-body/star/constellation captions, where text metrics aren't the
+ * cull's business. `exponentialApproach`/τ 100 ms/ε 0.005 tracks a
+ * continuously-moving distance-band target rather than a binary
+ * appear/disappear cliff — see `applyExponentialEnvelope`'s docblock for why
+ * that needs a different curve than COSMO's. `lift` clamps a lifted anchor
+ * inside NEAR0's own far plane, at the same 1%-inside margin the foreground
+ * layer's leader-line math has always used.
+ */
+export const FOREGROUND_LABEL_DIRECTOR: Label2DDirectorConfig = {
+  id: 'foreground-labels',
+  project: near0LabelProjection,
+  declutter: { mode: 'screenSeparation', minSeparationPx: STAR_CAPTION_MIN_SEPARATION_PX },
+  envelope: {
+    mode: 'exponentialApproach',
+    tauMs: CAPTION_ENVELOPE_TAU_MS,
+    settleEps: CAPTION_ENVELOPE_SETTLE_EPS,
+  },
+  lift: { slab: NEAR0, farClampFraction: NEAR0_FAR_CLAMP_FRACTION },
 };
 
 /**
@@ -427,6 +468,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // registered just after this literal).  Renderers are wired in during
       // initGpu so the director sees everything before the first frame.
       labelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
+
+      // ── Foreground label director ──────────────────────────────────
+      // The NEAR0 sibling of `labelDirector` — same factory, `screenSeparation`
+      // + `exponentialApproach` + lift arms instead. Constructed, attached, and
+      // polled every frame from this task onward, but carries zero producers
+      // until Task 4 extracts them from `foregroundLabelsLayer`; its flush is
+      // an empty set in the meantime, which is harmless because the layer's
+      // own `setLabels`/`setLines` calls still run after it in `draw`.
+      foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
       // ── Cluster focus-mode subsystem ─────────────────────────────
       // Selection-driven: `runFrame` calls `update(selectedStructure, nowMs)` to
@@ -804,6 +854,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // 3. Walk every other subsystem (order-independent past here).
     state.subsystems.biasCorrection.destroy();
     state.subsystems.labelDirector.destroy();
+    state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to
     // galaxyAtlas's eviction handler (destroy it first); hiResFamous

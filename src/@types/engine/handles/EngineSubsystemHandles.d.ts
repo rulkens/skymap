@@ -127,6 +127,19 @@ export type EngineSubsystemHandles = {
    */
   labelDirector: Label2DDirector;
   /**
+   * The NEAR0 sibling of `labelDirector` — same `createLabel2DDirector`
+   * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
+   * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
+   * in `engine.ts`). Attaches `foregroundLabelRenderer` +
+   * `foregroundMarkerLineRenderer` at the same two sites `labelDirector`
+   * attaches its own pair. Constructed and polled every frame from the
+   * NEAR0-arms task onward; carries zero producers until the producer
+   * extraction task moves them out of `foregroundLabelsLayer`, so its flush
+   * is an empty set in the interim (harmless — the layer's own `setLabels`/
+   * `setLines` calls still run after it, until that task removes them).
+   */
+  foregroundLabelDirector: Label2DDirector;
+  /**
    * Cluster focus-mode subsystem — drives the "dim non-members of the
    * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
    * `update(selectedStructure, nowMs)` each frame and threads

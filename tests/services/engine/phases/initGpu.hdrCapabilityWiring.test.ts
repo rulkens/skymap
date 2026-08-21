@@ -363,6 +363,7 @@ function makeState(): EngineState {
       filamentRenderer: null,
       labelRenderer: null,
       foregroundLabelRenderer: null,
+      foregroundMarkerLineRenderer: null,
       markerLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
@@ -401,6 +402,11 @@ function makeState(): EngineState {
         setMode: vi.fn().mockResolvedValue(undefined),
       },
       labelDirector: {
+        attachRenderers: vi.fn(),
+        registerProducer: vi.fn(),
+        runFrame: vi.fn(),
+      },
+      foregroundLabelDirector: {
         attachRenderers: vi.fn(),
         registerProducer: vi.fn(),
         runFrame: vi.fn(),

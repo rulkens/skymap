@@ -92,4 +92,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     state.gpu.labelRenderer!,
     state.gpu.markerLineRenderer!,
   );
+  // NEAR0 sibling of the attach above — same two-renderer contract, its own
+  // renderer pair.
+  state.subsystems.foregroundLabelDirector.attachRenderers(
+    state.gpu.foregroundLabelRenderer!,
+    state.gpu.foregroundMarkerLineRenderer!,
+  );
 }

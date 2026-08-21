@@ -68,6 +68,9 @@ function makeState(): EngineState {
       labelDirector: {
         attachRenderers: vi.fn(),
       },
+      foregroundLabelDirector: {
+        attachRenderers: vi.fn(),
+      },
     },
   } as unknown as EngineState;
 }

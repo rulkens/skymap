@@ -53,4 +53,10 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
     state.gpu.labelRenderer!,
     state.gpu.markerLineRenderer!,
   );
+  // NEAR0 sibling — `foregroundLabelRenderer`/`foregroundMarkerLineRenderer`
+  // are also `rebuildOnSwapFormat` rows above, so they need the same re-attach.
+  state.subsystems.foregroundLabelDirector.attachRenderers(
+    state.gpu.foregroundLabelRenderer!,
+    state.gpu.foregroundMarkerLineRenderer!,
+  );
 }

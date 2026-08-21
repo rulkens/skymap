@@ -638,13 +638,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Label director per-frame update ──────────────────────────────────────
   //
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
-  // `markerLineRenderer.setLines` are uploaded before `renderFrame` reads those
-  // buffers. The director polls every registered `Label2DProducer` (milkyWayLabel,
-  // structures, ...), merges, change-detects via signature hash, and flushes
-  // once; it null-checks its renderers, so this is safe before the atlas load
-  // completes. The return value is the label wake vote, folded into the
-  // keep-ticking bag below rather than the director calling requestRender.
-  const labelsAnimating = state.subsystems.labelDirector.runFrame(state, ctx);
+  // `markerLineRenderer.setLines` (and the NEAR0 pair) are uploaded before
+  // `renderFrame` reads those buffers. Each director polls its own registered
+  // `Label2DProducer`s, merges, change-detects via signature hash, and flushes
+  // once; both null-check their renderers, so this is safe before the atlas
+  // load completes.
+  //
+  // Three statements, not `a() || b()`: each `runFrame` call FLUSHES GPU
+  // buffers as a side effect, and `||` short-circuits — the inline form
+  // would skip the second director's flush the moment the first votes true.
+  const cosmoLabelsAnimating = state.subsystems.labelDirector.runFrame(state, ctx);
+  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
+  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating;
 
   // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
   //

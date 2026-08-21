@@ -1,12 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mat4 } from 'wgpu-matrix';
+import { mat4, mat4d } from 'wgpu-matrix';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
-import { COSMO_LABEL_DIRECTOR } from '../../../../src/services/engine/engine';
+import {
+  COSMO_LABEL_DIRECTOR,
+  FOREGROUND_LABEL_DIRECTOR,
+} from '../../../../src/services/engine/engine';
+import { cosmoLabelProjection } from '../../../../src/services/engine/frame/cosmoLabelProjection';
+import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
+import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsystems/Label2DDirectorConfig';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(): EngineState {
@@ -31,6 +38,29 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
   return {
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
+    canvasSize: { width: 1000, height: 1000 },
+    nowMs,
+  } as unknown as ReadyFrameContext;
+}
+
+// The FOREGROUND_LABEL_DIRECTOR's `project` (`near0LabelProjection`) rebases
+// `ctx.slabs[NEAR0].vp` about `ctx.drawCamPos` in f64. An identity slab vp +
+// zero cam position rebases to identity too, so this ctx behaves exactly
+// like `makeCtx`'s COSMO one for screen math — same [x,y,0] → screen mapping.
+const NEAR0_SLAB: Slab = {
+  index: NEAR0,
+  nearMpc: 1e-6,
+  farMpc: 1,
+  vp: mat4d.identity() as Float64Array,
+  originRelative: true,
+  precision: 'f64',
+  reversedZ: true,
+};
+
+function makeNear0Ctx(nowMs = 0): ReadyFrameContext {
+  return {
+    drawCamPos: [0, 0, 0],
+    slabs: [NEAR0_SLAB],
     canvasSize: { width: 1000, height: 1000 },
     nowMs,
   } as unknown as ReadyFrameContext;
@@ -656,6 +686,130 @@ describe('label2DDirector', () => {
       dir.runFrame(makeState(), makeCtx(0));
       dir.runFrame(makeState(), makeCtx(300));
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([first]);
+    });
+  });
+
+  describe('the NEAR0 arms (spec §4.6, §4.4)', () => {
+    it('exponentialApproach seeds a new id AT its target, not at 0', () => {
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      // No `lift` field — isolates the envelope seed from the lift stage.
+      const caption: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.4 };
+      dir.registerProducer(makeProducer('p', [caption]));
+
+      // A single frame: unlike smoothstepRamp's 0→1 ramp, a new id seeds AT
+      // its target, so the very first flush already carries 0.4 — no second
+      // frame needed to "settle".
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([caption]);
+    });
+
+    it('exponentialApproach drops an absent id immediately, with no remembered-emission tail', () => {
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      let labels: Label2D[] = [{ ...SAMPLE_LABEL, fadeAlpha: 0.4 }];
+      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([labels[0]]);
+
+      // The producer stops emitting — unlike COSMO's smoothstepRamp, there is
+      // no remembered-emission tail: the very next frame flushes empty.
+      labels = [];
+      dir.runFrame(makeState(), makeNear0Ctx(50));
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
+    });
+
+    it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {
+      // An ad hoc config pairing the NEW screenSeparation declutter arm with
+      // the UNCHANGED smoothstepRamp envelope — not one of the two real
+      // director instances, but a deliberate cross so this test exercises
+      // this task's new declutter code while pinning that smoothstepRamp's
+      // absence rule did NOT get swapped for exponentialApproach's (spec
+      // §12: the two rules are the most plausible port error, and swapping
+      // them is invisible in a settled frame).
+      const config: Label2DDirectorConfig = {
+        id: 'test-smoothstep-mirror',
+        project: cosmoLabelProjection,
+        declutter: { mode: 'screenSeparation', minSeparationPx: 48 },
+        envelope: { mode: 'smoothstepRamp', durationMs: 300 },
+        lift: null,
+      };
+      const dir = createLabel2DDirector(config);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      let labels: Label2D[] = [SAMPLE_LABEL];
+      dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
+
+      dir.runFrame(makeState(), makeCtx(0));
+      dir.runFrame(makeState(), makeCtx(300)); // fully in
+
+      labels = []; // producer stops emitting — the envelope's tail takes over
+      dir.runFrame(makeState(), makeCtx(400)); // transition frame: tail starts from alpha 1
+      dir.runFrame(makeState(), makeCtx(550)); // halfway out — remembered label at 0.5
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([{ ...SAMPLE_LABEL, fadeAlpha: 0.5 }]);
+
+      dir.runFrame(makeState(), makeCtx(700)); // ramp complete → dropped
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
+    });
+
+    it('the lift stage runs after the envelope, over survivors only', () => {
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      // Same world point (screen separation 0, well inside the 48 px margin)
+      // — declutter culls one. Both carry `lift`, so if the lift stage ran
+      // over the PRE-declutter set, `measure` would be called for both.
+      const big: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'big',
+        prominencePx: 100,
+        fadeAlpha: 1,
+        lift: { subjectSizePx: 10 },
+      };
+      const small: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'small',
+        prominencePx: 10,
+        fadeAlpha: 1,
+        lift: { subjectSizePx: 10 },
+      };
+      dir.registerProducer(makeProducer('p', [big, small]));
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+
+      // `measure` is called ONLY inside the lift stage for this director
+      // (screenSeparation's declutter arm never reads it) — one call proves
+      // the culled label never reached the lift.
+      expect(labelStub.measure).toHaveBeenCalledTimes(1);
+      expect(labelStub.measure).toHaveBeenCalledWith(big);
+    });
+
+    it('a label without a lift field is emitted unlifted (the constellation-shaped case, by data absence)', () => {
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      // No `lift` field, no `kind` discriminant anywhere in sight — the
+      // constellation caption's shape, not its label.
+      const constellationLike: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 1 };
+      dir.registerProducer(makeProducer('p', [constellationLike]));
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+
+      expect(labelStub.measure).not.toHaveBeenCalled();
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([constellationLike]);
     });
   });
 });

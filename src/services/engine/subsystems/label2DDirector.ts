@@ -2,16 +2,17 @@
  * label2DDirector — owns the labelRenderer + markerLineRenderer
  * setLabels/setLines calls, polling registered Label2DProducers each frame
  * and flushing the merged result once. `createLabel2DDirector(config)` mints
- * one instance per slab (COSMO today; NEAR0 once its arms land) —
- * `Label2DDirectorConfig` supplies the projection, declutter policy, and
- * envelope policy, so a second instance is data, not a second code path.
+ * one instance per slab (COSMO and NEAR0) — `Label2DDirectorConfig` supplies
+ * the projection, declutter policy, envelope policy, and lift policy, so a
+ * second instance is data, not a second code path.
  *
- * ### Declutter and envelope are policy arms
+ * ### Declutter, envelope, and lift are policy arms
  *
  * `config.declutter.mode` / `config.envelope.mode` select which stage
- * implementation runs. Only `bboxOverlap` and `smoothstepRamp` (COSMO's
- * arms) are implemented; `screenSeparation` and `exponentialApproach`
- * throw until NEAR0's arms land.
+ * implementation runs: `bboxOverlap`/`smoothstepRamp` (COSMO) or
+ * `screenSeparation`/`exponentialApproach` (NEAR0). `config.lift`, when
+ * non-null, runs a third stage after the envelope — see its own docblock
+ * for why it is gated on data absence (`label.lift`) rather than a mode.
  *
  * ### Why a director?
  *
@@ -48,19 +49,17 @@
  * and mutable state in what are today pure per-frame readers, times
  * three.)
  *
- * Each decluttered label id gets a ramp record; `envelopeAlpha` (below)
- * resolves it per `config.envelope.mode` — COSMO's `smoothstepRamp` is
- * 'startAlpha + (target − startAlpha) · smoothstep(elapsed/durationMs)'
- * — a pure function of `ctx.nowMs`, never an accumulated per-frame
- * delta, so a stepped recorder clock replays identical fades.  The
- * envelope MULTIPLIES the producer's own `fadeAlpha` (both continuous,
- * so the product is too; a first appearance therefore stacks with the
- * producer's layer load-in fade, which reads as one smooth reveal).  A
- * disappearing label keeps flushing its remembered last emission —
- * leader included, since the leader now lives on the label — until the
- * ramp reaches 0 — the text fades out rather than popping — and a
- * reappearance mid-fade reverses from the current alpha, so neither
- * direction jumps.
+ * Each decluttered label id gets a ramp/filter record in the arm's own map;
+ * `applySmoothstepEnvelope` (COSMO) and `applyExponentialEnvelope` (NEAR0)
+ * resolve it per `config.envelope.mode` — see their docblocks for the three
+ * axes they differ on (target shape, seed value, absence rule; spec §4.6).
+ * Both are pure functions of `ctx.nowMs` given their entry's state, so a
+ * stepped recorder clock replays identical fades. COSMO's envelope
+ * MULTIPLIES the producer's own `fadeAlpha` (both continuous, so the
+ * product is too; a first appearance therefore stacks with the producer's
+ * layer load-in fade, which reads as one smooth reveal) and keeps flushing
+ * a disappearing label's remembered last emission — leader included, since
+ * the leader now lives on the label — until the ramp reaches 0.
  *
  * ### Leader lines are synthesized, not carried
  *
@@ -107,16 +106,21 @@ import {
   LABEL_MAX_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
 } from '../../gpu/renderers/labels/labelRenderer';
+import { clampVec3Length } from '../../../utils/math/clampVec3Length';
+import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
+import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
+import { declutterByScreenSeparation } from '../../../utils/scene/declutterByScreenSeparation';
 
 /**
- * Ramp record for one label id.  `startAlpha`/`target`/`rampStartMs`
- * define the alpha as a closed-form function of the frame clock (see
- * `envelopeAlpha`); flipping direction re-bases `startAlpha` at the
- * evaluated current value so reversals are continuous.  `lastLabel`
- * (leader included) remembers the most recent live emission so the
- * fade-out tail has something to draw after the producer stops emitting.
+ * Ramp record for one label id under `smoothstepRamp` (COSMO).
+ * `startAlpha`/`target`/`rampStartMs` define the alpha as a closed-form
+ * function of the frame clock (see `smoothstepAlpha`); flipping direction
+ * re-bases `startAlpha` at the evaluated current value so reversals are
+ * continuous.  `lastLabel` (leader included) remembers the most recent live
+ * emission so the fade-out tail has something to draw after the producer
+ * stops emitting — see `applySmoothstepEnvelope`'s absence rule.
  */
-type EnvelopeEntry = {
+type SmoothstepEnvelopeEntry = {
   startAlpha: number;
   target: 0 | 1;
   rampStartMs: number;
@@ -124,9 +128,22 @@ type EnvelopeEntry = {
 };
 
 /**
+ * Filter state for one label id under `exponentialApproach` (NEAR0). Unlike
+ * the closed-form smoothstep entry, `alpha` is the IIR filter's running
+ * value and `evalMs` is when it was last advanced — evaluating twice at the
+ * same `nowMs` is a no-op (`dt` is 0 the second time). No `lastLabel`: this
+ * arm drops an absent id immediately rather than remembering an emission to
+ * fade out — see `applyExponentialEnvelope`'s absence rule (spec §4.6).
+ */
+type ExponentialEnvelopeEntry = {
+  alpha: number;
+  evalMs: number;
+};
+
+/**
  * One label's screen-space anchor, resolved ONCE per frame by `projectLabels`
- * and shared by whichever declutter arm runs (and, later, the lift stage) —
- * nothing downstream re-does the matrix multiply. `screenPx` is set whenever
+ * and shared by whichever declutter arm runs — nothing downstream re-does
+ * the matrix multiply. `screenPx` is set whenever
  * `clipW > 0` regardless of `onScreen`, matching what the vertex shader would
  * draw for an off-NDC-range anchor.
  */
@@ -255,6 +272,39 @@ function declutterByBboxOverlap(
   return labels.filter((_, i) => acceptedIndices.has(i));
 }
 
+/**
+ * `screenSeparation` declutter arm (NEAR0). Cheaper than `bboxOverlap` —
+ * anchor-point separation rather than measured text rects, appropriate where
+ * text metrics aren't the cull's business (moved from
+ * `foregroundLabelsLayer.ts:261-283`, spec §4.5). A label with no
+ * `screenPx` (behind the camera) bypasses the cull unconditionally, exactly
+ * as `declutterByBboxOverlap` never blocks on an off-screen anchor; the pure
+ * `declutterByScreenSeparation` util does the priority-sorted greedy accept
+ * over everything else. Returns a fresh array in original input order.
+ */
+function declutterByScreenSeparationArm(
+  labels: readonly Label2D[],
+  projected: readonly Label2DProjected[],
+  minSeparationPx: number,
+): Label2D[] {
+  const candidateIdx: number[] = [];
+  const candidates: { screenPx: Vec2; priorityPx: number }[] = [];
+  const accepted = new Set<number>();
+  for (let i = 0; i < labels.length; i++) {
+    const p = projected[i]!;
+    if (!p.screenPx) {
+      accepted.add(i);
+      continue;
+    }
+    candidateIdx.push(i);
+    candidates.push({ screenPx: p.screenPx, priorityPx: labels[i]!.prominencePx ?? 0 });
+  }
+  for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
+    accepted.add(candidateIdx[k]!);
+  }
+  return labels.filter((_, i) => accepted.has(i));
+}
+
 export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
@@ -263,10 +313,16 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   // first frame.  Empty string is a valid signature (no labels, no lines)
   // and is distinct from null.
   let prevSignature: string | null = null;
-  // The director's one piece of cross-frame animation state: label id →
-  // ramp record.  Everything else in the frame body is derived fresh;
-  // this map is what lets a label that STOPPED being emitted keep fading.
-  const envelopes = new Map<string, EnvelopeEntry>();
+  // The director's cross-frame animation state: label id → ramp/filter
+  // record, one map per envelope arm.  Only one is ever populated — which
+  // arm runs is fixed by `config.envelope.mode` for this instance's whole
+  // lifetime — but both exist so `applySmoothstepEnvelope`/
+  // `applyExponentialEnvelope` stay simple typed functions rather than a
+  // shared map cast per call.  Everything else in the frame body is derived
+  // fresh; these maps are what let a label that STOPPED being emitted keep
+  // fading (smoothstep) or drop immediately (exponential).
+  const smoothstepEnvelopes = new Map<string, SmoothstepEnvelopeEntry>();
+  const exponentialEnvelopes = new Map<string, ExponentialEnvelopeEntry>();
 
   function attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void {
     labelRenderer = label;
@@ -379,83 +435,61 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       case 'bboxOverlap':
         return declutterByBboxOverlap(labelRenderer!, labels, projected, projection, policy.padPx);
       case 'screenSeparation':
-        throw new Error('unimplemented');
+        return declutterByScreenSeparationArm(labels, projected, policy.minSeparationPx);
     }
+  }
+
+  /** Closed-form alpha at `nowMs` for a `smoothstepRamp` entry — `smoothstep` clamps internally, so a settled ramp holds its endpoint exactly (fade-in lands on precisely 1, never 0.999…, which matters for the `alpha === 1` fast path below). */
+  function smoothstepAlpha(
+    entry: SmoothstepEnvelopeEntry,
+    nowMs: number,
+    durationMs: number,
+  ): number {
+    const eased = smoothstep(0, 1, (nowMs - entry.rampStartMs) / durationMs);
+    return entry.startAlpha + (entry.target - entry.startAlpha) * eased;
   }
 
   /**
-   * Envelope alpha at the stamped frame clock, per `config.envelope.mode`.
-   * `smoothstepRamp` (COSMO) is closed-form: `smoothstep` clamps internally,
-   * so a settled ramp holds its endpoint exactly (the fade-in lands on
-   * precisely 1, never 0.999…, which matters because the `alpha === 1` fast
-   * path below passes originals through unchanged).
-   */
-  function envelopeAlpha(entry: EnvelopeEntry, nowMs: number): number {
-    const policy = config.envelope;
-    switch (policy.mode) {
-      case 'smoothstepRamp': {
-        const eased = smoothstep(0, 1, (nowMs - entry.rampStartMs) / policy.durationMs);
-        return entry.startAlpha + (entry.target - entry.startAlpha) * eased;
-      }
-      case 'exponentialApproach':
-        throw new Error('unimplemented');
-    }
-  }
-
-  /** Whether a still-live entry's ramp has more distance to close — `envelopeAlpha`'s duration test, per arm. */
-  function isEnvelopeRamping(entry: EnvelopeEntry, nowMs: number): boolean {
-    const policy = config.envelope;
-    switch (policy.mode) {
-      case 'smoothstepRamp':
-        return nowMs - entry.rampStartMs < policy.durationMs;
-      case 'exponentialApproach':
-        throw new Error('unimplemented');
-    }
-  }
-
-  /**
-   * The appear/disappear stage (see module header). Runs on the
-   * DECLUTTERED sets — a label the declutter culled is "absent" here and
-   * fades out exactly like one a producer stopped emitting.
+   * The `smoothstepRamp` appear/disappear arm (COSMO; module header). Runs
+   * on the DECLUTTERED set — a label the declutter culled is "absent" here
+   * and fades out exactly like one a producer stopped emitting.
    *
    * Presence drives direction: a decluttered label with no entry starts a
-   * 0→1 ramp; an entry whose label went absent flips to a →0 ramp ONCE
-   * (on the transition frame, re-based at the evaluated current alpha —
+   * 0→1 ramp; an entry whose label went absent flips to a →0 ramp ONCE (on
+   * the transition frame, re-based at the evaluated current alpha —
    * re-flipping every frame would freeze the fade at its start); an entry
-   * whose →0 ramp completes is deleted.  During the fade-out tail the
+   * whose →0 ramp completes is deleted. During the fade-out tail the
    * remembered last emission — leader included — is re-flushed so the
-   * glyphs (and any anchor) fade instead of popping.
-   *
-   * `anyRamping` is true while any entry's ramp is incomplete — the
-   * caller keeps the render loop awake so the animation actually draws
-   * under render-on-demand.
+   * glyphs (and any anchor) fade instead of popping. `anyRamping` keeps the
+   * render loop awake while any ramp is incomplete.
    */
-  function applyEnvelope(
+  function applySmoothstepEnvelope(
     labels: readonly Label2D[],
     nowMs: number,
+    policy: { durationMs: number },
   ): { labels: Label2D[]; anyRamping: boolean } {
     const outLabels: Label2D[] = [];
     const liveIds = new Set<string>();
 
     for (const label of labels) {
       liveIds.add(label.id);
-      const existing = envelopes.get(label.id);
-      let entry: EnvelopeEntry;
+      const existing = smoothstepEnvelopes.get(label.id);
+      let entry: SmoothstepEnvelopeEntry;
       if (!existing) {
         entry = { startAlpha: 0, target: 1, rampStartMs: nowMs, lastLabel: label };
-        envelopes.set(label.id, entry);
+        smoothstepEnvelopes.set(label.id, entry);
       } else {
         entry = existing;
         if (entry.target === 0) {
           // Reappeared mid-fade-out: reverse from the evaluated current
           // alpha, not from 0 — continuity in both directions.
-          entry.startAlpha = envelopeAlpha(entry, nowMs);
+          entry.startAlpha = smoothstepAlpha(entry, nowMs, policy.durationMs);
           entry.target = 1;
           entry.rampStartMs = nowMs;
         }
         entry.lastLabel = label;
       }
-      const alpha = envelopeAlpha(entry, nowMs);
+      const alpha = smoothstepAlpha(entry, nowMs, policy.durationMs);
       // Fast path: a settled envelope is a no-op — pass the producer's
       // object through so the steady state allocates nothing.
       outLabels.push(alpha === 1 ? label : { ...label, fadeAlpha: (label.fadeAlpha ?? 1) * alpha });
@@ -465,26 +499,26 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // the remembered emission while the tail lasts, drop when it hits 0.
     // (Deleting during for..of over a Map is spec-safe.)
     let anyRamping = false;
-    for (const [id, entry] of envelopes) {
+    for (const [id, entry] of smoothstepEnvelopes) {
       if (liveIds.has(id)) {
-        if (isEnvelopeRamping(entry, nowMs)) anyRamping = true;
+        if (nowMs - entry.rampStartMs < policy.durationMs) anyRamping = true;
         continue;
       }
       if (entry.target === 1) {
-        const current = envelopeAlpha(entry, nowMs);
+        const current = smoothstepAlpha(entry, nowMs, policy.durationMs);
         if (current <= 0) {
           // Never became visible (e.g. appeared and vanished within one
           // clock step) — nothing to fade, just forget it.
-          envelopes.delete(id);
+          smoothstepEnvelopes.delete(id);
           continue;
         }
         entry.startAlpha = current;
         entry.target = 0;
         entry.rampStartMs = nowMs;
       }
-      const alpha = envelopeAlpha(entry, nowMs);
+      const alpha = smoothstepAlpha(entry, nowMs, policy.durationMs);
       if (alpha <= 0) {
-        envelopes.delete(id);
+        smoothstepEnvelopes.delete(id);
         continue;
       }
       anyRamping = true;
@@ -493,6 +527,173 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     }
 
     return { labels: outLabels, anyRamping };
+  }
+
+  /**
+   * The `exponentialApproach` appear/disappear arm (NEAR0; spec §4.6),
+   * moved from `foregroundLabelsLayer.ts:285-320`. Differs from
+   * `applySmoothstepEnvelope` on three axes:
+   *
+   *   - target: the label's own `fadeAlpha` (continuous — the producer's
+   *     distance-band fade), not a binary 1/0 presence flag.
+   *   - seed: a new id's filter starts AT its target, so only CHANGES
+   *     animate — a gate turning on paints the steady state instead of
+   *     ramping every caption up from black.
+   *   - absence: DROPS IMMEDIATELY, no remembered-emission tail. The
+   *     producer is expected to keep emitting a caption at target 0 while
+   *     it eases out (an id genuinely gone has nothing left to fade).
+   *
+   * The filter itself is `prev + (target − prev)·(1 − exp(−dt/tau))`, with
+   * `dt` read off the entry's own `evalMs` (this arm's frame clock, kept as
+   * director-instance state rather than a module-level singleton — a second
+   * director instance must not share it) and a settle snap at `settleEps`
+   * so a finished ramp lands exactly on target instead of drifting forever.
+   * The `alpha > 0` skip below is what drops a zero-target caption from the
+   * flush instead of uploading an invisible row.
+   */
+  function applyExponentialEnvelope(
+    labels: readonly Label2D[],
+    nowMs: number,
+    policy: { tauMs: number; settleEps: number },
+  ): { labels: Label2D[]; anyRamping: boolean } {
+    const outLabels: Label2D[] = [];
+    const liveIds = new Set<string>();
+    let anyRamping = false;
+
+    for (const label of labels) {
+      liveIds.add(label.id);
+      const target = label.fadeAlpha ?? 1;
+      const existing = exponentialEnvelopes.get(label.id);
+      let alpha: number;
+      if (!existing) {
+        // Seed AT target — only changes animate, not first appearances.
+        alpha = target;
+        exponentialEnvelopes.set(label.id, { alpha, evalMs: nowMs });
+      } else {
+        const dtMs = Math.max(0, nowMs - existing.evalMs);
+        const approach = 1 - Math.exp(-dtMs / policy.tauMs);
+        let next = existing.alpha + (target - existing.alpha) * approach;
+        if (Math.abs(next - target) < policy.settleEps) next = target;
+        else anyRamping = true;
+        existing.alpha = next;
+        existing.evalMs = nowMs;
+        alpha = next;
+      }
+      if (alpha > 0) {
+        outLabels.push(alpha === target ? label : { ...label, fadeAlpha: alpha });
+      }
+    }
+
+    // Absence: drop immediately (see the arm's docblock above) — nothing to
+    // remember, nothing to re-emit.
+    for (const id of exponentialEnvelopes.keys()) {
+      if (!liveIds.has(id)) exponentialEnvelopes.delete(id);
+    }
+
+    return { labels: outLabels, anyRamping };
+  }
+
+  function applyEnvelope(
+    labels: readonly Label2D[],
+    nowMs: number,
+  ): { labels: Label2D[]; anyRamping: boolean } {
+    const policy = config.envelope;
+    switch (policy.mode) {
+      case 'smoothstepRamp':
+        return applySmoothstepEnvelope(labels, nowMs, policy);
+      case 'exponentialApproach':
+        return applyExponentialEnvelope(labels, nowMs, policy);
+    }
+  }
+
+  /**
+   * The lift stage (spec §4.4), moved from `foregroundLabelsLayer.ts:330-418`.
+   * Runs after the envelope, over survivors only, and only when
+   * `config.lift` is non-null. A label without a `lift` field skips the
+   * lift by ABSENCE OF DATA — never a `kind` test — so e.g. constellation
+   * captions (which anchor in empty space and have no subject to float
+   * above) simply never carry one.
+   */
+  function applyLift(labels: readonly Label2D[], ctx: ReadyFrameContext): readonly Label2D[] {
+    const policy = config.lift;
+    if (!policy) return labels;
+    const slab = ctx.slabs[policy.slab];
+    if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
+    const projection = config.project(ctx); // memoised per ctx — free here
+    const renderer = labelRenderer!;
+
+    const out: Label2D[] = [];
+    for (const label of labels) {
+      const lift = label.lift;
+      if (!lift) {
+        out.push(label);
+        continue;
+      }
+
+      // Pull the anchor inside the slab's far plane before the lift — the
+      // ill-conditioned-inverse guard: `liftedLabelPlacement` INVERTS the
+      // projection, and at deep zoom a NEAR0 anchor many orders of
+      // magnitude beyond a near-floored far plane makes `ndc_z` round to
+      // 1.0 within f64 error while the inverse's huge depth-row elements
+      // amplify the residual — the caption and both leader endpoints then
+      // hop every frame the camera moves. In the camera-relative frame (eye
+      // at the origin) a uniform length scale moves clip x/y/w together, so
+      // the screen position is IDENTICAL and only depth slides into the
+      // well-conditioned interior.
+      const anchor = label.worldPos;
+      const liftAnchor = clampVec3Length(anchor, slab.farMpc * policy.farClampFraction);
+
+      // Obligatory companion to the clamp: the label shader sizes glyphs as
+      // `pxPerEm = worldEmMpc / clip.w`, so a PHYSICAL em at the clamped
+      // depth inflates by exactly the clamp ratio — scaling the em by the
+      // same ratio (read off the clamp's OUTPUT, never re-derived) restores
+      // `em / clip.w` to the true-depth value. `clampVec3Length` returns its
+      // input by reference when in range, making the near-body case an
+      // exact no-op instead of a hypot round-off away from 1.
+      const anchorScale =
+        liftAnchor === anchor
+          ? 1
+          : Math.hypot(liftAnchor[0], liftAnchor[1], liftAnchor[2]) /
+            Math.hypot(anchor[0], anchor[1], anchor[2]);
+      const liftEmMpc = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * anchorScale;
+
+      const placement = liftedLabelPlacement({
+        anchorWorldPos: liftAnchor,
+        vp: projection.vp,
+        viewportPx: projection.viewportPx,
+        subjectSizePx: lift.subjectSizePx,
+        textBbox: renderer.measure(label),
+        worldEmMpc: liftEmMpc,
+        minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
+        maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+        lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
+      });
+
+      if (placement === null) {
+        // Behind the camera: no projection to lift from. Emitted unlifted
+        // at the raw (unclamped) anchor, matching DEMAND rather than which
+        // side of the camera plane the anchor happens to sit on this frame;
+        // no connector, since there is no geometry.
+        out.push({ ...label, worldPos: anchor, leader: undefined });
+        continue;
+      }
+
+      out.push({
+        ...label,
+        worldPos: placement.labelWorldPos,
+        worldEmMpc: liftEmMpc,
+        leader:
+          placement.line === null
+            ? undefined
+            : {
+                fromWorld: placement.line.fromWorld,
+                toWorld: placement.line.toWorld,
+                pixelWidth: FAMOUS_LABEL_STYLE.pixelWidth,
+                color: label.color ?? [1, 1, 1, 1],
+              },
+      });
+    }
+    return out;
   }
 
   function runFrame(state: EngineState, ctx: ReadyFrameContext): boolean {
@@ -518,10 +719,15 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Appear/disappear envelope over the decluttered result — animated
     // alphas feed `signatureOf` below, so mid-ramp frames re-upload and
     // settled frames skip, with no extra bookkeeping.
-    const { labels, anyRamping } = applyEnvelope(decluttered, ctx.nowMs);
+    const { labels: enveloped, anyRamping } = applyEnvelope(decluttered, ctx.nowMs);
+
+    // Lift stage (NEAR0 only — a no-op array pass-through when
+    // `config.lift` is null): runs over survivors only, after the envelope
+    // has resolved the final alpha for each.
+    const labels = applyLift(enveloped, ctx);
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
-    // derived from the FINAL (post-declutter, post-envelope) set.
+    // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
     const lines = synthesizeLines(labels);
 
     const sig = signatureOf(labels);
