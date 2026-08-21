@@ -36,6 +36,8 @@ import {
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
+  sdssNavigateUrl,
+  aladinLiteUrl,
   galaxyThumbnailFovArcmin,
   nedByNameUrl,
   nedNearPositionUrl,
@@ -140,6 +142,11 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     ? `/images/famous-thumb/${famousEntry.id}.webp`
     : surveyThumbnailUrl;
   const thumbnailFallbackUrl = famousEntry ? surveyThumbnailUrl : undefined;
+  // Famous rows get the same survey-based viewer as their catalog peers —
+  // their curated crop has no exact external-viewer equivalent to link to.
+  const skyViewUrl = isSdss
+    ? sdssNavigateUrl(ra, dec, fovArcmin)
+    : aladinLiteUrl(ra, dec, fovArcmin);
 
   const ar = row.axisRatio;
   const pa = row.positionAngleDeg;
@@ -248,6 +255,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     catalogues,
     thumbnailUrl,
     ...(thumbnailFallbackUrl !== undefined ? { thumbnailFallbackUrl } : {}),
+    skyViewUrl,
     diameterKpc: dKpc,
     diameterProvenance,
     orientation: { axisRatio: ar, positionAngleDeg: pa, provenance },

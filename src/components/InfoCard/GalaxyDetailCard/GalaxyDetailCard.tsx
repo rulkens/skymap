@@ -74,6 +74,7 @@ function GalaxyDetailCard({
           dec={info.dec}
           url={info.thumbnailUrl}
           fallbackUrl={info.thumbnailFallbackUrl}
+          href={info.skyViewUrl}
         />
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
