@@ -23,7 +23,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { earthLayer } from '../../../../../src/services/engine/frame/passes/earthLayer';
+import {
+  earthLayer,
+  prepareEarthFrame,
+} from '../../../../../src/services/engine/frame/passes/earthLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -35,6 +38,10 @@ import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
+import {
+  EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM,
+  EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM,
+} from '../../../../../src/data/bodies/earthTileParams';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -42,12 +49,15 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { EarthSurfaceTileDrawArgs } from '../../../../../src/@types/rendering/EarthSurfaceTileRenderer';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
-// object identity and (b) hand the renderer a recognisable Float32Array. The
-// real composition math is covered by composeBodyMvp's own tests.
+// object identity and (b) hand the layer a recognisable Float64Array — the
+// real (unmocked) composeBodyMvp returns f64; the layer narrows its own copy
+// at the GPU-upload boundary before packEarthSurfaceUniforms. The real
+// composition math is covered by composeBodyMvp's own tests.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
@@ -116,7 +126,12 @@ function makeCtx(distance: number): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-// A camera comfortably inside the shared foreground gate.
+// A camera comfortably inside the shared foreground gate. Reused by reference
+// where safe; the first three `earthLayer.draw` tests below call `makeCtx`
+// fresh instead — `prepareEarthFrame`'s ctx-keyed memo would otherwise let
+// the second and third hit the cache the first one primed (same NEAR_CTX
+// object ⇒ same memo entry ⇒ composeBodyMvp not re-invoked, and the first
+// test's `toHaveBeenCalledTimes(1)` would misattribute the shared call).
 const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 
 /**
@@ -165,8 +180,39 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
       // The Earth LOD overlay debug toggle earthLayer.draw now reads each
-      // frame — off by default, like the fixture's other DEBUG_OVERLAY_ROWS entries.
+      // frame (forwarded into the tile draw args) — off by default, like the
+      // fixture's other DEBUG_OVERLAY_ROWS entries.
       debug: { overlays: { 'earth-lod-overlay': false } },
+    },
+  } as unknown as EngineState;
+}
+
+/**
+ * `makeState`'s tile-draw variant: adds the `earthSurfaceTileRenderer` GPU
+ * handle and an `earthTiles` subsystem stub whose `getLastCut`/`getAtlasView`
+ * are caller-controlled — the instanced-draw gate's three inputs
+ * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`, `getLastCut()`).
+ */
+function makeTileDrawState(input: {
+  readonly tileRenderer: unknown;
+  readonly cut: readonly unknown[];
+  readonly atlasView: GPUTextureView | null;
+}): EngineState {
+  const base = makeState(
+    { draw: vi.fn(), getMapView: vi.fn(() => ({}) as GPUTextureView) },
+    SEEDED_EARTH,
+  );
+  return {
+    ...base,
+    gpu: {
+      ...(base as unknown as { gpu: object }).gpu,
+      earthSurfaceTileRenderer: input.tileRenderer,
+    },
+    subsystems: {
+      earthTiles: {
+        getLastCut: () => input.cut,
+        getAtlasView: () => input.atlasView,
+      },
     },
   } as unknown as EngineState;
 }
@@ -260,6 +306,41 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
   });
 });
 
+describe('prepareEarthFrame', () => {
+  it('returns null when bodies.earth is null', () => {
+    const state = makeState({ draw: vi.fn() }, null);
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    expect(prepareEarthFrame(state, ctx, makeNear0View())).toBeNull();
+  });
+
+  it('composes mvpLocal from the slab f64 vp, not the f32 vp', () => {
+    composeMock.mockClear();
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const view = makeNear0View();
+
+    prepareEarthFrame(state, ctx, view);
+
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    const call = composeMock.mock.calls[0]!;
+    expect(call[0]).toBe(view.slab.vp);
+    expect(call[0]).not.toBe(view.vp);
+  });
+
+  it('memoizes per ctx', () => {
+    composeMock.mockClear();
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const view = makeNear0View();
+
+    const first = prepareEarthFrame(state, ctx, view);
+    const second = prepareEarthFrame(state, ctx, view);
+
+    expect(second).toBe(first);
+    expect(composeMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('earthLayer.draw', () => {
   it('draws the seeded earth via composeBodyMvp with the slab f64 vp', () => {
     composeMock.mockClear();
@@ -267,11 +348,13 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    // NEAR_CTX, not the bare CTX_STUB: draw now also reads ctx.drawCamPos (the
-    // cloud-shadow descent fade), and NEAR_CTX's camera sits ~1e-13 Mpc from
-    // Earth's centre — hundreds of body radii up, well above the fade band — so
-    // the fade multiplier is 1 and every assertion below is unaffected by it.
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    // A camera comfortably inside the shared foreground gate, well above the
+    // cloud-shadow descent-fade band (see the note on NEAR_CTX). Fresh per
+    // this test, not the shared NEAR_CTX — this test's `toHaveBeenCalledTimes(1)`
+    // assertion needs its OWN `prepareEarthFrame` memo entry, not one another
+    // test using the same ctx object already primed.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
 
     // Exactly one MVP composed for the single Earth body.
     expect(composeMock).toHaveBeenCalledTimes(1);
@@ -286,16 +369,15 @@ describe('earthLayer.draw', () => {
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SEEDED_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-36 EarthSurfaceUniforms
+    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
     // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
-    // oceanRoughness + zWin/winX0/winY0 + debugLodOverlay + 2 pad), not the bare
-    // 16-float MVP.
+    // oceanRoughness + 3 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(36);
+    expect(uniforms).toHaveLength(32);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -309,12 +391,14 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
-    // note on the previous test).
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    // Fresh ctx (see the previous test's note): this test's own
+    // `toHaveBeenCalledTimes(1)` assertion needs its own `prepareEarthFrame`
+    // memo entry, not NEAR_CTX's shared one.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(36);
+    expect(uniforms).toHaveLength(32);
     const expected = sunDirLocal(
       SEEDED_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
@@ -338,12 +422,13 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
-    // note on the first draw test).
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    // Fresh ctx (see the first draw test's note): keeps this test's own
+    // `prepareEarthFrame` memo entry separate from NEAR_CTX's.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(36);
+    expect(uniforms).toHaveLength(32);
 
     // Independent recompute of the camera-in-local-frame vector. The fixture camera
     // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
@@ -375,30 +460,6 @@ describe('earthLayer.draw', () => {
     // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
     expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
     expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
-  });
-
-  it("packs the live debug.overlays['earth-lod-overlay'] toggle at slot 32", () => {
-    // The DebugPanel toggle must reach the GPU uniform every draw, not just on
-    // change — the fixture's two states below stand in for a checkbox flip
-    // between frames.
-    const drawSpy = vi.fn<(...args: unknown[]) => void>();
-    const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
-    (
-      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
-    ).debug.overlays['earth-lod-overlay'] = true;
-
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
-
-    const [, uniformsOn] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniformsOn[32]).toBe(1);
-
-    (
-      state.settings as unknown as { debug: { overlays: Record<string, boolean> } }
-    ).debug.overlays['earth-lod-overlay'] = false;
-    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
-    const [, uniformsOff] = drawSpy.mock.calls[1]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniformsOff[32]).toBe(0);
   });
 
   it('scales cloudShadowStrength by the descent fade as the camera nears the surface', () => {
@@ -442,5 +503,209 @@ describe('earthLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState({ draw: vi.fn() }, null);
     expect(() => earthLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+describe('earthLayer.draw — detail tiles', () => {
+  // A minimal stand-in for `SurfaceCutTile` — `earthLayer.draw` forwards it
+  // opaquely to `earthSurfaceTileRenderer.draw`, never reading its fields.
+  const STUB_CUT = [
+    {
+      id: { z: 8, x: 1, y: 1 },
+      originLocal: [1, 0, 0],
+      resident: {
+        slot: 0,
+        atlasUvOrigin: [0, 0],
+        atlasUvScale: [0.1, 0.1],
+        readyAtMs: 0,
+        fallback: null,
+      },
+    },
+  ];
+  const ATLAS_VIEW = {} as GPUTextureView;
+
+  it('draws the tile renderer AFTER the base globe when the cut is non-empty and the atlas is live', () => {
+    const order: string[] = [];
+    const baseDraw = vi.fn(() => order.push('base'));
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs) => void>(
+      () => order.push('tiles'),
+    );
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    (state.gpu as unknown as { earthRenderer: { draw: typeof baseDraw } }).earthRenderer.draw =
+      baseDraw;
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(baseDraw).toHaveBeenCalledTimes(1);
+    expect(tileDraw).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['base', 'tiles']);
+
+    const [pass, args] = tileDraw.mock.calls[0]!;
+    expect(pass).toBe(PASS_STUB);
+    expect(args.tiles).toBe(STUB_CUT);
+    expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
+    expect(typeof args.frame).toBe('number');
+  });
+
+  it("packs the live debug.overlays['earth-lod-overlay'] toggle into the tile draw args", () => {
+    // The DebugPanel toggle must reach the tile renderer every draw, not just
+    // on change — the fixture's two states below stand in for a checkbox
+    // flip between frames.
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs) => void>();
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
+
+    (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
+      'earth-lod-overlay'
+    ] = true;
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
+  });
+
+  it('does not draw the tile renderer when the cut is empty (nothing resident yet)', () => {
+    const tileDraw = vi.fn();
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: [],
+      atlasView: ATLAS_VIEW,
+    });
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(tileDraw).not.toHaveBeenCalled();
+  });
+
+  it('does not draw the tile renderer when the atlas has not engaged yet', () => {
+    const tileDraw = vi.fn();
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: null,
+    });
+
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(tileDraw).not.toHaveBeenCalled();
+  });
+
+  it('does not draw when the earthSurfaceTileRenderer GPU handle is null (pre-bootstrap)', () => {
+    const view = makeNear0View();
+    const state = makeTileDrawState({ tileRenderer: null, cut: STUB_CUT, atlasView: ATLAS_VIEW });
+
+    expect(() => earthLayer.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
+  });
+});
+
+describe('earthLayer.draw — base globe fade under the tile cut', () => {
+  // A minimal stand-in cut, reused from the detail-tiles suite above.
+  const STUB_CUT = [
+    {
+      id: { z: 8, x: 1, y: 1 },
+      originLocal: [1, 0, 0],
+      resident: {
+        slot: 0,
+        atlasUvOrigin: [0, 0],
+        atlasUvScale: [0.1, 0.1],
+        readyAtMs: 0,
+        fallback: null,
+      },
+    },
+  ];
+  const ATLAS_VIEW = {} as GPUTextureView;
+
+  /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along
+   *  +x — the shared fixture for the fade tests below. */
+  function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
+    const radiusMpc = SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
+    return {
+      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+      drawCamPos: [
+        SEEDED_EARTH.positionMpc[0] + radiusMpc + altitudeMpc,
+        SEEDED_EARTH.positionMpc[1],
+        SEEDED_EARTH.positionMpc[2],
+      ],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+  }
+
+  /** Installs a spy on `state.gpu.earthRenderer.draw`, replacing the
+   *  `vi.fn()` `makeTileDrawState` seeds it with. */
+  function spyOnBaseDraw(state: EngineState): ReturnType<typeof vi.fn> {
+    const baseDraw = vi.fn();
+    (state.gpu as unknown as { earthRenderer: { draw: typeof baseDraw } }).earthRenderer.draw =
+      baseDraw;
+    return baseDraw;
+  }
+
+  it('forwards alpha 1 when the cut is empty, regardless of altitude', () => {
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: vi.fn() },
+      cut: [],
+      atlasView: ATLAS_VIEW,
+    });
+    const baseDraw = spyOnBaseDraw(state);
+
+    // Deep inside what would be the alpha-0 band if the fade engaged — the
+    // empty cut must keep the base globe at the alpha-1 failure floor.
+    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(baseDraw).toHaveBeenCalledTimes(1);
+    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
+    expect(uniforms[29]).toBe(1);
+  });
+
+  it('skips the base-globe draw call at alpha 0 with a non-empty cut', () => {
+    const view = makeNear0View();
+    const tileDraw = vi.fn();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    const baseDraw = spyOnBaseDraw(state);
+
+    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
+    earthLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(baseDraw).not.toHaveBeenCalled();
+    // The tiles cover the whole cap by now — they must still draw.
+    expect(tileDraw).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards a fractional alpha at the fade band midpoint', () => {
+    const view = makeNear0View();
+    const state = makeTileDrawState({
+      tileRenderer: { draw: vi.fn() },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    const baseDraw = spyOnBaseDraw(state);
+
+    const midAltitudeKm =
+      (EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM + EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM) / 2;
+    earthLayer.draw(PASS_STUB, view, makeAltitudeCtx(midAltitudeKm), state);
+
+    expect(baseDraw).toHaveBeenCalledTimes(1);
+    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
+    expect(uniforms[29]).toBeGreaterThan(0);
+    expect(uniforms[29]).toBeLessThan(1);
   });
 });

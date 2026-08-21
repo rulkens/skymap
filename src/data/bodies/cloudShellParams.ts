@@ -47,9 +47,9 @@
  * The whole-globe cloud map is coarse next to the surface tiles the camera
  * descends toward, so the deck fades out on approach rather than smearing over
  * detail sharp enough to inspect. The band is calibrated against
- * `planEarthTiles`'s own thresholds, not chosen independently.
+ * `cutSurfaceTiles`'s own thresholds, not chosen independently.
  *
- * `planEarthTiles` refines a patch at level `z` while its projected size
+ * `cutSurfaceTiles` refines a patch at level `z` while its projected size
  * `screenPx` needs a finer level, and settles at the first level where
  * `screenPx <= 2 · tilePx` (that threshold falls out of
  * `EARTH_TILE_LOD_BIAS = 1`: the planner refines while

@@ -70,6 +70,7 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -162,12 +163,21 @@ export const ringsLayer: ContentLayer = {
       // — the frame the fragment's in-front-of-planet view-ray test runs in, so
       // the ring keeps its own lit brightness where it occults the disc.
       const radiusMpc = body.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      const cam = camPosLocal(ctx.drawCamPos, bodyState.positionMpc, radiusMpc, bodyState.orientation);
+      const cam = camPosLocal(
+        ctx.drawCamPos,
+        bodyState.positionMpc,
+        radiusMpc,
+        bodyState.orientation,
+      );
       // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
       // radius): the planet's size in disc units, and the hole's inner edge.
       const planetRadiusRatio = body.radiusKm / ring.outerRadiusKm;
       const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
-      renderer.draw(pass, packRingUniforms(mvp, sun, planetRadiusRatio, cam, innerRatio));
+      // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+      renderer.draw(
+        pass,
+        packRingUniforms(narrowMat4(mvp), sun, planetRadiusRatio, cam, innerRatio),
+      );
     }
   },
 };

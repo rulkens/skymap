@@ -40,7 +40,7 @@ function readSubCameraLonLat(
     target[2] + distance * dirWorld[2],
   ];
   // radiusMpc = 1: direction only, the readout normalises camDir separately
-  // (planEarthTiles) so the radius scale cancels out.
+  // (cutSurfaceTiles) so the radius scale cancels out.
   const local = camPosLocal(camPosMpc, target, 1, bodyOrientation);
   const mag = Math.hypot(local[0], local[1], local[2]) || 1;
   const dir: Vec3 = [local[0] / mag, local[1] / mag, local[2] / mag];

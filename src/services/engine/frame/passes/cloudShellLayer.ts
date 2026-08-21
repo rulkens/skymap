@@ -66,6 +66,7 @@ import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packCloudShellUniforms } from '../../../../utils/gpu/packCloudShellUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
@@ -170,7 +171,8 @@ export const cloudShellLayer: ContentLayer = {
     renderer.draw(
       pass,
       packCloudShellUniforms(
-        mvp,
+        // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+        narrowMat4(mvp),
         sun,
         CLOUD_SHELL_PARAMS.opacity * deckFade,
         EARTH_SURFACE_PARAMS.sunIrradiance,

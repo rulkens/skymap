@@ -1,7 +1,7 @@
 /**
  * earthTileBandRequestAllowed — "does any band overlapping this uv actually
  * bake a file at z?" Guards both the leaf branch and the ancestor-request
- * gate in `planEarthTiles`: a level a band's own min/max range doesn't cover
+ * gate in `cutSurfaceTiles`: a level a band's own min/max range doesn't cover
  * has no file, however much the walk wants to refine there.
  */
 import { describe, it, expect } from 'vitest';

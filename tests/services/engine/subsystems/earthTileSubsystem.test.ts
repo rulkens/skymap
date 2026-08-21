@@ -1,8 +1,9 @@
 /**
  * Four things this subsystem owns that a stand-in device is enough to see: the
  * manifest validation in `derivePlannerParams`, the base level it derives from
- * the tier the whole-globe texture is bound at, the terminal frame of a tile's
- * load fade, and the stand-down that happens when the engage rule goes false.
+ * the tier the whole-globe texture is bound at, the residency query
+ * (`residentSlot`) `cutSurfaceTiles` calls back into, and the engage/disengage
+ * transition the atlas view + debug snapshot both key off.
  *
  * The base level is the one of the three that is invisible when it is wrong. The
  * three tiers bind three different whole-globe images — z2, z3 and z4 on the
@@ -16,14 +17,14 @@
  * network nor clock, and the one that has to be a refusal rather than an
  * adaptation.
  *
- * 512 is a property of the tile FORMAT: the fragment derives the page table's
- * column count from `zWin` alone (`cols = 1u << zWin`), which is the ladder's
- * `(512 << z) / tilePx` with the two cancelled, and nothing on the GPU side
- * reads `tilePx` at all. A bake at another edge is therefore unaddressable, not
- * merely unusual — silently adapting to it would resolve the same uv to a
- * different cell and put every cell in the window on the wrong ground, with no
- * error anywhere and a picture that still looks like Earth. Rejecting degrades
- * to base-only, which is the identity case.
+ * 512 is a property of the tile FORMAT: `residentSlot` resolves
+ * `atlasUvOrigin`/`atlasUvScale` off the atlas's own `slotsPerRow`
+ * (`EARTH_TILE_ATLAS_SIDE / tilePx`) — sound only at the shipped 512 px
+ * edge, since nothing else re-derives from `tilePx` at all. A bake at
+ * another edge is therefore unaddressable, not merely unusual — silently
+ * adapting to it would resolve the same tile to a differently-sized atlas
+ * rect, with no error anywhere and a picture that still looks like Earth.
+ * Rejecting degrades to base-only, which is the identity case.
  *
  * Two cases, because a `null` that is right for the wrong reason is worth
  * nothing: the accepted default has to still be accepted.
@@ -39,6 +40,7 @@ vi.mock('../../../../src/utils/network/fetchEarthTileBitmap', () => ({
 
 import type { EarthTileManifest } from '../../../../src/@types/scene/EarthTileManifest';
 import type { EarthTilePlan } from '../../../../src/@types/scene/EarthTilePlan';
+import type { SurfaceCutTile } from '../../../../src/@types/scene/SurfaceCutTile';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import {
   createEarthTileSubsystem,
@@ -47,11 +49,7 @@ import {
 import { fetchEarthTileManifest } from '../../../../src/utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../../src/utils/network/fetchEarthTileBitmap';
 import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
-import {
-  EARTH_TILE_ATLAS_SIDE,
-  EARTH_TILE_FADE_MS,
-  EARTH_TILE_PX,
-} from '../../../../src/data/bodies/earthTileParams';
+import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
  *  bake sits one level above. */
@@ -151,22 +149,21 @@ describe('earthTileSubsystem base level', () => {
   });
 });
 
-/**
- * Standing down when the camera pulls back out past the engage altitude.
- *
- * This is the half that a drive-site `if (plan.zWin > baseLevel)` cannot have:
- * engaging is something the caller does and disengaging is something that merely
- * stops happening, so the page table simply kept its last contents and the globe
- * stayed painted with ground from wherever the camera used to be, at full weight,
- * forever. The bug is invisible to every pure test in the feature — the planner
- * was right all along — so it has to be observed at the seam where the plan meets
- * the texture.
- *
- * A page-table upload is a `queue.writeTexture` and nothing else, which is why a
- * stand-in device recording its writes is enough: the plans go in as literals,
- * the two questions the fragment would ask (which window? what weight in each
- * cell?) come straight back out.
- */
+/** A device that answers just enough to let the atlas allocate: a stub texture
+ *  and no-op queue writes. Nothing reads what it "records" any more — once the
+ *  page table went, the only remaining GPU write from this subsystem is the
+ *  atlas's own `copyExternalImageToTexture`, and every assertion below reads
+ *  the subsystem's own state (`getAtlasView`/`getDebugSnapshot`/`residentSlot`)
+ *  instead of a device call log. */
+function recordingDevice(): GPUDevice {
+  return {
+    createTexture: () => ({ createView: () => ({}) as GPUTextureView, destroy: () => {} }),
+    queue: {
+      writeTexture: () => {},
+      copyExternalImageToTexture: () => {},
+    },
+  } as unknown as GPUDevice;
+}
 
 const TILE = { kind: 'surface', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 // Sub-camera on the prime meridian/equator — an arbitrary but exactly
@@ -174,8 +171,6 @@ const TILE = { kind: 'surface', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 const SUB_CAMERA_EQUATOR_PRIME: EarthTilePlan['subCameraDirLocal'] = [1, 0, 0];
 const ENGAGED: EarthTilePlan = {
   zWin: MIN_TILE_LEVEL,
-  winX0: 0,
-  winY0: 0,
   requests: [{ tile: TILE, screenPx: EARTH_TILE_PX }],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
@@ -185,36 +180,14 @@ const ENGAGED: EarthTilePlan = {
  *  test below turns on. */
 const DISENGAGED: EarthTilePlan = {
   zWin: BASE_LEVEL,
-  winX0: 0,
-  winY0: 0,
   requests: [],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
 
-/** A device that records its page-table uploads and hands back the least it can
- *  for the atlas allocation. */
-function recordingDevice(writes: Uint8Array[]): GPUDevice {
-  return {
-    createTexture: () => ({ createView: () => ({}), destroy: () => {} }),
-    queue: {
-      // Copied, because the subsystem rebuilds the table into a fresh array each
-      // time but the atlas upload path hands us someone else's buffer.
-      writeTexture: (_target: unknown, data: Uint8Array) => writes.push(new Uint8Array(data)),
-      copyExternalImageToTexture: () => {},
-    },
-  } as unknown as GPUDevice;
-}
-
 /**
- * A subsystem with the manifest landed, one tile resident in the atlas, and its
- * load fade run all the way out — i.e. a page table that is genuinely painting
- * ground, so "the stand-down blanked it" is distinguishable from "it was blank
- * anyway". Returns the recorded `writeTexture` payloads alongside it.
- *
- * The frame in the MIDDLE of the fade is what makes the last frame a genuine
- * terminal one: it flushes the arrival's residency change, so by the frame the
- * ramp lands on, the fade's own record of what it uploaded is the only thing left
- * that can ask for the full-weight table.
+ * A subsystem with the manifest landed and `TILE` resident in the atlas —
+ * genuinely resident, not merely requested, so `residentSlot`/debug-snapshot
+ * assertions exercise the real post-fetch state.
  */
 async function engagedSubsystem() {
   vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
@@ -222,41 +195,38 @@ async function engagedSubsystem() {
     close: () => {},
   } as unknown as ImageBitmap);
 
-  const writes: Uint8Array[] = [];
   const subsystem = createEarthTileSubsystem({
-    device: recordingDevice(writes),
+    device: recordingDevice(),
     requestRender: () => {},
   });
   subsystem.plannerParams('large');
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  // First engaged frame: allocates, enqueues the tile's fetch, uploads a table
-  // that is still empty. The tile then lands, stamped with that frame's clock.
-  subsystem.update({ plan: ENGAGED, nowMs: 0 });
+  subsystem.update({ plan: ENGAGED });
   await new Promise((resolve) => setTimeout(resolve, 0));
-  // Mid-fade, then the frame the fade lands on.
-  subsystem.update({ plan: ENGAGED, nowMs: EARTH_TILE_FADE_MS / 2 });
-  subsystem.update({ plan: ENGAGED, nowMs: EARTH_TILE_FADE_MS });
+  // A second frame of the SAME plan: the tile lands async during the first
+  // call's fetch, so `notResidentCount`/`lastEngaged.plan.misses` only reads
+  // 0 on the frame AFTER the bitmap resolves.
+  subsystem.update({ plan: ENGAGED });
 
-  return { subsystem, writes };
+  return subsystem;
 }
 
 /**
  * Whether one frame of `plan` engages the virtual texture on a session bound at
- * `tier`. The atlas and the page table are allocated by the first ENGAGED frame
- * and by nothing else, so `getTileResources()` going non-null IS the gate's
- * answer.
+ * `tier`. The atlas is allocated by the first ENGAGED frame and by nothing
+ * else, so `getAtlasView()` going non-null IS the gate's answer.
  */
 async function engagesAt(plan: EarthTilePlan, tier: Tier): Promise<boolean> {
   vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
   const subsystem = createEarthTileSubsystem({
-    device: recordingDevice([]),
+    device: recordingDevice(),
     requestRender: () => {},
   });
   subsystem.plannerParams(tier);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  subsystem.update({ plan, nowMs: 0 });
-  return subsystem.getTileResources() !== null;
+  subsystem.update({ plan });
+  return subsystem.getAtlasView() !== null;
 }
 
 describe('earthTileSubsystem engage gate', () => {
@@ -273,32 +243,21 @@ describe('earthTileSubsystem engage gate', () => {
     expect(await engagesAt(DISENGAGED, 'medium'), 'medium').toBe(true);
     expect(await engagesAt(DISENGAGED, 'large'), 'large').toBe(false);
   });
-});
 
-/**
- * The last frame of a load fade, which is the one frame the fade can skip.
- *
- * A rebuild condition asking the CLOCK whether a fade is in progress goes false on
- * the very frame the weights would have reached full: `loadFadeAlpha` saturates
- * when the elapsed time reaches the duration, "still fading" needs it to be less.
- * So the terminal table was never uploaded and the settled globe kept blending its
- * tiles at ~97% against the base — indefinitely, and nearly invisibly, which is
- * the part that matters: it makes every visual judgement of tile sharpness a
- * judgement of something slightly other than the shipped picture.
- */
-describe('earthTileSubsystem load fade', () => {
-  it('uploads the settled, full-weight table on the frame the fade lands', async () => {
-    const { writes } = await engagedSubsystem();
+  it('re-engaging after a pull-back reuses residency instead of re-fetching', async () => {
+    // The page table's stand-down used to blank a texture on this transition;
+    // with it gone, the only remaining behaviour to pin is that residency
+    // itself survives a disengage/re-engage cycle — a resident tile the camera
+    // still wants must not re-fetch.
+    const subsystem = await engagedSubsystem();
+    const fetchesAfterFirstLand = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
 
-    // A is the blend weight against the whole-globe base, so every fourth byte is
-    // one cell's, and the resident tile's is the only non-zero one. Read out of the
-    // uploaded bytes rather than off an internal flag: what the fragment will
-    // actually blend with is the whole question.
-    const weights = writes.at(-1)!.filter((_, at) => at % 4 === 3);
-    expect(
-      Math.max(...weights),
-      'the last page table uploaded carries a weight short of 255, so a parked camera blends its tiles at less than full strength against the base forever',
-    ).toBe(255);
+    subsystem.update({ plan: DISENGAGED });
+    subsystem.update({ plan: ENGAGED });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length).toBe(fetchesAfterFirstLand);
+    expect(subsystem.residentSlot(TILE)).not.toBeNull();
   });
 });
 
@@ -316,16 +275,25 @@ describe('earthTileSubsystem debug snapshot', () => {
   });
 
   it('reports resident counts, the last plan shape and the deepest keys once engaged', async () => {
-    const { subsystem } = await engagedSubsystem();
+    const subsystem = await engagedSubsystem();
     const snap = subsystem.getDebugSnapshot();
 
     expect(snap.engaged).toBe(true);
     expect(snap.capacity).toBe((EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2);
     expect(snap.used).toBe(1);
     expect(snap.levels).toEqual([{ z: MIN_TILE_LEVEL, resident: 1, pending: 0 }]);
-    // The fade landed on the last of the three `update()` calls `engagedSubsystem`
-    // runs, so the tile the plan asked for is resident by the time this reads.
-    expect(snap.plan).toEqual({ requestCount: 1, zWin: ENGAGED.zWin, misses: 0 });
+    expect(snap.plan).toEqual({ requestCount: 1, zWin: ENGAGED.zWin, misses: 0, cutCount: 0 });
+    // cutCount tracks `lastCut`, not `update()`'s own request count — the two
+    // diverge whenever ancestor fallback drops a leaf from `cut` (see
+    // cutSurfaceTiles.ts) but still requests its file.
+    subsystem.setLastCut([
+      {
+        id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
+        originLocal: [1, 0, 0],
+        resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1], readyAtMs: 0, fallback: null },
+      },
+    ]);
+    expect(subsystem.getDebugSnapshot().plan?.cutCount).toBe(1);
     expect(snap.droppedAllocations).toBe(0);
     expect(snap.deepestLevelKeys).toEqual(['0,0']);
     // ENGAGED's subCameraDirLocal is the equator/prime-meridian direction, and
@@ -336,55 +304,133 @@ describe('earthTileSubsystem debug snapshot', () => {
   });
 
   it('clears the sub-camera readout on the frame the camera pulls back out', async () => {
-    // Same lifecycle bug class the stand-down describe block above pins for the
-    // page table: a stale sub-camera reading left over from the last engaged
-    // frame would misdescribe where the (now pulled-back) camera is.
-    const { subsystem } = await engagedSubsystem();
+    const subsystem = await engagedSubsystem();
     expect(subsystem.getDebugSnapshot().subCamera).not.toBeNull();
 
-    subsystem.update({ plan: DISENGAGED, nowMs: EARTH_TILE_FADE_MS + 16 });
+    subsystem.update({ plan: DISENGAGED });
     expect(subsystem.getDebugSnapshot().subCamera).toBeNull();
   });
 });
 
-describe('earthTileSubsystem stand-down', () => {
-  it('blanks the page table once when the camera pulls back out, and re-engages', async () => {
-    const { subsystem, writes } = await engagedSubsystem();
+describe('earthTileSubsystem residency readiness', () => {
+  it('stamps a resident entry with the real-time moment its bitmap uploaded', async () => {
+    vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchEarthTileBitmap).mockResolvedValue({
+      close: () => {},
+    } as unknown as ImageBitmap);
+    // performance.now(), not Date.now()/a sim clock — real time, per the
+    // design contract, so a fade runs even while the sim clock is paused.
+    const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(54_321);
 
-    // The premise: something is actually being drawn through the page table.
-    expect(subsystem.getUploadedWindow()).toEqual({
-      zWin: ENGAGED.zWin,
-      winX0: 0,
-      winY0: 0,
+    const subsystem = createEarthTileSubsystem({
+      device: recordingDevice(),
+      requestRender: () => {},
     });
-    expect(writes.at(-1)!.some((byte) => byte !== 0)).toBe(true);
+    subsystem.plannerParams('large');
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    subsystem.update({ plan: DISENGAGED, nowMs: EARTH_TILE_FADE_MS + 16 });
+    subsystem.update({ plan: ENGAGED });
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // The reported symptom, and the assertion that catches it on its own: no
-    // window means the draw site packs the all-zero identity.
-    expect(subsystem.getUploadedWindow()).toBeNull();
-    expect(writes.at(-1)!.every((byte) => byte === 0)).toBe(true);
+    const resolved = subsystem.residentSlot(TILE);
+    expect(resolved).not.toBeNull();
+    expect(resolved!.readyAtMs).toBe(54_321);
 
-    // A transition, not a per-frame state — a camera parked just outside the
-    // engage bracket must not re-upload 64 KB of zeroes every frame.
-    const afterStandDown = writes.length;
-    subsystem.update({ plan: DISENGAGED, nowMs: EARTH_TILE_FADE_MS + 32 });
-    subsystem.update({ plan: DISENGAGED, nowMs: EARTH_TILE_FADE_MS + 48 });
-    expect(writes.length).toBe(afterStandDown);
+    nowSpy.mockRestore();
+  });
+});
 
-    // And coming back finds the atlas still there: one upload re-arms the
-    // window, with no second allocation and no re-fetch.
-    subsystem.update({ plan: ENGAGED, nowMs: EARTH_TILE_FADE_MS + 64 });
-    expect(subsystem.getUploadedWindow()).toEqual({
-      zWin: ENGAGED.zWin,
-      winX0: 0,
-      winY0: 0,
-    });
-    expect(writes.length).toBe(afterStandDown + 1);
-    expect(writes.at(-1)!.some((byte) => byte !== 0)).toBe(true);
+describe('earthTileSubsystem residentSlot', () => {
+  it('returns null before the manifest lands and for a tile nothing has requested', async () => {
+    const cold = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    expect(cold.residentSlot(TILE)).toBeNull();
   });
 
+  it('returns null for a tile at a different (z,x,y) than the one resident', async () => {
+    const subsystem = await engagedSubsystem();
+    expect(subsystem.residentSlot({ kind: 'surface', z: MIN_TILE_LEVEL, x: 9, y: 9 })).toBeNull();
+  });
+
+  it('resolves the resident tile to a slot-sized atlas rect', async () => {
+    const subsystem = await engagedSubsystem();
+    const resolved = subsystem.residentSlot(TILE);
+
+    expect(resolved).not.toBeNull();
+    // Every tile occupies exactly one slot's fraction of the atlas, whichever
+    // slot it landed in — a structural invariant of the atlas geometry, not a
+    // restatement of `TextureAtlas.slotUv`'s own col/row arithmetic.
+    const slotFraction = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
+    expect(resolved!.atlasUvScale[0]).toBeCloseTo(slotFraction);
+    expect(resolved!.atlasUvScale[1]).toBeCloseTo(slotFraction);
+    expect(resolved!.atlasUvOrigin[0]).toBeGreaterThanOrEqual(0);
+    expect(resolved!.atlasUvOrigin[0]).toBeLessThan(1);
+    expect(resolved!.atlasUvOrigin[1]).toBeGreaterThanOrEqual(0);
+    expect(resolved!.atlasUvOrigin[1]).toBeLessThan(1);
+    // Each origin coordinate lands on a whole slot boundary.
+    const slotsX = resolved!.atlasUvOrigin[0] / slotFraction;
+    expect(slotsX).toBeCloseTo(Math.round(slotsX));
+  });
+
+  it('drops out of residency once the atlas evicts the slot', async () => {
+    // The eviction handler's whole job: `residentSlot` must stop reporting a
+    // tile the atlas has since recycled under a different key, or
+    // `cutSurfaceTiles`'s ancestor fallback would draw a stale/wrong rect.
+    const subsystem = await engagedSubsystem();
+    expect(subsystem.residentSlot(TILE)).not.toBeNull();
+
+    // Fill the atlas past capacity with distinct tiles at a LATER frame, so
+    // LRU has something older (TILE, from `engagedSubsystem`'s frame) to
+    // evict. `x` offset by 1 so this list never re-touches TILE's own (0,0).
+    const side = EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX;
+    const filling = Array.from({ length: side * side }, (_, i) => ({
+      tile: {
+        kind: 'surface' as const,
+        z: MIN_TILE_LEVEL,
+        x: (i % side) + 1,
+        y: Math.floor(i / side),
+      },
+      screenPx: side * side - i,
+    }));
+    subsystem.update({
+      plan: {
+        zWin: MIN_TILE_LEVEL,
+        requests: filling,
+        subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(subsystem.residentSlot(TILE)).toBeNull();
+  });
+});
+
+describe('earthTileSubsystem lastCut', () => {
+  it('starts empty, round-trips through setLastCut, and clears on destroy', async () => {
+    const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    expect(subsystem.getLastCut()).toEqual([]);
+
+    const cut: readonly SurfaceCutTile[] = [
+      {
+        id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
+        originLocal: [1, 0, 0],
+        resident: {
+          slot: 0,
+          atlasUvOrigin: [0, 0],
+          atlasUvScale: [0.1, 0.1],
+          readyAtMs: 0,
+          fallback: null,
+        },
+      },
+    ];
+    subsystem.setLastCut(cut);
+    expect(subsystem.getLastCut()).toBe(cut);
+
+    subsystem.destroy();
+    expect(subsystem.getLastCut()).toEqual([]);
+  });
+});
+
+describe('earthTileSubsystem stand-down', () => {
   it('allocates nothing when a session never engages', async () => {
     vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
     let touched = false;
@@ -399,14 +445,13 @@ describe('earthTileSubsystem stand-down', () => {
     subsystem.plannerParams('large');
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let frame = 0; frame < 3; frame++) {
-      subsystem.update({ plan: DISENGAGED, nowMs: frame * 16 });
+      subsystem.update({ plan: DISENGAGED });
     }
 
-    // Not one property of the device read: no atlas, no page table, no upload.
-    // 67 MB rides on this for every session that stays outside Earth's orbit.
+    // Not one property of the device read: no atlas, no upload. 67 MB rides on
+    // this for every session that stays outside Earth's orbit.
     expect(touched).toBe(false);
-    expect(subsystem.getTileResources()).toBeNull();
-    expect(subsystem.getUploadedWindow()).toBeNull();
+    expect(subsystem.getAtlasView()).toBeNull();
   });
 
   it('allocates nothing when the manifest 404s, even though the plan is engaged', async () => {
@@ -433,12 +478,11 @@ describe('earthTileSubsystem stand-down', () => {
     // anyway: engaged frames against a null-manifest session must still be inert.
     expect(subsystem.plannerParams('large')).toBeNull();
     for (let frame = 0; frame < 3; frame++) {
-      subsystem.update({ plan: ENGAGED, nowMs: frame * 16 });
+      subsystem.update({ plan: ENGAGED });
     }
 
     expect(touched).toBe(false);
-    expect(subsystem.getTileResources()).toBeNull();
-    expect(subsystem.getUploadedWindow()).toBeNull();
+    expect(subsystem.getAtlasView()).toBeNull();
     expect(fetchEarthTileBitmap).not.toHaveBeenCalled();
     // The one property that actually regresses if this path breaks: a 404
     // must not re-arm and re-fetch on every subsequent frame.
@@ -481,7 +525,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     } as unknown as ImageBitmap);
 
     const subsystem = createEarthTileSubsystem({
-      device: recordingDevice([]),
+      device: recordingDevice(),
       requestRender: () => {},
     });
     subsystem.plannerParams('large');
@@ -490,14 +534,12 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     const resident = fillingRequests();
     const fillPlan: EarthTilePlan = {
       zWin: MIN_TILE_LEVEL,
-      winX0: 0,
-      winY0: 0,
       requests: resident,
       subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
     };
 
     const callsBeforeFill = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
-    subsystem.update({ plan: fillPlan, nowMs: 0 });
+    subsystem.update({ plan: fillPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
     // The atlas is now genuinely full — every one of its slots resident.
     expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeFill).toBe(SLOT_COUNT);
@@ -508,14 +550,12 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     const newTile = { kind: 'surface', z: MIN_TILE_LEVEL, x: 99, y: 99 } as const;
     const nextPlan: EarthTilePlan = {
       zWin: MIN_TILE_LEVEL,
-      winX0: 0,
-      winY0: 0,
       requests: [{ tile: newTile, screenPx: SLOT_COUNT + 1 }, ...resident],
       subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
     };
 
     const callsBeforeNext = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
-    subsystem.update({ plan: nextPlan, nowMs: 16 });
+    subsystem.update({ plan: nextPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Nothing resident got evicted-and-refetched, and the full atlas made the

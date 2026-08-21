@@ -38,6 +38,7 @@ import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRen
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
+import type { EarthSurfaceTileRenderer } from '../../rendering/EarthSurfaceTileRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
@@ -426,6 +427,18 @@ export type EngineGpuHandles = {
    * the position + uv VBOs, index IBO, uniform buffer, and the Earth texture).
    */
   earthRenderer: EarthRenderer | null;
+  /**
+   * Instanced draw of the resident surface-tile detail patches
+   * (`cutSurfaceTiles`'s `cut` product) over the base globe — the OTHER half
+   * of the surface virtual texture, replacing the earlier page-table blend
+   * inside `earthRenderer`'s own fragment. Owns neither the tile atlas
+   * (`earthTileSubsystem`) nor the base globe's material/night/normal/cloud
+   * maps (`earthRenderer.getMapView`); both arrive as views on every
+   * `draw()` call. Excluded from `isEngineReady`, null-checked at use by
+   * `earthLayer`. Null until `initGpu` constructs it; released and
+   * re-nulled by `destroy()`.
+   */
+  earthSurfaceTileRenderer: EarthSurfaceTileRenderer | null;
   /**
    * Flat-emissive resolved stars (the `spheres` branch of
    * `partitionStarsByResolution` — any star whose apparent size crosses

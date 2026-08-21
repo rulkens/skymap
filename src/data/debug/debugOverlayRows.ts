@@ -8,9 +8,10 @@ import type { DebugOverlayRow } from '../../@types/data/debug/DebugOverlayRow';
 // tone-mapped frame. disk-radius-ring: outlines each famous-galaxy
 // thumbnail's disk-radius footprint. orbit-trail-impostor: draws the ribbon
 // impostor's hull as a flat fill tint over the real trails. earth-lod-overlay:
-// tints each Earth surface pixel by the tile-atlas pyramid level its
-// page-table cell actually samples (deep blue→red ramp, magenta = no
-// resident tile) — see fragment.wesl's `earthLodOverlayColor`.
+// tints each drawn surface-tile fragment by how many pyramid levels its
+// resolved atlas rect fell back from the leaf it's shading (green = the
+// leaf's own tile, yellow/orange/red = 1/2/3+ levels coarser) — see
+// earthSurfaceTile/fragment.wesl's `earthLodOverlayColor`.
 export const DEBUG_OVERLAY_ROWS = [
   { key: 'pick-buffer', label: 'Show pick buffer' },
   { key: 'disk-radius-ring', label: 'Show disk radius ring' },

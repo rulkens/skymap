@@ -220,7 +220,7 @@ import site (`import { prepareEarthFrame, earthLayer } from './passes/earthLayer
 mirrors its existing `import { prepareStarCut } from './passes/starCatalogLayer';`
 byte-for-byte.
 
-- [ ] Add `PreparedEarthFrame` + `prepareEarthFrame` to `earthLayer.ts`,
+- [x] Add `PreparedEarthFrame` + `prepareEarthFrame` to `earthLayer.ts`,
       computing exactly what `runFrame.ts:594–611` and `earthLayer.draw`'s
       own `:96–105,111–116` each compute today: `earthState =
       sceneBodyStates(state, ctx).get(earth.id)!`, `radiusMpc =
@@ -229,30 +229,30 @@ byte-for-byte.
       RENDER_ORIGIN_MPC, radiusMpc, earthState.orientation)`, `camLocal =
       camPosLocal(view.camPos, earthState.positionMpc, radiusMpc,
       earthState.orientation)`. Memoize per the WeakMap above.
-- [ ] **Test `prepareEarthFrame returns null when bodies.earth is null`.**
-- [ ] **Test `prepareEarthFrame composes mvpLocal from the slab f64 vp, not
+- [x] **Test `prepareEarthFrame returns null when bodies.earth is null`.**
+- [x] **Test `prepareEarthFrame composes mvpLocal from the slab f64 vp, not
       the f32 vp`** — mock `composeBodyMvp` (mirroring the existing
       `earthLayer.test.ts` mock at `:49–51`) and assert the first argument
       `toBe(view.slab.vp)` and `not.toBe(view.vp)`, the same load-bearing seam
       assertion the file already carries for `draw`.
-- [ ] **Test `prepareEarthFrame memoizes per ctx`** — call it twice with the
+- [x] **Test `prepareEarthFrame memoizes per ctx`** — call it twice with the
       identical `ctx`/`view` pair; assert the second call returns the exact
       same object (`toBe`) and that the mocked `composeBodyMvp` was called
       exactly once across both calls.
-- [ ] Rewire `earthLayer.draw` to call `prepareEarthFrame(state, ctx, view)`,
+- [x] Rewire `earthLayer.draw` to call `prepareEarthFrame(state, ctx, view)`,
       destructure `{ earthState, radiusMpc, mvpLocal, camLocal }`, delete its
       own `sceneBodyStates`/`composeBodyMvp`/`camPosLocal` calls and the now-
       redundant `earth.radiusKm * SCALE_UNITS.KM_TO_MPC` recomputation at
       `:103,114`; no-op (return) when `prepareEarthFrame` returns `null`
       (replacing today's `earth === null` check, which stays as the renderer
       guard).
-- [ ] Rewire `earthLayer.drawPick` to call `prepareEarthFrame(state, ctx,
+- [x] Rewire `earthLayer.drawPick` to call `prepareEarthFrame(state, ctx,
       view)` for `earthState`/`radiusMpc` **only** — pass `prepared.earthState.positionMpc`,
       `radiusMpc`, and `prepared.earthState.orientation` into
       `drawFlooredSpherePick`'s existing argument shape unchanged. Do **not**
       feed `mvpLocal`/`camLocal` anywhere near `drawPick` — see the
       correction above.
-- [ ] Rewire `runFrame.ts`'s tile-planning block (`:592–611`) to call
+- [x] Rewire `runFrame.ts`'s tile-planning block (`:592–611`) to call
       `prepareEarthFrame(state, ctx, view)` in place of its own
       `sceneBodyStates`/`radiusMpc`/`camPosLocal`/`composeBodyMvp` calls,
       feeding `viewProjLocal: prepared.mvpLocal` and `camPosLocal:
@@ -261,7 +261,7 @@ byte-for-byte.
       existing `earth !== null` guard one line up already gates this; keep
       both checks or fold them — implementer's call, behaviour is identical
       either way).
-- [ ] **Required test-fixture fix (`earthLayer.test.ts`):** the file's
+- [x] **Required test-fixture fix (`earthLayer.test.ts`):** the file's
       `NEAR_CTX` is a single module-level constant (`makeCtx(...)`, called
       once at load time) reused by reference across many `it()` blocks,
       including three separate tests (`'draws the seeded earth …'`, `'packs
@@ -281,7 +281,7 @@ byte-for-byte.
       `composeMock` counts, and `earthLayer.enabled`'s tests never call
       `prepareEarthFrame` at all — `enabled` keeps its own separate,
       untouched `sceneBodyStates` read; see the note below).
-- [ ] **Do not route `earthLayer.enabled` through `prepareEarthFrame`.**
+- [x] **Do not route `earthLayer.enabled` through `prepareEarthFrame`.**
       `enabled` (`earthLayer.ts:68–89`) only needs `earthState.positionMpc`
       for its distance/sub-pixel gates — it never needs `mvpLocal`/`camLocal`
       and is called with bare `ctx` fixtures that carry no `.slabs`
@@ -293,9 +293,9 @@ byte-for-byte.
       Leave `enabled`'s existing `sceneBodyStates(state, ctx).get(earth.id)!`
       call exactly as-is; this is a deliberate scope boundary, not an
       oversight.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- earthLayer runFrame` — green.
-- [ ] Commit (own commit, before Task 2's code exists):
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- earthLayer runFrame` — green.
+- [x] Commit (own commit, before Task 2's code exists):
 
 ```
 refactor(engine): extract prepareEarthFrame, the shared Earth per-frame derivation
@@ -460,28 +460,28 @@ atlas rect (the same math `earth/fragment.wesl:241–245` already does
 per-fragment today via `cellCols`/`fract`, moved CPU-side and resolved once
 per leaf instead of once per fragment).
 
-- [ ] **Test `cutSurfaceTiles` drops a leaf whose whole ancestor chain is
+- [x] **Test `cutSurfaceTiles` drops a leaf whose whole ancestor chain is
       non-resident** — a `residentSlot` stub returning `null` unconditionally;
       assert `cut` is empty even though the walk reaches leaves and
       `requests.requests` is non-empty (verifying the two products
       genuinely diverge here, not that the walk found nothing at all).
-- [ ] **Test `cutSurfaceTiles` resolves `levelDelta: 0` for an exactly
+- [x] **Test `cutSurfaceTiles` resolves `levelDelta: 0` for an exactly
       resident leaf** — a `residentSlot` stub that returns non-null only for
       the exact `{z,x,y}` the walk should reach at a known nadir camera pose
       (mirror `planEarthTiles.test.ts`'s `nadirAt` fixture, retargeted).
-- [ ] **Test `cutSurfaceTiles` falls back to a resident ancestor with the
+- [x] **Test `cutSurfaceTiles` falls back to a resident ancestor with the
       correct `levelDelta` and `quadrantOffset`** — a `residentSlot` stub
       resident only at `leaf.z - 2`; assert `levelDelta === 2` and
       `quadrantOffset` matches a hand-computed `[0,1)` fraction for the
       leaf's known sub-quadrant position (a hand-computed expectation per
       `testing.md`, not the same fraction formula the source uses).
-- [ ] **Test `cutSurfaceTiles` never resolves an ancestor at or shallower
+- [x] **Test `cutSurfaceTiles` never resolves an ancestor at or shallower
       than `baseLevel`** — a `residentSlot` stub resident at `baseLevel`
       itself; assert that resident entry is never used to backfill a leaf
       (the base globe covers it instead — this pins the "not including
       baseLevel" boundary explicitly, since off-by-one here would either
       double-draw the base level as an atlas tile or leave a gap).
-- [ ] **Test the near-plane-straddler fallback carries over, in both
+- [x] **Test the near-plane-straddler fallback carries over, in both
       products** — retarget `planEarthTiles.test.ts`'s off-nadir-tilt
       fixture (the "keeps the deep band alive when the near plane slices a
       root patch" case, `planEarthTiles.test.ts:160–171`) against
@@ -490,47 +490,47 @@ per leaf instead of once per fragment).
       deep tile (as today) **and** `cut` is non-empty (the false-negative-cull
       regression this test exists to catch applies to both outputs of the
       one walk that produces them).
-- [ ] **Test the horizon cull still drops the far hemisphere** — retarget
+- [x] **Test the horizon cull still drops the far hemisphere** — retarget
       `planEarthTiles.test.ts:256–280`'s far-altitude fixture; assert the
       antipodal tile never appears in `requests.requests`.
-- [ ] **Test `zWin` reaches the level a hand-computed texel density calls
+- [x] **Test `zWin` reaches the level a hand-computed texel density calls
       for, and gains exactly one level per halving of altitude** — retarget
       `planEarthTiles.test.ts`'s two `expectedLevel`/monotonicity tests onto
       `requests.zWin`.
-- [ ] **Test `lodBias` shifts `requests.zWin` and shrinks `requests.requests`,
+- [x] **Test `lodBias` shifts `requests.zWin` and shrinks `requests.requests`,
       and a bias large enough to underflow still floors at `baseLevel`** —
       retarget both `lodBias` tests verbatim.
-- [ ] **Test engage/disengage against a one-level pyramid, and the
+- [x] **Test engage/disengage against a one-level pyramid, and the
       `maxTileLevel` clamp** — retarget the "engages against the shipped
       z5-only pyramid, and stands down above it" and "never exceeds
       maxTileLevel" tests onto `requests.zWin`/`requests.requests`.
-- [ ] **Test every leaf's fetch request carries its full ancestor chain
+- [x] **Test every leaf's fetch request carries its full ancestor chain
       down to the floor** — retarget "requests every ancestor down to the
       floor alongside each leaf" verbatim onto `requests.requests`.
-- [ ] **Test the degenerate on-surface camera returns nothing, not
+- [x] **Test the degenerate on-surface camera returns nothing, not
       nonsense, from both products** — retarget "returns an empty plan
       rather than nonsense when the camera is on the surface": assert
       `requests.requests` and `cut` are both empty, and
       `requests.subCameraDirLocal` is still the meaningful `[1, 0, 0]`, not a
       NaN trap.
-- [ ] **Test `requests.subCameraDirLocal` is the normalised `camPosLocal`,
+- [x] **Test `requests.subCameraDirLocal` is the normalised `camPosLocal`,
       not a recomputed direction** — retarget verbatim.
-- [ ] **Test leaves land on both sides of the antimeridian** — retarget the
+- [x] **Test leaves land on both sides of the antimeridian** — retarget the
       "emits leaves on both sides of the antimeridian" fixture, dropping its
       window-membership assertions (`winX0`/`winY0`, the `EARTH_TILE_WINDOW_SIDE`
       wrap check) since `cutSurfaceTiles` has no window to be inside of —
       keep only the seam-straddling coverage itself (a request east of the
       seam and a request west of it, both present in `requests.requests`).
-- [ ] Implement `cutSurfaceTiles`: move `planEarthTiles`'s walk body in
+- [x] Implement `cutSurfaceTiles`: move `planEarthTiles`'s walk body in
       wholesale (no behaviour change to the request/`zWin` side beyond
       dropping the window clip, called out above), adding the
       `residentSlot`-driven ancestor-fallback resolution at each leaf's
       emission point to produce `cut` from the same pass.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- cutSurfaceTiles` — green. (`planEarthTiles.test.ts` also
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- cutSurfaceTiles` — green. (`planEarthTiles.test.ts` also
       still runs and still passes here, unmodified — it is deleted only in
       Task 5, once nothing calls `planEarthTiles` in production.)
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -613,14 +613,14 @@ them itself, every frame, the same "rebuilt every frame into a storage
 buffer" shape `starCatalogRenderer` already uses for its own per-frame CPU
 cut).
 
-- [ ] **Test `bakeSurfaceTileMesh` produces `(resolution+1)^2` vertices and
+- [x] **Test `bakeSurfaceTileMesh` produces `(resolution+1)^2` vertices and
       `resolution^2 * 6` indices** — a structural size assertion, the kind
       `testing.md` keeps (a real off-by-one in the grid loop fails this).
-- [ ] **Test `bakeSurfaceTileMesh`'s corner UVs are exactly `(0,0)`/`(1,0)`/
+- [x] **Test `bakeSurfaceTileMesh`'s corner UVs are exactly `(0,0)`/`(1,0)`/
       `(0,1)`/`(1,1)`** — hand-picked corner vertex indices (`0`, `resolution`,
       `resolution*(resolution+1)`, the last index), asserting `uvs` at those
       indices, independent of the position math.
-- [ ] **Test `bakeSurfaceTileMesh`'s positions are origin-relative** — assert
+- [x] **Test `bakeSurfaceTileMesh`'s positions are origin-relative** — assert
       the origin vertex's position is `[0,0,0]` (or whichever corner/centre
       convention is chosen) and that no other vertex's position magnitude
       exceeds a small multiple of the tile's own known angular extent at
@@ -628,27 +628,27 @@ cut).
       re-derivation of the bake formula) — this is the test that would catch
       a forgotten origin-subtraction regressing back to whole-sphere-scale
       coordinates.
-- [ ] **Test `bakeSurfaceTileMesh` curvature** — sample the mesh's centre
+- [x] **Test `bakeSurfaceTileMesh` curvature** — sample the mesh's centre
       vertex and assert it deviates from the flat bilinear interpolation of
       the four corners by a hand-computed sagitta (the §3.4 "flat quad
       undershoots the sphere's curvature" rejection this bake exists to
       avoid) — nonzero at a shallow tile, and present at any depth (even if
       tiny), proving the bake genuinely samples the sphere rather than
       lerping corners.
-- [ ] Implement `bakeSurfaceTileMesh`.
-- [ ] **Test `surfaceTileMeshCache` bakes on miss, returns the cached
+- [x] Implement `bakeSurfaceTileMesh`.
+- [x] **Test `surfaceTileMeshCache` bakes on miss, returns the cached
       reference on a hit** — `get(id, frame)` twice with the same `id`;
       assert the second call returns the exact same `SurfaceTileMesh`
       object (`toBe`) without a fresh bake (spy on the baker or count calls).
-- [ ] **Test `surfaceTileMeshCache` evicts LRU when full** — capacity 2, three
+- [x] **Test `surfaceTileMeshCache` evicts LRU when full** — capacity 2, three
       distinct ids requested across frames with increasing `frame` stamps
       touched per the `TextureAtlas.allocate`/`touch` pattern; assert the
       least-recently-touched id re-bakes (a fresh object, not the cached one)
       after the third id's request forces an eviction.
-- [ ] Implement `surfaceTileMeshCache`.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- bakeSurfaceTileMesh surfaceTileMeshCache` — green.
-- [ ] Commit.
+- [x] Implement `surfaceTileMeshCache`.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- bakeSurfaceTileMesh surfaceTileMeshCache` — green.
+- [x] Commit.
 
 ---
 
@@ -758,7 +758,7 @@ export function writeTileVertex(
 ): void;
 ```
 
-- [ ] **Test `earthSurfaceTileLayout`'s byte offsets round-trip** — write a
+- [x] **Test `earthSurfaceTileLayout`'s byte offsets round-trip** — write a
       `SurfaceTileNodeParams`/`TileVertex` record via the writer, read every
       field back through the same `DataView` at the documented offsets,
       assert equality. This is the parity-test pattern
@@ -766,8 +766,8 @@ export function writeTileVertex(
       a WGSL struct reorder without a matching TS move is exactly the class
       of bug this guards, per `testing.md`'s "Keep-rules" section (WGSL/TS
       parity is explicitly load-bearing, not a restatement).
-- [ ] Implement `earthSurfaceTileLayout.ts`.
-- [ ] Write `earthSurfaceTile/io.wesl` (the shared `VSOut` struct, mirroring
+- [x] Implement `earthSurfaceTileLayout.ts`.
+- [x] Write `earthSurfaceTile/io.wesl` (the shared `VSOut` struct, mirroring
       `bodies/earth/io.wesl`'s shape — clip position, intra-tile uv, local
       normal/tangent for lighting parity with the base globe's PBR path) and
       `earthSurfaceTile/{vertex,fragment}.wesl`. The fragment reuses the
@@ -778,7 +778,7 @@ export function writeTileVertex(
       page-table indirection (`:200–268` — that whole block has no
       equivalent here, since CPU-side `cutSurfaceTiles` already resolved
       which atlas rect this tile uses).
-- [ ] **Depth-compare landmine (verify, don't assume):** the instanced tile
+- [x] **Depth-compare landmine (verify, don't assume):** the instanced tile
       pipeline draws directly over the base globe at the **same** nominal
       unit-sphere radius (both are radius-1 spheres in their respective
       local frames before `S` scales them). A plain `'less'`/`'greater'`
@@ -794,7 +794,7 @@ export function writeTileVertex(
       `'nearer-or-equal'` insufficient (e.g. it also lets a stale/wrong tile
       win a tie against a correct one at the exact same depth — verify this
       isn't visually distinguishable before shipping either way).
-- [ ] Implement `createEarthSurfaceTileRenderer(device, targetFormat,
+- [x] Implement `createEarthSurfaceTileRenderer(device, targetFormat,
       depthFormat, reversedZ, meshCache)`: builds the two per-frame storage
       buffers (grow-only capacity, mirroring
       `starCatalogRenderer.ts:356–375`'s `ensureDrawBuffers` shape), a
@@ -803,9 +803,9 @@ export function writeTileVertex(
       radiusMpc; readonly vp: Float32Array; ... })` that rebuilds both
       buffers from `tiles` + `meshCache.get(id, frame)` every call, and
       issues one draw.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test -- earthSurfaceTileLayout` — green.
-- [ ] Commit.
+- [x] `npm run typecheck` — clean.
+- [x] `npm test -- earthSurfaceTileLayout` — green.
+- [x] Commit.
 
 ---
 
@@ -883,7 +883,7 @@ once bindings 7–9 are gone), and `earthTileConstants.parity.test.ts`'s
 dropping the window clip) but not proven against a real device — the same
 Task 6 smoke-pass flag applies.
 
-- [ ] Add a residency-query method to `EarthTileSubsystem`
+- [x] Add a residency-query method to `EarthTileSubsystem`
       (`src/@types/engine/subsystems/EarthTileSubsystem.d.ts` +
       `earthTileSubsystem.ts`'s `resident` map, currently closure-private):
       `residentSlot(tile: EarthTileId): { slot: number; atlasUvOrigin;
@@ -894,20 +894,20 @@ Task 6 smoke-pass flag applies.
       the atlas's own `slotsPerRow`/`atlasSide`/`slotSide` are in scope
       here). This is the callback Task 5 wires into `cutSurfaceTiles`'s
       `residentSlot` parameter.
-- [ ] Delete `buildEarthPageTable.ts` (and its test file, if present) once
+- [x] Delete `buildEarthPageTable.ts` (and its test file, if present) once
       nothing references it.
-- [ ] Delete `planEarthTiles.ts` and `planEarthTiles.test.ts` once
+- [x] Delete `planEarthTiles.ts` and `planEarthTiles.test.ts` once
       `runFrame.ts`'s call site (below) calls `cutSurfaceTiles` instead —
       `cutSurfaceTiles.test.ts` (Task 2) already carries every assertion
       `planEarthTiles.test.ts` made, so this is a pure deletion, not a
       coverage loss.
-- [ ] Drop `windowSide` from `EarthTilePlannerParams` and its one producer
+- [x] Drop `windowSide` from `EarthTilePlannerParams` and its one producer
       (`earthTileSubsystem.ts`'s `derivePlannerParams`); delete
       `EARTH_TILE_WINDOW_SIDE` from `earthTileParams.ts`; delete its mirror
       and the page-table cell-lookup block from `earth/fragment.wesl`; drop
       its case from `earthTileConstants.parity.test.ts` — see the collision
       note above.
-- [ ] Delete `earthTileSubsystem.ts`'s page-table half: the `pageTable`
+- [x] Delete `earthTileSubsystem.ts`'s page-table half: the `pageTable`
       `GPUTexture` allocation in `engage()` (`:224–235`), `uploadPageTable`
       (`:247–275`), `standDown`'s page-table zero-write (`:280–291`, though
       `standDown` itself may still be needed for other engage/disengage
@@ -921,13 +921,13 @@ Task 6 smoke-pass flag applies.
       does it need its own? The spec's §3.4 keeps "the atlas, its LRU
       eviction … unchanged" — so the SAME atlas view should still flow
       through).
-- [ ] Update `earthTileSubsystem.test.ts` to match: drop every assertion
+- [x] Update `earthTileSubsystem.test.ts` to match: drop every assertion
       that inspects the page-table upload path; update its `ENGAGED`/
       `DISENGAGED`/`fillPlan`/`nextPlan` `EarthTilePlan` fixtures to the
       reshaped type (drop their `winX0`/`winY0` fields); add coverage for
       the new `residentSlot` method (resident tile → correct slot/uv;
       non-resident → `null`).
-- [ ] Rewrite `earthLayer.draw` to draw the base globe (unchanged
+- [x] Rewrite `earthLayer.draw` to draw the base globe (unchanged
       `earthRenderer.draw` call, minus the now-dead page-table uniform
       fields `zWin`/`winX0`/`winY0` in `packEarthSurfaceUniforms` — verify
       whether those slots become true padding or get removed; removing them
@@ -936,7 +936,7 @@ Task 6 smoke-pass flag applies.
       tiles (`earthSurfaceTileRenderer.draw`, gated on the cut being
       non-empty — an empty cut is a legitimate "nothing resident yet, base
       globe alone" frame, not a bug).
-- [ ] Update `runFrame.ts`'s tile-planning block: replace the
+- [x] Update `runFrame.ts`'s tile-planning block: replace the
       `planEarthTiles(...)` call with `cutSurfaceTiles(...)`, passing
       `earthTiles.residentSlot` as its `residentSlot` argument; call
       `earthTiles.update({ plan: result.requests, nowMs: ctx.nowMs })` in
@@ -948,21 +948,21 @@ Task 6 smoke-pass flag applies.
       separate "compute" from "consume" — implementer's call, keep it
       inside the existing `earthTiles`/`ctx` seams rather than inventing a
       new global).
-- [ ] Update `earthRenderer.ts`: remove `TILE_PAGE_TABLE_BINDING`/
+- [x] Update `earthRenderer.ts`: remove `TILE_PAGE_TABLE_BINDING`/
       `TILE_ATLAS_BINDING`/`TILE_SAMPLER_BINDING` (bindings 7–9) and their
       placeholder textures/bind-group-layout entries, since the base globe
       no longer blends tile detail (Task 4's renderer owns tile drawing
       entirely now). Verify `packEarthSurfaceUniforms`'s
       `zWin`/`winX0`/`winY0`/reshape lands consistently with the previous
       step's choice.
-- [ ] `npm run typecheck` — clean.
-- [ ] `npm test` — full suite green.
-- [ ] Manual dev-server check (not yet the full Task 6 pass): fly to a
+- [x] `npm run typecheck` — clean.
+- [x] `npm test` — full suite green.
+- [x] Manual dev-server check (not yet the full Task 6 pass): fly to a
       tiled band, confirm detail tiles render and the base-globe fallback
       still shows correctly with the tile subsystem disengaged (far
       altitude); glance at `EarthTileAtlasSection`'s request/miss/dropped
       counters for the unclipped-request-list concern flagged above.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -972,7 +972,7 @@ Task 6 smoke-pass flag applies.
 fix. This task is the perf-halt rule and the spec's §8 visual checklist,
 executed and recorded.
 
-- [ ] Load the `perf` skill (`.claude/skills/perf/SKILL.md`) before running
+- [x] Load the `perf` skill (`.claude/skills/perf/SKILL.md`) before running
       anything. In this worktree, run `npm run perf -- --url
       http://localhost:<this worktree's dev-server port>` **before** any
       Task 4/5 GPU-side change lands relative to a clean baseline commit (if
@@ -980,12 +980,12 @@ executed and recorded.
       Task 5 completes. Record MERGED/PER-LAYER/FLOOR numbers in this
       section of the plan (or the ledger) per the skill's interpretation
       guidance.
-- [ ] **Land/park is the user's ruling per `feedback_code_is_liability`**: a
+- [x] **Land/park is the user's ruling per `feedback_code_is_liability`**: a
       neutral-or-negative perf measurement halts the pipeline here — report
       the numbers to the user before proceeding to the visual pass.
-- [ ] `npm test` — full suite green.
-- [ ] `npm run typecheck` — clean.
-- [ ] Hand off to the user for the dev-server visual pass (spec §8):
+- [x] `npm test` — full suite green.
+- [x] `npm run typecheck` — clean.
+- [x] Hand off to the user for the dev-server visual pass (spec §8):
   - Step-free camera motion and stable imagery down to ~2 m altitude
     (exercises the floor being lowered further than today's ~15 m, per the
     spec's acceptance criteria — magnified z19/z20 texels are expected and
@@ -996,4 +996,4 @@ executed and recorded.
     no manifest, no atlas engaged, a 404 on every tile request.
   - Flying anywhere outside a tiled band is visually unchanged from before
     this feature (BMNG-only regions untouched).
-- [ ] `/feature-done` audit once the visual pass is clean.
+- [x] `/feature-done` audit once the visual pass is clean.

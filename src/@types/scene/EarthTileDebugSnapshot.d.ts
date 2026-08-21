@@ -25,6 +25,9 @@ export type EarthTileDebugSnapshot = {
     readonly zWin: number;
     /** Planned tiles with no bitmap resident yet. */
     readonly misses: number;
+    /** Leaves in the last frame's drawn cut (`earthTileSubsystem`'s
+     *  `lastCut`) — unbounded today; a growth watch, not a cap. */
+    readonly cutCount: number;
   } | null;
   /** `atlas.allocate` refusals ("atlas full this frame") on the last update. */
   readonly droppedAllocations: number;

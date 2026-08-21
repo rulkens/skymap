@@ -115,10 +115,26 @@ function transformF64ToNdc(mvp: Float64Array): [number, number, number] {
   const y = localVertex[1] as number;
   const z = localVertex[2] as number;
   const w = localVertex[3] as number;
-  const cx = (mvp[0] as number) * x + (mvp[4] as number) * y + (mvp[8] as number) * z + (mvp[12] as number) * w;
-  const cy = (mvp[1] as number) * x + (mvp[5] as number) * y + (mvp[9] as number) * z + (mvp[13] as number) * w;
-  const cz = (mvp[2] as number) * x + (mvp[6] as number) * y + (mvp[10] as number) * z + (mvp[14] as number) * w;
-  const cw = (mvp[3] as number) * x + (mvp[7] as number) * y + (mvp[11] as number) * z + (mvp[15] as number) * w;
+  const cx =
+    (mvp[0] as number) * x +
+    (mvp[4] as number) * y +
+    (mvp[8] as number) * z +
+    (mvp[12] as number) * w;
+  const cy =
+    (mvp[1] as number) * x +
+    (mvp[5] as number) * y +
+    (mvp[9] as number) * z +
+    (mvp[13] as number) * w;
+  const cz =
+    (mvp[2] as number) * x +
+    (mvp[6] as number) * y +
+    (mvp[10] as number) * z +
+    (mvp[14] as number) * w;
+  const cw =
+    (mvp[3] as number) * x +
+    (mvp[7] as number) * y +
+    (mvp[11] as number) * z +
+    (mvp[15] as number) * w;
   return [cx / cw, cy / cw, cz / cw];
 }
 
@@ -133,10 +149,7 @@ function transformF32ToNdc(mvp: Float32Array): [number, number, number] {
 // The NDC cube is [-1,1]^3 and the body fills roughly the full frustum
 // (fovY = π/4, eye at 2×radiusMpc), so ~1 NDC unit ≈ 1 radiusMpc.
 // Multiplying by radiusMpc converts NDC distance to Mpc.
-function ndcErrorMpc(
-  a: [number, number, number],
-  b: [number, number, number],
-): number {
+function ndcErrorMpc(a: [number, number, number], b: [number, number, number]): number {
   const dx = (a[0] as number) - (b[0] as number);
   const dy = (a[1] as number) - (b[1] as number);
   const dz = (a[2] as number) - (b[2] as number);
@@ -147,8 +160,12 @@ function ndcErrorMpc(
 
 describe('composeBodyMvp', () => {
   it('an Earth-radius body at 1 AU survives compose-then-narrow with sub-metre error', () => {
-    // Compose-before-narrow path (the implementation under test).
-    const mvpF32 = composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc, IDENTITY_MAT3);
+    // Compose-before-narrow path (the implementation under test). composeBodyMvp
+    // itself returns f64; narrowMat4 here stands in for the GPU-drawing caller's
+    // own upload-site narrow (see composeBodyMvp's header).
+    const mvpF32 = narrowMat4(
+      composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc, IDENTITY_MAT3),
+    );
     const ndcF32 = transformF32ToNdc(mvpF32);
 
     // Pure-f64 ground truth.
@@ -160,7 +177,7 @@ describe('composeBodyMvp', () => {
 
     console.log(
       `[positive] NDC error in Mpc: ${errorMpc.toExponential(4)} ` +
-      `(tolerance: ${toleranceMpc.toExponential(4)} Mpc)`,
+        `(tolerance: ${toleranceMpc.toExponential(4)} Mpc)`,
     );
 
     expect(errorMpc).toBeLessThan(toleranceMpc);
@@ -187,11 +204,7 @@ describe('composeBodyMvp', () => {
 
     // ── Parsec-scale geometry ─────────────────────────────────────────────────
 
-    const pcBodyPosMpc: [number, number, number] = [
-      1.301 * SCALE_UNITS.PC_TO_MPC,
-      0,
-      0,
-    ];
+    const pcBodyPosMpc: [number, number, number] = [1.301 * SCALE_UNITS.PC_TO_MPC, 0, 0];
     const pcRenderOrigin: [number, number, number] = [
       RENDER_ORIGIN_MPC[0] as number,
       RENDER_ORIGIN_MPC[1] as number,
@@ -199,16 +212,8 @@ describe('composeBodyMvp', () => {
     ];
 
     // Camera sits ~2 body-radii from the body along +Z, looking at it.
-    const pcEyeMpc: [number, number, number] = [
-      pcBodyPosMpc[0] as number,
-      0,
-      2 * radiusMpc,
-    ];
-    const pcTargetMpc: [number, number, number] = [
-      pcBodyPosMpc[0] as number,
-      0,
-      0,
-    ];
+    const pcEyeMpc: [number, number, number] = [pcBodyPosMpc[0] as number, 0, 2 * radiusMpc];
+    const pcTargetMpc: [number, number, number] = [pcBodyPosMpc[0] as number, 0, 0];
 
     const pcForegroundVp = computeForegroundViewProj({
       eyeMpc: pcEyeMpc,
@@ -240,19 +245,15 @@ describe('composeBodyMvp', () => {
     // ── Assertion 1: composeBodyMvp (f64 compose then narrow) survives ────────
     // Error should be comfortably below one body radius.
 
-    const mvpF32Good = composeBodyMvp(
-      pcForegroundVp,
-      pcBodyPosMpc,
-      pcRenderOrigin,
-      radiusMpc,
-      IDENTITY_MAT3,
+    const mvpF32Good = narrowMat4(
+      composeBodyMvp(pcForegroundVp, pcBodyPosMpc, pcRenderOrigin, radiusMpc, IDENTITY_MAT3),
     );
     const ndcGood = transformF32ToNdc(mvpF32Good);
     const errorGoodMpc = ndcErrorMpc(ndcGood, ndcF64);
 
     console.log(
       `[negative/f64] NDC error in Mpc: ${errorGoodMpc.toExponential(4)} ` +
-      `(radiusMpc: ${radiusMpc.toExponential(4)})`,
+        `(radiusMpc: ${radiusMpc.toExponential(4)})`,
     );
 
     expect(errorGoodMpc).toBeLessThan(radiusMpc);
@@ -279,8 +280,8 @@ describe('composeBodyMvp', () => {
 
     console.log(
       `[negative/f32-sep] NDC error in Mpc: ${errorBadMpc.toExponential(4)} ` +
-      `(radiusMpc: ${radiusMpc.toExponential(4)}) ` +
-      `= ${(errorBadMpc / radiusMpc).toExponential(2)} body radii`,
+        `(radiusMpc: ${radiusMpc.toExponential(4)}) ` +
+        `= ${(errorBadMpc / radiusMpc).toExponential(2)} body radii`,
     );
 
     expect(errorBadMpc).toBeGreaterThan(radiusMpc);
@@ -311,7 +312,9 @@ describe('composeBodyMvp', () => {
     // image of local +y is world −x.
     const rot90z: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
 
-    const mvp = composeBodyMvp(rotVp, rotBodyPos, rotRenderOrigin, rotRadiusMpc, rot90z);
+    const mvp = narrowMat4(
+      composeBodyMvp(rotVp, rotBodyPos, rotRenderOrigin, rotRadiusMpc, rot90z),
+    );
     const actualNdc = transformF32ToNdc(mvp);
 
     // Independent expectation: rotate local +x into world +y, scale by the radius,
@@ -322,10 +325,26 @@ describe('composeBodyMvp', () => {
       rotBodyPos[1] + rotRadiusMpc * 1,
       rotBodyPos[2] + rotRadiusMpc * 0,
     ];
-    const cx = rotVp[0]! * worldSurface[0] + rotVp[4]! * worldSurface[1] + rotVp[8]! * worldSurface[2] + rotVp[12]!;
-    const cy = rotVp[1]! * worldSurface[0] + rotVp[5]! * worldSurface[1] + rotVp[9]! * worldSurface[2] + rotVp[13]!;
-    const cz = rotVp[2]! * worldSurface[0] + rotVp[6]! * worldSurface[1] + rotVp[10]! * worldSurface[2] + rotVp[14]!;
-    const cw = rotVp[3]! * worldSurface[0] + rotVp[7]! * worldSurface[1] + rotVp[11]! * worldSurface[2] + rotVp[15]!;
+    const cx =
+      rotVp[0]! * worldSurface[0] +
+      rotVp[4]! * worldSurface[1] +
+      rotVp[8]! * worldSurface[2] +
+      rotVp[12]!;
+    const cy =
+      rotVp[1]! * worldSurface[0] +
+      rotVp[5]! * worldSurface[1] +
+      rotVp[9]! * worldSurface[2] +
+      rotVp[13]!;
+    const cz =
+      rotVp[2]! * worldSurface[0] +
+      rotVp[6]! * worldSurface[1] +
+      rotVp[10]! * worldSurface[2] +
+      rotVp[14]!;
+    const cw =
+      rotVp[3]! * worldSurface[0] +
+      rotVp[7]! * worldSurface[1] +
+      rotVp[11]! * worldSurface[2] +
+      rotVp[15]!;
     const expectedNdc: [number, number, number] = [cx / cw, cy / cw, cz / cw];
 
     expect(actualNdc[0]).toBeCloseTo(expectedNdc[0], 5);
@@ -349,7 +368,9 @@ describe('composeBodyMvp', () => {
     ) as Float64Array;
     const referenceMvp = narrowMat4(mat4d.multiply(foregroundVp, modelTS) as Float64Array);
 
-    const actualMvp = composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc, IDENTITY_MAT3);
+    const actualMvp = narrowMat4(
+      composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc, IDENTITY_MAT3),
+    );
 
     for (let i = 0; i < 16; i++) {
       expect(actualMvp[i]).toBeCloseTo(referenceMvp[i] as number, 6);
