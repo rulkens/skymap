@@ -472,7 +472,7 @@ export function attachOrbitControls(
       // than canvas.height (backing-store pixels) keeps the gesture's
       // physical-feel consistent regardless of devicePixelRatio.
       const cssHeight = canvas.clientHeight || 1;
-      const pxToWorld = (2 * cam.distance * Math.tan(cam.fovYRad / 2)) / cssHeight;
+      const pxToWorld = (2 * (cam.distance - (pivotRadius() ?? 0)) * Math.tan(cam.fovYRad / 2)) / cssHeight;
 
       // Step 3: build the world-space translation.
       //   - dragging RIGHT  (+dx CSS) → world point should slide RIGHT  →

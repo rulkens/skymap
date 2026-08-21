@@ -49,6 +49,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
+import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { orbitRadPerPixel } from '../../../src/utils/camera/orbitRadPerPixel';
 import { cursorRayWorld } from '../../../src/utils/camera/cursorRayWorld';
 import { cursorSurfaceHit } from '../../../src/utils/camera/cursorSurfaceHit';
@@ -549,6 +550,81 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
 
     expect(cam.yaw).toBeCloseTo(-50 * 0.005, 6);
+  });
+});
+
+describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
+  // The pan gesture translates cam.target along the camera's right+up axes
+  // by a screen-aligned amount.  When a focused body's surface is nearby,
+  // `pxToWorld` (pixel→world conversion factor) must scale to ALTITUDE
+  // (distance − pivotRadius) rather than raw distance, so a fixed pan gesture
+  // moves the target by a distance scaled to the actual ground span in view.
+  // Without this fix, near Earth's surface a pan gesture moves the target by
+  // a distance scaled to Earth's whole radius instead, sweeping too far.
+
+  it('pan uses altitude when a pivot is focused (near-surface pan regime)', () => {
+    const cam = makeCamera();
+    // Near-surface framing: 127 km altitude above Earth's surface.
+    cam.distance = EARTH_RADIUS_MPC * 1.02;
+    cam.target = [0, 0, 0];
+    updatePosition(cam); // Update cam.position to match the new distance
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+    });
+
+    // Start a pan (right/middle mouse button).
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 2,
+      clientX: 500,
+      clientY: 500,
+    });
+    // Drag right by 100 CSS pixels.
+    win.fire('pointermove', { pointerId: 1, clientX: 600, clientY: 500 });
+
+    // Hand-compute the expected target shift.
+    // With the fix: pxToWorld = 2 * altitude * tan(fovY/2) / cssHeight
+    const cssHeight = 1000;
+    const fovYRad = (Math.PI / 180) * 60;
+    const altitude = cam.distance - EARTH_RADIUS_MPC;
+    const altitudePxToWorld =
+      (2 * altitude * Math.tan(fovYRad / 2)) / cssHeight;
+    const expectedRightShift = -100 * altitudePxToWorld;
+
+    // Assert the target moved by the altitude-based amount (leftward, since
+    // dragging right moves the target left via -dx·right).
+    expect(cam.target[0]).toBeCloseTo(expectedRightShift, 5);
+  });
+
+  it('pan degenerates to unchanged formula when no pivot is focused (deep-space pan)', () => {
+    // No pivot radius ⇒ pan must use raw distance, unchanged.
+    const cam = makeCamera();
+    cam.distance = 1000; // arbitrary far distance
+    cam.target = [0, 0, 0];
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 2,
+      clientX: 500,
+      clientY: 500,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 600, clientY: 500 });
+
+    // Hand-compute the expected target shift (unchanged formula).
+    const cssHeight = 1000;
+    const fovYRad = (Math.PI / 180) * 60;
+    const pxToWorld = (2 * cam.distance * Math.tan(fovYRad / 2)) / cssHeight;
+    const expectedRightShift = -100 * pxToWorld;
+
+    // Assert the target moved by the raw-distance formula (regression floor).
+    expect(cam.target[0]).toBeCloseTo(expectedRightShift, 5);
   });
 });
 
