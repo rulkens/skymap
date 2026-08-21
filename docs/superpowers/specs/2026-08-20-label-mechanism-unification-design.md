@@ -1,6 +1,7 @@
 # Label mechanism unification (ladder rung 8) — design
 
-> **Status.** Drafted, awaiting user review; not yet built.
+> **Status.** Reviewed call-by-call with the user 2026-08-21 — all four flagged
+> decisions confirmed as written (§15); not yet built.
 > **Date.** 2026-08-20. Branch `refactor/label-unification`, off `main` @ `9a7eb26c3`.
 > **Ladder position.** Rung 8 of the engine-composition ladder
 > ([decisions.md](../../research/engine/decisions.md) #9, widened by #11), the
@@ -177,15 +178,21 @@ once per frame, and its output is merged and flushed by exactly one owner.
 
 ### 3.1 Renames (PR A)
 
-Once `Label3D` exists, `Label` is an unmarked incumbent. Three renames, all
+Once `Label3D` exists, `Label` is an unmarked incumbent. Four renames, all
 tool-assisted (`npm run refactor -- rename`, then `npm run move-files` for the
-`.d.ts` files so the filename tracks the symbol):
+`.d.ts` and `.ts` files so the filename tracks the symbol):
 
 | from                                                | to                                                    |
 | --------------------------------------------------- | ----------------------------------------------------- |
 | `src/@types/rendering/Label.d.ts` → `Label`         | `src/@types/rendering/Label2D.d.ts` → `Label2D`       |
 | `@types/engine/subsystems/LabelProducer.d.ts`       | `Label2DProducer.d.ts` → `Label2DProducer`            |
 | `@types/engine/subsystems/LabelProducerOutput.d.ts` | `Label2DProducerOutput.d.ts` → `Label2DProducerOutput` |
+| `src/services/engine/presentation/produceFamousLabels.ts` → `produceFamousLabels` | `produceFamousGalaxyLabels.ts` → `produceFamousGalaxyLabels` |
+
+The fourth row is a 2026-08-21 addition, not a §3-motivated one: once
+`produceSceneBodyCaptions`' `famousStar` handle gives NEAR0 famous-**star**
+captions (§6), "famous labels" is an ambiguous incumbent — the same
+disambiguation this section already applies to `Label` → `Label2D`.
 
 Not renamed in PR A, deliberately: `LabelRenderer`, `MarkerLine`,
 `labelRenderer`, `labelsLayer`, `labelDirector`. The renderers and the
@@ -470,11 +477,12 @@ Two consequences worth stating:
   residue of where the lift lives, and it is the thing a later rung would
   converge by moving COSMO's lift into its director too — which is possible,
   because a producer measuring through `state.gpu.labelRenderer?.measure` is
-  already established (`produceFamousLabels.ts:297`). **Flagged for the user at
-  spec review**: the ruling puts the lift in the director; the evidence says a
-  producer could equally hold it. The ruling stands unless overturned; nothing
-  downstream in this spec depends on which way it goes beyond which file the
-  lift code lands in.
+  already established (`produceFamousLabels.ts:297`). **Confirmed at the
+  2026-08-21 review**: the director keeps the lift. Survivors-only
+  ordering — the lift must run after declutter/envelope, across every
+  producer's output, not one producer's — is the load-bearing argument over
+  the producer-side counter-evidence. Nothing downstream in this spec depends
+  on which way it goes beyond which file the lift code lands in.
 
 ### 4.5 One projection, one rank key
 
@@ -942,6 +950,7 @@ the `tests/` mirror follows)
 @types/…/LabelProducerOutput.d.ts              → Label2DProducerOutput.d.ts (PR A)
 @types/…/LabelDirectorSubsystem.d.ts           → Label2DDirector.d.ts       (PR B)
 services/engine/subsystems/labelDirectorSubsystem.ts → label2DDirector.ts   (PR B)
+services/engine/presentation/produceFamousLabels.ts → produceFamousGalaxyLabels.ts (PR A)
 ```
 
 Filenames track their exported symbol (`Label3DRenderer` → `label3DRenderer.ts`),
@@ -1076,7 +1085,7 @@ lift by re-running `liftedLabelPlacement`.
 
 **PR A — prep, mechanical, no plan needed.** Two commits:
 
-1. The three renames (§3.1), tool-assisted, plus the `tests/` mirror the tool
+1. The four renames (§3.1), tool-assisted, plus the `tests/` mirror the tool
    drags along. Zero behaviour, zero logic edits — a rename tool run and a
    typecheck.
 2. `lib/msdf.wesl` (§9.3): extract, rewire `labels/fragment.wesl` +
@@ -1203,8 +1212,8 @@ cites them by number.
     extraction (ZoA's copy not rewired — the feature deletes it). PR B = the
     feature. Prep commits are their own diffs.
 
-Decisions made while writing this spec, flagged for the user because the session
-did not cover them:
+Decisions made while writing this spec, put to the user at the 2026-08-21
+review and confirmed:
 
 - **`foregroundLabelDirector`** as the NEAR0 handle name (the brief's example
   was `captionDirector`), matching the renderer pair and the layer it drives.
@@ -1216,6 +1225,10 @@ did not cover them:
 - **The lift-in-the-director ruling is honoured, with counter-evidence
   recorded** (§4.4): `produceFamousLabels` already measures from inside a
   producer, so the ruling's premise is not the constraint it was taken to be.
+
+The review added one further item, outside the four above: `produceFamousLabels`
+→ `produceFamousGalaxyLabels` joins PR A's renames (§3.1) — user request,
+2026-08-21.
 
 ## References
 
