@@ -70,6 +70,11 @@ const settingsSlice = createSlice({
       settings.orientation = action.payload;
     },
 
+    // ── camera lens ─────────────────────────────────────────────────────────
+    setFovDeg: (settings, action: PayloadAction<number>) => {
+      settings.camera.fovDeg = action.payload;
+    },
+
     // ── galaxy-catalog billboard knobs ──────────────────────────────────────
     setGalaxyCatalogSize: (settings, action: PayloadAction<number>) => {
       settings.galaxyCatalogs.sizePx = action.payload;
@@ -485,6 +490,7 @@ const settingsSlice = createSlice({
 
 export const {
   setOrientation,
+  setFovDeg,
   setGalaxyCatalogSize,
   setBrightness,
   setDepthFade,

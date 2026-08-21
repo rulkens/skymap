@@ -151,6 +151,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Consolidate the renderer hygiene-basket duplications** `ready` — grow-on-demand instance buffer (×7+), 16-byte fade-scratch (×4 + a dummy-fade redeclare), fullscreen-triangle (×5 + a second `.wesl` copy), sub-pixel cull (×3). → [details](backlog/2026-08-20-renderer-hygiene-basket.md)
 - [ ] **Disabling a producer layer in the DebugPanel freezes its overlay** `ready` — `zone-of-avoidance`/`star-aggregates`/`mw-aggregate` stop re-clearing while their upsample consumers keep compositing, so the last frame smears in screen space as the camera moves. → [details](backlog/2026-08-17-debugpanel-producer-toggle-freezes-overlay.md)
 - [ ] **Pick-debug overlay is off `frameProgram`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
+- [ ] **Sun bloom inflates the solar disc against a transiting Moon** `needs-design` — geometry is correct (eclipse ratio ≈ 1.006); the emissive-12 disc seeds a bloom halo the lit-albedo Moon never gets. → [details](backlog/2026-08-21-sun-bloom-inflates-eclipse-disc.md)
 
 ## UI & UX
 

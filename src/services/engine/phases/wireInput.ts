@@ -196,7 +196,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //
   // Three writes, in dependency order:
   //   1. `projection` — read off the assembled camera via `projectionOf`.
-  //      Subsequent resizes patch only `aspect`.
+  //      `runFrame` patches `aspect` on resize and `fovYRad` from the settings
+  //      slider every frame thereafter.
   //   2. `lastPose.current` — the initial pose so the first commit-on-edge has
   //      a valid previous pose to refer to.
   //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
