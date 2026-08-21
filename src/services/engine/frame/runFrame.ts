@@ -202,6 +202,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (resizeCanvasToDisplay(deps.canvas)) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
   }
+  // Unlike aspect (canvas-resize-gated), the FOV slider can change on ANY frame
+  // with no resize event, so this write runs unconditionally — a settings-slider
+  // twin of the aspect assignment above, both landing on the same projection
+  // Resource `assembleOrbitCamera` merges into the live camera every frame.
+  state.cameraRuntime.projection.fovYRad = state.settings.camera.fovDeg * (Math.PI / 180);
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,

@@ -4,7 +4,8 @@
  * inside the SettingsPanel.
  *
  * Owns the Display thematic group UI: the orientation and tone-mapping curve
- * dropdowns, the exposure slider, and two nested CollapsibleSections — "Bloom"
+ * dropdowns, the exposure slider, the field-of-view slider, and two nested
+ * CollapsibleSections — "Bloom"
  * and "HDR" (both use the same master-enable header-toggle idiom `FlowSection`
  * uses; HDR's toggle is additionally `disabled` when `hdrCapable` is false, so
  * a user on an SDR display sees why it can't be flipped rather than a toggle
@@ -83,6 +84,10 @@ export type DisplaySectionProps = {
   exposure: number;
   /** Called with the new exposure as the slider drags. */
   onExposureChange: (next: number) => void;
+  /** Vertical camera field of view, in degrees. */
+  fovDeg: number;
+  /** Called with the new FOV as the slider drags. */
+  onFovDegChange: (next: number) => void;
   /** Whether extended-range HDR output is turned on. */
   hdrEnabled: boolean;
   /** Called with the toggled flag when the HDR header toggle is clicked. */
@@ -127,6 +132,8 @@ function DisplaySection({
   onToneMapCurveChange,
   exposure,
   onExposureChange,
+  fovDeg,
+  onFovDegChange,
   hdrEnabled,
   onHdrEnabledChange,
   hdrCapable,
@@ -188,6 +195,18 @@ function DisplaySection({
           step={0.25}
           onChange={(ev) => onExposureChange(evToExposure(ev))}
           format={formatEv}
+        />
+      </div>
+
+      <div className={styles.panelRow}>
+        <Slider
+          label="Field of view"
+          value={fovDeg}
+          min={30}
+          max={100}
+          step={1}
+          onChange={onFovDegChange}
+          format={(v) => `${Math.round(v)}°`}
         />
       </div>
 

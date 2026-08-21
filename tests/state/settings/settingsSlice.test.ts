@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 
 import reducer, {
   setOrientation,
+  setFovDeg,
   setBrightness,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
@@ -67,6 +68,13 @@ describe('settingsSlice — orientation', () => {
   it('setOrientation writes the frame (read back through selectOrientation)', () => {
     const next = reducer(base(), setOrientation('galactic'));
     expect(selectOrientation({ [settingsRoute]: next } as RootState)).toBe('galactic');
+  });
+});
+
+describe('settingsSlice — camera lens', () => {
+  it('setFovDeg writes the vertical field of view', () => {
+    const next = reducer(base(), setFovDeg(75));
+    expect(next.camera.fovDeg).toBe(75);
   });
 });
 

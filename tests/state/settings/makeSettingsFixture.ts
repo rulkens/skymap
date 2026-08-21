@@ -51,6 +51,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FOV_DEG,
   DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
   DEFAULT_HDR_HEADROOM,
@@ -99,6 +100,9 @@ export function makeSettingsFixture(
 ): EngineSettingsState {
   return {
     orientation: DEFAULT_ORIENTATION,
+    camera: {
+      fovDeg: DEFAULT_FOV_DEG,
+    },
     galaxyCatalogs: {
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,

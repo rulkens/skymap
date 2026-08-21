@@ -36,6 +36,7 @@ import type { InitialCam } from '../../../@types/camera/InitialCam';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { earthHomePose } from './earthHomePose';
+import { DEFAULT_FOV_DEG } from '../../../data/defaults';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
 export const INITIAL_DISTANCE_MPC = 0.14;
@@ -43,8 +44,8 @@ export const INITIAL_DISTANCE_MPC = 0.14;
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
 export const FAR_CLIP_MPC = 50000;
 
-/** Default vertical field-of-view in radians (60°) — the bootstrap lens setting. */
-export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
+/** Bootstrap lens in radians — derived from the `settings.camera.fovDeg` default so boot and slider rest position can't drift apart. */
+export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * DEFAULT_FOV_DEG;
 
 /**
  * Eye-tuned WORLD-space direction that faces the galactic disk — aimed along

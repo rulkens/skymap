@@ -121,6 +121,9 @@ function makeState(): EngineState {
   return {
     // Post-H5 nested-only settings shape.
     settings: {
+      // Read unconditionally at the top of the resize block, before the
+      // renderer-null bail-out — see `runFrame`'s fovYRad write.
+      camera: { fovDeg: 60 },
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2,

@@ -18,6 +18,7 @@ import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
+  DEFAULT_FOV_DEG,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
   DEFAULT_HDR_ENABLED,
@@ -90,6 +91,12 @@ export function buildInitialSettings(): EngineSettingsState {
     // stays the default's single source of truth (mirroring `tonemap.curve` ←
     // `DEFAULT_TONE_MAP_CURVE`).
     orientation: DEFAULT_ORIENTATION,
+    // Camera lens: the vertical FOV slider. `cameraFraming.ts`'s boot-lens
+    // constant derives from the same `DEFAULT_FOV_DEG`, so boot and slider
+    // rest position agree by construction.
+    camera: {
+      fovDeg: DEFAULT_FOV_DEG,
+    },
     // Galaxy catalog layer: shared billboard appearance knobs + one item row
     // per galaxy catalog. Rows are DERIVED from the galaxy-catalog registry
     // entries so the seed can't drift from the galaxy catalog set — and,
