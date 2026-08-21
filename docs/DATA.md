@@ -70,12 +70,12 @@ Inside `CUTOFF_MPC = 30` the pipeline replaces the cz-derived position with a Co
 
 All refreshes share one 3-step shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (memory `project_worktree_data_isolation`). The sync step is the deploy path — see [docs/DEPLOY.md](DEPLOY.md).
 
-| Data changed           | 1. Fetch                                            | 2. Build                                                   |
-| ---------------------- | --------------------------------------------------- | ---------------------------------------------------------- |
-| CF4 distances          | `fetch-cf4`                                         | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                  |
-| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*`  |
-| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)         |
-| Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`          |
+| Data changed           | 1. Fetch                                                                                   | 2. Build                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| CF4 distances          | `fetch-cf4`                                                                                | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                                      |
+| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`)                                        | `build-structures` (after `build-tiers`) → `structures.*`                      |
+| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                                                        | `build-tiers` (`desi-deep.bin`, the CrB deep cone)                             |
+| Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)                                            | `build-textures` → `public/data/images/textures/`                              |
 | Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB) + `fetch-eox` (populates `data/raw/eox/`) | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5, skips the EOX band) |
 
 Raw files and built artefacts are gitignored; only provenance `README.md` + `.sha256` sidecars are committed. Full-res texture pull/build/sync runs post-merge from the main worktree.
@@ -92,7 +92,9 @@ A locally-run Polyphorm (native MCPM app) export — `bin/export/<timestamp>/` w
 
 ### MCPM workbench promotion (mcpm-workbench)
 
-A durable, dedicated home for cubes promoted from the MCPM workbench dev tool (`tools/mcpm-workbench/`), separate from the one-off polyphorm-2mrs test field above. Operator steps: export a run in the workbench UI (writes a `polyphy-trace` v1 `.npy`+`.json` pair via `emitTraceSidecar.ts`, `provenance.producer: 'mcpm-workbench'`); move the pair into `data/raw/mcpm-workbench/` (registry key `mcpm-workbench.dir`, gitignored); run `npm run promote-mcpm-workbench -- --stem <stem>`, which validates the sidecar's provenance, imports it via the shared `buildRhizomeVolume()` to `public/data/scalar-field/v3/mcpm-workbench.scfd`, copies the sidecar to the committed pointer `data/seeds/mcpm_workbench_promoted.json` (registry key `mcpm-workbench.promoted` — mirrors the `famous.curated` precedent, so git history records exactly which run/params produced the live cube), and rebuilds the data manifest; then `npm run sync-r2-secure`. Registered as source `mcpm-workbench` (`Source.McpmWorkbench`), untiered (one cube per run, no d8/d4/d2 triple), **hidden** (`visible: false`) until Phase 4 validation clears — no UI toggle ships with the registry row.
+A durable, dedicated home for cubes promoted from the MCPM workbench dev tool (`tools/mcpm-workbench/`), separate from the one-off polyphorm-2mrs test field above. Operator steps: export a run in the workbench UI (writes a `polyphy-trace` v1 `.npy`+`.json` pair via `emitTraceSidecar.ts`, `provenance.producer: 'mcpm-workbench'`); move the pair into `data/raw/mcpm-workbench/` (registry key `mcpm-workbench.dir`, gitignored); run `npm run promote-mcpm-workbench -- --stem <stem>`, which validates the sidecar's provenance, imports it via the shared `buildRhizomeVolume()` to `public/data/scalar-field/v3/mcpm-workbench.scfd`, copies the sidecar to the committed pointer `data/seeds/mcpm_workbench_promoted.json` (registry key `mcpm-workbench.promoted` — mirrors the `famous.curated` precedent, so git history records exactly which run/params produced the live cube), and rebuilds the data manifest; then `npm run sync-r2-secure`. Registered as source `mcpm-workbench` (`Source.McpmWorkbench`), untiered (one cube per run, no d8/d4/d2 triple), **hidden** (`visible: false`) pending a promotion decision — no UI toggle ships with the registry row.
+
+The workbench's trace-mass total sits a uniform ~9.28× below the reference SDSS DR17 Cosmic Slime VAC. A three-stage investigation eliminated every ported quirk flag, every structural cause (deposit scaling, step count, data-point weighting), and f16 trace accumulation as explanations, leaving a uniform scale difference pointing at the reference VAC's own provenance. Ruled a documented offset, not a workbench bug — see [`docs/research/mcpm-trace-mass-offset.md`](research/mcpm-trace-mass-offset.md) for the full elimination trail.
 
 ## Catalog gotchas
 

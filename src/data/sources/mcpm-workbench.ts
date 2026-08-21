@@ -7,9 +7,11 @@ export const MCPM_WORKBENCH_ENTRY = {
   id: 'mcpm-workbench',
   label: 'MCPM Workbench (promoted)',
   allSky: true, // same physical field as MCPM/Polyphorm2MRS, whatever footprint the promoted run covers
-  // Stays false until Phase 4 validation clears — the workbench dev tool's
-  // exports aren't vetted against the shipped MCPM/Polyphorm reference yet.
-  // No UI toggle work ships with this row; flipping this is Phase 4's call.
+  // Hidden pending a promotion decision, not a known defect: the workbench's
+  // total trace mass sits a uniform ~9.28x below the reference VAC, ruled a
+  // documented offset (see docs/research/mcpm-trace-mass-offset.md) after
+  // quirks/structure/f16 were eliminated as causes. No UI toggle ships with
+  // this row; flipping this is a separate call.
   visible: false,
   bearsLabel: false,
   bearsMarker: false,

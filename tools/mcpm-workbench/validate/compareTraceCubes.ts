@@ -356,6 +356,10 @@ async function main(): Promise<void> {
     `axis marginal max relative deviation: x=${report.marginalMaxRelDev[0].toFixed(4)}, ` +
       `y=${report.marginalMaxRelDev[1].toFixed(4)}, z=${report.marginalMaxRelDev[2].toFixed(4)}`,
   );
+  // meanLogTraceAtPoints won't show it, but a workbench cube's total trace
+  // mass sits a uniform ~9.28x below the reference VAC's — a documented,
+  // investigated offset (docs/research/mcpm-trace-mass-offset.md), not a
+  // regression to chase if a caller sums this tool's inputs separately.
   console.log(
     `meanLogTraceAtPoints: a=${report.aStats.meanLogTraceAtPoints}, b=${report.bStats.meanLogTraceAtPoints}`,
   );
