@@ -563,15 +563,17 @@ describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
   // a distance scaled to Earth's whole radius instead, sweeping too far.
 
   it('pan uses altitude when a pivot is focused (near-surface pan regime)', () => {
-    const cam = makeCamera();
-    // Near-surface framing: 127 km altitude above Earth's surface.
-    cam.distance = EARTH_RADIUS_MPC * 1.02;
+    const cam = makeCamera(102);
+    // Near-surface framing: altitude = 2 units, pivot = 100 units.
+    // This creates a 51× divergence between raw-distance and altitude formulas,
+    // analogous to a ~127 km altitude above Earth's surface.
+    const pivotRadius = 100;
     cam.target = [0, 0, 0];
-    updatePosition(cam); // Update cam.position to match the new distance
+    updatePosition(cam); // Sync cam.position to the new distance
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotRadiusMpc: () => pivotRadius,
     });
 
     // Start a pan (right/middle mouse button).
@@ -585,27 +587,29 @@ describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
     // Drag right by 100 CSS pixels.
     win.fire('pointermove', { pointerId: 1, clientX: 600, clientY: 500 });
 
-    // Hand-compute the expected target shift.
-    // With the fix: pxToWorld = 2 * altitude * tan(fovY/2) / cssHeight
+    // Hand-compute the expected target shift using ALTITUDE formula (with the fix).
+    // pxToWorld = 2 * (distance - pivotRadius) * tan(fovY/2) / cssHeight
     const cssHeight = 1000;
     const fovYRad = (Math.PI / 180) * 60;
-    const altitude = cam.distance - EARTH_RADIUS_MPC;
+    const altitude = cam.distance - pivotRadius;
     const altitudePxToWorld =
       (2 * altitude * Math.tan(fovYRad / 2)) / cssHeight;
-    const expectedRightShift = -100 * altitudePxToWorld;
+    const expectedAltitudeShift = -100 * altitudePxToWorld;
 
-    // Assert the target moved by the altitude-based amount (leftward, since
-    // dragging right moves the target left via -dx·right).
-    expect(cam.target[0]).toBeCloseTo(expectedRightShift, 5);
+    // With the fix, cam.target[0] should match the altitude formula.
+    // Without the fix, it would match the raw-distance formula (51x larger).
+    expect(cam.target[0]).toBeCloseTo(expectedAltitudeShift, 5);
   });
 
   it('pan degenerates to unchanged formula when no pivot is focused (deep-space pan)', () => {
-    // No pivot radius ⇒ pan must use raw distance, unchanged.
-    const cam = makeCamera();
-    cam.distance = 1000; // arbitrary far distance
+    // No pivotRadiusMpc option ⇒ pivotRadius() returns null ⇒ altitude = distance - 0 = distance.
+    // Pan must use raw distance, unchanged. This is the regression floor: existing unfocused
+    // pans (galaxies, structures) must remain byte-identical.
+    const cam = makeCamera(1000);
     cam.target = [0, 0, 0];
     const { canvas, rec } = makeCanvas();
 
+    // Attach WITHOUT pivotRadiusMpc option — no focused body.
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
 
     rec.fire('pointerdown', {
@@ -617,14 +621,16 @@ describe('attachOrbitControls — pan altitude-currency fix (§4.5)', () => {
     });
     win.fire('pointermove', { pointerId: 1, clientX: 600, clientY: 500 });
 
-    // Hand-compute the expected target shift (unchanged formula).
+    // Hand-compute the expected target shift using RAW-DISTANCE formula (unchanged).
+    // With no pivot, altitude = distance, so both old and new code use the same formula:
+    // pxToWorld = 2 * distance * tan(fovY/2) / cssHeight
     const cssHeight = 1000;
     const fovYRad = (Math.PI / 180) * 60;
     const pxToWorld = (2 * cam.distance * Math.tan(fovYRad / 2)) / cssHeight;
-    const expectedRightShift = -100 * pxToWorld;
+    const expectedRawDistanceShift = -100 * pxToWorld;
 
     // Assert the target moved by the raw-distance formula (regression floor).
-    expect(cam.target[0]).toBeCloseTo(expectedRightShift, 5);
+    expect(cam.target[0]).toBeCloseTo(expectedRawDistanceShift, 5);
   });
 });
 
