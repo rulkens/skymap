@@ -1,0 +1,59 @@
+/* The galaxy-renderer Hud's vocabulary (root / eyebrow / title / badges /
+   badge), reproduced so the two tools read as one family. The diagnostic
+   rows keep their label-left, value-right shape, so the pills here stack
+   in a column where the galaxy tool's run along a row. */
+.root {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  pointer-events: none;
+  user-select: none;
+  color: var(--color-fg-base);
+}
+
+.eyebrow {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+  letter-spacing: 3px;
+  color: var(--color-fg-dim);
+  font-weight: 600;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+  /* Raw white, not a --color-fg token — matches Splash's marquee title and
+     the galaxy tool's, the app's one display-serif headline treatment. */
+  color: #ffffff;
+}
+
+.badges {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  margin-top: 12px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+}
+
+.badge {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 210px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-divider);
+}
+
+.label {
+  color: var(--color-fg-muted);
+}
+
+.value {
+  color: var(--color-fg-base);
+}

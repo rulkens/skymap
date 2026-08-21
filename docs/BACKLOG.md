@@ -150,6 +150,23 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Third copy of the reduced-res viewport formula** `ready` — `Math.max(1, Math.floor(size / scale))` in `renderTargets.ts`, `scalarVolumeLayer.ts`, `zoneOfAvoidanceLayer.ts`; consolidate into `renderTargets.sizeOf(target)`.
 - [ ] **Consolidate the renderer hygiene-basket duplications** `ready` — grow-on-demand instance buffer (×7+), 16-byte fade-scratch (×4 + a dummy-fade redeclare), fullscreen-triangle (×5 + a second `.wesl` copy), sub-pixel cull (×3). → [details](backlog/2026-08-20-renderer-hygiene-basket.md)
 - [ ] **Disabling a producer layer in the DebugPanel freezes its overlay** `ready` — `zone-of-avoidance`/`star-aggregates`/`mw-aggregate` stop re-clearing while their upsample consumers keep compositing, so the last frame smears in screen space as the camera moves. → [details](backlog/2026-08-17-debugpanel-producer-toggle-freezes-overlay.md)
+- [ ] **mcpm-workbench: per-layer exposure** `awaiting-decision` — `EXPOSURE = 2` is a raymarch-only fork compensation applied to all five layers by the global tonemap; needs a look decision before touching it.
+- [ ] **mcpm-workbench: histogram plot never redraws on resize or section expand** `ready` — blank canvas when the section opens while paused.
+- [ ] **mcpm-workbench: `RenderGraph`'s blit pipeline still uses `layout: 'auto'`** `ready` — the tool's one banned-pattern site.
+- [ ] **mcpm-workbench: collapse three duplicate bounds computations** `ready` — `worldBounds`/`manualBounds`/`worldToVoxel` each recompute `centre ± size/2`; fold into one `field/gridBoxBounds.ts`.
+- [ ] **mcpm-workbench: `densities` allocated as a full agent lane** `ready` — only `nDataPoints` entries are ever used (~41 MB dead VRAM at 10M agents).
+- [ ] **mcpm-workbench: pending-box preview recomputes `catalogBounds` every frame in auto-fit mode** `ready` — cheap fix: use `h.box` when auto-fit is on.
+- [ ] **mcpm-workbench: unit-test `recordHistogramSample`** `ready` — against the CLI's `dataPointHistogram` on a shared fixture; the statistic Phase 3 rests on has no test.
+- [ ] **mcpm-workbench: lift `Toggle.tsx`'s inline pill styling into a shared class** `ready` — `ToggleRow.statePill` can compose it instead of restating the recipe.
+- [ ] **mcpm-workbench: promote `ToggleRow` to `src/components/common/`** `ready` — the galaxy tool hand-rolls the same row in four files.
+- [ ] **mcpm-workbench: `boxLines.wesl` pushes a line endpoint to `z = 2.0`** `ready` — a line-list clips rather than discards, so a half-length line draws when a box corner is behind the eye plane.
+- [ ] **mcpm-workbench: comparator `--bins` is unvalidated** `ready` — an all-out-of-grid `--points` set fails with an unrelated `RangeError` instead of a clear message.
+- [ ] **mcpm-workbench: fold the one-shot command tokens into one table** `deferred` — `reset`/`clearTrace`/`export`/`scfd` each a 3-line reducer; table-ify once a fifth token arrives.
+- [ ] **mcpm-workbench: `export_metadata.txt` vs packed-catalog point-count mismatch** `needs-verification` — 324,849 (fork export) vs 324,901 (packed catalog sidecar), not yet investigated.
+- [ ] **mcpm-workbench: `attachTrace` rebuilds the whole pipeline on a palette change** `ready` — a cheap `setPalette(id)` would do if the palette becomes a live dropdown.
+- [ ] **mcpm-workbench: `PathTracerSliderSpec` duplicates `RaymarchSliderSpec` field-for-field** `ready` — one shared spec type covers both tables.
+- [ ] **mcpm-workbench: `compareTraceCubes.test.ts`'s hand-rolled `.npy` writer is supersedable by `writeNpy`** `ready` — pre-existing test-helper duplication.
+- [ ] **mcpm-workbench: `HistogramSlice.d.ts` exports two types** `ready` — the only file in the tool's `@types/` that does; `HistogramSample` wants its own file.
 - [ ] **Pick-debug overlay is off `frameProgram`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
 - [ ] **Sun bloom inflates the solar disc against a transiting Moon** `needs-design` — geometry is correct (eclipse ratio ≈ 1.006); the emissive-12 disc seeds a bloom halo the lit-albedo Moon never gets. → [details](backlog/2026-08-21-sun-bloom-inflates-eclipse-disc.md)
 

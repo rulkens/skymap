@@ -2,7 +2,7 @@
 }
 
 .header {
-  composes: sectionHeader from '../shared.module.css';
+  composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
   margin: 24px 0 12px;
   padding-top: 16px;
   border-top: 1px solid var(--border-divider);

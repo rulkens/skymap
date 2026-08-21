@@ -65,6 +65,12 @@ export type EngineAssetSlots = {
    */
   polyphorm2Mrs: AssetSlot<ScalarCube, Polyphorm2MRSReq> | null;
   /**
+   * `mcpm-workbench.scfd` — cube promoted from the MCPM workbench dev tool via
+   * `tools/volumes/promoteWorkbenchExport.ts`. Untiered like CF-4 (void
+   * request), default-off, hidden pending a promotion decision.
+   */
+  mcpmWorkbench: AssetSlot<ScalarCube, void> | null;
+  /**
    * Opt-in on `settings.constellations.enabled`. The commit uploads the static
    * segment buffer and kicks `syncVisibilityFades`, ramping the seeded-0
    * demand-loaded fade up to the toggle's intent; the pass itself only draws.

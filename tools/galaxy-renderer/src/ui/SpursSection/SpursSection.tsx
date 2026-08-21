@@ -12,8 +12,8 @@ import type { GalaxyArmSpurTuning } from '../../../../../src/@types/galaxy/Galax
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../ParamSlider/ParamSlider';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import styles from './SpursSection.module.css';
 
 type SpurSliderKey = Exclude<keyof GalaxyArmSpurTuning, 'enabled'>;

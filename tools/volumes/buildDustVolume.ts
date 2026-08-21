@@ -21,7 +21,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
-import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
 import { logNormalMedian } from '../utils/volume/logNormalMedian';
 import {
   encodeScalarField,

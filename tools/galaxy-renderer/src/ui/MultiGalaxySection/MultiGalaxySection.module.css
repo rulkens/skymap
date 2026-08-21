@@ -27,7 +27,7 @@
 }
 
 .regenButton {
-  composes: blockButton from '../shared.module.css';
+  composes: blockButton from '../../../../../src/components/common/shared.module.css';
 }
 
 .explainer {

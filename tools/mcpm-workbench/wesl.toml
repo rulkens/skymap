@@ -1,0 +1,20 @@
+# WESL linker configuration for the MCPM Workbench tool.
+#
+# `root` points up out of this tool at the runtime's canonical shader tree
+# (src/services/gpu/shaders), so `package::<family>::…` resolves identically
+# here and in the main app — a future `package::mcpm::grid` import will reach
+# the same file either way. See tools/flow-workbench/wesl.toml for the fuller
+# writeup of this arrangement.
+#
+# This tool keeps ONE shader of its own, src/render/shaders/blit.wesl — an
+# HDR→swapchain tonemap, imported relatively (`?static`), no `package::`
+# imports in or out — so it can sit outside `root` and just be listed in
+# `include`.
+#
+# wesl-plugin locates this file from the *explicit* `weslToml` option in
+# vite.config.ts, not from the Vite `root` or `process.cwd()` — see that
+# file's header for why the explicit path is mandatory.
+
+edition = "unstable_2025"
+include = ["../../src/services/gpu/shaders/**/*.wesl", "src/render/shaders/*.wesl"]
+root = "../../src/services/gpu/shaders"

@@ -12,7 +12,8 @@ import { join } from 'node:path';
 
 import { buildRhizomeVolume } from '../../tools/volumes/buildRhizomeVolume';
 import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
-import { f32ToF16Bits } from '../../tools/utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { f16BitsToFloat } from '../../tools/utils/math/f16BitsToFloat';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {
   const headerDict = `{'descr': '<f4', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
@@ -30,20 +31,20 @@ function writeF32Npy(path: string, values: number[], shape: readonly number[]): 
   writeFileSync(path, Buffer.from(buf));
 }
 
-// Values are irrelevant to the rejection test this fixture serves — only
-// the dtype byte and the zero-filled f16 payload matter.
-function writeF16Npy(path: string, count: number, shape: readonly number[]): void {
+function writeF16Npy(path: string, values: number[], shape: readonly number[]): void {
   const headerDict = `{'descr': '<f2', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
   const baseLen = 10 + headerDict.length + 1;
   const padded = baseLen + ((64 - (baseLen % 64)) % 64);
   const headerLen = padded - 10;
   const headerStr = headerDict + ' '.repeat(headerLen - headerDict.length - 1) + '\n';
-  const dataBytes = count * 2;
+  const dataBytes = values.length * 2;
   const buf = new ArrayBuffer(10 + headerLen + dataBytes);
   const u8 = new Uint8Array(buf);
   u8.set([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 1, 0]);
   new DataView(buf).setUint16(8, headerLen, true);
   for (let i = 0; i < headerStr.length; i++) u8[10 + i] = headerStr.charCodeAt(i);
+  const bits = new Uint16Array(buf, 10 + headerLen, values.length);
+  for (let i = 0; i < values.length; i++) bits[i] = f32ToF16Bits(values[i]!);
   writeFileSync(path, Buffer.from(buf));
 }
 
@@ -137,11 +138,39 @@ describe('buildRhizomeVolume (smoke)', () => {
     );
   });
 
-  it('refuses an f16 npy', async () => {
-    writeF16Npy(npyPath, 64, dims);
-    writeSidecar(join(dir, 'cube.json'), { dims });
+  it('builds an f16 .npy to the same .scfd values as its f32 equivalent, within f16 rounding', async () => {
+    // Fractional values (not the integer ramp the other tests use) so f16's
+    // 10-bit mantissa actually rounds something — integers up to 2048 are
+    // exact in f16 and would let this test pass even with no widening.
+    const values = Array.from({ length: 64 }, (_, i) => (i + 0.37) * 0.6931);
 
-    await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/export f32/);
+    const f32Path = join(dir, 'cube-f32.npy');
+    const f32Out = join(dir, 'cube-f32.scfd');
+    writeF32Npy(f32Path, values, dims);
+    writeSidecar(join(dir, 'cube-f32.json'), { dims });
+    await buildRhizomeVolume({ npyPath: f32Path, outPath: f32Out });
+
+    const f16Path = join(dir, 'cube-f16.npy');
+    const f16Out = join(dir, 'cube-f16.scfd');
+    writeF16Npy(f16Path, values, dims);
+    writeSidecar(join(dir, 'cube-f16.json'), { dims });
+    await buildRhizomeVolume({ npyPath: f16Path, outPath: f16Out });
+
+    const f32Buf = readFileSync(f32Out);
+    const f16Buf = readFileSync(f16Out);
+    const f32Cube = decodeScalarField(
+      f32Buf.buffer.slice(f32Buf.byteOffset, f32Buf.byteOffset + f32Buf.byteLength),
+    );
+    const f16Cube = decodeScalarField(
+      f16Buf.buffer.slice(f16Buf.byteOffset, f16Buf.byteOffset + f16Buf.byteLength),
+    );
+
+    expect(f16Cube.voxels.length).toBe(f32Cube.voxels.length);
+    for (let i = 0; i < f32Cube.voxels.length; i++) {
+      const a = f16BitsToFloat(f32Cube.voxels[i]!);
+      const b = f16BitsToFloat(f16Cube.voxels[i]!);
+      expect(Math.abs(a - b)).toBeLessThan(0.01);
+    }
   });
 
   it('refuses a cube whose per-axis voxel sizes disagree beyond 0.5%', async () => {

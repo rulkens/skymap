@@ -2,12 +2,12 @@
 }
 
 .toggleRow {
-  composes: toggleRow from '../shared.module.css';
+  composes: toggleRow from '../../../../../src/components/common/shared.module.css';
 }
 
 /* Generator picker — same control surface as TonemapSelect's own .root, sized to sit inline in a .toggleRow rather than filling the panel width. */
 .select {
-  composes: control from '../shared.module.css';
+  composes: control from '../../../../../src/components/common/shared.module.css';
   padding: 4px 6px;
   border-radius: var(--radius-xl);
   font-size: var(--font-size-lg);

@@ -38,6 +38,7 @@ export const allowDataFile = (path: string): boolean => {
     name === 'famous_stars_meta.json' ||
     name === 'cf4_density.scfd' ||
     name === 'flowfield.scfd' ||
+    name === 'mcpm-workbench.scfd' ||
     name === 'structures.ccat' ||
     name === 'structures_meta.json' ||
     name === 'constellations.json' ||

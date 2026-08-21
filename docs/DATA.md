@@ -18,13 +18,13 @@ module, with that family's **current** format version as an epoch segment —
 a bumped family moves to a new folder, so a stale browser/CDN cache can
 never pair mismatched code and bytes:
 
-| folder                  | files                                                                     | format module (version)         |
-| ----------------------- | ------------------------------------------------------------------------- | ------------------------------- |
-| `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`     | `galaxyCatalogFormat.ts` (9)    |
-| `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                          | `starCatalogFormat.ts` (1)      |
-| `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair) | `structureCatalogFormat.ts` (1) |
-| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*` `.scfd`          | `scalarFieldFormat.ts` (3)      |
-| `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                            | `filamentBinaryFormat.ts` (1)   |
+| folder                  | files                                                                              | format module (version)         |
+| ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+| `galaxy-catalog/v9/`    | `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-*`, `famous` `.bin`              | `galaxyCatalogFormat.ts` (9)    |
+| `star-catalog/v1/`      | `stars-{small,medium,large}.bin`                                                   | `starCatalogFormat.ts` (1)      |
+| `structure-catalog/v1/` | `structures`/`clusters` `.ccat` + their `*_meta.json` (fetched as a pair)          | `structureCatalogFormat.ts` (1) |
+| `scalar-field/v3/`      | `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `mcpm-workbench` `.scfd` | `scalarFieldFormat.ts` (3)      |
+| `filament/v1/`          | `filaments{,-sdss,-small}.bin`                                                     | `filamentBinaryFormat.ts` (1)   |
 
 Some family-folder residents are deliberately untracked and stay at their
 logical name forever — `allowDataFile` (`tools/deploy/r2/allowDataFile.ts`)
@@ -70,12 +70,12 @@ Inside `CUTOFF_MPC = 30` the pipeline replaces the cz-derived position with a Co
 
 All refreshes share one 3-step shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (memory `project_worktree_data_isolation`). The sync step is the deploy path — see [docs/DEPLOY.md](DEPLOY.md).
 
-| Data changed           | 1. Fetch                                            | 2. Build                                                   |
-| ---------------------- | --------------------------------------------------- | ---------------------------------------------------------- |
-| CF4 distances          | `fetch-cf4`                                         | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                  |
-| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*`  |
-| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)         |
-| Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`          |
+| Data changed           | 1. Fetch                                                                                   | 2. Build                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| CF4 distances          | `fetch-cf4`                                                                                | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                                      |
+| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`)                                        | `build-structures` (after `build-tiers`) → `structures.*`                      |
+| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                                                        | `build-tiers` (`desi-deep.bin`, the CrB deep cone)                             |
+| Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)                                            | `build-textures` → `public/data/images/textures/`                              |
 | Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB) + `fetch-eox` (populates `data/raw/eox/`) | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5, skips the EOX band) |
 
 Raw files and built artefacts are gitignored; only provenance `README.md` + `.sha256` sidecars are committed. Full-res texture pull/build/sync runs post-merge from the main worktree.
@@ -89,6 +89,12 @@ The SDSS DR17 Cosmic Slime VAC cube ships as three tiered SCFDs (`mcpm-{small,me
 ### Polyphorm volume exports (polyphorm-2mrs)
 
 A locally-run Polyphorm (native MCPM app) export — `bin/export/<timestamp>/` with raw `trace.bin` (headerless f16, z-slowest/x-fastest) + `export_metadata.txt` — is converted by `tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>` into d8/d4/d2 `.npy` + `polyphy-trace` v1 sidecars under `data/raw/polyphorm/` (registry key `polyphorm.dir`, gitignored). Each tier is then imported with `npx tsx tools/volumes/buildRhizomeVolume.ts <npy> --out public/data/scalar-field/v3/polyphorm-2mrs-{small,medium,large}.scfd --clamp 0.2` (small=d8, medium=d4, large=d2, mirroring MCPM's tiering) followed by `npm run build-data-manifest`. `--clamp` zeroes packed voxels below the given f16 threshold (in the [0,1] log-normalised domain); 0.2 sits below the renderer's default-settings visibility deadband (contrast 1.7/trim 0.3 → 0.41) and shrinks the gzipped large tier from 194 MB to 2.3 MB by turning 99.1% of voxels into exact zeros, at no visible cost. Registered as source `polyphorm-2mrs` (`Source.Polyphorm2MRS`), tiered like MCPM, hidden by default. Current dataset: the 2026-08-13 2MRS run (34,974 galaxies, 4M agents, grid 1200×752×960, ~1.22 Mpc native voxels, equatorial-cartesian frame).
+
+### MCPM workbench promotion (mcpm-workbench)
+
+A durable, dedicated home for cubes promoted from the MCPM workbench dev tool (`tools/mcpm-workbench/`), separate from the one-off polyphorm-2mrs test field above. Operator steps: export a run in the workbench UI (writes a `polyphy-trace` v1 `.npy`+`.json` pair via `emitTraceSidecar.ts`, `provenance.producer: 'mcpm-workbench'`); move the pair into `data/raw/mcpm-workbench/` (registry key `mcpm-workbench.dir`, gitignored); run `npm run promote-mcpm-workbench -- --stem <stem>`, which validates the sidecar's provenance, imports it via the shared `buildRhizomeVolume()` to `public/data/scalar-field/v3/mcpm-workbench.scfd`, copies the sidecar to the committed pointer `data/seeds/mcpm_workbench_promoted.json` (registry key `mcpm-workbench.promoted` — mirrors the `famous.curated` precedent, so git history records exactly which run/params produced the live cube), and rebuilds the data manifest; then `npm run sync-r2-secure`. Registered as source `mcpm-workbench` (`Source.McpmWorkbench`), untiered (one cube per run, no d8/d4/d2 triple), **hidden** (`visible: false`) pending a promotion decision — no UI toggle ships with the registry row.
+
+The workbench's trace-mass total sits a uniform ~9.28× below the reference SDSS DR17 Cosmic Slime VAC. A three-stage investigation eliminated every ported quirk flag, every structural cause (deposit scaling, step count, data-point weighting), and f16 trace accumulation as explanations, leaving a uniform scale difference pointing at the reference VAC's own provenance. Ruled a documented offset, not a workbench bug — see [`docs/research/mcpm-trace-mass-offset.md`](research/mcpm-trace-mass-offset.md) for the full elimination trail.
 
 ## Catalog gotchas
 

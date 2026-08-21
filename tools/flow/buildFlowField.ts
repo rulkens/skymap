@@ -31,7 +31,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
-import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
 import {
   encodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,

@@ -16,8 +16,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
-import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
-import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
+import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
+import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
 import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -92,16 +93,22 @@ export async function buildRhizomeVolume(args: {
   }
   const dims: Vec3 = [squeezedShape[0]!, squeezedShape[1]!, squeezedShape[2]!];
 
-  // Rule 9 — readNpy happily decodes `<f2` to raw f16 bits; rejecting it is
-  // ours to do. Half precision loses real information before block-average
-  // + log-normalise (same reasoning as extractMcpmCube.py's f32 upcast).
-  if (!(npy.values instanceof Float64Array) && !(npy.values instanceof Float32Array)) {
-    throw new Error(
-      `buildRhizomeVolume: expected f32/f64 .npy, got dtype ${npy.dtype} ` +
-        `(f16 input loses precision before normalisation — export f32)`,
-    );
+  // Rule 9 — f16 is accepted, not rejected: the browser trace tool's grid
+  // IS f16 in GPU memory, so an f32 export would be a widened copy at 2x
+  // the file size carrying no extra information. readNpy only ever returns
+  // Float64Array/Float32Array/Uint16Array (it rejects other dtypes itself),
+  // so this is a defensive fallback, not a live path.
+  if (
+    !(npy.values instanceof Float64Array) &&
+    !(npy.values instanceof Float32Array) &&
+    !(npy.values instanceof Uint16Array)
+  ) {
+    throw new Error(`buildRhizomeVolume: expected f16/f32/f64 .npy, got dtype ${npy.dtype}`);
   }
-  const values: Float64Array | Float32Array = npy.values;
+  const values: Float64Array | Float32Array =
+    npy.values instanceof Uint16Array
+      ? Float32Array.from(npy.values, (bits) => f16BitsToFloat(bits))
+      : npy.values;
 
   if (dims[0] !== sidecar.dims[0] || dims[1] !== sidecar.dims[1] || dims[2] !== sidecar.dims[2]) {
     throw new Error(

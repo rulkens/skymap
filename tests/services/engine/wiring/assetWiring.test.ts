@@ -95,6 +95,7 @@ describe('ASSET_WIRING membership', () => {
       'mcpm',
       'cf4Density',
       'polyphorm2Mrs',
+      'mcpmWorkbench',
       'flow',
       'constellations',
       'structureCatalog',
@@ -216,6 +217,16 @@ describe('ASSET_WIRING demand predicates', () => {
       ),
     ).toBe(true);
     expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
+  });
+
+  it('mcpmWorkbench demand follows its field-enabled flag (default-off ⇒ false)', () => {
+    const mcpmWorkbench = rowFor('mcpmWorkbench');
+    expect(
+      mcpmWorkbench.demand(
+        makeCtx({ settings: { volumes: { items: { 'mcpm-workbench': { enabled: true } } } } }),
+      ),
+    ).toBe(true);
+    expect(mcpmWorkbench.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('flow demand follows settings.flow.enabled (singleton overlay layer)', () => {
@@ -394,8 +405,9 @@ describe('ASSET_WIRING req builders', () => {
     expect(rowFor('structureCatalog').req('medium')).toEqual({});
   });
 
-  it('void-request sidecars (cf4Density, pgcAlias) return undefined', () => {
+  it('void-request sidecars (cf4Density, pgcAlias, mcpmWorkbench) return undefined', () => {
     expect(rowFor('cf4Density').req('medium')).toBeUndefined();
     expect(rowFor('pgcAlias').req('medium')).toBeUndefined();
+    expect(rowFor('mcpmWorkbench').req('medium')).toBeUndefined();
   });
 });

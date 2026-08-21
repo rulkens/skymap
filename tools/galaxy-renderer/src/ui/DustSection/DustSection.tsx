@@ -14,8 +14,8 @@ import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDu
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../ParamSlider/ParamSlider';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import styles from './DustSection.module.css';
 
 // `cloud` is DUST CLOUD's own section and copies from there — excluded from

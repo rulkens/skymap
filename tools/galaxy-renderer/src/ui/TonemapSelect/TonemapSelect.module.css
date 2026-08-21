@@ -1,7 +1,7 @@
 /* Composing .control brings in the surface/border/text vocabulary without
    button action styling (display:flex, gap, padding, brightness:hover, etc.). */
 .root {
-  composes: control from '../shared.module.css';
+  composes: control from '../../../../../src/components/common/shared.module.css';
   width: 100%;
   padding: 6px 8px;
   border-radius: var(--radius-xl);

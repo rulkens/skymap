@@ -22,6 +22,7 @@ export type AssetKey =
   | 'mcpm'
   | 'flow'
   | 'polyphorm2Mrs'
+  | 'mcpmWorkbench'
   | 'constellations'
   | 'bodyTextureAtlas'
   | BodyTextureSlotKey; // keyed family; `slotFor` routes these through `assetSlots.bodyTextures` via `isBodyTextureKey`

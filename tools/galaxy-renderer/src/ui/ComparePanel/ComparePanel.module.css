@@ -25,7 +25,7 @@
 }
 
 .eyebrow {
-  composes: sectionHeader from '../shared.module.css';
+  composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
 }
 
 .headline {
@@ -220,7 +220,7 @@
 }
 
 .fitButton {
-  composes: blockButton from '../shared.module.css';
+  composes: blockButton from '../../../../../src/components/common/shared.module.css';
   margin-top: 12px;
 }
 

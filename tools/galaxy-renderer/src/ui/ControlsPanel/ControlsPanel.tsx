@@ -32,16 +32,16 @@ import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import DebugViewsSection from '../DebugViewsSection/DebugViewsSection';
 import DustSection from '../DustSection/DustSection';
 import DustCloudSection from '../DustCloudSection/DustCloudSection';
 import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
 import HiiSection from '../HiiSection/HiiSection';
-import ParamSlider from '../ParamSlider/ParamSlider';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import IsmMapSection from '../IsmMapSection/IsmMapSection';
-import SliderGroup from '../SliderGroup/SliderGroup';
+import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
 import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
@@ -389,7 +389,7 @@ const PERF_SLIDERS: readonly RenderSliderSpec[] = [
     max: 0.6,
     step: 0.01,
     format: (v) => v.toFixed(2),
-    info: "Domain-warp displacement (world units) applied to the star-grain lookup before all three octaves — fixes the grain visibly repeating its own tile. Too large and the warp starts shredding the grain apart instead of just breaking the repeat; that begins around 1x the tile width.",
+    info: 'Domain-warp displacement (world units) applied to the star-grain lookup before all three octaves — fixes the grain visibly repeating its own tile. Too large and the warp starts shredding the grain apart instead of just breaking the repeat; that begins around 1x the tile width.',
   },
   {
     key: 'hiiQuadCap',

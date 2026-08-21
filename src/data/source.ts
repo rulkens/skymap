@@ -237,4 +237,15 @@ export const Source = {
    * toggles on. Appended at 30 — never renumber the codes below it.
    */
   Polyphorm2MRS: 30,
+  /**
+   * MCPM workbench promoted-export cosmic-web density volume — a durable
+   * home for cubes promoted from the workbench dev tool via
+   * `tools/volumes/promoteWorkbenchExport.ts`. Registry-key-only code (not
+   * persisted, not pickable); the entry carries its presentation defaults
+   * like CF-4/MCPM/Polyphorm2MRS. Hidden (`visible: false`) until Phase 4
+   * validation clears — see `src/data/sources/mcpm-workbench.ts`. Appended
+   * at 31, the first code the 6-bit pick-source widening opened up — never
+   * renumber the codes below it.
+   */
+  McpmWorkbench: 31,
 } as const;

@@ -1,9 +1,9 @@
 /**
- * volumeSlotIngest — cross-cutting parity net for the four volume slot
+ * volumeSlotIngest — cross-cutting parity net for the five volume slot
  * factories' shared ingest path (`uploadVolumeField`). No single src file
- * mirrors this test on purpose: the fact it pins is cross-file (four
- * factories, one shared ingest fn, four distinct field ids), so splitting it
- * into four one-assertion mirror files would be four files of noise —
+ * mirrors this test on purpose: the fact it pins is cross-file (five
+ * factories, one shared ingest fn, five distinct field ids), so splitting it
+ * into five one-assertion mirror files would be five files of noise —
  * `tests/services/engine/wiring/demandTable.test.ts` is the existing
  * precedent for a cross-cutting test file with no src twin.
  */
@@ -15,11 +15,18 @@ import { uploadVolumeField } from '../../../../src/services/engine/volume/upload
 
 // Hoisted mock targets — `vi.mock` runs before imports, so the fetcher
 // references have to live in a hoisted block the factory closures can see.
-const { mockCf4Fetch, mockMcpmFetch, mockPolyphormFetch, mockSyntheticFetch } = vi.hoisted(() => ({
+const {
+  mockCf4Fetch,
+  mockMcpmFetch,
+  mockPolyphormFetch,
+  mockSyntheticFetch,
+  mockMcpmWorkbenchFetch,
+} = vi.hoisted(() => ({
   mockCf4Fetch: vi.fn(),
   mockMcpmFetch: vi.fn(),
   mockPolyphormFetch: vi.fn(),
   mockSyntheticFetch: vi.fn(),
+  mockMcpmWorkbenchFetch: vi.fn(),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/cf4DensityFetcher', () => ({
@@ -34,6 +41,9 @@ vi.mock('../../../../src/services/loading/fetchers/polyphorm2MrsFetcher', () => 
 vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
   syntheticVolumeFetcher: mockSyntheticFetch,
 }));
+vi.mock('../../../../src/services/loading/fetchers/mcpmWorkbenchFetcher', () => ({
+  mcpmWorkbenchFetcher: mockMcpmWorkbenchFetch,
+}));
 
 vi.mock('../../../../src/services/engine/volume/uploadVolumeField', () => ({
   uploadVolumeField: vi.fn(),
@@ -43,6 +53,7 @@ import { createCf4DensitySlot } from '../../../../src/services/loading/slots/cf4
 import { createMcpmSlot } from '../../../../src/services/loading/slots/mcpmSlot';
 import { createPolyphorm2MrsSlot } from '../../../../src/services/loading/slots/polyphorm2MrsSlot';
 import { createSyntheticVolumeSlots } from '../../../../src/services/loading/slots/syntheticVolumeSlots';
+import { createMcpmWorkbenchSlot } from '../../../../src/services/loading/slots/mcpmWorkbenchSlot';
 
 const ingest = vi.mocked(uploadVolumeField);
 
@@ -124,5 +135,18 @@ describe('volume slot ingest', () => {
     await vi.waitFor(() => expect(slots['debug-gaussian'].state().kind).toBe('ready'));
 
     expect(ingest).toHaveBeenCalledWith(state, cb.store, 'debug-gaussian', cube);
+  });
+
+  it('mcpmWorkbenchSlot ingests its cube under the mcpm-workbench field id', async () => {
+    const cube = fakeCube();
+    mockMcpmWorkbenchFetch.mockResolvedValue(cube);
+    const state = fakeState();
+    const cb = fakeCb();
+
+    const slot = createMcpmWorkbenchSlot(state, cb);
+    slot.load(undefined as never);
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    expect(ingest).toHaveBeenCalledWith(state, cb.store, 'mcpm-workbench', cube);
   });
 });

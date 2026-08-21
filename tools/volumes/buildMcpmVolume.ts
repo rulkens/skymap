@@ -5,7 +5,7 @@
  *
  * Pure Node/TS — no Python required. Mirrors the conventions of
  * `tools/buildCf4Density.ts`; the log-normalise + f16-pack step is
- * shared via `tools/utils/volume/packLogTraceVoxels.ts`.
+ * shared via `src/utils/volume/packLogTraceVoxels.ts`.
  *
  * Output is gitignored and synced to R2 by `npm run sync-r2`.
  *
@@ -21,7 +21,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
-import { packLogTraceVoxels } from '../utils/volume/packLogTraceVoxels';
+import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
 import {
   encodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,

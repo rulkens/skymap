@@ -1,19 +1,17 @@
 /**
  * Viewport — owns the <canvas>, boots the flow harness, and bridges orbit input.
- *
  * On mount it creates the WebGPU flow harness against the canvas and starts the
  * loop; on unmount it disposes it. Orbit input is bridged into the STORE rather
  * than mutating the harness camera directly (the harness reads the camera slice
  * each frame): drag dispatches setCameraYawPitch, wheel dispatches
- * setCameraDistance. This keeps the store the single source of truth and avoids
- * sharing a mutable camera object across the React/harness boundary.
- *
- * createFlowHarness is async; if it rejects (no WebGPU adapter, field fetch
- * failure) we surface it rather than leaving a silently dead canvas.
+ * setCameraDistance — keeping the store the single source of truth. createFlowHarness
+ * is async; if it rejects (no WebGPU adapter, field fetch failure) we surface it
+ * rather than leaving a silently dead canvas.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Store } from '../../../@types/state/Store';
 import type { AppState } from '../../../@types/state/AppState';
+import { orbitDragDelta } from '../../../../utils/camera/orbitDragDelta';
 import { createFlowHarness, type FlowHarness } from '../../createFlowHarness';
 import { setCameraDistance, setCameraYawPitch } from '../../state/slices/cameraSlice';
 import styles from './Viewport.module.css';
@@ -62,26 +60,23 @@ function Viewport({ store }: ViewportProps): ReactNode {
     };
     const onPointerMove = (e: PointerEvent): void => {
       if (!dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
+      const { dYaw, dPitch } = orbitDragDelta(e.clientX - lastX, e.clientY - lastY, DRAG_SPEED);
       lastX = e.clientX;
       lastY = e.clientY;
-      store.setState((s) =>
-        ({
-          ...s,
-          camera: setCameraYawPitch(
-            s.camera,
-            s.camera.yaw + dx * DRAG_SPEED,
-            s.camera.pitch + dy * DRAG_SPEED,
-          ),
-        }),
-      );
+      store.setState((s) => ({
+        ...s,
+        camera: setCameraYawPitch(s.camera, s.camera.yaw + dYaw, s.camera.pitch + dPitch),
+      }));
     };
+    // Linear step, not exponentialZoomDistance's ratio — deliberately not adopted here (R8).
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
       store.setState((s) => ({
         ...s,
-        camera: setCameraDistance(s.camera, s.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP)),
+        camera: setCameraDistance(
+          s.camera,
+          s.camera.distance * (1 + Math.sign(e.deltaY) * ZOOM_STEP),
+        ),
       }));
     };
 
