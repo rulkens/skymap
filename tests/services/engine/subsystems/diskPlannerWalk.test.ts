@@ -203,8 +203,8 @@ describe('createDiskPlannerWalk', () => {
   it('caps rows admitted to onRow at DISK_ROW_ACCEPT_BUDGET per frame, even when every row in a huge window clears the distance gate', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     // Every row sits at 1 Mpc, well inside the 15 Mpc / 8-px bound (see the
-    // module-header worked example above) — a narrow-FOV pxPerRad would admit
-    // a catalog this size in full without the budget.
+    // worked example on `makeCatalog` above) — a narrow-FOV pxPerRad would
+    // admit a catalog this size in full without the budget.
     const rowCount = DISK_ROW_ACCEPT_BUDGET * 4;
     const rows = Array.from({ length: rowCount }, () => ({ distMpc: 1, diameterKpc: 50 }));
     const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCatalog(rows)]]);
