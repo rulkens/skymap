@@ -42,6 +42,10 @@ import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { EARTH_REF } from '../../../data/selection/earthRef';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
+import { cursorRayWorld } from '../../../utils/camera/cursorRayWorld';
+import { cursorSurfaceHit } from '../../../utils/camera/cursorSurfaceHit';
+import { frameUp } from '../../../utils/camera/frameUp';
 import {
   commitCameraPose,
   beginDrag,
@@ -66,6 +70,8 @@ import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 /**
@@ -276,6 +282,51 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // store; React reads it via selectors. No requestRender needed.
     onPointerMove: (cssPx) => {
       hoverPickDriver.onPointerMove(cssPx);
+
+      // Cursor→surface hit against the FOCUSED body, feeding Task 2's
+      // zoomBiasAnchor capture and Task 3's drag-grab capture via
+      // `state.picking.hoveredSurfacePoint`. Recomputed here — on every
+      // pointer move, not every frame — mirroring hoverPickDriver's own
+      // pointer-driven (not frame-driven) cadence. `deriveBodyStates` reads
+      // orientation, which `liveBodyPosition` alone drops.
+      const focusRow = selectFocusRow(store.getState());
+      const cam = state.cam;
+      if (focusRow?.type === 'body' && cam) {
+        const bodyState = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
+          focusRow.id,
+        );
+        if (bodyState) {
+          const fx = cam.target[0] - cam.position[0];
+          const fy = cam.target[1] - cam.position[1];
+          const fz = cam.target[2] - cam.position[2];
+          const flen = Math.hypot(fx, fy, fz) || 1;
+          const forward: Vec3 = [fx / flen, fy / flen, fz / flen];
+
+          const ray = cursorRayWorld(
+            cssPx,
+            { width: canvas.clientWidth, height: canvas.clientHeight },
+            cam.position,
+            forward,
+            cam.roll ?? 0,
+            frameUp(cam.upBasis),
+            cam.fovYRad,
+            cam.aspect,
+          );
+          const point = cursorSurfaceHit(
+            ray,
+            bodyState.positionMpc,
+            pivotRadiusMpc(focusRow)!,
+            bodyState.orientation,
+          );
+          // On a MISS, leave `hoveredSurfacePoint` at whatever it already
+          // was — never overwrite with null. A stale entry from a
+          // since-changed focus is harmless: every consumer gates on
+          // `bodyId` matching the currently focused body before reading it.
+          if (point) {
+            state.picking.hoveredSurfacePoint = { bodyId: focusRow.id as BodyId, point };
+          }
+        }
+      }
     },
     // Pointer left the canvas → clear hover state.  If a point
     // is selected the card stays visible (showing the pinned

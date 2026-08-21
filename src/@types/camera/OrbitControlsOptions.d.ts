@@ -5,6 +5,9 @@
  * behaviour as the original single-argument overload (orbit only, no click).
  */
 
+import type { BodyId } from '../data/body/BodyId';
+import type { LonLatDeg } from '../scene/LonLatDeg';
+
 export type OrbitControlsOptions = {
   /**
    * Called when the user clicks (as opposed to drags) on the canvas.
@@ -70,6 +73,16 @@ export type OrbitControlsOptions = {
    * (tests, or no scene) ⇒ only the global floor applies.
    */
   pivotRadiusMpc?: () => number | null;
+  /**
+   * The cursor's current surface hit against the focused body — `{ bodyId,
+   * point }` in that body's local lon/lat — or `null` when nothing has ever
+   * hit / no body is focused. A getter, not a cached value — mirrors
+   * `pivotRadiusMpc`'s shape: this module holds no scene state, so the
+   * engine wires it to a live read of `state.picking.hoveredSurfacePoint`.
+   * Consumed by the zoom-bias anchor capture and the drag-grab capture —
+   * not yet read anywhere as of this field's introduction.
+   */
+  hoveredSurfacePoint?: () => { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
   /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch

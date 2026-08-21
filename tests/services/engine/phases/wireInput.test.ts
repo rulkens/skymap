@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /**
  * wireInput — focused test for the highest-leverage invariant of the
  * third bootstrap phase: the initial camera framing call.
@@ -5,6 +7,10 @@
  * `computeInitialCamera` is called with a 60° FOV and the result drives
  * `state.cam`. No bbox input — framing uses pure constants so the phase
  * can run before any galaxy catalog arrives.
+ *
+ * jsdom (not the default node environment): the persistence-on-miss test
+ * below drives `onPointerMove` for real, which reaches `hoverPickDriver` →
+ * `cssToTexPx`, which reads `window.devicePixelRatio`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -48,6 +54,7 @@ vi.mock('../../../../src/utils/camera/createOrbitCamera', () => ({
     aspect: 1,
     near: 0.01,
     far: 6000,
+    position: [0, 0, 0.43],
   })),
 }));
 
@@ -80,8 +87,9 @@ vi.mock('../../../../src/services/engine/interaction/clickHandler', () => ({
   createClickResolver: vi.fn(() => ({ resolveClick: vi.fn() })),
 }));
 
+const attachEngineInputsSpy = vi.fn((..._args: unknown[]) => ({ detach: vi.fn() }));
 vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
-  attachEngineInputs: vi.fn(() => ({ detach: vi.fn() })),
+  attachEngineInputs: (...args: unknown[]) => attachEngineInputsSpy(...args),
 }));
 
 // Imported AFTER the mocks so wireInput picks them up.
@@ -103,6 +111,10 @@ import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+// Real (unmocked) — the persistence-on-miss test needs Earth's actual
+// CONST_J2000 position to build a well-conditioned camera pose near it.
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -142,7 +154,7 @@ function makeState(): EngineState {
       },
     },
     bias: {} as never,
-    picking: { pointerDown: false } as never,
+    picking: { pointerDown: false, hoveredSurfacePoint: null } as never,
     // createClickResolver captures the store accessors for resolvePick;
     // createClickResolver is module-mocked here, so the accessors are
     // never invoked — an empty galaxies/structures stub is enough.
@@ -182,6 +194,8 @@ function makeState(): EngineState {
       projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
       prevActiveId: { current: 'resting' },
+      lastRenderedSimDays: { current: CONST_J2000 },
+      upBasis: { current: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
     },
     assetSlots: {
       points: new Map(),
@@ -198,7 +212,7 @@ function makeDeps(): BootstrapDeps {
     store: configureStore({ reducer: rootReducer }),
   } as unknown as EngineCallbacks;
   return {
-    canvas: { width: 800, height: 600 } as HTMLCanvasElement,
+    canvas: { width: 800, height: 600, clientWidth: 800, clientHeight: 600 } as HTMLCanvasElement,
     cb,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
@@ -320,6 +334,58 @@ describe('wireInput', () => {
     expect(selectSelectedRef(root)).toBeNull();
     expect(selectFocusRef(root)).toBeNull();
     expect(selectPendingFocusId(root)).toBe('m31');
+  });
+
+  it('a raycast miss does not overwrite a prior hoveredSurfacePoint', async () => {
+    // The persistence rule (§4.1): a cursor miss — or no body focused — must
+    // leave `hoveredSurfacePoint` at whatever it already was, never clobber
+    // it with null. Every consumer gates on `bodyId` matching the currently
+    // focused body, so a stale entry is harmless; an overwrite-with-null
+    // would not be.
+    const state = makeState();
+    const deps = makeDeps();
+    attachEngineInputsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusKm: 6371,
+        },
+      }),
+    );
+
+    const seeded = { bodyId: 'earth', point: { lonDeg: 12, latDeg: 34 } };
+    state.picking.hoveredSurfacePoint = seeded as never;
+
+    // Anchor the camera pose at Earth's own tiny (~1e-12 Mpc) CONST_J2000
+    // scale rather than the shared mock's unrelated 0.43 Mpc target/position:
+    // mixing those two scales in the ray-sphere quadratic catastrophically
+    // cancels (both b² and c land near 0.1849 while their true difference is
+    // ~40 orders of magnitude smaller), producing a spurious tangent "hit"
+    // instead of the clean miss this test needs. Camera sits 100 body radii
+    // above Earth, looking at a point 100 radii to the side — screen centre
+    // (ndcX=ndcY=0) then aims the ray exactly at that off-body point.
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    const [ex, ey, ez] = earth.positionMpc;
+    state.cam!.position = [ex, ey, ez + 100 * radiusMpc];
+    state.cam!.target = [ex + 100 * radiusMpc, ey, ez];
+
+    const options = attachEngineInputsSpy.mock.calls[0]?.[0] as
+      | { onPointerMove: (pos: { x: number; y: number }) => void }
+      | undefined;
+    expect(options?.onPointerMove).toBeTypeOf('function');
+
+    options!.onPointerMove({ x: 400, y: 300 });
+
+    expect(state.picking.hoveredSurfacePoint).toBe(seeded);
   });
 
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {

@@ -241,6 +241,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // tracks its own `latest`/`picked` locals.
       pickInFlight: false,
       pointerDown: false,
+      hoveredSurfacePoint: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and

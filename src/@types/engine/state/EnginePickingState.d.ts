@@ -39,6 +39,9 @@
  * unrelated state.
  */
 
+import type { BodyId } from '../../data/body/BodyId';
+import type { LonLatDeg } from '../../scene/LonLatDeg';
+
 export type EnginePickingState = {
   pickInFlight: boolean;
   /**
@@ -50,4 +53,16 @@ export type EnginePickingState = {
    * Written by `wireInput.ts`; read by `hoverPickDriver.ts`.
    */
   pointerDown: boolean;
+  /**
+   * Where the cursor last hit the FOCUSED body's surface, in that body's
+   * local lon/lat — or `null` before any hit has ever landed. Written by
+   * `wireInput.ts`'s `onPointerMove` on a HIT only: a raycast miss (cursor
+   * off-globe, or no body focused) leaves this at whatever it already was,
+   * rather than being cleared to `null`. A stale entry from a
+   * since-changed focus is harmless because every consumer (the
+   * `zoomBiasAnchor` capture, the drag-grab capture) gates on `bodyId`
+   * matching the CURRENTLY focused body before reading `point` — so it is
+   * a read-time gate, not a write-time clear.
+   */
+  hoveredSurfacePoint: { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
 };
