@@ -762,7 +762,7 @@ describe('label2DDirector', () => {
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
     });
 
-    it('a declutter-culled caption eases to 0 and eases back in, rather than popping', () => {
+    it('a declutter-culled caption eases to 0 and eases back in, rather than popping — and the wake vote tracks it', () => {
       // CRITICAL fix: a label declutter culls this frame is CULLED, not
       // ABSENT — its producer keeps emitting it every frame, so it must
       // stay in the exponential filter's universe (target 0) and ease
@@ -770,6 +770,12 @@ describe('label2DDirector', () => {
       // target the instant the cull flips back (`foregroundLabelsLayer.ts:306`
       // sets a culled entry's TARGET to 0 while it stays in `entries`,
       // pruned only when the producer itself stops emitting it, `:325-328`).
+      // Also pins the render-loop WAKE VOTE (`runFrame`'s boolean) across the
+      // same four frames — this is the cull-driven counterpart of the
+      // producer-driven demand-drop test below, which checks the vote for
+      // the OTHER branch of `applyExponentialEnvelope`'s target (`ownAlpha`
+      // vs `survivorIds`); this test's `small` label never changes its own
+      // `fadeAlpha` — only declutter survival flips its target.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
@@ -799,30 +805,32 @@ describe('label2DDirector', () => {
           ?.fadeAlpha;
 
       // Frame 1: no collision — `small` survives trivially and seeds AT its
-      // target (1) immediately.
-      dir.runFrame(makeState(), makeNear0Ctx(0));
+      // target (1) immediately — a seed is not a ramp, so the wake vote is
+      // quiet.
+      expect(dir.runFrame(makeState(), makeNear0Ctx(0))).toBe(false);
       expect(smallAlphaOf()).toBe(1);
 
       // Frame 2: `big` moves onto `small` — declutter culls `small` this
       // frame. It must EASE toward 0 (a fractional alpha), not pop straight
-      // to absent.
+      // to absent — and the mid-ramp frame must wake the loop.
       bigPos = [0, 0, 0];
-      dir.runFrame(makeState(), makeNear0Ctx(50));
+      expect(dir.runFrame(makeState(), makeNear0Ctx(50))).toBe(true);
       const easingOut = smallAlphaOf();
       expect(easingOut).not.toBeUndefined();
       expect(easingOut!).toBeGreaterThan(0);
       expect(easingOut!).toBeLessThan(1);
 
       // Frame 3: still colliding, far enough later that the filter fully
-      // settles at 0 — `small` finally drops out of the flush.
-      dir.runFrame(makeState(), makeNear0Ctx(5050));
+      // settles at 0 — `small` finally drops out of the flush, and the wake
+      // vote goes quiet again.
+      expect(dir.runFrame(makeState(), makeNear0Ctx(5050))).toBe(false);
       expect(smallAlphaOf()).toBeUndefined();
 
       // Frame 4: the collision clears — `small` survives again. It must
       // ease BACK IN from wherever it left off (0), not snap straight to
-      // its full target (1).
+      // its full target (1) — waking the loop again for the ease-in.
       bigPos = [5, 0, 0];
-      dir.runFrame(makeState(), makeNear0Ctx(5100));
+      expect(dir.runFrame(makeState(), makeNear0Ctx(5100))).toBe(true);
       const easingIn = smallAlphaOf();
       expect(easingIn).not.toBeUndefined();
       expect(easingIn!).toBeGreaterThan(0);

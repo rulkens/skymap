@@ -13,6 +13,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
+import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
+import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/services/engine/engine';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -20,6 +22,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
+import type { Label2DProducer } from '../../../../../src/@types/engine/subsystems/Label2DProducer';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
@@ -50,6 +53,25 @@ function makeLineRenderer(): MarkerLineRenderer {
   } as unknown as MarkerLineRenderer;
 }
 
+// A REAL renderer contract for the gate test below: `glyphCount()` reflects
+// whatever `setLabels` last received, exactly like the production renderer —
+// a fixed-constant stub (as `makeRenderer` above hands out) would let the
+// test pass even if the director's upload moved to AFTER this layer's draw.
+function makeStatefulLabelRenderer(): LabelRenderer {
+  let last: readonly Label2D[] = [];
+  return {
+    label: 'foregroundLabelRenderer',
+    setLabels: (labels: readonly Label2D[]) => {
+      last = labels;
+    },
+    draw: vi.fn<(...args: unknown[]) => void>(),
+    measure: vi.fn<() => null>(() => null),
+    glyphCount: () => last.reduce((n, l) => n + l.text.length, 0),
+    labelCount: () => last.length,
+    destroy: vi.fn(),
+  } as unknown as LabelRenderer;
+}
+
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
@@ -61,8 +83,11 @@ function makeState(
 
 // A real NEAR0 slab (not mocked) — `near0LabelProjection` runs the genuine
 // `rebaseViewProj` + `narrowMat4` chain against it, matching what the director
-// resolves for the same `ctx` this frame.
-function makeCtx(): ReadyFrameContext {
+// resolves for the same `ctx` this frame. `nowMs` defaults to 0 for the draw
+// tests (which don't animate); the gate test below steps it explicitly, and
+// builds a FRESH ctx object per frame — `near0LabelProjection` memoises per
+// ctx identity, matching how `runFrame` mints a new ctx every frame for real.
+function makeCtx(nowMs = 0): ReadyFrameContext {
   const slab: Slab = {
     index: NEAR0,
     nearMpc: 0.0005,
@@ -76,21 +101,74 @@ function makeCtx(): ReadyFrameContext {
     slabs: [slab],
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
+    nowMs,
     renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
     renderedTargets: new Set(['foreground:0']),
   } as unknown as ReadyFrameContext;
 }
 
 describe('foregroundLabelsLayer.enabled', () => {
-  it("tracks the director's last flush, and re-opens when demand returns", () => {
-    // This is the "latches false forever" regression in its new shape: since
-    // `draw` never calls `setLabels`/`setLines` any more (the director does,
-    // earlier in `runFrame`), this test never calls `draw` either — proving
-    // `enabled` reads real upload state, not something the layer itself just
-    // produced.
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(3)), makeCtx())).toBe(true);
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(0)), makeCtx())).toBe(false);
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(2)), makeCtx())).toBe(true);
+  it("tracks the director's last flush across the runFrame/draw seam, and re-opens when demand returns", () => {
+    // The "latches false forever" regression, exercised across the REAL seam:
+    // a REAL `label2DDirector` uploads via `setLabels` (as `runFrame` does,
+    // BEFORE the frame program walks), and a STATEFUL renderer's
+    // `glyphCount()` reflects only what it last received — so this test
+    // fails if a future change ever moved the director's upload to run
+    // AFTER this layer's `draw`, or reintroduced a `draw`-local upload the
+    // old layer used to do. `enabled` itself never calls `draw`.
+    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+    const labelRenderer = makeStatefulLabelRenderer();
+    const lineRenderer = makeLineRenderer();
+    dir.attachRenderers(labelRenderer, lineRenderer);
+
+    // A producer that ALWAYS emits one candidate — real producers never omit
+    // a row, they drive it to invisible via `fadeAlpha` (Task 4/5's
+    // contract) — so demand toggles via `fadeAlpha`, exercising the
+    // envelope's ease exactly like a real distance-band caption would.
+    let fadeAlpha = 1;
+    const producer: Label2DProducer = {
+      id: 'demand-probe',
+      produceLabels: () => ({
+        labels: [
+          {
+            id: 'probe',
+            worldPos: [0, 0, 0],
+            text: 'x',
+            font: 'cormorant',
+            pixelSize: 10,
+            fadeAlpha,
+          },
+        ],
+        awake: false,
+      }),
+    };
+    dir.registerProducer(producer);
+    const state = { subsystems: {} } as unknown as EngineState;
+    const layerState = makeState(labelRenderer, lineRenderer);
+
+    // Demand present: a brand-new id seeds AT its target — no ramp needed —
+    // so the very first flush already carries it.
+    dir.runFrame(state, makeCtx(0));
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(0))).toBe(true);
+
+    // Demand drops (fadeAlpha → 0): a short dt later the envelope has only
+    // PARTLY eased down — still emitted, so the gate stays open through the
+    // fade-out tail exactly like the deleted layer-level demand-drop test.
+    fadeAlpha = 0;
+    dir.runFrame(state, makeCtx(50));
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(50))).toBe(true);
+
+    // Far enough later the envelope settles exactly on 0 — the label drops
+    // from the flush and the gate finally closes.
+    dir.runFrame(state, makeCtx(5050));
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(5050))).toBe(false);
+
+    // Demand returns: the very next flush carries the label again (mid-ease
+    // back toward 1, still nonzero), and the gate re-opens immediately —
+    // the "latches false forever" bug this whole test exists to catch.
+    fadeAlpha = 1;
+    dir.runFrame(state, makeCtx(5100));
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(5100))).toBe(true);
   });
 
   it('is false pre-bootstrap, before the renderer exists', () => {
