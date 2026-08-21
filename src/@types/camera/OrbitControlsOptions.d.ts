@@ -84,6 +84,17 @@ export type OrbitControlsOptions = {
    */
   hoveredSurfacePoint?: () => { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
   /**
+   * Called whenever `nextZoomBiasAnchor` produces a value — every wheel tick
+   * and at pinch-start — with the resulting anchor (or `null`). Idempotent
+   * when the anchor is unchanged (the module re-fires the same reference
+   * rather than skipping the call). The engine wires this to
+   * `state.picking.zoomBiasAnchor`; see that field's docblock for the
+   * read-time "clears on focus change" gate downstream consumers apply.
+   */
+  onZoomBiasAnchor?: (
+    anchor: { readonly bodyId: BodyId; readonly point: LonLatDeg } | null,
+  ) => void;
+  /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch
    * promotion) do NOT re-fire this.

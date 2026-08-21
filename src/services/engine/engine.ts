@@ -242,6 +242,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickInFlight: false,
       pointerDown: false,
       hoveredSurfacePoint: null,
+      zoomBiasAnchor: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and

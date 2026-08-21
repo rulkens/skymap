@@ -401,6 +401,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // derivation the `onZoom` path below uses.
     pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
 
+    // Live read of the cursor's last surface hit against the focused body —
+    // `orbitControls.ts` feeds this into `nextZoomBiasAnchor` at every wheel
+    // tick and pinch start; see that field's docblock.
+    hoveredSurfacePoint: () => state.picking.hoveredSurfacePoint,
+
+    // Written on every `nextZoomBiasAnchor` capture (idempotent when
+    // unchanged). `frameContext.ts`'s eye-bias hook is the read-time
+    // consumer — see `EnginePickingState.zoomBiasAnchor`'s docblock for the
+    // "clears on focus change" read-time gate.
+    onZoomBiasAnchor: (anchor) => {
+      state.picking.zoomBiasAnchor = anchor;
+    },
+
     // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
     // driver owns the distance this frame: while a body is followed the
     // followBody driver owns it (scale its distance target in place, so the

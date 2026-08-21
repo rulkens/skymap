@@ -67,9 +67,15 @@ import { zoomedDistance } from '../../utils/camera/zoomedDistance';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
+import { nextZoomBiasAnchor } from '../../utils/camera/nextZoomBiasAnchor';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
+
+/** The zoom-bias anchor's shape — see `EnginePickingState.zoomBiasAnchor`'s docblock. */
+type ZoomBiasAnchor = { readonly bodyId: BodyId; readonly point: LonLatDeg } | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -168,6 +174,31 @@ export function attachOrbitControls(
   let dragPointerId: number | null = null;
   let lastPinchDist = 0;
 
+  // ── Zoom-bias anchor capture (spec §4.2/§4.3) ─────────────────────────────
+  //
+  // `zoomBiasAnchor` is the anchor itself; `zoomBiasAnchorSource` is the
+  // `hoveredSurfacePoint()` reference it was captured FROM — kept separate so
+  // `nextZoomBiasAnchor`'s reference-identity guard can tell "still the same
+  // hover" from "cursor moved since we last captured" without re-deriving it
+  // from the anchor's own (possibly since-mutated-by-value-but-not-by-
+  // reference) fields. See `nextZoomBiasAnchor.ts`'s module header for why
+  // reference identity — not a timer or a gesture-boundary event — is what
+  // makes "captured once, at gesture start" work here.
+  let zoomBiasAnchor: ZoomBiasAnchor = null;
+  let zoomBiasAnchorSource: ZoomBiasAnchor = null;
+
+  /** Re-run the capture and notify the engine, called at every capture site. */
+  const captureZoomBiasAnchor = (): void => {
+    const next = nextZoomBiasAnchor(
+      zoomBiasAnchor,
+      zoomBiasAnchorSource,
+      options?.hoveredSurfacePoint?.() ?? null,
+    );
+    zoomBiasAnchor = next.anchor;
+    zoomBiasAnchorSource = next.captureSource;
+    options?.onZoomBiasAnchor?.(zoomBiasAnchor);
+  };
+
   /** Euclidean distance between the first two active pointers, or 0 if <2. */
   const currentPinchDistance = (): number => {
     const ptrs = Array.from(activePointers.values());
@@ -259,6 +290,7 @@ export function attachOrbitControls(
       // the orbit/pan branch in `onMove`.
       dragMode = 'pinch';
       lastPinchDist = currentPinchDistance();
+      captureZoomBiasAnchor();
     }
     // 3+ pointers: tracked in the map so they're consumed cleanly on
     // pointerup, but they don't change `dragMode` — pinch stays a
@@ -512,6 +544,11 @@ export function attachOrbitControls(
     // the void beyond the deepest galaxy catalog, where the cloud collapses to
     // a dot.
     const factor = Math.exp(e.deltaY * 0.001);
+
+    // Recapture on every tick, in-gesture or discrete: the zoom-bias anchor
+    // does not care which driver ends up owning the resulting distance —
+    // only whether the cursor moved since the last capture (§4.2's ruling).
+    captureZoomBiasAnchor();
 
     if (activePointers.size > 0) {
       // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.

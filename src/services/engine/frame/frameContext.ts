@@ -95,6 +95,9 @@ import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
+import { deriveBodyStates } from './deriveBodyStates';
+import { surfaceZoomBias } from '../../../utils/camera/surfaceZoomBias';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -163,6 +166,34 @@ export function deriveFrameContext(
   // (live, rolls). The returned camera is a fresh object — it does NOT alias
   // `state.cam` (the drag register) or any frozen store array.
   const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
+
+  // Cursor-directed zoom (spec §4.2/§4.3): an eye-position correction applied
+  // AFTER the orbit eye is otherwise computed, so `target`/`distance` (read
+  // by `pivotRadiusMpc` below and roughly a dozen NEAR0 content layers) keep
+  // their existing meaning — see `surfaceZoomBias.ts`'s header. Gated
+  // read-time on the anchor's `bodyId` matching the CURRENTLY focused body:
+  // the "clears on focus change" rule, realized without a second write site
+  // (see `EnginePickingState.zoomBiasAnchor`'s docblock). Applies on top of
+  // whatever driver produced `pose` — including mid-drag (spec §4.3).
+  const focusRow = state.selectionRows.focus;
+  const zoomBiasAnchor = state.picking.zoomBiasAnchor;
+  if (focusRow?.type === 'body' && zoomBiasAnchor?.bodyId === focusRow.id) {
+    const bodyState = deriveBodyStates(simDays).get(focusRow.id);
+    if (bodyState) {
+      const radiusMpc = focusRow.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const delta = surfaceZoomBias(
+        zoomBiasAnchor.point,
+        bodyState.orientation,
+        bodyState.positionMpc,
+        radiusMpc,
+        cam.distance - radiusMpc,
+        cam.position,
+      );
+      cam.position[0] += delta[0];
+      cam.position[1] += delta[1];
+      cam.position[2] += delta[2];
+    }
+  }
 
   // Snapshot-derive everything the caller would otherwise compute locally.
   // `runFrame` and `renderFrame` both read these off `ctx`, so the two
