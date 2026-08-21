@@ -37,8 +37,13 @@ export function zoomedEyeStep(
 
   // Where the eye's travel line pierces the floor sphere, as a value of the
   // same parameter `s` the zoom scales (`eye(s) = anchor + s·b`, so the current
-  // eye is s = 1). The line is INSIDE the sphere for s ∈ (sIn, sOut); the eye
-  // starts outside, so the clamp is one-sided in whichever direction it sits.
+  // eye is s = 1). The line is inside the sphere for s ∈ (sIn, sOut), and the
+  // partition below is on sIn ALONE so it stays total: either the whole
+  // forbidden span lies ahead in +s (stop short of sIn), or the eye is beyond
+  // it / already inside it (never go below sOut, the exit away from the
+  // anchor). Splitting on `sOut <= 1` instead leaves a gap at the tangent case
+  // — an eye sitting exactly ON the floor, which the previous tick's clamp
+  // produces, resolves sOut a hair above 1 and falls through both arms.
   const ax = anchorMpc[0] - bodyCentreMpc[0];
   const ay = anchorMpc[1] - bodyCentreMpc[1];
   const az = anchorMpc[2] - bodyCentreMpc[2];
@@ -50,8 +55,8 @@ export function zoomedEyeStep(
     const halfSpan = Math.sqrt(disc) / bb;
     const sIn = mid - halfSpan;
     const sOut = mid + halfSpan;
-    if (sOut <= 1) s = Math.max(s, sOut);
-    else if (sIn >= 1) s = Math.min(s, sIn);
+    if (sIn >= 1) s = Math.min(s, sIn);
+    else s = Math.max(s, sOut);
   }
 
   // eye′ − eye, split against the unit orbit axis (target → eye): the

@@ -17,6 +17,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { cursorZoomStep } from '../../../src/utils/camera/cursorZoomStep';
+import { zoomedPose } from '../../../src/utils/camera/zoomedPose';
 import { cursorRayWorld } from '../../../src/utils/camera/cursorRayWorld';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
@@ -26,6 +27,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { ZoomStep } from '../../../src/@types/camera/ZoomStep';
+import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 
 const CANVAS = { width: 800, height: 600 };
 const FOV_Y_RAD = Math.PI / 3;
@@ -170,5 +172,42 @@ describe('cursorZoomStep', () => {
     const step = cursorZoomStep(cam, CURSOR, CANVAS, null, 1.2);
     expect(step.distanceScale).toBe(1.2);
     expect(step.lateralMpc).toEqual([0, 0, 0]);
+  });
+});
+
+describe('cursorZoomStep — descent through the real apply path', () => {
+  /** The camera a pose renders as, rebuilt each tick exactly as the frame does. */
+  function camOf(pose: CameraPose): OrbitCamera {
+    return createOrbitCamera({
+      target: [pose.target[0], pose.target[1], pose.target[2]],
+      distance: pose.distance,
+      yaw: pose.yaw,
+      pitch: pose.pitch,
+      fovYRad: FOV_Y_RAD,
+      aspect: CANVAS.width / CANVAS.height,
+      near: 1e-20,
+      far: 1e-12,
+    });
+  }
+
+  it('an off-centre descent lands ON the standoff floor: not through it, not stalled above it', () => {
+    // The loop is the whole point: step → `zoomedPose` (the REAL clamp) → pose →
+    // step, at a cursor that keeps strafing the pivot off the body centre. Every
+    // other floor test applies the step by hand and never reaches the clamp, which
+    // is how a distance-currency floor here survived: it walls this descent
+    // thousands of km up (~285 km at this cursor, and STICKY — once the distance
+    // sits on `radius · STANDOFF` every further tick returns it unchanged), while
+    // the missing "eye already inside the shell" arm let a tick at the tangent
+    // case punch tens of km below the surface.
+    let pose: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: R + ALT };
+    // 135 ticks of 0.9 cover 21,216 km → 15 m; the rest prove the floor HOLDS.
+    for (let i = 0; i < 300; i++) {
+      pose = zoomedPose(pose, cursorZoomStep(camOf(pose), CURSOR, CANVAS, PIVOT, 0.9));
+    }
+
+    const standoffAltitude = R * (SURFACE_STANDOFF_RADII - 1);
+    const altitude = Math.hypot(...camOf(pose).position) - R;
+    expect(altitude).toBeGreaterThan(0);
+    expect(altitude / standoffAltitude).toBeCloseTo(1, 9);
   });
 });

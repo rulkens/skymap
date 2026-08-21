@@ -108,6 +108,7 @@ import {
   updateSelectionFocus,
 } from '../../../../src/state/selection/selectionSlice';
 import { requestFocus } from '../../../../src/state/selection/requestFocus';
+import { beginDrag } from '../../../../src/state/camera/cameraSlice';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -279,10 +280,10 @@ describe('wireInput', () => {
   });
 
   it('hands the orbit controls a live read of the focused body’s radius', async () => {
-    // The zoom floor lives in clampDistance, but the pinch / wheel-during-gesture
-    // sites inside orbitControls can only apply it if this phase supplies the
-    // getter. Drop the wiring and the camera silently scrolls through the planet
-    // again with every unit test still green — hence the assertion here.
+    // The orbit-drag rate damps on the focused body's radius, and it can only do
+    // that if this phase supplies the getter. Drop the wiring and the drag rate
+    // silently reverts to its flat, screen-centre-only form with every unit test
+    // still green — hence the assertion here.
     const state = makeState();
     const deps = makeDeps();
     // Earlier cases in this file attached against their own stores; take the call
@@ -446,6 +447,59 @@ describe('wireInput', () => {
     // Nothing is committed while follow owns the distance — a base commit
     // would be invisible and re-asserted away next frame.
     expect(deps.cb.store.getState().camera.base.distance).not.toBe(clock.followDistanceTarget);
+  });
+
+  it('a MID-GESTURE tick scales the drag register and still routes its lateral to followPanOffset', async () => {
+    // A tick can land between `onGestureStart` and the first rendered drag frame
+    // — most easily via pinch, where the second finger lands within a frame of
+    // the first. Leaving the lateral on the register's target and waiting for
+    // `accumulateFollowPan` to diff it out loses exactly that tick: the first
+    // follow-drag frame only SEEDS the diff chain, so it contributes nothing.
+    // Writing the offset directly is what makes the tick count.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusKm: 6371,
+        },
+      }),
+    );
+    deps.cb.store.dispatch(beginDrag());
+
+    const radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    const distance = radiusMpc + 21216 * SCALE_UNITS.KM_TO_MPC;
+    state.cameraRuntime.projection = {
+      fovYRad: Math.PI / 3,
+      aspect: 800 / 600,
+      near: 1e-20,
+      far: 1,
+    };
+    // The drag register is what `orbitDrag` renders; the pivot-pin supplies its
+    // target, so only the orbit terms have to be set up here.
+    const cam = state.cam!;
+    cam.distance = distance;
+    cam.yaw = 0;
+    cam.pitch = 0;
+    const targetBefore = [...cam.target];
+
+    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
+    options!.onZoom!(0.9, { x: 460, y: 300 });
+
+    expect(cam.distance).toBeLessThan(distance);
+    expect(Math.hypot(...state.cameraRuntime.clock.followPanOffset)).toBeGreaterThan(0);
+    // NOT on the register's target — that write would be erased by the pin and
+    // dropped by the diff chain on the gesture's first frame.
+    expect([...cam.target]).toEqual(targetBefore);
   });
 
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {

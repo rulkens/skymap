@@ -78,6 +78,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
+import type { ZoomStep } from '../../../@types/camera/ZoomStep';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -438,23 +439,25 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // Every zoom tick — wheel notch or pinch step. Classic zoom-to-cursor: the
     // surface point under `cursorCss` is re-picked per tick and the eye's
     // distance to it scales by `factor`, which `cursorZoomStep` splits into a
-    // distance scale plus a lateral pivot shift (see that util). The tick then
-    // lands in whichever register renders the camera this frame:
+    // distance scale plus a lateral pivot shift (see that util).
     //
-    //   - mid-gesture — the drag register. `orbitDrag` (priority 80) renders
-    //     `poseOf(cam)`, so the zoom shows immediately and rides the
-    //     `onGestureEnd` commit; `accumulateFollowPan` picks the lateral off
-    //     the register's target delta on the next frame.
-    //   - at rest — `applyWheelZoom`'s three arms (follow slot / spun base /
-    //     base). Reading `base` from the store rather than the frame-lagged
-    //     `lastPose` keeps rapid ticks accumulating on the prior tick's commit.
+    // The LATERAL half goes to `clock.followPanOffset` whenever the pivot-pin
+    // is in effect, whether or not a gesture is running: `applyFocusedBodyPivot`
+    // SETS `target = bodyPosition + followPanOffset` every frame for a moving
+    // focus, so a lateral written anywhere else is erased before it renders.
+    // Writing the offset DIRECTLY (rather than letting `accumulateFollowPan`
+    // diff it off the drag register's target) is what makes a tick landing
+    // between gesture-start and the first drag frame count — that first frame
+    // only seeds the diff chain, so a target write there contributes nothing.
+    // A static focus (the Sun) is never pinned and never reads the offset, so
+    // its lateral goes on the target instead.
     //
-    // The LATERAL half has only one durable channel while the pivot-pin is in
-    // effect: `applyFocusedBodyPivot` SETS `target = bodyPosition +
-    // followPanOffset` every frame for a moving focus, so a lateral written
-    // into a committed pose is erased before it renders. A static focus (the
-    // Sun) is never pinned and never reads the offset, so it keeps its
-    // committed target instead.
+    // The DISTANCE half lands in whichever register renders the camera:
+    // mid-gesture the drag register (`orbitDrag`, priority 80, renders
+    // `poseOf(cam)` — the zoom shows immediately and rides the `onGestureEnd`
+    // commit), at rest `applyWheelZoom`'s three arms (follow slot / spun base /
+    // base). Reading `base` from the store rather than the frame-lagged
+    // `lastPose` keeps rapid ticks accumulating on the prior tick's commit.
     onZoom: (factor, cursorCss) => {
       const root = store.getState();
       const focusRow = selectFocusRow(root);
@@ -475,32 +478,36 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       state.cameraRuntime.debugZoomLateralMpc = step.lateralMpc;
 
       const clock = state.cameraRuntime.clock;
+      const pinned = bodyMovesThisFrame(focusRow);
+      if (pinned) {
+        clock.followPanOffset = [
+          clock.followPanOffset[0] + step.lateralMpc[0],
+          clock.followPanOffset[1] + step.lateralMpc[1],
+          clock.followPanOffset[2] + step.lateralMpc[2],
+        ];
+      }
+      // The lateral the POSE still has to carry: none once the offset took it.
+      const poseStep: ZoomStep = pinned
+        ? { distanceScale: step.distanceScale, lateralMpc: [0, 0, 0] }
+        : step;
+
       if (dragging) {
         const cam = state.cam;
         if (cam) {
-          cam.distance = clampDistance(cam.distance * step.distanceScale, radiusMpc);
-          cam.target[0] += step.lateralMpc[0];
-          cam.target[1] += step.lateralMpc[1];
-          cam.target[2] += step.lateralMpc[2];
+          cam.distance = clampDistance(cam.distance * poseStep.distanceScale);
+          cam.target[0] += poseStep.lateralMpc[0];
+          cam.target[1] += poseStep.lateralMpc[1];
+          cam.target[2] += poseStep.lateralMpc[2];
           updatePosition(cam);
         }
       } else {
-        const pinned = bodyMovesThisFrame(focusRow);
-        if (pinned) {
-          clock.followPanOffset = [
-            clock.followPanOffset[0] + step.lateralMpc[0],
-            clock.followPanOffset[1] + step.lateralMpc[1],
-            clock.followPanOffset[2] + step.lateralMpc[2],
-          ];
-        }
         const zoomed = applyWheelZoom(
           clock,
           state.cameraRuntime.prevActiveId.current,
           root.camera.base,
-          pinned ? { distanceScale: step.distanceScale, lateralMpc: [0, 0, 0] } : step,
+          poseStep,
           root.camera.autoRotate,
           performance.now(),
-          radiusMpc,
         );
         if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
       }

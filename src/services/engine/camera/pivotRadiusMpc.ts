@@ -2,11 +2,12 @@
  * pivotRadiusMpc — the physical radius (Mpc) of whatever sits at the camera's
  * orbit pivot, or `null` when the pivot has no surface.
  *
- * The one place that maps a resolved `SelectionRow` onto `clampDistance`'s
- * floor argument, so the zoom floor, the pinch floor, and the follow driver's
- * distance target all derive it from the same rule. A body or survey star is a
- * surface the camera can crash into; a galaxy, a structure, or the Milky Way is
- * a volume the camera flies INTO, so those stay `null` and unfloored.
+ * The one place that answers "does the pivot have a surface, and how big is
+ * it" — the zoom's standoff floor, the orbit-drag rate's ground-tracking
+ * denominator, and the near-plane bracket all derive it from this one rule. A
+ * body or survey star is a surface the camera can crash into; a galaxy, a
+ * structure, or the Milky Way is a volume the camera flies INTO, so those stay
+ * `null` and unfloored.
  */
 
 import { SCALE_UNITS } from '../../../data/scaleUnits';

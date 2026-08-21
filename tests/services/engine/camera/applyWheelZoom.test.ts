@@ -17,7 +17,7 @@ import {
   createCameraClock,
   autoRotateElapsed,
 } from '../../../../src/services/engine/camera/cameraClock';
-import { MAX_DISTANCE_MPC } from '../../../../src/utils/camera/clampDistance';
+import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../../src/utils/camera/clampDistance';
 import type { ZoomStep } from '../../../../src/@types/camera/ZoomStep';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -45,7 +45,7 @@ describe('applyWheelZoom', () => {
     const clock = createCameraClock();
     clock.followDistanceTarget = 50;
 
-    const result = applyWheelZoom(clock, 'followBody', BASE, zoom(1.2), SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'followBody', BASE, zoom(1.2), SPIN_OFF, 0);
 
     expect(result).toBeNull(); // nothing to commit into the store
     expect(clock.followDistanceTarget).toBeCloseTo(60, 9); // 50 * 1.2
@@ -54,28 +54,29 @@ describe('applyWheelZoom', () => {
   it('clamps the scaled follow target to the shared zoom envelope', () => {
     const clock = createCameraClock();
     clock.followDistanceTarget = MAX_DISTANCE_MPC;
-    applyWheelZoom(clock, 'followBody', BASE, zoom(1000), SPIN_OFF, 0, null);
+    applyWheelZoom(clock, 'followBody', BASE, zoom(1000), SPIN_OFF, 0);
     expect(clock.followDistanceTarget).toBe(MAX_DISTANCE_MPC);
   });
 
-  it('floors the follow target at the focused body’s surface, not the absolute floor', () => {
-    // Zoom-in while following Earth: the follow driver owns the distance, so the
-    // per-pivot floor has to be applied HERE or the wheel walks the target inside
-    // the planet (the absolute floor is 0.048 Earth radii). A factor small enough
-    // to blow through the surface in one tick makes the arm's clamp the only thing
-    // standing between the camera and the mantle.
+  it('does NOT re-floor the follow target at the body’s radius — only the envelope', () => {
+    // The surface stop is upstream, in eye currency (`zoomedEyeStep`), because
+    // `distance` is measured to a pivot that a zoom-to-cursor tick strafes off
+    // the body centre. Re-applying it here in DISTANCE currency walls the zoom:
+    // once the target sits on `radius · STANDOFF`, every further tick returns
+    // that same value and the wheel goes dead while the pivot slides sideways.
     const clock = createCameraClock();
     clock.followDistanceTarget = EARTH_RADIUS_MPC * 4;
-    applyWheelZoom(clock, 'followBody', BASE, zoom(1e-6), SPIN_OFF, 0, EARTH_RADIUS_MPC);
+    applyWheelZoom(clock, 'followBody', BASE, zoom(1e-6), SPIN_OFF, 0);
 
-    const radii = clock.followDistanceTarget! / EARTH_RADIUS_MPC;
-    expect(radii).toBeGreaterThan(1);
-    expect(radii).toBeLessThan(1.05);
+    expect(clock.followDistanceTarget!).toBeLessThan(EARTH_RADIUS_MPC);
+    // Still strictly positive: a pivot that strafes past the eye is the one
+    // degeneracy the envelope's floor is here to catch.
+    expect(clock.followDistanceTarget!).toBe(MIN_DISTANCE_MPC);
   });
 
   it('commits the zoomed base when the resting driver owns the distance', () => {
     const clock = createCameraClock();
-    const result = applyWheelZoom(clock, 'resting', BASE, zoom(2), SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'resting', BASE, zoom(2), SPIN_OFF, 0);
     expect(result).not.toBeNull();
     expect(result!.distance).toBeCloseTo(200, 9); // 100 * 2
     // The follow target is untouched — resting reads base, not the follow clock.
@@ -100,7 +101,6 @@ describe('applyWheelZoom', () => {
       zoom(0.5),
       { active: true, rate },
       500,
-      null,
     );
 
     expect(result).not.toBeNull();
@@ -120,7 +120,6 @@ describe('applyWheelZoom', () => {
       zoom(0.5),
       { active: false, rate: 0.01 },
       500,
-      null,
     );
     expect(result).not.toBeNull();
     expect(result!.yaw).toBe(BASE.yaw); // no spin folded in
@@ -141,7 +140,6 @@ describe('applyWheelZoom', () => {
       zoom(0.5, [3, -4, 12]),
       SPIN_OFF,
       0,
-      null,
     );
     expect(result!.target).toEqual([3, -4, 12]);
     expect(result!.yaw).toBe(BASE.yaw);
@@ -154,7 +152,7 @@ describe('applyWheelZoom', () => {
     // the framing distance on its first produce.
     const clock = createCameraClock();
     clock.followDistanceTarget = null;
-    const result = applyWheelZoom(clock, 'followBody', BASE, zoom(1.1), SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'followBody', BASE, zoom(1.1), SPIN_OFF, 0);
     expect(result).not.toBeNull();
     expect(result!.distance).toBeCloseTo(110, 9);
   });

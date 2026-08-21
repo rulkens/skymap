@@ -6,22 +6,17 @@
  * construction). The target is copied into a fresh array so the result never
  * aliases the input pose's (frozen, store-owned) target.
  *
- * `clampDistance`'s floor is a BACKSTOP here, not the surface stop: the real
- * standoff floor is enforced in eye currency inside `zoomedEyeStep`. It stays
- * because a lateral shift only ever moves `target` PERPENDICULAR to the view
- * axis, which grows `distance` relative to the centred case — so this floor can
- * never cut a legal zoom short, only catch a pathological one.
+ * The surface stop is NOT here: it is enforced in eye currency inside
+ * `zoomedEyeStep`, the only currency that survives the pivot strafing off the
+ * body centre — which is exactly what the lateral term below does. All
+ * `clampDistance` contributes is the envelope (ceiling + positivity).
  */
 
 import { clampDistance } from './clampDistance';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { ZoomStep } from '../../@types/camera/ZoomStep';
 
-export function zoomedPose(
-  base: CameraPose,
-  step: ZoomStep,
-  pivotRadiusMpc: number | null,
-): CameraPose {
+export function zoomedPose(base: CameraPose, step: ZoomStep): CameraPose {
   return {
     target: [
       base.target[0] + step.lateralMpc[0],
@@ -30,6 +25,6 @@ export function zoomedPose(
     ],
     yaw: base.yaw,
     pitch: base.pitch,
-    distance: clampDistance(base.distance * step.distanceScale, pivotRadiusMpc),
+    distance: clampDistance(base.distance * step.distanceScale),
   };
 }

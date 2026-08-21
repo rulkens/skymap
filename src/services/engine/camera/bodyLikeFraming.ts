@@ -12,8 +12,8 @@
  * delegate here.
  *
  * The distance is deliberately UNCLAMPED: at ~2e-16 Mpc (Earth) any Mpc-scale
- * floor would swallow the framing. The wheel-zoom / descent clamps own the floor,
- * and it is derived from this same radius (clampDistance.ts stands off
+ * floor would swallow the framing. The zoom owns the floor, and it is derived
+ * from this same radius (`zoomedEyeStep` stands the EYE off
  * `SURFACE_STANDOFF_RADII` from the pivot's surface), so the framing distance is
  * always comfortably reachable — the fill factor puts it several radii out.
  */

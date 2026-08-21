@@ -1,22 +1,21 @@
 /**
  * Orbit-camera distance limits + the shared clamp policy.
  *
- * The limits here are the single source of truth for how far the orbit camera
- * may sit from its target — wheel zoom, pinch zoom, focus tweens, and initial
- * framing all route through `clampDistance` so the envelope can never drift.
- * The floor takes the orbited body's physical radius and stands off from its
- * surface (a framed body's target is its CENTRE), so `pivotRadiusMpc` is a
- * REQUIRED `number | null` param — optional would let a call site silently
- * fall back to the global floor, the drift this module exists to prevent.
+ * `clampDistance` is the ENVELOPE — a ceiling, and a positivity floor for a
+ * degenerate pose. It is deliberately NOT the surface stop: `distance` is
+ * measured to the orbit target, which drifts off the body centre the moment a
+ * pan or a zoom-to-cursor strafes the pivot, and a floor in that currency then
+ * walls off a zoom the eye has plenty of altitude for. The surface stop lives
+ * in EYE currency in `zoomedEyeStep`, against `SURFACE_STANDOFF_RADII` below.
  */
 
 // ─── Distance limits ──────────────────────────────────────────────────────────
 
 /**
  * Absolute floor for `cam.distance` in Mpc — 1e-17 Mpc ≈ 309 km. A degeneracy
- * backstop, NOT a surface stop (`SURFACE_STANDOFF_RADII` handles that): this
- * only keeps distance strictly positive with no pivot radius to stand off
- * from, and floors bodies smaller than ~309 km. Sits below the galaxy-focus
+ * backstop, NOT a surface stop (`SURFACE_STANDOFF_RADII` handles that, in eye
+ * currency): it only keeps `distance` strictly positive, which a pivot that
+ * strafes past the eye could otherwise break. Sits below the galaxy-focus
  * tween's minimum end distance (0.15 Mpc), so `clampDistance` never ratchets
  * a focus-on tween back outward.
  */
@@ -35,11 +34,10 @@ export const MIN_DISTANCE_MPC = 1e-17;
  * where there is none to plan against.
  *
  * The near plane no longer couples to this ratio directly: `deriveSlabs`
- * (`slabs.ts`) now keys `foregroundFrustum`'s bracket off ALTITUDE
- * (`cam.distance - pivotRadiusMpc`) rather than raw distance, so the floors
- * compare directly — this must stay comfortably above `foregroundFrustum.ts:
- * MIN_NEAR_MPC` (~6 m) or the near plane clips the ground, as `20fed8e31`
- * found the hard way.
+ * (`slabs.ts`) keys `foregroundFrustum`'s bracket off the EYE's altitude
+ * rather than raw distance, so the floors compare directly — this must stay
+ * comfortably above `foregroundFrustum.ts: MIN_NEAR_MPC` (~6 m) or the near
+ * plane clips the ground, as `20fed8e31` found the hard way.
  *
  * A RATIO applies the same floor to every body, which was only validated
  * visually over Earth. Revisit if a close Moon/Sun approach looks wrong.
@@ -59,20 +57,11 @@ export const SURFACE_STANDOFF_RADII = 1.0000024;
 export const MAX_DISTANCE_MPC = 30000;
 
 /**
- * Clamp a candidate distance to the zoom envelope: ceiling `MAX_DISTANCE_MPC`,
- * floor `max(MIN_DISTANCE_MPC, pivotRadiusMpc · SURFACE_STANDOFF_RADII)`.
- *
- * @param d               Candidate `cam.distance`, Mpc.
- * @param pivotRadiusMpc  Physical radius of the orbit pivot, Mpc, or `null` when
- *   it has no surface to stand off from (empty space, a galaxy, a structure,
- *   the Milky Way — volumes the camera flies INTO, never a floor).
+ * Clamp a candidate distance to the zoom envelope: `[MIN_DISTANCE_MPC,
+ * MAX_DISTANCE_MPC]`. The surface stop is not here — see the module header.
  */
-export function clampDistance(d: number, pivotRadiusMpc: number | null): number {
-  const floor =
-    pivotRadiusMpc === null
-      ? MIN_DISTANCE_MPC
-      : Math.max(MIN_DISTANCE_MPC, pivotRadiusMpc * SURFACE_STANDOFF_RADII);
-  if (d < floor) return floor;
+export function clampDistance(d: number): number {
+  if (d < MIN_DISTANCE_MPC) return MIN_DISTANCE_MPC;
   if (d > MAX_DISTANCE_MPC) return MAX_DISTANCE_MPC;
   return d;
 }

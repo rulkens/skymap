@@ -10,6 +10,7 @@
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
+import type { Vec3 } from '../../@types/math/Vec3';
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -948,7 +949,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             centreMpc === null || radiusMpc === null
               ? null
               : eyeAltitudeMpc(cam.position, centreMpc, radiusMpc),
-          followPanOffsetMpc: state.cameraRuntime.clock.followPanOffset,
+          // Copied: the clock's vector is mutated in place by the follow-pan
+          // and zoom paths, and a `Readonly<Vec3>` field that keeps changing
+          // under its reader is worse than no snapshot at all.
+          followPanOffsetMpc: [...state.cameraRuntime.clock.followPanOffset] as Vec3,
           zoomLateralMpc: state.cameraRuntime.debugZoomLateralMpc,
           idleTickMs: state.cameraRuntime.debugIdleTickMs,
         };

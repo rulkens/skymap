@@ -65,10 +65,11 @@ describe('zoomedEyeStep', () => {
   });
 
   it('shifts the pivot PERPENDICULAR to the orbit axis, never along it', () => {
-    // Downstream relies on this: `clampDistance`'s distance-currency backstop is
-    // only ever LOOSER than the true altitude floor because a lateral shift can
-    // only grow |eye − target|. A lateral with an along-axis component would
-    // double-count the distance term and break that argument.
+    // The decomposition is only exact if the two halves are orthogonal: an
+    // along-axis component in the lateral would double-count the distance term,
+    // and the pose would land somewhere other than where the anchor scaling
+    // said. It is also why `distance` alone is a poor proxy for altitude — the
+    // pivot slides sideways while the eye's radius changes on its own.
     const step = zoomedEyeStep(EYE, CENTRE, ANCHOR, CENTRE, FLOOR, 0.9);
     const axis: Vec3 = [0, 0, 1]; // (EYE − CENTRE) normalised
     const lateralLen = Math.hypot(...step.lateralMpc);
@@ -88,6 +89,26 @@ describe('zoomedEyeStep', () => {
     const step = zoomedEyeStep(EYE, CENTRE, ANCHOR, CENTRE, FLOOR, 1e-9);
     const eye = steppedEye(EYE, CENTRE, step);
     expect(Math.hypot(...eye) / FLOOR).toBeCloseTo(1, 9);
+  });
+
+  it('an eye already below the floor is brought back OUT, never pushed deeper', () => {
+    // The state this has to survive is one the clamp itself produces: the eye
+    // parked exactly on the floor, one float ulp either side of it. Partitioning
+    // the roots on `sOut <= 1` leaves that case in a gap — neither arm fires, no
+    // clamp applies, and the tick descends the full 10% of the slant range to a
+    // near-limb anchor (tens of km, straight through the crust). The anchor here
+    // is 20° round from the nadir, where that slant range is ~2,200 km.
+    const nearLimb: Vec3 = [
+      R * Math.sin((20 * Math.PI) / 180),
+      0,
+      R * Math.cos((20 * Math.PI) / 180),
+    ];
+    const sunkEye: Vec3 = [0, 0, FLOOR * (1 - 1e-12)];
+
+    const step = zoomedEyeStep(sunkEye, CENTRE, nearLimb, CENTRE, FLOOR, 0.9);
+    const eye = steppedEye(sunkEye, CENTRE, step);
+    expect(Math.hypot(...eye) / FLOOR).toBeCloseTo(1, 9);
+    expect(Math.hypot(...eye)).toBeGreaterThanOrEqual(Math.hypot(...sunkEye));
   });
 
   it('zooming out is never clamped by the floor', () => {

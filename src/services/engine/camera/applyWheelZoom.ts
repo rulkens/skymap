@@ -51,8 +51,8 @@
  * Only the follow arm drops the lateral — its slot is a scalar distance, and
  * following implies a pivot-pinned body, whose lateral the caller has already
  * routed into `clock.followPanOffset` (the only lateral channel the pin does
- * not erase). `pivotRadiusMpc` reaches every arm as `clampDistance`'s backstop
- * floor — see `zoomedPose` for why it is a backstop and not the surface stop.
+ * not erase). No arm re-floors the distance at the body's surface: `step` was
+ * already floored in eye currency where it was computed — see `zoomedPose`.
  */
 
 import { autoRotateElapsed } from './cameraClock';
@@ -70,18 +70,14 @@ export function applyWheelZoom(
   step: ZoomStep,
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
-  pivotRadiusMpc: number | null,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = clampDistance(
-      clock.followDistanceTarget * step.distanceScale,
-      pivotRadiusMpc,
-    );
+    clock.followDistanceTarget = clampDistance(clock.followDistanceTarget * step.distanceScale);
     return null;
   }
   if (prevActiveId === 'autoRotate') {
     const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), step, pivotRadiusMpc);
+    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), step);
   }
-  return zoomedPose(base, step, pivotRadiusMpc);
+  return zoomedPose(base, step);
 }
