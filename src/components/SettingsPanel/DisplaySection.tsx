@@ -202,11 +202,11 @@ function DisplaySection({
         <Slider
           label="Field of view"
           value={fovDeg}
-          min={5}
+          min={0.5}
           max={100}
-          step={1}
+          step={0.5}
           onChange={onFovDegChange}
-          format={(v) => `${Math.round(v)}°`}
+          format={(v) => `${v % 1 === 0 ? v : v.toFixed(1)}°`}
         />
       </div>
 

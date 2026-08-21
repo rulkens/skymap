@@ -167,7 +167,7 @@ describe('DisplaySection', () => {
       expect(fov).not.toBeUndefined();
       fireEvent.keyDown(fov, { key: 'ArrowRight' });
       expect(onFovDegChange).toHaveBeenCalledOnce();
-      expect(onFovDegChange).toHaveBeenCalledWith(61);
+      expect(onFovDegChange).toHaveBeenCalledWith(60.5);
     });
   });
 
