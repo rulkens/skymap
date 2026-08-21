@@ -5,7 +5,7 @@
  * projection math has its own tests), so it needs no camera or body record:
  * feed it an already-computed apparent size and it just applies the threshold
  * plus the always-resolved override. The boundary case is pinned to match the
- * famous-galaxy gate's `<` convention (`produceFamousLabels.ts:221`), where
+ * famous-galaxy gate's `<` convention (`produceFamousGalaxyLabels.ts:221`), where
  * exactly-at-threshold promotes rather than staying a point.
  */
 

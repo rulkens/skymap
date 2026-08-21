@@ -3,7 +3,7 @@
  * name shown for a famous-galaxy entry.
  *
  * Used by both `galaxyInfoBuilder.ts` (InfoCard headline) and
- * `produceFamousLabels.ts` (the famous-label producer) so the two surfaces
+ * `produceFamousGalaxyLabels.ts` (the famous-label producer) so the two surfaces
  * can't drift: hover a dot and the string in the label matches the
  * string in the panel.
  *

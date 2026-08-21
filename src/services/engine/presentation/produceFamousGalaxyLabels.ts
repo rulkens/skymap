@@ -1,5 +1,5 @@
 /**
- * produceFamousLabels — per-frame text labels for the curated famous galaxies,
+ * produceFamousGalaxyLabels — per-frame text labels for the curated famous galaxies,
  * derived from the famous `.bin` catalog in `galaxyStore` joined with the
  * famous-galaxies meta sidecar read off `state.famousGalaxiesMeta` (the
  * engine slice).
@@ -57,13 +57,13 @@
  * (LMC/SMC) don't pin the flat 150 px cap — see `famousLabelMaxPx`.
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
@@ -160,14 +160,14 @@ function deriveFamousLabelInputs(
   return out;
 }
 
-export function produceFamousLabels(
+export function produceFamousGalaxyLabels(
   state: EngineState,
   ctx: ReadyFrameContext,
-): LabelProducerOutput {
+): Label2DProducerOutput {
   const galaxies = state.data.galaxies;
   const fades = state.subsystems.fades;
   const now = ctx.nowMs;
-  const empty: LabelProducerOutput = { labels: [], lines: [], awake: false };
+  const empty: Label2DProducerOutput = { labels: [], lines: [], awake: false };
   // Render while the user wants famous labels OR the `galaxy` fade-out
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
   // popping (mirrors `filamentsLayer.enabled`). Once opacity hits 0 we stop.
@@ -193,7 +193,7 @@ export function produceFamousLabels(
   const inputs = deriveFamousLabelInputs(meta, catalog);
   if (inputs.length === 0) return empty;
 
-  const labels: Label[] = [];
+  const labels: Label2D[] = [];
   const lines: MarkerLine[] = [];
 
   const fovYRad = ctx.fovYRad;
@@ -264,7 +264,7 @@ export function produceFamousLabels(
     // bottom that positions the line top can never drift from what is drawn.
     // `worldPos` here is provisional (the dot); the push below replaces it
     // with the lifted anchor.
-    const label: Label = {
+    const label: Label2D = {
       id: p.id,
       worldPos: p.worldPos,
       text: p.name,

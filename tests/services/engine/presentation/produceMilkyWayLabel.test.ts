@@ -14,7 +14,7 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Label } from '../../../../src/@types/rendering/Label';
+import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
 // Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
@@ -46,7 +46,7 @@ function makeState(
       labels: { focusedOnly: opts.focusedOnly ?? false },
     },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label) => LabelBBox>(() => bbox) } },
+    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,

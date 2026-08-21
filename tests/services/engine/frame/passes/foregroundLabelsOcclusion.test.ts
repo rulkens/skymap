@@ -25,7 +25,7 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
-import type { Label } from '../../../../../src/@types/rendering/Label';
+import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
@@ -53,7 +53,7 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
 function makeRenderer(glyphCount: number): LabelRenderer {
   return {
     label: 'foregroundLabelRenderer',
-    setLabels: vi.fn<(labels: readonly Label[]) => void>(),
+    setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
     measure: vi.fn<() => null>(() => null),
     glyphCount: () => glyphCount,
