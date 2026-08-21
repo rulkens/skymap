@@ -178,7 +178,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
     // Disengaged at boot — no body is focused yet, so there is nothing to
     // follow. `runFrame` is the single writer from the first frame on.
-    surfaceFollow: { engaged: false, orientationAtFlip: null },
+    surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────

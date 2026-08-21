@@ -102,11 +102,14 @@ import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
+import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 
@@ -228,7 +231,7 @@ function makeState(): EngineState {
       // Disengaged by default — the surface-follow block reads/writes this
       // unconditionally (before the renderer-null bail-out), so the box must
       // exist even for fixtures that never focus a body.
-      surfaceFollow: { engaged: false, orientationAtFlip: null },
+      surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
     },
     // The surface-follow block reads `selectionRows.focus` unconditionally,
     // same reason as `cameraRuntime.surfaceFollow` above. No slot occupied by
@@ -606,38 +609,69 @@ describe('runFrame — orientation-frame roll', () => {
   });
 });
 
+/** Occupy `state.selectionRows.focus` with a body row — the type isn't part of the `EngineState` fixture cast. */
+function setFocusedBody(state: EngineState, id: string, radiusKm: number): void {
+  (state as { selectionRows: { focus: unknown } }).selectionRows.focus = {
+    type: 'body',
+    id,
+    label: id,
+    positionMpc: [0, 0, 0],
+    radiusKm,
+  };
+}
+
+/**
+ * `pose.distance` COMFORTABLY inside a body's engage zone (Mpc) — half the
+ * engage-threshold altitude, not the threshold itself: at the exact boundary
+ * `distance − radiusMpc` and `engageAtMpc` are both catastrophic-cancellation-
+ * sensitive sums of a ~1e-17 Mpc radius and a ~1e-22 Mpc altitude, so which
+ * way the last bit rounds (and hence whether `<=` holds) depends on the
+ * body's radius — Phobos and the Moon round opposite ways at the exact
+ * boundary. Comfortably inside removes that dependency.
+ */
+function engageDistanceMpc(radiusKm: number): number {
+  const radiusMpc = radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
+  return radiusMpc + standoffAltitudeMpc * SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT * 0.5;
+}
+
+/** Independent column-major elementary rotation builders — not the source's. */
+function rotZDeg(degrees: number): Mat3 {
+  const rad = (degrees * Math.PI) / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return [c, s, 0, -s, c, 0, 0, 0, 1];
+}
+function rotXDeg(degrees: number): Mat3 {
+  const rad = (degrees * Math.PI) / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return [1, 0, 0, 0, c, s, 0, -s, c];
+}
+
 describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
   it('the engage frame introduces no pose jump: corrected poseBasis/upBasis are bit-identical to the uncorrected values', () => {
     // Phobos carries no texture spec, so `orientationForBody` gives it
     // IDENTITY_MAT3 (see `orientationForBody.ts`) rather than a baked-from-trig
-    // rotation. That makes `orientationFlipCorrection(orientationAtFlip,
+    // rotation. That makes `orientationWorldDelta(orientationAtFlip,
     // orientationAtFlip)` exact integer arithmetic (0s and 1s) instead of a
     // near-but-not-exactly-orthonormal float matrix self-multiply — the
     // fixture the "bit-identical" claim actually needs to hold to the letter,
     // not just to within float noise.
     const store = makeStore();
     const state = makeCamState();
-    (state as { selectionRows: { focus: unknown } }).selectionRows.focus = {
-      type: 'body',
-      id: 'phobos',
-      label: 'Phobos',
-      positionMpc: [0, 0, 0],
-      radiusKm: 11,
-    };
+    setFocusedBody(state, 'phobos', 11);
     const deps = makeCamDeps(state, store);
 
-    // Set `pose.distance` exactly at the engage threshold: the same
-    // 'radius + standoff-multiple' resolution `runFrame`'s surface-follow
-    // block performs, computed independently here so the fixture — not a
+    // Set `pose.distance` inside the engage zone: the same 'radius +
+    // standoff-multiple' resolution `runFrame`'s surface-follow block
+    // performs, computed independently here so the fixture — not a
     // re-derivation of the block under test — decides the trigger altitude.
-    const radiusMpc = 11 * SCALE_UNITS.KM_TO_MPC;
-    const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
-    const engageAtMpc = standoffAltitudeMpc * SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT;
     const BASE: CameraPose = {
       target: [0, 0, 0],
       yaw: 0,
       pitch: 0,
-      distance: radiusMpc + engageAtMpc,
+      distance: engageDistanceMpc(11),
     };
     store.dispatch(commitCameraPose(BASE));
     state.cameraRuntime.lastPose.current = BASE;
@@ -655,6 +689,139 @@ describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
     const defaultBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
     expect(state.cam!.poseBasis).toEqual(defaultBasis);
     expect(state.cam!.upBasis).toEqual(defaultBasis);
+  });
+
+  it("holding on a tilted-pole body (Moon) rotates the decode basis about the MOON'S pole, not world Z", () => {
+    // The Moon's pole (poleRaDeg 269.9949°, poleDecDeg 66.5392° —
+    // rotationElements.ts) is NOT the world Z axis, so this is the minimum
+    // fixture that can distinguish the correct world-space delta
+    // `current·inverse(atFlip)` from the bug `inverse(atFlip)·current`
+    // (which reduces to a pure world-Z rotation regardless of the pole, and
+    // was silently right only for Earth — see `orientationWorldDelta.ts`'s
+    // docblock). An identity-orientation fixture (Phobos, above) cannot
+    // catch this either order — both give identity.
+    const MOON_RADIUS_KM = 1737;
+    const MOON_SPIN_DEG_PER_DAY = 13.17635815; // rotationElements.ts
+    const MOON_POLE_RA_DEG = 269.9949;
+    const MOON_POLE_DEC_DEG = 66.5392;
+    const DELTA_W_DEG = 47; // hand-chosen spin advance between the two frames
+
+    const store = makeStore();
+    const state = makeCamState();
+    setFocusedBody(state, 'moon', MOON_RADIUS_KM);
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = {
+      target: [0, 0, 0],
+      yaw: 0,
+      pitch: 0,
+      distance: engageDistanceMpc(MOON_RADIUS_KM),
+    };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    // Frame 1: engage, snapshotting the Moon's orientation at J2000.
+    // `setSimDays`'s `nowMs` matches the `runFrame` call's `nowMs`, so
+    // `deriveSimDays` reports the dispatched value exactly (zero elapsed
+    // real time since the anchor) — the same pinning trick the 'sim clock'
+    // suite above uses.
+    store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
+    runFrame(state, deps, 0);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    // Frame 2: advance the Moon's spin by DELTA_W_DEG, same body still
+    // focused (no lifecycle reset), still engaged.
+    const simDays2 = CONST_J2000 + DELTA_W_DEG / MOON_SPIN_DEG_PER_DAY;
+    store.dispatch(setSimDays({ simDays: simDays2, nowMs: 1000 }));
+    runFrame(state, deps, 1000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    // Hand-build the expected world-space delta independently of both
+    // rotationFromIau.ts and orientationWorldDelta.ts: `C` is the Moon's
+    // fixed pole tilt/swing, `Rz(ΔW)` its spin since flip, and the
+    // world-space rotation a body picks up is the CONJUGATE `C·Rz(ΔW)·C⁻¹`
+    // (a rotation about the body's own tilted pole) — not `Rz(ΔW)` itself
+    // (a rotation about world Z, which is what the buggy order collapses to).
+    const swingToRa = rotZDeg(90 + MOON_POLE_RA_DEG);
+    const tipToDec = rotXDeg(90 - MOON_POLE_DEC_DEG);
+    const swingToRaInv = rotZDeg(-(90 + MOON_POLE_RA_DEG));
+    const tipToDecInv = rotXDeg(-(90 - MOON_POLE_DEC_DEG));
+    const c = multiply3x3(swingToRa, tipToDec);
+    const cInv = multiply3x3(tipToDecInv, swingToRaInv); // inverse of a product reverses order
+    const deltaW = rotZDeg(DELTA_W_DEG);
+    const worldDelta = multiply3x3(multiply3x3(c, deltaW), cInv);
+
+    const defaultBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    const expectedPoseBasis = multiply3x3(worldDelta, defaultBasis);
+
+    const actual = state.cam!.poseBasis!;
+    for (let i = 0; i < 9; i++) {
+      expect(actual[i]).toBeCloseTo(expectedPoseBasis[i]!, 9);
+    }
+  });
+
+  it('focus switching to a different body while engaged resets: no cross-body correction frame', () => {
+    // If the false→true snapshot branch only fires on a hysteresis edge, a
+    // focus switch mid-engagement never re-fires it: `wasEngaged` carries
+    // over `true` from the OLD body, so if the new body's altitude lands
+    // inside its OWN hysteresis band (neither `<= engage` nor `>= disengage`),
+    // `surfaceFollowEngaged` returns `wasEngaged` unchanged — `engaged` stays
+    // `true` WITHOUT re-taking the snapshot, leaving `orientationAtFlip` as
+    // the OLD body's orientation composed against the NEW body's live
+    // orientation. Moon → Mars have unrelated poles (rotationElements.ts), so
+    // that cross-body correction is far from identity; the fix must instead
+    // reset to `wasEngaged = false` the instant the focused id changes, so
+    // the new body always gets a FRESH false→true snapshot (identity
+    // correction) rather than a stale cross-body one.
+    const MOON_RADIUS_KM = 1737;
+    const MARS_RADIUS_KM = 3390;
+
+    const store = makeStore();
+    const state = makeCamState();
+    setFocusedBody(state, 'moon', MOON_RADIUS_KM);
+    const deps = makeCamDeps(state, store);
+
+    store.dispatch(
+      commitCameraPose({
+        target: [0, 0, 0],
+        yaw: 0,
+        pitch: 0,
+        distance: engageDistanceMpc(MOON_RADIUS_KM),
+      }),
+    );
+    store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
+    runFrame(state, deps, 0);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+    expect(state.cameraRuntime.surfaceFollow.bodyId).toBe('moon');
+
+    // Switch focus to Mars AND re-pose inside Mars's own engage zone (a
+    // fresh focus normally arrives at a fresh distance too), so a correctly
+    // reset evaluation freshly engages and snapshots Mars's orientation THIS
+    // frame (identity correction).
+    setFocusedBody(state, 'mars', MARS_RADIUS_KM);
+    store.dispatch(
+      commitCameraPose({
+        target: [0, 0, 0],
+        yaw: 0,
+        pitch: 0,
+        distance: engageDistanceMpc(MARS_RADIUS_KM),
+      }),
+    );
+    store.dispatch(setSimDays({ simDays: CONST_J2000 + 1, nowMs: 1000 }));
+    runFrame(state, deps, 1000);
+
+    expect(state.cameraRuntime.surfaceFollow.bodyId).toBe('mars');
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    // The load-bearing assertion: a fresh engage composes an identity
+    // correction, so poseBasis must match the uncorrected default basis. A
+    // stale Moon-snapshot-vs-Mars-live correction would NOT be identity
+    // (unrelated poles), so this fails under the missing-reset bug.
+    const defaultBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    const actual = state.cam!.poseBasis!;
+    for (let i = 0; i < 9; i++) {
+      expect(actual[i]).toBeCloseTo(defaultBasis[i]!, 9);
+    }
   });
 });
 

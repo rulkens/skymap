@@ -68,7 +68,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
 import { surfaceFollowEngaged } from '../../../utils/camera/surfaceFollowEngaged';
-import { orientationFlipCorrection } from '../../../utils/camera/orientationFlipCorrection';
+import { orientationWorldDelta } from '../../../utils/camera/orientationWorldDelta';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -327,10 +327,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // below carries scene bodies, not survey stars, which have no baked
   // orientation to hold the camera fixed against.
   const surfaceFollow = state.cameraRuntime.surfaceFollow;
+  const surfaceFollowFocus = state.selectionRows.focus;
+  const surfaceFollowBodyId = surfaceFollowFocus?.type === 'body' ? surfaceFollowFocus.id : null;
+  if (surfaceFollowBodyId !== surfaceFollow.bodyId) {
+    // The focused body changed (or was lost) since last frame: the snapshot
+    // and engaged flag belong to the PREVIOUS body. Carrying them over would
+    // compose a cross-body correction and could wedge disengage (altitude
+    // computed against the NEW body's radius from a pose.distance the old
+    // body's hysteresis band was tuned to).
+    surfaceFollow.engaged = false;
+    surfaceFollow.orientationAtFlip = null;
+    surfaceFollow.bodyId = surfaceFollowBodyId;
+  }
   const wasSurfaceFollowEngaged = surfaceFollow.engaged;
   let surfaceFollowEngagedNow = false;
   let liveBodyOrientation: Mat3 | null = null;
-  const surfaceFollowFocus = state.selectionRows.focus;
   if (surfaceFollowFocus?.type === 'body') {
     const bodyState = deriveBodyStates(simDays).get(surfaceFollowFocus.id);
     if (bodyState) {
@@ -370,17 +381,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     surfaceFollow.orientationAtFlip !== null &&
     liveBodyOrientation !== null
   ) {
-    const correction = orientationFlipCorrection(
-      surfaceFollow.orientationAtFlip,
-      liveBodyOrientation,
-    );
+    const correction = orientationWorldDelta(surfaceFollow.orientationAtFlip, liveBodyOrientation);
     // Left-multiply: poseBasis/upBasis decode LOCAL orbit angles into WORLD
     // directions (assembleOrbitCamera's `dir_world = poseBasis · dir_local`).
-    // Holding a body-local point fixed needs the SAME world-space rotation
-    // the body picked up: `(liveBodyOrientation · orientationAtFlip⁻¹) ·
-    // poseBasis`. A body's spin is single-axis, so that commutes with what
-    // `correction` computes (`orientationAtFlip⁻¹ · liveBodyOrientation`) —
-    // making `correction` exactly the left factor needed.
+    // `correction` (`orientationWorldDelta`) is already the WORLD-space
+    // rotation the body picked up since the flip, so co-rotating the decode
+    // basis with it is a straight left-multiply — see that util's docblock
+    // for why the world-space delta (not `orientationAtFlip⁻¹·current`) is
+    // the correct factor for a body whose pole isn't the world Z axis.
     decodePoseBasis = multiply3x3(correction, poseBasis);
     decodeUpBasis = multiply3x3(correction, upBasis);
   }
