@@ -11,11 +11,16 @@
  *     job inside onRow
  *   - the single shared stride cursor advances once per frame and both
  *     visitor slots see the identical window
+ *   - a per-frame row-accept budget caps admission to onRow regardless of how
+ *     many rows clear the distance gate (the narrow-FOV admission-sphere bug)
  */
 
 import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { createDiskPlannerWalk } from '../../../../src/services/engine/subsystems/diskPlannerWalk';
+import {
+  createDiskPlannerWalk,
+  DISK_ROW_ACCEPT_BUDGET,
+} from '../../../../src/services/engine/subsystems/diskPlannerWalk';
 import { noopDiskRowVisitor } from './diskWalkHarness';
 import type { DiskRowVisitor } from '../../../../src/@types/engine/subsystems/DiskRowVisitor';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -193,5 +198,19 @@ describe('createDiskPlannerWalk', () => {
       [0, 2],
       [2, 4],
     ]);
+  });
+
+  it('caps rows admitted to onRow at DISK_ROW_ACCEPT_BUDGET per frame, even when every row in a huge window clears the distance gate', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    // Every row sits at 1 Mpc, well inside the 15 Mpc / 8-px bound (see the
+    // module-header worked example above) — a narrow-FOV pxPerRad would admit
+    // a catalog this size in full without the budget.
+    const rowCount = DISK_ROW_ACCEPT_BUDGET * 4;
+    const rows = Array.from({ length: rowCount }, () => ({ distMpc: 1, diameterKpc: 50 }));
+    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCatalog(rows)]]);
+    const events: WalkEvent[] = [];
+    walk.runFrame(makeInput(catalogs), recordingVisitor(events), noopDiskRowVisitor());
+    const onRowCount = events.filter((e) => e[0] === 'onRow').length;
+    expect(onRowCount).toBe(DISK_ROW_ACCEPT_BUDGET);
   });
 });
