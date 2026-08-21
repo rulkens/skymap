@@ -153,6 +153,17 @@ type Label2DProjected = {
   readonly onScreen: boolean;
 };
 
+/**
+ * `declutter`'s result: the filtered survivor array (what `applySmoothstepEnvelope`
+ * and the lift/flush stages consume) alongside a survivor-id set (what
+ * `applyExponentialEnvelope` additionally needs — see its docblock for why
+ * it must see every emitted label, not just the survivors).
+ */
+type DeclutterResult = {
+  readonly survivors: readonly Label2D[];
+  readonly survivorIds: ReadonlySet<string>;
+};
+
 function projectLabels(
   labels: readonly Label2D[],
   projection: Label2DProjection,
@@ -292,12 +303,19 @@ function declutterByScreenSeparationArm(
   const accepted = new Set<number>();
   for (let i = 0; i < labels.length; i++) {
     const p = projected[i]!;
-    if (!p.screenPx) {
+    const label = labels[i]!;
+    // Bypass unconditionally: behind camera (no screen position) OR emitted
+    // at a zero producer target — mirrors `foregroundLabelsLayer.ts:269`'s
+    // candidate filter (`baseTarget === 0 || screenPx === null`). A
+    // zero-fadeAlpha label has nothing to show regardless of survival, so it
+    // must not CLAIM a screen slot and cull a real, visible caption at the
+    // same position — it neither competes nor blocks.
+    if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) {
       accepted.add(i);
       continue;
     }
     candidateIdx.push(i);
-    candidates.push({ screenPx: p.screenPx, priorityPx: labels[i]!.prominencePx ?? 0 });
+    candidates.push({ screenPx: p.screenPx, priorityPx: label.prominencePx ?? 0 });
   }
   for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
     accepted.add(candidateIdx[k]!);
@@ -426,17 +444,34 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * labels ACROSS producers — a structure label vs a famous-galaxy label
    * vs the Milky Way "you are here" marker — which a per-producer pass
    * could never see.
+   *
+   * Returns BOTH the filtered `survivors` array (what `smoothstepRamp`
+   * consumes unchanged — a culled label is simply absent from it, exactly
+   * as before) and a `survivorIds` set (what `exponentialApproach` needs:
+   * it evaluates every label the producers emitted this frame, not just the
+   * survivors, so a culled-but-still-emitted label eases toward 0 instead of
+   * popping — see `applyExponentialEnvelope`).
    */
-  function declutter(labels: readonly Label2D[], ctx: ReadyFrameContext): Label2D[] {
+  function declutter(labels: readonly Label2D[], ctx: ReadyFrameContext): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
     const policy = config.declutter;
+    let survivors: Label2D[];
     switch (policy.mode) {
       case 'bboxOverlap':
-        return declutterByBboxOverlap(labelRenderer!, labels, projected, projection, policy.padPx);
+        survivors = declutterByBboxOverlap(
+          labelRenderer!,
+          labels,
+          projected,
+          projection,
+          policy.padPx,
+        );
+        break;
       case 'screenSeparation':
-        return declutterByScreenSeparationArm(labels, projected, policy.minSeparationPx);
+        survivors = declutterByScreenSeparationArm(labels, projected, policy.minSeparationPx);
+        break;
     }
+    return { survivors, survivorIds: new Set(survivors.map((l) => l.id)) };
   }
 
   /** Closed-form alpha at `nowMs` for a `smoothstepRamp` entry — `smoothstep` clamps internally, so a settled ramp holds its endpoint exactly (fade-in lands on precisely 1, never 0.999…, which matters for the `alpha === 1` fast path below). */
@@ -534,14 +569,28 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * moved from `foregroundLabelsLayer.ts:285-320`. Differs from
    * `applySmoothstepEnvelope` on three axes:
    *
-   *   - target: the label's own `fadeAlpha` (continuous — the producer's
-   *     distance-band fade), not a binary 1/0 presence flag.
-   *   - seed: a new id's filter starts AT its target, so only CHANGES
-   *     animate — a gate turning on paints the steady state instead of
-   *     ramping every caption up from black.
-   *   - absence: DROPS IMMEDIATELY, no remembered-emission tail. The
-   *     producer is expected to keep emitting a caption at target 0 while
-   *     it eases out (an id genuinely gone has nothing left to fade).
+   *   - target: the label's own `fadeAlpha` when it SURVIVED declutter this
+   *     frame (continuous — the producer's distance-band fade), 0 when
+   *     declutter culled it OR when it's genuinely absent. Unlike
+   *     `applySmoothstepEnvelope`, this arm therefore walks EVERY label the
+   *     producers emitted this frame (`labels`, the pre-declutter merged
+   *     set), not just `survivorIds`'s members — a culled label stays in the
+   *     filter's universe and eases toward 0 exactly like
+   *     `foregroundLabelsLayer.ts:306`'s `target = 0` for a culled entry
+   *     that stays in `entries` until its producer stops emitting it
+   *     (`:325-328`). Reading declutter survival straight off `labels`
+   *     instead would make a culled caption pop to invisible on the cull
+   *     frame and re-seed at full target the instant the cull flips back —
+   *     the seed rule (below) makes THAT look like a correct fade-in, which
+   *     is what makes the bug invisible in a settled frame.
+   *   - seed: a new id's filter starts AT its target (0 if culled on its
+   *     first frame, its fadeAlpha otherwise), so only CHANGES animate — a
+   *     gate turning on paints the steady state instead of ramping every
+   *     caption up from black.
+   *   - absence: DROPS IMMEDIATELY, no remembered-emission tail — but only
+   *     for ids the producers stopped emitting entirely (not in `labels`
+   *     this frame). A merely-culled label is still in `labels`, so it
+   *     keeps easing via the target-0 branch above instead of dropping.
    *
    * The filter itself is `prev + (target − prev)·(1 − exp(−dt/tau))`, with
    * `dt` read off the entry's own `evalMs` (this arm's frame clock, kept as
@@ -553,6 +602,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    */
   function applyExponentialEnvelope(
     labels: readonly Label2D[],
+    survivorIds: ReadonlySet<string>,
     nowMs: number,
     policy: { tauMs: number; settleEps: number },
   ): { labels: Label2D[]; anyRamping: boolean } {
@@ -562,7 +612,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
 
     for (const label of labels) {
       liveIds.add(label.id);
-      const target = label.fadeAlpha ?? 1;
+      const ownAlpha = label.fadeAlpha ?? 1;
+      const target = survivorIds.has(label.id) ? ownAlpha : 0;
       const existing = exponentialEnvelopes.get(label.id);
       let alpha: number;
       if (!existing) {
@@ -580,12 +631,14 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         alpha = next;
       }
       if (alpha > 0) {
-        outLabels.push(alpha === target ? label : { ...label, fadeAlpha: alpha });
+        outLabels.push(alpha === ownAlpha ? label : { ...label, fadeAlpha: alpha });
       }
     }
 
-    // Absence: drop immediately (see the arm's docblock above) — nothing to
-    // remember, nothing to re-emit.
+    // Absence: drop immediately (see the arm's docblock above) — an id NOT
+    // in `liveIds` this frame is one its producer stopped emitting entirely,
+    // as opposed to one declutter merely culled (still in `liveIds`, still
+    // eased via the target-0 branch above).
     for (const id of exponentialEnvelopes.keys()) {
       if (!liveIds.has(id)) exponentialEnvelopes.delete(id);
     }
@@ -593,16 +646,24 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     return { labels: outLabels, anyRamping };
   }
 
+  /**
+   * `smoothstepRamp` consumes `declutterResult.survivors` — a culled label
+   * is simply absent, unchanged from before this stage split. `exponentialApproach`
+   * consumes the full pre-declutter `mergedLabels` plus `survivorIds` — see
+   * `applyExponentialEnvelope`'s docblock for why culled-but-still-emitted
+   * labels must stay in ITS universe.
+   */
   function applyEnvelope(
-    labels: readonly Label2D[],
+    mergedLabels: readonly Label2D[],
+    declutterResult: DeclutterResult,
     nowMs: number,
   ): { labels: Label2D[]; anyRamping: boolean } {
     const policy = config.envelope;
     switch (policy.mode) {
       case 'smoothstepRamp':
-        return applySmoothstepEnvelope(labels, nowMs, policy);
+        return applySmoothstepEnvelope(declutterResult.survivors, nowMs, policy);
       case 'exponentialApproach':
-        return applyExponentialEnvelope(labels, nowMs, policy);
+        return applyExponentialEnvelope(mergedLabels, declutterResult.survivorIds, nowMs, policy);
     }
   }
 
@@ -714,12 +775,18 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Cross-producer declutter — producers emit every candidate (no internal
     // declutter); the director de-collides them together here. A culled
     // label's leader is culled with it by construction.
-    const decluttered = declutter(mergedLabels, ctx);
+    const declutterResult = declutter(mergedLabels, ctx);
 
-    // Appear/disappear envelope over the decluttered result — animated
-    // alphas feed `signatureOf` below, so mid-ramp frames re-upload and
-    // settled frames skip, with no extra bookkeeping.
-    const { labels: enveloped, anyRamping } = applyEnvelope(decluttered, ctx.nowMs);
+    // Appear/disappear envelope — animated alphas feed `signatureOf` below,
+    // so mid-ramp frames re-upload and settled frames skip, with no extra
+    // bookkeeping. Passed the FULL merged set alongside the declutter
+    // result (not just the survivors) — `applyEnvelope`'s docblock explains
+    // why the exponential arm needs both.
+    const { labels: enveloped, anyRamping } = applyEnvelope(
+      mergedLabels,
+      declutterResult,
+      ctx.nowMs,
+    );
 
     // Lift stage (NEAR0 only — a no-op array pass-through when
     // `config.lift` is null): runs over survivors only, after the envelope

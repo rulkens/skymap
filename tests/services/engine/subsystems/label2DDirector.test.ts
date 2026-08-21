@@ -707,6 +707,38 @@ describe('label2DDirector', () => {
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([caption]);
     });
 
+    it('a zero-target caption does not occupy declutter space and cannot suppress a real caption', () => {
+      // Mirrors `foregroundLabelsLayer.ts:269`'s candidate filter
+      // (`baseTarget === 0 || screenPx === null` never enters the cull).
+      // Without it, `zeroTarget`'s huge prominence would win the
+      // screenSeparation contest and cull `visible` — which would then
+      // never show, even though it has a real, positive target.
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      const zeroTarget: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'zero-target',
+        prominencePx: 1000,
+        fadeAlpha: 0,
+      };
+      const visible: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'visible',
+        prominencePx: 1,
+        fadeAlpha: 1,
+      };
+      dir.registerProducer(makeProducer('p', [zeroTarget, visible]));
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+
+      // `visible` survives and seeds AT its target immediately; `zeroTarget`
+      // never has anything to show (its own fadeAlpha is 0 either way).
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([visible]);
+    });
+
     it('exponentialApproach drops an absent id immediately, with no remembered-emission tail', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
@@ -724,6 +756,73 @@ describe('label2DDirector', () => {
       labels = [];
       dir.runFrame(makeState(), makeNear0Ctx(50));
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
+    });
+
+    it('a declutter-culled caption eases to 0 and eases back in, rather than popping', () => {
+      // CRITICAL fix: a label declutter culls this frame is CULLED, not
+      // ABSENT — its producer keeps emitting it every frame, so it must
+      // stay in the exponential filter's universe (target 0) and ease
+      // toward invisible, not vanish on the cull frame and re-seed at full
+      // target the instant the cull flips back (`foregroundLabelsLayer.ts:306`
+      // sets a culled entry's TARGET to 0 while it stays in `entries`,
+      // pruned only when the producer itself stops emitting it, `:325-328`).
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      // `big` always wins a collision (higher prominence); its worldPos
+      // toggles between far-from-`small` (no contest) and on top of it
+      // (contest, `small` loses). `small` itself never moves and is always
+      // emitted — declutter alone decides whether it's this frame's survivor.
+      let bigPos: [number, number, number] = [5, 0, 0]; // off-screen-ish, no collision
+      dir.registerProducer({
+        id: 'p',
+        produceLabels: () => ({
+          labels: [
+            { ...SAMPLE_LABEL, id: 'big', worldPos: bigPos, prominencePx: 100, fadeAlpha: 1 },
+            { ...SAMPLE_LABEL, id: 'small', worldPos: [0, 0, 0], prominencePx: 10, fadeAlpha: 1 },
+          ],
+          awake: false,
+        }),
+      });
+
+      // Every `small` object always carries an explicit `fadeAlpha` (either
+      // the producer's literal `1` or the envelope's rewritten value), so a
+      // defined return means "present in the flush, at this alpha".
+      const smallAlphaOf = (): number | undefined =>
+        (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).find((l) => l.id === 'small')
+          ?.fadeAlpha;
+
+      // Frame 1: no collision — `small` survives trivially and seeds AT its
+      // target (1) immediately.
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+      expect(smallAlphaOf()).toBe(1);
+
+      // Frame 2: `big` moves onto `small` — declutter culls `small` this
+      // frame. It must EASE toward 0 (a fractional alpha), not pop straight
+      // to absent.
+      bigPos = [0, 0, 0];
+      dir.runFrame(makeState(), makeNear0Ctx(50));
+      const easingOut = smallAlphaOf();
+      expect(easingOut).not.toBeUndefined();
+      expect(easingOut!).toBeGreaterThan(0);
+      expect(easingOut!).toBeLessThan(1);
+
+      // Frame 3: still colliding, far enough later that the filter fully
+      // settles at 0 — `small` finally drops out of the flush.
+      dir.runFrame(makeState(), makeNear0Ctx(5050));
+      expect(smallAlphaOf()).toBeUndefined();
+
+      // Frame 4: the collision clears — `small` survives again. It must
+      // ease BACK IN from wherever it left off (0), not snap straight to
+      // its full target (1).
+      bigPos = [5, 0, 0];
+      dir.runFrame(makeState(), makeNear0Ctx(5100));
+      const easingIn = smallAlphaOf();
+      expect(easingIn).not.toBeUndefined();
+      expect(easingIn!).toBeGreaterThan(0);
+      expect(easingIn!).toBeLessThan(1);
     });
 
     it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {
@@ -784,13 +883,26 @@ describe('label2DDirector', () => {
         fadeAlpha: 1,
         lift: { subjectSizePx: 10 },
       };
-      dir.registerProducer(makeProducer('p', [big, small]));
+      // A THIRD label, at a screen position far from the other two (so
+      // declutter never even considers it), whose producer target is 0.
+      // `fadeAlpha: 1` everywhere else makes lift-before-envelope
+      // indistinguishable from lift-after-envelope — this one only fails if
+      // the lift runs before the `alpha > 0` skip drops it.
+      const zeroTarget: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'zero',
+        worldPos: [0.9, 0.9, 0],
+        fadeAlpha: 0,
+        lift: { subjectSizePx: 10 },
+      };
+      dir.registerProducer(makeProducer('p', [big, small, zeroTarget]));
 
       dir.runFrame(makeState(), makeNear0Ctx(0));
 
       // `measure` is called ONLY inside the lift stage for this director
-      // (screenSeparation's declutter arm never reads it) — one call proves
-      // the culled label never reached the lift.
+      // (screenSeparation's declutter arm never reads it) — exactly one
+      // call proves neither the declutter-culled label nor the
+      // envelope-dropped (zero-target) label ever reached the lift.
       expect(labelStub.measure).toHaveBeenCalledTimes(1);
       expect(labelStub.measure).toHaveBeenCalledWith(big);
     });

@@ -1,7 +1,9 @@
 /**
- * A label's proportional screen-space lift off its subject. Minted here as
- * part of the leader fold (spec §3.2); not yet read by any producer or the
- * director — a later task wires the lift math into `liftedLabelPlacement`.
+ * A label's proportional screen-space lift off its subject. Minted as part
+ * of the leader fold (spec §3.2); read by `label2DDirector`'s lift stage
+ * (`config.lift`, gated on this field's presence rather than a `kind` test)
+ * when it calls `liftedLabelPlacement`. A label without this field skips the
+ * lift entirely — absence of data, not a discriminant.
  */
 
 export type Label2DLift = {
