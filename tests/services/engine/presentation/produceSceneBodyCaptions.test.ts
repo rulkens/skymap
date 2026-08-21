@@ -12,6 +12,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
+import { produceConstellationCaptions } from '../../../../src/services/engine/presentation/produceConstellationCaptions';
+import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
+import { constellationLayerOpacity } from '../../../../src/services/engine/presentation/constellationLayerOpacity';
 import {
   sceneBodyLabels,
   sceneBodyLabelId,
@@ -53,6 +56,7 @@ function makeCtx(camPos: Vec3, distance = 5e-4): ReadyFrameContext {
     fovYRad: 1,
     simDays: CONST_J2000,
     canvasSize: { width: 1280, height: 720 },
+    nowMs: 0,
   } as unknown as ReadyFrameContext;
 }
 
@@ -61,6 +65,13 @@ function makeCtx(camPos: Vec3, distance = 5e-4): ReadyFrameContext {
  * only cares whether body captions are on at all passes a bare boolean; the
  * per-row cases pass the bits separately, which is the axis those rows buy.
  * Moved verbatim from `foregroundLabelsLayer.test.ts`'s `makeState`.
+ *
+ * `registryOverrides`/`clipOverrides` key by a fade handle's `item` (e.g.
+ * `'earth'`, `'famousStar'`) / clip key (`'bodyLabel'`, `'starCatalogLabel'`).
+ * Left at the defaults, `fades.opacityOf` MIRRORS `labelEnabled` — the
+ * already-resolved state a settled toggle reaches — so every case that
+ * doesn't care about the mid-ramp value reads exactly as it did before the
+ * registry read existed. Only the ramp-behaviour cases below diverge the two.
  */
 function makeState(
   starMapLabelsEnabled = true,
@@ -68,21 +79,35 @@ function makeState(
   starMapEnabled = true,
   sunVisible = true,
   starCatalogsMasterEnabled = true,
+  registryOverrides: Readonly<Partial<Record<string, number>>> = {},
+  clipOverrides: Readonly<Partial<Record<'bodyLabel' | 'starCatalogLabel', number>>> = {},
 ): EngineState {
   const named: Record<string, boolean> =
     typeof bodyLabels === 'boolean' ? {} : { ...bodyLabels, sun: bodyLabels.sun ?? true };
   const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
+  const bodyItems = makeBodyItems((id) => ({
+    ...(id === 'sun' ? { enabled: sunVisible } : {}),
+    labelEnabled: named[id] ?? unnamed,
+  }));
   return {
     settings: {
-      bodies: {
-        items: makeBodyItems((id) => ({
-          ...(id === 'sun' ? { enabled: sunVisible } : {}),
-          labelEnabled: named[id] ?? unnamed,
-        })),
-      },
+      bodies: { items: bodyItems },
       starCatalogs: {
         enabled: starCatalogsMasterEnabled,
         items: { famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled } },
+      },
+    },
+    subsystems: {
+      fades: {
+        opacityOf: (handle: { item?: string }) => {
+          const item = handle.item;
+          if (item !== undefined && item in registryOverrides) return registryOverrides[item]!;
+          if (item === 'famousStar') return starMapLabelsEnabled ? 1 : 0;
+          return item !== undefined && (bodyItems[item]?.labelEnabled ?? true) ? 1 : 0;
+        },
+      },
+      clipPlayer: {
+        clipOpacityOf: (key: 'bodyLabel' | 'starCatalogLabel') => clipOverrides[key] ?? 1,
       },
     },
   } as unknown as EngineState;
@@ -275,5 +300,89 @@ describe('produceSceneBodyCaptions', () => {
     const earthLabel = out.labels.find((l) => l.id === EARTH_LABEL_ID);
     expect(earthLabel).toBeDefined();
     expect(earthLabel!.fadeAlpha).toBe(0);
+  });
+
+  it('a body caption dims with its fade-registry handle', () => {
+    // Earth's band target is exactly 1 at this camera distance (well inside
+    // `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`), so a registry opacity of 0.5
+    // must halve the emitted alpha with nothing else in play.
+    const camPos = worldPosOf(EARTH_LABEL_ID);
+    const out = produceSceneBodyCaptions(
+      makeState(true, true, true, true, true, { earth: 0.5 }),
+      makeCtx(camPos),
+    );
+    expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBeCloseTo(0.5);
+  });
+
+  it('a body caption keeps being emitted while its registry ramp runs after the toggle goes off', () => {
+    const camPos = worldPosOf(EARTH_LABEL_ID);
+
+    // Toggle off, but the registry hasn't caught up yet (still 0.5 into its
+    // fade-out ramp): the caption keeps showing at the ramped alpha rather
+    // than truncating to 0 the instant the setting flips.
+    const midRamp = produceSceneBodyCaptions(
+      makeState(true, { earth: false, planet: true }, true, true, true, { earth: 0.5 }),
+      makeCtx(camPos),
+    );
+    expect(fadeAlphaOf(midRamp.labels, EARTH_LABEL_ID)).toBeCloseTo(0.5);
+
+    // Ramp complete (registry reaches 0): the caption is still EMITTED (the
+    // zero-target contract) but its alpha has now reached 0 too.
+    const rampDone = produceSceneBodyCaptions(
+      makeState(true, { earth: false, planet: true }, true, true, true, { earth: 0 }),
+      makeCtx(camPos),
+    );
+    const earthLabel = rampDone.labels.find((l) => l.id === EARTH_LABEL_ID);
+    expect(earthLabel).toBeDefined();
+    expect(earthLabel!.fadeAlpha).toBe(0);
+  });
+
+  it('the star-map captions dim with the starCatalogLabel clip channel', () => {
+    const camPos = worldPosOf(EARTH_LABEL_ID);
+    const out = produceSceneBodyCaptions(
+      makeState(true, true, true, true, true, {}, { starCatalogLabel: 0.25 }),
+      makeCtx(camPos),
+    );
+    // The star map's full-alpha members scale by the clip channel...
+    expect(fadeAlphaOf(out.labels, PROXIMA_LABEL_ID)).toBeCloseTo(0.25);
+    // ...but the body kinds read the SEPARATE bodyLabel clip key, untouched
+    // here, so Earth stays at its unscaled band target.
+    expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBeCloseTo(1);
+  });
+
+  it('constellation captions do not double-count the registry', () => {
+    // The row states its stance rather than omitting it: `null`, because
+    // `produceConstellationCaptions` already composes its own registry read.
+    expect(CAPTION_FADE_RULES.constellation.fadeHandle).toBeNull();
+
+    const layerFade = 0.5;
+    const camPos: Vec3 = [5e-4, 0, 0];
+    const state = {
+      assetSlots: {
+        constellations: {
+          state: () => ({
+            kind: 'ready' as const,
+            value: {
+              version: 1 as const,
+              constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],
+            },
+          }),
+        },
+      },
+      subsystems: {
+        fades: { opacityOf: () => layerFade },
+        clipPlayer: { clipOpacityOf: () => 1 },
+      },
+    } as unknown as EngineState;
+    const ctx = {
+      cam: { distance: 5e-4 },
+      drawCamPos: camPos,
+      focusBlend: 0,
+      nowMs: 0,
+    } as unknown as ReadyFrameContext;
+
+    const out = produceConstellationCaptions(state, ctx);
+    const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(constellationLayerOpacity(camDistMpc, layerFade));
   });
 });

@@ -18,6 +18,10 @@
  *   3. `fadeTarget` — the distance band (and the units it keys on) the caption
  *      rides once both gates are open, so its name eases in as the camera
  *      descends rather than popping at a threshold.
+ *   4. `fadeHandle` — the fade-registry id this kind's opacity ramps through
+ *      on a Labels toggle, so the toggle eases out instead of popping. `null`
+ *      states "this kind composes its own registry read elsewhere" rather
+ *      than leaving the row silent about it.
  *
  * The call site reduces to "look up the row, apply the two gates, take the
  * target". The alternative — a `switch` for the gates plus a nested ternary for
@@ -36,6 +40,7 @@
 
 import type { CaptionKind } from './captionPriority';
 import type { EngineSettingsState } from '../../../@types/settings/EngineSettingsState';
+import type { FadeId } from '../../../@types/animation/FadeId';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -53,6 +58,8 @@ export type CaptionFadeRule = {
   readonly labelEnabled: (settings: EngineSettingsState) => boolean;
   readonly subjectVisible: (settings: EngineSettingsState) => boolean;
   readonly fadeTarget: (distanceMpc: number, camDistMpc: number) => number;
+  /** Required, not optional: a new CaptionKind must STATE its stance. */
+  readonly fadeHandle: FadeId | null;
 };
 
 /** An axis a kind doesn't carry: the gate is permanently open. */
@@ -95,6 +102,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
     labelEnabled: (settings) => settings.bodies.items.sun.labelEnabled,
     subjectVisible: (settings) => settings.bodies.items.sun.enabled,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc),
+    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'sun' },
   },
 
   /** Inside the caption range Earth is simply on — no band, no visibility axis. */
@@ -102,6 +110,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
     labelEnabled: (settings) => settings.bodies.items.earth.labelEnabled,
     subjectVisible: UNGATED,
     fadeTarget: SOLAR_SYSTEM_REACH,
+    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'earth' },
   },
 
   /**
@@ -112,6 +121,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
     labelEnabled: (settings) => settings.bodies.items.planet.labelEnabled,
     subjectVisible: UNGATED,
     fadeTarget: SOLAR_SYSTEM_REACH,
+    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'planet' },
   },
 
   /**
@@ -128,6 +138,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
       settings.starCatalogs.enabled && settings.starCatalogs.items.famousStar.enabled,
     fadeTarget: (distanceMpc) =>
       fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC),
+    fadeHandle: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
   },
 
   /**
@@ -148,6 +159,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
     labelEnabled: (settings) => settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled,
     subjectVisible: UNGATED,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
+    fadeHandle: { kind: 'labelLayer', layer: 'body', item: SGR_A_STAR_ENTRY.id },
   },
 
   /**
@@ -161,11 +173,15 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * that fade registry — so both gates are open and the target is the
    * producer's. The row exists so the table stays total over the kind union;
    * leaving the kind implicit would let it silently inherit the star map's
-   * parsec band and the star map's visibility toggle.
+   * parsec band and the star map's visibility toggle. `fadeHandle` is `null`
+   * for the same reason: `produceConstellationCaptions` already folds
+   * `resolveLayerOpacity({kind:'constellations'})` into its own target, and a
+   * second registry read here would double-count it.
    */
   constellation: {
     labelEnabled: UNGATED,
     subjectVisible: UNGATED,
     fadeTarget: PRODUCER_SUPPLIED,
+    fadeHandle: null,
   },
 };

@@ -52,6 +52,15 @@ export function produceSceneBodyCaptions(
   const viewportHeightPx = ctx.canvasSize.height;
   const fovYRad = ctx.fovYRad;
 
+  const fades = state.subsystems.fades;
+  const now = ctx.nowMs;
+  // Hoisted, not resolved per-caption: every 'star' kind shares the
+  // starCatalogLabel clip key and every other kind shares bodyLabel, so each
+  // is a single frame-constant literal (the `produceStructureMarkers.ts:65` /
+  // `produceFamousGalaxyLabels.ts:218` idiom).
+  const clipFactorBody = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
+  const clipFactorStarCatalog = state.subsystems.clipPlayer.clipOpacityOf('starCatalogLabel', now);
+
   const labels: Label2D[] = [];
   for (const label of baseLabelsFor(sceneBodyStates(state, ctx))) {
     const anchor: Vec3 = [
@@ -70,10 +79,21 @@ export function produceSceneBodyCaptions(
     });
 
     const rule = CAPTION_FADE_RULES[label.kind];
+    const handle = rule.fadeHandle;
+    // `null` only for the constellation row, which `sceneBodyLabels` never
+    // emits (see `CAPTION_FADE_RULES.constellation`'s docblock) — the ternary
+    // exists for the type, not because this branch runs.
+    const registryOpacity = handle === null ? 1 : fades.opacityOf(handle, now);
+    const clipFactor = label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody;
+    // Keep-emitting gate: a toggled-off caption stays gated OPEN while its
+    // registry ramp still has opacity to give, so the ramp's multiply carries
+    // the fade-out to completion instead of the boolean truncating it (the
+    // `produceMilkyWayLabel.ts:48` / `produceFamousGalaxyLabels.ts:174-179`
+    // idiom). `subjectVisible` stays a hard gate — unrelated to this toggle.
+    const ruleGate =
+      rule.subjectVisible(settings) && (rule.labelEnabled(settings) || registryOpacity > 0) ? 1 : 0;
     const fadeAlpha =
-      rule.labelEnabled(settings) && rule.subjectVisible(settings)
-        ? rule.fadeTarget(distanceMpc, camOrbitDistanceMpc)
-        : 0;
+      ruleGate * rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) * registryOpacity * clipFactor;
 
     const prominencePx =
       CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +

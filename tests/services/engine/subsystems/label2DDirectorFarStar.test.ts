@@ -87,6 +87,15 @@ function makeState(): EngineState {
       bodies: { items: makeBodyItems() },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
+    // Fail-safe pass-throughs (the real registry's unregistered-id default,
+    // the real clip player's no-clip-playing default): every row here is
+    // already `labelEnabled: true`, so these leave `produceSceneBodyCaptions`'s
+    // composition unchanged from its pre-fade-wire value — this fixture is
+    // about the ill-conditioned-projection regression, not the fade channels.
+    subsystems: {
+      fades: { opacityOf: () => 1 },
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
   } as unknown as EngineState;
 }
 
