@@ -81,7 +81,7 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
  * incoming ramps up) completes within a single tour beat's attention span.
  * `lift: null` states COSMO's stance explicitly — it has none.
  */
-const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
+export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
   id: 'labels',
   project: cosmoLabelProjection,
   declutter: { mode: 'bboxOverlap', padPx: 8 },

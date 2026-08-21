@@ -49,7 +49,7 @@
  *
  * Like `produceStructureLabels`, this emits every surviving candidate tagged
  * with a `prominencePx` (the galaxy's apparent diameter); the
- * `labelDirectorSubsystem` declutters across all producers in its merge step.
+ * `label2DDirector` declutters across all producers in its merge step.
  *
  * ### Distance-scaled pixel ceiling for near companions
  *

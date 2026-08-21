@@ -39,7 +39,7 @@
  * labels. This producer therefore emits EVERY surviving candidate, tagging each
  * with a
  * `prominencePx` (the ring's apparent radius) as the declutter sort key, and
- * the `labelDirectorSubsystem` declutters across ALL producers in its merge
+ * the `label2DDirector` declutters across ALL producers in its merge
  * step. Decluttering by apparent size (not a flat significance) keeps the
  * large structure under the camera while a small distant label sweeping past
  * during an orbit yields, instead of culling-then-releasing the structure

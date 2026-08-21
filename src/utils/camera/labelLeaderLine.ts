@@ -52,7 +52,7 @@
  * — the layer owns the slab, so it owns the domain guard.
  *
  * Pure geometry — no engine state, no clock. The forward-projection math
- * mirrors the declutter projection in `labelDirectorSubsystem`.
+ * mirrors `projectLabels` in `label2DDirector`.
  */
 
 import { mat4d } from 'wgpu-matrix';

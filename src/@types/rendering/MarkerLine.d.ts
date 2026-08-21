@@ -6,7 +6,7 @@
  * makes it easy for callers to reconcile the set with their own model
  * without maintaining a parallel index array.
  *
- * The `labelDirectorSubsystem` synthesizes one of these per label carrying a
+ * The `label2DDirector` synthesizes one of these per label carrying a
  * `Label2DLeader` at flush time — nothing upstream constructs a `MarkerLine`
  * for a label anchor directly.
  */

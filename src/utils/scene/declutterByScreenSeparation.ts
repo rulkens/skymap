@@ -7,7 +7,7 @@
  * ### Why a separate pure cull, not the label director's declutter
  *
  * The `labelDirector` already runs a greedy screen-space priority cull
- * (`labelDirectorSubsystem.ts`), but it is WELDED to the director's own
+ * (`label2DDirector.ts`), but it is WELDED to the director's own
  * `ctx.vp` and its merged COSMO producer set — it projects each anchor through
  * that view and de-collides measured text rects across every producer at once.
  * The foreground scene-body captions project through the NEAR0 slab, not the
@@ -25,7 +25,7 @@
  * star behind it is exactly the clutter to drop. Apparent size (bigger when
  * near / large) is that signal, so the caller passes each candidate's apparent
  * size as `priorityPx`. This mirrors the director's own rationale for sorting
- * its declutter by prominence (`labelDirectorSubsystem.ts`) — the higher
+ * its declutter by prominence (`label2DDirector.ts`) — the higher
  * `prominencePx`/apparent-size wins an overlap.
  *
  * The sort is a stable priority-DESC ordering (equal priorities keep input

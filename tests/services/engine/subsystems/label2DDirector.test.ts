@@ -2,28 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
-import { cosmoLabelProjection } from '../../../../src/services/engine/frame/cosmoLabelProjection';
+import { COSMO_LABEL_DIRECTOR } from '../../../../src/services/engine/engine';
 import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
-import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsystems/Label2DDirectorConfig';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-
-/**
- * The COSMO instance's config (spec §4.3) — every test exercises the
- * `bboxOverlap` / `smoothstepRamp` arms via this literal so the suite is
- * pinned to the real production wiring, not a parallel test-only shape.
- */
-function cosmoConfig(): Label2DDirectorConfig {
-  return {
-    id: 'labels',
-    project: cosmoLabelProjection,
-    declutter: { mode: 'bboxOverlap', padPx: 8 },
-    envelope: { mode: 'smoothstepRamp', durationMs: 300 },
-    lift: null,
-  };
-}
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -96,13 +80,13 @@ const SAMPLE_LEADER: Label2DLeader = {
 
 describe('label2DDirector', () => {
   it('no-ops when renderers are not attached', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
     expect(() => dir.runFrame(makeState(), makeCtx())).not.toThrow();
   });
 
   it('merges labels from multiple producers', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -123,7 +107,7 @@ describe('label2DDirector', () => {
   });
 
   it('skips re-uploading the same merged set across frames once settled', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -140,7 +124,7 @@ describe('label2DDirector', () => {
   });
 
   it('reports the vote when any producer is awake', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -156,7 +140,7 @@ describe('label2DDirector', () => {
     // watched id+count, the GPU instance buffer would stay stuck at the
     // first-frame fadeAlpha and the marker would appear at the wrong
     // opacity.
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -200,7 +184,7 @@ describe('label2DDirector', () => {
     // the camera does while the label's id, worldPos, and fadeAlpha stay
     // constant. Without this term the connector would freeze at whatever
     // geometry was uploaded the first visible frame.
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -245,7 +229,7 @@ describe('label2DDirector', () => {
     // leader endpoint moves, nothing but the label's own `worldPos` keys
     // the motion — without it in the signature the anchor would freeze and
     // reproject/drift over the glyphs under orbit.
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -276,7 +260,7 @@ describe('label2DDirector', () => {
   });
 
   it('flushes empty when no producers contribute, then skips subsequent empties', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -289,7 +273,7 @@ describe('label2DDirector', () => {
   });
 
   it('declutters colliding on-screen labels across producers, keeping higher prominence', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -312,7 +296,7 @@ describe('label2DDirector', () => {
     // A culled label takes its leader with it BY CONSTRUCTION now that the
     // leader lives on the label object — declutter no longer needs a
     // separate line-filter pass.
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -353,7 +337,7 @@ describe('label2DDirector', () => {
     };
 
     it('keeps a label whose anchor is near another but whose text rect is clear of it', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -374,7 +358,7 @@ describe('label2DDirector', () => {
     });
 
     it('culls the lower-prominence label when wide text rects overlap despite distant anchors', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -395,7 +379,7 @@ describe('label2DDirector', () => {
   });
 
   it('never drops or blocks off-screen labels', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -419,7 +403,7 @@ describe('label2DDirector', () => {
   it('no longer fires any layer load-in fade on a non-empty flush', () => {
     // The per-category structure load-in lives in produceStructureLabels;
     // the director must not call fades.fadeTo on its own.
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -431,7 +415,7 @@ describe('label2DDirector', () => {
   });
 
   it('treats a label with no prominencePx as prominence 0', () => {
-    const dir = createLabel2DDirector(cosmoConfig());
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
@@ -453,7 +437,7 @@ describe('label2DDirector', () => {
 
   describe('appear/disappear envelope', () => {
     it('fades a newly appearing label in over the 300 ms ramp (smoothstep of nowMs)', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -474,7 +458,7 @@ describe('label2DDirector', () => {
     });
 
     it('fades a disappearing label out by re-emitting the remembered label, then drops it', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -499,7 +483,7 @@ describe('label2DDirector', () => {
     });
 
     it('multiplies the envelope with the producer-driven fadeAlpha', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -520,7 +504,7 @@ describe('label2DDirector', () => {
       // Also covers the fade-out tail: the remembered label carries its
       // leader along, so the synthesized line fades out in lock-step
       // without any separate "owned lines" bookkeeping.
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -582,7 +566,7 @@ describe('label2DDirector', () => {
     });
 
     it('keeps the loop awake while any envelope ramps, and goes quiet once settled', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -601,7 +585,7 @@ describe('label2DDirector', () => {
     });
 
     it('resumes from the current alpha when a label reappears mid-fade-out (no pop either way)', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -637,7 +621,7 @@ describe('label2DDirector', () => {
 
   describe('the projection stage', () => {
     it('projects each label exactly once per frame', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
@@ -658,7 +642,7 @@ describe('label2DDirector', () => {
     });
 
     it('sorts by prominencePx descending with a stable input-order tiebreak', () => {
-      const dir = createLabel2DDirector(cosmoConfig());
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never);
