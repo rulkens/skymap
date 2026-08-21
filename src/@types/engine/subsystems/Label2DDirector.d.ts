@@ -4,7 +4,7 @@ import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
 import type { EngineState } from '../state/EngineState';
 import type { Label2DProducer } from './Label2DProducer';
 
-export type LabelDirectorSubsystem = {
+export type Label2DDirector = {
   /** Wire in the renderers once initGpu has constructed them. Idempotent. */
   attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void;
   /** Register a producer.  Order of registration = order of merging. */

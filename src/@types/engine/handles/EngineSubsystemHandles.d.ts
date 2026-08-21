@@ -26,7 +26,7 @@ import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
 import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
 import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
-import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
+import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
@@ -125,7 +125,7 @@ export type EngineSubsystemHandles = {
    * fetch completes. Producers register right after the state literal so
    * they're in place before the first frame.
    */
-  labelDirector: LabelDirectorSubsystem;
+  labelDirector: Label2DDirector;
   /**
    * Cluster focus-mode subsystem — drives the "dim non-members of the
    * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls

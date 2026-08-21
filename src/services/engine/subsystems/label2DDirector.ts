@@ -1,7 +1,17 @@
 /**
- * labelDirectorSubsystem — owns the labelRenderer + markerLineRenderer
- * setLabels/setLines calls, polling registered LabelProducers each frame
- * and flushing the merged result once.
+ * label2DDirector — owns the labelRenderer + markerLineRenderer
+ * setLabels/setLines calls, polling registered Label2DProducers each frame
+ * and flushing the merged result once. `createLabel2DDirector(config)` mints
+ * one instance per slab (COSMO today; NEAR0 once its arms land) —
+ * `Label2DDirectorConfig` supplies the projection, declutter policy, and
+ * envelope policy, so a second instance is data, not a second code path.
+ *
+ * ### Declutter and envelope are policy arms
+ *
+ * `config.declutter.mode` / `config.envelope.mode` select which stage
+ * implementation runs. Only `bboxOverlap` and `smoothstepRamp` (COSMO's
+ * arms) are implemented; `screenSeparation` and `exponentialApproach`
+ * throw until NEAR0's arms land.
  *
  * ### Why a director?
  *
@@ -38,8 +48,9 @@
  * and mutable state in what are today pure per-frame readers, times
  * three.)
  *
- * Each decluttered label id gets a ramp record; the envelope alpha is
- * 'startAlpha + (target − startAlpha) · smoothstep(elapsed/ENVELOPE_MS)'
+ * Each decluttered label id gets a ramp record; `envelopeAlpha` (below)
+ * resolves it per `config.envelope.mode` — COSMO's `smoothstepRamp` is
+ * 'startAlpha + (target − startAlpha) · smoothstep(elapsed/durationMs)'
  * — a pure function of `ctx.nowMs`, never an accumulated per-frame
  * delta, so a stepped recorder clock replays identical fades.  The
  * envelope MULTIPLIES the producer's own `fadeAlpha` (both continuous,
@@ -85,7 +96,10 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
-import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
+import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
+import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/Label2DDirectorConfig';
+import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import {
@@ -93,30 +107,6 @@ import {
   LABEL_MAX_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
 } from '../../gpu/renderers/labels/labelRenderer';
-
-/**
- * Breathing margin, in screen pixels, added around every label's measured
- * text rect before the overlap test.  Two labels collide when their padded
- * rects INTERSECT — the rects come from `labelRenderer.measure` (real glyph
- * ink, alignment shifts applied) scaled by the same em clamp the vertex
- * shader applies, so the test tracks what is actually drawn: a label merely
- * anchored near another (e.g. just below a baseline-aligned label whose text
- * extends upward) does not collide, while wide labels whose anchors are far
- * apart but whose texts overlap do.
- *
- * The declutter runs in the director (not per producer) so it de-collides
- * labels ACROSS producers — a structure label vs a famous-galaxy label vs the
- * Milky Way "you are here" marker — which a per-producer pass could never see.
- */
-const DECLUTTER_PAD_PX = 8;
-
-/**
- * Appear/disappear ramp duration in frame-clock ms.  Long enough to read
- * as a fade rather than a flicker, short enough that a focus handoff
- * (outgoing label ramping down while the incoming ramps up, concurrently)
- * completes within a single tour beat's attention span.
- */
-const ENVELOPE_MS = 300;
 
 /**
  * Ramp record for one label id.  `startAlpha`/`target`/`rampStartMs`
@@ -133,7 +123,139 @@ type EnvelopeEntry = {
   lastLabel: Label2D;
 };
 
-export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
+/**
+ * One label's screen-space anchor, resolved ONCE per frame by `projectLabels`
+ * and shared by whichever declutter arm runs (and, later, the lift stage) —
+ * nothing downstream re-does the matrix multiply. `screenPx` is set whenever
+ * `clipW > 0` regardless of `onScreen`, matching what the vertex shader would
+ * draw for an off-NDC-range anchor.
+ */
+type Label2DProjected = {
+  readonly screenPx: Vec2 | null;
+  readonly clipW: number;
+  readonly onScreen: boolean;
+};
+
+function projectLabels(
+  labels: readonly Label2D[],
+  projection: Label2DProjection,
+): Label2DProjected[] {
+  const m = projection.vp;
+  const [viewportW, viewportH] = projection.viewportPx;
+  return labels.map((label) => {
+    // Column-major mat4·vec4 by hand — the lib's vec4.transformMat4
+    // allocates per call.
+    const wx = label.worldPos[0];
+    const wy = label.worldPos[1];
+    const wz = label.worldPos[2];
+    const clipX = m[0]! * wx + m[4]! * wy + m[8]! * wz + m[12]!;
+    const clipY = m[1]! * wx + m[5]! * wy + m[9]! * wz + m[13]!;
+    const clipW = m[3]! * wx + m[7]! * wy + m[11]! * wz + m[15]!;
+    if (clipW <= 0) return { screenPx: null, clipW, onScreen: false };
+    const ndcX = clipX / clipW;
+    const ndcY = clipY / clipW;
+    const screenX = (ndcX * 0.5 + 0.5) * viewportW;
+    // Flip Y: NDC +Y is up, screen +Y is down.
+    const screenY = (1 - (ndcY * 0.5 + 0.5)) * viewportH;
+    const onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
+    return { screenPx: [screenX, screenY], clipW, onScreen };
+  });
+}
+
+/**
+ * `prominencePx` DESC, stable on input order — the one rank contract every
+ * declutter arm shares, whichever collision test it runs.  A label with no
+ * prominence sinks to lowest priority rather than beating real structures.
+ * (Labels that must always win — the Milky Way "You are here" — declare it
+ * explicitly with `prominencePx: Number.MAX_VALUE` in their producer.)
+ */
+function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
+  const order = labels.map((_, i) => i);
+  order.sort((a, b) => {
+    const d = (labels[b]!.prominencePx ?? 0) - (labels[a]!.prominencePx ?? 0);
+    return d !== 0 ? d : a - b;
+  });
+  return order;
+}
+
+/**
+ * `bboxOverlap` declutter arm (COSMO). Reads each label's shared `clipW` to
+ * reproduce the vertex shader's em clamp on the CPU, places the measured
+ * text rect (`labelRenderer.measure` — real glyph ink, alignment shifts
+ * applied), and accepts a label in rank order when its padded rect
+ * intersects no already-accepted rect.  Two labels collide when their padded
+ * rects INTERSECT — a label merely anchored near another (e.g. just below a
+ * baseline-aligned label whose text extends upward) does not collide, while
+ * wide labels whose anchors are far apart but whose texts overlap do.
+ * Off-screen labels (behind camera / outside the viewport) are accepted
+ * unconditionally and never block, as are labels whose text lays out to no
+ * ink.  A culled label's leader is culled with it BY CONSTRUCTION — the
+ * leader lives on the label object, so there is no separate line-side filter
+ * to run.  Returns a fresh array in original input order (deterministic,
+ * sort-independent).
+ */
+function declutterByBboxOverlap(
+  labelRenderer: LabelRenderer,
+  labels: readonly Label2D[],
+  projected: readonly Label2DProjected[],
+  projection: Label2DProjection,
+  padPx: number,
+): Label2D[] {
+  type Rect = { x0: number; y0: number; x1: number; y1: number };
+  const halfViewportH = projection.viewportPx[1] * 0.5;
+  const rects: (Rect | null)[] = labels.map((label, i) => {
+    const p = projected[i]!;
+    if (!p.screenPx) return null;
+    const bbox = labelRenderer.measure(label);
+    if (!bbox) return null;
+    // Reproduce the vertex shader's sizing exactly: worldLenToPx
+    // (worldLen / clipW · viewportH/2) clamped to [minPx, maxPx], then
+    // atlas px → screen px via displayEmPx / ATLAS_FONT_SIZE. The bbox is
+    // anchor-relative with +Y down, matching screen space (the shader's
+    // atlas-Y and NDC→screen flips cancel).
+    const pxPerEm = ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / p.clipW) * halfViewportH;
+    const displayEmPx = Math.min(
+      Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
+      label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+    );
+    const s = displayEmPx / ATLAS_FONT_SIZE;
+    return {
+      x0: p.screenPx[0] + bbox.minX * s,
+      y0: p.screenPx[1] + bbox.minY * s,
+      x1: p.screenPx[0] + bbox.maxX * s,
+      y1: p.screenPx[1] + bbox.maxY * s,
+    };
+  });
+
+  const order = sortByProminenceDesc(labels);
+  const accepted: number[] = [];
+  for (const i of order) {
+    const rect = rects[i];
+    if (projected[i]!.onScreen && rect) {
+      let collides = false;
+      for (const a of accepted) {
+        const aRect = rects[a]!;
+        if (!projected[a]!.onScreen || !aRect) continue;
+        if (
+          rect.x0 - padPx < aRect.x1 &&
+          rect.x1 + padPx > aRect.x0 &&
+          rect.y0 - padPx < aRect.y1 &&
+          rect.y1 + padPx > aRect.y0
+        ) {
+          collides = true;
+          break;
+        }
+      }
+      if (collides) continue;
+    }
+    accepted.push(i);
+  }
+
+  const acceptedIndices = new Set(accepted);
+  return labels.filter((_, i) => acceptedIndices.has(i));
+}
+
+export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
   let producers: readonly Label2DProducer[] = [];
@@ -240,126 +362,59 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   }
 
   /**
-   * Greedy screen-space declutter over the merged label set.  Projects each
-   * label's anchor to screen pixels, places its measured text rect
-   * (`labelRenderer.measure`, scaled by the shader's em clamp reproduced on
-   * the CPU), sorts by `prominencePx` DESC (stable input-order tiebreak),
-   * and accepts a label when its padded rect intersects no accepted rect.
-   * Off-screen labels (behind camera / outside the viewport) are accepted
-   * unconditionally and never block, as are labels whose text lays out to
-   * no ink.  Decluttering by apparent size (not a flat significance) keeps
-   * the large structure under the camera while a small distant label
-   * sweeping past during an orbit yields, instead of culling-then-releasing
-   * the structure being inspected (flicker).
-   *
-   * A culled label's leader is culled with it BY CONSTRUCTION — the leader
-   * lives on the label object, so there is no separate line-side filter to
-   * run.  Returns a fresh array in original input order (deterministic,
-   * sort-independent).
+   * Cross-producer declutter over the merged label set: resolves this
+   * frame's projection (memoised per `ctx` by `config.project`), projects
+   * every label's anchor ONCE (`projectLabels`), then hands the shared
+   * per-label records to whichever declutter arm `config.declutter.mode`
+   * selects. Runs in the director (not per producer) so it de-collides
+   * labels ACROSS producers — a structure label vs a famous-galaxy label
+   * vs the Milky Way "you are here" marker — which a per-producer pass
+   * could never see.
    */
   function declutter(labels: readonly Label2D[], ctx: ReadyFrameContext): Label2D[] {
-    type Projected = {
-      readonly index: number;
-      readonly prominencePx: number;
-      readonly onScreen: boolean;
-      // Screen-space text rect (px, +Y down), or null when the label has
-      // no measurable ink — such labels never collide with anything.
-      readonly rect: { x0: number; y0: number; x1: number; y1: number } | null;
-    };
-    const m = ctx.vp;
-    const projected: Projected[] = labels.map((label, index) => {
-      // Column-major mat4·vec4 by hand — the lib's vec4.transformMat4
-      // allocates per call.
-      const wx = label.worldPos[0];
-      const wy = label.worldPos[1];
-      const wz = label.worldPos[2];
-      const clipX = m[0]! * wx + m[4]! * wy + m[8]! * wz + m[12]!;
-      const clipY = m[1]! * wx + m[5]! * wy + m[9]! * wz + m[13]!;
-      const clipW = m[3]! * wx + m[7]! * wy + m[11]! * wz + m[15]!;
-      let onScreen = false;
-      let rect: Projected['rect'] = null;
-      if (clipW > 0) {
-        const ndcX = clipX / clipW;
-        const ndcY = clipY / clipW;
-        const screenX = (ndcX * 0.5 + 0.5) * ctx.canvasSize.width;
-        // Flip Y: NDC +Y is up, screen +Y is down.
-        const screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
-        onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
-
-        const bbox = labelRenderer!.measure(label);
-        if (bbox) {
-          // Reproduce the vertex shader's sizing exactly: worldLenToPx
-          // (worldLen / clipW · viewportH/2) clamped to [minPx, maxPx],
-          // then atlas px → screen px via displayEmPx / ATLAS_FONT_SIZE.
-          // The bbox is anchor-relative with +Y down, matching screen
-          // space (the shader's atlas-Y and NDC→screen flips cancel).
-          const pxPerEm =
-            ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / clipW) *
-            (ctx.canvasSize.height * 0.5);
-          const displayEmPx = Math.min(
-            Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
-            label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
-          );
-          const s = displayEmPx / ATLAS_FONT_SIZE;
-          rect = {
-            x0: screenX + bbox.minX * s,
-            y0: screenY + bbox.minY * s,
-            x1: screenX + bbox.maxX * s,
-            y1: screenY + bbox.maxY * s,
-          };
-        }
-      }
-      // A label with no prominence sinks to lowest priority rather than
-      // beating real structures.  (Labels that must always win — the
-      // Milky Way "You are here" — declare it explicitly with
-      // prominencePx: Number.MAX_VALUE in their producer.)
-      return { index, prominencePx: label.prominencePx ?? 0, onScreen, rect };
-    });
-
-    const order = projected.map((_, i) => i);
-    order.sort((a, b) => {
-      const d = projected[b]!.prominencePx - projected[a]!.prominencePx;
-      return d !== 0 ? d : a - b;
-    });
-    const accepted: Projected[] = [];
-    for (const i of order) {
-      const c = projected[i]!;
-      if (c.onScreen && c.rect) {
-        let collides = false;
-        for (const a of accepted) {
-          if (!a.onScreen || !a.rect) continue;
-          if (
-            c.rect.x0 - DECLUTTER_PAD_PX < a.rect.x1 &&
-            c.rect.x1 + DECLUTTER_PAD_PX > a.rect.x0 &&
-            c.rect.y0 - DECLUTTER_PAD_PX < a.rect.y1 &&
-            c.rect.y1 + DECLUTTER_PAD_PX > a.rect.y0
-          ) {
-            collides = true;
-            break;
-          }
-        }
-        if (collides) continue;
-      }
-      accepted.push(c);
+    const projection = config.project(ctx);
+    const projected = projectLabels(labels, projection);
+    const policy = config.declutter;
+    switch (policy.mode) {
+      case 'bboxOverlap':
+        return declutterByBboxOverlap(labelRenderer!, labels, projected, projection, policy.padPx);
+      case 'screenSeparation':
+        throw new Error('unimplemented');
     }
-
-    const acceptedIndices = new Set(accepted.map((c) => c.index));
-    return labels.filter((_, i) => acceptedIndices.has(i));
   }
 
   /**
-   * Closed-form envelope alpha at the stamped frame clock.  `smoothstep`
-   * clamps internally, so a settled ramp holds its endpoint exactly (the
-   * fade-in lands on precisely 1, never 0.999…, which matters because the
-   * `alpha === 1` fast path below passes originals through unchanged).
+   * Envelope alpha at the stamped frame clock, per `config.envelope.mode`.
+   * `smoothstepRamp` (COSMO) is closed-form: `smoothstep` clamps internally,
+   * so a settled ramp holds its endpoint exactly (the fade-in lands on
+   * precisely 1, never 0.999…, which matters because the `alpha === 1` fast
+   * path below passes originals through unchanged).
    */
   function envelopeAlpha(entry: EnvelopeEntry, nowMs: number): number {
-    const eased = smoothstep(0, 1, (nowMs - entry.rampStartMs) / ENVELOPE_MS);
-    return entry.startAlpha + (entry.target - entry.startAlpha) * eased;
+    const policy = config.envelope;
+    switch (policy.mode) {
+      case 'smoothstepRamp': {
+        const eased = smoothstep(0, 1, (nowMs - entry.rampStartMs) / policy.durationMs);
+        return entry.startAlpha + (entry.target - entry.startAlpha) * eased;
+      }
+      case 'exponentialApproach':
+        throw new Error('unimplemented');
+    }
+  }
+
+  /** Whether a still-live entry's ramp has more distance to close — `envelopeAlpha`'s duration test, per arm. */
+  function isEnvelopeRamping(entry: EnvelopeEntry, nowMs: number): boolean {
+    const policy = config.envelope;
+    switch (policy.mode) {
+      case 'smoothstepRamp':
+        return nowMs - entry.rampStartMs < policy.durationMs;
+      case 'exponentialApproach':
+        throw new Error('unimplemented');
+    }
   }
 
   /**
-   * The appear/disappear stage (see module header).  Runs on the
+   * The appear/disappear stage (see module header). Runs on the
    * DECLUTTERED sets — a label the declutter culled is "absent" here and
    * fades out exactly like one a producer stopped emitting.
    *
@@ -412,7 +467,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     let anyRamping = false;
     for (const [id, entry] of envelopes) {
       if (liveIds.has(id)) {
-        if (nowMs - entry.rampStartMs < ENVELOPE_MS) anyRamping = true;
+        if (isEnvelopeRamping(entry, nowMs)) anyRamping = true;
         continue;
       }
       if (entry.target === 1) {
@@ -483,7 +538,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   // the `satisfies Destroyable` latch — the label director is one of
   // the engine's ~13 teardown targets, and the shared shape lets
   // engine.destroy() iterate uniformly across the bag.
-  const director: LabelDirectorSubsystem = {
+  const director: Label2DDirector = {
     attachRenderers,
     registerProducer,
     runFrame,
