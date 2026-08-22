@@ -260,27 +260,27 @@ that reasoning moves onto the label term rather than being deleted).
 
 **Steps:**
 
-- [ ] In `labelDirectorSubsystem.test.ts`, **delete** the two cases that drive
+- [x] In `labelDirectorSubsystem.test.ts`, **delete** the two cases that drive
       the `ownerLabelId === undefined` branches (`:112`, `:398`). Per
       `testing.md`, a test asserting a branch that no longer exists cannot fail
       on a real bug; the default is delete, not port.
-- [ ] Add the failing test `flushes a leader as a MarkerLine id'd
+- [x] Add the failing test `flushes a leader as a MarkerLine id'd
       \`${label.id}-anchor\` at the label's post-envelope alpha` — asserts the
       line handed to `lineRenderer.setLines` for a mid-envelope label carries
       the envelope-multiplied alpha, not the raw producer alpha.
-- [ ] Add the failing test `drops a culled label's leader with it` — a label
+- [x] Add the failing test `drops a culled label's leader with it` — a label
       losing a declutter overlap contributes no line at all.
-- [ ] Add the failing test `re-flushes when a leader's toWorld moves at fixed
+- [x] Add the failing test `re-flushes when a leader's toWorld moves at fixed
       id and alpha` — pins that the leader's endpoint still keys the signature
       after the collapse (the camera-derived-endpoint freeze this term exists to
       prevent).
-- [ ] `npm test -- labelDirectorSubsystem` → the three new cases fail.
-- [ ] Mint the two `.d.ts` files, edit the three modified ones, port the three
+- [x] `npm test -- labelDirectorSubsystem` → the three new cases fail.
+- [x] Mint the two `.d.ts` files, edit the three modified ones, port the three
       producers to emit `leader` on the label, and rework the director per the
       flush contract + the three fall-outs above.
-- [ ] `npm test` and `npm run typecheck` → green; `rg 'ownerLabelId' src/ tests/`
+- [x] `npm test` and `npm run typecheck` → green; `rg 'ownerLabelId' src/ tests/`
       → no hits.
-- [ ] Commit: `refactor(engine): fold leader lines onto Label2D, delete the sibling lines array`
+- [x] Commit: `refactor(engine): fold leader lines onto Label2D, delete the sibling lines array`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -395,24 +395,24 @@ frame does not recompute it.
 
 **Steps:**
 
-- [ ] Run the four move/rename commands above (`--dry` first on the file moves).
+- [x] Run the four move/rename commands above (`--dry` first on the file moves).
       `npm run typecheck` → green with zero hand-edited imports.
-- [ ] `rg 'subsystems/labelProducer' src/ tests/ tools/` → confirm zero hits,
+- [x] `rg 'subsystems/labelProducer' src/ tests/ tools/` → confirm zero hits,
       then delete `src/services/engine/subsystems/labelProducer.ts`.
-- [ ] In `label2DDirector.test.ts`, add the failing test `projects each label
+- [x] In `label2DDirector.test.ts`, add the failing test `projects each label
       exactly once per frame` — asserts a spy-instrumented `measure`/projection
       path is entered once per label per `runFrame`, so the declutter and any
       later stage share one record rather than re-projecting.
-- [ ] Add the failing test `sorts by prominencePx descending with a stable
+- [x] Add the failing test `sorts by prominencePx descending with a stable
       input-order tiebreak` against the `bboxOverlap` arm — two equal-prominence
       overlapping labels resolve in registration order.
-- [ ] `npm test -- label2DDirector` → both fail.
-- [ ] Mint the five `.d.ts` files and `cosmoLabelProjection.ts`; convert the
+- [x] `npm test -- label2DDirector` → both fail.
+- [x] Mint the five `.d.ts` files and `cosmoLabelProjection.ts`; convert the
       factory to `createLabel2DDirector(config)`; extract the projection stage;
       route the existing declutter + envelope behind the `bboxOverlap` /
       `smoothstepRamp` arms; wire `engine.ts:408` to `COSMO_LABEL_DIRECTOR`.
-- [ ] `npm test` and `npm run typecheck` → green.
-- [ ] Commit: `refactor(engine): parameterize the label director, COSMO instance on config`
+- [x] `npm test` and `npm run typecheck` → green.
+- [x] Commit: `refactor(engine): parameterize the label director, COSMO instance on config`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -531,29 +531,29 @@ layer's upload and the interim ends.
 
 **Steps:**
 
-- [ ] Add the failing test `exponentialApproach seeds a new id AT its target,
+- [x] Add the failing test `exponentialApproach seeds a new id AT its target,
       not at 0` — a first-frame caption at `fadeAlpha` 0.4 flushes at 0.4.
-- [ ] Add the failing test `exponentialApproach drops an absent id immediately`
+- [x] Add the failing test `exponentialApproach drops an absent id immediately`
       — an id the producer stops emitting contributes nothing on the very next
       frame (no remembered-emission tail).
-- [ ] Add the failing test `smoothstepRamp keeps flushing a remembered emission
+- [x] Add the failing test `smoothstepRamp keeps flushing a remembered emission
       until the ramp hits 0` — the mirror-image assertion, pinning that the two
       absence rules did not get swapped. (Spec §12: "Both envelope arms need
       their absence rule pinned explicitly … because swapping them is the most
       plausible port error and it is invisible in a settled frame.")
-- [ ] Add the failing test `the lift stage runs after the envelope, over
+- [x] Add the failing test `the lift stage runs after the envelope, over
       survivors only` — a label culled by `screenSeparation` produces no lifted
       placement call.
-- [ ] Add the failing test `a label without a lift field is emitted unlifted` —
+- [x] Add the failing test `a label without a lift field is emitted unlifted` —
       the constellation-shaped case, asserted through data absence.
-- [ ] Add the failing test in the runFrame suite: `a director voting true does
+- [x] Add the failing test in the runFrame suite: `a director voting true does
       not prevent its sibling's flush` — spec §12's short-circuit trap.
-- [ ] `npm test -- label2DDirector runFrame` → all six fail.
-- [ ] Implement: `near0LabelProjection.ts`, the two new policy arms, the lift
+- [x] `npm test -- label2DDirector runFrame` → all six fail.
+- [x] Implement: `near0LabelProjection.ts`, the two new policy arms, the lift
       stage, `FOREGROUND_LABEL_DIRECTOR`, the handle + type field, both
       `attachRenderers` call sites, and the three-statement wake form.
-- [ ] `npm test` and `npm run typecheck` → green.
-- [ ] Commit: `refactor(engine): add the NEAR0 director arms, lift stage, and foregroundLabelDirector instance`
+- [x] `npm test` and `npm run typecheck` → green.
+- [x] Commit: `refactor(engine): add the NEAR0 director arms, lift stage, and foregroundLabelDirector instance`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -628,26 +628,26 @@ a figure centroid); body captions carry one.
 §12 — each case keeps its assertions, re-pointed at the producer's emitted
 `fadeAlpha` instead of the drawn label set):**
 
-- [ ] Move into `produceSceneBodyCaptions.test.ts`, assertions intact: the six
+- [x] Move into `produceSceneBodyCaptions.test.ts`, assertions intact: the six
       per-toggle mutes (`:498`, `:541`, `:600`, `:644`, `:677`, `:699` and the
       combined `:718`), the Sun-visibility case (`:566`), the descent fade
       (`:818`), and the neighbourhood band (`:756`).
-- [ ] Move the priority-tier collision case (`:857`) into
+- [x] Move the priority-tier collision case (`:857`) into
       `produceSceneBodyCaptions.test.ts`, re-pointed to assert the **composed
       `prominencePx` ordering** rather than the cull outcome. (The cull itself
       gets its own director case in Task 5.)
-- [ ] Add `emits a zero-target caption rather than omitting it` — a body whose
+- [x] Add `emits a zero-target caption rather than omitting it` — a body whose
       rule gates are closed still appears in the output at `fadeAlpha` 0. This
       is the absence-rule landmine in test form.
-- [ ] Move the two constellation cases (`:1096`, `:1114`) into
+- [x] Move the two constellation cases (`:1096`, `:1114`) into
       `produceConstellationCaptions.test.ts`, assertions intact.
-- [ ] `npm test -- produceSceneBodyCaptions produceConstellationCaptions` → all
+- [x] `npm test -- produceSceneBodyCaptions produceConstellationCaptions` → all
       fail (the modules do not exist).
-- [ ] Implement both producers by moving the content per the table above. Do not
+- [x] Implement both producers by moving the content per the table above. Do not
       change any formula; this task is a move.
-- [ ] `npm test` and `npm run typecheck` → green. (The layer's own suite is
+- [x] `npm test` and `npm run typecheck` → green. (The layer's own suite is
       still green too — its code is untouched this task.)
-- [ ] Commit: `refactor(engine): extract the two foreground caption producers`
+- [x] Commit: `refactor(engine): extract the two foreground caption producers`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -727,9 +727,9 @@ same and must still agree, but the sentence naming the caller is wrong.
 
 **Steps:**
 
-- [ ] Delete the three enable-gate cases (`:316`, `:353`, `:365`) — they test a
+- [x] Delete the three enable-gate cases (`:316`, `:353`, `:365`) — they test a
       gate that no longer exists.
-- [ ] Delete the fourth enable-gate case, `runs the row past the body-caption
+- [x] Delete the fourth enable-gate case, `runs the row past the body-caption
       gate while a figure name could show` (`:1064`). **The spec's §12 map does
       not list it** — it sits inside the `— constellation captions` describe
       block rather than the `.enabled` one, but it is an enable-gate case of the
@@ -737,7 +737,7 @@ same and must still agree, but the sentence naming the caller is wrong.
       gate, and that summary is deleted. Its real subject — that constellation
       captions survive past the body-caption reach — is already covered by the
       producer cases re-homed in Task 4, so it is retired, not ported.
-- [ ] Add the replacement failing case in
+- [x] Add the replacement failing case in
       `foregroundLabelsLayer.test.ts`: `enabled tracks the director's last
       flush, and re-opens when demand returns` — after a frame in which the
       director flushed a non-empty set, `enabled` is true; after a frame in
@@ -745,21 +745,21 @@ same and must still agree, but the sentence naming the caller is wrong.
       with demand flushes again and `enabled` returns true. This is the
       "latch false forever" regression in its new form — it can only pass if the
       upload genuinely happens outside the layer's own `draw`.
-- [ ] Keep, adapted to the thin layer: `rebase + draw` (`:403`), `leader-line
+- [x] Keep, adapted to the thin layer: `rebase + draw` (`:403`), `leader-line
       rebase` (`:454`), `null line renderer` (`:1036`), `null renderer`
       (`:1046`).
-- [ ] Move into `label2DDirector.test.ts` (`exponentialApproach` config): the
+- [x] Move into `label2DDirector.test.ts` (`exponentialApproach` config): the
       declutter-flip easing + settle-and-go-quiet case (`:880`) and the
       demand-drop tail case (`:970`); plus one new case for the cull itself —
       `the higher CAPTION_PRIORITY tier survives a screenSeparation collision`,
       driven by the `prominencePx` the producer composed.
-- [ ] `npm test -- foregroundLabelsLayer label2DDirector` → the new gate case
+- [x] `npm test -- foregroundLabelsLayer label2DDirector` → the new gate case
       and the cull case fail.
-- [ ] Register both producers in `engine.ts` (bodies first); collapse the layer;
+- [x] Register both producers in `engine.ts` (bodies first); collapse the layer;
       re-point the `projectToScreenPx` header sentence.
-- [ ] `npm test` and `npm run typecheck` → green. `wc -l
+- [x] `npm test` and `npm run typecheck` → green. `wc -l
       src/services/engine/frame/passes/foregroundLabelsLayer.ts` → under 100.
-- [ ] Commit: `refactor(engine): collapse foregroundLabelsLayer onto the foreground director`
+- [x] Commit: `refactor(engine): collapse foregroundLabelsLayer onto the foreground director`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -839,28 +839,28 @@ existing).
 
 **Steps:**
 
-- [ ] Add the failing test `a body caption dims with its fade-registry handle`
+- [x] Add the failing test `a body caption dims with its fade-registry handle`
       — with the settings toggle on and the registry opacity at 0.5, the emitted
       `fadeAlpha` is half the band target.
-- [ ] Add the failing test `a body caption keeps being emitted while its
+- [x] Add the failing test `a body caption keeps being emitted while its
       registry ramp runs after the toggle goes off` — with `labelEnabled` false
       and `opacityOf` still > 0, the caption is still in the output (at the
       ramped alpha), and disappears only once the ramp reaches 0.
-- [ ] Add the failing test `the star-map captions dim with the
+- [x] Add the failing test `the star-map captions dim with the
       starCatalogLabel clip channel` — `clipOpacityOf('starCatalogLabel')` at
       0.25 scales the `star`-kind captions and leaves the body kinds alone.
-- [ ] Add the failing test `constellation captions do not double-count the
+- [x] Add the failing test `constellation captions do not double-count the
       registry` — the `constellation` row's `null` handle means its emitted
       alpha equals its producer-supplied target unchanged.
-- [ ] `npm test -- produceSceneBodyCaptions produceConstellationCaptions` → the
+- [x] `npm test -- produceSceneBodyCaptions produceConstellationCaptions` → the
       four fail.
-- [ ] Add `fadeHandle` to `CaptionFadeRule` and all six rows; implement the
+- [x] Add `fadeHandle` to `CaptionFadeRule` and all six rows; implement the
       composition + keep-emitting gate in `produceSceneBodyCaptions`; delete the
       two LANDMINE lines.
-- [ ] `npm test` and `npm run typecheck` → green. `rg -n 'LANDMINE'
+- [x] `npm test` and `npm run typecheck` → green. `rg -n 'LANDMINE'
       src/services/engine/wiring/fadeLayers.ts` → no `starCatalogLabel` /
       `bodyLabel` hits.
-- [ ] Commit: `feat(engine): wire the starCatalogLabel and bodyLabel fade channels to the captions`
+- [x] Commit: `feat(engine): wire the starCatalogLabel and bodyLabel fade channels to the captions`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -921,16 +921,16 @@ waits for a second, non-structure member.
 
 **Steps:**
 
-- [ ] Add the failing test `preserves producer order and emits every descriptor
+- [x] Add the failing test `preserves producer order and emits every descriptor
       unfiltered` in `runMarkerProducers.test.ts` — the pick index-alignment
       contract. Assert the walker's output is the concatenation of its
       producers' outputs, element-for-element, including alpha-0 descriptors.
       (This is **not** a restatement of `produceStructureMarkers`' own suite,
       which stays as-is; drive the walker with stub producers.)
-- [ ] `npm test -- runMarkerProducers` → fails.
-- [ ] Mint the type, the array and the walker; replace the `runFrame` block.
-- [ ] `npm test` and `npm run typecheck` → green.
-- [ ] Commit: `refactor(engine): route structure markers through a MarkerProducer walk`
+- [x] `npm test -- runMarkerProducers` → fails.
+- [x] Mint the type, the array and the walker; replace the `runFrame` block.
+- [x] `npm test` and `npm run typecheck` → green.
+- [x] Commit: `refactor(engine): route structure markers through a MarkerProducer walk`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -1068,22 +1068,22 @@ a platform-specific bug that does not reproduce on the dev machine.
 
 **Steps:**
 
-- [ ] Add the failing test `a glyph at localOffset.x = 0, repeatIndex = 0,
+- [x] Add the failing test `a glyph at localOffset.x = 0, repeatIndex = 0,
       startAngleRad = 0 lands at center + radiusMpc · referenceDir` in
       `label3DRenderer.test.ts`. **Hand-compute** the expected world position
       (a `testing.md` WGSL/TS-parity keep-rule case) — do **not** re-run the
       shader's expression to build the expectation, which would be a mirror
       test.
-- [ ] `npm test -- label3DRenderer` → fails.
-- [ ] Mint the three `.d.ts` files (handedness docblock included), the three
+- [x] `npm test -- label3DRenderer` → fails.
+- [x] Mint the three `.d.ts` files (handedness docblock included), the three
       `.wesl` files, the renderer, the `GPU_HANDLE_ROWS` row and the
       `EngineGpuHandles` field.
-- [ ] `npm test` and `npm run typecheck` → green.
-- [ ] Shader-compile smoke: run the app (dev server already running — do not
+- [x] `npm test` and `npm run typecheck` → green.
+- [x] Shader-compile smoke: run the app (dev server already running — do not
       restart it) or the tint probe, and confirm no `Invalid ShaderModule`. The
       linker is the only thing that catches a mis-scoped binding, and the
       failure is a runtime error, not a type error.
-- [ ] Commit: `feat(gpu): add the shared label3DRenderer for world-geometry text`
+- [x] Commit: `feat(gpu): add the shared label3DRenderer for world-geometry text`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -1206,27 +1206,27 @@ make it worse — the band uniform is not the label uniform.
 
 **Steps:**
 
-- [ ] Add the failing test `places the lettering on the galactic plane` in
+- [x] Add the failing test `places the lettering on the galactic plane` in
       `produceZoneOfAvoidanceLettering.test.ts` — `planeNormal === GAL_Z_EQ`,
       `referenceDir === GAL_X_EQ`, with the basis values **imported** from
       `orientationFrames.ts`, not restated (no constant restatement).
-- [ ] Add the failing test `fadeAlpha tracks deriveZoneOfAvoidanceLiveness` —
+- [x] Add the failing test `fadeAlpha tracks deriveZoneOfAvoidanceLiveness` —
       a liveness of `null` emits no labels; a liveness of 0.3 emits one label at
       `fadeAlpha` 0.3.
-- [ ] Rewrite the existing `zoneOfAvoidanceUpsampleLayer.test.ts` case against
+- [x] Rewrite the existing `zoneOfAvoidanceUpsampleLayer.test.ts` case against
       `label3DRenderer.draw`, keeping its real subject: **a null blit handle
       must not suppress the lettering, and vice versa.**
-- [ ] `npm test -- produceZoneOfAvoidanceLettering zoneOfAvoidanceUpsampleLayer`
+- [x] `npm test -- produceZoneOfAvoidanceLettering zoneOfAvoidanceUpsampleLayer`
       → fails.
-- [ ] Implement the two types, the producer, the array, the walker, the third
+- [x] Implement the two types, the producer, the array, the walker, the third
       wake statement, and the thin `postBlit`.
-- [ ] Delete everything in the "what dies" list; run the grep gates:
+- [x] Delete everything in the "what dies" list; run the grep gates:
       `rg -n 'drawLabels|shaders/zoneOfAvoidance/label' src/ tests/` → no hits.
       (`.wesl` `package::` imports are outside the refactor tool's reach — grep
       is the check.)
-- [ ] `npm test` and `npm run typecheck` → green; shader-compile smoke in the
+- [x] `npm test` and `npm run typecheck` → green; shader-compile smoke in the
       running dev server → no `Invalid ShaderModule`, lettering still on screen.
-- [ ] Commit: `refactor(gpu): make the ZoA lettering a Label3DProducer and delete the private glyph pipeline`
+- [x] Commit: `refactor(gpu): make the ZoA lettering a Label3DProducer and delete the private glyph pipeline`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
@@ -1286,12 +1286,12 @@ record is the git log plus `specs/completed/`.
 
 **Steps:**
 
-- [ ] Write the `decisions.md` #19 entry covering all five bullets above,
+- [x] Write the `decisions.md` #19 entry covering all five bullets above,
       matching the numbered-list style of items 1–18.
-- [ ] Update the five `renderer-layer-outliers.md` sites.
-- [ ] Re-read both edits against the branch's actual diff — every claim must be
+- [x] Update the five `renderer-layer-outliers.md` sites.
+- [x] Re-read both edits against the branch's actual diff — every claim must be
       true of the code as landed, not of the spec's intent.
-- [ ] Commit: `docs(engine): record decision #19 and close the rung-8 outlier rows`
+- [x] Commit: `docs(engine): record decision #19 and close the rung-8 outlier rows`
       with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ---
