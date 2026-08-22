@@ -16,9 +16,13 @@
  *      the live size / brightness / glow-overlap / fog-cap scalars.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { mat4d } from 'wgpu-matrix';
 
-import { starCatalogLayer } from '../../../../../src/services/engine/frame/passes/starCatalogLayer';
+import {
+  starCatalogLayer,
+  prepareStarCut,
+} from '../../../../../src/services/engine/frame/passes/starCatalogLayer';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
@@ -27,6 +31,8 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { vrOverride } from '../../../../../src/services/xr/vrSpikeState';
+import type { VrEye } from '../../../../../src/services/xr/vrSpikeState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -137,6 +143,11 @@ function makeNear0View(camPos: Vec3): SlabView {
 
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 
+afterEach(() => {
+  vrOverride.active = false;
+  vrOverride.eyes = [];
+});
+
 describe('starCatalogLayer.enabled', () => {
   it('is false while the renderer handle is null (pre-bootstrap)', () => {
     const state = makeState(null);
@@ -231,5 +242,89 @@ describe('starCatalogLayer.draw', () => {
     const view = makeNear0View(camAtPc(inner));
     const state = makeState(null);
     expect(() => starCatalogLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+/**
+ * VR regression: the per-node `originRelCamMpc` a VR frame's ONE walk bakes
+ * (`prepareStarCut`, shared by both eyes) is rebased against the HEAD pose,
+ * not either eye's own position — see `PreparedStarCut.originMpc`'s doc. A
+ * draw call MUST rebase its vp against that SAME origin (`prep.originMpc`),
+ * never `view.camPos` (this eye's own position): using the per-eye camPos
+ * there — the bug traced on-device — reintroduces a `headPos - eyePos`
+ * mismatch between the vp and the baked origins, so every star renders
+ * offset by that (world-scale) vector and parallaxes wrong under head motion.
+ */
+describe('starCatalogLayer.draw — VR head/eye origin (on-device parallax bug)', () => {
+  function makeEye(camPos: Vec3): VrEye {
+    return {
+      camPos,
+      viewNear0: mat4d.identity() as Float64Array,
+      tan: { l: -1e6, r: 1e6, d: -1e6, u: 1e6 },
+    } as unknown as VrEye;
+  }
+
+  /** Same shape as `makeCtx`, plus the fields the VR frustum builder reads. */
+  function makeVrCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
+    return {
+      drawCamPos: camPos,
+      nowMs: 0,
+      fovYRad: 1.0,
+      canvasSize: { width: 1280, height: 720 },
+    } as unknown as ReadyFrameContext;
+  }
+
+  it("rebases every eye's draw against the HEAD pose, not that eye's own camPos", () => {
+    const loaded = [{ source: Source.GaiaStars, catalog: makeCatalog() }];
+    const renderer = makeRenderer(loaded);
+    const state = makeState(renderer);
+
+    // Two eyes straddling the band's midpoint symmetrically along z, so the
+    // HEAD pose (their midpoint) sits exactly at `headDistPc` while each eye
+    // individually sits noticeably off it — distinguishable from the head by
+    // far more than an interocular offset, so a wrong rebase origin cannot
+    // hide behind rounding.
+    const headDistPc = inner + (outer - inner) * 0.5;
+    const eye0 = makeEye(camAtPc(headDistPc - 200));
+    const eye1 = makeEye(camAtPc(headDistPc + 200));
+    vrOverride.active = true;
+    vrOverride.eyes = [eye0, eye1]; // ONE array reference — both draws share the memoised walk.
+
+    // Both eyes' SlabViews share the identical `slab.vp` on purpose: any
+    // difference between the two `renderer.draw` calls' rebased `vp` can then
+    // only come from the rebase ORIGIN each draw chose, isolating the bug.
+    const sharedSlabVp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
+    const slab: Slab = {
+      index: NEAR0,
+      nearMpc: 0.0005,
+      farMpc: 500,
+      vp: sharedSlabVp,
+      originRelative: true,
+      precision: 'f64',
+      reversedZ: false,
+    };
+    const view0: SlabView = { slab, vp: new Float32Array(16), camPos: eye0.camPos, viewportPx: [1280, 720] };
+    const view1: SlabView = { slab, vp: new Float32Array(16), camPos: eye1.camPos, viewportPx: [1280, 720] };
+
+    starCatalogLayer.draw(PASS_STUB, view0, makeVrCtx(eye0.camPos), state);
+    starCatalogLayer.draw(PASS_STUB, view1, makeVrCtx(eye1.camPos), state);
+
+    expect(renderer.draw).toHaveBeenCalledTimes(2);
+    const vp0 = renderer.draw.mock.calls[0]![1].vp;
+    const vp1 = renderer.draw.mock.calls[1]![1].vp;
+
+    const headPos = camAtPc(headDistPc);
+    const expectedVp = narrowMat4(rebaseViewProj(sharedSlabVp, headPos));
+    // Both eyes must agree with EACH OTHER (same slab.vp + same rebase origin)…
+    expect(vp0).toEqual(vp1);
+    // …and that shared result must be the HEAD-pose rebase, not either eye's own.
+    expect(vp0).toEqual(expectedVp);
+    const wrongPerEyeVp = narrowMat4(rebaseViewProj(sharedSlabVp, eye0.camPos));
+    expect(vp0).not.toEqual(wrongPerEyeVp);
+
+    // Direct check on the traced field: the shared prep's origin is the head
+    // pose, not either eye's camPos.
+    const prep = prepareStarCut(state, makeVrCtx(eye0.camPos))!;
+    expect(prep.originMpc).toEqual(headPos);
   });
 });

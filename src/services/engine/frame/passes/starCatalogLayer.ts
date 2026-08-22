@@ -41,12 +41,12 @@
  * near-equal to the NEAR0 view translation during the local-map approach: an
  * f32 subtraction cancels catastrophically and jitters the sprites. So the
  * walk rebases in f64 before narrowing — each box origin re-expressed
- * camera-relative (`computeStarCut` inlines that seam allocation-free, keyed on
- * `ctx.drawCamPos` which equals the NEAR0 view origin; the math mirrors
- * `starNodeOriginRelCamMpc`, still the standalone home `resolveStarRecord`
- * reuses) — and each layer narrows the vp via
- * `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`. The renderer stays a dumb
- * f32 pipeline; the precision seam lives here.
+ * camera-relative (`computeStarCut` inlines that seam allocation-free, keyed
+ * on `ctx.drawCamPos` outside VR / the head pose in VR — see `originMpc` on
+ * `PreparedStarCut`; the math mirrors `starNodeOriginRelCamMpc`, still the
+ * standalone home `resolveStarRecord` reuses) — and each layer narrows the vp
+ * via `narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc))`. The
+ * renderer stays a dumb f32 pipeline; the precision seam lives here.
  *
  * ### The shared-vp invariant (load-bearing)
  *
@@ -662,6 +662,21 @@ export type PreparedStarCut = {
   glowOverlap: number;
   aggregateIntensityCap: number;
   anyNodeFading: boolean;
+  /**
+   * THE ORIGIN EVERY `originRelCamMpc` IN THIS CUT WAS SUBTRACTED AGAINST —
+   * outside VR this is `ctx.drawCamPos` (identical to `view.camPos`, so it was
+   * historically safe to drop and re-read `view.camPos` at draw time); in VR
+   * this is the HEAD pose (`vrHeadPose().camPosMpc`), which differs from
+   * either eye's own `view.camPos`. `rebaseViewProj` is an exact algebraic
+   * identity for ANY rebase origin (see its header) — it only requires the
+   * SAME origin on both sides of `pos - origin`. So a draw call MUST rebase
+   * its vp against THIS value, never `view.camPos` directly, or the two
+   * eyes' vp (correctly per-eye) and this cut's origins (head-pose, shared by
+   * both eyes) disagree by `headPos - eyePos`: every star renders offset by
+   * that constant world-space vector, which is what actually moved wrong
+   * on-device — see `drawStream`/`drawPick`.
+   */
+  originMpc: Vec3;
 };
 
 /** A fresh stream with backing arrays at `cap` node capacity (grown as needed). */
@@ -1042,7 +1057,15 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     sources.push({ source, leaf, aggregate });
   }
 
-  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap, anyNodeFading };
+  return {
+    sources,
+    sizePx,
+    brightness,
+    glowOverlap,
+    aggregateIntensityCap,
+    anyNodeFading,
+    originMpc: camPos,
+  };
 }
 
 /**
@@ -1060,7 +1083,11 @@ function drawStream(
   stream: StarDrawStream,
   fovYRad: number,
 ): void {
-  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+  // Rebase against `prep.originMpc`, NOT `view.camPos` — see the field's doc.
+  // In VR the two differ (head pose vs. this eye's own position); using the
+  // wrong one here reproduces the origin/vp mismatch that made stars parallax
+  // incorrectly (`originRelCamMpc` was already baked relative to `originMpc`).
+  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
   // exact matrix the GPU clips against, which is what makes the cull visually
   // lossless — and derive the leaf angular slack once. Both are source-independent
@@ -1148,7 +1175,9 @@ export const starCatalogLayer: ContentLayer = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
 
-    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    // Rebase against `prep.originMpc`, not `view.camPos` — see that field's
+    // doc on `PreparedStarCut` (the pick leaf origins were baked against it).
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
     // Same once-per-draw plane extraction as `drawStream`, off the identical
     // rebased vp — the pick cull must agree with the visual cull so a picked and
     // a drawn star always partition the frustum the same way. The margin uses the
