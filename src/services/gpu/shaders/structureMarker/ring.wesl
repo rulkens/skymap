@@ -117,6 +117,47 @@ fn vs(
   return out;
 }
 
+// THROWAWAY (vrSpike): 'vsFlat' is a VR-only sibling of 'vs' above, selected
+// by structureMarkerRenderer.ts when 'vrOverride.active'. 'vs' expands the
+// quad entirely in clip space around ONE projected centre — screen-aligned,
+// so the ring always faces whichever eye is drawing it, with zero
+// orientation change as the viewer's head turns. At cluster/void distances
+// that's also true of translation (IPD is negligible next to Mpc), so the
+// ring reads as a decal glued to the view rather than an object sitting in
+// the scene. 'vsFlat' instead projects each CORNER as a real world-space
+// point on a fixed XZ-plane disc (no camera-relative basis at all — the
+// disc's orientation never depends on the eye), so turning your head
+// reveals it edge-on like any other 3D object. Same UV/margin contract as
+// 'vs' (see its comments); the fragment stage ('fs' below) is unchanged and
+// shared by both entry points.
+@vertex
+fn vsFlat(
+  @builtin(vertex_index) vi: u32,
+  @builtin(instance_index) ii: u32,
+  input: VsIn,
+) -> VsOut {
+  let worldPos = input.positionAndRadius.xyz;
+  let radiusMpc = input.positionAndRadius.w;
+
+  let corner = quadCorner(vi);
+  // Fixed world-plane offset (XZ) instead of a screen-space expansion — the
+  // one substantive difference from 'vs'.
+  let cornerWorld = worldPos + vec3<f32>(corner.x, 0.0, corner.y) * (radiusMpc * RING_QUAD_MARGIN);
+  let centerClip = worldToClip(u.cam, worldPos);
+  let cornerClip = worldToClip(u.cam, cornerWorld);
+  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w);
+
+  var out: VsOut;
+  out.pos = cornerClip;
+  out.uv = corner * RING_QUAD_MARGIN;
+  out.color = input.ringColorAndAlpha.xyz;
+  out.alpha = input.ringColorAndAlpha.w;
+  out.radiusMpc = radiusMpc;
+  out.camDistMpc = sizePx;
+  out.structureIndex = ii;
+  return out;
+}
+
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // Faded-out instances arrive at alpha 0.  produceMarkers now emits one

@@ -66,6 +66,7 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
+import { vrOverride } from '../../../xr/vrSpikeState';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -159,6 +160,12 @@ export function createStructureMarkerRenderer(
   // GPU resources — null when device is null.
   let haloPipeline: GPURenderPipeline | null = null;
   let ringPipeline: GPURenderPipeline | null = null;
+  // THROWAWAY (vrSpike): VR-only sibling of ringPipeline, sharing everything
+  // (layout, blend, targets, VsIn/VsOut) but compiled from ring.wesl's
+  // 'vsFlat' entry point instead of 'vs' — see that entry point's docstring
+  // for why. Selected in `draw()` by `vrOverride.active`; flat-screen always
+  // uses `ringPipeline`, so non-VR rendering is untouched by this addition.
+  let ringVrPipeline: GPURenderPipeline | null = null;
   // Ring-pick pipeline — same vertex source as ringPipeline, fragment
   // swapped to ringPick.wesl's fsRingPick + colour target swapped to
   // r32uint + depth24plus added.  See the pick pipeline build below for
@@ -281,6 +288,27 @@ export function createStructureMarkerRenderer(
             blend: PREMULTIPLIED_OVER_BLEND,
           },
         ],
+      },
+      primitive: { topology: 'triangle-list' },
+    });
+
+    // THROWAWAY (vrSpike): separate GPUShaderModule pair (not a reused
+    // module — see the ring-pick block below for why one module per
+    // pipeline is this file's convention) compiled from the SAME
+    // ring.wesl source, entry point 'vsFlat' instead of 'vs'. Same
+    // pipeline layout, vertex-buffer layout, and blend state as
+    // ringPipeline — the only difference is which world points the
+    // vertex stage projects.
+    const ringVrVs = createShaderModuleWithDevLog(device, ringVsCode, 'structureMarker.ringVr.vs');
+    const ringVrFs = createShaderModuleWithDevLog(device, ringFsCode, 'structureMarker.ringVr.fs');
+    ringVrPipeline = device.createRenderPipeline({
+      label: 'structure-marker-ring-vr-pipeline',
+      layout: pipelineLayout,
+      vertex: { module: ringVrVs, entryPoint: 'vsFlat', buffers: vertexBuffers },
+      fragment: {
+        module: ringVrFs,
+        entryPoint: 'fs',
+        targets: [{ format, blend: PREMULTIPLIED_OVER_BLEND }],
       },
       primitive: { topology: 'triangle-list' },
     });
@@ -549,7 +577,13 @@ export function createStructureMarkerRenderer(
     }
 
     // Ring passes second (premultiplied OVER — composites over halo).
-    pass.setPipeline(ringPipeline);
+    // THROWAWAY (vrSpike): flat-screen always takes `ringPipeline`
+    // (identical to pre-VR-spike behaviour); a VR session swaps in
+    // `ringVrPipeline` so rings track head rotation instead of always
+    // facing whichever eye is drawing (see ring.wesl's `vsFlat` docstring).
+    const activeRingPipeline =
+      vrOverride.active && ringVrPipeline !== null ? ringVrPipeline : ringPipeline;
+    pass.setPipeline(activeRingPipeline);
     for (const cat of STRUCTURE_IDS) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
