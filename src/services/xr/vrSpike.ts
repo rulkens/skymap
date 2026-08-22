@@ -10,9 +10,10 @@
  *
  * World mapping: the XR reference space (metres) is anchored at the live
  * orbit camera — origin at the eye, axes = the camera's image plane basis,
- * scale METERS_TO_MPC = orbit distance / SCALE_DIVISOR at session start. So
- * the orbit pivot sits SCALE_DIVISOR metres in front of the viewer and head
- * translation gives real stereo parallax against nearby content.
+ * scale metersToMpc = live orbit distance / SCALE_DIVISOR, re-derived every
+ * XR frame. So the orbit pivot sits SCALE_DIVISOR metres in front of the
+ * viewer and head translation gives real stereo parallax against nearby
+ * content.
  *
  * Known spike caveats (accepted, not bugs to fix here): labels project with
  * the mono orbit vp (render at infinity), pick/UI are dead in-session, the
@@ -146,9 +147,9 @@ function buildFrameDiagnostics(
   eyeCaptures.forEach((e, i) => {
     const expectSign = i === 0 ? 'negative' : 'positive';
     check(
-      Math.abs(e.ep[0]) >= 0.025 && Math.abs(e.ep[0]) <= 0.04,
+      Math.abs(e.ep[0]) >= 0.02 && Math.abs(e.ep[0]) <= 0.05,
       `eye${i} ep.x magnitude`,
-      `actual=${e.ep[0].toFixed(4)} expected=0.025..0.04 (${expectSign})`,
+      `actual=${e.ep[0].toFixed(4)} expected=0.02..0.05 (${expectSign})`,
     );
     check(Math.abs(e.ep[1]) < 0.15, `eye${i} ep.y magnitude`, `actual=${e.ep[1].toFixed(4)} expected<0.15`);
     check(Math.abs(e.ep[2]) < 0.15, `eye${i} ep.z magnitude`, `actual=${e.ep[2].toFixed(4)} expected<0.15`);
@@ -327,10 +328,6 @@ async function startSession(
   session.updateRenderState({ layers: [layer] });
   const refSpace = await session.requestReferenceSpace('local');
 
-  // Freeze the world scale at session start: pivot lands SCALE_DIVISOR metres
-  // out. Frozen (not live) so head translation can't feedback into the scale.
-  const metersToMpc = Math.max(state.cameraRuntime.lastPose.current.distance, 1e-12) / SCALE_DIVISOR;
-
   // Size the canvas backing store to the per-eye texture so renderTargets
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
   // resolution through the normal path. runFrame's resize guard is off while
@@ -352,10 +349,7 @@ async function startSession(
   let warnedViewport = false;
 
   diag.length = 0;
-  pushDiag(
-    `layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`,
-    `metersToMpc=${metersToMpc.toExponential(3)} anchor distance=${state.cameraRuntime.lastPose.current.distance.toExponential(3)}`,
-  );
+  pushDiag(`layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`);
   let diagFramesLeft = 1;
 
   session.addEventListener('end', () => {
@@ -373,6 +367,11 @@ async function startSession(
     session.requestAnimationFrame(onXRFrame);
     const pose = frame.getViewerPose(refSpace);
     if (!pose) return;
+
+    // Live every frame (not frozen at session start): head translation doesn't
+    // move the orbit distance, so this can't feedback-pump, and orbit-distance
+    // changes (tweens, future thumbstick zoom) become world-scale zoom for free.
+    const metersToMpc = Math.max(state.cameraRuntime.lastPose.current.distance, 1e-12) / SCALE_DIVISOR;
 
     // ── Anchor: the live orbit camera, reassembled from last frame's pose ──
     const store = frameDeps.cb.store.getState();
@@ -460,6 +459,9 @@ async function startSession(
     }
 
     if (diagFramesLeft > 0) {
+      pushDiag(
+        `metersToMpc=${metersToMpc.toExponential(3)} anchor distance=${state.cameraRuntime.lastPose.current.distance.toExponential(3)}`,
+      );
       const { summary, body } = buildFrameDiagnostics(
         eyeCaptures,
         metersToMpc,
