@@ -143,6 +143,7 @@ import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRen
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
+import type { Slab } from '../../../../@types/engine/frame/Slab';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
 import { NEAR0, slabViewOf } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -639,12 +640,24 @@ function streamsFor(catalog: StarCatalog): CatalogStreams {
 /**
  * Per-frame memo: `prepareStarCut` runs the walk + fade advance exactly once
  * per frame even though both the aggregate and leaf layers call it. Keyed on
- * the frame's `ctx` object — `deriveFrameContext` mints a fresh one each frame —
- * so a new frame recomputes and the previous entry is GC'd with its `ctx`. The
- * fade advance mutating `fadeStateByCatalog` is what makes the once-per-frame
- * guarantee load-bearing: a second dt-step would double-advance the ramps.
+ * the NEAR0 `Slab` object (`ctx.slabs[NEAR0]`), NOT `ctx` itself — mirrors
+ * `earthLayer`'s `preparedBySlab` fix for the identical VR bug. `applyVrEyeToCtx`
+ * (vrSpikeState.ts) mutates ONE `ctx` object in place across both eyes
+ * (replacing `ctx.slabs` with a fresh pair of `Slab`s per eye), so a ctx-keyed
+ * memo computes once — at whichever call site runs first, the planner or eye
+ * 0's draw — and hands every later caller that SAME planner-camera-relative
+ * result: the per-node `originRelCamMpc` origins baked into the streams never
+ * track the eye's actual position, so the star field looks frozen through a VR
+ * zoom. Keying on the Slab object instead still collapses to one compute per
+ * frame outside VR (`deriveSlabs` mints one NEAR0 slab per frame, shared by the
+ * planner call and the single draw call) but forces a recompute per eye inside
+ * VR, so the baked origins always track the camera the eye's `vp` was built
+ * against. `preparedByCtxFallback` covers hand-built test contexts with no
+ * `slabs` (only ever a synthetic fixture — see `buildCutFrustum`'s identical
+ * fallback), preserving the old once-per-`ctx` memo there.
  */
-const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
+const preparedBySlab = new WeakMap<Slab, PreparedStarCut | null>();
+const preparedByCtxFallback = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
 
 /**
  * Walk every loaded catalog's octree, advance its per-node LOD fades, and
@@ -652,15 +665,22 @@ const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
  * and an aggregate stream (interior flux-mip nodes) by `childMask`. Returns the
  * per-source streams plus the shared shader scalars and the `anyNodeFading`
  * wake vote, or `null` when the star pass is not live (no renderer, master
- * off). Memoised on `ctx` (see `preparedByCtx`); the fade advance runs on the
- * first call for a frame only. The wake vote is DATA on the result — runFrame
- * forwards it to `shouldKeepTicking`, the single authority (see module header).
+ * off). Memoised per NEAR0 Slab (see `preparedBySlab`); the fade advance runs
+ * once per key only. The wake vote is DATA on the result — runFrame forwards it
+ * to `shouldKeepTicking`, the single authority (see module header).
  */
 export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
-  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+  const slab = ctx.slabs?.[NEAR0];
+  if (slab !== undefined) {
+    if (preparedBySlab.has(slab)) return preparedBySlab.get(slab)!;
+    const result = computeStarCut(state, ctx);
+    preparedBySlab.set(slab, result);
+    return result;
+  }
 
+  if (preparedByCtxFallback.has(ctx)) return preparedByCtxFallback.get(ctx)!;
   const result = computeStarCut(state, ctx);
-  preparedByCtx.set(ctx, result);
+  preparedByCtxFallback.set(ctx, result);
   return result;
 }
 
@@ -926,8 +946,8 @@ export const starCatalogLayer: ContentLayer = {
   // Pick aspect — stamps every visible LEAF star's packed identity into the
   // NEAR0 r32uint pick pass. The pick pass runs on a FRESH `ctx` minted by
   // `pickFrameContext` (→ `deriveFrameContext` from `lastPose.current`, the pose
-  // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
-  // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
+  // the last frame actually rendered), so `prepareStarCut`'s per-Slab memo
+  // (`preparedBySlab`) MISSES and recomputes the leaf cut here — a second octree
   // walk, but against that same last-rendered camera, so the pick lands exactly
   // where the sprite drew. The alternative — threading the visual frame's cached
   // cut into the pick path — would braid pick into frame ordering (the pick pass
