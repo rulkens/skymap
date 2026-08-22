@@ -35,6 +35,7 @@ import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRenderer';
+import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
@@ -308,6 +309,16 @@ export type EngineGpuHandles = {
    * back out during teardown).
    */
   zoneOfAvoidanceRenderer: ZoneOfAvoidanceRenderer | null;
+  /**
+   * Shared world-geometry text renderer (spec §9.1) — generalizes
+   * `zoneOfAvoidanceRenderer`'s curved on-band lettering to any number of
+   * arc-placed labels with per-label font/placement/repeat. Draws into HDR
+   * (not the swap chain), so it is NOT one of the `rebuildOnSwapFormat`
+   * rows. Null until `initGpu` constructs it; nulled back out during
+   * teardown. Unconsumed until Task 9 wires the zone-of-avoidance lettering
+   * onto it.
+   */
+  label3DRenderer: Label3DRenderer | null;
   /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).

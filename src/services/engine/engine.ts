@@ -362,6 +362,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Galactic-plane dust-band guide. null until initGpu; excluded from
       // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
       zoneOfAvoidanceRenderer: null,
+      // Shared world-geometry text renderer (Task 8). null until initGpu;
+      // unconsumed until Task 9 wires the ZoA lettering onto it.
+      label3DRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,

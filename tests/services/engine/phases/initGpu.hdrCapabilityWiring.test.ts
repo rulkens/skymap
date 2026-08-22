@@ -150,6 +150,10 @@ vi.mock('../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceR
   createZoneOfAvoidanceRenderer: vi.fn(() => makeStub('zoneOfAvoidanceRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () => ({
+  createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
