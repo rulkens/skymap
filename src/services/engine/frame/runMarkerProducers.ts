@@ -1,13 +1,8 @@
 /**
- * runMarkerProducers — walk the marker producer array and concatenate outputs.
- *
- * Each producer emits descriptors in a fixed order (determined by the source
- * data — `structureStore.all()` for structure markers). This walker preserves
- * that order exactly — NO sort, NO filter, NO dedupe. Pick-index alignment
- * depends on it: `@builtin(instance_index)` resolves through
- * `byCategory(cat)[structureIndex]`, so descriptor order must stay locked to
- * `structureStore.all()` order per category. A second producer joining this
- * array must answer the alignment question before its outputs can merge.
+ * runMarkerProducers — concatenate marker descriptors in producer order.
+ * LANDMINE: walker must not sort, filter, or dedupe — pick-index alignment
+ * depends on `structureStore.all()` order per category (resolves via
+ * `@builtin(instance_index)` through `byCategory(cat)[structureIndex]`).
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

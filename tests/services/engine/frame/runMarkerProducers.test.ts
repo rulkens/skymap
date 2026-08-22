@@ -1,16 +1,7 @@
 /**
- * runMarkerProducers — unit tests for the marker producer walker.
- *
- * The walker concatenates outputs from the `MARKER_PRODUCERS` array, preserving
- * the order of each producer's descriptors. This test drives the walker with
- * stub producers to verify it emits every descriptor unfiltered — INCLUDING
- * alpha-0 descriptors — which is essential for pick-index alignment:
- * `@builtin(instance_index)` resolves through `byCategory(cat)[structureIndex]`,
- * so the descriptor order must stay locked to `structureStore.all()` order per
- * category. Sorting, filtering, or deduping would break the ring pick path.
- *
- * `produceStructureMarkers`' own suite tests the fade math and opacity
- * weighting; this suite tests only the walk contract.
+ * runMarkerProducers — tests the walker's concatenation contract (producer
+ * order preserved, no filtering or deduping). `produceStructureMarkers`' own
+ * suite tests fade math and opacity; this suite tests only the walk.
  */
 
 import { describe, it, expect, vi } from 'vitest';

@@ -669,10 +669,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Per-frame marker upload ───────────────────────────────────────────────
   //
-  // Like the label flush above: produceStructureMarkers walks the structure
-  // store, applies fade math, and hands descriptors to the renderer. Must run
-  // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // `structureMarkersLayer` reads it. Null-checked for the pre-initGpu window.
+  // Like the label flush above: runMarkerProducers walks the producer array (no
+  // sort/filter/dedupe, picks order preserved) and hands descriptors to the
+  // renderer. Must run BEFORE the GPU dispatch so the instance buffer is
+  // uploaded before `structureMarkersLayer` reads it. Null-checked for the
+  // pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
     state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
   }
