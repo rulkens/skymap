@@ -284,7 +284,7 @@ export function produceFamousGalaxyLabels(
     // screen-space (world +Y offsets foreshorten or fall over the text), the
     // line top derives from the measured text bottom minus the shared
     // padding, and the line vanishes when no room remains. The endpoints are
-    // camera-derived per frame — safe because the labelDirector's re-upload
+    // camera-derived per frame — safe because the cosmoLabelDirector's re-upload
     // signature keys on the label's `leader.toWorld`, so moved geometry
     // re-uploads instead of freezing at first-visible distance.
     const placement = liftedLabelPlacement({

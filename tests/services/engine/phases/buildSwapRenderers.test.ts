@@ -65,7 +65,7 @@ function makeState(): EngineState {
       filamentRenderer: makeStub(),
     },
     subsystems: {
-      labelDirector: {
+      cosmoLabelDirector: {
         attachRenderers: vi.fn(),
       },
       foregroundLabelDirector: {
@@ -109,7 +109,7 @@ describe('buildSwapRenderers', () => {
 
     buildSwapRenderers(state, 'rgba16float');
 
-    const attachRenderers = state.subsystems.labelDirector.attachRenderers as ReturnType<
+    const attachRenderers = state.subsystems.cosmoLabelDirector.attachRenderers as ReturnType<
       typeof vi.fn
     >;
     // Must be re-wired onto the SECOND-round instances — attaching the stale

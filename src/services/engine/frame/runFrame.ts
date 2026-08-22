@@ -648,7 +648,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Three statements, not `a() || b() || c()`: each call FLUSHES GPU buffers
   // as a side effect, and `||` short-circuits — the inline form would skip a
   // sibling's flush the moment an earlier one votes true.
-  const cosmoLabelsAnimating = state.subsystems.labelDirector.runFrame(state, ctx);
+  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, ctx);
   const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
   const label3DAnimating = runLabel3DProducers(state, ctx);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;

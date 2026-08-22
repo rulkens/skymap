@@ -6,7 +6,7 @@
  * ### Why a foreground caption, not a main-director label
  *
  * The figure anchors sit at parsec distances from the origin (~1e-5 to ~1.5e-3
- * Mpc). The main `labelDirector` projects its labels through the COSMO slab,
+ * Mpc). The main `cosmoLabelDirector` projects its labels through the COSMO slab,
  * whose near plane is pinned at `COSMO_NEAR_MPC = 0.01` Mpc — so at every camera
  * distance where the constellation band is visible (it fades out by 0.01 Mpc)
  * every anchor sits INSIDE that near plane and gets GPU-clipped. A director

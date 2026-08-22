@@ -125,13 +125,13 @@ export type EngineSubsystemHandles = {
    * fetch completes. Producers register right after the state literal so
    * they're in place before the first frame.
    */
-  labelDirector: Label2DDirector;
+  cosmoLabelDirector: Label2DDirector;
   /**
-   * The NEAR0 sibling of `labelDirector` — same `createLabel2DDirector`
+   * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
    * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
    * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
    * in `engine.ts`). Attaches `foregroundLabelRenderer` +
-   * `foregroundMarkerLineRenderer` at the same two sites `labelDirector`
+   * `foregroundMarkerLineRenderer` at the same two sites `cosmoLabelDirector`
    * attaches its own pair.
    */
   foregroundLabelDirector: Label2DDirector;

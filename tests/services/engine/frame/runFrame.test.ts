@@ -928,7 +928,7 @@ describe('runFrame — the label-director wake fold', () => {
         earthTiles: null,
         structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
-        labelDirector: { runFrame: vi.fn(cosmoRunFrame) },
+        cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
         foregroundLabelDirector: { runFrame: vi.fn(foregroundRunFrame) },
       },
     } as unknown as EngineState;
@@ -948,7 +948,7 @@ describe('runFrame — the label-director wake fold', () => {
 
     runFrame(state, deps, 0);
 
-    expect(state.subsystems.labelDirector.runFrame).toHaveBeenCalledTimes(1);
+    expect(state.subsystems.cosmoLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
   });

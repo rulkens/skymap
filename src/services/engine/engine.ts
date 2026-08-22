@@ -470,10 +470,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `Label2DProducer`s (the milkyWay + structure/famous label producers,
       // registered just after this literal).  Renderers are wired in during
       // initGpu so the director sees everything before the first frame.
-      labelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
+      cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
 
       // ── Foreground label director ──────────────────────────────────
-      // The NEAR0 sibling of `labelDirector` — same factory, `screenSeparation`
+      // The NEAR0 sibling of `cosmoLabelDirector` — same factory, `screenSeparation`
       // + `exponentialApproach` + lift arms instead. Owns the caption + leader-
       // line upload for `produceSceneBodyCaptions` + `produceConstellationCaptions`
       // (registered just after this literal); `foregroundLabelsLayer` only
@@ -616,15 +616,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane this
   // director projects through, so a label here could never draw. They register
   // on `foregroundLabelDirector` (NEAR0) instead, just below.
-  state.subsystems.labelDirector.registerProducer({
+  state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
   });
-  state.subsystems.labelDirector.registerProducer({
+  state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,
   });
-  state.subsystems.labelDirector.registerProducer({
+  state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'famousLabels',
     produceLabels: produceFamousGalaxyLabels,
   });
@@ -868,7 +868,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // 3. Walk every other subsystem (order-independent past here).
     state.subsystems.biasCorrection.destroy();
-    state.subsystems.labelDirector.destroy();
+    state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to

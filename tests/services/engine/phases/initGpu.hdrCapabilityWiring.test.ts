@@ -353,7 +353,7 @@ import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuH
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
  * writes. Every nullable `gpu.*` handle starts at `null`; the
  * `subsystems` bag carries just the facades `initGpu` calls into
- * (`biasCorrection.attachRenderer`, `labelDirector.attachRenderers`).
+ * (`biasCorrection.attachRenderer`, `cosmoLabelDirector.attachRenderers`).
  */
 function makeState(): EngineState {
   return {
@@ -405,7 +405,7 @@ function makeState(): EngineState {
         attachRenderer: vi.fn(),
         setMode: vi.fn().mockResolvedValue(undefined),
       },
-      labelDirector: {
+      cosmoLabelDirector: {
         attachRenderers: vi.fn(),
         registerProducer: vi.fn(),
         runFrame: vi.fn(),

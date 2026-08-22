@@ -64,7 +64,7 @@
  *     engage gate — otherwise a camera that stops moving mid-fetch sleeps the
  *     loop and the tiles never appear.
  *   - `anim.labelsAnimating`: EITHER label director's own producers or its
- *     appear/disappear envelope are mid-ramp — `labelDirector.runFrame` OR
+ *     appear/disappear envelope are mid-ramp — `cosmoLabelDirector.runFrame` OR
  *     `foregroundLabelDirector.runFrame`'s vote, folded with plain `||` at
  *     the call site in `runFrame.ts` (see its comment for why the two calls
  *     stay separate statements), rather than either director calling

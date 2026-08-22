@@ -88,7 +88,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Post-construction wiring, now reading the walker's output off state.gpu:
   state.subsystems.biasCorrection.attachRenderer(state.gpu.galaxyPointRenderer!);
   // Used to run inside `buildSwapRenderers`, which no longer builds at boot.
-  state.subsystems.labelDirector.attachRenderers(
+  state.subsystems.cosmoLabelDirector.attachRenderers(
     state.gpu.labelRenderer!,
     state.gpu.markerLineRenderer!,
   );

@@ -1,6 +1,6 @@
 /**
  * produceMilkyWayLabel — the per-frame "You are here" label + stem, a bare
- * function registered with the `labelDirector` in `engine.ts`.
+ * function registered with the `cosmoLabelDirector` in `engine.ts`.
  *
  * It only READS `fades.opacityOf(LAYER_ID)`; `syncVisibilityFades` is the sole
  * writer of that intent opacity. The two distance bands stay here — pure functions
@@ -89,7 +89,7 @@ export function produceMilkyWayLabel(
   };
 
   // Endpoints are re-derived from the camera every frame — safe only because the
-  // labelDirector's re-upload signature keys on the label's `leader.toWorld`.
+  // cosmoLabelDirector's re-upload signature keys on the label's `leader.toWorld`.
   const sizePx = apparentSizePx({
     diameterKpc: MILKY_WAY_DIAMETER_KPC,
     distanceMpc: camDist,

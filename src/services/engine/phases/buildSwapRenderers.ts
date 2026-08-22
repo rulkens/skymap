@@ -49,7 +49,7 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
 
   // The director holds direct renderer refs — skipping this would leave it
   // drawing into destroyed buffers, so labels/marker-lines would vanish.
-  state.subsystems.labelDirector.attachRenderers(
+  state.subsystems.cosmoLabelDirector.attachRenderers(
     state.gpu.labelRenderer!,
     state.gpu.markerLineRenderer!,
   );
