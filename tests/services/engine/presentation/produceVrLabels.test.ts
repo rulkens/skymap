@@ -12,7 +12,12 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   produceVrLabels,
   vrLabelArcPlacement,
+  capAndPlace,
 } from '../../../../src/services/engine/presentation/produceVrLabels';
+import type { VrLabelCandidate } from '../../../../src/services/engine/presentation/produceVrLabels';
+import { near0VrRebasedVpF32 } from '../../../../src/services/engine/frame/passes/labels3dNear0Layer';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
+import { forwardProjectPoint } from '../../../../src/utils/camera/forwardProjectPoint';
 import { rejectVec3 } from '../../../../src/utils/math/rejectVec3';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { vrOverride } from '../../../../src/services/xr/vrSpikeState';
@@ -20,6 +25,7 @@ import type { VrEye } from '../../../../src/services/xr/vrSpikeState';
 import { Source } from '../../../../src/data/sources';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { ForwardProjectedPoint } from '../../../../src/@types/camera/ForwardProjectedPoint';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const CTX = { simDays: 0 } as unknown as ReadyFrameContext;
@@ -286,5 +292,124 @@ describe('produceVrLabels', () => {
     expect(labelsNear0.length).toBeGreaterThan(0);
     expect(labelsNear0.some((l) => l.id === 'vr-sceneBody-earth')).toBe(true);
     expect(out.labels.some((l) => l.id.startsWith('vr-sceneBody'))).toBe(false);
+  });
+});
+
+/**
+ * Decisive numeric test for the NEAR0 collapse bug: `labels3dNear0Layer`
+ * draws through `near0VrRebasedVpF32(slab.vp, headWorldPos)`, which (per
+ * `rebaseViewProj`'s contract) expects POSITIONS already shifted by the same
+ * `headWorldPos` — not absolute world Mpc. `capAndPlace`'s `rebaseOriginMpc`
+ * parameter is where that shift happens (`placeCandidate`'s header).
+ *
+ * The camera looks along X (`forward`), with Y as up: MIN_DISTANCE_MPC's
+ * floor (1 parsec — vastly larger than any solar-system body's true
+ * head-distance) pins every NEAR0 label's "above object" lift to the same
+ * huge constant along Y regardless of the candidate's real position, which
+ * would swamp a lift measured along the SAME axis as the test's own
+ * separation. Keeping the two test bodies' separation on Z (orthogonal to
+ * both forward and up) means that shared Y lift cancels out of the
+ * comparison instead of confounding it — this test's own scope is the
+ * head-frame bug, not that separate sizing constant.
+ *
+ * Un-fixed (`rebaseOriginMpc` reverted to the zero vector — see the `BUGGY`
+ * comparison below), the two bodies' NDC-x positions differ by ~5e-5:
+ * collapsed into the same clump, reproducing "all jumbled up in one place"
+ * at solar-system scale, where the head's own ~AU-scale position dwarfs the
+ * inter-body separation. Fixed, they separate by ~0.8 NDC — correctly, per
+ * the ground-truth cross-check against the un-rebased `slabVp` (unambiguously
+ * the right camera transform, since it's exactly what built the rebase).
+ */
+describe('NEAR0 label placement — frame consistency with near0VrRebasedVpF32', () => {
+  const MPC_PER_KM = 1 / 3.0857e19;
+  const AU_MPC = 4.848e-12;
+
+  it('projects two head-scale-distant bodies to DISTINCT, correctly-separated screen x positions (does not collapse)', () => {
+    // Head near Earth's orbit — deliberately NOT axis-aligned, so the bug
+    // (which only shows up along the axes the head offset has weight on)
+    // can't hide behind a lucky choice of axis.
+    const head: Vec3 = [AU_MPC * 0.6, AU_MPC * 0.3, AU_MPC * 0.74];
+    // Forward ⟂ up: keeps the MIN_DISTANCE_MPC-floored "above object" lift
+    // (along up=Y) out of view-space depth, so clipW tracks true distance.
+    const forward: Vec3 = [1, 0, 0];
+    const target: Vec3 = [head[0] + forward[0], head[1] + forward[1], head[2] + forward[2]];
+
+    // Two candidates 5000km in front of the head, ~2236km apart along Z.
+    const p1: Vec3 = [head[0] + 5000 * MPC_PER_KM, head[1], head[2]];
+    const p2: Vec3 = [head[0] + 5000 * MPC_PER_KM, head[1], head[2] + 2236 * MPC_PER_KM];
+
+    const slabVp = computeForegroundViewProj({
+      eyeMpc: head,
+      targetMpc: target,
+      up: [0, 1, 0],
+      renderOrigin: [0, 0, 0],
+      fovYRad: 1,
+      aspect: 1,
+      near: 100 * MPC_PER_KM,
+      far: 1000,
+      reversedZ: true,
+    });
+
+    const candidates: VrLabelCandidate[] = [
+      { id: 'p1', text: 'P1', worldPos: p1, color: [1, 1, 1, 1] },
+      { id: 'p2', text: 'P2', worldPos: p2, color: [1, 1, 1, 1] },
+    ];
+
+    function anchorOf(placement: (typeof labels)[number]['placement']): Vec3 {
+      // Reconstruct the text anchor from the arc placement (existing idiom,
+      // used above): anchor = center + radius·referenceDir.
+      return [
+        placement.center[0] + placement.radiusMpc * placement.referenceDir[0],
+        placement.center[1] + placement.radiusMpc * placement.referenceDir[1],
+        placement.center[2] + placement.radiusMpc * placement.referenceDir[2],
+      ];
+    }
+    function ndcXOf(vp: Float32Array | Float64Array, p: Vec3): number {
+      const out: ForwardProjectedPoint = {
+        clipX: 0,
+        clipY: 0,
+        clipZ: 0,
+        clipW: 0,
+        screenX: 0,
+        screenY: 0,
+        onScreen: false,
+      };
+      forwardProjectPoint(vp, p[0], p[1], p[2], [1000, 1000], out);
+      return out.clipX / out.clipW;
+    }
+
+    // The exact call `produceVrLabels` makes for the NEAR0 channel: the
+    // rebase origin IS the head position. The pass's actual draw-time vp —
+    // same function, same origin.
+    const labels = capAndPlace(candidates, head, [0, 1, 0], 16, head);
+    expect(labels).toHaveLength(2);
+    const vpF32 = near0VrRebasedVpF32(slabVp, head);
+    const ndcX1 = ndcXOf(vpF32, anchorOf(labels[0]!.placement));
+    const ndcX2 = ndcXOf(vpF32, anchorOf(labels[1]!.placement));
+
+    // Ground truth: the same anchors, converted back to absolute world Mpc,
+    // through the RAW un-rebased `slabVp` — unambiguously correct, since
+    // that's exactly the camera transform the rebase was built to match.
+    const truthX1 = ndcXOf(slabVp, [
+      ...anchorOf(labels[0]!.placement).map((v, i) => v + head[i]!),
+    ] as Vec3);
+    const truthX2 = ndcXOf(slabVp, [
+      ...anchorOf(labels[1]!.placement).map((v, i) => v + head[i]!),
+    ] as Vec3);
+    expect(ndcX1).toBeCloseTo(truthX1, 3);
+    expect(ndcX2).toBeCloseTo(truthX2, 3);
+
+    // The decisive non-collapse assertion: the bodies' true ~2236km
+    // separation, viewed from 5000km away, subtends a real angle — well
+    // over 0.1 of NDC space, not the sub-percent clump the bug produces.
+    expect(Math.abs(ndcX2 - ndcX1)).toBeGreaterThan(0.1);
+
+    // Contrast with the UN-fixed behaviour (rebaseOriginMpc reverted to the
+    // zero vector, i.e. `candidate.worldPos` fed straight through): the same
+    // two bodies collapse to within a tiny fraction of that separation.
+    const buggyLabels = capAndPlace(candidates, head, [0, 1, 0], 16, [0, 0, 0]);
+    const buggyNdcX1 = ndcXOf(vpF32, anchorOf(buggyLabels[0]!.placement));
+    const buggyNdcX2 = ndcXOf(vpF32, anchorOf(buggyLabels[1]!.placement));
+    expect(Math.abs(buggyNdcX2 - buggyNdcX1)).toBeLessThan(0.001);
   });
 });

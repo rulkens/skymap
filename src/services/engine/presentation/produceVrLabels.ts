@@ -64,6 +64,15 @@ const VR_LABEL_MAX_COUNT = 24;
 /** Nearest-N cap for the NEAR0 channel (scene bodies) — a much smaller roster. */
 const VR_BODY_LABEL_MAX_COUNT = 16;
 
+/**
+ * COSMO channel's rebase origin — a no-op. COSMO candidates (galaxies,
+ * structures) are Mpc-scale, so head-scale (~1e-12 Mpc) offsets are already
+ * negligible there; keeping the subtraction explicit (rather than skipping
+ * it) means one code path for both channels, and COSMO output stays
+ * byte-identical (subtracting the zero vector changes no bit).
+ */
+const ZERO_ORIGIN_MPC: Readonly<Vec3> = [0, 0, 0];
+
 /** Floor under the head↔anchor distance so a coincident head can't zero the em size. */
 const MIN_DISTANCE_MPC = 1e-6;
 
@@ -147,7 +156,8 @@ export function vrLabelArcPlacement(
   };
 }
 
-type VrLabelCandidate = {
+/** Exported for the frame-consistency test (`capAndPlace` below) — not used outside this module and its test. */
+export type VrLabelCandidate = {
   readonly id: string;
   readonly text: string;
   readonly worldPos: Vec3;
@@ -226,21 +236,32 @@ function collectSceneBodyCandidates(
   return out;
 }
 
-/** Build one Label3D from a candidate at a known head distance. */
+/**
+ * Build one Label3D from a candidate at a known head distance.
+ *
+ * `rebaseOriginMpc` MUST equal the origin the drawing pass rebases its vp
+ * about (`labels3dNear0Layer`'s `near0VrRebasedVpF32(vp, headWorldPos)` for
+ * the NEAR0 channel; the zero vector for COSMO's un-rebased `labels3dLayer`).
+ * `vrLabelArcPlacement`'s `center` is a POSITION and must live in that same
+ * frame; `resolveReferenceDir` below stays on absolute candidate/head
+ * positions regardless, because a direction (a position DIFFERENCE) is
+ * translation-invariant and needs no rebase.
+ */
 function placeCandidate(
   candidate: VrLabelCandidate,
   distanceMpc: number,
   headWorldPos: Vec3,
   upU: Vec3,
+  rebaseOriginMpc: Readonly<Vec3>,
 ): Label3D {
   // Constant apparent size: em height scales linearly with distance so near
   // and far labels read at the same angular height in the headset.
   const emMpc = Math.max(distanceMpc, MIN_DISTANCE_MPC) * Math.tan(VR_LABEL_ANGULAR_HEIGHT_RAD);
   const aboveOffset = ABOVE_OBJECT_EM_RATIO * emMpc;
   const centerTextWorldPos: Vec3 = [
-    candidate.worldPos[0] + upU[0] * aboveOffset,
-    candidate.worldPos[1] + upU[1] * aboveOffset,
-    candidate.worldPos[2] + upU[2] * aboveOffset,
+    candidate.worldPos[0] - rebaseOriginMpc[0] + upU[0] * aboveOffset,
+    candidate.worldPos[1] - rebaseOriginMpc[1] + upU[1] * aboveOffset,
+    candidate.worldPos[2] - rebaseOriginMpc[2] + upU[2] * aboveOffset,
   ];
   const referenceDir = resolveReferenceDir(candidate.id, candidate.worldPos, headWorldPos, upU);
   const radiusMpc = emMpc * VR_LABEL_RADIUS_TO_EM_RATIO;
@@ -257,12 +278,18 @@ function placeCandidate(
   };
 }
 
-/** Sort by head distance, cap to `maxCount`, and place each survivor. */
-function capAndPlace(
+/**
+ * Sort by head distance, cap to `maxCount`, and place each survivor.
+ * Exported for the frame-consistency test — drives it with a synthetic head
+ * + candidates and the real `near0VrRebasedVpF32` to prove NEAR0 labels
+ * project to distinct screen positions instead of collapsing.
+ */
+export function capAndPlace(
   candidates: readonly VrLabelCandidate[],
   headWorldPos: Vec3,
   upU: Vec3,
   maxCount: number,
+  rebaseOriginMpc: Readonly<Vec3>,
 ): Label3D[] {
   const withDistance = candidates
     .map((c) => ({
@@ -279,7 +306,7 @@ function capAndPlace(
   const labels: Label3D[] = [];
   for (let i = 0; i < emitCount; i++) {
     const { c, distanceMpc } = withDistance[i]!;
-    labels.push(placeCandidate(c, distanceMpc, headWorldPos, upU));
+    labels.push(placeCandidate(c, distanceMpc, headWorldPos, upU, rebaseOriginMpc));
   }
   return labels;
 }
@@ -297,8 +324,26 @@ export function produceVrLabels(state: EngineState, ctx: ReadyFrameContext): Lab
   const bodyCandidates = collectSceneBodyCandidates(state, ctx);
   if (cosmoCandidates.length === 0 && bodyCandidates.length === 0) return empty;
 
-  const labels = capAndPlace(cosmoCandidates, headWorldPos, upU, VR_LABEL_MAX_COUNT);
-  const labelsNear0 = capAndPlace(bodyCandidates, headWorldPos, upU, VR_BODY_LABEL_MAX_COUNT);
+  const labels = capAndPlace(
+    cosmoCandidates,
+    headWorldPos,
+    upU,
+    VR_LABEL_MAX_COUNT,
+    ZERO_ORIGIN_MPC,
+  );
+  // NEAR0 geometry is rebased about the SAME head position labels3dNear0Layer
+  // rebases its vp about (near0VrRebasedVpF32) — see placeCandidate's header
+  // for the frame contract this closes. Without it every NEAR0 label's
+  // center silently gains +headWorldPos when the shader multiplies through
+  // the rebased vp, so all bodies collapse toward one point (the bug this
+  // fixes: planets/stars "all jumbled up in one place").
+  const labelsNear0 = capAndPlace(
+    bodyCandidates,
+    headWorldPos,
+    upU,
+    VR_BODY_LABEL_MAX_COUNT,
+    headWorldPos,
+  );
 
   return { labels, labelsNear0, awake: false };
 }
