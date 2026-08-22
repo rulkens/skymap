@@ -15,12 +15,14 @@ import {
   clipElapsed,
   followElapsed,
   accumulateFollowPan,
+  rotateFollowPan,
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTweenDescriptor {
   return {
@@ -293,6 +295,35 @@ describe('accumulateFollowPan', () => {
     expect(clock.followPanOffset).toEqual([4, 0, 0]);
     accumulateFollowPan(clock, true, [102, 0, 0]);
     expect(clock.followPanOffset).toEqual([6, 0, 0]);
+  });
+});
+
+describe('rotateFollowPan', () => {
+  // +90° about Z, column-major (cell at row r, col c is m[c*3+r]) — same
+  // convention `orientationWorldDelta` and `multiply3x3` use.
+  const ROTATE_Z90: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
+  const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+  it('rotates the offset in place by the given rotation', () => {
+    const clock = createCameraClock();
+    clock.followPanOffset = [1, 0, 0];
+    rotateFollowPan(clock, ROTATE_Z90);
+    expect(clock.followPanOffset[0]).toBeCloseTo(0, 12);
+    expect(clock.followPanOffset[1]).toBeCloseTo(1, 12);
+    expect(clock.followPanOffset[2]).toBeCloseTo(0, 12);
+  });
+
+  it('leaves the offset unchanged under an identity rotation', () => {
+    const clock = createCameraClock();
+    clock.followPanOffset = [3, -2, 5];
+    rotateFollowPan(clock, IDENTITY);
+    expect(clock.followPanOffset).toEqual([3, -2, 5]);
+  });
+
+  it('a zero offset stays zero under any rotation — no special-case branch needed', () => {
+    const clock = createCameraClock(); // followPanOffset defaults to [0, 0, 0]
+    rotateFollowPan(clock, ROTATE_Z90);
+    expect(clock.followPanOffset).toEqual([0, 0, 0]);
   });
 });
 

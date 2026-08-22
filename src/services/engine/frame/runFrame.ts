@@ -65,7 +65,12 @@ import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { poseEyePositionMpc } from '../../../utils/camera/poseEyePositionMpc';
 import { eyeAltitudeMpc } from '../../../utils/camera/eyeAltitudeMpc';
 import { pivotCenterMpc } from '../camera/pivotCenterMpc';
-import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
+import {
+  tweenElapsed,
+  accumulateFollowPan,
+  frameTweenElapsed,
+  rotateFollowPan,
+} from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -442,6 +447,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // body's hysteresis band was tuned to).
     surfaceFollow.engaged = false;
     surfaceFollow.orientationAtFlip = null;
+    surfaceFollow.prevOrientation = null;
     surfaceFollow.bodyId = surfaceFollowBodyId;
   }
   const wasSurfaceFollowEngaged = surfaceFollow.engaged;
@@ -473,6 +479,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     surfaceFollow.orientationAtFlip = [...liveBodyOrientation] as Mat3;
   } else if (!surfaceFollowEngagedNow) {
     surfaceFollow.orientationAtFlip = null;
+    surfaceFollow.prevOrientation = null;
   }
 
   // Default: pass through unchanged; overridden only while engaged. At the
@@ -496,6 +503,26 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // the correct factor for a body whose pole isn't the world Z axis.
     decodePoseBasis = multiply3x3(correction, poseBasis);
     decodeUpBasis = multiply3x3(correction, upBasis);
+
+    // Ground-fixed pan: `correction` above co-rotates the CAMERA's pose about
+    // the target, but `followPanOffset` sets WHERE that target sits — left
+    // world-fixed, a grabbed ground point slides out from under the held
+    // camera at ω × pan (the "follow engages and does nothing" bug). Rotate
+    // by the INCREMENTAL delta since last frame (not `correction`, cumulative
+    // from the flip), so an external pan write (drag strafe, zoom lateral)
+    // folds in for free instead of being fought by a snapshot-relative
+    // factor — see `rotateFollowPan`'s docblock. `prevOrientation` falls back
+    // to `orientationAtFlip` on the engage frame, giving an identity delta
+    // there too (no pan jump, mirroring the basis correction above).
+    rotateFollowPan(
+      state.cameraRuntime.clock,
+      orientationWorldDelta(
+        surfaceFollow.prevOrientation ?? surfaceFollow.orientationAtFlip,
+        liveBodyOrientation,
+      ),
+    );
+    // Copy, not alias — same reason as `orientationAtFlip` above.
+    surfaceFollow.prevOrientation = [...liveBodyOrientation] as Mat3;
   }
 
   if (state.cam) {

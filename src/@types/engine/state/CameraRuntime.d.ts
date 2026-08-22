@@ -70,11 +70,20 @@
  *                    orientation keeps changing every frame) the instant
  *                    `engaged` flips false→true, so the composed correction
  *                    starts at identity and the engage frame introduces no
- *                    pose jump. `bodyId` is the id the other two fields
- *                    pertain to; `runFrame` resets all three the frame the
- *                    focused body id changes, so a re-focus can never carry a
- *                    stale snapshot or engaged flag onto a different body.
- *                    `runFrame` is the single writer.
+ *                    pose jump. `prevOrientation` is the PREVIOUS engaged
+ *                    frame's orientation (same copy discipline), letting
+ *                    `runFrame` co-rotate `clock.followPanOffset` by the
+ *                    INCREMENTAL delta since last frame — a different factor
+ *                    from `orientationAtFlip`'s cumulative one, so a stored
+ *                    pan mutation mid-engagement composes instead of being
+ *                    overwritten (see `rotateFollowPan`'s docblock). Null
+ *                    while disengaged, and at the engage frame itself (the
+ *                    correction falls back to `orientationAtFlip`, giving an
+ *                    identity delta there too). `bodyId` is the id the other
+ *                    fields pertain to; `runFrame` resets all of them the
+ *                    frame the focused body id changes, so a re-focus can
+ *                    never carry a stale snapshot or engaged flag onto a
+ *                    different body. `runFrame` is the single writer.
  *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
  * of truth for all five Resources: `wireInput`, `startLoop`, `runFrame`, and the
@@ -117,7 +126,9 @@ export type CameraRuntime = {
     engaged: boolean;
     /** Snapshotted the frame engagement flips false→true; null while disengaged. */
     orientationAtFlip: Mat3 | null;
-    /** The focused body id `engaged`/`orientationAtFlip` pertain to, or null. */
+    /** Previous engaged frame's orientation; null while disengaged or on the engage frame. */
+    prevOrientation: Mat3 | null;
+    /** The focused body id the other fields pertain to, or null. */
     bodyId: string | null;
   };
   /**

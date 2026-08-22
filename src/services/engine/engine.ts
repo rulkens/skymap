@@ -184,7 +184,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
     // Disengaged at boot — no body is focused yet, so there is nothing to
     // follow. `runFrame` is the single writer from the first frame on.
-    surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
+    surfaceFollow: { engaged: false, orientationAtFlip: null, prevOrientation: null, bodyId: null },
     // DebugPanel-only (Camera section) — see the type's docblock. Quiet zero
     // defaults until the first frame / gesture writes a real value.
     debugZoomLateralMpc: [0, 0, 0],

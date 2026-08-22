@@ -95,7 +95,12 @@ function makeEngineState(): {
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
-      surfaceFollow: { engaged: false, orientationAtFlip: null, bodyId: null },
+      surfaceFollow: {
+        engaged: false,
+        orientationAtFlip: null,
+        prevOrientation: null,
+        bodyId: null,
+      },
       debugZoomLateralMpc: [0, 0, 0] as Vec3,
       debugIdleTickMs: 0,
       controlsDebug: {

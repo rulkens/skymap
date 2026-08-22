@@ -23,12 +23,14 @@
  * `buildCameraDrivers`.
  */
 
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { FrameTween } from '../../../@types/camera/FrameTween';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraState } from '../../../@types/camera/CameraState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
@@ -236,4 +238,18 @@ export function accumulateFollowPan(
     ];
   }
   clock.lastPanTarget = [camTarget[0], camTarget[1], camTarget[2]];
+}
+
+/**
+ * Rotate `followPanOffset` in place by `rotation` — while surface-fixed
+ * follow is engaged, the strafe must co-rotate with the focused body's spin
+ * (`runFrame`'s engaged block, spec §4.6) or a grabbed ground point slides
+ * under the held camera at ω × pan. `rotation` is the INCREMENTAL per-frame
+ * delta (not the cumulative flip-to-now correction `orientationAtFlip`
+ * feeds the decode basis): a snapshot-relative factor would erase external
+ * pan mutations (drag strafes, zoom laterals) made mid-engagement, while the
+ * incremental form folds them in for free from the next frame on.
+ */
+export function rotateFollowPan(clock: CameraClock, rotation: Readonly<Mat3>): void {
+  clock.followPanOffset = rotateVec3ByTightMat3(clock.followPanOffset, rotation);
 }
