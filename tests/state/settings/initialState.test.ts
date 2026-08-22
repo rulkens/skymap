@@ -103,5 +103,16 @@ describe('buildInitialSettings', () => {
         expect(s.starCatalogs.items[id as keyof typeof s.starCatalogs.items].enabled).toBe(false);
       }
     });
+
+    it('defaults 2MRS on while forcing every other galaxy catalog off', () => {
+      // 2MRS is the headset's default galaxy layer: 35k all-sky points, light
+      // enough for the Quest's frame budget. Every other galaxy catalog stays
+      // off, unlike the un-forced star-catalogs master gate above.
+      setSearch('?vr');
+      const { items } = buildInitialSettings().galaxyCatalogs;
+      for (const id of Object.keys(items)) {
+        expect(items[id as keyof typeof items].enabled).toBe(id === '2mrs');
+      }
+    });
   });
 });

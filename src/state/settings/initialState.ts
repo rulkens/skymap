@@ -85,12 +85,13 @@ import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 export function buildInitialSettings(): EngineSettingsState {
-  // THROWAWAY (vrSpike): `?vr` defaults the FLAT page to Earth-only too, so
-  // the 2D view before/around a VR session doesn't fetch + GPU-upload every
-  // galaxy/star catalog and the MCPM volume. Same URLSearchParams check as
-  // device.ts / startLoop.ts. The sidebar toggles stay live — this only
-  // changes the boot default, so re-enabling a source still loads it via the
-  // normal demand path. Delete with the spike.
+  // THROWAWAY (vrSpike): `?vr` defaults the FLAT page to Earth-only (plus
+  // 2MRS, the one galaxy catalog light enough for the headset's frame
+  // budget) too, so the 2D view before/around a VR session doesn't fetch +
+  // GPU-upload every other galaxy/star catalog and the MCPM volume. Same
+  // URLSearchParams check as device.ts / startLoop.ts. The sidebar toggles
+  // stay live — this only changes the boot default, so re-enabling a source
+  // still loads it via the normal demand path. Delete with the spike.
   const vrSpike =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('vr');
   const volumeItems = seedVolumeFields();
@@ -131,8 +132,13 @@ export function buildInitialSettings(): EngineSettingsState {
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
-          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above.
-          { enabled: vrSpike ? false : e.visible, labelEnabled: true },
+          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above —
+          // except 2MRS, which stays on as the headset's default galaxy layer
+          // (35k all-sky points, light enough for the Quest's frame budget).
+          {
+            enabled: vrSpike ? e.id === SOURCE_REGISTRY[Source.TwoMRS].id : e.visible,
+            labelEnabled: true,
+          },
         ]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
