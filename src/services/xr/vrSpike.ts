@@ -45,18 +45,18 @@ import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
 import { deriveBodyStates } from '../engine/frame/deriveBodyStates';
 import { SCALE_UNITS } from '../../data/scaleUnits';
-import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_DISC_RADIUS_KPC } from '../../data/milkyWay/galacticCenter';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_DISC_RADIUS_KPC,
+} from '../../data/milkyWay/galacticCenter';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { HORIZON_RADIUS_GPC } from '../gpu/renderers/horizonShell/horizonShellRenderer';
 import { lerp } from '../../utils/math/lerp';
 import { lerpVec3 } from '../../utils/math/lerpVec3';
 import { smoothstep } from '../../utils/math/smoothstep';
-import {
-  vrOverride,
-  tangentsOf,
-  viewFromBasis,
-  viewFromBasisOriginRelative,
-} from './vrSpikeState';
+import { cross3 } from '../../utils/math/cross3';
+import { normalize3 } from '../../utils/math/normalize3';
+import { vrOverride, tangentsOf, viewFromBasis, viewFromBasisOriginRelative } from './vrSpikeState';
 import type { VrEye, EyeTangents } from './vrSpikeState';
 
 /** Earth's apparent radius inside the headset, metres (user request: ~1.5 m tall globe). */
@@ -114,31 +114,33 @@ function readStickAxes(session: XRSessionish, handedness: 'left' | 'right'): Sti
 }
 
 /** xr-standard face button: index 4 = A/X, index 5 = B/Y, per controller handedness. */
-function readFaceButtonPressed(session: XRSessionish, handedness: 'left' | 'right', buttonIndex: number): boolean {
+function readFaceButtonPressed(
+  session: XRSessionish,
+  handedness: 'left' | 'right',
+  buttonIndex: number,
+): boolean {
   return findXrGamepad(session, handedness)?.buttons[buttonIndex]?.pressed ?? false;
 }
 
-/** XR +X, the viewer's local right axis at session start — the pitch rotation axis. */
-const XR_RIGHT_AXIS: Vec3 = [1, 0, 0];
+/**
+ * `v` with its component along unit `axis` removed — `v` projected onto the
+ * plane through the origin perpendicular to `axis`.
+ */
+function rejectAlong(v: Readonly<Vec3>, axis: Readonly<Vec3>): Vec3 {
+  const d = v[0] * axis[0] + v[1] * axis[1] + v[2] * axis[2];
+  return [v[0] - axis[0] * d, v[1] - axis[1] * d, v[2] - axis[2] * d];
+}
 
 /**
- * Rotation of `v` about a unit `axis` by `angleRad` (Rodrigues' formula,
- * right-hand rule). Generalises the old fixed-axis rotateAboutX/rotateAboutY:
- * axis=[1,0,0] reproduces the former exactly (both reduce to the same
- * c·v + (axis×v)·s + axis·(axis·v)·(1−c) expansion).
+ * An arbitrary unit vector perpendicular to `axis` — last-ditch fallback when
+ * neither the anchor's forward nor its right axis has a usable horizontal
+ * component (looking exactly along `axis`, e.g. straight along a pole with no
+ * roll to fall back on). Picks whichever of world +Y/+X is least parallel to
+ * `axis` so the projection below is never near-degenerate itself.
  */
-function rotateAboutAxis(v: Vec3, axis: Readonly<Vec3>, angleRad: number): Vec3 {
-  const c = Math.cos(angleRad);
-  const s = Math.sin(angleRad);
-  const d = axis[0] * v[0] + axis[1] * v[1] + axis[2] * v[2]; // axis · v
-  const cx = axis[1] * v[2] - axis[2] * v[1]; // axis × v
-  const cy = axis[2] * v[0] - axis[0] * v[2];
-  const cz = axis[0] * v[1] - axis[1] * v[0];
-  return [
-    v[0] * c + cx * s + axis[0] * d * (1 - c),
-    v[1] * c + cy * s + axis[1] * d * (1 - c),
-    v[2] * c + cz * s + axis[2] * d * (1 - c),
-  ];
+function referenceHorizontal(axis: Readonly<Vec3>): Vec3 {
+  const helper: Vec3 = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  return normalize3(rejectAlong(helper, axis));
 }
 
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
@@ -217,7 +219,9 @@ function pushDiag(...lines: string[]): void {
 }
 
 const f3 = (v: ArrayLike<number>): string =>
-  Array.from(v as number[], (x) => (Math.abs(x) < 1e-4 && x !== 0 ? x.toExponential(2) : x.toFixed(4))).join(', ');
+  Array.from(v as number[], (x) =>
+    Math.abs(x) < 1e-4 && x !== 0 ? x.toExponential(2) : x.toFixed(4),
+  ).join(', ');
 
 // First-frame-only raw capture per eye, gathered inside the pose.views loop
 // and graded once both eyes are in — see buildFrameDiagnostics below.
@@ -277,17 +281,31 @@ function buildFrameDiagnostics(
       `eye${i} ep.x magnitude`,
       `actual=${e.ep[0].toFixed(4)} expected=0.02..0.05 (${expectSign})`,
     );
-    check(Math.abs(e.ep[1]) < 0.15, `eye${i} ep.y magnitude`, `actual=${e.ep[1].toFixed(4)} expected<0.15`);
-    check(Math.abs(e.ep[2]) < 0.15, `eye${i} ep.z magnitude`, `actual=${e.ep[2].toFixed(4)} expected<0.15`);
+    check(
+      Math.abs(e.ep[1]) < 0.15,
+      `eye${i} ep.y magnitude`,
+      `actual=${e.ep[1].toFixed(4)} expected<0.15`,
+    );
+    check(
+      Math.abs(e.ep[2]) < 0.15,
+      `eye${i} ep.z magnitude`,
+      `actual=${e.ep[2].toFixed(4)} expected<0.15`,
+    );
 
     const alc = e.vd.arrayLayerCount;
-    check(alc === 1 || alc === undefined, `eye${i} arrayLayerCount`, `actual=${String(alc)} expected=1 or undefined`);
+    check(
+      alc === 1 || alc === undefined,
+      `eye${i} arrayLayerCount`,
+      `actual=${String(alc)} expected=1 or undefined`,
+    );
 
     check(
       e.texLayers >= 2,
       `eye${i} colorTexture.depthOrArrayLayers`,
       `actual=${e.texLayers} expected>=2` +
-        (e.texLayers >= 2 ? '' : ' — not a texture-array — side-by-side layout, spike assumption broken'),
+        (e.texLayers >= 2
+          ? ''
+          : ' — not a texture-array — side-by-side layout, spike assumption broken'),
     );
 
     const vpOk =
@@ -299,13 +317,19 @@ function buildFrameDiagnostics(
       vpOk,
       `eye${i} viewport === full texture`,
       `actual=${JSON.stringify(e.viewport)} expected={x:0,y:0,width:${e.texWidth},height:${e.texHeight}}` +
-        (vpOk ? '' : ' — partial viewport — side-by-side layout, spike renders full-texture and this breaks'),
+        (vpOk
+          ? ''
+          : ' — partial viewport — side-by-side layout, spike renders full-texture and this breaks'),
     );
 
     const p = e.proj;
     const colMajorOk = Math.abs(p[11]! + 1) < 1e-3;
     if (colMajorOk) {
-      check(true, `eye${i} projectionMatrix p[11]`, `actual=${p[11]!.toFixed(4)} expected=-1 (column-major)`);
+      check(
+        true,
+        `eye${i} projectionMatrix p[11]`,
+        `actual=${p[11]!.toFixed(4)} expected=-1 (column-major)`,
+      );
     } else if (Math.abs(p[14]! + 1) < 1e-3) {
       check(
         false,
@@ -315,12 +339,32 @@ function buildFrameDiagnostics(
     } else {
       check(false, `eye${i} projectionMatrix p[11]`, `actual=${p[11]!.toFixed(4)} expected=-1`);
     }
-    check(Math.abs(p[15]!) < 1e-3, `eye${i} projectionMatrix p[15]`, `actual=${p[15]!.toFixed(4)} expected~0`);
-    check(Math.abs(p[3]!) < 1e-3, `eye${i} projectionMatrix p[3]`, `actual=${p[3]!.toFixed(4)} expected~0`);
-    check(Math.abs(p[7]!) < 1e-3, `eye${i} projectionMatrix p[7]`, `actual=${p[7]!.toFixed(4)} expected~0`);
+    check(
+      Math.abs(p[15]!) < 1e-3,
+      `eye${i} projectionMatrix p[15]`,
+      `actual=${p[15]!.toFixed(4)} expected~0`,
+    );
+    check(
+      Math.abs(p[3]!) < 1e-3,
+      `eye${i} projectionMatrix p[3]`,
+      `actual=${p[3]!.toFixed(4)} expected~0`,
+    );
+    check(
+      Math.abs(p[7]!) < 1e-3,
+      `eye${i} projectionMatrix p[7]`,
+      `actual=${p[7]!.toFixed(4)} expected~0`,
+    );
 
-    check(e.tan.l < 0 && 0 < e.tan.r, `eye${i} tangents l<0<r`, `actual l=${e.tan.l.toFixed(4)} r=${e.tan.r.toFixed(4)}`);
-    check(e.tan.d < 0 && 0 < e.tan.u, `eye${i} tangents d<0<u`, `actual d=${e.tan.d.toFixed(4)} u=${e.tan.u.toFixed(4)}`);
+    check(
+      e.tan.l < 0 && 0 < e.tan.r,
+      `eye${i} tangents l<0<r`,
+      `actual l=${e.tan.l.toFixed(4)} r=${e.tan.r.toFixed(4)}`,
+    );
+    check(
+      e.tan.d < 0 && 0 < e.tan.u,
+      `eye${i} tangents d<0<u`,
+      `actual d=${e.tan.d.toFixed(4)} u=${e.tan.u.toFixed(4)}`,
+    );
   });
 
   if (eyeCaptures.length === 2) {
@@ -332,7 +376,11 @@ function buildFrameDiagnostics(
       orderOk,
       'eye order (ep.x sign)',
       `actual=(${e0.ep[0].toFixed(4)}, ${e1.ep[0].toFixed(4)}) expected=(negative, positive)` +
-        (swapped ? ' — eye order swapped' : orderOk ? '' : ' — neither eye matches the expected sign'),
+        (swapped
+          ? ' — eye order swapped'
+          : orderOk
+            ? ''
+            : ' — neither eye matches the expected sign'),
     );
 
     const bal0 = e0.vd.baseArrayLayer;
@@ -354,11 +402,16 @@ function buildFrameDiagnostics(
       `actual r=${e1.tan.r.toFixed(4)} |l|=${Math.abs(e1.tan.l).toFixed(4)}`,
     );
     const identicalFrusta =
-      e0.tan.l === e1.tan.l && e0.tan.r === e1.tan.r && e0.tan.d === e1.tan.d && e0.tan.u === e1.tan.u;
+      e0.tan.l === e1.tan.l &&
+      e0.tan.r === e1.tan.r &&
+      e0.tan.d === e1.tan.d &&
+      e0.tan.u === e1.tan.u;
     check(
       !identicalFrusta,
       'eyes have distinct frusta',
-      identicalFrusta ? 'eyes have identical frusta — asymmetry lost' : 'left/right tangents differ',
+      identicalFrusta
+        ? 'eyes have identical frusta — asymmetry lost'
+        : 'left/right tangents differ',
     );
 
     const sepWorld = Math.hypot(
@@ -367,7 +420,11 @@ function buildFrameDiagnostics(
       e0.eyeWorld[2] - e1.eyeWorld[2],
     );
     const sepMeters = sepWorld / metersToMpc;
-    check(sepWorld > 0, 'eyeWorld positions differ', `actual separation=${sepWorld.toExponential(3)} world units`);
+    check(
+      sepWorld > 0,
+      'eyeWorld positions differ',
+      `actual separation=${sepWorld.toExponential(3)} world units`,
+    );
     check(
       sepMeters >= 0.02 && sepMeters <= 0.12,
       'eyeWorld separation ≈ IPD',
@@ -375,7 +432,11 @@ function buildFrameDiagnostics(
     );
   }
 
-  check(Number.isFinite(metersToMpc) && metersToMpc > 0, 'metersToMpc finite>0', `actual=${metersToMpc}`);
+  check(
+    Number.isFinite(metersToMpc) && metersToMpc > 0,
+    'metersToMpc finite>0',
+    `actual=${metersToMpc}`,
+  );
   // Generic across every focus preset (including the session-start "current
   // view" one, whose radiusMpc/apparentRadiusM aren't Earth's) — each preset
   // defines its own target apparent radius, so this checks the SAME focus's
@@ -407,7 +468,10 @@ function buildFrameDiagnostics(
 
   const rawDumps: string[] = [];
   eyeCaptures.forEach((e, i) => {
-    rawDumps.push(`eye${i} projectionMatrix: ${f3(e.proj)}`, `eye${i} transform matrix m: ${f3(e.m)}`);
+    rawDumps.push(
+      `eye${i} projectionMatrix: ${f3(e.proj)}`,
+      `eye${i} transform matrix m: ${f3(e.m)}`,
+    );
   });
 
   return {
@@ -417,10 +481,18 @@ function buildFrameDiagnostics(
 }
 
 export function installVrSpike(state: EngineState, frameDeps: RunFrameDeps): void {
-  const xr = (navigator as unknown as { xr?: { requestSession(mode: string, init?: unknown): Promise<XRSessionish> } }).xr;
-  const XRGPUBindingCtor = (window as unknown as { XRGPUBinding?: new (s: XRSessionish, d: GPUDevice) => XRGPUBindingish }).XRGPUBinding;
+  const xr = (
+    navigator as unknown as {
+      xr?: { requestSession(mode: string, init?: unknown): Promise<XRSessionish> };
+    }
+  ).xr;
+  const XRGPUBindingCtor = (
+    window as unknown as { XRGPUBinding?: new (s: XRSessionish, d: GPUDevice) => XRGPUBindingish }
+  ).XRGPUBinding;
   if (!xr || !XRGPUBindingCtor) {
-    console.warn('[vrSpike] navigator.xr or XRGPUBinding missing — enable "WebXR experimental features" in chrome://flags');
+    console.warn(
+      '[vrSpike] navigator.xr or XRGPUBinding missing — enable "WebXR experimental features" in chrome://flags',
+    );
     return;
   }
 
@@ -434,11 +506,10 @@ export function installVrSpike(state: EngineState, frameDeps: RunFrameDeps): voi
 
   button.onclick = () => {
     button.disabled = true;
-    startSession(state, frameDeps, xr, XRGPUBindingCtor, button)
-      .catch((e: unknown) => {
-        console.error('[vrSpike] session failed', e);
-        button.disabled = false;
-      });
+    startSession(state, frameDeps, xr, XRGPUBindingCtor, button).catch((e: unknown) => {
+      console.error('[vrSpike] session failed', e);
+      button.disabled = false;
+    });
   };
 }
 
@@ -457,7 +528,9 @@ async function startSession(
   if (swapFormat !== undefined && swapFormat !== colorFormat) {
     // Overlay pipelines were baked against the canvas swap format at init;
     // a mismatch here renders garbage or validation-errors every frame.
-    console.warn(`[vrSpike] XR layer format ${colorFormat} != swap format ${swapFormat} — expect validation errors`);
+    console.warn(
+      `[vrSpike] XR layer format ${colorFormat} != swap format ${swapFormat} — expect validation errors`,
+    );
   }
 
   const earthBody = state.data.bodies.earth;
@@ -485,7 +558,8 @@ async function startSession(
     // Live every call — Earth's position moves frame to frame, same read as
     // the pre-focus-preset version of this file.
     centerWorldMpc: () =>
-      deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(earthBody.id)!.positionMpc,
+      deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(earthBody.id)!
+        .positionMpc,
     radiusMpc: EARTH_RADIUS_MPC,
     apparentRadiusM: EARTH_RADIUS_TARGET_M,
   };
@@ -555,7 +629,7 @@ async function startSession(
   session.updateRenderState({ layers: [layer] });
   const refSpace = await session.requestReferenceSpace('local');
 
-  // ── Anchor rotation basis, frozen once at session start ────────────────
+  // ── Anchor view direction, frozen once at session start ────────────────
   // World-fixed VR needs a rigid world orientation while the user walks;
   // reassembling this from the live orbit camera every frame (the pre-Earth-
   // anchor version) would spin the world under the user's feet whenever the
@@ -578,35 +652,57 @@ async function startSession(
   af[1] /= afl;
   af[2] /= afl;
   // World-space up the flat app's orbit camera zeniths on (its orientation
-  // frame's pole) — frozen here alongside A so left-stick yaw stays pinned to
-  // the scene's actual up even though A itself is a session-start snapshot.
+  // frame's pole) — every yaw/pitch below is measured about this one axis,
+  // every frame, which is what makes the reconstructed orbit roll-free.
   const worldUp = frameUp(anchorCam.upBasis);
-  const anchorBasis = imagePlaneBasis(af, anchorCam.roll ?? 0, worldUp);
-  // Anchor columns: XR x→camera right, XR y→image-plane up, XR z→backward.
-  const AX = anchorBasis.right;
-  const AY = anchorBasis.up;
-  const AZ: Vec3 = [-af[0], -af[1], -af[2]];
-  const rot = (v: Vec3): Vec3 => [
-    AX[0] * v[0] + AY[0] * v[1] + AZ[0] * v[2],
-    AX[1] * v[0] + AY[1] * v[1] + AZ[1] * v[2],
-    AX[2] * v[0] + AY[2] * v[1] + AZ[2] * v[2],
-  ];
+
+  // ── Roll-free spherical orbit frame ─────────────────────────────────────
+  // An orbit camera never accumulates roll because it rebuilds view/up from
+  // (yaw, pitch) about ONE fixed pole every frame — see updatePosition.ts +
+  // imagePlaneBasis.ts. The bug this replaces instead composed two rotations
+  // about DIFFERENT axes (yaw about worldUp, then pitch about the
+  // session-frozen XR +X carried through the anchor basis): roll-free only
+  // when those two axes happen to be perpendicular, which stops holding the
+  // moment the anchor view itself is pitched/oblique. Fix: extract the
+  // anchor's own heading/elevation about worldUp ONCE (below), then every
+  // frame rebuild forward/right/up from (yaw0+yaw, pitch0+pitch) the same
+  // way the flat camera does — `imagePlaneBasis(forward, 0, worldUp)` forces
+  // right to `normalize(forward × worldUp)`, which is perpendicular to
+  // worldUp for ANY forward, so the horizon can never tilt.
+  //
+  // yaw0 is folded into Z0 rather than stored separately: Z0 IS the anchor's
+  // own (roll-discarded) heading direction, so "yaw = 0" already reproduces
+  // it — pitch0 is the only angle that needs storing as a number.
+  const pitch0 = Math.asin(
+    Math.max(-1, Math.min(1, af[0] * worldUp[0] + af[1] * worldUp[1] + af[2] * worldUp[2])),
+  );
+  const HEADING_EPS = 1e-4;
+  // Heading source, in priority order: the anchor forward's own horizontal
+  // component (the normal case); else its roll-discarded right axis (still
+  // well-defined when forward is near-vertical, since right ⊥ forward); else
+  // an arbitrary horizontal axis unrelated to the view. The last two only
+  // matter when |af·worldUp| ≈ 1 (e.g. entering VR looking straight down at
+  // Earth) — right there pitch0 ≈ ±π/2 so cos(pitch0) ≈ 0 and yaw stops
+  // affecting the reproduced direction anyway, making the exact fallback
+  // choice harmless as long as it's finite (never NaN).
+  const afHoriz = rejectAlong(af, worldUp);
+  const afHorizLen = Math.hypot(afHoriz[0], afHoriz[1], afHoriz[2]);
+  let heading: Vec3;
+  if (afHorizLen >= HEADING_EPS) {
+    heading = afHoriz;
+  } else {
+    const rightLevel = imagePlaneBasis(af, 0, worldUp).right;
+    heading =
+      Math.hypot(rightLevel[0], rightLevel[1], rightLevel[2]) >= HEADING_EPS
+        ? rightLevel
+        : referenceHorizontal(worldUp);
+  }
+  const Z0 = normalize3(heading);
+  const X0 = cross3(worldUp, Z0);
 
   // ── Left-stick orbit, session-scoped, reset to 0 on every focus change ──
-  // M = Ryaw_world(worldUp) · A · Rpitch(XR +X): pitch is right-multiplied —
-  // rotate the XR-space vector about the viewer's own right axis, then through
-  // the frozen anchor A — so tilting up/down keeps the classic first-person
-  // orbit feel. Yaw is left-multiplied AFTER A, about the frozen worldUp axis
-  // (not A's XR-space +Y), so circling left/right always turns about the
-  // scene's actual up regardless of how A happened to be tilted at session
-  // start — this is the fix for the "orbit is on an angle" bug. Since the
-  // per-eye position term below is an offset from E_XR (the active focus's
-  // XR-space pin), rotating that offset orbits the view about the focus's
-  // centre — the focus itself never moves; the world visibly spins around it.
   let orbitYawRad = 0;
   let orbitPitchRad = 0;
-  const rotOrbited = (v: Vec3): Vec3 =>
-    rotateAboutAxis(rot(rotateAboutAxis(v, XR_RIGHT_AXIS, orbitPitchRad)), worldUp, orbitYawRad);
 
   // Size the canvas backing store to the per-eye texture so renderTargets
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
@@ -620,7 +716,9 @@ async function startSession(
   let warnedViewport = false;
   let lastFrameTimeMs: number | null = null;
 
-  pushDiag(`layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`);
+  pushDiag(
+    `layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`,
+  );
   let diagFramesLeft = 1;
 
   session.addEventListener('end', () => {
@@ -667,7 +765,8 @@ async function startSession(
     const pose = frame.getViewerPose(refSpace);
     if (!pose) return;
 
-    const dtSeconds = lastFrameTimeMs === null ? null : Math.min((time - lastFrameTimeMs) / 1000, 0.1);
+    const dtSeconds =
+      lastFrameTimeMs === null ? null : Math.min((time - lastFrameTimeMs) / 1000, 0.1);
     lastFrameTimeMs = time;
 
     // Resolve this frame's focus center + scale first — ages any in-flight
@@ -755,12 +854,47 @@ async function startSession(
     }
     prevBothSqueezes = bothSqueezes;
 
+    // Roll-free orbit basis for this frame — rebuilt from (yaw0+yaw,
+    // pitch0+pitch) about worldUp every frame (see the setup-time comment
+    // above), not composed from the previous frame's basis, so error can't
+    // accumulate and no yaw/pitch combination can tilt the horizon.
+    const orbitPitch = pitch0 + orbitPitchRad;
+    const cosOrbitPitch = Math.cos(orbitPitch);
+    const sinOrbitPitch = Math.sin(orbitPitch);
+    const cosOrbitYaw = Math.cos(orbitYawRad);
+    const sinOrbitYaw = Math.sin(orbitYawRad);
+    const orbitForward: Vec3 = [
+      X0[0] * cosOrbitPitch * sinOrbitYaw +
+        worldUp[0] * sinOrbitPitch +
+        Z0[0] * cosOrbitPitch * cosOrbitYaw,
+      X0[1] * cosOrbitPitch * sinOrbitYaw +
+        worldUp[1] * sinOrbitPitch +
+        Z0[1] * cosOrbitPitch * cosOrbitYaw,
+      X0[2] * cosOrbitPitch * sinOrbitYaw +
+        worldUp[2] * sinOrbitPitch +
+        Z0[2] * cosOrbitPitch * cosOrbitYaw,
+    ];
+    const orbitBasis = imagePlaneBasis(orbitForward, 0, worldUp);
+    const OX = orbitBasis.right;
+    const OY = orbitBasis.up;
+    const OZ: Vec3 = [-orbitForward[0], -orbitForward[1], -orbitForward[2]];
+    // Rotates an XR-local vector (x→right, y→up, z→backward) into world
+    // space through this frame's basis — the position offset below rotates
+    // the same way, orbiting the view about the focus's pinned centre.
+    const rotOrbited = (v: Vec3): Vec3 => [
+      OX[0] * v[0] + OY[0] * v[1] + OZ[0] * v[2],
+      OX[1] * v[0] + OY[1] * v[1] + OZ[1] * v[2],
+      OX[2] * v[0] + OY[2] * v[1] + OZ[2] * v[2],
+    ];
+
     const eyes: VrEye[] = [];
     const eyeCaptures: EyeCapture[] = [];
     for (const view of pose.views) {
       const sub = binding.getViewSubImage(layer, view);
       if (!warnedViewport && (sub.viewport.x !== 0 || sub.viewport.y !== 0)) {
-        console.warn('[vrSpike] non-zero subimage viewport — side-by-side layout unsupported by the spike');
+        console.warn(
+          '[vrSpike] non-zero subimage viewport — side-by-side layout unsupported by the spike',
+        );
         warnedViewport = true;
       }
       const m = view.transform.matrix; // eye→reference, col-major, metres
@@ -803,7 +937,12 @@ async function startSession(
           texWidth: sub.colorTexture.width,
           texHeight: sub.colorTexture.height,
           texLayers: sub.colorTexture.depthOrArrayLayers,
-          viewport: { x: sub.viewport.x, y: sub.viewport.y, width: sub.viewport.width, height: sub.viewport.height },
+          viewport: {
+            x: sub.viewport.x,
+            y: sub.viewport.y,
+            width: sub.viewport.width,
+            height: sub.viewport.height,
+          },
           proj: view.projectionMatrix,
           m,
           tan,
