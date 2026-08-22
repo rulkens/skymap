@@ -428,11 +428,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       );
       const radiusMpc = pivotRadiusMpc(focusRow);
       if (!bodyState || radiusMpc === null) return null;
+      // The pinned target, resolved exactly as `applyFocusedBodyPivot` will
+      // resolve it for the frame this move renders into — same
+      // `bodyMovesThisFrame` gate, same `+ followPanOffset`.
+      const pan = state.cameraRuntime.clock.followPanOffset;
+      const centre = bodyState.positionMpc;
       return {
         bodyId: focusRow.id as BodyId,
         bodyOrientation: bodyState.orientation,
-        bodyCentreMpc: bodyState.positionMpc,
+        bodyCentreMpc: centre,
         radiusMpc,
+        pinnedTargetMpc: bodyMovesThisFrame(focusRow)
+          ? [centre[0] + pan[0], centre[1] + pan[1], centre[2] + pan[2]]
+          : null,
       };
     },
 

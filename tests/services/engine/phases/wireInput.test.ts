@@ -392,6 +392,43 @@ describe('wireInput', () => {
     expect(state.picking.hoveredSurfacePoint).toBe(seeded);
   });
 
+  it('hands the drag solve the PINNED target, offset and all', async () => {
+    // §4.4's solve reconstructs its eye from a target. For a pinned focus the
+    // rendered target is `body centre + followPanOffset` — the slot a mid-drag
+    // zoom's lateral lands in — so the frame has to carry it; the drag
+    // register's own target is frozen at gesture start and cannot.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusKm: 6371,
+        },
+      }),
+    );
+    const pan: [number, number, number] = [1e-17, -2e-17, 3e-17];
+    state.cameraRuntime.clock.followPanOffset = pan;
+
+    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
+    const frame = options?.dragPivotFrame?.();
+    expect(frame).not.toBeNull();
+
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    expect(frame!.pinnedTargetMpc).not.toBeNull();
+    for (let i = 0; i < 3; i++) {
+      expect(frame!.pinnedTargetMpc![i]).toBeCloseTo(earth.positionMpc[i]! + pan[i]!, 30);
+    }
+  });
+
   it('routes a zoom tick over a followed body: distance to the follow slot, lateral to followPanOffset', async () => {
     // The pivot-pin SETS `target = bodyPosition + followPanOffset` every frame
     // for a moving focus, so the lateral half of a zoom-to-cursor tick survives

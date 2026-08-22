@@ -51,10 +51,13 @@ import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { orbitRadPerPixel } from '../../../src/utils/camera/orbitRadPerPixel';
 import { cursorRayWorld } from '../../../src/utils/camera/cursorRayWorld';
 import { cursorSurfaceHit } from '../../../src/utils/camera/cursorSurfaceHit';
+import { lonLatDegToDirection } from '../../../src/utils/scene/lonLatDegToDirection';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { LonLatDeg } from '../../../src/@types/scene/LonLatDeg';
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 /** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */
@@ -792,6 +795,7 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
         ],
         bodyCentreMpc: [0, 0, 0],
         radiusMpc: RADIUS_MPC,
+        pinnedTargetMpc: null,
       }),
     });
 
@@ -843,6 +847,7 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
         ],
         bodyCentreMpc: [0, 0, 0],
         radiusMpc: RADIUS_MPC,
+        pinnedTargetMpc: null,
       }),
       pivotRadiusMpc: () => RADIUS_MPC,
       pivotAltitudeMpc: () => cam.distance - RADIUS_MPC,
@@ -864,5 +869,167 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
       RADIUS_MPC,
     );
     expect(cam.yaw).toBeCloseTo(-50 * radPerPixel, 10);
+  });
+
+  it('never alternates rate currencies within one gesture: one decline latches the fallback', () => {
+    // The two branches quote different rad/px. Near the limb — where the exact
+    // solve's solvability flickers pixel to pixel — alternating between them
+    // event-by-event is the pervasive "jumps and is not linear" the re-gate
+    // found. After the first decline every remaining move of the gesture must
+    // be flat-rate, exactly.
+    // 10 body radii out, where the disc is only ~87 px across on a 1000 px
+    // canvas — the regime the re-gate complained about, and the one where an
+    // ordinary drag crosses the silhouette constantly.
+    const DISTANCE = 100;
+    const attach = (cam: OrbitCamera, grab: { bodyId: BodyId; point: LonLatDeg }) => {
+      const { canvas, rec } = makeCanvas();
+      attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+        hoveredSurfacePoint: () => grab,
+        dragPivotFrame: () => ({
+          bodyId: 'earth' as BodyId,
+          bodyOrientation: IDENTITY_MAT3 as unknown as Mat3,
+          bodyCentreMpc: [0, 0, 0],
+          radiusMpc: RADIUS_MPC,
+          pinnedTargetMpc: null,
+        }),
+        pivotRadiusMpc: () => RADIUS_MPC,
+        pivotAltitudeMpc: () => DISTANCE - RADIUS_MPC,
+      });
+      return rec;
+    };
+
+    const cam = makeCamera(DISTANCE);
+    const grabbedPoint = { bodyId: 'earth' as BodyId, point: grabAtCss(cam, { x: 540, y: 540 }) };
+    const rec = attach(cam, grabbedPoint);
+
+    const radPerPixel = orbitRadPerPixel(
+      FOV_Y_RAD,
+      DISTANCE - RADIUS_MPC,
+      CANVAS_SIZE.height,
+      RADIUS_MPC,
+    );
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 540,
+      clientY: 540,
+    });
+
+    // 1 — a small drag on the disc: solved exactly, so it must NOT match the
+    // flat rate (otherwise the sequence below proves nothing).
+    win.fire('pointermove', { pointerId: 1, clientX: 544, clientY: 542 });
+    const yawAfterExact = cam.yaw;
+    expect(Math.abs(yawAfterExact - -4 * radPerPixel)).toBeGreaterThan(
+      0.05 * Math.abs(4 * radPerPixel),
+    );
+
+    // 2 — the cursor leaves the silhouette. The disc is centred on screen for
+    // every pose (the camera always looks at its target), so no rotation can
+    // put the grabbed point 200 px out: the solve declines. This latches.
+    win.fire('pointermove', { pointerId: 1, clientX: 700, clientY: 500 });
+    const yawAfterMiss = cam.yaw;
+    expect(yawAfterMiss - yawAfterExact).toBeCloseTo(-(700 - 544) * radPerPixel, 12);
+
+    // 3 — back onto the disc, a pixel delta the exact solve would happily take.
+    // With the latch it stays flat-rate; without it, this event's yaw comes
+    // from the exact solve and misses the flat-rate prediction outright.
+    win.fire('pointermove', { pointerId: 1, clientX: 520, clientY: 490 });
+    expect(cam.yaw - yawAfterMiss).toBeCloseTo(-(520 - 700) * radPerPixel, 12);
+
+    // 4 — a fresh gesture re-arms it: the exact solve is back on the next grab.
+    const camB = makeCamera(DISTANCE);
+    const grabB = { bodyId: 'earth' as BodyId, point: grabAtCss(camB, { x: 540, y: 540 }) };
+    const recB = attach(camB, grabB);
+    recB.fire('pointerdown', {
+      pointerId: 2,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 540,
+      clientY: 540,
+    });
+    win.fire('pointermove', { pointerId: 2, clientX: 544, clientY: 542 });
+    expect(camB.yaw).toBeCloseTo(yawAfterExact, 12);
+  });
+
+  it('solves against the PINNED target, not the drag register’s frozen one', () => {
+    // A wheel tick mid-drag writes its lateral to `clock.followPanOffset`, and
+    // the frame loop renders `target = body centre + offset`. The register's
+    // own target stays where gesture-start seeded it, so a solve measured from
+    // it aims from an eye that is not on screen — every later move of that
+    // gesture then tracks the cursor from the wrong place.
+    const PINNED_TARGET: Vec3 = [0.5, 0, 0];
+    const cam = makeCamera(15);
+
+    // The camera the frame loop actually renders: same orbit terms, pinned
+    // target. The grab is captured through THAT, as the live hover pick is.
+    const rendered = makeCamera(15);
+    rendered.target = [PINNED_TARGET[0], PINNED_TARGET[1], PINNED_TARGET[2]];
+    updatePosition(rendered);
+    const grabCss = { x: 700, y: 620 };
+    const grabbedPoint = { bodyId: 'earth' as BodyId, point: grabAtCss(rendered, grabCss) };
+
+    const { canvas, rec } = makeCanvas();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      hoveredSurfacePoint: () => grabbedPoint,
+      dragPivotFrame: () => ({
+        bodyId: 'earth' as BodyId,
+        bodyOrientation: IDENTITY_MAT3 as unknown as Mat3,
+        bodyCentreMpc: [0, 0, 0],
+        radiusMpc: RADIUS_MPC,
+        pinnedTargetMpc: PINNED_TARGET,
+      }),
+      pivotRadiusMpc: () => RADIUS_MPC,
+      pivotAltitudeMpc: () => cam.distance - RADIUS_MPC,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: grabCss.x,
+      clientY: grabCss.y,
+    });
+    const cursorCss = { x: grabCss.x + 6, y: grabCss.y - 4 };
+    win.fire('pointermove', { pointerId: 1, clientX: cursorCss.x, clientY: cursorCss.y });
+
+    // Cursor-lock residual, checked against the RENDERED camera (pinned target,
+    // the drag's new orbit terms) with an independently built ray.
+    const after = makeCamera(15);
+    after.target = [PINNED_TARGET[0], PINNED_TARGET[1], PINNED_TARGET[2]];
+    after.yaw = cam.yaw;
+    after.pitch = cam.pitch;
+    updatePosition(after);
+
+    const ray = cursorRayWorld(
+      cursorCss,
+      CANVAS_SIZE,
+      after.position,
+      forwardOf(after),
+      0,
+      [0, 1, 0],
+      FOV_Y_RAD,
+      1,
+    );
+    const hit = cursorSurfaceHit(ray, [0, 0, 0], RADIUS_MPC, IDENTITY_MAT3);
+    expect(hit).not.toBeNull();
+    // Angular miss between what the cursor now points at and what it grabbed.
+    const a = lonLatDegToDirection(hit!);
+    const b = lonLatDegToDirection(grabbedPoint.point);
+    const missRad = Math.acos(Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+    expect(missRad).toBeLessThan(1e-7);
+
+    // …and the exact solve is what achieved it. Measured from the frozen
+    // target the grabbed point projects ~86 px from where it really is, so the
+    // solve either declines (trust bound) or answers wrong — either way the
+    // gesture drops to the flat rate, which this pins apart from.
+    const radPerPixel = orbitRadPerPixel(
+      FOV_Y_RAD,
+      15 - RADIUS_MPC,
+      CANVAS_SIZE.height,
+      RADIUS_MPC,
+    );
+    expect(Math.abs(cam.yaw - -6 * radPerPixel)).toBeGreaterThan(0.02 * Math.abs(6 * radPerPixel));
   });
 });

@@ -130,6 +130,16 @@ export type OrbitControlsOptions = {
     readonly bodyOrientation: Mat3;
     readonly bodyCentreMpc: Vec3;
     readonly radiusMpc: number;
+    /**
+     * The orbit target the frame loop will actually render this focus around —
+     * `bodyCentreMpc + clock.followPanOffset` — or `null` when the focus is not
+     * pivot-pinned (a static body keeps its committed target). The drag
+     * register's own `target` is seeded once at gesture start, so mid-gesture
+     * it is stale by exactly the pin: the body's motion since, plus any zoom
+     * lateral the offset absorbed. The solve reads this instead; nothing about
+     * the register's target WRITES changes (`accumulateFollowPan` diffs them).
+     */
+    readonly pinnedTargetMpc: Vec3 | null;
   } | null;
   /**
    * Called on the first pointer contact that begins a new gesture (i.e. when

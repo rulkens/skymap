@@ -65,6 +65,7 @@ import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOpti
 import { updatePosition } from '../../utils/camera/updatePosition';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { surfaceDragRotation } from '../../utils/camera/surfaceDragRotation';
+import { PITCH_LIMIT } from '../../utils/camera/pitchLimit';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
 import { vec3 } from 'wgpu-matrix';
@@ -74,27 +75,6 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-/**
- * Maximum allowed pitch angle in radians — clamped just below π/2 (90°).
- *
- * ### Why not exactly π/2?
- *
- * At pitch = ±π/2 the camera sits exactly on the world's +Y or −Y pole.
- * At that point the camera's "forward" direction (toward the target) is
- * perfectly aligned with the world "up" vector `[0, 1, 0]` used by `lookAt`.
- * When forward and up are collinear, `lookAt` cannot determine a unique
- * "right" axis: the cross product of two parallel vectors is the zero vector.
- * The result is a degenerate (all-NaN) view matrix — this is the **gimbal
- * lock** singularity. Every orbit camera must guard against it.
- *
- * Subtracting a small ε (0.01 rad ≈ 0.57°) keeps the camera safely off the
- * poles so `lookAt` always has a well-defined "up" direction. The user will
- * never notice the 0.57° gap.
- *
- * See also: the ⚠ note in `orbitCamera.ts` on `OrbitCameraInit.pitch`.
- */
-const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 /**
  * Gap (ms) above which a wheel tick starts a NEW gesture rather than
@@ -169,6 +149,15 @@ export function attachOrbitControls(
   // falls back to `orbitRadPerPixel`'s flat rate (the "Drag hit/miss
   // coexistence" constraint: hit and miss are branches of ONE drag path).
   let grabbedPoint: { bodyId: BodyId; point: LonLatDeg } | null = null;
+
+  // Latched off for the REST of the gesture the first time the exact solve
+  // declines (spec §4.4 / FW-D M1). The two paths quote different rad/px
+  // currencies, so alternating between them event-by-event — which is the
+  // common case near the limb, where solvability flickers pixel to pixel — is
+  // felt as the drag repeatedly jumping and changing gear. One currency per
+  // gesture is worth more than exactness on the events that still solve; a
+  // fresh pointerdown re-grabs and re-arms.
+  let exactSolveLatchedOff = false;
 
   // ── Multi-touch state ─────────────────────────────────────────────────────
   //
@@ -304,6 +293,7 @@ export function attachOrbitControls(
       // hit (or the getter is absent), which the orbit branch reads as "use
       // the flat-rate fallback".
       grabbedPoint = options?.hoveredSurfacePoint?.() ?? null;
+      exactSolveLatchedOff = false;
 
       // Notify the engine that a new gesture is starting. The engine uses this
       // to seed the drag register from the live produced pose (so a mid-tween
@@ -527,9 +517,18 @@ export function attachOrbitControls(
     // centre). `dragPivotFrame` is read fresh every move, not cached from
     // gesture start, so a body that itself orbits between ticks is handled
     // correctly by construction.
-    if (grabbedPoint !== null) {
+    if (grabbedPoint !== null && !exactSolveLatchedOff) {
       const frame = options?.dragPivotFrame?.() ?? null;
       if (frame !== null && frame.bodyId === grabbedPoint.bodyId) {
+        // The eye the solve measures from must be the one on SCREEN. For a
+        // pivot-pinned focus the frame loop SETS `target = body centre +
+        // followPanOffset` every frame, so the drag register's `target` is
+        // frozen at gesture start — a mid-drag zoom's lateral and the body's
+        // own motion both land in the offset and nowhere else. Read-side
+        // only: the register's target keeps `accumulateFollowPan`'s write
+        // semantics untouched.
+        const solveCam =
+          frame.pinnedTargetMpc === null ? cam : { ...cam, target: frame.pinnedTargetMpc };
         // Screen basis: `cam.roll` / `frameUp(cam.upBasis)`, mirroring the
         // pan branch's reads above — this is the basis `computeViewProj`
         // actually renders with, NOT `poseBasis` (which only decodes where
@@ -540,26 +539,29 @@ export function attachOrbitControls(
           frame.bodyOrientation,
           frame.bodyCentreMpc,
           frame.radiusMpc,
-          cam,
+          solveCam,
           cam.roll ?? 0,
           frameUp(cam.upBasis, upRefScratch),
           cam.fovYRad,
           cam.aspect,
           { width: canvas.clientWidth, height: canvas.clientHeight },
           { x: e.clientX, y: e.clientY },
+          Math.hypot(dx, dy),
         );
         if (solved !== null) {
           cam.yaw = solved.yaw;
-          // Same gimbal-lock guard the flat-rate path applies below (see
-          // PITCH_LIMIT's comment) — the exact solve can walk pitch to the
-          // pole just as easily as the flat rate can.
+          // Final safety on whichever path won — the solve already refuses a
+          // solution past the limit rather than clamping one (see
+          // `surfaceDragRotation`'s `accept`).
           cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, solved.pitch));
           updatePosition(cam);
           options?.onChange?.();
           return;
         }
-        // Non-convergent or degenerate solve — fall through to the flat-rate
-        // miss branch below, same as an unmatched/absent grab.
+        // Declined — degenerate, non-convergent, or a step this event could
+        // not plausibly want. Fall through to the flat rate, and stay there
+        // for the rest of the gesture.
+        exactSolveLatchedOff = true;
       }
     }
 

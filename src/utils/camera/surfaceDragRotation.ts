@@ -17,15 +17,18 @@
  * `frameUp(cam.upBasis)` (see `computeViewProj.ts`), NOT `poseBasis`, which
  * only governs the yaw/pitch DECODE (where the eye sits), never the screen
  * plane. Two-variable Newton drives the projection's residual against
- * `cursorCss` to zero, with a FRESH finite-difference Jacobian every step —
- * full convergence inside one call, not a single linear step, so a big
- * cursor jump or a limb grab still lands exactly.
+ * `cursorCss` to zero, with a FRESH finite-difference Jacobian every step.
+ * A converged root is then screened for trustworthiness — see `accept` below.
  */
 
 import { lonLatDegToDirection } from '../scene/lonLatDegToDirection';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
+import { shortestAngleDelta } from '../math/shortestAngleDelta';
 import { yawPitchToDir } from './yawPitchToDir';
 import { imagePlaneBasis } from './imagePlaneBasis';
+import { eyeAltitudeMpc } from './eyeAltitudeMpc';
+import { groundTrackingRadPerPixel } from './groundTrackingRadPerPixel';
+import { PITCH_LIMIT } from './pitchLimit';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -33,6 +36,22 @@ import type { Vec3 } from '../../@types/math/Vec3';
 const MAX_NEWTON_ITERS = 20;
 const RESIDUAL_TOL_PX = 1e-9;
 const FINITE_DIFF_EPS_RAD = 1e-6;
+
+/**
+ * How many times the centre-screen ground-tracking rate this solve may exceed
+ * before its answer is treated as a failure. Measured against the solve itself
+ * over 0.001–200 body radii of altitude, every disc position out to 0.7 of the
+ * visible radius, pitches to 63°, drags of 1–36 px: median 1.30x, p90 2.44x,
+ * p95 3.61x. 6 clears p95 by 1.7x and still accepts 98% of that sample, while
+ * shedding the tail — grazing-limb and near-pole configurations whose
+ * pixel-exact answer is a 10°-per-pixel lurch, and far Newton roots (the
+ * captured bug reached 204 rad of yaw on a 2 px drag).
+ */
+const MAX_SOLVE_RATE_MULT = 6;
+
+/** A sub-pixel event still gets one pixel of allowance, so the cap can never
+ * collapse to zero on a fractional-CSS-pixel move. */
+const MIN_SOLVE_STEP_PX = 1;
 
 export function surfaceDragRotation(
   grabbedPoint: LonLatDeg,
@@ -55,6 +74,9 @@ export function surfaceDragRotation(
   aspect: number,
   canvasCssSize: Readonly<{ width: number; height: number }>,
   cursorCss: Readonly<{ x: number; y: number }>,
+  // CSS pixels the cursor moved on THIS event — the yardstick the accepted
+  // rotation is bounded against (see `MAX_SOLVE_RATE_MULT`).
+  pxMoved: number,
 ): { readonly yaw: number; readonly pitch: number } | null {
   // Fixed world position of the grabbed point. local→world: bodyOrientation's
   // columns are local axes in world space (the convention `lonLatFocusPose`
@@ -104,6 +126,52 @@ export function surfaceDragRotation(
     };
   };
 
+  // The rotation this event is allowed to spend, in the same currency the flat
+  // rate is quoted in: `groundTrackingRadPerPixel` at the PRE-event eye is
+  // exactly what a screen-centre grab needs, and the allowance is a multiple of
+  // it. Nothing else bounds Newton — it will happily converge onto a root many
+  // turns away, or onto the true-but-hyper-sensitive root of a grazing-limb
+  // grab, and either reads on screen as the jump this cap exists to shed.
+  const eyeDir = rotateVec3ByTightMat3(yawPitchToDir(cam.yaw, cam.pitch), cam.poseBasis);
+  const eye0: Vec3 = [
+    cam.target[0] + eyeDir[0] * cam.distance,
+    cam.target[1] + eyeDir[1] * cam.distance,
+    cam.target[2] + eyeDir[2] * cam.distance,
+  ];
+  const maxStepRad =
+    MAX_SOLVE_RATE_MULT *
+    groundTrackingRadPerPixel(
+      fovYRad,
+      eyeAltitudeMpc(eye0, bodyCentreMpc, radiusMpc),
+      canvasCssSize.height,
+      radiusMpc,
+    ) *
+    Math.max(pxMoved, MIN_SOLVE_STEP_PX);
+
+  // A converged root is only usable if it is the branch the camera is ON and
+  // the step it asks for is one the drag could plausibly want.
+  //   - Yaw is re-based to its nearest representative: the projection is
+  //     2π-periodic in yaw, so a root 10 turns out (the captured 65.87 rad) is
+  //     the same pose stated absurdly — and the register would keep the absurd
+  //     number as the next event's starting guess.
+  //   - Past `PITCH_LIMIT` the answer is a FAILURE, not something to clamp:
+  //     clamping silently breaks the cursor lock the solve exists to hold.
+  //   - The step is measured as `hypot(Δyaw, Δpitch)`, not as the eye's angular
+  //     motion: near the pole most of a yaw change comes out as image ROLL
+  //     rather than eye translation, and the picture is disturbed just as much
+  //     either way.
+  const accept = (
+    yawRaw: number,
+    pitchSolved: number,
+  ): { readonly yaw: number; readonly pitch: number } | null => {
+    if (Math.abs(pitchSolved) > PITCH_LIMIT) return null;
+    const dYaw = shortestAngleDelta(cam.yaw, yawRaw);
+    const dPitch = pitchSolved - cam.pitch;
+    // Negated comparison so a non-finite step fails the test rather than passing it.
+    if (!(Math.hypot(dYaw, dPitch) <= maxStepRad)) return null;
+    return { yaw: cam.yaw + dYaw, pitch: pitchSolved };
+  };
+
   let yaw = cam.yaw;
   let pitch = cam.pitch;
 
@@ -112,7 +180,7 @@ export function surfaceDragRotation(
     if (p0 === null) return null;
     const fx = p0.x - cursorCss.x;
     const fy = p0.y - cursorCss.y;
-    if (Math.abs(fx) < RESIDUAL_TOL_PX && Math.abs(fy) < RESIDUAL_TOL_PX) return { yaw, pitch };
+    if (Math.abs(fx) < RESIDUAL_TOL_PX && Math.abs(fy) < RESIDUAL_TOL_PX) return accept(yaw, pitch);
 
     const py = projectCss(yaw + FINITE_DIFF_EPS_RAD, pitch);
     const pp = projectCss(yaw, pitch + FINITE_DIFF_EPS_RAD);
