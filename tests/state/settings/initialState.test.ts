@@ -108,6 +108,23 @@ describe('buildInitialSettings', () => {
       }
     });
 
+    it('disables the selection-ring and Label2D swap-target passes', () => {
+      // Regression: Label2D captions swim with the head in VR because their
+      // projections memoize per frame-ctx, serving one eye's vp to both — so
+      // they must be off whenever `produceVrLabels`'s Label3D captions take
+      // over (see initialState.ts's disabledPasses comment for the pass ↔
+      // director mapping).
+      setSearch('?vr');
+      const { disabledPasses } = buildInitialSettings().debug;
+      expect(disabledPasses).toEqual({
+        'selection-ring': true,
+        'near0-selection-ring': true,
+        labels: true,
+        'marker-lines': true,
+        'foreground-labels': true,
+      });
+    });
+
     it('defaults 2MRS and Famous on while forcing every other galaxy catalog off', () => {
       // 2MRS is the headset's default galaxy layer: 35k all-sky points, light
       // enough for the Quest's frame budget. Famous is the curated thumbnail

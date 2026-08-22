@@ -308,8 +308,28 @@ export function buildInitialSettings(): EngineSettingsState {
       // consults (see its `disabledPasses[l.name]` check), so reusing it here
       // needs no new field. The ring reads as a distracting reticle in the
       // headset; the DebugPanel toggle stays live so it can be flipped back
-      // on for the flat page. Delete with the spike.
-      disabledPasses: vrSpike ? { 'selection-ring': true, 'near0-selection-ring': true } : {},
+      // on for the flat page.
+      //
+      // The three Label2D swap-target layers are disabled too: their
+      // projections (`cosmoLabelProjection.ts` / `near0LabelProjection.ts`)
+      // memoize per `ReadyFrameContext`, so in VR they'd serve one eye's
+      // projection to both — captions would swim with the head regardless of
+      // the mono-camera issue this spike otherwise works around. `labels` +
+      // `marker-lines` are the COSMO pair (famous-galaxy + structure + Milky
+      // Way captions and their leader lines); `foreground-labels` is the
+      // NEAR0 pair (constellation + scene-body captions, whose leader-line
+      // renderer draws inside the same layer, no separate pass name).
+      // `produceVrLabels` (Label3D) replaces the COSMO content in-headset.
+      // Delete with the spike.
+      disabledPasses: vrSpike
+        ? {
+            'selection-ring': true,
+            'near0-selection-ring': true,
+            labels: true,
+            'marker-lines': true,
+            'foreground-labels': true,
+          }
+        : {},
       // 'auto' reproduces the old timing-derived pass shape, so production +
       // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
       renderStrategy: 'auto',
