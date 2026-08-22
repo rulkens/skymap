@@ -9,19 +9,24 @@
  * program once per eye into the projection layer's textures.
  *
  * World mapping: world-fixed active focus. The active focus's centre (Mpc) is
- * placed at a fixed point in XR 'local' space — 1.75 m in front of the
- * session-start head pose, at head height — scaled so it reads at its preset
- * apparent radius (metersToMpc = focus.radiusMpc / focus.apparentRadiusM).
- * The session-start focus is the flat app's live 2D view (whatever it was
- * centred/framed on when "Enter VR" was pressed), falling back to Earth only
- * if the 2D distance is unusable; see `focusCurrentView` below. The anchor
- * rotation basis is captured ONCE at session start (not reassembled per
- * frame): freezing it is what makes the virtual world rigid so the user can
- * walk around the focus, at the cost of orbit-camera rotation (tweens, drag)
- * no longer steering the VR view — fine for the spike. Position still comes
- * from the focus's live centre each frame (a followed body keeps moving; the
- * other presets are constants), so rotation freezes while translation
- * doesn't.
+ * placed at a fixed point in XR 'local' space — 1.75 m along the head's
+ * ACTUAL forward direction, seeded from the first valid XR pose (re-seeded
+ * on a Quest recenter) rather than a hard-coded 'local' −Z — scaled so it
+ * reads at its preset apparent radius (metersToMpc = focus.radiusMpc /
+ * focus.apparentRadiusM). The same seeding folds the head's entry yaw into
+ * the world-orientation quaternion so the focus presents straight ahead
+ * regardless of which way 'local' −Z happens to point (see
+ * `deriveEntrySeed`/`foldEntryYaw` below). The session-start focus is the
+ * flat app's live 2D view (whatever it was centred/framed on when "Enter VR"
+ * was pressed), falling back to Earth only if the 2D distance is unusable;
+ * see `focusCurrentView` below. The anchor rotation basis is captured ONCE at
+ * session start (not reassembled per frame) and then yaw-corrected by the
+ * entry seed: freezing it is what makes the virtual world rigid so the user
+ * can walk around the focus, at the cost of orbit-camera rotation (tweens,
+ * drag) no longer steering the VR view — fine for the spike. Position still
+ * comes from the focus's live centre each frame (a followed body keeps
+ * moving; the other presets are constants), so rotation freezes while
+ * translation doesn't.
  *
  * Focus navigation: the right controller's A/B and left controller's X/Y
  * face buttons (xr-standard buttons[4]/[5]) tween (center, metersToMpc) to
@@ -61,15 +66,14 @@ import { matrixToQuaternion } from '../../utils/math/matrixToQuaternion';
 import { quatFromAxisAngle } from '../../utils/math/quatFromAxisAngle';
 import { multiplyQuat } from '../../utils/math/multiplyQuat';
 import { rotateVec3ByQuat } from '../../utils/math/rotateVec3ByQuat';
+import { rejectVec3 } from '../../utils/math/rejectVec3';
 import { vrOverride, tangentsOf, viewFromBasis, viewFromBasisOriginRelative } from './vrSpikeState';
 import type { VrEye, EyeTangents } from './vrSpikeState';
 
 /** Earth's apparent radius inside the headset, metres (user request: ~1.5 m tall globe). */
 const EARTH_RADIUS_TARGET_M = 0.75;
 /** Head → focus-centre distance in XR 'local' space, metres — same pin for every focus preset. */
-const HEAD_TO_EARTH_CENTER_M = 1.75;
-/** The active focus's target position in 'local' space: straight ahead of the session-start head, at head height. */
-const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
+export const HEAD_TO_EARTH_CENTER_M = 1.75;
 
 // ── Thumbsticks: right = zoom, left = orbit ────────────────────────────────
 /** Ignore stick noise below this magnitude (xr-standard axes rest near 0 but rarely at exactly 0). */
@@ -138,23 +142,54 @@ function readFaceButtonPressed(
   return findXrGamepad(session, handedness)?.buttons[buttonIndex]?.pressed ?? false;
 }
 
-/**
- * `v` with its component along unit `axis` removed — `v` projected onto the
- * plane through the origin perpendicular to `axis`.
- */
-function rejectAlong(v: Readonly<Vec3>, axis: Readonly<Vec3>): Vec3 {
-  const d = v[0] * axis[0] + v[1] * axis[1] + v[2] * axis[2];
-  return [v[0] - axis[0] * d, v[1] - axis[1] * d, v[2] - axis[2] * d];
-}
-
 /** XR-reference space gravity vertical — the physical axis the left-stick's
  * yaw and the exposed `physicalUpWorld` both key off, distinct from the
  * cosmological orientation-frame pole used only once, at session start. */
 const PHYSICAL_UP_XR: Vec3 = [0, 1, 0];
-/** Below this horizontal-component length, the head is looking too near
- * straight up/down (along PHYSICAL_UP_XR) for its right axis to give a
- * stable pitch pivot this frame — reuse the last valid one instead. */
+/** Below this horizontal-component length, a pose is looking too near
+ * straight up/down (along PHYSICAL_UP_XR) for a stable horizontal axis this
+ * frame: reused both by the orbit pitch pivot (r̂, reuse the last valid one)
+ * and by the entry-yaw forward derivation below (fall back to local [0,0,-1]). */
 const RHAT_DEGENERATE_EPS = 1e-3;
+
+/**
+ * The head's yaw-only forward direction (unit, horizontal) and the pin 1.75 m
+ * along it from `headPositionLocal` — both in XR 'local' space. `rawBackAxisLocal`
+ * is the pose transform's z-basis column (points backward, away from gaze).
+ */
+export function deriveEntrySeed(
+  rawBackAxisLocal: Readonly<Vec3>,
+  headPositionLocal: Readonly<Vec3>,
+): { pinLocal: Vec3; yawRad: number } {
+  const rawForward: Vec3 = [-rawBackAxisLocal[0], -rawBackAxisLocal[1], -rawBackAxisLocal[2]];
+  const horiz = rejectVec3(rawForward, PHYSICAL_UP_XR);
+  const horizLen = Math.hypot(horiz[0], horiz[1], horiz[2]);
+  const forward: Vec3 =
+    horizLen >= RHAT_DEGENERATE_EPS
+      ? [horiz[0] / horizLen, horiz[1] / horizLen, horiz[2] / horizLen]
+      : [0, 0, -1];
+  const pinLocal: Vec3 = [
+    headPositionLocal[0] + HEAD_TO_EARTH_CENTER_M * forward[0],
+    headPositionLocal[1] + HEAD_TO_EARTH_CENTER_M * forward[1],
+    headPositionLocal[2] + HEAD_TO_EARTH_CENTER_M * forward[2],
+  ];
+  // Signed angle θ with R(ŷ, θ) carrying canonical local −Z onto `forward`:
+  // right-hand rotation about +Y sends (0,0,−1) to (−sinθ, 0, −cosθ), so
+  // solving −sinθ=forward.x, −cosθ=forward.z gives atan2(−x, −z).
+  const yawRad = Math.atan2(-forward[0], -forward[2]);
+  return { pinLocal, yawRad };
+}
+
+/**
+ * Fold the entry yaw into a mapping quaternion: M ← M ∘ R(ŷ, −θ). We want
+ * M_new(forward) = M_old(local −Z) — the anchor's "straight ahead" reappears
+ * along the head's ACTUAL facing direction. Since forward = R(ŷ, θ)(−Z),
+ * substituting gives M_new = M_old ∘ R(ŷ, −θ) (multiplyQuat(a, b) applies b
+ * then a).
+ */
+export function foldEntryYaw(m: Readonly<Vec4>, yawRad: number): Vec4 {
+  return multiplyQuat(m, quatFromAxisAngle(PHYSICAL_UP_XR, -yawRad));
+}
 
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
 // has no XRGPUBinding types yet. All spike-local, all erased with the spike.
@@ -171,6 +206,11 @@ type XRViewerPoseish = {
 };
 type XRFrameish = {
   getViewerPose(ref: unknown): XRViewerPoseish | null;
+};
+// 'reset' fires on a Quest system recenter — the trigger to re-seed the pin.
+type XRReferenceSpaceish = {
+  addEventListener(type: string, cb: () => void): void;
+  removeEventListener(type: string, cb: () => void): void;
 };
 type XRSessionish = {
   requestReferenceSpace(kind: string): Promise<unknown>;
@@ -647,7 +687,7 @@ async function startSession(
 
   const layer = binding.createProjectionLayer({ colorFormat, textureType: 'texture-array' });
   session.updateRenderState({ layers: [layer] });
-  const refSpace = await session.requestReferenceSpace('local');
+  const refSpace = (await session.requestReferenceSpace('local')) as XRReferenceSpaceish;
 
   // ── Anchor view direction, frozen once at session start ────────────────
   // World-fixed VR needs a rigid world orientation while the user walks;
@@ -672,7 +712,7 @@ async function startSession(
   af[1] /= afl;
   af[2] /= afl;
   // World mapping is eyeWorld = focusCenterWorld + metersToMpc · M · (p_XR −
-  // E_XR): M is the one rotation carrying XR-local axes (x=right, y=up,
+  // pinLocal): M is the one rotation carrying XR-local axes (x=right, y=up,
   // z=back) into world space, stored as a quaternion so the left-stick orbit
   // below can update it incrementally by POST-multiplying rotations about
   // physical (XR-reference) axes — see onXRFrame. Seeded here from the
@@ -699,8 +739,38 @@ async function startSession(
   // Session-start basis, kept for focus-preset resets (see selectFocus): a
   // preset jump re-centres the pivot (C) but should present the new focus
   // face-on, the same view direction as session start, rather than carrying
-  // over whatever the user had orbited to.
-  const M0: Vec4 = [M[0], M[1], M[2], M[3]];
+  // over whatever the user had orbited to. `let`, not `const`: seedEntryPin
+  // folds the entry yaw into it too, so a preset jump doesn't snap back to
+  // the unyawed anchor frame.
+  let M0: Vec4 = [M[0], M[1], M[2], M[3]];
+
+  // ── Entry pin: where the focus is anchored in XR 'local' space ─────────
+  // Placeholder until the first valid pose seeds it — inert, since onXRFrame
+  // returns before any pose-consuming code runs whenever `frame.getViewerPose`
+  // comes back null. `pinSeeded` false also re-arms on a reference-space
+  // 'reset' (Quest recenter), see below.
+  let pinLocal: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
+  let pinSeeded = false;
+  /**
+   * The one seeding function: derive the head's actual forward from `pose`,
+   * plant the pin 1.75 m along it, and fold the yaw delta into M and M0. Runs
+   * on the first valid pose and again after every reference-space reset —
+   * same call, same math, no second copy of the derivation.
+   */
+  const seedEntryPin = (pose: XRViewerPoseish): void => {
+    const headMatrix = pose.transform ? pose.transform.matrix : pose.views[0]!.transform.matrix;
+    const headPositionLocal: Vec3 = [headMatrix[12]!, headMatrix[13]!, headMatrix[14]!];
+    const rawBackAxisLocal: Vec3 = [headMatrix[8]!, headMatrix[9]!, headMatrix[10]!];
+    const seed = deriveEntrySeed(rawBackAxisLocal, headPositionLocal);
+    pinLocal = seed.pinLocal;
+    M = foldEntryYaw(M, seed.yawRad);
+    M0 = foldEntryYaw(M0, seed.yawRad);
+    pinSeeded = true;
+  };
+  const onReferenceSpaceReset = (): void => {
+    pinSeeded = false;
+  };
+  refSpace.addEventListener('reset', onReferenceSpaceReset);
 
   // ── Left-stick orbit, session-scoped ────────────────────────────────────
   // Sum of applied pitch deltas — clamp bookkeeping only (ORBIT_PITCH_LIMIT_RAD
@@ -733,6 +803,7 @@ async function startSession(
   let diagFramesLeft = 1;
 
   session.addEventListener('end', () => {
+    refSpace.removeEventListener('reset', onReferenceSpaceReset);
     vrOverride.active = false;
     vrOverride.eyes = [];
     vrOverride.physicalUpWorld = [0, 1, 0];
@@ -783,6 +854,7 @@ async function startSession(
     session.requestAnimationFrame(onXRFrame);
     const pose = frame.getViewerPose(refSpace);
     if (!pose) return;
+    if (!pinSeeded) seedEntryPin(pose);
 
     const dtSeconds =
       lastFrameTimeMs === null ? null : Math.min((time - lastFrameTimeMs) / 1000, 0.1);
@@ -812,11 +884,11 @@ async function startSession(
       focusCenterWorld = activeFocus.centerWorldMpc();
     }
 
-    // Thumbstick zoom: rescale metersToMpc about focusCenterWorld/E_XR — the
-    // active focus stays pinned 1.75 m ahead of the session-start origin
-    // while its apparent size changes, since every eyeWorld below is an
-    // offset from that fixed pin scaled by metersToMpc. Suppressed mid-tween:
-    // the tween owns metersToMpc while it runs.
+    // Thumbstick zoom: rescale metersToMpc about focusCenterWorld/pinLocal —
+    // the active focus stays pinned 1.75 m along the seeded entry pin while
+    // its apparent size changes, since every eyeWorld below is an offset from
+    // that fixed pin scaled by metersToMpc. Suppressed mid-tween: the tween
+    // owns metersToMpc while it runs.
     if (dtSeconds !== null) {
       const rightStick = readStickAxes(session, 'right');
       if (tween === null && Math.abs(rightStick.y) > STICK_DEADZONE) {
@@ -842,7 +914,7 @@ async function startSession(
             pose.views[0]!.transform.matrix[1]!,
             pose.views[0]!.transform.matrix[2]!,
           ];
-      const rHatHoriz = rejectAlong(viewerRightXr, PHYSICAL_UP_XR);
+      const rHatHoriz = rejectVec3(viewerRightXr, PHYSICAL_UP_XR);
       const rHatLen = Math.hypot(rHatHoriz[0], rHatHoriz[1], rHatHoriz[2]);
       const rHat: Vec3 | null =
         rHatLen >= RHAT_DEGENERATE_EPS
@@ -929,15 +1001,15 @@ async function startSession(
       const ey: Vec3 = [m[4]!, m[5]!, m[6]!];
       const ez: Vec3 = [m[8]!, m[9]!, m[10]!];
       const ep: Vec3 = [m[12]!, m[13]!, m[14]!];
-      // Rotate through M (session-start anchor basis, left-stick-orbited
-      // since) into world space. Position offsets from the active focus's
-      // pinned 'local'-space point E_XR, not from the reference-space
-      // origin, so ep === E_XR maps to eyeWorld === focusCenterWorld
+      // Rotate through M (session-start anchor basis, entry-yaw-folded,
+      // left-stick-orbited since) into world space. Position offsets from the
+      // active focus's seeded pin `pinLocal`, not from the reference-space
+      // origin, so ep === pinLocal maps to eyeWorld === focusCenterWorld
       // regardless of orbit.
       const X = rotOrbited(ex);
       const Y = rotOrbited(ey);
       const Z = rotOrbited(ez);
-      const off = rotOrbited([ep[0] - E_XR[0], ep[1] - E_XR[1], ep[2] - E_XR[2]]);
+      const off = rotOrbited([ep[0] - pinLocal[0], ep[1] - pinLocal[1], ep[2] - pinLocal[2]]);
       const eyeWorld: Vec3 = [
         focusCenterWorld[0] + metersToMpc * off[0],
         focusCenterWorld[1] + metersToMpc * off[1],
@@ -992,9 +1064,9 @@ async function startSession(
       // gated its population in the loop above.
       const e0ep = eyeCaptures[0]!.ep;
       const headToFocusCenterM = Math.hypot(
-        e0ep[0] - E_XR[0],
-        e0ep[1] - E_XR[1],
-        e0ep[2] - E_XR[2],
+        e0ep[0] - pinLocal[0],
+        e0ep[1] - pinLocal[1],
+        e0ep[2] - pinLocal[2],
       );
       pushDiag(
         `focus=${activeFocus.label} metersToMpc=${metersToMpc.toExponential(3)} focusApparentRadiusM=${focusApparentRadiusM.toFixed(4)} headToFocusCenterM=${headToFocusCenterM.toFixed(4)}`,
