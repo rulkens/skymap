@@ -1338,7 +1338,7 @@ type SubsystemBundle = {
   liveness?: DeriveLiveness | InlineGates;
   wake?: (state, ctx) => boolean; // folded into the anim bag
   fades?: readonly FadeLayer[]; // FADE_LAYERS manifest derived by concatenation
-  labelProducers?: readonly LabelProducer[];
+  labelProducers?: readonly Label2DProducer[];
   markerProducers?: readonly MarkerProducer[];
   debug?: { groupTitle: string; sliders?: readonly SliderField[] };
 };

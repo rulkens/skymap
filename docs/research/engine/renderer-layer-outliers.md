@@ -59,12 +59,11 @@ where ≥2 layers share a gate.
 
 **Uploads inside `draw`**
 
-| ⬤   | layer            | note                                                                                                       |
-| --- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| 🟠  | starPoints       | `setStars` per frame, justified by rebasing header                                                         |
-| 🟠  | foregroundLabels | `setLabels` + `setLines`                                                                                   |
-| 🟠  | clipPathDebug    | `setLines`                                                                                                 |
-| 🟠  | starCatalog      | `prepareStarCut` mutates fade state + streams — memoised per ctx, pick path deliberately re-advances ramps |
+| ⬤   | layer         | note                                                                                                       |
+| --- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| 🟠  | starPoints    | `setStars` per frame, justified by rebasing header                                                         |
+| 🟠  | clipPathDebug | `setLines`                                                                                                 |
+| 🟠  | starCatalog   | `prepareStarCut` mutates fade state + streams — memoised per ctx, pick path deliberately re-advances ramps |
 
 **God-layers** (median layer ≈ 100 LoC)
 
@@ -119,8 +118,13 @@ where ≥2 layers share a gate.
    also reuses the shared `createAdditiveUpsample` factory directly (no new
    pipeline), so it is genuine evidence FOR the shared primitive, not a
    divergent one — except its `draw` bolts on a second concern the scaffold
-   doesn't have: after the blit, it also draws the band's full-res MSDF
-   lettering (`drawLabels`) through the same liveness gate. A shared
+   doesn't have: after the blit, `postBlit` draws the band's full-res MSDF
+   lettering through the shared `label3DRenderer` (rung 8, decisions.md #19;
+   `drawLabels` and its private pipeline are deleted). Liveness now lives in
+   the producer's `fadeAlpha` (`produceZoneOfAvoidanceLettering` reads
+   `deriveZoneOfAvoidanceLiveness` and emits no label at all when it is
+   `null`), not a second gate re-tested in the layer — `postBlit` guards
+   itself independently with a null-renderer + zero-glyphCount check. A shared
    `{name, slab, sourceTargetId, handleKey, enabled}` primitive would need an
    optional post-blit hook to fit this 4th row without a bolted branch (rule
    #10) — worth deciding at rung 2 rather than after, since it would collapse
@@ -188,17 +192,16 @@ flowchart LR
     F3["MW cloud-gen staleness +<br/>earth third ingest"] --> R3["rung 3"]
     F4["multi-item ingest<br/>divergence + volume ×5"] --> R4["rung 4"]
     F5["fade consumption<br/>canonical vs raw"] --> R7["rung 7"]
-    F6["label/marker<br/>shadow paths"] --> R8["rung 8 (new)"]
+    F6["label/marker<br/>shadow paths"] --> R8["rung 8"]
     HYG(["hygiene basket +<br/>backlog items"])
     classDef good fill:#1a7f37,stroke:#116329,color:#ffffff
     classDef warn fill:#bf8700,stroke:#9a6700,color:#ffffff
     classDef bad fill:#cf222e,stroke:#a40e26,color:#ffffff
     classDef out fill:#6e7781,stroke:#57606a,color:#ffffff
     class F1,R1 bad
-    class F2,R2,F5,R7 warn
+    class F2,R2,F5,R7,F6,R8 warn
     class F3,R3 good
     class F4,R4 warn
-    class F6,R8 out
     class HYG out
 ```
 
@@ -212,6 +215,6 @@ flowchart LR
 | ⚪  | foregroundLabels private director + structureMarkers shadow path + **zoneOfAvoidanceRenderer's private MSDF glyph pipeline (NEW, #555, §1 family A)** — a 3rd private label path                                                                          | underlying contract for `markerProducers` / director unification                                                                                                                                                  | **done — rung 8 (label-mechanism-unification, decisions.md #19).** All three named items closed: `foregroundLabelsLayer` collapsed onto `foregroundLabelDirector` (Label2DProducer), `structureMarkers` is a registered `MarkerProducer` walked by `runMarkerProducers`, and `zoneOfAvoidanceRenderer`'s private label pipeline is deleted in favour of the shared `label3DRenderer` (Label3DProducer). **`clipPathDebug`'s bypass was deliberately excluded from this rung** — it is a debug-geometry `setLines` with no glyphs, no label ownership, no declutter and no envelope, so folding it in would give `MarkerProducer` a label-free member solely to absorb a dev overlay (spec §1 non-goals); recorded here so the omission does not read as unfinished work. |
 | 🟢  | `foreground:0` gate — **10** layers gate on `FOREGROUND_MAX_DISTANCE_MPC` across **three** frame steps (not ×8: that counted the 8 `foreground:0` ROWS, of which only 6 gate explicitly; `fieldStarSphereLayer` gates not at all, by design — see `:165`) | already ruled: step-level gate, refined to the frame-step work alone, not a single step (decisions #7, refined by #16 D6)                                                                                         | the eventual frame-step work alone — rung 2 already shipped, without it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 🟢  | Grow-buffer helper ×7, fade-scratch ×4, dummy-fade copy, hypot ×10, sub-pixel ×3                                                                                                                                                                          | pure hygiene, no contract change                                                                                                                                                                                  | **hygiene basket** — one small PR anytime, or opportunistic within rungs that touch the files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| 🟢  | `starCatalogLayer` / `foregroundLabelsLayer` god-layer splits                                                                                                                                                                                             | worthwhile but not contract-blocking                                                                                                                                                                              | backlog; foregroundLabels split falls out of rung 8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 🟢  | `starCatalogLayer` god-layer split (983 LoC, unchanged)                                                                                                                                                                                                   | worthwhile but not contract-blocking                                                                                                                                                                              | backlog. `foregroundLabelsLayer`'s split is **done** — rung 8 collapsed it to 45 lines (§2's god-layer row, decisions.md #19)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 🟢  | hiResFamous substrate bypass + dual LRU                                                                                                                                                                                                                   | streamed-substrate consolidation                                                                                                                                                                                  | backlog (or ride rung 3's streamed work if cheap)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 🟠  | §5 bug-suspects                                                                                                                                                                                                                                           | verify-first (multiple-sufficient-causes rule)                                                                                                                                                                    | attach to the rung touching each area; compositor check DONE — RESOLVED NEGATIVE, rung 1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
