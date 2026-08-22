@@ -66,9 +66,6 @@ const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 const STICK_DEADZONE = 0.15;
 /** Full deflection ≈ doubling/halving metersToMpc per second (e^ln2 = 2). */
 const ZOOM_RATE = Math.LN2;
-/** The active focus's apparent radius is kept inside this range regardless of zoom input. */
-const FOCUS_APPARENT_RADIUS_MIN_M = 0.02;
-const FOCUS_APPARENT_RADIUS_MAX_M = 2000;
 /** Full deflection ≈ 1.2 rad/s of orbit yaw/pitch. */
 const ORBIT_RATE = 1.2;
 /** Pitch clamp — beyond this the view flips past the focus's poles. */
@@ -468,6 +465,14 @@ async function startSession(
   // doesn't change at runtime, unlike the old orbit-distance-derived scale).
   const EARTH_RADIUS_MPC = earthBody.radiusKm * SCALE_UNITS.KM_TO_MPC;
 
+  // Absolute stick-zoom bounds on metersToMpc — independent of whichever
+  // focus is active, so a preset tween never gets fought by a clamp sized
+  // for a different preset. Floor: Earth's apparent radius ≤ ~2000 m.
+  // Ceiling: the whole observable universe (HORIZON_RADIUS_GPC) fits within
+  // half a meter.
+  const METERS_TO_MPC_MIN = EARTH_RADIUS_MPC / 2000;
+  const METERS_TO_MPC_MAX = (HORIZON_RADIUS_GPC * 1000) / 0.5;
+
   // ── Focus-button navigation presets ─────────────────────────────────────
   // Each preset's target metersToMpc = radiusMpc / apparentRadiusM, so every
   // focus fills the same fraction of the headset view its radius implies.
@@ -657,9 +662,7 @@ async function startSession(
       const rightStick = readStickAxes(session, 'right');
       if (tween === null && Math.abs(rightStick.y) > STICK_DEADZONE) {
         metersToMpc *= Math.exp(ZOOM_RATE * rightStick.y * dtSeconds);
-        const metersToMpcMin = activeFocus.radiusMpc / FOCUS_APPARENT_RADIUS_MAX_M;
-        const metersToMpcMax = activeFocus.radiusMpc / FOCUS_APPARENT_RADIUS_MIN_M;
-        metersToMpc = Math.min(metersToMpcMax, Math.max(metersToMpcMin, metersToMpc));
+        metersToMpc = Math.min(METERS_TO_MPC_MAX, Math.max(METERS_TO_MPC_MIN, metersToMpc));
       }
 
       // Left-stick orbit: X = yaw (circle around the globe), Y = pitch
