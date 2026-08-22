@@ -109,10 +109,12 @@ export function renderFrame(input: RenderFrameInput): void {
     state.settings.bloom.enabled,
   );
   if (vrEyes) {
-    // THROWAWAY (vrSpike): walk the same program once per eye. applyVrEyeToCtx
-    // swaps the per-eye vp/slabs/camPos onto ctx and resets the first-touch set
-    // so every target clears again — the offscreen chain is reused sequentially
-    // within this one encoder, which pass ordering makes safe.
+    // THROWAWAY (vrSpike): walk the same program once per eye, each into its
+    // own encoder (see the per-eye submit below). applyVrEyeToCtx swaps the
+    // per-eye vp/slabs/camPos onto ctx and resets the first-touch set so
+    // every target clears again — the offscreen chain is reused sequentially
+    // across eyes, which pass ordering (each eye fully submitted before the
+    // next starts recording) makes safe.
     //
     // `layerAllow` is the spike's Earth-only start mode: non-null restricts
     // the walked layer list to the named subset (vrSpike.ts sets it at
@@ -121,9 +123,20 @@ export function renderFrame(input: RenderFrameInput): void {
       ? CONTENT_LAYERS.filter((l) => vrOverride.layerAllow!.has(l.name))
       : CONTENT_LAYERS;
     for (const eye of vrEyes) {
+      // THROWAWAY (vrSpike): each eye gets its OWN encoder + submit here.
+      // `device.queue.writeBuffer` (per-draw uniform uploads) lands in queue
+      // order IMMEDIATELY, ahead of any encoder's eventual `submit` — it is
+      // NOT ordered against the draws recorded between writes (the same
+      // writeBuffer-vs-submit landmine `planetRenderer`/`earthLayer` document
+      // for a single encoder). Sharing the outer `encoder` across both eyes
+      // meant eye 1's uniform writes clobbered eye 0's before either eye's
+      // draws were submitted, so both eyes presented eye 1's matrices —
+      // submitting per eye forces each eye's writes to land before its own
+      // draws submit.
+      const eyeEncoder = device.createCommandEncoder();
       applyVrEyeToCtx(ctx, eye);
       executeFrame({
-        encoder,
+        encoder: eyeEncoder,
         ctx,
         state,
         program,
@@ -132,6 +145,7 @@ export function renderFrame(input: RenderFrameInput): void {
         timing: timingService,
         swapView: eye.textureView,
       });
+      device.queue.submit([eyeEncoder.finish()]);
     }
   } else {
     executeFrame({
@@ -147,5 +161,10 @@ export function renderFrame(input: RenderFrameInput): void {
   }
   timingService.endFrame(timingCtx, encoder);
 
+  // THROWAWAY (vrSpike): in the VR branch `encoder` above never receives a
+  // draw — each eye records and submits its own encoder — so GPU timing
+  // (bracketed on `encoder` by `beginFrame`/`endFrame`) isn't meaningful in
+  // VR spike mode. Still submitting it here closes out its timing
+  // resolve/copy and keeps the non-VR path's single `submit` call untouched.
   device.queue.submit([encoder.finish()]);
 }
