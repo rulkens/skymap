@@ -113,6 +113,13 @@ export function renderFrame(input: RenderFrameInput): void {
     // swaps the per-eye vp/slabs/camPos onto ctx and resets the first-touch set
     // so every target clears again — the offscreen chain is reused sequentially
     // within this one encoder, which pass ordering makes safe.
+    //
+    // `layerAllow` is the spike's Earth-only start mode: non-null restricts
+    // the walked layer list to the named subset (vrSpike.ts sets it at
+    // session start), leaving the non-VR path's `CONTENT_LAYERS` untouched.
+    const eyeLayers = vrOverride.layerAllow
+      ? CONTENT_LAYERS.filter((l) => vrOverride.layerAllow!.has(l.name))
+      : CONTENT_LAYERS;
     for (const eye of vrEyes) {
       applyVrEyeToCtx(ctx, eye);
       executeFrame({
@@ -120,7 +127,7 @@ export function renderFrame(input: RenderFrameInput): void {
         ctx,
         state,
         program,
-        layers: CONTENT_LAYERS,
+        layers: eyeLayers,
         strategy,
         timing: timingService,
         swapView: eye.textureView,

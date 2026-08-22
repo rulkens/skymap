@@ -69,9 +69,17 @@ type XRGPUSubImageish = {
 // ── Spike diagnostics ────────────────────────────────────────────────────────
 // First-frame per-eye raw numbers, shown in a <pre> overlay on the 2D page
 // after the session ends — the Quest has no convenient console, so the page
-// IS the console for this spike.
+// IS the console for this spike. Also console.log'd at capture time
+// (one line per call, `[vrSpike-diag]`-prefixed) so `adb logcat` picks them
+// up live — Chromium mirrors console output to logcat, which is otherwise
+// the only way to see these numbers before the session ends.
 const diag: string[] = [];
 let diagEl: HTMLPreElement | null = null;
+
+function pushDiag(...lines: string[]): void {
+  diag.push(...lines);
+  for (const line of lines) console.log(`[vrSpike-diag] ${line}`);
+}
 
 function showDiag(): void {
   if (!diagEl) {
@@ -333,10 +341,18 @@ async function startSession(
 
   vrOverride.active = true;
   vrOverride.eyes = [];
+  // Earth-only start mode: `earthLayer` (passes/earthLayer.ts) is the sole
+  // Earth-related ContentLayer — it draws both the base globe and, in the
+  // same `draw()` call, the resident surface-tile detail patches, so there
+  // is no separate tile-layer name to add. Restricting to just this layer
+  // isolates the head-locked-Earth repro from every other layer's own
+  // per-eye behaviour.
+  vrOverride.layerAllow = new Set(['earth']);
+  console.log('[vrSpike] layerAllow:', Array.from(vrOverride.layerAllow));
   let warnedViewport = false;
 
   diag.length = 0;
-  diag.push(
+  pushDiag(
     `layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`,
     `metersToMpc=${metersToMpc.toExponential(3)} anchor distance=${state.cameraRuntime.lastPose.current.distance.toExponential(3)}`,
   );
@@ -345,6 +361,7 @@ async function startSession(
   session.addEventListener('end', () => {
     vrOverride.active = false;
     vrOverride.eyes = [];
+    vrOverride.layerAllow = null;
     frameDeps.canvas.width = savedCanvas.w;
     frameDeps.canvas.height = savedCanvas.h;
     state.subsystems.scheduler.requestRender();
@@ -448,7 +465,8 @@ async function startSession(
         metersToMpc,
         state.cameraRuntime.lastPose.current.distance,
       );
-      diag.push(...body);
+      pushDiag(...body);
+      console.log(`[vrSpike-diag] ${summary}`);
       diag.unshift(summary);
       diagFramesLeft -= 1;
     }
