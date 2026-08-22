@@ -234,7 +234,8 @@ const FOREGROUND_NAMES = [
 // aggregate UPSAMPLE composite (adjacent to the leaf draw it composites).
 // Neither aggregate STREAM is here — the Milky Way's star billboards target
 // 'mw-aggregate' and the survey's target 'star-aggregates', so both sit
-// outside the hdr group.
+// outside the hdr group. 'labels3d-near0' trails the group — the THROWAWAY
+// vrSpike's planet-scale VR captions (see labels3dNear0Layer.ts).
 const NEAR_HDR_NAMES = [
   'milky-way-upsample',
   'milky-way',
@@ -244,6 +245,7 @@ const NEAR_HDR_NAMES = [
   'star-catalog',
   'star-upsample',
   'constellations',
+  'labels3d-near0',
 ];
 
 // The near-field swap group: the overlays that pair the swap target with the
@@ -280,7 +282,7 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds milky-way-upsample, milky-way, star-points, orbit-trails, star-catalog, additive', () => {
+  it('the (hdr, NEAR0) group holds milky-way-upsample, milky-way, star-points, orbit-trails, star-catalog, labels3d-near0, additive', () => {
     // The hdr rows outside the cosmological slab: the Milky-Way cloud's
     // upsample + dust, the far-partition neighbourhood stars, and the orbit
     // trails, projected through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would

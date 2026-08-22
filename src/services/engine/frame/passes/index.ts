@@ -218,6 +218,7 @@ import { horizonShellLayer } from './horizonShellLayer';
 import { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
 import { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
 import { labels3dLayer } from './labels3dLayer';
+import { labels3dNear0Layer } from './labels3dNear0Layer';
 import { structureMarkersLayer } from './structureMarkersLayer';
 import { selectionRingLayer } from './selectionRingLayer';
 import { near0SelectionRingLayer } from './near0SelectionRingLayer';
@@ -324,6 +325,11 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // streams so the figure lines read over the starfield; additive blend makes
   // that a listing choice, not a compositing one.
   constellationsLayer,
+  // THROWAWAY (vrSpike): the NEAR0 sibling of labels3dLayer — planet-scale VR
+  // captions (scene bodies), camera-rebased each draw (see the layer's own
+  // header). Joins the same (hdr, NEAR0) render step as its group above;
+  // ungated outside VR (its renderer only ever holds VR-produced labels).
+  labels3dNear0Layer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the debug
   // clip-path overlay is the very last swap row (below, past the NEAR0 group) so
@@ -405,6 +411,7 @@ export { horizonShellLayer } from './horizonShellLayer';
 export { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
 export { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
 export { labels3dLayer } from './labels3dLayer';
+export { labels3dNear0Layer } from './labels3dNear0Layer';
 export { structureMarkersLayer } from './structureMarkersLayer';
 export { selectionRingLayer } from './selectionRingLayer';
 export { near0SelectionRingLayer } from './near0SelectionRingLayer';

@@ -266,11 +266,12 @@ describe('timedSlotsOf', () => {
     // each its OWN NEAR0 render step ahead of the hdr NEAR0 step:
     // star-aggregates, then milky-way-aggregate. The (hdr, NEAR0) step follows
     // with milky-way-upsample + milky-way + star-points + orbit-trails +
-    // star-catalog + star-upsample before the tone-map — milky-way-upsample
-    // precedes milky-way so the dust extincts the cloud's own starlight, that
-    // pair leads the group so the multiplicative dust never darkens the local
-    // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
-    // it composites. The
+    // star-catalog + star-upsample + constellations + labels3d-near0 (the
+    // THROWAWAY vrSpike's planet-scale VR captions) before the tone-map —
+    // milky-way-upsample precedes milky-way so the dust extincts the cloud's
+    // own starlight, that pair leads the group so the multiplicative dust
+    // never darkens the local starfield, and star-upsample sits adjacent to
+    // the star-catalog leaf draw it composites. The
     // foreground:0 body render now comes NEXT (before the composites) — one
     // slot per body layer: earth, then Earth's translucent cloud-shell overlay
     // (drawn right after the opaque surface), star-spheres, field-star-sphere,
@@ -312,6 +313,7 @@ describe('timedSlotsOf', () => {
       'star-catalog',
       'star-upsample',
       'constellations',
+      'labels3d-near0',
       'hdr·NEAR0',
       'earth',
       'cloud-shell',

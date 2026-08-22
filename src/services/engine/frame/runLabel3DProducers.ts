@@ -1,7 +1,9 @@
 /**
  * runLabel3DProducers — concatenate Label3D descriptors in producer order,
- * flush them to `label3DRenderer`, and fold `awake` across producers. Mirrors
- * `runMarkerProducers`'s walk; no sort/filter/dedupe.
+ * flush them to `label3DRenderer` (COSMO) and `label3DRendererNear0` (planet
+ * scale — see `Label3DProducerOutput.labelsNear0`'s docblock), and fold
+ * `awake` across producers. Mirrors `runMarkerProducers`'s walk; no
+ * sort/filter/dedupe.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -11,12 +13,15 @@ import { LABEL_3D_PRODUCERS } from '../presentation/label3DProducers';
 
 export function runLabel3DProducers(state: EngineState, ctx: ReadyFrameContext): boolean {
   const labels: Label3D[] = [];
+  const labelsNear0: Label3D[] = [];
   let awake = false;
   for (const producer of LABEL_3D_PRODUCERS) {
     const output = producer.produceLabels3D(state, ctx);
     for (const l of output.labels) labels.push(l);
+    for (const l of output.labelsNear0 ?? []) labelsNear0.push(l);
     awake = awake || output.awake;
   }
   state.gpu.label3DRenderer?.setLabels(labels);
+  state.gpu.label3DRendererNear0?.setLabels(labelsNear0);
   return awake;
 }

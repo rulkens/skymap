@@ -334,6 +334,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // must EXIST as `null` (undefined would crash the call, not just slip
         // past a `=== null` guard, since this gate calls a method).
         label3DRenderer: null,
+        // labels3dNear0Layer.enabled shares the same landmine for its own handle.
+        label3DRendererNear0: null,
         // The FRAME program's hdr→swap composite reads state.gpu.compositor.
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },

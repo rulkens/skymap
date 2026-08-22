@@ -307,6 +307,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Shared world-geometry text renderer. null until initGpu; its first
       // consumer is the zone-of-avoidance lettering path, null-checked at use.
       label3DRenderer: null,
+      // THROWAWAY (vrSpike): second Label3D instance for planet-scale VR
+      // content. null until initGpu; null-checked at use by labels3dNear0Layer.
+      label3DRendererNear0: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
