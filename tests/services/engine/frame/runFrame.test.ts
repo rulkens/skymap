@@ -76,10 +76,10 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 
 import {
   runFrame,
-  SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT,
+  SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC,
+  SURFACE_FOLLOW_DISENGAGE_ALTITUDE_MPC,
 } from '../../../../src/services/engine/frame/runFrame';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/surfaceStandoffRadii';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
@@ -621,18 +621,24 @@ function setFocusedBody(state: EngineState, id: string, radiusKm: number): void 
 }
 
 /**
- * `pose.distance` COMFORTABLY inside a body's engage zone (Mpc) — half the
- * engage-threshold altitude, not the threshold itself: at the exact boundary
- * `distance − radiusMpc` and `engageAtMpc` are both catastrophic-cancellation-
- * sensitive sums of a ~1e-17 Mpc radius and a ~1e-22 Mpc altitude, so which
- * way the last bit rounds (and hence whether `<=` holds) depends on the
- * body's radius — Phobos and the Moon round opposite ways at the exact
- * boundary. Comfortably inside removes that dependency.
+ * `pose.distance` comfortably inside a body's engage zone (Mpc) — half the
+ * fixed engage-threshold altitude (spec §4.6), not the boundary itself, so
+ * the fixture doesn't depend on which way an exact-boundary comparison
+ * rounds. The altitude is now body-radius-independent, so this is a plain
+ * offset from the body's own radius, not a per-body-derived multiple.
  */
 function engageDistanceMpc(radiusKm: number): number {
   const radiusMpc = radiusKm * SCALE_UNITS.KM_TO_MPC;
-  const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
-  return radiusMpc + standoffAltitudeMpc * SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT * 0.5;
+  return radiusMpc + SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC * 0.5;
+}
+
+/**
+ * `pose.distance` comfortably beyond the fixed disengage-threshold altitude
+ * (1.5x it), for fixtures that need a previously-engaged follow to disengage.
+ */
+function disengageDistanceMpc(radiusKm: number): number {
+  const radiusMpc = radiusKm * SCALE_UNITS.KM_TO_MPC;
+  return radiusMpc + SURFACE_FOLLOW_DISENGAGE_ALTITUDE_MPC * 1.5;
 }
 
 /** Independent column-major elementary rotation builders — not the source's. */
@@ -650,6 +656,66 @@ function rotXDeg(degrees: number): Mat3 {
 }
 
 describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
+  it('real-bug regression: focused Earth at ~7.5 km altitude engages surface follow (user ruling 2026-08-22)', () => {
+    // The observed regime that motivated FW-E: at ~7.5 km over Copenhagen the
+    // ground visibly slides (~0.26 km/s crosses a screen height in under a
+    // minute) while the OLD 2x-standoff band (~31 m) left follow permanently
+    // disengaged. The widened drift-based band must engage here.
+    const EARTH_RADIUS_KM = 6371;
+    const OBSERVED_ALTITUDE_KM = 7.5;
+
+    const store = makeStore();
+    const state = makeCamState();
+    setFocusedBody(state, 'earth', EARTH_RADIUS_KM);
+    const deps = makeCamDeps(state, store);
+
+    const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    const altitudeMpc = OBSERVED_ALTITUDE_KM * SCALE_UNITS.KM_TO_MPC;
+    const BASE: CameraPose = {
+      target: [0, 0, 0],
+      yaw: 0,
+      pitch: 0,
+      distance: radiusMpc + altitudeMpc,
+    };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    runFrame(state, deps, 0);
+
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+  });
+
+  it('altitude above ~241 km disengages a previously engaged follow', () => {
+    const EARTH_RADIUS_KM = 6371;
+
+    const store = makeStore();
+    const state = makeCamState();
+    setFocusedBody(state, 'earth', EARTH_RADIUS_KM);
+    const deps = makeCamDeps(state, store);
+
+    store.dispatch(
+      commitCameraPose({
+        target: [0, 0, 0],
+        yaw: 0,
+        pitch: 0,
+        distance: engageDistanceMpc(EARTH_RADIUS_KM),
+      }),
+    );
+    runFrame(state, deps, 0);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    store.dispatch(
+      commitCameraPose({
+        target: [0, 0, 0],
+        yaw: 0,
+        pitch: 0,
+        distance: disengageDistanceMpc(EARTH_RADIUS_KM),
+      }),
+    );
+    runFrame(state, deps, 1000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
+  });
+
   it('the engage frame introduces no pose jump: corrected poseBasis/upBasis are bit-identical to the uncorrected values', () => {
     // Phobos carries no texture spec, so `orientationForBody` gives it
     // IDENTITY_MAT3 (see `orientationForBody.ts`) rather than a baked-from-trig

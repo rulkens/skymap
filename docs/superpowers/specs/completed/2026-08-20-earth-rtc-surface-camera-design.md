@@ -478,6 +478,14 @@ altitude spans metres, not ~147 km — the existing 500 ms cadence would read
 as a large multi-metre jump at today's floor, not the sub-1.5 px drift the
 comment currently claims.
 
+**2026-08-22 amendment (user ruling, FW-E):** the 2x/4x-standoff band (~31/61 m)
+left follow disengaged at ~7.5 km over Earth, where the ground plainly slides.
+Widened to drift-based absolute altitudes — engage ≥3 px/s (~120 km),
+disengage <1.5 px/s (~241 km), same 2x hysteresis ratio — since rotation's
+visibility is set by on-screen drift, not body radius. See
+`SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC` / `SURFACE_FOLLOW_DISENGAGE_ALTITUDE_MPC`
+in `runFrame.ts`.
+
 ## 5. Acceptance criteria
 
 - Smooth, step-free camera motion and stable imagery down to ~2 m altitude

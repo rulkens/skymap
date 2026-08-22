@@ -71,7 +71,6 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { DEFAULT_FOV_DEG } from '../../../data/defaults';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
-import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/surfaceStandoffRadii';
 import { surfaceFollowEngaged } from '../../../utils/camera/surfaceFollowEngaged';
 import { orientationWorldDelta } from '../../../utils/camera/orientationWorldDelta';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
@@ -130,9 +129,9 @@ const publishBodyDistanceGate = throttleByTime(250);
  * between heartbeat frames (the scheduling site below) before Earth's
  * terminator drift becomes visible. A FUNCTION of the focused pivot's
  * altitude, not a fixed value — a single constant can't serve both ends of
- * the reachable range: honest at the ~61 m surface-follow disengage altitude
- * (spec §4.6, Task 5) demands near-every-frame ticking, while that cadence
- * is needless GPU burn once the camera is far from any surface.
+ * the reachable range: honest at the ~61 m altitude just above the surface
+ * standoff floor demands near-every-frame ticking, while that cadence is
+ * needless GPU burn once the camera is far from any surface.
  *
  * Derivation, same formula throughout: live time advances one sim day per
  * real day, so Earth's terminator sweeps `(360° / 86400 s) * T` of ground per
@@ -145,12 +144,12 @@ const publishBodyDistanceGate = throttleByTime(250);
  * `IDLE_TICK_MS_PER_KM` below is exactly that slope, computed once from the
  * named constants that follow (60° FOV, Earth's radius and rotation rate)
  * instead of inlined as a magic float, so it stays checkable against this
- * comment. Two reference points: at h ≈ 61.2 m — Earth's ~15.3 m
- * `SURFACE_STANDOFF_RADII` floor × the disengage multiplier (4) — T ≈
- * 0.25 ms, clamped up to the 16 ms floor (no discrete cadence holds 1.5 px
- * this close to the surface, so "idle tick" and "render every frame" become
- * the same request); at h ≈ 127 km, T ≈ 528 ms, clamped down to the 500 ms
- * ceiling (the historical idle heartbeat, honest again above ~120 km).
+ * comment. Two reference points: at h ≈ 61.2 m — four times Earth's ~15.3 m
+ * surface-standoff floor — T ≈ 0.25 ms, clamped up to the 16 ms floor (no
+ * discrete cadence holds 1.5 px this close to the surface, so "idle tick" and
+ * "render every frame" become the same request); at h ≈ 127 km, T ≈ 528 ms,
+ * clamped down to the 500 ms ceiling (the historical idle heartbeat, honest
+ * again above ~120 km).
  *
  * Calibrated to Earth's own rotation rate — the only body this feature
  * streams near-surface tiles for — and reused verbatim for whatever body or
@@ -197,19 +196,40 @@ function liveIdleTickMs(focusedPivotAltitudeMpc: number | null): number {
 }
 
 /**
- * Surface-fixed follow's hysteresis band (spec §4.6), expressed as multiples
- * of the surface standoff floor's altitude (`SURFACE_STANDOFF_RADII`,
- * `clampDistance.ts` — ~15 m over Earth). A single threshold would flicker
- * the mode every frame for a camera parked exactly at the switch point
- * (scroll noise, hand jitter); engaging at 2x that floor and disengaging only
- * at 4x gives room to absorb it. Expressed as multiples of the PER-BODY
- * standoff altitude (not a fixed Mpc constant) because the same absolute
- * altitude means something very different on the Moon than on Earth — see
- * `pivotRadiusMpc`. Starting points only; finalized against the dev-server
- * visual pass (Task 7), the same posture `ORBIT_MAX_RAD_PER_PX` documents.
+ * Surface-fixed follow's hysteresis band (spec §4.6): engage/disengage
+ * altitudes derived from projected on-screen ground-drift rate, using the
+ * SAME drift model the idle-tick derivation above owns —
+ *
+ *   drift_px_per_s(h) = IDLE_TICK_CANVAS_HEIGHT_PX * IDLE_TICK_GROUND_SPEED_KM_PER_S
+ *                       / (2 * h_km * tan(DEFAULT_FOV_DEG / 2))
+ *
+ * — inverted for h. Engage at 3 px/s (~120 km), disengage at 1.5 px/s
+ * (~241 km); same 2x ratio the old standoff-multiple band used, still
+ * absorbing switch-point jitter (scroll noise, hand jitter) with a single
+ * threshold. Fixed absolute altitudes, NOT multiples of the per-body
+ * standoff floor as before: rotation's visibility is set by drift on screen,
+ * not by body radius (user ruling 2026-08-22 — the old ~31/61 m band left
+ * follow disengaged at ~7.5 km over Earth, where the ground plainly slides).
+ * Earth-calibrated ground speed, reused for every body, same posture as the
+ * idle-tick derivation: a slow rotator just engages "early," locking a
+ * near-static ground — benign, not a per-body rotation model.
  */
-export const SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT = 2;
-export const SURFACE_FOLLOW_DISENGAGE_STANDOFF_MULT = 4;
+export const SURFACE_FOLLOW_ENGAGE_DRIFT_PX_PER_S = 3;
+export const SURFACE_FOLLOW_DISENGAGE_DRIFT_PX_PER_S = 1.5;
+
+function surfaceFollowAltitudeMpc(driftPxPerS: number): number {
+  const altitudeKm =
+    (IDLE_TICK_CANVAS_HEIGHT_PX * IDLE_TICK_GROUND_SPEED_KM_PER_S) /
+    (2 * driftPxPerS * Math.tan((DEFAULT_FOV_DEG / 2) * (Math.PI / 180)));
+  return altitudeKm * SCALE_UNITS.KM_TO_MPC;
+}
+
+export const SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC = surfaceFollowAltitudeMpc(
+  SURFACE_FOLLOW_ENGAGE_DRIFT_PX_PER_S,
+);
+export const SURFACE_FOLLOW_DISENGAGE_ALTITUDE_MPC = surfaceFollowAltitudeMpc(
+  SURFACE_FOLLOW_DISENGAGE_DRIFT_PX_PER_S,
+);
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -437,12 +457,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // which `liveIdleTickMs` reads further down — one call serves both.
       const altitudeMpc = eyeAltitudeMpc(poseEyeMpc, bodyState.positionMpc, radiusMpc);
       focusedPivotAltitudeMpc = altitudeMpc;
-      const standoffAltitudeMpc = radiusMpc * (SURFACE_STANDOFF_RADII - 1);
       surfaceFollowEngagedNow = surfaceFollowEngaged(
         wasSurfaceFollowEngaged,
         altitudeMpc,
-        standoffAltitudeMpc * SURFACE_FOLLOW_ENGAGE_STANDOFF_MULT,
-        standoffAltitudeMpc * SURFACE_FOLLOW_DISENGAGE_STANDOFF_MULT,
+        SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC,
+        SURFACE_FOLLOW_DISENGAGE_ALTITUDE_MPC,
       );
       liveBodyOrientation = bodyState.orientation;
     }

@@ -8,8 +8,8 @@
  *
  * Pure boolean state machine — no altitude→Mpc resolution here. The caller
  * (`runFrame`'s basis-resolution block) resolves `engageAtMpc` /
- * `disengageAtMpc` from the focused body's radius, since the same absolute
- * altitude means something very different on the Moon than on Earth.
+ * `disengageAtMpc` from on-screen ground-drift rate (spec §4.6) — fixed
+ * absolute altitudes shared by every focused body, not the body's own radius.
  */
 
 export function surfaceFollowEngaged(
