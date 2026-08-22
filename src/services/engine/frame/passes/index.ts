@@ -28,10 +28,16 @@
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
  *   7. zone-of-avoidance-upsample — upsamples the 1/5-res zone-of-avoidance
- *                            band offscreen into HDR, then draws the band's
- *                            full-res curved lettering (its producer,
+ *                            band offscreen into HDR (its producer,
  *                            zone-of-avoidance, targets its own 'zoa' row —
  *                            see below, same reason scalar-volume isn't here)
+ *   7b. labels3d           — the shared Label3D draw site (world-geometry
+ *                            text): today the band's own full-res curved
+ *                            lettering plus VR labels, see
+ *                            `label3DProducers.ts`. Ungated on scale, unlike
+ *                            its zone-of-avoidance-upsample neighbour above
+ *                            (its former host) — each producer self-gates
+ *                            its own visibility instead
  *   8. horizon-shell       — translucent sphere at the observable-universe edge
  *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
@@ -211,6 +217,7 @@ import { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 import { horizonShellLayer } from './horizonShellLayer';
 import { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
 import { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
+import { labels3dLayer } from './labels3dLayer';
 import { structureMarkersLayer } from './structureMarkersLayer';
 import { selectionRingLayer } from './selectionRingLayer';
 import { near0SelectionRingLayer } from './near0SelectionRingLayer';
@@ -261,10 +268,15 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   filamentsLayer,
   flowFieldLayer,
   volumeUpsampleLayer,
-  // The zone-of-avoidance band's CONSUMER: composites 'zoa' into hdr, then
-  // draws the full-res lettering — positioned beside volume-upsample, its
-  // closest sibling in shape (a reduced-res-offscreen-into-hdr composite).
+  // The zone-of-avoidance band's CONSUMER: composites 'zoa' into hdr —
+  // positioned beside volume-upsample, its closest sibling in shape (a
+  // reduced-res-offscreen-into-hdr composite).
   zoneOfAvoidanceUpsampleLayer,
+  // The shared Label3D draw site (world-geometry text: ZoA lettering + VR
+  // labels — label3DProducers.ts), ungated on scale unlike its ZoA neighbour
+  // above: each producer self-gates its own visibility. Placed right after
+  // zoneOfAvoidanceUpsampleLayer, its former (and now removed) host.
+  labels3dLayer,
   horizonShellLayer,
   structureMarkersLayer,
   // The near-field NEAR0 rows: they project through NEAR0 (COSMO's fixed near
@@ -392,6 +404,7 @@ export { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 export { horizonShellLayer } from './horizonShellLayer';
 export { zoneOfAvoidanceLayer } from './zoneOfAvoidanceLayer';
 export { zoneOfAvoidanceUpsampleLayer } from './zoneOfAvoidanceUpsampleLayer';
+export { labels3dLayer } from './labels3dLayer';
 export { structureMarkersLayer } from './structureMarkersLayer';
 export { selectionRingLayer } from './selectionRingLayer';
 export { near0SelectionRingLayer } from './near0SelectionRingLayer';

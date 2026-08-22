@@ -39,6 +39,7 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { runFrame } from '../engine/frame/runFrame';
+import { setPassDisabled } from '../../state/settings/settingsSlice';
 import { assembleOrbitCamera } from '../engine/camera/assembleOrbitCamera';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
@@ -77,6 +78,17 @@ const ORBIT_RATE = 1.2;
 const ORBIT_PITCH_LIMIT_RAD = 1.5;
 /** Focus-button navigation: time to tween (center, metersToMpc) to the pressed preset. */
 const FOCUS_TWEEN_DURATION_MS = 2000;
+
+/**
+ * Label2D swap-target passes disabled only for the DURATION of a VR session
+ * (set on session start, un-set on session end) — not at boot, unlike the
+ * selection-ring passes in initialState.ts's `?vr` branch. Their
+ * `ReadyFrameContext`-keyed projections (`cosmoLabelProjection.ts` /
+ * `near0LabelProjection.ts`) would otherwise serve one eye's vp to both.
+ * `produceVrLabels` (Label3D, drawn by `labels3dLayer`) replaces the COSMO
+ * pair's content in-headset.
+ */
+const VR_SESSION_DISABLED_PASSES = ['labels', 'marker-lines', 'foreground-labels'] as const;
 
 type StickAxes = { x: number; y: number };
 
@@ -716,6 +728,10 @@ async function startSession(
   let warnedViewport = false;
   let lastFrameTimeMs: number | null = null;
 
+  for (const pass of VR_SESSION_DISABLED_PASSES) {
+    frameDeps.cb.store.dispatch(setPassDisabled({ pass, disabled: true }));
+  }
+
   pushDiag(
     `layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`,
   );
@@ -724,6 +740,12 @@ async function startSession(
   session.addEventListener('end', () => {
     vrOverride.active = false;
     vrOverride.eyes = [];
+    // Restore exactly the keys this session added — never a blanket
+    // `disabledPasses = {}`, which would clobber unrelated entries (e.g. the
+    // selection-ring pair initialState.ts pre-disabled for the flat page).
+    for (const pass of VR_SESSION_DISABLED_PASSES) {
+      frameDeps.cb.store.dispatch(setPassDisabled({ pass, disabled: false }));
+    }
     // Deliberately leave the canvas backing store at the eye-texture size —
     // the next non-VR runFrame's resizeCanvasToDisplay sees the mismatch
     // against clientWidth/Height and resizes AND refreshes

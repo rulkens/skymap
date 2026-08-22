@@ -108,20 +108,17 @@ describe('buildInitialSettings', () => {
       }
     });
 
-    it('disables the selection-ring and Label2D swap-target passes', () => {
-      // Regression: Label2D captions swim with the head in VR because their
-      // projections memoize per frame-ctx, serving one eye's vp to both — so
-      // they must be off whenever `produceVrLabels`'s Label3D captions take
-      // over (see initialState.ts's disabledPasses comment for the pass ↔
-      // director mapping).
+    it('disables the selection-ring passes but leaves the Label2D swap-target passes alone', () => {
+      // Regression: the Label2D passes used to be forced off here too, but
+      // that also killed labels on the FLAT page whenever `?vr` was merely in
+      // the URL, outside any active session — disabling them per-session is
+      // vrSpike.ts's job (it dispatches `setPassDisabled` on session
+      // start/end), not this boot-time seed's.
       setSearch('?vr');
       const { disabledPasses } = buildInitialSettings().debug;
       expect(disabledPasses).toEqual({
         'selection-ring': true,
         'near0-selection-ring': true,
-        labels: true,
-        'marker-lines': true,
-        'foreground-labels': true,
       });
     });
 

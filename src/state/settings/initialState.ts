@@ -310,24 +310,19 @@ export function buildInitialSettings(): EngineSettingsState {
       // headset; the DebugPanel toggle stays live so it can be flipped back
       // on for the flat page.
       //
-      // The three Label2D swap-target layers are disabled too: their
+      // The three Label2D swap-target layers ('labels', 'marker-lines',
+      // 'foreground-labels') are NOT disabled here at boot: their
       // projections (`cosmoLabelProjection.ts` / `near0LabelProjection.ts`)
-      // memoize per `ReadyFrameContext`, so in VR they'd serve one eye's
-      // projection to both — captions would swim with the head regardless of
-      // the mono-camera issue this spike otherwise works around. `labels` +
-      // `marker-lines` are the COSMO pair (famous-galaxy + structure + Milky
-      // Way captions and their leader lines); `foreground-labels` is the
-      // NEAR0 pair (constellation + scene-body captions, whose leader-line
-      // renderer draws inside the same layer, no separate pass name).
-      // `produceVrLabels` (Label3D) replaces the COSMO content in-headset.
-      // Delete with the spike.
+      // memoize per `ReadyFrameContext`, so they'd serve one eye's projection
+      // to both DURING an active VR session — but disabling them at boot also
+      // killed labels on the flat page whenever `?vr` was merely in the URL,
+      // outside any session. `vrSpike.ts` instead dispatches `setPassDisabled`
+      // for these three when a session starts, and un-disables them when it
+      // ends — session-scoped, not boot-scoped. Delete with the spike.
       disabledPasses: vrSpike
         ? {
             'selection-ring': true,
             'near0-selection-ring': true,
-            labels: true,
-            'marker-lines': true,
-            'foreground-labels': true,
           }
         : {},
       // 'auto' reproduces the old timing-derived pass shape, so production +

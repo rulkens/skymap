@@ -1,10 +1,9 @@
 /**
  * zoneOfAvoidanceUpsampleLayer tests — the consumer half of the reduced-res
- * band: the hdr-target layer that composites the reduced-res `zoa` offscreen into HDR
- * (`state.gpu.zoneOfAvoidanceUpsample`) and then draws the full-res curved
- * lettering via the shared `label3DRenderer.draw` — the two halves are
- * independently null-guarded, so either GPU handle being absent
- * pre-bootstrap doesn't silence the other.
+ * band: the hdr-target layer that composites the reduced-res `zoa` offscreen
+ * into HDR (`state.gpu.zoneOfAvoidanceUpsample`). The full-res curved
+ * lettering it used to draw via `postBlit` now has its own draw site,
+ * `labels3dLayer` — see that layer's own test file.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -58,10 +57,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
 function makeState(
   over: {
     upsampleDraw?: ReturnType<typeof vi.fn>;
-    labelDraw?: ReturnType<typeof vi.fn>;
-    glyphCount?: number;
     upsample?: unknown;
-    label3D?: unknown;
     renderer?: unknown;
   } = {},
 ): EngineState {
@@ -73,10 +69,6 @@ function makeState(
           : over.upsample,
       zoneOfAvoidanceRenderer:
         over.renderer === undefined ? { draw: vi.fn(), drawPick: vi.fn() } : over.renderer,
-      label3DRenderer:
-        over.label3D === undefined
-          ? { draw: over.labelDraw ?? vi.fn(), glyphCount: () => over.glyphCount ?? 1 }
-          : over.label3D,
     },
     settings: { zoneOfAvoidance: { labelColor: [1, 1, 1], intensity: 1 } },
     subsystems: {
@@ -105,10 +97,9 @@ describe('zoneOfAvoidanceUpsampleLayer.enabled', () => {
 });
 
 describe('zoneOfAvoidanceUpsampleLayer.draw', () => {
-  it('composites the zoa offscreen into HDR and draws the full-res lettering', () => {
+  it('composites the zoa offscreen into HDR', () => {
     const upsampleDraw = vi.fn();
-    const labelDraw = vi.fn();
-    const state = makeState({ upsampleDraw, labelDraw });
+    const state = makeState({ upsampleDraw });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
     zoneOfAvoidanceUpsampleLayer.draw(PASS_STUB, view, ctx, state);
@@ -116,47 +107,10 @@ describe('zoneOfAvoidanceUpsampleLayer.draw', () => {
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(upsampleDraw.mock.calls[0]![0]).toBe(PASS_STUB);
     expect(upsampleDraw.mock.calls[0]![1]).toBe(ZOA_VIEW);
-
-    expect(labelDraw).toHaveBeenCalledTimes(1);
-    const labelArgs = labelDraw.mock.calls[0]!;
-    // label3DRenderer.draw(pass, viewProj, viewportPx) — full-res: the
-    // resolved SlabView's vp/viewportPx, NOT a downscaled one.
-    expect(labelArgs[0]).toBe(PASS_STUB);
-    expect(labelArgs[1]).toBe(view.vp);
-    expect(labelArgs[2]).toEqual(view.viewportPx);
   });
 
-  it('skips the blit but still draws labels when zoneOfAvoidanceUpsample is null', () => {
-    const labelDraw = vi.fn();
-    const state = makeState({ upsample: null, labelDraw });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(() => zoneOfAvoidanceUpsampleLayer.draw(PASS_STUB, view, ctx, state)).not.toThrow();
-    expect(labelDraw).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips the labels but still blits when label3DRenderer is null', () => {
-    const upsampleDraw = vi.fn();
-    const state = makeState({ upsampleDraw, label3D: null });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(() => zoneOfAvoidanceUpsampleLayer.draw(PASS_STUB, view, ctx, state)).not.toThrow();
-    expect(upsampleDraw).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips the labels but still blits when glyphCount is 0 (no lettering to draw)', () => {
-    const upsampleDraw = vi.fn();
-    const labelDraw = vi.fn();
-    const state = makeState({ upsampleDraw, labelDraw, glyphCount: 0 });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    zoneOfAvoidanceUpsampleLayer.draw(PASS_STUB, view, ctx, state);
-    expect(upsampleDraw).toHaveBeenCalledTimes(1);
-    expect(labelDraw).not.toHaveBeenCalled();
-  });
-
-  it('is a no-op when both handles are null (pre-bootstrap)', () => {
-    const state = makeState({ upsample: null, label3D: null });
+  it('is a no-op when zoneOfAvoidanceUpsample is null (pre-bootstrap)', () => {
+    const state = makeState({ upsample: null });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
     expect(() => zoneOfAvoidanceUpsampleLayer.draw(PASS_STUB, view, ctx, state)).not.toThrow();

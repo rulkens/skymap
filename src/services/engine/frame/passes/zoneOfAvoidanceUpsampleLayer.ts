@@ -1,11 +1,12 @@
 /**
  * zoneOfAvoidanceUpsampleLayer — composites the reduced-res `zoa` offscreen
- * into HDR, then draws the full-res curved lettering via `postBlit` — MSDF
- * text at reduced res would blur past legibility, so captions can't ride
- * the producer's reduced-res target.
- *
- * `postBlit` guards itself independently of the blit handle: the blit and
- * the caption must never suppress each other.
+ * into HDR. The full-res curved lettering it used to draw via `postBlit` now
+ * has its own dedicated draw site, `labels3dLayer` — gating the whole
+ * Label3D draw on THIS layer's ZoA-band liveness meant no Label3D producer's
+ * output (including the later VR labels) ever drew at planet scale, where
+ * the band is never live. `produceZoneOfAvoidanceLettering` shares this same
+ * liveness derivation to self-gate, so the lettering still only appears
+ * when the band does.
  */
 
 import { createUpsampleLayer } from './createUpsampleLayer';
@@ -19,10 +20,5 @@ export const zoneOfAvoidanceUpsampleLayer = createUpsampleLayer({
   handleOf: (state) => state.gpu.zoneOfAvoidanceUpsample,
   enabled(state, ctx) {
     return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;
-  },
-  postBlit(pass, view, _ctx, state) {
-    const r = state.gpu.label3DRenderer;
-    if (r === null || r.glyphCount() === 0) return;
-    r.draw(pass, view.vp, view.viewportPx);
   },
 });

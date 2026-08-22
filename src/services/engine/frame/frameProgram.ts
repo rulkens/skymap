@@ -46,9 +46,11 @@
  * separate whole-texture composite (plan-time decision 3). The `zoa`
  * offscreen (the zone-of-avoidance band raymarch) is merged the same way, by
  * `zoneOfAvoidanceUpsampleLayer` inside the same hdr COSMO step — so there is
- * no `zoa→hdr` composite step either; that layer also draws the band's
- * full-res curved lettering straight into HDR, since MSDF text can't ride a
- * reduced-res offscreen without blurring. The `star-aggregates` offscreen is
+ * no `zoa→hdr` composite step either. The band's full-res curved lettering
+ * draws separately, via `labels3dLayer` in that same step — MSDF text can't
+ * ride a reduced-res offscreen without blurring, and that layer is the
+ * shared draw site for every Label3D producer, ungated on ZoA-band liveness
+ * (VR labels ride it too). The `star-aggregates` offscreen is
  * merged the same way — by the `star-upsample` layer inside the hdr NEAR0
  * render step, adjacent to the `star-catalog` leaf draw — so there is no
  * `star-aggregates→hdr` composite step either. The `mw-aggregate` offscreen

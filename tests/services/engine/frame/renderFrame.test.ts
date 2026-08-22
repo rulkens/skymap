@@ -514,6 +514,10 @@ function makeInput(
           // fixture camera sits inside the band's visibility window, so this
           // layer's `enabled` is true and `draw` runs every frame here.
           zoneOfAvoidanceUpsample: null,
+          // labels3dLayer.enabled reads this off state.gpu.* directly, same
+          // === null early-return guard as zoneOfAvoidanceRenderer above —
+          // the key must EXIST (undefined would slip past `=== null`).
+          label3DRenderer: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },

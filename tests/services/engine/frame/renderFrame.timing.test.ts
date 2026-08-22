@@ -330,6 +330,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         texturedDiskRenderer,
         proceduralDiskRenderer,
         filamentRenderer: null,
+        // labels3dLayer.enabled calls `.glyphCount()` on this handle — the key
+        // must EXIST as `null` (undefined would crash the call, not just slip
+        // past a `=== null` guard, since this gate calls a method).
+        label3DRenderer: null,
         // The FRAME program's hdr→swap composite reads state.gpu.compositor.
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
