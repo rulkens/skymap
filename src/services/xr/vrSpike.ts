@@ -371,7 +371,10 @@ async function startSession(
     // Live every frame (not frozen at session start): head translation doesn't
     // move the orbit distance, so this can't feedback-pump, and orbit-distance
     // changes (tweens, future thumbstick zoom) become world-scale zoom for free.
-    const metersToMpc = Math.max(state.cameraRuntime.lastPose.current.distance, 1e-12) / SCALE_DIVISOR;
+    // Floor is a zero/denormal guard only — a real clamp here (e.g. 1e-12 Mpc,
+    // ~30M km) silently overrides the scale near planets, where live distance
+    // can be far smaller.
+    const metersToMpc = Math.max(state.cameraRuntime.lastPose.current.distance, 1e-30) / SCALE_DIVISOR;
 
     // ── Anchor: the live orbit camera, reassembled from last frame's pose ──
     const store = frameDeps.cb.store.getState();
