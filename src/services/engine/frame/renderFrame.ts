@@ -115,13 +115,6 @@ export function renderFrame(input: RenderFrameInput): void {
     // every target clears again — the offscreen chain is reused sequentially
     // across eyes, which pass ordering (each eye fully submitted before the
     // next starts recording) makes safe.
-    //
-    // `layerAllow` is the spike's Earth-only start mode: non-null restricts
-    // the walked layer list to the named subset (vrSpike.ts sets it at
-    // session start), leaving the non-VR path's `CONTENT_LAYERS` untouched.
-    const eyeLayers = vrOverride.layerAllow
-      ? CONTENT_LAYERS.filter((l) => vrOverride.layerAllow!.has(l.name))
-      : CONTENT_LAYERS;
     for (const eye of vrEyes) {
       // THROWAWAY (vrSpike): each eye gets its OWN encoder + submit here.
       // `device.queue.writeBuffer` (per-draw uniform uploads) lands in queue
@@ -140,7 +133,7 @@ export function renderFrame(input: RenderFrameInput): void {
         ctx,
         state,
         program,
-        layers: eyeLayers,
+        layers: CONTENT_LAYERS,
         strategy,
         timing: timingService,
         swapView: eye.textureView,

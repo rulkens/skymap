@@ -397,14 +397,6 @@ async function startSession(
 
   vrOverride.active = true;
   vrOverride.eyes = [];
-  // Earth-only start mode: `earthLayer` (passes/earthLayer.ts) is the sole
-  // Earth-related ContentLayer — it draws both the base globe and, in the
-  // same `draw()` call, the resident surface-tile detail patches, so there
-  // is no separate tile-layer name to add. Restricting to just this layer
-  // isolates the head-locked-Earth repro from every other layer's own
-  // per-eye behaviour.
-  vrOverride.layerAllow = new Set(['earth']);
-  console.log('[vrSpike] layerAllow:', Array.from(vrOverride.layerAllow));
   let warnedViewport = false;
 
   diag.length = 0;
@@ -414,7 +406,6 @@ async function startSession(
   session.addEventListener('end', () => {
     vrOverride.active = false;
     vrOverride.eyes = [];
-    vrOverride.layerAllow = null;
     frameDeps.canvas.width = savedCanvas.w;
     frameDeps.canvas.height = savedCanvas.h;
     state.subsystems.scheduler.requestRender();

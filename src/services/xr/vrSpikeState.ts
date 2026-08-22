@@ -35,15 +35,12 @@ export type VrOverride = {
   /** symmetric-equivalent vertical FOV for planners (pxPerRad etc.). */
   fovYRad: number;
   eyes: VrEye[];
-  /** null (default) ⇒ all CONTENT_LAYERS draw; else only layers whose `name` is a member. */
-  layerAllow: ReadonlySet<string> | null;
 };
 
 export const vrOverride: VrOverride = {
   active: false,
   fovYRad: 1.0,
   eyes: [],
-  layerAllow: null,
 };
 
 /** tanL/tanR/tanD/tanU from a GL-convention XRView.projectionMatrix. */
