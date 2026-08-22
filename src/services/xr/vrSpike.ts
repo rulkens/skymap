@@ -66,6 +66,27 @@ type XRGPUSubImageish = {
   viewport: { x: number; y: number; width: number; height: number };
 };
 
+// ── Spike diagnostics ────────────────────────────────────────────────────────
+// First-frame per-eye raw numbers, shown in a <pre> overlay on the 2D page
+// after the session ends — the Quest has no convenient console, so the page
+// IS the console for this spike.
+const diag: string[] = [];
+let diagEl: HTMLPreElement | null = null;
+
+function showDiag(): void {
+  if (!diagEl) {
+    diagEl = document.createElement('pre');
+    diagEl.style.cssText =
+      'position:fixed;top:8px;left:8px;right:8px;z-index:1001;max-height:70vh;overflow:auto;' +
+      'background:rgba(0,0,0,.85);color:#8f8;font:11px/1.4 monospace;padding:10px;white-space:pre-wrap;';
+    document.body.append(diagEl);
+  }
+  diagEl.textContent = diag.join('\n');
+}
+
+const f3 = (v: ArrayLike<number>): string =>
+  Array.from(v as number[], (x) => (Math.abs(x) < 1e-4 && x !== 0 ? x.toExponential(2) : x.toFixed(4))).join(', ');
+
 export function installVrSpike(state: EngineState, frameDeps: RunFrameDeps): void {
   const xr = (navigator as unknown as { xr?: { requestSession(mode: string, init?: unknown): Promise<XRSessionish> } }).xr;
   const XRGPUBindingCtor = (window as unknown as { XRGPUBinding?: new (s: XRSessionish, d: GPUDevice) => XRGPUBindingish }).XRGPUBinding;
@@ -129,12 +150,20 @@ async function startSession(
   vrOverride.eyes = [];
   let warnedViewport = false;
 
+  diag.length = 0;
+  diag.push(
+    `layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`,
+    `metersToMpc=${metersToMpc.toExponential(3)} anchor distance=${state.cameraRuntime.lastPose.current.distance.toExponential(3)}`,
+  );
+  let diagFramesLeft = 2;
+
   session.addEventListener('end', () => {
     vrOverride.active = false;
     vrOverride.eyes = [];
     frameDeps.canvas.width = savedCanvas.w;
     frameDeps.canvas.height = savedCanvas.h;
     state.subsystems.scheduler.requestRender();
+    showDiag();
   });
 
   const onXRFrame = (time: number, frame: XRFrameish): void => {
@@ -193,6 +222,19 @@ async function startSession(
       ];
 
       const tan = tangentsOf(view.projectionMatrix);
+      if (diagFramesLeft > 0) {
+        const vd = sub.getViewDescriptor() as GPUTextureViewDescriptor & Record<string, unknown>;
+        diag.push(
+          `--- frame(view ${eyes.length}) ---`,
+          `xr eye pos (m): ${f3(ep)}`,
+          `viewDescriptor: ${JSON.stringify(vd)}`,
+          `colorTexture: ${sub.colorTexture.width}x${sub.colorTexture.height} layers=${sub.colorTexture.depthOrArrayLayers}`,
+          `viewport: ${JSON.stringify(sub.viewport)}`,
+          `projMatrix: ${f3(view.projectionMatrix)}`,
+          `tangents l/r/d/u: ${tan.l.toFixed(4)} ${tan.r.toFixed(4)} ${tan.d.toFixed(4)} ${tan.u.toFixed(4)}`,
+          `eyeWorld: ${f3(eyeWorld)}`,
+        );
+      }
       eyes.push({
         viewCosmo: viewFromBasis(new Float32Array(16), X, Y, Z, eyeWorld),
         viewNear0: viewFromBasisOriginRelative(X, Y, Z, eyeWorld),
@@ -202,6 +244,7 @@ async function startSession(
       });
     }
 
+    if (diagFramesLeft > 0) diagFramesLeft -= 1;
     if (eyes.length > 0) {
       const t0 = eyes[0]!.tan;
       vrOverride.fovYRad = Math.atan(t0.u) - Math.atan(t0.d);
