@@ -8,12 +8,16 @@
  * built here from the orbit camera anchor, and renderFrame walks the frame
  * program once per eye into the projection layer's textures.
  *
- * World mapping: the XR reference space (metres) is anchored at the live
- * orbit camera — origin at the eye, axes = the camera's image plane basis,
- * scale metersToMpc = live orbit distance / SCALE_DIVISOR, re-derived every
- * XR frame. So the orbit pivot sits SCALE_DIVISOR metres in front of the
- * viewer and head translation gives real stereo parallax against nearby
- * content.
+ * World mapping: world-fixed Earth. Earth's live centre (Mpc) is placed at a
+ * fixed point in XR 'local' space — 1.75 m in front of the session-start head
+ * pose, at head height — scaled so Earth reads as a 0.75 m-radius globe
+ * (metersToMpc = EARTH_RADIUS_MPC / 0.75, a session-start constant). The
+ * anchor rotation basis is captured ONCE at session start (not reassembled
+ * per frame): freezing it is what makes the virtual world rigid so the user
+ * can walk around Earth, at the cost of orbit-camera rotation (tweens, drag)
+ * no longer steering the VR view — fine for the spike. Position still comes
+ * from Earth's live centre each frame (it barely moves), so rotation freezes
+ * while translation doesn't.
  *
  * Known spike caveats (accepted, not bugs to fix here): labels project with
  * the mono orbit vp (render at infinity), pick/UI are dead in-session, the
@@ -28,6 +32,8 @@ import { assembleOrbitCamera } from '../engine/camera/assembleOrbitCamera';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
+import { deriveBodyStates } from '../engine/frame/deriveBodyStates';
+import { SCALE_UNITS } from '../../data/scaleUnits';
 import {
   vrOverride,
   tangentsOf,
@@ -36,8 +42,12 @@ import {
 } from './vrSpikeState';
 import type { VrEye, EyeTangents } from './vrSpikeState';
 
-/** Orbit-pivot distance in metres inside the headset (world scale knob). */
-const SCALE_DIVISOR = 4;
+/** Earth's apparent radius inside the headset, metres (user request: ~1.5 m tall globe). */
+const EARTH_RADIUS_TARGET_M = 0.75;
+/** Head → Earth-centre distance in XR 'local' space, metres (Earth's near edge ~1 m out). */
+const HEAD_TO_EARTH_CENTER_M = 1.75;
+/** Earth's target position in 'local' space: straight ahead of the session-start head, at head height. */
+const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
 // has no XRGPUBinding types yet. All spike-local, all erased with the spike.
@@ -128,7 +138,8 @@ type EyeCapture = {
 function buildFrameDiagnostics(
   eyeCaptures: EyeCapture[],
   metersToMpc: number,
-  anchorDistance: number,
+  earthApparentRadiusM: number,
+  headToEarthCenterM: number,
 ): { summary: string; body: string[] } {
   const checks: string[] = [];
   let offCount = 0;
@@ -251,9 +262,14 @@ function buildFrameDiagnostics(
 
   check(Number.isFinite(metersToMpc) && metersToMpc > 0, 'metersToMpc finite>0', `actual=${metersToMpc}`);
   check(
-    Number.isFinite(anchorDistance) && anchorDistance > 0,
-    'anchor distance finite>0',
-    `actual=${anchorDistance}`,
+    Math.abs(earthApparentRadiusM - EARTH_RADIUS_TARGET_M) < 1e-6,
+    'Earth apparent radius = target',
+    `actual=${earthApparentRadiusM.toFixed(4)} m expected=${EARTH_RADIUS_TARGET_M} m`,
+  );
+  check(
+    Math.abs(headToEarthCenterM - HEAD_TO_EARTH_CENTER_M) < 0.05,
+    'head→Earth-centre distance ≈ target',
+    `actual=${headToEarthCenterM.toFixed(4)} m expected≈${HEAD_TO_EARTH_CENTER_M} m`,
   );
 
   const eyeBlocks: string[] = [];
@@ -324,9 +340,52 @@ async function startSession(
     console.warn(`[vrSpike] XR layer format ${colorFormat} != swap format ${swapFormat} — expect validation errors`);
   }
 
+  const earthBody = state.data.bodies.earth;
+  if (earthBody === null) {
+    console.warn('[vrSpike] no Earth body seeded — nothing to anchor the VR session on');
+    return;
+  }
+  // Earth-radius-derived world scale (session-start constant — Earth's radius
+  // doesn't change at runtime, unlike the old orbit-distance-derived scale).
+  const EARTH_RADIUS_MPC = earthBody.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const metersToMpc = EARTH_RADIUS_MPC / EARTH_RADIUS_TARGET_M;
+
   const layer = binding.createProjectionLayer({ colorFormat, textureType: 'texture-array' });
   session.updateRenderState({ layers: [layer] });
   const refSpace = await session.requestReferenceSpace('local');
+
+  // ── Anchor rotation basis, frozen once at session start ────────────────
+  // World-fixed VR needs a rigid world orientation while the user walks;
+  // reassembling this from the live orbit camera every frame (the pre-Earth-
+  // anchor version) would spin the world under the user's feet whenever the
+  // orbit camera rotates (tweens, drag). Position still tracks Earth's live
+  // centre per frame below — only rotation freezes.
+  const store0 = frameDeps.cb.store.getState();
+  const anchorCam = assembleOrbitCamera(
+    state.cameraRuntime.lastPose.current,
+    state.cameraRuntime.projection,
+    ORIENTATION_FRAMES[store0.settings.orientation],
+    state.cameraRuntime.upBasis.current,
+  );
+  const af: Vec3 = [
+    anchorCam.target[0] - anchorCam.position[0],
+    anchorCam.target[1] - anchorCam.position[1],
+    anchorCam.target[2] - anchorCam.position[2],
+  ];
+  const afl = Math.hypot(af[0], af[1], af[2]) || 1;
+  af[0] /= afl;
+  af[1] /= afl;
+  af[2] /= afl;
+  const anchorBasis = imagePlaneBasis(af, anchorCam.roll ?? 0, frameUp(anchorCam.upBasis));
+  // Anchor columns: XR x→camera right, XR y→image-plane up, XR z→backward.
+  const AX = anchorBasis.right;
+  const AY = anchorBasis.up;
+  const AZ: Vec3 = [-af[0], -af[1], -af[2]];
+  const rot = (v: Vec3): Vec3 => [
+    AX[0] * v[0] + AY[0] * v[1] + AZ[0] * v[2],
+    AX[1] * v[0] + AY[1] * v[1] + AZ[1] * v[2],
+    AX[2] * v[0] + AY[2] * v[1] + AZ[2] * v[2],
+  ];
 
   // Size the canvas backing store to the per-eye texture so renderTargets
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
@@ -368,33 +427,12 @@ async function startSession(
     const pose = frame.getViewerPose(refSpace);
     if (!pose) return;
 
-    // Live every frame (not frozen at session start): head translation doesn't
-    // move the orbit distance, so this can't feedback-pump, and orbit-distance
-    // changes (tweens, future thumbstick zoom) become world-scale zoom for free.
-    // Floor is a zero/denormal guard only — a real clamp here (e.g. 1e-12 Mpc,
-    // ~30M km) silently overrides the scale near planets, where live distance
-    // can be far smaller.
-    const metersToMpc = Math.max(state.cameraRuntime.lastPose.current.distance, 1e-30) / SCALE_DIVISOR;
-
-    // ── Anchor: the live orbit camera, reassembled from last frame's pose ──
-    const store = frameDeps.cb.store.getState();
-    const cam = assembleOrbitCamera(
-      state.cameraRuntime.lastPose.current,
-      state.cameraRuntime.projection,
-      ORIENTATION_FRAMES[store.settings.orientation],
-      state.cameraRuntime.upBasis.current,
-    );
-    const P = cam.position;
-    const f: Vec3 = [cam.target[0] - P[0], cam.target[1] - P[1], cam.target[2] - P[2]];
-    const fl = Math.hypot(f[0], f[1], f[2]) || 1;
-    f[0] /= fl;
-    f[1] /= fl;
-    f[2] /= fl;
-    const basis = imagePlaneBasis(f, cam.roll ?? 0, frameUp(cam.upBasis));
-    // Anchor columns: XR x→camera right, XR y→image-plane up, XR z→backward.
-    const AX = basis.right;
-    const AY = basis.up;
-    const AZ: Vec3 = [-f[0], -f[1], -f[2]];
+    // Read fresh every XR frame (not cached) — Earth barely moves frame to
+    // frame, but a stale copy would drift from the tile/label passes reading
+    // the live snapshot the same instant via sceneBodyStates.
+    const earthCenterWorld = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
+      earthBody.id,
+    )!.positionMpc;
 
     const eyes: VrEye[] = [];
     const eyeCaptures: EyeCapture[] = [];
@@ -410,20 +448,18 @@ async function startSession(
       const ey: Vec3 = [m[4]!, m[5]!, m[6]!];
       const ez: Vec3 = [m[8]!, m[9]!, m[10]!];
       const ep: Vec3 = [m[12]!, m[13]!, m[14]!];
-      // Rotate through the anchor into world space: v_world = A · v_xr.
-      const rot = (v: Vec3): Vec3 => [
-        AX[0] * v[0] + AY[0] * v[1] + AZ[0] * v[2],
-        AX[1] * v[0] + AY[1] * v[1] + AZ[1] * v[2],
-        AX[2] * v[0] + AY[2] * v[1] + AZ[2] * v[2],
-      ];
+      // Rotate through the (session-frozen) anchor into world space:
+      // v_world = A · v_xr. Position offsets from Earth's target 'local'-space
+      // point E_XR, not from the reference-space origin, so ep === E_XR maps
+      // to eyeWorld === earthCenterWorld.
       const X = rot(ex);
       const Y = rot(ey);
       const Z = rot(ez);
-      const off = rot(ep);
+      const off = rot([ep[0] - E_XR[0], ep[1] - E_XR[1], ep[2] - E_XR[2]]);
       const eyeWorld: Vec3 = [
-        P[0] + metersToMpc * off[0],
-        P[1] + metersToMpc * off[1],
-        P[2] + metersToMpc * off[2],
+        earthCenterWorld[0] + metersToMpc * off[0],
+        earthCenterWorld[1] + metersToMpc * off[1],
+        earthCenterWorld[2] + metersToMpc * off[2],
       ];
 
       const tan = tangentsOf(view.projectionMatrix);
@@ -462,13 +498,23 @@ async function startSession(
     }
 
     if (diagFramesLeft > 0) {
+      const earthApparentRadiusM = EARTH_RADIUS_MPC / metersToMpc;
+      // eyeCaptures is non-empty here: the same diagFramesLeft>0 condition
+      // gated its population in the loop above.
+      const e0ep = eyeCaptures[0]!.ep;
+      const headToEarthCenterM = Math.hypot(
+        e0ep[0] - E_XR[0],
+        e0ep[1] - E_XR[1],
+        e0ep[2] - E_XR[2],
+      );
       pushDiag(
-        `metersToMpc=${metersToMpc.toExponential(3)} anchor distance=${state.cameraRuntime.lastPose.current.distance.toExponential(3)}`,
+        `metersToMpc=${metersToMpc.toExponential(3)} earthApparentRadiusM=${earthApparentRadiusM.toFixed(4)} headToEarthCenterM=${headToEarthCenterM.toFixed(4)}`,
       );
       const { summary, body } = buildFrameDiagnostics(
         eyeCaptures,
         metersToMpc,
-        state.cameraRuntime.lastPose.current.distance,
+        earthApparentRadiusM,
+        headToEarthCenterM,
       );
       pushDiag(...body);
       console.log(`[vrSpike-diag] ${summary}`);
