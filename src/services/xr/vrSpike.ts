@@ -49,36 +49,59 @@ const HEAD_TO_EARTH_CENTER_M = 1.75;
 /** Earth's target position in 'local' space: straight ahead of the session-start head, at head height. */
 const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 
-// ── Thumbstick zoom ──────────────────────────────────────────────────────────
+// ── Thumbsticks: right = zoom, left = orbit ────────────────────────────────
 /** Ignore stick noise below this magnitude (xr-standard axes rest near 0 but rarely at exactly 0). */
-const ZOOM_DEADZONE = 0.15;
+const STICK_DEADZONE = 0.15;
 /** Full deflection ≈ doubling/halving metersToMpc per second (e^ln2 = 2). */
 const ZOOM_RATE = Math.LN2;
 /** Earth's apparent radius is kept inside this range regardless of zoom input. */
 const EARTH_APPARENT_RADIUS_MIN_M = 0.02;
 const EARTH_APPARENT_RADIUS_MAX_M = 2000;
+/** Full deflection ≈ 1.2 rad/s of orbit yaw/pitch. */
+const ORBIT_RATE = 1.2;
+/** Pitch clamp — beyond this the view flips past Earth's poles. */
+const ORBIT_PITCH_LIMIT_RAD = 1.5;
+
+type StickAxes = { x: number; y: number };
 
 /**
- * Right-hand thumbstick Y (forward = negative, per the xr-standard gamepad
- * mapping). Falls back to any xr-standard gamepad if no right-hand source is
- * present, and to axes[1] for 2-axis pads (Quest touch controllers expose
- * the thumbstick at axes[3]).
+ * One controller's thumbstick {x, y}, xr-standard gamepad mapping (axes[2..3];
+ * 2-axis pads with no touchpad expose the thumbstick at axes[0..1]). Prefers
+ * `handedness`, falling back to any xr-standard gamepad found (matches the
+ * original zoom-only fallback so a single-controller session still zooms).
  */
-function readZoomAxis(session: XRSessionish): number {
-  let rightY: number | null = null;
-  let anyY: number | null = null;
+function readStickAxes(session: XRSessionish, handedness: 'left' | 'right'): StickAxes {
+  let matched: StickAxes | null = null;
+  let any: StickAxes | null = null;
   for (const src of session.inputSources) {
     const gp = src.gamepad;
     if (!gp || gp.mapping !== 'xr-standard') continue;
-    const y = gp.axes.length >= 4 ? gp.axes[3] : gp.axes[1];
-    if (y === undefined) continue;
-    if (anyY === null) anyY = y;
-    if (src.handedness === 'right') {
-      rightY = y;
+    const fourAxis = gp.axes.length >= 4;
+    const x = fourAxis ? gp.axes[2] : gp.axes[0];
+    const y = fourAxis ? gp.axes[3] : gp.axes[1];
+    if (x === undefined || y === undefined) continue;
+    const axes: StickAxes = { x, y };
+    if (any === null) any = axes;
+    if (src.handedness === handedness) {
+      matched = axes;
       break;
     }
   }
-  return rightY ?? anyY ?? 0;
+  return matched ?? any ?? { x: 0, y: 0 };
+}
+
+/** Rotation about the XR +X axis (pitch), right-hand rule. */
+function rotateAboutX(v: Vec3, angleRad: number): Vec3 {
+  const c = Math.cos(angleRad);
+  const s = Math.sin(angleRad);
+  return [v[0], c * v[1] - s * v[2], s * v[1] + c * v[2]];
+}
+
+/** Rotation about the XR +Y axis (yaw), right-hand rule. */
+function rotateAboutY(v: Vec3, angleRad: number): Vec3 {
+  const c = Math.cos(angleRad);
+  const s = Math.sin(angleRad);
+  return [c * v[0] + s * v[2], v[1], -s * v[0] + c * v[2]];
 }
 
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
@@ -431,6 +454,16 @@ async function startSession(
     AX[2] * v[0] + AY[2] * v[1] + AZ[2] * v[2],
   ];
 
+  // ── Left-stick orbit, session-scoped, 0 at session start ────────────────
+  // Applied as A' = A · R with R = Ryaw · Rpitch (right-multiply: rotate the
+  // XR-space vector by R first, then through the frozen anchor A). Since the
+  // per-eye position term below is an offset from E_XR (Earth's XR-space
+  // pin), rotating that offset orbits the view about Earth's centre — Earth
+  // itself never moves; the world visibly spins around it.
+  let orbitYawRad = 0;
+  let orbitPitchRad = 0;
+  const rotOrbited = (v: Vec3): Vec3 => rot(rotateAboutY(rotateAboutX(v, orbitPitchRad), orbitYawRad));
+
   // Size the canvas backing store to the per-eye texture so renderTargets
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
   // resolution through the normal path. runFrame's resize guard is off while
@@ -470,10 +503,24 @@ async function startSession(
     const dtSeconds = lastFrameTimeMs === null ? null : Math.min((time - lastFrameTimeMs) / 1000, 0.1);
     lastFrameTimeMs = time;
     if (dtSeconds !== null) {
-      const y = readZoomAxis(session);
-      if (Math.abs(y) > ZOOM_DEADZONE) {
-        metersToMpc *= Math.exp(ZOOM_RATE * y * dtSeconds);
+      const rightStick = readStickAxes(session, 'right');
+      if (Math.abs(rightStick.y) > STICK_DEADZONE) {
+        metersToMpc *= Math.exp(ZOOM_RATE * rightStick.y * dtSeconds);
         metersToMpc = Math.min(metersToMpcMax, Math.max(metersToMpcMin, metersToMpc));
+      }
+
+      // Left-stick orbit: X = yaw (circle around the globe), Y = pitch
+      // (forward tilts the viewpoint up and over it — flip here if that
+      // reads inverted on-device).
+      const leftStick = readStickAxes(session, 'left');
+      if (Math.abs(leftStick.x) > STICK_DEADZONE) {
+        orbitYawRad += ORBIT_RATE * leftStick.x * dtSeconds;
+      }
+      if (Math.abs(leftStick.y) > STICK_DEADZONE) {
+        orbitPitchRad = Math.min(
+          ORBIT_PITCH_LIMIT_RAD,
+          Math.max(-ORBIT_PITCH_LIMIT_RAD, orbitPitchRad + ORBIT_RATE * -leftStick.y * dtSeconds),
+        );
       }
     }
 
@@ -498,14 +545,15 @@ async function startSession(
       const ey: Vec3 = [m[4]!, m[5]!, m[6]!];
       const ez: Vec3 = [m[8]!, m[9]!, m[10]!];
       const ep: Vec3 = [m[12]!, m[13]!, m[14]!];
-      // Rotate through the (session-frozen) anchor into world space:
-      // v_world = A · v_xr. Position offsets from Earth's target 'local'-space
-      // point E_XR, not from the reference-space origin, so ep === E_XR maps
-      // to eyeWorld === earthCenterWorld.
-      const X = rot(ex);
-      const Y = rot(ey);
-      const Z = rot(ez);
-      const off = rot([ep[0] - E_XR[0], ep[1] - E_XR[1], ep[2] - E_XR[2]]);
+      // Rotate through the left-stick orbit R then the (session-frozen)
+      // anchor into world space: v_world = A' · v_xr = A · (R · v_xr).
+      // Position offsets from Earth's target 'local'-space point E_XR, not
+      // from the reference-space origin, so ep === E_XR maps to
+      // eyeWorld === earthCenterWorld regardless of orbit.
+      const X = rotOrbited(ex);
+      const Y = rotOrbited(ey);
+      const Z = rotOrbited(ez);
+      const off = rotOrbited([ep[0] - E_XR[0], ep[1] - E_XR[1], ep[2] - E_XR[2]]);
       const eyeWorld: Vec3 = [
         earthCenterWorld[0] + metersToMpc * off[0],
         earthCenterWorld[1] + metersToMpc * off[1],
