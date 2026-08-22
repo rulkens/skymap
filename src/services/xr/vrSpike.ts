@@ -423,7 +423,7 @@ export function installVrSpike(state: EngineState, frameDeps: RunFrameDeps): voi
 
   button.onclick = () => {
     button.disabled = true;
-    startSession(state, frameDeps, xr, XRGPUBindingCtor)
+    startSession(state, frameDeps, xr, XRGPUBindingCtor, button)
       .catch((e: unknown) => {
         console.error('[vrSpike] session failed', e);
         button.disabled = false;
@@ -436,6 +436,7 @@ async function startSession(
   frameDeps: RunFrameDeps,
   xr: { requestSession(mode: string, init?: unknown): Promise<XRSessionish> },
   XRGPUBindingCtor: new (s: XRSessionish, d: GPUDevice) => XRGPUBindingish,
+  button: HTMLButtonElement,
 ): Promise<void> {
   const session = await xr.requestSession('immersive-vr', { optionalFeatures: ['webgpu'] });
   const binding = new XRGPUBindingCtor(session, frameDeps.device);
@@ -578,7 +579,6 @@ async function startSession(
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
   // resolution through the normal path. runFrame's resize guard is off while
   // the override is active, so nothing fights this.
-  const savedCanvas = { w: frameDeps.canvas.width, h: frameDeps.canvas.height };
   frameDeps.canvas.width = Math.max(1, layer.textureWidth);
   frameDeps.canvas.height = Math.max(1, layer.textureHeight);
 
@@ -593,8 +593,13 @@ async function startSession(
   session.addEventListener('end', () => {
     vrOverride.active = false;
     vrOverride.eyes = [];
-    frameDeps.canvas.width = savedCanvas.w;
-    frameDeps.canvas.height = savedCanvas.h;
+    // Deliberately leave the canvas backing store at the eye-texture size —
+    // the next non-VR runFrame's resizeCanvasToDisplay sees the mismatch
+    // against clientWidth/Height and resizes AND refreshes
+    // cameraRuntime.projection.aspect together. A hand-restore to the cached
+    // pre-session size looked like "no change" to that guard and left aspect
+    // stuck at the eye-texture ratio (the stretched-Earth bug).
+    button.disabled = false;
     state.subsystems.scheduler.requestRender();
   });
 
