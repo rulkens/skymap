@@ -194,6 +194,57 @@ describe('label3DRenderer placement (WGSL/TS parity)', () => {
     expect(worldPos[1]).toBeCloseTo(0, 10);
     expect(worldPos[2]).toBeCloseTo(0, 10);
   });
+
+  // The case above is DEGENERATE for guarding the handedness/sign bugs the
+  // formula exists to catch: repeatIndex = 0 makes repeatAngle = 0,
+  // localOffset.x = 0 makes arcRad = 0 (so the '-arcRad' sign is inert),
+  // and localOffset.y = 0 makes lat = 0 (so its negation is inert) — theta
+  // collapses to 0, where sin(theta) = 0 zeroes out the binormal term
+  // entirely. Flipping the cross-product order, the '-arcRad' sign, or the
+  // lat negation would all still pass that test. This second case pins
+  // real, nonzero values through every one of those terms at once.
+  it('a non-degenerate glyph (nonzero repeat, arc, and lat terms) lands where the formula, worked by hand, predicts', () => {
+    // Chosen so every term reduces to a value with an exact, independently
+    // verifiable closed form:
+    //   binormal      = cross([0,0,1], [1,0,0]) = [0,1,0]
+    //   repeatAngle   = repeatIndex(1) * 2*PI / repeatCount(4) = PI/2
+    //   mpcPerAtlasPx = emMpc(10) / ATLAS_EM_PX(84) = 10/84
+    //   arcRad        = localOffsetX(84) * mpcPerAtlasPx / radiusMpc(10)
+    //                 = 84 * (10/84) / 10 = 10/10 = 1              (radian)
+    //   lat           = -localOffsetY(42) * mpcPerAtlasPx / radiusMpc(10)
+    //                 = -(42 * 10/84) / 10 = -(5) / 10 = -0.5
+    //   theta         = startAngleRad(0) + repeatAngle(PI/2) - arcRad(1)
+    //                 = PI/2 - 1
+    // Angle-subtraction identity (not the twin's own formula, so this is
+    // an independent reduction, not a re-run of the code under test):
+    //   cos(PI/2 - 1) = sin(1) ;  sin(PI/2 - 1) = cos(1)
+    // sin(1)/cos(1) are standard mathematical constants (radian argument),
+    // verifiable against any reference table or calculator:
+    //   sin(1) = 0.8414709848078965
+    //   cos(1) = 0.5403023058681398
+    // So:
+    //   dir = cos(theta)*[1,0,0] + sin(theta)*[0,1,0] = [sin(1), cos(1), 0]
+    //   yAxis = planeNormal = [0,0,1]
+    //   world = [0,0,0] + 10 * ([sin(1), cos(1), 0] + (-0.5)*[0,0,1])
+    //         = [10*sin(1), 10*cos(1), -5]
+    //         = [8.414709848078965, 5.403023058681398, -5]
+    const worldPos = computeArcAnchorWorldPos({
+      center: [0, 0, 0],
+      planeNormal: [0, 0, 1],
+      referenceDir: [1, 0, 0],
+      radiusMpc: 10,
+      emMpc: 10,
+      startAngleRad: 0,
+      repeatIndex: 1,
+      repeatCount: 4,
+      localOffsetXAtlasPx: 84,
+      localOffsetYAtlasPx: 42,
+    });
+
+    expect(worldPos[0]).toBeCloseTo(8.414709848078965, 10);
+    expect(worldPos[1]).toBeCloseTo(5.403023058681398, 10);
+    expect(worldPos[2]).toBeCloseTo(-5, 10);
+  });
 });
 
 describe('label3DRenderer (CPU state)', () => {

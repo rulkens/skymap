@@ -315,8 +315,8 @@ export type EngineGpuHandles = {
    * arc-placed labels with per-label font/placement/repeat. Draws into HDR
    * (not the swap chain), so it is NOT one of the `rebuildOnSwapFormat`
    * rows. Null until `initGpu` constructs it; nulled back out during
-   * teardown. Unconsumed until Task 9 wires the zone-of-avoidance lettering
-   * onto it.
+   * teardown. Its intended first consumer is the zone-of-avoidance
+   * lettering path, not yet wired onto it.
    */
   label3DRenderer: Label3DRenderer | null;
   /**

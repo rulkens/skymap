@@ -31,6 +31,8 @@ fn vs(input: VsIn) -> VsOut {
 
   let binormal = cross(label.planeNormal, label.referenceDir);
   let repeatAngle = f32(input.repeatIndex) * TAU / f32(label.repeatCount);
+  // Only 'localOffset' feeds the anchor angle, never 'corner' — keeps one
+  // glyph on one flat basis (see module header).
   let arcRad = input.localOffset.x * mpcPerAtlasPx / label.radiusMpc;
   let theta = label.startAngleRad + repeatAngle - arcRad;
   // Negated to match the atlas Y-down -> world-up convention (labels/vertex.wesl's cornerAtlasPx.y).

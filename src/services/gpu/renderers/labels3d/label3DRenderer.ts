@@ -49,10 +49,10 @@ import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unit
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 /** Per-label storage-buffer stride — see the module header's byte table. */
-export const LABEL3D_DATA_BYTES = 80;
+const LABEL3D_DATA_BYTES = 80;
 
 /** Per-glyph instance-buffer stride — see the module header's byte table. */
-export const LABEL3D_GLYPH_INSTANCE_BYTES = 44;
+const LABEL3D_GLYPH_INSTANCE_BYTES = 44;
 
 const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength;
 
