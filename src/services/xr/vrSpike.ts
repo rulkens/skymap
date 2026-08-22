@@ -194,29 +194,12 @@ type XRGPUSubImageish = {
 };
 
 // ── Spike diagnostics ────────────────────────────────────────────────────────
-// First-frame per-eye raw numbers, shown in a <pre> overlay on the 2D page
-// after the session ends — the Quest has no convenient console, so the page
-// IS the console for this spike. Also console.log'd at capture time
-// (one line per call, `[vrSpike-diag]`-prefixed) so `adb logcat` picks them
-// up live — Chromium mirrors console output to logcat, which is otherwise
-// the only way to see these numbers before the session ends.
-const diag: string[] = [];
-let diagEl: HTMLPreElement | null = null;
-
+// First-frame per-eye raw numbers, console.log'd at capture time (one line
+// per call, `[vrSpike-diag]`-prefixed) so `adb logcat` picks them up live —
+// Chromium mirrors console output to logcat, the only way to see these
+// numbers on-device without a tethered devtools session.
 function pushDiag(...lines: string[]): void {
-  diag.push(...lines);
   for (const line of lines) console.log(`[vrSpike-diag] ${line}`);
-}
-
-function showDiag(): void {
-  if (!diagEl) {
-    diagEl = document.createElement('pre');
-    diagEl.style.cssText =
-      'position:fixed;top:8px;left:8px;right:8px;z-index:1001;max-height:70vh;overflow:auto;' +
-      'background:rgba(0,0,0,.85);color:#8f8;font:11px/1.4 monospace;padding:10px;white-space:pre-wrap;';
-    document.body.append(diagEl);
-  }
-  diagEl.textContent = diag.join('\n');
 }
 
 const f3 = (v: ArrayLike<number>): string =>
@@ -582,7 +565,6 @@ async function startSession(
   let warnedViewport = false;
   let lastFrameTimeMs: number | null = null;
 
-  diag.length = 0;
   pushDiag(`layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`);
   let diagFramesLeft = 1;
 
@@ -592,7 +574,6 @@ async function startSession(
     frameDeps.canvas.width = savedCanvas.w;
     frameDeps.canvas.height = savedCanvas.h;
     state.subsystems.scheduler.requestRender();
-    showDiag();
   });
 
   /**
@@ -661,7 +642,9 @@ async function startSession(
     if (dtSeconds !== null) {
       const rightStick = readStickAxes(session, 'right');
       if (tween === null && Math.abs(rightStick.y) > STICK_DEADZONE) {
-        metersToMpc *= Math.exp(ZOOM_RATE * rightStick.y * dtSeconds);
+        // Signed square: light pulls give fine control, full deflection (|y|=1) still hits ZOOM_RATE.
+        const curved = rightStick.y * Math.abs(rightStick.y);
+        metersToMpc *= Math.exp(ZOOM_RATE * curved * dtSeconds);
         metersToMpc = Math.min(METERS_TO_MPC_MAX, Math.max(METERS_TO_MPC_MIN, metersToMpc));
       }
 
@@ -781,7 +764,6 @@ async function startSession(
       );
       pushDiag(...body);
       console.log(`[vrSpike-diag] ${summary}`);
-      diag.unshift(summary);
       diagFramesLeft -= 1;
     }
     if (eyes.length > 0) {
