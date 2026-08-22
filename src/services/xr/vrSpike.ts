@@ -513,6 +513,9 @@ async function startSession(
   let prevBtnB = false;
   let prevBtnX = false;
   let prevBtnY = false;
+  // Edge-trigger on the combined both-triggers condition (not per-button) so
+  // holding both down after the first frame doesn't re-fire session.end().
+  let prevBothTriggers = false;
 
   const layer = binding.createProjectionLayer({ colorFormat, textureType: 'texture-array' });
   session.updateRenderState({ layers: [layer] });
@@ -700,6 +703,19 @@ async function startSession(
     prevBtnB = btnB;
     prevBtnX = btnX;
     prevBtnY = btnY;
+
+    // In-VR exit gesture: both index triggers at once ends the session —
+    // the Quest system menu can't always dismiss the immersive view.
+    // xr-standard trigger is buttons[0]; the 'end' listener above does the
+    // teardown (canvas restore, vrOverride reset).
+    const triggerL = readFaceButtonPressed(session, 'left', 0);
+    const triggerR = readFaceButtonPressed(session, 'right', 0);
+    const bothTriggers = triggerL && triggerR;
+    if (bothTriggers && !prevBothTriggers) {
+      console.log('[vrSpike] dual-trigger exit');
+      session.end().catch((e: unknown) => console.error('[vrSpike] session.end failed', e));
+    }
+    prevBothTriggers = bothTriggers;
 
     const eyes: VrEye[] = [];
     const eyeCaptures: EyeCapture[] = [];
