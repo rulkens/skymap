@@ -8,16 +8,22 @@
  * built here from the orbit camera anchor, and renderFrame walks the frame
  * program once per eye into the projection layer's textures.
  *
- * World mapping: world-fixed Earth. Earth's live centre (Mpc) is placed at a
- * fixed point in XR 'local' space — 1.75 m in front of the session-start head
- * pose, at head height — scaled so Earth reads as a 0.75 m-radius globe
- * (metersToMpc = EARTH_RADIUS_MPC / 0.75, a session-start constant). The
- * anchor rotation basis is captured ONCE at session start (not reassembled
- * per frame): freezing it is what makes the virtual world rigid so the user
- * can walk around Earth, at the cost of orbit-camera rotation (tweens, drag)
- * no longer steering the VR view — fine for the spike. Position still comes
- * from Earth's live centre each frame (it barely moves), so rotation freezes
- * while translation doesn't.
+ * World mapping: world-fixed active focus. The active focus's centre (Mpc) is
+ * placed at a fixed point in XR 'local' space — 1.75 m in front of the
+ * session-start head pose, at head height — scaled so it reads at its preset
+ * apparent radius (metersToMpc = focus.radiusMpc / focus.apparentRadiusM).
+ * The anchor rotation basis is captured ONCE at session start (not
+ * reassembled per frame): freezing it is what makes the virtual world rigid
+ * so the user can walk around the focus, at the cost of orbit-camera rotation
+ * (tweens, drag) no longer steering the VR view — fine for the spike.
+ * Position still comes from the focus's live centre each frame (Earth barely
+ * moves; the other presets are constants), so rotation freezes while
+ * translation doesn't.
+ *
+ * Focus navigation: the right controller's A/B and left controller's X/Y
+ * face buttons (xr-standard buttons[4]/[5]) tween (center, metersToMpc) to
+ * Earth / Milky Way / local universe / deep universe over ~2 s, log-lerping
+ * scale and smoothstep-easing both; see the `VrFocus` presets below.
  *
  * Known spike caveats (accepted, not bugs to fix here): labels project with
  * the mono orbit vp (render at infinity), pick/UI are dead in-session, the
@@ -34,6 +40,12 @@ import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
 import { deriveBodyStates } from '../engine/frame/deriveBodyStates';
 import { SCALE_UNITS } from '../../data/scaleUnits';
+import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_DISC_RADIUS_KPC } from '../../data/milkyWay/galacticCenter';
+import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
+import { HORIZON_RADIUS_GPC } from '../gpu/renderers/horizonShell/horizonShellRenderer';
+import { lerp } from '../../utils/math/lerp';
+import { lerpVec3 } from '../../utils/math/lerpVec3';
+import { smoothstep } from '../../utils/math/smoothstep';
 import {
   vrOverride,
   tangentsOf,
@@ -44,9 +56,9 @@ import type { VrEye, EyeTangents } from './vrSpikeState';
 
 /** Earth's apparent radius inside the headset, metres (user request: ~1.5 m tall globe). */
 const EARTH_RADIUS_TARGET_M = 0.75;
-/** Head → Earth-centre distance in XR 'local' space, metres (Earth's near edge ~1 m out). */
+/** Head → focus-centre distance in XR 'local' space, metres — same pin for every focus preset. */
 const HEAD_TO_EARTH_CENTER_M = 1.75;
-/** Earth's target position in 'local' space: straight ahead of the session-start head, at head height. */
+/** The active focus's target position in 'local' space: straight ahead of the session-start head, at head height. */
 const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 
 // ── Thumbsticks: right = zoom, left = orbit ────────────────────────────────
@@ -54,40 +66,54 @@ const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 const STICK_DEADZONE = 0.15;
 /** Full deflection ≈ doubling/halving metersToMpc per second (e^ln2 = 2). */
 const ZOOM_RATE = Math.LN2;
-/** Earth's apparent radius is kept inside this range regardless of zoom input. */
-const EARTH_APPARENT_RADIUS_MIN_M = 0.02;
-const EARTH_APPARENT_RADIUS_MAX_M = 2000;
+/** The active focus's apparent radius is kept inside this range regardless of zoom input. */
+const FOCUS_APPARENT_RADIUS_MIN_M = 0.02;
+const FOCUS_APPARENT_RADIUS_MAX_M = 2000;
 /** Full deflection ≈ 1.2 rad/s of orbit yaw/pitch. */
 const ORBIT_RATE = 1.2;
-/** Pitch clamp — beyond this the view flips past Earth's poles. */
+/** Pitch clamp — beyond this the view flips past the focus's poles. */
 const ORBIT_PITCH_LIMIT_RAD = 1.5;
+/** Focus-button navigation: time to tween (center, metersToMpc) to the pressed preset. */
+const FOCUS_TWEEN_DURATION_MS = 2000;
 
 type StickAxes = { x: number; y: number };
 
 /**
- * One controller's thumbstick {x, y}, xr-standard gamepad mapping (axes[2..3];
- * 2-axis pads with no touchpad expose the thumbstick at axes[0..1]). Prefers
- * `handedness`, falling back to any xr-standard gamepad found (matches the
- * original zoom-only fallback so a single-controller session still zooms).
+ * The `handedness` controller's xr-standard gamepad, falling back to any
+ * xr-standard gamepad found — lets a single-controller test session still
+ * drive every axis/button read (matches the original zoom-only fallback).
  */
-function readStickAxes(session: XRSessionish, handedness: 'left' | 'right'): StickAxes {
-  let matched: StickAxes | null = null;
-  let any: StickAxes | null = null;
+function findXrGamepad(session: XRSessionish, handedness: 'left' | 'right'): XRGamepadish | null {
+  let matched: XRGamepadish | null = null;
+  let any: XRGamepadish | null = null;
   for (const src of session.inputSources) {
     const gp = src.gamepad;
     if (!gp || gp.mapping !== 'xr-standard') continue;
-    const fourAxis = gp.axes.length >= 4;
-    const x = fourAxis ? gp.axes[2] : gp.axes[0];
-    const y = fourAxis ? gp.axes[3] : gp.axes[1];
-    if (x === undefined || y === undefined) continue;
-    const axes: StickAxes = { x, y };
-    if (any === null) any = axes;
+    if (any === null) any = gp;
     if (src.handedness === handedness) {
-      matched = axes;
+      matched = gp;
       break;
     }
   }
-  return matched ?? any ?? { x: 0, y: 0 };
+  return matched ?? any;
+}
+
+/**
+ * One controller's thumbstick {x, y}, xr-standard gamepad mapping (axes[2..3];
+ * 2-axis pads with no touchpad expose the thumbstick at axes[0..1]).
+ */
+function readStickAxes(session: XRSessionish, handedness: 'left' | 'right'): StickAxes {
+  const gp = findXrGamepad(session, handedness);
+  if (!gp) return { x: 0, y: 0 };
+  const fourAxis = gp.axes.length >= 4;
+  const x = fourAxis ? gp.axes[2] : gp.axes[0];
+  const y = fourAxis ? gp.axes[3] : gp.axes[1];
+  return x === undefined || y === undefined ? { x: 0, y: 0 } : { x, y };
+}
+
+/** xr-standard face button: index 4 = A/X, index 5 = B/Y, per controller handedness. */
+function readFaceButtonPressed(session: XRSessionish, handedness: 'left' | 'right', buttonIndex: number): boolean {
+  return findXrGamepad(session, handedness)?.buttons[buttonIndex]?.pressed ?? false;
 }
 
 /** Rotation about the XR +X axis (pitch), right-hand rule. */
@@ -124,10 +150,39 @@ type XRSessionish = {
 type XRGamepadish = {
   mapping: string;
   axes: ArrayLike<number>;
+  buttons: ArrayLike<{ pressed: boolean }>;
 };
 type XRInputSourceish = {
   handedness: string;
   gamepad: XRGamepadish | null | undefined;
+};
+
+/**
+ * A focus-button navigation target: a named point the VR view can tween to.
+ * `centerWorldMpc` is a function rather than a plain Vec3 so a live-tracked
+ * focus (Earth) reads its current position every call while a static focus
+ * (Milky Way, universe scales) just closes over a constant.
+ */
+type VrFocus = {
+  label: string;
+  centerWorldMpc: () => Readonly<Vec3>;
+  /** Physical radius this focus is framed at, Mpc. */
+  radiusMpc: number;
+  /** Apparent radius the framing targets inside the headset, metres. */
+  apparentRadiusM: number;
+};
+
+/**
+ * An in-flight tween from the state (center, metersToMpc) captured at
+ * `startTimeMs` toward `toFocus`. `fromCenter`/`fromLogScale` are a snapshot,
+ * not re-read — that's what makes "restart mid-tween" well-defined: the next
+ * button press snapshots wherever the interpolation currently sits.
+ */
+type VrTween = {
+  fromCenter: Readonly<Vec3>;
+  fromLogScale: number;
+  toFocus: VrFocus;
+  startTimeMs: number;
 };
 type XRGPUBindingish = {
   getPreferredColorFormat(): GPUTextureFormat;
@@ -412,10 +467,55 @@ async function startSession(
   // Earth-radius-derived world scale (session-start constant — Earth's radius
   // doesn't change at runtime, unlike the old orbit-distance-derived scale).
   const EARTH_RADIUS_MPC = earthBody.radiusKm * SCALE_UNITS.KM_TO_MPC;
-  // Mutable: thumbstick zoom rescales this every frame (see onXRFrame below).
-  let metersToMpc = EARTH_RADIUS_MPC / EARTH_RADIUS_TARGET_M;
-  const metersToMpcMin = EARTH_RADIUS_MPC / EARTH_APPARENT_RADIUS_MAX_M;
-  const metersToMpcMax = EARTH_RADIUS_MPC / EARTH_APPARENT_RADIUS_MIN_M;
+
+  // ── Focus-button navigation presets ─────────────────────────────────────
+  // Each preset's target metersToMpc = radiusMpc / apparentRadiusM, so every
+  // focus fills the same fraction of the headset view its radius implies.
+  const focusEarth: VrFocus = {
+    label: 'Earth',
+    // Live every call — Earth's position moves frame to frame, same read as
+    // the pre-focus-preset version of this file.
+    centerWorldMpc: () =>
+      deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(earthBody.id)!.positionMpc,
+    radiusMpc: EARTH_RADIUS_MPC,
+    apparentRadiusM: EARTH_RADIUS_TARGET_M,
+  };
+  const focusMilkyWay: VrFocus = {
+    label: 'Milky Way',
+    centerWorldMpc: () => MILKY_WAY_CENTER_WORLD,
+    // MILKY_WAY_DISC_RADIUS_KPC (galacticCenter.ts) is the disc's real
+    // physical radius — the same number the point-cloud model matrix and
+    // pick target size from.
+    radiusMpc: MILKY_WAY_DISC_RADIUS_KPC * SCALE_UNITS.KPC_TO_MPC,
+    apparentRadiusM: 1.0,
+  };
+  const focusLocalUniverse: VrFocus = {
+    label: 'Local universe',
+    centerWorldMpc: () => RENDER_ORIGIN_MPC,
+    radiusMpc: 10,
+    apparentRadiusM: 1.0,
+  };
+  const focusDeepUniverse: VrFocus = {
+    label: 'Deep universe',
+    centerWorldMpc: () => RENDER_ORIGIN_MPC,
+    // ~1/3 of the observable universe's comoving radius. HORIZON_RADIUS_GPC
+    // (horizonShellRenderer.ts) is the real 14.3 Gpc = 14,300 Mpc constant
+    // the horizon-shell impostor and "The edge" tour beat both size from.
+    radiusMpc: (HORIZON_RADIUS_GPC * 1000) / 3,
+    apparentRadiusM: 1.5,
+  };
+
+  // Mutable: thumbstick zoom rescales this every frame; a focus-button tween
+  // also rewrites it every frame while in flight (see onXRFrame below).
+  let metersToMpc = focusEarth.radiusMpc / focusEarth.apparentRadiusM;
+  let activeFocus: VrFocus = focusEarth;
+  let tween: VrTween | null = null;
+  // Edge-trigger state: fire navigation only on the false→true transition,
+  // not every frame the button is held.
+  let prevBtnA = false;
+  let prevBtnB = false;
+  let prevBtnX = false;
+  let prevBtnY = false;
 
   const layer = binding.createProjectionLayer({ colorFormat, textureType: 'texture-array' });
   session.updateRenderState({ layers: [layer] });
@@ -454,12 +554,12 @@ async function startSession(
     AX[2] * v[0] + AY[2] * v[1] + AZ[2] * v[2],
   ];
 
-  // ── Left-stick orbit, session-scoped, 0 at session start ────────────────
+  // ── Left-stick orbit, session-scoped, reset to 0 on every focus change ──
   // Applied as A' = A · R with R = Ryaw · Rpitch (right-multiply: rotate the
   // XR-space vector by R first, then through the frozen anchor A). Since the
-  // per-eye position term below is an offset from E_XR (Earth's XR-space
-  // pin), rotating that offset orbits the view about Earth's centre — Earth
-  // itself never moves; the world visibly spins around it.
+  // per-eye position term below is an offset from E_XR (the active focus's
+  // XR-space pin), rotating that offset orbits the view about the focus's
+  // centre — the focus itself never moves; the world visibly spins around it.
   let orbitYawRad = 0;
   let orbitPitchRad = 0;
   const rotOrbited = (v: Vec3): Vec3 => rot(rotateAboutY(rotateAboutX(v, orbitPitchRad), orbitYawRad));
@@ -490,28 +590,81 @@ async function startSession(
     showDiag();
   });
 
+  /**
+   * Focus-button press: snapshot the current interpolated (center,
+   * metersToMpc) as the tween's start and (re)tween to `focus` — restart-safe,
+   * since re-calling mid-tween just re-snapshots wherever the interpolation
+   * currently sits. Orbit resets to 0 because the pivot is about to move to a
+   * different focus; carrying the old yaw/pitch would spin the new subject in
+   * at an arbitrary angle instead of presenting it face-on.
+   */
+  const selectFocus = (
+    focus: VrFocus,
+    currentCenter: Readonly<Vec3>,
+    currentMetersToMpc: number,
+    nowMs: number,
+  ): void => {
+    tween = {
+      fromCenter: [currentCenter[0], currentCenter[1], currentCenter[2]],
+      fromLogScale: Math.log(currentMetersToMpc),
+      toFocus: focus,
+      startTimeMs: nowMs,
+    };
+    orbitYawRad = 0;
+    orbitPitchRad = 0;
+    console.log(`[vrSpike] focus → ${focus.label}`);
+  };
+
   const onXRFrame = (time: number, frame: XRFrameish): void => {
     if (!vrOverride.active) return;
     session.requestAnimationFrame(onXRFrame);
     const pose = frame.getViewerPose(refSpace);
     if (!pose) return;
 
-    // Thumbstick zoom: rescale metersToMpc about earthCenterWorld/E_XR — Earth
-    // stays pinned 1.75 m ahead of the session-start origin while its
-    // apparent size changes, since every eyeWorld below is an offset from
-    // that fixed pin scaled by metersToMpc.
     const dtSeconds = lastFrameTimeMs === null ? null : Math.min((time - lastFrameTimeMs) / 1000, 0.1);
     lastFrameTimeMs = time;
+
+    // Resolve this frame's focus center + scale first — ages any in-flight
+    // tween (log-lerping metersToMpc, smoothstep-eased) or reads the active
+    // focus live — so the button check below both snapshots the right state
+    // and this frame still renders from a consistent (center, scale) pair.
+    let focusCenterWorld: Readonly<Vec3>;
+    if (tween !== null) {
+      const t = Math.min(1, (time - tween.startTimeMs) / FOCUS_TWEEN_DURATION_MS);
+      const ease = smoothstep(0, 1, t);
+      const toCenter = tween.toFocus.centerWorldMpc();
+      const toLogScale = Math.log(tween.toFocus.radiusMpc / tween.toFocus.apparentRadiusM);
+      focusCenterWorld = lerpVec3(tween.fromCenter, toCenter, ease);
+      metersToMpc = Math.exp(lerp(tween.fromLogScale, toLogScale, ease));
+      if (t >= 1) {
+        activeFocus = tween.toFocus;
+        tween = null;
+      }
+    } else {
+      // Read fresh every XR frame (not cached) — Earth barely moves frame to
+      // frame, but a stale copy would drift from the tile/label passes reading
+      // the live snapshot the same instant via sceneBodyStates; static
+      // presets just return their constant.
+      focusCenterWorld = activeFocus.centerWorldMpc();
+    }
+
+    // Thumbstick zoom: rescale metersToMpc about focusCenterWorld/E_XR — the
+    // active focus stays pinned 1.75 m ahead of the session-start origin
+    // while its apparent size changes, since every eyeWorld below is an
+    // offset from that fixed pin scaled by metersToMpc. Suppressed mid-tween:
+    // the tween owns metersToMpc while it runs.
     if (dtSeconds !== null) {
       const rightStick = readStickAxes(session, 'right');
-      if (Math.abs(rightStick.y) > STICK_DEADZONE) {
+      if (tween === null && Math.abs(rightStick.y) > STICK_DEADZONE) {
         metersToMpc *= Math.exp(ZOOM_RATE * rightStick.y * dtSeconds);
+        const metersToMpcMin = activeFocus.radiusMpc / FOCUS_APPARENT_RADIUS_MAX_M;
+        const metersToMpcMax = activeFocus.radiusMpc / FOCUS_APPARENT_RADIUS_MIN_M;
         metersToMpc = Math.min(metersToMpcMax, Math.max(metersToMpcMin, metersToMpc));
       }
 
       // Left-stick orbit: X = yaw (circle around the globe), Y = pitch
       // (forward tilts the viewpoint up and over it — flip here if that
-      // reads inverted on-device).
+      // reads inverted on-device). Keeps working through a tween.
       const leftStick = readStickAxes(session, 'left');
       if (Math.abs(leftStick.x) > STICK_DEADZONE) {
         orbitYawRad += ORBIT_RATE * leftStick.x * dtSeconds;
@@ -524,12 +677,21 @@ async function startSession(
       }
     }
 
-    // Read fresh every XR frame (not cached) — Earth barely moves frame to
-    // frame, but a stale copy would drift from the tile/label passes reading
-    // the live snapshot the same instant via sceneBodyStates.
-    const earthCenterWorld = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
-      earthBody.id,
-    )!.positionMpc;
+    // Face buttons → focus navigation (A/B right controller, X/Y left —
+    // xr-standard buttons[4]/[5]). Edge-triggered so a held button fires the
+    // tween once, not every frame it stays down.
+    const btnA = readFaceButtonPressed(session, 'right', 4);
+    const btnB = readFaceButtonPressed(session, 'right', 5);
+    const btnX = readFaceButtonPressed(session, 'left', 4);
+    const btnY = readFaceButtonPressed(session, 'left', 5);
+    if (btnA && !prevBtnA) selectFocus(focusEarth, focusCenterWorld, metersToMpc, time);
+    if (btnB && !prevBtnB) selectFocus(focusMilkyWay, focusCenterWorld, metersToMpc, time);
+    if (btnX && !prevBtnX) selectFocus(focusLocalUniverse, focusCenterWorld, metersToMpc, time);
+    if (btnY && !prevBtnY) selectFocus(focusDeepUniverse, focusCenterWorld, metersToMpc, time);
+    prevBtnA = btnA;
+    prevBtnB = btnB;
+    prevBtnX = btnX;
+    prevBtnY = btnY;
 
     const eyes: VrEye[] = [];
     const eyeCaptures: EyeCapture[] = [];
@@ -547,17 +709,17 @@ async function startSession(
       const ep: Vec3 = [m[12]!, m[13]!, m[14]!];
       // Rotate through the left-stick orbit R then the (session-frozen)
       // anchor into world space: v_world = A' · v_xr = A · (R · v_xr).
-      // Position offsets from Earth's target 'local'-space point E_XR, not
-      // from the reference-space origin, so ep === E_XR maps to
-      // eyeWorld === earthCenterWorld regardless of orbit.
+      // Position offsets from the active focus's pinned 'local'-space point
+      // E_XR, not from the reference-space origin, so ep === E_XR maps to
+      // eyeWorld === focusCenterWorld regardless of orbit.
       const X = rotOrbited(ex);
       const Y = rotOrbited(ey);
       const Z = rotOrbited(ez);
       const off = rotOrbited([ep[0] - E_XR[0], ep[1] - E_XR[1], ep[2] - E_XR[2]]);
       const eyeWorld: Vec3 = [
-        earthCenterWorld[0] + metersToMpc * off[0],
-        earthCenterWorld[1] + metersToMpc * off[1],
-        earthCenterWorld[2] + metersToMpc * off[2],
+        focusCenterWorld[0] + metersToMpc * off[0],
+        focusCenterWorld[1] + metersToMpc * off[1],
+        focusCenterWorld[2] + metersToMpc * off[2],
       ];
 
       const tan = tangentsOf(view.projectionMatrix);
