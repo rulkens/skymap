@@ -38,6 +38,8 @@
 import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec4 } from '../../@types/math/Vec4';
+import type { Mat3 } from '../../@types/math/Mat3';
 import { runFrame } from '../engine/frame/runFrame';
 import { setPassDisabled } from '../../state/settings/settingsSlice';
 import { assembleOrbitCamera } from '../engine/camera/assembleOrbitCamera';
@@ -55,8 +57,10 @@ import { HORIZON_RADIUS_GPC } from '../gpu/renderers/horizonShell/horizonShellRe
 import { lerp } from '../../utils/math/lerp';
 import { lerpVec3 } from '../../utils/math/lerpVec3';
 import { smoothstep } from '../../utils/math/smoothstep';
-import { cross3 } from '../../utils/math/cross3';
-import { normalize3 } from '../../utils/math/normalize3';
+import { matrixToQuaternion } from '../../utils/math/matrixToQuaternion';
+import { quatFromAxisAngle } from '../../utils/math/quatFromAxisAngle';
+import { multiplyQuat } from '../../utils/math/multiplyQuat';
+import { rotateVec3ByQuat } from '../../utils/math/rotateVec3ByQuat';
 import { vrOverride, tangentsOf, viewFromBasis, viewFromBasisOriginRelative } from './vrSpikeState';
 import type { VrEye, EyeTangents } from './vrSpikeState';
 
@@ -143,17 +147,14 @@ function rejectAlong(v: Readonly<Vec3>, axis: Readonly<Vec3>): Vec3 {
   return [v[0] - axis[0] * d, v[1] - axis[1] * d, v[2] - axis[2] * d];
 }
 
-/**
- * An arbitrary unit vector perpendicular to `axis` — last-ditch fallback when
- * neither the anchor's forward nor its right axis has a usable horizontal
- * component (looking exactly along `axis`, e.g. straight along a pole with no
- * roll to fall back on). Picks whichever of world +Y/+X is least parallel to
- * `axis` so the projection below is never near-degenerate itself.
- */
-function referenceHorizontal(axis: Readonly<Vec3>): Vec3 {
-  const helper: Vec3 = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-  return normalize3(rejectAlong(helper, axis));
-}
+/** XR-reference space gravity vertical — the physical axis the left-stick's
+ * yaw and the exposed `physicalUpWorld` both key off, distinct from the
+ * cosmological orientation-frame pole used only once, at session start. */
+const PHYSICAL_UP_XR: Vec3 = [0, 1, 0];
+/** Below this horizontal-component length, the head is looking too near
+ * straight up/down (along PHYSICAL_UP_XR) for its right axis to give a
+ * stable pitch pivot this frame — reuse the last valid one instead. */
+const RHAT_DEGENERATE_EPS = 1e-3;
 
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
 // has no XRGPUBinding types yet. All spike-local, all erased with the spike.
@@ -161,8 +162,15 @@ type XRViewish = {
   transform: { matrix: Float32Array };
   projectionMatrix: Float32Array;
 };
+// `transform` mirrors the real WebXR XRViewerPose (head pose, not per-eye);
+// optional because the r̂ derivation below falls back to views[0]'s own
+// transform on a runtime that omits it.
+type XRViewerPoseish = {
+  transform?: { matrix: Float32Array };
+  views: XRViewish[];
+};
 type XRFrameish = {
-  getViewerPose(ref: unknown): { views: XRViewish[] } | null;
+  getViewerPose(ref: unknown): XRViewerPoseish | null;
 };
 type XRSessionish = {
   requestReferenceSpace(kind: string): Promise<unknown>;
@@ -663,58 +671,45 @@ async function startSession(
   af[0] /= afl;
   af[1] /= afl;
   af[2] /= afl;
-  // World-space up the flat app's orbit camera zeniths on (its orientation
-  // frame's pole) — every yaw/pitch below is measured about this one axis,
-  // every frame, which is what makes the reconstructed orbit roll-free.
-  const worldUp = frameUp(anchorCam.upBasis);
+  // World mapping is eyeWorld = focusCenterWorld + metersToMpc · M · (p_XR −
+  // E_XR): M is the one rotation carrying XR-local axes (x=right, y=up,
+  // z=back) into world space, stored as a quaternion so the left-stick orbit
+  // below can update it incrementally by POST-multiplying rotations about
+  // physical (XR-reference) axes — see onXRFrame. Seeded here from the
+  // anchor's own roll-free basis: right/up via `imagePlaneBasis(af, 0,
+  // cosmoUp)` (forces right ⊥ cosmoUp for any forward, the same convention
+  // the flat orbit camera uses), back = -af. This is the ONLY place the
+  // cosmological up (the orientation frame's pole) enters the rewrite — it
+  // reproduces the pre-rewrite view exactly when no stick input has landed
+  // yet (the zero-input invariant), then drops out of the per-frame math.
+  const cosmoUp = frameUp(anchorCam.upBasis);
+  const anchorBasis = imagePlaneBasis(af, 0, cosmoUp);
+  const initM3: Mat3 = [
+    anchorBasis.right[0],
+    anchorBasis.right[1],
+    anchorBasis.right[2],
+    anchorBasis.up[0],
+    anchorBasis.up[1],
+    anchorBasis.up[2],
+    -af[0],
+    -af[1],
+    -af[2],
+  ];
+  let M: Vec4 = matrixToQuaternion(initM3);
+  // Session-start basis, kept for focus-preset resets (see selectFocus): a
+  // preset jump re-centres the pivot (C) but should present the new focus
+  // face-on, the same view direction as session start, rather than carrying
+  // over whatever the user had orbited to.
+  const M0: Vec4 = [M[0], M[1], M[2], M[3]];
 
-  // ── Roll-free spherical orbit frame ─────────────────────────────────────
-  // An orbit camera never accumulates roll because it rebuilds view/up from
-  // (yaw, pitch) about ONE fixed pole every frame — see updatePosition.ts +
-  // imagePlaneBasis.ts. The bug this replaces instead composed two rotations
-  // about DIFFERENT axes (yaw about worldUp, then pitch about the
-  // session-frozen XR +X carried through the anchor basis): roll-free only
-  // when those two axes happen to be perpendicular, which stops holding the
-  // moment the anchor view itself is pitched/oblique. Fix: extract the
-  // anchor's own heading/elevation about worldUp ONCE (below), then every
-  // frame rebuild forward/right/up from (yaw0+yaw, pitch0+pitch) the same
-  // way the flat camera does — `imagePlaneBasis(forward, 0, worldUp)` forces
-  // right to `normalize(forward × worldUp)`, which is perpendicular to
-  // worldUp for ANY forward, so the horizon can never tilt.
-  //
-  // yaw0 is folded into Z0 rather than stored separately: Z0 IS the anchor's
-  // own (roll-discarded) heading direction, so "yaw = 0" already reproduces
-  // it — pitch0 is the only angle that needs storing as a number.
-  const pitch0 = Math.asin(
-    Math.max(-1, Math.min(1, af[0] * worldUp[0] + af[1] * worldUp[1] + af[2] * worldUp[2])),
-  );
-  const HEADING_EPS = 1e-4;
-  // Heading source, in priority order: the anchor forward's own horizontal
-  // component (the normal case); else its roll-discarded right axis (still
-  // well-defined when forward is near-vertical, since right ⊥ forward); else
-  // an arbitrary horizontal axis unrelated to the view. The last two only
-  // matter when |af·worldUp| ≈ 1 (e.g. entering VR looking straight down at
-  // Earth) — right there pitch0 ≈ ±π/2 so cos(pitch0) ≈ 0 and yaw stops
-  // affecting the reproduced direction anyway, making the exact fallback
-  // choice harmless as long as it's finite (never NaN).
-  const afHoriz = rejectAlong(af, worldUp);
-  const afHorizLen = Math.hypot(afHoriz[0], afHoriz[1], afHoriz[2]);
-  let heading: Vec3;
-  if (afHorizLen >= HEADING_EPS) {
-    heading = afHoriz;
-  } else {
-    const rightLevel = imagePlaneBasis(af, 0, worldUp).right;
-    heading =
-      Math.hypot(rightLevel[0], rightLevel[1], rightLevel[2]) >= HEADING_EPS
-        ? rightLevel
-        : referenceHorizontal(worldUp);
-  }
-  const Z0 = normalize3(heading);
-  const X0 = cross3(worldUp, Z0);
-
-  // ── Left-stick orbit, session-scoped, reset to 0 on every focus change ──
-  let orbitYawRad = 0;
-  let orbitPitchRad = 0;
+  // ── Left-stick orbit, session-scoped ────────────────────────────────────
+  // Sum of applied pitch deltas — clamp bookkeeping only (ORBIT_PITCH_LIMIT_RAD
+  // below); M itself is never rebuilt from this, only incremented by it.
+  let pitchAccumRad = 0;
+  // Last non-degenerate physical right axis (horizontal component of the
+  // head's current right axis) — reused when the head is looking too near
+  // straight up/down to derive a fresh one this frame.
+  let lastRHat: Vec3 | null = null;
 
   // Size the canvas backing store to the per-eye texture so renderTargets
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
@@ -740,6 +735,7 @@ async function startSession(
   session.addEventListener('end', () => {
     vrOverride.active = false;
     vrOverride.eyes = [];
+    vrOverride.physicalUpWorld = [0, 1, 0];
     // Restore exactly the keys this session added — never a blanket
     // `disabledPasses = {}`, which would clobber unrelated entries (e.g. the
     // selection-ring pair initialState.ts pre-disabled for the flat page).
@@ -760,9 +756,10 @@ async function startSession(
    * Focus-button press: snapshot the current interpolated (center,
    * metersToMpc) as the tween's start and (re)tween to `focus` — restart-safe,
    * since re-calling mid-tween just re-snapshots wherever the interpolation
-   * currently sits. Orbit resets to 0 because the pivot is about to move to a
-   * different focus; carrying the old yaw/pitch would spin the new subject in
-   * at an arbitrary angle instead of presenting it face-on.
+   * currently sits. Orbit resets to M0 (the session-start basis) because the
+   * pivot is about to move to a different focus; carrying the accumulated
+   * orbit would spin the new subject in at an arbitrary angle instead of
+   * presenting it face-on, same intent the pre-quaternion yaw/pitch reset had.
    */
   const selectFocus = (
     focus: VrFocus,
@@ -776,8 +773,8 @@ async function startSession(
       toFocus: focus,
       startTimeMs: nowMs,
     };
-    orbitYawRad = 0;
-    orbitPitchRad = 0;
+    M = [M0[0], M0[1], M0[2], M0[3]];
+    pitchAccumRad = 0;
     console.log(`[vrSpike] focus → ${focus.label}`);
   };
 
@@ -829,23 +826,58 @@ async function startSession(
         metersToMpc = Math.min(METERS_TO_MPC_MAX, Math.max(METERS_TO_MPC_MIN, metersToMpc));
       }
 
-      // Left-stick orbit: X = yaw about worldUp (circle around the globe —
-      // intent is stick-right orbits the view right, world appears to turn
-      // left; flip the sign here if that reads backwards on-device, same
-      // as the pitch note below), Y = pitch (forward tilts the viewpoint up
-      // and over it — flip here if that reads inverted on-device). Keeps
-      // working through a tween.
+      // Left-stick orbit, about PHYSICAL (XR-reference) axes rather than the
+      // cosmological up: ŷ = PHYSICAL_UP_XR (gravity vertical, constant), r̂ =
+      // the head's CURRENT right axis projected to horizontal — so pitch
+      // always tilts relative to how the head is held right now, and rolling
+      // the head no longer reads as a world-roll (the bug this replaces).
+      // X = yaw about ŷ (stick-right orbits the view right, world appears to
+      // turn left; flip the sign here if that reads backwards on-device),
+      // Y = pitch about r̂ (forward tilts the viewpoint up and over it — flip
+      // here if inverted on-device). Keeps working through a tween.
+      const viewerRightXr: Vec3 = pose.transform
+        ? [pose.transform.matrix[0]!, pose.transform.matrix[1]!, pose.transform.matrix[2]!]
+        : [
+            pose.views[0]!.transform.matrix[0]!,
+            pose.views[0]!.transform.matrix[1]!,
+            pose.views[0]!.transform.matrix[2]!,
+          ];
+      const rHatHoriz = rejectAlong(viewerRightXr, PHYSICAL_UP_XR);
+      const rHatLen = Math.hypot(rHatHoriz[0], rHatHoriz[1], rHatHoriz[2]);
+      const rHat: Vec3 | null =
+        rHatLen >= RHAT_DEGENERATE_EPS
+          ? [rHatHoriz[0] / rHatLen, rHatHoriz[1] / rHatLen, rHatHoriz[2] / rHatLen]
+          : lastRHat;
+      if (rHat !== null) lastRHat = rHat;
+
       const leftStick = readStickAxes(session, 'left');
-      if (Math.abs(leftStick.x) > STICK_DEADZONE) {
-        orbitYawRad += ORBIT_RATE * leftStick.x * dtSeconds;
-      }
-      if (Math.abs(leftStick.y) > STICK_DEADZONE) {
-        orbitPitchRad = Math.min(
+      const dTheta =
+        Math.abs(leftStick.x) > STICK_DEADZONE ? ORBIT_RATE * leftStick.x * dtSeconds : 0;
+      let dPhi = 0;
+      if (Math.abs(leftStick.y) > STICK_DEADZONE && rHat !== null) {
+        const wantedAccum = pitchAccumRad + ORBIT_RATE * -leftStick.y * dtSeconds;
+        const clampedAccum = Math.min(
           ORBIT_PITCH_LIMIT_RAD,
-          Math.max(-ORBIT_PITCH_LIMIT_RAD, orbitPitchRad + ORBIT_RATE * -leftStick.y * dtSeconds),
+          Math.max(-ORBIT_PITCH_LIMIT_RAD, wantedAccum),
         );
+        dPhi = clampedAccum - pitchAccumRad;
+        pitchAccumRad = clampedAccum;
       }
+      // M ← M ∘ R(ŷ, dθ) ∘ R(r̂, dφ) — post-multiplied so both deltas are
+      // expressed in physical axes rather than through M's own current
+      // frame. multiplyQuat(a, b) applies b then a, so this order applies
+      // yaw first, then pitch — matching the flat camera's (yaw, pitch)
+      // convention. A zero angle composes to identity regardless of axis,
+      // so an inactive stick or a degenerate r̂ (dPhi left at 0) is a no-op.
+      const Ryaw = quatFromAxisAngle(PHYSICAL_UP_XR, dTheta);
+      const Rpitch = quatFromAxisAngle(rHat ?? PHYSICAL_UP_XR, dPhi);
+      M = multiplyQuat(multiplyQuat(M, Ryaw), Rpitch);
+      const mLen = Math.hypot(M[0], M[1], M[2], M[3]) || 1;
+      M = [M[0] / mLen, M[1] / mLen, M[2] / mLen, M[3] / mLen];
     }
+    // Exposed for label-orientation consumers outside the render loop — the
+    // world direction that currently appears physically vertical to the user.
+    vrOverride.physicalUpWorld = rotateVec3ByQuat(M, PHYSICAL_UP_XR);
 
     // Face buttons → focus navigation (A/B right controller, X/Y left —
     // xr-standard buttons[4]/[5]). Edge-triggered so a held button fires the
@@ -876,38 +908,10 @@ async function startSession(
     }
     prevBothSqueezes = bothSqueezes;
 
-    // Roll-free orbit basis for this frame — rebuilt from (yaw0+yaw,
-    // pitch0+pitch) about worldUp every frame (see the setup-time comment
-    // above), not composed from the previous frame's basis, so error can't
-    // accumulate and no yaw/pitch combination can tilt the horizon.
-    const orbitPitch = pitch0 + orbitPitchRad;
-    const cosOrbitPitch = Math.cos(orbitPitch);
-    const sinOrbitPitch = Math.sin(orbitPitch);
-    const cosOrbitYaw = Math.cos(orbitYawRad);
-    const sinOrbitYaw = Math.sin(orbitYawRad);
-    const orbitForward: Vec3 = [
-      X0[0] * cosOrbitPitch * sinOrbitYaw +
-        worldUp[0] * sinOrbitPitch +
-        Z0[0] * cosOrbitPitch * cosOrbitYaw,
-      X0[1] * cosOrbitPitch * sinOrbitYaw +
-        worldUp[1] * sinOrbitPitch +
-        Z0[1] * cosOrbitPitch * cosOrbitYaw,
-      X0[2] * cosOrbitPitch * sinOrbitYaw +
-        worldUp[2] * sinOrbitPitch +
-        Z0[2] * cosOrbitPitch * cosOrbitYaw,
-    ];
-    const orbitBasis = imagePlaneBasis(orbitForward, 0, worldUp);
-    const OX = orbitBasis.right;
-    const OY = orbitBasis.up;
-    const OZ: Vec3 = [-orbitForward[0], -orbitForward[1], -orbitForward[2]];
     // Rotates an XR-local vector (x→right, y→up, z→backward) into world
-    // space through this frame's basis — the position offset below rotates
-    // the same way, orbiting the view about the focus's pinned centre.
-    const rotOrbited = (v: Vec3): Vec3 => [
-      OX[0] * v[0] + OY[0] * v[1] + OZ[0] * v[2],
-      OX[1] * v[0] + OY[1] * v[1] + OZ[1] * v[2],
-      OX[2] * v[0] + OY[2] * v[1] + OZ[2] * v[2],
-    ];
+    // space through this frame's M — the position offset below rotates the
+    // same way, orbiting the view about the focus's pinned centre.
+    const rotOrbited = (v: Vec3): Vec3 => rotateVec3ByQuat(M, v);
 
     const eyes: VrEye[] = [];
     const eyeCaptures: EyeCapture[] = [];
@@ -925,11 +929,11 @@ async function startSession(
       const ey: Vec3 = [m[4]!, m[5]!, m[6]!];
       const ez: Vec3 = [m[8]!, m[9]!, m[10]!];
       const ep: Vec3 = [m[12]!, m[13]!, m[14]!];
-      // Rotate through the left-stick orbit R then the (session-frozen)
-      // anchor into world space: v_world = A' · v_xr = A · (R · v_xr).
-      // Position offsets from the active focus's pinned 'local'-space point
-      // E_XR, not from the reference-space origin, so ep === E_XR maps to
-      // eyeWorld === focusCenterWorld regardless of orbit.
+      // Rotate through M (session-start anchor basis, left-stick-orbited
+      // since) into world space. Position offsets from the active focus's
+      // pinned 'local'-space point E_XR, not from the reference-space
+      // origin, so ep === E_XR maps to eyeWorld === focusCenterWorld
+      // regardless of orbit.
       const X = rotOrbited(ex);
       const Y = rotOrbited(ey);
       const Z = rotOrbited(ez);

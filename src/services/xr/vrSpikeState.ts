@@ -38,12 +38,21 @@ export type VrOverride = {
   /** symmetric-equivalent vertical FOV for planners (pxPerRad etc.). */
   fovYRad: number;
   eyes: VrEye[];
+  /**
+   * World-space direction of the user's physical (XR-reference) vertical
+   * this frame — the world direction that currently appears "up" to the
+   * user regardless of any left-stick orbit — for label-orientation
+   * consumers outside the render loop. `[0, 1, 0]` (inert placeholder) when
+   * no XR session is active.
+   */
+  physicalUpWorld: Vec3;
 };
 
 export const vrOverride: VrOverride = {
   active: false,
   fovYRad: 1.0,
   eyes: [],
+  physicalUpWorld: [0, 1, 0],
 };
 
 /** tanL/tanR/tanD/tanU from a GL-convention XRView.projectionMatrix. */
@@ -126,12 +135,7 @@ function billboardBasisFromView(view: Float32Array | Float64Array): VrBillboardB
 }
 
 /** Origin-relative variant of viewFromBasis for the NEAR0 slab (f64). */
-export function viewFromBasisOriginRelative(
-  X: Vec3,
-  Y: Vec3,
-  Z: Vec3,
-  eyeMpc: Vec3,
-): Float64Array {
+export function viewFromBasisOriginRelative(X: Vec3, Y: Vec3, Z: Vec3, eyeMpc: Vec3): Float64Array {
   const rel: Vec3 = [
     eyeMpc[0] - RENDER_ORIGIN_MPC[0],
     eyeMpc[1] - RENDER_ORIGIN_MPC[1],
