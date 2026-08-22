@@ -12,18 +12,23 @@
  * placed at a fixed point in XR 'local' space — 1.75 m in front of the
  * session-start head pose, at head height — scaled so it reads at its preset
  * apparent radius (metersToMpc = focus.radiusMpc / focus.apparentRadiusM).
- * The anchor rotation basis is captured ONCE at session start (not
- * reassembled per frame): freezing it is what makes the virtual world rigid
- * so the user can walk around the focus, at the cost of orbit-camera rotation
- * (tweens, drag) no longer steering the VR view — fine for the spike.
- * Position still comes from the focus's live centre each frame (Earth barely
- * moves; the other presets are constants), so rotation freezes while
- * translation doesn't.
+ * The session-start focus is the flat app's live 2D view (whatever it was
+ * centred/framed on when "Enter VR" was pressed), falling back to Earth only
+ * if the 2D distance is unusable; see `focusCurrentView` below. The anchor
+ * rotation basis is captured ONCE at session start (not reassembled per
+ * frame): freezing it is what makes the virtual world rigid so the user can
+ * walk around the focus, at the cost of orbit-camera rotation (tweens, drag)
+ * no longer steering the VR view — fine for the spike. Position still comes
+ * from the focus's live centre each frame (a followed body keeps moving; the
+ * other presets are constants), so rotation freezes while translation
+ * doesn't.
  *
  * Focus navigation: the right controller's A/B and left controller's X/Y
  * face buttons (xr-standard buttons[4]/[5]) tween (center, metersToMpc) to
  * Earth / Milky Way / local universe / deep universe over ~2 s, log-lerping
- * scale and smoothstep-easing both; see the `VrFocus` presets below.
+ * scale and smoothstep-easing both; see the `VrFocus` presets below. No
+ * button tweens back to the session-start view — it is a one-time landing
+ * spot, not a fifth preset.
  *
  * Known spike caveats (accepted, not bugs to fix here): labels project with
  * the mono orbit vp (render at infinity), pick/UI are dead in-session, the
@@ -246,8 +251,10 @@ type EyeCapture = {
 function buildFrameDiagnostics(
   eyeCaptures: EyeCapture[],
   metersToMpc: number,
-  earthApparentRadiusM: number,
-  headToEarthCenterM: number,
+  focusApparentRadiusM: number,
+  targetApparentRadiusM: number,
+  focusLabel: string,
+  headToFocusCenterM: number,
 ): { summary: string; body: string[] } {
   const checks: string[] = [];
   let offCount = 0;
@@ -369,15 +376,19 @@ function buildFrameDiagnostics(
   }
 
   check(Number.isFinite(metersToMpc) && metersToMpc > 0, 'metersToMpc finite>0', `actual=${metersToMpc}`);
+  // Generic across every focus preset (including the session-start "current
+  // view" one, whose radiusMpc/apparentRadiusM aren't Earth's) — each preset
+  // defines its own target apparent radius, so this checks the SAME focus's
+  // own math rather than hardcoding Earth's 0.75 m expectation.
   check(
-    Math.abs(earthApparentRadiusM - EARTH_RADIUS_TARGET_M) < 1e-6,
-    'Earth apparent radius = target',
-    `actual=${earthApparentRadiusM.toFixed(4)} m expected=${EARTH_RADIUS_TARGET_M} m`,
+    Math.abs(focusApparentRadiusM - targetApparentRadiusM) < 1e-6,
+    `${focusLabel} apparent radius = target`,
+    `actual=${focusApparentRadiusM.toFixed(4)} m expected=${targetApparentRadiusM} m`,
   );
   check(
-    Math.abs(headToEarthCenterM - HEAD_TO_EARTH_CENTER_M) < 0.05,
-    'head→Earth-centre distance ≈ target',
-    `actual=${headToEarthCenterM.toFixed(4)} m expected≈${HEAD_TO_EARTH_CENTER_M} m`,
+    Math.abs(headToFocusCenterM - HEAD_TO_EARTH_CENTER_M) < 0.05,
+    'head→focus-centre distance ≈ target',
+    `actual=${headToFocusCenterM.toFixed(4)} m expected≈${HEAD_TO_EARTH_CENTER_M} m`,
   );
 
   const eyeBlocks: string[] = [];
@@ -503,10 +514,32 @@ async function startSession(
     apparentRadiusM: 1.5,
   };
 
+  // ── Session-start focus: wherever the 2D view already was ───────────────
+  // "Enter VR" should land on the flat app's current view (a focused Saturn,
+  // a followed body, an arbitrary pan) rather than always jumping to Earth.
+  // `lastPose.current` is the same Resource the 2D camera reads via
+  // `assembleOrbitCamera`, and `runFrame`'s step 4 rewrites it every frame
+  // regardless of vrOverride — so closing over it (not copying `.target`
+  // once) means a body-followed pivot keeps tracking after the headset goes
+  // on. Scale is captured ONCE, from the 2D distance at session start:
+  // metersToMpc = distance / HEAD_TO_EARTH_CENTER_M keeps the framed subject
+  // at its 2D apparent size with the pin the same 1.75 m in front of the
+  // head every preset uses.
+  const startDistanceMpc = state.cameraRuntime.lastPose.current.distance;
+  const focusCurrentView: VrFocus =
+    Number.isFinite(startDistanceMpc) && startDistanceMpc > 0
+      ? {
+          label: 'Current view',
+          centerWorldMpc: () => state.cameraRuntime.lastPose.current.target,
+          radiusMpc: startDistanceMpc,
+          apparentRadiusM: HEAD_TO_EARTH_CENTER_M,
+        }
+      : focusEarth; // sanity guard: a zero/non-finite distance can't scale — fall back to Earth.
+
   // Mutable: thumbstick zoom rescales this every frame; a focus-button tween
   // also rewrites it every frame while in flight (see onXRFrame below).
-  let metersToMpc = focusEarth.radiusMpc / focusEarth.apparentRadiusM;
-  let activeFocus: VrFocus = focusEarth;
+  let metersToMpc = focusCurrentView.radiusMpc / focusCurrentView.apparentRadiusM;
+  let activeFocus: VrFocus = focusCurrentView;
   let tween: VrTween | null = null;
   // Edge-trigger state: fire navigation only on the false→true transition,
   // not every frame the button is held.
@@ -787,23 +820,27 @@ async function startSession(
     }
 
     if (diagFramesLeft > 0) {
-      const earthApparentRadiusM = EARTH_RADIUS_MPC / metersToMpc;
+      // Generic over whichever focus is active on frame 1 (the session-start
+      // "current view" preset, or its Earth fallback) — see buildFrameDiagnostics.
+      const focusApparentRadiusM = activeFocus.radiusMpc / metersToMpc;
       // eyeCaptures is non-empty here: the same diagFramesLeft>0 condition
       // gated its population in the loop above.
       const e0ep = eyeCaptures[0]!.ep;
-      const headToEarthCenterM = Math.hypot(
+      const headToFocusCenterM = Math.hypot(
         e0ep[0] - E_XR[0],
         e0ep[1] - E_XR[1],
         e0ep[2] - E_XR[2],
       );
       pushDiag(
-        `metersToMpc=${metersToMpc.toExponential(3)} earthApparentRadiusM=${earthApparentRadiusM.toFixed(4)} headToEarthCenterM=${headToEarthCenterM.toFixed(4)}`,
+        `focus=${activeFocus.label} metersToMpc=${metersToMpc.toExponential(3)} focusApparentRadiusM=${focusApparentRadiusM.toFixed(4)} headToFocusCenterM=${headToFocusCenterM.toFixed(4)}`,
       );
       const { summary, body } = buildFrameDiagnostics(
         eyeCaptures,
         metersToMpc,
-        earthApparentRadiusM,
-        headToEarthCenterM,
+        focusApparentRadiusM,
+        activeFocus.apparentRadiusM,
+        activeFocus.label,
+        headToFocusCenterM,
       );
       pushDiag(...body);
       console.log(`[vrSpike-diag] ${summary}`);
