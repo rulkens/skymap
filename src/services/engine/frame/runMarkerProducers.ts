@@ -17,7 +17,7 @@ export function runMarkerProducers(
   const out: StructureMarkerDescriptor[] = [];
   for (const producer of MARKER_PRODUCERS) {
     const descriptors = producer.produceMarkers(state, ctx);
-    out.push(...descriptors);
+    for (const d of descriptors) out.push(d);
   }
   return out;
 }

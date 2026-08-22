@@ -15,7 +15,12 @@ export type Label3D = {
   readonly placement: Label3DArcPlacement;
   /** Em height in Mpc — a fixed PHYSICAL size. No pixel clamps, by design. */
   readonly emMpc: number;
-  /** Copies evenly spaced around the arc; 1 = a single instance. */
+  /**
+   * Copies evenly spaced around the arc; 1 = a single instance. `0` emits NO
+   * glyphs — `label3DRenderer`'s instance loop runs `rep < repeatCount`
+   * CPU-side, so the shader's `/ f32(repeatCount)` divide is never reached; a
+   * refactor that hoists that divide out of the loop must keep this guard.
+   */
   readonly repeatCount: number;
   /** Straight RGBA fill. Single-band MSDF — no outline. */
   readonly color: Vec4;

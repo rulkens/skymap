@@ -10,7 +10,6 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { StructureMarkerDescriptor } from '../../../../src/@types/rendering/StructureMarkerDescriptor';
 import type { MarkerProducer } from '../../../../src/@types/engine/subsystems/MarkerProducer';
 
-// Stub descriptors for testing. The `id` field lets us verify ordering.
 const desc = (id: string): StructureMarkerDescriptor => ({
   id,
   category: 'cluster',
@@ -29,7 +28,6 @@ const alphaZeroDesc = (id: string): StructureMarkerDescriptor => ({
   ringColor: [1, 1, 1, 0],
 });
 
-// Mock the MARKER_PRODUCERS array to use stub producers
 vi.mock('../../../../src/services/engine/presentation/markerProducers', () => {
   const producer1: MarkerProducer = {
     id: 'producer1',
@@ -46,18 +44,15 @@ vi.mock('../../../../src/services/engine/presentation/markerProducers', () => {
   };
 });
 
-// Now import the function under test
 import { runMarkerProducers } from '../../../../src/services/engine/frame/runMarkerProducers';
 
 describe('runMarkerProducers', () => {
   it('preserves producer order and emits every descriptor unfiltered', () => {
-    // Mock state and context (values unused by stub producers)
     const state = {} as EngineState;
     const ctx = {} as ReadyFrameContext;
 
     const result = runMarkerProducers(state, ctx);
 
-    // Expected output: concatenation of producer outputs in order
     expect(result).toHaveLength(5);
     expect(result.at(0)?.id).toBe('p1-a');
     expect(result.at(1)?.id).toBe('p1-b');
@@ -65,7 +60,6 @@ describe('runMarkerProducers', () => {
     expect(result.at(3)?.id).toBe('p2-a');
     expect(result.at(4)?.id).toBe('p2-b');
 
-    // Verify alpha-0 descriptors are included (not filtered out)
     expect(result.at(1)?.haloColor[3]).toBe(0);
     expect(result.at(1)?.ringColor[3]).toBe(0);
   });

@@ -16,12 +16,12 @@ import type { Vec4 } from '../math/Vec4';
 
 export type MarkerLine = {
   id: string;
-  fromWorld: Vec3;
-  toWorld: Vec3;
+  readonly fromWorld: Vec3;
+  readonly toWorld: Vec3;
   /** Full pixel width of the rendered line (the shader halves to half-width). */
   pixelWidth: number;
   /** Premultiplied RGBA — alpha-weighted colour packed into a single vec4. */
-  color: Vec4;
+  readonly color: Vec4;
   /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Defaults to 1. */
   fadeAlpha?: number;
 };

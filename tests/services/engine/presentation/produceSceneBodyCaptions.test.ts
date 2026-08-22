@@ -25,6 +25,7 @@ import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/en
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
@@ -44,6 +45,7 @@ const PROXIMA_LABEL_ID = sceneBodyLabelId('proxima-centauri');
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
   SCENE_PLANETS.map((p) => sceneBodyLabelId(p.id)),
 );
+const SGR_A_STAR_LABEL_ID = sceneBodyLabelId(SGR_A_STAR_ENTRY.id);
 
 function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
@@ -274,6 +276,24 @@ describe('produceSceneBodyCaptions', () => {
     // full alpha all the way down.
     expect(sunFadeAt(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2)).toBe(1);
     expect(sunFadeAt(1e-5)).toBe(1);
+  });
+
+  it('keeps captioning Sgr A* past the solar-system gate while Earth and the planets go dark', () => {
+    // `captionFadeRules.sgrAStar` takes NO SOLAR_SYSTEM_REACH row — it is the
+    // one caption whose reach outlives the solar-system gate (8 kpc away, and
+    // the galaxy-framing view that most needs it). Camera near Earth keeps the
+    // Sgr A*-to-camera distance essentially R0 (fullAt on its own band, ~1 AU
+    // of slack against an 8 kpc scale) while `ctx.cam.distance` — the
+    // SEPARATE quantity Earth/planet's SOLAR_SYSTEM_REACH gate reads — is
+    // pushed past the gate, so Earth and the planets must read exactly 0.
+    const camPos = worldPosOf(EARTH_LABEL_ID);
+    const out = produceSceneBodyCaptions(
+      makeState(),
+      makeCtx(camPos, SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2),
+    );
+    expect(fadeAlphaOf(out.labels, SGR_A_STAR_LABEL_ID)).toBeGreaterThan(0);
+    expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBe(0);
+    for (const id of PLANET_LABEL_IDS) expect(fadeAlphaOf(out.labels, id)).toBe(0);
   });
 
   it('composes prominencePx so the kind tier dominates apparent size', () => {

@@ -14,7 +14,7 @@ export function runLabel3DProducers(state: EngineState, ctx: ReadyFrameContext):
   let awake = false;
   for (const producer of LABEL_3D_PRODUCERS) {
     const output = producer.produceLabels3D(state, ctx);
-    labels.push(...output.labels);
+    for (const l of output.labels) labels.push(l);
     awake = awake || output.awake;
   }
   state.gpu.label3DRenderer?.setLabels(labels);
