@@ -101,6 +101,12 @@ export function buildInitialSettings(): EngineSettingsState {
   // nodes, and costs less. 0.3 trades a visibly boxier far field for headroom
   // on the headset.
   const VR_STAR_REFINE_THRESHOLD = 0.3;
+  // THROWAWAY (vrSpike): perf A/B knobs traded in from on-device Quest 3
+  // testing — the star draw is fragment-bound, so a flat 2px point plus half
+  // the default glow-overlap spread buys back frame budget at the cost of
+  // physical accuracy the headset viewer won't notice up close.
+  const VR_STAR_SIZE_PX = 2;
+  const VR_STAR_GLOW_OVERLAP = DEFAULT_STAR_GLOW_OVERLAP * 0.5;
   const volumeItems = seedVolumeFields();
   if (vrSpike && volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]) {
     volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]!.enabled = false;
@@ -252,10 +258,10 @@ export function buildInitialSettings(): EngineSettingsState {
       // row is still forced off below, so nothing fetches until the user
       // picks one.
       enabled: true,
-      sizePx: DEFAULT_STAR_SIZE_PX,
+      sizePx: vrSpike ? VR_STAR_SIZE_PX : DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
       refineThreshold: vrSpike ? VR_STAR_REFINE_THRESHOLD : DEFAULT_REFINE_THRESHOLD,
-      glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
+      glowOverlap: vrSpike ? VR_STAR_GLOW_OVERLAP : DEFAULT_STAR_GLOW_OVERLAP,
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
       exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,

@@ -133,6 +133,17 @@ describe('buildInitialSettings', () => {
       expect(s.starCatalogs.refineThreshold).toBeGreaterThan(DEFAULT_REFINE_THRESHOLD);
     });
 
+    it('sets star size to 2px and halves glow overlap for the headset perf A/B', () => {
+      // Regression/documentation: fragment-bound star draw on Quest 3 — a
+      // flat 2px point plus half the default glow-overlap spread buys back
+      // frame budget. Non-VR boot keeps the un-scaled defaults (asserted in
+      // the top-level 'wires per-field defaults' test above).
+      setSearch('?vr');
+      const s = buildInitialSettings();
+      expect(s.starCatalogs.sizePx).toBe(2);
+      expect(s.starCatalogs.glowOverlap).toBe(DEFAULT_STAR_GLOW_OVERLAP * 0.5);
+    });
+
     it('defaults 2MRS and Famous on while forcing every other galaxy catalog off', () => {
       // 2MRS is the headset's default galaxy layer: 35k all-sky points, light
       // enough for the Quest's frame budget. Famous is the curated thumbnail
