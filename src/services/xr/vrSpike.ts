@@ -49,6 +49,38 @@ const HEAD_TO_EARTH_CENTER_M = 1.75;
 /** Earth's target position in 'local' space: straight ahead of the session-start head, at head height. */
 const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 
+// ── Thumbstick zoom ──────────────────────────────────────────────────────────
+/** Ignore stick noise below this magnitude (xr-standard axes rest near 0 but rarely at exactly 0). */
+const ZOOM_DEADZONE = 0.15;
+/** Full deflection ≈ doubling/halving metersToMpc per second (e^ln2 = 2). */
+const ZOOM_RATE = Math.LN2;
+/** Earth's apparent radius is kept inside this range regardless of zoom input. */
+const EARTH_APPARENT_RADIUS_MIN_M = 0.02;
+const EARTH_APPARENT_RADIUS_MAX_M = 2000;
+
+/**
+ * Right-hand thumbstick Y (forward = negative, per the xr-standard gamepad
+ * mapping). Falls back to any xr-standard gamepad if no right-hand source is
+ * present, and to axes[1] for 2-axis pads (Quest touch controllers expose
+ * the thumbstick at axes[3]).
+ */
+function readZoomAxis(session: XRSessionish): number {
+  let rightY: number | null = null;
+  let anyY: number | null = null;
+  for (const src of session.inputSources) {
+    const gp = src.gamepad;
+    if (!gp || gp.mapping !== 'xr-standard') continue;
+    const y = gp.axes.length >= 4 ? gp.axes[3] : gp.axes[1];
+    if (y === undefined) continue;
+    if (anyY === null) anyY = y;
+    if (src.handedness === 'right') {
+      rightY = y;
+      break;
+    }
+  }
+  return rightY ?? anyY ?? 0;
+}
+
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
 // has no XRGPUBinding types yet. All spike-local, all erased with the spike.
 type XRViewish = {
@@ -64,6 +96,15 @@ type XRSessionish = {
   requestAnimationFrame(cb: (time: number, frame: XRFrameish) => void): number;
   addEventListener(type: string, cb: () => void): void;
   end(): Promise<void>;
+  inputSources: Iterable<XRInputSourceish>;
+};
+type XRGamepadish = {
+  mapping: string;
+  axes: ArrayLike<number>;
+};
+type XRInputSourceish = {
+  handedness: string;
+  gamepad: XRGamepadish | null | undefined;
 };
 type XRGPUBindingish = {
   getPreferredColorFormat(): GPUTextureFormat;
@@ -348,7 +389,10 @@ async function startSession(
   // Earth-radius-derived world scale (session-start constant — Earth's radius
   // doesn't change at runtime, unlike the old orbit-distance-derived scale).
   const EARTH_RADIUS_MPC = earthBody.radiusKm * SCALE_UNITS.KM_TO_MPC;
-  const metersToMpc = EARTH_RADIUS_MPC / EARTH_RADIUS_TARGET_M;
+  // Mutable: thumbstick zoom rescales this every frame (see onXRFrame below).
+  let metersToMpc = EARTH_RADIUS_MPC / EARTH_RADIUS_TARGET_M;
+  const metersToMpcMin = EARTH_RADIUS_MPC / EARTH_APPARENT_RADIUS_MAX_M;
+  const metersToMpcMax = EARTH_RADIUS_MPC / EARTH_APPARENT_RADIUS_MIN_M;
 
   const layer = binding.createProjectionLayer({ colorFormat, textureType: 'texture-array' });
   session.updateRenderState({ layers: [layer] });
@@ -398,6 +442,7 @@ async function startSession(
   vrOverride.active = true;
   vrOverride.eyes = [];
   let warnedViewport = false;
+  let lastFrameTimeMs: number | null = null;
 
   diag.length = 0;
   pushDiag(`layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`);
@@ -417,6 +462,20 @@ async function startSession(
     session.requestAnimationFrame(onXRFrame);
     const pose = frame.getViewerPose(refSpace);
     if (!pose) return;
+
+    // Thumbstick zoom: rescale metersToMpc about earthCenterWorld/E_XR — Earth
+    // stays pinned 1.75 m ahead of the session-start origin while its
+    // apparent size changes, since every eyeWorld below is an offset from
+    // that fixed pin scaled by metersToMpc.
+    const dtSeconds = lastFrameTimeMs === null ? null : Math.min((time - lastFrameTimeMs) / 1000, 0.1);
+    lastFrameTimeMs = time;
+    if (dtSeconds !== null) {
+      const y = readZoomAxis(session);
+      if (Math.abs(y) > ZOOM_DEADZONE) {
+        metersToMpc *= Math.exp(ZOOM_RATE * y * dtSeconds);
+        metersToMpc = Math.min(metersToMpcMax, Math.max(metersToMpcMin, metersToMpc));
+      }
+    }
 
     // Read fresh every XR frame (not cached) — Earth barely moves frame to
     // frame, but a stale copy would drift from the tile/label passes reading
