@@ -94,6 +94,13 @@ export function buildInitialSettings(): EngineSettingsState {
   // still loads it via the normal demand path. Delete with the spike.
   const vrSpike =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('vr');
+  // THROWAWAY (vrSpike): perf A/B knob for the on-device Quest fit — raising
+  // `refineThreshold` above `DEFAULT_REFINE_THRESHOLD` (0.16) makes the octree
+  // cut COARSER, not finer: a node refines only while `edge/distance` exceeds
+  // this threshold, so a HIGHER value delays refinement, walks/draws fewer
+  // nodes, and costs less. 0.3 trades a visibly boxier far field for headroom
+  // on the headset.
+  const VR_STAR_REFINE_THRESHOLD = 0.3;
   const volumeItems = seedVolumeFields();
   if (vrSpike && volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]) {
     volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]!.enabled = false;
@@ -247,7 +254,7 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
-      refineThreshold: DEFAULT_REFINE_THRESHOLD,
+      refineThreshold: vrSpike ? VR_STAR_REFINE_THRESHOLD : DEFAULT_REFINE_THRESHOLD,
       glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,

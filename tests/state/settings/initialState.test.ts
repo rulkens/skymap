@@ -122,6 +122,17 @@ describe('buildInitialSettings', () => {
       });
     });
 
+    it('coarsens the star-cut Detail knob (0.3, above the 0.16 default) for the headset perf A/B', () => {
+      // Regression/documentation: `refineThreshold` gates the octree walk's
+      // refine decision (`edge/distance > threshold`), so a HIGHER value
+      // delays refinement and draws FEWER nodes — this is the "less detail,
+      // cheaper" direction, not "more detail" despite the larger number.
+      setSearch('?vr');
+      const s = buildInitialSettings();
+      expect(s.starCatalogs.refineThreshold).toBe(0.3);
+      expect(s.starCatalogs.refineThreshold).toBeGreaterThan(DEFAULT_REFINE_THRESHOLD);
+    });
+
     it('defaults 2MRS and Famous on while forcing every other galaxy catalog off', () => {
       // 2MRS is the headset's default galaxy layer: 35k all-sky points, light
       // enough for the Quest's frame budget. Famous is the curated thumbnail
