@@ -14,7 +14,7 @@ import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
-import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/services/engine/engine';
+import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregroundLabelDirectorConfig';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';

@@ -2,10 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4, mat4d } from 'wgpu-matrix';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
-import {
-  COSMO_LABEL_DIRECTOR,
-  FOREGROUND_LABEL_DIRECTOR,
-} from '../../../../src/services/engine/engine';
+import { COSMO_LABEL_DIRECTOR } from '../../../../src/data/labels/cosmoLabelDirectorConfig';
+import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { cosmoLabelProjection } from '../../../../src/services/engine/frame/cosmoLabelProjection';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import {

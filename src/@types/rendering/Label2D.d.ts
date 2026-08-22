@@ -105,7 +105,7 @@ export type Label2D = {
   readonly alignY?: LabelAlignY;
   /**
    * On-screen prominence (apparent size, px) used as the declutter sort
-   * key by the `labelDirector` merge: a ring's apparent radius for a
+   * key by the `label2DDirector` merge: a ring's apparent radius for a
    * structure, a galaxy's apparent diameter for a famous label.  When two
    * labels' measured text rects overlap on screen, the higher
    * `prominencePx` wins.  The label renderer ignores this field — it exists

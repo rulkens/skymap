@@ -28,7 +28,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
-import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/services/engine/engine';
+import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import {

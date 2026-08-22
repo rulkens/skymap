@@ -130,7 +130,7 @@ export type EngineSubsystemHandles = {
    * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
    * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
    * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
-   * in `engine.ts`). Attaches `foregroundLabelRenderer` +
+   * in `src/data/labels/`). Attaches `foregroundLabelRenderer` +
    * `foregroundMarkerLineRenderer` at the same two sites `cosmoLabelDirector`
    * attaches its own pair.
    */

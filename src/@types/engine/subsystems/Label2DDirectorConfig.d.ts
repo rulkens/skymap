@@ -7,7 +7,7 @@ import type { Label2DLiftPolicy } from './Label2DLiftPolicy';
 /**
  * Data-driven parameterization for `createLabel2DDirector` — one literal per
  * director instance (COSMO's `COSMO_LABEL_DIRECTOR`, NEAR0's
- * `FOREGROUND_LABEL_DIRECTOR`, both in `engine.ts`). Declutter and envelope
+ * `FOREGROUND_LABEL_DIRECTOR`, both in `src/data/labels/`). Declutter and envelope
  * are tagged unions so a director's behaviour is picked by `mode` rather
  * than by which factory function got called.
  */
