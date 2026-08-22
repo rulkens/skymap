@@ -87,7 +87,7 @@ describe('buildInitialSettings', () => {
       });
     }
 
-    it('leaves the star-catalogs master gate on while forcing every row off', () => {
+    it('leaves the star-catalogs master gate on while defaulting only the famous-star map on', () => {
       // Regression: the master gate used to be forced off alongside the
       // per-row items. `starCatalogVisible` ANDs the master against each row,
       // so with the master off, re-enabling a single row's sidebar checkbox
@@ -95,23 +95,31 @@ describe('buildInitialSettings', () => {
       // control for the master) had to be found and flipped too. Leaving the
       // master on makes a single row's own checkbox sufficient again, the
       // same one-click contract the Galaxies section (no separate master
-      // gate) already gives.
+      // gate) already gives. The famous-star map is the one row that stays
+      // on: the curated set the headset demo flies through, not a bulk
+      // survey the Quest would choke fetching.
       setSearch('?vr');
       const s = buildInitialSettings();
       expect(s.starCatalogs.enabled).toBe(true);
       for (const id of Object.keys(s.starCatalogs.items)) {
-        expect(s.starCatalogs.items[id as keyof typeof s.starCatalogs.items].enabled).toBe(false);
+        expect(s.starCatalogs.items[id as keyof typeof s.starCatalogs.items].enabled).toBe(
+          id === 'famousStar',
+        );
       }
     });
 
-    it('defaults 2MRS on while forcing every other galaxy catalog off', () => {
+    it('defaults 2MRS and Famous on while forcing every other galaxy catalog off', () => {
       // 2MRS is the headset's default galaxy layer: 35k all-sky points, light
-      // enough for the Quest's frame budget. Every other galaxy catalog stays
-      // off, unlike the un-forced star-catalogs master gate above.
+      // enough for the Quest's frame budget. Famous is the curated thumbnail
+      // set the headset demo is built to fly through. Every other galaxy
+      // catalog stays off, unlike the un-forced star-catalogs master gate
+      // above.
       setSearch('?vr');
       const { items } = buildInitialSettings().galaxyCatalogs;
       for (const id of Object.keys(items)) {
-        expect(items[id as keyof typeof items].enabled).toBe(id === '2mrs');
+        expect(items[id as keyof typeof items].enabled).toBe(
+          id === '2mrs' || id === 'famousGalaxy',
+        );
       }
     });
   });

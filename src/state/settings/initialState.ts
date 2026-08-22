@@ -133,10 +133,15 @@ export function buildInitialSettings(): EngineSettingsState {
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
           // THROWAWAY (vrSpike): forced off under `?vr` — see the note above —
-          // except 2MRS, which stays on as the headset's default galaxy layer
-          // (35k all-sky points, light enough for the Quest's frame budget).
+          // except 2MRS (35k all-sky points, light enough for the Quest's
+          // frame budget) and Famous (the curated thumbnail set — no
+          // per-galaxy fetch cost until close approach, and this is the
+          // catalog the headset demo is built to fly through).
           {
-            enabled: vrSpike ? e.id === SOURCE_REGISTRY[Source.TwoMRS].id : e.visible,
+            enabled: vrSpike
+              ? e.id === SOURCE_REGISTRY[Source.TwoMRS].id ||
+                e.id === SOURCE_REGISTRY[Source.FamousGalaxy].id
+              : e.visible,
             labelEnabled: true,
           },
         ]),
@@ -251,8 +256,14 @@ export function buildInitialSettings(): EngineSettingsState {
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
           e.id,
-          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above.
-          { enabled: vrSpike ? false : e.visible, labelEnabled: true },
+          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above —
+          // except the famous-star map, which stays on for the same reason
+          // as Famous galaxies: it's the curated set the headset demo flies
+          // through, not a bulk survey the Quest would choke fetching.
+          {
+            enabled: vrSpike ? e.id === SOURCE_REGISTRY[Source.FamousStar].id : e.visible,
+            labelEnabled: true,
+          },
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
