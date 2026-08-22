@@ -442,6 +442,24 @@ describe('buildGalaxyInfo — blueshifted / zero-z lookback fallback', () => {
   });
 });
 
+// ─── buildGalaxyInfo — skyViewUrl dispatch ───────────────────────────────────
+
+describe('buildGalaxyInfo — skyViewUrl', () => {
+  it('routes SDSS rows to the SDSS Navigate viewer', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    const info = buildInfo(cloud, 0, Source.SDSS);
+    expect(info.skyViewUrl).toContain('skyserver.sdss.org/dr18/VisualTools/navi');
+  });
+
+  it('routes non-SDSS rows to the Aladin Lite viewer', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 50, 50, 0);
+    const info = buildInfo(cloud, 0, Source.TwoMRS);
+    expect(info.skyViewUrl).toContain('aladin.cds.unistra.fr/AladinLite');
+  });
+});
+
 // ─── buildGalaxyInfo — Milliquas branch ──────────────────────────────────────
 
 describe('buildGalaxyInfo — Milliquas source', () => {

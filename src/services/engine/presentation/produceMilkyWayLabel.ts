@@ -1,6 +1,6 @@
 /**
  * produceMilkyWayLabel — the per-frame "You are here" label + stem, a bare
- * function registered with the `labelDirector` in `engine.ts`.
+ * function registered with the `cosmoLabelDirector` in `engine.ts`.
  *
  * It only READS `fades.opacityOf(LAYER_ID)`; `syncVisibilityFades` is the sole
  * writer of that intent opacity. The two distance bands stay here — pure functions
@@ -10,7 +10,6 @@
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -45,10 +44,10 @@ export function produceMilkyWayLabel(
   const labelEnabled = state.settings.milkyWay.labelEnabled;
 
   // A still-fading disabled label keeps emitting so its fade-out tail completes.
-  if (!labelEnabled && intentOpacity === 0) return { labels: [], lines: [], awake: false };
+  if (!labelEnabled && intentOpacity === 0) return { labels: [], awake: false };
 
   if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
-    return { labels: [], lines: [], awake: false };
+    return { labels: [], awake: false };
 
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const distAlpha = milkyWayLabelAlpha(camDist);
@@ -60,7 +59,7 @@ export function produceMilkyWayLabel(
   // impostor could move to NEAR0; this origin-anchored label cannot, so it rides
   // the shallower survey band instead (gone by 2 kpc, well clear of the blowup).
   const deepZoomFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDist);
-  if (distAlpha <= 0 || deepZoomFade <= 0) return { labels: [], lines: [], awake: false };
+  if (distAlpha <= 0 || deepZoomFade <= 0) return { labels: [], awake: false };
 
   // Applied to BOTH the label and the stem so they fade in lock-step.
   const fadeAlpha = distAlpha * deepZoomFade * resolveLayerOpacity(state, ctx, LAYER_ID);
@@ -90,7 +89,7 @@ export function produceMilkyWayLabel(
   };
 
   // Endpoints are re-derived from the camera every frame — safe only because the
-  // labelDirector's re-upload signature keys on each line's `toWorld`.
+  // cosmoLabelDirector's re-upload signature keys on the label's `leader.toWorld`.
   const sizePx = apparentSizePx({
     diameterKpc: MILKY_WAY_DIAMETER_KPC,
     distanceMpc: camDist,
@@ -109,28 +108,25 @@ export function produceMilkyWayLabel(
     maxPixelSize: style.maxPixelSize,
   });
   // Origin behind the camera: the projection is undefined — emit nothing.
-  if (placement === null) return { labels: [], lines: [], awake: false };
+  if (placement === null) return { labels: [], awake: false };
 
-  const labels: readonly Label2D[] = [{ ...label, worldPos: placement.labelWorldPos }];
-  const lines: readonly MarkerLine[] =
-    placement.line !== null
-      ? [
-          {
-            id: 'milkyWay',
-            fromWorld: placement.line.fromWorld,
-            toWorld: placement.line.toWorld,
-            pixelWidth: style.pixelWidth,
-            color: [...style.lineColor],
-            fadeAlpha,
-            // The director drops this stem when its label loses an overlap, so it
-            // can never float orphaned.
-            ownerLabelId: 'milkyWay',
-          },
-        ]
-      : [];
+  const labels: readonly Label2D[] = [
+    {
+      ...label,
+      worldPos: placement.labelWorldPos,
+      ...(placement.line !== null && {
+        leader: {
+          fromWorld: placement.line.fromWorld,
+          toWorld: placement.line.toWorld,
+          pixelWidth: style.pixelWidth,
+          color: [...style.lineColor],
+        },
+      }),
+    },
+  ];
 
   // Never `awake`: alpha is a pure function of camera distance, and camera motion
   // already wakes the loop. `awake: alpha < 1` would instead pin the loop for as
   // long as the camera parked inside the 0.6–2.0 Mpc fade band.
-  return { labels, lines, awake: false };
+  return { labels, awake: false };
 }

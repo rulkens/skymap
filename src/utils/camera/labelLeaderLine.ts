@@ -51,13 +51,28 @@
  * header). This function trusts an in-domain anchor rather than clamping itself
  * — the layer owns the slab, so it owns the domain guard.
  *
- * Pure geometry — no engine state, no clock. The forward-projection math
- * mirrors the declutter projection in `labelDirectorSubsystem`.
+ * Pure geometry — no engine state, no clock. The forward-projection step
+ * is `forwardProjectPoint`, shared with `label2DDirector`'s `projectLabels`
+ * and `projectToScreenPx`.
  */
 
 import { mat4d } from 'wgpu-matrix';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ForwardProjectedPoint } from '../../@types/camera/ForwardProjectedPoint';
+import { forwardProjectPoint } from './forwardProjectPoint';
+
+// Reused across calls — see `projectToScreenPx`'s identical scratch for why
+// a leaf function without its own loop still keeps the primitive alloc-free.
+const scratch: ForwardProjectedPoint = {
+  clipX: 0,
+  clipY: 0,
+  clipZ: 0,
+  clipW: 0,
+  screenX: 0,
+  screenY: 0,
+  onScreen: false,
+};
 
 export function labelLeaderLine(input: {
   /** The dot (galaxy / body) position in the layer's world frame. Not mutated. */
@@ -78,12 +93,12 @@ export function labelLeaderLine(input: {
   const wy = p[1];
   const wz = p[2];
 
-  // Forward-project the dot. Column-major mat4·vec4 by hand — same as the
-  // declutter projection, and cheaper than the lib's allocating transform.
-  const clipX = m[0]! * wx + m[4]! * wy + m[8]! * wz + m[12]!;
-  const clipY = m[1]! * wx + m[5]! * wy + m[9]! * wz + m[13]!;
-  const clipZ = m[2]! * wx + m[6]! * wy + m[10]! * wz + m[14]!;
-  const clipW = m[3]! * wx + m[7]! * wy + m[11]! * wz + m[15]!;
+  // Forward-project the dot.
+  forwardProjectPoint(m, wx, wy, wz, viewportPx, scratch);
+  const clipX = scratch.clipX;
+  const clipY = scratch.clipY;
+  const clipZ = scratch.clipZ;
+  const clipW = scratch.clipW;
 
   // Behind (or on) the camera plane: the projection is undefined, so there is
   // no meaningful leader line to draw.

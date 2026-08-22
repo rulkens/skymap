@@ -175,11 +175,11 @@ describe('produceFamousGalaxyLabels', () => {
     expect(label.fadeAlpha).toBe(1);
     expect(label.prominencePx).toBeCloseTo(sizePxAt(120, 5), 3);
 
-    // Line present, from the dot up to exactly the padding below the text's
-    // measured bottom.
-    expect(out.lines.map((m) => m.id)).toEqual(['famous-m31-anchor']);
-    expect(out.lines[0]!.fromWorld).toEqual([5, 0, 0]);
-    const tip = screenOf(out.lines[0]!.toWorld);
+    // Leader present, from the dot up to exactly the padding below the
+    // text's measured bottom.
+    expect(label.leader).toBeDefined();
+    expect(label.leader!.fromWorld).toEqual([5, 0, 0]);
+    const tip = screenOf(label.leader!.toWorld);
     expect(tip[0]).toBeCloseTo(dot[0], 2);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
@@ -197,7 +197,7 @@ describe('produceFamousGalaxyLabels', () => {
       const out = produceFamousGalaxyLabels(state, makeCtx());
 
       const anchor = screenOf(out.labels[0]!.worldPos);
-      const tip = screenOf(out.lines[0]!.toWorld);
+      const tip = screenOf(out.labels[0]!.leader!.toWorld);
       expect(tip[1] - anchor[1]).toBeCloseTo(
         TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX,
         2,
@@ -221,7 +221,7 @@ describe('produceFamousGalaxyLabels', () => {
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
     expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_CLEARANCE_PX + TEXT_BOTTOM_BELOW_ANCHOR_PX, 2);
-    const tip = screenOf(out.lines[0]!.toWorld);
+    const tip = screenOf(out.labels[0]!.leader!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
 
@@ -246,8 +246,8 @@ describe('produceFamousGalaxyLabels', () => {
     // exactly the guaranteed minimum.
     expect(dot[1] - (anchor[1] + inkDropPx)).toBeCloseTo(MIN_LABEL_CLEARANCE_PX, 2);
     // The connector reappears, top at the padding below the ink bottom.
-    expect(out.lines.map((m) => m.id)).toEqual(['famous-m31-anchor']);
-    const tip = screenOf(out.lines[0]!.toWorld);
+    expect(out.labels[0]!.leader).toBeDefined();
+    const tip = screenOf(out.labels[0]!.leader!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(inkDropPx + LEADER_LINE_PADDING_PX, 2);
   });
 
@@ -256,7 +256,6 @@ describe('produceFamousGalaxyLabels', () => {
     seed(state, [{ id: 'far', names: ['Far'] }], [100000, 0, 0], [40]);
     const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels).toEqual([]);
-    expect(out.lines).toEqual([]);
   });
 
   it('emits nothing when famous labels are hidden AND the fade-out has completed', () => {
@@ -286,7 +285,6 @@ describe('produceFamousGalaxyLabels', () => {
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     // Emitted at the half opacity (full distance-fade alpha here is 1 × 0.5).
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
-    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
 
     // Once the fade reaches 0, the producer falls silent.
     const done = makeRegistry();
@@ -331,7 +329,6 @@ describe('produceFamousGalaxyLabels', () => {
     const out = produceFamousGalaxyLabels(dimmed, makeCtx());
 
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
-    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
   });
 
   it('famous labels recede uniformly at blend > 0', () => {
@@ -347,19 +344,6 @@ describe('produceFamousGalaxyLabels', () => {
       .fadeAlpha!;
 
     expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
-  });
-
-  it('anchor lines fade with their labels', () => {
-    // The connector carries the same × layerAlpha factor as its label, at both
-    // a dimmed opacity and under recession.
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
-    const state = makeState({ fades });
-    seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(state, makeCtx({ focusBlend: 1 }));
-
-    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(out.labels[0]!.fadeAlpha!, 6);
   });
 
   it('focusedOnly mode: emits only the focused famous galaxy', () => {
@@ -381,7 +365,7 @@ describe('produceFamousGalaxyLabels', () => {
     );
     const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m87']);
-    expect(out.lines.map((m) => m.id)).toEqual(['famous-m87-anchor']);
+    expect(out.labels[0]!.leader).toBeDefined();
   });
 
   it('focusedOnly mode: emits nothing when the focus is not a famous galaxy', () => {
@@ -405,7 +389,6 @@ describe('produceFamousGalaxyLabels', () => {
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.fadeAlpha).toBe(1);
-    expect(out.lines[0]!.fadeAlpha).toBe(1);
   });
 
   it('caps a very close companion (e.g. the LMC) to the near-distance pixel ceiling', () => {

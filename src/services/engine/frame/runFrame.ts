@@ -66,7 +66,8 @@ import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
+import { runMarkerProducers } from './runMarkerProducers';
+import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -640,13 +641,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Label director per-frame update ──────────────────────────────────────
   //
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
-  // `markerLineRenderer.setLines` are uploaded before `renderFrame` reads those
-  // buffers. The director polls every registered `Label2DProducer` (milkyWayLabel,
-  // structures, ...), merges, change-detects via signature hash, and flushes
-  // once; it null-checks its renderers, so this is safe before the atlas load
-  // completes. The return value is the label wake vote, folded into the
-  // keep-ticking bag below rather than the director calling requestRender.
-  const labelsAnimating = state.subsystems.labelDirector.runFrame(state, ctx);
+  // `markerLineRenderer.setLines` (and the NEAR0 pair) are uploaded before
+  // `renderFrame` reads those buffers. Each director polls its own registered
+  // `Label2DProducer`s, merges, change-detects via signature hash, and flushes
+  // once; both null-check their renderers, so this is safe before the atlas
+  // load completes.
+  //
+  // Three statements, not `a() || b() || c()`: each call FLUSHES GPU buffers
+  // as a side effect, and `||` short-circuits — the inline form would skip a
+  // sibling's flush the moment an earlier one votes true.
+  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, ctx);
+  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
+  const label3DAnimating = runLabel3DProducers(state, ctx);
+  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
   // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
   //
@@ -666,13 +673,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Per-frame marker upload ───────────────────────────────────────────────
   //
-  // Like the label flush above: produceStructureMarkers walks the structure
-  // store, applies fade math, and hands descriptors to the renderer. Must run
-  // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // `structureMarkersLayer` reads it. Null-checked for the pre-initGpu window.
+  // Like the label flush above: runMarkerProducers walks the producer array (no
+  // sort/filter/dedupe, picks order preserved) and hands descriptors to the
+  // renderer. Must run BEFORE the GPU dispatch so the instance buffer is
+  // uploaded before `structureMarkersLayer` reads it. Null-checked for the
+  // pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
-    const markers = produceStructureMarkers(state, ctx);
-    state.gpu.structureMarkerRenderer.setMarkers(markers);
+    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
   }
 
   // ── GPU dispatch ──────────────────────────────────────────────────────────

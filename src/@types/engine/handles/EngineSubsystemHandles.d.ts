@@ -26,7 +26,7 @@ import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
 import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
 import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
-import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
+import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
@@ -125,7 +125,16 @@ export type EngineSubsystemHandles = {
    * fetch completes. Producers register right after the state literal so
    * they're in place before the first frame.
    */
-  labelDirector: LabelDirectorSubsystem;
+  cosmoLabelDirector: Label2DDirector;
+  /**
+   * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
+   * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
+   * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
+   * in `src/data/labels/`). Attaches `foregroundLabelRenderer` +
+   * `foregroundMarkerLineRenderer` at the same two sites `cosmoLabelDirector`
+   * attaches its own pair.
+   */
+  foregroundLabelDirector: Label2DDirector;
   /**
    * Cluster focus-mode subsystem — drives the "dim non-members of the
    * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls

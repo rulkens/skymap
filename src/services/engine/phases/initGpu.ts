@@ -21,6 +21,7 @@ import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUnifor
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
+import { attachLabelDirectors } from '../wiring/attachLabelDirectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -87,9 +88,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // Post-construction wiring, now reading the walker's output off state.gpu:
   state.subsystems.biasCorrection.attachRenderer(state.gpu.galaxyPointRenderer!);
-  // Used to run inside `buildSwapRenderers`, which no longer builds at boot.
-  state.subsystems.labelDirector.attachRenderers(
-    state.gpu.labelRenderer!,
-    state.gpu.markerLineRenderer!,
-  );
+  // Label directors: this attach used to run only inside `buildSwapRenderers`,
+  // which no longer builds at boot — `attachLabelDirectors` is the shared
+  // table both this phase and a later swap-format rebuild call into.
+  attachLabelDirectors(state);
 }

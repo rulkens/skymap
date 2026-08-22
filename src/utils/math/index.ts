@@ -38,6 +38,8 @@ export * from './lerpAngleShortest';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
 export * from './dssThumbnailUrl';
+export * from './sdssNavigateUrl';
+export * from './aladinLiteUrl';
 export * from './galaxyThumbnailFovArcmin';
 export * from './nedByNameUrl';
 export * from './nedNearPositionUrl';

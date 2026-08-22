@@ -7,11 +7,9 @@
  *
  * Same family as `HorizonShellRenderer`: a single, world-anchored impostor
  * whose fragment stage intersects each per-pixel view ray with the geometry
- * analytically, rather than rasterising a mesh.
- *
- * `drawLabels` draws the curved on-band "Zone of Avoidance" lettering —
- * discrete world-oriented MSDF glyph quads, a separate pipeline from the
- * band's fullscreen ray march (see zoneOfAvoidanceRenderer.ts's header).
+ * analytically, rather than rasterising a mesh. The curved "Zone of
+ * Avoidance" lettering is a `Label3DProducer` drawn by the shared
+ * `label3DRenderer`, not this renderer.
  * `drawPick` reruns the SAME ray march against an r32uint pick target so a
  * click only registers where the band's density is perceptible.
  */
@@ -60,31 +58,6 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
     outerRadiusMpc: number,
     bulgeDeg: number,
     anticenterDeg: number,
-    fadeAlpha: number,
-  ): void;
-
-  /**
-   * Issue the curved-lettering instanced draw. `viewProj` is the
-   * already-narrowed-to-f32 slab view-projection (`SlabView.vp`) — this
-   * pass only ever projects world-fixed glyph corners, so it needs no
-   * camera basis/ray reconstruction and takes the matrix directly rather
-   * than an `OrbitCamera`, unlike `draw` above.
-   *
-   * `tuning.labelColor` is the lettering's tint (linear RGB); `labelRadiusMpc`
-   * is the fixed radius (Mpc) of the galactic-plane circle the lettering
-   * sits on; `fadeAlpha` is the same per-frame opacity `draw` receives —
-   * band and lettering ride the single `zoneOfAvoidance` fade-registry
-   * entry, not independent controllers (see `zoneOfAvoidanceLiveness.ts`).
-   * The glyph-instance buffer is built once at construction from
-   * `layoutLabel`; this call only writes the small per-frame uniform and
-   * issues one instanced draw.
-   */
-  drawLabels(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportPx: Vec2,
-    tuning: ZoneOfAvoidanceTuning,
-    labelRadiusMpc: number,
     fadeAlpha: number,
   ): void;
 };

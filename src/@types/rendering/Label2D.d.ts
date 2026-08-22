@@ -21,6 +21,8 @@ import type { Vec4 } from '../math/Vec4';
 import type { LabelAlignX } from './LabelAlignX';
 import type { LabelAlignY } from './LabelAlignY';
 import type { FontId } from '../data/FontId';
+import type { Label2DLeader } from './Label2DLeader';
+import type { Label2DLift } from './Label2DLift';
 
 export type Label2D = {
   readonly id: string;
@@ -32,8 +34,7 @@ export type Label2D = {
    * @deprecated Unread buffer slot — sizing is driven by `worldEmMpc`
    * projected through perspective (see `shaders/labels/vertex.wesl`).
    * The value is written to the GPU buffer but ignored by the sizing
-   * math.  Set to `0` on new call sites.  Transitional: producers are
-   * migrating to `worldEmMpc`.
+   * math. Every producer sets this to `0`.
    */
   readonly pixelSize: number;
   /**
@@ -47,8 +48,8 @@ export type Label2D = {
    * fragment shader composites in premultiplied space.  Producers
    * therefore never have to think about premultiplication.
    *
-   * The outline/glow colour fields below follow the same straight-RGBA
-   * convention, so the colour API surface is uniform.
+   * `outlineColor` below follows the same straight-RGBA convention, so the
+   * colour API surface is uniform.
    */
   readonly color?: Vec4;
   /**
@@ -104,7 +105,7 @@ export type Label2D = {
   readonly alignY?: LabelAlignY;
   /**
    * On-screen prominence (apparent size, px) used as the declutter sort
-   * key by the `labelDirector` merge: a ring's apparent radius for a
+   * key by the `label2DDirector` merge: a ring's apparent radius for a
    * structure, a galaxy's apparent diameter for a famous label.  When two
    * labels' measured text rects overlap on screen, the higher
    * `prominencePx` wins.  The label renderer ignores this field — it exists
@@ -112,4 +113,16 @@ export type Label2D = {
    * cross-producer declutter.  Absent → treated as 0 (lowest priority).
    */
   readonly prominencePx?: number;
+  /**
+   * Optional anchor line, drawn from the subject dot up to this label. The
+   * director synthesizes one `MarkerLine` per surviving leader-carrying
+   * label at flush time (id `` `${label.id}-anchor` ``) — producers never
+   * push a separate line.
+   */
+  readonly leader?: Label2DLeader;
+  /**
+   * Optional proportional-lift parameters, read by `label2DDirector`'s lift
+   * stage (`config.lift`) when present.
+   */
+  readonly lift?: Label2DLift;
 };

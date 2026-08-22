@@ -29,10 +29,14 @@ import { Source } from '../../data/source';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
-import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
+import { createLabel2DDirector } from './subsystems/label2DDirector';
+import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
+import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousGalaxyLabels } from './presentation/produceFamousGalaxyLabels';
+import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
+import { produceConstellationCaptions } from './presentation/produceConstellationCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -300,6 +304,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Galactic-plane dust-band guide. null until initGpu; excluded from
       // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
       zoneOfAvoidanceRenderer: null,
+      // Shared world-geometry text renderer. null until initGpu; its first
+      // consumer is the zone-of-avoidance lettering path, null-checked at use.
+      label3DRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
@@ -408,7 +415,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `Label2DProducer`s (the milkyWay + structure/famous label producers,
       // registered just after this literal).  Renderers are wired in during
       // initGpu so the director sees everything before the first frame.
-      labelDirector: createLabelDirectorSubsystem(),
+      cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
+
+      // ── Foreground label director ──────────────────────────────────
+      // The NEAR0 sibling of `cosmoLabelDirector` — same factory, `screenSeparation`
+      // + `exponentialApproach` + lift arms instead. Owns the caption + leader-
+      // line upload for `produceSceneBodyCaptions` + `produceConstellationCaptions`
+      // (registered just after this literal); `foregroundLabelsLayer` only
+      // issues the draw calls against what this director already flushed.
+      foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
       // ── Cluster focus-mode subsystem ─────────────────────────────
       // Selection-driven: `runFrame` calls `update(selectedStructure, nowMs)` to
@@ -545,21 +560,34 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // this is synchronous before any frame.
   //
   // The constellation figure NAMES are deliberately NOT here: their anchors sit
-  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane the
-  // director projects through, so a director label for them could never draw.
-  // They route through `foregroundLabelsLayer` on the NEAR0 slab instead, beside
-  // the scene-body captions — see `constellationCaptions`.
-  state.subsystems.labelDirector.registerProducer({
+  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane this
+  // director projects through, so a label here could never draw. They register
+  // on `foregroundLabelDirector` (NEAR0) instead, just below.
+  state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
   });
-  state.subsystems.labelDirector.registerProducer({
+  state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,
   });
-  state.subsystems.labelDirector.registerProducer({
+  state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'famousLabels',
     produceLabels: produceFamousGalaxyLabels,
+  });
+
+  // The NEAR0 sibling registration: scene-body captions first, matching the
+  // COSMO order's "landmark before decoration" shape — body captions are
+  // navigation aids, the constellation figures a diffuse orientation overlay
+  // (`captionPriority.ts`'s own ranking) — so an equal-`prominencePx` tiebreak
+  // (rare) favours the body.
+  state.subsystems.foregroundLabelDirector.registerProducer({
+    id: 'sceneBodyCaptions',
+    produceLabels: produceSceneBodyCaptions,
+  });
+  state.subsystems.foregroundLabelDirector.registerProducer({
+    id: 'constellationCaptions',
+    produceLabels: produceConstellationCaptions,
   });
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
@@ -787,7 +815,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // 3. Walk every other subsystem (order-independent past here).
     state.subsystems.biasCorrection.destroy();
-    state.subsystems.labelDirector.destroy();
+    state.subsystems.cosmoLabelDirector.destroy();
+    state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to
     // galaxyAtlas's eviction handler (destroy it first); hiResFamous
