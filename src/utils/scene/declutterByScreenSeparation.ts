@@ -4,19 +4,12 @@
  * candidate only when it clears every higher-priority survivor by a minimum
  * pixel separation. Returns the kept indices, highest-priority first.
  *
- * ### Why a separate pure cull, not the label director's declutter
+ * ### Why a pure function, not inline in the director
  *
- * The `labelDirector` already runs a greedy screen-space priority cull
- * (`label2DDirector.ts`), but it is WELDED to the director's own
- * `ctx.vp` and its merged COSMO producer set — it projects each anchor through
- * that view and de-collides measured text rects across every producer at once.
- * The foreground scene-body captions project through the NEAR0 slab, not the
- * COSMO one, so they cannot join the director's merge without the slab tension
- * Task 9 spelled out (one renderer draws with one view-projection). Rather than
- * thread a second slab through the director, this extracts the MINIMAL cull —
- * priority sort + separation accept — as a pure function the NEAR0 foreground
- * path calls against its own projected anchors. It takes already-projected
- * screen positions (not a camera or a vp), so it unit-tests headlessly.
+ * `label2DDirector`'s `screenSeparation` declutter arm (NEAR0) calls this
+ * against its own already-projected candidates. It takes screen positions +
+ * priorities (not a camera or a vp), so it unit-tests headlessly, independent
+ * of the director's projection and merge machinery.
  *
  * ### Why priority = apparent size
  *

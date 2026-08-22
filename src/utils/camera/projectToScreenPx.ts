@@ -8,11 +8,10 @@
  * Screen +Y points DOWN, matching the caption declutter's separation metric
  * (pure pixel distance, orientation-agnostic).
  *
- * Its one caller is `starPointsLayer`'s pick. The caption declutter now runs
- * through `label2DDirector`'s own `projectLabels` instead — a separate
- * hand-rolled copy of the same forward projection (avoids a per-label
- * allocation) — so the two must still agree on the arithmetic even though
- * neither calls the other.
+ * Its one caller is `starPointsLayer`'s pick. `label2DDirector`'s own
+ * `projectLabels` is a separate hand-rolled copy of the same forward
+ * projection (avoids a per-label allocation) — the two must agree on the
+ * arithmetic even though neither calls the other.
  */
 
 import type { Vec2 } from '../../@types/math/Vec2';

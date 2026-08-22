@@ -51,15 +51,14 @@
  *
  * Each decluttered label id gets a ramp/filter record in the arm's own map;
  * `applySmoothstepEnvelope` (COSMO) and `applyExponentialEnvelope` (NEAR0)
- * resolve it per `config.envelope.mode` — see their docblocks for the three
- * axes they differ on (target shape, seed value, absence rule; spec §4.6).
- * Both are pure functions of `ctx.nowMs` given their entry's state, so a
- * stepped recorder clock replays identical fades. COSMO's envelope
- * MULTIPLIES the producer's own `fadeAlpha` (both continuous, so the
- * product is too; a first appearance therefore stacks with the producer's
- * layer load-in fade, which reads as one smooth reveal) and keeps flushing
- * a disappearing label's remembered last emission — leader included, since
- * the leader now lives on the label — until the ramp reaches 0.
+ * resolve it per `config.envelope.mode` — see their docblocks for the
+ * fade-out mechanics and the three axes they differ on (target shape, seed
+ * value, absence rule; spec §4.6). Both are pure functions of `ctx.nowMs`
+ * given their entry's state, so a stepped recorder clock replays identical
+ * fades. COSMO's envelope MULTIPLIES the producer's own `fadeAlpha` (both
+ * continuous, so the product is too; a first appearance therefore stacks
+ * with the producer's layer load-in fade, which reads as one smooth
+ * reveal).
  *
  * ### Leader lines are synthesized, not carried
  *
@@ -286,8 +285,7 @@ function declutterByBboxOverlap(
 /**
  * `screenSeparation` declutter arm (NEAR0). Cheaper than `bboxOverlap` —
  * anchor-point separation rather than measured text rects, appropriate where
- * text metrics aren't the cull's business (moved from
- * `foregroundLabelsLayer.ts:261-283`, spec §4.5). A label with no
+ * text metrics aren't the cull's business (spec §4.5). A label with no
  * `screenPx` (behind the camera) bypasses the cull unconditionally, exactly
  * as `declutterByBboxOverlap` never blocks on an off-screen anchor; the pure
  * `declutterByScreenSeparation` util does the priority-sorted greedy accept
@@ -304,12 +302,10 @@ function declutterByScreenSeparationArm(
   for (let i = 0; i < labels.length; i++) {
     const p = projected[i]!;
     const label = labels[i]!;
-    // Bypass unconditionally: behind camera (no screen position) OR emitted
-    // at a zero producer target — mirrors `foregroundLabelsLayer.ts:269`'s
-    // candidate filter (`baseTarget === 0 || screenPx === null`). A
-    // zero-fadeAlpha label has nothing to show regardless of survival, so it
-    // must not CLAIM a screen slot and cull a real, visible caption at the
-    // same position — it neither competes nor blocks.
+    // Bypass unconditionally: behind camera (no screen position) OR a
+    // zero-fadeAlpha label. Such a label has nothing to show regardless of
+    // survival, so it must not CLAIM a screen slot and cull a real, visible
+    // caption at the same position — it neither competes nor blocks.
     if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) {
       accepted.add(i);
       continue;
@@ -327,9 +323,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
   let producers: readonly Label2DProducer[] = [];
-  // Signature of the last flushed (labels, lines) tuple, or null on the
-  // first frame.  Empty string is a valid signature (no labels, no lines)
-  // and is distinct from null.
+  // Signature of the last flushed label set, or null on the first frame.
+  // Empty string is a valid signature (no labels) and is distinct from null.
   let prevSignature: string | null = null;
   // The director's cross-frame animation state: label id → ramp/filter
   // record, one map per envelope arm.  Only one is ever populated — which
@@ -565,9 +560,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   /**
-   * The `exponentialApproach` appear/disappear arm (NEAR0; spec §4.6),
-   * moved from `foregroundLabelsLayer.ts:285-320`. Differs from
-   * `applySmoothstepEnvelope` on three axes:
+   * The `exponentialApproach` appear/disappear arm (NEAR0; spec §4.6).
+   * Differs from `applySmoothstepEnvelope` on three axes:
    *
    *   - target: the label's own `fadeAlpha` when it SURVIVED declutter this
    *     frame (continuous — the producer's distance-band fade), 0 when
@@ -575,10 +569,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    *     `applySmoothstepEnvelope`, this arm therefore walks EVERY label the
    *     producers emitted this frame (`labels`, the pre-declutter merged
    *     set), not just `survivorIds`'s members — a culled label stays in the
-   *     filter's universe and eases toward 0 exactly like
-   *     `foregroundLabelsLayer.ts:306`'s `target = 0` for a culled entry
-   *     that stays in `entries` until its producer stops emitting it
-   *     (`:325-328`). Reading declutter survival straight off `labels`
+   *     filter's universe and eases toward 0 rather than disappearing on
+   *     the cull frame. Reading declutter survival straight off `labels`
    *     instead would make a culled caption pop to invisible on the cull
    *     frame and re-seed at full target the instant the cull flips back —
    *     the seed rule (below) makes THAT look like a correct fade-in, which
@@ -668,12 +660,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   /**
-   * The lift stage (spec §4.4), moved from `foregroundLabelsLayer.ts:330-418`.
-   * Runs after the envelope, over survivors only, and only when
-   * `config.lift` is non-null. A label without a `lift` field skips the
-   * lift by ABSENCE OF DATA — never a `kind` test — so e.g. constellation
-   * captions (which anchor in empty space and have no subject to float
-   * above) simply never carry one.
+   * The lift stage (spec §4.4). Runs after the envelope, over survivors
+   * only, and only when `config.lift` is non-null. A label without a `lift`
+   * field skips the lift by ABSENCE OF DATA — never a `kind` test — so e.g.
+   * constellation captions (which anchor in empty space and have no subject
+   * to float above) simply never carry one.
    */
   function applyLift(labels: readonly Label2D[], ctx: ReadyFrameContext): readonly Label2D[] {
     const policy = config.lift;

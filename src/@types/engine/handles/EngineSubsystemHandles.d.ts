@@ -132,11 +132,7 @@ export type EngineSubsystemHandles = {
    * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
    * in `engine.ts`). Attaches `foregroundLabelRenderer` +
    * `foregroundMarkerLineRenderer` at the same two sites `labelDirector`
-   * attaches its own pair. Constructed and polled every frame from the
-   * NEAR0-arms task onward; carries zero producers until the producer
-   * extraction task moves them out of `foregroundLabelsLayer`, so its flush
-   * is an empty set in the interim (harmless — the layer's own `setLabels`/
-   * `setLines` calls still run after it, until that task removes them).
+   * attaches its own pair.
    */
   foregroundLabelDirector: Label2DDirector;
   /**

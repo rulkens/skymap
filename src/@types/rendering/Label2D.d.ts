@@ -34,8 +34,7 @@ export type Label2D = {
    * @deprecated Unread buffer slot — sizing is driven by `worldEmMpc`
    * projected through perspective (see `shaders/labels/vertex.wesl`).
    * The value is written to the GPU buffer but ignored by the sizing
-   * math.  Set to `0` on new call sites.  Transitional: producers are
-   * migrating to `worldEmMpc`.
+   * math. Every producer sets this to `0`.
    */
   readonly pixelSize: number;
   /**
@@ -49,8 +48,8 @@ export type Label2D = {
    * fragment shader composites in premultiplied space.  Producers
    * therefore never have to think about premultiplication.
    *
-   * The outline/glow colour fields below follow the same straight-RGBA
-   * convention, so the colour API surface is uniform.
+   * `outlineColor` below follows the same straight-RGBA convention, so the
+   * colour API surface is uniform.
    */
   readonly color?: Vec4;
   /**
@@ -122,8 +121,8 @@ export type Label2D = {
    */
   readonly leader?: Label2DLeader;
   /**
-   * Optional proportional-lift parameters. Minted alongside `leader` but
-   * unread until a later task wires it into the placement math.
+   * Optional proportional-lift parameters, read by `label2DDirector`'s lift
+   * stage (`config.lift`) when present.
    */
   readonly lift?: Label2DLift;
 };

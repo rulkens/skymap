@@ -65,11 +65,10 @@
  *     loop and the tiles never appear.
  *   - `anim.labelsAnimating`: EITHER label director's own producers or its
  *     appear/disappear envelope are mid-ramp — `labelDirector.runFrame` OR
- *     `foregroundLabelDirector.runFrame`'s vote (folded with plain `||` at
- *     the call site, AFTER both have already run and flushed — the two
- *     `runFrame` calls themselves stay separate statements so the boolean
- *     short-circuit can't skip a sibling's GPU flush), rather than either
- *     director calling `requestRender` itself.
+ *     `foregroundLabelDirector.runFrame`'s vote, folded with plain `||` at
+ *     the call site in `runFrame.ts` (see its comment for why the two calls
+ *     stay separate statements), rather than either director calling
+ *     `requestRender` itself.
  *   - manual clock playing: `selectIsManualPlaying(s)` — a manual sim clock that
  *     is advancing (not paused) moves every body every frame, so playback must
  *     be continuous. LIVE mode is deliberately absent: it advances at real-time
