@@ -2,9 +2,8 @@
  * label3DRenderer — the shared world-geometry text renderer (spec §9.1);
  * exceeds the usual header budget because the byte-layout table below IS
  * the CPU/WGSL shared contract (see comments.md's byte-layout exception).
- * Generalizes `zoneOfAvoidanceRenderer`'s curved on-band lettering pass —
- * one fixed galactic-plane band, hard-wired to `FONT_IDS[0]` — to any
- * number of arc-placed labels sharing one draw call, following
+ * Draws any number of arc-placed labels — each with its own center, plane,
+ * radius, repeat count, and font — in one draw call, following
  * `labelRenderer`'s per-label-storage / per-glyph-instance buffer split and
  * its multi-font `texture_2d_array` atlas. Additive blend, single-band MSDF
  * fill (no outline) — see `shaders/labels3d/fragment.wesl`'s header for the
@@ -28,8 +27,8 @@
  *   40..43  fontIndex   (u32)
  *
  * `localOffset`/`localSize` stay in atlas px — the vertex stage converts to
- * Mpc per-glyph via the label's `emMpc`, unlike `zoneOfAvoidanceRenderer`
- * which bakes the conversion at construction (its text never changes).
+ * Mpc per-glyph via the label's `emMpc`, so each label carries its own
+ * physical size and `setLabels` can rebuild the whole set every frame.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';

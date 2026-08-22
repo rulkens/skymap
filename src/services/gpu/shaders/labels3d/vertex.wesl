@@ -1,9 +1,8 @@
-// labels3d/vertex.wesl — shared world-geometry text vertex stage.
-// Generalizes zoneOfAvoidance/label/vertex.wesl's fixed galactic-plane band
-// to a per-label arc (any center/plane/radius/repeatCount, read from the
-// labels[] storage buffer instead of baked WGSL constants). 'binormal' is
-// evaluated ONCE per glyph so every corner shares one flat basis (same
-// chording approximation the ZoA path documents).
+// labels3d/vertex.wesl — shared world-geometry text vertex stage: places
+// each glyph on its label's per-instance arc (center/plane/radius/
+// repeatCount, read from the labels[] storage buffer). 'binormal' is
+// evaluated ONCE per glyph so every corner shares one flat basis — a
+// chording approximation, negligible at MSDF glyph scale.
 //
 // Sign derivation (load-bearing, see Label3DArcPlacement's docblock): glyphs
 // anchor at 'theta = startAngle + repeatAngle - arcRad', not '+', so text

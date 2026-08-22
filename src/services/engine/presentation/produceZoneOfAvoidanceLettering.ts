@@ -2,8 +2,8 @@
  * produceZoneOfAvoidanceLettering — the sole `Label3DProducer` today: the
  * curved "Zone of Avoidance" caption riding the galactic plane. Reads the
  * same `deriveZoneOfAvoidanceLiveness` gate the band pass reads, so band
- * and lettering can never independently go stale, and folds
- * `LABEL_RADIUS_MPC`/`LABEL_EM_MPC` into one placeholder home instead of two.
+ * and lettering can never independently go stale. Both `LABEL_RADIUS_MPC`
+ * and `LABEL_EM_MPC` — visual-pass placeholders — live here.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

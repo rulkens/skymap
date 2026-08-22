@@ -310,13 +310,12 @@ export type EngineGpuHandles = {
    */
   zoneOfAvoidanceRenderer: ZoneOfAvoidanceRenderer | null;
   /**
-   * Shared world-geometry text renderer (spec §9.1) — generalizes
-   * `zoneOfAvoidanceRenderer`'s curved on-band lettering to any number of
-   * arc-placed labels with per-label font/placement/repeat. Draws into HDR
-   * (not the swap chain), so it is NOT one of the `rebuildOnSwapFormat`
-   * rows. Null until `initGpu` constructs it; nulled back out during
-   * teardown. Its first consumer is the zone-of-avoidance lettering path
-   * (`produceZoneOfAvoidanceLettering`).
+   * Shared world-geometry text renderer (spec §9.1) — any number of
+   * arc-placed labels, each with its own font/placement/repeat count. Draws
+   * into HDR (not the swap chain), so it is NOT one of the
+   * `rebuildOnSwapFormat` rows. Null until `initGpu` constructs it; nulled
+   * back out during teardown. Its first consumer is the zone-of-avoidance
+   * lettering path (`produceZoneOfAvoidanceLettering`).
    */
   label3DRenderer: Label3DRenderer | null;
   /**

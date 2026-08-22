@@ -1,6 +1,7 @@
 /**
  * produceZoneOfAvoidanceLettering — placement identity (no constant
- * restatement) and fadeAlpha pass-through from deriveZoneOfAvoidanceLiveness.
+ * restatement), labelColor pass-through, and fadeAlpha pass-through from
+ * deriveZoneOfAvoidanceLiveness.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -30,6 +31,10 @@ describe('produceZoneOfAvoidanceLettering', () => {
     const placement = out.labels[0]!.placement;
     expect(placement.planeNormal).toBe(GAL_Z_EQ);
     expect(placement.referenceDir).toBe(GAL_X_EQ);
+    // Pins the read to `labelColor` specifically — `tuning.color` (the
+    // band's colour) lives on the same settings object and is a reachable
+    // mistake to read instead.
+    expect(out.labels[0]!.color).toEqual([1, 0.5, 0.2, 1]);
   });
 
   it('fadeAlpha tracks deriveZoneOfAvoidanceLiveness', () => {

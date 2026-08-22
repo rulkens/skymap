@@ -917,6 +917,7 @@ describe('runFrame — the label-director wake fold', () => {
         compositor: {},
         starCatalogRenderer: null,
         structureMarkerRenderer: null,
+        label3DRenderer: { setLabels: vi.fn() },
       },
       subsystems: {
         ...base.subsystems,
@@ -933,12 +934,14 @@ describe('runFrame — the label-director wake fold', () => {
     } as unknown as EngineState;
   }
 
-  it("a director voting true does not prevent its sibling's flush", () => {
-    // spec §12's short-circuit trap: `a() || b()` would never call `b()`
-    // once `a()` returns true, silently dropping the second director's GPU
-    // flush the moment the first one votes to keep animating.
+  it("a director voting true does not prevent its siblings' flush", () => {
+    // spec §12's short-circuit trap: `a() || b() || c()` would never call
+    // `b()`/`c()` once `a()` returns true, silently dropping a later
+    // statement's GPU flush the moment an earlier one votes to keep
+    // animating. `runLabel3DProducers` is the newest of the three and the
+    // one most likely to get folded into the `||` chain later — pin it too.
     const state = makeReadyState(
-      () => true, // COSMO votes true — must NOT short-circuit the call below
+      () => true, // COSMO votes true — must NOT short-circuit the calls below
       () => false,
     );
     const deps = makeCamDeps(state);
@@ -947,5 +950,6 @@ describe('runFrame — the label-director wake fold', () => {
 
     expect(state.subsystems.labelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
+    expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
   });
 });

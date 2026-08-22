@@ -1,8 +1,8 @@
-// labels3d/io.wesl — structs for the shared world-geometry text renderer.
-// Generalizes zoneOfAvoidance/label/io.wesl (one fixed galactic-plane band)
-// to any number of labels, each with its own arc placement, font, and
-// repeat count — using labels/io.wesl's per-label storage-buffer /
-// per-glyph instance-buffer indirection so multiple labels share one draw.
+// labels3d/io.wesl — structs for the shared world-geometry text renderer:
+// any number of labels, each with its own arc placement (center/plane/
+// radius/repeatCount), font, and repeat count. Follows labels/io.wesl's
+// per-label storage-buffer / per-glyph instance-buffer split so multiple
+// labels share one draw call.
 
 import package::lib::camera::CameraUniforms;
 
