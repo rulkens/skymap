@@ -98,6 +98,8 @@ import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DD
 import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/Label2DDirectorConfig';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { ForwardProjectedPoint } from '../../../@types/camera/ForwardProjectedPoint';
+import { forwardProjectPoint } from '../../../utils/camera/forwardProjectPoint';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import {
@@ -168,24 +170,29 @@ function projectLabels(
   projection: Label2DProjection,
 ): Label2DProjected[] {
   const m = projection.vp;
-  const [viewportW, viewportH] = projection.viewportPx;
+  const viewportPx = projection.viewportPx;
+  // One scratch reused across the whole loop — forwardProjectPoint mutates
+  // it in place rather than allocating, per label.
+  const scratch: ForwardProjectedPoint = {
+    clipX: 0,
+    clipY: 0,
+    clipZ: 0,
+    clipW: 0,
+    screenX: 0,
+    screenY: 0,
+    onScreen: false,
+  };
   return labels.map((label) => {
-    // Column-major mat4·vec4 by hand — the lib's vec4.transformMat4
-    // allocates per call.
     const wx = label.worldPos[0];
     const wy = label.worldPos[1];
     const wz = label.worldPos[2];
-    const clipX = m[0]! * wx + m[4]! * wy + m[8]! * wz + m[12]!;
-    const clipY = m[1]! * wx + m[5]! * wy + m[9]! * wz + m[13]!;
-    const clipW = m[3]! * wx + m[7]! * wy + m[11]! * wz + m[15]!;
-    if (clipW <= 0) return { screenPx: null, clipW, onScreen: false };
-    const ndcX = clipX / clipW;
-    const ndcY = clipY / clipW;
-    const screenX = (ndcX * 0.5 + 0.5) * viewportW;
-    // Flip Y: NDC +Y is up, screen +Y is down.
-    const screenY = (1 - (ndcY * 0.5 + 0.5)) * viewportH;
-    const onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
-    return { screenPx: [screenX, screenY], clipW, onScreen };
+    forwardProjectPoint(m, wx, wy, wz, viewportPx, scratch);
+    if (scratch.clipW <= 0) return { screenPx: null, clipW: scratch.clipW, onScreen: false };
+    return {
+      screenPx: [scratch.screenX, scratch.screenY],
+      clipW: scratch.clipW,
+      onScreen: scratch.onScreen,
+    };
   });
 }
 
