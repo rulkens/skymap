@@ -224,8 +224,16 @@ export function buildInitialSettings(): EngineSettingsState {
     // bin (the star renderer draws no per-star names). Per-row "loaded" is the
     // asset slot's own readiness — no data-layer store.
     starCatalogs: {
-      // THROWAWAY (vrSpike): forced off under `?vr` — see the note above.
-      enabled: !vrSpike,
+      // NOT forced off under `?vr`, unlike the per-catalog rows below: this
+      // cluster's master is a real gate the per-item rows are ANDed against
+      // (`starCatalogVisible`), and the Stars section's header checkbox is
+      // the only sidebar control for it — easy to miss beside the per-catalog
+      // checkboxes. Forcing it off left a spike bug: re-enabling a star
+      // catalog's own row from the sidebar did nothing, because the master
+      // gate silently stayed off. Leaving it on costs nothing at boot — every
+      // row is still forced off below, so nothing fetches until the user
+      // picks one.
+      enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
       refineThreshold: DEFAULT_REFINE_THRESHOLD,
