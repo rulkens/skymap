@@ -113,18 +113,27 @@ function readFaceButtonPressed(session: XRSessionish, handedness: 'left' | 'righ
   return findXrGamepad(session, handedness)?.buttons[buttonIndex]?.pressed ?? false;
 }
 
-/** Rotation about the XR +X axis (pitch), right-hand rule. */
-function rotateAboutX(v: Vec3, angleRad: number): Vec3 {
-  const c = Math.cos(angleRad);
-  const s = Math.sin(angleRad);
-  return [v[0], c * v[1] - s * v[2], s * v[1] + c * v[2]];
-}
+/** XR +X, the viewer's local right axis at session start — the pitch rotation axis. */
+const XR_RIGHT_AXIS: Vec3 = [1, 0, 0];
 
-/** Rotation about the XR +Y axis (yaw), right-hand rule. */
-function rotateAboutY(v: Vec3, angleRad: number): Vec3 {
+/**
+ * Rotation of `v` about a unit `axis` by `angleRad` (Rodrigues' formula,
+ * right-hand rule). Generalises the old fixed-axis rotateAboutX/rotateAboutY:
+ * axis=[1,0,0] reproduces the former exactly (both reduce to the same
+ * c·v + (axis×v)·s + axis·(axis·v)·(1−c) expansion).
+ */
+function rotateAboutAxis(v: Vec3, axis: Readonly<Vec3>, angleRad: number): Vec3 {
   const c = Math.cos(angleRad);
   const s = Math.sin(angleRad);
-  return [c * v[0] + s * v[2], v[1], -s * v[0] + c * v[2]];
+  const d = axis[0] * v[0] + axis[1] * v[1] + axis[2] * v[2]; // axis · v
+  const cx = axis[1] * v[2] - axis[2] * v[1]; // axis × v
+  const cy = axis[2] * v[0] - axis[0] * v[2];
+  const cz = axis[0] * v[1] - axis[1] * v[0];
+  return [
+    v[0] * c + cx * s + axis[0] * d * (1 - c),
+    v[1] * c + cy * s + axis[1] * d * (1 - c),
+    v[2] * c + cz * s + axis[2] * d * (1 - c),
+  ];
 }
 
 // Minimal ambient shims for the WebXR surface the spike touches — the DOM lib
@@ -531,7 +540,11 @@ async function startSession(
   af[0] /= afl;
   af[1] /= afl;
   af[2] /= afl;
-  const anchorBasis = imagePlaneBasis(af, anchorCam.roll ?? 0, frameUp(anchorCam.upBasis));
+  // World-space up the flat app's orbit camera zeniths on (its orientation
+  // frame's pole) — frozen here alongside A so left-stick yaw stays pinned to
+  // the scene's actual up even though A itself is a session-start snapshot.
+  const worldUp = frameUp(anchorCam.upBasis);
+  const anchorBasis = imagePlaneBasis(af, anchorCam.roll ?? 0, worldUp);
   // Anchor columns: XR x→camera right, XR y→image-plane up, XR z→backward.
   const AX = anchorBasis.right;
   const AY = anchorBasis.up;
@@ -543,14 +556,20 @@ async function startSession(
   ];
 
   // ── Left-stick orbit, session-scoped, reset to 0 on every focus change ──
-  // Applied as A' = A · R with R = Ryaw · Rpitch (right-multiply: rotate the
-  // XR-space vector by R first, then through the frozen anchor A). Since the
+  // M = Ryaw_world(worldUp) · A · Rpitch(XR +X): pitch is right-multiplied —
+  // rotate the XR-space vector about the viewer's own right axis, then through
+  // the frozen anchor A — so tilting up/down keeps the classic first-person
+  // orbit feel. Yaw is left-multiplied AFTER A, about the frozen worldUp axis
+  // (not A's XR-space +Y), so circling left/right always turns about the
+  // scene's actual up regardless of how A happened to be tilted at session
+  // start — this is the fix for the "orbit is on an angle" bug. Since the
   // per-eye position term below is an offset from E_XR (the active focus's
   // XR-space pin), rotating that offset orbits the view about the focus's
   // centre — the focus itself never moves; the world visibly spins around it.
   let orbitYawRad = 0;
   let orbitPitchRad = 0;
-  const rotOrbited = (v: Vec3): Vec3 => rot(rotateAboutY(rotateAboutX(v, orbitPitchRad), orbitYawRad));
+  const rotOrbited = (v: Vec3): Vec3 =>
+    rotateAboutAxis(rot(rotateAboutAxis(v, XR_RIGHT_AXIS, orbitPitchRad)), worldUp, orbitYawRad);
 
   // Size the canvas backing store to the per-eye texture so renderTargets
   // reconciles the offscreen chain (HDR, bloom, half-res upsamples) to XR
@@ -648,9 +667,12 @@ async function startSession(
         metersToMpc = Math.min(METERS_TO_MPC_MAX, Math.max(METERS_TO_MPC_MIN, metersToMpc));
       }
 
-      // Left-stick orbit: X = yaw (circle around the globe), Y = pitch
-      // (forward tilts the viewpoint up and over it — flip here if that
-      // reads inverted on-device). Keeps working through a tween.
+      // Left-stick orbit: X = yaw about worldUp (circle around the globe —
+      // intent is stick-right orbits the view right, world appears to turn
+      // left; flip the sign here if that reads backwards on-device, same
+      // as the pitch note below), Y = pitch (forward tilts the viewpoint up
+      // and over it — flip here if that reads inverted on-device). Keeps
+      // working through a tween.
       const leftStick = readStickAxes(session, 'left');
       if (Math.abs(leftStick.x) > STICK_DEADZONE) {
         orbitYawRad += ORBIT_RATE * leftStick.x * dtSeconds;
