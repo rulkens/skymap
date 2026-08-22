@@ -33,7 +33,7 @@ import {
   viewFromBasis,
   viewFromBasisOriginRelative,
 } from './vrSpikeState';
-import type { VrEye } from './vrSpikeState';
+import type { VrEye, EyeTangents } from './vrSpikeState';
 
 /** Orbit-pivot distance in metres inside the headset (world scale knob). */
 const SCALE_DIVISOR = 4;
@@ -86,6 +86,191 @@ function showDiag(): void {
 
 const f3 = (v: ArrayLike<number>): string =>
   Array.from(v as number[], (x) => (Math.abs(x) < 1e-4 && x !== 0 ? x.toExponential(2) : x.toFixed(4))).join(', ');
+
+// First-frame-only raw capture per eye, gathered inside the pose.views loop
+// and graded once both eyes are in — see buildFrameDiagnostics below.
+type EyeCapture = {
+  ep: Vec3;
+  vd: {
+    dimension: unknown;
+    format: unknown;
+    baseArrayLayer: unknown;
+    arrayLayerCount: unknown;
+    baseMipLevel: unknown;
+    mipLevelCount: unknown;
+    aspect: unknown;
+  };
+  texWidth: number;
+  texHeight: number;
+  texLayers: number;
+  viewport: { x: number; y: number; width: number; height: number };
+  proj: Float32Array;
+  m: Float32Array;
+  tan: EyeTangents;
+  eyeWorld: Vec3;
+};
+
+/**
+ * Self-grading first-frame diagnostics. Every field the spike's math depends
+ * on gets an explicit [OK]/[OFF] check instead of a raw dump the reader has
+ * to eyeball — WebIDL dictionaries (GPUTextureViewDescriptor) don't
+ * enumerate for JSON.stringify, so each field here is read out by name.
+ */
+function buildFrameDiagnostics(
+  eyeCaptures: EyeCapture[],
+  metersToMpc: number,
+  anchorDistance: number,
+): { summary: string; body: string[] } {
+  const checks: string[] = [];
+  let offCount = 0;
+  const check = (ok: boolean, name: string, detail: string): void => {
+    checks.push(`${ok ? '[OK]' : '[OFF]'} ${name} — ${detail}`);
+    if (!ok) offCount += 1;
+  };
+
+  check(
+    eyeCaptures.length === 2,
+    'views per frame',
+    `actual=${eyeCaptures.length} expected=2` +
+      (eyeCaptures.length === 2 ? '' : ' — FAIL: cross-eye checks below are skipped'),
+  );
+
+  eyeCaptures.forEach((e, i) => {
+    const expectSign = i === 0 ? 'negative' : 'positive';
+    check(
+      Math.abs(e.ep[0]) >= 0.025 && Math.abs(e.ep[0]) <= 0.04,
+      `eye${i} ep.x magnitude`,
+      `actual=${e.ep[0].toFixed(4)} expected=0.025..0.04 (${expectSign})`,
+    );
+    check(Math.abs(e.ep[1]) < 0.15, `eye${i} ep.y magnitude`, `actual=${e.ep[1].toFixed(4)} expected<0.15`);
+    check(Math.abs(e.ep[2]) < 0.15, `eye${i} ep.z magnitude`, `actual=${e.ep[2].toFixed(4)} expected<0.15`);
+
+    const alc = e.vd.arrayLayerCount;
+    check(alc === 1 || alc === undefined, `eye${i} arrayLayerCount`, `actual=${String(alc)} expected=1 or undefined`);
+
+    check(
+      e.texLayers >= 2,
+      `eye${i} colorTexture.depthOrArrayLayers`,
+      `actual=${e.texLayers} expected>=2` +
+        (e.texLayers >= 2 ? '' : ' — not a texture-array — side-by-side layout, spike assumption broken'),
+    );
+
+    const vpOk =
+      e.viewport.x === 0 &&
+      e.viewport.y === 0 &&
+      e.viewport.width === e.texWidth &&
+      e.viewport.height === e.texHeight;
+    check(
+      vpOk,
+      `eye${i} viewport === full texture`,
+      `actual=${JSON.stringify(e.viewport)} expected={x:0,y:0,width:${e.texWidth},height:${e.texHeight}}` +
+        (vpOk ? '' : ' — partial viewport — side-by-side layout, spike renders full-texture and this breaks'),
+    );
+
+    const p = e.proj;
+    const colMajorOk = Math.abs(p[11]! + 1) < 1e-3;
+    if (colMajorOk) {
+      check(true, `eye${i} projectionMatrix p[11]`, `actual=${p[11]!.toFixed(4)} expected=-1 (column-major)`);
+    } else if (Math.abs(p[14]! + 1) < 1e-3) {
+      check(
+        false,
+        `eye${i} projectionMatrix layout`,
+        `p[11]=${p[11]!.toFixed(4)} p[14]=${p[14]!.toFixed(4)} — projection matrix appears ROW-major/transposed — tangent decomposition reads garbage`,
+      );
+    } else {
+      check(false, `eye${i} projectionMatrix p[11]`, `actual=${p[11]!.toFixed(4)} expected=-1`);
+    }
+    check(Math.abs(p[15]!) < 1e-3, `eye${i} projectionMatrix p[15]`, `actual=${p[15]!.toFixed(4)} expected~0`);
+    check(Math.abs(p[3]!) < 1e-3, `eye${i} projectionMatrix p[3]`, `actual=${p[3]!.toFixed(4)} expected~0`);
+    check(Math.abs(p[7]!) < 1e-3, `eye${i} projectionMatrix p[7]`, `actual=${p[7]!.toFixed(4)} expected~0`);
+
+    check(e.tan.l < 0 && 0 < e.tan.r, `eye${i} tangents l<0<r`, `actual l=${e.tan.l.toFixed(4)} r=${e.tan.r.toFixed(4)}`);
+    check(e.tan.d < 0 && 0 < e.tan.u, `eye${i} tangents d<0<u`, `actual d=${e.tan.d.toFixed(4)} u=${e.tan.u.toFixed(4)}`);
+  });
+
+  if (eyeCaptures.length === 2) {
+    const [e0, e1] = eyeCaptures as [EyeCapture, EyeCapture];
+
+    const orderOk = e0.ep[0] < 0 && e1.ep[0] > 0;
+    const swapped = e0.ep[0] > 0 && e1.ep[0] < 0;
+    check(
+      orderOk,
+      'eye order (ep.x sign)',
+      `actual=(${e0.ep[0].toFixed(4)}, ${e1.ep[0].toFixed(4)}) expected=(negative, positive)` +
+        (swapped ? ' — eye order swapped' : orderOk ? '' : ' — neither eye matches the expected sign'),
+    );
+
+    const bal0 = e0.vd.baseArrayLayer;
+    const bal1 = e1.vd.baseArrayLayer;
+    check(
+      bal0 !== bal1,
+      'baseArrayLayer differs across eyes',
+      `actual=(${String(bal0)}, ${String(bal1)}) expected=distinct (0 and 1)`,
+    );
+
+    check(
+      Math.abs(e0.tan.l) > e0.tan.r,
+      'left eye outward cant (|l|>r)',
+      `actual |l|=${Math.abs(e0.tan.l).toFixed(4)} r=${e0.tan.r.toFixed(4)}`,
+    );
+    check(
+      e1.tan.r > Math.abs(e1.tan.l),
+      'right eye outward cant (r>|l|)',
+      `actual r=${e1.tan.r.toFixed(4)} |l|=${Math.abs(e1.tan.l).toFixed(4)}`,
+    );
+    const identicalFrusta =
+      e0.tan.l === e1.tan.l && e0.tan.r === e1.tan.r && e0.tan.d === e1.tan.d && e0.tan.u === e1.tan.u;
+    check(
+      !identicalFrusta,
+      'eyes have distinct frusta',
+      identicalFrusta ? 'eyes have identical frusta — asymmetry lost' : 'left/right tangents differ',
+    );
+
+    const sepWorld = Math.hypot(
+      e0.eyeWorld[0] - e1.eyeWorld[0],
+      e0.eyeWorld[1] - e1.eyeWorld[1],
+      e0.eyeWorld[2] - e1.eyeWorld[2],
+    );
+    const sepMeters = sepWorld / metersToMpc;
+    check(sepWorld > 0, 'eyeWorld positions differ', `actual separation=${sepWorld.toExponential(3)} world units`);
+    check(
+      sepMeters >= 0.02 && sepMeters <= 0.12,
+      'eyeWorld separation ≈ IPD',
+      `actual=${sepMeters.toFixed(4)} m expected≈0.055..0.075 m (bounds 0.02..0.12)`,
+    );
+  }
+
+  check(Number.isFinite(metersToMpc) && metersToMpc > 0, 'metersToMpc finite>0', `actual=${metersToMpc}`);
+  check(
+    Number.isFinite(anchorDistance) && anchorDistance > 0,
+    'anchor distance finite>0',
+    `actual=${anchorDistance}`,
+  );
+
+  const eyeBlocks: string[] = [];
+  eyeCaptures.forEach((e, i) => {
+    eyeBlocks.push(`EYE ${i} — pos.x ${i === 0 ? '<' : '>'} 0 ⇒ ${i === 0 ? 'LEFT' : 'RIGHT'}`);
+    eyeBlocks.push(
+      `dimension: ${String(e.vd.dimension)}`,
+      `format: ${String(e.vd.format)}`,
+      `baseArrayLayer: ${String(e.vd.baseArrayLayer)}`,
+      `arrayLayerCount: ${String(e.vd.arrayLayerCount)}`,
+      `baseMipLevel: ${String(e.vd.baseMipLevel)}`,
+      `mipLevelCount: ${String(e.vd.mipLevelCount)}`,
+      `aspect: ${String(e.vd.aspect)}`,
+    );
+  });
+
+  const rawDumps: string[] = [];
+  eyeCaptures.forEach((e, i) => {
+    rawDumps.push(`eye${i} projectionMatrix: ${f3(e.proj)}`, `eye${i} transform matrix m: ${f3(e.m)}`);
+  });
+
+  return {
+    summary: offCount === 0 ? 'VR DIAG: all checks OK' : `VR DIAG: ${offCount} checks OFF`,
+    body: [...checks, ...eyeBlocks, ...rawDumps],
+  };
+}
 
 export function installVrSpike(state: EngineState, frameDeps: RunFrameDeps): void {
   const xr = (navigator as unknown as { xr?: { requestSession(mode: string, init?: unknown): Promise<XRSessionish> } }).xr;
@@ -155,7 +340,7 @@ async function startSession(
     `layer: ${layer.textureWidth}x${layer.textureHeight} colorFormat=${colorFormat} swapFormat=${swapFormat}`,
     `metersToMpc=${metersToMpc.toExponential(3)} anchor distance=${state.cameraRuntime.lastPose.current.distance.toExponential(3)}`,
   );
-  let diagFramesLeft = 2;
+  let diagFramesLeft = 1;
 
   session.addEventListener('end', () => {
     vrOverride.active = false;
@@ -193,6 +378,7 @@ async function startSession(
     const AZ: Vec3 = [-f[0], -f[1], -f[2]];
 
     const eyes: VrEye[] = [];
+    const eyeCaptures: EyeCapture[] = [];
     for (const view of pose.views) {
       const sub = binding.getViewSubImage(layer, view);
       if (!warnedViewport && (sub.viewport.x !== 0 || sub.viewport.y !== 0)) {
@@ -223,17 +409,29 @@ async function startSession(
 
       const tan = tangentsOf(view.projectionMatrix);
       if (diagFramesLeft > 0) {
-        const vd = sub.getViewDescriptor() as GPUTextureViewDescriptor & Record<string, unknown>;
-        diag.push(
-          `--- frame(view ${eyes.length}) ---`,
-          `xr eye pos (m): ${f3(ep)}`,
-          `viewDescriptor: ${JSON.stringify(vd)}`,
-          `colorTexture: ${sub.colorTexture.width}x${sub.colorTexture.height} layers=${sub.colorTexture.depthOrArrayLayers}`,
-          `viewport: ${JSON.stringify(sub.viewport)}`,
-          `projMatrix: ${f3(view.projectionMatrix)}`,
-          `tangents l/r/d/u: ${tan.l.toFixed(4)} ${tan.r.toFixed(4)} ${tan.d.toFixed(4)} ${tan.u.toFixed(4)}`,
-          `eyeWorld: ${f3(eyeWorld)}`,
-        );
+        // WebIDL dictionary fields don't enumerate — JSON.stringify(vd) prints
+        // "{}" for most of these. Read each one explicitly.
+        const vdRaw = sub.getViewDescriptor() as GPUTextureViewDescriptor & Record<string, unknown>;
+        eyeCaptures.push({
+          ep,
+          vd: {
+            dimension: vdRaw.dimension,
+            format: vdRaw.format,
+            baseArrayLayer: vdRaw.baseArrayLayer,
+            arrayLayerCount: vdRaw.arrayLayerCount,
+            baseMipLevel: vdRaw.baseMipLevel,
+            mipLevelCount: vdRaw.mipLevelCount,
+            aspect: vdRaw.aspect,
+          },
+          texWidth: sub.colorTexture.width,
+          texHeight: sub.colorTexture.height,
+          texLayers: sub.colorTexture.depthOrArrayLayers,
+          viewport: { x: sub.viewport.x, y: sub.viewport.y, width: sub.viewport.width, height: sub.viewport.height },
+          proj: view.projectionMatrix,
+          m,
+          tan,
+          eyeWorld,
+        });
       }
       eyes.push({
         viewCosmo: viewFromBasis(new Float32Array(16), X, Y, Z, eyeWorld),
@@ -244,7 +442,16 @@ async function startSession(
       });
     }
 
-    if (diagFramesLeft > 0) diagFramesLeft -= 1;
+    if (diagFramesLeft > 0) {
+      const { summary, body } = buildFrameDiagnostics(
+        eyeCaptures,
+        metersToMpc,
+        state.cameraRuntime.lastPose.current.distance,
+      );
+      diag.push(...body);
+      diag.unshift(summary);
+      diagFramesLeft -= 1;
+    }
     if (eyes.length > 0) {
       const t0 = eyes[0]!.tan;
       vrOverride.fovYRad = Math.atan(t0.u) - Math.atan(t0.d);
