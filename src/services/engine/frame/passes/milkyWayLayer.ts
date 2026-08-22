@@ -52,6 +52,7 @@ import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
+import type { VrBillboardBasis } from '../../../xr/vrSpikeState';
 
 /**
  * Camera origin distance (Mpc) below which the impostor stops taking clicks —
@@ -113,9 +114,14 @@ export const milkyWayLayer: ContentLayer = {
     const cloudRenderer = state.gpu.milkyWayCloudRenderer;
     if (cloudRenderer === null) return;
 
-    // Camera-facing billboard axes for the dust sprites (world space),
-    // derived from the live camera each frame.
-    const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
+    // Camera-facing billboard axes for the dust sprites (world space). In VR,
+    // `applyVrEyeToCtx` (vrSpikeState.ts) stamps the per-eye basis onto ctx —
+    // `ctx.cam` stays the frozen mono 2D orbit camera for the spike's
+    // duration, so falling back to it here would billboard every sprite
+    // against the wrong eye. ReadyFrameContext doesn't declare this spike
+    // field; cast to read it, mirroring applyVrEyeToCtx's own cast.
+    const vrBasis = (ctx as unknown as { vrBillboardBasis?: VrBillboardBasis }).vrBillboardBasis;
+    const { right: camRight, up: camUp } = vrBasis ?? cameraBillboardBasis(ctx.cam);
 
     cloudRenderer.drawDust(pass, {
       vp: view.vp,

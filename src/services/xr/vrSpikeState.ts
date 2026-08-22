@@ -18,6 +18,9 @@ import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 /** Signed frustum half-tangents decomposed from an XRView.projectionMatrix. */
 export type EyeTangents = { l: number; r: number; d: number; u: number };
 
+/** World-space billboard axes for one eye, stamped onto `ReadyFrameContext`. */
+export type VrBillboardBasis = { right: Vec3; up: Vec3 };
+
 export type VrEye = {
   /** world→eye view matrix in Mpc, f32 col-major (COSMO slab). */
   viewCosmo: Float32Array;
@@ -109,6 +112,19 @@ export function viewFromBasis<T extends Float32Array | Float64Array>(
   return out;
 }
 
+/**
+ * Recover the world-space right/up axes baked into a view matrix built by
+ * `viewFromBasis` (X=right, Y=up, Z=back, col-major): the view matrix's
+ * rotation rows are the world-space basis vectors it was built from, so row 0
+ * is `right` and row 1 is `up` — no re-derivation from camera state needed.
+ */
+function billboardBasisFromView(view: Float32Array | Float64Array): VrBillboardBasis {
+  return {
+    right: [view[0]!, view[4]!, view[8]!],
+    up: [view[1]!, view[5]!, view[9]!],
+  };
+}
+
 /** Origin-relative variant of viewFromBasis for the NEAR0 slab (f64). */
 export function viewFromBasisOriginRelative(
   X: Vec3,
@@ -155,10 +171,14 @@ export function applyVrEyeToCtx(ctx: ReadyFrameContext, eye: VrEye): void {
     vp: Float32Array;
     slabs: readonly Slab[];
     drawCamPos: Readonly<Vec3>;
+    vrBillboardBasis?: VrBillboardBasis;
   };
   w.vp = vpC;
   w.slabs = slabs;
   w.drawCamPos = [eye.camPos[0], eye.camPos[1], eye.camPos[2]];
+  // Rotation is identical between the two eye view matrices (only the
+  // translation differs), so either slab's view yields the same basis.
+  w.vrBillboardBasis = billboardBasisFromView(eye.viewCosmo);
 
   (ctx.renderedTargets as Set<string>).clear();
 }
