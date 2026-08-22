@@ -35,6 +35,7 @@ import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRenderer';
+import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
@@ -310,6 +311,15 @@ export type EngineGpuHandles = {
    */
   zoneOfAvoidanceRenderer: ZoneOfAvoidanceRenderer | null;
   /**
+   * Shared world-geometry text renderer (spec §9.1) — any number of
+   * arc-placed labels, each with its own font/placement/repeat count. Draws
+   * into HDR (not the swap chain), so it is NOT one of the
+   * `rebuildOnSwapFormat` rows. Null until `initGpu` constructs it; nulled
+   * back out during teardown. Its first consumer is the zone-of-avoidance
+   * lettering path (`produceZoneOfAvoidanceLettering`).
+   */
+  label3DRenderer: Label3DRenderer | null;
+  /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
@@ -362,9 +372,9 @@ export type EngineGpuHandles = {
    * until `initGpu` constructs it (same phase as `volumeUpsample`). Excluded
    * from `isEngineReady` — when null, `zoneOfAvoidanceUpsampleLayer` skips
    * its blit (the full-res lettering draw is gated separately, on
-   * `zoneOfAvoidanceRenderer`), so a null handle is a silent no-op. Stored
-   * here so `destroy()` can release the pipeline + sampler + bind-group-layout
-   * via the pass's no-op destroy method.
+   * `label3DRenderer`), so a null handle is a silent no-op. Stored here so
+   * `destroy()` can release the pipeline + sampler + bind-group-layout via
+   * the pass's no-op destroy method.
    */
   zoneOfAvoidanceUpsample: AdditiveUpsample | null;
   /**

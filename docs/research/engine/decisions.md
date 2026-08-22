@@ -38,9 +38,13 @@ the deep tuning surface.
 6. **Vocabulary** (from subsystem-sweep TASK B): adopt incumbents; **do not coin
    "phase"** — layers pin to `(target, slab)` and the hand-authored `frameProgram`
    step list stays the ordering artifact (a walker validates coverage). "Planner"
-   is the official noun for per-frame prepare (verb standardized). Presentation
+   is the official noun for per-frame prepare (verb standardized). ~~Presentation
    producers remain three named mechanisms (LabelProducer / MarkerProducer(new,
-   grown from LabelProducer's shape) / drawPick) — no fake-unified registry. Say
+   grown from LabelProducer's shape) / drawPick) — no fake-unified registry.~~
+   **REFINED by #19 (2026-08-21)** — **four** named mechanisms, not three:
+   zone-of-avoidance (#555) landed a fourth kind of thing, world-geometry text
+   with no declutter/envelope/leader and an arc anchor, that `Label2DProducer`
+   would have had to fake-unify around. Say
    "render target contribution", not "private target".
 7. **Contract amendments from the 14-subsystem sweep**:
    - Artifact kinds: `baked | generated | fetched | streamed` (streamed =
@@ -1188,6 +1192,140 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
     (bucket 1), the survey pick filter answers "does this source claim a hit"
     (bucket 2).
 
+19. **Label mechanism unification (rung 8): four named presentation contracts,
+    not three — amends #6; one parameterized director factory replaces the two
+    hand-duplicated label paths; ZoA lettering and structure markers become
+    registered producers; both pre-ruling verifications passed** (2026-08-21,
+    ruled at the rung-8 design review —
+    [spec](../../superpowers/specs/2026-08-20-label-mechanism-unification-design.md),
+    refines #6's vocabulary count, discharges #15 D6's caption-wake hand-off and
+    #18 D12's fade-wire hand-off, and closes `renderer-layer-outliers.md`
+    §1/§2/§3/§6's rung-8-assigned rows).
+
+    **#6 amended: three named mechanisms become four.** `LabelProducer` /
+    `MarkerProducer` / `drawPick` was the count before zone-of-avoidance (#555)
+    landed a fourth kind of thing: text placed as world geometry rather than a
+    screen billboard. It does not declutter, does not envelope, has no leader
+    line, and its anchor is an arc, not a point — forcing it through
+    `Label2DProducer` would have been exactly the fake unification #6 forbids.
+    The four: `Label2DProducer` (screen-billboard text, decluttered +
+    enveloped — the renamed incumbent `LabelProducer`), `Label3DProducer`
+    (world-geometry text, new), `MarkerProducer` (rings/halos, unchanged from
+    #6's naming), `drawPick` (unchanged).
+
+    - **D1 — one parameterized director factory, two instances.**
+      `createLabel2DDirector(config)` replaced the zero-arg
+      `createLabelDirectorSubsystem`; `labelDirector` (COSMO, `bboxOverlap`
+      declutter + 300 ms `smoothstepRamp` envelope) and `foregroundLabelDirector`
+      (NEAR0, `screenSeparation` declutter + 100 ms `exponentialApproach`
+      envelope, named to match its renderer pair and layer rather than the
+      brief's `captionDirector`) are its two instances, each keeping its exact
+      current feel. Landed shape refines the spec's declutter/envelope contract:
+      the declutter stage returns the FULL projected set plus survivorship
+      (`DeclutterResult = { survivors, survivorIds }`, `label2DDirector.ts`),
+      not a filtered survivors-only array — `exponentialApproach` needs every
+      emitted-but-culled caption to ease its alpha toward 0 rather than drop, so
+      it reads `survivorIds` against the unfiltered merge while `smoothstepRamp`
+      reads `survivors` alone.
+    - **D2 — captions became real `Label2DProducer`s.**
+      `produceSceneBodyCaptions` and `produceConstellationCaptions` carry
+      `captionFadeRules`, `captionPriority`, the Sgr A* gate and the
+      apparent-size math out of `foregroundLabelsLayer`, which collapsed to the
+      `labelsLayer` shape: 45 lines, `enabled` reads only
+      `state.gpu.foregroundLabelRenderer`, and the private
+      `scheduler.requestRender()` latch is gone.
+    - **D3 — the #18 D12 fade wire landed here.** `starCatalogLabel` /
+      `bodyLabel` registered fade handles no production code read;
+      `produceSceneBodyCaptions` now composes both by hand per #18 D8 rule 3 (a
+      required `fadeHandle` field on `CAPTION_FADE_RULES`'s rows — five carry a
+      handle, the `constellation` row is `null` because it already composes
+      `resolveLayerOpacity` itself). The two `fadeLayers.ts` LANDMINE lines are
+      deleted, not re-pointed. This is the rung's one sanctioned behaviour
+      change; everything else is behaviour-neutral.
+    - **D4 — `MarkerProducer` mints thin**, typed to the closed
+      `StructureMarkerDescriptor`. Merge and flush only — no declutter, no
+      envelope, no wake vote. Registration is a module-level array
+      (`MARKER_PRODUCERS`, one member: `structureMarkers`), not a runtime
+      `register` call on a new subsystem; the raw `runFrame` call to
+      `produceStructureMarkers`/`setMarkers` became a walker,
+      `runMarkerProducers`, which concatenates producer order without
+      sort/filter/dedupe (the pick index-alignment contract) and is called
+      unconditionally behind the existing null-renderer guard.
+    - **D5 — ZoA lettering became a `Label3DProducer`** with plane-agnostic arc
+      placement (`center`, `planeNormal`, `referenceDir`, `radiusMpc`,
+      `startAngleRad`), a fixed physical `emMpc` with no pixel clamps, and
+      `repeatCount`; the galactic basis moved from shader constants to producer
+      data. A shared `label3DRenderer`
+      (`src/services/gpu/renderers/labels3d/`) draws it — its own
+      `texture_2d_array` + upload loop, mirroring `labelRenderer`'s idiom
+      (a second GPU texture, not a shared handle; net memory flat at one
+      registered font, ~4 MB at 1024²), reusing only the atlas IMAGE source
+      and the extracted `lib/msdf.wesl` shading path; `zoneOfAvoidanceRenderer.drawLabels`
+      and `shaders/zoneOfAvoidance/label/{io,vertex,fragment}.wesl` are deleted,
+      and the constructor is back on the family-A norm
+      `(device, targetFormat)` — no `atlases` third param
+      (`renderer-layer-outliers.md:26`'s outlier cell retired). The draw site
+      stayed pinned at `zoneOfAvoidanceUpsampleLayer`'s `postBlit`. Landed shape
+      refines the spec's §3 pipeline table in one respect: the walker,
+      `runLabel3DProducers`, calls `state.gpu.label3DRenderer?.setLabels(labels)`
+      unconditionally every frame — there is no signature/flush-skip stage, just
+      merge → flush → fold `awake` into the return value (`awake` still has
+      exactly one producer today and it returns `false`, kept so the walker's
+      contract matches the two Label2D directors').
+    - **D6 — `clipPathDebug` stays excluded.** A pure debug-geometry `setLines`
+      with no glyphs, no label ownership, no declutter and no envelope; folding
+      it into `MarkerProducer` would give the contract a label-free member
+      solely to absorb a dev overlay. Recorded so
+      `renderer-layer-outliers.md`'s rung-8 row does not read the omission as an
+      oversight.
+    - **D7 — leader lines fold onto the label, gated on verification. The gate
+      PASSED.** Every `MarkerLine` emitted in `src/` was already owned by
+      exactly one label (four emission sites checked: `produceFamousLabels.ts`,
+      `produceMilkyWayLabel.ts`, `produceStructureLabels.ts` (emits none),
+      `foregroundLabelsLayer.ts`; none carried an unowned line) — reverified
+      against the landed tree: `ownerLabelId` and `LabelProducerOutput.lines`
+      are gone from `src/` entirely; `Label2D.leader?` carries the connector
+      instead, and the director synthesizes the renderer's `MarkerLine` at
+      flush time.
+    - **D8 — `src/services/engine/subsystems/labelProducer.ts` was DEAD.
+      Verified, and deleted.** A docblock plus `export {}`, zero importers
+      anywhere in `src/`, `tests/`, `tools/` — confirmed gone from the tree.
+    - **D9 — prep PR + feature PR, as ruled.** PR A (the four renames + the
+      `lib/msdf.wesl` extraction, #621) landed first, merged to `main` at
+      `dda9f484b`; this decision's ten-task plan is PR B.
+    - **D10 — four 2026-08-21 review confirmations**, put to the user at the
+      design review and confirmed as written: `foregroundLabelDirector` (not
+      the brief's `captionDirector`) as the NEAR0 handle name; marker
+      registration as a module-level array, not a runtime `register` call; the
+      fade wire composing two channels (registry handle + clip key), not one;
+      and the lift staying in the director despite the counter-evidence that
+      `produceFamousLabels` already measures from inside a producer. The
+      review's fifth item, `produceFamousLabels` → `produceFamousGalaxyLabels`
+      (once `Label3D` made "famous labels" ambiguous against NEAR0's famous-star
+      captions), joined PR A's renames.
+
+    **What was not built.** No umbrella `SubsystemBundle` (#17 stays deferred).
+    No runtime marker registry — `MARKER_PRODUCERS` is a module-level array a
+    hand-written walker maps over. No envelope convergence — `smoothstepRamp`
+    and `exponentialApproach` stay two independently eye-tuned policies. No
+    renderer-pair merging — `labelRenderer`/`foregroundLabelRenderer` and
+    `markerLineRenderer`/`foregroundMarkerLineRenderer` stay four instances
+    (different slabs, different occlusion modes). No `clipPathDebug` fold (D6).
+    No `drawPick` change.
+
+    **Two recorded second-special-case triggers**, so the next family member
+    decides on evidence rather than re-argues the shape: a third
+    `Label2DDirector` instance decides whether the config's declutter/envelope
+    shape — two independent policy unions, only two of eight combinations
+    instantiated, the same instance picking both arms — was right or should
+    collapse to one `flavour: 'cosmo' | 'near0'` knob; a second, non-structure
+    `MarkerProducer` decides whether `StructureMarkerDescriptor` opens to a
+    category union, since the merged order must stay `structureStore.all()`
+    order per category for the pick index-alignment contract.
+
+    Evidence + the full accounting:
+    [rung-8 plan](../../superpowers/plans/2026-08-21-label-mechanism-unification.md).
+
 ## The contract (settled sketch)
 
 ```ts
@@ -1203,7 +1341,7 @@ type SubsystemBundle = {
   liveness?: DeriveLiveness | InlineGates;
   wake?: (state, ctx) => boolean; // folded into the anim bag
   fades?: readonly FadeLayer[]; // FADE_LAYERS manifest derived by concatenation
-  labelProducers?: readonly LabelProducer[];
+  labelProducers?: readonly Label2DProducer[];
   markerProducers?: readonly MarkerProducer[];
   debug?: { groupTitle: string; sliders?: readonly SliderField[] };
 };

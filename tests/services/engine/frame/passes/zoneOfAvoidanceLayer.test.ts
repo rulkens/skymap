@@ -63,7 +63,6 @@ function liveState(
       zoneOfAvoidanceRenderer: {
         draw: over.draw ?? vi.fn(),
         drawPick: over.drawPick ?? vi.fn(),
-        drawLabels: vi.fn(),
       },
     },
     settings: { zoneOfAvoidance: { color: [1, 1, 1], intensity: 1, edgeSharpness: 1 } },

@@ -53,6 +53,7 @@ import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
+import { createLabel3DRenderer } from '../../gpu/renderers/labels3d/label3DRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
@@ -229,7 +230,14 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'zoneOfAvoidanceRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
+      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    // Draws into HDR (rgba16float), not the swap chain — no
+    // rebuildOnSwapFormat (that's only the 8 swap-chain-format rows above).
+    key: 'label3DRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
   },
   {
     key: 'filamentRenderer',

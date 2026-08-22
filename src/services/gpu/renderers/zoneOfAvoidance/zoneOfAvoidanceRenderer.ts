@@ -3,10 +3,10 @@
  * drawn as an analytic ray-marched shell (same family as
  * `horizonShellRenderer`): the fragment stage intersects a per-pixel view
  * ray with geometry analytically, so the band reads correctly from every
- * camera position/distance without a proxy mesh. A second pipeline
- * (`drawLabels`) draws the curved "Zone of Avoidance" lettering, built
- * once at construction. Byte layouts: `shaders/zoneOfAvoidance/io.wesl`
- * (band) and `label/io.wesl` (lettering) are authoritative.
+ * camera position/distance without a proxy mesh. The curved "Zone of
+ * Avoidance" lettering is a `Label3DProducer` drawn by the shared
+ * `label3DRenderer` (spec §9.2), not this renderer. Byte layout:
+ * `shaders/zoneOfAvoidance/io.wesl` is authoritative.
  */
 
 import { vec3 } from 'wgpu-matrix';
@@ -17,52 +17,23 @@ import { frameUp } from '../../../../utils/camera/frameUp';
 import vsCode from '../../shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../shaders/zoneOfAvoidance/fragment.wesl?static';
 import fsPickCode from '../../shaders/zoneOfAvoidance/fragmentPick.wesl?static';
-import labelVsCode from '../../shaders/zoneOfAvoidance/label/vertex.wesl?static';
-import labelFsCode from '../../shaders/zoneOfAvoidance/label/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { writeCameraPrefix } from '../../lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
-import { layoutLabel } from '../../labelLayout/labelLayout';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { ATLAS_FONT_SIZE, FONT_IDS } from '../../../../data/fonts';
 import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import {
-  ZONE_OF_AVOIDANCE_LABEL_TEXT,
-  ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
-} from '../../../../data/zoneOfAvoidance/zoneOfAvoidanceLabelText';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { ZoneOfAvoidanceRenderer } from '../../../../@types/rendering/ZoneOfAvoidanceRenderer';
 import type { ZoneOfAvoidanceTuning } from '../../../../@types/settings/ZoneOfAvoidanceTuning';
 import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontAtlases';
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
 export const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 112;
 
-/** On-the-wire label uniform-buffer size; must match `label/io.wesl`'s `Uniforms`. */
-export const ZONE_OF_AVOIDANCE_LABEL_UNIFORM_BUFFER_SIZE = 112;
-
-/**
- * Physical em-height of the curved lettering, in Mpc — a fixed real-world
- * size (like a giant sign at `labelRadiusMpc`), so its ANGULAR size (and
- * hence on-screen legibility) scales inversely with `labelRadiusMpc` the
- * same way any physical object would. Visual-checkpoint placeholder, tuned
- * alongside `LABEL_RADIUS_MPC` in `zoneOfAvoidanceLayer.ts` — at that
- * layer's placeholder radius this gives ~2.9° letter height and ~27° label
- * width, comfortably inside the 120° gap between the 3 repeats.
- */
-const LABEL_EM_MPC = 2;
-
-/** Per-glyph instance stride: localOffset(8) + localSize(8) + uvRect(16) + galacticLonRad(4). */
-const LABEL_GLYPH_INSTANCE_BYTES = 36;
-
 export function createZoneOfAvoidanceRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
-  atlases: LoadedFontAtlases,
 ): ZoneOfAvoidanceRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'zoneOfAvoidance.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'zoneOfAvoidance.fragment');
@@ -164,174 +135,6 @@ export function createZoneOfAvoidanceRenderer(
   // once directly into the shared uniform scratch below (see `packedId`'s
   // offset in io.wesl's byte table), rather than every `writeUniforms` call.
   const packedId = packSelection(Source.ZoneOfAvoidance, 0) + PICK_SENTINEL_OFFSET;
-
-  // ── Curved-lettering pipeline ("Zone of Avoidance" glyphs) ────────────
-  //
-  // A single font (`FONT_IDS[0]`) — unlike `labelRenderer`, this pass has
-  // no per-label font choice, so the atlas binds as a plain `texture_2d`
-  // rather than a `texture_2d_array`. Reuses `atlases` (loaded once by
-  // `initGpu.ts`'s `loadFontAtlases()` call) rather than fetching a second
-  // copy.
-  const labelFontId = FONT_IDS[0]!;
-  const labelMetrics = atlases.metricsByFont[labelFontId];
-  const labelBitmap = atlases.bitmaps[0];
-
-  const labelUniformBuffer = device.createBuffer({
-    label: 'zoneOfAvoidance-label-uniform-buffer',
-    size: ZONE_OF_AVOIDANCE_LABEL_UNIFORM_BUFFER_SIZE,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const labelBindGroupLayout = device.createBindGroupLayout({
-    label: 'zoneOfAvoidance-label-bgl',
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-    ],
-  });
-
-  const labelVsModule = createShaderModuleWithDevLog(
-    device,
-    labelVsCode,
-    'zoneOfAvoidance.label.vertex',
-  );
-  const labelFsModule = createShaderModuleWithDevLog(
-    device,
-    labelFsCode,
-    'zoneOfAvoidance.label.fragment',
-  );
-
-  const labelPipeline = device.createRenderPipeline({
-    label: 'zoneOfAvoidance-label-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'zoneOfAvoidance-label-pipeline-layout',
-      bindGroupLayouts: [labelBindGroupLayout],
-    }),
-    vertex: {
-      module: labelVsModule,
-      entryPoint: 'vs',
-      buffers: [
-        // Slot 0: static unit-corner quad, shared with labelRenderer/markerLine/debugLine.
-        UNIT_QUAD_VERTEX_LAYOUT,
-        // Slot 1: per-glyph instance data, built once at construction (see below).
-        {
-          arrayStride: LABEL_GLYPH_INSTANCE_BYTES,
-          stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: 'float32x2' }, // localOffset
-            { shaderLocation: 2, offset: 8, format: 'float32x2' }, // localSize
-            { shaderLocation: 3, offset: 16, format: 'float32x4' }, // uvRect
-            { shaderLocation: 4, offset: 32, format: 'float32' }, // galacticLonRad
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: labelFsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: targetFormat,
-          // Additive, not premultiplied OVER — see label/fragment.wesl's
-          // header for why (the documented OVER/HDR coherency landmine).
-          blend: ADDITIVE_BLEND,
-        },
-      ],
-    },
-    primitive: { topology: 'triangle-strip' },
-    // No depth test, same depthless HDR target as the band pipeline above.
-  });
-
-  const labelCornerBuffer = device.createBuffer({
-    label: 'zoneOfAvoidance-label-corners',
-    size: UNIT_QUAD_STRIP_CORNERS.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(labelCornerBuffer, 0, UNIT_QUAD_STRIP_CORNERS);
-
-  // Glyph-instance buffer: built ONCE here from layoutLabel, never rebuilt —
-  // the text and repeat count are compile-time constants, so there is no
-  // per-frame CPU work beyond the small uniform write in `drawLabels`.
-  // localOffset/localSize are baked from atlas px to world-Mpc via
-  // LABEL_EM_MPC (the same worldEmMpc idea labels/io.wesl documents,
-  // resolved once here instead of per-frame). 'center'/'center' alignment
-  // centres each repeat's pen origin at (0, 0), so `galacticLonRad` alone
-  // (no extra per-glyph shift) is each repeat's base longitude — see
-  // label/vertex.wesl for how the pen offset folds in.
-  const mpcPerAtlasPx = LABEL_EM_MPC / ATLAS_FONT_SIZE;
-  const glyphQuads = layoutLabel(ZONE_OF_AVOIDANCE_LABEL_TEXT, labelMetrics, 'center', 'center');
-  const labelGlyphCount = glyphQuads.length * ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT;
-  const labelGlyphBuf = new ArrayBuffer(Math.max(labelGlyphCount, 1) * LABEL_GLYPH_INSTANCE_BYTES);
-  const labelGlyphF32 = new Float32Array(labelGlyphBuf);
-  {
-    let i = 0;
-    for (let rep = 0; rep < ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT; rep++) {
-      const galacticLonRad = (rep * 2 * Math.PI) / ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT;
-      for (const q of glyphQuads) {
-        const base = i * (LABEL_GLYPH_INSTANCE_BYTES / 4);
-        labelGlyphF32[base + 0] = q.localOffsetX * mpcPerAtlasPx;
-        labelGlyphF32[base + 1] = q.localOffsetY * mpcPerAtlasPx;
-        labelGlyphF32[base + 2] = q.localSizeW * mpcPerAtlasPx;
-        labelGlyphF32[base + 3] = q.localSizeH * mpcPerAtlasPx;
-        labelGlyphF32[base + 4] = q.uvU0;
-        labelGlyphF32[base + 5] = q.uvV0;
-        labelGlyphF32[base + 6] = q.uvU1;
-        labelGlyphF32[base + 7] = q.uvV1;
-        labelGlyphF32[base + 8] = galacticLonRad;
-        i++;
-      }
-    }
-  }
-  const labelInstanceBuffer = device.createBuffer({
-    label: 'zoneOfAvoidance-label-instances',
-    size: labelGlyphBuf.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(labelInstanceBuffer, 0, labelGlyphBuf);
-
-  // Atlas texture: one font, one layer — `rgba8unorm`, no mipmaps (MSDF
-  // handles multi-scale rendering itself; see labelRenderer.ts's header).
-  const labelAtlasTexture = device.createTexture({
-    label: 'zoneOfAvoidance-label-atlas',
-    size: [labelMetrics.atlas.width, labelMetrics.atlas.height, 1],
-    format: 'rgba8unorm',
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  if (labelBitmap != null) {
-    device.queue.copyExternalImageToTexture(
-      { source: labelBitmap },
-      { texture: labelAtlasTexture },
-      [labelMetrics.atlas.width, labelMetrics.atlas.height],
-    );
-  }
-  const labelSampler = device.createSampler({
-    label: 'zoneOfAvoidance-label-sampler',
-    magFilter: 'linear',
-    minFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
-  });
-
-  const labelBindGroup = device.createBindGroup({
-    label: 'zoneOfAvoidance-label-bg',
-    layout: labelBindGroupLayout,
-    entries: [
-      { binding: 0, resource: { buffer: labelUniformBuffer } },
-      { binding: 1, resource: labelAtlasTexture.createView() },
-      { binding: 2, resource: labelSampler },
-    ],
-  });
-
-  // Per-frame label uniform scratch (112 bytes), allocated once.
-  const labelUniforms = new Float32Array(ZONE_OF_AVOIDANCE_LABEL_UNIFORM_BUFFER_SIZE / 4);
 
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE);
@@ -476,46 +279,14 @@ export function createZoneOfAvoidanceRenderer(
     pass.draw(6, 1);
   }
 
-  function drawLabels(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportPx: Vec2,
-    tuning: ZoneOfAvoidanceTuning,
-    labelRadiusMpc: number,
-    fadeAlpha: number,
-  ): void {
-    if (labelGlyphCount === 0) return;
-
-    writeCameraPrefix(labelUniforms, viewProj, viewportPx);
-    // color (floats 20..22) + labelRadiusMpc (float 23).
-    labelUniforms[20] = tuning.labelColor[0];
-    labelUniforms[21] = tuning.labelColor[1];
-    labelUniforms[22] = tuning.labelColor[2];
-    labelUniforms[23] = labelRadiusMpc;
-    // fadeAlpha (float 24); floats 25..27 are pad, left at zero.
-    labelUniforms[24] = fadeAlpha;
-    device.queue.writeBuffer(labelUniformBuffer, 0, labelUniforms);
-
-    pass.setPipeline(labelPipeline);
-    pass.setBindGroup(0, labelBindGroup);
-    pass.setVertexBuffer(0, labelCornerBuffer);
-    pass.setVertexBuffer(1, labelInstanceBuffer);
-    pass.draw(4, labelGlyphCount);
-  }
-
   function destroy(): void {
     uniformBuffer.destroy();
-    labelUniformBuffer.destroy();
-    labelCornerBuffer.destroy();
-    labelInstanceBuffer.destroy();
-    labelAtlasTexture.destroy();
   }
 
   const renderer: ZoneOfAvoidanceRenderer = {
     label: 'zoneOfAvoidanceRenderer',
     draw,
     drawPick,
-    drawLabels,
     destroy,
   };
   renderer satisfies Renderer;

@@ -1,22 +1,32 @@
 /**
  * projectToScreenPx — a camera-relative anchor through a rebased vp to
  * backing-store screen pixels, or `null` when it sits on/behind the camera
- * plane (no screen position).
+ * plane (no screen position). Screen +Y points DOWN, matching the caption
+ * declutter's separation metric (pure pixel distance, orientation-agnostic).
  *
- * Column-major mat4·vec4 by hand — the same forward projection `labelLeaderLine`
- * does, but returning the 2D screen point rather than a lifted world endpoint.
- * Screen +Y points DOWN, matching the caption declutter's separation metric
- * (pure pixel distance, orientation-agnostic).
- *
- * Its two callers are the caption declutter and `starPointsLayer`'s pick, which
- * both ask the same question — "how many pixels apart are these two anchors on
- * screen?" — and must answer it identically: a pick footprint that disagreed
- * with the caption layout by even a few pixels would put the click target
- * somewhere other than where the name is.
+ * Its one caller is `starPointsLayer`'s pick. The forward-projection
+ * arithmetic itself lives in `forwardProjectPoint`, shared with
+ * `label2DDirector` and `labelLeaderLine` — this wrapper just adapts that
+ * primitive's mutable-out shape to the `Vec2 | null` callers here expect.
  */
 
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ForwardProjectedPoint } from '../../@types/camera/ForwardProjectedPoint';
+import { forwardProjectPoint } from './forwardProjectPoint';
+
+// Reused across calls — this function has no per-label loop of its own, but
+// the primitive is alloc-free by contract, so a call-site scratch keeps it
+// that way here too rather than allocating a fresh out object every pick.
+const scratch: ForwardProjectedPoint = {
+  clipX: 0,
+  clipY: 0,
+  clipZ: 0,
+  clipW: 0,
+  screenX: 0,
+  screenY: 0,
+  onScreen: false,
+};
 
 export function projectToScreenPx(
   anchor: Readonly<Vec3>,
@@ -24,11 +34,7 @@ export function projectToScreenPx(
   viewportPx: Readonly<Vec2>,
 ): Vec2 | null {
   const [x, y, z] = anchor;
-  const clipX = vp[0]! * x + vp[4]! * y + vp[8]! * z + vp[12]!;
-  const clipY = vp[1]! * x + vp[5]! * y + vp[9]! * z + vp[13]!;
-  const clipW = vp[3]! * x + vp[7]! * y + vp[11]! * z + vp[15]!;
-  if (clipW <= 0) return null;
-  const ndcX = clipX / clipW;
-  const ndcY = clipY / clipW;
-  return [(ndcX * 0.5 + 0.5) * viewportPx[0], (0.5 - ndcY * 0.5) * viewportPx[1]];
+  forwardProjectPoint(vp, x, y, z, viewportPx, scratch);
+  if (scratch.clipW <= 0) return null;
+  return [scratch.screenX, scratch.screenY];
 }

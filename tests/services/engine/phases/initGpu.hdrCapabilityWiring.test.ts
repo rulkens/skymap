@@ -150,6 +150,10 @@ vi.mock('../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceR
   createZoneOfAvoidanceRenderer: vi.fn(() => makeStub('zoneOfAvoidanceRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () => ({
+  createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
@@ -349,7 +353,7 @@ import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuH
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
  * writes. Every nullable `gpu.*` handle starts at `null`; the
  * `subsystems` bag carries just the facades `initGpu` calls into
- * (`biasCorrection.attachRenderer`, `labelDirector.attachRenderers`).
+ * (`biasCorrection.attachRenderer`, `cosmoLabelDirector.attachRenderers`).
  */
 function makeState(): EngineState {
   return {
@@ -363,6 +367,7 @@ function makeState(): EngineState {
       filamentRenderer: null,
       labelRenderer: null,
       foregroundLabelRenderer: null,
+      foregroundMarkerLineRenderer: null,
       markerLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
@@ -400,7 +405,12 @@ function makeState(): EngineState {
         attachRenderer: vi.fn(),
         setMode: vi.fn().mockResolvedValue(undefined),
       },
-      labelDirector: {
+      cosmoLabelDirector: {
+        attachRenderers: vi.fn(),
+        registerProducer: vi.fn(),
+        runFrame: vi.fn(),
+      },
+      foregroundLabelDirector: {
         attachRenderers: vi.fn(),
         registerProducer: vi.fn(),
         runFrame: vi.fn(),
