@@ -53,6 +53,7 @@ import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
+import { vrOverride, applyVrEyeToCtx } from '../../xr/vrSpikeState';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -70,7 +71,12 @@ export function renderFrame(input: RenderFrameInput): void {
   state.gpu.focusUniform?.write(ctx.focus);
 
   const encoder = device.createCommandEncoder();
-  const swapView = context.getCurrentTexture().createView();
+  // THROWAWAY (vrSpike): in an XR session the presented targets are the
+  // projection layer's per-eye textures; the canvas swap chain is not
+  // acquired at all (its size is pinned to the eye size purely so the
+  // offscreen chain reconciles to XR resolution).
+  const vrEyes = vrOverride.active && vrOverride.eyes.length > 0 ? vrOverride.eyes : null;
+  const swapView = vrEyes ? null : context.getCurrentTexture().createView();
 
   const timingCtx = timingService.beginFrame();
   // The frame's pass shape: `settings.debug.renderStrategy` overrides it, defaulting
@@ -91,26 +97,47 @@ export function renderFrame(input: RenderFrameInput): void {
   // makes that in-between frame correct, not just a safe fallback.
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
-  executeFrame({
-    encoder,
-    ctx,
-    state,
-    program: frameProgram(
-      {
-        exposure: state.settings.tonemap.exposure,
-        curve: state.settings.tonemap.curve,
-        hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
-        hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
-      },
-      // The master bloom toggle is the ONLY bloom value that shapes the step
-      // list; strength/threshold are read live by the bloom layers each draw.
-      state.settings.bloom.enabled,
-    ),
-    layers: CONTENT_LAYERS,
-    strategy,
-    timing: timingService,
-    swapView,
-  });
+  const program = frameProgram(
+    {
+      exposure: state.settings.tonemap.exposure,
+      curve: state.settings.tonemap.curve,
+      hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
+      hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
+    },
+    // The master bloom toggle is the ONLY bloom value that shapes the step
+    // list; strength/threshold are read live by the bloom layers each draw.
+    state.settings.bloom.enabled,
+  );
+  if (vrEyes) {
+    // THROWAWAY (vrSpike): walk the same program once per eye. applyVrEyeToCtx
+    // swaps the per-eye vp/slabs/camPos onto ctx and resets the first-touch set
+    // so every target clears again — the offscreen chain is reused sequentially
+    // within this one encoder, which pass ordering makes safe.
+    for (const eye of vrEyes) {
+      applyVrEyeToCtx(ctx, eye);
+      executeFrame({
+        encoder,
+        ctx,
+        state,
+        program,
+        layers: CONTENT_LAYERS,
+        strategy,
+        timing: timingService,
+        swapView: eye.textureView,
+      });
+    }
+  } else {
+    executeFrame({
+      encoder,
+      ctx,
+      state,
+      program,
+      layers: CONTENT_LAYERS,
+      strategy,
+      timing: timingService,
+      swapView: swapView!,
+    });
+  }
   timingService.endFrame(timingCtx, encoder);
 
   device.queue.submit([encoder.finish()]);

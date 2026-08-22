@@ -157,4 +157,10 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // loop sleeps until a channel mouth wakes it.
   // Boot ignition — independent of `goLiveNowAction`'s route: covers the clock, not frame 1 (D8).
   state.subsystems.scheduler.requestRender();
+
+  // THROWAWAY (vrSpike): `?vr` opts into the Quest WebXR spike. Dynamically
+  // imported so the module stays out of the normal path entirely.
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('vr')) {
+    void import('../../xr/vrSpike').then((m) => m.installVrSpike(state, frameDeps));
+  }
 }

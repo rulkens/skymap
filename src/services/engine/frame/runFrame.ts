@@ -90,6 +90,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { vrOverride } from '../../xr/vrSpikeState';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
@@ -196,14 +197,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // a live slider). It reallocates only the rows whose pixel size actually
   // moved, so a steady-state frame allocates nothing. Both can run
   // pre-bootstrap; `renderTargets` is null until initGpu, hence the `?.`.
-  if (resizeCanvasToDisplay(deps.canvas)) {
+  // THROWAWAY (vrSpike): while an XR session drives the loop, the canvas
+  // backing store is pinned to the per-eye XR texture size by vrSpike.ts —
+  // the CSS-driven resize must not fight it, and the planner FOV comes from
+  // the headset's per-eye frustum instead of the settings slider.
+  if (vrOverride.active) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
+    state.cameraRuntime.projection.fovYRad = vrOverride.fovYRad;
+  } else {
+    if (resizeCanvasToDisplay(deps.canvas)) {
+      state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
+    }
+    // Unlike aspect (canvas-resize-gated), the FOV slider can change on ANY frame
+    // with no resize event, so this write runs unconditionally — a settings-slider
+    // twin of the aspect assignment above, both landing on the same projection
+    // Resource `assembleOrbitCamera` merges into the live camera every frame.
+    state.cameraRuntime.projection.fovYRad = state.settings.camera.fovDeg * (Math.PI / 180);
   }
-  // Unlike aspect (canvas-resize-gated), the FOV slider can change on ANY frame
-  // with no resize event, so this write runs unconditionally — a settings-slider
-  // twin of the aspect assignment above, both landing on the same projection
-  // Resource `assembleOrbitCamera` merges into the live camera every frame.
-  state.cameraRuntime.projection.fovYRad = state.settings.camera.fovDeg * (Math.PI / 180);
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,
