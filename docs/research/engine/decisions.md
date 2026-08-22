@@ -1256,8 +1256,11 @@ FlowRow.tsx` — the explorer panel's flow Intensity slider — stays
       `startAngleRad`), a fixed physical `emMpc` with no pixel clamps, and
       `repeatCount`; the galactic basis moved from shader constants to producer
       data. A shared `label3DRenderer`
-      (`src/services/gpu/renderers/labels3d/`) draws it, reusing the font atlas
-      and the extracted `lib/msdf.wesl`; `zoneOfAvoidanceRenderer.drawLabels`
+      (`src/services/gpu/renderers/labels3d/`) draws it — its own
+      `texture_2d_array` + upload loop, mirroring `labelRenderer`'s idiom
+      (a second GPU texture, not a shared handle; net memory flat at one
+      registered font, ~4 MB at 1024²), reusing only the atlas IMAGE source
+      and the extracted `lib/msdf.wesl` shading path; `zoneOfAvoidanceRenderer.drawLabels`
       and `shaders/zoneOfAvoidance/label/{io,vertex,fragment}.wesl` are deleted,
       and the constructor is back on the family-A norm
       `(device, targetFormat)` — no `atlases` third param
