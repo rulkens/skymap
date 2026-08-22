@@ -1,30 +1,23 @@
 /**
  * orbitRadPerPixel — yaw/pitch sensitivity of an orbit drag, radians per CSS
- * pixel, damped by altitude above a focused body's surface.
+ * pixel — what the drag falls back to whenever the exact cursor-anchored solve
+ * (`surfaceDragRotation`) declines to answer.
  *
  * A flat rate rotates the world about the target's CENTRE, so the ground it
  * sweeps scales with the pivot's radius, not altitude — at 127 km over Earth
  * (illustrative only; the `SURFACE_STANDOFF_RADII` floor sits far lower) a
  * flat-rate pixel sweeps ~350x the ground the screen actually spans.
+ * `groundTrackingRadPerPixel` rates the drag against the ground instead (its
+ * header carries the derivation), capped here at `ORBIT_MAX_RAD_PER_PX`, the
+ * old flat rate: the two terms cross at ~7 body radii of altitude, so deep
+ * space is unchanged above that and the drag slows continuously below it.
+ * Either `altitudeMpc` or `pivotRadiusMpc` being `null` (no surface)
+ * degenerates to the flat rate exactly.
  *
- * `2 * tan(fovYRad / 2) * h / (cssHeight * pivotRadiusMpc)`, where `h` is the
- * caller-supplied EYE-based altitude (`eyeAltitudeMpc`, not `distance −
- * pivotRadiusMpc` — the shortcut only holds while `cam.target` sits exactly
- * at the pivot's centre), rates the drag against the ground instead — the pan
- * path's `pxToWorld` conversion (`orbitControls.ts`) evaluated at altitude
- * rather than `distance` (pan moves the TARGET, an orbit drag sweeps the
- * GROUND), divided by the pivot's radius to convert world distance into
- * radians of rotation.
- *
- * Capped at `ORBIT_MAX_RAD_PER_PX`, the old flat rate: the two terms cross at
- * ~7 body radii of altitude, so deep space is unchanged above that and the
- * drag slows continuously below it. Either `altitudeMpc` or `pivotRadiusMpc`
- * being `null` (no surface) degenerates to the flat rate exactly.
- *
- * Correct only at SCREEN CENTRE — an exact fix needs a cursor-to-surface
- * raycast that doesn't exist in this codebase yet (deferred,
- * `docs/backlog/2026-07-30-surface-directed-zoom.md`).
+ * Correct only at SCREEN CENTRE, and only below the cap.
  */
+
+import { groundTrackingRadPerPixel } from './groundTrackingRadPerPixel';
 
 /** Flat-rate ceiling, radians per CSS pixel: 0.005 rad/px, a 100 px drag ~28.6°. */
 export const ORBIT_MAX_RAD_PER_PX = 0.005;
@@ -46,10 +39,10 @@ export function orbitRadPerPixel(
   pivotRadiusMpc: number | null,
 ): number {
   if (altitudeMpc === null || pivotRadiusMpc === null) return ORBIT_MAX_RAD_PER_PX;
+  if (altitudeMpc <= 0) return ORBIT_MAX_RAD_PER_PX;
 
-  const h = altitudeMpc;
-  if (h <= 0) return ORBIT_MAX_RAD_PER_PX;
-
-  const groundTrackingRate = (2 * Math.tan(fovYRad / 2) * h) / (cssHeight * pivotRadiusMpc);
-  return Math.min(ORBIT_MAX_RAD_PER_PX, groundTrackingRate);
+  return Math.min(
+    ORBIT_MAX_RAD_PER_PX,
+    groundTrackingRadPerPixel(fovYRad, altitudeMpc, cssHeight, pivotRadiusMpc),
+  );
 }
