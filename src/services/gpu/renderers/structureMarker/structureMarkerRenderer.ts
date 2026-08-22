@@ -45,6 +45,9 @@
  * match whatever a prior HDR pass left bound at slot 1), SourceUniforms
  * BGL at `@group(2)` — so one `device.createBindGroup(...)` is valid
  * against every pipeline (which `layout:'auto'` does NOT guarantee).
+ * THROWAWAY (vrSpike) exception: `ringVrPipeline` adds its own `@group(3)`
+ * camera-position uniform (see ring.wesl's `VrCamUniforms`), so it gets its
+ * own 4-group pipeline layout rather than the shared 3-group one.
  */
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
@@ -55,6 +58,7 @@ import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsB
 import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../../data/structure/structureIds';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import haloVsCode from '../../shaders/structureMarker/halo.wesl?static';
 import haloFsCode from '../../shaders/structureMarker/halo.wesl?static';
 import ringVsCode from '../../shaders/structureMarker/ring.wesl?static';
@@ -186,6 +190,12 @@ export function createStructureMarkerRenderer(
   // groups remain layout-compatible across the encoder boundary.
   let pickDummyFadeBuffer: GPUBuffer | null = null;
   let pickDummyFadeBindGroup: GPUBindGroup | null = null;
+  // THROWAWAY (vrSpike): per-eye camera-position uniform for the VR ring
+  // pipeline's 'vsFlat' upright-billboard math (see ring.wesl's VrCamUniforms
+  // docstring for why this rides its own @group(3) instead of growing the
+  // shared io.wesl Uniforms every other pipeline here binds).
+  let vrCamBuffer: GPUBuffer | null = null;
+  let vrCamBindGroup: GPUBindGroup | null = null;
   const sourceBuffers = byCategory<GPUBuffer | null>(null);
   let cameraBindGroup: GPUBindGroup | null = null;
   const sourceBindGroups = byCategory<GPUBindGroup | null>(null);
@@ -195,6 +205,10 @@ export function createStructureMarkerRenderer(
   // 0 and the trailing 12 bytes held at zero.
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
+  // THROWAWAY (vrSpike): scratch for the per-draw VR camera-position upload
+  // (vec4: xyz camPos, w pad-stays-zero) — same shape as fadeScratchBuffer above.
+  const vrCamScratchBuffer = new ArrayBuffer(16);
+  const vrCamScratchF32 = new Float32Array(vrCamScratchBuffer);
 
   if (device) {
     const cameraBgl = device.createBindGroupLayout({
@@ -295,15 +309,31 @@ export function createStructureMarkerRenderer(
     // THROWAWAY (vrSpike): separate GPUShaderModule pair (not a reused
     // module — see the ring-pick block below for why one module per
     // pipeline is this file's convention) compiled from the SAME
-    // ring.wesl source, entry point 'vsFlat' instead of 'vs'. Same
-    // pipeline layout, vertex-buffer layout, and blend state as
-    // ringPipeline — the only difference is which world points the
-    // vertex stage projects.
+    // ring.wesl source, entry point 'vsFlat' instead of 'vs'. Vertex-buffer
+    // layout and blend state match ringPipeline — the only differences are
+    // which world points the vertex stage projects, and the extra @group(3)
+    // camera-position uniform 'vsFlat' reads (see ring.wesl's VrCamUniforms
+    // docstring), which is why this pipeline gets its OWN pipeline layout
+    // instead of reusing the shared `pipelineLayout`.
+    const vrCamBgl = device.createBindGroupLayout({
+      label: 'structure-marker-vr-cam-bgl',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: { type: 'uniform' },
+        },
+      ],
+    });
+    const ringVrPipelineLayout = device.createPipelineLayout({
+      label: 'structure-marker-ring-vr-pipeline-layout',
+      bindGroupLayouts: [cameraBgl, fadeBgl, sourceBgl, vrCamBgl],
+    });
     const ringVrVs = createShaderModuleWithDevLog(device, ringVsCode, 'structureMarker.ringVr.vs');
     const ringVrFs = createShaderModuleWithDevLog(device, ringFsCode, 'structureMarker.ringVr.fs');
     ringVrPipeline = device.createRenderPipeline({
       label: 'structure-marker-ring-vr-pipeline',
-      layout: pipelineLayout,
+      layout: ringVrPipelineLayout,
       vertex: { module: ringVrVs, entryPoint: 'vsFlat', buffers: vertexBuffers },
       fragment: {
         module: ringVrFs,
@@ -311,6 +341,17 @@ export function createStructureMarkerRenderer(
         targets: [{ format, blend: PREMULTIPLIED_OVER_BLEND }],
       },
       primitive: { topology: 'triangle-list' },
+    });
+
+    vrCamBuffer = device.createBuffer({
+      label: 'structure-marker-vr-cam-uniform',
+      size: 16, // vec4<f32> (xyz camPos + pad) — see ring.wesl's VrCamUniforms.
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    vrCamBindGroup = device.createBindGroup({
+      label: 'structure-marker-vr-cam-bg',
+      layout: vrCamBgl,
+      entries: [{ binding: 0, resource: { buffer: vrCamBuffer } }],
     });
 
     // ── Ring-pick pipeline ────────────────────────────────────────────
@@ -517,6 +558,14 @@ export function createStructureMarkerRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     fadeOpacity: number,
+    // THROWAWAY (vrSpike): per-eye camera world position (Mpc) — the flat
+    // path ignores it; the VR ring pipeline's 'vsFlat' needs it every draw
+    // to orient the upright disc toward whichever eye is currently
+    // rendering (see ring.wesl's VrCamUniforms docstring). The caller
+    // (structureMarkersLayer.ts) already has this as `view.camPos`, kept
+    // correct per-eye by `applyVrEyeToCtx` mutating `ctx.drawCamPos` before
+    // each eye's pass loop — see that function's docstring.
+    camPos: Vec3,
   ): void {
     if (
       !device ||
@@ -536,6 +585,18 @@ export function createStructureMarkerRenderer(
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
+
+    // THROWAWAY (vrSpike): VR-only camera-position uniform, written every
+    // draw regardless of vrOverride.active — cheap (16 bytes), and simpler
+    // than gating the write on a state check that duplicates the pipeline
+    // selection below. The flat 'vs'/'halo'/'ringPick' pipelines never bind
+    // @group(3), so this buffer is read only by 'vsFlat' when it's active.
+    if (vrCamBuffer) {
+      vrCamScratchF32[0] = camPos[0];
+      vrCamScratchF32[1] = camPos[1];
+      vrCamScratchF32[2] = camPos[2];
+      device.queue.writeBuffer(vrCamBuffer, 0, vrCamScratchBuffer);
+    }
 
     // Per-frame fade.opacity write — same pattern as filamentRenderer.
     // The upload spans the full 16-byte scratch (one writeBuffer of a
@@ -583,7 +644,15 @@ export function createStructureMarkerRenderer(
     // facing whichever eye is drawing (see ring.wesl's `vsFlat` docstring).
     const activeRingPipeline =
       vrOverride.active && ringVrPipeline !== null ? ringVrPipeline : ringPipeline;
+    const usingVrRing = activeRingPipeline === ringVrPipeline;
     pass.setPipeline(activeRingPipeline);
+    // THROWAWAY (vrSpike): @group(3) only exists on ringVrPipelineLayout —
+    // binding it while the flat ringPipeline (built from the shared 3-group
+    // `pipelineLayout`) is active would be a stale, unused bind group, so
+    // this is gated on the same pipeline choice made above.
+    if (usingVrRing && vrCamBindGroup) {
+      pass.setBindGroup(3, vrCamBindGroup);
+    }
     for (const cat of STRUCTURE_IDS) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
@@ -639,6 +708,7 @@ export function createStructureMarkerRenderer(
     instanceBuffer?.destroy();
     fadeBuffer?.destroy();
     pickDummyFadeBuffer?.destroy();
+    vrCamBuffer?.destroy();
     for (const cat of STRUCTURE_IDS) {
       sourceBuffers[cat]?.destroy();
     }
