@@ -277,7 +277,14 @@ export function buildInitialSettings(): EngineSettingsState {
       >,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
-      disabledPasses: {},
+      // THROWAWAY (vrSpike): under `?vr` both selection-ring layers (COSMO +
+      // NEAR0 halo around the picked target) are pre-disabled — this record
+      // is the existing per-layer settings gate `executeFrame` already
+      // consults (see its `disabledPasses[l.name]` check), so reusing it here
+      // needs no new field. The ring reads as a distracting reticle in the
+      // headset; the DebugPanel toggle stays live so it can be flipped back
+      // on for the flat page. Delete with the spike.
+      disabledPasses: vrSpike ? { 'selection-ring': true, 'near0-selection-ring': true } : {},
       // 'auto' reproduces the old timing-derived pass shape, so production +
       // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
       renderStrategy: 'auto',
