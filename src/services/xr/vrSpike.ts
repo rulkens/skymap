@@ -64,8 +64,8 @@ const E_XR: Vec3 = [0, 0, -HEAD_TO_EARTH_CENTER_M];
 // ── Thumbsticks: right = zoom, left = orbit ────────────────────────────────
 /** Ignore stick noise below this magnitude (xr-standard axes rest near 0 but rarely at exactly 0). */
 const STICK_DEADZONE = 0.15;
-/** Full deflection ≈ doubling/halving metersToMpc per second (e^ln2 = 2). */
-const ZOOM_RATE = Math.LN2;
+/** Full deflection ≈ 3 doublings/halvings of metersToMpc per second — full Earth→universe sweep ≈ 20 s. */
+const ZOOM_RATE = 3 * Math.LN2;
 /** Full deflection ≈ 1.2 rad/s of orbit yaw/pitch. */
 const ORBIT_RATE = 1.2;
 /** Pitch clamp — beyond this the view flips past the focus's poles. */
