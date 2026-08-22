@@ -224,7 +224,7 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'zoneOfAvoidanceRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
+      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Draws into HDR (rgba16float), not the swap chain — no

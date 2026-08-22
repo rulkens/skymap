@@ -68,6 +68,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runMarkerProducers } from './runMarkerProducers';
+import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -644,12 +645,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // once; both null-check their renderers, so this is safe before the atlas
   // load completes.
   //
-  // Three statements, not `a() || b()`: each `runFrame` call FLUSHES GPU
-  // buffers as a side effect, and `||` short-circuits — the inline form
-  // would skip the second director's flush the moment the first votes true.
+  // Three statements, not `a() || b() || c()`: each call FLUSHES GPU buffers
+  // as a side effect, and `||` short-circuits — the inline form would skip a
+  // sibling's flush the moment an earlier one votes true.
   const cosmoLabelsAnimating = state.subsystems.labelDirector.runFrame(state, ctx);
   const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
-  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating;
+  const label3DAnimating = runLabel3DProducers(state, ctx);
+  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
   // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
   //

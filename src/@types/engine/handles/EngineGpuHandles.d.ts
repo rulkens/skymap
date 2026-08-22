@@ -315,8 +315,8 @@ export type EngineGpuHandles = {
    * arc-placed labels with per-label font/placement/repeat. Draws into HDR
    * (not the swap chain), so it is NOT one of the `rebuildOnSwapFormat`
    * rows. Null until `initGpu` constructs it; nulled back out during
-   * teardown. Its intended first consumer is the zone-of-avoidance
-   * lettering path, not yet wired onto it.
+   * teardown. Its first consumer is the zone-of-avoidance lettering path
+   * (`produceZoneOfAvoidanceLettering`).
    */
   label3DRenderer: Label3DRenderer | null;
   /**
@@ -372,9 +372,9 @@ export type EngineGpuHandles = {
    * until `initGpu` constructs it (same phase as `volumeUpsample`). Excluded
    * from `isEngineReady` — when null, `zoneOfAvoidanceUpsampleLayer` skips
    * its blit (the full-res lettering draw is gated separately, on
-   * `zoneOfAvoidanceRenderer`), so a null handle is a silent no-op. Stored
-   * here so `destroy()` can release the pipeline + sampler + bind-group-layout
-   * via the pass's no-op destroy method.
+   * `label3DRenderer`), so a null handle is a silent no-op. Stored here so
+   * `destroy()` can release the pipeline + sampler + bind-group-layout via
+   * the pass's no-op destroy method.
    */
   zoneOfAvoidanceUpsample: AdditiveUpsample | null;
   /**
