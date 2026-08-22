@@ -85,6 +85,18 @@ import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 export function buildInitialSettings(): EngineSettingsState {
+  // THROWAWAY (vrSpike): `?vr` defaults the FLAT page to Earth-only too, so
+  // the 2D view before/around a VR session doesn't fetch + GPU-upload every
+  // galaxy/star catalog and the MCPM volume. Same URLSearchParams check as
+  // device.ts / startLoop.ts. The sidebar toggles stay live — this only
+  // changes the boot default, so re-enabling a source still loads it via the
+  // normal demand path. Delete with the spike.
+  const vrSpike =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('vr');
+  const volumeItems = seedVolumeFields();
+  if (vrSpike && volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]) {
+    volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]!.enabled = false;
+  }
   return {
     // Camera orientation frame — the bare scalar "which pole is up" view
     // preference (spec §3.2). Seeded from `DEFAULT_ORIENTATION` so that file
@@ -119,7 +131,8 @@ export function buildInitialSettings(): EngineSettingsState {
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
-          { enabled: e.visible, labelEnabled: true },
+          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above.
+          { enabled: vrSpike ? false : e.visible, labelEnabled: true },
         ]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
@@ -211,7 +224,8 @@ export function buildInitialSettings(): EngineSettingsState {
     // bin (the star renderer draws no per-star names). Per-row "loaded" is the
     // asset slot's own readiness — no data-layer store.
     starCatalogs: {
-      enabled: true,
+      // THROWAWAY (vrSpike): forced off under `?vr` — see the note above.
+      enabled: !vrSpike,
       sizePx: DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
       refineThreshold: DEFAULT_REFINE_THRESHOLD,
@@ -223,7 +237,8 @@ export function buildInitialSettings(): EngineSettingsState {
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
           e.id,
-          { enabled: e.visible, labelEnabled: true },
+          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above.
+          { enabled: vrSpike ? false : e.visible, labelEnabled: true },
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
@@ -242,7 +257,8 @@ export function buildInitialSettings(): EngineSettingsState {
     },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
-      items: seedVolumeFields(),
+      // THROWAWAY (vrSpike): `mcpm` row forced off under `?vr` above.
+      items: volumeItems,
     },
     // Flow is a singleton overlay layer: all its user-facing state (master
     // gate + look/motion knobs) lives here, spread from the single
