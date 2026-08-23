@@ -68,6 +68,8 @@ import { surfaceDragRotation } from '../../utils/camera/surfaceDragRotation';
 import { PITCH_LIMIT } from '../../utils/camera/pitchLimit';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
+import { orbitAnglesLookingAlong } from '../../utils/camera/orbitAnglesLookingAlong';
+import { surfaceTiltAngle } from '../../utils/camera/surfaceTiltAngle';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
@@ -137,7 +139,7 @@ export function attachOrbitControls(
   // `dragMode` distinguishes a left-button orbit from a right-button (or
   // middle-button) pan, plus the touch-only `'pinch'` mode that fires when
   // a second finger touches down.  `null` means no drag in progress.
-  type DragMode = 'orbit' | 'pan' | 'pinch';
+  type DragMode = 'orbit' | 'pan' | 'pinch' | 'tilt';
   let dragMode: DragMode | null = null;
   let lastX = 0; // client-space X of the previous pointermove event
   let lastY = 0; // client-space Y of the previous pointermove event
@@ -278,6 +280,11 @@ export function attachOrbitControls(
       // orbit here.  Pinch is set later if a second contact arrives.
       if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) {
         dragMode = 'pan';
+      } else if (e.shiftKey) {
+        // Shift is sampled ONCE, here: a modifier released mid-drag must not
+        // swap the gesture's currency out from under the hand.
+        // delete when the globe-anchored camera pivot replaces surface navigation
+        dragMode = 'tilt';
       } else {
         dragMode = 'orbit';
       }
@@ -445,6 +452,61 @@ export function attachOrbitControls(
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
+
+    if (dragMode === 'tilt') {
+      // ── Tilt PROBE (shift + drag) ───────────────────────────────────────
+      //
+      // delete when the globe-anchored camera pivot replaces surface navigation
+      //
+      // The EYE is held and the PIVOT swings: rotate the aim toward screen-up
+      // by the clamped tilt delta, then re-place the target at the same range
+      // along the new aim, so `updatePosition` puts the eye back exactly where
+      // it was. The pivot move is the frame's own channel — `accumulateFollowPan`
+      // diffs `cam.target` during an orbit drag, so the pin keeps the tilt.
+      // Horizontal motion is ignored: heading would need its own machinery.
+      const frame = options?.dragPivotFrame?.() ?? null;
+      if (frame === null || dy === 0) return;
+
+      vec3.subtract(cam.target, cam.position, forwardScratch);
+      vec3.normalize(forwardScratch, forwardScratch);
+      const basis = imagePlaneBasis(
+        forwardScratch,
+        cam.roll ?? 0,
+        frameUp(cam.upBasis, upRefScratch),
+        basisScratch,
+      );
+      const nx = frame.bodyCentreMpc[0] - cam.position[0];
+      const ny = frame.bodyCentreMpc[1] - cam.position[1];
+      const nz = frame.bodyCentreMpc[2] - cam.position[2];
+      const nlen = Math.hypot(nx, ny, nz) || 1;
+      const cosTilt =
+        (forwardScratch[0] * nx + forwardScratch[1] * ny + forwardScratch[2] * nz) / nlen;
+      const current = Math.acos(Math.max(-1, Math.min(1, cosTilt)));
+      const next = surfaceTiltAngle(current, dy, pivotAltitude() ?? cam.distance, frame.radiusMpc);
+      const delta = next - current;
+      if (delta === 0) return;
+
+      const c = Math.cos(delta);
+      const s = Math.sin(delta);
+      const aim: Vec3 = [
+        forwardScratch[0] * c + basis.up[0] * s,
+        forwardScratch[1] * c + basis.up[1] * s,
+        forwardScratch[2] * c + basis.up[2] * s,
+      ];
+      const angles = orbitAnglesLookingAlong(aim, cam.poseBasis);
+      // Past the limit the answer is a failure, not something to clamp — the
+      // same rule the drag solve follows.
+      if (Math.abs(angles.pitch) > PITCH_LIMIT) return;
+
+      cam.target[0] = cam.position[0] + aim[0] * cam.distance;
+      cam.target[1] = cam.position[1] + aim[1] * cam.distance;
+      cam.target[2] = cam.position[2] + aim[2] * cam.distance;
+      cam.yaw = angles.yaw;
+      cam.pitch = angles.pitch;
+      updatePosition(cam);
+      options?.onChange?.();
+      return;
+    }
 
     if (dragMode === 'pan') {
       // ── Pan (right / middle button drag) ────────────────────────────────

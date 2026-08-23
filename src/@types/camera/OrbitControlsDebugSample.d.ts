@@ -6,7 +6,7 @@
  * window onto them.
  */
 export type OrbitControlsDebugSample = {
-  readonly dragMode: 'orbit' | 'pan' | 'pinch' | null;
+  readonly dragMode: 'orbit' | 'pan' | 'pinch' | 'tilt' | null;
   readonly activePointers: number;
   /** Last wheel event's `deltaY`, unmodified. */
   readonly wheelDeltaY: number;
