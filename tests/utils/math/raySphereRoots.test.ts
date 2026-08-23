@@ -5,9 +5,10 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 // Every expectation below is hand-computed from the quadratic
 //   m = ro - center;  b = dot(m, rd);  c = dot(m, m) - r²;  discr = b² - c
 //   roots = -b ∓ sqrt(discr)      (tNear ≤ tFar)
-// (the same formulation as lib/util.wesl::raySphere). Derivations are in
-// the comments so a future reader can re-check the arithmetic without a
-// calculator.
+// (the formulation lib/util.wesl::raySphere spells out; the TS side computes
+// the algebraically equal `discr = r² − |m − b·rd|²`, which is what survives
+// at astronomical |m|). Derivations are in the comments so a future reader
+// can re-check the arithmetic without a calculator.
 describe('raySphereRoots', () => {
   const ORIGIN: Vec3 = [0, 0, 0];
   const PLUS_X: Vec3 = [1, 0, 0];

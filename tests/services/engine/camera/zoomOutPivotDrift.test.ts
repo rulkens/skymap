@@ -214,81 +214,63 @@ function altitudeKm(sim: Sim): number {
   return KM(eyeAltitudeMpc(poseEyePositionMpc(pose, POSE_BASIS), earth.positionMpc, R_MPC));
 }
 
-/** Zoom out `ticks` notches, sampling the pivot offset at each decade of altitude. */
-function zoomOut(
-  sim: Sim,
-  rotating: boolean,
-  ticks: number,
-): { ledger: string[]; maxOffsetKm: number } {
-  const ledger: string[] = [];
-  let nextDecade = 1e3;
-  let maxOffsetKm = 0;
-  for (let i = 0; i < ticks; i++) {
-    const offsetKm = tick(sim, NOTCH_OUT, rotating);
-    maxOffsetKm = Math.max(maxOffsetKm, offsetKm);
-    const alt = altitudeKm(sim);
-    while (alt >= nextDecade) {
-      ledger.push(
-        `alt ${nextDecade.toExponential(0)} km → pivot offset ${offsetKm.toExponential(3)} km ` +
-          `(${(offsetKm / R_KM).toExponential(2)} R⊕)`,
-      );
-      nextDecade *= 10;
-    }
-  }
-  return { ledger, maxOffsetKm };
+/**
+ * The pivot must stay ON the body it is pinned to. The bound is one radius, or
+ * a few ulps of the eye's distance where that is coarser: the sweep rides all
+ * the way to the zoom ceiling (`MAX_DISTANCE_MPC`, 30 Gpc ≈ 1e21 km), and one
+ * Earth radius there is 7e-18 of the eye distance — a hundredth of a double's
+ * resolution, so no lateral arithmetic can hold it. The drift under test ran at
+ * 0.163 · altitude, thirteen decades above this bound.
+ */
+function pivotBoundKm(altKm: number): number {
+  return Math.max(R_KM, 16 * Number.EPSILON * altKm);
 }
 
-describe('zoom-out pivot drift — the focus centre walks off Earth', () => {
-  it('compounds proportionally to distance: the pivot offset grows one decade per altitude decade', () => {
+/** Zoom out `ticks` notches; worst pivot offset seen, as a fraction of its bound. */
+function zoomOut(sim: Sim, rotating: boolean, ticks: number): { worst: number; where: string } {
+  let worst = 0;
+  let where = 'never off centre';
+  for (let i = 0; i < ticks; i++) {
+    const offsetKm = tick(sim, NOTCH_OUT, rotating);
+    const alt = altitudeKm(sim);
+    const ratio = offsetKm / pivotBoundKm(alt);
+    if (ratio > worst) {
+      worst = ratio;
+      where = `offset ${offsetKm.toExponential(3)} km at altitude ${alt.toExponential(3)} km`;
+    }
+  }
+  return { worst, where };
+}
+
+describe('zoom-out pivot drift — the focus centre stays on Earth', () => {
+  it('holds the pivot on Earth across twenty decades of altitude', () => {
     const { sim, rotating } = makeSim(100, true);
-    const { ledger, maxOffsetKm } = zoomOut(sim, rotating, 400);
-
-    // eslint-disable-next-line no-console
-    console.log('FULL LOOP (rotating, engage→disengage):\n' + ledger.join('\n'));
-
-    // The pivot is the point the camera orbits and the point a cursor-miss zoom
-    // converges on. It must stay ON the body it is pinned to.
-    expect(maxOffsetKm).toBeLessThan(R_KM);
+    const { worst, where } = zoomOut(sim, rotating, 400);
+    expect(worst, where).toBeLessThan(1);
   });
 
-  it('a frozen sim clock (R̃ ≡ identity, no fold) drifts identically — rotation is not the cause', () => {
+  it('holds it with a frozen sim clock too (R̃ ≡ identity, no fold)', () => {
     const { sim } = makeSim(100, false);
-    const { ledger, maxOffsetKm } = zoomOut(sim, false, 400);
-
-    // eslint-disable-next-line no-console
-    console.log('FROZEN CLOCK (no co-rotation):\n' + ledger.join('\n'));
-
-    expect(maxOffsetKm).toBeLessThan(R_KM);
+    const { worst, where } = zoomOut(sim, false, 400);
+    expect(worst, where).toBeLessThan(1);
   });
 
-  it('never engaging surface follow drifts identically — the hysteresis band is not the cause', () => {
+  it('holds it when surface follow never engages — no snapshot, no R̃, no fold', () => {
     // Start well above the ~241 km disengage altitude: `surfaceFollowEngaged`
-    // never flips true, so no snapshot, no R̃, no fold — pure zoom path.
+    // never flips true, so the zoom path is on its own.
     const { sim, rotating } = makeSim(5000, true);
-    const { ledger, maxOffsetKm } = zoomOut(sim, rotating, 400);
+    const { worst, where } = zoomOut(sim, rotating, 400);
     expect(sim.surfaceFollow.engaged).toBe(false);
-
-    // eslint-disable-next-line no-console
-    console.log('NEVER ENGAGED (no surface follow at all):\n' + ledger.join('\n'));
-
-    expect(maxOffsetKm).toBeLessThan(R_KM);
+    expect(worst, where).toBeLessThan(1);
   });
 
-  it('zooming back in leaves the pivot off Earth, so the descent converges on empty space', () => {
+  it('a round trip out and back leaves the pivot on Earth, so the descent lands on it', () => {
     const { sim, rotating } = makeSim(100, true);
     zoomOut(sim, rotating, 260);
-    const outOffsetKm = tick(sim, 1, rotating);
 
     // Back in the same number of notches, cursor unmoved.
     for (let i = 0; i < 260; i++) tick(sim, NOTCH_IN, rotating);
     const backOffsetKm = tick(sim, 1, rotating);
-
-    // eslint-disable-next-line no-console
-    console.log(
-      `round trip: out-offset ${outOffsetKm.toExponential(3)} km, ` +
-        `back-offset ${backOffsetKm.toExponential(3)} km, ` +
-        `final altitude ${altitudeKm(sim).toExponential(3)} km`,
-    );
 
     expect(backOffsetKm).toBeLessThan(R_KM);
   });
