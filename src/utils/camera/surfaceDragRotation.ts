@@ -7,9 +7,10 @@
  * point back under THIS tick's cursor — exactly, not `orbitRadPerPixel`'s
  * altitude-damped rate (correct only at screen centre, per its own header).
  * `target`/`distance` are read, never written (§4.4's distance semantics
- * untouched). Returns `null` on a non-convergent or degenerate solve (grab
- * behind the eye, near-singular Jacobian) — the caller treats that the same
- * as a genuine miss and falls back to the flat rate.
+ * untouched). Returns `null` on a degenerate solve (grab behind the eye,
+ * near-singular Jacobian) or when the best iterate is still a whole pixel off —
+ * the caller treats that the same as a genuine miss and falls back to the flat
+ * rate.
  *
  * `projectCss(yaw, pitch)` is the closed-form inverse of `cursorRayWorld`'s
  * NDC→direction formula, built from the SAME `roll`/`upRef` the caller feeds
@@ -34,7 +35,19 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 const MAX_NEWTON_ITERS = 20;
-const RESIDUAL_TOL_PX = 1e-9;
+/**
+ * Convergence floor in CSS pixels, and NOT tightenable: with the body 1 AU from
+ * the world origin `grabbedWorld − eye` cancels four decades of mantissa, so
+ * the achievable residual bottoms out near 1e-6 px at surface altitudes. The
+ * 1e-9 this asked for was unreachable, and every low-altitude drag "failed"
+ * into the flat rate, whose horizontal gain is cos(latitude). The real cure is
+ * solving in body-relative coordinates, where nothing cancels.
+ */
+const RESIDUAL_TOL_PX = 1e-3;
+/** A run that never met the floor is still usable while its residual is under a
+ * pixel and better than not moving — that iterate sits at the noise floor, not
+ * on a wrong branch, and the alternative is the flat rate. */
+const USABLE_RESIDUAL_PX = 1;
 const FINITE_DIFF_EPS_RAD = 1e-6;
 
 /**
@@ -156,31 +169,47 @@ export function surfaceDragRotation(
   //     number as the next event's starting guess.
   //   - Past `PITCH_LIMIT` the answer is a FAILURE, not something to clamp:
   //     clamping silently breaks the cursor lock the solve exists to hold.
-  //   - The step is measured as `hypot(Δyaw, Δpitch)`, not as the eye's angular
-  //     motion: near the pole most of a yaw change comes out as image ROLL
-  //     rather than eye translation, and the picture is disturbed just as much
-  //     either way.
+  //   - The step is the EYE's angular travel, not `hypot(Δyaw, Δpitch)`: yaw is
+  //     a coordinate, and near the pole a ground-correct drag legitimately
+  //     spends 1/cos(lat) of it (11.5x at 85°) while the eye barely moves.
+  //     Pricing the coordinate made this cap an implicit 80.4° latitude ceiling;
+  //     pricing the eye still sheds the lurches it exists for.
   const accept = (
     yawRaw: number,
     pitchSolved: number,
   ): { readonly yaw: number; readonly pitch: number } | null => {
     if (Math.abs(pitchSolved) > PITCH_LIMIT) return null;
     const dYaw = shortestAngleDelta(cam.yaw, yawRaw);
-    const dPitch = pitchSolved - cam.pitch;
+    const from = yawPitchToDir(cam.yaw, cam.pitch);
+    const to = yawPitchToDir(cam.yaw + dYaw, pitchSolved);
+    const dot = from[0] * to[0] + from[1] * to[1] + from[2] * to[2];
     // Negated comparison so a non-finite step fails the test rather than passing it.
-    if (!(Math.hypot(dYaw, dPitch) <= maxStepRad)) return null;
+    if (!(Math.acos(Math.min(1, Math.max(-1, dot))) <= maxStepRad)) return null;
     return { yaw: cam.yaw + dYaw, pitch: pitchSolved };
   };
 
   let yaw = cam.yaw;
   let pitch = cam.pitch;
+  // Kept because Newton at the cancellation floor wanders rather than converges,
+  // so the LAST iterate is not the closest one.
+  let bestYaw = yaw;
+  let bestPitch = pitch;
+  let bestResidualPx = Infinity;
+  let standingResidualPx = Infinity;
 
   for (let i = 0; i < MAX_NEWTON_ITERS; i++) {
     const p0 = projectCss(yaw, pitch);
     if (p0 === null) return null;
     const fx = p0.x - cursorCss.x;
     const fy = p0.y - cursorCss.y;
-    if (Math.abs(fx) < RESIDUAL_TOL_PX && Math.abs(fy) < RESIDUAL_TOL_PX) return accept(yaw, pitch);
+    const residualPx = Math.max(Math.abs(fx), Math.abs(fy));
+    if (i === 0) standingResidualPx = residualPx;
+    if (residualPx < bestResidualPx) {
+      bestResidualPx = residualPx;
+      bestYaw = yaw;
+      bestPitch = pitch;
+    }
+    if (residualPx < RESIDUAL_TOL_PX) return accept(yaw, pitch);
 
     const py = projectCss(yaw + FINITE_DIFF_EPS_RAD, pitch);
     const pp = projectCss(yaw, pitch + FINITE_DIFF_EPS_RAD);
@@ -199,5 +228,10 @@ export function surfaceDragRotation(
     pitch += (j10 * fx - j00 * fy) / det;
   }
 
-  return null; // MAX_NEWTON_ITERS exhausted without meeting the residual tolerance
+  // Exhausted, but "did not reach the floor" is not "no answer": take the best
+  // iterate while it is sub-pixel and closer than standing still.
+  if (bestResidualPx < USABLE_RESIDUAL_PX && bestResidualPx < standingResidualPx) {
+    return accept(bestYaw, bestPitch);
+  }
+  return null;
 }

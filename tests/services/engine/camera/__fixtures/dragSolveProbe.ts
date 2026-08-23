@@ -1,8 +1,8 @@
 /**
- * Diagnostic twin of `surfaceDragRotation` that reports WHY it declines.
- * Byte-for-byte the same algorithm; the only additions are the reason string,
- * the achieved residual, and a switch that disables the FW-D `accept` bound so
- * the pre-FW-D behaviour can be compared on the same inputs.
+ * Diagnostic twin of the PRE-FW-I `surfaceDragRotation` — the 1e-9 px tolerance
+ * and the `hypot(Δyaw, Δpitch)` step bound, kept verbatim so the tests can show
+ * what those two declined and what the last Newton iterate would have been.
+ * Additions over that original: the reason string and the achieved residual.
  *
  * Test-only; not shipped.
  */

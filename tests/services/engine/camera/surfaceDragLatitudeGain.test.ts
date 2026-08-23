@@ -282,7 +282,14 @@ describe('drag trace — the grabbed ground point vs the cursor', () => {
           )
           .join('\n'),
     );
-    for (const r of rows) expect(r.errPx).toBeLessThan(1);
+    for (const r of rows) {
+      // One row cannot track, and it is geometry rather than the solve: 40 px at
+      // 10 000 km is ~4.8° of ground, so a pull from lat 85 reaches the pole
+      // first and stops at PITCH_LIMIT (89.43°), ~0.4° = ~3.6 px short of the
+      // cursor. Dragging over the pole is not expressible in yaw/pitch at all.
+      const overThePole = r.altKm === 10000 && r.latDeg === 85;
+      expect(r.errPx, `alt ${r.altKm} km, lat ${r.latDeg}`).toBeLessThan(overThePole ? 4 : 1);
+    }
   });
 
   it('oblique grab at a fixed latitude: reports the per-incidence tracking error', () => {
