@@ -17,6 +17,8 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
+import { distDir } from '../utils/io/distDir';
+
 export default defineConfig(({ command }) => ({
   root: resolve(__dirname),
   // Build mode deploys to skymap.rulkens.com/galaxy/ as a subpath of the main
@@ -31,7 +33,7 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/galaxy/' : '/',
   publicDir: command === 'build' ? false : resolve(__dirname, '../../public'),
   envDir: resolve(__dirname, '../../'),
-  build: { outDir: resolve(__dirname, '../../dist/galaxy'), emptyOutDir: true },
+  build: { outDir: resolve(distDir, 'galaxy'), emptyOutDir: true },
   server: { port: 5400 },
   resolve: {
     // Cross-root WESL: the shared shader families live under the MAIN app's

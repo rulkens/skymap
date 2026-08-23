@@ -18,6 +18,8 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
+import { distDir } from '../utils/io/distDir';
+
 export default defineConfig(({ command }) => ({
   root: resolve(__dirname),
   // Build mode deploys to skymap.rulkens.com/mcpm/ as a subpath of the main
@@ -32,7 +34,7 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/mcpm/' : '/',
   publicDir: command === 'build' ? false : resolve(__dirname, '../../public'),
   envDir: resolve(__dirname, '../../'),
-  build: { outDir: resolve(__dirname, '../../dist/mcpm'), emptyOutDir: true },
+  build: { outDir: resolve(distDir, 'mcpm'), emptyOutDir: true },
   server: { port: 5500 },
   plugins: [
     viteWesl({

@@ -6,6 +6,8 @@ import { defineConfig } from 'vite';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
+import { distDir } from './tools/utils/io/distDir';
+
 // ── Opt-in LAN HTTPS for on-device (iPad/iPhone) testing ────────────────────
 //
 // WebGPU is gated to *secure contexts*. `localhost` qualifies, so the normal
@@ -66,4 +68,5 @@ export default defineConfig({
   plugins: [viteWesl({ extensions: [staticBuildExtension] }), react()],
   server: { port: 5173, ...lanHttpsServer() },
   assetsInclude: ['**/*.wgsl'],
+  build: { outDir: distDir },
 });
