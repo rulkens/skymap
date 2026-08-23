@@ -6,4 +6,4 @@
  */
 import { resolve } from 'node:path';
 
-export const distDir = resolve(__dirname, '../../../dist');
+export const distDir = resolve(import.meta.dirname, '../../../dist');

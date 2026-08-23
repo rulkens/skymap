@@ -17,10 +17,10 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-import { distDir } from '../utils/io/distDir';
+import { distDir } from '../utils/io/distDir.ts';
 
 export default defineConfig(({ command }) => ({
-  root: resolve(__dirname),
+  root: resolve(import.meta.dirname),
   // Build mode deploys to skymap.rulkens.com/galaxy/ as a subpath of the main
   // shell (see docs/DEPLOY.md): assets get the /galaxy/ prefix, and publicDir
   // is dropped — copying the repo's public/ here would duplicate the shell's
@@ -31,8 +31,8 @@ export default defineConfig(({ command }) => ({
   // this directory Vite would otherwise look for env files HERE and silently
   // fall back to same-origin /data/, which Workers Assets doesn't serve.
   base: command === 'build' ? '/galaxy/' : '/',
-  publicDir: command === 'build' ? false : resolve(__dirname, '../../public'),
-  envDir: resolve(__dirname, '../../'),
+  publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
+  envDir: resolve(import.meta.dirname, '../../'),
   build: { outDir: resolve(distDir, 'galaxy'), emptyOutDir: true },
   server: { port: 5400 },
   resolve: {
@@ -62,13 +62,13 @@ export default defineConfig(({ command }) => ({
     preserveSymlinks: true,
     alias: ['milkyWay', 'additiveUpsample', 'bloom', 'compositor'].map((family) => ({
       find: new RegExp(`^(.*)/shaders/${family}/(.+\\.wesl(\\?.+)?)$`),
-      replacement: `${resolve(__dirname, `src/engine/shaders/${family}`)}/$2`,
+      replacement: `${resolve(import.meta.dirname, `src/engine/shaders/${family}`)}/$2`,
     })),
   },
   plugins: [
     viteWesl({
       extensions: [staticBuildExtension],
-      weslToml: resolve(__dirname, 'wesl.toml'),
+      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
     }),
     react(),
   ],

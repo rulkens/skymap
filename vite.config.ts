@@ -6,7 +6,7 @@ import { defineConfig } from 'vite';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-import { distDir } from './tools/utils/io/distDir';
+import { distDir } from './tools/utils/io/distDir.ts';
 
 // ── Opt-in LAN HTTPS for on-device (iPad/iPhone) testing ────────────────────
 //
@@ -32,7 +32,7 @@ import { distDir } from './tools/utils/io/distDir';
 function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer } } | undefined {
   if (process.env.SKYMAP_HTTPS !== '1') return undefined;
 
-  const certDir = join(__dirname, '.certs');
+  const certDir = join(import.meta.dirname, '.certs');
   const files = existsSync(certDir) ? readdirSync(certDir) : [];
   const keyFile = files.find((f) => f.endsWith('-key.pem'));
   const certFile = files.find((f) => f.endsWith('.pem') && !f.endsWith('-key.pem'));
