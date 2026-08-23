@@ -38,11 +38,7 @@ export function loadOverrideIndex(path: string): OverrideIndex {
   return { version: 1, entries: raw.entries as Record<string, OverrideEntry> };
 }
 
-export function upsertOverrideEntry(
-  path: string,
-  id: string,
-  entry: OverrideEntry,
-): OverrideIndex {
+export function upsertOverrideEntry(path: string, id: string, entry: OverrideEntry): OverrideIndex {
   const idx = loadOverrideIndex(path);
   idx.entries[id] = entry;
   const json = JSON.stringify(idx, null, 2) + '\n';

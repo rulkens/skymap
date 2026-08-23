@@ -19,9 +19,9 @@
 import sharp from 'sharp';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { rotatedExtract, type RotatedCrop } from '../famous-curator/plugin/cropExtract';
-import { runStarnet, type StarnetConfig } from '../famous-curator/plugin/starnet';
-import { applyLuminanceAsAlpha } from '../utils/image/applyLuminanceAsAlpha';
+import { rotatedExtract, type RotatedCrop } from '../famous-curator/plugin/cropExtract.ts';
+import { runStarnet, type StarnetConfig } from '../famous-curator/plugin/starnet.ts';
+import { applyLuminanceAsAlpha } from '../utils/image/applyLuminanceAsAlpha.ts';
 import type { LuminanceAsAlphaOptions } from '../utils/image/LuminanceAsAlphaOptions';
 
 // StarNet working size, applied to the SHORTER edge (fit: 'outside').  A

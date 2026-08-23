@@ -27,48 +27,32 @@
 import type { Plugin } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
-import { dirname, extname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { handleFetch } from './routes/fetch';
-import { handleProcess } from './routes/process';
-import { handleProcessAlphaOnly } from './routes/processAlphaOnly';
-import { handleExport } from './routes/export';
-import { handleGalaxies } from './routes/galaxies';
-import { handleRecipe } from './routes/recipe';
-import { handleBuildFamous } from './routes/buildFamous';
+import { extname, resolve } from 'node:path';
+import { handleFetch } from './routes/fetch.ts';
+import { handleProcess } from './routes/process.ts';
+import { handleProcessAlphaOnly } from './routes/processAlphaOnly.ts';
+import { handleExport } from './routes/export.ts';
+import { handleGalaxies } from './routes/galaxies.ts';
+import { handleRecipe } from './routes/recipe.ts';
+import { handleBuildFamous } from './routes/buildFamous.ts';
 import {
   handleResolve,
   UnknownHostError,
   UnscrapeableError,
   UpstreamError,
   type ResolverFn,
-} from './routes/resolve';
-import { parseNoirLabPage } from './noirlabResolver';
-import { sessionPath, createSession } from './tmpSession';
-import { curatedGalaxyDir } from './paths';
-import { resolveStarnetConfig, type StarnetConfig } from './starnet';
-import { fetchWithCache } from '../../famous/sourceImageCache';
-import { rawDataPath } from '../../utils/io/rawDataRegistry';
+} from './routes/resolve.ts';
+import { parseNoirLabPage } from './noirlabResolver.ts';
+import { sessionPath, createSession } from './tmpSession.ts';
+import { curatedGalaxyDir } from './paths.ts';
+import { resolveStarnetConfig, type StarnetConfig } from './starnet.ts';
+import { fetchWithCache } from '../../famous/sourceImageCache.ts';
+import { rawDataPath } from '../../utils/io/rawDataRegistry.ts';
 
 // Resolve the repo root relative to this file's location.
 // `tools/famous-curator/plugin/apiPlugin.ts` → 3 levels up → repo root.
-// We use `import.meta.url` (ESM, Vitest) when available and fall back to
-// the CJS `__dirname` shim that Vite injects when processing the plugin
-// via vite.config.ts.  Both produce the same absolute path.
 function resolveRepoRoot(): string {
-  try {
-    // ESM: import.meta.url is defined; fileURLToPath converts it to a path.
-    return resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-  } catch {
-    // CJS fallback (Vite's __dirname shim or truly CJS context).
-    // `__dirname` is injected by Vite's CJS transform so it is always
-    // a string here; the cast silences the TypeScript "not defined in
-    // global scope" error without requiring a types patch.
-    return resolve(
-      (globalThis as any).__dirname ?? __dirname,
-      '../../..',
-    );
-  }
+  return resolve(import.meta.dirname, '../../..');
 }
 
 function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -77,8 +61,11 @@ function readJsonBody(req: IncomingMessage): Promise<unknown> {
     req.on('data', (c: Buffer) => chunks.push(c));
     req.on('end', () => {
       const body = Buffer.concat(chunks).toString('utf8');
-      try { res(body.length > 0 ? JSON.parse(body) : {}); }
-      catch (err) { rej(err); }
+      try {
+        res(body.length > 0 ? JSON.parse(body) : {});
+      } catch (err) {
+        rej(err);
+      }
     });
     req.on('error', rej);
   });
@@ -161,7 +148,10 @@ export function apiPlugin(): Plugin {
         const method = req.method ?? 'GET';
         // Only intercept /api/* — everything else (HTML, JS, HMR socket)
         // continues down the Vite middleware stack.
-        if (!url.startsWith('/api/')) { next(); return; }
+        if (!url.startsWith('/api/')) {
+          next();
+          return;
+        }
         // Strip query string for matching purposes.
         const path = url.split('?')[0] ?? url;
         try {
@@ -239,7 +229,7 @@ export function apiPlugin(): Plugin {
             const ct = (req.headers['content-type'] ?? '') as string;
             let body: Parameters<typeof handleFetch>[0]['body'];
             if (ct.startsWith('application/json')) {
-              body = await readJsonBody(req) as { url: string };
+              body = (await readJsonBody(req)) as { url: string };
             } else {
               // multipart / octet-stream: treat the whole body as the file.
               // The UI sends the raw image bytes when the user drags a local
@@ -295,7 +285,7 @@ export function apiPlugin(): Plugin {
             // the missing content-type guard (we want HTML, not images).
             // Folding these into one helper would force a branch on
             // "what shape of body do you want?", which buys nothing.
-            const body = await readJsonBody(req) as { url: string };
+            const body = (await readJsonBody(req)) as { url: string };
             const out = await handleResolve({
               body,
               hostDispatch,
@@ -315,21 +305,23 @@ export function apiPlugin(): Plugin {
           }
 
           if (method === 'POST' && path === '/api/process') {
-            const body = await readJsonBody(req) as Parameters<typeof handleProcess>[0]['body'];
+            const body = (await readJsonBody(req)) as Parameters<typeof handleProcess>[0]['body'];
             const out = await handleProcess({ body, starnetConfig });
             sendJson(res, 200, out);
             return;
           }
 
           if (method === 'POST' && path === '/api/process/alpha-only') {
-            const body = await readJsonBody(req) as Parameters<typeof handleProcessAlphaOnly>[0]['body'];
+            const body = (await readJsonBody(req)) as Parameters<
+              typeof handleProcessAlphaOnly
+            >[0]['body'];
             const out = await handleProcessAlphaOnly({ body });
             sendJson(res, 200, out);
             return;
           }
 
           if (method === 'POST' && path === '/api/export') {
-            const body = await readJsonBody(req) as Parameters<typeof handleExport>[0]['body'];
+            const body = (await readJsonBody(req)) as Parameters<typeof handleExport>[0]['body'];
             const out = await handleExport({ body, repoRoot, starnetConfig });
             sendJson(res, 200, out);
             return;

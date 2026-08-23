@@ -12,7 +12,7 @@
 
 import { resolve } from 'node:path';
 
-import { BMNG_VINTAGE } from './bmngVintage';
+import { BMNG_VINTAGE } from './bmngVintage.ts';
 
 export type RawDataEntry = {
   readonly path: string;

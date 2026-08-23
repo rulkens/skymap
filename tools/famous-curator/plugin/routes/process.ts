@@ -17,13 +17,13 @@
 import sharp from 'sharp';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { sessionPath } from '../tmpSession';
-import { runStarnet, type StarnetConfig } from '../starnet';
-import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha';
-import { rotatedExtract } from '../cropExtract';
-import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk';
-import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop';
-import { validateRecipeDisk, type RecipeDisk } from '../recipe';
+import { sessionPath } from '../tmpSession.ts';
+import { runStarnet, type StarnetConfig } from '../starnet.ts';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.ts';
+import { rotatedExtract } from '../cropExtract.ts';
+import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.ts';
+import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.ts';
+import { validateRecipeDisk, type RecipeDisk } from '../recipe.ts';
 
 const PREVIEW_PX = 512;
 

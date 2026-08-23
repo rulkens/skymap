@@ -13,7 +13,9 @@ import { defaultApi, type Api } from './api';
 const ApiContext = createContext<Api>(defaultApi);
 
 export function ApiProvider(props: { value?: Api; children: ReactNode }): JSX.Element {
-  return <ApiContext.Provider value={props.value ?? defaultApi}>{props.children}</ApiContext.Provider>;
+  return (
+    <ApiContext.Provider value={props.value ?? defaultApi}>{props.children}</ApiContext.Provider>
+  );
 }
 
 export function useApi(): Api {

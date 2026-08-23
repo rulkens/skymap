@@ -33,8 +33,8 @@
  * Callers invoke this ONLY when the disk is deprojected; an un-deprojected
  * crop must keep the maintainer's chosen rotation/aspect untouched.
  */
-import type { RotatedCrop } from '../famous-curator/plugin/cropExtract';
-import type { RecipeDisk } from '../famous-curator/plugin/recipe';
+import type { RotatedCrop } from '../famous-curator/plugin/cropExtract.ts';
+import type { RecipeDisk } from '../famous-curator/plugin/recipe.ts';
 
 export function squareDeprojectCrop(
   crop: RotatedCrop,

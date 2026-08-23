@@ -33,9 +33,7 @@ import { join } from 'node:path';
 const MAX_BYTES = 50 * 1024 * 1024;
 const PREVIEW_PX = 512;
 
-export type FetchBody =
-  | { url: string }
-  | { bytes: Buffer; mediaType: string };
+export type FetchBody = { url: string } | { bytes: Buffer; mediaType: string };
 
 export type FetchResult = {
   tmpId: string;

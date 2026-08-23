@@ -18,15 +18,25 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-export default defineConfig({
-  root: resolve(__dirname),
-  publicDir: resolve(__dirname, '../../public'),
+import { distDir } from '../utils/io/distDir.ts';
+import { toolPages } from '../utils/io/toolPages.ts';
+
+export default defineConfig(({ command }) => ({
+  root: resolve(import.meta.dirname),
+  // Build = the /mcpm/ subpath deploy (docs/DEPLOY.md). envDir at the repo
+  // root is load-bearing: with `root:` here Vite looks for env files locally
+  // and dataUrl() silently falls back to same-origin /data/. publicDir off in
+  // build: the main shell already serves those files; copying duplicates GBs.
+  base: command === 'build' ? `/${toolPages.mcpmWorkbench}/` : '/',
+  publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
+  envDir: resolve(import.meta.dirname, '../../'),
+  build: { outDir: resolve(distDir, toolPages.mcpmWorkbench), emptyOutDir: true },
   server: { port: 5500 },
   plugins: [
     viteWesl({
       extensions: [staticBuildExtension],
-      weslToml: resolve(__dirname, 'wesl.toml'),
+      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
     }),
     react(),
   ],
-});
+}));
