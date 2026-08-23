@@ -60,3 +60,12 @@ implementation as the template. Shape:
    re-doing the other's diff.
 4. Not gated on any ladder rung — decisions.md #7 names it as long-tail work
    independent of the umbrella `SubsystemBundle` reassessment.
+
+## Partial progress
+
+The [inside-atmosphere-rendering spec](../superpowers/specs/2026-08-24-inside-atmosphere-rendering-design.md)
+(§5a) hoists a fifth, closely-related pair on its own branch:
+`atmosphereShellLayer.draw` and `encodeAtmosphereSkyView` each independently
+recompute `camPosLocal`/`sunDirLocal` per body per frame from the same five
+inputs. That pair is handled there, not here. The four derivations listed
+above are untouched by that work and this item stays open for them.
