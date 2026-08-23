@@ -116,3 +116,119 @@ Always consult the upstream ReadMes (alongside each catalog, e.g. `data/raw/2mrs
 5. **Provenance README** at `data/raw/<catalog>/README.md`: upstream URL, columns / byte layout, fetch date, checksum.
 
 Reference fetchers: `tools/fetch/fetchHyperLeda.ts`, `tools/fetch/fetch2massXsc.ts` (both registry-migrated).
+
+## Contributor: building the galaxy catalogs locally
+
+`npm run fetch-data` (see the root README) pulls the deployed binaries directly and is the fastest path to real data. Everything below is for building those binaries yourself from raw catalog downloads — useful if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
+
+### 1. Download the raw catalogs
+
+| Survey      | Source                                                                                                            | File / notes                                                                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| SDSS        | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql) or [CasJobs](https://skyserver.sdss.org/casjobs) | Run the query below; export as CSV to `data/raw/sdss/`.                                                                                                      |
+| 2MRS        | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26)                        | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs/2mrs_table3.dat`.                                                          |
+| GLADE       | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)                                    | `glade2.3.dat`, 256-byte fixed-width, 3.26M rows, ~838 MB. Drop into `data/raw/glade/glade2.3.dat`.                                                          |
+| Milliquas   | [quasars.org](https://quasars.org/milliquas.htm)                                                                  | `npm run fetch-milliquas` — pulls the 31 MB zip, verifies SHA-256, unpacks to `data/raw/milliquas/milliquas.txt`.                                            |
+| Gaia DR3    | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                                       | `npm run fetch-gaia` — pages the `G<14` main catalog + Bailer-Jones distances via ADQL into `data/raw/gaia/`. ~2 GB total; gated behind a size confirmation. |
+| GCNS        | same TAP service                                                                                                  | Fetched automatically by `npm run fetch-gaia` — the 100 pc nearby-star supplement.                                                                           |
+| Hipparcos-2 | [VizieR I/311](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=I/311)                                        | Fetched automatically by `npm run fetch-gaia` — `hip2.dat` (~33 MB) + Gaia cross-match.                                                                      |
+
+GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
+
+#### SDSS query — and the 500,000-row trap
+
+```sql
+SELECT
+  p.objID, p.ra, p.dec, s.z,
+  p.modelMag_u, p.modelMag_g, p.modelMag_r, p.modelMag_i, p.modelMag_z,
+  p.expAB_r, p.expPhi_r, p.deVAB_r, p.deVPhi_r, p.fracDeV_r,
+  p.petroR50_r, p.petroR90_r
+FROM SpecObj AS s
+JOIN PhotoObjAll AS p ON s.bestObjID = p.objID
+WHERE
+  s.class = 'GALAXY'
+  AND s.zWarning = 0
+  AND s.z BETWEEN 0.001 AND 0.3
+```
+
+This query matches roughly 970k spectra. The interactive **SqlSearch** tool at the URL above silently caps output at 500,000 rows — no error, no warning — and the dropped rows follow plate/database order, which carves a survey-geometry-shaped hole out of the result (a real 2026-08 pull this way put a hole at Dec +14°..22° straight through the Coma-supercluster bridge). Two ways around it:
+
+- **CasJobs** (linked above) has no row cap and a much larger result quota — run the same query there and export the full result.
+- If you do use SqlSearch, split the query into plate-range batches (`AND p.field BETWEEN … AND …`, or similar) small enough to stay under 500k rows each, and concatenate the resulting CSVs before dropping the file into `data/raw/sdss/`.
+
+Columns break down into three groups: **photometry** (`modelMag_u/g/r/i/z`, five colour bands, drives the colour ramp), **shape/orientation** (`expAB_r`, `expPhi_r`, `deVAB_r`, `deVPhi_r`, `fracDeV_r` — axis ratio and position angle from two profile fits, blended by `fracDeV_r`), and **size** (`petroR50_r`, `petroR90_r` — half-light and 90%-light radii in arcsec, converted to physical kpc using each galaxy's redshift).
+
+### 2. Build the binary files
+
+```bash
+npm run build-all
+```
+
+With no flags, the builder auto-detects every input from `tools/utils/io/rawDataRegistry.ts`'s default paths — the newest `Skyserver_*.csv` under `data/raw/sdss/`, `data/raw/2mrs/2mrs_table3.dat`, `data/raw/glade/glade2.3.dat`, `data/raw/milliquas/milliquas.txt` — and skips whichever aren't present, so downloading just SDSS (or any subset) is a fine single-survey workflow. Override any input explicitly with `--sdss <path>`, `--twomrs <path>`, `--glade <path>`, `--milliquas <path>`, or redirect the output with `--out-dir <path>` (default `public/data`).
+
+The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes v9 binary files under `public/data/galaxy-catalog/v9/` with content-hashed names (see the family/epoch layout above).
+
+### 3. Optional: real galaxy orientations
+
+2MRS and GLADE don't ship shape/orientation columns, so by default those galaxies render with deterministic-but-fake orientations (random per galaxy, stable across reloads). Two optional enrichment fetchers add real ones, picked up automatically by the next `npm run build-all`:
+
+```bash
+npm run fetch-2mass-xsc    # ~5 minutes; adds PA + axis-ratio for 2MRS galaxies
+npm run fetch-hyperleda    # multi-hour; adds PA + axis-ratio for GLADE galaxies
+```
+
+`fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mrs/2mass_xsc_pa.csv`. `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across the unique GLADE PGCs, writes `data/raw/hyperleda/hyperleda_pa.csv`, and is resumable if interrupted.
+
+The pre-computed cache shipped from R2 is **deliberately partial** (roughly 52k of GLADE's ~1.5M unique PGCs, not a full crawl — see the `hyperleda.pa` entry in `rawDataRegistry.ts`), so don't treat an incomplete local run as broken, and don't auto-refetch it as a matter of routine. To use it instead of running the fetcher yourself:
+
+```bash
+mkdir -p data/raw/hyperleda
+curl -L -o data/raw/hyperleda/hyperleda_pa.csv.gz \
+  https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
+gunzip data/raw/hyperleda/hyperleda_pa.csv.gz
+```
+
+Both fetchers are entirely optional; the renderer works without them.
+
+### 4. Famous galaxies (curated atlas)
+
+A separate small catalog of well-known galaxies (Messier + NGC greatest-hits) ships alongside the survey data. Entries appear with their curated names in the InfoCard and are searchable via Cmd+K. Their thumbnails are pre-processed transparent WebPs — most hand-curated from press and astrophotography sources via the famous-galaxy curator (`npm run curate-famous`), with a Wikipedia → DESI Legacy auto-fetch fallback for the rest. Per-image credits and licences are recorded in `data/seeds/famous_curated_overrides.json` and summarised in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md). Skip this section entirely if you only want the survey data — it works fine without the famous-galaxies bin.
+
+Run order:
+
+```bash
+npm run build-all             # produces 2mrs.bin + glade.bin, needed for cross-match
+npm run fetch-famous-images   # downloads + processes thumbnails (~30 s); idempotent, --force to re-fetch
+npm run build-famous          # produces famous.bin + famous_galaxies_meta.json
+```
+
+To add more galaxies, edit `data/seeds/famous_galaxies.seed.json` — each entry needs `id` (URL-safe lower-case identifier), `names` (string array, first is the headline), `ra`/`dec` (degrees), `distanceMpc`, `diameterKpc`, `type` (free-form Hubble type), and `description` (1-3 sentence editorial blurb) — then re-run `npm run fetch-famous-images && npm run build-famous`.
+
+### 5. Cosmic-web filaments (DisPerSE)
+
+The filament skeleton is computed offline by [DisPerSE](https://disperse.readthedocs.io/) (Sousbie 2011), which extracts the persistent ridges of the Delaunay-tessellation density field. The default build runs `delaunay_3D → mse → skelconv` with a 5σ persistence cut and 2 smoothing passes, against the **2MRS + GLADE** subset of the catalogue — SDSS is excluded by default because its wedge footprint dominates the density field at the survey edges and DisPerSE locks onto those boundaries instead of the actual cosmic web (confirmed empirically via an SDSS-only diagnostic build, `--sources sdss`).
+
+```bash
+# Install DisPerSE following its upstream instructions; ensure
+# delaunay_3D, mse, and skelconv are on $PATH.
+npm run build-all          # so the .bin catalogues exist first
+npm run build-filaments    # writes public/data/filament/v1/filaments.bin
+```
+
+CLI flags: `--cut N` (persistence sigma, default 5), `--smooth N` (skelconv smoothing passes, default 2), `--sources csv` (subset of `sdss,2mrs,glade`, default `2mrs,glade`), `--output path` (write elsewhere so diagnostic builds don't clobber the canonical file). Skip this step entirely if you don't want filaments — the renderer treats a missing `filaments.bin` as optional and silently no-ops the toggle.
+
+The filament skeleton is shared across all three dataset tiers (small/medium/large), unlike the per-tier galaxy `.bin`s — the cosmic web extends well beyond what the small tier's decimated point sample shows, and drawing the full structure there is more informative than a tier-matched skeleton would be.
+
+### 6. Milky Way star field (Gaia DR3)
+
+```bash
+npm run build-stars
+```
+
+Consumes `data/raw/gaia/` — the paged Gaia DR3 CSVs, the GCNS 100 pc supplement, and the Hipparcos-2 bright-star patch — and emits the per-tier binaries under `public/data/star-catalog/v1/`. The full build holds the ~16.8M-row Gaia superset in memory at once, so run it on a machine with roughly 16 GB of free RAM (the npm script raises Node's heap limit accordingly).
+
+For real-scale runs the canonical builder is the Rust port `tools/stars-rs/`, invoked with `npm run build-stars-rs` (requires a Rust toolchain). It emits byte-identical `.bin` files far faster and with a lower memory ceiling; the TypeScript `buildStars.ts` stays the reference implementation the Vitest suite covers. See `tools/stars-rs/README.md` for the bit-parity contract.
+
+### Cosmic-web volumes (CF-4 + MCPM)
+
+Both volumes' contributor and maintainer flows — including the R2 curl shortcuts — live in their own directory READMEs: [`data/raw/cf4/README.md`](../data/raw/cf4/README.md) and [`data/raw/mcpm/README.md`](../data/raw/mcpm/README.md). See also the "MCPM Cosmic Web volume" and "Polyphorm volume exports" sections above.
