@@ -13,5 +13,10 @@ read on demand via its citations: [cesium-notes.md](cesium-notes.md),
 [maplibre-kml-notes.md](maplibre-kml-notes.md),
 [skymap-seam-map.md](skymap-seam-map.md).
 
+Related: [`docs/grill-sessions/earth-local-slab-2026-08-21.md`](../../grill-sessions/earth-local-slab-2026-08-21.md)
+is the paused predecessor design (camera-rebased, Earth-fixed f64 anchor, km/m units)
+that this pivot design absorbs — DESIGN-INPUT.md treats its local-frame conclusion
+as a given.
+
 Caveat: `skymap-seam-map.md`'s `file:line` references are a snapshot of branch
 `earth-surface-navigation` as of this date, not necessarily `main`.
