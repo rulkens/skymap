@@ -14,9 +14,7 @@ presumed until a line proves itself.
 Calibration (13-audit experiment, 2026-08-23, PRs #623/#570): sonnet returned a
 false clean bill (~0–25 LOC) where opus found 255–430 on the identical diff —
 **opus-class only; a cheap seat's clean bill reads as evidence**. Adversarial
-framing multiplied capable models' findings without recklessness. Legacy
-time-shift won volume on both PRs; evidence-only proof-backs every claim;
-greenfield validates what stays and catches spec/code divergence.
+framing multiplied capable models' findings without recklessness.
 
 ## When to run
 
