@@ -1,6 +1,6 @@
 # What the pixels mean
 
-This page documents the math and conventions behind skymap's galaxy rendering: the coordinate frame, how distance is derived from redshift, how brightness becomes on-screen alpha, the density-correction modes that compensate for survey selection effects, the per-survey colour ramps and K-correction, and the three-pass level of detail that takes a galaxy from a dot to a real thumbnail as you approach it.
+The math and conventions behind skymap's galaxy rendering: where galaxies are placed, how catalogue brightness and colour become pixels, and what corrections are applied for survey selection effects.
 
 ## Coordinate frame
 
@@ -10,7 +10,7 @@ Skymap uses a right-handed equatorial Cartesian frame, distances in megaparsecs 
 - `+y` → (RA = 90°, Dec = 0°)
 - `+z` → Dec = +90° — the celestial north pole
 
-Everything in the scene — galaxies, stars, structures, the solar system, Earth — shares this one frame; the descent from cosmic to human scale is a continuous zoom through it, not a series of separately-oriented views stitched together.
+Galaxies, stars, structures, the solar system, and Earth all share this one frame, which is what makes the zoom continuous across scales.
 
 ## Distance model
 

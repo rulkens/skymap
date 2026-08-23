@@ -1,6 +1,6 @@
 # skymap
 
-> A continuous, true-scale descent from Earth's surface to the edge of the observable universe, built from real catalog data — in your browser, with WebGPU.
+> Fly from Earth's surface to the edge of the observable universe in one true-scale WebGPU scene, built from real survey data.
 
 [![CI](https://github.com/rulkens/skymap/actions/workflows/ci.yml/badge.svg)](https://github.com/rulkens/skymap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/rulkens/skymap)](LICENSE)
@@ -16,61 +16,60 @@
 
 ## The zoom
 
-Skymap starts at Earth's surface, around 10⁷ meters, and ends past the observable universe's horizon, around 10²⁶ meters — nineteen orders of magnitude, rendered as one continuous scene rather than a series of jump cuts between separately-scaled views. Zoom out from Earth and you pass the solar system's planets moving on a live clock, a stellar neighbourhood built from real Gaia stars, the galactic disk that marks "you are here" — the S-stars circling Sagittarius A\* at its centre — and out to the cosmic web: roughly three million real galaxies stretching toward the horizon, threaded by filaments and structure.
+Skymap covers nineteen orders of magnitude, from Earth's surface (about 10⁷ m) to the horizon of the observable universe (about 10²⁶ m), in a single scene with no scale breaks. Zoom out from Earth and you pass the planets, then the Gaia star field, then the galactic disk, and finally the cosmic web: about three million catalogued galaxies. Everything sits where its catalog says it should.
 
-A guided tour, "The Long Way Out," walks the whole descent with captions and timed camera moves. Outside the tour, free orbit controls and a Cmd+K search reach the same scene directly — useful for teaching large-scale structure, general astronomy outreach, or just browsing the underlying catalogs.
+The guided tour, "The Long Way Out," plays the whole descent with captions and timed camera moves. You can also just explore: orbit freely, or jump anywhere by name with Cmd+K. Skymap is meant for teaching large-scale structure, for outreach, and for browsing the catalogs themselves.
 
 ## Highlights
 
-- Cosmic web of roughly 3 million galaxies from SDSS, 2MRS, GLADE, and Milliquas, each rendered through a three-stage level of detail — dot, then [procedural disk](docs/science.md#galaxy-level-of-detail), then real thumbnail — as you approach
-- A [DisPerSE filament skeleton](docs/DATA.md#5-cosmic-web-filaments-disperse) tracing the cosmic web's ridges, and an MCPM slime-mould density volume underneath it
-- Cluster, supercluster, void, and group markers with labels, drawn from MCXC, MSCC, and other VizieR structure catalogs
-- A curated famous-galaxy atlas — hand-picked high-resolution thumbnails for the Messier/NGC greatest hits, searchable via Cmd+K
-- A procedural Milky Way anchored at the origin, pickable, marking "you are here"
-- A Gaia DR3 star field of about 16.8 million stars, extended by the GCNS and Hipparcos-2 supplements; stars large enough to resolve render as true-scale spheres
-- The S-stars orbiting Sagittarius A\* on their measured Keplerian orbits, with trails
-- The solar system on a live clock — every planet including Pluto and Charon, Saturn's rings, conic orbit trails, body glints, and the Sun with bloom
-- A photoreal Earth — cubesphere PBR shading, night lights, normal-mapped relief, a cloud shell, and streamed virtual-texture surface tiles down to city scale
-- Time simulation — jump to a date, step the simulation rate, share a moment via a `#t=` deep link
-- A Cmd+K command palette searching the famous atlas, roughly 48,000 PGC name aliases, and named structures, plus `#focus=`/`#orientation=` deep links for camera state
-- Off by default, toggled in the Settings panel: DESI DR1 pencil cones, the CF4++ peculiar-velocity flow field, the 88 classical constellations, and the CF-4 dark-matter density volume
-- A debug panel (`d`) with per-pass GPU timings and pass toggles
+- About 3 million galaxies from SDSS, 2MRS, GLADE, and Milliquas. Each is a dot until you approach, then a procedural disk, then a real thumbnail ([how](docs/science.md#galaxy-level-of-detail)).
+- A DisPerSE filament skeleton and an MCPM slime-mould density volume trace the cosmic web between the points.
+- Clusters, superclusters, voids, and groups from MCXC, MSCC, and other VizieR catalogs, with markers and labels.
+- Curated thumbnails and descriptions for the famous Messier and NGC galaxies.
+- 16.8 million Gaia DR3 stars, extended by the GCNS and Hipparcos-2 supplements. Stars close enough to resolve become true-scale spheres.
+- The S-stars orbit Sagittarius A\* on their measured Keplerian elements, with trails.
+- The solar system runs on a live clock: all the planets plus Pluto and Charon, Saturn's rings, orbit trails, the Sun with bloom.
+- Earth has PBR shading, night lights, relief, clouds, an atmosphere, and streamed surface tiles down to city scale.
+- Jump the simulation to any date, change its rate, and share the moment with a `#t=` link.
+- Cmd+K searches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets.
+- Off by default in the Settings panel: DESI DR1 cones, the CF4++ flow field, constellations, and the CF-4 dark-matter volume.
+- Press `d` for per-pass GPU timings and render-pass toggles.
 
 ## Gallery
 
 <!-- TODO capture -->
 
-![Earth close-up — cubesphere shading, night lights, streamed surface tiles](docs/screenshots/earth-closeup.png)
+![Earth close-up with night lights and streamed surface tiles](docs/screenshots/earth-closeup.png)
 
-_Earth from low orbit: PBR cubesphere shading, night-side city lights, and a streamed virtual-texture surface tile resolving detail beyond the whole-globe base map._
-
-<!-- TODO capture -->
-
-![Solar system on a live clock, with orbit trails](docs/screenshots/solar-system.png)
-
-_The solar system at the current simulated time — planets on their measured orbits, conic trails, Saturn's rings, and the Sun with HDR bloom._
+_Earth from low orbit, with night lights and streamed surface tiles over the base map._
 
 <!-- TODO capture -->
 
-![Gaia star field crossfading into the procedural Milky Way](docs/screenshots/stars-milky-way.png)
+![Solar system with orbit trails](docs/screenshots/solar-system.png)
 
-_Zooming out from the Sun: the real Gaia DR3 star field crossfades into the procedural Milky Way disk that anchors the scene's "you are here" point._
+_The solar system at the current simulated time._
+
+<!-- TODO capture -->
+
+![Gaia star field and the procedural Milky Way](docs/screenshots/stars-milky-way.png)
+
+_The Gaia star field giving way to the procedural Milky Way disk._
 
 <!-- TODO capture -->
 
 ![Local volume with famous-galaxy thumbnails and labels](docs/screenshots/local-volume.png)
 
-_The local volume, tens of Mpc across — famous-catalog galaxies with curated thumbnails, structure labels, and the filament overlay threading between them._
+_The local volume: famous galaxies with curated thumbnails, structure labels, and filaments._
 
 <!-- TODO capture -->
 
-![Cosmic web at supercluster scale, with filaments and the MCPM volume](docs/screenshots/cosmic-web.png)
+![Cosmic web at supercluster scale](docs/screenshots/cosmic-web.png)
 
-_Supercluster scale, hundreds of Mpc across — the galaxy point cloud, the DisPerSE filament skeleton, and the MCPM cosmic-web volume drawn together._
+_The point cloud, filament skeleton, and MCPM volume at supercluster scale._
 
 ## The data
 
-Everything on screen is anchored to a real catalog, survey, or mission dataset; how catalogue brightness, colour, and survey selection effects become pixels is documented in [docs/science.md](docs/science.md). This table is deliberately terse — [ATTRIBUTIONS.md](ATTRIBUTIONS.md) is the authoritative credit list, with full citations and license terms for everything below.
+Every dataset skymap renders is listed below. [docs/science.md](docs/science.md) explains how catalogue brightness, colour, and selection effects turn into pixels. Full citations and license terms live in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 **Sky**
 
@@ -105,7 +104,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — drag to orbit, scroll to zoom; on touch devices, one-finger orbit and pinch to zoom. Without any real data files present, the renderer falls back to 100,000 synthetic galaxies distributed in a sphere, enough to verify the pipeline end to end.
+Open http://localhost:5173. Drag to orbit, scroll to zoom (on touch: drag and pinch). With no data files present the renderer falls back to 100,000 synthetic galaxies.
 
 For real data, pull the prebuilt catalogs:
 
@@ -113,13 +112,15 @@ For real data, pull the prebuilt catalogs:
 npm run fetch-data
 ```
 
-This downloads the deployed catalog, star, structure, and filament bins from R2 into `public/data/` — everything the live site loads by default, at every tier. See [docs/DATA.md](docs/DATA.md) for the full raw-catalog pipeline, if you want to build the binaries yourself instead of pulling them prebuilt.
+This downloads the catalog, star, structure, and filament binaries from R2 into `public/data/`. They are the same files the live site serves. If you want to build them from the raw catalogs instead, see [docs/DATA.md](docs/DATA.md).
 
 The code is documented didactically throughout — if you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
 
 ## How it works
 
-WebGPU and the per-frame render loop are inherently imperative, so they live in a long-running engine that the React UI subscribes to via callbacks rather than owns directly; React holds the DOM and UI-relevant state, the engine holds everything that updates 60 times a second. The engine doesn't run a continuous render loop — it renders on demand, waking only when an event handler touches render-affecting state and going idle again once nothing is moving. Every visible pass draws into a single `rgba16float` HDR accumulation target with a reversed-Z depth buffer, tone-mapped to the display in one pass at the end of the frame; a floating-origin camera keeps precision intact across the full 10⁷–10²⁶ meter scale range. Catalog data ships as five small binary formats, tiered and content-hashed, streamed from R2 through a boot-fetched manifest:
+The render loop lives in a long-running imperative engine. React subscribes to it for the handful of state slices the UI needs and owns nothing that updates per frame. The engine renders on demand: input and loading events request a frame, and the loop goes idle when nothing is moving. Every visible pass draws into one `rgba16float` HDR target, tone-mapped to the display at the end of the frame. Reversed-Z depth and a floating-origin camera hold precision across the full 10⁷–10²⁶ m range.
+
+Catalog data ships in five binary formats, tiered, content-hashed, and streamed from R2 through a manifest fetched at boot:
 
 - **SKMP v9** — galaxies, 64 bytes per row
 - **SKST v1** — stars
@@ -127,28 +128,28 @@ WebGPU and the per-frame render loop are inherently imperative, so they live in 
 - **SCFD v3** — scalar fields (density and flow volumes)
 - **FILA v1** — filaments
 
-See [docs/RENDERER.md](docs/RENDERER.md) for the renderer map and its hard-won WebGPU landmines, [docs/DATA.md](docs/DATA.md) for the data pipeline and binary format details, [docs/science.md](docs/science.md) for the rendering conventions behind the science, and [docs/adrs/](docs/adrs/) for the architectural decision records behind the engine/state split.
+For more depth: [docs/RENDERER.md](docs/RENDERER.md) (renderer map, WebGPU landmines), [docs/DATA.md](docs/DATA.md) (pipeline, binary formats), [docs/science.md](docs/science.md) (rendering conventions), [docs/adrs/](docs/adrs/) (decision records).
 
 ## Dev tools
 
-- Three renderer dev tools ship as deployed pages alongside the main app: [/galaxy/](https://skymap.rulkens.com/galaxy/) (procedural Hubble-sequence galaxy + HDR bloom), [/mcpm/](https://skymap.rulkens.com/mcpm/) (MCPM cosmic-web workbench), and [/flow/](https://skymap.rulkens.com/flow/) (CF4++ flow-field visualizer)
-- `npm run perf` — a headless GPU-timing harness for measuring renderer changes before and after
-- `npm run record-tour` — an offline 4K recorder for the guided tour
+- Three renderer workbenches deploy next to the main app: [/galaxy/](https://skymap.rulkens.com/galaxy/) (procedural Hubble-sequence galaxy), [/mcpm/](https://skymap.rulkens.com/mcpm/) (MCPM cosmic-web workbench), [/flow/](https://skymap.rulkens.com/flow/) (CF4++ flow-field visualizer)
+- `npm run perf` measures per-pass GPU timings headlessly
+- `npm run record-tour` renders the guided tour to 4K video offline
 - ~1,150 test files under Vitest
 
 ## Direction
 
-- Extend the descent with more real data and fewer procedural stand-ins, rather than new scales for their own sake
-- Comoving distance via a proper ΛCDM integration, replacing the current linear Hubble's-law approximation
-- Spatial chunking so denser catalogs — SDSS's full photometric catalog is roughly a billion objects — become tractable past the current few-million-point ceiling
-- Broader WebGPU coverage as it lands on more browsers and platforms
+- More measured data where procedural stand-ins currently fill in
+- Comoving distance from a ΛCDM integration (currently linear Hubble's law)
+- Spatial chunking to get past the few-million-point ceiling; SDSS's full photometric catalog holds around a billion objects
+- Wider platform support as WebGPU lands in more browsers
 
-The living list of what's actually queued is [docs/BACKLOG.md](docs/BACKLOG.md).
+The live queue is [docs/BACKLOG.md](docs/BACKLOG.md).
 
 ## Cite, credit, and license
 
-If you use skymap in a publication, talk, or derived work, please cite it via the metadata in [CITATION.cff](CITATION.cff) — GitHub's "Cite this repository" sidebar button exposes both BibTeX and APA forms. The catalog data, imagery, and shaders skymap displays carry their own citation requirements; see [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the full list.
+If you use skymap in a publication, talk, or derived work, please cite it via [CITATION.cff](CITATION.cff). GitHub's "Cite this repository" sidebar button exposes BibTeX and APA forms.
 
-Skymap's source code is MIT-licensed — see [LICENSE](LICENSE). Catalog data, imagery, and external service usage carry their own licensing terms (CC-BY-SA, public domain, publication-citation, and so on); ATTRIBUTIONS.md again has the full enumeration.
+Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms (CC-BY-SA, public domain, publication citation), all enumerated in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
-[CLAUDE.md](CLAUDE.md) at the repo root is onboarding guidance for AI coding assistants. It isn't load-bearing for the build or runtime — it's there because parts of this project were developed with AI assistance, and that context is useful for future AI-assisted edits.
+[CLAUDE.md](CLAUDE.md) at the repo root is onboarding guidance for AI coding assistants. It isn't load-bearing for the build or runtime. It exists because parts of this project were developed with AI assistance, and that context helps future AI-assisted edits.
