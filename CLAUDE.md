@@ -20,7 +20,7 @@ src/
       galaxyGenerator/  galaxy generation: v1/ sprite stars (to be deleted),
                         v2/ analytic field, shared/ — READMEs in each
     gpu/  renderers, texture atlas, image queue/fetcher, WGSL shaders
-    input/  SpaceMouse + raw input → camera deltas
+    input/  raw pointer/wheel input → camera deltas (SpaceMouse removed 2026-06-16)
   state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
   store/  RTK store wiring: createAppStore, root reducer/saga, effects
   styles/  global.css — design tokens + body/html reset only
