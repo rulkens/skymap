@@ -20,6 +20,8 @@ Skymap covers nineteen orders of magnitude, from Earth's surface (about 10⁷ m)
 
 The guided tour, "The Long Way Out," plays the whole descent with captions and timed camera moves. You can also just explore: orbit freely, or jump anywhere by name with Cmd+K. Skymap is meant for teaching large-scale structure, for outreach, and for browsing the catalogs themselves.
 
+The framing owes everything to [Powers of Ten](https://www.youtube.com/watch?v=0fKBhvDjuy0) (Charles and Ray Eames, 1977); skymap tries the same journey with today's measured universe, and hands you the camera.
+
 ## Highlights
 
 - About 3 million galaxies from SDSS, 2MRS, GLADE, and Milliquas. Each is a dot until you approach, then a procedural disk, then a real thumbnail ([how](docs/science.md#galaxy-level-of-detail)).
@@ -164,10 +166,6 @@ tests/          Vitest suite, mirrors src/
 - Wider platform support as WebGPU lands in more browsers
 
 The live queue is [docs/BACKLOG.md](docs/BACKLOG.md).
-
-## Inspiration
-
-Skymap's framing comes from [Powers of Ten](https://www.youtube.com/watch?v=0fKBhvDjuy0) (Charles and Ray Eames, 1977), the nine-minute film that zooms from a picnic blanket out to the scale of the universe. Skymap tries the same journey with today's measured universe, and hands you the camera.
 
 ## Cite, credit, and license
 
