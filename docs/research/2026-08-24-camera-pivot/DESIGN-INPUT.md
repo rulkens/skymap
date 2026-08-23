@@ -450,11 +450,11 @@ position. Concretely:
 
 ## 4. PRECISION MODEL
 
-| Regime             | Units            | Magnitude           | f64 ulp                     | Note                                              |
-| ------------------ | ---------------- | ------------------- | --------------------------- | ------------------------------------------------- | ------------------------ | ------------------------------------------- |
-| Surface            | body-fixed km    | `R_earth` = 6371 km | ≈1.4e-12 km ≈ **1.4 nm**    | G Q3 quotes ~0.7 nm (2⁻⁵³ convention); same order |
-| World orbit        | heliocentric Mpc | 1 AU = 4.85e-12 Mpc | ≈1e-27 Mpc ≈ **tens of µm** | G Q1 quotes ~14 µm                                |
-| Today's drag solve | Mpc              | —                   | residual floor ≈ `eps·      | centre                                            | /altitude` ≈ **1e-6 px** | S; FW-I interim: tol 1e-3 px + best-iterate |
+| Regime             | Units            | Magnitude           | f64 ulp                                                  | Note                                              |
+| ------------------ | ---------------- | ------------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| Surface            | body-fixed km    | `R_earth` = 6371 km | ≈1.4e-12 km ≈ **1.4 nm**                                 | G Q3 quotes ~0.7 nm (2⁻⁵³ convention); same order |
+| World orbit        | heliocentric Mpc | 1 AU = 4.85e-12 Mpc | ≈1e-27 Mpc ≈ **tens of µm**                              | G Q1 quotes ~14 µm                                |
+| Today's drag solve | Mpc              | —                   | residual floor ≈ `eps·\|centre\|/altitude` ≈ **1e-6 px** | S; FW-I interim: tol 1e-3 px + best-iterate       |
 
 Readings:
 

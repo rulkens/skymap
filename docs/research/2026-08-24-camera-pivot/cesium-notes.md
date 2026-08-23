@@ -11,9 +11,10 @@ Primary files:
 - `packages/engine/Source/Core/Transforms.js` — `eastNorthUpToFixedFrame`
 - `packages/engine/Source/Core/IntersectionTests.js` — `rayEllipsoid`, `rayPlane`, `grazingAltitudeLocation`
 
-The exact sources read are cached beside this file in `cesium/` (`ssc.js` = `ScreenSpaceCameraController.js`,
-plus `Camera.js`, `CameraEventAggregator.js`, `Transforms.js`, `IntersectionTests.js`) so the line
-numbers below can be checked without re-fetching.
+The exact sources read (`ssc.js` = `ScreenSpaceCameraController.js`, plus `Camera.js`,
+`CameraEventAggregator.js`, `Transforms.js`, `IntersectionTests.js`) were cached beside the original
+research scratchpad and were not committed; line numbers are pinned by the commit SHA above and can
+be checked by fetching that commit.
 
 Cesium's SCENE3D world frame is **ECEF (Earth-fixed)**. Every claim below is in that frame unless
 flagged. Places where the "Earth cannot move" assumption is load-bearing are marked **[EF]**.

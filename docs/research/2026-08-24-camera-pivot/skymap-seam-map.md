@@ -34,8 +34,9 @@ followPanWorld(followPanStored)`; pose basis left-multiplied by FW-G
   altitude taper. Spec: "reverts cleanly to centre-directed zoom on zoom-out".
 - Earth ROTATES in world frame (unlike Cesium's ECEF world). Sim clock can run
   accelerated — OpenSpace pauses time during camera paths; skymap cannot.
-- Input sources: mouse/touch + 3D SpaceMouse (src/services/input/) feeding
-  camera deltas; probe in flight: shift+drag tilt (throwaway, expiry-marked).
+- Input sources: mouse/touch feeding camera deltas; the CameraDriver
+  registry's priority-100 input slot is vacant (SpaceMouse subsystem removed
+  2026-06-16); probe in flight: shift+drag tilt (throwaway, expiry-marked).
 - Rendering already has an RTC path for Earth surface tiles (Plan 1, #617) and
   a PAUSED earth-local slab design (docs/grill-sessions/earth-local-slab-
   2026-08-21.md): camera-rebased, Earth-fixed f64 anchor, km/m units,
