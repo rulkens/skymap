@@ -25,10 +25,14 @@ export type CommitPhase = 'idle' | 'processing' | 'exporting' | 'building';
 
 function commitLabel(phase: CommitPhase): string {
   switch (phase) {
-    case 'processing': return 'Processing…';
-    case 'exporting': return 'Exporting…';
-    case 'building': return 'Rebuilding famous.bin…';
-    case 'idle': return 'Commit';
+    case 'processing':
+      return 'Processing…';
+    case 'exporting':
+      return 'Exporting…';
+    case 'building':
+      return 'Rebuilding famous.bin…';
+    case 'idle':
+      return 'Commit';
   }
 }
 
@@ -45,7 +49,10 @@ function snapStride(v: number): number {
   let bestDist = Math.abs(v - best);
   for (const s of SNAP_STRIDES) {
     const d = Math.abs(v - s);
-    if (d < bestDist) { best = s; bestDist = d; }
+    if (d < bestDist) {
+      best = s;
+      bestDist = d;
+    }
   }
   return best;
 }
@@ -92,9 +99,7 @@ export function ParamSliders(props: ParamSlidersProps) {
             aria-label="upsample"
             type="checkbox"
             checked={props.starnet.upsample}
-            onChange={(e) =>
-              props.onStarnet({ ...props.starnet, upsample: e.target.checked })
-            }
+            onChange={(e) => props.onStarnet({ ...props.starnet, upsample: e.target.checked })}
           />
           upsample
         </label>
@@ -110,9 +115,7 @@ export function ParamSliders(props: ParamSlidersProps) {
             max="50"
             step="1"
             value={props.alpha.blackPoint}
-            onChange={(e) =>
-              props.onAlpha({ ...props.alpha, blackPoint: Number(e.target.value) })
-            }
+            onChange={(e) => props.onAlpha({ ...props.alpha, blackPoint: Number(e.target.value) })}
           />
         </label>
         <label>
@@ -124,9 +127,7 @@ export function ParamSliders(props: ParamSlidersProps) {
             max="255"
             step="1"
             value={props.alpha.whitePoint}
-            onChange={(e) =>
-              props.onAlpha({ ...props.alpha, whitePoint: Number(e.target.value) })
-            }
+            onChange={(e) => props.onAlpha({ ...props.alpha, whitePoint: Number(e.target.value) })}
           />
         </label>
         <label>
@@ -138,9 +139,7 @@ export function ParamSliders(props: ParamSlidersProps) {
             max="2.0"
             step="0.05"
             value={props.alpha.gamma}
-            onChange={(e) =>
-              props.onAlpha({ ...props.alpha, gamma: Number(e.target.value) })
-            }
+            onChange={(e) => props.onAlpha({ ...props.alpha, gamma: Number(e.target.value) })}
           />
         </label>
       </fieldset>
@@ -153,9 +152,9 @@ export function ParamSliders(props: ParamSlidersProps) {
           data-dirty={String(processDirty)}
           disabled={!props.canCommit || props.commitPhase !== 'idle'}
         >
-          {props.commitPhase !== 'idle'
-            ? <span className="curator-spinner" aria-hidden="true" />
-            : null}
+          {props.commitPhase !== 'idle' ? (
+            <span className="curator-spinner" aria-hidden="true" />
+          ) : null}
           {commitLabel(props.commitPhase)}
         </button>
       </div>

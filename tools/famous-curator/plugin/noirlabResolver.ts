@@ -54,7 +54,10 @@ export const NOIRLAB_LICENSE = 'CC BY 4.0';
  *  used by tools/famous-curator/ui/wikipediaMedia.ts — adequate for the
  *  shallow markup (`<a>` wrappers) NOIRLab puts inside `<div class="credit">`. */
 function stripHtml(s: string): string {
-  return s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  return s
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -78,8 +81,7 @@ const FULLSIZE_ORIGINAL_RE =
  * the archive_download blocks are missing entirely — see resolution
  * order in the module header.
  */
-const OG_IMAGE_SECURE_RE =
-  /<meta\s+property="og:image:secure_url"\s+content="([^"]+)"\s*\/?>/i;
+const OG_IMAGE_SECURE_RE = /<meta\s+property="og:image:secure_url"\s+content="([^"]+)"\s*\/?>/i;
 
 /** The single `<div class="credit">` on every NOIRLab image page. */
 const CREDIT_DIV_RE = /<div class="credit">([\s\S]*?)<\/div>/;
@@ -91,10 +93,7 @@ const CREDIT_DIV_RE = /<div class="credit">([\s\S]*?)<\/div>/;
  * Returns null on any extraction miss — the caller decides whether to
  * surface that as a user-facing error or to retry with a different URL.
  */
-export function parseNoirLabPage(
-  html: string,
-  pageUrl: string,
-): ResolvedMedia | null {
+export function parseNoirLabPage(html: string, pageUrl: string): ResolvedMedia | null {
   // Fallback chain per spec §Resolver contract: Large → Fullsize → og:image.
   // Each branch returns the capture group from a regex that's already
   // proved a successful match, so the `!` assertion is sound.

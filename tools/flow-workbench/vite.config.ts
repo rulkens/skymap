@@ -34,13 +34,13 @@ import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
 export default defineConfig({
-  root: resolve(__dirname),
-  publicDir: resolve(__dirname, '../../public'),
+  root: resolve(import.meta.dirname),
+  publicDir: resolve(import.meta.dirname, '../../public'),
   server: { port: 5300 },
   plugins: [
     viteWesl({
       extensions: [staticBuildExtension],
-      weslToml: resolve(__dirname, 'wesl.toml'),
+      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
     }),
     react(),
   ],

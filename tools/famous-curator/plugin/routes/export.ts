@@ -34,17 +34,17 @@
 import sharp from 'sharp';
 import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths';
-import { sessionPath } from '../tmpSession';
-import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe';
-import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex';
-import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha';
-import { willDeproject } from '../../../famous/deprojectDisk';
-import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop';
-import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration';
-import { publishFamousRuntimeImages } from '../../../famous/publishFamousRuntimeImages';
-import { buildThumbTile } from '../../../famous/buildThumbTile';
-import { type StarnetConfig } from '../starnet';
+import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths.ts';
+import { sessionPath } from '../tmpSession.ts';
+import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe.ts';
+import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.ts';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.ts';
+import { willDeproject } from '../../../famous/deprojectDisk.ts';
+import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.ts';
+import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.ts';
+import { publishFamousRuntimeImages } from '../../../famous/publishFamousRuntimeImages.ts';
+import { buildThumbTile } from '../../../famous/buildThumbTile.ts';
+import { type StarnetConfig } from '../starnet.ts';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
 const FULL_PX = 1024;

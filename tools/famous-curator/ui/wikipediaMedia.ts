@@ -61,28 +61,34 @@ export function parseWikipediaMediaTitle(url: string): string | null {
  *  contains <a>…</a> wrappers).  Regex-based — fine for the simple cases
  *  Commons emits; we don't need a full HTML parser here. */
 function stripHtml(s: string): string {
-  return s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  return s
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 type CommonsResponse = {
   query?: {
-    pages?: Record<string, {
-      imageinfo?: Array<{
-        url?: string;
-        /**
-         * Scaled thumbnail URL — present when the API call requests
-         * `iiurlwidth=N`.  Commons regenerates it server-side at most N
-         * pixels wide; we use it to dodge the 50 MB upload-limit on the
-         * curator's /api/fetch route, since some Wikipedia galaxy
-         * originals are 8000+ pixels wide and well over 100 MB.
-         */
-        thumburl?: string;
-        extmetadata?: {
-          Artist?: { value?: string };
-          LicenseShortName?: { value?: string };
-        };
-      }>;
-    }>;
+    pages?: Record<
+      string,
+      {
+        imageinfo?: Array<{
+          url?: string;
+          /**
+           * Scaled thumbnail URL — present when the API call requests
+           * `iiurlwidth=N`.  Commons regenerates it server-side at most N
+           * pixels wide; we use it to dodge the 50 MB upload-limit on the
+           * curator's /api/fetch route, since some Wikipedia galaxy
+           * originals are 8000+ pixels wide and well over 100 MB.
+           */
+          thumburl?: string;
+          extmetadata?: {
+            Artist?: { value?: string };
+            LicenseShortName?: { value?: string };
+          };
+        }>;
+      }
+    >;
   };
 };
 

@@ -16,9 +16,7 @@ export type BuildFamousResult = {
   durationMs: number;
 };
 
-export async function handleBuildFamous(opts: {
-  repoRoot: string;
-}): Promise<BuildFamousResult> {
+export async function handleBuildFamous(opts: { repoRoot: string }): Promise<BuildFamousResult> {
   const startedAt = Date.now();
   return new Promise<BuildFamousResult>((resolveResult, rejectResult) => {
     const proc = spawn('npm', ['run', 'build-famous'], {

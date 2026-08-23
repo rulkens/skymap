@@ -10,8 +10,8 @@
  * every page load when only one galaxy is being resumed.
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { recipePath } from '../paths';
-import { parseRecipe, type Recipe } from '../recipe';
+import { recipePath } from '../paths.ts';
+import { parseRecipe, type Recipe } from '../recipe.ts';
 
 export async function handleRecipe(opts: {
   repoRoot: string;

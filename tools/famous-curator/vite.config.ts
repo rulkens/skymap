@@ -15,11 +15,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
-import { apiPlugin } from './plugin/apiPlugin';
-import { restartOnPluginChange } from './plugin/restartOnPluginChange';
+import { apiPlugin } from './plugin/apiPlugin.ts';
+import { restartOnPluginChange } from './plugin/restartOnPluginChange.ts';
 
 export default defineConfig({
-  root: resolve(__dirname, 'ui'),
+  root: resolve(import.meta.dirname, 'ui'),
   // Vite resolves `index.html` from `root`; explicit publicDir keeps
   // the curator from pulling in the main app's `public/` (we don't
   // want the runtime atlas + bins served from the curator).

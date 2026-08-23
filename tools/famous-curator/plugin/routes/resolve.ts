@@ -22,7 +22,7 @@
  * in; tests inject stubs.  Only the `ResolvedMedia` shape is shared,
  * and it crosses as a type-only import — no value-level coupling.
  */
-import type { ResolvedMedia } from '../noirlabResolver';
+import type { ResolvedMedia } from '../noirlabResolver.ts';
 
 export type ResolverFn = (html: string, pageUrl: string) => ResolvedMedia | null;
 export type HtmlFetcher = (url: string) => Promise<string>;
