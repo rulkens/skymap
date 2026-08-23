@@ -17,9 +17,21 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: resolve(__dirname),
-  publicDir: resolve(__dirname, '../../public'),
+  // Build mode deploys to skymap.rulkens.com/galaxy/ as a subpath of the main
+  // shell (see docs/DEPLOY.md): assets get the /galaxy/ prefix, and publicDir
+  // is dropped — copying the repo's public/ here would duplicate the shell's
+  // assets (and locally drag in the multi-GB gitignored data tree). Absolute
+  // fetches like /images/famous-curated/... resolve against the main shell,
+  // which ships those tracked files. envDir points at the repo root so the
+  // committed .env.production (VITE_DATA_BASE_URL) is inlined — with root: at
+  // this directory Vite would otherwise look for env files HERE and silently
+  // fall back to same-origin /data/, which Workers Assets doesn't serve.
+  base: command === 'build' ? '/galaxy/' : '/',
+  publicDir: command === 'build' ? false : resolve(__dirname, '../../public'),
+  envDir: resolve(__dirname, '../../'),
+  build: { outDir: resolve(__dirname, '../../dist/galaxy'), emptyOutDir: true },
   server: { port: 5400 },
   resolve: {
     // Cross-root WESL: the shared shader families live under the MAIN app's
@@ -58,4 +70,4 @@ export default defineConfig({
     }),
     react(),
   ],
-});
+}));

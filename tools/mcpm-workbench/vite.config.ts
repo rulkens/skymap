@@ -18,9 +18,21 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: resolve(__dirname),
-  publicDir: resolve(__dirname, '../../public'),
+  // Build mode deploys to skymap.rulkens.com/mcpm/ as a subpath of the main
+  // shell (see docs/DEPLOY.md): assets get the /mcpm/ prefix, publicDir is
+  // dropped (copying the repo's public/ would duplicate the shell's assets and
+  // locally drag in the multi-GB gitignored data tree), and envDir points at
+  // the repo root so the committed .env.production (VITE_DATA_BASE_URL) is
+  // inlined — with root: at this directory Vite would otherwise look for env
+  // files HERE and dataUrl() would silently fall back to same-origin /data/,
+  // which Workers Assets doesn't serve. Catalog loads then hit R2 directly;
+  // the existing CORS rule already covers the skymap.rulkens.com origin.
+  base: command === 'build' ? '/mcpm/' : '/',
+  publicDir: command === 'build' ? false : resolve(__dirname, '../../public'),
+  envDir: resolve(__dirname, '../../'),
+  build: { outDir: resolve(__dirname, '../../dist/mcpm'), emptyOutDir: true },
   server: { port: 5500 },
   plugins: [
     viteWesl({
@@ -29,4 +41,4 @@ export default defineConfig({
     }),
     react(),
   ],
-});
+}));
