@@ -70,6 +70,14 @@ import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
 import { orbitAnglesLookingAlong } from '../../utils/camera/orbitAnglesLookingAlong';
 import { surfaceTiltAngle } from '../../utils/camera/surfaceTiltAngle';
+
+/**
+ * Radians per CSS pixel for the shift+drag look probe's HEADING axis, read off
+ * the tilt mapping itself (one pixel from nadir, far from any clamp) so the two
+ * axes of one gesture cannot drift apart.
+ * delete when the globe-anchored camera pivot replaces surface navigation
+ */
+const LOOK_RAD_PER_PX = surfaceTiltAngle(0, -1);
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
@@ -454,66 +462,106 @@ export function attachOrbitControls(
     lastY = e.clientY;
 
     if (dragMode === 'tilt') {
-      // ── Tilt PROBE (shift + drag) ───────────────────────────────────────
+      // ── Look PROBE (shift + drag): dx heading, dy tilt ───────────────────
       //
       // delete when the globe-anchored camera pivot replaces surface navigation
       //
-      // The EYE is held and the PIVOT swings: rotate the aim toward screen-up
-      // by the clamped tilt delta, then re-place the target at the same range
-      // along the new aim, so `updatePosition` puts the eye back exactly where
-      // it was. The pivot move is the frame's own channel — `accumulateFollowPan`
-      // diffs `cam.target` during an orbit drag, so the pin keeps the tilt. Past
-      // the horizon that pivot is a point in the SKY, which the pin carries
-      // fine; what it costs is listed in `surfaceTiltAngle`'s header.
-      // Horizontal motion is ignored: heading would need its own machinery.
+      // The EYE is held and the AIM swings, so this is a look-around from a
+      // fixed standpoint: heading first, about the eye's own local vertical
+      // (that radial line runs through the body centre AND the ground point
+      // under the eye, so it is the anchor's up axis and the eye sits ON it —
+      // nothing moves), then tilt inside the local vertical plane the heading
+      // just chose. Z-then-X, the order KML uses, and it matters off zero
+      // heading.
+      // The target is re-placed at the same range along the new aim, so
+      // `updatePosition` puts the eye back where it was; that pivot move rides
+      // the frame's own channel (`accumulateFollowPan` diffs `cam.target`
+      // during a drag), which is what makes the look survive the pivot-pin.
+      // Past the horizon the pivot is a point in the SKY — carried fine, at the
+      // costs `surfaceTiltAngle`'s header lists.
       const frame = options?.dragPivotFrame?.() ?? null;
-      if (frame === null || dy === 0) return;
+      if (frame === null || (dx === 0 && dy === 0)) return;
 
       vec3.subtract(cam.target, cam.position, forwardScratch);
       vec3.normalize(forwardScratch, forwardScratch);
-      const basis = imagePlaneBasis(
-        forwardScratch,
-        cam.roll ?? 0,
-        frameUp(cam.upBasis, upRefScratch),
-        basisScratch,
-      );
+      frameUp(cam.upBasis, upRefScratch);
       const nx = frame.bodyCentreMpc[0] - cam.position[0];
       const ny = frame.bodyCentreMpc[1] - cam.position[1];
       const nz = frame.bodyCentreMpc[2] - cam.position[2];
       const nlen = Math.hypot(nx, ny, nz) || 1;
-      const cosTilt =
-        (forwardScratch[0] * nx + forwardScratch[1] * ny + forwardScratch[2] * nz) / nlen;
+      // Local up at the standpoint: outward radial, so the line runs through the
+      // body centre and the ground point under the eye alike.
+      const ux = -nx / nlen;
+      const uy = -ny / nlen;
+      const uz = -nz / nlen;
+
+      // Each axis is admitted on its own, so a tilt pinned at its ceiling still
+      // lets the head turn. The ceiling is where the aim nears the frame pole:
+      // the screen basis is `aim × upRef`, which REVERSES across it — the tilt
+      // walks backwards and the horizon flips end over end. `PITCH_LIMIT` alone
+      // stops a degree short, deep inside the unusable zone; 0.1 rad (5.7°) is
+      // measured to be clear of it.
+      let aim: Vec3 = [forwardScratch[0], forwardScratch[1], forwardScratch[2]];
+      let yawOut = cam.yaw;
+      let pitchOut = cam.pitch;
+      let admitted = false;
+      const admit = (a: Vec3): void => {
+        const poleDot = a[0] * upRefScratch[0] + a[1] * upRefScratch[1] + a[2] * upRefScratch[2];
+        if (Math.abs(poleDot) > Math.cos(0.1)) return;
+        const solved = orbitAnglesLookingAlong(a, cam.poseBasis);
+        // Refused, not clamped — the rule the drag solve follows.
+        if (Math.abs(solved.pitch) > PITCH_LIMIT) return;
+        aim = a;
+        yawOut = solved.yaw;
+        pitchOut = solved.pitch;
+        admitted = true;
+      };
+
+      // Heading: Rodrigues about the outward radial, by the same rad/px the
+      // tilt spends, so the gesture feels isotropic. Sign follows the orbit
+      // drag's grab-the-world convention (drag right, world goes right).
+      if (dx !== 0) {
+        const psi = dx * LOOK_RAD_PER_PX;
+        const cp = Math.cos(psi);
+        const sp = Math.sin(psi);
+        const kv = ux * aim[0] + uy * aim[1] + uz * aim[2];
+        admit([
+          aim[0] * cp + (uy * aim[2] - uz * aim[1]) * sp + ux * kv * (1 - cp),
+          aim[1] * cp + (uz * aim[0] - ux * aim[2]) * sp + uy * kv * (1 - cp),
+          aim[2] * cp + (ux * aim[1] - uy * aim[0]) * sp + uz * kv * (1 - cp),
+        ]);
+      }
+
+      // Tilt: swing the aim toward local up, INSIDE the vertical plane the
+      // heading left it in. Rotating about the screen-right axis instead reads
+      // as the same gesture but that axis is built from the frame pole, so it
+      // drags the azimuth along with it — 10° of heading nobody asked for per
+      // 60 px, measured. At nadir the aim IS the vertical and the plane does not
+      // exist, so there the screen picks it, once.
+      const cosTilt = (aim[0] * nx + aim[1] * ny + aim[2] * nz) / nlen;
       const current = Math.acos(Math.max(-1, Math.min(1, cosTilt)));
-      const next = surfaceTiltAngle(current, dy);
-      const delta = next - current;
-      if (delta === 0) return;
-
-      const c = Math.cos(delta);
-      const s = Math.sin(delta);
-      const aim: Vec3 = [
-        forwardScratch[0] * c + basis.up[0] * s,
-        forwardScratch[1] * c + basis.up[1] * s,
-        forwardScratch[2] * c + basis.up[2] * s,
-      ];
-      // The REAL ceiling on how far up the view swings, and it depends on where
-      // you stand: the aim reaches the frame pole at π/2 + frame latitude, and
-      // the whole screen basis is `aim × upRef`, which REVERSES as it crosses —
-      // the tilt then walks backwards and the horizon flips end over end.
-      // `PITCH_LIMIT` alone stops a degree short of that, deep inside the zone
-      // where it is already unusable; 0.1 rad (5.7°) is measured to be clear.
-      const poleDot =
-        aim[0] * upRefScratch[0] + aim[1] * upRefScratch[1] + aim[2] * upRefScratch[2];
-      if (Math.abs(poleDot) > Math.cos(0.1)) return;
-
-      const angles = orbitAnglesLookingAlong(aim, cam.poseBasis);
-      // Refused, not clamped — the rule the drag solve follows.
-      if (Math.abs(angles.pitch) > PITCH_LIMIT) return;
+      const delta = surfaceTiltAngle(current, dy) - current;
+      if (delta !== 0) {
+        const au = aim[0] * ux + aim[1] * uy + aim[2] * uz;
+        const px = ux - aim[0] * au;
+        const py = uy - aim[1] * au;
+        const pz = uz - aim[2] * au;
+        const plen = Math.hypot(px, py, pz);
+        const basis = imagePlaneBasis(aim, cam.roll ?? 0, upRefScratch, basisScratch);
+        const upx = plen > 1e-6 ? px / plen : basis.up[0];
+        const upy = plen > 1e-6 ? py / plen : basis.up[1];
+        const upz = plen > 1e-6 ? pz / plen : basis.up[2];
+        const c = Math.cos(delta);
+        const s = Math.sin(delta);
+        admit([aim[0] * c + upx * s, aim[1] * c + upy * s, aim[2] * c + upz * s]);
+      }
+      if (!admitted) return;
 
       cam.target[0] = cam.position[0] + aim[0] * cam.distance;
       cam.target[1] = cam.position[1] + aim[1] * cam.distance;
       cam.target[2] = cam.position[2] + aim[2] * cam.distance;
-      cam.yaw = angles.yaw;
-      cam.pitch = angles.pitch;
+      cam.yaw = yawOut;
+      cam.pitch = pitchOut;
       updatePosition(cam);
       options?.onChange?.();
       return;
