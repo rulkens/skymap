@@ -19,6 +19,7 @@ import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
 import { distDir } from '../utils/io/distDir.ts';
+import { toolPages } from '../utils/io/toolPages.ts';
 
 export default defineConfig(({ command }) => ({
   root: resolve(import.meta.dirname),
@@ -26,10 +27,10 @@ export default defineConfig(({ command }) => ({
   // root is load-bearing: with `root:` here Vite looks for env files locally
   // and dataUrl() silently falls back to same-origin /data/. publicDir off in
   // build: the main shell already serves those files; copying duplicates GBs.
-  base: command === 'build' ? '/mcpm/' : '/',
+  base: command === 'build' ? `/${toolPages.mcpmWorkbench}/` : '/',
   publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),
-  build: { outDir: resolve(distDir, 'mcpm'), emptyOutDir: true },
+  build: { outDir: resolve(distDir, toolPages.mcpmWorkbench), emptyOutDir: true },
   server: { port: 5500 },
   plugins: [
     viteWesl({

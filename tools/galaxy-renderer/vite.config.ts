@@ -18,6 +18,7 @@ import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
 import { distDir } from '../utils/io/distDir.ts';
+import { toolPages } from '../utils/io/toolPages.ts';
 
 export default defineConfig(({ command }) => ({
   root: resolve(import.meta.dirname),
@@ -25,10 +26,10 @@ export default defineConfig(({ command }) => ({
   // root is load-bearing: with `root:` here Vite looks for env files locally
   // and dataUrl() silently falls back to same-origin /data/. publicDir off in
   // build: the main shell already serves those files; copying duplicates GBs.
-  base: command === 'build' ? '/galaxy/' : '/',
+  base: command === 'build' ? `/${toolPages.galaxyRenderer}/` : '/',
   publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),
-  build: { outDir: resolve(distDir, 'galaxy'), emptyOutDir: true },
+  build: { outDir: resolve(distDir, toolPages.galaxyRenderer), emptyOutDir: true },
   server: { port: 5400 },
   resolve: {
     // Cross-root WESL: the shared shader families live under the MAIN app's
