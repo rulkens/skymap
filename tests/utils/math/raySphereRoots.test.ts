@@ -60,6 +60,23 @@ describe('raySphereRoots', () => {
     expect(raySphereRoots(ro, PLUS_X, ORIGIN, 1)).toBeNull();
   });
 
+  it('resolves a hit when the sphere is a billionth of the ray distance away', () => {
+    // Earth (r = 6371 km) seen from 2.4e12 km — the zoomed-out surface camera.
+    // `c = |m|² − r²` annihilates r² entirely at this ratio (5.76e24 vs 4.06e7,
+    // 17 decades apart), so the b²−c form returns null for a ray that passes
+    // half a radius from the centre. Aimed at [0, r/2, 0]: the chord's
+    // half-width is r·√3/2, and that is what the cancellation eats.
+    const D = 2.4e12;
+    const r = 6371;
+    const len = Math.hypot(D, r / 2);
+    const ro: Vec3 = [D, 0, 0];
+    const rd: Vec3 = [-D / len, r / 2 / len, 0];
+
+    const roots = raySphereRoots(ro, rd, ORIGIN, r);
+    expect(roots).not.toBeNull();
+    expect((roots![1] - roots![0]) / 2 / (r * (Math.sqrt(3) / 2))).toBeCloseTo(1, 6);
+  });
+
   it('sphere fully behind the origin still returns both (negative) roots', () => {
     // ro=[3,0,0] looking +x, unit sphere at origin sits entirely behind us.
     //   m=[3,0,0]; b=3; c=9-1=8; discr=9-8=1; s=1

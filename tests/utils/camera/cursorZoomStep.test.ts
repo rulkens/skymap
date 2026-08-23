@@ -160,6 +160,32 @@ describe('cursorZoomStep', () => {
     expect((cam.distance * step.distanceScale) / (R + ALT * 0.9)).toBeCloseTo(1, 12);
   });
 
+  it('zooming OUT under the cursor is centred too: the anchor would repel', () => {
+    // Same cursor as the anchored zoom-in above, hitting the globe — but on
+    // the way out the anchor is a repelling fixed point, so the step has to be
+    // the plain altitude taper instead.
+    const cam = makeCam();
+    expect(surfaceUnderCursor(cam, CURSOR)).not.toBeNull();
+
+    const step = cursorZoomStep(cam, CURSOR, CANVAS, PIVOT, 1.1);
+    expect(step.lateralMpc).toEqual([0, 0, 0]);
+    expect((cam.distance * step.distanceScale) / (R + ALT * 1.1)).toBeCloseTo(1, 12);
+  });
+
+  it('a centred zoom-in with the pivot off the body walks the pivot BACK to it', () => {
+    // The pivot stranded half a radius off centre (a `followPanStored` the
+    // zoom-to-cursor left behind). A centred zoom must close on the body, not
+    // on the stranded pivot — otherwise the drift is unrecoverable.
+    const cam = makeCam();
+    cam.target = [R / 2, 0, 0];
+    updatePosition(cam);
+    const offGlobe = { x: 4, y: 4 };
+    expect(surfaceUnderCursor(cam, offGlobe)).toBeNull();
+
+    const zoomed = applyStep(cam, cursorZoomStep(cam, offGlobe, CANVAS, PIVOT, 0.9));
+    expect(Math.hypot(...zoomed.target) / Math.hypot(...cam.target)).toBeLessThan(0.95);
+  });
+
   it('stops the eye at the standoff floor when the tick overshoots the surface', () => {
     const cam = makeCam();
     const zoomed = applyStep(cam, cursorZoomStep(cam, CURSOR, CANVAS, PIVOT, 1e-9));
