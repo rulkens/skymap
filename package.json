@@ -30,7 +30,7 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build",
+    "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build && npm run flow-workbench:build",
     "build-data-manifest": "tsx tools/deploy/buildDataManifest.ts",
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
     "build-cf4-density": "tsx tools/volumes/buildCf4Density.ts && npm run build-data-manifest",
@@ -57,6 +57,7 @@
     "build-textures": "tsx tools/textures/buildTextures.ts",
     "tour-length": "tsx tools/animation/tourLength.ts",
     "flow-workbench": "vite --config tools/flow-workbench/vite.config.ts",
+    "flow-workbench:build": "vite build --config tools/flow-workbench/vite.config.ts",
     "galaxy-renderer": "vite --config tools/galaxy-renderer/vite.config.ts",
     "galaxy-renderer:build": "vite build --config tools/galaxy-renderer/vite.config.ts",
     "galaxy-renderer:probe": "tsx tools/galaxy-renderer/probeGpuErrors.ts",

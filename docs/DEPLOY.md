@@ -19,9 +19,9 @@ A full data-refreshing deploy:
 
 Each `build-*` script above already tails with `npm run build-data-manifest`, which writes `public/data/manifest.json` **last**, after every file it names, so a run always leaves one coherent manifest. A hand-run `tsx tools/…` invocation skips that tail and must be followed by the pass manually — `sync-r2-secure`'s drift guard refuses to sync when the tracked set doesn't match the manifest.
 
-### Dev-tool pages (/galaxy/, /mcpm/)
+### Dev-tool pages (/galaxy/, /mcpm/, /flow/)
 
-`npm run build` also builds `tools/galaxy-renderer` → `dist/galaxy/` and `tools/mcpm-workbench` → `dist/mcpm/`, so the same Workers Assets push serves them at `skymap.rulkens.com/galaxy/` and `/mcpm/`. Their vite configs switch on `command === 'build'`: base gets the subpath prefix, `publicDir` is dropped (absolute fetches like `/images/famous-curated/...` resolve against the main shell), and `envDir` points at the repo root so `VITE_DATA_BASE_URL` is inlined — the workbench then loads manifest + catalog tiers from R2 directly, covered by the existing same-origin CORS rule. Dev servers (5400/5500) are untouched.
+`npm run build` also builds the tool pages listed in `tools/utils/io/toolPages.ts` (galaxy-renderer, mcpm-workbench, flow-workbench) into matching `dist/` subfolders, so the same Workers Assets push serves them at `skymap.rulkens.com/<page>/`. Their vite configs switch on `command === 'build'`: base gets the subpath prefix, `publicDir` is dropped (absolute fetches like `/images/famous-curated/...` resolve against the main shell), and `envDir` points at the repo root so `VITE_DATA_BASE_URL` is inlined — the workbench then loads manifest + catalog tiers from R2 directly, covered by the existing same-origin CORS rule. Dev servers (5400/5500) are untouched.
 
 Code-only change: **step 5 alone is enough**. The `.bin` files stay out of git (`public/data/*.bin` gitignored): they are deterministic build artefacts, and committing them would bloat clones and drift against pipeline settings.
 

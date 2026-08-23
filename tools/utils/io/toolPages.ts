@@ -7,4 +7,5 @@
 export const toolPages = {
   galaxyRenderer: 'galaxy',
   mcpmWorkbench: 'mcpm',
+  flowWorkbench: 'flow',
 } as const;

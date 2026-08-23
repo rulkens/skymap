@@ -33,9 +33,19 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-export default defineConfig({
+import { distDir } from '../utils/io/distDir.ts';
+import { toolPages } from '../utils/io/toolPages.ts';
+
+export default defineConfig(({ command }) => ({
   root: resolve(import.meta.dirname),
-  publicDir: resolve(import.meta.dirname, '../../public'),
+  // Build = the /flow/ subpath deploy (docs/DEPLOY.md). envDir at the repo
+  // root is load-bearing: with `root:` here Vite looks for env files locally
+  // and dataUrl() silently falls back to same-origin /data/. publicDir off in
+  // build: the flowfield.scfd then comes from R2 via the manifest, like prod.
+  base: command === 'build' ? `/${toolPages.flowWorkbench}/` : '/',
+  publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
+  envDir: resolve(import.meta.dirname, '../../'),
+  build: { outDir: resolve(distDir, toolPages.flowWorkbench), emptyOutDir: true },
   server: { port: 5300 },
   plugins: [
     viteWesl({
@@ -44,4 +54,4 @@ export default defineConfig({
     }),
     react(),
   ],
-});
+}));
