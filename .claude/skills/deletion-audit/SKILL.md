@@ -1,3 +1,8 @@
+---
+name: deletion-audit
+description: Use when hunting removable code — after a fix wave, at /feature-done, or when asked "anything to delete in this PR/module?". Dispatches one read-only opus-class deletion auditor with the calibrated adversarial framing (legacy default; --verified / --justify modes); findings apply per docs/superpowers/conventions/leanness.md. Never run it on a cheaper model.
+---
+
 # Deletion audit — the leanness seat
 
 A standing counter-bias against under-deletion. Correctness reviewers must treat
