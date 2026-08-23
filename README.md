@@ -24,18 +24,18 @@ The framing owes everything to [Powers of Ten](https://www.youtube.com/watch?v=0
 
 ## Highlights
 
-- About 3 million galaxies from SDSS, 2MRS, GLADE, and Milliquas. Each is a dot until you approach, then a procedural disk, then a real thumbnail ([how](docs/science.md#galaxy-level-of-detail)).
-- A DisPerSE filament skeleton and an MCPM slime-mould density volume trace the cosmic web between the points.
-- Clusters, superclusters, voids, and groups from MCXC, MSCC, and other VizieR catalogs, with markers and labels.
-- Curated thumbnails and descriptions for the famous Messier and NGC galaxies.
-- 16.8 million Gaia DR3 stars, extended by the GCNS and Hipparcos-2 supplements. Stars close enough to resolve become true-scale spheres.
-- The S-stars orbit Sagittarius A\* on their measured Keplerian elements, with trails.
-- The solar system runs on a live clock: all the planets plus Pluto and Charon, Saturn's rings, orbit trails, the Sun with bloom.
-- Earth has PBR shading, night lights, relief, clouds, an atmosphere, and streamed surface tiles down to city scale.
-- Jump the simulation to any date, change its rate, and share the moment with a `#t=` link.
-- Cmd+K searches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets.
-- Off by default in the Settings panel: DESI DR1 cones, the CF4++ flow field, constellations, and the CF-4 dark-matter volume.
-- Press `d` for per-pass GPU timings and render-pass toggles.
+- **Galaxies**: about 3 million from SDSS, 2MRS, GLADE, and Milliquas. Each is a dot until you approach, then a procedural disk, then a real thumbnail ([how](docs/science.md#galaxy-level-of-detail)).
+- **Cosmic web**: a DisPerSE filament skeleton and an MCPM slime-mould density volume trace the structure between the points.
+- **Structures**: clusters, superclusters, voids, and groups from MCXC, MSCC, and other VizieR catalogs, with markers and labels.
+- **Famous galaxies**: curated thumbnails and descriptions for the well-known Messier and NGC objects.
+- **Stars**: 16.8 million from Gaia DR3, extended by the GCNS and Hipparcos-2 supplements. Stars close enough to resolve become true-scale spheres.
+- **Galactic centre**: the S-stars orbit Sagittarius A\* on their measured Keplerian elements, with trails.
+- **Solar system**: runs on a live clock. All the planets plus Pluto and Charon, Saturn's rings, orbit trails, the Sun with bloom.
+- **Earth**: PBR shading, night lights, relief, clouds, an atmosphere, and streamed surface tiles down to city scale.
+- **Time**: jump the simulation to any date, change its rate, and share the moment with a `#t=` link.
+- **Search**: Cmd+K reaches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets.
+- **Opt-in**: DESI DR1 cones, the CF4++ flow field, constellations, and the CF-4 dark-matter volume are off by default in the Settings panel.
+- **Debug**: press `d` for per-pass GPU timings and render-pass toggles.
 
 ## Gallery
 
