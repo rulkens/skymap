@@ -495,11 +495,18 @@ export function attachOrbitControls(
         forwardScratch[1] * c + basis.up[1] * s,
         forwardScratch[2] * c + basis.up[2] * s,
       ];
-      const angles = orbitAnglesLookingAlong(aim, cam.poseBasis);
       // The REAL ceiling on how far up the view swings, and it depends on where
       // you stand: the aim reaches the frame pole at π/2 + frame latitude, and
-      // no yaw/pitch pose looks through it (`surfaceTiltAngle`'s header has the
-      // consequence). Refused, not clamped — the rule the drag solve follows.
+      // the whole screen basis is `aim × upRef`, which REVERSES as it crosses —
+      // the tilt then walks backwards and the horizon flips end over end.
+      // `PITCH_LIMIT` alone stops a degree short of that, deep inside the zone
+      // where it is already unusable; 0.1 rad (5.7°) is measured to be clear.
+      const poleDot =
+        aim[0] * upRefScratch[0] + aim[1] * upRefScratch[1] + aim[2] * upRefScratch[2];
+      if (Math.abs(poleDot) > Math.cos(0.1)) return;
+
+      const angles = orbitAnglesLookingAlong(aim, cam.poseBasis);
+      // Refused, not clamped — the rule the drag solve follows.
       if (Math.abs(angles.pitch) > PITCH_LIMIT) return;
 
       cam.target[0] = cam.position[0] + aim[0] * cam.distance;
