@@ -79,6 +79,7 @@ tests/  Vitest suite — mirrors src/ tree
 npm run dev         # vite dev server (leave running)
 npm run build       # tsc --noEmit + vite build
 npm run typecheck   # both src and tools tsconfigs
+npm run typecheck:fast  # same two projects via tsgo (TS 7 preview) — ~7x faster
 npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
@@ -89,6 +90,8 @@ npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/ref
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 ```
+
+`typecheck:fast` is the inner-loop typecheck: TypeScript 7 (`tsgo`, the Go port) over the same two tsconfigs, 13.2s → 1.8s. It's an **exact-pinned dev build**, so `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug and confirm against `tsc` before acting on it.
 
 For `npm run perf`, read the `perf` skill (`.claude/skills/perf/SKILL.md`) first: measure **before and after** any renderer/perf change, and **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server. The skill carries the flags and interpretation traps (MERGED vs PER-LAYER vs FLOOR, Apple Silicon slot-sum inflation).
 
