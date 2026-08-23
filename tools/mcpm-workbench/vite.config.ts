@@ -22,15 +22,10 @@ import { distDir } from '../utils/io/distDir.ts';
 
 export default defineConfig(({ command }) => ({
   root: resolve(import.meta.dirname),
-  // Build mode deploys to skymap.rulkens.com/mcpm/ as a subpath of the main
-  // shell (see docs/DEPLOY.md): assets get the /mcpm/ prefix, publicDir is
-  // dropped (copying the repo's public/ would duplicate the shell's assets and
-  // locally drag in the multi-GB gitignored data tree), and envDir points at
-  // the repo root so the committed .env.production (VITE_DATA_BASE_URL) is
-  // inlined — with root: at this directory Vite would otherwise look for env
-  // files HERE and dataUrl() would silently fall back to same-origin /data/,
-  // which Workers Assets doesn't serve. Catalog loads then hit R2 directly;
-  // the existing CORS rule already covers the skymap.rulkens.com origin.
+  // Build = the /mcpm/ subpath deploy (docs/DEPLOY.md). envDir at the repo
+  // root is load-bearing: with `root:` here Vite looks for env files locally
+  // and dataUrl() silently falls back to same-origin /data/. publicDir off in
+  // build: the main shell already serves those files; copying duplicates GBs.
   base: command === 'build' ? '/mcpm/' : '/',
   publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),

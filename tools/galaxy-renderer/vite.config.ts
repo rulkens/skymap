@@ -21,15 +21,10 @@ import { distDir } from '../utils/io/distDir.ts';
 
 export default defineConfig(({ command }) => ({
   root: resolve(import.meta.dirname),
-  // Build mode deploys to skymap.rulkens.com/galaxy/ as a subpath of the main
-  // shell (see docs/DEPLOY.md): assets get the /galaxy/ prefix, and publicDir
-  // is dropped — copying the repo's public/ here would duplicate the shell's
-  // assets (and locally drag in the multi-GB gitignored data tree). Absolute
-  // fetches like /images/famous-curated/... resolve against the main shell,
-  // which ships those tracked files. envDir points at the repo root so the
-  // committed .env.production (VITE_DATA_BASE_URL) is inlined — with root: at
-  // this directory Vite would otherwise look for env files HERE and silently
-  // fall back to same-origin /data/, which Workers Assets doesn't serve.
+  // Build = the /galaxy/ subpath deploy (docs/DEPLOY.md). envDir at the repo
+  // root is load-bearing: with `root:` here Vite looks for env files locally
+  // and dataUrl() silently falls back to same-origin /data/. publicDir off in
+  // build: the main shell already serves those files; copying duplicates GBs.
   base: command === 'build' ? '/galaxy/' : '/',
   publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),
