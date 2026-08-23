@@ -462,7 +462,9 @@ export function attachOrbitControls(
       // by the clamped tilt delta, then re-place the target at the same range
       // along the new aim, so `updatePosition` puts the eye back exactly where
       // it was. The pivot move is the frame's own channel — `accumulateFollowPan`
-      // diffs `cam.target` during an orbit drag, so the pin keeps the tilt.
+      // diffs `cam.target` during an orbit drag, so the pin keeps the tilt. Past
+      // the horizon that pivot is a point in the SKY, which the pin carries
+      // fine; what it costs is listed in `surfaceTiltAngle`'s header.
       // Horizontal motion is ignored: heading would need its own machinery.
       const frame = options?.dragPivotFrame?.() ?? null;
       if (frame === null || dy === 0) return;
@@ -482,7 +484,7 @@ export function attachOrbitControls(
       const cosTilt =
         (forwardScratch[0] * nx + forwardScratch[1] * ny + forwardScratch[2] * nz) / nlen;
       const current = Math.acos(Math.max(-1, Math.min(1, cosTilt)));
-      const next = surfaceTiltAngle(current, dy, pivotAltitude() ?? cam.distance, frame.radiusMpc);
+      const next = surfaceTiltAngle(current, dy);
       const delta = next - current;
       if (delta === 0) return;
 
@@ -494,8 +496,10 @@ export function attachOrbitControls(
         forwardScratch[2] * c + basis.up[2] * s,
       ];
       const angles = orbitAnglesLookingAlong(aim, cam.poseBasis);
-      // Past the limit the answer is a failure, not something to clamp — the
-      // same rule the drag solve follows.
+      // The REAL ceiling on how far up the view swings, and it depends on where
+      // you stand: the aim reaches the frame pole at π/2 + frame latitude, and
+      // no yaw/pitch pose looks through it (`surfaceTiltAngle`'s header has the
+      // consequence). Refused, not clamped — the rule the drag solve follows.
       if (Math.abs(angles.pitch) > PITCH_LIMIT) return;
 
       cam.target[0] = cam.position[0] + aim[0] * cam.distance;

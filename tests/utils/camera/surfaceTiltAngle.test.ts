@@ -1,7 +1,7 @@
 /**
- * The tilt probe's clamp, checked against the geometry it claims rather than
- * against its own formula: at the ceiling the aim must still find ground, and
- * a little past it must not.
+ * The tilt probe's clamp. The horizon is checked as a landmark the sweep passes
+ * THROUGH — geometry, via a real ground ray — and the zenith stop as the fold
+ * guard it is.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,7 +13,8 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const R = 6371 * SCALE_UNITS.KM_TO_MPC;
 const CENTRE: Vec3 = [0, 0, 0];
-/** Ground hit for an aim tilted `tilt` off nadir, from an eye at `altMpc`. */
+
+/** Does an aim tilted `tilt` off nadir, from an eye at `altMpc`, find ground? */
 function hitsGround(tilt: number, altMpc: number): boolean {
   const eye: Vec3 = [0, 0, R + altMpc];
   const dir: Vec3 = [0, Math.sin(tilt), -Math.cos(tilt)];
@@ -22,21 +23,24 @@ function hitsGround(tilt: number, altMpc: number): boolean {
 }
 
 describe('surfaceTiltAngle', () => {
-  it('stops at the horizon, which tightens with altitude', () => {
-    // A drag far longer than the whole range, at two altitudes an order of
-    // magnitude apart: both saturate, and the high one saturates much lower.
-    for (const altKm of [100, 10000]) {
-      const altMpc = altKm * SCALE_UNITS.KM_TO_MPC;
-      const ceiling = surfaceTiltAngle(0, -100000, altMpc, R);
-      expect(hitsGround(ceiling, altMpc), `ceiling at ${altKm} km`).toBe(true);
-      expect(hitsGround(ceiling + 0.05, altMpc), `past ceiling at ${altKm} km`).toBe(false);
-    }
-    expect(surfaceTiltAngle(0, -100000, 10000 * SCALE_UNITS.KM_TO_MPC, R)).toBeLessThan(
-      surfaceTiltAngle(0, -100000, 100 * SCALE_UNITS.KM_TO_MPC, R) / 2,
-    );
+  it('carries on past the horizon and into the sky, at any altitude', () => {
+    // 360 px up from nadir is 103°: past the 100 km horizon (80°), past the
+    // 10 000 km one (23°), and past level. Not clamped at any of them — the
+    // ground's limb is a landmark on the way, not a limit.
+    const tilt = surfaceTiltAngle(0, -360);
+    expect(hitsGround(tilt, 100 * SCALE_UNITS.KM_TO_MPC)).toBe(false);
+    expect(hitsGround(tilt, 10000 * SCALE_UNITS.KM_TO_MPC)).toBe(false);
+    expect(tilt).toBeGreaterThan(Math.PI / 2);
+  });
+
+  it('stops short of the zenith rather than folding back', () => {
+    // `acos` cannot report past π, so a fold would read as the drag reversing.
+    const far = surfaceTiltAngle(0, -100000);
+    expect(far).toBeLessThan(Math.PI);
+    expect(surfaceTiltAngle(far, -100000)).toBe(far);
   });
 
   it('cannot tilt back through nadir', () => {
-    expect(surfaceTiltAngle(0, 40, 100 * SCALE_UNITS.KM_TO_MPC, R)).toBe(0);
+    expect(surfaceTiltAngle(0, 40)).toBe(0);
   });
 });
