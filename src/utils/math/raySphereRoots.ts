@@ -1,4 +1,7 @@
 /**
+ * Over the ≤half comment budget: the discriminant below is a numerical contract
+ * (comments.md's wire-format exception), unreadable as arithmetic alone.
+ *
  * raySphereRoots — the two roots (tNear ≤ tFar) of
  * `|ro + t·rd − center|² = radius²`, or `null` on a miss. CPU twin of
  * `lib/util.wesl::raySphere`, and it diverges from that WESL sentinel posture

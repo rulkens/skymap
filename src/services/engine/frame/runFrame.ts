@@ -641,6 +641,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // then the pin resolves the pivot to `bodyPosition + panWorld`. The offset —
   // not `cam.target`, which the pin overwrites — is the strafe's home, so the
   // shifted pivot still translate-follows the body.
+  // Transcribed by `zoomOutPivotDrift.test.ts` — see the surface-follow block's
+  // header.
   // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
   // resolved against this frame), so the pin and the winner never disagree on
   // what is focused. A separate `focusRow` local below reads the EngineState

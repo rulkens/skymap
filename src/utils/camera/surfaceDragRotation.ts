@@ -185,6 +185,16 @@ export function surfaceDragRotation(
     const dot = from[0] * to[0] + from[1] * to[1] + from[2] * to[2];
     // Negated comparison so a non-finite step fails the test rather than passing it.
     if (!(Math.acos(Math.min(1, Math.max(-1, dot))) <= maxStepRad)) return null;
+    // Near-hemisphere belt: `projectCss` has no occlusion test and the eye-priced
+    // bound is blind to yaw about the pole, so a pose that put the grabbed point
+    // on the FAR side of the body and still projected it under the cursor would
+    // otherwise be admissible near `PITCH_LIMIT`.
+    const solvedEyeDir = rotateVec3ByTightMat3(to, cam.poseBasis);
+    const facing =
+      dirWorld[0] * (cam.target[0] + solvedEyeDir[0] * cam.distance - bodyCentreMpc[0]) +
+      dirWorld[1] * (cam.target[1] + solvedEyeDir[1] * cam.distance - bodyCentreMpc[1]) +
+      dirWorld[2] * (cam.target[2] + solvedEyeDir[2] * cam.distance - bodyCentreMpc[2]);
+    if (!(facing > 0)) return null;
     return { yaw: cam.yaw + dYaw, pitch: pitchSolved };
   };
 
