@@ -97,8 +97,7 @@ function makeEngineState(): {
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       surfaceFollow: {
         engaged: false,
-        orientationAtFlip: null,
-        prevOrientation: null,
+        orientationAtEngage: null,
         bodyId: null,
       },
       debugZoomLateralMpc: [0, 0, 0] as Vec3,

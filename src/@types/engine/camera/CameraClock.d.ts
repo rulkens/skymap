@@ -79,12 +79,13 @@ export type CameraClock = {
   // ── follow-body pan (strafe) offset ────────────────────────────────────────
   // A right-drag strafe while following a body cannot move `cam.target` (the
   // pivot-pin overwrites it with the body position every frame). Instead the
-  // strafe accumulates here as a WORLD-frame offset, and the pivot resolves to
-  // `bodyPosition + followPanOffset` — so the offset rides along with the body's
-  // motion (translate-follow keeps tracking the body, just shifted). World-frame
-  // is chosen for simplicity: at the scales a followed body is viewed, a fixed
-  // world-space offset reads as a stable screen strafe, and it needs no camera
-  // basis re-projection. The reset is winner-gated: `followElapsed` zeroes it
+  // strafe accumulates here, and the pivot resolves to `bodyPosition + pan` — so
+  // the offset rides along with the body's motion (translate-follow keeps
+  // tracking the body, just shifted). FRAME-TAGGED by surface-fixed follow's
+  // `engaged` bit: world while disengaged, the body-at-engage frame while
+  // engaged, so a grabbed ground point does not slide at ω × pan. Never read or
+  // written raw — `followPanWorld` / `addFollowPan` own the conversion (spec
+  // §4.6). The reset is winner-gated: `followElapsed` zeroes it
   // (alongside the other follow fields) on a focus ROW ref change, but it only
   // runs when followBody wins the frame. So an offset can outlive a focus switch
   // while a higher driver (e.g. autoRotate) holds the win; it clears the next

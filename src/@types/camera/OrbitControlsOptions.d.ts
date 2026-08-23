@@ -132,7 +132,7 @@ export type OrbitControlsOptions = {
     readonly radiusMpc: number;
     /**
      * The orbit target the frame loop will actually render this focus around —
-     * `bodyCentreMpc + clock.followPanOffset` — or `null` when the focus is not
+     * `bodyCentreMpc + followPanWorld(...)` — or `null` when the focus is not
      * pivot-pinned (a static body keeps its committed target). The drag
      * register's own `target` is seeded once at gesture start, so mid-gesture
      * it is stale by exactly the pin: the body's motion since, plus any zoom

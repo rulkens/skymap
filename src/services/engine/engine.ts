@@ -18,7 +18,8 @@ import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
-import { createCameraClock } from './camera/cameraClock';
+import { createCameraClock, followPanWorld } from './camera/cameraClock';
+import { surfaceFollowCorotation } from './camera/surfaceFollowCorotation';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
@@ -184,7 +185,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
     // Disengaged at boot — no body is focused yet, so there is nothing to
     // follow. `runFrame` is the single writer from the first frame on.
-    surfaceFollow: { engaged: false, orientationAtFlip: null, prevOrientation: null, bodyId: null },
+    surfaceFollow: { engaged: false, orientationAtEngage: null, bodyId: null },
     // DebugPanel-only (Camera section) — see the type's docblock. Quiet zero
     // defaults until the first frame / gesture writes a real value.
     debugZoomLateralMpc: [0, 0, 0],
@@ -931,10 +932,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (!cam) return null;
         const focusRow = state.selectionRows.focus;
         const radiusMpc = pivotRadiusMpc(focusRow);
-        const centreMpc =
-          radiusMpc === null
-            ? null
-            : pivotCenterMpc(focusRow, state.cameraRuntime.lastRenderedSimDays.current);
+        const { clock, surfaceFollow, lastRenderedSimDays } = state.cameraRuntime;
+        const simDays = lastRenderedSimDays.current;
+        const centreMpc = radiusMpc === null ? null : pivotCenterMpc(focusRow, simDays);
         return {
           distanceMpc: cam.distance,
           pivotRadiusMpc: radiusMpc,
@@ -952,7 +952,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // Copied: every writer currently REPLACES the clock's array, but a
           // snapshot that silently depends on that is one in-place `+=` away
           // from a `Readonly<Vec3>` that mutates under its reader.
-          followPanOffsetMpc: [...state.cameraRuntime.clock.followPanOffset] as Vec3,
+          followPanOffsetMpc: [
+            ...followPanWorld(clock, surfaceFollowCorotation(surfaceFollow, simDays)),
+          ] as Vec3,
           zoomLateralMpc: state.cameraRuntime.debugZoomLateralMpc,
           idleTickMs: state.cameraRuntime.debugIdleTickMs,
         };

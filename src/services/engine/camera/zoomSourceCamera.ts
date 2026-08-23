@@ -22,6 +22,8 @@ import { poseOf } from './poseOf';
 import { applyFocusedBodyPivot } from './applyFocusedBodyPivot';
 import { assembleOrbitCamera } from './assembleOrbitCamera';
 import { followOwnsDistance } from './followOwnsDistance';
+import { followPanWorld } from './cameraClock';
+import { surfaceFollowCorotation } from './surfaceFollowCorotation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
@@ -35,9 +37,15 @@ export function zoomSourceCamera(
 ): OrbitCamera | null {
   const register = state.cam;
   if (register === null) return null;
-  const { clock, lastPose, prevActiveId } = state.cameraRuntime;
+  const { clock, lastPose, prevActiveId, surfaceFollow } = state.cameraRuntime;
   const rendered = dragging
-    ? applyFocusedBodyPivot(poseOf(register), true, focusRow, simDays, clock.followPanOffset)
+    ? applyFocusedBodyPivot(
+        poseOf(register),
+        true,
+        focusRow,
+        simDays,
+        followPanWorld(clock, surfaceFollowCorotation(surfaceFollow, simDays)),
+      )
     : lastPose.current;
   const pose =
     !dragging && followOwnsDistance(clock, prevActiveId.current)

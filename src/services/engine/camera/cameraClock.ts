@@ -12,10 +12,11 @@
  * and `followElapsed` all return milliseconds (for easing drivers); `clipElapsed`
  * returns SECONDS (for `evaluateClip`). All take `nowMs` as a parameter — they
  * never read `performance.now()` or `Date.now()` themselves. The caller owns the
- * wall clock; this keeps the clock deterministic and testable. `accumulateFollowPan`
- * is the odd one out — it returns void, folding a follow-while-panning strafe into
- * the clock's `followPanOffset` — but it lives here because that offset is
- * follow-runtime state the same resource owns and `followElapsed` zeroes on focus.
+ * wall clock; this keeps the clock deterministic and testable. The pan trio
+ * (`followPanWorld` / `addFollowPan` / `accumulateFollowPan`) is the odd one
+ * out — no elapsed time involved — but it lives here because `followPanOffset`
+ * is follow-runtime state the same resource owns and `followElapsed` zeroes on
+ * a fresh focus.
  *
  * One module for all four functions because they share the `CameraClock`
  * Resource: the halves are inseparable parts of one stateful computation.
@@ -205,6 +206,44 @@ export function followElapsed(
 }
 
 /**
+ * Read `followPanOffset` in WORLD space.
+ *
+ * The offset is STORED in the frame its strafe was authored in: world while
+ * surface-fixed follow is disengaged, the body-at-engage frame while it is
+ * engaged. `corotation` is that frame's R̃ (`surfaceFollowCorotation`), null
+ * for identity. Every site that places the pivot reads through here, so the
+ * frame tag resolves in one function; `addFollowPan` is the writing half.
+ */
+export function followPanWorld(clock: CameraClock, corotation: Readonly<Mat3> | null): Vec3 {
+  return corotation === null
+    ? clock.followPanOffset
+    : rotateVec3ByTightMat3(clock.followPanOffset, corotation);
+}
+
+/**
+ * Fold a WORLD-space strafe delta into `followPanOffset`, converting into the
+ * stored frame on the way in — `followPanWorld`'s inverse, so a writer only
+ * ever has to hold a world delta.
+ *
+ * R̃ is a rotation, so its inverse is its transpose: component `i` of the
+ * stored delta is the dot of R̃'s COLUMN `i` with the world delta (the tight
+ * column-major convention `orbitAnglesLookingAlong` derives).
+ */
+export function addFollowPan(
+  clock: CameraClock,
+  worldDelta: Readonly<Vec3>,
+  corotation: Readonly<Mat3> | null,
+): void {
+  const [wx, wy, wz] = worldDelta;
+  const r = corotation;
+  const dx = r === null ? wx : r[0] * wx + r[1] * wy + r[2] * wz;
+  const dy = r === null ? wy : r[3] * wx + r[4] * wy + r[5] * wz;
+  const dz = r === null ? wz : r[6] * wx + r[7] * wy + r[8] * wz;
+  const pan = clock.followPanOffset;
+  clock.followPanOffset = [pan[0] + dx, pan[1] + dy, pan[2] + dz];
+}
+
+/**
  * Fold a follow-while-panning strafe into `clock.followPanOffset`.
  *
  * `isFollowDragFrame` is true only when a body is followed AND a drag gesture is
@@ -213,7 +252,8 @@ export function followElapsed(
  * body's own motion never touches `cam.target`, so the delta isolates the strafe
  * with no body-motion contamination. Accumulating the delta (rather than reading
  * `cam.target - bodyPosition`) is what keeps the offset clean across a drag while
- * the body moves under it.
+ * the body moves under it. The register's target is world-space, so the delta
+ * goes through `addFollowPan`'s conversion like any other world write.
  *
  * Off a follow-drag frame the delta chain is dropped (`lastPanTarget = null`) so
  * the next grab continues the existing offset instead of re-basing it — and the
@@ -224,6 +264,7 @@ export function accumulateFollowPan(
   clock: CameraClock,
   isFollowDragFrame: boolean,
   camTarget: Vec3,
+  corotation: Readonly<Mat3> | null,
 ): void {
   if (!isFollowDragFrame) {
     clock.lastPanTarget = null;
@@ -231,25 +272,11 @@ export function accumulateFollowPan(
   }
   const last = clock.lastPanTarget;
   if (last !== null) {
-    clock.followPanOffset = [
-      clock.followPanOffset[0] + (camTarget[0] - last[0]),
-      clock.followPanOffset[1] + (camTarget[1] - last[1]),
-      clock.followPanOffset[2] + (camTarget[2] - last[2]),
-    ];
+    addFollowPan(
+      clock,
+      [camTarget[0] - last[0], camTarget[1] - last[1], camTarget[2] - last[2]],
+      corotation,
+    );
   }
   clock.lastPanTarget = [camTarget[0], camTarget[1], camTarget[2]];
-}
-
-/**
- * Rotate `followPanOffset` in place by `rotation` — while surface-fixed
- * follow is engaged, the strafe must co-rotate with the focused body's spin
- * (`runFrame`'s engaged block, spec §4.6) or a grabbed ground point slides
- * under the held camera at ω × pan. `rotation` is the INCREMENTAL per-frame
- * delta (not the cumulative flip-to-now correction `orientationAtFlip`
- * feeds the decode basis): a snapshot-relative factor would erase external
- * pan mutations (drag strafes, zoom laterals) made mid-engagement, while the
- * incremental form folds them in for free from the next frame on.
- */
-export function rotateFollowPan(clock: CameraClock, rotation: Readonly<Mat3>): void {
-  clock.followPanOffset = rotateVec3ByTightMat3(clock.followPanOffset, rotation);
 }

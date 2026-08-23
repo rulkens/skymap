@@ -15,7 +15,8 @@ import {
   clipElapsed,
   followElapsed,
   accumulateFollowPan,
-  rotateFollowPan,
+  addFollowPan,
+  followPanWorld,
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { CameraState } from '../../../../src/@types/camera/CameraState';
@@ -266,64 +267,78 @@ describe('clipElapsed', () => {
 
 // ── follow-body pan (strafe) offset ──────────────────────────────────────────
 
+// +90° about Z, column-major (cell at row r, col c is m[c*3+r]) — same
+// convention `orientationWorldDelta` and `multiply3x3` use.
+const ROTATE_Z90: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
+
 describe('accumulateFollowPan', () => {
   it('folds the frame-to-frame cam.target delta into the offset while follow-dragging', () => {
     const clock = createCameraClock();
     // First follow-drag frame only seeds the delta chain (offset unchanged) — the
     // absolute seeded cam.target must NOT leak into the offset.
-    accumulateFollowPan(clock, true, [0, 0, 0]);
+    accumulateFollowPan(clock, true, [0, 0, 0], null);
     expect(clock.followPanOffset).toEqual([0, 0, 0]);
-    accumulateFollowPan(clock, true, [5, 0, 0]); // +[5,0,0]
-    accumulateFollowPan(clock, true, [5, 3, 0]); // +[0,3,0]
+    accumulateFollowPan(clock, true, [5, 0, 0], null); // +[5,0,0]
+    accumulateFollowPan(clock, true, [5, 3, 0], null); // +[0,3,0]
     expect(clock.followPanOffset).toEqual([5, 3, 0]);
   });
 
   it('holds the offset and drops the delta chain on non-drag frames', () => {
     const clock = createCameraClock();
-    accumulateFollowPan(clock, true, [0, 0, 0]);
-    accumulateFollowPan(clock, true, [4, 0, 0]);
+    accumulateFollowPan(clock, true, [0, 0, 0], null);
+    accumulateFollowPan(clock, true, [4, 0, 0], null);
     expect(clock.followPanOffset).toEqual([4, 0, 0]);
 
     // A non-drag frame must NOT accumulate, and must reset lastPanTarget so the
     // NEXT grab starts a fresh delta chain rather than jumping the offset by the gap.
-    accumulateFollowPan(clock, false, [999, 999, 999]);
+    accumulateFollowPan(clock, false, [999, 999, 999], null);
     expect(clock.followPanOffset).toEqual([4, 0, 0]);
     expect(clock.lastPanTarget).toBeNull();
 
     // Next grab: first frame seeds (offset unchanged), then accumulates the delta.
-    accumulateFollowPan(clock, true, [100, 0, 0]);
+    accumulateFollowPan(clock, true, [100, 0, 0], null);
     expect(clock.followPanOffset).toEqual([4, 0, 0]);
-    accumulateFollowPan(clock, true, [102, 0, 0]);
+    accumulateFollowPan(clock, true, [102, 0, 0], null);
     expect(clock.followPanOffset).toEqual([6, 0, 0]);
+  });
+
+  it('converts the world-space drag delta into the stored frame while engaged', () => {
+    // The drag register's target is world-space in both regimes, so an engaged
+    // follow-drag must store R̃⁻¹·delta — otherwise the strafe would be rotated
+    // a second time on every read and run away from the cursor.
+    const clock = createCameraClock();
+    accumulateFollowPan(clock, true, [0, 0, 0], ROTATE_Z90); // seed only
+    accumulateFollowPan(clock, true, [1, 0, 0], ROTATE_Z90); // world +X
+    // R̃ maps stored → world; +X in world came from −Y in the stored frame.
+    expect(clock.followPanOffset[0]).toBeCloseTo(0, 12);
+    expect(clock.followPanOffset[1]).toBeCloseTo(-1, 12);
+    expect(clock.followPanOffset[2]).toBeCloseTo(0, 12);
   });
 });
 
-describe('rotateFollowPan', () => {
-  // +90° about Z, column-major (cell at row r, col c is m[c*3+r]) — same
-  // convention `orientationWorldDelta` and `multiply3x3` use.
-  const ROTATE_Z90: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
-  const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-
-  it('rotates the offset in place by the given rotation', () => {
+describe('followPanWorld / addFollowPan', () => {
+  it('round-trips a world delta through the stored frame', () => {
+    // The load-bearing property: whatever `addFollowPan` is handed in world
+    // space must come back out of `followPanWorld` unchanged under the SAME
+    // correction. A transposed (or forgotten) conversion on either half breaks
+    // this while both halves still look individually plausible.
     const clock = createCameraClock();
-    clock.followPanOffset = [1, 0, 0];
-    rotateFollowPan(clock, ROTATE_Z90);
-    expect(clock.followPanOffset[0]).toBeCloseTo(0, 12);
-    expect(clock.followPanOffset[1]).toBeCloseTo(1, 12);
-    expect(clock.followPanOffset[2]).toBeCloseTo(0, 12);
+    addFollowPan(clock, [3, -2, 5], ROTATE_Z90);
+    const world = followPanWorld(clock, ROTATE_Z90);
+    expect(world[0]).toBeCloseTo(3, 12);
+    expect(world[1]).toBeCloseTo(-2, 12);
+    expect(world[2]).toBeCloseTo(5, 12);
+    // ...and the STORED value really is a different vector (a no-op conversion
+    // would pass the round-trip too).
+    expect(clock.followPanOffset[0]).toBeCloseTo(-2, 12);
+    expect(clock.followPanOffset[1]).toBeCloseTo(-3, 12);
   });
 
-  it('leaves the offset unchanged under an identity rotation', () => {
+  it('a null correction is the identity on both halves', () => {
     const clock = createCameraClock();
-    clock.followPanOffset = [3, -2, 5];
-    rotateFollowPan(clock, IDENTITY);
+    addFollowPan(clock, [3, -2, 5], null);
     expect(clock.followPanOffset).toEqual([3, -2, 5]);
-  });
-
-  it('a zero offset stays zero under any rotation — no special-case branch needed', () => {
-    const clock = createCameraClock(); // followPanOffset defaults to [0, 0, 0]
-    rotateFollowPan(clock, ROTATE_Z90);
-    expect(clock.followPanOffset).toEqual([0, 0, 0]);
+    expect(followPanWorld(clock, null)).toEqual([3, -2, 5]);
   });
 });
 

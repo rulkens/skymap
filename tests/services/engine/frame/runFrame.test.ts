@@ -74,6 +74,25 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
   };
 });
 
+// `deriveFrameContext` reports not-ready in these renderer-null fixtures, so
+// its RESULT can't carry an assertion about the rendered camera. Wrap it to
+// record the bases runFrame hands it — the seam where the surface-follow
+// correction either reaches the drawn frame or stops at the drag register.
+const frameContextArgs = vi.hoisted(() => ({
+  last: null as { pose: unknown; poseBasis: number[]; upBasis: number[] } | null,
+}));
+vi.mock('../../../../src/services/engine/frame/frameContext', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/services/engine/frame/frameContext')>();
+  return {
+    ...actual,
+    deriveFrameContext: vi.fn((...args: Parameters<typeof actual.deriveFrameContext>) => {
+      frameContextArgs.last = { pose: args[2], poseBasis: args[4], upBasis: args[5] };
+      return actual.deriveFrameContext(...args);
+    }),
+  };
+});
+
 import {
   runFrame,
   SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC,
@@ -84,7 +103,11 @@ import { buildCameraDrivers } from '../../../../src/services/engine/camera/camer
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import {
+  createCameraClock,
+  addFollowPan,
+} from '../../../../src/services/engine/camera/cameraClock';
+import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import {
   startCameraTween,
   setAutoRotate,
@@ -238,8 +261,7 @@ function makeState(): EngineState {
       // exist even for fixtures that never focus a body.
       surfaceFollow: {
         engaged: false,
-        orientationAtFlip: null,
-        prevOrientation: null,
+        orientationAtEngage: null,
         bodyId: null,
       },
     },
@@ -901,17 +923,17 @@ describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
   });
 });
 
-describe('runFrame — surface-fixed follow: ground-fixed pan co-rotation (FW-F)', () => {
+describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () => {
   const EARTH_RADIUS_KM = 6371;
   const EARTH_SPIN_DEG_PER_DAY = 360.9856235; // rotationElements.ts — IAU spin rate
   const PHOBOS_RADIUS_KM = 11;
 
   // A pinned follow-distance term small relative to `EARTH_RADIUS_KM`: with
-  // the target panned to `bodyCenter + panOffset` (|panOffset| == radius) and
+  // the target panned to `bodyCenter + panWorld` (|pan| == radius) and
   // eye = target + distance·dir(yaw,pitch), the triangle inequality bounds
   // |eye - bodyCenter| within [radius - distance, radius + distance] for ANY
   // yaw/pitch/pan-direction — so altitude stays within ±distance regardless
-  // of how far the (rotated) pan has turned, keeping the fixture engaged
+  // of how far the (mapped) pan has turned, keeping the fixture engaged
   // without needing to align pan and sightline.
   const PINNED_ALTITUDE_MPC = SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC * 0.3;
 
@@ -962,28 +984,36 @@ describe('runFrame — surface-fixed follow: ground-fixed pan co-rotation (FW-F)
     clock.followDistanceTarget = distanceMpc;
   }
 
-  it('real-bug regression: an Earth-radius-scale panOffset must co-rotate with the body, not stay world-fixed (2026-08-22 re-gate)', () => {
+  /** Largest absolute cell difference between two bases — the "did this move at
+   * all?" guard that keeps a correction assertion from passing vacuously. */
+  function maxCellDiff(a: readonly number[], b: readonly number[]): number {
+    let worst = 0;
+    for (let i = 0; i < 9; i++) worst = Math.max(worst, Math.abs(a[i]! - b[i]!));
+    return worst;
+  }
+
+  it('real-bug regression: an Earth-radius-scale pan must co-rotate with the body, not stay world-fixed (2026-08-22 re-gate)', () => {
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
     settleBodyFocus(store, state, deps, 'earth', EARTH_RADIUS_KM);
     pinFollowDistance(state, PINNED_ALTITUDE_MPC);
 
-    // Seed panOffset AFTER the fresh-focus reset already ran, at Earth-radius
+    // Seed the pan AFTER the fresh-focus reset already ran, at Earth-radius
     // scale — the FW-B zoom-to-cursor regime the root cause traces.
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
     const panOffset0: Vec3 = [radiusMpc, 0, 0];
     state.cameraRuntime.clock.followPanOffset = [...panOffset0];
 
     // Engage frame: still at CONST_J2000 (the settle frame advanced no sim
-    // time), so `orientationAtFlip` snapshots the SAME instant read below.
+    // time), so `orientationAtEngage` snapshots the SAME instant read below.
     runFrame(state, deps, 1000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
-    const orientationAtFlip = state.cameraRuntime.surfaceFollow.orientationAtFlip!;
+    const orientationAtEngage = state.cameraRuntime.surfaceFollow.orientationAtEngage!;
 
-    // Advance a quarter-day of Earth spin (~90°) across several frames — the
-    // INCREMENTAL per-frame rotation this bug fix relies on must telescope
-    // back to the cumulative flip-to-now delta.
+    // Advance a quarter-day of Earth spin (~90°) across several frames. R̃ is a
+    // pure function of the instant, so the multi-frame path must land on the
+    // same answer a single jump would.
     const totalDeltaDays = 90 / EARTH_SPIN_DEG_PER_DAY;
     const FRAMES = 3;
     let simDaysFinal = CONST_J2000;
@@ -995,8 +1025,8 @@ describe('runFrame — surface-fixed follow: ground-fixed pan co-rotation (FW-F)
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
 
     const finalBodyState = deriveBodyStates(simDaysFinal).get('earth')!;
-    const correction = orientationWorldDelta(orientationAtFlip, finalBodyState.orientation);
-    const expectedPan = rotateVec3ByTightMat3(panOffset0, correction);
+    const corotation = orientationWorldDelta(orientationAtEngage, finalBodyState.orientation);
+    const expectedPan = rotateVec3ByTightMat3(panOffset0, corotation);
 
     const actualTarget = state.cameraRuntime.lastPose.current.target;
     // Relative tolerance (real magnitudes: Mpc values here are ~1e-16) —
@@ -1016,32 +1046,12 @@ describe('runFrame — surface-fixed follow: ground-fixed pan co-rotation (FW-F)
     expect(Math.abs(actualTarget[0] - buggyTargetX) / radiusMpc).toBeGreaterThan(0.5);
   });
 
-  it('the engage frame introduces no pan jump (delta = identity)', () => {
-    // Phobos (like the precedent basis test above) carries IDENTITY_MAT3
-    // orientation — no texture spec to bake trig into — so the engage-frame
-    // correction is EXACT integer arithmetic (0s/1s), not floating-point-close
-    // to identity. Earth's real spin orientation would only be identity to
-    // ~1e-16 noise, too loose for the bit-exact assertion this test makes.
-    const store = makeStore();
-    const state = makeCamState();
-    const deps = makeCamDeps(state, store);
-    settleBodyFocus(store, state, deps, 'phobos', PHOBOS_RADIUS_KM);
-    pinFollowDistance(state, PINNED_ALTITUDE_MPC);
-
-    // A probe at Phobos-radius scale (same |panOffset| == radius bound the
-    // other fixtures in this block rely on to stay engaged) — seeded AFTER
-    // the fresh-focus reset, so a coincidental zero can't mask a broken
-    // (non-identity) delta.
-    const probeRadiusMpc = PHOBOS_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-    const PROBE_PAN: Vec3 = [0, probeRadiusMpc, 0];
-    state.cameraRuntime.clock.followPanOffset = [...PROBE_PAN];
-
-    runFrame(state, deps, 1000); // the engage transition frame
-    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
-    expect(state.cameraRuntime.clock.followPanOffset).toEqual(PROBE_PAN);
-  });
-
-  it('an external pan mutation mid-engagement composes: the NEW combined offset co-rotates from then on', () => {
+  it('the RENDERED camera co-rotates: deriveFrameContext gets the corrected bases, not the raw ones', () => {
+    // The correction reaching `state.cam` (the drag register) is not enough —
+    // that register is only what a GESTURE decodes through. The drawn frame
+    // decodes through whatever `deriveFrameContext` is handed, so if the raw
+    // bases go there the scene still swings about the tracked ground point at ω
+    // while the follow reports itself engaged.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -1050,54 +1060,148 @@ describe('runFrame — surface-fixed follow: ground-fixed pan co-rotation (FW-F)
 
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
     state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
-    runFrame(state, deps, 1000); // engage frame, identity delta
+    runFrame(state, deps, 1000); // engage frame — R̃ = I
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+    const orientationAtEngage = state.cameraRuntime.surfaceFollow.orientationAtEngage!;
 
-    // One engaged frame of real spin before the external mutation.
-    const firstLegDays = 30 / EARTH_SPIN_DEG_PER_DAY;
-    const simDaysAtMutation = CONST_J2000 + firstLegDays;
-    store.dispatch(setSimDays({ simDays: simDaysAtMutation, nowMs: 2000 }));
+    const simDays = CONST_J2000 + 90 / EARTH_SPIN_DEG_PER_DAY;
+    store.dispatch(setSimDays({ simDays, nowMs: 2000 }));
     runFrame(state, deps, 2000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
-    const orientationAtMutation = deriveBodyStates(simDaysAtMutation).get('earth')!.orientation;
 
-    // Fold in an external pan delta AS THE WHEEL PATH WOULD — a direct
-    // additive write to the clock's offset (a zoom lateral), independent of
-    // the rotation this block owns. Kept small (2% of the radius): the
-    // combined magnitude must stay close enough to the radius that the
-    // engage-preserving bound (see `PINNED_ALTITUDE_MPC`'s comment) still
-    // holds regardless of the angle between the rotated pan and the delta.
-    const EXTERNAL_DELTA: Vec3 = [0, radiusMpc * 0.02, 0];
-    const priorOffset = state.cameraRuntime.clock.followPanOffset;
-    const combinedAfterMutation: Vec3 = [
-      priorOffset[0] + EXTERNAL_DELTA[0],
-      priorOffset[1] + EXTERNAL_DELTA[1],
-      priorOffset[2] + EXTERNAL_DELTA[2],
-    ];
-    state.cameraRuntime.clock.followPanOffset = combinedAfterMutation;
+    const corotation = orientationWorldDelta(
+      orientationAtEngage,
+      deriveBodyStates(simDays).get('earth')!.orientation,
+    );
+    const rawBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    const expected = multiply3x3(corotation, rawBasis);
 
-    // Advance more frames after the mutation.
+    const seen = frameContextArgs.last!;
+    for (let i = 0; i < 9; i++) {
+      expect(seen.poseBasis[i]).toBeCloseTo(expected[i]!, 9);
+      expect(seen.upBasis[i]).toBeCloseTo(expected[i]!, 9);
+    }
+    // Vacuous-pass guard: after ~90° of spin the corrected basis is nowhere
+    // near the raw one, so this assertion could not have been satisfied by the
+    // pass-through the pre-fix code did.
+    expect(maxCellDiff(seen.poseBasis, rawBasis)).toBeGreaterThan(0.5);
+  });
+
+  it('the engage frame introduces no jump: R̃ is exactly identity', () => {
+    // Phobos carries no texture spec, so `orientationForBody` gives it
+    // IDENTITY_MAT3 rather than a baked-from-trig rotation. That makes the
+    // engage-frame correction exact integer arithmetic (0s and 1s) instead of
+    // a near-but-not-exactly-orthonormal float self-multiply — the fixture the
+    // "bit-identical" claim actually needs to hold to the letter.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+    settleBodyFocus(store, state, deps, 'phobos', PHOBOS_RADIUS_KM);
+    pinFollowDistance(state, PINNED_ALTITUDE_MPC);
+
+    // A probe at Phobos-radius scale (the |pan| == radius bound the fixtures in
+    // this block rely on to stay engaged), seeded AFTER the fresh-focus reset
+    // so a coincidental zero can't mask a broken (non-identity) correction.
+    const probeRadiusMpc = PHOBOS_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    const PROBE_PAN: Vec3 = [0, probeRadiusMpc, 0];
+    state.cameraRuntime.clock.followPanOffset = [...PROBE_PAN];
+
+    runFrame(state, deps, 1000); // the engage transition frame
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    const defaultBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    expect(frameContextArgs.last!.poseBasis).toEqual(defaultBasis);
+    expect(frameContextArgs.last!.upBasis).toEqual(defaultBasis);
+    expect(state.cameraRuntime.clock.followPanOffset).toEqual(PROBE_PAN);
+
+    const bodyPos = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
+      'phobos',
+    )!.positionMpc;
+    const target = state.cameraRuntime.lastPose.current.target;
+    for (let i = 0; i < 3; i++) {
+      expect((target[i]! - bodyPos[i]!) / probeRadiusMpc).toBeCloseTo(
+        PROBE_PAN[i]! / probeRadiusMpc,
+        9,
+      );
+    }
+  });
+
+  it('an external pan write mid-engagement composes: the world delta lands in the stored frame and co-rotates from there', () => {
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+    settleBodyFocus(store, state, deps, 'earth', EARTH_RADIUS_KM);
+    pinFollowDistance(state, PINNED_ALTITUDE_MPC);
+
+    const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    runFrame(state, deps, 1000); // engage frame, R̃ = I
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+    const orientationAtEngage = state.cameraRuntime.surfaceFollow.orientationAtEngage!;
+
+    // One engaged frame of real spin before the external write.
+    const simDaysAtWrite = CONST_J2000 + 30 / EARTH_SPIN_DEG_PER_DAY;
+    store.dispatch(setSimDays({ simDays: simDaysAtWrite, nowMs: 2000 }));
+    runFrame(state, deps, 2000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    const orientationAtWrite = deriveBodyStates(simDaysAtWrite).get('earth')!.orientation;
+    const corotationAtWrite = orientationWorldDelta(orientationAtEngage, orientationAtWrite);
+    const worldPanBeforeWrite = rotateVec3ByTightMat3(
+      state.cameraRuntime.clock.followPanOffset,
+      corotationAtWrite,
+    );
+
+    // The wheel-lateral path (`wireInput`'s onZoom) as it now writes: a WORLD
+    // delta handed to the clock's mutator with the live correction. Kept small
+    // (2% of the radius) so the combined magnitude stays close enough to the
+    // radius that the engage-preserving bound above still holds.
+    const WORLD_DELTA: Vec3 = [0, radiusMpc * 0.02, 0];
+    addFollowPan(state.cameraRuntime.clock, WORLD_DELTA, corotationAtWrite);
+
     const secondLegDays = 45 / EARTH_SPIN_DEG_PER_DAY;
     const FRAMES = 2;
-    let simDaysFinal = simDaysAtMutation;
+    let simDaysFinal = simDaysAtWrite;
     for (let i = 1; i <= FRAMES; i++) {
-      simDaysFinal = simDaysAtMutation + (secondLegDays * i) / FRAMES;
+      simDaysFinal = simDaysAtWrite + (secondLegDays * i) / FRAMES;
       store.dispatch(setSimDays({ simDays: simDaysFinal, nowMs: 3000 + 1000 * i }));
       runFrame(state, deps, 3000 + 1000 * i);
     }
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
 
-    const finalOrientation = deriveBodyStates(simDaysFinal).get('earth')!.orientation;
-    const correctionAfterMutation = orientationWorldDelta(orientationAtMutation, finalOrientation);
-    const expectedPan = rotateVec3ByTightMat3(combinedAfterMutation, correctionAfterMutation);
+    const finalBodyState = deriveBodyStates(simDaysFinal).get('earth')!;
+    const combinedAtWrite: Vec3 = [
+      worldPanBeforeWrite[0] + WORLD_DELTA[0],
+      worldPanBeforeWrite[1] + WORLD_DELTA[1],
+      worldPanBeforeWrite[2] + WORLD_DELTA[2],
+    ];
+    const sinceWrite = orientationWorldDelta(orientationAtWrite, finalBodyState.orientation);
+    const expectedWorldPan = rotateVec3ByTightMat3(combinedAtWrite, sinceWrite);
 
-    const actualPan = state.cameraRuntime.clock.followPanOffset;
+    const actualTarget = state.cameraRuntime.lastPose.current.target;
     for (let i = 0; i < 3; i++) {
-      expect(actualPan[i]! / radiusMpc).toBeCloseTo(expectedPan[i]! / radiusMpc, 6);
+      expect((actualTarget[i]! - finalBodyState.positionMpc[i]!) / radiusMpc).toBeCloseTo(
+        expectedWorldPan[i]! / radiusMpc,
+        6,
+      );
     }
+
+    // Discriminator: dropping the write-time conversion (adding the world delta
+    // straight into the stored array) would rotate D twice, missing by
+    // |D − R̃⁻¹D| ≈ 1% of a radius here.
+    const unconverted = rotateVec3ByTightMat3(
+      [radiusMpc + WORLD_DELTA[0], WORLD_DELTA[1], WORLD_DELTA[2]],
+      orientationWorldDelta(orientationAtEngage, finalBodyState.orientation),
+    );
+    const miss = Math.hypot(
+      unconverted[0] - expectedWorldPan[0],
+      unconverted[1] - expectedWorldPan[1],
+      unconverted[2] - expectedWorldPan[2],
+    );
+    expect(miss / radiusMpc).toBeGreaterThan(5e-3);
   });
 
-  it('disengaging stops the co-rotation: further simDays advances leave the offset unchanged', () => {
+  it('disengaging folds ONCE: the pivot holds, the eye keeps pointing where it did, and rotation stops', () => {
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -1109,30 +1213,71 @@ describe('runFrame — surface-fixed follow: ground-fixed pan co-rotation (FW-F)
     runFrame(state, deps, 1000); // engage frame
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
 
-    // One engaged frame of real spin, so the value about to be disengaged is
-    // an actually-rotated offset, not the untouched seed.
-    const legDays = 20 / EARTH_SPIN_DEG_PER_DAY;
-    store.dispatch(setSimDays({ simDays: CONST_J2000 + legDays, nowMs: 2000 }));
+    // A real slab of spin, so the correction being folded out is far from
+    // identity and a missing fold would be unmistakable.
+    const simDays = CONST_J2000 + 90 / EARTH_SPIN_DEG_PER_DAY;
+    store.dispatch(setSimDays({ simDays, nowMs: 2000 }));
     runFrame(state, deps, 2000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
-    const panAtDisengage = [...state.cameraRuntime.clock.followPanOffset] as Vec3;
+    const engagedPose = state.cameraRuntime.lastPose.current;
+    const engagedTarget = [...engagedPose.target] as Vec3;
+    const engagedYaw = engagedPose.yaw;
+    const engagedPitch = engagedPose.pitch;
+    const engagedDir = rotateVec3ByTightMat3(
+      yawPitchToDir(engagedYaw, engagedPitch),
+      frameContextArgs.last!.poseBasis as Mat3,
+    );
 
-    // Disengage unambiguously regardless of the (rotated) pan's direction:
-    // pin the follow distance to 3x the body radius. Since |panOffset| stays
-    // exactly `radiusMpc` (rotation preserves magnitude), the eye sits
-    // between (3R - R) and (3R + R) from body centre for ANY angle —
-    // comfortably past the ~241 km disengage band either way.
+    // Cross the disengage band at the SAME sim instant (pinned by re-anchoring
+    // the clock to this frame's nowMs), so the body has not moved: any change
+    // in the pivot is the fold's doing, not the clock's. 3x the radius puts the
+    // eye between 2R and 4R from centre for ANY pan direction — comfortably
+    // past the ~241 km band either way.
     pinFollowDistance(state, radiusMpc * 3);
-    store.dispatch(setSimDays({ simDays: CONST_J2000 + legDays + 1, nowMs: 3000 }));
+    store.dispatch(setSimDays({ simDays, nowMs: 3000 }));
     runFrame(state, deps, 3000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
-    expect(state.cameraRuntime.clock.followPanOffset).toEqual(panAtDisengage);
 
-    // Further sim-time advances while disengaged must leave the offset alone.
-    store.dispatch(setSimDays({ simDays: CONST_J2000 + legDays + 500, nowMs: 4000 }));
+    const rawBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    expect(frameContextArgs.last!.poseBasis).toEqual(rawBasis);
+
+    // (a) The eye still points where it did — the re-based yaw/pitch decoded
+    // through the RAW basis reproduce the last engaged frame's direction.
+    const disengagedPose = state.cameraRuntime.lastPose.current;
+    const disengagedDir = rotateVec3ByTightMat3(
+      yawPitchToDir(disengagedPose.yaw, disengagedPose.pitch),
+      rawBasis,
+    );
+    for (let i = 0; i < 3; i++) expect(disengagedDir[i]).toBeCloseTo(engagedDir[i]!, 9);
+
+    // Vacuous-pass guard: without the re-base the angles would decode through
+    // the raw basis to a plainly different direction — that snap is the bug.
+    const snapped = rotateVec3ByTightMat3(yawPitchToDir(engagedYaw, engagedPitch), rawBasis);
+    expect(
+      Math.hypot(
+        disengagedDir[0] - snapped[0],
+        disengagedDir[1] - snapped[1],
+        disengagedDir[2] - snapped[2],
+      ),
+    ).toBeGreaterThan(0.5);
+
+    // (b) The pivot did not move: the pan fold is exact.
+    for (let i = 0; i < 3; i++) {
+      expect(disengagedPose.target[i]! / radiusMpc).toBeCloseTo(engagedTarget[i]! / radiusMpc, 9);
+    }
+
+    // (c) The re-based angles went through the ordinary pose-commit path...
+    expect(store.getState().camera.base.yaw).toBeCloseTo(disengagedPose.yaw, 12);
+    // ...and the residual up-roll rides the existing frame-roll tween.
+    expect(store.getState().camera.frameTween).not.toBeNull();
+
+    // (d) Further sim time while disengaged leaves the (now world-frame) pan
+    // alone — nothing kept a memory of the engage frame.
+    const panAfterFold = [...state.cameraRuntime.clock.followPanOffset] as Vec3;
+    store.dispatch(setSimDays({ simDays: simDays + 500, nowMs: 4000 }));
     runFrame(state, deps, 4000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
-    expect(state.cameraRuntime.clock.followPanOffset).toEqual(panAtDisengage);
+    expect(state.cameraRuntime.clock.followPanOffset).toEqual(panAfterFold);
   });
 });
 

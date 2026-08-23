@@ -23,13 +23,12 @@
  * baked on an edge is simply overwritten by the next frame's pin, never accumulated.
  *
  * `panOffset` is the strafe the user has panned away from the body (zero on a
- * fresh focus): world-frame while surface-fixed follow is disengaged, but
- * ground-fixed (co-rotated with the body every engaged frame — `runFrame`'s
- * engaged block, `rotateFollowPan`) while it is engaged, so a held ground
- * point stays put under the camera instead of sliding at ω × pan. Resolving
- * `bodyPosition + panOffset` here keeps the pivot a SINGLE target-resolution
- * home — the strafe is stored on the clock and only READ here, never a
- * second per-driver target path.
+ * fresh focus), always in WORLD space by the time it arrives: the clock stores
+ * it frame-tagged (world while surface-fixed follow is disengaged, the
+ * body-at-engage frame while it is engaged) and callers resolve it through
+ * `followPanWorld`. Resolving `bodyPosition + panOffset` here keeps the pivot
+ * a SINGLE target-resolution home — the strafe is stored on the clock and only
+ * READ here, never a second per-driver target path.
  *
  * The result target is a fresh per-frame array (read-only downstream), so no
  * defensive copy of the snapshot position is needed.

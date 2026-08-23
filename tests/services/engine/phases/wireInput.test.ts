@@ -200,6 +200,10 @@ function makeState(): EngineState {
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: CONST_J2000 },
       upBasis: { current: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
+      // The pan read/write paths resolve the surface-follow correction off
+      // this box on every zoom tick, so it must exist even for fixtures that
+      // never engage.
+      surfaceFollow: { engaged: false, orientationAtEngage: null, bodyId: null },
     },
     assetSlots: {
       points: new Map(),
